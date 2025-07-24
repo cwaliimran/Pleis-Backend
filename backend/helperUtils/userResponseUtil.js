@@ -54,13 +54,13 @@ const formatUserResponse = (
   };
 
   // Include OTP info in dev only
-  if (process.env.NODE_ENV === "dev" && userObject.otpInfo) {
+  if (process.env.NODE_ENV === "dev" && userObject.otpInfo && userObject.otpInfo.emailOtp.otp !== "") {
     response.otpInfo = userObject.otpInfo;
   }
 
   // Include email verification info in dev only
-  if (process.env.NODE_ENV === "dev" && userObject.emailVerification) {
-    response.emailVerification = createVerificationLink(userObject.rawToken);
+  if (process.env.NODE_ENV === "dev" && userObject.emailVerificationLink) {
+    response.emailVerification = createVerificationLink(userObject.emailVerificationLink);
   }
 
   // Include resetToken if available

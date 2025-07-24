@@ -1,0 +1,46 @@
+// repositories/tagRepository.js
+const Tags = require("./Tags");
+
+// Create
+const createTag = async (data) => {
+  const tag = new Tags(data);
+  return await tag.save();
+};
+
+// Get all with filters
+const getTagsWithFilters = async (query, skip, limit) => {
+  return Tags.find(query)
+    .sort({ title: 1 })
+    .skip(skip)
+    .limit(limit);
+};
+
+// Count by condition
+const countTags = async (query = {}) => {
+  return Tags.countDocuments(query);
+};
+
+// Find by ID
+const findTagById = async (id) => {
+  return Tags.findById(id);
+};
+
+// Update and save
+const updateTagData = async (tag, data) => {
+  Object.assign(tag, data);
+  return await tag.save();
+};
+
+// Delete
+const deleteTagById = async (tag) => {
+  return await tag.deleteOne();
+};
+
+module.exports = {
+  createTag,
+  getTagsWithFilters,
+  countTags,
+  findTagById,
+  updateTagData,
+  deleteTagById,
+};

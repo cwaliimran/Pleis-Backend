@@ -5,15 +5,15 @@ const {
   generateMeta,
 } = require("../../helperUtils/responseUtil");
 
-const supplierService = require("./supplierService");
+const organizationService = require("./organizationService");
 
-const createSupplier = async (req, res) => {
+const createOrganization = async (req, res) => {
   const { title, description, status = "active" } = req.body;
 
   if (!validateParams(req, res, { rawData: ["title"] })) return;
 
   try {
-    const supplier = await supplierService.createSupplier({
+    const organization = await organizationService.createOrganization({
       title,
       description,
       status,
@@ -22,8 +22,8 @@ const createSupplier = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "supplier_created_successfully",
-      data: supplier,
+      translationKey: "organization_created_successfully",
+      data: organization,
     });
   } catch (error) {
     return sendResponse({
@@ -31,19 +31,19 @@ const createSupplier = async (req, res) => {
       statusCode: error.code === 11000 ? 400 : 500,
       translationKey:
         error.code === 11000
-          ? "supplier_title_unique_violation"
+          ? "organization_title_unique_violation"
           : "internal_server",
       error: error.message,
     });
   }
 };
 
-const getSuppliers = async (req, res) => {
+const getOrganizations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status } = req.query;
 
   try {
-    const { suppliers, meta } = await supplierService.getSuppliers({
+    const { organizations, meta } = await organizationService.getOrganizations({
       page,
       limit,
       keyword,
@@ -53,8 +53,8 @@ const getSuppliers = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "suppliers_fetched_successfully",
-      data: suppliers,
+      translationKey: "organizations_fetched_successfully",
+      data: organizations,
       meta: generateMeta(page, limit, meta.total, meta.tagsCount),
     });
   } catch (error) {
@@ -67,12 +67,12 @@ const getSuppliers = async (req, res) => {
   }
 };
 
-const getPublicSuppliers = async (req, res) => {
+const getPublicOrganizations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword } = req.query;
 
   try {
-    const { suppliers, meta } = await supplierService.getPublicSuppliers({
+    const { organizations, meta } = await organizationService.getPublicOrganizations({
       page,
       limit,
       keyword,
@@ -81,8 +81,8 @@ const getPublicSuppliers = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "suppliers_fetched_successfully",
-      data: suppliers,
+      translationKey: "public_organizations_fetched_successfully",
+      data: organizations,
       meta: generateMeta(page, limit, meta.total),
     });
   } catch (error) {
@@ -95,7 +95,7 @@ const getPublicSuppliers = async (req, res) => {
   }
 };
 
-const updateSupplier = async (req, res) => {
+const updateOrganization = async (req, res) => {
   const { id } = req.params;
   const { title, description, status } = req.body;
 
@@ -108,7 +108,7 @@ const updateSupplier = async (req, res) => {
     return;
 
   try {
-    const updated = await supplierService.updateSupplier(id, {
+    const updated = await organizationService.updateOrganization(id, {
       title,
       description,
       ...(status !== undefined && { status }),
@@ -118,14 +118,14 @@ const updateSupplier = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "supplier_not_found",
+        translationKey: "organization_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "supplier_updated_successfully",
+      translationKey: "organization_updated_successfully",
       data: updated,
     });
   } catch (error) {
@@ -138,7 +138,7 @@ const updateSupplier = async (req, res) => {
   }
 };
 
-const deleteSupplier = async (req, res) => {
+const deleteOrganization = async (req, res) => {
   const { id } = req.params;
 
   if (
@@ -150,19 +150,19 @@ const deleteSupplier = async (req, res) => {
     return;
 
   try {
-    const deleted = await supplierService.deleteSupplier(id);
+    const deleted = await organizationService.deleteOrganization(id);
     if (!deleted) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "supplier_not_found",
+        translationKey: "organization_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "supplier_deleted_successfully",
+      translationKey: "organization_deleted_successfully",
     });
   } catch (error) {
     return sendResponse({
@@ -175,9 +175,9 @@ const deleteSupplier = async (req, res) => {
 };
 
 module.exports = {
-  createSupplier,
-  getSuppliers,
-  getPublicSuppliers,
-  updateSupplier,
-  deleteSupplier,
+  createOrganization,
+  getOrganizations,
+  getPublicOrganizations,
+  updateOrganization,
+  deleteOrganization,
 };

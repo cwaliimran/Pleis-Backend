@@ -41,7 +41,6 @@ const getPublicSuppliers = async ({ page, limit, keyword }) => {
   if (keyword) {
     query.$or = [
       { title: { $regex: keyword, $options: "i" } },
-      { description: { $regex: keyword, $options: "i" } },
     ];
   }
 

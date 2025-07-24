@@ -4,8 +4,9 @@ const jwt = require("jsonwebtoken");
 const moment = require("moment-timezone");
 const validator = require("validator");
 const { randomBytes } = require("crypto");
-const { Company, CompanySchema } = require("./CompanyDetails");
+const { CompanySchema } = require("./CompanyDetails");
 const crypto = require("crypto");
+const { generateSecureToken } = require("../helperUtils/secureToken");
 
 // Define subscription statuses
 const SubscriptionType = {
@@ -72,6 +73,31 @@ const userSchema = new mongoose.Schema(
         type: Boolean,
         default: false,
       },
+      otpRequestCount: {
+        type: Number,
+        default: 0,
+      },
+      otpRequestTimestamp: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+
+    passwordReset: {
+      tokenHash: String,
+      expiresAt: Number,
+      used: {
+        type: Boolean,
+        default: false,
+      },
+      otpRequestCount: {
+        type: Number,
+        default: 0,
+      },
+      otpRequestTimestamp: {
+        type: Date,
+        default: Date.now,
+      },
     },
 
     phoneNumber: {
@@ -89,12 +115,12 @@ const userSchema = new mongoose.Schema(
     verificationStatus: {
       email: {
         type: String,
-        enum: ["pending", "verified", "rejected"],
+        enum: ["pending", "verified"],
         default: "pending",
       },
       phoneNumber: {
         type: String,
-        enum: ["pending", "verified", "rejected"],
+        enum: ["pending", "verified"],
         default: "pending",
       },
     },
@@ -106,23 +132,32 @@ const userSchema = new mongoose.Schema(
     accountState: {
       userType: {
         type: String,
-        enum: ["user", "organizer", "admin"],
+        enum: [
+          "guest",
+          "user",
+          "admin",
+          "manager",
+          // "superadmin",
+          "staff",
+          "organizer",
+        ], 
         default: "user",
       },
       status: {
         type: String,
-        enum: ["active", "inactive", "suspended", "softDeleted", "hardDeleted"],
-        default: "inactive",
+        enum: [
+          "pending",
+          "active",
+          "rejected",
+          "suspended",
+          "softDeleted",
+          "hardDeleted",
+        ],
+        default: "pending",
       },
       reason: {
         type: String,
         default: "",
-      },
-      suspensionDate: {
-        type: Date,
-      },
-      finalDeletionDate: {
-        type: Date, // field to keep track of final deletion date
       },
     },
 
@@ -431,14 +466,7 @@ userSchema.methods.generateEmailVerificationToken = function (
   user.otpInfo.emailOtp.otpRequestTimestamp = now;
   user.otpInfo.emailOtp.otpRequestCount = count + 1;
 
-  // 1. Generate raw token (what user sees)
-  const rawToken = crypto.randomBytes(32).toString("hex");
-
-  // 2. Hash it before saving to DB
-  const hashedToken = crypto
-    .createHash("sha256")
-    .update(rawToken)
-    .digest("hex");
+  const { rawToken, hashedToken } = generateSecureToken();
 
   // 3. Set expiry (e.g. 10 minutes)
   const expiresAt = moment.tz(now, timezone).add(10, "minutes").valueOf();
@@ -458,6 +486,51 @@ userSchema.methods.generateEmailVerificationToken = function (
 
 const createVerificationLink = (token) => {
   return `${process.env.EMAIL_VERIFICATION_LINK}${token}`;
+};
+
+userSchema.methods.generatePasswordResetToken = function (timezone = "UTC") {
+  const user = this;
+  const now = Date.now();
+
+  // ✅ Ensure parent object exists
+  if (!user.passwordReset) {
+    user.passwordReset = {};
+  }
+  // request count limit
+  const allowedRequestsPerHour = 3;
+  const lastTimestamp = user.passwordReset?.otpRequestTimestamp || 0;
+  const count = user.passwordReset?.otpRequestCount || 0;
+  if (process.env.NODE_ENV !== "dev") {
+    // Check if the last request was within the last hour and if the count exceeds the limit
+    if (
+      now < moment(lastTimestamp).add(1, "hour").valueOf() &&
+      count >= allowedRequestsPerHour
+    ) {
+      return { error: "too_many_password_reset_requests" };
+    }
+  }
+
+  const { rawToken, hashedToken } = generateSecureToken();
+
+  const expiresAt = moment.tz(now, timezone).add(15, "minutes").valueOf();
+
+  // Update OTP info for limiting
+  user.passwordReset.otpRequestTimestamp = now;
+  user.passwordReset.otpRequestCount = count + 1;
+  user.passwordReset.tokenHash = hashedToken;
+  user.passwordReset.expiresAt = expiresAt;
+  user.passwordReset.used = false;
+
+  const resetLink = createResetPasswordLink(rawToken);
+
+  return {
+    resetLink,
+    rawToken,
+  };
+};
+
+const createResetPasswordLink = (token) => {
+  return `${process.env.PASSWORD_RESET_LINK}${token}`;
 };
 
 // Exclude sensitive fields when returning user object

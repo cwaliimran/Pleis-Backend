@@ -1,6 +1,7 @@
 const { User, generateResetToken } = require("../models/UserModel");
 const mongoose = require("mongoose");
 const moment = require("moment-timezone");
+const bcrypt = require("bcryptjs");
 const {
   sendResponse,
   validateParams,
@@ -14,7 +15,6 @@ const {
 } = require("../helperUtils/emailTemplates");
 const { createOrSkipDevice, Devices } = require("../models/Devices");
 const validator = require("validator");
-const { Company } = require("../models/CompanyDetails");
 const crypto = require("crypto");
 //register
 const register = async (req, res) => {
@@ -30,8 +30,10 @@ const register = async (req, res) => {
     organizationName,
     password,
     timezone,
+    companyDetails,
   } = req.body;
 
+  let verificationStatus = "active"
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -49,6 +51,7 @@ const register = async (req, res) => {
 
     if (userType === "organizer") {
       rawData.push("organizationName");
+      verificationStatus = "pending";
     }
 
     const validationOptions = {
@@ -162,7 +165,8 @@ const register = async (req, res) => {
       organizationName,
       password,
       timezone,
-      accountState: { userType: finalUserType, status: "inactive" },
+      accountState: { userType: finalUserType, status: verificationStatus },
+      companyDetails: companyDetails || null,
     });
 
     if (existingUser) {
@@ -171,13 +175,13 @@ const register = async (req, res) => {
     }
 
     // const otp = user.generateOtp("email", user.timezone);
-    const newToken = user.generateEmailVerificationToken();
-    user.rawToken = newToken.rawToken; // Store the raw token for email verification
+    const tokenData = user.generateEmailVerificationToken();
+    user.emailVerificationLink = tokenData.rawToken; // Store the raw token for email verification
     await user.save({ session });
 
     // Send email within the transaction
     const subject = "Welcome! Verify Your Email";
-    // const mBody = registrationOtpEmailTemplate(newToken.verificationLink);
+    // const mBody = registrationOtpEmailTemplate(tokenData.verificationLink);
     // await sendEmailViaBrevo([email], subject, mBody);
 
     // Commit the transaction
@@ -358,16 +362,30 @@ const login = async (req, res) => {
       });
     }
 
-    if (verificationStatus === "rejected") {
+    if (
+      user.accountState.status === "pending"
+    ) {
       return sendResponse({
         res,
         statusCode: 403,
-        translationKey: "your_account_1",
+        translationKey: "pending_approval",
       });
     }
 
     if (
-      user.accountState.status === "restricted" ||
+      user.accountState.status === "rejected"
+    ) {
+      return sendResponse({
+        res,
+        statusCode: 403,
+        translationKey: "rejected_verification",
+        data: {
+          reason: user.accountState.reason || "No reason provided",
+        }
+      });
+    }
+
+    if (
       user.accountState.status === "suspended"
     ) {
       return sendResponse({
@@ -377,13 +395,6 @@ const login = async (req, res) => {
       });
     }
 
-    if (verificationStatus !== "verified") {
-      return sendResponse({
-        res,
-        statusCode: 401,
-        translationKey: "your_account_3",
-      });
-    }
 
     // Check if the account is softDeleted
     if (user.accountState.status === "softDeleted") {
@@ -641,9 +652,6 @@ const verifyOtp = async (req, res) => {
     userOtpInfo.otpExpires = "";
     userOtpInfo.otpUsed = true; // Mark OTP as used
     user.verificationStatus[type] = "verified"; // Mark verification as complete
-    if (user.accountState.status === "inactive") {
-      user.accountState.status = "active"; // Activate the account if it's still inactive
-    }
 
     // Generate a password reset token (JWT or a UUID)
     const resetToken = generateResetToken(); // Function to generate a secure token
@@ -732,10 +740,12 @@ const verifyEmailViaLink = async (req, res) => {
   // Mark verified
   user.verificationStatus.email = "verified";
   user.emailVerification.used = true;
+  user.emailVerification.otpRequestCount = 0;
   await user.save();
 
-  return res.redirect(process.env.EMAIL_VERIFICATION_REDIRECT_URL || "http://localhost:3000/");
-
+  return res.redirect(
+    process.env.EMAIL_VERIFICATION_REDIRECT_URL || "http://localhost:3000/"
+  );
 };
 
 const resendEmailVerificationLink = async (req, res) => {
@@ -754,10 +764,10 @@ const resendEmailVerificationLink = async (req, res) => {
     }
 
     // Generate a new email verification token
-    const newToken = user.generateEmailVerificationToken();
-    if (newToken.error) {
+    const tokenData = user.generateEmailVerificationToken();
+    if (tokenData.error) {
       //too_many_verification_requests
-      if (newToken.error === "too_many_verification_requests") {
+      if (tokenData.error === "too_many_verification_requests") {
         return sendResponse({
           res,
           statusCode: 400,
@@ -769,13 +779,13 @@ const resendEmailVerificationLink = async (req, res) => {
     await user.save();
 
     // Send the verification email
-    // await sendVerificationEmail(user.email, newToken.verificationLink);
+    // await sendVerificationEmail(user.email, tokenData.verificationLink);
 
     return sendResponse({
       res,
       statusCode: 201,
       translationKey: "verification_email_sent",
-      data: { verificationLink: newToken.verificationLink },
+      data: { verificationLink: tokenData.verificationLink },
     });
   } catch (error) {
     return sendResponse({
@@ -785,6 +795,107 @@ const resendEmailVerificationLink = async (req, res) => {
       error: error,
     });
   }
+};
+
+//sends link to email
+const sendPasswordResetLink = async (req, res) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email: email.trim().toLowerCase() });
+  if (!user) {
+    return sendResponse({
+      res,
+      statusCode: 404,
+      translationKey: "user_not_found",
+    });
+  }
+
+  const tokenData = user.generatePasswordResetToken();
+
+  if (tokenData.error) {
+    //too_many_password_reset_requests
+    if (tokenData.error === "too_many_password_reset_requests") {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "too_many_password_reset_requests",
+      });
+    }
+  }
+
+  await user.save();
+
+  // await sendResetEmail(user.email, tokenData.resetLink);
+
+  return sendResponse({
+    res,
+    statusCode: 200,
+    translationKey: "password_reset_link_sent",
+    data: { resetLink: tokenData.resetLink },
+  });
+};
+
+// when user clicks on link from email inbox
+const verifyPasswordResetLink = async (req, res) => {
+  const { token } = req.query;
+
+  if (!token) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "missing_token",
+    });
+  }
+
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+  const user = await User.findOne({ "passwordReset.tokenHash": tokenHash });
+  if (
+    !user ||
+    user.passwordReset.used ||
+    Date.now() > user.passwordReset.expiresAt
+  ) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "invalid_or_expired_link",
+    });
+  }
+
+  // ✅ Redirect to your frontend's reset password form
+  return res.redirect(`${process.env.PASSWORD_RESET_FRONTEND_URL}${token}`);
+};
+
+//
+const resetPasswordViaLink = async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+  const user = await User.findOne({ "passwordReset.tokenHash": tokenHash });
+  if (
+    !user ||
+    user.passwordReset.used ||
+    Date.now() > user.passwordReset.expiresAt
+  ) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "invalid_or_expired_link",
+    });
+  }
+
+  // ✅ Set new password
+  user.password = newPassword;
+  user.passwordReset.used = true;
+  user.passwordReset.otpRequestCount = 0;
+  await user.save();
+
+  return sendResponse({
+    res,
+    statusCode: 200,
+    translationKey: "password_reset_successful",
+  });
 };
 
 // Reset Password
@@ -1206,6 +1317,89 @@ const socialAuth = async (req, res) => {
   }
 };
 
+//check if email already exists and verified
+const checkEmailExistsAndVerified = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "missing_email",
+      });
+    }
+    const user = await User.findOne({ email: email.trim().toLowerCase() }).select("verificationStatus");
+    const existsAndVerified = !!(user && user.verificationStatus.email === "verified");
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "email_check_success",
+      data: { exists: existsAndVerified },
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server_error",
+      error,
+    });
+  }
+};
+
+//changePassword api which takes old password and new password
+const changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+
+    const validationOptions = {
+      rawData: ["oldPassword", "newPassword"],
+      minLengthFields: {
+        newPassword: 6, // New password must be at least 6 characters long
+      },
+    };
+    if (!validateParams(req, res, validationOptions)) {
+      return;
+    }
+
+    const user = await User.findById(req.user._id).select("password");
+
+    if (!user) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "user_not_found",
+      });
+    }
+
+    // Check if the old password is correct using bcrypt
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return sendResponse({
+        res,
+        statusCode: 401,
+        translationKey: "incorrect_old_password",
+      });
+    }
+
+    // Update the password
+    user.password = newPassword;
+    await user.save();
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "password_changed_successfully",
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "an_error_occurred",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   register,
   companyDetails,
@@ -1214,10 +1408,15 @@ module.exports = {
   verifyOtp,
   verifyEmailViaLink,
   resendEmailVerificationLink,
+  sendPasswordResetLink,
+  verifyPasswordResetLink,
+  resetPasswordViaLink,
   resetPassword,
   logout,
   hardDeleteAccount,
   softDeleteAccount,
   resumeAccount,
   socialAuth,
+  checkEmailExistsAndVerified,
+  changePassword
 };

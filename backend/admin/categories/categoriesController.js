@@ -5,15 +5,15 @@ const {
   generateMeta,
 } = require("../../helperUtils/responseUtil");
 
-const supplierService = require("./supplierService");
+const categoriesService = require("./categoriesService");
 
-const createSupplier = async (req, res) => {
+const createCategory = async (req, res) => {
   const { title, description, status = "active" } = req.body;
 
   if (!validateParams(req, res, { rawData: ["title"] })) return;
 
   try {
-    const supplier = await supplierService.createSupplier({
+    const category = await categoriesService.createCategory({
       title,
       description,
       status,
@@ -22,8 +22,8 @@ const createSupplier = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "supplier_created_successfully",
-      data: supplier,
+      translationKey: "category_created_successfully",
+      data: category,
     });
   } catch (error) {
     return sendResponse({
@@ -31,19 +31,19 @@ const createSupplier = async (req, res) => {
       statusCode: error.code === 11000 ? 400 : 500,
       translationKey:
         error.code === 11000
-          ? "supplier_title_unique_violation"
+          ? "category_title_unique_violation"
           : "internal_server",
       error: error.message,
     });
   }
 };
 
-const getSuppliers = async (req, res) => {
+const getCategories = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status } = req.query;
 
   try {
-    const { suppliers, meta } = await supplierService.getSuppliers({
+    const { categories, meta } = await categoriesService.getCategories({
       page,
       limit,
       keyword,
@@ -53,9 +53,9 @@ const getSuppliers = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "suppliers_fetched_successfully",
-      data: suppliers,
-      meta: generateMeta(page, limit, meta.total, meta.tagsCount),
+      translationKey: "categories_fetched_successfully",
+      data: categories,
+      meta: generateMeta(page, limit, meta.total, meta.categoriesCount),
     });
   } catch (error) {
     return sendResponse({
@@ -67,12 +67,12 @@ const getSuppliers = async (req, res) => {
   }
 };
 
-const getPublicSuppliers = async (req, res) => {
+const getPublicCategories = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword } = req.query;
 
   try {
-    const { suppliers, meta } = await supplierService.getPublicSuppliers({
+    const { categories, meta } = await categoriesService.getPublicCategories({
       page,
       limit,
       keyword,
@@ -81,8 +81,8 @@ const getPublicSuppliers = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "suppliers_fetched_successfully",
-      data: suppliers,
+      translationKey: "categories_fetched_successfully",
+      data: categories,
       meta: generateMeta(page, limit, meta.total),
     });
   } catch (error) {
@@ -95,7 +95,7 @@ const getPublicSuppliers = async (req, res) => {
   }
 };
 
-const updateSupplier = async (req, res) => {
+const updateCategory = async (req, res) => {
   const { id } = req.params;
   const { title, description, status } = req.body;
 
@@ -108,7 +108,7 @@ const updateSupplier = async (req, res) => {
     return;
 
   try {
-    const updated = await supplierService.updateSupplier(id, {
+    const updated = await categoriesService.updateCategory(id, {
       title,
       description,
       ...(status !== undefined && { status }),
@@ -118,14 +118,14 @@ const updateSupplier = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "supplier_not_found",
+        translationKey: "category_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "supplier_updated_successfully",
+      translationKey: "category_updated_successfully",
       data: updated,
     });
   } catch (error) {
@@ -138,7 +138,7 @@ const updateSupplier = async (req, res) => {
   }
 };
 
-const deleteSupplier = async (req, res) => {
+const deleteCategory = async (req, res) => {
   const { id } = req.params;
 
   if (
@@ -150,19 +150,19 @@ const deleteSupplier = async (req, res) => {
     return;
 
   try {
-    const deleted = await supplierService.deleteSupplier(id);
+    const deleted = await categoriesService.deleteCategory(id);
     if (!deleted) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "supplier_not_found",
+        translationKey: "category_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "supplier_deleted_successfully",
+      translationKey: "category_deleted_successfully",
     });
   } catch (error) {
     return sendResponse({
@@ -175,9 +175,9 @@ const deleteSupplier = async (req, res) => {
 };
 
 module.exports = {
-  createSupplier,
-  getSuppliers,
-  getPublicSuppliers,
-  updateSupplier,
-  deleteSupplier,
+  createCategory,
+  getCategories,
+  getPublicCategories,
+  updateCategory,
+  deleteCategory,
 };

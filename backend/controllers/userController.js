@@ -84,6 +84,7 @@ const updateProfile = async (req, res, next) => {
     lastName,
     organizationName,
     timezone,
+    companyDetails,
   } = req.body;
   const currentUser = req.user;
 
@@ -152,6 +153,35 @@ const updateProfile = async (req, res, next) => {
     }
     if (currentUser.userType === "organizer" && organizationName) {
       user.organizationName = organizationName;
+    }
+    if (currentUser.userType === "organizer" && companyDetails) {
+      // Update only provided company details, keep existing fields if not provided
+      user.companyDetails = {
+        name:
+          companyDetails.name !== undefined
+            ? companyDetails.name
+            : user.companyDetails?.name,
+        oib:
+          companyDetails.oib !== undefined
+            ? companyDetails.oib
+            : user.companyDetails?.oib,
+        bankAccountNumber:
+          companyDetails.bankAccountNumber !== undefined
+            ? companyDetails.bankAccountNumber
+            : user.companyDetails?.bankAccountNumber,
+        representativeName:
+          companyDetails.representativeName !== undefined
+            ? companyDetails.representativeName
+            : user.companyDetails?.representativeName,
+        location:
+          companyDetails.location !== undefined
+            ? companyDetails.location
+            : user.companyDetails?.location,
+        suppliers:
+          companyDetails.suppliers !== undefined
+            ? companyDetails.suppliers
+            : user.companyDetails?.suppliers,
+      };
     }
 
     await user.save();
