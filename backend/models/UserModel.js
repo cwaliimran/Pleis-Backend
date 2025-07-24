@@ -5,6 +5,7 @@ const moment = require("moment-timezone");
 const validator = require("validator");
 const { randomBytes } = require("crypto");
 const { Company, CompanySchema } = require("./CompanyDetails");
+const crypto = require("crypto");
 
 // Define subscription statuses
 const SubscriptionType = {
@@ -63,6 +64,16 @@ const userSchema = new mongoose.Schema(
         message: "email_invalid", // Generic error message key
       },
     },
+
+    emailVerification: {
+      tokenHash: String,
+      expiresAt: Number,
+      used: {
+        type: Boolean,
+        default: false,
+      },
+    },
+
     phoneNumber: {
       code: {
         // Country code for phone number
@@ -295,7 +306,6 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-
 // Generate JWT token
 userSchema.methods.generateAuthToken = function () {
   const user = this;
@@ -398,6 +408,58 @@ userSchema.methods.generateOtp = function (type = "email", timezone = "UTC") {
   return otp; // Return the OTP for sending it to the user
 };
 
+userSchema.methods.generateEmailVerificationToken = function (
+  timezone = "UTC"
+) {
+  const user = this;
+  const now = Date.now();
+
+  // Limit requests
+  const allowedRequestsPerHour = 10;
+  const lastTimestamp = user.otpInfo?.emailOtp?.otpRequestTimestamp || 0;
+  const count = user.otpInfo?.emailOtp?.otpRequestCount || 0;
+  if (process.env.NODE_ENV !== "dev") {
+    if (
+      now < moment(lastTimestamp).add(1, "hour").valueOf() &&
+      count >= allowedRequestsPerHour
+    ) {
+      return { error: "too_many_verification_requests" };
+    }
+  }
+
+  // Update OTP info for limiting
+  user.otpInfo.emailOtp.otpRequestTimestamp = now;
+  user.otpInfo.emailOtp.otpRequestCount = count + 1;
+
+  // 1. Generate raw token (what user sees)
+  const rawToken = crypto.randomBytes(32).toString("hex");
+
+  // 2. Hash it before saving to DB
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(rawToken)
+    .digest("hex");
+
+  // 3. Set expiry (e.g. 10 minutes)
+  const expiresAt = moment.tz(now, timezone).add(10, "minutes").valueOf();
+
+  user.emailVerification = {
+    tokenHash: hashedToken,
+    expiresAt,
+    used: false,
+  };
+  const verificationLink = createVerificationLink(rawToken);
+
+  return {
+    verificationLink,
+    rawToken,
+  }; // Return raw token to send in the email
+};
+
+const createVerificationLink = (token) => {
+  return `${process.env.EMAIL_VERIFICATION_LINK}${token}`;
+};
+
 // Exclude sensitive fields when returning user object
 userSchema.methods.toJSON = function (userData) {
   const user = this;
@@ -405,7 +467,6 @@ userSchema.methods.toJSON = function (userData) {
 
   // Attach base URL to document images
   const baseUrl = `${process.env.S3_BASE_URL}/`;
-
 
   // Attach base URL to profileIcon
   if (userObject.profileIcon && !userObject.profileIcon.startsWith("http")) {
@@ -419,6 +480,7 @@ userSchema.methods.toJSON = function (userData) {
   // include otpInfo only in development environment
   if (process.env.NODE_ENV == "prod") {
     delete userObject.otpInfo;
+    delete userObject.emailVerification;
   }
 
   return userObject;
@@ -436,4 +498,9 @@ const generateResetToken = () => {
 
 const User = mongoose.model("User", userSchema);
 
-module.exports = { User, SubscriptionType, generateResetToken };
+module.exports = {
+  User,
+  SubscriptionType,
+  generateResetToken,
+  createVerificationLink,
+};

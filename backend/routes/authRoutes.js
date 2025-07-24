@@ -12,6 +12,8 @@ const {
   resumeAccount,
   socialAuth,
   companyDetails,
+  verifyEmailViaLink,
+  resendEmailVerificationLink,
 } = require("../controllers/authController");
 const createRateLimiter = require("../helperUtils/rateLimiter");
 const roleMiddleware = require("../middlewares/roleMiddleware");
@@ -60,6 +62,9 @@ router.post("/logout", auth, logout);
 router.delete("/delete-account", auth, hardDeleteAccount);
 router.put("/resume-account", resumeAccount);
 router.post("/social-auth", socialAuth);
+router.get("/verify-email", verifyEmailViaLink);
+//resend verification email link
+router.post("/resend-verification-email", resendEmailVerificationLink);
 
 router.put(
   "/company-details",

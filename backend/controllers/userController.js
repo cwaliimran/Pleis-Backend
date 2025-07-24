@@ -125,6 +125,28 @@ const updateProfile = async (req, res, next) => {
     if (profileIcon) user.profileIcon = profileIcon;
     if (timezone) user.timezone = timezone;
     if (phoneNumber) {
+      // Check if phoneNumber is already verified and associated with someone else (exclude current user)
+      const existingPhone = await User.findOne({
+        _id: { $ne: currentUser._id },
+        "phoneNumber.code": phoneNumber.code,
+        "phoneNumber.number": phoneNumber.number,
+        "verificationStatus.phoneNumber": "verified",
+      });
+      if (existingPhone) {
+        // Compare both code and number fields for phoneNumber object
+        if (
+          existingPhone.phoneNumber &&
+          existingPhone.phoneNumber.code === phoneNumber.code &&
+          existingPhone.phoneNumber.number === phoneNumber.number
+        ) {
+          return sendResponse({
+            res,
+            statusCode: 409,
+            translationKey: "phone_number_already",
+          });
+        }
+      }
+
       user.phoneNumber = phoneNumber;
       user.verificationStatus.phoneNumber = "pending"; // Reset verification status
     }

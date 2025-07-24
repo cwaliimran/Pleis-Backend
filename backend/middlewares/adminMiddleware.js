@@ -8,7 +8,7 @@ const admin = (req, res, next) => {
     sendResponse({
       res,
       statusCode: 403,
-      translationKey: "Access denied. Admins only.",
+      translationKey: "access_denied_admins_only",
       error: "Access denied. Admins only."
     });
   }

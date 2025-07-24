@@ -1,5 +1,6 @@
 // helperUtils/userResponseUtil.js
 
+const { createVerificationLink } = require("../models/UserModel");
 const { convertUtcToTimezone } = require("./responseUtil");
 
 const formatUserResponse = (
@@ -55,6 +56,11 @@ const formatUserResponse = (
   // Include OTP info in dev only
   if (process.env.NODE_ENV === "dev" && userObject.otpInfo) {
     response.otpInfo = userObject.otpInfo;
+  }
+
+  // Include email verification info in dev only
+  if (process.env.NODE_ENV === "dev" && userObject.emailVerification) {
+    response.emailVerification = createVerificationLink(userObject.rawToken);
   }
 
   // Include resetToken if available

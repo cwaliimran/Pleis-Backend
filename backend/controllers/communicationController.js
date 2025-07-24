@@ -437,7 +437,7 @@ const sendSmsViaVonage = async (req, res) => {
         return sendResponse({
           res,
           statusCode: 500,
-          translationKey: "Error sending SMS via Vonage",
+          translationKey: "error_sending_sms_via_vonage",
           error: err.message,
         });
       } else {

@@ -111,7 +111,7 @@ const getFaqs = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Faqs fetched successfully",
+      translationKey: "faqs_fetched_successfully",
       data: faqs,
       meta,
     });

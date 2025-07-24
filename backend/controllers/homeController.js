@@ -13,7 +13,7 @@ const getHome = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Welcome to Pleis API",
+      translationKey: "welcome_to_pleis_api",
       data: "Welcome to Pleis API",
     });
   } catch (error) {

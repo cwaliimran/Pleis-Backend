@@ -15,6 +15,7 @@ const {
 const { createOrSkipDevice, Devices } = require("../models/Devices");
 const validator = require("validator");
 const { Company } = require("../models/CompanyDetails");
+const crypto = require("crypto");
 //register
 const register = async (req, res) => {
   const {
@@ -94,14 +95,6 @@ const register = async (req, res) => {
     const existingEmail = await User.findOne({
       email: email.trim().toLowerCase(),
     });
-    let existingPhone;
-    if (phoneNumber) {
-      existingPhone = await User.findOne({
-        "phoneNumber.code": phoneNumber.code,
-        "phoneNumber.number": phoneNumber.number,
-        "verificationStatus.phoneNumber": "verified",
-      });
-    }
 
     if (existingEmail) {
       if (
@@ -116,6 +109,14 @@ const register = async (req, res) => {
       }
     }
 
+    let existingPhone;
+    if (phoneNumber) {
+      existingPhone = await User.findOne({
+        "phoneNumber.code": phoneNumber.code,
+        "phoneNumber.number": phoneNumber.number,
+        "verificationStatus.phoneNumber": "verified",
+      });
+    }
     if (existingPhone) {
       // Compare both code and number fields for phoneNumber object
       if (
@@ -169,20 +170,21 @@ const register = async (req, res) => {
       user.verificationStatus.phoneNumber = "pending";
     }
 
-    const otp = user.generateOtp("email", user.timezone);
-
+    // const otp = user.generateOtp("email", user.timezone);
+    const newToken = user.generateEmailVerificationToken();
+    user.rawToken = newToken.rawToken; // Store the raw token for email verification
     await user.save({ session });
 
     // Send email within the transaction
     const subject = "Welcome! Verify Your Email";
-    const mBody = registrationOtpEmailTemplate(otp);
+    // const mBody = registrationOtpEmailTemplate(newToken.verificationLink);
     // await sendEmailViaBrevo([email], subject, mBody);
 
     // Commit the transaction
     await session.commitTransaction();
 
     // Ensure toJSON method is applied to strip out sensitive data
-    const userObject = user.toJSON();
+    const userObject = new User(user).toJSON(user);
 
     // Format the user response using the utility function
     const response = formatUserResponse(userObject);
@@ -252,18 +254,25 @@ const companyDetails = async (req, res) => {
     user.companyDetails = {
       name: name !== undefined ? name : user.companyDetails?.name,
       oib: oib !== undefined ? oib : user.companyDetails?.oib,
-      bankAccountNumber: bankAccountNumber !== undefined ? bankAccountNumber : user.companyDetails?.bankAccountNumber,
-      representativeName: representativeName !== undefined ? representativeName : user.companyDetails?.representativeName,
-      location: location !== undefined ? location : user.companyDetails?.location,
-      suppliers: suppliers !== undefined ? suppliers : user.companyDetails?.suppliers,
+      bankAccountNumber:
+        bankAccountNumber !== undefined
+          ? bankAccountNumber
+          : user.companyDetails?.bankAccountNumber,
+      representativeName:
+        representativeName !== undefined
+          ? representativeName
+          : user.companyDetails?.representativeName,
+      location:
+        location !== undefined ? location : user.companyDetails?.location,
+      suppliers:
+        suppliers !== undefined ? suppliers : user.companyDetails?.suppliers,
     };
-
 
     await user.save();
 
     return sendResponse({
       res,
-      statusCode: 200,
+      statusCode: 201,
       translationKey: "company_details_saved",
       data: user.companyDetails,
     });
@@ -675,6 +684,109 @@ const verifyOtp = async (req, res) => {
   }
 };
 
+const verifyEmailViaLink = async (req, res) => {
+  const { token } = req.query;
+
+  if (!token) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "missing_token",
+    });
+  }
+
+  // Hash the token from the URL
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+  // Find user by hashed token
+  const user = await User.findOne({
+    "emailVerification.tokenHash": tokenHash,
+  });
+
+  if (!user) {
+    return sendResponse({
+      res,
+      statusCode: 404,
+      translationKey: "invalid_or_expired_verification_link",
+    });
+  }
+
+  const { expiresAt, used } = user.emailVerification;
+
+  if (used) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "verification_link_already_used",
+    });
+  }
+
+  if (Date.now() > expiresAt) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "verification_link_expired",
+    });
+  }
+
+  // Mark verified
+  user.verificationStatus.email = "verified";
+  user.emailVerification.used = true;
+  await user.save();
+
+  return res.redirect(process.env.EMAIL_VERIFICATION_REDIRECT_URL || "http://localhost:3000/");
+
+};
+
+const resendEmailVerificationLink = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Find the user by email
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+
+    if (!user) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "user_not_found",
+      });
+    }
+
+    // Generate a new email verification token
+    const newToken = user.generateEmailVerificationToken();
+    if (newToken.error) {
+      //too_many_verification_requests
+      if (newToken.error === "too_many_verification_requests") {
+        return sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "too_many_verification_requests",
+        });
+      }
+    }
+
+    await user.save();
+
+    // Send the verification email
+    // await sendVerificationEmail(user.email, newToken.verificationLink);
+
+    return sendResponse({
+      res,
+      statusCode: 201,
+      translationKey: "verification_email_sent",
+      data: { verificationLink: newToken.verificationLink },
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server_error",
+      error: error,
+    });
+  }
+};
+
 // Reset Password
 const resetPassword = async (req, res) => {
   try {
@@ -922,11 +1034,12 @@ const resumeAccount = async (req, res) => {
 };
 
 const socialAuth = async (req, res) => {
-  const {
+  let {
     provider,
     socialId,
     email,
-    name,
+    firstName,
+    lastName,
     deviceId,
     deviceType,
     timezone,
@@ -940,7 +1053,6 @@ const socialAuth = async (req, res) => {
       rawData: [
         "provider",
         "socialId",
-        "email",
         "firstName",
         "lastName",
         "deviceId",
@@ -950,7 +1062,7 @@ const socialAuth = async (req, res) => {
       ],
       enumFields: {
         provider: ["google", "facebook", "apple"], // Allowed values for provider
-        userType: ["user", "organizer", "admin"],
+        userType: ["user", "organizer"],
       },
     };
 
@@ -958,13 +1070,36 @@ const socialAuth = async (req, res) => {
       return;
     }
 
-    // Check for existing user by email
-    const existingUser = await User.findOne({ email });
+    //if no email is provided, then create it from socialId
+    if (!email) {
+      if (provider === "google") {
+        email = `${socialId}@google.com`;
+      } else if (provider === "facebook") {
+        email = `${socialId}@facebook.com`;
+      } else if (provider === "apple") {
+        email = `${socialId}@apple.com`;
+      }
+    }
+
+    if (!validator.isEmail(email)) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_email",
+        values: { field: "email" },
+      });
+    }
+
+    // Normalize email to lowercase
+    email = email.trim().toLowerCase();
+    // Find user by socialId or email
+    let existingUser = await User.findOne({
+      $or: [{ [`${provider}Id`]: socialId }, { email }],
+    });
 
     // If user exists, update or link the social provider
+    let providerLinked = false;
     if (existingUser) {
-      let providerLinked = false;
-
       if (existingUser.accountState.status === "suspended") {
         return sendResponse({
           res,
@@ -985,16 +1120,29 @@ const socialAuth = async (req, res) => {
         providerLinked = true;
       }
 
+      //if existingUser.email is not set, update it
+      if (req.body.email && existingUser.email !== req.body.email) {
+        existingUser.email = email; // Update the email to the one provided
+        existingUser.verificationStatus.email = "verified"; // Mark email as verified
+      }
+
       // Always update the provider and timezone, regardless of providerLinked status
       existingUser.provider = provider; // Update the provider field to reflect the latest social login
       existingUser.timezone = timezone; // Update the timezone to reflect the user's current login
       existingUser.accountState.status = "active"; // Ensure the account is active
+      if (firstName !== undefined) {
+        existingUser.firstName = firstName; // Update first name if provided
+      }
+      if (lastName !== undefined) {
+        existingUser.lastName = lastName; // Update last name if provided
+      }
 
       await existingUser.save({ session });
       const token = existingUser.generateAuthToken();
 
       // Ensure toJSON method is applied to strip out sensitive data
-      const userObject = existingUser.toJSON();
+      const userObject = new User(existingUser).toJSON(existingUser);
+
       const response = formatUserResponse(userObject, token);
 
       // Save device information
@@ -1021,6 +1169,7 @@ const socialAuth = async (req, res) => {
         verificationStatus: {
           email: "verified", // Mark email as verified
         },
+        accountState: { userType: userType, status: "active" },
       });
 
       await newUser.save({ session });
@@ -1063,6 +1212,8 @@ module.exports = {
   login,
   generateOtp,
   verifyOtp,
+  verifyEmailViaLink,
+  resendEmailVerificationLink,
   resetPassword,
   logout,
   hardDeleteAccount,

@@ -13,7 +13,7 @@ function createRateLimiter(endpoint, timeWindow = 10, maxRequests = 100) {
   // Check if the environment is development
   if (process.env.NODE_ENV === "dev") {
     // Return a no-op middleware that does nothing
-    return (req, res, next) => next();
+    // return (req, res, next) => next();
   }
   return rateLimit({
     windowMs: timeWindow * 60 * 1000, // Convert timeWindow to milliseconds
@@ -23,7 +23,9 @@ function createRateLimiter(endpoint, timeWindow = 10, maxRequests = 100) {
         res,
         statusCode: 429,
         translationKey: `Too many requests to ${endpoint}. Please try again later.`,
-        error: true
+        error: {
+          message: `Too many requests to ${endpoint}. Please try again later.`,
+        },
       });
     },
   });
