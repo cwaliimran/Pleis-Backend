@@ -165,5 +165,10 @@
   "public_organizations_fetched_successfully": "Public organizations fetched successfully",
   "organization_not_found": "Organization not found",
   "organization_updated_successfully": "Organization updated successfully",
-  "organization_deleted_successfully": "Organization deleted successfully"
+  "organization_deleted_successfully": "Organization deleted successfully",
+  "venue_type_created_successfully": "Venue type created successfully",
+  "venue_type_not_found": "Venue type not found",
+  "venue_type_updated_successfully": "Venue type updated successfully",
+  "venue_type_deleted_successfully": "Venue type deleted successfully",
+  "venue_types_fetched_successfully": "Venue types fetched successfully"
 }

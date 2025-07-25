@@ -16,6 +16,8 @@ router.use("/util", require("./dbRoutes"));
 //public routes
 router.use("/suppliers", require("../admin/suppliers/suppliersRoutes"));
 
+router.use("/tags", require("../admin/tags/tagsRoutes"));
+
 //locations
 router.use("/locations", require("../shared/locations/routes"));
 

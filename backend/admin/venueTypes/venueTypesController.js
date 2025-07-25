@@ -6,15 +6,16 @@ const {
   getReadableErrorMessage,
 } = require("../../helperUtils/responseUtil");
 
-const tagsService = require("./tagsService");
+const venuetypesService = require("./venuetypesService");
 
-const createTag = async (req, res) => {
-  const { title, status = "active", pinned = false } = req.body;
+const createVenueType = async (req, res) => {
+  const { image, title, status = "active" } = req.body;
 
   if (!validateParams(req, res, { rawData: ["title"] })) return;
 
   try {
-    const tag = await tagsService.createTag({
+    const venuetype = await venuetypesService.createVenueType({
+      image,
       title,
       status: "active",
       pinned: false,
@@ -23,8 +24,8 @@ const createTag = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "tag_created_successfully",
-      data: tag,
+      translationKey: "venue_type_created_successfully",
+      data: venuetype,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -37,12 +38,12 @@ const createTag = async (req, res) => {
   }
 };
 
-const getTags = async (req, res) => {
+const getVenueTypes = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, pinned } = req.query;
 
   try {
-    const { tags, meta } = await tagsService.getTags({
+    const { venuetypes, meta } = await venuetypesService.getVenueTypes({
       page,
       limit,
       keyword,
@@ -53,30 +54,29 @@ const getTags = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "tags_fetched_successfully",
-      data: tags,
+      translationKey: "venue_types_fetched_successfully",
+      data: venuetypes,
       meta: {
         ...generateMeta(page, limit, meta.total),
-        tagsCount: meta.tagsCount,
+        venuetypesCount: meta.venuetypesCount,
       },
     });
   } catch (error) {
-    const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
-      statusCode: readableError.statusCode,
-      translationKey: readableError.message,
-      error,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
     });
   }
 };
 
-const getPublicTags = async (req, res) => {
+const getPublicVenueTypes = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword } = req.query;
 
   try {
-    const { tags, meta } = await tagsService.getPublicTags({
+    const { venuetypes, meta } = await venuetypesService.getPublicVenueTypes({
       page,
       limit,
       keyword,
@@ -85,22 +85,21 @@ const getPublicTags = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "tags_fetched_successfully",
-      data: tags,
+      translationKey: "venue_types_fetched_successfully",
+      data: venuetypes,
       meta: generateMeta(page, limit, meta.total),
     });
   } catch (error) {
-    const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
-      statusCode: readableError.statusCode,
-      translationKey: readableError.message,
-      error,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
     });
   }
 };
 
-const updateTag = async (req, res) => {
+const updateVenueType = async (req, res) => {
   const { id } = req.params;
   const { title, status, pinned } = req.body;
 
@@ -113,7 +112,7 @@ const updateTag = async (req, res) => {
     return;
 
   try {
-    const updated = await tagsService.updateTag(id, {
+    const updated = await venuetypesService.updateVenueType(id, {
       title,
       status,
       pinned,
@@ -123,14 +122,14 @@ const updateTag = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "tag_not_found",
+        translationKey: "venue_type_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "tag_updated_successfully",
+      translationKey: "venue_type_updated_successfully",
       data: updated,
     });
   } catch (error) {
@@ -144,7 +143,7 @@ const updateTag = async (req, res) => {
   }
 };
 
-const deleteTag = async (req, res) => {
+const deleteVenueType = async (req, res) => {
   const { id } = req.params;
 
   if (
@@ -156,35 +155,34 @@ const deleteTag = async (req, res) => {
     return;
 
   try {
-    const deleted = await tagsService.deleteTag(id);
+    const deleted = await venuetypesService.deleteVenueType(id);
     if (!deleted) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "tag_not_found",
+        translationKey: "venue_type_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "tag_deleted_successfully",
+      translationKey: "venue_type_deleted_successfully",
     });
   } catch (error) {
-    const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
-      statusCode: readableError.statusCode,
-      translationKey: readableError.message,
-      error,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
     });
   }
 };
 
 module.exports = {
-  createTag,
-  getTags,
-  getPublicTags,
-  updateTag,
-  deleteTag,
+  createVenueType,
+  getVenueTypes,
+  getPublicVenueTypes,
+  updateVenueType,
+  deleteVenueType,
 };

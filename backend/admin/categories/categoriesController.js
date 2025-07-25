@@ -40,7 +40,7 @@ const createCategory = async (req, res) => {
 
 const getCategories = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status } = req.query;
+  const { keyword, status, pinned } = req.query;
 
   try {
     const { categories, meta } = await categoriesService.getCategories({
@@ -48,6 +48,7 @@ const getCategories = async (req, res) => {
       limit,
       keyword,
       status,
+      pinned
     });
 
     return sendResponse({

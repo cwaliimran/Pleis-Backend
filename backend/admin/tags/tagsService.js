@@ -5,40 +5,27 @@ const createTag = async ({ title, status }) => {
   return await tagRepo.createTag({ title, status });
 };
 
-const getTags = async ({ page, limit, keyword, status }) => {
+const getTags = async ({ page, limit, keyword, status, pinned }) => {
   const query = {};
   if (status) query.status = status;
   if (keyword) {
-    query.$or = [
-      { title: { $regex: keyword, $options: "i" } },
-    ];
+    query.$or = [{ title: { $regex: keyword, $options: "i" } }];
+  }
+  if (pinned !== undefined) {
+   query.pinned = pinned;
   }
 
-  // Always get pinned tags first
-  const pinnedQuery = { ...query, pinned: true };
-  const unpinnedQuery = { ...query, $or: [
-      { pinned: false },
-      { pinned: null },
-      { pinned: { $exists: false } }
-    ]
-  };
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  // Only skip when keyword is applied
-  const skip = keyword ? (limit === 0 ? 0 : (page - 1) * limit) : 0;
-
-  // Get pinned tags (no skip/limit), then unpinned tags (with skip/limit if no keyword)
-  const [pinnedTags, unpinnedTags, totalFiltered, total, active, inactive, deleted] = await Promise.all([
-    tagRepo.getTagsWithFilters(pinnedQuery, 0, 0), // all pinned
-    tagRepo.getTagsWithFilters(unpinnedQuery, skip, limit === 0 ? 0 : limit), // paginated unpinned
-    tagRepo.countTags(query),
-    tagRepo.countTags({}),
-    tagRepo.countTags({ status: "active" }),
-    tagRepo.countTags({ status: "inactive" }),
-    tagRepo.countTags({ status: "deleted" }),
-  ]);
-
-  // Combine pinned tags on top
-  const tags = [...pinnedTags, ...unpinnedTags];
+  const [tags, totalFiltered, total, active, inactive, deleted] =
+    await Promise.all([
+      tagRepo.getTagsWithFilters(query, skip, limit === 0 ? 0 : limit),
+      tagRepo.countTags(query),
+      tagRepo.countTags({}),
+      tagRepo.countTags({ status: "active" }),
+      tagRepo.countTags({ status: "inactive" }),
+      tagRepo.countTags({ status: "deleted" }),
+    ]);
 
   return {
     tags,
