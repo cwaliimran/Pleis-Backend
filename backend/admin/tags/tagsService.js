@@ -1,8 +1,8 @@
 // services/tagService.js
 const tagRepo = require("./tagsRepository");
 
-const createTag = async ({ title, description, status }) => {
-  return await tagRepo.createTag({ title, description, status });
+const createTag = async ({ title, status }) => {
+  return await tagRepo.createTag({ title, status });
 };
 
 const getTags = async ({ page, limit, keyword, status }) => {
@@ -14,15 +14,31 @@ const getTags = async ({ page, limit, keyword, status }) => {
     ];
   }
 
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  // Always get pinned tags first
+  const pinnedQuery = { ...query, pinned: true };
+  const unpinnedQuery = { ...query, $or: [
+      { pinned: false },
+      { pinned: null },
+      { pinned: { $exists: false } }
+    ]
+  };
 
-  const [tags, totalFiltered, total, active, inactive] = await Promise.all([
-    tagRepo.getTagsWithFilters(query, skip, limit === 0 ? 0 : limit),
+  // Only skip when keyword is applied
+  const skip = keyword ? (limit === 0 ? 0 : (page - 1) * limit) : 0;
+
+  // Get pinned tags (no skip/limit), then unpinned tags (with skip/limit if no keyword)
+  const [pinnedTags, unpinnedTags, totalFiltered, total, active, inactive, deleted] = await Promise.all([
+    tagRepo.getTagsWithFilters(pinnedQuery, 0, 0), // all pinned
+    tagRepo.getTagsWithFilters(unpinnedQuery, skip, limit === 0 ? 0 : limit), // paginated unpinned
     tagRepo.countTags(query),
     tagRepo.countTags({}),
     tagRepo.countTags({ status: "active" }),
     tagRepo.countTags({ status: "inactive" }),
+    tagRepo.countTags({ status: "deleted" }),
   ]);
+
+  // Combine pinned tags on top
+  const tags = [...pinnedTags, ...unpinnedTags];
 
   return {
     tags,
@@ -30,7 +46,7 @@ const getTags = async ({ page, limit, keyword, status }) => {
       page,
       limit,
       total: totalFiltered,
-      tagsCount: { total, active, inactive },
+      tagsCount: { total, active, inactive, deleted },
     },
   };
 };
@@ -40,16 +56,30 @@ const getPublicTags = async ({ page, limit, keyword }) => {
   if (keyword) {
     query.$or = [
       { title: { $regex: keyword, $options: "i" } },
-      { description: { $regex: keyword, $options: "i" } },
     ];
   }
 
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  // Always get pinned tags first
+  const pinnedQuery = { ...query, pinned: true };
+  const unpinnedQuery = { ...query, $or: [
+      { pinned: false },
+      { pinned: null },
+      { pinned: { $exists: false } }
+    ]
+  };
 
-  const [tags, totalFiltered] = await Promise.all([
-    tagRepo.getTagsWithFilters(query, skip, limit === 0 ? 0 : limit),
+  // Only skip when keyword is applied
+  const skip = keyword ? (limit === 0 ? 0 : (page - 1) * limit) : 0;
+
+  // Get pinned tags (no skip/limit), then unpinned tags (with skip/limit if no keyword)
+  const [pinnedTags, unpinnedTags, totalFiltered] = await Promise.all([
+    tagRepo.getTagsWithFilters(pinnedQuery, 0, 0), // all pinned
+    tagRepo.getTagsWithFilters(unpinnedQuery, skip, limit === 0 ? 0 : limit), // paginated unpinned
     tagRepo.countTags(query),
   ]);
+
+  // Combine pinned tags on top
+  const tags = [...pinnedTags, ...unpinnedTags];
 
   return {
     tags,
@@ -62,18 +92,25 @@ const getPublicTags = async ({ page, limit, keyword }) => {
 };
 
 const updateTag = async (id, data) => {
-  const tag = await tagRepo.findTagById(id);
-  if (!tag) return null;
+  // Only update provided fields
+  const updateData = {
+    ...(data.title !== undefined && { title: data.title }),
+    ...(data.pinned !== undefined && { pinned: data.pinned }),
+    ...(data.status !== undefined && { status: data.status }),
+  };
 
-  const updated = await tagRepo.updateTagData(tag, data);
+  if (Object.keys(updateData).length === 0) {
+    const tag = await tagRepo.findTagById(id);
+    return tag;
+  }
+
+  const updated = await tagRepo.findTagByIdAndUpdate(id, updateData);
   return updated;
 };
 
 const deleteTag = async (id) => {
-  const tag = await tagRepo.findTagById(id);
-  if (!tag) return null;
-
-  await tagRepo.deleteTagById(tag);
+  const updated = await tagRepo.findTagByIdAndUpdate(id, { status: "deleted" });
+  if (!updated) return null;
   return true;
 };
 

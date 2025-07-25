@@ -36,6 +36,11 @@ const deleteCategoryById = async (category) => {
   return await category.deleteOne();
 };
 
+//findByIdAndUpdate
+const findByIdAndUpdate = async (id, data) => {
+  return Categories.findByIdAndUpdate(id, data, { new: true });
+};
+
 module.exports = {
   createCategory,
   getCategoriesWithFilters,
@@ -43,4 +48,5 @@ module.exports = {
   findCategoryById,
   updateCategoryData,
   deleteCategoryById,
+  findByIdAndUpdate,
 };

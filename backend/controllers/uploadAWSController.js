@@ -124,7 +124,7 @@ const uploadFilesToS3 = async (files) => {
 
     return parallelUploads3.done().then(() => ({
       file: params.Key,
-      fileUrl: `${process.env.S3_BASE_URL}/${params.Key}`,
+      fileUrl: `${process.env.S3_BASE_URL}${params.Key}`,
       fileExtension: path.extname(params.Key),
       // fileSize: (compressedBuffer.length / 1024).toFixed(2) + ' KB', // Convert bytes to KB and format to 2 decimal places
     }));

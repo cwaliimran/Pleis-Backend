@@ -36,6 +36,11 @@ const deleteTagById = async (tag) => {
   return await tag.deleteOne();
 };
 
+//findTagByIdAndUpdate
+const findTagByIdAndUpdate = async (id, data) => {
+  return Tags.findByIdAndUpdate(id, data, { new: true });
+};
+
 module.exports = {
   createTag,
   getTagsWithFilters,
@@ -43,4 +48,5 @@ module.exports = {
   findTagById,
   updateTagData,
   deleteTagById,
+  findTagByIdAndUpdate,
 };

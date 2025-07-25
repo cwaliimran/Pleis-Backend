@@ -539,7 +539,7 @@ userSchema.methods.toJSON = function (userData) {
   const userObject = userData ? userData : user.toObject();
 
   // Attach base URL to document images
-  const baseUrl = `${process.env.S3_BASE_URL}/`;
+  const baseUrl = `${process.env.S3_BASE_URL}`;
 
   // Attach base URL to profileIcon
   if (userObject.profileIcon && !userObject.profileIcon.startsWith("http")) {
@@ -559,7 +559,7 @@ userSchema.methods.toJSON = function (userData) {
   return userObject;
 };
 userSchema.methods.addBaseUrlToProfileIcon = function (user) {
-  const baseUrl = `${process.env.S3_BASE_URL}/`;
+  const baseUrl = `${process.env.S3_BASE_URL}`;
   if (user.profileIcon && !user.profileIcon.startsWith("http")) {
     user.profileIcon = baseUrl + user.profileIcon;
   }

@@ -7,16 +7,16 @@ const tagsSchema = new mongoose.Schema(
       trim: true,
       required: true,
       default: "",
-    },
-    description: {
-      type: String,
-      trim: true,
-      default: "",
+      unique: true,
     },
     status: {
       type: String,
-      enum: ["active", "inactive"],
+      enum: ["active", "inactive", "deleted"],
       default: "active",
+    },
+    pinned: {
+      type: Boolean,
+      default: false,
     },
   },
   {

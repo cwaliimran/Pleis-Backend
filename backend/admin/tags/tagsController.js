@@ -3,20 +3,21 @@ const {
   parsePaginationParams,
   validateParams,
   generateMeta,
+  getReadableErrorMessage,
 } = require("../../helperUtils/responseUtil");
 
 const tagsService = require("./tagsService");
 
 const createTag = async (req, res) => {
-  const { title, description, status = "active" } = req.body;
+  const { title, status = "active", pinned = false } = req.body;
 
   if (!validateParams(req, res, { rawData: ["title"] })) return;
 
   try {
     const tag = await tagsService.createTag({
       title,
-      description,
-      status,
+      status: "active",
+      pinned: false,
     });
 
     return sendResponse({
@@ -26,14 +27,12 @@ const createTag = async (req, res) => {
       data: tag,
     });
   } catch (error) {
+    const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
-      statusCode: error.code === 11000 ? 400 : 500,
-      translationKey:
-        error.code === 11000
-          ? "tag_title_unique_violation"
-          : "internal_server",
-      error: error.message,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
     });
   }
 };
@@ -55,14 +54,18 @@ const getTags = async (req, res) => {
       statusCode: 200,
       translationKey: "tags_fetched_successfully",
       data: tags,
-      meta: generateMeta(page, limit, meta.total, meta.tagsCount),
+      meta: {
+        ...generateMeta(page, limit, meta.total),
+        tagsCount: meta.tagsCount,
+      },
     });
   } catch (error) {
+    const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: error.message,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
     });
   }
 };
@@ -86,18 +89,19 @@ const getPublicTags = async (req, res) => {
       meta: generateMeta(page, limit, meta.total),
     });
   } catch (error) {
+    const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: error.message,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
     });
   }
 };
 
 const updateTag = async (req, res) => {
   const { id } = req.params;
-  const { title, description, status } = req.body;
+  const { title, status, pinned } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -110,8 +114,8 @@ const updateTag = async (req, res) => {
   try {
     const updated = await tagsService.updateTag(id, {
       title,
-      description,
-      ...(status !== undefined && { status }),
+      status,
+      pinned,
     });
 
     if (!updated) {
@@ -129,11 +133,12 @@ const updateTag = async (req, res) => {
       data: updated,
     });
   } catch (error) {
+    const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
-      statusCode: error.name === "ValidationError" ? 400 : 500,
-      translationKey: "internal_server",
-      error: error.message,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
     });
   }
 };
@@ -165,11 +170,12 @@ const deleteTag = async (req, res) => {
       translationKey: "tag_deleted_successfully",
     });
   } catch (error) {
+    const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: error.message,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
     });
   }
 };

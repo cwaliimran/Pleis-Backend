@@ -34,7 +34,7 @@ languageSchema.methods.toJSON = function () {
   const languageObject = language.toObject();
 
   // Attach base URL to flag
-  const baseUrl = `${process.env.S3_BASE_URL}/`;
+  const baseUrl = `${process.env.S3_BASE_URL}`;
   if (languageObject.flag && !languageObject.flag.startsWith("http")) {
     languageObject.flag = `${baseUrl}${languageObject.flag}`;
   } else if (!languageObject.flag) {

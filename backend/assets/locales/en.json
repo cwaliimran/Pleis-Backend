@@ -111,7 +111,6 @@
   "supplier_not_found": "Supplier not found",
   "supplier_created_successfully": "Supplier created successfully",
   "suppliers_fetched_successfully": "Suppliers fetched successfully",
-  "public_suppliers_fetched_successfully": "Public suppliers fetched successfully",
   "supplier_updated_successfully": "Supplier updated successfully",
   "supplier_deleted_successfully": "Supplier deleted successfully",
   "language_created_successfully": "Language created successfully",
@@ -154,7 +153,17 @@
   "tag_not_found": "Tag not found",
   "tag_updated_successfully": "Tag updated successfully",
   "tag_deleted_successfully": "Tag deleted successfully",
-   "pending_approval": "Your account is awaiting admin review. You will be notified once it's approved.",
-  "rejected_verification": "Your account was reviewed but not approved. Please check the email or contact support."
-
+  "pending_approval": "Your account is awaiting admin review. You will be notified once it's approved.",
+  "rejected_verification": "Your account was reviewed but not approved. Please check the email or contact support.",
+  "category_created_successfully": "Category created successfully",
+  "categories_fetched_successfully": "Categories fetched successfully",
+  "category_not_found": "Category not found",
+  "category_updated_successfully": "Category updated successfully",
+  "category_deleted_successfully": "Category deleted successfully",
+  "organization_created_successfully": "Organization created successfully",
+  "organizations_fetched_successfully": "Organizations fetched successfully",
+  "public_organizations_fetched_successfully": "Public organizations fetched successfully",
+  "organization_not_found": "Organization not found",
+  "organization_updated_successfully": "Organization updated successfully",
+  "organization_deleted_successfully": "Organization deleted successfully"
 }

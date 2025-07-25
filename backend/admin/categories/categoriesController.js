@@ -3,20 +3,22 @@ const {
   parsePaginationParams,
   validateParams,
   generateMeta,
+  getReadableErrorMessage,
 } = require("../../helperUtils/responseUtil");
 
 const categoriesService = require("./categoriesService");
 
 const createCategory = async (req, res) => {
-  const { title, description, status = "active" } = req.body;
+  const { image, title, status = "active" } = req.body;
 
   if (!validateParams(req, res, { rawData: ["title"] })) return;
 
   try {
     const category = await categoriesService.createCategory({
+      image,
       title,
-      description,
-      status,
+      status: "active",
+      pinned: false,
     });
 
     return sendResponse({
@@ -26,14 +28,12 @@ const createCategory = async (req, res) => {
       data: category,
     });
   } catch (error) {
+    const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
-      statusCode: error.code === 11000 ? 400 : 500,
-      translationKey:
-        error.code === 11000
-          ? "category_title_unique_violation"
-          : "internal_server",
-      error: error.message,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
     });
   }
 };
@@ -55,7 +55,10 @@ const getCategories = async (req, res) => {
       statusCode: 200,
       translationKey: "categories_fetched_successfully",
       data: categories,
-      meta: generateMeta(page, limit, meta.total, meta.categoriesCount),
+      meta: {
+        ...generateMeta(page, limit, meta.total),
+        categoriesCount: meta.categoriesCount,
+      },
     });
   } catch (error) {
     return sendResponse({
@@ -97,7 +100,7 @@ const getPublicCategories = async (req, res) => {
 
 const updateCategory = async (req, res) => {
   const { id } = req.params;
-  const { title, description, status } = req.body;
+  const { title, status, pinned } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -110,8 +113,8 @@ const updateCategory = async (req, res) => {
   try {
     const updated = await categoriesService.updateCategory(id, {
       title,
-      description,
-      ...(status !== undefined && { status }),
+      status,
+      pinned,
     });
 
     if (!updated) {
@@ -129,11 +132,12 @@ const updateCategory = async (req, res) => {
       data: updated,
     });
   } catch (error) {
+    const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
-      statusCode: error.name === "ValidationError" ? 400 : 500,
-      translationKey: "internal_server",
-      error: error.message,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
     });
   }
 };

@@ -1,8 +1,8 @@
 // services/categoryService.js
 const categoryRepo = require("./categoriesRepository");
 
-const createCategory = async ({ title, description, status }) => {
-  return await categoryRepo.createCategory({ title, description, status });
+const createCategory = async ({image, title, status, pinned }) => {
+  return await categoryRepo.createCategory({ image,title, status, pinned });
 };
 
 const getCategories = async ({ page, limit, keyword, status }) => {
@@ -14,15 +14,33 @@ const getCategories = async ({ page, limit, keyword, status }) => {
     ];
   }
 
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  // Always get pinned categories first
+  const pinnedQuery = { ...query, pinned: true };
+  const unpinnedQuery = { 
+    ...query, 
+    $or: [
+      { pinned: false },
+      { pinned: null },
+      { pinned: { $exists: false } }
+    ]
+  };
 
-  const [categories, totalFiltered, total, active, inactive] = await Promise.all([
-    categoryRepo.getCategoriesWithFilters(query, skip, limit === 0 ? 0 : limit),
+  // Only skip when keyword is applied
+  const skip = keyword ? (limit === 0 ? 0 : (page - 1) * limit) : 0;
+
+  // Get pinned categories (no skip/limit), then unpinned categories (with skip/limit if no keyword)
+  const [pinnedCategories, unpinnedCategories, totalFiltered, total, active, inactive, deleted] = await Promise.all([
+    categoryRepo.getCategoriesWithFilters(pinnedQuery, 0, 0), // all pinned
+    categoryRepo.getCategoriesWithFilters(unpinnedQuery, skip, limit === 0 ? 0 : limit), // paginated unpinned
     categoryRepo.countCategories(query),
     categoryRepo.countCategories({}),
     categoryRepo.countCategories({ status: "active" }),
     categoryRepo.countCategories({ status: "inactive" }),
+    categoryRepo.countCategories({ status: "deleted" }),
   ]);
+
+  // Combine pinned categories on top
+  const categories = [...pinnedCategories, ...unpinnedCategories];
 
   return {
     categories,
@@ -30,26 +48,44 @@ const getCategories = async ({ page, limit, keyword, status }) => {
       page,
       limit,
       total: totalFiltered,
-      categoriesCount: { total, active, inactive },
+      categoriesCount: { total, active, inactive, deleted },
     },
   };
 };
 
 const getPublicCategories = async ({ page, limit, keyword }) => {
-  const query = { status: "active" };
+  const baseQuery = { status: "active" };
   if (keyword) {
-    query.$or = [
+    baseQuery.$or = [
       { title: { $regex: keyword, $options: "i" } },
       { description: { $regex: keyword, $options: "i" } },
     ];
   }
 
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  // Always get pinned categories first
+  const pinnedQuery = { ...baseQuery, pinned: true };
+  const unpinnedQuery = { 
+    ...baseQuery, 
+    $or: [
+      ...(baseQuery.$or || []),
+      { pinned: false },
+      { pinned: null },
+      { pinned: { $exists: false } }
+    ]
+  };
 
-  const [categories, totalFiltered] = await Promise.all([
-    categoryRepo.getCategoriesWithFilters(query, skip, limit === 0 ? 0 : limit),
-    categoryRepo.countCategories(query),
+  // Only skip when keyword is applied
+  const skip = keyword ? (limit === 0 ? 0 : (page - 1) * limit) : 0;
+
+  // Get pinned categories (no skip/limit), then unpinned categories (with skip/limit if no keyword)
+  const [pinnedCategories, unpinnedCategories, totalFiltered] = await Promise.all([
+    categoryRepo.getCategoriesWithFilters(pinnedQuery, 0, 0), // all pinned
+    categoryRepo.getCategoriesWithFilters(unpinnedQuery, skip, limit === 0 ? 0 : limit), // paginated unpinned
+    categoryRepo.countCategories(baseQuery),
   ]);
+
+  // Combine pinned categories on top
+  const categories = [...pinnedCategories, ...unpinnedCategories];
 
   return {
     categories,
@@ -62,18 +98,26 @@ const getPublicCategories = async ({ page, limit, keyword }) => {
 };
 
 const updateCategory = async (id, data) => {
-  const category = await categoryRepo.findCategoryById(id);
-  if (!category) return null;
+  // Only update provided fields
+  const updateData = {
+    ...(data.title !== undefined && { title: data.title }),
+    ...(data.image !== undefined && { image: data.image }),
+    ...(data.status !== undefined && { status: data.status }),
+    ...(data.pinned !== undefined && { pinned: data.pinned }),
+  };
 
-  const updated = await categoryRepo.updateCategoryData(category, data);
+  if (Object.keys(updateData).length === 0) {
+    const category = await categoryRepo.findCategoryById(id);
+    return category;
+  }
+
+  const updated = await categoryRepo.findByIdAndUpdate(id, updateData);
   return updated;
 };
 
 const deleteCategory = async (id) => {
-  const category = await categoryRepo.findCategoryById(id);
-  if (!category) return null;
-
-  await categoryRepo.deleteCategoryById(category);
+  const updated = await categoryRepo.findByIdAndUpdate(id, { status: "deleted" });
+  if (!updated) return null;
   return true;
 };
 
