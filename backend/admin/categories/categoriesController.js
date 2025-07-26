@@ -56,10 +56,7 @@ const getCategories = async (req, res) => {
       statusCode: 200,
       translationKey: "categories_fetched_successfully",
       data: categories,
-      meta: {
-        ...generateMeta(page, limit, meta.total),
-        categoriesCount: meta.categoriesCount,
-      },
+      meta
     });
   } catch (error) {
     return sendResponse({
@@ -74,7 +71,6 @@ const getCategories = async (req, res) => {
 const getPublicCategories = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword } = req.query;
-
   try {
     const { categories, meta } = await categoriesService.getPublicCategories({
       page,
@@ -87,14 +83,15 @@ const getPublicCategories = async (req, res) => {
       statusCode: 200,
       translationKey: "categories_fetched_successfully",
       data: categories,
-      meta: generateMeta(page, limit, meta.total),
+      meta,
     });
   } catch (error) {
+    const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: error.message,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
     });
   }
 };

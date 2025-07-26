@@ -12,19 +12,18 @@ const auth = require("../../middlewares/authMiddleware");
 
 const router = express.Router();
 
-//public routes
-router.get("/public", getPublicCategories);
-
 router.use(auth);
 
 // Create a rate limiter for Categories
 const apiRateLimiter = createRateLimiter("Categories");
+//public routes
+router.get("/global", apiRateLimiter, getPublicCategories);
 
 // Create a new category
 router.post("/", admin, createCategory);
 
 // Get all categories with pagination
-router.get("/", apiRateLimiter, getCategories);
+router.get("/", getCategories);
 
 // Update an existing category
 router.put("/:id", admin, updateCategory);

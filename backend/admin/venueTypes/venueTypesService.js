@@ -1,95 +1,110 @@
 // services/venuetypeService.js
+const { generateMeta } = require("../../helperUtils/responseUtil");
 const venuetypeRepo = require("./venuetypesRepository");
 
 const createVenueType = async ({ image, title, status, pinned }) => {
   return await venuetypeRepo.createVenueType({ image, title, status, pinned });
 };
 const getVenueTypes = async ({ page, limit, keyword, status, pinned }) => {
-  const query = {};
-  if (status) query.status = status;
+  const andConditions = [];
+
+  if (status) {
+    andConditions.push({ status });
+  }
+
   if (keyword) {
-    query.$or = [{ title: { $regex: keyword, $options: "i" } }];
+    andConditions.push({
+      $or: [{ title: { $regex: keyword, $options: "i" } }],
+    });
   }
+
   if (pinned !== undefined) {
-    query.$or = [
-      ...(query.$or || []),
-      { pinned: false },
-      { pinned: null },
-      { pinned: { $exists: false } }
-    ];
+    if (pinned === true) {
+      andConditions.push({ pinned: true });
+    } else {
+      andConditions.push({
+        $or: [
+          { pinned: false },
+          { pinned: null },
+          { pinned: { $exists: false } },
+        ],
+      });
+    }
   }
+
+  const query = andConditions.length > 0 ? { $and: andConditions } : {};
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const [venuetypes, totalFiltered, total, active, inactive, deleted] =
     await Promise.all([
-      venuetypeRepo.getVenueTypesWithFilters(query, skip, limit === 0 ? 0 : limit),
+      venuetypeRepo.getVenueTypesWithFilters(
+        query,
+        skip,
+        limit === 0 ? 0 : limit
+      ),
       venuetypeRepo.countVenueTypes(query),
       venuetypeRepo.countVenueTypes({}),
       venuetypeRepo.countVenueTypes({ status: "active" }),
       venuetypeRepo.countVenueTypes({ status: "inactive" }),
       venuetypeRepo.countVenueTypes({ status: "deleted" }),
     ]);
-
+  let meta = generateMeta(page, limit, totalFiltered);
+  meta.venueTypesCount = { total, active, inactive, deleted };
   return {
     venuetypes,
-    meta: {
-      page,
-      limit,
-      total: totalFiltered,
-      venuetypesCount: { total, active, inactive, deleted },
-    },
+    meta,
   };
 };
 
 const getPublicVenueTypes = async ({ page, limit, keyword }) => {
-  const baseQuery = { status: "active" };
+  const baseFilters = [{ status: "active" }];
+
   if (keyword) {
-    baseQuery.$or = [
-      { title: { $regex: keyword, $options: "i" } },
-      { description: { $regex: keyword, $options: "i" } },
-    ];
+    baseFilters.push({
+      $or: [
+        { title: { $regex: keyword, $options: "i" } },
+        // Add more fields here if needed
+      ],
+    });
   }
 
-  // Always get pinned venuetypes first
+  const baseQuery = baseFilters.length ? { $and: baseFilters } : {};
+
   const pinnedQuery = { ...baseQuery, pinned: true };
+
+  const unpinnedConditions = {
+    $or: [{ pinned: false }, { pinned: null }, { pinned: { $exists: false } }],
+  };
   const unpinnedQuery = {
-    ...baseQuery,
-    $or: [
-      ...(baseQuery.$or || []),
-      { pinned: false },
-      { pinned: null },
-      { pinned: { $exists: false } },
-    ],
+    $and: [...(baseQuery.$and || []), unpinnedConditions],
   };
 
-  // Only skip when keyword is applied
-  const skip = keyword ? (limit === 0 ? 0 : (page - 1) * limit) : 0;
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  // Get pinned venuetypes (no skip/limit), then unpinned venuetypes (with skip/limit if no keyword)
   const [pinnedVenueTypes, unpinnedVenueTypes, totalFiltered] =
     await Promise.all([
-      venuetypeRepo.getVenueTypesWithFilters(pinnedQuery, 0, 0), // all pinned
+      page === 1
+        ? venuetypeRepo.getVenueTypesWithFilters(pinnedQuery, 0, 0)
+        : [],
       venuetypeRepo.getVenueTypesWithFilters(
         unpinnedQuery,
         skip,
         limit === 0 ? 0 : limit
-      ), // paginated unpinned
+      ),
       venuetypeRepo.countVenueTypes(baseQuery),
     ]);
+
 
   const venuetypes = {
     pinned: pinnedVenueTypes,
     unpinned: unpinnedVenueTypes,
   };
-
+  let meta = generateMeta(page, limit, totalFiltered);
+  
   return {
     venuetypes,
-    meta: {
-      page,
-      limit,
-      total: totalFiltered,
-    },
+    meta,
   };
 };
 

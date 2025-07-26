@@ -56,10 +56,7 @@ const getVenueTypes = async (req, res) => {
       statusCode: 200,
       translationKey: "venue_types_fetched_successfully",
       data: venuetypes,
-      meta: {
-        ...generateMeta(page, limit, meta.total),
-        venuetypesCount: meta.venuetypesCount,
-      },
+      meta,
     });
   } catch (error) {
     return sendResponse({
@@ -74,7 +71,6 @@ const getVenueTypes = async (req, res) => {
 const getPublicVenueTypes = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword } = req.query;
-
   try {
     const { venuetypes, meta } = await venuetypesService.getPublicVenueTypes({
       page,
@@ -87,7 +83,7 @@ const getPublicVenueTypes = async (req, res) => {
       statusCode: 200,
       translationKey: "venue_types_fetched_successfully",
       data: venuetypes,
-      meta: generateMeta(page, limit, meta.total),
+      meta
     });
   } catch (error) {
     return sendResponse({

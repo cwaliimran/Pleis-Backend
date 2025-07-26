@@ -1,11 +1,11 @@
-// services/categoryService.js
+// services/venueService.js
 const { generateMeta } = require("../../helperUtils/responseUtil");
-const categoryRepo = require("./categoriesRepository");
+const venueRepo = require("./venuesRepository");
 
-const createCategory = async ({ image, title, status, pinned }) => {
-  return await categoryRepo.createCategory({ image, title, status, pinned });
+const createVenue = async (data) => {
+  return await venueRepo.createVenue(data);
 };
-const getCategories = async ({ page, limit, keyword, status, pinned }) => {
+const getVenues = async ({ page, limit, keyword, status, pinned }) => {
   const query = {};
   if (status) query.status = status;
   if (keyword) {
@@ -22,28 +22,28 @@ const getCategories = async ({ page, limit, keyword, status, pinned }) => {
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [categories, totalFiltered, total, active, inactive, deleted] =
+  const [venues, totalFiltered, total, active, inactive, deleted] =
     await Promise.all([
-      categoryRepo.getCategoriesWithFilters(
+      venueRepo.getVenuesWithFilters(
         query,
         skip,
         limit === 0 ? 0 : limit
       ),
-      categoryRepo.countCategories(query),
-      categoryRepo.countCategories({}),
-      categoryRepo.countCategories({ status: "active" }),
-      categoryRepo.countCategories({ status: "inactive" }),
-      categoryRepo.countCategories({ status: "deleted" }),
+      venueRepo.countVenues(query),
+      venueRepo.countVenues({}),
+      venueRepo.countVenues({ status: "active" }),
+      venueRepo.countVenues({ status: "inactive" }),
+      venueRepo.countVenues({ status: "deleted" }),
     ]);
 
   let meta = generateMeta(page, limit, totalFiltered);
-  meta.categoriesCount = { total, active, inactive, deleted };
+  meta.venuesCount = { total, active, inactive, deleted };
   return {
-    categories,
+    venues,
     meta,
   };
 };
-const getPublicCategories = async ({ page, limit, keyword }) => {
+const getPublicVenues = async ({ page, limit, keyword }) => {
   const baseFilters = [{ status: "active" }];
 
   if (keyword) {
@@ -68,25 +68,25 @@ const getPublicCategories = async ({ page, limit, keyword }) => {
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [pinnedCategories, unpinnedCategories, totalFiltered] =
+  const [pinnedVenues, unpinnedVenues, totalFiltered] =
     await Promise.all([
       page === 1
-        ? categoryRepo.getCategoriesWithFilters(pinnedQuery, 0, 0)
+        ? venueRepo.getVenuesWithFilters(pinnedQuery, 0, 0)
         : [],
-      categoryRepo.getCategoriesWithFilters(
+      venueRepo.getVenuesWithFilters(
         unpinnedQuery,
         skip,
         limit === 0 ? 0 : limit
       ),
-      categoryRepo.countCategories(baseQuery),
+      venueRepo.countVenues(baseQuery),
     ]);
 
   const totalPages =
     limit && totalFiltered != null ? Math.ceil(totalFiltered / limit) : 1;
 
-  const categories = {
-    pinned: pinnedCategories,
-    unpinned: unpinnedCategories,
+  const venues = {
+    pinned: pinnedVenues,
+    unpinned: unpinnedVenues,
   };
   let meta = {
     page,
@@ -95,31 +95,36 @@ const getPublicCategories = async ({ page, limit, keyword }) => {
     total: totalFiltered,
   };
   return {
-    categories,
+    venues,
     meta,
   };
 };
 
-const updateCategory = async (id, data) => {
+const updateVenue = async (id, data) => {
   // Only update provided fields
   const updateData = {
     ...(data.title !== undefined && { title: data.title }),
+    ...(data.floorPlan !== undefined && { floorPlan: data.floorPlan }),
+    ...(data.venueType !== undefined && { venueType: data.venueType }),
+    ...(data.organization !== undefined && { organization: data.organization }),
+    ...(data.isPrimary !== undefined && { isPrimary: data.isPrimary }),
+    ...(data.location !== undefined && { location: data.location }),
     ...(data.image !== undefined && { image: data.image }),
     ...(data.status !== undefined && { status: data.status }),
     ...(data.pinned !== undefined && { pinned: data.pinned }),
   };
 
   if (Object.keys(updateData).length === 0) {
-    const category = await categoryRepo.findCategoryById(id);
-    return category;
+    const venue = await venueRepo.findVenueById(id);
+    return venue;
   }
 
-  const updated = await categoryRepo.findByIdAndUpdate(id, updateData);
+  const updated = await venueRepo.findByIdAndUpdate(id, updateData);
   return updated;
 };
 
-const deleteCategory = async (id) => {
-  const updated = await categoryRepo.findByIdAndUpdate(id, {
+const deleteVenue = async (id) => {
+  const updated = await venueRepo.findByIdAndUpdate(id, {
     status: "deleted",
   });
   if (!updated) return null;
@@ -127,9 +132,8 @@ const deleteCategory = async (id) => {
 };
 
 module.exports = {
-  createCategory,
-  getCategories,
-  updateCategory,
-  deleteCategory,
-  getPublicCategories,
+  createVenue,
+  getVenues,
+  updateVenue,
+  deleteVenue,
 };

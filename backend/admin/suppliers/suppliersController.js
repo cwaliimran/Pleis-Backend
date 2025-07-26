@@ -55,7 +55,7 @@ const getSuppliers = async (req, res) => {
       statusCode: 200,
       translationKey: "suppliers_fetched_successfully",
       data: suppliers,
-      meta: generateMeta(page, limit, meta.total, meta.tagsCount),
+      meta
     });
   } catch (error) {
     return sendResponse({
@@ -83,7 +83,7 @@ const getPublicSuppliers = async (req, res) => {
       statusCode: 200,
       translationKey: "suppliers_fetched_successfully",
       data: suppliers,
-      meta: generateMeta(page, limit, meta.total),
+      meta
     });
   } catch (error) {
     return sendResponse({

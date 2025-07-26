@@ -12,19 +12,19 @@ const auth = require("../../middlewares/authMiddleware");
 
 const router = express.Router();
 
-//public routes
-router.get("/public", getPublicTags);
-
 router.use(auth);
 
 // Create a rate limiter for Tags
 const apiRateLimiter = createRateLimiter("Tags");
 
+//public routes
+router.get("/global", apiRateLimiter, getPublicTags);
+
 // Create a new tag
 router.post("/", admin, createTag);
 
 // Get all tags with pagination
-router.get("/", apiRateLimiter, getTags);
+router.get("/", getTags);
 
 // Update an existing tag
 router.put("/:id", admin, updateTag);

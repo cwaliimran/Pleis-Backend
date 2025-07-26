@@ -107,7 +107,6 @@
   "image_size_compress": "Image size compress",
   "missing_time_field": "Missing time field",
   "company_details_saved": "Company details saved",
-  "Location.coordinates must be [lng, lat]": "Location coordinates must be [lng, lat]",
   "supplier_not_found": "Supplier not found",
   "supplier_created_successfully": "Supplier created successfully",
   "suppliers_fetched_successfully": "Suppliers fetched successfully",
@@ -170,5 +169,11 @@
   "venue_type_not_found": "Venue type not found",
   "venue_type_updated_successfully": "Venue type updated successfully",
   "venue_type_deleted_successfully": "Venue type deleted successfully",
-  "venue_types_fetched_successfully": "Venue types fetched successfully"
+  "venue_types_fetched_successfully": "Venue types fetched successfully",
+  "venue_creation_failed": "Venue creation failed",
+  "venue_created_successfully": "Venue created successfully",
+  "venues_fetched_successfully": "Venues fetched successfully",
+  "venue_not_found": "Venue not found",
+  "venue_updated_successfully": "Venue updated successfully",
+  "venue_deleted_successfully": "Venue deleted successfully"
 }

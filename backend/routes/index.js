@@ -13,10 +13,14 @@ router.use("/languages", require("./languageRoutes"));
 router.use("/home", require("./homeRoutes"));
 router.use("/util", require("./dbRoutes"));
 
-//public routes
-router.use("/suppliers", require("../admin/suppliers/suppliersRoutes"));
+//organizer routes
+router.use("/organizations", require("../organizer/organizations/organizationRoutes"));
 
+//global routes
+router.use("/suppliers", require("../admin/suppliers/suppliersRoutes"));
 router.use("/tags", require("../admin/tags/tagsRoutes"));
+router.use("/categories", require("../admin/categories/categoriesRoutes"));
+router.use("/venue-types", require("../admin/venueTypes/venueTypesRoutes"));
 
 //locations
 router.use("/locations", require("../shared/locations/routes"));

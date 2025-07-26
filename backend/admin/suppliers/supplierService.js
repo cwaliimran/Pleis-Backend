@@ -1,4 +1,5 @@
 // services/supplierService.js
+const { generateMeta } = require("../../helperUtils/responseUtil");
 const supplierRepo = require("./supplierRepository");
 
 const createSupplier = async ({ title, description, status }) => {
@@ -25,14 +26,12 @@ const getSuppliers = async ({ page, limit, keyword, status }) => {
     supplierRepo.countSuppliers({ status: "inactive" }),
   ]);
 
+  let meta = generateMeta(page, limit, totalFiltered);
+  meta.tagsCount = { total, active, inactive };
+
   return {
     suppliers,
-    meta: {
-      page,
-      limit,
-      total: totalFiltered,
-      tagsCount: { total, active, inactive },
-    },
+    meta,
   };
 };
 
@@ -50,14 +49,10 @@ const getPublicSuppliers = async ({ page, limit, keyword }) => {
     supplierRepo.getSuppliersWithFilters(query, skip, limit === 0 ? 0 : limit),
     supplierRepo.countSuppliers(query),
   ]);
-
+let meta = generateMeta(page, limit, totalFiltered);
   return {
     suppliers,
-    meta: {
-      page,
-      limit,
-      total: totalFiltered,
-    },
+    meta,
   };
 };
 

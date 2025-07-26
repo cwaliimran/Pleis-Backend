@@ -1,4 +1,5 @@
 // services/tagService.js
+const { generateMeta } = require("../../helperUtils/responseUtil");
 const tagRepo = require("./tagsRepository");
 
 const createTag = async ({ title, status }) => {
@@ -6,14 +7,23 @@ const createTag = async ({ title, status }) => {
 };
 
 const getTags = async ({ page, limit, keyword, status, pinned }) => {
-  const query = {};
-  if (status) query.status = status;
+  const filters = [];
+
+  if (status) {
+    filters.push({ status });
+  }
+
   if (keyword) {
-    query.$or = [{ title: { $regex: keyword, $options: "i" } }];
+    filters.push({
+      $or: [{ title: { $regex: keyword, $options: "i" } }],
+    });
   }
+
   if (pinned !== undefined) {
-   query.pinned = pinned;
+    filters.push({ pinned });
   }
+
+  const query = filters.length ? { $and: filters } : {};
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
@@ -38,45 +48,61 @@ const getTags = async ({ page, limit, keyword, status, pinned }) => {
   };
 };
 
+
 const getPublicTags = async ({ page, limit, keyword }) => {
-  const query = { status: "active" };
+  const baseFilters = [{ status: "active" }];
+
   if (keyword) {
-    query.$or = [
-      { title: { $regex: keyword, $options: "i" } },
-    ];
+    baseFilters.push({
+      $or: [
+        { title: { $regex: keyword, $options: "i" } },
+        // Add more fields here if needed
+      ]
+    });
   }
 
-  // Always get pinned tags first
-  const pinnedQuery = { ...query, pinned: true };
-  const unpinnedQuery = { ...query, $or: [
+  // Final base query (e.g., status + keyword)
+  const baseQuery = baseFilters.length ? { $and: baseFilters } : {};
+
+  // Pinned filter
+  const pinnedQuery = { ...baseQuery, pinned: true };
+
+  // Unpinned filter
+  const unpinnedConditions = {
+    $or: [
       { pinned: false },
       { pinned: null },
-      { pinned: { $exists: false } }
+      { pinned: { $exists: false } },
     ]
   };
+  const unpinnedQuery = {
+    $and: [...(baseQuery.$and || []), unpinnedConditions],
+  };
 
-  // Only skip when keyword is applied
-  const skip = keyword ? (limit === 0 ? 0 : (page - 1) * limit) : 0;
+  // Always paginate unpinned
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  // Get pinned tags (no skip/limit), then unpinned tags (with skip/limit if no keyword)
   const [pinnedTags, unpinnedTags, totalFiltered] = await Promise.all([
-    tagRepo.getTagsWithFilters(pinnedQuery, 0, 0), // all pinned
-    tagRepo.getTagsWithFilters(unpinnedQuery, skip, limit === 0 ? 0 : limit), // paginated unpinned
-    tagRepo.countTags(query),
+    page === 1 ? tagRepo.getTagsWithFilters(pinnedQuery, 0, 0) : [],
+    tagRepo.getTagsWithFilters(unpinnedQuery, skip, limit === 0 ? 0 : limit),
+    tagRepo.countTags(baseQuery),
   ]);
 
-  // Combine pinned tags on top
-  const tags = [...pinnedTags, ...unpinnedTags];
+const totalPages = (limit && totalFiltered != null) ? Math.ceil(totalFiltered / limit) : 1;
 
+  const tags = {
+    pinned: pinnedTags,
+    unpinned: unpinnedTags,
+  };
+  let meta = generateMeta(page, limit, totalPages);
   return {
     tags,
-    meta: {
-      page,
-      limit,
-      total: totalFiltered,
-    },
+    meta,
   };
 };
+
+
+
 
 const updateTag = async (id, data) => {
   // Only update provided fields

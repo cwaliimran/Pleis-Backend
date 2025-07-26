@@ -13,7 +13,7 @@ const auth = require("../../middlewares/authMiddleware");
 const router = express.Router();
 
 //public routes
-router.get("/public", getPublicSuppliers);
+router.get("/global", getPublicSuppliers);
 
 router.use(auth);
 

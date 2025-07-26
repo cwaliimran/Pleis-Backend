@@ -2,12 +2,12 @@ const fs = require("fs");
 const path = require("path");
 
 // ============== CONFIG ==============
-const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/admin/venueTypes";
+const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/admin/venues";
 
 const oldSingular = "Category";
 const oldPlural = "Categories";
-const newSingular = "VenueType";
-const newPlural = "VenueTypes";
+const newSingular = "Venue";
+const newPlural = "Venues";
 // =====================================
 
 // Helpers

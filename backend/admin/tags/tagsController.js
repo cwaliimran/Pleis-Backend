@@ -74,7 +74,6 @@ const getTags = async (req, res) => {
 const getPublicTags = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword } = req.query;
-
   try {
     const { tags, meta } = await tagsService.getPublicTags({
       page,
@@ -87,7 +86,7 @@ const getPublicTags = async (req, res) => {
       statusCode: 200,
       translationKey: "tags_fetched_successfully",
       data: tags,
-      meta: generateMeta(page, limit, meta.total),
+      meta
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);

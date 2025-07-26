@@ -25,22 +25,20 @@ const findOrganizationById = async (id) => {
   return Organization.findById(id);
 };
 
-// Update and save
-const updateOrganizationData = async (organization, data) => {
-  Object.assign(organization, data);
-  return await organization.save();
-};
-
 // Delete
 const deleteOrganizationById = async (organization) => {
   return await organization.deleteOne();
 };
 
+// Optional: keep this only for non-nested shallow updates
+const findByIdAndUpdate = async (id, data) => {
+  return Organization.findByIdAndUpdate(id, { $set: data }, { new: true });
+};
 module.exports = {
   createOrganization,
   getOrganizationsWithFilters,
   countOrganizations,
   findOrganizationById,
-  updateOrganizationData,
   deleteOrganizationById,
+  findByIdAndUpdate,
 };

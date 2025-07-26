@@ -3,20 +3,34 @@ const {
   parsePaginationParams,
   validateParams,
   generateMeta,
+  getReadableErrorMessage,
 } = require("../../helperUtils/responseUtil");
 
 const organizationService = require("./organizationService");
 
 const createOrganization = async (req, res) => {
-  const { title, description, status = "active" } = req.body;
+  let data = ({
+    basicInfo,
+    otherInfo,
+    operatingHours,
+    status = "active",
+    venues,
+    location,
+    pinned,
+    image,
+    tags,
+    description,
+    title,
+  } = req.body);
+  let creator = req.user._id;
+  data.creator = creator;
 
-  if (!validateParams(req, res, { rawData: ["title"] })) return;
+  if (!validateParams(req, res, { rawData: ["basicInfo"] })) return;
 
   try {
     const organization = await organizationService.createOrganization({
-      title,
-      description,
-      status,
+      data,
+      creator: req.user._id,
     });
 
     return sendResponse({
@@ -26,28 +40,27 @@ const createOrganization = async (req, res) => {
       data: organization,
     });
   } catch (error) {
+    const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
-      statusCode: error.code === 11000 ? 400 : 500,
-      translationKey:
-        error.code === 11000
-          ? "organization_title_unique_violation"
-          : "internal_server",
-      error: error.message,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
     });
   }
 };
 
 const getOrganizations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status } = req.query;
-
+  const { keyword, status = "active" } = req.query;
+  let { _id } = req.user;
   try {
     const { organizations, meta } = await organizationService.getOrganizations({
       page,
       limit,
       keyword,
       status,
+      creator: _id,
     });
 
     return sendResponse({
@@ -72,11 +85,12 @@ const getPublicOrganizations = async (req, res) => {
   const { keyword } = req.query;
 
   try {
-    const { organizations, meta } = await organizationService.getPublicOrganizations({
-      page,
-      limit,
-      keyword,
-    });
+    const { organizations, meta } =
+      await organizationService.getPublicOrganizations({
+        page,
+        limit,
+        keyword,
+      });
 
     return sendResponse({
       res,
@@ -97,7 +111,6 @@ const getPublicOrganizations = async (req, res) => {
 
 const updateOrganization = async (req, res) => {
   const { id } = req.params;
-  const { title, description, status } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -107,12 +120,22 @@ const updateOrganization = async (req, res) => {
   )
     return;
 
+  let data = ({
+    basicInfo,
+    otherInfo,
+    operatingHours,
+    status,
+    venues,
+    location,
+    pinned,
+    image,
+    tags,
+    description,
+    title,
+  } = req.body);
+
   try {
-    const updated = await organizationService.updateOrganization(id, {
-      title,
-      description,
-      ...(status !== undefined && { status }),
-    });
+    const updated = await organizationService.updateOrganization(id, data);
 
     if (!updated) {
       return sendResponse({
