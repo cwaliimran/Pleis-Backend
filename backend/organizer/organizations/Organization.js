@@ -1,6 +1,9 @@
 const mongoose = require("mongoose");
 const { LocationSchema } = require("../../shared/locations/locationSchmea");
 const { getFullImageUrl } = require("../../helperUtils/imageHelper");
+const {
+  OperatingHoursSchema,
+} = require("../../shared/commonSchemas/operatingHours");
 
 const organizationSchema = new mongoose.Schema(
   {
@@ -73,69 +76,8 @@ const organizationSchema = new mongoose.Schema(
       ],
     },
     operatingHours: {
-      monday: {
-        from: { type: String, default: "" },
-        to: { type: String, default: "" },
-        break: {
-          from: { type: String, default: "" },
-          to: { type: String, default: "" },
-        },
-        off: { type: Boolean, default: false },
-      },
-      tuesday: {
-        from: { type: String, default: "" },
-        to: { type: String, default: "" },
-        break: {
-          from: { type: String, default: "" },
-          to: { type: String, default: "" },
-        },
-        off: { type: Boolean, default: false },
-      },
-      wednesday: {
-        from: { type: String, default: "" },
-        to: { type: String, default: "" },
-        break: {
-          from: { type: String, default: "" },
-          to: { type: String, default: "" },
-        },
-        off: { type: Boolean, default: false },
-      },
-      thursday: {
-        from: { type: String, default: "" },
-        to: { type: String, default: "" },
-        break: {
-          from: { type: String, default: "" },
-          to: { type: String, default: "" },
-        },
-        off: { type: Boolean, default: false },
-      },
-      friday: {
-        from: { type: String, default: "" },
-        to: { type: String, default: "" },
-        break: {
-          from: { type: String, default: "" },
-          to: { type: String, default: "" },
-        },
-        off: { type: Boolean, default: false },
-      },
-      saturday: {
-        from: { type: String, default: "" },
-        to: { type: String, default: "" },
-        break: {
-          from: { type: String, default: "" },
-          to: { type: String, default: "" },
-        },
-        off: { type: Boolean, default: false },
-      },
-      sunday: {
-        from: { type: String, default: "" },
-        to: { type: String, default: "" },
-        break: {
-          from: { type: String, default: "" },
-          to: { type: String, default: "" },
-        },
-        off: { type: Boolean, default: false },
-      },
+      type: OperatingHoursSchema,
+      default: {},
     },
     creator: {
       type: mongoose.Schema.Types.ObjectId,
@@ -204,7 +146,6 @@ function transformDoc(doc, ret) {
   delete ret.id;
   return ret;
 }
-
 
 const Organizations = mongoose.model("Organizations", organizationSchema);
 

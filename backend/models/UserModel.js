@@ -285,6 +285,10 @@ const userSchema = new mongoose.Schema(
       type: CompanySchema,
       default: null,
     },
+    termsAccepted: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
