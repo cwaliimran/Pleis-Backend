@@ -26,7 +26,7 @@ const venuesSchema = new mongoose.Schema(
     },
     venueType: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "VenueType",
+      ref: "VenueTypes",
       required: true,
     },
     creator: {
@@ -34,7 +34,7 @@ const venuesSchema = new mongoose.Schema(
       ref: "Users",
       required: true,
     },
-      location: {
+    location: {
       type: LocationSchema,
       default: {},
     },

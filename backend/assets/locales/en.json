@@ -124,7 +124,6 @@
   "faqs_fetched_successfully": "Faqs fetched successfully",
   "error_sending_sms_via_vonage": "Error sending SMS via Vonage",
   "welcome_to_pleis_api": "Welcome to Pleis API",
-  "access_denied_admins_only": "Access denied. Admins only.",
   "countries_fetched_successfully": "Countries fetched successfully",
   "error_reading_countries_data": "Error reading countries data",
   "states_fetched_successfully": "States fetched successfully",
@@ -175,5 +174,6 @@
   "venues_fetched_successfully": "Venues fetched successfully",
   "venue_not_found": "Venue not found",
   "venue_updated_successfully": "Venue updated successfully",
-  "venue_deleted_successfully": "Venue deleted successfully"
+  "venue_deleted_successfully": "Venue deleted successfully",
+  "venue_details_fetched_successfully": "Venue details fetched successfully"
 }

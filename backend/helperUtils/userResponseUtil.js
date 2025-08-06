@@ -24,12 +24,7 @@ const formatUserResponse = (
     country: userObject.country,
   };
 
-  if (userType === "organizer") {
-    basicInfo.organizationName = userObject.organizationName || "";
-    basicInfo.companyDetails = userObject.companyDetails || null;
-  } else if (userType == "admin") {
-    // Removed location for admin userType
-  }
+
 
   // Main response object
   const response = {
@@ -41,6 +36,7 @@ const formatUserResponse = (
         email: userObject.verificationStatus?.email || "pending",
         phoneNumber: userObject.verificationStatus?.phoneNumber || "pending",
       },
+      
       ...(userObject.accountState?.reason && {
         reason: userObject.accountState.reason,
       }),
@@ -52,6 +48,15 @@ const formatUserResponse = (
       __v: userObject.__v,
     },
   };
+
+    if (userType === "organizer") {
+    basicInfo.organizationName = userObject.organizationName || "";
+    basicInfo.companyDetails = userObject.companyDetails || null;
+    //add termsAccepted to organizer
+    response.accountState.termsAccepted = userObject.termsAccepted || false;
+  } else if (userType == "admin") {
+    // Removed location for admin userType
+  }
 
   // Include OTP info in dev only
   if (process.env.NODE_ENV === "dev" && userObject.otpInfo && userObject.otpInfo.emailOtp.otp !== "") {

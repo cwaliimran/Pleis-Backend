@@ -85,6 +85,7 @@ const updateProfile = async (req, res, next) => {
     organizationName,
     timezone,
     companyDetails,
+    termsAccepted,
   } = req.body;
   const currentUser = req.user;
 
@@ -125,6 +126,9 @@ const updateProfile = async (req, res, next) => {
     if (deviceType) user.deviceType = deviceType;
     if (profileIcon) user.profileIcon = profileIcon;
     if (timezone) user.timezone = timezone;
+    if (termsAccepted !== undefined) {
+      user.termsAccepted = termsAccepted;
+    }
     if (phoneNumber) {
       // Check if phoneNumber is already verified and associated with someone else (exclude current user)
       const existingPhone = await User.findOne({

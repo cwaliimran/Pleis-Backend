@@ -7,7 +7,7 @@ const {
   deleteVenueType,
 } = require("./venuetypesController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
-const admin = require("../../middlewares/adminMiddleware");
+const roleMiddleware = require("../../middlewares/roleMiddleware");
 const auth = require("../../middlewares/authMiddleware");
 
 const router = express.Router();
@@ -20,15 +20,15 @@ const apiRateLimiter = createRateLimiter("VenueTypes");
 router.get("/global", apiRateLimiter, getPublicVenueTypes);
 
 // Create a new venuetype
-router.post("/", admin, createVenueType);
+router.post("/", roleMiddleware(["admin"]), createVenueType);
 
 // Get all venuetypes with pagination
 router.get("/", getVenueTypes);
 
 // Update an existing venuetype
-router.put("/:id", admin, updateVenueType);
+router.put("/:id", roleMiddleware(["admin"]), updateVenueType);
 
 // Delete a venuetype
-router.delete("/:id", admin, deleteVenueType);
+router.delete("/:id", roleMiddleware(["admin"]), deleteVenueType);
 
 module.exports = router;

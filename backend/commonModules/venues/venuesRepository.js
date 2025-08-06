@@ -15,9 +15,9 @@ const createVenue = async (data) => {
     // Update organization: set organization field in venue, push venue id to organization.venues
     if (data.organization) {
       await Organizations.findByIdAndUpdate(
-      data.organization,
-      { venue: venue._id },
-      { session }
+        data.organization,
+        { venue: venue._id },
+        { session }
       );
     }
     await session.commitTransaction();
@@ -33,6 +33,7 @@ const createVenue = async (data) => {
 // Get all with filters
 const getVenuesWithFilters = async (query, skip, limit) => {
   return Venues.find(query)
+    .populate({ path: "venueType", select: "title image" })
     .sort({ title: 1 })
     .skip(skip)
     .limit(limit);

@@ -70,8 +70,8 @@ const createVenue = async (req, res) => {
 
 const getVenues = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status="active", pinned } = req.query;
-
+  const { keyword, status = "active", pinned } = req.query;
+  const { _id: userId } = req.user._id;
   try {
     const { venues, meta } = await venuesService.getVenues({
       page,
@@ -79,6 +79,7 @@ const getVenues = async (req, res) => {
       keyword,
       status,
       pinned,
+      userId,
     });
 
     return sendResponse({
@@ -89,26 +90,17 @@ const getVenues = async (req, res) => {
       meta,
     });
   } catch (error) {
+    const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: error.message,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
     });
   }
 };
-
-const updateVenue = async (req, res) => {
+const getVenueDetails = async (req, res) => {
   const { id } = req.params;
-  const {  title,
-    floorPlan,
-    venueType,
-    organization,
-    isPrimary,
-    location,
-    image,
-    status = "active",
-    pinned = false, } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -118,7 +110,55 @@ const updateVenue = async (req, res) => {
   )
     return;
 
-    let data = {
+  try {
+    const venue = await venuesService.getVenueDetails(id);
+    if (!venue) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "venue_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "venue_details_fetched_successfully",
+      data: venue,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+const updateVenue = async (req, res) => {
+  const { id } = req.params;
+  const {
+    title,
+    floorPlan,
+    venueType,
+    organization,
+    isPrimary,
+    location,
+    image,
+    status = "active",
+    pinned = false,
+  } = req.body;
+
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })
+  )
+    return;
+
+  let data = {
     title,
     floorPlan,
     venueType,
@@ -192,11 +232,12 @@ const deleteVenue = async (req, res) => {
       translationKey: "venue_deleted_successfully",
     });
   } catch (error) {
+    const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: error.message,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
     });
   }
 };
@@ -206,4 +247,5 @@ module.exports = {
   getVenues,
   updateVenue,
   deleteVenue,
+  getVenueDetails,
 };

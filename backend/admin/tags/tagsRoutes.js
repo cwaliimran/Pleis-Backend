@@ -7,8 +7,8 @@ const {
   deleteTag,
 } = require("./tagsController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
-const admin = require("../../middlewares/adminMiddleware");
 const auth = require("../../middlewares/authMiddleware");
+const roleMiddleware = require("../../middlewares/roleMiddleware");
 
 const router = express.Router();
 
@@ -21,15 +21,15 @@ const apiRateLimiter = createRateLimiter("Tags");
 router.get("/global", apiRateLimiter, getPublicTags);
 
 // Create a new tag
-router.post("/", admin, createTag);
+router.post("/", roleMiddleware(["admin"]), createTag);
 
 // Get all tags with pagination
 router.get("/", getTags);
 
 // Update an existing tag
-router.put("/:id", admin, updateTag);
+router.put("/:id", roleMiddleware(["admin"]), updateTag);
 
 // Delete a tag
-router.delete("/:id", admin, deleteTag);
+router.delete("/:id", roleMiddleware(["admin"]), deleteTag);
 
 module.exports = router;

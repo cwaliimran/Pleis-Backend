@@ -10,6 +10,7 @@ const createOrganization = async (data) => {
 // Get all with filters
 const getOrganizationsWithFilters = async (query, skip, limit) => {
   return Organization.find(query)
+  .populate("venue")
     .sort({ title: 1 })
     .skip(skip)
     .limit(limit);

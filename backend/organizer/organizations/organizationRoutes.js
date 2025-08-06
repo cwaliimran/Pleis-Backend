@@ -6,7 +6,6 @@ const {
   deleteOrganization,
 } = require("./organizationController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
-const admin = require("../../middlewares/adminMiddleware");
 const auth = require("../../middlewares/authMiddleware");
 const roleMiddleware = require("../../middlewares/roleMiddleware");
 

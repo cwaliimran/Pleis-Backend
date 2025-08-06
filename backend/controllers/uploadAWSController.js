@@ -9,6 +9,8 @@ require("dotenv").config();
 const { uploads3Mw } = require("../middlewares/uploadFilesAWSMw");
 const sharp = require("sharp");
 const { send } = require("process");
+const { NodeHttpHandler } = require("@smithy/node-http-handler");
+
 
 const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3 MB in bytes
 
@@ -88,9 +90,16 @@ const uploadFiles = (req, res) => {
   });
 };
 
+const requestHandler = new NodeHttpHandler({
+  connectionTimeout: 3000,     // ⏱️ Max time to establish TCP connection (3s)
+  socketTimeout: 30000,        // ⌛ Max time for inactivity on open socket (30s)
+  maxSockets: 200,             // 🚀 Number of parallel TCP sockets allowed (raised from 50)
+});
+
 // Initialize AWS S3 Client
 const s3 = new S3Client({
   region: process.env.AWS_S3_REGION,
+  requestHandler: requestHandler,
   credentials: {
     accessKeyId: process.env.AWS_S3_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_S3_SECRET_ACCESS_KEY,

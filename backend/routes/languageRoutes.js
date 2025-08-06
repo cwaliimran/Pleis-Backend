@@ -6,14 +6,14 @@ const {
   deleteLanguage,
   updateUserLanguage,
 } = require("../controllers/languageController");
-const admin = require("../middlewares/adminMiddleware");
 const auth = require("../middlewares/authMiddleware");
+const roleMiddleware = require("../middlewares/roleMiddleware");
 
 const router = express.Router();
 router.use(auth);
 
 // Create a new language
-router.post("/", admin, createLanguage);
+router.post("/", roleMiddleware(["admin"]), createLanguage);
 
 // Get all languages with pagination
 router.get("/", getLanguages);
@@ -22,9 +22,9 @@ router.get("/", getLanguages);
 router.put("/user", updateUserLanguage);
 
 // Update an existing language
-router.put("/:id", admin, updateLanguage);
+router.put("/:id", roleMiddleware(["admin"]), updateLanguage);
 
 // Delete a language
-router.delete("/:id", admin, deleteLanguage);
+router.delete("/:id", roleMiddleware(["admin"]), deleteLanguage);
 
 module.exports = router;

@@ -7,8 +7,8 @@ const {
   deleteCategory,
 } = require("./categoriesController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
-const admin = require("../../middlewares/adminMiddleware");
 const auth = require("../../middlewares/authMiddleware");
+const roleMiddleware = require("../../middlewares/roleMiddleware");
 
 const router = express.Router();
 
@@ -20,15 +20,15 @@ const apiRateLimiter = createRateLimiter("Categories");
 router.get("/global", apiRateLimiter, getPublicCategories);
 
 // Create a new category
-router.post("/", admin, createCategory);
+router.post("/", roleMiddleware(["admin"]), createCategory);
 
 // Get all categories with pagination
 router.get("/", getCategories);
 
 // Update an existing category
-router.put("/:id", admin, updateCategory);
+router.put("/:id", roleMiddleware(["admin"]), updateCategory);
 
 // Delete a category
-router.delete("/:id", admin, deleteCategory);
+router.delete("/:id", roleMiddleware(["admin"]), deleteCategory);
 
 module.exports = router;

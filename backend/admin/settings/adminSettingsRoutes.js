@@ -8,8 +8,8 @@ const {
   getFaqs
 } = require("./controllers/adminSettingsController");
 const auth = require("../../middlewares/authMiddleware");
-const admin = require("../../middlewares/adminMiddleware");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
+const roleMiddleware = require("../../middlewares/roleMiddleware");
 
 const router = express.Router();
 
@@ -29,9 +29,9 @@ router.get("/privacy-policy", apiRateLimiter, getPrivacyPolicy);
 router.get("/faqs", apiRateLimiter, getFaqs);
 
 // Route to create admin settings (requires auth and admin privileges)
-router.post("/create", auth, admin, createAdminSettings);
+router.post("/create", auth, roleMiddleware(["admin"]), createAdminSettings);
 
 // Route to update all settings at once (requires auth and admin privileges)
-router.put("/update/:id", auth, admin, updateAdminSettings);
+router.put("/update/:id", auth, roleMiddleware(["admin"]), updateAdminSettings);
 
 module.exports = router;
