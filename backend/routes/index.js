@@ -24,6 +24,8 @@ router.use("/venue-types", require("../admin/venueTypes/venueTypesRoutes"));
 router.use("/venues", require("../commonModules/venues/venuesRoutes"));
 //events
 router.use("/events", require("../commonModules/events/eventRoutes"));
+//highlights
+router.use("/highlights", require("../commonModules/highlights/highlightRoutes"));
 
 //locations
 router.use("/locations", require("../shared/locations/routes"));

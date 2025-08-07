@@ -136,3 +136,4 @@ secretAssets/*
 .env.stag
 backend/missingTranslations.json
 backend/extraTranslations.json
+/scripts.js

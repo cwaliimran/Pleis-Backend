@@ -175,5 +175,19 @@
   "venue_not_found": "Venue not found",
   "venue_updated_successfully": "Venue updated successfully",
   "venue_deleted_successfully": "Venue deleted successfully",
-  "venue_details_fetched_successfully": "Venue details fetched successfully"
+  "venue_details_fetched_successfully": "Venue details fetched successfully",
+  "event_created_successfully": "Event created successfully",
+  "events_fetched_successfully": "Events fetched successfully",
+  "public_events_fetched_successfully": "Public events fetched successfully",
+  "event_not_found": "Event not found",
+  "event_updated_successfully": "Event updated successfully",
+  "event_deleted_successfully": "Event deleted successfully",
+  "event_details_fetched_successfully": "Event details fetched successfully",
+  "highlight_created_successfully": "Highlight created successfully",
+  "highlights_fetched_successfully": "Highlights fetched successfully",
+  "public_highlights_fetched_successfully": "Public highlights fetched successfully",
+  "highlight_not_found": "Highlight not found",
+  "highlight_updated_successfully": "Highlight updated successfully",
+  "highlight_deleted_successfully": "Highlight deleted successfully",
+  "highlight_details_fetched_successfully": "Highlight details fetched successfully"
 }
