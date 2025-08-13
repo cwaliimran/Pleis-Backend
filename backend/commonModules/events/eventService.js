@@ -156,9 +156,21 @@ const getEventDetails = async (id, timezone) => {
   return event;
 };
 
+const cloneEvent = async (id) => {
+  const event = await eventRepo.findEventById(id);
+  if (!event) return null;
+
+  const clonedData = JSON.parse(JSON.stringify(event));
+  delete clonedData._id; // Remove the original ID
+  clonedData.status = "inactive"; // Set status to inactive for the clone
+
+  return await eventRepo.createEvent(clonedData);
+};
+
 module.exports = {
   createEvent,
   getEvents,
+  cloneEvent,
   updateEvent,
   deleteEvent,
   getPublicEvents,

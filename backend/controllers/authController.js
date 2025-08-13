@@ -319,6 +319,7 @@ const login = async (req, res) => {
       email,
       password,
       userType,
+      timezone,
       populateFields
     );
 

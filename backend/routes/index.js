@@ -22,6 +22,7 @@ router.use("/tags", require("../admin/tags/tagsRoutes"));
 router.use("/categories", require("../admin/categories/categoriesRoutes"));
 router.use("/venue-types", require("../admin/venueTypes/venueTypesRoutes"));
 router.use("/venues", require("../commonModules/venues/venuesRoutes"));
+router.use("/features", require("../admin/features/featureRoutes"));
 //events
 router.use("/events", require("../commonModules/events/eventRoutes"));
 //highlights
@@ -29,5 +30,6 @@ router.use("/highlights", require("../commonModules/highlights/highlightRoutes")
 
 //locations
 router.use("/locations", require("../shared/locations/routes"));
+
 
 module.exports = router;

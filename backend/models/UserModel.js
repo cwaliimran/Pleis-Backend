@@ -33,6 +33,15 @@ const subscriptionSchema = new mongoose.Schema({
   },
 });
 
+const USER_TYPES = [
+  "guest",
+  "user",
+  "admin",
+  "manager",
+  "staff",
+  "organizer",
+];
+
 const userSchema = new mongoose.Schema(
   {
     profileIcon: {
@@ -133,15 +142,7 @@ const userSchema = new mongoose.Schema(
     accountState: {
       userType: {
         type: String,
-        enum: [
-          "guest",
-          "user",
-          "admin",
-          "manager",
-          // "superadmin",
-          "staff",
-          "organizer",
-        ], 
+        enum: USER_TYPES,
         default: "user",
       },
       status: {
@@ -275,7 +276,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-     location: {
+    location: {
       type: LocationSchema,
       default: {},
     },
@@ -323,6 +324,7 @@ userSchema.statics.findByCredentials = async (
   email,
   password,
   userType,
+  timezone,
   populateFields = []
 ) => {
   let query = User.findOne({ email: email, "accountState.userType": userType });
@@ -345,6 +347,12 @@ userSchema.statics.findByCredentials = async (
     }
     return { error: "incorrect_password" }; // Return an error key if password doesn't match
   }
+
+  if (timezone) {
+    user.timezone = timezone; // Update user's timezone if provided
+    user.save(); // Save the updated user document
+  }
+
   return user; // Return the user object if login is successful
 };
 
@@ -546,4 +554,5 @@ module.exports = {
   SubscriptionType,
   generateResetToken,
   createVerificationLink,
+  USER_TYPES,
 };

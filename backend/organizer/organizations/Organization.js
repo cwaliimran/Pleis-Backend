@@ -99,6 +99,20 @@ const organizationSchema = new mongoose.Schema(
       type: LocationSchema,
       default: {},
     },
+    staff: {
+      users: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Users",
+        },
+      ],
+      featuresAccess: {
+        type: [mongoose.Schema.Types.ObjectId],
+        ref: "Features",
+        default: [],
+      },
+      default: [],
+    },
   },
   {
     timestamps: true,

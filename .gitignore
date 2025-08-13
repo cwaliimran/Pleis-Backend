@@ -137,3 +137,4 @@ secretAssets/*
 backend/missingTranslations.json
 backend/extraTranslations.json
 /scripts.js
+scripts.js/renameModule.js

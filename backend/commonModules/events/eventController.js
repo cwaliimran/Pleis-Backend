@@ -308,10 +308,47 @@ const getEventDetails = async (req, res) => {
   }
 };
 
+const cloneEvent = async (req, res) => {
+  const { id } = req.params;
+
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })
+  ) return;
+
+  try {
+    const clonedEvent = await eventService.cloneEvent(id);
+    if (!clonedEvent) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "event_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 201,
+      translationKey: "event_cloned_successfully",
+      data: clonedEvent,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: error.name === "ValidationError" ? 400 : 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createEvent,
   getEvents,
   getPublicEvents,
+  cloneEvent,
   updateEvent,
   deleteEvent,
   getEventDetails,

@@ -5,6 +5,7 @@ const {
   updateEvent,
   deleteEvent,
   getEventDetails,
+  cloneEvent,
 } = require("./eventController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -31,5 +32,8 @@ router.put("/:id", updateEvent);
 
 // Delete a event
 router.delete("/:id" , deleteEvent);
+
+// Clone an existing event
+router.post("/:id/clone", roleMiddleware(["organizer","admin"]), cloneEvent);
 
 module.exports = router;

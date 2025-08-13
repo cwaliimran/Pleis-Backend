@@ -128,7 +128,6 @@
   "error_reading_countries_data": "Error reading countries data",
   "states_fetched_successfully": "States fetched successfully",
   "state_not_found": "State not found",
-  "key": "Key",
   "missing_token": "Missing token",
   "invalid_or_expired_verification_link": "Invalid or expired verification link",
   "verification_link_already_used": "Verification link already used",
@@ -189,5 +188,14 @@
   "highlight_not_found": "Highlight not found",
   "highlight_updated_successfully": "Highlight updated successfully",
   "highlight_deleted_successfully": "Highlight deleted successfully",
-  "highlight_details_fetched_successfully": "Highlight details fetched successfully"
+  "highlight_details_fetched_successfully": "Highlight details fetched successfully",
+  "event_cloned_successfully": "Event cloned successfully",
+  "feature_created_successfully": "Feature created successfully",
+  "features_fetched_successfully": "Features fetched successfully",
+  "public_features_fetched_successfully": "Public features fetched successfully",
+  "feature_not_found": "Feature not found",
+  "feature_updated_successfully": "Feature updated successfully",
+  "feature_deleted_successfully": "Feature deleted successfully",
+  "feature_details_fetched_successfully": "Feature details fetched successfully",
+  "feature_key_already_exists": "Feature key already exists"
 }
