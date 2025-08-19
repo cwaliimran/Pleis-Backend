@@ -122,7 +122,6 @@
   "cities_fetched_successfully": "Cities fetched successfully",
   "country_not_found": "Country not found",
   "faqs_fetched_successfully": "Faqs fetched successfully",
-  "error_sending_sms_via_vonage": "Error sending SMS via Vonage",
   "welcome_to_pleis_api": "Welcome to Pleis API",
   "countries_fetched_successfully": "Countries fetched successfully",
   "error_reading_countries_data": "Error reading countries data",

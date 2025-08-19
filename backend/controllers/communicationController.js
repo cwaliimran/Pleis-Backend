@@ -12,7 +12,6 @@ const {
   registrationOtpEmailTemplate,
 } = require("../helperUtils/emailTemplates");
 const { NotificationExp } = require("../models/Notifications");
-const { Vonage } = require("@vonage/server-sdk");
 
 /**
  * Send an email using SendGrid
@@ -399,85 +398,6 @@ const sendNotification = async (recipients, payload) => {
   }
 };
 
-// Initialize the Vonage client with your credentials
-const vonage = new Vonage({
-  apiKey: "ec823766", // Replace with your Vonage API Key
-  apiSecret: "KNMQzSzi9eJx93mF", // Replace with your Vonage API Secret
-});
-
-const sendSmsViaVonage = async (req, res) => {
-  const { phoneNumber, otp } = req.body;
-
-  // Validate required parameters
-  if (!phoneNumber || !otp) {
-    return sendResponse({
-      res,
-      statusCode: 400,
-      translationKey: "phone_number_1",
-      error: "Phone number and OTP are required.",
-    });
-  }
-
-  try {
-    const otpMessage = `${otp} is your OTP for the ZahraPay App`;
-    const from = "+923005098444"; // Replace with your Vonage virtual number
-
-    // Send SMS using Nexmo's API (Vonage)
-    const messageData = {
-      to: phoneNumber,
-      from: from,
-      text: otpMessage,
-    };
-
-    // Send the message via Nexmo (Vonage) SDK
-    vonage.sms.send(messageData, (err, responseData) => {
-      console.log("Entered the callback function");
-      if (err) {
-        console.error("Error sending SMS:", err);
-        return sendResponse({
-          res,
-          statusCode: 500,
-          translationKey: "error_sending_sms_via_vonage",
-          error: err.message,
-        });
-      } else {
-        console.log("Response data:", responseData);
-        if (
-          responseData &&
-          responseData.messages &&
-          responseData.messages[0].status === "0"
-        ) {
-          console.log("Message sent successfully:", responseData);
-          return sendResponse({
-            res,
-            statusCode: 200,
-            translationKey: "otp_sent",
-            data: responseData,
-          });
-        } else {
-          console.error(
-            "Failed to send message. Status:",
-            responseData.messages[0].status
-          );
-          return sendResponse({
-            res,
-            statusCode: 500,
-            translationKey: "otp_sent",
-            error: `Failed with status: ${responseData.messages[0].status}`,
-          });
-        }
-      }
-    });
-  } catch (error) {
-    console.error("Error sending SMS:", error);
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: error.message || "otp_sent",
-      error: error.message,
-    });
-  }
-};
 
 
 const axios = require('axios');
@@ -554,7 +474,6 @@ module.exports = {
   sendSmsViaPinpointAws,
   sendNotificationControllerForTesting,
   sendUserNotifications,
-  sendSmsViaVonage,
   sendSMSSomalianAPI,
   sendEmailBrevo
 };
