@@ -1,5 +1,6 @@
 // repositories/venueTypeRepository.js
-const VenueTypesModel = require("./VenueTypes");
+
+const VenueTypesModel = require("./VenueTypesModel");
 
 // Create
 const createVenueType = async (data) => {
