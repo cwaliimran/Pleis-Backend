@@ -1,15 +1,15 @@
-// repositories/venuetypeRepository.js
-const VenueTypes = require("./VenueTypes");
+// repositories/venueTypeRepository.js
+const VenueTypesModel = require("./VenueTypes");
 
 // Create
 const createVenueType = async (data) => {
-  const venuetype = new VenueTypes(data);
+  const venuetype = new VenueTypesModel(data);
   return await venuetype.save();
 };
 
 // Get all with filters
 const getVenueTypesWithFilters = async (query, skip, limit) => {
-  return VenueTypes.find(query)
+  return VenueTypesModel.find(query)
     .sort({ title: 1 })
     .skip(skip)
     .limit(limit);
@@ -17,12 +17,12 @@ const getVenueTypesWithFilters = async (query, skip, limit) => {
 
 // Count by condition
 const countVenueTypes = async (query = {}) => {
-  return VenueTypes.countDocuments(query);
+  return VenueTypesModel.countDocuments(query);
 };
 
 // Find by ID
 const findVenueTypeById = async (id) => {
-  return VenueTypes.findById(id);
+  return VenueTypesModel.findById(id);
 };
 
 // Update and save
@@ -38,7 +38,7 @@ const deleteVenueTypeById = async (venuetype) => {
 
 //findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
-  return VenueTypes.findByIdAndUpdate(id, data, { new: true });
+  return VenueTypesModel.findByIdAndUpdate(id, data, { new: true });
 };
 
 module.exports = {

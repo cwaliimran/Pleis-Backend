@@ -45,6 +45,6 @@ function transformDoc(doc, ret) {
   return ret;
 }
 
-const VenueTypes = mongoose.model("VenueTypes", venuetypesSchema);
+const VenueTypesModel = mongoose.model("VenueTypes", venuetypesSchema);
 
-module.exports = VenueTypes;
+module.exports = VenueTypesModel;
