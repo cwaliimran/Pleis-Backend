@@ -1,9 +1,11 @@
 const mongoose = require("mongoose");
 require('dotenv').config({ path: `.env.${process.env.NODE_ENV || 'dev'}` });
 
+const PORT = process.env.PORT || 4014; // 4014 only for local testing
+
 const startServer = (app) => {
-  app.listen(process.env.PORT, () => {
-    console.log("🚀 Server is running on port", process.env.PORT);
+  app.listen(PORT, () => {
+    console.log("🚀 Server is running on port", PORT);
   });
 };
 
@@ -16,6 +18,7 @@ const connectToDB = async (app, retries = 5, delay = 3000) => {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       await mongoose.connect(uri);
+      console.log("✅ Connected to MongoDB successfully");
       startServer(app);
       return;
     } catch (error) {
