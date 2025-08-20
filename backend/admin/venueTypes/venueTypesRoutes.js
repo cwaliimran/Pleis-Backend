@@ -5,7 +5,7 @@ const {
   getPublicVenueTypes,
   updateVenueType,
   deleteVenueType,
-} = require("./venuetypesController");
+} = require("./venueTypesController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const roleMiddleware = require("../../middlewares/roleMiddleware");
 const auth = require("../../middlewares/authMiddleware");
