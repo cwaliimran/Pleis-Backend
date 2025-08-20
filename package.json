@@ -5,7 +5,7 @@
   "main": "backend/server.js",
   "scripts": {
     "test": "mocha test/**/*.test.js --timeout 10000",
-    "start": "nodemon backend/server.js",
+    "start": "NODE_ENV=prod node backend/server.js",
     "dev": "NODE_ENV=dev nodemon backend/server.js",
     "prod": "NODE_ENV=prod node backend/server.js",
     "rd": "npm run dev",
