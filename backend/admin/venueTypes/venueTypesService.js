@@ -1,6 +1,6 @@
 // services/venuetypeService.js
 const { generateMeta } = require("../../helperUtils/responseUtil");
-const venuetypeRepo = require("./venuetypesRepository");
+const venuetypeRepo = require("./venueTypesRepository");
 
 const createVenueType = async ({ image, title, status, pinned }) => {
   return await venuetypeRepo.createVenueType({ image, title, status, pinned });

@@ -6,7 +6,7 @@ const {
   getReadableErrorMessage,
 } = require("../../helperUtils/responseUtil");
 
-const venuetypesService = require("./venuetypesService");
+const venuetypesService = require("./venueTypesService");
 
 const createVenueType = async (req, res) => {
   const { image, title, status = "active" } = req.body;
