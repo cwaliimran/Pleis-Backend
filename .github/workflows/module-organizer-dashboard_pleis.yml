@@ -1,26 +1,30 @@
-name: Build and deploy Node.js app to Azure Web App - Pleis
+name: Deploy Node.js API to Azure Web App - Pleis
 
 on:
   push:
     branches:
-      - module/organizer-dashboard
+      - module/organizer-dashboard1
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # 1. Checkout the code
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2. Setup Node.js 20.x
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '20.x'
 
+      # 3. Install dependencies (production)
       - name: Install dependencies
-        run: npm install --production
+        run: npm ci --only=production
 
+      # 4. Upload build artifact
       - name: Upload artifact for deployment
         uses: actions/upload-artifact@v4
         with:
@@ -28,6 +32,7 @@ jobs:
           path: |
             ./
             !.git/
+            !node_modules/
             !node_modules.tar.gz
             !_del_node_modules
 
@@ -35,16 +40,16 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+      # 1. Download artifact from previous job
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: node-app
 
+      # 2. Deploy to Azure Web App
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'Pleis'
-          slot-name: 'Production'
-          package: ./
+          app-name: 'Pleis' # Your Azure Web App name
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_D6B5A721CC1F4065BA303A78D3C5B578 }}
-          enable-oryx-build: true
+          package: ./

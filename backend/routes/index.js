@@ -3,7 +3,6 @@ const router = express.Router();
 router.use("/auth", require("./authRoutes"));
 router.use("/users", require("./userRoutes"));
 router.use("/upload", require("./uploadRoutes"));
-router.use("/upload/s3", require("./uploadAWSRoutes"));
 router.use("/upload/azure", require("./uploadAzureBlobRoutes"));
 router.use("/settings", require("../admin/settings/adminSettingsRoutes"));
 router.use("/communications", require("./communicationRoutes"));

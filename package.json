@@ -5,24 +5,17 @@
   "main": "backend/server.js",
   "scripts": {
     "test": "mocha test/**/*.test.js --timeout 10000",
-    "start": "NODE_ENV=dev node backend/server.js",
+    "start": "NODE_ENV=dev nodemon backend/server.js",
     "dev": "NODE_ENV=dev nodemon backend/server.js",
-    "prod": "NODE_ENV=prod node backend/server.js",
-    "rd": "npm run dev",
-    "rp": "npm run prod"
+    "prod": "NODE_ENV=prod nodemon backend/server.js",
+    "d": "npm run dev",
+    "p": "npm run prod"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@aws-sdk/client-pinpoint": "^3.650.0",
-    "@aws-sdk/client-s3": "^3.651.1",
-    "@aws-sdk/client-ses": "^3.650.0",
-    "@aws-sdk/lib-storage": "^3.651.1",
-    "@aws-sdk/s3-request-presigner": "^3.651.1",
     "@azure/storage-blob": "^12.28.0",
-    "@sendgrid/mail": "^8.1.3",
-    "aws-sdk": "^2.1692.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -44,7 +37,6 @@
     "nodemon": "^3.1.7",
     "sharp": "^0.33.5",
     "shortid": "^2.2.16",
-    "sib-api-v3-sdk": "^8.5.0",
     "socket.io": "^4.8.0",
     "uuid": "^10.0.0",
     "validator": "^13.12.0"
