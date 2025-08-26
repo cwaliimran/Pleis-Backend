@@ -33,7 +33,7 @@ const uploadFile = (req, res) => {
                     translationKey: "no_file",
                 });
             } else {
-                const baseUrl = `${process.env.S3_BASE_URL}`;
+                const baseUrl = `${process.env.AZURE_STORAGE_BASE_URL}`;
 
                 sendResponse({
                     res,

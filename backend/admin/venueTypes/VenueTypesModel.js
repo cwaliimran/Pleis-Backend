@@ -12,7 +12,7 @@ const venuetypesSchema = new mongoose.Schema(
       trim: true,
       required: true,
       default: "",
-      unique: true,
+      // Remove unique from schema, handle in pre-save
     },
     status: {
       type: String,
@@ -30,6 +30,21 @@ const venuetypesSchema = new mongoose.Schema(
     toObject: { virtuals: true, transform: transformDoc },
   }
 );
+
+// Custom validation for unique title if status is not 'deleted'
+venuetypesSchema.pre("save", async function (next) {
+  if (this.status !== "deleted") {
+    const existing = await mongoose.models.VenueTypes.findOne({
+      title: this.title,
+      status: { $ne: "deleted" },
+      _id: { $ne: this._id }
+    });
+    if (existing) {
+      return next(new Error("Title must be unique for active/inactive venue types."));
+    }
+  }
+  next();
+});
 
 // ✅ Virtual field `icon` (computed image + full URL)
 venuetypesSchema.virtual("imageInfo").get(function () {

@@ -37,7 +37,7 @@ const transactionsSchema = new mongoose.Schema(
 
 transactionsSchema.methods.toJSON = function () {
   const transaction = this.toObject();
-  const baseUrl = `${process.env.S3_BASE_URL}`;
+  const baseUrl = `${process.env.AZURE_STORAGE_BASE_URL}`;
 
   if (transaction.user && transaction.user.profileIcon && !transaction.user.profileIcon.startsWith("http")) {
     transaction.user.profileIcon = `${baseUrl}${transaction.user.profileIcon }`;

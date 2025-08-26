@@ -123,8 +123,39 @@ const populateNestedFields = async (model, query, nestedFieldsToPopulate, option
   return populateQuery.lean().exec();
 };
 
+
+// Utility function to build keyword search dynamically
+function buildKeywordQueryFromModel(model, keyword) {
+  if (!keyword || !keyword.trim()) return {};
+
+  const orConditions = [];
+
+  function getStringPaths(schema, prefix = '') {
+    const paths = [];
+    schema.eachPath((pathname, schemaType) => {
+      if (schemaType.instance === 'String') {
+        paths.push(prefix + pathname);
+      } else if (schemaType.schema) {
+        // One level nested schema (subdocument)
+        const nestedPaths = getStringPaths(schemaType.schema, prefix + pathname + '.');
+        paths.push(...nestedPaths);
+      }
+    });
+    return paths;
+  }
+
+  const stringFields = getStringPaths(model.schema);
+
+  stringFields.forEach(field => {
+    orConditions.push({ [field]: { $regex: keyword, $options: 'i' } });
+  });
+
+  return orConditions.length > 0 ? { $or: orConditions } : {};
+}
+
 module.exports = {
   populateFields,
   populateMultipleTables,
   populateNestedFields,
+  buildKeywordQueryFromModel,
 };

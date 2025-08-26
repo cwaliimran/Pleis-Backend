@@ -18,7 +18,6 @@ const connectToDB = async (app, retries = 5, delay = 3000) => {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       await mongoose.connect(uri);
-      console.log("✅ Connected to MongoDB successfully");
       startServer(app);
       return;
     } catch (error) {

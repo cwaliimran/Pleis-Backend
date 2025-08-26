@@ -7,7 +7,20 @@ const tagsSchema = new mongoose.Schema(
       trim: true,
       required: true,
       default: "",
-      unique: true,
+      // Remove unique from schema, enforce in custom validator
+      validate: {
+        validator: async function (value) {
+          // Only check uniqueness if status is not 'deleted'
+          if (this.status === "deleted") return true;
+          const count = await mongoose.models.Tags.countDocuments({
+            title: value,
+            status: { $ne: "deleted" },
+            _id: { $ne: this._id }
+          });
+          return count === 0;
+        },
+        message: "Title must be unique."
+      }
     },
     status: {
       type: String,

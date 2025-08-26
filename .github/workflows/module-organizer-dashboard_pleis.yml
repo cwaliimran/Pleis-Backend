@@ -3,7 +3,7 @@ name: Deploy Node.js API to Azure Web App - Pleis
 on:
   push:
     branches:
-      - module/organizer-dashboard1
+      - module/organizer-dashboard
   workflow_dispatch:
 
 jobs:

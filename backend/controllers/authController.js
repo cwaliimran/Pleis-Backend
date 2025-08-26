@@ -1,4 +1,4 @@
-const { User, generateResetToken } = require("../models/UserModel");
+const { User, generateResetToken, USER_TYPES } = require("../models/UserModel");
 const mongoose = require("mongoose");
 const moment = require("moment-timezone");
 const bcrypt = require("bcryptjs");
@@ -57,7 +57,7 @@ const register = async (req, res) => {
     const validationOptions = {
       rawData,
       enumFields: {
-        userType: ["user", "organizer", "admin"],
+        userType: USER_TYPES,
       },
       minLengthFields: {
         password: 6, // Password must be at least 6 characters long
@@ -223,6 +223,9 @@ const register = async (req, res) => {
     session.endSession(); // Ensure the session is always ended
   }
 };
+
+
+
 
 const companyDetails = async (req, res) => {
   const {
