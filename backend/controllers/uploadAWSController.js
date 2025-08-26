@@ -4,11 +4,9 @@ const { Upload } = require("@aws-sdk/lib-storage");
 const multer = require("multer");
 const { sendResponse } = require("../helperUtils/responseUtil");
 const { v4: uuidv4 } = require("uuid");
-const { values } = require("lodash");
 require("dotenv").config();
 const { uploads3Mw } = require("../middlewares/uploadFilesAWSMw");
 const sharp = require("sharp");
-const { send } = require("process");
 const { NodeHttpHandler } = require("@smithy/node-http-handler");
 
 
