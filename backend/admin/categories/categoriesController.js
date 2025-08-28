@@ -40,15 +40,22 @@ const createCategory = async (req, res) => {
 
 const getCategories = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, pinned } = req.query;
+  const { keyword, status, pinned, date } = req.query;
 
   try {
+
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+
     const { categories, meta } = await categoriesService.getCategories({
       page,
       limit,
       keyword,
       status,
-      pinned
+      pinned, date
     });
 
     return sendResponse({
@@ -70,12 +77,19 @@ const getCategories = async (req, res) => {
 
 const getPublicCategories = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword } = req.query;
+  const { keyword, date } = req.query;
   try {
+       if (date && !validateParams(req, res, {
+          dateFields: {
+            date: "YYYY-MM-DD",
+          },
+        })) return;
+
     const { categories, meta } = await categoriesService.getPublicCategories({
       page,
       limit,
       keyword,
+      date
     });
 
     return sendResponse({
@@ -98,7 +112,7 @@ const getPublicCategories = async (req, res) => {
 
 const updateCategory = async (req, res) => {
   const { id } = req.params;
-  const { title, status, pinned } = req.body;
+  const { title, status, pinned, image } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -113,6 +127,7 @@ const updateCategory = async (req, res) => {
       title,
       status,
       pinned,
+      image
     });
 
     if (!updated) {

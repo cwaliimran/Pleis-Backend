@@ -5,11 +5,22 @@ const venuetypeRepo = require("./venueTypesRepository");
 const createVenueType = async ({ image, title, status, pinned }) => {
   return await venuetypeRepo.createVenueType({ image, title, status, pinned });
 };
-const getVenueTypes = async ({ page, limit, keyword, status, pinned }) => {
+const getVenueTypes = async ({ page, limit, keyword, status, pinned, date }) => {
   const andConditions = [];
+  // if date is available then match createdAt with date current date format is yyyy-mm-dd
+  if (date) {
+    andConditions.push({
+      createdAt: {
+        $gte: new Date(date),
+        $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
+      },
+    });
+  }
 
   if (status) {
     andConditions.push({ status });
+  } else {
+    andConditions.push({ status: { $ne: "deleted" } });
   }
 
   if (keyword) {
@@ -36,7 +47,7 @@ const getVenueTypes = async ({ page, limit, keyword, status, pinned }) => {
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [venuetypes, totalFiltered, total, active, inactive, deleted] =
+  const [venuetypes, totalFiltered, total, active, inactive] =
     await Promise.all([
       venuetypeRepo.getVenueTypesWithFilters(
         query,
@@ -44,21 +55,29 @@ const getVenueTypes = async ({ page, limit, keyword, status, pinned }) => {
         limit === 0 ? 0 : limit
       ),
       venuetypeRepo.countVenueTypes(query),
-      venuetypeRepo.countVenueTypes({}),
+      venuetypeRepo.countVenueTypes({ status: { $ne: "deleted" } }),
       venuetypeRepo.countVenueTypes({ status: "active" }),
       venuetypeRepo.countVenueTypes({ status: "inactive" }),
-      venuetypeRepo.countVenueTypes({ status: "deleted" }),
     ]);
   let meta = generateMeta(page, limit, totalFiltered);
-  meta.venueTypesCount = { total, active, inactive, deleted };
+  meta.venueTypesCount = { total, active, inactive };
   return {
     venuetypes,
     meta,
   };
 };
 
-const getPublicVenueTypes = async ({ page, limit, keyword }) => {
+const getPublicVenueTypes = async ({ page, limit, keyword, date }) => {
   const baseFilters = [{ status: "active" }];
+  //if date is available then match createdAt with date current date format is yyyy-mm-dd
+  if (date) {
+    baseFilters.push({
+      createdAt: {
+        $gte: new Date(date),
+        $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
+      },
+    });
+  }
 
   if (keyword) {
     baseFilters.push({
@@ -101,7 +120,7 @@ const getPublicVenueTypes = async ({ page, limit, keyword }) => {
     unpinned: unpinnedVenueTypes,
   };
   let meta = generateMeta(page, limit, totalFiltered);
-  
+
   return {
     venuetypes,
     meta,

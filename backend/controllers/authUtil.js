@@ -1,5 +1,6 @@
 
 
+const { validateParams, sendResponse } = require("../helperUtils/responseUtil");
 const { formatUserResponse } = require("../helperUtils/userResponseUtil");
 const { createOrSkipDevice } = require("../models/Devices");
 const { User, USER_TYPES } = require("../models/UserModel");
@@ -10,145 +11,127 @@ const validator = require("validator");
 // const { registrationOtpEmailTemplate } = require("../helperUtils/emailTemplates");
 
 // ✅ Main utility function
-const registerUserUtility = async ({
+const registerUserUtility = async (req, res) => {
+  const {
     email,
-    deviceId,
-    deviceType,
     phoneNumber,
     profileIcon,
     userType = "user",
     firstName,
     lastName,
     organizationName,
+    companyDetails,
     password,
     timezone = "Europe/Berlin",
-    companyDetails,
     adminToken,
-    sendEmail = false
-}) => {
-    let verificationStatus = "active";
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    sendEmail = false,
+    username,
+    gender,
+    dob,
+    organization,
+    modules,
+  } = req.body;
 
-    try {
-        // ✅ Step 1: Validate inputs
-        validateRequiredFields({
-            email,
-            password,
-            deviceId,
-            deviceType,
-            timezone,
-            userType,
-            firstName,
-            lastName,
-            organizationName,
-        }, userType);
+  let verificationStatus = "active";
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-        if (profileIcon && profileIcon.startsWith("http")) {
-            throw new Error("Invalid URL for profileIcon");
-        }
+  try {
+    let rawData = ["firstName", "lastName", "email", "password", "userType"];
 
-        validatePhoneNumber(phoneNumber);
+    if (userType === "guest") verificationStatus = "active";
+    if (userType === "manager") { rawData.push("organization"); }
+    if (userType === "user") { rawData.push("dob", "gender", "username"); }
+    if (userType === "staff") { rawData.push("organization", "modules"); }
+    if (userType === "organizer") { rawData.push("organizationName", "companyDetails"); }
 
-        // ✅ Step 2: Check for existing user/email/phone
-        const existingEmail = await User.findOne({ email: email.trim().toLowerCase() });
-        if (existingEmail && existingEmail.verificationStatus.email === "verified") {
-            throw new Error("Email already registered");
-        }
+    const validationOptions = {
+      rawData,
+      enumFields: { userType: USER_TYPES },
+      minLengthFields: { password: 6 },
+    };
 
-        if (phoneNumber) {
-            const existingPhone = await User.findOne({
-                "phoneNumber.code": phoneNumber.code,
-                "phoneNumber.number": phoneNumber.number,
-                "verificationStatus.phoneNumber": "verified",
-            });
-            if (existingPhone) throw new Error("Phone number already registered");
-        }
-
-        // ✅ Step 3: Check for admin creation restriction
-        let finalUserType = userType;
-        if (userType === "admin") {
-            if (adminToken !== process.env.ADMIN_ACCESS_TOKEN) {
-                throw new Error("Unauthorized to create admin");
-            }
-        }
-
-        // ✅ Step 4: Create or update user
-        let user = existingEmail || new User();
-        Object.assign(user, {
-            email,
-            phoneNumber: phoneNumber || { code: "", number: "" },
-            deviceId,
-            deviceType,
-            profileIcon,
-            firstName,
-            lastName,
-            organizationName,
-            password,
-            timezone,
-            accountState: { userType: finalUserType, status: verificationStatus },
-            verificationStatus: {email: "verified", phoneNumber: "pending"},
-            companyDetails: companyDetails || null,
-        });
-
-
-        // ✅ Step 5: Generate token and save
-        const tokenData = user.generateEmailVerificationToken();
-        user.emailVerificationLink = tokenData.rawToken;
-        await user.save({ session });
-
-        /*   // ✅ Step 6: Send email (if enabled)
-          if (sendEmail) {
-            const subject = "Welcome! Verify Your Email";
-            const body = registrationOtpEmailTemplate(tokenData.verificationLink);
-            await sendEmailViaBrevo([email], subject, body);
-          } */
-
-        await session.commitTransaction();
-
-        // ✅ Step 7: Format response
-        const userObject = user.toJSON(user);
-        const formattedResponse = formatUserResponse(userObject);
-
-        // ✅ Save device info asynchronously
-        if (deviceId && deviceType) {
-            createOrSkipDevice(userObject._id, deviceId, deviceType);
-        }
-
-        return { success: true, user: formattedResponse };
-    } catch (error) {
-        await session.abortTransaction();
-        return { success: false, error: error };
-    } finally {
-        session.endSession();
-    }
-}
-
-module.exports = { registerUserUtility };
-
-
-// ✅ Helper: Validate required fields
-function validateRequiredFields(fields, userType) {
-    const required = ["firstName", "lastName", "email", "password", "timezone", "userType"];
-    if (userType === "organizer") required.push("organizationName");
-
-    for (const key of required) {
-        if (!fields[key]) throw new Error(`${key} is required`);
+    if (!validateParams(req, res, validationOptions)) {
+      return { responseSent: true }; // ✅ Mark that response is already sent
     }
 
-    if (fields.password.length < 6) throw new Error("Password must be at least 6 characters long");
-    if (!USER_TYPES.includes(fields.userType)) throw new Error("Invalid userType");
-}
+    if (profileIcon && profileIcon.startsWith("http")) {
+      throw new Error("Invalid URL for profileIcon");
+    }
 
-// ✅ Helper: Validate phone number
-function validatePhoneNumber(phoneNumber) {
-    if (!phoneNumber) return;
-    if (
+    // ✅ Admin token check
+    if (userType === "admin" && adminToken !== process.env.ADMIN_ACCESS_TOKEN) {
+      throw new Error("Unauthorized to create admin");
+    }
+
+    // ✅ Check existing email
+    const existingUser = await User.findOne({ email: email.trim().toLowerCase() });
+    if (existingUser && existingUser.verificationStatus.email === "verified") {
+      throw new Error("Email already registered");
+    }
+
+    // ✅ Validate phone number
+    if (phoneNumber) {
+      if (
         typeof phoneNumber !== "object" ||
         !phoneNumber.code ||
         !phoneNumber.number ||
-        !validator.isMobilePhone(phoneNumber.code + phoneNumber.number, "any", { strictMode: true })
-    ) {
-        throw new Error("Invalid phone number");
+        !validator.isMobilePhone(`${phoneNumber.code}${phoneNumber.number}`, "any", { strictMode: true })
+      ) {
+        sendResponse({ res, statusCode: 400, translationKey: "invalid_phone" });
+        return { responseSent: true }; // ✅ Response sent, stop further flow
+      }
+
+      const existingPhone = await User.findOne({
+        "phoneNumber.code": phoneNumber.code,
+        "phoneNumber.number": phoneNumber.number,
+        "verificationStatus.phoneNumber": "verified",
+      });
+      if (existingPhone) throw new Error("Phone number already registered");
     }
-}
+
+    // ✅ Create user
+    let user = existingUser || new User();
+    Object.assign(user, {
+      email,
+      phoneNumber: phoneNumber || { code: "", number: "" },
+      profileIcon,
+      firstName,
+      lastName,
+      username,
+      gender,
+      dob,
+      organization,
+      modules,
+      organizationName,
+      password,
+      timezone,
+      accountState: { userType, status: verificationStatus },
+      verificationStatus: { email: "verified", phoneNumber: "pending" },
+      companyDetails: companyDetails || null,
+    });
+
+    const tokenData = user.generateEmailVerificationToken();
+    user.emailVerificationLink = tokenData.rawToken;
+    await user.save({ session });
+    await session.commitTransaction();
+
+    const userObject = user.toJSON(user);
+    const formattedResponse = formatUserResponse(userObject);
+
+    // if (deviceId && deviceType) {
+    //   createOrSkipDevice(userObject._id, deviceId, deviceType);
+    // }
+
+    return { success: true, user: formattedResponse, responseSent: false }; // ✅ No direct response here
+  } catch (error) {
+    // await session.abortTransaction();
+    return { success: false, error: error, responseSent: false }; // ✅ Let controller handle error
+  } finally {
+    session.endSession();
+  }
+};
+
+module.exports = { registerUserUtility };
+
+module.exports = { registerUserUtility };

@@ -70,9 +70,15 @@ const createVenue = async (req, res) => {
 
 const getVenues = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", pinned } = req.query;
+  const { keyword, status = "active", pinned, date } = req.query;
   const { _id: userId } = req.user._id;
   try {
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+
     const { venues, meta } = await venuesService.getVenues({
       page,
       limit,
@@ -80,6 +86,7 @@ const getVenues = async (req, res) => {
       status,
       pinned,
       userId,
+      date
     });
 
     return sendResponse({

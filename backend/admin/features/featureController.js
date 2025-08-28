@@ -73,15 +73,22 @@ const createFeature = async (req, res) => {
 
 const getFeatures = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status } = req.query;
+  const { keyword, status, date } = req.query;
   let { _id } = req.user;
   try {
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+
     let { features, meta } = await featureService.getFeatures({
       page,
       limit,
       keyword,
       status,
       creator: _id,
+      date,
     });
 
     return sendResponse({
@@ -159,7 +166,7 @@ const updateFeature = async (req, res) => {
     validateData.rawData.push("key");
     validateData.enumFields["key"] = ["ticketing", "reservationManagement", "loyaltyScanning", "inAppOrdering"];
   }
- 
+
   if ("status" in req.body) {
     validateData.rawData.push("status");
     validateData.enumFields["status"] = ["active", "inactive"];

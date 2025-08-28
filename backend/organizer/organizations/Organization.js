@@ -161,6 +161,40 @@ function transformDoc(doc, ret) {
   return ret;
 }
 
+organizationSchema.methods.formatResponse = function (orgData) {
+  const org = orgData ? orgData : this.toObject();
+
+  delete org.__v;
+
+  // Handle media transformation for aggregation structure
+  if (org.basicInfo?.media?.logo) {
+    const logoName = org.basicInfo.media.logo;
+    org.basicInfo.media.logo = {
+      name: logoName,
+      url: getFullImageUrl(logoName)
+    };
+  }
+
+  if (org.basicInfo?.media?.cover) {
+    const coverName = org.basicInfo.media.cover;
+    org.basicInfo.media.cover = {
+      name: coverName,
+      url: getFullImageUrl(coverName)
+    };
+  }
+
+  // Handle mediaInfo structure if exists
+  if (org.basicInfo?.mediaInfo?.logo?.name) {
+    org.basicInfo.mediaInfo.logo.url = getFullImageUrl(org.basicInfo.mediaInfo.logo.name);
+  }
+  if (org.basicInfo?.mediaInfo?.cover?.name) {
+    org.basicInfo.mediaInfo.cover.url = getFullImageUrl(org.basicInfo.mediaInfo.cover.name);
+  }
+
+  return org;
+};
+
+
 const Organizations = mongoose.model("Organizations", organizationSchema);
 
 module.exports = Organizations;

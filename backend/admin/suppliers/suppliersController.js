@@ -40,14 +40,22 @@ const createSupplier = async (req, res) => {
 
 const getSuppliers = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status } = req.query;
+  const { keyword, status, date } = req.query;
 
   try {
+
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+    
     const { suppliers, meta } = await supplierService.getSuppliers({
       page,
       limit,
       keyword,
       status,
+      date,
     });
 
     return sendResponse({

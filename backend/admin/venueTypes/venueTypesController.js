@@ -40,15 +40,24 @@ const createVenueType = async (req, res) => {
 
 const getVenueTypes = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, pinned } = req.query;
+  const { keyword, status, pinned, date } = req.query;
 
   try {
+
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+
+
     const { venuetypes, meta } = await venuetypesService.getVenueTypes({
       page,
       limit,
       keyword,
       status,
-      pinned
+      pinned,
+      date
     });
 
     return sendResponse({
@@ -70,12 +79,21 @@ const getVenueTypes = async (req, res) => {
 
 const getPublicVenueTypes = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword } = req.query;
+  const { keyword, date } = req.query;
   try {
+
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+
+
     const { venuetypes, meta } = await venuetypesService.getPublicVenueTypes({
       page,
       limit,
       keyword,
+      date
     });
 
     return sendResponse({

@@ -15,17 +15,13 @@ const connectToDB = require("./helperUtils/server-setup");
 const app = express();
 
 // ✅ Allow localhost only in development
-const allowedOrigins = [
+let allowedOrigins = [
   "https://pleis.com",
   "https://www.pleis.com",
   "wss://pleis.com",
 ];
 if (process.env.NODE_ENV === "dev") {
-  allowedOrigins.push("http://localhost:4003");
-  allowedOrigins.push("ws://localhost:4004");
-  allowedOrigins.push("https://dev.pleis.com");
-  allowedOrigins.push("https://www.dev.pleis.com");
-  allowedOrigins.push("wss://dev.pleis.com");
+  allowedOrigins = ["*"];
 }
 
 // ✅ CORS middleware with dynamic origin check

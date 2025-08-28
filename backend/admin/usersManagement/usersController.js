@@ -11,38 +11,11 @@ const { registerUserUtility } = require("../../controllers/authUtil.js");
 
 const createUser = async (req, res) => {
   try {
+    const result = await registerUserUtility(req, res);
 
-    const {
-      email,
-      deviceId,
-      deviceType,
-      phoneNumber,
-      profileIcon,
-      userType = "user",
-      firstName,
-      lastName,
-      organizationName,
-      password,
-      timezone,
-      companyDetails,
-    } = req.body;
-
-    const result = await registerUserUtility({
-      email,
-      deviceId,
-      deviceType,
-      phoneNumber,
-      profileIcon,
-      userType,
-      firstName,
-      lastName,
-      organizationName,
-      password,
-      timezone,
-      companyDetails,
-      sendEmail: false,
-    });
-
+    if (result.responseSent) {
+      return; // ✅ Utility already handled response, stop here
+    }
 
     if (result.success) {
       return sendResponse({
@@ -60,7 +33,6 @@ const createUser = async (req, res) => {
         error: result.error,
       });
     }
-
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
     return sendResponse({
@@ -71,6 +43,7 @@ const createUser = async (req, res) => {
     });
   }
 };
+
 
 const getUsers = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);

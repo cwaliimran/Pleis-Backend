@@ -6,10 +6,22 @@ const createEvent = async ({ data }) => {
   return await eventRepo.createEvent(data);
 };
 
-const getEvents = async ({ page, limit, keyword, status, creator }) => {
+const getEvents = async ({ page, limit, keyword, status, creator, startDate, endDate }) => {
   const query = {};
   if (creator) query.creator = creator;
-  if (status) query.status = status;
+  if (status) {
+    query.status = status;
+  } else {
+    query.status = { $ne: "deleted" };
+  }
+
+  if (startDate) {
+    query["schedule.startDateTime"] = { $gte: new Date(startDate) };
+  }
+  if (endDate) {
+    query["schedule.endDateTime"] = { $lte: new Date(endDate) };
+  }
+
   if (keyword) {
     query.$or = [
       { title: { $regex: keyword, $options: "i" } },
@@ -27,7 +39,7 @@ const getEvents = async ({ page, limit, keyword, status, creator }) => {
         limit === 0 ? 0 : limit
       ),
       eventRepo.countEvents(query),
-      eventRepo.countEvents({}),
+      eventRepo.countEvents({ status: { $ne: "deleted" } }),
       eventRepo.countEvents({ status: "active" }),
       eventRepo.countEvents({ status: "inactive" }),
     ]);

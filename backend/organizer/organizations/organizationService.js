@@ -9,7 +9,11 @@ const createOrganization = async ({ data }) => {
 const getOrganizations = async ({ page, limit, keyword, status, creator }) => {
   const query = {};
   if (creator) query.creator = creator;
-  if (status) query.status = status;
+  if (status) {
+    query.status = status;
+  } else {
+    query.status = { $ne: "deleted" };
+  }
   if (keyword) {
     query.$or = [
       { title: { $regex: keyword, $options: "i" } },
@@ -27,7 +31,7 @@ const getOrganizations = async ({ page, limit, keyword, status, creator }) => {
         limit === 0 ? 0 : limit
       ),
       organizationRepo.countOrganizations(query),
-      organizationRepo.countOrganizations({}),
+      organizationRepo.countOrganizations({ status: { $ne: "deleted" } }),
       organizationRepo.countOrganizations({ status: "active" }),
       organizationRepo.countOrganizations({ status: "inactive" }),
     ]);

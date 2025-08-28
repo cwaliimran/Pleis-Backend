@@ -11,7 +11,7 @@ const createVenueType = async (data) => {
 // Get all with filters
 const getVenueTypesWithFilters = async (query, skip, limit) => {
   return VenueTypesModel.find(query)
-    .sort({ title: 1 })
+    .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
 };

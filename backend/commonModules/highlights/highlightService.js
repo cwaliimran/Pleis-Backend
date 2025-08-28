@@ -8,10 +8,21 @@ const createHighlight = async ({ data }) => {
   return await highlightRepo.createHighlight(data);
 };
 
-const getHighlights = async ({ page, limit, keyword, status, creator }) => {
+const getHighlights = async ({ page, limit, keyword, status, creator, date}) => {
   const query = {};
   if (creator) query.creator = creator;
-  if (status) query.status = status;
+    if (status) {
+    query.status = status;
+  } else {
+    query.status = { $ne: "deleted" };
+  }
+   // if date is available then match createdAt with date current date format is yyyy-mm-dd
+  if (date) {
+    query.createdAt = {
+      $gte: new Date(date),
+      $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
+    };
+  }
   if (keyword) {
     query.$or = [
       { title: { $regex: keyword, $options: "i" } },
@@ -29,7 +40,7 @@ const getHighlights = async ({ page, limit, keyword, status, creator }) => {
         limit === 0 ? 0 : limit
       ),
       highlightRepo.countHighlights(query),
-      highlightRepo.countHighlights({}),
+      highlightRepo.countHighlights({status: {$ne: "deleted"}}),
       highlightRepo.countHighlights({ status: "active" }),
       highlightRepo.countHighlights({ status: "inactive" }),
     ]);

@@ -30,13 +30,45 @@ const createVenue = async (data) => {
   }
 };
 
-// Get all with filters
+// Get all venues with organizations array (using $lookup), sorted by createdAt descending
 const getVenuesWithFilters = async (query, skip, limit) => {
-  return Venues.find(query)
-    .populate({ path: "venueType", select: "title image" })
-    .sort({ title: 1 })
-    .skip(skip)
-    .limit(limit);
+  return Venues.aggregate([
+    { $match: query },
+    {
+      $lookup: {
+        from: "organizations",
+        localField: "_id",
+        foreignField: "venue",
+        as: "organizations",
+        pipeline: [
+          { $project: { basicInfo: 1} }
+        ]
+      },
+    },
+    {
+      $sort: { createdAt: -1 }
+    },
+    { $skip: skip },
+    { $limit: limit },
+    {
+      $lookup: {
+        from: "venuetypes",
+        localField: "venueType",
+        foreignField: "_id",
+        as: "venueTypeData"
+      }
+    },
+    {
+      $addFields: {
+        venueType: { $arrayElemAt: ["$venueTypeData", 0] }
+      }
+    },
+    {
+      $project: {
+        venueTypeData: 0
+      }
+    }
+  ]);
 };
 
 // Count by condition

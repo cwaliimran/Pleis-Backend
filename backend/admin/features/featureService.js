@@ -7,10 +7,23 @@ const createFeature = async ({ data }) => {
   return await featureRepo.createFeature(data);
 };
 
-const getFeatures = async ({ page, limit, keyword, status, creator }) => {
+const getFeatures = async ({ page, limit, keyword, status, creator, date }) => {
   const query = {};
   if (creator) query.creator = creator;
-  if (status) query.status = status;
+  if (status) {
+    query.status = status;
+  } else {
+    query.status = { $ne: "deleted" };
+  }
+
+   // if date is available then match createdAt with date current date format is yyyy-mm-dd
+  if (date) {
+    query.createdAt = {
+      $gte: new Date(date),
+      $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
+    };
+  }
+
   if (keyword) {
     query.$or = [
       { title: { $regex: keyword, $options: "i" } },
@@ -19,7 +32,7 @@ const getFeatures = async ({ page, limit, keyword, status, creator }) => {
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [features, totalFiltered, total, active, inactive, deleted] =
+  const [features, totalFiltered, total, active, inactive] =
     await Promise.all([
       featureRepo.getFeaturesWithFilters(
         query,
@@ -27,13 +40,12 @@ const getFeatures = async ({ page, limit, keyword, status, creator }) => {
         limit === 0 ? 0 : limit
       ),
       featureRepo.countFeatures(query),
-      featureRepo.countFeatures({}),
+      featureRepo.countFeatures({ status: { $ne: "deleted" } }),
       featureRepo.countFeatures({ status: "active" }),
       featureRepo.countFeatures({ status: "inactive" }),
-      featureRepo.countFeatures({ status: "deleted" }),
     ]);
   let meta = generateMeta(page, limit, totalFiltered);
-  meta.featuresCount = { total, active, inactive, deleted };
+  meta.featuresCount = { total, active, inactive };
   return {
     features,
     meta

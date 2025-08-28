@@ -98,15 +98,22 @@ const createHighlight = async (req, res) => {
 
 const getHighlights = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status } = req.query;
+  const { keyword, status, date } = req.query;
   let { _id, timezone } = req.user;
   try {
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+    
     let { highlights, meta } = await highlightService.getHighlights({
       page,
       limit,
       keyword,
       status,
       creator: _id,
+      date
     });
 
     //transform highlight to .toCustomJSON()
@@ -242,7 +249,7 @@ const updateHighlight = async (req, res) => {
       translationKey: "highlight_updated_successfully",
       data: updated,
     });
-   } catch (error) {
+  } catch (error) {
     const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,

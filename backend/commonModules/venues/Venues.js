@@ -60,6 +60,23 @@ function transformDoc(doc, ret) {
   return ret;
 }
 
+venuesSchema.methods.formatResponse = function (venueData) {
+  const venue = venueData ? venueData : this.toObject();
+
+  delete venue.__v;
+  delete venue.id; // Remove redundant id field
+
+  // Attach full image URL for floorPlan
+  venue.floorPlanInfo = {
+    name: venue.floorPlan || "noimage.png",
+    url: getFullImageUrl(venue.floorPlan || "noimage.png"),
+  };
+  delete venue.floorPlan;
+
+  return venue;
+};
+
+
 const Venues = mongoose.model("Venues", venuesSchema);
 
 module.exports = Venues;

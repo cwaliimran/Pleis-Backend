@@ -19,9 +19,12 @@ const languageSchema = new mongoose.Schema(
     code: {
       type: String,
       required: [true, "language_code_required"], // Custom error message key
-      unique: true,
     },
-    isActive: { type: Boolean, default: true },
+    status: {
+      type: String,
+      enum: ["active", "inactive", "deleted"],
+      default: "active",
+    },
   },
   {
     timestamps: true,
@@ -44,6 +47,6 @@ languageSchema.methods.toJSON = function () {
   return languageObject;
 };
 
-  
+
 
 module.exports = mongoose.model("Language", languageSchema);

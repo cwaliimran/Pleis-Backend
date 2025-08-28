@@ -10,7 +10,7 @@ const createCategory = async (data) => {
 // Get all with filters
 const getCategoriesWithFilters = async (query, skip, limit) => {
   return Categories.find(query)
-    .sort({ title: 1 })
+    .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
 };

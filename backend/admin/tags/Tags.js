@@ -27,6 +27,11 @@ const tagsSchema = new mongoose.Schema(
       enum: ["active", "inactive", "deleted"],
       default: "active",
     },
+    type: {
+      type: String,
+      enum: ["primary", "success", "warning", "danger"],
+      default: "primary",
+    },
     pinned: {
       type: Boolean,
       default: false,

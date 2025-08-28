@@ -2,15 +2,31 @@
 const { generateMeta } = require("../../helperUtils/responseUtil");
 const tagRepo = require("./tagsRepository");
 
-const createTag = async ({ title, status }) => {
-  return await tagRepo.createTag({ title, status });
+const createTag = async ({ title, status, type }) => {
+  return await tagRepo.createTag({ title, status, type });
 };
 
-const getTags = async ({ page, limit, keyword, status, pinned }) => {
+const getTags = async ({ page, limit, keyword, type, status, pinned, date }) => {
   const filters = [];
+
+  // if date is available then match createdAt with date current date format is yyyy-mm-dd
+  if (date) {
+    filters.push({
+      createdAt: {
+        $gte: new Date(date),
+        $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
+      },
+    });
+  }
+
+  if (type) {
+    filters.push({ type });
+  }
 
   if (status) {
     filters.push({ status });
+  } else {
+    filters.push({ status: { $ne: "deleted" } });
   }
 
   if (keyword) {
@@ -27,14 +43,13 @@ const getTags = async ({ page, limit, keyword, status, pinned }) => {
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [tags, totalFiltered, total, active, inactive, deleted] =
+  const [tags, totalFiltered, total, active, inactive] =
     await Promise.all([
       tagRepo.getTagsWithFilters(query, skip, limit === 0 ? 0 : limit),
       tagRepo.countTags(query),
-      tagRepo.countTags({}),
+      tagRepo.countTags({ status: { $ne: "deleted" } }),
       tagRepo.countTags({ status: "active" }),
       tagRepo.countTags({ status: "inactive" }),
-      tagRepo.countTags({ status: "deleted" }),
     ]);
 
   return {
@@ -43,7 +58,7 @@ const getTags = async ({ page, limit, keyword, status, pinned }) => {
       page,
       limit,
       total: totalFiltered,
-      tagsCount: { total, active, inactive, deleted },
+      tagsCount: { total, active, inactive },
     },
   };
 };
@@ -88,7 +103,7 @@ const getPublicTags = async ({ page, limit, keyword }) => {
     tagRepo.countTags(baseQuery),
   ]);
 
-const totalPages = (limit && totalFiltered != null) ? Math.ceil(totalFiltered / limit) : 1;
+  const totalPages = (limit && totalFiltered != null) ? Math.ceil(totalFiltered / limit) : 1;
 
   const tags = {
     pinned: pinnedTags,
@@ -110,6 +125,7 @@ const updateTag = async (id, data) => {
     ...(data.title !== undefined && { title: data.title }),
     ...(data.pinned !== undefined && { pinned: data.pinned }),
     ...(data.status !== undefined && { status: data.status }),
+    ...(data.type !== undefined && { type: data.type }),
   };
 
   if (Object.keys(updateData).length === 0) {

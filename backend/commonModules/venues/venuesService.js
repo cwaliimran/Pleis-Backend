@@ -1,15 +1,29 @@
 // services/venueService.js
 const { generateMeta } = require("../../helperUtils/responseUtil");
+const Organizations = require("../../organizer/organizations/Organization");
+const Venues = require("./Venues");
 const venueRepo = require("./venuesRepository");
 
 const createVenue = async (data) => {
   return await venueRepo.createVenue(data);
 };
-const getVenues = async ({ page, limit, keyword, status, pinned, userId }) => {
+const getVenues = async ({ page, limit, keyword, status, pinned, userId, date }) => {
   const query = {
     creator: userId,
   };
-  if (status) query.status = status;
+  if (status) {
+    query.status = status;
+  } else {
+    query.status = { $ne: "deleted" };
+  }
+
+  if (date) {
+    query.createdAt = {
+      $gte: new Date(date),
+      $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
+    };
+  }
+
   if (keyword) {
     query.$or = [{ title: { $regex: keyword, $options: "i" } }];
   }
@@ -24,7 +38,7 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId }) => {
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [venues, totalFiltered, total, active, inactive, deleted] =
+  let [venues, totalFiltered, total, active, inactive] =
     await Promise.all([
       venueRepo.getVenuesWithFilters(
         query,
@@ -32,16 +46,31 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId }) => {
         limit === 0 ? 0 : limit
       ),
       venueRepo.countVenues(query),
-      venueRepo.countVenues({ creator: userId }),
+      venueRepo.countVenues({ creator: userId, status: { $ne: "deleted" } }),
       venueRepo.countVenues({ status: "active", creator: userId }),
       venueRepo.countVenues({ status: "inactive", creator: userId }),
-      venueRepo.countVenues({ status: "deleted", creator: userId }),
     ]);
 
+
+const formattedVenues = venues.map(venue => {
+  const venueDoc = new Venues(venue);
+  const formattedVenue = venueDoc.formatResponse();
+
+  if (venue.organizations && Array.isArray(venue.organizations)) {
+    formattedVenue.organizations = venue.organizations.map(org => {
+      return Organizations.prototype.formatResponse(org);
+    });
+  }
+
+  return formattedVenue;
+});
+
+
+
   let meta = generateMeta(page, limit, totalFiltered);
-  meta.venuesCount = { total, active, inactive, deleted };
+  meta.venuesCount = { total, active, inactive };
   return {
-    venues,
+    venues: formattedVenues,
     meta,
   };
 };

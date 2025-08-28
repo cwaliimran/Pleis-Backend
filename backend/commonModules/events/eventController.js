@@ -89,15 +89,30 @@ const createEvent = async (req, res) => {
 
 const getEvents = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active" } = req.query;
+  const { keyword, status = "active", startDate, endDate } = req.query;
   let { _id, timezone } = req.user;
   try {
+
+    if (startDate && !validateParams(req, res, {
+      dateFields: {
+        startDate: "YYYY-MM-DD",
+      },
+    })) return;
+
+    if (endDate && !validateParams(req, res, {
+      dateFields: {
+        endDate: "YYYY-MM-DD",
+      },
+    })) return;
+
     let { events, meta } = await eventService.getEvents({
       page,
       limit,
       keyword,
       status,
       creator: _id,
+      startDate,
+      endDate
     });
     // Deep clone events to avoid mutating original objects (especially if using Mongoose docs)
     let formattedEvents = events.map(event => {
