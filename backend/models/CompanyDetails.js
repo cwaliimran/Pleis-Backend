@@ -4,23 +4,19 @@ const CompanySchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true,
       trim: true,
     },
     oib: {
       type: String,
-      required: true,
       unique: true,
       trim: true,
     },
     bankAccountNumber: {
       type: String,
-      required: true,
       trim: true,
     },
     representativeName: {
       type: String,
-      required: true,
       trim: true,
     },
 
@@ -48,6 +44,7 @@ const CompanySchema = new mongoose.Schema(
         ref: "Suppliers",
       },
     ],
+      default: [],
   },
   {
     _id: false,

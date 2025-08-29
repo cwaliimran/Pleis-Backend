@@ -154,10 +154,16 @@ const deleteOrganization = async (id) => {
   return true;
 };
 
+const checkOrganizationExists = async (id) => {
+  const organization = await organizationRepo.findOrganizationById(id);
+  return !!organization;
+};
+
 module.exports = {
   createOrganization,
   getOrganizations,
   updateOrganization,
   deleteOrganization,
   getPublicOrganizations,
+  checkOrganizationExists,
 };

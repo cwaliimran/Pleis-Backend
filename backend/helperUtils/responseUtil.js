@@ -292,10 +292,18 @@ const validateParams = (req, res, options = {}) => {
       extractNestedFields(req.body, field) ||
       extractNestedFields(req.params, field) ||
       extractNestedFields(req.query, field);
-    if (value) {
-      objectIdsToValidate.push(value);
-      fieldNames.push(field);
+   if (value) {
+  if (Array.isArray(value)) {
+    for (const val of value) {
+      objectIdsToValidate.push(val);
+      fieldNames.push(field); // Indicate it's from an array
     }
+  } else {
+    objectIdsToValidate.push(value);
+    fieldNames.push(field);
+  }
+}
+
   }
   if (!validateObjectIdsArr(res, objectIdsToValidate, fieldNames)) {
     return false;

@@ -7,6 +7,7 @@ const { User, USER_TYPES } = require("../models/UserModel");
 
 const mongoose = require("mongoose");
 const validator = require("validator");
+const { checkOrganizationExists } = require("../organizer/organizations/organizationService");
 // const { sendEmailViaBrevo } = require("../helperUtils/emailUtil");
 // const { registrationOtpEmailTemplate } = require("../helperUtils/emailTemplates");
 
@@ -38,15 +39,24 @@ const registerUserUtility = async (req, res) => {
 
   try {
     let rawData = ["firstName", "lastName", "email", "password", "userType"];
+    let objectIdFields = [];
 
     if (userType === "guest") verificationStatus = "active";
-    if (userType === "manager") { rawData.push("organization"); }
+    if (userType === "manager") { 
+      rawData.push("organization"); 
+      objectIdFields.push("organization");
+    }
     if (userType === "user") { rawData.push("dob", "gender", "username"); }
-    if (userType === "staff") { rawData.push("organization", "modules"); }
-    if (userType === "organizer") { rawData.push("organizationName", "companyDetails"); }
+    if (userType === "staff") { 
+      rawData.push("organization", "modules");
+      objectIdFields.push("organization");
+      objectIdFields.push("modules");
+     }
+    if (userType === "organizer") { rawData.push("organizationName", "phoneNumber", "companyDetails"); }
 
     const validationOptions = {
       rawData,
+      objectIdFields,
       enumFields: { userType: USER_TYPES },
       minLengthFields: { password: 6 },
     };
@@ -54,6 +64,9 @@ const registerUserUtility = async (req, res) => {
     if (!validateParams(req, res, validationOptions)) {
       return { responseSent: true }; // ✅ Mark that response is already sent
     }
+
+    console.log("here")
+    return;
 
     if (profileIcon && profileIcon.startsWith("http")) {
       throw new Error("Invalid URL for profileIcon");
@@ -90,6 +103,15 @@ const registerUserUtility = async (req, res) => {
       if (existingPhone) throw new Error("Phone number already registered");
     }
 
+    //check if organization exists
+    if (organization) {
+      const exists = await checkOrganizationExists(organization);
+      if (!exists) {
+        sendResponse({ res, statusCode: 400, translationKey: "invalid_organization" });
+        return { responseSent: true }; // ✅ Response sent, stop further flow
+      }
+    }
+
     // ✅ Create user
     let user = existingUser || new User();
     Object.assign(user, {
@@ -101,8 +123,6 @@ const registerUserUtility = async (req, res) => {
       username,
       gender,
       dob,
-      organization,
-      modules,
       organizationName,
       password,
       timezone,
@@ -110,6 +130,10 @@ const registerUserUtility = async (req, res) => {
       verificationStatus: { email: "verified", phoneNumber: "pending" },
       companyDetails: companyDetails || null,
     });
+
+
+    // organization,
+    // modules,
 
     const tokenData = user.generateEmailVerificationToken();
     user.emailVerificationLink = tokenData.rawToken;

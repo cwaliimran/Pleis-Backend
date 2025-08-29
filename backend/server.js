@@ -15,38 +15,29 @@ const connectToDB = require("./helperUtils/server-setup");
 const app = express();
 
 // ✅ Allow localhost only in development
-let allowedOrigins = [
+const allowedOrigins = [
   "https://pleis.com",
   "https://www.pleis.com",
-  "wss://pleis.com",
 ];
-if (process.env.NODE_ENV === "dev") {
-  allowedOrigins = ["*"];
-}
 
-// ✅ CORS middleware with dynamic origin check
 app.use(
   cors({
     origin: function (origin, callback) {
-      // console.log("origin", origin);
-      if (!origin) return callback(null, true); // ✅ Allow Postman
-      if (allowedOrigins.includes(origin)) return callback(null, true);
+      if (!origin) return callback(null, true); // ✅ Allow Postman/no origin
+      if (process.env.NODE_ENV === "dev") {
+        return callback(null, true); // ✅ Allow any origin in dev
+      }
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
       return callback(new Error("Not allowed by CORS"), false);
     },
-    methods: "*",
-    allowedHeaders: ["Content-Type", "Authorization", "x-admin-access-token"],
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-admin-access-token"],
     optionsSuccessStatus: 200,
   })
 );
-
-// ✅ Optional: Handle CORS errors gracefully
-app.use((err, req, res, next) => {
-  if (err.message === "Not allowed by CORS") {
-    return res.status(403).json({ message: "CORS Forbidden" });
-  }
-  next(err);
-});
 
 
 app.use(i18nConfig.init);
