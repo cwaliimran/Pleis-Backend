@@ -7,12 +7,17 @@ const { User, USER_TYPES } = require("../models/UserModel");
 
 const mongoose = require("mongoose");
 const validator = require("validator");
-const { checkOrganizationExists } = require("../organizer/organizations/organizationService");
+const Organizations = require("../organizer/organizations/Organization");
+const { FEATURE_KEYS } = require("../admin/features/Feature");
 // const { sendEmailViaBrevo } = require("../helperUtils/emailUtil");
 // const { registrationOtpEmailTemplate } = require("../helperUtils/emailTemplates");
 
 // ✅ Main utility function
-const registerUserUtility = async (req, res) => {
+const registerUserUtility = async (req, res, options = {}) => {
+  const {
+    autoVerify = false, // true if created by admin, false if app user
+  } = options;
+
   const {
     email,
     phoneNumber,
@@ -24,13 +29,13 @@ const registerUserUtility = async (req, res) => {
     companyDetails,
     password,
     timezone = "Europe/Berlin",
-    adminToken,
-    sendEmail = false,
     username,
     gender,
     dob,
-    organization,
-    modules,
+    organizations = [], // multiple organizations for managers
+    modules = [],
+    deviceId,
+    deviceType,
   } = req.body;
 
   let verificationStatus = "active";
@@ -41,23 +46,26 @@ const registerUserUtility = async (req, res) => {
     let rawData = ["firstName", "lastName", "email", "password", "userType"];
     let objectIdFields = [];
 
+    // Adjust required fields by userType
     if (userType === "guest") verificationStatus = "active";
-    if (userType === "manager") { 
-      rawData.push("organization"); 
-      objectIdFields.push("organization");
+    if (userType === "manager") {
+      rawData.push("organizations", "phoneNumber");
+      objectIdFields.push("organizations");
     }
-    if (userType === "user") { rawData.push("dob", "gender", "username"); }
-    if (userType === "staff") { 
-      rawData.push("organization", "modules");
-      objectIdFields.push("organization");
-      objectIdFields.push("modules");
-     }
-    if (userType === "organizer") { rawData.push("organizationName", "phoneNumber", "companyDetails"); }
+    if (userType === "user") rawData.push("dob", "gender", "username", "phoneNumber");
+    if (userType === "staff") {
+      rawData.push("organizations", "phoneNumber");
+      objectIdFields.push("organizations");
+    }
+    if (userType === "organizer") {
+      rawData.push("organizationName", "phoneNumber", "companyDetails");
+      verificationStatus = "pending"; // Organizer starts as pending
+    }
 
     const validationOptions = {
       rawData,
       objectIdFields,
-      enumFields: { userType: USER_TYPES },
+      enumFields: { userType: USER_TYPES, modules: FEATURE_KEYS },
       minLengthFields: { password: 6 },
     };
 
@@ -65,22 +73,35 @@ const registerUserUtility = async (req, res) => {
       return { responseSent: true }; // ✅ Mark that response is already sent
     }
 
-    console.log("here")
-    return;
-
+    // ✅ Validate profile icon
     if (profileIcon && profileIcon.startsWith("http")) {
-      throw new Error("Invalid URL for profileIcon");
+      return {
+        success: false,
+        error: { message: "Invalid URL for profileIcon", translationKey: "url_not_accepted" },
+        responseSent: false,
+      };
     }
 
-    // ✅ Admin token check
-    if (userType === "admin" && adminToken !== process.env.ADMIN_ACCESS_TOKEN) {
-      throw new Error("Unauthorized to create admin");
+    // ✅ Admin token check for admin creation
+    if (userType === "admin") {
+      const adminToken = req.header("x-admin-access-token");
+      if (adminToken !== process.env.ADMIN_ACCESS_TOKEN) {
+        return {
+          success: false,
+          error: { message: "Unauthorized to create admin", translationKey: "unauthorized_to" },
+          responseSent: false,
+        };
+      }
     }
 
-    // ✅ Check existing email
+    // ✅ Check if email exists
     const existingUser = await User.findOne({ email: email.trim().toLowerCase() });
     if (existingUser && existingUser.verificationStatus.email === "verified") {
-      throw new Error("Email already registered");
+      return {
+        success: false,
+        error: { message: "Email already registered", translationKey: "email_already" },
+        responseSent: false,
+      };
     }
 
     // ✅ Validate phone number
@@ -92,7 +113,7 @@ const registerUserUtility = async (req, res) => {
         !validator.isMobilePhone(`${phoneNumber.code}${phoneNumber.number}`, "any", { strictMode: true })
       ) {
         sendResponse({ res, statusCode: 400, translationKey: "invalid_phone" });
-        return { responseSent: true }; // ✅ Response sent, stop further flow
+        return { responseSent: true };
       }
 
       const existingPhone = await User.findOne({
@@ -100,19 +121,28 @@ const registerUserUtility = async (req, res) => {
         "phoneNumber.number": phoneNumber.number,
         "verificationStatus.phoneNumber": "verified",
       });
-      if (existingPhone) throw new Error("Phone number already registered");
-    }
-
-    //check if organization exists
-    if (organization) {
-      const exists = await checkOrganizationExists(organization);
-      if (!exists) {
-        sendResponse({ res, statusCode: 400, translationKey: "invalid_organization" });
-        return { responseSent: true }; // ✅ Response sent, stop further flow
+      if (existingPhone) {
+        return {
+          success: false,
+          error: { message: "Phone number already registered", translationKey: "phone_number_already" },
+          responseSent: false,
+        };
       }
     }
 
-    // ✅ Create user
+    // ✅ Validate organizations for manager/staff
+    let organizationsDocs;
+    if (userType == "manager" || userType == "staff") {
+      if (organizations && organizations.length > 0) {
+        organizationsDocs = await Organizations.find({ _id: { $in: organizations } });
+        if (organizationsDocs.length !== organizations.length) {
+          sendResponse({ res, statusCode: 400, translationKey: "invalid_organizations" });
+          return { responseSent: true };
+        }
+      }
+    }
+
+    // ✅ Create or reuse user
     let user = existingUser || new User();
     Object.assign(user, {
       email,
@@ -127,34 +157,84 @@ const registerUserUtility = async (req, res) => {
       password,
       timezone,
       accountState: { userType, status: verificationStatus },
-      verificationStatus: { email: "verified", phoneNumber: "pending" },
+      verificationStatus: {
+        email: autoVerify ? "verified" : "pending",
+        phoneNumber: "pending",
+      },
       companyDetails: companyDetails || null,
     });
 
+    // ✅ Handle organizations for staff and manager
+    if (userType === "staff" && Array.isArray(organizationsDocs) && organizationsDocs.length > 0) {
+      for (const orgDoc of organizationsDocs) {
+        const staffIndex = orgDoc.staff?.findIndex(
+          s => s.user?.toString() === user._id.toString()
+        );
 
-    // organization,
-    // modules,
+        if (staffIndex === -1) {
+          orgDoc.staff = orgDoc.staff || [];
+          orgDoc.staff.push({
+            user: user._id,
+            featuresAccess: Array.isArray(modules) ? modules : [],
+          });
+          await orgDoc.save({ session });
+        } else if (Array.isArray(modules) && modules.length > 0) {
+          const currentFeatures = orgDoc.staff[staffIndex].featuresAccess || [];
+          const newFeatures = modules.filter(f => !currentFeatures.includes(f));
+          if (newFeatures.length > 0) {
+            orgDoc.staff[staffIndex].featuresAccess = [...currentFeatures, ...newFeatures];
+            await orgDoc.save({ session });
+          }
+        }
+      }
+    }
 
-    const tokenData = user.generateEmailVerificationToken();
-    user.emailVerificationLink = tokenData.rawToken;
+    if (userType === "manager" && Array.isArray(organizationsDocs) && organizationsDocs.length > 0) {
+      for (const orgDoc of organizationsDocs) {
+        const existingStaff = orgDoc.staff?.find(s => s.user.toString() === user._id.toString());
+        if (!existingStaff) {
+          orgDoc.staff = orgDoc.staff || [];
+          orgDoc.staff.push({ user: user._id });
+        }
+        await orgDoc.save({ session });
+      }
+    }
+
+    // ✅ Generate email verification token if not auto-verified
+    if (!autoVerify) {
+      const tokenData = user.generateEmailVerificationToken();
+      user.emailVerificationLink = tokenData.rawToken;
+
+        // await sendEmailViaBrevo(user.email, tokenData.verificationLink);
+    }
+
     await user.save({ session });
+
+    // ✅ Optional device handling
+    if (deviceId && deviceType) {
+      createOrSkipDevice(user._id, deviceId, deviceType);
+    }
+
     await session.commitTransaction();
 
     const userObject = user.toJSON(user);
     const formattedResponse = formatUserResponse(userObject);
 
-    // if (deviceId && deviceType) {
-    //   createOrSkipDevice(userObject._id, deviceId, deviceType);
-    // }
-
-    return { success: true, user: formattedResponse, responseSent: false }; // ✅ No direct response here
+    return { success: true, user: formattedResponse, responseSent: false };
   } catch (error) {
-    // await session.abortTransaction();
-    return { success: false, error: error, responseSent: false }; // ✅ Let controller handle error
+    await session.abortTransaction();
+    return {
+      success: false,
+      error: { message: error.message, translationKey: "registration_failed" },
+      responseSent: false,
+    };
   } finally {
     session.endSession();
   }
 };
+
+
+
 
 module.exports = { registerUserUtility };
 

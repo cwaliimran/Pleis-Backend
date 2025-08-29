@@ -25,7 +25,6 @@ const featureSchema = new mongoose.Schema(
       type: String,
       enum: FEATURE_KEYS,
       default: "ticketing",
-      unique: true
     },
     creator: {
       type: mongoose.Schema.Types.ObjectId,

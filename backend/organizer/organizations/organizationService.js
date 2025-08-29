@@ -159,11 +159,20 @@ const checkOrganizationExists = async (id) => {
   return !!organization;
 };
 
+const findOrganizationById = async (id) => {
+  return await organizationRepo.findOrganizationById(id);
+};
+
+const getOrganizationsAsStaff = async (id) => {
+  return await organizationRepo.getOrganizationsAsStaff(id);
+};
 module.exports = {
   createOrganization,
   getOrganizations,
   updateOrganization,
+  findOrganizationById,
   deleteOrganization,
   getPublicOrganizations,
   checkOrganizationExists,
+  getOrganizationsAsStaff,
 };

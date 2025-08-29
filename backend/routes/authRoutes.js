@@ -7,9 +7,7 @@ const {
   resetPassword,
   verifyOtp,
   logout,
-  softDeleteAccount,
   hardDeleteAccount,
-  resumeAccount,
   socialAuth,
   companyDetails,
   verifyEmailViaLink,
@@ -74,7 +72,6 @@ router.post("/reset-password", resetPasswordRateLimiter, resetPassword);
 
 router.post("/logout", auth, logout);
 router.delete("/delete-account", auth, hardDeleteAccount);
-router.put("/resume-account", resumeAccount);
 router.post("/social-auth", socialAuth);
 
 router.get("/link/verify-email", linkRateLimiterEmail, verifyEmailViaLink);

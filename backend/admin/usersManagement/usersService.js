@@ -1,15 +1,18 @@
 // services/userService.js
+const e = require("express");
 const { generateMeta } = require("../../helperUtils/responseUtil");
 const userRepo = require("./usersRepository");
 
-const createUser = async ({ image, title, status, userType }) => {
-  return await userRepo.createUser({ image, title, status, userType });
-};
+
 const getUsers = async ({ page, limit, keyword, status, userType }) => {
   const query = {
     "verificationStatus.email": "verified",
   };
-  if (status) query["accountState.status"] = status;
+  if (status) {
+    query["accountState.status"] = status;
+  } else {
+    query["accountState.status"] = { $ne: "deleted" };
+  }
   if (keyword) {
     query.$or = [{ firstName: { $regex: keyword, $options: "i" } }];
   }
@@ -18,7 +21,7 @@ const getUsers = async ({ page, limit, keyword, status, userType }) => {
   }
 
   const skip = (page - 1) * limit;
-  const [users, totalFiltered, pending, active, rejected, suspended, softDeleted, hardDeleted] =
+  const [users, totalFiltered, pending, active, rejected, suspended] =
     await Promise.all([
       userRepo.getUsersWithFilters(
         query,
@@ -30,12 +33,10 @@ const getUsers = async ({ page, limit, keyword, status, userType }) => {
       userRepo.countUsers({ "accountState.status": "active" }),
       userRepo.countUsers({ "accountState.status": "rejected" }),
       userRepo.countUsers({ "accountState.status": "suspended" }),
-      userRepo.countUsers({ "accountState.status": "softDeleted" }),
-      userRepo.countUsers({ "accountState.status": "hardDeleted" }),
     ]);
 
   let meta = generateMeta(page, limit, totalFiltered);
-  meta.usersCount = { pending, active, rejected, suspended, softDeleted, hardDeleted };
+  meta.usersCount = { pending, active, rejected, suspended };
   return {
     users,
     meta,
@@ -62,15 +63,20 @@ const updateUser = async (id, data) => {
 
 const deleteUser = async (id) => {
   const updated = await userRepo.findByIdAndUpdate(id, {
-    status: "deleted",
+    "accountState.status": "deleted",
   });
   if (!updated) return null;
   return true;
 };
 
+const getUserDetails = async (id) => {
+  return await userRepo.findUserById(id);
+};
+
+
 module.exports = {
-  createUser,
   getUsers,
   updateUser,
   deleteUser,
+  getUserDetails,
 };

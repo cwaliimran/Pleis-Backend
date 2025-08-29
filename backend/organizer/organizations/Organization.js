@@ -4,6 +4,7 @@ const { getFullImageUrl } = require("../../helperUtils/imageHelper");
 const {
   OperatingHoursSchema,
 } = require("../../shared/commonSchemas/operatingHours");
+const { FEATURE_KEYS } = require("../../admin/features/Feature");
 
 const organizationSchema = new mongoose.Schema(
   {
@@ -99,20 +100,25 @@ const organizationSchema = new mongoose.Schema(
       type: LocationSchema,
       default: {},
     },
-    staff: {
-      users: [
-        {
+    staff: [
+      {
+        user: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: "Users",
+          ref: "User",
+          required: true,
         },
-      ],
-      featuresAccess: {
-        type: [mongoose.Schema.Types.ObjectId],
-        ref: "Features",
-        default: [],
+        featuresAccess: [
+          {
+            type: String,
+            enum: FEATURE_KEYS,
+            default: [],
+          },
+        ],
+        _id: false,
+
       },
-      default: [],
-    },
+    ],
+
   },
   {
     timestamps: true,

@@ -292,17 +292,17 @@ const validateParams = (req, res, options = {}) => {
       extractNestedFields(req.body, field) ||
       extractNestedFields(req.params, field) ||
       extractNestedFields(req.query, field);
-   if (value) {
-  if (Array.isArray(value)) {
-    for (const val of value) {
-      objectIdsToValidate.push(val);
-      fieldNames.push(field); // Indicate it's from an array
+    if (value) {
+      if (Array.isArray(value)) {
+        for (const val of value) {
+          objectIdsToValidate.push(val);
+          fieldNames.push(field); // Indicate it's from an array
+        }
+      } else {
+        objectIdsToValidate.push(value);
+        fieldNames.push(field);
+      }
     }
-  } else {
-    objectIdsToValidate.push(value);
-    fieldNames.push(field);
-  }
-}
 
   }
   if (!validateObjectIdsArr(res, objectIdsToValidate, fieldNames)) {
@@ -370,16 +370,39 @@ const validateParams = (req, res, options = {}) => {
       extractNestedFields(req.body, field) ||
       extractNestedFields(req.params, field) ||
       extractNestedFields(req.query, field);
-    if (value && !allowedValues.includes(value)) {
-      sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "invalid_enum_value", // Use translation key
-        values: { field, allowedValues: allowedValues.join(", ") }, // Replace placeholders with actual values
-      });
-      return false;
+
+    if (value) {
+      if (Array.isArray(value)) {
+        // Check if every item in the array is allowed
+        const invalidValues = value.filter(v => !allowedValues.includes(v));
+        if (invalidValues.length > 0) {
+          sendResponse({
+            res,
+            statusCode: 400,
+            translationKey: "invalid_enum_value",
+            values: {
+              field,
+              allowedValues: allowedValues.join(", "),
+              invalidValues: invalidValues.join(", ")
+            },
+          });
+          return false;
+        }
+      } else {
+        // Single value check
+        if (!allowedValues.includes(value)) {
+          sendResponse({
+            res,
+            statusCode: 400,
+            translationKey: "invalid_enum_value",
+            values: { field, allowedValues: allowedValues.join(", ") },
+          });
+          return false;
+        }
+      }
     }
   }
+
 
   // Validate minimum length fields
   for (const [field, minLength] of Object.entries(minLengthFields)) {
@@ -443,18 +466,18 @@ const validateParams = (req, res, options = {}) => {
   return true;
 };
 
- const extractNestedFields = (obj, fieldPath) => {
-    const fields = fieldPath.split(".");
-    let value = obj;
-    for (const field of fields) {
-      if (value && value[field]) {
-        value = value[field];
-      } else {
-        return null;
-      }
+const extractNestedFields = (obj, fieldPath) => {
+  const fields = fieldPath.split(".");
+  let value = obj;
+  for (const field of fields) {
+    if (value && value[field]) {
+      value = value[field];
+    } else {
+      return null;
     }
-    return value;
-  };
+  }
+  return value;
+};
 
 // Example usage
 const exampleMiddleware = (req, res, next) => {

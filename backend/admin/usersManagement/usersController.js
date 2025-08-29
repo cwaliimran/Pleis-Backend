@@ -8,40 +8,32 @@ const {
 const { formatUserResponse } = require("../../helperUtils/userResponseUtil");
 const usersService = require("./usersService");
 const { registerUserUtility } = require("../../controllers/authUtil.js");
+const { User } = require("../../models/UserModel.js");
+const { getOrganizationsAsStaff } = require("../../organizer/organizations/organizationService.js");
+const Organizations = require("../../organizer/organizations/Organization.js");
 
 const createUser = async (req, res) => {
-  try {
-    const result = await registerUserUtility(req, res);
+  const result = await registerUserUtility(req, res, {
+    autoVerify: true,
+  });
 
-    if (result.responseSent) {
-      return; // ✅ Utility already handled response, stop here
-    }
+  if (result.responseSent) return;
 
-    if (result.success) {
-      return sendResponse({
-        res,
-        statusCode: 201,
-        translationKey: "user_created_successfully",
-        data: result.user,
-      });
-    } else {
-      const readableError = getReadableErrorMessage(result.error);
-      return sendResponse({
-        res,
-        statusCode: readableError.statusCode,
-        translationKey: readableError.message,
-        error: result.error,
-      });
-    }
-  } catch (error) {
-    const readableError = getReadableErrorMessage(error);
+  if (!result.success) {
     return sendResponse({
       res,
-      statusCode: readableError.statusCode,
-      translationKey: readableError.message,
-      error,
+      statusCode: 400,
+      translationKey: result.error.translationKey,
+      message: result.error.message,
     });
   }
+
+  return sendResponse({
+    res,
+    statusCode: 201,
+    translationKey: "signup_successful",
+    data: result.user,
+  });
 };
 
 
@@ -161,9 +153,65 @@ const deleteUser = async (req, res) => {
   }
 };
 
+const getUserDetails = async (req, res) => {
+  const { id } = req.params;
+
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })
+  )
+    return;
+
+  try {
+    let user = await usersService.getUserDetails(id);
+    if (!user) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "user_not_found",
+      });
+    }
+    const userObject = new User(user).toJSON(user);
+
+    if (user.accountState?.userType === "staff" || user.accountState?.userType === "manager") {
+      // Fetch organizations where this user is staff member
+      const organizations = await getOrganizationsAsStaff(user._id);
+
+      // Format each organization response
+      userObject.organizations = Array.isArray(organizations)
+        ? organizations.map(org => {
+          return Organizations.prototype.formatResponse(org);
+        })
+        : [];
+    }
+
+
+    // Format the user response using the utility function
+    const response = formatUserResponse(userObject);
+
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "user_fetched_successfully",
+      data: response,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createUser,
   getUsers,
   updateUser,
   deleteUser,
+  getUserDetails
 };

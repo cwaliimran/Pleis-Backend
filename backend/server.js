@@ -24,9 +24,9 @@ app.use(
   cors({
     origin: function (origin, callback) {
       if (!origin) return callback(null, true); // ✅ Allow Postman/no origin
-      if (process.env.NODE_ENV === "dev") {
+      // if (process.env.NODE_ENV === "dev") {
         return callback(null, true); // ✅ Allow any origin in dev
-      }
+      // }
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }

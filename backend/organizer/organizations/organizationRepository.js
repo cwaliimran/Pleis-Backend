@@ -10,7 +10,7 @@ const createOrganization = async (data) => {
 // Get all with filters
 const getOrganizationsWithFilters = async (query, skip, limit) => {
   return Organization.find(query)
-  .populate("venue")
+    .populate("venue")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
@@ -35,6 +35,28 @@ const deleteOrganizationById = async (organization) => {
 const findByIdAndUpdate = async (id, data) => {
   return Organization.findByIdAndUpdate(id, { $set: data }, { new: true });
 };
+const getOrganizationsAsStaff = async (userId) => {
+  const organizations = await Organization.find({
+    $or: [
+      { creator: userId },
+      { "staff.user": userId }
+    ]
+  }).select("basicInfo staff").lean();
+
+  // For each organization, filter staff to only include the current user
+  return organizations.map(org => {
+    if (org.creator?.toString() === userId.toString()) {
+      // If creator, return all staff
+      return org;
+    }
+    // Otherwise, filter staff to only the current user
+    return {
+      ...org,
+      staff: org.staff.filter(s => s.user.toString() === userId.toString())
+    };
+  });
+};
+
 module.exports = {
   createOrganization,
   getOrganizationsWithFilters,
@@ -42,4 +64,5 @@ module.exports = {
   findOrganizationById,
   deleteOrganizationById,
   findByIdAndUpdate,
+  getOrganizationsAsStaff
 };

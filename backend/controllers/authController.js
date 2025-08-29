@@ -16,212 +16,30 @@ const {
 const { createOrSkipDevice, Devices } = require("../models/Devices");
 const validator = require("validator");
 const crypto = require("crypto");
+const { registerUserUtility } = require("./authUtil");
 //register
 const register = async (req, res) => {
-  const {
-    email,
-    deviceId,
-    deviceType,
-    phoneNumber,
-    profileIcon,
-    userType = "user",
-    firstName,
-    lastName,
-    organizationName,
-    password,
-    timezone,
-    companyDetails,
-  } = req.body;
+  const result = await registerUserUtility(req, res, {
+    autoVerify: false,
+  });
 
-  let verificationStatus = "active"
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  if (result.responseSent) return;
 
-  try {
-    let rawData = [
-      "firstName",
-      "lastName",
-      "email",
-      "password",
-      "deviceId",
-      "deviceType",
-      "timezone",
-      "userType",
-    ];
-
-    if (userType === "organizer") {
-      rawData.push("organizationName");
-      verificationStatus = "pending";
-    }
-
-    const validationOptions = {
-      rawData,
-      enumFields: {
-        userType: USER_TYPES,
-      },
-      minLengthFields: {
-        password: 6, // Password must be at least 6 characters long
-      },
-    };
-    if (!validateParams(req, res, validationOptions)) {
-      return;
-    }
-
-    //if profile icon and starts with http or https then it is a invalid url
-    if (profileIcon && profileIcon.startsWith("http")) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "url_not_accepted",
-        values: { field: "profileIcon" },
-      });
-    }
-
-    // Validate phone number format (expects phoneNumber as { code, number })
-    if (
-      phoneNumber &&
-      (typeof phoneNumber !== "object" ||
-        !phoneNumber.code ||
-        !phoneNumber.number ||
-        !validator.isMobilePhone(phoneNumber.code + phoneNumber.number, "any", {
-          strictMode: true,
-        }))
-    ) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "invalid_phone",
-      });
-    }
-
-    // Fetch existing user
-    const existingEmail = await User.findOne({
-      email: email.trim().toLowerCase(),
-    });
-
-    if (existingEmail) {
-      if (
-        (existingEmail.email === email.trim().toLowerCase(),
-        existingEmail.verificationStatus.email === "verified")
-      ) {
-        return sendResponse({
-          res,
-          statusCode: 409,
-          translationKey: "email_already",
-        });
-      }
-    }
-
-    let existingPhone;
-    if (phoneNumber) {
-      existingPhone = await User.findOne({
-        "phoneNumber.code": phoneNumber.code,
-        "phoneNumber.number": phoneNumber.number,
-        "verificationStatus.phoneNumber": "verified",
-      });
-    }
-    if (existingPhone) {
-      // Compare both code and number fields for phoneNumber object
-      if (
-        existingPhone.phoneNumber &&
-        existingPhone.phoneNumber.code === phoneNumber.code &&
-        existingPhone.phoneNumber.number === phoneNumber.number
-      ) {
-        return sendResponse({
-          res,
-          statusCode: 409,
-          translationKey: "phone_number_already",
-        });
-      }
-    }
-
-    let existingUser = existingEmail;
-
-    // Restrict admin creation
-    let finalUserType = userType; // default to user
-    if (userType === "admin") {
-      const adminCreationToken = req.header("x-admin-access-token");
-      if (adminCreationToken === process.env.ADMIN_ACCESS_TOKEN) {
-        finalUserType = "admin";
-      } else {
-        return sendResponse({
-          res,
-          statusCode: 403,
-          translationKey: "unauthorized_to",
-        });
-      }
-    }
-
-    let user = existingUser || new User();
-
-    Object.assign(user, {
-      email,
-      phoneNumber: phoneNumber ? phoneNumber : { code: "", number: "" },
-      deviceId,
-      deviceType,
-      profileIcon,
-      firstName,
-      lastName,
-      organizationName,
-      password,
-      timezone,
-      accountState: { userType: finalUserType, status: verificationStatus },
-      companyDetails: companyDetails || null,
-    });
-
-    if (existingUser) {
-      user.verificationStatus.email = "pending";
-      user.verificationStatus.phoneNumber = "pending";
-    }
-
-    // const otp = user.generateOtp("email", user.timezone);
-    const tokenData = user.generateEmailVerificationToken();
-    user.emailVerificationLink = tokenData.rawToken; // Store the raw token for email verification
-    await user.save({ session });
-
-    // Send email within the transaction
-    const subject = "Welcome! Verify Your Email";
-    // const mBody = registrationOtpEmailTemplate(tokenData.verificationLink);
-    // await sendEmailViaBrevo([email], subject, mBody);
-
-    // Commit the transaction
-    await session.commitTransaction();
-
-    // Ensure toJSON method is applied to strip out sensitive data
-    const userObject = new User(user).toJSON(user);
-
-    // Format the user response using the utility function
-    const response = formatUserResponse(userObject);
-
-    // Save device information (not part of the transaction)
-    createOrSkipDevice(userObject._id, deviceId, deviceType);
-
-    // Send successful response with token and user data
+  if (!result.success) {
     return sendResponse({
       res,
-      statusCode: 201,
-      translationKey: "signup_successful",
-      data: response,
+      statusCode: 400,
+      translationKey: result.error.translationKey,
+      message: result.error.message,
     });
-  } catch (error) {
-    // Only abort the transaction if it hasn't been committed yet
-    await session.abortTransaction();
-    // Handle validation errors from Mongoose
-    const statusCode = error.name === "ValidationError" ? 400 : 500;
-    const translationKey =
-      error.name === "ValidationError"
-        ? Object.values(error.errors)[0].message
-        : error.message;
-
-    return sendResponse({
-      res,
-      statusCode,
-      translationKey,
-      error,
-    });
-  } finally {
-    session.endSession(); // Ensure the session is always ended
   }
+
+  return sendResponse({
+    res,
+    statusCode: 201,
+    translationKey: "signup_successful",
+    data: result.user,
+  });
 };
 
 
@@ -396,45 +214,6 @@ const login = async (req, res) => {
         res,
         statusCode: 403,
         translationKey: "your_account_2",
-      });
-    }
-
-
-    // Check if the account is softDeleted
-    if (user.accountState.status === "softDeleted") {
-      const currentDate = moment();
-      const finalDeletionDate = moment(user.accountState.finalDeletionDate); // Final deletion date from the user model
-      const daysUntilDeletion = finalDeletionDate.diff(currentDate, "days"); // Calculate the difference in days
-
-      if (daysUntilDeletion <= 0) {
-        // Permanently delete the user account
-        // Generate a random email and username
-        const randomEmail = `deleted_user_${user._id}@example.com`;
-
-        // Update the user record to anonymize it
-        await User.findByIdAndUpdate(user._id, {
-          $set: {
-            email: randomEmail,
-            firstName: `Deleted User ${user._id}`,
-            lastName: ``,
-            phoneNumber: { code: "", number: "" },
-            profileIcon: "noimage.png",
-            "accountState.status": "hardDeleted",
-          },
-        });
-
-        return sendResponse({
-          res,
-          statusCode: 410,
-          translationKey: "user_not_found",
-        });
-      }
-
-      return sendResponse({
-        res,
-        statusCode: 423,
-        translationKey: "account_deletion_warning",
-        values: { daysUntilDeletion: daysUntilDeletion }, // Values to replace placeholders
       });
     }
 
@@ -990,44 +769,6 @@ const logout = async (req, res) => {
     });
   }
 };
-const softDeleteAccount = async (req, res) => {
-  try {
-    const userId = req.user._id;
-
-    // Set the final deletion date to 30 days from now
-    const finalDeletionDate = moment().add(30, "days").toDate();
-
-    // Update the user's account state to softDeleted and set the finalDeletionDate
-    await User.findByIdAndUpdate(
-      userId,
-      {
-        $set: {
-          "accountState.status": "softDeleted",
-          "accountState.finalDeletionDate": finalDeletionDate,
-        },
-      },
-      { new: true }
-    );
-
-    await Devices.updateOne(
-      { userId: userId },
-      { $set: { devices: [] } } // This will empty the array of devices for the user
-    );
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "account_marked",
-    });
-  } catch (error) {
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: error.message,
-      error: error,
-    });
-  }
-};
 
 const hardDeleteAccount = async (req, res) => {
   try {
@@ -1037,7 +778,7 @@ const hardDeleteAccount = async (req, res) => {
     // Generate a random email using the userId and original email
     const randomEmail = `deleted_user_${userId}_${Date.now()}@example.com`;
 
-    // Update the user's account state to hardDeleted and set the finalDeletionDate
+    // Update the user's account state to deleted and set the finalDeletionDate
     await User.findByIdAndUpdate(
       userId,
       {
@@ -1046,7 +787,7 @@ const hardDeleteAccount = async (req, res) => {
           previousEmail: email, // store the original email
           phoneNumber: { code: "", number: "" }, // clear phone number object
           profileIcon: "noimage.png",
-          "accountState.status": "hardDeleted",
+          "accountState.status": "deleted",
         },
       },
       { new: true }
@@ -1067,82 +808,6 @@ const hardDeleteAccount = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: error.message,
-      error: error,
-    });
-  }
-};
-
-const resumeAccount = async (req, res) => {
-  try {
-    const { email, otp } = req.body;
-
-    const validationOptions = {
-      rawData: ["email", "otp"],
-    };
-    if (!validateParams(req, res, validationOptions)) {
-      return;
-    }
-
-    // Find the user by email and OTP
-    const user = await User.findOne({
-      email: email.trim().toLowerCase(),
-      "otpInfo.emailOtp.otp": otp.toString(),
-    });
-
-    // Check if user is found
-    if (!user) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "invalid_otp_1",
-      });
-    }
-
-    // Check if the OTP has expired based on user's timezone
-    const currentTime = moment.tz(Date.now(), user.timezone).valueOf();
-
-    if (
-      user.otpInfo.emailOtp.otpExpires &&
-      user.otpInfo.emailOtp.otpExpires < currentTime
-    ) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "otp_has",
-      });
-    }
-
-    // Clear the OTP and OTP expiration after successful verification
-    user.otpInfo.emailOtp.otp = "";
-    user.otpInfo.emailOtp.otpExpires = "";
-    user.otpInfo.emailOtp.otpUsed = true; // Mark OTP as used
-
-    // Check if the account is marked as softDeleted
-    if (user.accountState.status !== "softDeleted") {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "your_account_5",
-      });
-    }
-
-    // Reset the account status to active and remove the finalDeletionDate
-    user.accountState.status = "active";
-    user.accountState.finalDeletionDate = null;
-
-    await user.save();
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "account_resumed",
-    });
-  } catch (error) {
-    console.error("Error during account resumption:", error);
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: "an_error_2",
       error: error,
     });
   }
@@ -1418,8 +1083,6 @@ module.exports = {
   resetPassword,
   logout,
   hardDeleteAccount,
-  softDeleteAccount,
-  resumeAccount,
   socialAuth,
   checkEmailExistsAndVerified,
   changePassword

@@ -36,7 +36,7 @@ const formatUserResponse = (
         email: userObject.verificationStatus?.email || "pending",
         phoneNumber: userObject.verificationStatus?.phoneNumber || "pending",
       },
-      
+
       ...(userObject.accountState?.reason && {
         reason: userObject.accountState.reason,
       }),
@@ -49,12 +49,18 @@ const formatUserResponse = (
     },
   };
 
-    if (userType === "organizer") {
+  if (userType === "organizer") {
     basicInfo.organizationName = userObject.organizationName || "";
     basicInfo.companyDetails = userObject.companyDetails || null;
     //add termsAccepted to organizer
     response.accountState.termsAccepted = userObject.termsAccepted || false;
-  } else if (userType == "admin") {
+  }
+
+  else if (userType == "staff" || userType == "manager") {
+    response.organizations = userObject.organizations || [];
+  }
+
+  else if (userType == "admin") {
     // Removed location for admin userType
   }
 

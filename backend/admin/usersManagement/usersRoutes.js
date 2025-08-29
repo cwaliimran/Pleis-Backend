@@ -4,6 +4,7 @@ const {
   getUsers,
   updateUser,
   deleteUser,
+  getUserDetails
 } = require("./usersController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -14,17 +15,21 @@ const router = express.Router();
 router.use(auth);
 
 // Create a rate limiter for Users
-const apiRateLimiter = createRateLimiter("Users");
+const apiRateLimiterUsers = createRateLimiter("Users");
+const apiRateLimiterUserDetail = createRateLimiter("Users details");
 
 
 // Create a new user
-router.post("/", roleMiddleware(["admin"]), createUser);
+router.post("/", roleMiddleware(["admin", "organizer", "manager"]), createUser);
+
+// Get user profile
+router.get("/:id", apiRateLimiterUserDetail, getUserDetails);
 
 // Get all users with pagination
-router.get("/", roleMiddleware(["admin"]), getUsers);
+router.get("/", apiRateLimiterUsers, getUsers);
 
 // Update an existing user
-router.put("/:id", roleMiddleware(["admin"]), updateUser);
+router.put("/:id", updateUser);
 
 // Delete a user
 router.delete("/:id", roleMiddleware(["admin"]), deleteUser);
