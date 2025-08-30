@@ -1369,12 +1369,18 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}users/profile",
+											"raw": "{{url}}users/:id",
 											"host": [
 												"{{url}}users"
 											],
 											"path": [
-												"profile"
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": ""
+												}
 											]
 										}
 									},
@@ -1507,6 +1513,59 @@
 											],
 											"path": [
 												"delete-account"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "twoFA toggle",
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"enable\": true\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}users/twofa",
+											"host": [
+												"{{url}}users"
+											],
+											"path": [
+												"twofa"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "twoFA verify",
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"token\": \"901901\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}users/twofa/verify",
+											"host": [
+												"{{url}}users"
+											],
+											"path": [
+												"twofa",
+												"verify"
 											]
 										}
 									},
@@ -5070,7 +5129,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68b2a0f035fd9d10b4f1bd7a"
+											"value": "68b2fdfbb1b44d263e635df9"
 										}
 									]
 								}
@@ -5106,7 +5165,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"logo\": \"org-logo_pic1.png\",\n            \"cover\": \"org-cover.jpg\"\n        },\n        \"name\": \"Lex Events\",\n        \"socialLinks\": {\n            \"youtube\": \"https://youtube.com/lexevents\",\n            \"facebook\": \"https://facebook.com/lexevents\",\n            \"instagram\": \"https://instagram.com/lexevents\",\n            \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        }\n    },\n    \"otherInfo\": {\n        \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n        \"minAge\": 18,\n        \"tags\": [\n            \"64f7206e442c7dfc4aa00001\"\n        ],\n        \"categories\": [\n            \"64f7206e442c7dfc4aa00002\"\n        ],\n        \"galleryMedia\": [\n            \"gallery1.jpg\",\n            \"gallery2.jpg\"\n        ]\n    },\n    \"operatingHours\": {\n        \"monday\": {\n            \"from\": \"10:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"tuesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"wednesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"thursday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"friday\": {\n            \"from\": \"09:00\",\n            \"to\": \"20:00\",\n            \"break\": {\n                \"from\": \"14:00\",\n                \"to\": \"15:00\"\n            },\n            \"isOpen\": false\n        },\n        \"saturday\": {\n            \"from\": \"12:00\",\n            \"to\": \"22:00\",\n            \"break\": {\n                \"from\": \"16:00\",\n                \"to\": \"17:00\"\n            },\n            \"isOpen\": false\n        },\n        \"sunday\": {\n            \"from\": \"\",\n            \"to\": \"\",\n            \"break\": {\n                \"from\": \"\",\n                \"to\": \"\"\n            },\n            \"isOpen\": true\n        }\n    },\n    \"status\": \"active\"\n}",
+									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"logo\": \"org-logo_pic1.png\",\n            \"cover\": \"org-cover.jpg\"\n        },\n        \"name\": \"Lex Events\",\n        \"socialLinks\": {\n            \"youtube\": \"https://youtube.com/lexevents\",\n            \"facebook\": \"https://facebook.com/lexevents\",\n            \"instagram\": \"https://instagram.com/lexevents\",\n            \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        }\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -5242,7 +5301,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68b2a0f035fd9d10b4f1bd7a"
+											"value": "68b2fdfbb1b44d263e635df9"
 										}
 									]
 								},
@@ -5350,7 +5409,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}events/?startDate=2025-08-15",
+									"raw": "{{url}}events/",
 									"host": [
 										"{{url}}events"
 									],
@@ -5360,7 +5419,8 @@
 									"query": [
 										{
 											"key": "startDate",
-											"value": "2025-08-15"
+											"value": "2025-08-15",
+											"disabled": true
 										},
 										{
 											"key": "endDate",
@@ -5458,7 +5518,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"basicInfo\": {\n    \"media\": {\n      \"type\": \"image\",\n      \"name\": \"event-banner.jpg\"\n    },\n    \"title\": \"Summer Music Festival\",\n    \"description\": \"A fun-filled day of live music and food.\",\n    \"organization\": \"68932a0dce6408026b883458\",\n    \"venue\": \"68831477f990daf522ff311e\",\n    \"category\": \"68831477f990daf522ff3110\",\n    \"tags\": [\n      \"68822a624ebf07788604301b\",\n      \"6883208feec25d5f951a8c74\"\n    ]\n  },\n  \"schedule\": {\n    \"type\": \"oneTime\",\n    \"startDateTime\": \"2025-22-15 10:00 PM\",\n    \"endDateTime\": \"2025-08-15 11:00 PM\"\n    // ,\n    // \"recurringDetails\": {\n    //   \"isEnabled\": true,\n    //   \"frequency\": \"weekly\",\n    //   \"interval\": 1,\n    //   \"daysOfWeek\": [\"fri\"],\n    //   \"endType\": \"onDate\",\n    //   \"endDate\": \"2025-12-31T00:00:00.000Z\"\n    // }\n  }\n}\n",
+									"raw": "{\n  \"basicInfo\": {\n    \"media\": {\n      \"type\": \"image\",\n      \"name\": \"event-banner.jpg\"\n    },\n    \"title\": \"Summer Music Festival\",\n    \"description\": \"A fun-filled day of live music and food.\",\n    \"organization\": \"68932a0dce6408026b883458\",\n    \"venue\": \"68831477f990daf522ff311e\",\n    \"category\": \"68831477f990daf522ff3110\",\n    \"tags\": [\n      \"68822a624ebf07788604301b\",\n      \"6883208feec25d5f951a8c74\"\n    ]\n  },\n  \"schedule\": {\n    \"type\": \"oneTime\",\n    \"startDateTime\": \"2025-08-15 10:00 PM\",\n    \"endDateTime\": \"2025-08-15 11:00 PM\"\n    // ,\n    // \"recurringDetails\": {\n    //   \"isEnabled\": true,\n    //   \"frequency\": \"weekly\",\n    //   \"interval\": 1,\n    //   \"daysOfWeek\": [\"fri\"],\n    //   \"endType\": \"onDate\",\n    //   \"endDate\": \"2025-12-31T00:00:00.000Z\"\n    // }\n  }\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -5633,7 +5693,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}highlights/?date=2025-08-07",
+									"raw": "{{url}}highlights/",
 									"host": [
 										"{{url}}highlights"
 									],
@@ -5643,7 +5703,8 @@
 									"query": [
 										{
 											"key": "date",
-											"value": "2025-08-07"
+											"value": "2025-08-07",
+											"disabled": true
 										}
 									]
 								}
@@ -5736,7 +5797,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"media\": {\n    \"type\": \"video\",\n    \"name\": \"highlight_video.mp4\"\n  },\n  \"title\": \"Amazing Highlight\",\n  \"type\": \"organization\",\n  \"object\": \"68932a0dce6408026b883458\",//event/organization\n  \"status\": \"active\"\n}\n",
+									"raw": "{\n  \"media\": {\n    \"type\": \"video\",\n    \"name\": \"highlight_video.mp4\"\n  },\n  \"title\": \"Amazing Highlight\",\n  \"type\": \"event\", ////event/organization\n  \"object\": \"68b2fd3bb1b44d263e635de5\",//event/organization\n  \"status\": \"active\"\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -6717,17 +6778,14 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{url}}admin/users?page=1&limit=10",
+									"raw": "{{url}}users?page=1&limit=10",
 									"host": [
-										"{{url}}admin"
-									],
-									"path": [
-										"users"
+										"{{url}}users"
 									],
 									"query": [
 										{
 											"key": "status",
-											"value": "pending",
+											"value": "",
 											"description": "\"pending\",\"\",\"active\", \"rejected\", \"suspended\"",
 											"disabled": true
 										},
@@ -6761,18 +6819,17 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{url}}admin/users/:userId",
+									"raw": "{{url}}users/:userId",
 									"host": [
-										"{{url}}admin"
+										"{{url}}users"
 									],
 									"path": [
-										"users",
 										":userId"
 									],
 									"variable": [
 										{
 											"key": "userId",
-											"value": "68b15e5f074fb2e2026e8807"
+											"value": "68b2df13ae600472ef17ed09"
 										}
 									]
 								}
@@ -6841,12 +6898,9 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}admin/users",
+									"raw": "{{url}}users",
 									"host": [
-										"{{url}}admin"
-									],
-									"path": [
-										"users"
+										"{{url}}users"
 									]
 								},
 								"description": "### Register User\n\nThis endpoint is used to register a new user.\n\n#### Request Body\n\n- `profileIcon` (string): Unique identifier referencing a profile Bitmoji.\n    \n- `name` (string): The user's full name.\n    \n- `annonymousName` (string): A randomly generated username.\n    \n- `email` (string): The user's email address.\n    \n- `phoneNumber` (string): The user's phone number.\n    \n- `phoneNote` (string): Additional note about the phone number.\n    \n- `password` (string): The user's chosen password.\n    \n- `deviceType` (string): The type of device (android/ios).\n    \n- `deviceId` (string): The device ID from Firebase FCM.\n    \n- `timezone` (string): The user's timezone.\n    \n\n#### Response (JSON Schema)\n\n``` json\n{\n    \"type\": \"object\",\n    \"properties\": {\n        \"message\": {\n            \"type\": \"string\"\n        },\n        \"data\": {\n            \"type\": \"object\",\n            \"properties\": {\n                \"basicInfo\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                        \"profileIcon\": {\n                            \"type\": \"string\"\n                        },\n                        \"name\": {\n                            \"type\": \"string\"\n                        },\n                        \"annonymousName\": {\n                            \"type\": \"string\"\n                        },\n                        \"email\": {\n                            \"type\": \"string\"\n                        },\n                        \"phoneNumber\": {\n                            \"type\": \"string\"\n                        },\n                        \"phoneNote\": {\n                            \"type\": \"string\"\n                        }\n                    }\n                },\n                \"accountState\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                        \"userType\": {\n                            \"type\": \"string\"\n                        },\n                        \"status\": {\n                            \"type\": \"string\"\n                        },\n                        \"verificationStatus\": {\n                            \"type\": \"string\"\n                        }\n                    }\n                },\n                \"profileCompletionStatus\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                        \"personalDetails\": {\n                            \"type\": \"boolean\"\n                        },\n                        \"pregnancyDetails\": {\n                            \"type\": \"boolean\"\n                        },\n                        \"lossDetails\": {\n                            \"type\": \"boolean\"\n                        },\n                        \"healingDetails\": {\n                            \"type\": \"boolean\"\n                        }\n                    }\n                },\n                \"metadata\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                        \"_id\": {\n                            \"type\": \"string\"\n                        },\n                        \"timezone\": {\n                            \"type\": \"string\"\n                        },\n                        \"createdAt\": {\n                            \"type\": \"string\"\n                        },\n                        \"updatedAt\": {\n                            \"type\": \"string\"\n                        },\n                        \"__v\": {\n                            \"type\": \"integer\"\n                        }\n                    }\n                },\n                \"otpInfo\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                        \"otp\": {\n                            \"type\": \"string\"\n                        },\n                        \"otpUsed\": {\n                            \"type\": \"boolean\"\n                        },\n                        \"otpExpires\": {\n                            \"type\": \"string\"\n                        }\n                    }\n                }\n            }\n        }\n    }\n}\n\n ```"
@@ -6915,12 +6969,9 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}admin/users",
+									"raw": "{{url}}users",
 									"host": [
-										"{{url}}admin"
-									],
-									"path": [
-										"users"
+										"{{url}}users"
 									]
 								},
 								"description": "const USER_TYPES = \\[ \"guest\", \"user\", \"admin\", \"manager\", \"staff\", \"organizer\",\\];"
@@ -6989,12 +7040,9 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}admin/users",
+									"raw": "{{url}}users",
 									"host": [
-										"{{url}}admin"
-									],
-									"path": [
-										"users"
+										"{{url}}users"
 									]
 								},
 								"description": "const USER_TYPES = \\[ \"guest\", \"user\", \"admin\", \"manager\", \"staff\", \"organizer\",\\];"
@@ -7063,12 +7111,80 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}admin/users",
+									"raw": "{{url}}users",
 									"host": [
-										"{{url}}admin"
-									],
-									"path": [
-										"users"
+										"{{url}}users"
+									]
+								},
+								"description": "const USER_TYPES = \\[ \"guest\", \"user\", \"admin\", \"manager\", \"staff\", \"organizer\",\\];"
+							},
+							"response": []
+						},
+						{
+							"name": "create - user",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"// Generate a random 7-digit number for the phone number",
+											"let randomPhoneNumber = Math.floor(1000000 + Math.random() * 9000000);",
+											"",
+											"// Choose a valid mobile network code in Pakistan",
+											"let validMobileNetworkCode = Math.floor(300 + Math.random() * 8); // Random number between 300 and 307 (valid codes)",
+											"",
+											"// Set the phone number with Pakistan country code",
+											"let internationalPhoneNumber = `+92${validMobileNetworkCode}${randomPhoneNumber}`;",
+											"",
+											"// Store the generated phone number in an environment variable",
+											"pm.environment.set(\"randomPhoneNumber\", internationalPhoneNumber);",
+											"",
+											"console.log(\"Generated Phone Number:\", internationalPhoneNumber);",
+											"",
+											"",
+											"// Generate a random number",
+											"let randomNumber = Math.floor(Math.random() * 10000); // Generates a number between 0 and 9999",
+											"",
+											"// Create a random email using the random number",
+											"let randomEmail = `testuser${randomNumber}@gmail.com`;",
+											"",
+											"// Store the generated email in an environment variable",
+											"pm.environment.set(\"randomEmail\", randomEmail);",
+											"",
+											"console.log(\"Generated Email:\", randomEmail);",
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"{{$randomUserName}}\",\n    \"email\": \"{{$randomExampleEmail}}\",\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122105\"\n    },\n    \"password\": \"123456\",\n    \"userType\": \"user\",\n    \"username\": \"alin\",\n    \"dob\": \"2005-03-16\",\n    \"gender\": \"Male\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}users",
+									"host": [
+										"{{url}}users"
 									]
 								},
 								"description": "const USER_TYPES = \\[ \"guest\", \"user\", \"admin\", \"manager\", \"staff\", \"organizer\",\\];"
@@ -7143,15 +7259,98 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}admin/users",
+									"raw": "{{url}}users",
 									"host": [
-										"{{url}}admin"
-									],
-									"path": [
-										"users"
+										"{{url}}users"
 									]
 								},
 								"description": "const USER_TYPES = \\[ \"guest\", \"user\", \"admin\", \"manager\", \"staff\", \"organizer\",\\];"
+							},
+							"response": []
+						},
+						{
+							"name": "update",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"// Generate a random 7-digit number for the phone number",
+											"let randomPhoneNumber = Math.floor(1000000 + Math.random() * 9000000);",
+											"",
+											"// Choose a valid mobile network code in Pakistan",
+											"let validMobileNetworkCode = Math.floor(300 + Math.random() * 8); // Random number between 300 and 307 (valid codes)",
+											"",
+											"// Set the phone number with Pakistan country code",
+											"let internationalPhoneNumber = `+92${validMobileNetworkCode}${randomPhoneNumber}`;",
+											"",
+											"// Store the generated phone number in an environment variable",
+											"pm.environment.set(\"randomPhoneNumber\", internationalPhoneNumber);",
+											"",
+											"console.log(\"Generated Phone Number:\", internationalPhoneNumber);",
+											"",
+											"",
+											"// Generate a random number",
+											"let randomNumber = Math.floor(Math.random() * 10000); // Generates a number between 0 and 9999",
+											"",
+											"// Create a random email using the random number",
+											"let randomEmail = `testuser${randomNumber}@gmail.com`;",
+											"",
+											"// Store the generated email in an environment variable",
+											"pm.environment.set(\"randomEmail\", randomEmail);",
+											"",
+											"console.log(\"Generated Email:\", randomEmail);",
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "x-admin-access-token",
+										"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYWRtaW4tY3JlYXRpb24iLCJpYXQiOjE3NTMxODc2MDEsImV4cCI6MTc1MzE5MTIwMX0.-Dg--Tut4bY1a4Lr49WP7si7SDZ8QxEaG6bZX1vktY4",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"organizations\": [\n        \"68b11b3dda9c956a543970ab\",\n        \"68932a0dce6408026b883458\"\n    ],\n    \"modules\": [\n        \"inAppOrdering\",\n        \"reservationManagement\",\n        \"loyaltyScanning\",\n        \"ticketing\"\n    ],\n    \"status\": \"active\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}users/:id",
+									"host": [
+										"{{url}}users"
+									],
+									"path": [
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "68b2df0cae600472ef17ed01"
+										}
+									]
+								},
+								"description": "status: { type: String, enum: \\[ \"pending\", \"active\", \"rejected\", \"suspended\", \"deleted\", \\], default: \"pending\", },\n\nthese two fields are mandatory in \"manager, staff\" case  \nif you don't send while updating the staff and manager will result in having no organizations set  \n\"organizations\": \\[ \"68b11b3dda9c956a543970ab\", \"68932a0dce6408026b883458\" \\],  \n\"modules\": \\[ \"inAppOrdering\", \"reservationManagement\", \"loyaltyScanning\", \"ticketing\" \\],"
 							},
 							"response": []
 						}

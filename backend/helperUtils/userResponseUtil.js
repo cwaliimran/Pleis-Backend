@@ -29,6 +29,7 @@ const formatUserResponse = (
   const response = {
     basicInfo,
     accountState: {
+      twoFactorAuth: userObject.twoFA?.isEnabled || false,
       userType: userType || "user",
       status: userObject.accountState?.status || "active",
       verificationStatus: {
