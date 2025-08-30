@@ -4,7 +4,9 @@ const {
   getUsers,
   updateUser,
   deleteUser,
-  getUserDetails
+  getUserDetails,
+  toggleTwoFA,
+  verifyTwoFA
 } = require("./usersController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -31,7 +33,15 @@ router.get("/", apiRateLimiterUsers, getUsers);
 // Update an existing user
 router.put("/:id", updateUser);
 
+
+// Toggle 2FA (Enable/Disable)
+router.post("/twofa", toggleTwoFA);
+
+// Verify 2FA token
+router.post("/twofa/verify", verifyTwoFA);
+
+
 // Delete a user
-router.delete("/:id", roleMiddleware(["admin"]), deleteUser);
+router.delete("/:id", deleteUser);
 
 module.exports = router;

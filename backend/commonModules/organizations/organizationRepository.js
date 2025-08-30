@@ -1,16 +1,16 @@
 // repositories/organizationRepository.js
-const Organization = require("./Organization");
+const Venues = require("../venues/Venues");
+const Organizations = require("./Organization");
 
 // Create
 const createOrganization = async (data) => {
-  const organization = new Organization(data);
+  const organization = new Organizations(data);
   return await organization.save();
 };
 
 // Get all with filters
 const getOrganizationsWithFilters = async (query, skip, limit) => {
-  return Organization.find(query)
-    .populate("venue")
+  return Organizations.find(query)
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
@@ -18,13 +18,33 @@ const getOrganizationsWithFilters = async (query, skip, limit) => {
 
 // Count by condition
 const countOrganizations = async (query = {}) => {
-  return Organization.countDocuments(query);
+  return Organizations.countDocuments(query);
 };
 
 // Find by ID
 const findOrganizationById = async (id) => {
-  return Organization.findById(id);
+  return Organizations.findById(id);
 };
+
+
+const getOrganizationDetails = async (id) => {
+  const [organization, primaryVenue] = await Promise.all([
+    Organizations.findById(id)
+      .populate("otherInfo.tags")
+      .populate("otherInfo.categories"),
+    Venues.findOne({
+      organization: id,
+      isPrimary: true
+    }).populate("venueType")
+  ]);
+  if (!organization) return null;
+
+  // Attach primaryVenue (formatted) or null inside organization
+  const orgObj = organization.toObject ? organization.toObject() : organization;
+  orgObj.venue = primaryVenue ? primaryVenue.formatResponse() : null;
+  return orgObj;
+};
+
 
 // Delete
 const deleteOrganizationById = async (organization) => {
@@ -33,10 +53,11 @@ const deleteOrganizationById = async (organization) => {
 
 // Optional: keep this only for non-nested shallow updates
 const findByIdAndUpdate = async (id, data) => {
-  return Organization.findByIdAndUpdate(id, { $set: data }, { new: true });
+  return Organizations.findByIdAndUpdate(id, { $set: data }, { new: true });
 };
+
 const getOrganizationsAsStaff = async (userId) => {
-  const organizations = await Organization.find({
+  const organizations = await Organizations.find({
     $or: [
       { creator: userId },
       { "staff.user": userId }
@@ -64,5 +85,6 @@ module.exports = {
   findOrganizationById,
   deleteOrganizationById,
   findByIdAndUpdate,
+  getOrganizationDetails,
   getOrganizationsAsStaff
 };

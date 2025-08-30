@@ -2698,327 +2698,6 @@
 					]
 				},
 				{
-					"name": "Create User",
-					"item": [
-						{
-							"name": "get",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"protocolProfileBehavior": {
-								"disableBodyPruning": true
-							},
-							"request": {
-								"method": "GET",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}create-user/",
-									"host": [
-										"{{url}}create-user"
-									],
-									"path": [
-										""
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "get details",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"protocolProfileBehavior": {
-								"disableBodyPruning": true
-							},
-							"request": {
-								"method": "GET",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}create-user/:id",
-									"host": [
-										"{{url}}create-user"
-									],
-									"path": [
-										":id"
-									],
-									"variable": [
-										{
-											"key": "id",
-											"value": ""
-										}
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "add - staff",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"profileIcon\": \"noImage.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"Staff\",\n    \"email\": \"{{$randomExampleEmail}}\",\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122103\"\n    },\n    \"password\": \"123456\",\n    \"userType\": \"staff\", //staff, user\n    \"organization\":\"68932a0dce6408026b883458\",\n    \"modulesAccess\":[\"inAppOrdering\",\"loyaltyScanning\"]\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}create-user/",
-									"host": [
-										"{{url}}create-user"
-									],
-									"path": [
-										""
-									]
-								},
-								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
-							},
-							"response": []
-						},
-						{
-							"name": "add - user",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"profileIcon\": \"noImage.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"Staff\",\n    \"email\": \"{{$randomExampleEmail}}\",\n    \"username\":\"{{$randomUserName}}\",\n    \"dateOfBirth\":\"\",\n    \"gender\":\"Male\",\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122103\"\n    },\n    \"password\": \"123456\",\n    \"userType\": \"user\", //staff, user\n\n    \"organization\":\"68932a0dce6408026b883458\",\n    \"modulesAccess\":[\"inAppOrdering\",\"loyaltyScanning\"]\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}create-user/",
-									"host": [
-										"{{url}}create-user"
-									],
-									"path": [
-										""
-									]
-								},
-								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
-							},
-							"response": []
-						},
-						{
-							"name": "update",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "PUT",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"title\": \"Sample title\",\n  \"description\": \"description of item\"\n}\n",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}create-user/:id",
-									"host": [
-										"{{url}}create-user"
-									],
-									"path": [
-										":id"
-									],
-									"variable": [
-										{
-											"key": "id",
-											"value": ""
-										}
-									]
-								},
-								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
-							},
-							"response": []
-						},
-						{
-							"name": "delete",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "DELETE",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}create-user/:id",
-									"host": [
-										"{{url}}create-user"
-									],
-									"path": [
-										":id"
-									],
-									"variable": [
-										{
-											"key": "id",
-											"value": ""
-										}
-									]
-								},
-								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
-							},
-							"response": []
-						}
-					]
-				},
-				{
 					"name": "venue types",
 					"event": [
 						{
@@ -4334,302 +4013,6 @@
 					]
 				},
 				{
-					"name": "Tag Categories *Pending",
-					"item": [
-						{
-							"name": "get",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"protocolProfileBehavior": {
-								"disableBodyPruning": true
-							},
-							"request": {
-								"method": "GET",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}admin/tags?page=1&limit=10",
-									"host": [
-										"{{url}}admin"
-									],
-									"path": [
-										"tags"
-									],
-									"query": [
-										{
-											"key": "keyword",
-											"value": "",
-											"disabled": true
-										},
-										{
-											"key": "page",
-											"value": "1"
-										},
-										{
-											"key": "limit",
-											"value": "10"
-										},
-										{
-											"key": "pinned",
-											"value": "true",
-											"disabled": true
-										}
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "get details",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"protocolProfileBehavior": {
-								"disableBodyPruning": true
-							},
-							"request": {
-								"method": "GET",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}admin/tags/:id",
-									"host": [
-										"{{url}}admin"
-									],
-									"path": [
-										"tags",
-										":id"
-									],
-									"variable": [
-										{
-											"key": "id",
-											"value": ""
-										}
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "add",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"title\": \"#night\",\n    \"description\": \"Going out for events\",\n    \"status\": \"active\"\n  }",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}admin/tags/",
-									"host": [
-										"{{url}}admin"
-									],
-									"path": [
-										"tags",
-										""
-									]
-								},
-								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
-							},
-							"response": []
-						},
-						{
-							"name": "update",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "PUT",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"pinned\":false\n}\n",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}admin/tags/:id",
-									"host": [
-										"{{url}}admin"
-									],
-									"path": [
-										"tags",
-										":id"
-									],
-									"variable": [
-										{
-											"key": "id",
-											"value": "68822a624ebf07788604301b"
-										}
-									]
-								},
-								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
-							},
-							"response": []
-						},
-						{
-							"name": "delete",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"request": {
-								"method": "DELETE",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}admin/tags/:id",
-									"host": [
-										"{{url}}admin"
-									],
-									"path": [
-										"tags",
-										":id"
-									],
-									"variable": [
-										{
-											"key": "id",
-											"value": "68810061acb33f97130688e5"
-										}
-									]
-								},
-								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
-							},
-							"response": []
-						}
-					]
-				},
-				{
 					"name": "Venues Types",
 					"item": [
 						{
@@ -4672,7 +4055,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}admin/venue-types?page=1&limit=10&status=active&date=2025-07-26",
+									"raw": "{{url}}admin/venue-types?page=1&limit=10&status=active",
 									"host": [
 										"{{url}}admin"
 									],
@@ -4701,7 +4084,8 @@
 										{
 											"key": "date",
 											"value": "2025-07-26",
-											"description": "yyyy-mm-dd"
+											"description": "yyyy-mm-dd",
+											"disabled": true
 										}
 									]
 								}
@@ -4995,7 +4379,63 @@
 											"key": "date",
 											"value": "2025-07-26",
 											"disabled": true
+										},
+										{
+											"key": "organization",
+											"value": "null",
+											"disabled": true
 										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get unassigned",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}venues/unassigned",
+									"host": [
+										"{{url}}venues"
+									],
+									"path": [
+										"unassigned"
 									]
 								}
 							},
@@ -5041,18 +4481,17 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}admin/venues/:id",
+									"raw": "{{url}}venues/:id",
 									"host": [
-										"{{url}}admin"
+										"{{url}}venues"
 									],
 									"path": [
-										"venues",
 										":id"
 									],
 									"variable": [
 										{
 											"key": "id",
-											"value": "6884bc9b1c3854a47c18dbd9"
+											"value": "68b29c988c8ec45157147b31"
 										}
 									]
 								}
@@ -5088,7 +4527,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"title\": \"Sunset Beach Club\",\n    \"floorPlan\": \"\",\n    \"venueType\": \"68a805f3c740faa65aefdb37\",\n    \"organization\": \"68932a0dce6408026b883458\",\n    \"location\": {\n        \"fullAddress\":\"123 Seaside Blvd\",\n        \"state\":\"Col\",\n        \"city\": \"Split\",\n        \"postalCode\": \"21000\",\n        \"country\": \"Croatia\",\n        \"coordinates\": [\n            43.5081, //lng\n            16.4402 //lat\n        ]\n    }\n}",
+									"raw": "{\n    \"title\": \"Sunrise Beach Club\",\n    \"floorPlan\": \"\",\n    \"venueType\": \"68b2a8c62e76b4cdac8be34d\",\n    \"organization\": \"68932a0dce6408026b883458\", //optional\n    \"location\": {\n        \"fullAddress\":\"123 Seaside Blvd\",\n        \"state\":\"Col\",\n        \"city\": \"Split\",\n        \"postalCode\": \"21000\",\n        \"country\": \"Croatia\",\n        \"coordinates\": [\n            43.5081, //lng\n            16.4402 //lat\n        ]\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -5134,7 +4573,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n     //    \"title\": \"Sunrise Beach Club\"\n     \"organization\":\"68932a0dce6408026b883458\"\n\n}\n",
+									"raw": "{\n     //    \"title\": \"Sunrise Beach Club\"\n    //  \"organization\":\"68932a0dce6408026b883458\"\n  \"venueType\":\"68848633721543813c533a7f\",\n\"isPrimary\":\"true\"\n\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -5142,18 +4581,17 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}admin/venues/:id",
+									"raw": "{{url}}venues/:id",
 									"host": [
-										"{{url}}admin"
+										"{{url}}venues"
 									],
 									"path": [
-										"venues",
 										":id"
 									],
 									"variable": [
 										{
 											"key": "id",
-											"value": "6884bc9b1c3854a47c18dbd9"
+											"value": "68b2a8c62e76b4cdac8be34d"
 										}
 									]
 								},
@@ -5519,6 +4957,908 @@
 										{
 											"key": "id",
 											"value": "68b06473832a88c706134952"
+										}
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Organizations",
+					"item": [
+						{
+							"name": "get",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}organizations/",
+									"host": [
+										"{{url}}organizations"
+									],
+									"path": [
+										""
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get details",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}organizations/:id",
+									"host": [
+										"{{url}}organizations"
+									],
+									"path": [
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "68b2a0f035fd9d10b4f1bd7a"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "add",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"logo\": \"org-logo_pic1.png\",\n            \"cover\": \"org-cover.jpg\"\n        },\n        \"name\": \"Lex Events\",\n        \"socialLinks\": {\n            \"youtube\": \"https://youtube.com/lexevents\",\n            \"facebook\": \"https://facebook.com/lexevents\",\n            \"instagram\": \"https://instagram.com/lexevents\",\n            \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        }\n    },\n    \"otherInfo\": {\n        \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n        \"minAge\": 18,\n        \"tags\": [\n            \"64f7206e442c7dfc4aa00001\"\n        ],\n        \"categories\": [\n            \"64f7206e442c7dfc4aa00002\"\n        ],\n        \"galleryMedia\": [\n            \"gallery1.jpg\",\n            \"gallery2.jpg\"\n        ]\n    },\n    \"operatingHours\": {\n        \"monday\": {\n            \"from\": \"10:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"tuesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"wednesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"thursday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"friday\": {\n            \"from\": \"09:00\",\n            \"to\": \"20:00\",\n            \"break\": {\n                \"from\": \"14:00\",\n                \"to\": \"15:00\"\n            },\n            \"isOpen\": false\n        },\n        \"saturday\": {\n            \"from\": \"12:00\",\n            \"to\": \"22:00\",\n            \"break\": {\n                \"from\": \"16:00\",\n                \"to\": \"17:00\"\n            },\n            \"isOpen\": false\n        },\n        \"sunday\": {\n            \"from\": \"\",\n            \"to\": \"\",\n            \"break\": {\n                \"from\": \"\",\n                \"to\": \"\"\n            },\n            \"isOpen\": true\n        }\n    },\n    \"status\": \"active\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}organizations/",
+									"host": [
+										"{{url}}organizations"
+									],
+									"path": [
+										""
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": [
+								{
+									"name": "add",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"basicInfo\": {\n    \"media\": {\n      \"logo\": \"\"\n    },\n    \"name\": \"OpenAI Organization\",\n    \"socialLinks\": {\n      \"youtube\": \"https://youtube.com/openai\",\n      \"facebook\": \"https://facebook.com/openai\",\n      \"instagram\": \"https://instagram.com/openai\",\n      \"linkedin\": \"https://linkedin.com/company/openai\"\n    }\n  }\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}organizations/",
+											"host": [
+												"{{url}}organizations"
+											],
+											"path": [
+												""
+											]
+										}
+									},
+									"status": "Created",
+									"code": 201,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "X-Powered-By",
+											"value": "Express"
+										},
+										{
+											"key": "Vary",
+											"value": "Origin"
+										},
+										{
+											"key": "Access-Control-Allow-Credentials",
+											"value": "true"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "1101"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"44d-BkTGDrlrBc+ecHjOxZy1Y1RsICA\""
+										},
+										{
+											"key": "Date",
+											"value": "Sat, 26 Jul 2025 11:29:48 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"message\": \"Organization created successfully\",\n    \"data\": {\n        \"basicInfo\": {\n            \"media\": {\n                \"logo\": \"\",\n                \"cover\": \"\"\n            },\n            \"name\": \"OpenAI Organization\",\n            \"socialLinks\": {\n                \"youtube\": \"https://youtube.com/openai\",\n                \"facebook\": \"https://facebook.com/openai\",\n                \"instagram\": \"https://instagram.com/openai\",\n                \"linkedin\": \"https://linkedin.com/company/openai\"\n            }\n        },\n        \"otherInfo\": {\n            \"description\": \"\",\n            \"minAge\": 0,\n            \"tags\": [],\n            \"categories\": [],\n            \"galleryMedia\": []\n        },\n        \"operatingHours\": {\n            \"monday\": {\n                \"break\": {\n                    \"from\": \"\",\n                    \"to\": \"\"\n                },\n                \"from\": \"\",\n                \"to\": \"\",\n                \"off\": false\n            },\n            \"tuesday\": {\n                \"break\": {\n                    \"from\": \"\",\n                    \"to\": \"\"\n                },\n                \"from\": \"\",\n                \"to\": \"\",\n                \"off\": false\n            },\n            \"wednesday\": {\n                \"break\": {\n                    \"from\": \"\",\n                    \"to\": \"\"\n                },\n                \"from\": \"\",\n                \"to\": \"\",\n                \"off\": false\n            },\n            \"thursday\": {\n                \"break\": {\n                    \"from\": \"\",\n                    \"to\": \"\"\n                },\n                \"from\": \"\",\n                \"to\": \"\",\n                \"off\": false\n            },\n            \"friday\": {\n                \"break\": {\n                    \"from\": \"\",\n                    \"to\": \"\"\n                },\n                \"from\": \"\",\n                \"to\": \"\",\n                \"off\": false\n            },\n            \"saturday\": {\n                \"break\": {\n                    \"from\": \"\",\n                    \"to\": \"\"\n                },\n                \"from\": \"\",\n                \"to\": \"\",\n                \"off\": false\n            },\n            \"sunday\": {\n                \"break\": {\n                    \"from\": \"\",\n                    \"to\": \"\"\n                },\n                \"from\": \"\",\n                \"to\": \"\",\n                \"off\": false\n            }\n        },\n        \"creator\": \"68820e3b16cdbcf24dd18794\",\n        \"status\": \"active\",\n        \"venue\": null,\n        \"_id\": \"6884bc2cea0037a3d1263cff\",\n        \"createdAt\": \"2025-07-26T11:29:48.350Z\",\n        \"updatedAt\": \"2025-07-26T11:29:48.350Z\",\n        \"__v\": 0\n    }\n}"
+								}
+							]
+						},
+						{
+							"name": "update",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"logo\": \"org-logo_pic1.png\",\n            \"cover\": \"org-cover.jpg\"\n        },\n        \"name\": \"Lex Events\",\n        \"socialLinks\": {\n            \"youtube\": \"https://youtube.com/lexevents\",\n            \"facebook\": \"https://facebook.com/lexevents\",\n            \"instagram\": \"https://instagram.com/lexevents\",\n            \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        }\n    },\n    \"otherInfo\": {\n        \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n        \"minAge\": 18,\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\"68b294c4a09f4da7cdf23d47\"\n        ],\n        \"categories\": [\n            \"64f7206e442c7dfc4aa00002\"\n        ],\n        \"galleryMedia\": [\n            \"gallery1.jpg\",\n            \"gallery2.jpg\"\n        ]\n    },\n    \"operatingHours\": {\n        \"monday\": {\n            \"from\": \"10:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"tuesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"wednesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"thursday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"friday\": {\n            \"from\": \"09:00\",\n            \"to\": \"20:00\",\n            \"break\": {\n                \"from\": \"14:00\",\n                \"to\": \"15:00\"\n            },\n            \"isOpen\": false\n        },\n        \"saturday\": {\n            \"from\": \"12:00\",\n            \"to\": \"22:00\",\n            \"break\": {\n                \"from\": \"16:00\",\n                \"to\": \"17:00\"\n            },\n            \"isOpen\": false\n        },\n        \"sunday\": {\n            \"from\": \"\",\n            \"to\": \"\",\n            \"break\": {\n                \"from\": \"\",\n                \"to\": \"\"\n            },\n            \"isOpen\": true\n        }\n    },\n    \"status\": \"active\",\n    \"venue\": \"68b2a8c62e76b4cdac8be34d\",\n    \"location\": {\n        \"address\": \"100 Tech Avenue\",\n        \"city\": \"Split\",\n        \"postalCode\": \"21000\",\n        \"country\": \"Croatia\",\n        \"coordinates\": [\n            43.5081,\n            16.4402\n        ]\n    }\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}organizations/:id",
+									"host": [
+										"{{url}}organizations"
+									],
+									"path": [
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "68b2a0f035fd9d10b4f1bd7a"
+										}
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						},
+						{
+							"name": "delete",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}organizations/:id",
+									"host": [
+										"{{url}}organizations"
+									],
+									"path": [
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "68b291a743d1a796978a73da"
+										}
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Events",
+					"item": [
+						{
+							"name": "get",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}events/?startDate=2025-08-15",
+									"host": [
+										"{{url}}events"
+									],
+									"path": [
+										""
+									],
+									"query": [
+										{
+											"key": "startDate",
+											"value": "2025-08-15"
+										},
+										{
+											"key": "endDate",
+											"value": "2025-08-06",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get details",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}events/:id",
+									"host": [
+										"{{url}}events"
+									],
+									"path": [
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "6893380bac0794c59a13d5e8"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "add",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"basicInfo\": {\n    \"media\": {\n      \"type\": \"image\",\n      \"name\": \"event-banner.jpg\"\n    },\n    \"title\": \"Summer Music Festival\",\n    \"description\": \"A fun-filled day of live music and food.\",\n    \"organization\": \"68932a0dce6408026b883458\",\n    \"venue\": \"68831477f990daf522ff311e\",\n    \"category\": \"68831477f990daf522ff3110\",\n    \"tags\": [\n      \"68822a624ebf07788604301b\",\n      \"6883208feec25d5f951a8c74\"\n    ]\n  },\n  \"schedule\": {\n    \"type\": \"oneTime\",\n    \"startDateTime\": \"2025-22-15 10:00 PM\",\n    \"endDateTime\": \"2025-08-15 11:00 PM\"\n    // ,\n    // \"recurringDetails\": {\n    //   \"isEnabled\": true,\n    //   \"frequency\": \"weekly\",\n    //   \"interval\": 1,\n    //   \"daysOfWeek\": [\"fri\"],\n    //   \"endType\": \"onDate\",\n    //   \"endDate\": \"2025-12-31T00:00:00.000Z\"\n    // }\n  }\n}\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}events/",
+									"host": [
+										"{{url}}events"
+									],
+									"path": [
+										""
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						},
+						{
+							"name": "update",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"title\": \"Sample title\",\n  \"description\": \"description of item\"\n}\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}events/:id",
+									"host": [
+										"{{url}}events"
+									],
+									"path": [
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": ""
+										}
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						},
+						{
+							"name": "delete",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}events/:id",
+									"host": [
+										"{{url}}events"
+									],
+									"path": [
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": ""
+										}
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Highlights",
+					"item": [
+						{
+							"name": "get",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}highlights/?date=2025-08-07",
+									"host": [
+										"{{url}}highlights"
+									],
+									"path": [
+										""
+									],
+									"query": [
+										{
+											"key": "date",
+											"value": "2025-08-07"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get details",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}highlights/:id",
+									"host": [
+										"{{url}}highlights"
+									],
+									"path": [
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "68940344189de43cc539fe13"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "add",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"media\": {\n    \"type\": \"video\",\n    \"name\": \"highlight_video.mp4\"\n  },\n  \"title\": \"Amazing Highlight\",\n  \"type\": \"organization\",\n  \"object\": \"68932a0dce6408026b883458\",//event/organization\n  \"status\": \"active\"\n}\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}highlights/",
+									"host": [
+										"{{url}}highlights"
+									],
+									"path": [
+										""
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						},
+						{
+							"name": "update",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"media\": {\n    \"type\": \"video\",\n    \"name\": \"highlight_video1.mp4\"\n  },\n//   \"title\": \"Amazing Highlight\",\n  \"type\": \"event\",\n  \"object\": \"6893380bac0794c59a13d5e8\",//event/organization\n  \"status\": \"inactive\"\n}\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}highlights/:id",
+									"host": [
+										"{{url}}highlights"
+									],
+									"path": [
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "68940344189de43cc539fe13"
+										}
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						},
+						{
+							"name": "delete",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}highlights/:id",
+									"host": [
+										"{{url}}highlights"
+									],
+									"path": [
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": ""
 										}
 									]
 								},
@@ -6387,8 +6727,8 @@
 									"query": [
 										{
 											"key": "status",
-											"value": "active",
-											"description": "\"active\", \"inactive\", \"suspended\"",
+											"value": "pending",
+											"description": "\"pending\",\"\",\"active\", \"rejected\", \"suspended\"",
 											"disabled": true
 										},
 										{
@@ -6398,8 +6738,8 @@
 										},
 										{
 											"key": "userType",
-											"value": "user",
-											"description": "user, organizer",
+											"value": "organizer",
+											"description": "user, organizer, guest, manager, admin",
 											"disabled": true
 										},
 										{
@@ -6416,12 +6756,12 @@
 							"response": []
 						},
 						{
-							"name": "get user/trainer profile",
+							"name": "get profile",
 							"request": {
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{url}}admin/users/:userId?page=1",
+									"raw": "{{url}}admin/users/:userId",
 									"host": [
 										"{{url}}admin"
 									],
@@ -6429,16 +6769,10 @@
 										"users",
 										":userId"
 									],
-									"query": [
-										{
-											"key": "page",
-											"value": "1"
-										}
-									],
 									"variable": [
 										{
 											"key": "userId",
-											"value": "67fa3e0e957aed51b85c0b02"
+											"value": "68b15e5f074fb2e2026e8807"
 										}
 									]
 								}
@@ -6499,7 +6833,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"M\",\n    \"organizationName\": \"Tech Innovators Ltd.\",\n    \"email\": \"{{$randomExampleEmail}}\",\n\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122103\"\n    },\n    \"password\": \"123456\",\n    \"userType\": \"organizer\", //organizer, user, admin\n    \"companyDetails\": {\n        \"name\": \"Tech Innovators Ltd\",\n        \"oib\": \"{{$randomAlphaNumeric}}\",\n        \"bankAccountNumber\": \"HR1234567890001234567\",\n        \"representativeName\": \"Alice Johnson\",\n        \"location\": {\n          \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYK\",\n            \"postalCode\": \"10011\"\n        },\n        \"suppliers\": [\n            \"6881002e5b438e9b241870f9\",\n            \"68810088acb33f97130688f4\"\n        ]\n    }\n}",
+									"raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"M\",\n    \"organizationName\": \"Tech Innovators Ltd.\",\n    \"email\": \"{{$randomExampleEmail}}\",\n\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122103\"\n    },\n    \"password\": \"123456\",\n    \"userType\": \"organizer\", //organizer, user, admin\n    \"companyDetails\": {\n        \"name\": \"Tech Innovators Ltd\",\n        \"oib\": \"12345678903\",\n        \"bankAccountNumber\": \"HR1234567890001234567\",\n        \"representativeName\": \"Alice Johnson\",\n        \"location\": {\n          \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYK\",\n            \"postalCode\": \"10011\"\n        },\n        \"suppliers\": [\n            \"6881002e5b438e9b241870f9\",\n            \"68810088acb33f97130688f4\"\n        ]\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -6573,7 +6907,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"{{$randomUserName}}\",\n    \"email\": \"guest3@pleis.com\",\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122103\"\n    },\n    \"password\": \"123456\",\n    \"userType\": \"guest\" \n}",
+									"raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"{{$randomUserName}}\",\n    \"email\": \"guest4@pleis.com\",\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122104\"\n    },\n    \"password\": \"123456\",\n    \"userType\": \"guest\" \n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -6647,7 +6981,161 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"{{$randomUserName}}\",\n    \"email\": \"{{$randomExampleEmail}}\",\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122104\"\n    },\n    \"password\": \"123456\",\n    \"userType\": \"staff\",\n    \"organization\":\"\",\n    \"modules\":[\"\"]\n}",
+									"raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"{{$randomUserName}}\",\n    \"email\": \"{{$randomExampleEmail}}\",\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122104\"\n    },\n    \"password\": \"123456\",\n    \"userType\": \"staff\",\n    \"organizations\":[\"68b11b3dda9c956a543970ab\",\"68932a0dce6408026b883458\"],\n    \"modules\":[\"inAppOrdering\",\"reservationManagement\",\"loyaltyScanning\",\"ticketing\"]\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/users",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"users"
+									]
+								},
+								"description": "const USER_TYPES = \\[ \"guest\", \"user\", \"admin\", \"manager\", \"staff\", \"organizer\",\\];"
+							},
+							"response": []
+						},
+						{
+							"name": "create - manager",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"// Generate a random 7-digit number for the phone number",
+											"let randomPhoneNumber = Math.floor(1000000 + Math.random() * 9000000);",
+											"",
+											"// Choose a valid mobile network code in Pakistan",
+											"let validMobileNetworkCode = Math.floor(300 + Math.random() * 8); // Random number between 300 and 307 (valid codes)",
+											"",
+											"// Set the phone number with Pakistan country code",
+											"let internationalPhoneNumber = `+92${validMobileNetworkCode}${randomPhoneNumber}`;",
+											"",
+											"// Store the generated phone number in an environment variable",
+											"pm.environment.set(\"randomPhoneNumber\", internationalPhoneNumber);",
+											"",
+											"console.log(\"Generated Phone Number:\", internationalPhoneNumber);",
+											"",
+											"",
+											"// Generate a random number",
+											"let randomNumber = Math.floor(Math.random() * 10000); // Generates a number between 0 and 9999",
+											"",
+											"// Create a random email using the random number",
+											"let randomEmail = `testuser${randomNumber}@gmail.com`;",
+											"",
+											"// Store the generated email in an environment variable",
+											"pm.environment.set(\"randomEmail\", randomEmail);",
+											"",
+											"console.log(\"Generated Email:\", randomEmail);",
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"{{$randomUserName}}\",\n    \"email\": \"{{$randomExampleEmail}}\",\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122105\"\n    },\n    \"password\": \"123456\",\n    \"userType\": \"manager\",\n    \"organizations\":[\"68b11b3dda9c956a543970ab\",\"68932a0dce6408026b883458\"]\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/users",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"users"
+									]
+								},
+								"description": "const USER_TYPES = \\[ \"guest\", \"user\", \"admin\", \"manager\", \"staff\", \"organizer\",\\];"
+							},
+							"response": []
+						},
+						{
+							"name": "create - admin",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"// Generate a random 7-digit number for the phone number",
+											"let randomPhoneNumber = Math.floor(1000000 + Math.random() * 9000000);",
+											"",
+											"// Choose a valid mobile network code in Pakistan",
+											"let validMobileNetworkCode = Math.floor(300 + Math.random() * 8); // Random number between 300 and 307 (valid codes)",
+											"",
+											"// Set the phone number with Pakistan country code",
+											"let internationalPhoneNumber = `+92${validMobileNetworkCode}${randomPhoneNumber}`;",
+											"",
+											"// Store the generated phone number in an environment variable",
+											"pm.environment.set(\"randomPhoneNumber\", internationalPhoneNumber);",
+											"",
+											"console.log(\"Generated Phone Number:\", internationalPhoneNumber);",
+											"",
+											"",
+											"// Generate a random number",
+											"let randomNumber = Math.floor(Math.random() * 10000); // Generates a number between 0 and 9999",
+											"",
+											"// Create a random email using the random number",
+											"let randomEmail = `testuser${randomNumber}@gmail.com`;",
+											"",
+											"// Store the generated email in an environment variable",
+											"pm.environment.set(\"randomEmail\", randomEmail);",
+											"",
+											"console.log(\"Generated Email:\", randomEmail);",
+											""
+										],
+										"type": "text/javascript",
+										"packages": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "x-admin-access-token",
+										"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYWRtaW4tY3JlYXRpb24iLCJpYXQiOjE3NTMxODc2MDEsImV4cCI6MTc1MzE5MTIwMX0.-Dg--Tut4bY1a4Lr49WP7si7SDZ8QxEaG6bZX1vktY4",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"{{$randomUserName}}\",\n    \"email\": \"{{$randomExampleEmail}}\",\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122105\"\n    },\n    \"password\": \"123456\",\n    \"userType\": \"admin\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -7904,7 +8392,7 @@
 								{
 									"key": "files",
 									"type": "file",
-									"src": "/Users/s/Desktop/Development/_FreeLancing/samples_mobile/Circle Images/Circle Images/avatars/Mask Group 22.png"
+									"src": "/Users/s/Desktop/Development/_FreeLancing/samples_mobile/Circle Images/Circle Images/avatars/Mask Group 14.png"
 								}
 							]
 						},
@@ -7954,7 +8442,7 @@
 							},
 							"status": "OK",
 							"code": 200,
-							"_postman_previewlanguage": "",
+							"_postman_previewlanguage": null,
 							"header": [
 								{
 									"key": "X-Powered-By",

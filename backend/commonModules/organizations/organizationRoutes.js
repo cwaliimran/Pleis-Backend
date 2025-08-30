@@ -4,6 +4,7 @@ const {
   getOrganizations,
   updateOrganization,
   deleteOrganization,
+  getOrganizationDetails,
 } = require("./organizationController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -17,15 +18,18 @@ router.use(auth);
 const apiRateLimiter = createRateLimiter("Organizations");
 
 // Create a new organization
-router.post("/", roleMiddleware(["organizer"]), createOrganization);
+router.post("/", roleMiddleware(["organizer", "admin", "manager", "staff"]), createOrganization);
 
 // Get all organizations with pagination
 router.get("/", apiRateLimiter, getOrganizations);
 
+//get details
+router.get("/:id", getOrganizationDetails);
+
 // Update an existing organization
-router.put("/:id", updateOrganization);
+router.put("/:id", roleMiddleware(["organizer", "admin", "manager", "staff"]), updateOrganization);
 
 // Delete a organization
-router.delete("/:id" , deleteOrganization);
+router.delete("/:id", deleteOrganization);
 
 module.exports = router;

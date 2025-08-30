@@ -29,9 +29,18 @@ const venuesSchema = new mongoose.Schema(
       ref: "VenueTypes",
       required: true,
     },
+    organization: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organizations",
+      default: null,
+    },
+    isPrimary: {
+      type: Boolean,
+      default: false,
+    },
     creator: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Users",
+      ref: "User",
       required: true,
     },
     location: {

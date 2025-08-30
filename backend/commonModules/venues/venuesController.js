@@ -14,7 +14,7 @@ const createVenue = async (req, res) => {
     floorPlan,
     venueType,
     organization,
-    isPrimary,
+    isPrimary = false,
     location,
     image,
     status = "active",
@@ -70,7 +70,7 @@ const createVenue = async (req, res) => {
 
 const getVenues = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", pinned, date } = req.query;
+  const { keyword, status = "active", pinned, date, organization } = req.query;
   const { _id: userId } = req.user._id;
   try {
     if (date && !validateParams(req, res, {
@@ -86,7 +86,8 @@ const getVenues = async (req, res) => {
       status,
       pinned,
       userId,
-      date
+      date,
+      organization,
     });
 
     return sendResponse({
@@ -249,10 +250,36 @@ const deleteVenue = async (req, res) => {
   }
 };
 
+const getUnassignedVenues = async (req, res) => {
+  const { _id } = req.user;
+  console.log("object", _id);
+  console.log("object", req.user);
+  console.log("here")
+
+  try {
+    const venues = await venuesService.getUnassignedVenues(_id);
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "unassigned_venues_fetched_successfully",
+      data: venues,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
 module.exports = {
   createVenue,
   getVenues,
   updateVenue,
   deleteVenue,
   getVenueDetails,
+  getUnassignedVenues
 };

@@ -2,7 +2,7 @@
 
 const highlightRepo = require("./highlightRepository");
 const eventRepository = require("../events/eventRepository");
-const organizationRepo = require("../../organizer/organizations/organizationRepository");
+const organizationRepo = require("../organizations/organizationRepository");
 
 const createHighlight = async ({ data }) => {
   return await highlightRepo.createHighlight(data);

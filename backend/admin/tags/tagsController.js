@@ -9,16 +9,16 @@ const {
 const tagsService = require("./tagsService");
 
 const createTag = async (req, res) => {
-  const { title, status = "active", pinned = false } = req.body;
+  const { title, status = "active", pinned = false, type } = req.body;
 
-  if (!validateParams(req, res, { rawData: ["title"] })) return;
+  if (!validateParams(req, res, { rawData: ["title", "type"] })) return;
 
   try {
     const tag = await tagsService.createTag({
       title,
-      status: "active",
-      type: "primary",
-      pinned: false,
+      status,
+      type,
+      pinned,
     });
 
     return sendResponse({

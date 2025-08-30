@@ -1,7 +1,6 @@
 // helperUtils/userResponseUtil.js
 
 const { createVerificationLink } = require("../models/UserModel");
-const { convertUtcToTimezone } = require("./responseUtil");
 
 const formatUserResponse = (
   userObject,
@@ -48,6 +47,12 @@ const formatUserResponse = (
       __v: userObject.__v,
     },
   };
+
+  if (userType == "user") {
+    basicInfo.dob = userObject.dob || "";
+    basicInfo.gender = userObject.gender || "";
+    basicInfo.username = userObject.username || "";
+  }
 
   if (userType === "organizer") {
     basicInfo.organizationName = userObject.organizationName || "";

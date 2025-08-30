@@ -1,5 +1,9 @@
 // services/organizationService.js
 
+const { default: mongoose } = require("mongoose");
+const { buildKeywordQueryFromModel } = require("../../helperUtils/queryUtil");
+const Venues = require("../venues/Venues");
+const Organizations = require("./Organization");
 const organizationRepo = require("./organizationRepository");
 
 const createOrganization = async ({ data }) => {
@@ -8,17 +12,20 @@ const createOrganization = async ({ data }) => {
 
 const getOrganizations = async ({ page, limit, keyword, status, creator }) => {
   const query = {};
-  if (creator) query.creator = creator;
+  query.$or = [
+    { creator: creator },
+    { "staff.user": creator },
+  ];
   if (status) {
     query.status = status;
   } else {
     query.status = { $ne: "deleted" };
   }
-  if (keyword) {
-    query.$or = [
-      { title: { $regex: keyword, $options: "i" } },
-      { description: { $regex: keyword, $options: "i" } },
-    ];
+  if (keyword && keyword.trim() !== "") {
+    Object.assign(
+      query,
+      buildKeywordQueryFromModel(Organizations, keyword)
+    );
   }
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
@@ -77,7 +84,7 @@ const getPublicOrganizations = async ({ page, limit, keyword }) => {
   };
 };
 
-const updateOrganization = async (id, data) => {
+const updateOrganization = async ({id, data}) => {
   const organization = await organizationRepo.findOrganizationById(id);
   if (!organization) return null;
 
@@ -86,7 +93,7 @@ const updateOrganization = async (id, data) => {
     otherInfo,
     operatingHours,
     status,
-    venues,
+    venue,
     location,
     pinned,
     image,
@@ -126,7 +133,6 @@ const updateOrganization = async (id, data) => {
   }
 
   if (status !== undefined) organization.status = status;
-  if (venues !== undefined) organization.venues = venues;
   if (location !== undefined) organization.location = location;
   if (pinned !== undefined) organization.pinned = pinned;
   if (image !== undefined) organization.image = image;
@@ -139,6 +145,27 @@ const updateOrganization = async (id, data) => {
     if (!organization.basicInfo) organization.basicInfo = {};
     organization.basicInfo.name = title;
   }
+
+  if (venue !== undefined) {
+    // 1. Set all previous venues' isPrimary to false for this organization
+    await Venues.updateMany(
+      { organization: organization._id, isPrimary: true },
+      { isPrimary: false }
+    );
+
+    // 2. Make current venue isPrimary true and assign organization if not assigned
+    const existingVenue = await Venues.findOne({ _id: venue });
+
+    if (existingVenue) {
+      // Assign organization if not already assigned
+      if (!existingVenue.organization || String(existingVenue.organization) !== String(organization._id)) {
+        existingVenue.organization = organization._id;
+      }
+      existingVenue.isPrimary = true;
+      await existingVenue.save();
+    }
+  }
+
 
   await organization.save();
 
@@ -163,9 +190,17 @@ const findOrganizationById = async (id) => {
   return await organizationRepo.findOrganizationById(id);
 };
 
+const getOrganizationDetails = async (id) => {
+  return await organizationRepo.getOrganizationDetails(id);
+};
+
 const getOrganizationsAsStaff = async (id) => {
   return await organizationRepo.getOrganizationsAsStaff(id);
 };
+
+
+
+
 module.exports = {
   createOrganization,
   getOrganizations,
@@ -175,4 +210,5 @@ module.exports = {
   getPublicOrganizations,
   checkOrganizationExists,
   getOrganizationsAsStaff,
+  getOrganizationDetails
 };

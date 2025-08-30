@@ -91,16 +91,11 @@ const organizationSchema = new mongoose.Schema(
       enum: ["active", "inactive", "blocked", "deleted"],
       default: "active",
     },
-    venue: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Venues",
-      default: null,
-    },
     location: {
       type: LocationSchema,
       default: {},
     },
-    staff: [
+    staff: [ // Staff members associated with the organization e.g staff, managers
       {
         user: {
           type: mongoose.Schema.Types.ObjectId,

@@ -13,8 +13,6 @@ const createOrganization = async (req, res) => {
     basicInfo,
     otherInfo,
     operatingHours,
-    status = "active",
-    venues,
     location,
     pinned,
     image,
@@ -125,7 +123,7 @@ const updateOrganization = async (req, res) => {
     otherInfo,
     operatingHours,
     status,
-    venues,
+    venue,
     location,
     pinned,
     image,
@@ -135,7 +133,7 @@ const updateOrganization = async (req, res) => {
   } = req.body);
 
   try {
-    const updated = await organizationService.updateOrganization(id, data);
+    const updated = await organizationService.updateOrganization({id, data});
 
     if (!updated) {
       return sendResponse({
@@ -156,7 +154,7 @@ const updateOrganization = async (req, res) => {
       res,
       statusCode: error.name === "ValidationError" ? 400 : 500,
       translationKey: "internal_server",
-      error: error.message,
+      error: error,
     });
   }
 };
@@ -197,10 +195,37 @@ const deleteOrganization = async (req, res) => {
   }
 };
 
+const getOrganizationDetails = async (req, res) => {
+  const { id } = req.params;
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })
+  )
+    return;
+  const organization = await organizationService.getOrganizationDetails(id);
+  if (!organization) {
+    return sendResponse({
+      res,
+      statusCode: 404,
+      translationKey: "organization_not_found",
+    });
+  }
+
+  return sendResponse({
+    res,
+    statusCode: 200,
+    translationKey: "organization_fetched_successfully",
+    data: organization,
+  });
+};
+
 module.exports = {
   createOrganization,
   getOrganizations,
   getPublicOrganizations,
+  getOrganizationDetails,
   updateOrganization,
   deleteOrganization,
 };

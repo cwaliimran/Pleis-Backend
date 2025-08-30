@@ -68,6 +68,10 @@ const userSchema = new mongoose.Schema(
       enum: ["", "Male", "Female", "Other"],
       default: "",
     },
+    dob: {
+      type: String,
+      default: "",
+    },
 
     organizationName: {
       type: String,
@@ -298,6 +302,16 @@ const userSchema = new mongoose.Schema(
     termsAccepted: {
       type: Boolean,
       default: false,
+    },
+    twoFA: {
+      secret: {
+        type: String,
+        default: null,
+      },
+      isEnabled: {
+        type: Boolean,
+        default: false,
+      },
     },
   },
   {

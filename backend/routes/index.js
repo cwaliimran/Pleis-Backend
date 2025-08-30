@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 router.use("/auth", require("./authRoutes"));
-router.use("/users", require("./userRoutes"));
+router.use("/users", require("../commonModules/usersManagement/usersRoutes"));
 router.use("/upload", require("./uploadRoutes"));
 router.use("/upload/azure", require("./uploadAzureBlobRoutes"));
 router.use("/settings", require("../admin/settings/adminSettingsRoutes"));
@@ -14,7 +14,7 @@ router.use("/home", require("./homeRoutes"));
 router.use("/util", require("./dbRoutes"));
 
 //organizer routes
-router.use("/organizations", require("../organizer/organizations/organizationRoutes"));
+router.use("/organizations", require("../commonModules/organizations/organizationRoutes"));
 
 //global routes
 router.use("/suppliers", require("../admin/suppliers/suppliersRoutes"));

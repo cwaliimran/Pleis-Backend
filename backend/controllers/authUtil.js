@@ -1,13 +1,13 @@
 
 
-const { validateParams, sendResponse } = require("../helperUtils/responseUtil");
+const { validateParams, sendResponse, getReadableErrorMessage } = require("../helperUtils/responseUtil");
 const { formatUserResponse } = require("../helperUtils/userResponseUtil");
 const { createOrSkipDevice } = require("../models/Devices");
 const { User, USER_TYPES } = require("../models/UserModel");
 
 const mongoose = require("mongoose");
 const validator = require("validator");
-const Organizations = require("../organizer/organizations/Organization");
+const Organizations = require("../commonModules/organizations/Organization");
 const { FEATURE_KEYS } = require("../admin/features/Feature");
 // const { sendEmailViaBrevo } = require("../helperUtils/emailUtil");
 // const { registrationOtpEmailTemplate } = require("../helperUtils/emailTemplates");
@@ -45,6 +45,8 @@ const registerUserUtility = async (req, res, options = {}) => {
   try {
     let rawData = ["firstName", "lastName", "email", "password", "userType"];
     let objectIdFields = [];
+    let dateFields = {};
+    // let enumFields = {};
 
     // Adjust required fields by userType
     if (userType === "guest") verificationStatus = "active";
@@ -52,7 +54,11 @@ const registerUserUtility = async (req, res, options = {}) => {
       rawData.push("organizations", "phoneNumber");
       objectIdFields.push("organizations");
     }
-    if (userType === "user") rawData.push("dob", "gender", "username", "phoneNumber");
+    if (userType === "user") {
+      rawData.push("dob", "gender", "username", "phoneNumber");
+      dateFields = { dob: "YYYY-MM-DD" };
+      // enumFields = { gender: ["", "Male", "Female", "Other"] };
+    }
     if (userType === "staff") {
       rawData.push("organizations", "phoneNumber");
       objectIdFields.push("organizations");
@@ -65,7 +71,8 @@ const registerUserUtility = async (req, res, options = {}) => {
     const validationOptions = {
       rawData,
       objectIdFields,
-      enumFields: { userType: USER_TYPES, modules: FEATURE_KEYS },
+      dateFields,
+      enumFields: { userType: USER_TYPES, modules: FEATURE_KEYS, gender: ["", "Male", "Female", "Other"] },
       minLengthFields: { password: 6 },
     };
 
@@ -75,33 +82,39 @@ const registerUserUtility = async (req, res, options = {}) => {
 
     // ✅ Validate profile icon
     if (profileIcon && profileIcon.startsWith("http")) {
-      return {
-        success: false,
-        error: { message: "Invalid URL for profileIcon", translationKey: "url_not_accepted" },
-        responseSent: false,
-      };
+      sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "url_not_accepted",
+        values: { field: "profileIcon" },
+      });
+
+      return { responseSent: true };
     }
 
     // ✅ Admin token check for admin creation
-    if (userType === "admin") {
+    if (userType === "admin" || userType === "guest") {
       const adminToken = req.header("x-admin-access-token");
       if (adminToken !== process.env.ADMIN_ACCESS_TOKEN) {
-        return {
-          success: false,
-          error: { message: "Unauthorized to create admin", translationKey: "unauthorized_to" },
-          responseSent: false,
-        };
+        sendResponse({
+          res,
+          statusCode: 401,
+          translationKey: "unauthorized_to_perform_this_action",
+        });
+
+        return { responseSent: true };
       }
     }
 
     // ✅ Check if email exists
     const existingUser = await User.findOne({ email: email.trim().toLowerCase() });
     if (existingUser && existingUser.verificationStatus.email === "verified") {
-      return {
-        success: false,
-        error: { message: "Email already registered", translationKey: "email_already" },
-        responseSent: false,
-      };
+      sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "email_already",
+      });
+      return { responseSent: true };
     }
 
     // ✅ Validate phone number
@@ -122,11 +135,12 @@ const registerUserUtility = async (req, res, options = {}) => {
         "verificationStatus.phoneNumber": "verified",
       });
       if (existingPhone) {
-        return {
-          success: false,
-          error: { message: "Phone number already registered", translationKey: "phone_number_already" },
-          responseSent: false,
-        };
+        sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "phone_number_already",
+        });
+        return { responseSent: true };
       }
     }
 
@@ -205,7 +219,7 @@ const registerUserUtility = async (req, res, options = {}) => {
       const tokenData = user.generateEmailVerificationToken();
       user.emailVerificationLink = tokenData.rawToken;
 
-        // await sendEmailViaBrevo(user.email, tokenData.verificationLink);
+      // await sendEmailViaBrevo(user.email, tokenData.verificationLink);
     }
 
     await user.save({ session });
@@ -222,20 +236,18 @@ const registerUserUtility = async (req, res, options = {}) => {
 
     return { success: true, user: formattedResponse, responseSent: false };
   } catch (error) {
-    await session.abortTransaction();
-    return {
-      success: false,
-      error: { message: error.message, translationKey: "registration_failed" },
-      responseSent: false,
-    };
+    const readableError = getReadableErrorMessage(error);
+    sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+    return { responseSent: true };
+
   } finally {
     session.endSession();
   }
 };
-
-
-
-
-module.exports = { registerUserUtility };
 
 module.exports = { registerUserUtility };

@@ -123,7 +123,15 @@ const populateNestedFields = async (model, query, nestedFieldsToPopulate, option
   return populateQuery.lean().exec();
 };
 
-
+//for using this function
+/* 
+ if (keyword && keyword.trim() !== "") {
+    Object.assign(
+      query,
+      buildKeywordQueryFromModel(ModelName, keyword)
+    );
+  }
+*/
 // Utility function to build keyword search dynamically
 function buildKeywordQueryFromModel(model, keyword) {
   if (!keyword || !keyword.trim()) return {};
