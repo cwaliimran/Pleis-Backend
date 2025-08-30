@@ -14,30 +14,14 @@ const connectToDB = require("./helperUtils/server-setup");
 // Express app
 const app = express();
 
-// ✅ Allow localhost only in development
-const allowedOrigins = [
-  "https://pleis.com",
-  "https://www.pleis.com",
-];
+// Enable CORS middleware
+const corsOptions = {
+  origin: "*", // Allow all origins
+  methods: "*", // Allow all methods
+  allowedHeaders: ["Content-Type", "Authorization", "x-admin-access-token"],
+};
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true); // ✅ Allow Postman/no origin
-      // if (process.env.NODE_ENV === "dev") {
-        return callback(null, true); // ✅ Allow any origin in dev
-      // }
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error("Not allowed by CORS"), false);
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-admin-access-token"],
-    optionsSuccessStatus: 200,
-  })
-);
+app.use(cors(corsOptions)); // Apply CORS middleware
 
 
 app.use(i18nConfig.init);
