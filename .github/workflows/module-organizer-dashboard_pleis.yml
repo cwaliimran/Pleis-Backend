@@ -32,7 +32,6 @@ jobs:
           path: |
             ./
             !.git/
-            !node_modules/
             !node_modules.tar.gz
             !_del_node_modules
 
