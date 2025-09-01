@@ -7,8 +7,9 @@ const validator = require("validator");
 const { User } = require("../../models/UserModel");
 const Organizations = require("../organizations/Organization");
 const { default: mongoose } = require("mongoose");
-const { generate2FASecret, verify2FAToken } = require("./twoFactorAuth");
+const {  generate2FASecret, generateQRCode, verify2FAToken} = require("./twoFactorAuth");
 
+const APP_NAME = "Pleis App";
 
 const getUsers = async ({ page, limit, keyword, status, userType }) => {
   const query = {
@@ -231,40 +232,74 @@ const getUserDetails = async (id) => {
   return await userRepo.findUserById(id);
 };
 
+
 /**
- * Toggle 2FA for user (enable/disable)
+ * Setup 2FA (Generate QR and Secret, but do not enable yet)
  * @param {string} userId
- * @param {Object} options - { enable: boolean, email?: string }
+ * @returns {Promise<{ qrCodeDataURL: string, secret: string }>}
  */
-const toggleTwoFA = async (userId, { enable, email }) => {
-  if (enable) {
-    const { secret, qrCodeDataURL } = await generate2FASecret(email);
+const setupTwoFA = async (userId) => {
+  const user = await userRepo.findUserById(userId, { twoFA: 1, email: 1 });
+
+  let secret = user.twoFA?.secret;
+  if (!secret) {
+    const { secret: newSecret } = generate2FASecret(APP_NAME, user.email);
+    secret = newSecret;
+
     await userRepo.updateTwoFA(userId, {
       "twoFA.secret": secret,
-      "twoFA.isEnabled": true,
-    });
-    return { qrCodeDataURL };
-  } else {
-    await userRepo.updateTwoFA(userId, {
-      "twoFA.secret": null,
       "twoFA.isEnabled": false,
+      "twoFA.isConfirmed": false,
     });
-    return true;
   }
+
+  const otpauth = `otpauth://totp/${encodeURIComponent(APP_NAME)}:${encodeURIComponent(user.email)}?secret=${secret}&issuer=${encodeURIComponent(APP_NAME)}`;
+  const qrCodeDataURL = await generateQRCode(otpauth);
+
+  return { qrCodeDataURL, secret };
+};
+
+/**
+ * Confirm 2FA (Verify token and enable)
+ * @param {string} userId
+ * @param {string} token
+ * @returns {Promise<boolean>}
+ */
+const confirmTwoFA = async (userId, token) => {
+  const user = await userRepo.findUserById(userId, { twoFA: 1 });
+  if (!user || !user.twoFA?.secret) return { isValid: false, newlyEnabled: false };
+
+  const isValid = verify2FAToken(token, user.twoFA.secret);
+  if (!isValid) {
+    return { isValid: false, newlyEnabled: false };
+  }
+
+  let newlyEnabled = false;
+
+  if (!user.twoFA.isEnabled) {
+    await userRepo.updateTwoFA(userId, {
+      "twoFA.isEnabled": true,
+      "twoFA.isConfirmed": true,
+    });
+    newlyEnabled = true;
+  }
+
+  return { isValid: true, newlyEnabled };
 };
 
 
 /**
- * Verify 2FA token for login or setup (projects only 2FA fields)
+ * Disable 2FA
+ * @param {string} userId
+ * @returns {Promise<boolean>}
  */
-const verifyTwoFA = async (userId, token) => {
-  // Only project twoFA fields
-  const user = await userRepo.findUserById(userId, { twoFA: 1 });
-  if (!user || !user.twoFA?.secret) return false;
-
-  return verify2FAToken(token, user.twoFA.secret);
+const disableTwoFA = async (userId) => {
+  await userRepo.updateTwoFA(userId, {
+    "twoFA.isEnabled": false,
+    "twoFA.isConfirmed": false,
+  });
+  return true;
 };
-
 
 
 
@@ -273,6 +308,7 @@ module.exports = {
   updateUser,
   deleteUser,
   getUserDetails,
-  toggleTwoFA,
-  verifyTwoFA
+  setupTwoFA,
+  confirmTwoFA,
+  disableTwoFA
 };

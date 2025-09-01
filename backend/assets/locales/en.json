@@ -188,10 +188,9 @@
   "organization_fetched_successfully": "Organization fetched successfully",
   "unassigned_venues_fetched_successfully": "Unassigned venues fetched successfully",
   "unauthorized_to_perform_this_action": "Unauthorized to perform this action",
-  "invalid_request_data": "Invalid request data",
   "2fa_enabled_successfully": "2fa enabled successfully",
   "2fa_disabled_successfully": "2fa disabled successfully",
-  "token_required": "Token required",
   "invalid_2fa_token": "Invalid 2fa token",
+  "2fa_setup": "2fa setup",
   "2fa_verified_successfully": "2fa verified successfully"
 }

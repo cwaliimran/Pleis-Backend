@@ -216,67 +216,30 @@ const getUserDetails = async (req, res) => {
 };
 
 
-/**
- * Enable or Disable 2FA
- */
-const toggleTwoFA = async (req, res) => {
+// Setup 2FA (get QR code)
+const setupTwoFAController = async (req, res) => {
   const user = req.user;
-  const { enable } = req.body;
-
-  if (typeof enable !== "boolean") {
-    return sendResponse({
-      res,
-      statusCode: 400,
-      translationKey: "invalid_request_data",
-    });
-  }
-
   try {
-    const result = await usersService.toggleTwoFA(user._id, {
-      enable,
-      email: user.email,
-    });
-    if (enable) {
-      return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "2fa_enabled_successfully",
-      data: { qrCode: result.qrCodeDataURL },
-      });
-    } else {
-      return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "2fa_disabled_successfully",
-      });
-    }
-  } catch (error) {
+    const result = await usersService.setupTwoFA(user._id);
     return sendResponse({
       res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: error.message,
+      statusCode: 200,
+      translationKey: "2fa_setup",
+      data: { qrCode: result.qrCodeDataURL },
     });
+  } catch (error) {
+    return sendResponse({ res, statusCode: 500, translationKey: "internal_server", error: error });
   }
 };
 
-/**
- * Verify 2FA token
- */
-const verifyTwoFA = async (req, res) => {
+// Confirm 2FA
+const confirmTwoFAController = async (req, res) => {
   const user = req.user;
   const { token } = req.body;
 
-  if (!token) {
-    return sendResponse({
-      res,
-      statusCode: 400,
-      translationKey: "token_required",
-    });
-  }
-
   try {
-    const isValid = await usersService.verifyTwoFA(user._id, token);
+    const { isValid, newlyEnabled } = await usersService.confirmTwoFA(user._id, token);
+
     if (!isValid) {
       return sendResponse({
         res,
@@ -285,10 +248,18 @@ const verifyTwoFA = async (req, res) => {
       });
     }
 
+    if (newlyEnabled) {
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "2fa_enabled_successfully", // First time enabling
+      });
+    }
+
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "2fa_verified_successfully",
+      translationKey: "2fa_verified_successfully", // Already enabled, just validated
     });
   } catch (error) {
     return sendResponse({
@@ -300,12 +271,31 @@ const verifyTwoFA = async (req, res) => {
   }
 };
 
+
+// Disable 2FA
+const disableTwoFAController = async (req, res) => {
+  const user = req.user;
+  try {
+    await usersService.disableTwoFA(user._id);
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "2fa_disabled_successfully",
+    });
+  } catch (error) {
+    return sendResponse({ res, statusCode: 500, translationKey: "internal_server", error });
+  }
+};
+
+
+
 module.exports = {
   createUser,
   getUsers,
   updateUser,
-  toggleTwoFA,
-  verifyTwoFA,
+  setupTwoFAController,
+  confirmTwoFAController,
+  disableTwoFAController,
   deleteUser,
   getUserDetails
 };
