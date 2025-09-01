@@ -49,9 +49,10 @@ jobs:
       # 2. Deploy to Azure Web App
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
+        env:
+          SCM_DO_BUILD_DURING_DEPLOYMENT: true
         with:
           app-name: 'Pleis'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_D6B5A721CC1F4065BA303A78D3C5B578 }}
           package: ./
-          env:
-            SCM_DO_BUILD_DURING_DEPLOYMENT: true
+
