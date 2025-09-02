@@ -1352,6 +1352,273 @@
 							"name": "Account Management",
 							"item": [
 								{
+									"name": "TwoFA",
+									"item": [
+										{
+											"name": "setup",
+											"request": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}users/twofa/setup",
+													"host": [
+														"{{url}}users"
+													],
+													"path": [
+														"twofa",
+														"setup"
+													]
+												}
+											},
+											"response": [
+												{
+													"name": "setup",
+													"originalRequest": {
+														"method": "POST",
+														"header": [],
+														"body": {
+															"mode": "raw",
+															"raw": "",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{url}}users/twofa/setup",
+															"host": [
+																"{{url}}users"
+															],
+															"path": [
+																"twofa",
+																"setup"
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": null,
+													"header": [
+														{
+															"key": "X-Powered-By",
+															"value": "Express"
+														},
+														{
+															"key": "Access-Control-Allow-Origin",
+															"value": "*"
+														},
+														{
+															"key": "Content-Type",
+															"value": "application/json; charset=utf-8"
+														},
+														{
+															"key": "Content-Length",
+															"value": "3149"
+														},
+														{
+															"key": "ETag",
+															"value": "W/\"c4d-LSc5tZmiu62JO4P1Psu3kwAohM8\""
+														},
+														{
+															"key": "Date",
+															"value": "Mon, 01 Sep 2025 00:50:04 GMT"
+														},
+														{
+															"key": "Connection",
+															"value": "keep-alive"
+														},
+														{
+															"key": "Keep-Alive",
+															"value": "timeout=5"
+														}
+													],
+													"cookie": [],
+													"body": "{\n    \"message\": \"2fa qr generated\",\n    \"data\": {\n        \"qrCode\": \"data:image/png;base64,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\"\n    }\n}"
+												}
+											]
+										},
+										{
+											"name": "confirm or enable",
+											"request": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"token\": \"948769\"\n}\n",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}users/twofa/confirm",
+													"host": [
+														"{{url}}users"
+													],
+													"path": [
+														"twofa",
+														"confirm"
+													]
+												},
+												"description": "Confirming will enable it automatically"
+											},
+											"response": [
+												{
+													"name": "confirm",
+													"originalRequest": {
+														"method": "POST",
+														"header": [],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n  \"token\": \"901901\"\n}\n",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{url}}users/twofa/confirm",
+															"host": [
+																"{{url}}users"
+															],
+															"path": [
+																"twofa",
+																"confirm"
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": null,
+													"header": [
+														{
+															"key": "X-Powered-By",
+															"value": "Express"
+														},
+														{
+															"key": "Access-Control-Allow-Origin",
+															"value": "*"
+														},
+														{
+															"key": "Content-Type",
+															"value": "application/json; charset=utf-8"
+														},
+														{
+															"key": "Content-Length",
+															"value": "39"
+														},
+														{
+															"key": "ETag",
+															"value": "W/\"27-UfCE2+e3T6aATsmrBA+hqFGVfwQ\""
+														},
+														{
+															"key": "Date",
+															"value": "Sat, 30 Aug 2025 14:18:07 GMT"
+														},
+														{
+															"key": "Connection",
+															"value": "keep-alive"
+														},
+														{
+															"key": "Keep-Alive",
+															"value": "timeout=5"
+														}
+													],
+													"cookie": [],
+													"body": "{\n    \"message\": \"2fa verified successfully\"\n}"
+												}
+											]
+										},
+										{
+											"name": "disable",
+											"request": {
+												"method": "POST",
+												"header": [],
+												"url": {
+													"raw": "{{url}}users/twofa/disable",
+													"host": [
+														"{{url}}users"
+													],
+													"path": [
+														"twofa",
+														"disable"
+													]
+												}
+											},
+											"response": [
+												{
+													"name": "disable",
+													"originalRequest": {
+														"method": "POST",
+														"header": [],
+														"url": {
+															"raw": "{{url}}users/twofa/disable",
+															"host": [
+																"{{url}}users"
+															],
+															"path": [
+																"twofa",
+																"disable"
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": null,
+													"header": [
+														{
+															"key": "X-Powered-By",
+															"value": "Express"
+														},
+														{
+															"key": "Access-Control-Allow-Origin",
+															"value": "*"
+														},
+														{
+															"key": "Content-Type",
+															"value": "application/json; charset=utf-8"
+														},
+														{
+															"key": "Content-Length",
+															"value": "39"
+														},
+														{
+															"key": "ETag",
+															"value": "W/\"27-AwL5GpezvwMDTSMawpLeoHo01n4\""
+														},
+														{
+															"key": "Date",
+															"value": "Mon, 01 Sep 2025 01:20:55 GMT"
+														},
+														{
+															"key": "Connection",
+															"value": "keep-alive"
+														},
+														{
+															"key": "Keep-Alive",
+															"value": "timeout=5"
+														}
+													],
+													"cookie": [],
+													"body": "{\n    \"message\": \"2fa disabled successfully\"\n}"
+												}
+											]
+										}
+									]
+								},
+								{
 									"name": "profile",
 									"protocolProfileBehavior": {
 										"disableBodyPruning": true
@@ -1513,59 +1780,6 @@
 											],
 											"path": [
 												"delete-account"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "twoFA toggle",
-									"request": {
-										"method": "POST",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "{\n  \"enable\": true\n}\n",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "{{url}}users/twofa",
-											"host": [
-												"{{url}}users"
-											],
-											"path": [
-												"twofa"
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "twoFA verify",
-									"request": {
-										"method": "POST",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "{\n  \"token\": \"901901\"\n}\n",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "{{url}}users/twofa/verify",
-											"host": [
-												"{{url}}users"
-											],
-											"path": [
-												"twofa",
-												"verify"
 											]
 										}
 									},

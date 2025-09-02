@@ -30,7 +30,7 @@ jobs:
         with:
           name: node-app
           path: |
-            ./
+            ./backend-dev/
             !.git/
             !node_modules.tar.gz
             !_del_node_modules

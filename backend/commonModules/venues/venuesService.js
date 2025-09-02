@@ -1,5 +1,5 @@
 // services/venueService.js
-const { buildKeywordQueryFromModel } = require("../../helperUtils/queryUtil");
+const { buildKeywordQueryFromModel, buildKeywordQueryFromModels } = require("../../helperUtils/queryUtil");
 const { generateMeta } = require("../../helperUtils/responseUtil");
 const Organizations = require("../organizations/Organization");
 const Venues = require("./Venues");
@@ -62,11 +62,18 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
     });
   }
 
-  if (keyword && keyword.trim() !== "") {
-    pipeline.push({
-      $match: buildKeywordQueryFromModel(Venues, keyword)
-    });
+  const keywordMatch = buildKeywordQueryFromModels(
+    [
+      { schema: Venues.schema },                       // Venue fields
+      { schema: Organizations.schema, prefix: 'organizationData.' } // Organization fields (with prefix)
+    ],
+    keyword
+  );
+
+  if (Object.keys(keywordMatch).length) {
+    pipeline.push({ $match: keywordMatch });
   }
+
 
   if (pinned !== undefined) {
     pipeline.push({
@@ -80,6 +87,8 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
     });
   }
 
+  pipeline.push({ $sort: { createdAt: -1 } });
+
   // Apply pagination + counts using $facet
   pipeline.push({
     $facet: {
@@ -90,6 +99,7 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
       totalFiltered: [{ $count: "count" }]
     }
   });
+
 
   const result = await Venues.aggregate(pipeline);
 
@@ -132,11 +142,9 @@ const getUnassignedVenues = async (userId) => {
 
 
 const updateVenue = async (id, data) => {
-  // Find the existing venue first
   const venue = await venueRepo.findVenueById(id);
   if (!venue) return null;
 
-  // Only update provided fields that exist in the venue
   const allowedFields = [
     "title",
     "floorPlan",
@@ -156,20 +164,48 @@ const updateVenue = async (id, data) => {
   }
 
   if (Object.keys(updateData).length === 0) {
-    return venue;
+    return venue; // nothing to update
   }
 
-  const updated = await venueRepo.findByIdAndUpdate(id, updateData);
-  // If updating to primary, set all other venues for this organization to isPrimary: false
-  if (data.isPrimary && venue.organization) {
+  // Handle organization change and primary logic
+  let organizationChanged = false;
+
+  if (updateData.organization && String(updateData.organization) !== String(venue.organization)) {
+    organizationChanged = true;
+  }
+
+  // ✅ Step 1: Update venue fields
+  Object.assign(venue, updateData);
+  await venue.save();
+
+  // ✅ Step 2: If isPrimary = true
+  if (updateData.isPrimary) {
+    // Ensure only one primary per organization
     await Venues.updateMany(
-      { organization: venue.organization, isPrimary: true, _id: { $ne: venue._id } },
-      { isPrimary: false }
+      {
+        organization: venue.organization,
+        _id: { $ne: venue._id },
+        isPrimary: true
+      },
+      { $set: { isPrimary: false } }
     );
   }
 
-  return updated;
+  // ✅ Step 3: If organization changed and isPrimary = true, double-check previous organization
+  if (organizationChanged && updateData.isPrimary) {
+    // Just to make sure previous org doesn't keep old primary (edge case)
+    await Venues.updateMany(
+      {
+        organization: data.organization, // old org
+        isPrimary: true
+      },
+      { $set: { isPrimary: false } }
+    );
+  }
+
+  return venue;
 };
+
 
 const deleteVenue = async (id) => {
   const updated = await venueRepo.findByIdAndUpdate(id, {

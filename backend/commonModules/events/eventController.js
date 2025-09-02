@@ -30,14 +30,40 @@ const createEvent = async (req, res) => {
 
   }
 
+
   let eventType = schedule.type || "oneTime";
 
   if (eventType === "oneTime") {
-    // One-time event specific validation
+    // Validate both start and end date for one-time events
     validateData.dateFields = {
       "schedule.startDateTime": "YYYY-MM-DD hh:mm A",
-      "schedule.endDateTime": "YYYY-MM-DD hh:mm A",
+      "schedule.endDateTime": "YYYY-MM-DD hh:mm A"
     };
+  }
+
+  const recurringDetails = schedule.recurringDetails || {};
+  if (recurringDetails.isEnabled) {
+    // Recurring event validation
+    validateData.dateFields = {
+      "schedule.startDateTime": "YYYY-MM-DD hh:mm A"
+    };
+
+    validateData.rawData.push("schedule.recurringDetails");
+    validateData.rawData.push("schedule.recurringDetails.frequency");
+    validateData.rawData.push("schedule.recurringDetails.interval");
+    validateData.rawData.push("schedule.recurringDetails.endType");
+
+    // Conditional validation based on endType
+    if (recurringDetails.endType === "onDate") {
+      validateData.dateFields["schedule.recurringDetails.endDate"] = "YYYY-MM-DD";
+    } else if (recurringDetails.endType === "afterOccurrences") {
+      validateData.rawData.push("schedule.recurringDetails.occurrences");
+    }
+
+    // Validate daysOfWeek if frequency is weekly or monthly
+    if (["weekly", "monthly"].includes(recurringDetails.frequency)) {
+      validateData.rawData.push("schedule.recurringDetails.daysOfWeek");
+    }
   }
 
   if (!validateParams(req, res, validateData)) return;
@@ -65,7 +91,6 @@ const createEvent = async (req, res) => {
     creator: userId,
   };
 
-  console.log("eventData in createEvent:", eventData);
 
   try {
     const event = await eventService.createEvent({ data: eventData });

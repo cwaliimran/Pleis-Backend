@@ -161,9 +161,39 @@ function buildKeywordQueryFromModel(model, keyword) {
   return orConditions.length > 0 ? { $or: orConditions } : {};
 }
 
+function buildKeywordQueryFromModels(models, keyword) {
+  if (!keyword || !keyword.trim()) return {};
+
+  const orConditions = [];
+
+  function getStringPaths(schema, prefix = '') {
+    const paths = [];
+    schema.eachPath((pathname, schemaType) => {
+      if (schemaType.instance === 'String') {
+        paths.push(prefix + pathname);
+      } else if (schemaType.schema) {
+        const nestedPaths = getStringPaths(schemaType.schema, prefix + pathname + '.');
+        paths.push(...nestedPaths);
+      }
+    });
+    return paths;
+  }
+
+  models.forEach(({ schema, prefix }) => {
+    const stringFields = getStringPaths(schema, prefix);
+    stringFields.forEach(field => {
+      orConditions.push({ [field]: { $regex: keyword, $options: 'i' } });
+    });
+  });
+
+  return orConditions.length > 0 ? { $or: orConditions } : {};
+}
+
+
 module.exports = {
   populateFields,
   populateMultipleTables,
   populateNestedFields,
   buildKeywordQueryFromModel,
+  buildKeywordQueryFromModels
 };
