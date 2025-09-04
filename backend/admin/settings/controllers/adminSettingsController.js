@@ -1,4 +1,5 @@
 const { sendResponse, parsePaginationParams, generateMeta } = require("../../../helperUtils/responseUtil");
+const { User } = require("../../../models/UserModel");
 const AdminSettings = require("../models/AdminSettings");
 const Faq = require("../models/Faq");
 
@@ -111,7 +112,7 @@ const getFaqs = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Faqs fetched successfully",
+      translationKey: "faqs_fetched_successfully",
       data: faqs,
       meta,
     });
@@ -188,6 +189,14 @@ const updateAdminSettings = async (req, res) => {
         statusCode: 404,
         translationKey: "admin_settings_2",
       });
+    }
+
+    if (req.body.terms_and_conditions){
+      //update all organizers with new termsAccepted
+      await User.updateMany(
+        { "accountState.userType": "organizer" },
+        { $set: { termsAccepted: req.body.termsAccepted || false } }
+      );
     }
 
     return sendResponse({

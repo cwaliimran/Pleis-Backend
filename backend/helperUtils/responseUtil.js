@@ -165,7 +165,11 @@ const convertUnderscoresToSpaces = (str) => String(str).replace(/_/g, " ");
 //   queryParams:["name","plan"],
 //   rawData:["title"],
 //   formFields:["age"],
-//   objectIdFields:["123"]
+//   objectIdFields:["123"],
+//   dateFields: {
+//     startDate: "YYYY-MM-DD",
+//     endDate: "YYYY-MM-DD",
+//   },
 // }
 // if (!validateParams(req, res, validationOptions)) {
 //   return; // Invalid request data response already sent by validateParams
@@ -254,23 +258,21 @@ const validateParams = (req, res, options = {}) => {
   // Validate raw data
   const missingParamsRaw = [];
   for (const param of rawData) {
-    if (req.body.hasOwnProperty(param)) {
-      const value = req.body[param];
-      if (typeof value === "string" && value.trim() !== "") {
-        req.body[camelCase(param)] = convertUnderscoresToSpaces(value);
-      } else if (
-        typeof value === "number" ||
-        typeof value === "boolean" ||
-        typeof value === "object"
-      ) {
-        req.body[camelCase(param)] = value;
-      } else {
-        missingParamsRaw.push(param);
-      }
+    const value = extractNestedFields(req.body, param);
+
+    if (
+      typeof value === "string" && value.trim() !== "" ||
+      typeof value === "number" ||
+      typeof value === "boolean" ||
+      (typeof value === "object" && value !== null)
+    ) {
+      // Optional: You can still set camelCase version if needed, though nesting complicates this
+      // e.g., req.body[camelCase(param)] = value;
     } else {
       missingParamsRaw.push(param);
     }
   }
+
   if (missingParamsRaw.length > 0) {
     sendResponse({
       res,
@@ -285,28 +287,23 @@ const validateParams = (req, res, options = {}) => {
   const objectIdsToValidate = [];
   const fieldNames = [];
 
-  const extractNestedFields = (obj, fieldPath) => {
-    const fields = fieldPath.split(".");
-    let value = obj;
-    for (const field of fields) {
-      if (value && value[field]) {
-        value = value[field];
-      } else {
-        return null;
-      }
-    }
-    return value;
-  };
-
   for (const field of objectIdFields) {
     let value =
       extractNestedFields(req.body, field) ||
       extractNestedFields(req.params, field) ||
       extractNestedFields(req.query, field);
     if (value) {
-      objectIdsToValidate.push(value);
-      fieldNames.push(field);
+      if (Array.isArray(value)) {
+        for (const val of value) {
+          objectIdsToValidate.push(val);
+          fieldNames.push(field); // Indicate it's from an array
+        }
+      } else {
+        objectIdsToValidate.push(value);
+        fieldNames.push(field);
+      }
     }
+
   }
   if (!validateObjectIdsArr(res, objectIdsToValidate, fieldNames)) {
     return false;
@@ -373,16 +370,39 @@ const validateParams = (req, res, options = {}) => {
       extractNestedFields(req.body, field) ||
       extractNestedFields(req.params, field) ||
       extractNestedFields(req.query, field);
-    if (value && !allowedValues.includes(value)) {
-      sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "invalid_enum_value", // Use translation key
-        values: { field, allowedValues: allowedValues.join(", ") }, // Replace placeholders with actual values
-      });
-      return false;
+
+    if (value) {
+      if (Array.isArray(value)) {
+        // Check if every item in the array is allowed
+        const invalidValues = value.filter(v => !allowedValues.includes(v));
+        if (invalidValues.length > 0) {
+          sendResponse({
+            res,
+            statusCode: 400,
+            translationKey: "invalid_enum_value",
+            values: {
+              field,
+              allowedValues: allowedValues.join(", "),
+              invalidValues: invalidValues.join(", ")
+            },
+          });
+          return false;
+        }
+      } else {
+        // Single value check
+        if (!allowedValues.includes(value)) {
+          sendResponse({
+            res,
+            statusCode: 400,
+            translationKey: "invalid_enum_value",
+            values: { field, allowedValues: allowedValues.join(", ") },
+          });
+          return false;
+        }
+      }
     }
   }
+
 
   // Validate minimum length fields
   for (const [field, minLength] of Object.entries(minLengthFields)) {
@@ -444,6 +464,19 @@ const validateParams = (req, res, options = {}) => {
   }
 
   return true;
+};
+
+const extractNestedFields = (obj, fieldPath) => {
+  const fields = fieldPath.split(".");
+  let value = obj;
+  for (const field of fields) {
+    if (value && value[field]) {
+      value = value[field];
+    } else {
+      return null;
+    }
+  }
+  return value;
 };
 
 // Example usage
@@ -554,8 +587,8 @@ const getReadableErrorMessage = (error) => {
     error.name === "ValidationError"
       ? 400
       : error.code === 11000
-      ? 409
-      : 500;
+        ? 409
+        : 500;
 
   // Handle duplicate key error
   if (error.code === 11000 && error.message.includes("dup key")) {

@@ -10,7 +10,7 @@ const createSupplier = async (data) => {
 // Get all with filters
 const getSuppliersWithFilters = async (query, skip, limit) => {
   return Supplier.find(query)
-    .sort({ title: 1 })
+    .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
 };

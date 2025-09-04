@@ -1,6 +1,7 @@
-const { User, generateResetToken } = require("../models/UserModel");
+const { User, generateResetToken, USER_TYPES } = require("../models/UserModel");
 const mongoose = require("mongoose");
 const moment = require("moment-timezone");
+const bcrypt = require("bcryptjs");
 const {
   sendResponse,
   validateParams,
@@ -14,209 +15,35 @@ const {
 } = require("../helperUtils/emailTemplates");
 const { createOrSkipDevice, Devices } = require("../models/Devices");
 const validator = require("validator");
-const { Company } = require("../models/CompanyDetails");
+const crypto = require("crypto");
+const { registerUserUtility } = require("./authUtil");
 //register
 const register = async (req, res) => {
-  const {
-    email,
-    deviceId,
-    deviceType,
-    phoneNumber,
-    profileIcon,
-    userType = "user",
-    firstName,
-    lastName,
-    organizationName,
-    password,
-    timezone,
-  } = req.body;
+  const result = await registerUserUtility(req, res, {
+    autoVerify: false,
+  });
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  if (result.responseSent) return;
 
-  try {
-    let rawData = [
-      "firstName",
-      "lastName",
-      "email",
-      "password",
-      "deviceId",
-      "deviceType",
-      "timezone",
-      "userType",
-    ];
-
-    if (userType === "organizer") {
-      rawData.push("organizationName");
-    }
-
-    const validationOptions = {
-      rawData,
-      enumFields: {
-        userType: ["user", "organizer", "admin"],
-      },
-      minLengthFields: {
-        password: 6, // Password must be at least 6 characters long
-      },
-    };
-    if (!validateParams(req, res, validationOptions)) {
-      return;
-    }
-
-    //if profile icon and starts with http or https then it is a invalid url
-    if (profileIcon && profileIcon.startsWith("http")) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "url_not_accepted",
-        values: { field: "profileIcon" },
-      });
-    }
-
-    // Validate phone number format (expects phoneNumber as { code, number })
-    if (
-      phoneNumber &&
-      (typeof phoneNumber !== "object" ||
-        !phoneNumber.code ||
-        !phoneNumber.number ||
-        !validator.isMobilePhone(phoneNumber.code + phoneNumber.number, "any", {
-          strictMode: true,
-        }))
-    ) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "invalid_phone",
-      });
-    }
-
-    // Fetch existing user
-    const existingEmail = await User.findOne({
-      email: email.trim().toLowerCase(),
-    });
-    let existingPhone;
-    if (phoneNumber) {
-      existingPhone = await User.findOne({
-        "phoneNumber.code": phoneNumber.code,
-        "phoneNumber.number": phoneNumber.number,
-        "verificationStatus.phoneNumber": "verified",
-      });
-    }
-
-    if (existingEmail) {
-      if (
-        (existingEmail.email === email.trim().toLowerCase(),
-        existingEmail.verificationStatus.email === "verified")
-      ) {
-        return sendResponse({
-          res,
-          statusCode: 409,
-          translationKey: "email_already",
-        });
-      }
-    }
-
-    if (existingPhone) {
-      // Compare both code and number fields for phoneNumber object
-      if (
-        existingPhone.phoneNumber &&
-        existingPhone.phoneNumber.code === phoneNumber.code &&
-        existingPhone.phoneNumber.number === phoneNumber.number
-      ) {
-        return sendResponse({
-          res,
-          statusCode: 409,
-          translationKey: "phone_number_already",
-        });
-      }
-    }
-
-    let existingUser = existingEmail;
-
-    // Restrict admin creation
-    let finalUserType = userType; // default to user
-    if (userType === "admin") {
-      const adminCreationToken = req.header("x-admin-access-token");
-      if (adminCreationToken === process.env.ADMIN_ACCESS_TOKEN) {
-        finalUserType = "admin";
-      } else {
-        return sendResponse({
-          res,
-          statusCode: 403,
-          translationKey: "unauthorized_to",
-        });
-      }
-    }
-
-    let user = existingUser || new User();
-
-    Object.assign(user, {
-      email,
-      phoneNumber: phoneNumber ? phoneNumber : { code: "", number: "" },
-      deviceId,
-      deviceType,
-      profileIcon,
-      firstName,
-      lastName,
-      organizationName,
-      password,
-      timezone,
-      accountState: { userType: finalUserType, status: "inactive" },
-    });
-
-    if (existingUser) {
-      user.verificationStatus.email = "pending";
-      user.verificationStatus.phoneNumber = "pending";
-    }
-
-    const otp = user.generateOtp("email", user.timezone);
-
-    await user.save({ session });
-
-    // Send email within the transaction
-    const subject = "Welcome! Verify Your Email";
-    const mBody = registrationOtpEmailTemplate(otp);
-    // await sendEmailViaBrevo([email], subject, mBody);
-
-    // Commit the transaction
-    await session.commitTransaction();
-
-    // Ensure toJSON method is applied to strip out sensitive data
-    const userObject = user.toJSON();
-
-    // Format the user response using the utility function
-    const response = formatUserResponse(userObject);
-
-    // Save device information (not part of the transaction)
-    createOrSkipDevice(userObject._id, deviceId, deviceType);
-
-    // Send successful response with token and user data
+  if (!result.success) {
     return sendResponse({
       res,
-      statusCode: 201,
-      translationKey: "signup_successful",
-      data: response,
+      statusCode: 400,
+      translationKey: result.error.translationKey,
+      message: result.error.message,
     });
-  } catch (error) {
-    // Only abort the transaction if it hasn't been committed yet
-    await session.abortTransaction();
-    // Handle validation errors from Mongoose
-    const statusCode = error.name === "ValidationError" ? 400 : 500;
-    const translationKey =
-      error.name === "ValidationError"
-        ? Object.values(error.errors)[0].message
-        : error.message;
-
-    return sendResponse({
-      res,
-      statusCode,
-      translationKey,
-      error,
-    });
-  } finally {
-    session.endSession(); // Ensure the session is always ended
   }
+
+  return sendResponse({
+    res,
+    statusCode: 201,
+    translationKey: "signup_successful",
+    data: result.user,
+  });
 };
+
+
+
 
 const companyDetails = async (req, res) => {
   const {
@@ -252,18 +79,25 @@ const companyDetails = async (req, res) => {
     user.companyDetails = {
       name: name !== undefined ? name : user.companyDetails?.name,
       oib: oib !== undefined ? oib : user.companyDetails?.oib,
-      bankAccountNumber: bankAccountNumber !== undefined ? bankAccountNumber : user.companyDetails?.bankAccountNumber,
-      representativeName: representativeName !== undefined ? representativeName : user.companyDetails?.representativeName,
-      location: location !== undefined ? location : user.companyDetails?.location,
-      suppliers: suppliers !== undefined ? suppliers : user.companyDetails?.suppliers,
+      bankAccountNumber:
+        bankAccountNumber !== undefined
+          ? bankAccountNumber
+          : user.companyDetails?.bankAccountNumber,
+      representativeName:
+        representativeName !== undefined
+          ? representativeName
+          : user.companyDetails?.representativeName,
+      location:
+        location !== undefined ? location : user.companyDetails?.location,
+      suppliers:
+        suppliers !== undefined ? suppliers : user.companyDetails?.suppliers,
     };
-
 
     await user.save();
 
     return sendResponse({
       res,
-      statusCode: 200,
+      statusCode: 201,
       translationKey: "company_details_saved",
       data: user.companyDetails,
     });
@@ -306,6 +140,7 @@ const login = async (req, res) => {
       email,
       password,
       userType,
+      timezone,
       populateFields
     );
 
@@ -349,68 +184,36 @@ const login = async (req, res) => {
       });
     }
 
-    if (verificationStatus === "rejected") {
+    if (
+      user.accountState.status === "pending"
+    ) {
       return sendResponse({
         res,
         statusCode: 403,
-        translationKey: "your_account_1",
+        translationKey: "pending_approval",
       });
     }
 
     if (
-      user.accountState.status === "restricted" ||
+      user.accountState.status === "rejected"
+    ) {
+      return sendResponse({
+        res,
+        statusCode: 403,
+        translationKey: "rejected_verification",
+        data: {
+          reason: user.accountState.reason || "No reason provided",
+        }
+      });
+    }
+
+    if (
       user.accountState.status === "suspended"
     ) {
       return sendResponse({
         res,
         statusCode: 403,
         translationKey: "your_account_2",
-      });
-    }
-
-    if (verificationStatus !== "verified") {
-      return sendResponse({
-        res,
-        statusCode: 401,
-        translationKey: "your_account_3",
-      });
-    }
-
-    // Check if the account is softDeleted
-    if (user.accountState.status === "softDeleted") {
-      const currentDate = moment();
-      const finalDeletionDate = moment(user.accountState.finalDeletionDate); // Final deletion date from the user model
-      const daysUntilDeletion = finalDeletionDate.diff(currentDate, "days"); // Calculate the difference in days
-
-      if (daysUntilDeletion <= 0) {
-        // Permanently delete the user account
-        // Generate a random email and username
-        const randomEmail = `deleted_user_${user._id}@example.com`;
-
-        // Update the user record to anonymize it
-        await User.findByIdAndUpdate(user._id, {
-          $set: {
-            email: randomEmail,
-            firstName: `Deleted User ${user._id}`,
-            lastName: ``,
-            phoneNumber: { code: "", number: "" },
-            profileIcon: "noimage.png",
-            "accountState.status": "hardDeleted",
-          },
-        });
-
-        return sendResponse({
-          res,
-          statusCode: 410,
-          translationKey: "user_not_found",
-        });
-      }
-
-      return sendResponse({
-        res,
-        statusCode: 423,
-        translationKey: "account_deletion_warning",
-        values: { daysUntilDeletion: daysUntilDeletion }, // Values to replace placeholders
       });
     }
 
@@ -632,9 +435,6 @@ const verifyOtp = async (req, res) => {
     userOtpInfo.otpExpires = "";
     userOtpInfo.otpUsed = true; // Mark OTP as used
     user.verificationStatus[type] = "verified"; // Mark verification as complete
-    if (user.accountState.status === "inactive") {
-      user.accountState.status = "active"; // Activate the account if it's still inactive
-    }
 
     // Generate a password reset token (JWT or a UUID)
     const resetToken = generateResetToken(); // Function to generate a secure token
@@ -673,6 +473,212 @@ const verifyOtp = async (req, res) => {
       error: error,
     });
   }
+};
+
+const verifyEmailViaLink = async (req, res) => {
+  const { token } = req.query;
+
+  if (!token) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "missing_token",
+    });
+  }
+
+  // Hash the token from the URL
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+  // Find user by hashed token
+  const user = await User.findOne({
+    "emailVerification.tokenHash": tokenHash,
+  });
+
+  if (!user) {
+    return sendResponse({
+      res,
+      statusCode: 404,
+      translationKey: "invalid_or_expired_verification_link",
+    });
+  }
+
+  const { expiresAt, used } = user.emailVerification;
+
+  if (used) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "verification_link_already_used",
+    });
+  }
+
+  if (Date.now() > expiresAt) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "verification_link_expired",
+    });
+  }
+
+  // Mark verified
+  user.verificationStatus.email = "verified";
+  user.emailVerification.used = true;
+  user.emailVerification.otpRequestCount = 0;
+  await user.save();
+
+  return res.redirect(
+    process.env.EMAIL_VERIFICATION_REDIRECT_URL || "http://localhost:3000/"
+  );
+};
+
+const resendEmailVerificationLink = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Find the user by email
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+
+    if (!user) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "user_not_found",
+      });
+    }
+
+    // Generate a new email verification token
+    const tokenData = user.generateEmailVerificationToken();
+    if (tokenData.error) {
+      //too_many_verification_requests
+      if (tokenData.error === "too_many_verification_requests") {
+        return sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "too_many_verification_requests",
+        });
+      }
+    }
+
+    await user.save();
+
+    // Send the verification email
+    // await sendVerificationEmail(user.email, tokenData.verificationLink);
+
+    return sendResponse({
+      res,
+      statusCode: 201,
+      translationKey: "verification_email_sent",
+      data: { verificationLink: tokenData.verificationLink },
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server_error",
+      error: error,
+    });
+  }
+};
+
+//sends link to email
+const sendPasswordResetLink = async (req, res) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email: email.trim().toLowerCase() });
+  if (!user) {
+    return sendResponse({
+      res,
+      statusCode: 404,
+      translationKey: "user_not_found",
+    });
+  }
+
+  const tokenData = user.generatePasswordResetToken();
+
+  if (tokenData.error) {
+    //too_many_password_reset_requests
+    if (tokenData.error === "too_many_password_reset_requests") {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "too_many_password_reset_requests",
+      });
+    }
+  }
+
+  await user.save();
+
+  // await sendResetEmail(user.email, tokenData.resetLink);
+
+  return sendResponse({
+    res,
+    statusCode: 200,
+    translationKey: "password_reset_link_sent",
+    data: { resetLink: tokenData.resetLink },
+  });
+};
+
+// when user clicks on link from email inbox
+const verifyPasswordResetLink = async (req, res) => {
+  const { token } = req.query;
+
+  if (!token) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "missing_token",
+    });
+  }
+
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+  const user = await User.findOne({ "passwordReset.tokenHash": tokenHash });
+  if (
+    !user ||
+    user.passwordReset.used ||
+    Date.now() > user.passwordReset.expiresAt
+  ) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "invalid_or_expired_link",
+    });
+  }
+
+  // ✅ Redirect to your frontend's reset password form
+  return res.redirect(`${process.env.PASSWORD_RESET_FRONTEND_URL}${token}`);
+};
+
+//
+const resetPasswordViaLink = async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+  const user = await User.findOne({ "passwordReset.tokenHash": tokenHash });
+  if (
+    !user ||
+    user.passwordReset.used ||
+    Date.now() > user.passwordReset.expiresAt
+  ) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "invalid_or_expired_link",
+    });
+  }
+
+  // ✅ Set new password
+  user.password = newPassword;
+  user.passwordReset.used = true;
+  user.passwordReset.otpRequestCount = 0;
+  await user.save();
+
+  return sendResponse({
+    res,
+    statusCode: 200,
+    translationKey: "password_reset_successful",
+  });
 };
 
 // Reset Password
@@ -763,44 +769,6 @@ const logout = async (req, res) => {
     });
   }
 };
-const softDeleteAccount = async (req, res) => {
-  try {
-    const userId = req.user._id;
-
-    // Set the final deletion date to 30 days from now
-    const finalDeletionDate = moment().add(30, "days").toDate();
-
-    // Update the user's account state to softDeleted and set the finalDeletionDate
-    await User.findByIdAndUpdate(
-      userId,
-      {
-        $set: {
-          "accountState.status": "softDeleted",
-          "accountState.finalDeletionDate": finalDeletionDate,
-        },
-      },
-      { new: true }
-    );
-
-    await Devices.updateOne(
-      { userId: userId },
-      { $set: { devices: [] } } // This will empty the array of devices for the user
-    );
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "account_marked",
-    });
-  } catch (error) {
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: error.message,
-      error: error,
-    });
-  }
-};
 
 const hardDeleteAccount = async (req, res) => {
   try {
@@ -810,7 +778,7 @@ const hardDeleteAccount = async (req, res) => {
     // Generate a random email using the userId and original email
     const randomEmail = `deleted_user_${userId}_${Date.now()}@example.com`;
 
-    // Update the user's account state to hardDeleted and set the finalDeletionDate
+    // Update the user's account state to deleted and set the finalDeletionDate
     await User.findByIdAndUpdate(
       userId,
       {
@@ -819,7 +787,7 @@ const hardDeleteAccount = async (req, res) => {
           previousEmail: email, // store the original email
           phoneNumber: { code: "", number: "" }, // clear phone number object
           profileIcon: "noimage.png",
-          "accountState.status": "hardDeleted",
+          "accountState.status": "deleted",
         },
       },
       { new: true }
@@ -845,88 +813,13 @@ const hardDeleteAccount = async (req, res) => {
   }
 };
 
-const resumeAccount = async (req, res) => {
-  try {
-    const { email, otp } = req.body;
-
-    const validationOptions = {
-      rawData: ["email", "otp"],
-    };
-    if (!validateParams(req, res, validationOptions)) {
-      return;
-    }
-
-    // Find the user by email and OTP
-    const user = await User.findOne({
-      email: email.trim().toLowerCase(),
-      "otpInfo.emailOtp.otp": otp.toString(),
-    });
-
-    // Check if user is found
-    if (!user) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "invalid_otp_1",
-      });
-    }
-
-    // Check if the OTP has expired based on user's timezone
-    const currentTime = moment.tz(Date.now(), user.timezone).valueOf();
-
-    if (
-      user.otpInfo.emailOtp.otpExpires &&
-      user.otpInfo.emailOtp.otpExpires < currentTime
-    ) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "otp_has",
-      });
-    }
-
-    // Clear the OTP and OTP expiration after successful verification
-    user.otpInfo.emailOtp.otp = "";
-    user.otpInfo.emailOtp.otpExpires = "";
-    user.otpInfo.emailOtp.otpUsed = true; // Mark OTP as used
-
-    // Check if the account is marked as softDeleted
-    if (user.accountState.status !== "softDeleted") {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "your_account_5",
-      });
-    }
-
-    // Reset the account status to active and remove the finalDeletionDate
-    user.accountState.status = "active";
-    user.accountState.finalDeletionDate = null;
-
-    await user.save();
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "account_resumed",
-    });
-  } catch (error) {
-    console.error("Error during account resumption:", error);
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: "an_error_2",
-      error: error,
-    });
-  }
-};
-
 const socialAuth = async (req, res) => {
-  const {
+  let {
     provider,
     socialId,
     email,
-    name,
+    firstName,
+    lastName,
     deviceId,
     deviceType,
     timezone,
@@ -940,7 +833,6 @@ const socialAuth = async (req, res) => {
       rawData: [
         "provider",
         "socialId",
-        "email",
         "firstName",
         "lastName",
         "deviceId",
@@ -950,7 +842,7 @@ const socialAuth = async (req, res) => {
       ],
       enumFields: {
         provider: ["google", "facebook", "apple"], // Allowed values for provider
-        userType: ["user", "organizer", "admin"],
+        userType: ["user", "organizer"],
       },
     };
 
@@ -958,13 +850,36 @@ const socialAuth = async (req, res) => {
       return;
     }
 
-    // Check for existing user by email
-    const existingUser = await User.findOne({ email });
+    //if no email is provided, then create it from socialId
+    if (!email) {
+      if (provider === "google") {
+        email = `${socialId}@google.com`;
+      } else if (provider === "facebook") {
+        email = `${socialId}@facebook.com`;
+      } else if (provider === "apple") {
+        email = `${socialId}@apple.com`;
+      }
+    }
+
+    if (!validator.isEmail(email)) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_email",
+        values: { field: "email" },
+      });
+    }
+
+    // Normalize email to lowercase
+    email = email.trim().toLowerCase();
+    // Find user by socialId or email
+    let existingUser = await User.findOne({
+      $or: [{ [`${provider}Id`]: socialId }, { email }],
+    });
 
     // If user exists, update or link the social provider
+    let providerLinked = false;
     if (existingUser) {
-      let providerLinked = false;
-
       if (existingUser.accountState.status === "suspended") {
         return sendResponse({
           res,
@@ -985,16 +900,29 @@ const socialAuth = async (req, res) => {
         providerLinked = true;
       }
 
+      //if existingUser.email is not set, update it
+      if (req.body.email && existingUser.email !== req.body.email) {
+        existingUser.email = email; // Update the email to the one provided
+        existingUser.verificationStatus.email = "verified"; // Mark email as verified
+      }
+
       // Always update the provider and timezone, regardless of providerLinked status
       existingUser.provider = provider; // Update the provider field to reflect the latest social login
       existingUser.timezone = timezone; // Update the timezone to reflect the user's current login
       existingUser.accountState.status = "active"; // Ensure the account is active
+      if (firstName !== undefined) {
+        existingUser.firstName = firstName; // Update first name if provided
+      }
+      if (lastName !== undefined) {
+        existingUser.lastName = lastName; // Update last name if provided
+      }
 
       await existingUser.save({ session });
       const token = existingUser.generateAuthToken();
 
       // Ensure toJSON method is applied to strip out sensitive data
-      const userObject = existingUser.toJSON();
+      const userObject = new User(existingUser).toJSON(existingUser);
+
       const response = formatUserResponse(userObject, token);
 
       // Save device information
@@ -1021,6 +949,7 @@ const socialAuth = async (req, res) => {
         verificationStatus: {
           email: "verified", // Mark email as verified
         },
+        accountState: { userType: userType, status: "active" },
       });
 
       await newUser.save({ session });
@@ -1057,16 +986,104 @@ const socialAuth = async (req, res) => {
   }
 };
 
+//check if email already exists and verified
+const checkEmailExistsAndVerified = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "missing_email",
+      });
+    }
+    const user = await User.findOne({ email: email.trim().toLowerCase() }).select("verificationStatus");
+    const existsAndVerified = !!(user && user.verificationStatus.email === "verified");
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "email_check_success",
+      data: { exists: existsAndVerified },
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server_error",
+      error,
+    });
+  }
+};
+
+//changePassword api which takes old password and new password
+const changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+
+    const validationOptions = {
+      rawData: ["oldPassword", "newPassword"],
+      minLengthFields: {
+        newPassword: 6, // New password must be at least 6 characters long
+      },
+    };
+    if (!validateParams(req, res, validationOptions)) {
+      return;
+    }
+
+    const user = await User.findById(req.user._id).select("password");
+
+    if (!user) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "user_not_found",
+      });
+    }
+
+    // Check if the old password is correct using bcrypt
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return sendResponse({
+        res,
+        statusCode: 401,
+        translationKey: "incorrect_old_password",
+      });
+    }
+
+    // Update the password
+    user.password = newPassword;
+    await user.save();
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "password_changed_successfully",
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "an_error_occurred",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   register,
   companyDetails,
   login,
   generateOtp,
   verifyOtp,
+  verifyEmailViaLink,
+  resendEmailVerificationLink,
+  sendPasswordResetLink,
+  verifyPasswordResetLink,
+  resetPasswordViaLink,
   resetPassword,
   logout,
   hardDeleteAccount,
-  softDeleteAccount,
-  resumeAccount,
   socialAuth,
+  checkEmailExistsAndVerified,
+  changePassword
 };

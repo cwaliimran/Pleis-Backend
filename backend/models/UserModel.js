@@ -4,7 +4,10 @@ const jwt = require("jsonwebtoken");
 const moment = require("moment-timezone");
 const validator = require("validator");
 const { randomBytes } = require("crypto");
-const { Company, CompanySchema } = require("./CompanyDetails");
+const { CompanySchema } = require("./CompanyDetails");
+const crypto = require("crypto");
+const { generateSecureToken } = require("../helperUtils/secureToken");
+const { LocationSchema } = require("../shared/locations/locationSchmea");
 
 // Define subscription statuses
 const SubscriptionType = {
@@ -30,6 +33,15 @@ const subscriptionSchema = new mongoose.Schema({
   },
 });
 
+const USER_TYPES = [
+  "guest",
+  "user",
+  "admin",
+  "manager",
+  "staff",
+  "organizer",
+];
+
 const userSchema = new mongoose.Schema(
   {
     profileIcon: {
@@ -43,6 +55,20 @@ const userSchema = new mongoose.Schema(
     },
 
     lastName: {
+      type: String,
+      default: "",
+    },
+
+    username: {
+      type: String,
+      default: "",
+    },
+    gender: {
+      type: String,
+      enum: ["", "Male", "Female", "Other"],
+      default: "",
+    },
+    dob: {
       type: String,
       default: "",
     },
@@ -63,6 +89,41 @@ const userSchema = new mongoose.Schema(
         message: "email_invalid", // Generic error message key
       },
     },
+
+    emailVerification: {
+      tokenHash: String,
+      expiresAt: Number,
+      used: {
+        type: Boolean,
+        default: false,
+      },
+      otpRequestCount: {
+        type: Number,
+        default: 0,
+      },
+      otpRequestTimestamp: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+
+    passwordReset: {
+      tokenHash: String,
+      expiresAt: Number,
+      used: {
+        type: Boolean,
+        default: false,
+      },
+      otpRequestCount: {
+        type: Number,
+        default: 0,
+      },
+      otpRequestTimestamp: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+
     phoneNumber: {
       code: {
         // Country code for phone number
@@ -78,12 +139,12 @@ const userSchema = new mongoose.Schema(
     verificationStatus: {
       email: {
         type: String,
-        enum: ["pending", "verified", "rejected"],
+        enum: ["pending", "verified"],
         default: "pending",
       },
       phoneNumber: {
         type: String,
-        enum: ["pending", "verified", "rejected"],
+        enum: ["pending", "verified"],
         default: "pending",
       },
     },
@@ -95,23 +156,23 @@ const userSchema = new mongoose.Schema(
     accountState: {
       userType: {
         type: String,
-        enum: ["user", "organizer", "admin"],
+        enum: USER_TYPES,
         default: "user",
       },
       status: {
         type: String,
-        enum: ["active", "inactive", "suspended", "softDeleted", "hardDeleted"],
-        default: "inactive",
+        enum: [
+          "pending",
+          "active",
+          "rejected",
+          "suspended",
+          "deleted",
+        ],
+        default: "pending",
       },
       reason: {
         type: String,
         default: "",
-      },
-      suspensionDate: {
-        type: Date,
-      },
-      finalDeletionDate: {
-        type: Date, // field to keep track of final deletion date
       },
     },
 
@@ -229,49 +290,28 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
     location: {
-      type: {
-        type: String,
-        enum: ["Point"],
-        default: "Point", // Default type is 'Point'
-      },
-      coordinates: {
-        type: [Number],
-        required: false,
-        validate: {
-          validator: function (arr) {
-            // Only validate if coordinates are provided
-            if (!arr || arr.length === 0) return true;
-            return arr.length === 2;
-          },
-          message: "Location.coordinates must be [lng, lat]",
-        },
-      },
-      fullAddress: {
-        type: String, // Full formatted address, e.g., "13th Street 47, NY 10011, USA"
-        default: "",
-      },
-      city: {
-        type: String, // City name
-        default: "",
-      },
-      country: {
-        type: String, // Country name
-        default: "",
-      },
-      state: {
-        type: String, // State name
-        default: "",
-      },
-      postalCode: {
-        type: String, // Postal code
-        default: "",
-      },
+      type: LocationSchema,
+      default: {},
     },
 
     //company details
     companyDetails: {
       type: CompanySchema,
       default: null,
+    },
+    termsAccepted: {
+      type: Boolean,
+      default: false,
+    },
+    twoFA: {
+      secret: {
+        type: String,
+        default: null,
+      },
+      isEnabled: {
+        type: Boolean,
+        default: false,
+      },
     },
   },
   {
@@ -295,7 +335,6 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-
 // Generate JWT token
 userSchema.methods.generateAuthToken = function () {
   const user = this;
@@ -308,6 +347,7 @@ userSchema.statics.findByCredentials = async (
   email,
   password,
   userType,
+  timezone,
   populateFields = []
 ) => {
   let query = User.findOne({ email: email, "accountState.userType": userType });
@@ -325,11 +365,14 @@ userSchema.statics.findByCredentials = async (
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
-    if (process.env.NODE_ENV == "dev") {
-      return user;
-    }
     return { error: "incorrect_password" }; // Return an error key if password doesn't match
   }
+
+  if (timezone) {
+    user.timezone = timezone; // Update user's timezone if provided
+    user.save(); // Save the updated user document
+  }
+
   return user; // Return the user object if login is successful
 };
 
@@ -398,14 +441,103 @@ userSchema.methods.generateOtp = function (type = "email", timezone = "UTC") {
   return otp; // Return the OTP for sending it to the user
 };
 
+userSchema.methods.generateEmailVerificationToken = function (
+  timezone = "UTC"
+) {
+  const user = this;
+  const now = Date.now();
+
+  // Limit requests
+  const allowedRequestsPerHour = 10;
+  const lastTimestamp = user.otpInfo?.emailOtp?.otpRequestTimestamp || 0;
+  const count = user.otpInfo?.emailOtp?.otpRequestCount || 0;
+  if (process.env.NODE_ENV !== "dev") {
+    if (
+      now < moment(lastTimestamp).add(1, "hour").valueOf() &&
+      count >= allowedRequestsPerHour
+    ) {
+      return { error: "too_many_verification_requests" };
+    }
+  }
+
+  // Update OTP info for limiting
+  user.otpInfo.emailOtp.otpRequestTimestamp = now;
+  user.otpInfo.emailOtp.otpRequestCount = count + 1;
+
+  const { rawToken, hashedToken } = generateSecureToken();
+
+  // 3. Set expiry (e.g. 10 minutes)
+  const expiresAt = moment.tz(now, timezone).add(10, "minutes").valueOf();
+
+  user.emailVerification = {
+    tokenHash: hashedToken,
+    expiresAt,
+    used: false,
+  };
+  const verificationLink = createVerificationLink(rawToken);
+
+  return {
+    verificationLink,
+    rawToken,
+  }; // Return raw token to send in the email
+};
+
+const createVerificationLink = (token) => {
+  return `${process.env.EMAIL_VERIFICATION_LINK}${token}`;
+};
+
+userSchema.methods.generatePasswordResetToken = function (timezone = "UTC") {
+  const user = this;
+  const now = Date.now();
+
+  // ✅ Ensure parent object exists
+  if (!user.passwordReset) {
+    user.passwordReset = {};
+  }
+  // request count limit
+  const allowedRequestsPerHour = 3;
+  const lastTimestamp = user.passwordReset?.otpRequestTimestamp || 0;
+  const count = user.passwordReset?.otpRequestCount || 0;
+  if (process.env.NODE_ENV !== "dev") {
+    // Check if the last request was within the last hour and if the count exceeds the limit
+    if (
+      now < moment(lastTimestamp).add(1, "hour").valueOf() &&
+      count >= allowedRequestsPerHour
+    ) {
+      return { error: "too_many_password_reset_requests" };
+    }
+  }
+
+  const { rawToken, hashedToken } = generateSecureToken();
+
+  const expiresAt = moment.tz(now, timezone).add(15, "minutes").valueOf();
+
+  // Update OTP info for limiting
+  user.passwordReset.otpRequestTimestamp = now;
+  user.passwordReset.otpRequestCount = count + 1;
+  user.passwordReset.tokenHash = hashedToken;
+  user.passwordReset.expiresAt = expiresAt;
+  user.passwordReset.used = false;
+
+  const resetLink = createResetPasswordLink(rawToken);
+
+  return {
+    resetLink,
+    rawToken,
+  };
+};
+
+const createResetPasswordLink = (token) => {
+  return `${process.env.PASSWORD_RESET_LINK}${token}`;
+};
+
 // Exclude sensitive fields when returning user object
 userSchema.methods.toJSON = function (userData) {
   const user = this;
   const userObject = userData ? userData : user.toObject();
 
   // Attach base URL to document images
-  const baseUrl = `${process.env.S3_BASE_URL}/`;
-
+  const baseUrl = `${process.env.AZURE_STORAGE_BASE_URL}`;
 
   // Attach base URL to profileIcon
   if (userObject.profileIcon && !userObject.profileIcon.startsWith("http")) {
@@ -419,12 +551,13 @@ userSchema.methods.toJSON = function (userData) {
   // include otpInfo only in development environment
   if (process.env.NODE_ENV == "prod") {
     delete userObject.otpInfo;
+    delete userObject.emailVerification;
   }
 
   return userObject;
 };
 userSchema.methods.addBaseUrlToProfileIcon = function (user) {
-  const baseUrl = `${process.env.S3_BASE_URL}/`;
+  const baseUrl = `${process.env.AZURE_STORAGE_BASE_URL}`;
   if (user.profileIcon && !user.profileIcon.startsWith("http")) {
     user.profileIcon = baseUrl + user.profileIcon;
   }
@@ -436,4 +569,10 @@ const generateResetToken = () => {
 
 const User = mongoose.model("User", userSchema);
 
-module.exports = { User, SubscriptionType, generateResetToken };
+module.exports = {
+  User,
+  SubscriptionType,
+  generateResetToken,
+  createVerificationLink,
+  USER_TYPES,
+};

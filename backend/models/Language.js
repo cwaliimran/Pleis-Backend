@@ -19,9 +19,12 @@ const languageSchema = new mongoose.Schema(
     code: {
       type: String,
       required: [true, "language_code_required"], // Custom error message key
-      unique: true,
     },
-    isActive: { type: Boolean, default: true },
+    status: {
+      type: String,
+      enum: ["active", "inactive", "deleted"],
+      default: "active",
+    },
   },
   {
     timestamps: true,
@@ -34,7 +37,7 @@ languageSchema.methods.toJSON = function () {
   const languageObject = language.toObject();
 
   // Attach base URL to flag
-  const baseUrl = `${process.env.S3_BASE_URL}/`;
+  const baseUrl = `${process.env.AZURE_STORAGE_BASE_URL}`;
   if (languageObject.flag && !languageObject.flag.startsWith("http")) {
     languageObject.flag = `${baseUrl}${languageObject.flag}`;
   } else if (!languageObject.flag) {
@@ -44,6 +47,6 @@ languageSchema.methods.toJSON = function () {
   return languageObject;
 };
 
-  
+
 
 module.exports = mongoose.model("Language", languageSchema);

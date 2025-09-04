@@ -10,7 +10,7 @@ const { userCache } = require("../config/nodeCache");
 
 // Create a new language
 const createLanguage = async (req, res) => {
-  const { title, transliteration, flag, code, isActive=true } = req.body;
+  const { title, transliteration, flag, code, status = "active" } = req.body;
 
   try {
     //validate params
@@ -22,7 +22,7 @@ const createLanguage = async (req, res) => {
       return;
     }
 
-    const language = new Language({ title, transliteration, flag, code, isActive });
+    const language = new Language({ title, transliteration, flag, code, status });
     await language.save();
 
     return sendResponse({
@@ -55,12 +55,14 @@ const getLanguages = async (req, res) => {
 
   let mLimit = req.query.limit || 0;
 
-  const { keyword, isActive } = req.query;
+  const { keyword, status, date } = req.query;
 
   try {
     let queryConditions = {};
-    if (isActive !== undefined && isActive !== "") {
-      queryConditions.isActive = isActive === "true";
+    if (status) {
+      queryConditions.status = status;
+    } else {
+      queryConditions.status = { $ne: "deleted" };
     }
     // If a keyword is provided, apply a search filter on multiple fields
     if (keyword) {
@@ -79,16 +81,16 @@ const getLanguages = async (req, res) => {
       inactive,
     ] = await Promise.all([
       Language.find(queryConditions)
-      .sort({ title: 1 }) // Sort by title in alphabetical order
-      .skip(mLimit === 0 ? 0 : (page - 1) * limit)
-      .limit(mLimit === 0 ? 0 : limit),
+        .sort({ title: 1 }) // Sort by title in alphabetical order
+        .skip(mLimit === 0 ? 0 : (page - 1) * limit)
+        .limit(mLimit === 0 ? 0 : limit),
       Language.countDocuments(queryConditions), // Count filtered languages
-      Language.countDocuments({}), // Count all languages
-      Language.countDocuments({ isActive: true }), // Count active languages
-      Language.countDocuments({ isActive: false }), // Count inactive languages
+      Language.countDocuments({ status: { $ne: "deleted" } }), // Count all languages
+      Language.countDocuments({ status: "active" }), // Count active languages
+      Language.countDocuments({ status: "inactive" }), // Count inactive languages
     ]);
 
-    let meta = generateMeta(page, mLimit, totalLanguages);
+    let meta = generateMeta(page, limit, totalLanguages);
     meta.tagsCount = {
       total,
       active,
@@ -115,7 +117,7 @@ const getLanguages = async (req, res) => {
 // Update an existing language
 const updateLanguage = async (req, res) => {
   const { id } = req.params;
-  const { title, transliteration, flag, code, isActive } = req.body;
+  const { title, transliteration, flag, code, status } = req.body;
   try {
 
     const validationOptions = {
@@ -139,8 +141,8 @@ const updateLanguage = async (req, res) => {
     language.transliteration = transliteration || language.transliteration;
     language.flag = flag || language.flag;
     language.code = code || language.code;
-    if (isActive !== undefined) {
-      language.isActive = isActive;
+    if (status !== undefined) {
+      language.status = status;
     }
 
     await language.save();

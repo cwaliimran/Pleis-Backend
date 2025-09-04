@@ -40,14 +40,22 @@ const createSupplier = async (req, res) => {
 
 const getSuppliers = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status } = req.query;
+  const { keyword, status, date } = req.query;
 
   try {
+
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+    
     const { suppliers, meta } = await supplierService.getSuppliers({
       page,
       limit,
       keyword,
       status,
+      date,
     });
 
     return sendResponse({
@@ -55,7 +63,7 @@ const getSuppliers = async (req, res) => {
       statusCode: 200,
       translationKey: "suppliers_fetched_successfully",
       data: suppliers,
-      meta: generateMeta(page, limit, meta.total, meta.tagsCount),
+      meta
     });
   } catch (error) {
     return sendResponse({
@@ -81,9 +89,9 @@ const getPublicSuppliers = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "public_suppliers_fetched_successfully",
+      translationKey: "suppliers_fetched_successfully",
       data: suppliers,
-      meta: generateMeta(page, limit, meta.total),
+      meta
     });
   } catch (error) {
     return sendResponse({

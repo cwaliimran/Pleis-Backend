@@ -1,6 +1,6 @@
 // helperUtils/userResponseUtil.js
 
-const { convertUtcToTimezone } = require("./responseUtil");
+const { createVerificationLink } = require("../models/UserModel");
 
 const formatUserResponse = (
   userObject,
@@ -23,23 +23,20 @@ const formatUserResponse = (
     country: userObject.country,
   };
 
-  if (userType === "organizer") {
-    basicInfo.organizationName = userObject.organizationName || "";
-    basicInfo.companyDetails = userObject.companyDetails || null;
-  } else if (userType == "admin") {
-    // Removed location for admin userType
-  }
+
 
   // Main response object
   const response = {
     basicInfo,
     accountState: {
+      twoFactorAuth: userObject.twoFA?.isEnabled || false,
       userType: userType || "user",
       status: userObject.accountState?.status || "active",
       verificationStatus: {
         email: userObject.verificationStatus?.email || "pending",
         phoneNumber: userObject.verificationStatus?.phoneNumber || "pending",
       },
+
       ...(userObject.accountState?.reason && {
         reason: userObject.accountState.reason,
       }),
@@ -52,9 +49,35 @@ const formatUserResponse = (
     },
   };
 
+  if (userType == "user") {
+    basicInfo.dob = userObject.dob || "";
+    basicInfo.gender = userObject.gender || "";
+    basicInfo.username = userObject.username || "";
+  }
+
+  if (userType === "organizer") {
+    basicInfo.organizationName = userObject.organizationName || "";
+    basicInfo.companyDetails = userObject.companyDetails || null;
+    //add termsAccepted to organizer
+    response.accountState.termsAccepted = userObject.termsAccepted || false;
+  }
+
+  else if (userType == "staff" || userType == "manager") {
+    response.organizations = userObject.organizations || [];
+  }
+
+  else if (userType == "admin") {
+    // Removed location for admin userType
+  }
+
   // Include OTP info in dev only
-  if (process.env.NODE_ENV === "dev" && userObject.otpInfo) {
+  if (process.env.NODE_ENV === "dev" && userObject.otpInfo && userObject.otpInfo.emailOtp.otp !== "") {
     response.otpInfo = userObject.otpInfo;
+  }
+
+  // Include email verification info in dev only
+  if (process.env.NODE_ENV === "dev" && userObject.emailVerificationLink) {
+    response.emailVerification = createVerificationLink(userObject.emailVerificationLink);
   }
 
   // Include resetToken if available

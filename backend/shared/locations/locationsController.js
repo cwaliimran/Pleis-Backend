@@ -31,14 +31,14 @@ const getCountries = (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Countries fetched successfully",
+      translationKey: "countries_fetched_successfully",
       data: countries,
     });
   } else {
     return sendResponse({
       res,
       statusCode: 500,
-      translationKey: "Error reading countries data",
+      translationKey: "error_reading_countries_data",
     });
   }
 };
@@ -57,7 +57,7 @@ const getStatesByCountryId = (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "States fetched successfully",
+      translationKey: "states_fetched_successfully",
       data: country.states || [],
     });
   } else {
@@ -65,7 +65,7 @@ const getStatesByCountryId = (req, res) => {
       res,
       statusCode: 404,
       translateMessage: false,
-      translationKey: "Country not found",
+      translationKey: "country_not_found",
     });
   }
 };
@@ -90,7 +90,7 @@ const getCitiesByStateId = (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Cities fetched successfully",
+      translationKey: "cities_fetched_successfully",
       data: state.cities || [],
     });
   } else {
@@ -98,7 +98,7 @@ const getCitiesByStateId = (req, res) => {
       res,
       statusCode: 404,
       translateMessage: false,
-      translationKey: "State not found",
+      translationKey: "state_not_found",
     });
   }
 };
