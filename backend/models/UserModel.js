@@ -365,9 +365,6 @@ userSchema.statics.findByCredentials = async (
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
-    if (process.env.NODE_ENV == "dev") {
-      return user;
-    }
     return { error: "incorrect_password" }; // Return an error key if password doesn't match
   }
 

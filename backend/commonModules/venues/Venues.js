@@ -64,7 +64,6 @@ venuesSchema.virtual("floorPlanInfo").get(function () {
 
 // ✅ Custom transformation — applies automatically to .toJSON() and .toObject()
 function transformDoc(doc, ret) {
-  delete ret.floorPlan; // remove original image string
   delete ret.id; // remove original image string
   return ret;
 }

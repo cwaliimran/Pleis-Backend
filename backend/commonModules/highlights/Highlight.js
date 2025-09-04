@@ -99,6 +99,13 @@ highlightSchema.methods.toCustomJSON = function (highlightData) {
     mediaUrl = getFullImageUrl(mediaName);
   }
 
+  // ✅ Always attach root-level mediaInfo
+  highlightObject.mediaInfo = {
+    name: mediaName,
+    type: mediaType,
+    url: mediaUrl,
+  };
+
   // Populated object media
   const object = highlightObject.object;
   if (object?.basicInfo?.media) {
@@ -119,22 +126,14 @@ highlightSchema.methods.toCustomJSON = function (highlightData) {
     } else {
       // Event: type and name
       const embeddedMedia = object.basicInfo.media;
-      mediaName = embeddedMedia.name || mediaName;
-      mediaType = embeddedMedia.type || mediaType;
+      const eName = embeddedMedia.name || "";
+      const eType = embeddedMedia.type || "image"; // fallback for event
       object.basicInfo.mediaInfo = {
-        name: mediaName,
-        type: mediaType,
-        url: getFullImageUrl(mediaName),
+        name: eName,
+        type: eType,
+        url: getFullImageUrl(eName),
       };
     }
-  } else {
-    // Fallback: inject top-level mediaInfo
-    object.basicInfo = object.basicInfo || {};
-    object.basicInfo.mediaInfo = {
-      name: mediaName,
-      type: mediaType,
-      url: mediaUrl,
-    };
   }
 
   // Cleanup
@@ -147,6 +146,7 @@ highlightSchema.methods.toCustomJSON = function (highlightData) {
 
   return highlightObject;
 };
+
 
 
 const Highlights = mongoose.model("Highlight", highlightSchema);

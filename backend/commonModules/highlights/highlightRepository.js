@@ -86,11 +86,10 @@ const getHighlightsWithFilters = async (query, skip, limit) => {
         meta: 1,
         status: 1,
         title: 1,
+        media: 1,
         mediaInfo: 1
       }
     }
-
-
   ]);
 
   return highlights;

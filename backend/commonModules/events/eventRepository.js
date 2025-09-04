@@ -14,7 +14,7 @@ const getEventsWithFilters = async (query, skip, limit) => {
   .populate("basicInfo.venue", "title location floorPlan")
   .populate("basicInfo.category", "title image")
   .populate("basicInfo.tags", "title")
-  .populate("basicInfo.organization", "basicInfo.name basicInfo.media")
+  .populate("basicInfo.organization", "basicInfo.name basicInfo.media otherInfo.description")
   .sort({ createdAt: -1 })
   .skip(skip)
   .limit(limit);
@@ -31,7 +31,7 @@ const findEventById = async (id) => {
     .populate("basicInfo.venue", "title location floorPlan")
     .populate("basicInfo.category", "title image")
     .populate("basicInfo.tags", "title")
-    .populate("basicInfo.organization", "basicInfo.name basicInfo.media");
+    .populate("basicInfo.organization", "basicInfo.name basicInfo.media otherInfo.description");
 };
 
 // Delete
