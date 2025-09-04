@@ -45,9 +45,6 @@ jobs:
         with:
           name: node-app
 
-      # 2. Make nodemon globally available (safety)
-      - name: Make nodemon available
-        run: npm install -g nodemon
 
       # 3. Deploy to Azure Web App
       - name: Deploy to Azure Web App
