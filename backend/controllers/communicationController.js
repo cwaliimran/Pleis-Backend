@@ -1,44 +1,41 @@
 // communicationController.js
-/* const {
-  sendEmailViaSgrid,
-  sendEmailViaAwsSes,
-  sendSmsViaPinpoint,
-  sendEmailViaBrevo
-} = require("../helperUtils/emailUtil"); */
+const {
+  sendEmailViaMailgun
+} = require("../helperUtils/emailUtil");
 const { Devices } = require("../models/Devices");
 const { sendResponse, validateParams } = require("../helperUtils/responseUtil");
 const adminFireBConfig = require("../config/firebaseAdmin"); // Firebase admin SDK setup
-const {
-  registrationOtpEmailTemplate,
-} = require("../helperUtils/emailTemplates");
+
 const { NotificationExp } = require("../models/Notifications");
 
-const sendSmsViaPinpointAws = async (req, res) => {
-  const { phoneNumber, otp } = req.body;
-
+/**
+ * Send an email using AWS SES
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const sendEmailMailgun = async (req, res) => {
+  const { title, emails, subject, body, config } = req.body;
   // Validate required parameters
-  if (!phoneNumber || !otp) {
-    return sendResponse({
-      res,
-      statusCode: 400,
-      translationKey: "phone_number_1",
-      error: "Phone number and OTP are required.",
-    });
+  const validationOptions = {
+    bodyParams: ["title", "emails", "subject", "body"],
+  };
+
+  if (!validateParams(req, res, validationOptions)) {
+    return;
   }
 
   try {
-    const otpMessage = `${otp} is your OTP for the Pleis App`;
-    await sendSmsViaPinpoint(phoneNumber, otpMessage);
+    await sendEmailViaMailgun(emails, subject, body, config);
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "otp_sent",
+      translationKey: "email_sent",
     });
   } catch (error) {
     return sendResponse({
       res,
       statusCode: 500,
-      translationKey: error.body,
+      translationKey: "failed_to_send_email",
       error,
     });
   }
@@ -174,12 +171,18 @@ const sendUserNotifications = async ({
             })
           ); // Convert Set to Array and include deviceType
 
+
+        //apply .toString to all values in data object
+          const dataWithStringValues = Object.fromEntries(
+            Object.entries(data).map(([key, value]) => [key, value.toString()])
+          );
+
           // Send notifications without awaiting
           const sendNotificationPromise = sendNotification(userDevices, {
             title,
             body,
             data: {
-              ...data, // Additional data payload
+              ...dataWithStringValues, // Additional data payload
               subjectId: sender ? sender.toString() : null, // Convert subjectId to plain text
               objectId: objectId.toString(), // Ensure objectId is also plain text
             },
@@ -188,6 +191,9 @@ const sendUserNotifications = async ({
           const sendNotificationResponse = await sendNotificationPromise;
           responses.push({ userId, sendNotificationResponse });
         }
+
+        //log all response using json.stringify for better readability
+        // console.log("Notification responses:", JSON.stringify(responses, null, 2));
 
         // Process the notifications after sending them
         if (!saveNotification) {
@@ -299,9 +305,8 @@ const sendNotification = async (recipients, payload) => {
 };
 
 
-
 module.exports = {
-  sendSmsViaPinpointAws,
   sendNotificationControllerForTesting,
   sendUserNotifications,
+  sendEmailMailgun
 };
