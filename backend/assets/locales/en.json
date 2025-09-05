@@ -193,5 +193,6 @@
   "2fa_verified_successfully": "2fa verified successfully",
   "key": "Key",
   "email_sent": "Email sent",
-  "failed_to_send_email": "Failed to send email"
+  "failed_to_send_email": "Failed to send email",
+  "oib_already_exists": "Oib already exists"
 }

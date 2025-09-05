@@ -10,7 +10,7 @@ const {
   StorageSharedKeyCredential,
 } = require("@azure/storage-blob");
 
-const MAX_FILE_SIZE = 3 * 1024 * 1024; // 3 MB
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
 
 // Initialize Azure Blob Service
 const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;

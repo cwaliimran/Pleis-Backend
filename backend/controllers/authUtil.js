@@ -156,6 +156,23 @@ const registerUserUtility = async (req, res, options = {}) => {
       }
     }
 
+    // If organizer then check companyDetails.oib; it should be unique to every company
+    if (userType === "organizer" && companyDetails && companyDetails.oib) {
+      const query = { "companyDetails.oib": companyDetails.oib, "verificationStatus.email": "verified", "accountState.status": "active" };
+      if (existingUser) {
+        query._id = { $ne: existingUser._id };
+      }
+      const oibExists = await User.findOne(query);
+      if (oibExists) {
+        sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "oib_already_exists",
+        });
+        return { responseSent: true };
+      }
+    }
+
     // ✅ Create or reuse user
     let user = existingUser || new User();
     Object.assign(user, {
