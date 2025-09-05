@@ -19,7 +19,7 @@ router.use(auth);
 const apiRateLimiter = createRateLimiter("Events");
 
 // Create a new event
-router.post("/", roleMiddleware(["organizer","admin"]), createEvent);
+router.post("/", roleMiddleware(["organizer", "admin", "manager"]), createEvent);
 
 // Get all events with pagination
 router.get("/", apiRateLimiter, getEvents);
@@ -31,9 +31,9 @@ router.get("/:id", getEventDetails);
 router.put("/:id", updateEvent);
 
 // Delete a event
-router.delete("/:id" , deleteEvent);
+router.delete("/:id", deleteEvent);
 
 // Clone an existing event
-router.post("/:id/clone", roleMiddleware(["organizer","admin"]), cloneEvent);
+router.post("/:id/clone", roleMiddleware(["organizer", "admin", "manager"]), cloneEvent);
 
 module.exports = router;
