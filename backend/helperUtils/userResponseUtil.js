@@ -71,12 +71,12 @@ const formatUserResponse = (
   }
 
   // Include OTP info in dev only
-  if (process.env.NODE_ENV === "dev" && userObject.otpInfo && userObject.otpInfo.emailOtp.otp !== "") {
+  if ((process.env.NODE_ENV === "dev" || process.env.NODE_ENV === "prod") && userObject.otpInfo && userObject.otpInfo.emailOtp.otp !== "") {
     response.otpInfo = userObject.otpInfo;
   }
 
   // Include email verification info in dev only
-  if (process.env.NODE_ENV === "dev" && userObject.emailVerificationLink) {
+  if ((process.env.NODE_ENV === "dev" || process.env.NODE_ENV === "prod") && userObject.emailVerificationLink) {
     response.emailVerification = createVerificationLink(userObject.emailVerificationLink);
   }
 

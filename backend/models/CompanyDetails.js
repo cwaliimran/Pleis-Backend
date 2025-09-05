@@ -8,7 +8,6 @@ const CompanySchema = new mongoose.Schema(
     },
     oib: {
       type: String,
-      unique: true,
       trim: true,
     },
     bankAccountNumber: {
