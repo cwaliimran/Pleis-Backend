@@ -11,7 +11,7 @@ const { sendResponse } = require("../helperUtils/responseUtil");
  */
 function createRateLimiter(endpoint, timeWindow = 10, maxRequests = 100) {
   // Check if the environment is development
-  if (process.env.NODE_ENV === "dev") {
+  if (process.env.NODE_ENV === "dev" || process.env.NODE_ENV === "prod") {
     // Return a no-op middleware that does nothing
     return (req, res, next) => next();
   }
