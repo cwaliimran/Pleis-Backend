@@ -7,7 +7,8 @@ const validator = require("validator");
 const { User } = require("../../models/UserModel");
 const Organizations = require("../organizations/Organization");
 const { default: mongoose } = require("mongoose");
-const {  generate2FASecret, generateQRCode, verify2FAToken} = require("./twoFactorAuth");
+const { generate2FASecret, generateQRCode, verify2FAToken } = require("./twoFactorAuth");
+const { buildKeywordQueryFromModel } = require("../../helperUtils/queryUtil");
 
 const APP_NAME = "Pleis App";
 
@@ -20,8 +21,11 @@ const getUsers = async ({ page, limit, keyword, status, userType }) => {
   } else {
     query["accountState.status"] = { $ne: "deleted" };
   }
-  if (keyword) {
-    query.$or = [{ firstName: { $regex: keyword, $options: "i" } }];
+  if (keyword && keyword.trim() !== "") {
+    Object.assign(
+      query,
+      buildKeywordQueryFromModel(User, keyword)
+    );
   }
   if (userType !== undefined) {
     query["accountState.userType"] = userType;

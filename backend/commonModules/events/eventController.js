@@ -228,9 +228,49 @@ const updateEvent = async (req, res) => {
     tags,
     description,
     title,
+    schedule,
   } = req.body);
 
   try {
+
+    
+  // Now validate schedule if provided
+  if (data.schedule !== undefined) {
+    let validateData = { rawData: [], dateFields: {} };
+    const recurringDetails = data.schedule.recurringDetails;
+
+    if (recurringDetails && recurringDetails.isEnabled) {
+      validateData.dateFields = {
+        "schedule.startDateTime": "YYYY-MM-DD hh:mm A",
+      };
+
+      validateData.rawData.push("schedule.recurringDetails");
+      validateData.rawData.push("schedule.recurringDetails.frequency");
+      validateData.rawData.push("schedule.recurringDetails.interval");
+      validateData.rawData.push("schedule.recurringDetails.endType");
+
+      if (recurringDetails.endType === "onDate") {
+        validateData.dateFields["schedule.recurringDetails.endDate"] = "YYYY-MM-DD";
+      } else if (recurringDetails.endType === "afterOccurrences") {
+        validateData.rawData.push("schedule.recurringDetails.occurrences");
+      }
+
+      if (["weekly", "monthly"].includes(recurringDetails.frequency)) {
+        validateData.rawData.push("schedule.recurringDetails.daysOfWeek");
+      }
+
+      if (!validateParams(req, res, validateData)) return;
+    } else {
+      validateData.dateFields = {
+        "schedule.startDateTime": "YYYY-MM-DD hh:mm A",
+        "schedule.endDateTime": "YYYY-MM-DD hh:mm A",
+      };
+
+      if (!validateParams(req, res, validateData)) return;
+    }
+  }
+
+
     const updated = await eventService.updateEvent(id, data);
 
     if (!updated) {

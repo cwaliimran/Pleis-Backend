@@ -90,7 +90,7 @@ const createHighlight = async (req, res) => {
     return sendResponse({
       res,
       statusCode: readableError.statusCode,
-      translationKey: readableError.message,
+      translationKey: readableerror,
       error,
     });
   }
@@ -133,7 +133,7 @@ const getHighlights = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error: error,
     });
   }
 };
@@ -162,7 +162,7 @@ const getPublicHighlights = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error: error,
     });
   }
 };
@@ -254,7 +254,7 @@ const updateHighlight = async (req, res) => {
     return sendResponse({
       res,
       statusCode: readableError.statusCode,
-      translationKey: readableError.message,
+      translationKey: readableerror,
       error,
     });
   }
@@ -291,7 +291,7 @@ const deleteHighlight = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error: error,
     });
   }
 };
@@ -329,7 +329,7 @@ const getHighlightDetails = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error: error,
     });
   }
 };

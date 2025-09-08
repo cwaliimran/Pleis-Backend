@@ -10,7 +10,7 @@ const createOrganization = async ({ data }) => {
   return await organizationRepo.createOrganization(data);
 };
 
-const getOrganizations = async ({ page, limit, keyword, status, creator }) => {
+const getOrganizations = async ({ page, limit, keyword, status, creator, date }) => {
   const query = {};
   query.$or = [
     { creator: creator },
@@ -21,6 +21,13 @@ const getOrganizations = async ({ page, limit, keyword, status, creator }) => {
   } else {
     query.status = { $ne: "deleted" };
   }
+
+  if (date) {
+    const start = new Date(date);
+    const end = new Date(new Date(date).setDate(start.getDate() + 1));
+    query.createdAt = { $gte: start, $lt: end };
+  }
+
   if (keyword && keyword.trim() !== "") {
     Object.assign(
       query,
@@ -54,13 +61,19 @@ const getOrganizations = async ({ page, limit, keyword, status, creator }) => {
   };
 };
 
-const getPublicOrganizations = async ({ page, limit, keyword }) => {
+const getPublicOrganizations = async ({ page, limit, keyword, date }) => {
   const query = { status: "active" };
   if (keyword) {
     query.$or = [
       { title: { $regex: keyword, $options: "i" } },
       { description: { $regex: keyword, $options: "i" } },
     ];
+  }
+
+  if (date) {
+    const start = new Date(date);
+    const end = new Date(new Date(date).setDate(start.getDate() + 1));
+    query.createdAt = { $gte: start, $lt: end };
   }
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
@@ -84,7 +97,7 @@ const getPublicOrganizations = async ({ page, limit, keyword }) => {
   };
 };
 
-const updateOrganization = async ({id, data}) => {
+const updateOrganization = async ({ id, data }) => {
   const organization = await organizationRepo.findOrganizationById(id);
   if (!organization) return null;
 

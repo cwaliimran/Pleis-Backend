@@ -11,6 +11,7 @@ const createUser = async (data) => {
 // Get all with filters
 const getUsersWithFilters = async (query, skip, limit) => {
   return User.find(query)
+    .populate("companyDetails.suppliers")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
@@ -59,5 +60,5 @@ module.exports = {
   deleteUserById,
   findByIdAndUpdate,
   updateTwoFA,
-  
+
 };

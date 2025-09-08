@@ -50,15 +50,21 @@ const createOrganization = async (req, res) => {
 
 const getOrganizations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active" } = req.query;
+  const { keyword, date, status = "active" } = req.query;
   let { _id } = req.user;
   try {
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
     const { organizations, meta } = await organizationService.getOrganizations({
       page,
       limit,
       keyword,
       status,
       creator: _id,
+      date,
     });
 
     return sendResponse({
@@ -80,14 +86,21 @@ const getOrganizations = async (req, res) => {
 
 const getPublicOrganizations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword } = req.query;
+  const { keyword, date } = req.query;
 
   try {
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+
     const { organizations, meta } =
       await organizationService.getPublicOrganizations({
         page,
         limit,
         keyword,
+        date,
       });
 
     return sendResponse({
@@ -133,7 +146,7 @@ const updateOrganization = async (req, res) => {
   } = req.body);
 
   try {
-    const updated = await organizationService.updateOrganization({id, data});
+    const updated = await organizationService.updateOrganization({ id, data });
 
     if (!updated) {
       return sendResponse({

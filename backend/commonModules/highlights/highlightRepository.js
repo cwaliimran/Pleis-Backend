@@ -10,8 +10,8 @@ const createHighlight = async (data) => {
 };
 
 // Get highlights with filters
-const getHighlightsWithFilters = async (query, skip, limit) => {
-  const highlights = await Highlights.aggregate([
+const getHighlightsWithFilters = async (query,keyword, skip, limit) => {
+  const pipeline = [
     { $match: query },
     { $sort: { createdAt: -1 } },
     { $skip: skip },
@@ -35,8 +35,7 @@ const getHighlightsWithFilters = async (query, skip, limit) => {
         as: "orgObject"
       }
     },
-
-    // Replace 'object' field with correct populated result
+    // Replace 'object' field
     {
       $addFields: {
         object: {
@@ -47,52 +46,48 @@ const getHighlightsWithFilters = async (query, skip, limit) => {
           ]
         }
       }
-    },
-
-    // Project final shape
-    {
-      $project: {
-        "object._id": 1,
-        "object.basicInfo.media": 1,
-
-        // Conditionally include title only for type 'event'
-        "object.basicInfo.title": {
-          $switch: {
-            branches: [
-              {
-                case: { $eq: ["$type", "event"] },
-                then: "$object.basicInfo.title"
-              }
-            ],
-            default: "$$REMOVE"
-          }
-        },
-
-        // Conditionally include name only for type 'organization'
-        "object.basicInfo.name": {
-          $switch: {
-            branches: [
-              {
-                case: { $eq: ["$type", "organization"] },
-                then: "$object.basicInfo.name"
-              }
-            ],
-            default: "$$REMOVE"
-          }
-        },
-
-        type: 1,
-        createdAt: 1,
-        meta: 1,
-        status: 1,
-        title: 1,
-        media: 1,
-        mediaInfo: 1
-      }
     }
-  ]);
+  ];
 
-  return highlights;
+  // ✅ Apply keyword filter AFTER lookup
+  if (keyword) {
+    const regex = { $regex: keyword, $options: "i" };
+
+    pipeline.push({
+      $match: {
+        $or: [
+          { title: regex }, // highlight title
+          { "media.name": regex }, // highlight media
+          { "object.basicInfo.title": regex }, // event title
+          { "object.basicInfo.name": regex }, // org name
+          { "object.basicInfo.description": regex }, // event description
+          { "object.basicInfo.otherInfo.description": regex }, // org description
+          { "object.basicInfo.socialLinks.facebook": regex },
+          { "object.basicInfo.socialLinks.instagram": regex },
+          { "object.basicInfo.socialLinks.linkedin": regex },
+          { "object.basicInfo.socialLinks.youtube": regex }
+        ]
+      }
+    });
+  }
+
+  pipeline.push({
+    $project: {
+      "object._id": 1,
+      "object.basicInfo.media": 1,
+      "object.basicInfo.title": 1,
+      "object.basicInfo.name": 1,
+      type: 1,
+      createdAt: 1,
+      meta: 1,
+      status: 1,
+      title: 1,
+      media: 1,
+      mediaInfo: 1
+    }
+  });
+
+  return Highlights.aggregate(pipeline);
 };
 
 

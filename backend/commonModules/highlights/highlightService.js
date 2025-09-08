@@ -23,19 +23,20 @@ const getHighlights = async ({ page, limit, keyword, status, creator, date}) => 
       $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
     };
   }
-  if (keyword) {
-    query.$or = [
-      { title: { $regex: keyword, $options: "i" } },
-      { description: { $regex: keyword, $options: "i" } },
-    ];
-  }
-
+  // if (keyword) {
+  //   query.$or = [
+  //     { title: { $regex: keyword, $options: "i" } },
+  //     { description: { $regex: keyword, $options: "i" } },
+  //   ];
+  // }
+// console.log("query",query)
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const [highlights, totalFiltered, total, active, inactive] =
     await Promise.all([
       highlightRepo.getHighlightsWithFilters(
         query,
+        keyword,
         skip,
         limit === 0 ? 0 : limit
       ),

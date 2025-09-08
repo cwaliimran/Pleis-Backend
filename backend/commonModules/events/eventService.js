@@ -1,5 +1,6 @@
 // services/eventService.js
 
+const { validateParams } = require("../../helperUtils/responseUtil");
 const eventRepo = require("./eventRepository");
 
 const createEvent = async ({ data }) => {
@@ -101,9 +102,9 @@ const updateEvent = async (id, data) => {
     tags,
     description,
     title,
+    schedule,
   } = data;
 
-  // ✅ Safe assignment logic
   if (basicInfo) {
     event.basicInfo = {
       ...event.basicInfo,
@@ -147,6 +148,15 @@ const updateEvent = async (id, data) => {
     if (!event.basicInfo) event.basicInfo = {};
     event.basicInfo.name = title;
   }
+
+  if (schedule !== undefined) {
+    if (!event.schedule) event.schedule = {};
+    event.schedule = {
+      ...event.schedule,
+      ...schedule
+    };
+  }
+
 
   await event.save();
 
