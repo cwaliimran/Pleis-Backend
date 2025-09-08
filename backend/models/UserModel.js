@@ -533,29 +533,38 @@ const createResetPasswordLink = (token) => {
 
 // Exclude sensitive fields when returning user object
 userSchema.methods.toJSON = function (userData) {
-  const user = this;
-  const userObject = userData ? userData : user.toObject();
+  let userObject;
 
-  // Attach base URL to document images
+  if (userData) {
+    // Case 1: explicitly provided plain object
+    userObject = { ...userData };
+  } else if (typeof this.toObject === "function") {
+    // Case 2: called on a mongoose doc
+    userObject = this.toObject();
+  } else {
+    // Case 3: fallback if it's already a plain object
+    userObject = { ...this };
+  }
+
   const baseUrl = `${process.env.AZURE_STORAGE_BASE_URL}`;
 
   // Attach base URL to profileIcon
   if (userObject.profileIcon && !userObject.profileIcon.startsWith("http")) {
     userObject.profileIcon = baseUrl + userObject.profileIcon;
-  } else {
+  } else if (!userObject.profileIcon) {
     userObject.profileIcon = baseUrl + "noImage.png";
   }
 
   delete userObject.password;
 
-  // include otpInfo only in development environment
-  if (process.env.NODE_ENV == "prod") {
+  if (process.env.NODE_ENV === "prod") {
     delete userObject.otpInfo;
     delete userObject.emailVerification;
   }
 
   return userObject;
 };
+
 userSchema.methods.addBaseUrlToProfileIcon = function (user) {
   const baseUrl = `${process.env.AZURE_STORAGE_BASE_URL}`;
   if (user.profileIcon && !user.profileIcon.startsWith("http")) {

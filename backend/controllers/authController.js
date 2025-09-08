@@ -128,7 +128,7 @@ const login = async (req, res) => {
         "userType",
       ],
       enumFields: {
-        userType: ["user", "organizer", "admin"],
+        userType: User.USER_TYPES,
       },
     };
     if (!validateParams(req, res, validationOptions)) {

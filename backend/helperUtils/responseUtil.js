@@ -390,14 +390,16 @@ const validateParams = (req, res, options = {}) => {
         }
       } else {
         // Single value check
-        if (!allowedValues.includes(value)) {
-          sendResponse({
-            res,
-            statusCode: 400,
-            translationKey: "invalid_enum_value",
-            values: { field, allowedValues: allowedValues.join(", ") },
-          });
-          return false;
+        if (Array.isArray(allowedValues) && allowedValues.length > 0) {
+          if (!allowedValues.includes(value)) {
+            sendResponse({
+              res,
+              statusCode: 400,
+              translationKey: "invalid_enum_value",
+              values: { field, allowedValues: allowedValues.join(", ") },
+            });
+            return false;
+          }
         }
       }
     }

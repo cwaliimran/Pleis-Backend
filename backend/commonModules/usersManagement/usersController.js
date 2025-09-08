@@ -50,10 +50,18 @@ const getUsers = async (req, res) => {
       userType
     });
     // Ensure toJSON method is applied to strip out sensitive data
+const sanitizedUsers = users.map(user => {
+  // Use your updated toJSON (works for docs and plain objects)
+  let formattedUser = User.prototype.toJSON(user);
 
-    const sanitizedUsers = users.map(user => {
-      return formatUserResponse(user.toJSON());
+  if (formattedUser.organizations && Array.isArray(formattedUser.organizations)) {
+    formattedUser.organizations = formattedUser.organizations.map(org => {
+      return Organizations.prototype.formatResponse(org);
     });
+  }
+
+  return formatUserResponse(formattedUser);
+});
 
     return sendResponse({
       res,
@@ -67,7 +75,7 @@ const getUsers = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
@@ -155,7 +163,7 @@ const deleteUser = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
@@ -210,7 +218,7 @@ const getUserDetails = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
@@ -266,7 +274,7 @@ const confirmTwoFAController = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
