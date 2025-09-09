@@ -40,44 +40,120 @@ const createUser = async (req, res) => {
 const getUsers = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, userType } = req.query;
+  const currentUser = req.user
 
-  try {
-    const { users, meta } = await usersService.getUsers({
-      page,
-      limit,
-      keyword,
-      status,
-      userType
-    });
-    // Ensure toJSON method is applied to strip out sensitive data
-const sanitizedUsers = users.map(user => {
-  // Use your updated toJSON (works for docs and plain objects)
-  let formattedUser = User.prototype.toJSON(user);
+  if (currentUser.userType === "admin") { // Admin can see all users
+    try {
+      const { users, meta } = await usersService.getAllUsers({
+        page,
+        limit,
+        keyword,
+        status,
+        userType
+      });
+      // Ensure toJSON method is applied to strip out sensitive data
+      const sanitizedUsers = users.map(user => {
+        // Use your updated toJSON (works for docs and plain objects)
+        let formattedUser = User.prototype.toJSON(user);
 
-  if (formattedUser.organizations && Array.isArray(formattedUser.organizations)) {
-    formattedUser.organizations = formattedUser.organizations.map(org => {
-      return Organizations.prototype.formatResponse(org);
-    });
+        if (formattedUser.organizations && Array.isArray(formattedUser.organizations)) {
+          formattedUser.organizations = formattedUser.organizations.map(org => {
+            return Organizations.prototype.formatResponse(org);
+          });
+        }
+
+        return formatUserResponse(formattedUser);
+      });
+
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "users_fetched_successfully",
+        data: sanitizedUsers,
+        meta
+      });
+    } catch (error) {
+      return sendResponse({
+        res,
+        statusCode: 500,
+        translationKey: "internal_server",
+        error,
+      });
+    }
+  } else if (["manager", "organizer"].includes(currentUser.userType)) { // Managers and Organizers can see users they created or users in their organizations
+    try {
+
+      //only staff, manager userTypes accepted
+
+      if (
+        !validateParams(req, res, {
+          enumFields: { userType: ["staff", "manager"] },
+        })
+      )
+        return;
+
+      // Managers and Organizers can only see users they created or users in their organizations
+      const { users, meta } = await usersService.getStaff({
+        page,
+        limit,
+        keyword,
+        status,
+        userType,
+        currentUser
+      });
+
+      // Filter users to only include those created by currentUser or in their organizations
+      const filteredUsers = users.filter(user => {
+        if (currentUser.userType === "organizer") {
+          // Organizer: users in orgs they created
+          return user.organizations?.some(
+            org => org.creator.toString() === currentUser._id.toString()
+          );
+        }
+
+        if (currentUser.userType === "manager") {
+          // Manager: users in orgs where they're listed in staff
+          return user.organizations?.some(
+            org => org.staff.some(
+              s => s.user.toString() === currentUser._id.toString()
+            )
+          );
+        }
+
+        return false;
+      });
+
+      // Ensure toJSON method is applied to strip out sensitive data
+      const sanitizedUsers = filteredUsers.map(user => {
+        // Use your updated toJSON (works for docs and plain objects)
+        let formattedUser = User.prototype.toJSON(user);
+
+        if (formattedUser.organizations && Array.isArray(formattedUser.organizations)) {
+          formattedUser.organizations = formattedUser.organizations.map(org => {
+            return Organizations.prototype.formatResponse(org);
+          });
+        }
+
+        return formatUserResponse(formattedUser);
+      });
+
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "users_fetched_successfully",
+        data: sanitizedUsers,
+        meta
+      });
+    } catch (error) {
+      return sendResponse({
+        res,
+        statusCode: 500,
+        translationKey: "internal_server",
+        error,
+      });
+    }
   }
 
-  return formatUserResponse(formattedUser);
-});
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "users_fetched_successfully",
-      data: sanitizedUsers,
-      meta
-    });
-  } catch (error) {
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error,
-    });
-  }
 };
 
 

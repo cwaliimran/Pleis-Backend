@@ -70,6 +70,50 @@ const getUsersWithFilters = async (query, skip, limit) => {
   return users;
 };
 
+//Get all staff and managers with filters
+const getStaffWithFilters = async (query, skip, limit) => {
+  return User.aggregate([
+    { $match: query },
+    { $sort: { createdAt: -1 } },
+    { $skip: skip },
+    ...(limit > 0 ? [{ $limit: limit }] : []),
+
+    // Lookup organizations the user belongs to (as creator or staff)
+    {
+      $lookup: {
+        from: "organizations",
+        let: { userId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $or: [
+                  { $eq: ["$creator", "$$userId"] },
+                  { $in: ["$$userId", "$staff.user"] },
+                ],
+              },
+              status: { $ne: "deleted" },
+            },
+          },
+          { $project: { basicInfo: 1, staff: 1, creator: 1 } },
+        ],
+        as: "organizations",
+      },
+    },
+
+    // Lookup suppliers if needed
+    {
+      $lookup: {
+        from: "suppliers",
+        localField: "companyDetails.suppliers",
+        foreignField: "_id",
+        as: "companyDetails.suppliers",
+      },
+    },
+  ]);
+};
+
+
 
 // Count by condition
 const countUsers = async (query = {}) => {
@@ -108,6 +152,7 @@ const updateTwoFA = async (userId, data) => {
 module.exports = {
   createUser,
   getUsersWithFilters,
+  getStaffWithFilters,
   countUsers,
   findUserById,
   updateUserData,

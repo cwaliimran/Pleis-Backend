@@ -36,7 +36,7 @@ router.post("/", roleMiddleware(["admin", "organizer", "manager"]), apiRateLimit
 router.get("/:id", apiRateLimiterUserDetail, getUserDetails);
 
 // Get all users with pagination
-router.get("/", apiRateLimiterUsers, getUsers);
+router.get("/", apiRateLimiterUsers, roleMiddleware(["admin", "organizer", "manager"]), getUsers);
 
 // Update an existing user
 router.put("/:id", apiRateLimiterUserUpdate, updateUser);

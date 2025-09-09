@@ -239,11 +239,11 @@ const login = async (req, res) => {
       data: response,
     });
   } catch (error) {
-    console.log("error:", error);
     return sendResponse({
       res,
       statusCode: 400,
       translationKey: error,
+      error,
     });
   }
 };

@@ -12,7 +12,7 @@ const { buildKeywordQueryFromModel } = require("../../helperUtils/queryUtil");
 
 const APP_NAME = "Pleis App";
 
-const getUsers = async ({ page, limit, keyword, status, userType }) => {
+const getAllUsers = async ({ page, limit, keyword, status, userType }) => {
   const query = {
     "verificationStatus.email": "verified",
   };
@@ -53,6 +53,58 @@ const getUsers = async ({ page, limit, keyword, status, userType }) => {
     meta,
   };
 };
+
+//to get only staff and managers
+const getStaff = async ({ page, limit, keyword, status, userType, currentUser }) => {
+  const query = {
+    "verificationStatus.email": "verified",
+    "accountState.status": status || { $ne: "deleted" },
+  };
+
+  if (keyword && keyword.trim() !== "") {
+    Object.assign(query, buildKeywordQueryFromModel(User, keyword));
+  }
+
+  if (userType !== undefined) {
+    query["accountState.userType"] = userType;
+  }
+
+  const skip = (page - 1) * limit;
+
+  if (currentUser.userType === "manager") {
+    const orgs = await Organizations.find({
+      "staff.user": currentUser._id,
+      status: { $ne: "deleted" },
+    }).select("staff.user");
+    
+
+    const allowedUserIds = orgs.flatMap(org => org.staff.map(s => s.user));
+    query["_id"] = { $in: allowedUserIds };
+
+  } else if (currentUser.userType === "organizer") {
+    const orgs = await Organizations.find({
+      creator: currentUser._id,
+      status: { $ne: "deleted" },
+    }).select("staff.user creator");
+
+
+    const allowedUserIds = orgs.flatMap(org => [org.creator, ...org.staff.map(s => s.user)]);
+    query["_id"] = { $in: allowedUserIds };
+  }
+
+  const [users, totalFiltered] = await Promise.all([
+    userRepo.getStaffWithFilters(query, skip, limit),
+    userRepo.countUsers(query),
+  ]);
+
+  const meta = {
+    ...generateMeta(page, limit, totalFiltered),
+  };
+
+  return { users, meta };
+};
+
+
 
 
 const updateUser = async (req, res, options = {}) => {
@@ -308,7 +360,8 @@ const disableTwoFA = async (userId) => {
 
 
 module.exports = {
-  getUsers,
+  getAllUsers,
+  getStaff,
   updateUser,
   deleteUser,
   getUserDetails,
