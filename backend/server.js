@@ -1,4 +1,5 @@
 require("dotenv").config({ path: `.env.${process.env.NODE_ENV || "dev"}` });
+global.logger = require("../backend/helperUtils/logger");
 
 const express = require("express");
 const morgan = require("morgan");

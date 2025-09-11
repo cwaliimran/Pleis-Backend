@@ -39,6 +39,7 @@ const createCategory = async (req, res) => {
 };
 
 const getCategories = async (req, res) => {
+
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, pinned, date } = req.query;
 
@@ -79,11 +80,11 @@ const getPublicCategories = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, date } = req.query;
   try {
-       if (date && !validateParams(req, res, {
-          dateFields: {
-            date: "YYYY-MM-DD",
-          },
-        })) return;
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
 
     const { categories, meta } = await categoriesService.getPublicCategories({
       page,

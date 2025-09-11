@@ -9,7 +9,7 @@ const bulkInsert = async (values, collectionName) => {
 
         // Insert documents in bulk
         const result = await Model.insertMany(values);
-        console.log(`Inserted ${result.length} documents into ${collectionName} collection`);
+        logger.log(`Inserted ${result.length} documents into ${collectionName} collection`);
         return result;
     } catch (error) {
         console.error(`Error inserting documents into ${collectionName} collection:`, error);

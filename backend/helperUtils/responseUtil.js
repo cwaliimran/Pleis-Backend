@@ -63,7 +63,7 @@ const sendResponse = ({
   }
   // Include data in the response if provided
   if (data !== undefined && data !== null) {
-    // console.log("Response Data:", data);
+    // logger.log("Response Data:", data);
     response.data = data;
   }
 

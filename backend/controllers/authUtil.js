@@ -249,7 +249,7 @@ const registerUserUtility = async (req, res, options = {}) => {
     await session.commitTransaction();
 
     const userObject = user.toJSON();
-    console.log("userObject-->", userObject);
+    logger.log("userObject-->", userObject);
     const formattedResponse = formatUserResponse(userObject);
 
     return { success: true, user: formattedResponse, responseSent: false };
