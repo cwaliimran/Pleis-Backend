@@ -7,13 +7,17 @@ const createEvent = async ({ data }) => {
   return await eventRepo.createEvent(data);
 };
 
-const getEvents = async ({ page, limit, keyword, status, creator, startDate, endDate }) => {
+const getEvents = async ({ page, limit, keyword, status, creator, startDate, endDate, organization }) => {
   const query = {};
   if (creator) query.creator = creator;
   if (status) {
     query.status = status;
   } else {
     query.status = { $ne: "deleted" };
+  }
+  
+  if (organization) {
+    query["basicInfo.organization"] = organization;
   }
 
   if (startDate) {

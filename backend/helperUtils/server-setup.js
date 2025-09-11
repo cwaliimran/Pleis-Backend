@@ -5,7 +5,7 @@ const PORT = process.env.PORT || 4014; // 4014 only for local testing
 
 const startServer = (app) => {
   app.listen(PORT, () => {
-    console.log("🚀 Server is running on port", PORT);
+    logger.log("🚀 Server is running on port", PORT);
   });
 };
 
@@ -24,7 +24,7 @@ const connectToDB = async (app, retries = 5, delay = 3000) => {
       console.error(`Failed to connect to MongoDB (attempt ${attempt} of ${retries}):`, error);
       if (attempt < retries) {
         await new Promise(res => setTimeout(res, delay));
-        console.log(`Retrying to connect in ${delay / 1000} seconds...`);
+        logger.log(`Retrying to connect in ${delay / 1000} seconds...`);
       } else {
         console.error("All attempts to connect to MongoDB failed. Exiting.");
         process.exit(1);

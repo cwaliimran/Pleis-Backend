@@ -74,7 +74,7 @@ function keyToReadableText(key) {
 }
 
 (async () => {
-  console.log("Scanning files...");
+  logger.log("Scanning files...");
 
   const allFiles = scanFiles(rootDir);
   const foundKeys = new Set();
@@ -95,7 +95,7 @@ function keyToReadableText(key) {
     }
   }
 
-  console.log(`Total translation keys found: ${foundKeys.size}`);
+  logger.log(`Total translation keys found: ${foundKeys.size}`);
 
   // Find missing keys
   const missingKeys = {};
@@ -120,7 +120,7 @@ function keyToReadableText(key) {
   fs.writeFileSync(missingFile, JSON.stringify(missingKeys, null, 2), "utf-8");
   fs.writeFileSync(extraFile, JSON.stringify(extraKeys, null, 2), "utf-8");
 
-  console.log(`✅ Updated ${baseLangFile}`);
-  console.log(`📁 Missing keys saved to: ${missingFile}`);
-  console.log(`🧹 Extra keys saved to: ${extraFile}`);
+  logger.log(`✅ Updated ${baseLangFile}`);
+  logger.log(`📁 Missing keys saved to: ${missingFile}`);
+  logger.log(`🧹 Extra keys saved to: ${extraFile}`);
 })();

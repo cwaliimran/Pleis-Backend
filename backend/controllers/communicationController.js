@@ -61,8 +61,8 @@ const sendNotificationControllerForTesting = async (req, res) => {
   try {
     // Placeholder for notification sending logic
     // This can be expanded to handle different titles of notifications like SMS, Push, etc.
-    // console.log(`Sending ${title} notification to: ${recipients.join(", ")}`);
-    // console.log(`body: ${body}`);
+    // logger.log(`Sending ${title} notification to: ${recipients.join(", ")}`);
+    // logger.log(`body: ${body}`);
 
     // Simulate sending notification
     const response = await sendNotification(recipients, {
@@ -193,7 +193,7 @@ const sendUserNotifications = async ({
         }
 
         //log all response using json.stringify for better readability
-        // console.log("Notification responses:", JSON.stringify(responses, null, 2));
+        // logger.log("Notification responses:", JSON.stringify(responses, null, 2));
 
         // Process the notifications after sending them
         if (!saveNotification) {
@@ -214,7 +214,7 @@ const sendUserNotifications = async ({
         // Save all notifications in a batch to the database
         await NotificationExp.insertMany(notificationsToSave);
       } else {
-        console.log("No devices found for the provided user IDs.");
+        logger.log("No devices found for the provided user IDs.");
       }
     } catch (error) {
       console.error("Error sending notifications in background:", error);

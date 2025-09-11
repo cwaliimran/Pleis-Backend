@@ -114,9 +114,16 @@ const createEvent = async (req, res) => {
 
 const getEvents = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", startDate, endDate } = req.query;
+  const { keyword, status = "active", startDate, endDate, organization } = req.query;
   let { _id, timezone } = req.user;
   try {
+
+   
+    if(organization){
+      if (!validateParams(req, res, {
+        objectIdFields: ["organization"],
+      })) return;
+    }
 
     if (startDate && !validateParams(req, res, {
       dateFields: {
@@ -137,7 +144,8 @@ const getEvents = async (req, res) => {
       status,
       creator: _id,
       startDate,
-      endDate
+      endDate,
+      organization
     });
     // Deep clone events to avoid mutating original objects (especially if using Mongoose docs)
     let formattedEvents = events.map(event => {

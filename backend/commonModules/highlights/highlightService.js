@@ -29,7 +29,7 @@ const getHighlights = async ({ page, limit, keyword, status, creator, date}) => 
   //     { description: { $regex: keyword, $options: "i" } },
   //   ];
   // }
-// console.log("query",query)
+// logger.log("query",query)
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const [highlights, totalFiltered, total, active, inactive] =
