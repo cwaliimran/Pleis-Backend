@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const logger = require("./helperUtils/logger");
 
 // Path to base language file
 const baseLangFile = path.join(__dirname, "assets", "locales", "en.json");

@@ -81,7 +81,8 @@ const deleteSupplier = async (id) => {
   const supplier = await supplierRepo.findSupplierById(id);
   if (!supplier) return null;
 
-  await supplierRepo.deleteSupplierById(supplier);
+  const updated = await supplierRepo.updateSupplierData(supplier, { status: "deleted" });
+  if (!updated) return null;
   return true;
 };
 

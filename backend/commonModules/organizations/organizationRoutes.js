@@ -18,7 +18,7 @@ router.use(auth);
 const apiRateLimiter = createRateLimiter("Organizations");
 
 // Create a new organization
-router.post("/", roleMiddleware(["organizer", "admin", "manager", "staff"]), createOrganization);
+router.post("/", roleMiddleware(["organizer", "admin", "manager"]), createOrganization);
 
 // Get all organizations with pagination
 router.get("/", apiRateLimiter, getOrganizations);

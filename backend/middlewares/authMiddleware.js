@@ -59,7 +59,7 @@ const auth = async (req, res, next) => {
         return sendResponse({
           res,
           statusCode: 401,
-          translationKey: "user_not",
+          translationKey: "account_not_found",
         });
       }
 

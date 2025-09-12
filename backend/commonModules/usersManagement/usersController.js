@@ -198,6 +198,7 @@ const updateUser = async (req, res) => {
       data: result
     });
   } catch (error) {
+    console.log("error", error);
     return sendResponse({
       res,
       statusCode: 500,
@@ -246,7 +247,7 @@ const deleteUser = async (req, res) => {
 
 const getUserDetails = async (req, res) => {
   const { id } = req.params;
-
+console.log("here", id)
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
@@ -264,9 +265,9 @@ const getUserDetails = async (req, res) => {
         translationKey: "user_details_not_found",
       });
     }
-    const userObject = new User(user).toJSON(user);
+    let userObject = new User(user).toJSON();
 
-    if (user.accountState?.userType === "staff" || user.accountState?.userType === "manager") {
+    if (user.accountState?.userType === "organizer" || user.accountState?.userType === "staff" || user.accountState?.userType === "manager") {
       // Fetch organizations where this user is staff member
       const organizations = await getOrganizationsAsStaff(user._id);
 
