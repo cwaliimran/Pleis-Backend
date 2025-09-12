@@ -21,6 +21,11 @@ const createOrganization = async (req, res) => {
     title,
   } = req.body);
   let creator = req.user._id;
+  if (req.user.userType === "admin") {
+    if (basicInfo && basicInfo.user) {
+      creator = basicInfo.user;
+    }
+  }
   data.creator = creator;
 
   if (!validateParams(req, res, { rawData: ["basicInfo"] })) return;
@@ -28,7 +33,7 @@ const createOrganization = async (req, res) => {
   try {
     const organization = await organizationService.createOrganization({
       data,
-      creator: req.user._id,
+      creator,
     });
 
     return sendResponse({

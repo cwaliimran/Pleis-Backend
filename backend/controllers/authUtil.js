@@ -9,6 +9,7 @@ const mongoose = require("mongoose");
 const validator = require("validator");
 const Organizations = require("../commonModules/organizations/Organization");
 const { FEATURE_KEYS } = require("../admin/features/Feature");
+const { validatePhoneNumber } = require("../helperUtils/validationsUtil");
 // const { sendEmailViaBrevo } = require("../helperUtils/emailUtil");
 // const { registrationOtpEmailTemplate } = require("../helperUtils/emailTemplates");
 
@@ -123,7 +124,7 @@ const registerUserUtility = async (req, res, options = {}) => {
         typeof phoneNumber !== "object" ||
         !phoneNumber.code ||
         !phoneNumber.number ||
-        !validator.isMobilePhone(`${phoneNumber.code}${phoneNumber.number}`, "any", { strictMode: true })
+        !validatePhoneNumber(`${phoneNumber.code}${phoneNumber.number}`).valid
       ) {
         sendResponse({ res, statusCode: 400, translationKey: "invalid_phone" });
         return { responseSent: true };
@@ -249,7 +250,6 @@ const registerUserUtility = async (req, res, options = {}) => {
     await session.commitTransaction();
 
     const userObject = user.toJSON();
-    logger.log("userObject-->", userObject);
     const formattedResponse = formatUserResponse(userObject);
 
     return { success: true, user: formattedResponse, responseSent: false };

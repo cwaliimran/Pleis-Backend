@@ -9,6 +9,7 @@ const {
 const validator = require("validator");
 const { sendEmailViaBrevo } = require("../helperUtils/emailUtil");
 const { config } = require("dotenv");
+const { validatePhoneNumber } = require("../helperUtils/validationsUtil");
 
 // Create a new contact request
 const createContactRequest = async (req, res) => {
@@ -25,7 +26,7 @@ const createContactRequest = async (req, res) => {
   // Validate phone number format
   if (
     phoneNumber &&
-    !validator.isMobilePhone(phoneNumber, "any", { strictMode: true })
+    !validatePhoneNumber(`${phoneNumber.code}${phoneNumber.number}`).valid
   ) {
     return sendResponse({
       res,

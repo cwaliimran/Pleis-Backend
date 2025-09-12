@@ -17,6 +17,7 @@ const { createOrSkipDevice, Devices } = require("../models/Devices");
 const validator = require("validator");
 const crypto = require("crypto");
 const { registerUserUtility } = require("./authUtil");
+const { validatePhoneNumber } = require("../helperUtils/validationsUtil");
 //register
 const register = async (req, res) => {
   const result = await registerUserUtility(req, res, {
@@ -226,7 +227,7 @@ const login = async (req, res) => {
     const userObject = user.toJSON();
 
     // Format the user response using the utility function
-    const response = formatUserResponse(userObject, token, [], ["resetToken"]);
+    const response = formatUserResponse(userObject, token, [], ["resetToken", "organizations"]);
 
     // Save device information (not part of the transaction)
     createOrSkipDevice(userObject._id, deviceId, deviceType);
@@ -269,9 +270,8 @@ const generateOtp = async (req, res) => {
       (typeof phoneNumber !== "object" ||
         !phoneNumber.code ||
         !phoneNumber.number ||
-        !validator.isMobilePhone(phoneNumber.code + phoneNumber.number, "any", {
-          strictMode: true,
-        }))
+        !validatePhoneNumber(`${phoneNumber.code}${phoneNumber.number}`).valid
+      )
     ) {
       return sendResponse({
         res,
@@ -374,9 +374,8 @@ const verifyOtp = async (req, res) => {
       (typeof phoneNumber !== "object" ||
         !phoneNumber.code ||
         !phoneNumber.number ||
-        !validator.isMobilePhone(phoneNumber.code + phoneNumber.number, "any", {
-          strictMode: true,
-        }))
+        !validatePhoneNumber(`${phoneNumber.code}${phoneNumber.number}`).valid
+      )
     ) {
       return sendResponse({
         res,
@@ -921,7 +920,7 @@ const socialAuth = async (req, res) => {
       const token = existingUser.generateAuthToken();
 
       // Ensure toJSON method is applied to strip out sensitive data
-      const userObject = new User(existingUser).toJSON(existingUser);
+      const userObject = new User(existingUser).toJSON();
 
       const response = formatUserResponse(userObject, token);
 

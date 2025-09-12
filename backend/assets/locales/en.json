@@ -194,5 +194,6 @@
   "key": "Key",
   "email_sent": "Email sent",
   "failed_to_send_email": "Failed to send email",
-  "oib_already_exists": "Oib already exists"
+  "oib_already_exists": "Oib already exists",
+  "account_not_found": "Account not found"
 }

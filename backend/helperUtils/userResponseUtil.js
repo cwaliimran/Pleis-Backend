@@ -26,7 +26,7 @@ const formatUserResponse = (
 
 
   // Main response object
-  const response = {
+  let response = {
     basicInfo,
     accountState: {
       twoFactorAuth: userObject.twoFA?.isEnabled || false,
@@ -60,8 +60,8 @@ const formatUserResponse = (
     basicInfo.companyDetails = userObject.companyDetails || null;
     //add termsAccepted to organizer
     response.accountState.termsAccepted = userObject.termsAccepted || false;
+    response.organizations = userObject.organizations || [];
   }
-
   else if (userType == "staff" || userType == "manager") {
     response.organizations = userObject.organizations || [];
   }

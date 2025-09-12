@@ -9,6 +9,7 @@ const Organizations = require("../organizations/Organization");
 const { default: mongoose } = require("mongoose");
 const { generate2FASecret, generateQRCode, verify2FAToken } = require("./twoFactorAuth");
 const { buildKeywordQueryFromModel } = require("../../helperUtils/queryUtil");
+const { validatePhoneNumber } = require("../../helperUtils/validationsUtil");
 
 const APP_NAME = "Pleis App";
 
@@ -163,7 +164,7 @@ const updateUser = async (req, res, options = {}) => {
         typeof phoneNumber !== "object" ||
         !phoneNumber.code ||
         !phoneNumber.number ||
-        !validator.isMobilePhone(phoneNumber.code + phoneNumber.number, "any", { strictMode: true })
+        !validatePhoneNumber(`${phoneNumber.code}${phoneNumber.number}`).valid
       ) {
         return { errorCode: 400, message: "invalid_phone" };
       }
