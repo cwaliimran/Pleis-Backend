@@ -233,8 +233,10 @@ const registerUserUtility = async (req, res, options = {}) => {
     }
 
     // ✅ Generate email verification token if not auto-verified
+    let emailVerificationLink = null;
     if (!autoVerify) {
       const tokenData = user.generateEmailVerificationToken();
+      emailVerificationLink = tokenData.rawToken;
       user.emailVerificationLink = tokenData.rawToken;
 
       // await sendEmailViaBrevo(user.email, tokenData.verificationLink);
@@ -250,6 +252,9 @@ const registerUserUtility = async (req, res, options = {}) => {
     await session.commitTransaction();
 
     const userObject = user.toJSON();
+    if (emailVerificationLink) {
+      userObject.emailVerificationLink = emailVerificationLink;
+    }
     const formattedResponse = formatUserResponse(userObject);
 
     return { success: true, user: formattedResponse, responseSent: false };
