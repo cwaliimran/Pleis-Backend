@@ -120,9 +120,16 @@ const countUsers = async (query = {}) => {
   return User.countDocuments(query);
 };
 
-// Find by ID with optional projection
+// Find by ID with optional projection and populate suppliers
 const findUserById = async (id, projection = null) => {
-  return User.findById(id, projection);
+  // Prepare projection object if needed
+  const proj = projection ? projection : {};
+
+  // Find user and populate suppliers
+  return User.findById(id, proj).populate({
+    path: "companyDetails.suppliers",
+    model: "Suppliers"
+  });
 };
 
 // Update and save

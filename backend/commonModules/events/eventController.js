@@ -24,9 +24,9 @@ const createEvent = async (req, res) => {
       "basicInfo.title",
       "basicInfo.organization",
       "basicInfo.venue",
-      "basicInfo.category",
+      "basicInfo.categories",
     ],
-    objectIdFields: ["basicInfo.organization", "basicInfo.venue", "basicInfo.category"],
+    objectIdFields: ["basicInfo.organization", "basicInfo.venue", "basicInfo.categories"],
 
   }
 
@@ -79,7 +79,7 @@ const createEvent = async (req, res) => {
       description: basicInfo.description?.trim() || "",
       organization: basicInfo.organization,
       venue: basicInfo.venue,
-      category: basicInfo.category || null,
+      categories: Array.isArray(basicInfo.categories) ? basicInfo.categories : [],
       tags: Array.isArray(basicInfo.tags) ? basicInfo.tags : [],
     },
     schedule: {
