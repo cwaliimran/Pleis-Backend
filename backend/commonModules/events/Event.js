@@ -37,12 +37,13 @@ const eventSchema = new mongoose.Schema(
         ref: "Venues",
         required: true,
       },
-      category:
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Categories",
-        default: null,
-      },
+      categories: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Categories",
+          default: [],
+        },
+      ],
       tags: [
         {
           type: mongoose.Schema.Types.ObjectId,
