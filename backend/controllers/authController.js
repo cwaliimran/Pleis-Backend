@@ -8,10 +8,10 @@ const {
   getReadableErrorMessage,
 } = require("../helperUtils/responseUtil");
 const { formatUserResponse } = require("../helperUtils/userResponseUtil");
-// const { sendEmailViaBrevo } = require("../helperUtils/emailUtil");
+const { sendEmailViaMailgun } = require("../helperUtils/emailUtil");
 const {
-  registrationOtpEmailTemplate,
-  forgotPasswordOtpEmailTemplate,
+  forgotPasswordEmailTemplate,
+  registrationEmailTemplate,
 } = require("../helperUtils/emailTemplates");
 const { createOrSkipDevice, Devices } = require("../models/Devices");
 const validator = require("validator");
@@ -325,8 +325,8 @@ const generateOtp = async (req, res) => {
 
     // Send email or SMS within the transaction
     const subject = "Password Reset OTP";
-    const mBody = forgotPasswordOtpEmailTemplate(otp);
-    // await sendEmailViaBrevo([email], subject, mBody);
+    // const mBody = forgotPasswordOtpEmailTemplate(otp);
+    // await sendEmailViaMailgun([email], subject, mBody);
 
     await session.commitTransaction();
     session.endSession();
@@ -561,7 +561,8 @@ const resendEmailVerificationLink = async (req, res) => {
     await user.save();
 
     // Send the verification email
-    // await sendVerificationEmail(user.email, tokenData.verificationLink);
+    const mBody = registrationEmailTemplate(tokenData.verificationLink);
+    await sendEmailViaMailgun(user.email, "Email Verification", mBody);
 
     return sendResponse({
       res,
@@ -607,7 +608,8 @@ const sendPasswordResetLink = async (req, res) => {
 
   await user.save();
 
-  // await sendResetEmail(user.email, tokenData.resetLink);
+  const mBody = forgotPasswordEmailTemplate(tokenData.resetLink);
+  await sendEmailViaMailgun(user.email, "Password Reset", mBody);
 
   return sendResponse({
     res,

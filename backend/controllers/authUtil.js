@@ -6,12 +6,11 @@ const { createOrSkipDevice } = require("../models/Devices");
 const { User, USER_TYPES } = require("../models/UserModel");
 
 const mongoose = require("mongoose");
-const validator = require("validator");
 const Organizations = require("../commonModules/organizations/Organization");
 const { FEATURE_KEYS } = require("../admin/features/Feature");
 const { validatePhoneNumber } = require("../helperUtils/validationsUtil");
-// const { sendEmailViaBrevo } = require("../helperUtils/emailUtil");
-// const { registrationOtpEmailTemplate } = require("../helperUtils/emailTemplates");
+const { sendEmailViaMailgun } = require("../helperUtils/emailUtil");
+const { registrationEmailTemplate } = require("../helperUtils/emailTemplates");
 
 // ✅ Main utility function
 const registerUserUtility = async (req, res, options = {}) => {
@@ -238,8 +237,8 @@ const registerUserUtility = async (req, res, options = {}) => {
       const tokenData = user.generateEmailVerificationToken();
       emailVerificationLink = tokenData.rawToken;
       user.emailVerificationLink = tokenData.rawToken;
-
-      // await sendEmailViaBrevo(user.email, tokenData.verificationLink);
+      const mBody = registrationEmailTemplate(tokenData.verificationLink);
+      await sendEmailViaMailgun(user.email, "Email Verification", mBody);
     }
 
     await user.save({ session });

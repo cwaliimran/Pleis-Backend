@@ -10,10 +10,12 @@ const mg = mailgun.client({
 const sendEmailViaMailgun = async (emails, subject, body, config = {}) => {
   try {
     const {
-      fromEmail = "Pleis <noreply@pleis.hr>",
+      fromEmail = "Pleis <noreply@pleis.ai>",
       attachments = [],
       isHtml = true,
     } = config;
+    
+    console.log(config)
 
     const data = await mg.messages.create(process.env.MAILGUN_DOMAIN, {
       from: fromEmail,
