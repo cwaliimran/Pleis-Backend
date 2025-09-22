@@ -339,7 +339,7 @@ userSchema.pre("save", async function (next) {
 userSchema.methods.generateAuthToken = function () {
   const user = this;
   const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: "2m", // Token valid for 2 minutes
+    // expiresIn: "1h", // Token valid for 1 hour
   });
   return token;
 };

@@ -10,6 +10,8 @@ const { default: mongoose } = require("mongoose");
 const { generate2FASecret, generateQRCode, verify2FAToken } = require("./twoFactorAuth");
 const { buildKeywordQueryFromModel } = require("../../helperUtils/queryUtil");
 const { validatePhoneNumber } = require("../../helperUtils/validationsUtil");
+const { accountStatusEmailTemplate } = require("../../helperUtils/emailTemplates");
+const { sendEmailViaMailgun } = require("../../helperUtils/emailUtil");
 
 const APP_NAME = "Pleis App";
 
@@ -77,7 +79,7 @@ const getStaff = async ({ page, limit, keyword, status, userType, currentUser })
       "staff.user": currentUser._id,
       status: { $ne: "deleted" },
     }).select("staff.user");
-    
+
 
     const allowedUserIds = orgs.flatMap(org => org.staff.map(s => s.user));
     query["_id"] = { $in: allowedUserIds };
@@ -259,6 +261,12 @@ const updateUser = async (req, res, options = {}) => {
     // ✅ Device handling
     if (deviceId && deviceType) {
       createOrSkipDevice(user._id, deviceId, deviceType);
+    }
+
+    //if status is updated then send email to user
+    if (status) {
+      const mBody = accountStatusEmailTemplate(status, user.firstName + " " + user.lastName);
+      await sendEmailViaMailgun(user.email, "Account Status", mBody);
     }
 
     await session.commitTransaction();
