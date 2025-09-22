@@ -32,6 +32,7 @@ const register = async (req, res) => {
       statusCode: 400,
       translationKey: result.error.translationKey,
       message: result.error.message,
+      error: result.error,
     });
   }
 
