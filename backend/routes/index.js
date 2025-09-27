@@ -31,10 +31,7 @@ router.use("/highlights", require("../commonModules/highlights/highlightRoutes")
 //locations
 router.use("/locations", require("../shared/locations/routes"));
 
-//menu
-router.use("/menu", require("../commonModules/menuManagement/menu/menusRoutes"));
-router.use("/menu-item-categories", require("../commonModules/menuManagement/menuItemCategories/menuItemCategoriesRoutes"));
-// router.use("/menu-items", require("../commonModules/menuManagement/menuItems/menuItemsRoutes"));
-
+// All menu-related routes now fall under "/menu"
+router.use("/menu", require("./menuRoutes"));
 
 module.exports = router;
