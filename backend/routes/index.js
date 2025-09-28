@@ -34,4 +34,9 @@ router.use("/locations", require("../shared/locations/routes"));
 // All menu-related routes now fall under "/menu"
 router.use("/menu", require("./menuRoutes"));
 
+//loyalty
+router.use("/challenges", require("../commonModules/loyalty/challenges/challengesRoutes"));
+
+
+
 module.exports = router;

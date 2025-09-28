@@ -4,16 +4,15 @@ const {
   validateParams,
   generateMeta,
   getReadableErrorMessage,
-} = require("../../../helperUtils/responseUtil");
+} = require("../../helperUtils/responseUtil");
 
-const presetsService = require("./presetsService");
+const tiersService = require("./tiersService");
 
-const createPreset = async (req, res) => {
+const createTier = async (req, res) => {
   const {
-    image,
     title,
-    description = "",
-    basePrice = "0",
+    entryPoints = 0,
+    retainPoints = 0,
     status = "active",
   } = req.body;
 
@@ -25,27 +24,26 @@ const createPreset = async (req, res) => {
     return;
 
   let data = {
-    image,
     title,
-    description,
-    basePrice,
+    entryPoints,
+    retainPoints,
     status,
   };
 
   try {
-    const preset = await presetsService.createPreset(data);
-    if (!preset) {
+    const tier = await tiersService.createTier(data);
+    if (!tier) {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "preset_creation_failed",
+        translationKey: "tier_creation_failed",
       });
     }
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "preset_created_successfully",
-      data: preset,
+      translationKey: "tier_created_successfully",
+      data: tier,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -58,11 +56,11 @@ const createPreset = async (req, res) => {
   }
 };
 
-const getPresets = async (req, res) => {
+const getTiers = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status = "active", date } = req.query;
   try {
-    const { presets, meta } = await presetsService.getPresets({
+    const { tiers, meta } = await tiersService.getTiers({
       page,
       limit,
       keyword,
@@ -73,8 +71,8 @@ const getPresets = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "presets_fetched_successfully",
-      data: presets,
+      translationKey: "tiers_fetched_successfully",
+      data: tiers,
       meta,
     });
   } catch (error) {
@@ -88,7 +86,7 @@ const getPresets = async (req, res) => {
   }
 };
 
-const getPresetDetails = async (req, res) => {
+const getTierDetails = async (req, res) => {
   const { id } = req.params;
 
   if (
@@ -100,20 +98,20 @@ const getPresetDetails = async (req, res) => {
     return;
 
   try {
-    const preset = await presetsService.getPresetDetails(id);
-    if (!preset) {
+    const tier = await tiersService.getTierDetails(id);
+    if (!tier) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "preset_not_found",
+        translationKey: "tier_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "preset_details_fetched_successfully",
-      data: preset,
+      translationKey: "tier_details_fetched_successfully",
+      data: tier,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -126,13 +124,12 @@ const getPresetDetails = async (req, res) => {
   }
 };
 
-const updatePreset = async (req, res) => {
+const updateTier = async (req, res) => {
   const { id } = req.params;
   const {
-    image,
     title,
-    description,
-    basePrice,
+    entryPoints,
+    retainPoints,
     status = "active",
   } = req.body;
 
@@ -145,28 +142,27 @@ const updatePreset = async (req, res) => {
     return;
 
   let data = {
-    image,
     title,
-    description,
-    basePrice,
+    entryPoints,
+    retainPoints,
     status,
   };
 
   try {
-    const updated = await presetsService.updatePreset(id, data);
+    const updated = await tiersService.updateTier(id, data);
 
     if (!updated) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "preset_not_found",
+        translationKey: "tier_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "preset_updated_successfully",
+      translationKey: "tier_updated_successfully",
       data: updated,
     });
   } catch (error) {
@@ -180,7 +176,7 @@ const updatePreset = async (req, res) => {
   }
 };
 
-const deletePreset = async (req, res) => {
+const deleteTier = async (req, res) => {
   const { id } = req.params;
 
   if (
@@ -192,19 +188,19 @@ const deletePreset = async (req, res) => {
     return;
 
   try {
-    const deleted = await presetsService.deletePreset(id);
+    const deleted = await tiersService.deleteTier(id);
     if (!deleted) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "preset_not_found",
+        translationKey: "tier_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "preset_deleted_successfully",
+      translationKey: "tier_deleted_successfully",
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -218,9 +214,9 @@ const deletePreset = async (req, res) => {
 };
 
 module.exports = {
-  createPreset,
-  getPresets,
-  updatePreset,
-  deletePreset,
-  getPresetDetails,
+  createTier,
+  getTiers,
+  updateTier,
+  deleteTier,
+  getTierDetails,
 };

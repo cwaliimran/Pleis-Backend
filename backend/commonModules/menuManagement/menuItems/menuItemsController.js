@@ -103,6 +103,7 @@ const getMenuItems = async (req, res) => {
     category,
     startTime,
     endTime,
+    date,
   } = req.query;
   const userId = req.user?._id;
   try {
@@ -118,6 +119,7 @@ const getMenuItems = async (req, res) => {
       endTime,
       userId,
       timezone: req.user?.timezone,
+      date,
     });
 
     return sendResponse({

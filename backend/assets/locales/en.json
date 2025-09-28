@@ -69,7 +69,6 @@
   "invalid_object_ids": "Invalid ObjectIds for fields: {fields}",
   "invalid_date_format": "Invalid date format for '{field}'. Expected format is {format}.",
   "invalid_time_format": "Invalid time format for '{field}'. Expected format is {format}.",
-  "missing_date_field": "Missing date field: {field}",
   "invalid_enum_value": "Invalid value for '{field}'. Allowed values are: {allowedValues}.",
   "min_length_violation": "{field} must be at least {minLength} characters long.",
   "too_many_otp_requests": "Too many OTP requests. Please try again later.",
@@ -217,5 +216,19 @@
   "menu_item_not_found": "Menu item not found",
   "menu_item_details_fetched_successfully": "Menu item details fetched successfully",
   "menu_item_updated_successfully": "Menu item updated successfully",
-  "menu_item_deleted_successfully": "Menu item deleted successfully"
+  "menu_item_deleted_successfully": "Menu item deleted successfully",
+  "tier_creation_failed": "Tier creation failed",
+  "tier_created_successfully": "Tier created successfully",
+  "tiers_fetched_successfully": "Tiers fetched successfully",
+  "tier_not_found": "Tier not found",
+  "tier_details_fetched_successfully": "Tier details fetched successfully",
+  "tier_updated_successfully": "Tier updated successfully",
+  "tier_deleted_successfully": "Tier deleted successfully",
+  "end_time_must_be_after_start_time": "End time must be after start time",
+  "challenge_created_successfully": "Challenge created successfully",
+  "challenges_fetched_successfully": "Challenges fetched successfully",
+  "challenge_not_found": "Challenge not found",
+  "challenge_details_fetched_successfully": "Challenge details fetched successfully",
+  "challenge_updated_successfully": "Challenge updated successfully",
+  "challenge_deleted_successfully": "Challenge deleted successfully"
 }
