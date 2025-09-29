@@ -230,5 +230,11 @@
   "challenge_not_found": "Challenge not found",
   "challenge_details_fetched_successfully": "Challenge details fetched successfully",
   "challenge_updated_successfully": "Challenge updated successfully",
-  "challenge_deleted_successfully": "Challenge deleted successfully"
+  "challenge_deleted_successfully": "Challenge deleted successfully",
+  "promotion_created_successfully": "Promotion created successfully",
+  "promotion_not_found": "Promotion not found",
+  "promotion_details_fetched_successfully": "Promotion details fetched successfully",
+  "promotion_updated_successfully": "Promotion updated successfully",
+  "promotion_deleted_successfully": "Promotion deleted successfully",
+  "promotions_fetched_successfully": "Promotions fetched successfully"
 }

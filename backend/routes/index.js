@@ -35,7 +35,7 @@ router.use("/locations", require("../shared/locations/routes"));
 router.use("/menu", require("./menuRoutes"));
 
 //loyalty
-router.use("/challenges", require("../commonModules/loyalty/challenges/challengesRoutes"));
+router.use("/loyalty", require("./loyaltyRoutes"));
 
 
 

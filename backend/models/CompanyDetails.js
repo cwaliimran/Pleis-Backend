@@ -36,14 +36,19 @@ const CompanySchema = new mongoose.Schema(
         type: String, // Postal code
         default: "",
       },
+      state: {
+        type: String,
+        default: "",
+      },
     },
+
     suppliers: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Suppliers",
       },
     ],
-      default: [],
+    default: [],
   },
   {
     _id: false,
