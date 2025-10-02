@@ -9,7 +9,7 @@ const { sendResponse } = require("../helperUtils/responseUtil");
  * @param {number} [maxRequests=5] - The maximum number of requests allowed.
  * @returns {Function} Express middleware function for rate limiting.
  */
-function createRateLimiter(endpoint, timeWindow = 10, maxRequests = 100) {
+function createRateLimiter(endpoint, timeWindow = 15, maxRequests = 200) {
   // Check if the environment is development
   if (process.env.NODE_ENV === "dev" || process.env.NODE_ENV === "prod") {
     // Return a no-op middleware that does nothing

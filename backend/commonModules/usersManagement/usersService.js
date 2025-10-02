@@ -131,7 +131,8 @@ const updateUser = async (req, res, options = {}) => {
     deviceId,
     deviceType,
     termsAccepted,
-    status
+    status,
+    location
   } = req.body;
 
   const session = await mongoose.startSession();
@@ -196,6 +197,7 @@ const updateUser = async (req, res, options = {}) => {
     if (gender) user.gender = gender;
     if (dob) user.dob = dob;
     if (status) user.accountState.status = status;
+    if (location) user.location = location;
 
 
     // ✅ Handle organization changes for manager/staff

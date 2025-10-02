@@ -309,7 +309,7 @@ const validateParams = (req, res, options = {}) => {
     return false;
   }
 
-  // Validate date fields
+  // Validate date fields (only verify format if available, don't check for missing)
   for (const [field, format] of Object.entries(dateFields)) {
     const dateValue =
       extractNestedFields(req.body, field) ||
@@ -326,14 +326,6 @@ const validateParams = (req, res, options = {}) => {
         });
         return false;
       }
-    } else {
-      sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "missing_date_field", // Use translation key
-        values: { field }, // Pass the missing field as a value
-      });
-      return false;
     }
   }
   //time fields validation

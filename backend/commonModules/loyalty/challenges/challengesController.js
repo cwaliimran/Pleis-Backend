@@ -1,0 +1,125 @@
+const {
+  sendResponse,
+  parsePaginationParams,
+  validateParams,
+  getReadableErrorMessage,
+  convertTimezoneToUtc,
+} = require("../../../helperUtils/responseUtil");
+
+const challengeService = require("./challengesService");
+
+const createChallenge = async (req, res) => {
+  if (!validateParams(req, res, {
+    rawData: ["title", "taskType", "reward", "endDate", "organization"],
+    dateFields: {
+      endDate: "YYYY-MM-DD"
+    }
+  })) return;
+
+  try {
+    if (req.body.endDate) {
+      req.body.endDate = convertTimezoneToUtc(req.body.endDate, req.user.timezone, "YYYY-MM-DD");
+    }
+    const challenge = await challengeService.createChallenge(req.body);
+    return sendResponse({
+      res,
+      statusCode: 201,
+      translationKey: "challenge_created_successfully",
+      data: challenge,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
+const getChallenges = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  const { keyword, status, date } = req.query;
+
+  try {
+    const { challenges, meta } = await challengeService.getChallenges({
+      page,
+      limit,
+      keyword,
+      status,
+      date,
+      timezone: req.user?.timezone,
+    });
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "challenges_fetched_successfully",
+      data: challenges,
+      meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({ res, statusCode: 500, translationKey: readableError.message, error });
+  }
+};
+
+const getChallengeDetails = async (req, res) => {
+  if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
+  try {
+    const challenge = await challengeService.getChallengeDetails(req.params.id);
+    if (!challenge) {
+      return sendResponse({ res, statusCode: 404, translationKey: "challenge_not_found" });
+    }
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "challenge_details_fetched_successfully",
+      data: challenge,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({ res, statusCode: 500, translationKey: readableError.message, error });
+  }
+};
+
+const updateChallenge = async (req, res) => {
+  if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
+  try {
+    const updated = await challengeService.updateChallenge(req.params.id, req.body);
+    if (!updated) {
+      return sendResponse({ res, statusCode: 404, translationKey: "challenge_not_found" });
+    }
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "challenge_updated_successfully",
+      data: updated,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({ res, statusCode: 500, translationKey: readableError.message, error });
+  }
+};
+
+const deleteChallenge = async (req, res) => {
+  if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
+  try {
+    const deleted = await challengeService.deleteChallenge(req.params.id);
+    if (!deleted) {
+      return sendResponse({ res, statusCode: 404, translationKey: "challenge_not_found" });
+    }
+    return sendResponse({ res, statusCode: 200, translationKey: "challenge_deleted_successfully" });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({ res, statusCode: 500, translationKey: readableError.message, error });
+  }
+};
+
+module.exports = {
+  createChallenge,
+  getChallenges,
+  getChallengeDetails,
+  updateChallenge,
+  deleteChallenge,
+};

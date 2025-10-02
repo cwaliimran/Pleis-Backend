@@ -1,0 +1,26 @@
+const express = require("express");
+const {
+  create,
+  get,
+  getDetails,
+  update,
+  deleteItem,
+} = require("./promotionController");
+const createRateLimiter = require("../../../helperUtils/rateLimiter");
+const auth = require("../../../middlewares/authMiddleware");
+const roleMiddleware = require("../../../middlewares/roleMiddleware");
+
+const router = express.Router();
+
+router.use(auth);
+
+const apiRateLimiter = createRateLimiter("Promotions");
+const apiRateLimiterDetails = createRateLimiter("Promotions/:id");
+
+router.post("/", roleMiddleware(["admin", "organizer", "manager"]), create);
+router.get("/", apiRateLimiter, get);
+router.get("/:id", apiRateLimiterDetails, getDetails);
+router.put("/:id", roleMiddleware(["admin", "organizer", "manager"]), update);
+router.delete("/:id", roleMiddleware(["admin", "organizer", "manager"]), deleteItem);
+
+module.exports = router;

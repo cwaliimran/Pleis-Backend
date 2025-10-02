@@ -31,5 +31,12 @@ router.use("/highlights", require("../commonModules/highlights/highlightRoutes")
 //locations
 router.use("/locations", require("../shared/locations/routes"));
 
+// All menu-related routes now fall under "/menu"
+router.use("/menu", require("./menuRoutes"));
+
+//loyalty
+router.use("/loyalty", require("./loyaltyRoutes"));
+
+
 
 module.exports = router;

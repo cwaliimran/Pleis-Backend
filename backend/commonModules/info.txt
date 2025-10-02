@@ -1,0 +1,2 @@
+Common modules belongs to all user types
+e.g admin, organizer ..
