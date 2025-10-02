@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const basePromotionsSchema = new mongoose.Schema(
+const baseRewardsSchema = new mongoose.Schema(
   {
     image: {
       type: String,
@@ -8,19 +8,21 @@ const basePromotionsSchema = new mongoose.Schema(
     },
     title: { type: String, trim: true, required: true },
     description: { type: String, default: "" },
-    promotionType: {
+    rewardType: {
       type: String,
       required: true,
-      enum: ["happyHour", "buyMenuItem", "productSale"],
+      enum: ["buyMenuItemReward", "customReward", "ticketReward"],
     },
 
-    startDate: { type: Date, default: null }, //contains date/time in happyHour case otherwise just date
-    endDate: { type: Date, default: null },
-    repeatSettings: {
+    sortingType: { // for display purposes and grouping similar rewards
       type: String,
-      enum: ["none", "daily", "weekly", "monthly"],
-      default: "none",
+      default: "",
     },
+
+    minPointsRequiredToClaim: { type: Number, default: null },
+    claimLimit: { type: Number, default: null },
+
+    percentOff: { type: Number, default: null },
 
 
     tierLimit: {
@@ -42,7 +44,7 @@ const basePromotionsSchema = new mongoose.Schema(
     },
 
   },
-  { timestamps: true, discriminatorKey: "promotionType" }
+  { timestamps: true, discriminatorKey: "rewardType" }
 );
 
-module.exports = mongoose.model("Promotion", basePromotionsSchema);
+module.exports = mongoose.model("Reward", baseRewardsSchema);

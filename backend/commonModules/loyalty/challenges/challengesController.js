@@ -9,12 +9,42 @@ const {
 const challengeService = require("./challengesService");
 
 const createChallenge = async (req, res) => {
+
+  //"visit", "earnPoints", "buyMenuItem", "referUsers"
+
+  var dateFields = {}
+  var rawData = ["title", "taskType", "reward", "endDate", "organization", "reward", "reward.rewardType"]
+  var objectIdFields = ["organization"]
+
+  if (req.body.promotionType === "buyMenuItem") {
+    rawData.push("menuItem")
+    objectIdFields.push("menuItem")
+  }
+
+  var rewardType = req.body.reward?.rewardType || ""
+  if (rewardType === "points") {
+    rawData.push("reward.rewardValue")
+  } else if (rewardType === "menuItem") {
+    rawData.push("reward.rewardMenuItem")
+    objectIdFields.push("reward.rewardMenuItem")
+  } else if (rewardType === "specialTicket") {
+    rawData.push("reward.rewardValue")
+  } else if (rewardType === "customReward") {
+    rawData.push("reward.customReward")
+    rawData.push("reward.customReward.image")
+    rawData.push("reward.customReward.title")
+    rawData.push("reward.customReward.description")
+  }
+
   if (!validateParams(req, res, {
-    rawData: ["title", "taskType", "reward", "endDate", "organization"],
+    rawData,
+    dateFields,
+    objectIdFields,
     dateFields: {
       endDate: "YYYY-MM-DD"
     }
   })) return;
+
 
   try {
     if (req.body.endDate) {

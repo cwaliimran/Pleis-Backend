@@ -7040,7 +7040,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -7050,7 +7051,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -7070,7 +7072,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}events/?organization=68bfbd72fdaea1e1b6b52acb",
+									"raw": "{{url}}events/",
 									"host": [
 										"{{url}}events"
 									],
@@ -7090,7 +7092,8 @@
 										},
 										{
 											"key": "organization",
-											"value": "68bfbd72fdaea1e1b6b52acb"
+											"value": "68bfbd72fdaea1e1b6b52acb",
+											"disabled": true
 										}
 									]
 								}
@@ -7373,7 +7376,73 @@
 											]
 										}
 									},
-									"response": []
+									"response": [
+										{
+											"name": "get",
+											"originalRequest": {
+												"method": "GET",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}menu/presets/",
+													"host": [
+														"{{url}}menu"
+													],
+													"path": [
+														"presets",
+														""
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": null,
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "553"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"229-Ep2u7H2m0fO9Qal9mbFphM1RsTU\""
+												},
+												{
+													"key": "Date",
+													"value": "Thu, 02 Oct 2025 07:06:22 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Presets fetched successfully\",\n    \"data\": [\n        {\n            \"title\": \"Lunch Menu\",\n            \"description\": \"Special lunch menu with vegan options\",\n            \"basePrice\": \"0\",\n            \"status\": \"active\",\n            \"_id\": \"68d7dcbcbceec05c711a13fe\",\n            \"createdAt\": \"2025-09-27T12:46:52.444Z\",\n            \"updatedAt\": \"2025-09-27T12:46:52.444Z\",\n            \"__v\": 0,\n            \"imageInfo\": {\n                \"name\": \"68d69359fbccb319035eb13b.png\",\n                \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/68d69359fbccb319035eb13b.png\"\n            }\n        }\n    ],\n    \"meta\": {\n        \"currentPage\": 1,\n        \"totalPages\": 1,\n        \"totalRecords\": 1,\n        \"limit\": 10,\n        \"presetsCount\": {\n            \"total\": 1,\n            \"active\": 1,\n            \"inactive\": 0\n        }\n    }\n}"
+										}
+									]
 								},
 								{
 									"name": "get details",
@@ -7433,7 +7502,79 @@
 											]
 										}
 									},
-									"response": []
+									"response": [
+										{
+											"name": "get details",
+											"originalRequest": {
+												"method": "GET",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}menu/presets/:id",
+													"host": [
+														"{{url}}menu"
+													],
+													"path": [
+														"presets",
+														":id"
+													],
+													"variable": [
+														{
+															"key": "id",
+															"value": "68d7dcbcbceec05c711a13fe"
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": null,
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "439"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"1b7-OTEZiQEmGwg4PxbbUcHZHcW5lh4\""
+												},
+												{
+													"key": "Date",
+													"value": "Thu, 02 Oct 2025 07:06:28 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Preset details fetched successfully\",\n    \"data\": {\n        \"_id\": \"68d7dcbcbceec05c711a13fe\",\n        \"title\": \"Lunch Menu\",\n        \"description\": \"Special lunch menu with vegan options\",\n        \"basePrice\": \"0\",\n        \"status\": \"active\",\n        \"createdAt\": \"2025-09-27T12:46:52.444Z\",\n        \"updatedAt\": \"2025-09-27T12:46:52.444Z\",\n        \"__v\": 0,\n        \"imageInfo\": {\n            \"name\": \"68d69359fbccb319035eb13b.png\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/68d69359fbccb319035eb13b.png\"\n        }\n    }\n}"
+										}
+									]
 								},
 								{
 									"name": "add",
@@ -7485,7 +7626,73 @@
 										},
 										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
 									},
-									"response": []
+									"response": [
+										{
+											"name": "add",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"image\": \"68d69359fbccb319035eb13b.png\",\n    \"title\": \"Lunch Menu\",\n    \"description\": \"Special lunch menu with vegan options\",\n    \"status\": \"active\"\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}menu/presets/",
+													"host": [
+														"{{url}}menu"
+													],
+													"path": [
+														"presets",
+														""
+													]
+												}
+											},
+											"status": "Created",
+											"code": 201,
+											"_postman_previewlanguage": null,
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "431"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"1af-2vXiOfQrveGo21gIjoTQAMyXDPE\""
+												},
+												{
+													"key": "Date",
+													"value": "Thu, 02 Oct 2025 07:10:25 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Preset created successfully\",\n    \"data\": {\n        \"title\": \"Lunch Menu\",\n        \"description\": \"Special lunch menu with vegan options\",\n        \"basePrice\": \"0\",\n        \"status\": \"active\",\n        \"_id\": \"68de25610f668c9ac12f6a86\",\n        \"createdAt\": \"2025-10-02T07:10:25.340Z\",\n        \"updatedAt\": \"2025-10-02T07:10:25.340Z\",\n        \"__v\": 0,\n        \"imageInfo\": {\n            \"name\": \"68d69359fbccb319035eb13b.png\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/68d69359fbccb319035eb13b.png\"\n        }\n    }\n}"
+										}
+									]
 								},
 								{
 									"name": "update",
@@ -7834,7 +8041,72 @@
 										},
 										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
 									},
-									"response": []
+									"response": [
+										{
+											"name": "add",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"title\": \"Lunch Menu\",\n  \"description\": \"Special lunch menu with vegan options\",\n  \"venue\": \"68d69359fbccb319035eb13b\",\n  \"status\": \"active\"\n}\n",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}menu/",
+													"host": [
+														"{{url}}menu"
+													],
+													"path": [
+														""
+													]
+												}
+											},
+											"status": "Created",
+											"code": 201,
+											"_postman_previewlanguage": null,
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "332"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"14c-MqRsdzCejLa/JOHk43iNXYlkRQE\""
+												},
+												{
+													"key": "Date",
+													"value": "Thu, 02 Oct 2025 07:10:33 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Menu created successfully\",\n    \"data\": {\n        \"title\": \"Lunch Menu\",\n        \"description\": \"Special lunch menu with vegan options\",\n        \"venue\": \"68d69359fbccb319035eb13b\",\n        \"creator\": \"68d69157fbccb319035eb118\",\n        \"status\": \"active\",\n        \"_id\": \"68de25690f668c9ac12f6a89\",\n        \"createdAt\": \"2025-10-02T07:10:33.300Z\",\n        \"updatedAt\": \"2025-10-02T07:10:33.300Z\",\n        \"__v\": 0\n    }\n}"
+										}
+									]
 								},
 								{
 									"name": "update",
@@ -8106,7 +8378,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Drinks\",\n  \"status\": \"active\"\n}\n",
+											"raw": "{\n  \"title\": \"Food\",\n  \"status\": \"active\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -8125,7 +8397,73 @@
 										},
 										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
 									},
-									"response": []
+									"response": [
+										{
+											"name": "add",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"title\": \"Food\",\n  \"status\": \"active\"\n}\n",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}menu/categories/",
+													"host": [
+														"{{url}}menu"
+													],
+													"path": [
+														"categories",
+														""
+													]
+												}
+											},
+											"status": "Created",
+											"code": 201,
+											"_postman_previewlanguage": null,
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "204"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"cc-NtcXbeQQoC3+E5oeBWdGzkaY8A0\""
+												},
+												{
+													"key": "Date",
+													"value": "Thu, 02 Oct 2025 07:10:46 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Category created successfully\",\n    \"data\": {\n        \"title\": \"Food\",\n        \"status\": \"active\",\n        \"_id\": \"68de25760f668c9ac12f6a8f\",\n        \"createdAt\": \"2025-10-02T07:10:46.590Z\",\n        \"updatedAt\": \"2025-10-02T07:10:46.590Z\",\n        \"__v\": 0\n    }\n}"
+										}
+									]
 								},
 								{
 									"name": "update",
@@ -11475,7 +11813,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"organization\":\"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe to claim this challenge\",\n    \"taskType\": \"visit\", //\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\": \"68d7ee19c9469f7d754b5c99\"\n    }\n}",
+											"raw": "{\n    \"organization\":\"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe to claim this challenge\",\n    \"taskType\": \"visit\", //\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 5\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -11494,7 +11832,73 @@
 										},
 										"description": "We have 4 combinations\n\nTask Type  \n\\[\"visit\", \"earnPoints\", \"buyMenuItem\", \"referUsers\"\\]  \n  \nReward Type  \n\\[\"points\", \"menuItem\", \"specialTicket\", \"customReward\"\\]  \n  \n1\\. Each task type has its own fields  \n2\\. Each Reward type has its own fields  \n  \nYou can match any task type with any reward type make sure to pass the correct params required for each type."
 									},
-									"response": []
+									"response": [
+										{
+											"name": "add - visit",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"organization\":\"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe to claim this challenge\",\n    \"taskType\": \"visit\", //\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 5\n    }\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}loyalty/challenges/",
+													"host": [
+														"{{url}}loyalty"
+													],
+													"path": [
+														"challenges",
+														""
+													]
+												}
+											},
+											"status": "Created",
+											"code": 201,
+											"_postman_previewlanguage": null,
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "505"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"1f9-3vIAy3rpDZ4AwaaTCeFJQeizDc0\""
+												},
+												{
+													"key": "Date",
+													"value": "Tue, 30 Sep 2025 10:13:16 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Challenge created successfully\",\n    \"data\": {\n        \"title\": \"Check in at Cafe\",\n        \"description\": \"Visit our cafe to claim this challenge\",\n        \"taskType\": \"visit\",\n        \"claimLimit\": 1,\n        \"endDate\": \"2025-12-30T19:00:00.000Z\",\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"status\": \"active\",\n        \"reward\": {\n            \"rewardType\": \"points\",\n            \"rewardValue\": 5\n        },\n        \"_id\": \"68dbad3cb24d98832f06267c\",\n        \"createdAt\": \"2025-09-30T10:13:16.729Z\",\n        \"updatedAt\": \"2025-09-30T10:13:16.729Z\",\n        \"__v\": 0,\n        \"id\": \"68dbad3cb24d98832f06267c\"\n    }\n}"
+										}
+									]
 								},
 								{
 									"name": "add - earn points",
@@ -12288,6 +12692,659 @@
 											],
 											"path": [
 												"promotions",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "68daa70cc6b557bd920a31c8"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Rewards",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/rewards",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"rewards"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "get details",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/rewards/:id",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"rewards",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "68de364aa3e78f8d2560e89e"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add - Custom Reward",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"rewardType\": \"customReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Custom Reward\",\n    \"description\": \"A custom reward for special achievements.\", //optional\n    \"sortingType\": \"food\",\n    \"minPointsRequiredToClaim\": 50, //optional\n    \"claimLimit\": 5, //optional\n    \"percentOff\": 0, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"status\": \"active\",\n    \"customReward\": {\n        \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Special Custom Title\",\n        \"description\": \"A custom description for the reward.\"\n    }\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/rewards/",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"rewards",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": [
+										{
+											"name": "add - Custom Reward",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"rewardType\": \"customReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Custom Reward\",\n    \"description\": \"A custom reward for special achievements.\", //optional\n    \"sortingType\": \"food\",\n    \"minPointsRequiredToClaim\": 50, //optional\n    \"claimLimit\": 5, //optional\n    \"percentOff\": 0, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"status\": \"active\",\n    \"customReward\": {\n        \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Special Custom Title\",\n        \"description\": \"A custom description for the reward.\"\n    }\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}loyalty/rewards/",
+													"host": [
+														"{{url}}loyalty"
+													],
+													"path": [
+														"rewards",
+														""
+													]
+												}
+											},
+											"status": "Created",
+											"code": 201,
+											"_postman_previewlanguage": "",
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "868"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"364-fFPDvVonJuWNo+FfpMVpWY0IUOE\""
+												},
+												{
+													"key": "Date",
+													"value": "Thu, 02 Oct 2025 08:21:59 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"title\": \"Custom Reward\",\n        \"description\": \"A custom reward for special achievements.\",\n        \"rewardType\": \"customReward\",\n        \"sortingType\": \"food\",\n        \"minPointsRequiredToClaim\": 50,\n        \"claimLimit\": 5,\n        \"percentOff\": 0,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"status\": \"active\",\n        \"_id\": \"68de3627a3e78f8d2560e898\",\n        \"customReward\": {\n            \"title\": \"Special Custom Title\",\n            \"description\": \"A custom description for the reward.\",\n            \"mediaInfo\": {\n                \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n                \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/78d8f3b5d9a10a4e5d408a5c.png\"\n            }\n        },\n        \"createdAt\": \"2025-10-02T08:21:59.691Z\",\n        \"updatedAt\": \"2025-10-02T08:21:59.691Z\",\n        \"__v\": 0,\n        \"mediaInfo\": {\n            \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/68d8f3b5d9a10a4e5d408a5c.png\"\n        }\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "add - Ticket Reward",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"rewardType\": \"ticketReward\",\n  \"image\": \"image_url\",\n  \"title\": \"Ticket Reward\",\n  \"description\": \"Get a free ticket for a special event.\", //optional\n  \"sortingType\": \"category\", //optional\n  \"minPointsRequiredToClaim\": 200, //optional\n  \"claimLimit\": 1, //optional\n  \"percentOff\": 0, //optional\n   \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n  \"status\": \"active\",\n  \"event\": \"68de33b7bcddb74bfc2d9dd8\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/rewards/",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"rewards",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": [
+										{
+											"name": "add - Ticket Reward",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"rewardType\": \"ticketReward\",\n  \"image\": \"image_url\",\n  \"title\": \"Ticket Reward\",\n  \"description\": \"Get a free ticket for a special event.\", //optional\n  \"sortingType\": \"category\", //optional\n  \"minPointsRequiredToClaim\": 200, //optional\n  \"claimLimit\": 1, //optional\n  \"percentOff\": 0, //optional\n   \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n  \"status\": \"active\",\n  \"event\": \"68de33b7bcddb74bfc2d9dd8\"\n}\n",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}loyalty/rewards/",
+													"host": [
+														"{{url}}loyalty"
+													],
+													"path": [
+														"rewards",
+														""
+													]
+												}
+											},
+											"status": "Created",
+											"code": 201,
+											"_postman_previewlanguage": "",
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "612"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"264-58Pq29QaPJWLXQL4AFzPNX8NMCg\""
+												},
+												{
+													"key": "Date",
+													"value": "Thu, 02 Oct 2025 08:22:25 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"title\": \"Ticket Reward\",\n        \"description\": \"Get a free ticket for a special event.\",\n        \"rewardType\": \"ticketReward\",\n        \"sortingType\": \"category\",\n        \"minPointsRequiredToClaim\": 200,\n        \"claimLimit\": 1,\n        \"percentOff\": 0,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"status\": \"active\",\n        \"_id\": \"68de3641a3e78f8d2560e89b\",\n        \"event\": \"68de33b7bcddb74bfc2d9dd8\",\n        \"createdAt\": \"2025-10-02T08:22:25.516Z\",\n        \"updatedAt\": \"2025-10-02T08:22:25.516Z\",\n        \"__v\": 0,\n        \"mediaInfo\": {\n            \"image\": \"image_url\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/image_url\"\n        }\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "add - buy Menu Item",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"rewardType\": \"buyMenuItemReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/rewards/",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"rewards",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": [
+										{
+											"name": "add - buy Menu Item",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"rewardType\": \"buyMenuItemReward2\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}loyalty/rewards/",
+													"host": [
+														"{{url}}loyalty"
+													],
+													"path": [
+														"rewards",
+														""
+													]
+												}
+											},
+											"status": "Created",
+											"code": 201,
+											"_postman_previewlanguage": null,
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "560"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"230-NwgBx8shr6rOG57T1nR9MF7lJJg\""
+												},
+												{
+													"key": "Date",
+													"value": "Thu, 02 Oct 2025 06:25:29 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Buy a Menu Item Reward\",\n        \"description\": \"Get a free item after purchasing a menu item.\",\n        \"rewardType\": \"buyMenuItemReward\",\n        \"sortingType\": \"category\",\n        \"minPointsRequiredToClaim\": 100,\n        \"claimLimit\": 1,\n        \"percentOff\": 20,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"status\": \"active\",\n        \"_id\": \"68de1ad95dfd5818fb763433\",\n        \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n        \"createdAt\": \"2025-10-02T06:25:29.084Z\",\n        \"updatedAt\": \"2025-10-02T06:25:29.084Z\",\n        \"__v\": 0\n    }\n}"
+										},
+										{
+											"name": "add - buy Menu Item",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"rewardType\": \"buyMenuItemReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}loyalty/rewards/",
+													"host": [
+														"{{url}}loyalty"
+													],
+													"path": [
+														"rewards",
+														""
+													]
+												}
+											},
+											"status": "Created",
+											"code": 201,
+											"_postman_previewlanguage": "",
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "672"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"2a0-muf0hWmHVKrxNfLtDNpBL5OYjyg\""
+												},
+												{
+													"key": "Date",
+													"value": "Thu, 02 Oct 2025 08:22:34 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"title\": \"Buy a Menu Item Reward\",\n        \"description\": \"Get a free item after purchasing a menu item.\",\n        \"rewardType\": \"buyMenuItemReward\",\n        \"sortingType\": \"Fresh\",\n        \"minPointsRequiredToClaim\": 100,\n        \"claimLimit\": 1,\n        \"percentOff\": 20,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"status\": \"active\",\n        \"_id\": \"68de364aa3e78f8d2560e89e\",\n        \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n        \"createdAt\": \"2025-10-02T08:22:34.639Z\",\n        \"updatedAt\": \"2025-10-02T08:22:34.639Z\",\n        \"__v\": 0,\n        \"mediaInfo\": {\n            \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/68d8f3b5d9a10a4e5d408a5c.png\"\n        }\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "update",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"title\": \"Sample title\",\n  \"description\": \"description of item\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/rewards/:id",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"rewards",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": ""
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/rewards/:id",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"rewards",
 												":id"
 											],
 											"variable": [

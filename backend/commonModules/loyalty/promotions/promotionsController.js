@@ -6,12 +6,13 @@ const {
   convertTimezoneToUtc,
 } = require("../../../helperUtils/responseUtil");
 
-const service = require("./promotionService");
+const service = require("./promotionsService");
 
 const create = async (req, res) => {
 
   var dateFields = {}
   var rawData = ["image", "title", "promotionType", "startDate", "endDate", "organization"]
+  var objectIdFields = ["organization"]
 
   if (req.body.promotionType === "happyHour") {
     dateFields.startDate = "YYYY-MM-DD hh:mm A"
@@ -22,25 +23,24 @@ const create = async (req, res) => {
     dateFields.startDate = "YYYY-MM-DD"
     dateFields.endDate = "YYYY-MM-DD"
     rawData.push("menuItem", "extraPoints")
+    objectIdFields.push("menuItem")
   }
   if (req.body.promotionType === "productSale") {
     dateFields.startDate = "YYYY-MM-DD"
     dateFields.endDate = "YYYY-MM-DD"
     rawData.push("menuItem", "discountedPrice")
-
-
-
+    objectIdFields.push("menuItem")
   }
 
   if (!validateParams(req, res, {
     rawData,
-    dateFields
+    dateFields,
+    objectIdFields
   })) return;
 
 
 
   try {
-
 
     if (req.body.promotionType === "happyHour") {
       //convert to utc

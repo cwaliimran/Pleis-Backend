@@ -236,5 +236,12 @@
   "promotion_details_fetched_successfully": "Promotion details fetched successfully",
   "promotion_updated_successfully": "Promotion updated successfully",
   "promotion_deleted_successfully": "Promotion deleted successfully",
-  "promotions_fetched_successfully": "Promotions fetched successfully"
+  "promotions_fetched_successfully": "Promotions fetched successfully",
+  "end_date_cannot_be_before_start_date": "End date cannot be before start date",
+  "reward_created_successfully": "Reward created successfully",
+  "rewards_fetched_successfully": "Rewards fetched successfully",
+  "reward_not_found": "Reward not found",
+  "reward_details_fetched_successfully": "Reward details fetched successfully",
+  "reward_updated_successfully": "Reward updated successfully",
+  "reward_deleted_successfully": "Reward deleted successfully"
 }
