@@ -33,4 +33,5 @@ router.put("/:id", roleMiddleware(["admin", "organizer", "staff", "manager"]), u
 // Delete a menuItem
 router.delete("/:id", roleMiddleware(["admin", "organizer", "staff", "manager"]), deleteMenuItem);
 
+
 module.exports = router;

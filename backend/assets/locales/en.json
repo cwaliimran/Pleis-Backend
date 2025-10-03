@@ -243,5 +243,6 @@
   "reward_not_found": "Reward not found",
   "reward_details_fetched_successfully": "Reward details fetched successfully",
   "reward_updated_successfully": "Reward updated successfully",
-  "reward_deleted_successfully": "Reward deleted successfully"
+  "reward_deleted_successfully": "Reward deleted successfully",
+  "menu_duplicated_successfully": "Menu duplicated successfully"
 }

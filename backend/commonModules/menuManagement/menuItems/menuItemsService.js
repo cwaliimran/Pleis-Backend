@@ -33,9 +33,9 @@ const getMenuItems = async ({ page, limit, keyword, status, userId, date, menu, 
     {
       $lookup: {
         from: "menus",
-        let: { menuId: "$menu" },
+        let: { menu: "$menu" },
         pipeline: [
-          { $match: { $expr: { $eq: ["$_id", "$$menuId"] } } },
+          { $match: { $expr: { $eq: ["$_id", "$$menu"] } } },
           { $project: { _id: 1, title: 1, image: 1, venue: 1 } },
           {
             $lookup: {
@@ -102,10 +102,11 @@ const getMenuItems = async ({ page, limit, keyword, status, userId, date, menu, 
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   // Side counts
+  const menuFilter = menu ? { menu: menu } : {};
   const [total, active, inactive] = await Promise.all([
-    MenuItems.countDocuments({ creator: userId, status: { $ne: "deleted" } }),
-    MenuItems.countDocuments({ status: "active", creator: userId }),
-    MenuItems.countDocuments({ status: "inactive", creator: userId })
+    MenuItems.countDocuments({ creator: userId, status: { $ne: "deleted" }, ...menuFilter }),
+    MenuItems.countDocuments({ status: "active", creator: userId, ...menuFilter }),
+    MenuItems.countDocuments({ status: "inactive", creator: userId, ...menuFilter })
   ]);
 
   // Shape final docs
@@ -181,6 +182,8 @@ const getMenuItemDetails = async (id) => {
   if (!menuItem) return null;
   return menuItem;
 };
+
+
 
 module.exports = {
   createMenuItem,

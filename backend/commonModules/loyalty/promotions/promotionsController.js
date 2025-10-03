@@ -11,8 +11,8 @@ const service = require("./promotionsService");
 const create = async (req, res) => {
 
   var dateFields = {}
-  var rawData = ["image", "title", "promotionType", "startDate", "endDate", "organization"]
-  var objectIdFields = ["organization"]
+  var rawData = ["image", "title", "promotionType", "startDate", "endDate", "companyOrganizer"]
+  var objectIdFields = ["companyOrganizer"]
 
   if (req.body.promotionType === "happyHour") {
     dateFields.startDate = "YYYY-MM-DD hh:mm A"

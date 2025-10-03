@@ -5,6 +5,8 @@ const {
   updateMenu,
   deleteMenu,
   getMenuDetails,
+  duplicateMenuAndItems
+
 } = require("./menusController");
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
@@ -32,5 +34,12 @@ router.put("/:id", roleMiddleware(["admin", "organizer", "staff", "manager"]), u
 
 // Delete a menu
 router.delete("/:id", roleMiddleware(["admin", "organizer", "staff", "manager"]), deleteMenu);
+
+//duplicate menu and its items
+router.post(
+  "/duplicate/:id",
+  roleMiddleware(["admin", "organizer", "staff", "manager"]),
+  duplicateMenuAndItems
+);
 
 module.exports = router;

@@ -20,9 +20,9 @@ const baseChallengeSchema = new mongoose.Schema(
       default: null,
     },
 
-    organization: {
+    companyOrganizer: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Organizations",
+      ref: "Users",
       required: true,
     },
 

@@ -11,8 +11,8 @@ const service = require("./rewardsService");
 const create = async (req, res) => {
 
   var dateFields = {}
-  var rawData = ["image", "title", "rewardType", "sortingType", "minPointsRequiredToClaim", "organization",]
-  var objectIdFields = ["organization"]
+  var rawData = ["image", "title", "rewardType", "sortingType", "minPointsRequiredToClaim", "companyOrganizer",]
+  var objectIdFields = ["companyOrganizer"]
 
   if (req.body.rewardType === "ticketReward") {
     rawData.push("event")
