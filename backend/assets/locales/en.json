@@ -244,5 +244,13 @@
   "reward_details_fetched_successfully": "Reward details fetched successfully",
   "reward_updated_successfully": "Reward updated successfully",
   "reward_deleted_successfully": "Reward deleted successfully",
-  "menu_duplicated_successfully": "Menu duplicated successfully"
+  "menu_duplicated_successfully": "Menu duplicated successfully",
+  "club_collaboration_already_exists": "Club collaboration already exists",
+  "club_collaboration_creation_failed": "Club collaboration creation failed",
+  "club_collaboration_created_successfully": "Club collaboration created successfully",
+  "club_collaborations_fetched_successfully": "Club collaborations fetched successfully",
+  "club_collaboration_not_found": "Club collaboration not found",
+  "club_collaboration_details_fetched_successfully": "Club collaboration details fetched successfully",
+  "club_collaboration_updated_successfully": "Club collaboration updated successfully",
+  "club_collaboration_deleted_successfully": "Club collaboration deleted successfully"
 }
