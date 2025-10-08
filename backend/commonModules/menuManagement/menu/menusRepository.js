@@ -61,12 +61,30 @@ const getUnassignedMenus = async (userId) => {
     creator: userId
   });
 };
-  
+
+
+const createDuplicatedMenu = async (menuData, session = null) => {
+  const duplicatedMenu = new Menus(menuData);
+  return await duplicatedMenu.save({ session });
+};
+
+const getMenuItemsByMenuId = async (menuId, session = null) => {
+  return await Menus.find({ menu: menuId }).session(session);
+};
+
+const createDuplicatedMenuItem = async (itemData, session = null) => {
+  const duplicatedItem = new Menus(itemData);
+  return await duplicatedItem.save({ session });
+};
+
 
 module.exports = {
   createMenu,
   getMenusWithFilters,
   countMenus,
+  createDuplicatedMenu,
+  getMenuItemsByMenuId,
+  createDuplicatedMenuItem,
   getUnassignedMenus,
   findMenuById,
   updateMenuData,

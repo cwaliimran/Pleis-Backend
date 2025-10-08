@@ -5,7 +5,7 @@ const {
   getDetails,
   update,
   deleteItem,
-} = require("./promotionController");
+} = require("./promotionsController");
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
 const roleMiddleware = require("../../../middlewares/roleMiddleware");

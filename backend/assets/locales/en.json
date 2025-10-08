@@ -236,5 +236,21 @@
   "promotion_details_fetched_successfully": "Promotion details fetched successfully",
   "promotion_updated_successfully": "Promotion updated successfully",
   "promotion_deleted_successfully": "Promotion deleted successfully",
-  "promotions_fetched_successfully": "Promotions fetched successfully"
+  "promotions_fetched_successfully": "Promotions fetched successfully",
+  "end_date_cannot_be_before_start_date": "End date cannot be before start date",
+  "reward_created_successfully": "Reward created successfully",
+  "rewards_fetched_successfully": "Rewards fetched successfully",
+  "reward_not_found": "Reward not found",
+  "reward_details_fetched_successfully": "Reward details fetched successfully",
+  "reward_updated_successfully": "Reward updated successfully",
+  "reward_deleted_successfully": "Reward deleted successfully",
+  "menu_duplicated_successfully": "Menu duplicated successfully",
+  "club_collaboration_already_exists": "Club collaboration already exists",
+  "club_collaboration_creation_failed": "Club collaboration creation failed",
+  "club_collaboration_created_successfully": "Club collaboration created successfully",
+  "club_collaborations_fetched_successfully": "Club collaborations fetched successfully",
+  "club_collaboration_not_found": "Club collaboration not found",
+  "club_collaboration_details_fetched_successfully": "Club collaboration details fetched successfully",
+  "club_collaboration_updated_successfully": "Club collaboration updated successfully",
+  "club_collaboration_deleted_successfully": "Club collaboration deleted successfully"
 }

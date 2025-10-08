@@ -1,6 +1,6 @@
 const { buildKeywordQueryFromModels } = require("../../../helperUtils/queryUtil");
 const { Promotion } = require("./models/Promotion");
-const repository = require("./promotionRepository");
+const repository = require("./promotionsRepository");
 const mongoose = require("mongoose");
 const { generateMeta } = require("../../../helperUtils/responseUtil");
 const formatPromotion = require("./utils/formatPromotion");

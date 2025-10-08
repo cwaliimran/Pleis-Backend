@@ -254,7 +254,14 @@ const updateUser = async (req, res, options = {}) => {
         bankAccountNumber: companyDetails.bankAccountNumber ?? user.companyDetails?.bankAccountNumber,
         representativeName: companyDetails.representativeName ?? user.companyDetails?.representativeName,
         location: companyDetails.location ?? user.companyDetails?.location,
-        suppliers: companyDetails.suppliers ?? user.companyDetails?.suppliers
+        suppliers: companyDetails.suppliers ?? user.companyDetails?.suppliers,
+
+        //update loyaltySettings if provided
+        loyaltySettings: {
+          model: companyDetails.loyaltySettings?.model ?? user.companyDetails?.loyaltySettings?.model ?? "essential",
+          pointValuePercentage: companyDetails.loyaltySettings?.pointValuePercentage ?? user.companyDetails?.loyaltySettings?.pointValuePercentage ?? 0
+        }
+        
       };
     }
 

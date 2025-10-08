@@ -32,6 +32,9 @@ const createMenu = async (req, res) => {
     creator: req.user._id,
   };
 
+  //convert venue to array if it's not
+  data.venue = [data.venue];
+
   try {
     const menu = await menusService.createMenu(data);
     if (!menu) {
@@ -217,6 +220,44 @@ const deleteMenu = async (req, res) => {
     });
   }
 };
+const duplicateMenuAndItems = async (req, res) => {
+  const { id: menu } = req.params;
+  const { venue } = req.body;
+
+  if (
+    !validateParams(req, res, {
+      rawData: ["venue"],
+      pathParams: ["id"],
+      objectIdFields: ["id", "venue"],
+    })
+  )
+    return;
+  try {
+    const duplicatedMenu = await menusService.duplicateMenuAndItems(menu, venue);
+    if (!duplicatedMenu) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "menu_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 201,
+      translationKey: "menu_duplicated_successfully",
+      data: duplicatedMenu,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+}
 
 module.exports = {
   createMenu,
@@ -224,4 +265,5 @@ module.exports = {
   updateMenu,
   deleteMenu,
   getMenuDetails,
+  duplicateMenuAndItems
 };

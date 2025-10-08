@@ -161,10 +161,67 @@ const getMenuDetails = async (id) => {
   return menu;
 };
 
+
+const duplicateMenuAndItems = async (menuId, venue) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    // Step 1: Duplicate the Menu
+    const menu = await menuRepo.findMenuById(menuId);
+    if (!menu) {
+      throw new Error('Menu not found');
+    }
+
+    if (menu.venue.toString() === venue.toString()) {
+      throw new Error('Old and new venue cannot be the same');
+    }
+
+    //check if new venue has already a menu with
+    const existingMenu = await Menus.findOne({ venue: venue, status: { $ne: 'deleted' } }).session(session);
+    if (existingMenu) {
+      throw new Error('A menu already exists for this venue');
+    }
+
+    const duplicatedMenu = {
+      ...menu.toObject(),
+      _id: new mongoose.Types.ObjectId(),
+      title: `${menu.title}`,  // Optionally append "(Copy)" to the title
+      venue: venue,
+    };
+
+    const savedDuplicatedMenu = await menuRepo.createDuplicatedMenu(duplicatedMenu, session);
+
+    // Step 2: Duplicate the Menu Items
+    const menuItems = await menuRepo.getMenuItemsByMenuId(menu, session);
+
+    const duplicatedMenuItemsPromises = menuItems.map(item => {
+      const duplicatedItem = {
+        ...item.toObject(),
+        _id: new mongoose.Types.ObjectId(),
+        menu: savedDuplicatedMenu._id,
+      };
+      return menuRepo.createDuplicatedMenuItem(duplicatedItem, session);
+    });
+
+    await Promise.all(duplicatedMenuItemsPromises);
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return savedDuplicatedMenu;
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
+};
+
 module.exports = {
   createMenu,
   getMenus,
   updateMenu,
   getMenuDetails,
+  duplicateMenuAndItems,
   deleteMenu,
 };
