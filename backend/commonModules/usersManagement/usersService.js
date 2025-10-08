@@ -131,7 +131,8 @@ const updateUser = async (req, res, options = {}) => {
     deviceId,
     deviceType,
     termsAccepted,
-    status
+    status,
+    location
   } = req.body;
 
   const session = await mongoose.startSession();
@@ -196,6 +197,7 @@ const updateUser = async (req, res, options = {}) => {
     if (gender) user.gender = gender;
     if (dob) user.dob = dob;
     if (status) user.accountState.status = status;
+    if (location) user.location = location;
 
 
     // ✅ Handle organization changes for manager/staff
@@ -252,7 +254,14 @@ const updateUser = async (req, res, options = {}) => {
         bankAccountNumber: companyDetails.bankAccountNumber ?? user.companyDetails?.bankAccountNumber,
         representativeName: companyDetails.representativeName ?? user.companyDetails?.representativeName,
         location: companyDetails.location ?? user.companyDetails?.location,
-        suppliers: companyDetails.suppliers ?? user.companyDetails?.suppliers
+        suppliers: companyDetails.suppliers ?? user.companyDetails?.suppliers,
+
+        //update loyaltySettings if provided
+        loyaltySettings: {
+          model: companyDetails.loyaltySettings?.model ?? user.companyDetails?.loyaltySettings?.model ?? "essential",
+          pointValuePercentage: companyDetails.loyaltySettings?.pointValuePercentage ?? user.companyDetails?.loyaltySettings?.pointValuePercentage ?? 0
+        }
+        
       };
     }
 

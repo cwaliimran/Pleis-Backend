@@ -36,15 +36,44 @@ const CompanySchema = new mongoose.Schema(
         type: String, // Postal code
         default: "",
       },
+      state: {
+        type: String,
+        default: "",
+      },
     },
+
     suppliers: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Suppliers",
       },
     ],
-      default: [],
+    default: [],
+
+    loyaltySettings: {
+      model: {
+        type: String,
+        enum: ["essential", "preferred", "premier"],
+        default: "essential",
+      },
+
+      pointValuePercentage: {
+        type: Number,
+        default: 0,
+      },
+
+      linkedClubs: [
+        {
+          club: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "LoyaltyClubs",
+          },
+          //club points and collaboration add here
+        },
+      ],
+    },
   },
+
   {
     _id: false,
   }

@@ -1,0 +1,83 @@
+const mongoose = require("mongoose");
+const rewardSchema = require("../Reward/rewardSchema");
+
+const baseChallengeSchema = new mongoose.Schema(
+  {
+    title: { type: String, trim: true, required: true },
+    description: { type: String, default: "" },
+    taskType: {
+      type: String,
+      required: true,
+      enum: ["visit", "earnPoints", "buyMenuItem", "referUsers"],
+    },
+
+    claimLimit: { type: Number, default: null },
+    endDate: { type: Date, default: null },
+
+    tierLimit: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Tiers",
+      default: null,
+    },
+
+    companyOrganizer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Users",
+      required: true,
+    },
+
+    status: {
+      type: String,
+      enum: ["active", "inactive", "completed", "deleted"],
+      default: "active",
+    },
+
+    reward: rewardSchema, // nested reward
+  },
+  { timestamps: true, discriminatorKey: "taskType" }
+);
+
+// ✅ Centralized transformation logic
+baseChallengeSchema.methods.toJSON = function () {
+  const obj = this.toObject({ virtuals: true });
+
+  // Clean reward fields
+  if (obj.reward) {
+    switch (obj.reward.rewardType) {
+      case "points":
+      case "specialTicket":
+        delete obj.reward.rewardMenuItem;
+        delete obj.reward.customReward;
+        break;
+      case "menuItem":
+        delete obj.reward.rewardValue;
+        delete obj.reward.customReward;
+        break;
+      case "customReward":
+        delete obj.reward.rewardValue;
+        delete obj.reward.rewardMenuItem;
+        break;
+    }
+  }
+
+  // Clean task fields
+  switch (obj.taskType) {
+    case "visit":
+      delete obj.taskValue;
+      delete obj.taskMenuItem;
+      break;
+    case "earnPoints":
+      delete obj.taskMenuItem;
+      break;
+    case "buyMenuItem":
+      delete obj.taskValue;
+      break;
+    case "referUsers":
+      delete obj.taskMenuItem;
+      break;
+  }
+
+  return obj;
+};
+
+module.exports = mongoose.model("Challenge", baseChallengeSchema);
