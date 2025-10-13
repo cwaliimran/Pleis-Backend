@@ -73,6 +73,11 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
+    referralCode: {
+      type: String,
+      default: "",
+    },
+
     organizationName: {
       type: String,
       default: "",

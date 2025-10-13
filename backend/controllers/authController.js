@@ -10,8 +10,9 @@ const {
 const { formatUserResponse } = require("../helperUtils/userResponseUtil");
 const { sendEmailViaMailgun } = require("../helperUtils/emailUtil");
 const {
-  forgotPasswordEmailTemplate,
-  registrationEmailTemplate,
+  forgotPasswordViaLinkEmailTemplate,
+  registrationViaLinkEmailTemplate,
+  forgotPasswordViaOtpEmailTemplate,
 } = require("../helperUtils/emailTemplates");
 const { createOrSkipDevice, Devices } = require("../models/Devices");
 const validator = require("validator");
@@ -326,8 +327,8 @@ const generateOtp = async (req, res) => {
 
     // Send email or SMS within the transaction
     const subject = "Password Reset OTP";
-    // const mBody = forgotPasswordOtpEmailTemplate(otp);
-    // await sendEmailViaMailgun([email], subject, mBody);
+    const mBody = forgotPasswordViaOtpEmailTemplate(otp);
+    await sendEmailViaMailgun([email], subject, mBody);
 
     await session.commitTransaction();
     session.endSession();
@@ -562,7 +563,7 @@ const resendEmailVerificationLink = async (req, res) => {
     await user.save();
 
     // Send the verification email
-    const mBody = registrationEmailTemplate(tokenData.verificationLink);
+    const mBody = registrationViaLinkEmailTemplate(tokenData.verificationLink);
     await sendEmailViaMailgun(user.email, "Email Verification", mBody);
 
     return sendResponse({
@@ -609,7 +610,7 @@ const sendPasswordResetLink = async (req, res) => {
 
   await user.save();
 
-  const mBody = forgotPasswordEmailTemplate(tokenData.resetLink);
+  const mBody = forgotPasswordViaLinkEmailTemplate(tokenData.resetLink);
   await sendEmailViaMailgun(user.email, "Password Reset", mBody);
 
   return sendResponse({

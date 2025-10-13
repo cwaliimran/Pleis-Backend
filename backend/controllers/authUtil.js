@@ -10,7 +10,7 @@ const Organizations = require("../commonModules/organizations/Organization");
 const { FEATURE_KEYS } = require("../admin/features/Feature");
 const { validatePhoneNumber } = require("../helperUtils/validationsUtil");
 const { sendEmailViaMailgun } = require("../helperUtils/emailUtil");
-const { registrationEmailTemplate } = require("../helperUtils/emailTemplates");
+const { registrationViaLinkEmailTemplate, registrationViaOtpEmailTemplate } = require("../helperUtils/emailTemplates");
 
 // ✅ Main utility function
 const registerUserUtility = async (req, res, options = {}) => {
@@ -35,6 +35,7 @@ const registerUserUtility = async (req, res, options = {}) => {
     organizations = [], // multiple organizations for managers
     modules = [],
     deviceId,
+    referralCode = "",
     deviceType,
   } = req.body;
 
@@ -57,7 +58,7 @@ const registerUserUtility = async (req, res, options = {}) => {
     if (userType === "user") {
       rawData.push("dob", "gender", "username", "phoneNumber");
       dateFields = { dob: "YYYY-MM-DD" };
-      // enumFields = { gender: ["", "Male", "Female", "Other"] };
+      enumFields = { gender: ["", "Male", "Female", "Other"] };
     }
     if (userType === "staff") {
       rawData.push("organizations", "phoneNumber");
@@ -184,6 +185,7 @@ const registerUserUtility = async (req, res, options = {}) => {
       username,
       gender,
       dob,
+      referralCode,
       organizationName,
       password,
       timezone,
@@ -234,11 +236,19 @@ const registerUserUtility = async (req, res, options = {}) => {
     // ✅ Generate email verification token if not auto-verified
     let emailVerificationLink = null;
     if (!autoVerify) {
-      const tokenData = user.generateEmailVerificationToken();
-      emailVerificationLink = tokenData.rawToken;
-      user.emailVerificationLink = tokenData.rawToken;
-      const mBody = registrationEmailTemplate(tokenData.verificationLink);
-      await sendEmailViaMailgun(user.email, "Email Verification", mBody);
+      if (userType === "user") {
+        //send otp
+        const otp = user.generateOtp("email", user.timezone);
+        const mBody = registrationViaOtpEmailTemplate(otp);
+        await sendEmailViaMailgun(user.email, "Email Verification", mBody);
+      } else {
+        // send email verification link
+        const tokenData = user.generateEmailVerificationToken();
+        emailVerificationLink = tokenData.rawToken;
+        user.emailVerificationLink = tokenData.rawToken;
+        const mBody = registrationViaLinkEmailTemplate(tokenData.verificationLink);
+        await sendEmailViaMailgun(user.email, "Email Verification", mBody);
+      }
     }
 
     await user.save({ session });

@@ -1688,7 +1688,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    // \"profileIcon\": \"noImage.png\",\n    // \"firstName\": \"{{$randomUserName}}\",\n    // \"lastName\": \"M\",\n    // \"organizationName\":\"Tech Innovators Ltd\",\n    // \"phoneNumber\": {\n    //     \"code\": \"+92\",\n    //     \"number\": \"3001122104\"\n    // },\n      \"location\": {\n          \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYKaff\",\n            \"postalCode\": \"10012\"\n        },\n    // \"deviceType\": \"web\", //andoird/ios/web\n    // \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    // \"timezone\": \"Asia/Karachi\"\n    \n    // ,\n    \"companyDetails\":{\n        \"oib\": \"5492948232\",\n        \"location\": {\n          \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYKa\",\n            \"postalCode\": \"10012\"\n        }\n    },\n\n    \"termsAccepted\":true\n}",
+											"raw": "{\n    // \"profileIcon\": \"noImage.png\",\n    // \"firstName\": \"{{$randomUserName}}\",\n    // \"lastName\": \"M\",\n    // \"organizationName\":\"Tech Innovators Ltd\",\n    // \"phoneNumber\": {\n    //     \"code\": \"+92\",\n    //     \"number\": \"3001122104\"\n    // },\n      \"location\": {\n          \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYKaff\",\n            \"postalCode\": \"10012\"\n        },\n    // \"deviceType\": \"web\", //andoird/ios/web\n    // \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    // \"timezone\": \"Asia/Karachi\"\n    \n    // ,\n    \"companyDetails\":{\n        \"oib\": \"5492948232\",\n        \"location\": {\n          \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYKa\",\n            \"postalCode\": \"10012\"\n        },\n        \"loyaltySettings\":{\n            \"model\":\"essential\",\n            \"pointValuePercentage\":2.5\n        }\n    },\n\n\n    \"termsAccepted\":true\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -6207,7 +6207,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -6217,7 +6218,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -6226,7 +6228,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"title\": \"Club De Moon\",\n    \"floorPlan\": \"a0aa3def-47ef-4e43-a5da-8fb36fa0c529.png\",\n    \"venueType\": \"68b2a8c62e76b4cdac8be34d\",\n    \"organization\": \"68932a0dce6408026b883458\", //optional\n    \"location\": {\n        \"fullAddress\":\"123 Seaside Blvd\",\n        \"state\":\"Col\",\n        \"city\": \"Split\",\n        \"postalCode\": \"21000\",\n        \"country\": \"Croatia\",\n        \"coordinates\": [\n            43.5081, //lng\n            16.4402 //lat\n        ]\n    }\n}",
+									"raw": "{\n    \"title\": \"Venue De Lama\",\n    \"floorPlan\": \"a0aa3def-47ef-4e43-a5da-8fb36fa0c529.png\",\n    \"venueType\": \"68b2a8c62e76b4cdac8be34d\",\n    \"organization\": \"68932a0dce6408026b883458\", //optional\n    \"location\": {\n        \"fullAddress\":\"123 Seaside Blvd\",\n        \"state\":\"Col\",\n        \"city\": \"Split\",\n        \"postalCode\": \"21000\",\n        \"country\": \"Croatia\",\n        \"coordinates\": [\n            43.5081, //lng\n            16.4402 //lat\n        ]\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -7985,7 +7987,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "68d69376fbccb319035eb13e"
+													"value": "68de726e80b634b07eade829"
 												}
 											]
 										}
@@ -8109,6 +8111,64 @@
 									]
 								},
 								{
+									"name": "duplicate",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"venue\": \"68de734580b634b07eade84c\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}menu/duplicate/:menuId",
+											"host": [
+												"{{url}}menu"
+											],
+											"path": [
+												"duplicate",
+												":menuId"
+											],
+											"variable": [
+												{
+													"key": "menuId",
+													"value": "68de726e80b634b07eade829"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
 									"name": "update",
 									"event": [
 										{
@@ -8214,7 +8274,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "68d693c7fbccb319035eb152"
+													"value": "68de735980b634b07eade851"
 												}
 											]
 										},
@@ -8638,7 +8698,7 @@
 											"query": [
 												{
 													"key": "menu",
-													"value": "68d69376fbccb319035eb13e",
+													"value": "68de726e80b634b07eade829",
 													"disabled": true
 												},
 												{
@@ -8765,7 +8825,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"image\": \"burger.png\",\n  \"title\": \"Cheese Burger\",\n  \"description\": \"A delicious cheeseburger with lettuce, tomato, and fries.\",\n  \"type\": \"food\",\n  \"category\": \"68d699f66513527e7a236563\",\n  \"basePrice\": 10.99,\n  \"discountPrice\": 8.99,\n  \"taxPercent\": 5,\n  \"menu\": \"68d69376fbccb319035eb13e\",\n  \"startTime\": \"10:30 AM\",\n  \"endTime\": \"05:30 PM\",\n  \"status\": \"active\"\n}\n",
+											"raw": "{\n  \"image\": \"burger.png\",\n  \"title\": \"Cheese Burger\",\n  \"description\": \"A delicious cheeseburger with lettuce, tomato, and fries.\",\n  \"type\": \"food\",\n  \"category\": \"68d699f66513527e7a236563\",\n  \"basePrice\": 10.99,\n  \"discountPrice\": 8.99,\n  \"taxPercent\": 5,\n  \"menu\": \"68de726e80b634b07eade829\",\n  \"startTime\": \"10:30 AM\",\n  \"endTime\": \"05:30 PM\",\n  \"status\": \"active\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -11813,7 +11873,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"organization\":\"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe to claim this challenge\",\n    \"taskType\": \"visit\", //\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 5\n    }\n}",
+											"raw": "{\n    \"companyOrganizer\":\"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe to claim this challenge\",\n    \"taskType\": \"visit\", //\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 5\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -11840,7 +11900,7 @@
 												"header": [],
 												"body": {
 													"mode": "raw",
-													"raw": "{\n    \"organization\":\"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe to claim this challenge\",\n    \"taskType\": \"visit\", //\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 5\n    }\n}",
+													"raw": "{\n    \"companyOrganizer\":\"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe to claim this challenge\",\n    \"taskType\": \"visit\", //\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 5\n    }\n}",
 													"options": {
 														"raw": {
 															"language": "json"
@@ -11896,7 +11956,7 @@
 												}
 											],
 											"cookie": [],
-											"body": "{\n    \"message\": \"Challenge created successfully\",\n    \"data\": {\n        \"title\": \"Check in at Cafe\",\n        \"description\": \"Visit our cafe to claim this challenge\",\n        \"taskType\": \"visit\",\n        \"claimLimit\": 1,\n        \"endDate\": \"2025-12-30T19:00:00.000Z\",\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"status\": \"active\",\n        \"reward\": {\n            \"rewardType\": \"points\",\n            \"rewardValue\": 5\n        },\n        \"_id\": \"68dbad3cb24d98832f06267c\",\n        \"createdAt\": \"2025-09-30T10:13:16.729Z\",\n        \"updatedAt\": \"2025-09-30T10:13:16.729Z\",\n        \"__v\": 0,\n        \"id\": \"68dbad3cb24d98832f06267c\"\n    }\n}"
+											"body": "{\n    \"message\": \"Challenge created successfully\",\n    \"data\": {\n        \"title\": \"Check in at Cafe\",\n        \"description\": \"Visit our cafe to claim this challenge\",\n        \"taskType\": \"visit\",\n        \"claimLimit\": 1,\n        \"endDate\": \"2025-12-30T19:00:00.000Z\",\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n        \"status\": \"active\",\n        \"reward\": {\n            \"rewardType\": \"points\",\n            \"rewardValue\": 5\n        },\n        \"_id\": \"68dbad3cb24d98832f06267c\",\n        \"createdAt\": \"2025-09-30T10:13:16.729Z\",\n        \"updatedAt\": \"2025-09-30T10:13:16.729Z\",\n        \"__v\": 0,\n        \"id\": \"68dbad3cb24d98832f06267c\"\n    }\n}"
 										}
 									]
 								},
@@ -11931,7 +11991,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Walk 10,000 steps\",\n    \"description\": \"Earn points by being active\",\n    \"taskType\": \"earnPoints\",\n    \"taskValue\": 500,\n    \"claimLimit\": 5,\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\": \"68d7ee19c9469f7d754b5c99\"\n    }\n}",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Walk 10,000 steps\",\n    \"description\": \"Earn points by being active\",\n    \"taskType\": \"earnPoints\",\n    \"taskValue\": 500,\n    \"claimLimit\": 5,\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\": \"68d7ee19c9469f7d754b5c99\"\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -11958,7 +12018,7 @@
 												"header": [],
 												"body": {
 													"mode": "raw",
-													"raw": "{\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Walk 10,000 steps\",\n    \"description\": \"Earn points by being active\",\n    \"taskType\": \"earnPoints\",\n    \"taskValue\": 500,\n    \"claimLimit\": 5,\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\": \"68d7ee19c9469f7d754b5c99\"\n    }\n}",
+													"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Walk 10,000 steps\",\n    \"description\": \"Earn points by being active\",\n    \"taskType\": \"earnPoints\",\n    \"taskValue\": 500,\n    \"claimLimit\": 5,\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\": \"68d7ee19c9469f7d754b5c99\"\n    }\n}",
 													"options": {
 														"raw": {
 															"language": "json"
@@ -12048,7 +12108,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -12075,7 +12135,7 @@
 												"header": [],
 												"body": {
 													"mode": "raw",
-													"raw": "{\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
+													"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
 													"options": {
 														"raw": {
 															"language": "json"
@@ -12165,7 +12225,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Invite your friends\",\n    \"description\": \"Refer 3 friends to unlock rewards\",\n    \"taskType\": \"referUsers\",\n    \"taskValue\": 3,\n    \"claimLimit\": 10,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"customReward\",\n        \"customReward\": {\n            \"image\": \"68d7ee19c9469f7d754b5c99.png\",\n            \"title\": \"VIP Badge\",\n            \"description\": \"Special recognition for referring friends\"\n        }\n    }\n}",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Invite your friends\",\n    \"description\": \"Refer 3 friends to unlock rewards\",\n    \"taskType\": \"referUsers\",\n    \"taskValue\": 3,\n    \"claimLimit\": 10,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"customReward\",\n        \"customReward\": {\n            \"image\": \"68d7ee19c9469f7d754b5c99.png\",\n            \"title\": \"VIP Badge\",\n            \"description\": \"Special recognition for referring friends\"\n        }\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -12192,7 +12252,7 @@
 												"header": [],
 												"body": {
 													"mode": "raw",
-													"raw": "{\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Invite your friends\",\n    \"description\": \"Refer 3 friends to unlock rewards\",\n    \"taskType\": \"referUsers\",\n    \"taskValue\": 3,\n    \"claimLimit\": 10,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"customReward\",\n        \"customReward\": {\n            \"image\": \"68d7ee19c9469f7d754b5c99.png\",\n            \"title\": \"VIP Badge\",\n            \"description\": \"Special recognition for referring friends\"\n        }\n    }\n}",
+													"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Invite your friends\",\n    \"description\": \"Refer 3 friends to unlock rewards\",\n    \"taskType\": \"referUsers\",\n    \"taskValue\": 3,\n    \"claimLimit\": 10,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"customReward\",\n        \"customReward\": {\n            \"image\": \"68d7ee19c9469f7d754b5c99.png\",\n            \"title\": \"VIP Badge\",\n            \"description\": \"Special recognition for referring friends\"\n        }\n    }\n}",
 													"options": {
 														"raw": {
 															"language": "json"
@@ -12516,7 +12576,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"happyHour\", //[\"happyHour\", \"buyMenuItem\", \"productSale\"]\n    \"title\": \"Sample title\",\n    \"description\": \"description of item\",\n    \"startDate\":\"2025-11-05 05:00 AM\",\n    \"endDate\": \"2025-11-05 11:00 AM\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"pointsMultiplier\":\"1.5\",\n    \"status\": \"active\"\n}",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"happyHour\", //[\"happyHour\", \"buyMenuItem\", \"productSale\"]\n    \"title\": \"Sample title\",\n    \"description\": \"description of item\",\n    \"startDate\":\"2025-11-05 05:00 AM\",\n    \"endDate\": \"2025-11-05 11:00 AM\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"pointsMultiplier\":\"1.5\",\n    \"status\": \"active\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -12568,7 +12628,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"buyMenuItem\",\n    \"title\": \"Buy Coffee\",\n    \"description\": \"Best coffee to make your day\",\n    \"startDate\":\"2025-11-05\",\n    \"endDate\": \"2025-11-15\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"extraPoints\": 5,\n    \"status\": \"active\"\n}",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"buyMenuItem\",\n    \"title\": \"Buy Coffee\",\n    \"description\": \"Best coffee to make your day\",\n    \"startDate\":\"2025-11-05\",\n    \"endDate\": \"2025-11-15\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"extraPoints\": 5,\n    \"status\": \"active\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -12816,7 +12876,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "68de364aa3e78f8d2560e89e"
+													"value": "68de3771d928079c34f32824"
 												}
 											]
 										}
@@ -12854,7 +12914,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"rewardType\": \"customReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Custom Reward\",\n    \"description\": \"A custom reward for special achievements.\", //optional\n    \"sortingType\": \"food\",\n    \"minPointsRequiredToClaim\": 50, //optional\n    \"claimLimit\": 5, //optional\n    \"percentOff\": 0, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"status\": \"active\",\n    \"customReward\": {\n        \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Special Custom Title\",\n        \"description\": \"A custom description for the reward.\"\n    }\n}",
+											"raw": "{\n    \"rewardType\": \"customReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Custom Reward\",\n    \"description\": \"A custom reward for special achievements.\", //optional\n    \"sortingType\": \"food\",\n    \"minPointsRequiredToClaim\": 50, //optional\n    \"claimLimit\": 5, //optional\n    \"percentOff\": 0, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"status\": \"active\",\n    \"customReward\": {\n        \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Special Custom Title\",\n        \"description\": \"A custom description for the reward.\"\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -12881,7 +12941,7 @@
 												"header": [],
 												"body": {
 													"mode": "raw",
-													"raw": "{\n    \"rewardType\": \"customReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Custom Reward\",\n    \"description\": \"A custom reward for special achievements.\", //optional\n    \"sortingType\": \"food\",\n    \"minPointsRequiredToClaim\": 50, //optional\n    \"claimLimit\": 5, //optional\n    \"percentOff\": 0, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"status\": \"active\",\n    \"customReward\": {\n        \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Special Custom Title\",\n        \"description\": \"A custom description for the reward.\"\n    }\n}",
+													"raw": "{\n    \"rewardType\": \"customReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Custom Reward\",\n    \"description\": \"A custom reward for special achievements.\", //optional\n    \"sortingType\": \"food\",\n    \"minPointsRequiredToClaim\": 50, //optional\n    \"claimLimit\": 5, //optional\n    \"percentOff\": 0, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"status\": \"active\",\n    \"customReward\": {\n        \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Special Custom Title\",\n        \"description\": \"A custom description for the reward.\"\n    }\n}",
 													"options": {
 														"raw": {
 															"language": "json"
@@ -12901,7 +12961,7 @@
 											},
 											"status": "Created",
 											"code": 201,
-											"_postman_previewlanguage": "",
+											"_postman_previewlanguage": null,
 											"header": [
 												{
 													"key": "X-Powered-By",
@@ -12937,7 +12997,7 @@
 												}
 											],
 											"cookie": [],
-											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"title\": \"Custom Reward\",\n        \"description\": \"A custom reward for special achievements.\",\n        \"rewardType\": \"customReward\",\n        \"sortingType\": \"food\",\n        \"minPointsRequiredToClaim\": 50,\n        \"claimLimit\": 5,\n        \"percentOff\": 0,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"status\": \"active\",\n        \"_id\": \"68de3627a3e78f8d2560e898\",\n        \"customReward\": {\n            \"title\": \"Special Custom Title\",\n            \"description\": \"A custom description for the reward.\",\n            \"mediaInfo\": {\n                \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n                \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/78d8f3b5d9a10a4e5d408a5c.png\"\n            }\n        },\n        \"createdAt\": \"2025-10-02T08:21:59.691Z\",\n        \"updatedAt\": \"2025-10-02T08:21:59.691Z\",\n        \"__v\": 0,\n        \"mediaInfo\": {\n            \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/68d8f3b5d9a10a4e5d408a5c.png\"\n        }\n    }\n}"
+											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"title\": \"Custom Reward\",\n        \"description\": \"A custom reward for special achievements.\",\n        \"rewardType\": \"customReward\",\n        \"sortingType\": \"food\",\n        \"minPointsRequiredToClaim\": 50,\n        \"claimLimit\": 5,\n        \"percentOff\": 0,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n        \"status\": \"active\",\n        \"_id\": \"68de3627a3e78f8d2560e898\",\n        \"customReward\": {\n            \"title\": \"Special Custom Title\",\n            \"description\": \"A custom description for the reward.\",\n            \"mediaInfo\": {\n                \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n                \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/78d8f3b5d9a10a4e5d408a5c.png\"\n            }\n        },\n        \"createdAt\": \"2025-10-02T08:21:59.691Z\",\n        \"updatedAt\": \"2025-10-02T08:21:59.691Z\",\n        \"__v\": 0,\n        \"mediaInfo\": {\n            \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/68d8f3b5d9a10a4e5d408a5c.png\"\n        }\n    }\n}"
 										}
 									]
 								},
@@ -12972,7 +13032,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"rewardType\": \"ticketReward\",\n  \"image\": \"image_url\",\n  \"title\": \"Ticket Reward\",\n  \"description\": \"Get a free ticket for a special event.\", //optional\n  \"sortingType\": \"category\", //optional\n  \"minPointsRequiredToClaim\": 200, //optional\n  \"claimLimit\": 1, //optional\n  \"percentOff\": 0, //optional\n   \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n  \"status\": \"active\",\n  \"event\": \"68de33b7bcddb74bfc2d9dd8\"\n}\n",
+											"raw": "{\n  \"rewardType\": \"ticketReward\",\n  \"image\": \"image_url\",\n  \"title\": \"Ticket Reward\",\n  \"description\": \"Get a free ticket for a special event.\", //optional\n  \"sortingType\": \"category\", //optional\n  \"minPointsRequiredToClaim\": 200,\n  \"claimLimit\": 1, //optional\n  \"percentOff\": 0, //optional\n   \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n  \"status\": \"active\",\n  \"event\": \"68de33b7bcddb74bfc2d9dd8\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -12999,7 +13059,7 @@
 												"header": [],
 												"body": {
 													"mode": "raw",
-													"raw": "{\n  \"rewardType\": \"ticketReward\",\n  \"image\": \"image_url\",\n  \"title\": \"Ticket Reward\",\n  \"description\": \"Get a free ticket for a special event.\", //optional\n  \"sortingType\": \"category\", //optional\n  \"minPointsRequiredToClaim\": 200, //optional\n  \"claimLimit\": 1, //optional\n  \"percentOff\": 0, //optional\n   \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n  \"status\": \"active\",\n  \"event\": \"68de33b7bcddb74bfc2d9dd8\"\n}\n",
+													"raw": "{\n  \"rewardType\": \"ticketReward\",\n  \"image\": \"image_url\",\n  \"title\": \"Ticket Reward\",\n  \"description\": \"Get a free ticket for a special event.\", //optional\n  \"sortingType\": \"category\", //optional\n  \"minPointsRequiredToClaim\": 200, //optional\n  \"claimLimit\": 1, //optional\n  \"percentOff\": 0, //optional\n   \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n  \"status\": \"active\",\n  \"event\": \"68de33b7bcddb74bfc2d9dd8\"\n}\n",
 													"options": {
 														"raw": {
 															"language": "json"
@@ -13019,7 +13079,7 @@
 											},
 											"status": "Created",
 											"code": 201,
-											"_postman_previewlanguage": "",
+											"_postman_previewlanguage": null,
 											"header": [
 												{
 													"key": "X-Powered-By",
@@ -13055,7 +13115,7 @@
 												}
 											],
 											"cookie": [],
-											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"title\": \"Ticket Reward\",\n        \"description\": \"Get a free ticket for a special event.\",\n        \"rewardType\": \"ticketReward\",\n        \"sortingType\": \"category\",\n        \"minPointsRequiredToClaim\": 200,\n        \"claimLimit\": 1,\n        \"percentOff\": 0,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"status\": \"active\",\n        \"_id\": \"68de3641a3e78f8d2560e89b\",\n        \"event\": \"68de33b7bcddb74bfc2d9dd8\",\n        \"createdAt\": \"2025-10-02T08:22:25.516Z\",\n        \"updatedAt\": \"2025-10-02T08:22:25.516Z\",\n        \"__v\": 0,\n        \"mediaInfo\": {\n            \"image\": \"image_url\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/image_url\"\n        }\n    }\n}"
+											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"title\": \"Ticket Reward\",\n        \"description\": \"Get a free ticket for a special event.\",\n        \"rewardType\": \"ticketReward\",\n        \"sortingType\": \"category\",\n        \"minPointsRequiredToClaim\": 200,\n        \"claimLimit\": 1,\n        \"percentOff\": 0,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n        \"status\": \"active\",\n        \"_id\": \"68de3641a3e78f8d2560e89b\",\n        \"event\": \"68de33b7bcddb74bfc2d9dd8\",\n        \"createdAt\": \"2025-10-02T08:22:25.516Z\",\n        \"updatedAt\": \"2025-10-02T08:22:25.516Z\",\n        \"__v\": 0,\n        \"mediaInfo\": {\n            \"image\": \"image_url\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/image_url\"\n        }\n    }\n}"
 										}
 									]
 								},
@@ -13090,7 +13150,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"rewardType\": \"buyMenuItemReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
+											"raw": "{\n    \"rewardType\": \"buyMenuItemReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -13117,7 +13177,7 @@
 												"header": [],
 												"body": {
 													"mode": "raw",
-													"raw": "{\n    \"rewardType\": \"buyMenuItemReward2\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
+													"raw": "{\n    \"rewardType\": \"buyMenuItemReward2\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
 													"options": {
 														"raw": {
 															"language": "json"
@@ -13173,7 +13233,7 @@
 												}
 											],
 											"cookie": [],
-											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Buy a Menu Item Reward\",\n        \"description\": \"Get a free item after purchasing a menu item.\",\n        \"rewardType\": \"buyMenuItemReward\",\n        \"sortingType\": \"category\",\n        \"minPointsRequiredToClaim\": 100,\n        \"claimLimit\": 1,\n        \"percentOff\": 20,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"status\": \"active\",\n        \"_id\": \"68de1ad95dfd5818fb763433\",\n        \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n        \"createdAt\": \"2025-10-02T06:25:29.084Z\",\n        \"updatedAt\": \"2025-10-02T06:25:29.084Z\",\n        \"__v\": 0\n    }\n}"
+											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Buy a Menu Item Reward\",\n        \"description\": \"Get a free item after purchasing a menu item.\",\n        \"rewardType\": \"buyMenuItemReward\",\n        \"sortingType\": \"category\",\n        \"minPointsRequiredToClaim\": 100,\n        \"claimLimit\": 1,\n        \"percentOff\": 20,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n        \"status\": \"active\",\n        \"_id\": \"68de1ad95dfd5818fb763433\",\n        \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n        \"createdAt\": \"2025-10-02T06:25:29.084Z\",\n        \"updatedAt\": \"2025-10-02T06:25:29.084Z\",\n        \"__v\": 0\n    }\n}"
 										},
 										{
 											"name": "add - buy Menu Item",
@@ -13182,7 +13242,7 @@
 												"header": [],
 												"body": {
 													"mode": "raw",
-													"raw": "{\n    \"rewardType\": \"buyMenuItemReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
+													"raw": "{\n    \"rewardType\": \"buyMenuItemReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
 													"options": {
 														"raw": {
 															"language": "json"
@@ -13202,7 +13262,7 @@
 											},
 											"status": "Created",
 											"code": 201,
-											"_postman_previewlanguage": "",
+											"_postman_previewlanguage": null,
 											"header": [
 												{
 													"key": "X-Powered-By",
@@ -13238,7 +13298,7 @@
 												}
 											],
 											"cookie": [],
-											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"title\": \"Buy a Menu Item Reward\",\n        \"description\": \"Get a free item after purchasing a menu item.\",\n        \"rewardType\": \"buyMenuItemReward\",\n        \"sortingType\": \"Fresh\",\n        \"minPointsRequiredToClaim\": 100,\n        \"claimLimit\": 1,\n        \"percentOff\": 20,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"status\": \"active\",\n        \"_id\": \"68de364aa3e78f8d2560e89e\",\n        \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n        \"createdAt\": \"2025-10-02T08:22:34.639Z\",\n        \"updatedAt\": \"2025-10-02T08:22:34.639Z\",\n        \"__v\": 0,\n        \"mediaInfo\": {\n            \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/68d8f3b5d9a10a4e5d408a5c.png\"\n        }\n    }\n}"
+											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"title\": \"Buy a Menu Item Reward\",\n        \"description\": \"Get a free item after purchasing a menu item.\",\n        \"rewardType\": \"buyMenuItemReward\",\n        \"sortingType\": \"Fresh\",\n        \"minPointsRequiredToClaim\": 100,\n        \"claimLimit\": 1,\n        \"percentOff\": 20,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n        \"status\": \"active\",\n        \"_id\": \"68de364aa3e78f8d2560e89e\",\n        \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n        \"createdAt\": \"2025-10-02T08:22:34.639Z\",\n        \"updatedAt\": \"2025-10-02T08:22:34.639Z\",\n        \"__v\": 0,\n        \"mediaInfo\": {\n            \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/68d8f3b5d9a10a4e5d408a5c.png\"\n        }\n    }\n}"
 										}
 									]
 								},
@@ -13351,6 +13411,287 @@
 												{
 													"key": "id",
 													"value": "68daa70cc6b557bd920a31c8"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Loyalty Club Collaboration",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/club-collaborations",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"club-collaborations"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "get details",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}endpoint/:id",
+											"host": [
+												"{{url}}endpoint"
+											],
+											"path": [
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": ""
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"sender\": \"68d69157fbccb319035eb118\",\n  \"receiver\": \"68da7aa1e6f099d42e32da71\",\n  \"notes\": \"Looking forward to collaborating on the upcoming event.\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/club-collaborations",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"club-collaborations"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "update",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"title\": \"Sample title\",\n  \"description\": \"description of item\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/club-collaborations/::id",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"club-collaborations",
+												"::id"
+											],
+											"variable": [
+												{
+													"key": ":id",
+													"value": "68da7aa1e6f099d42e32da71"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/club-collaborations?id=68df69b47a82e5f63bee9466",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"club-collaborations"
+											],
+											"query": [
+												{
+													"key": "id",
+													"value": "68df69b47a82e5f63bee9466"
 												}
 											]
 										},
