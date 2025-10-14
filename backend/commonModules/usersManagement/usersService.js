@@ -12,6 +12,7 @@ const { buildKeywordQueryFromModel } = require("../../helperUtils/queryUtil");
 const { validatePhoneNumber } = require("../../helperUtils/validationsUtil");
 const { accountStatusEmailTemplate } = require("../../helperUtils/emailTemplates");
 const { sendEmailViaMailgun } = require("../../helperUtils/emailUtil");
+const { createOrSkipDevice } = require("../../models/Devices");
 
 const APP_NAME = "Pleis App";
 
@@ -132,7 +133,8 @@ const updateUser = async (req, res, options = {}) => {
     deviceType,
     termsAccepted,
     status,
-    location
+    location,
+    notifications
   } = req.body;
 
   const session = await mongoose.startSession();
@@ -198,7 +200,14 @@ const updateUser = async (req, res, options = {}) => {
     if (dob) user.dob = dob;
     if (status) user.accountState.status = status;
     if (location) user.location = location;
-
+    if (notifications && typeof notifications === "object") {
+      if (typeof notifications.email === "boolean") {
+        user.notifications.email = notifications.email;
+      }
+      if (typeof notifications.push === "boolean") {
+        user.notifications.push = notifications.push;
+      }
+    }
 
     // ✅ Handle organization changes for manager/staff
     if ((userType === "staff" || userType === "manager") && Array.isArray(organizations)) {
@@ -261,7 +270,7 @@ const updateUser = async (req, res, options = {}) => {
           model: companyDetails.loyaltySettings?.model ?? user.companyDetails?.loyaltySettings?.model ?? "essential",
           pointValuePercentage: companyDetails.loyaltySettings?.pointValuePercentage ?? user.companyDetails?.loyaltySettings?.pointValuePercentage ?? 0
         }
-        
+
       };
     }
 
@@ -375,6 +384,16 @@ const disableTwoFA = async (userId) => {
   return true;
 };
 
+const updateUserInterests = async (userId, data) => {
+  // Update user interests in the database
+  console.log("data", data)
+  await userRepo.updateUserInterests(userId, data);
+  return true;
+}
+
+const getUserInterestsByUserId = async (userId) => {
+  return await userRepo.getUserInterestsByUserId(userId);
+};
 
 
 module.exports = {
@@ -385,5 +404,7 @@ module.exports = {
   getUserDetails,
   setupTwoFA,
   confirmTwoFA,
-  disableTwoFA
+  disableTwoFA,
+  updateUserInterests,
+  getUserInterestsByUserId
 };

@@ -68,9 +68,11 @@ const getPublicHighlights = async ({ page, limit, keyword }) => {
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
+
   const [highlights, totalFiltered] = await Promise.all([
     highlightRepo.getHighlightsWithFilters(
       query,
+      keyword,
       skip,
       limit === 0 ? 0 : limit
     ),

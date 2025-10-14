@@ -118,8 +118,8 @@ const getEvents = async (req, res) => {
   let { _id, timezone } = req.user;
   try {
 
-   
-    if(organization){
+
+    if (organization) {
       if (!validateParams(req, res, {
         objectIdFields: ["organization"],
       })) return;
@@ -237,46 +237,61 @@ const updateEvent = async (req, res) => {
     description,
     title,
     schedule,
+    promotion,
   } = req.body);
 
   try {
 
-    
-  // Now validate schedule if provided
-  if (data.schedule !== undefined) {
-    let validateData = { rawData: [], dateFields: {} };
-    const recurringDetails = data.schedule.recurringDetails;
-
-    if (recurringDetails && recurringDetails.isEnabled) {
-      validateData.dateFields = {
-        "schedule.startDateTime": "YYYY-MM-DD hh:mm A",
-      };
-
-      validateData.rawData.push("schedule.recurringDetails");
-      validateData.rawData.push("schedule.recurringDetails.frequency");
-      validateData.rawData.push("schedule.recurringDetails.interval");
-      validateData.rawData.push("schedule.recurringDetails.endType");
-
-      if (recurringDetails.endType === "onDate") {
-        validateData.dateFields["schedule.recurringDetails.endDate"] = "YYYY-MM-DD";
-      } else if (recurringDetails.endType === "afterOccurrences") {
-        validateData.rawData.push("schedule.recurringDetails.occurrences");
+    //if userType not admin then throw error
+    if (data.promotion) {
+      if (req.user.userType !== 'admin') {
+        return sendResponse({
+          res,
+          statusCode: 403,
+          translationKey: "unauthorized_to_set_promotion",
+        });
+      } else {
+        promotion.promotedBy = req.user._id;
+        promotion.promotedAt = new Date();
       }
-
-      if (["weekly", "monthly"].includes(recurringDetails.frequency)) {
-        validateData.rawData.push("schedule.recurringDetails.daysOfWeek");
-      }
-
-      if (!validateParams(req, res, validateData)) return;
-    } else {
-      validateData.dateFields = {
-        "schedule.startDateTime": "YYYY-MM-DD hh:mm A",
-        "schedule.endDateTime": "YYYY-MM-DD hh:mm A",
-      };
-
-      if (!validateParams(req, res, validateData)) return;
     }
-  }
+
+
+    // Now validate schedule if provided
+    if (data.schedule !== undefined) {
+      let validateData = { rawData: [], dateFields: {} };
+      const recurringDetails = data.schedule.recurringDetails;
+
+      if (recurringDetails && recurringDetails.isEnabled) {
+        validateData.dateFields = {
+          "schedule.startDateTime": "YYYY-MM-DD hh:mm A",
+        };
+
+        validateData.rawData.push("schedule.recurringDetails");
+        validateData.rawData.push("schedule.recurringDetails.frequency");
+        validateData.rawData.push("schedule.recurringDetails.interval");
+        validateData.rawData.push("schedule.recurringDetails.endType");
+
+        if (recurringDetails.endType === "onDate") {
+          validateData.dateFields["schedule.recurringDetails.endDate"] = "YYYY-MM-DD";
+        } else if (recurringDetails.endType === "afterOccurrences") {
+          validateData.rawData.push("schedule.recurringDetails.occurrences");
+        }
+
+        if (["weekly", "monthly"].includes(recurringDetails.frequency)) {
+          validateData.rawData.push("schedule.recurringDetails.daysOfWeek");
+        }
+
+        if (!validateParams(req, res, validateData)) return;
+      } else {
+        validateData.dateFields = {
+          "schedule.startDateTime": "YYYY-MM-DD hh:mm A",
+          "schedule.endDateTime": "YYYY-MM-DD hh:mm A",
+        };
+
+        if (!validateParams(req, res, validateData)) return;
+      }
+    }
 
 
     const updated = await eventService.updateEvent(id, data);

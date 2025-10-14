@@ -8,6 +8,8 @@ const {
   setupTwoFAController,
   confirmTwoFAController,
   disableTwoFAController,
+  createUserInterests,
+  getUserInterestsByUserId
 } = require("./usersController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -26,11 +28,18 @@ const apiRateLimiterUserDeletion = createRateLimiter("/users/delete");
 const apiRateLimiterUserTwoFA = createRateLimiter("/users/twofa/setup", 3, 10);     // 3 requests per 10 minutes
 const apiRateLimiterTwoFAConfirm = createRateLimiter("/users/twofa/confirm", 5, 10); // 5 requests per 10 minutes
 const apiRateLimiterTwoFADisable = createRateLimiter("/users/twofa/disable", 2, 30); // 2 requests per 30 minutes
-
+const apiRateLimiterInterests = createRateLimiter("/users/interests", 10, 10); // 10 requests per 10 minutes
+const apiRateLimiterUserInterests = createRateLimiter("/users/interests/:id", 5, 10); // 5 requests per 10 minutes
 
 
 // Create a new user
 router.post("/", roleMiddleware(["admin", "organizer", "manager"]), apiRateLimiterUserCreation, createUser);
+
+//create user interests
+router.post("/interests", apiRateLimiterInterests, createUserInterests);
+//get user interests by userId
+router.get("/interests", apiRateLimiterUserInterests, getUserInterestsByUserId);
+
 
 // Get user profile
 router.get("/:id", apiRateLimiterUserDetail, getUserDetails);

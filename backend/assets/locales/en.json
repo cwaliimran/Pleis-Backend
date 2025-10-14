@@ -101,7 +101,6 @@
   "cities_fetched_successfully": "Cities fetched successfully",
   "country_not_found": "Country not found",
   "faqs_fetched_successfully": "Faqs fetched successfully",
-  "welcome_to_pleis_api": "Welcome to Pleis API",
   "countries_fetched_successfully": "Countries fetched successfully",
   "error_reading_countries_data": "Error reading countries data",
   "states_fetched_successfully": "States fetched successfully",
@@ -252,5 +251,10 @@
   "club_collaboration_not_found": "Club collaboration not found",
   "club_collaboration_details_fetched_successfully": "Club collaboration details fetched successfully",
   "club_collaboration_updated_successfully": "Club collaboration updated successfully",
-  "club_collaboration_deleted_successfully": "Club collaboration deleted successfully"
+  "club_collaboration_deleted_successfully": "Club collaboration deleted successfully",
+  "data_fetched_successfully": "Data fetched successfully",
+  "unauthorized_to_set_promotion": "Unauthorized to set promotion",
+  "user_interests_updated_successfully": "User interests updated successfully",
+  "user_interests_not_found": "User interests not found",
+  "user_interests_fetched_successfully": "User interests fetched successfully"
 }

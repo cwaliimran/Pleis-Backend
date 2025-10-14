@@ -15,7 +15,7 @@ const getEvents = async ({ page, limit, keyword, status, creator, startDate, end
   } else {
     query.status = { $ne: "deleted" };
   }
-  
+
   if (organization) {
     query["basicInfo.organization"] = organization;
   }
@@ -107,6 +107,7 @@ const updateEvent = async (id, data) => {
     description,
     title,
     schedule,
+    promotion,
   } = data;
 
   if (basicInfo) {
@@ -135,6 +136,13 @@ const updateEvent = async (id, data) => {
     event.operatingHours = {
       ...event.operatingHours,
       ...operatingHours
+    };
+  }
+
+  if (promotion) {
+    event.promotion = {
+      ...event.promotion,
+      ...promotion
     };
   }
 
@@ -193,6 +201,23 @@ const cloneEvent = async (id) => {
   return await eventRepo.createEvent(clonedData);
 };
 
+const getPromotedEventsByFilters = async (limit) => {
+  const query = {
+    status: "active",
+    "promotion.isPromoted": true,
+    // "schedule.startDateTime": { $gte: new Date() } // Upcoming events only
+  };
+
+  const events = await eventRepo.getEventsWithFilters(
+    query,
+    0,
+    limit
+  );
+
+  return events;
+};
+
+
 module.exports = {
   createEvent,
   getEvents,
@@ -201,4 +226,5 @@ module.exports = {
   deleteEvent,
   getPublicEvents,
   getEventDetails,
+  getPromotedEventsByFilters,
 };

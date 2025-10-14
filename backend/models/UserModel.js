@@ -318,9 +318,20 @@ const userSchema = new mongoose.Schema(
         default: false,
       },
     },
+    notifications: {
+      email: {
+        type: Boolean,
+        default: true,
+      },
+      push: {
+        type: Boolean,
+        default: true,
+      },
+    }
   },
   {
     timestamps: true,
+    // discriminatorKey: "userType"
   }
 );
 

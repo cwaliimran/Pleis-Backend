@@ -23,8 +23,6 @@ const formatUserResponse = (
     country: userObject.country,
   };
 
-
-
   // Main response object
   let response = {
     basicInfo,
@@ -41,6 +39,12 @@ const formatUserResponse = (
         reason: userObject.accountState.reason,
       }),
     },
+    preferences: {
+      notifications: {
+        email: userObject.notifications?.email,
+        push: userObject.notifications?.push,
+      },
+    },
     metadata: {
       timezone: userObject.timezone,
       createdAt: userObject.createdAt,
@@ -53,6 +57,8 @@ const formatUserResponse = (
     basicInfo.dob = userObject.dob || "";
     basicInfo.gender = userObject.gender || "";
     basicInfo.username = userObject.username || "";
+    //location
+    response.location = userObject.location || "";
   }
 
   if (userType === "organizer") {
