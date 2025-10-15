@@ -2,10 +2,10 @@
 const { generateMeta } = require("../../helperUtils/responseUtil");
 const categoryRepo = require("./categoriesRepository");
 
-const createCategory = async ({ image, title, status, pinned }) => {
-  return await categoryRepo.createCategory({ image, title, status, pinned });
+const createCategory = async ({ image, title, status, order }) => {
+  return await categoryRepo.createCategory({ image, title, status, order });
 };
-const getCategories = async ({ page, limit, keyword, status, pinned, date }) => {
+const getCategories = async ({ page, limit, keyword, status, date }) => {
   const query = {};
   if (status) {
     query.status = status;
@@ -21,14 +21,6 @@ const getCategories = async ({ page, limit, keyword, status, pinned, date }) => 
   }
   if (keyword) {
     query.$or = [{ title: { $regex: keyword, $options: "i" } }];
-  }
-  if (pinned !== undefined) {
-    query.$or = [
-      ...(query.$or || []),
-      { pinned: false },
-      { pinned: null },
-      { pinned: { $exists: false } },
-    ];
   }
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
@@ -79,43 +71,20 @@ const getPublicCategories = async ({ page, limit, keyword, date }) => {
 
   const baseQuery = baseFilters.length ? { $and: baseFilters } : {};
 
-  const pinnedQuery = { ...baseQuery, pinned: true };
-
-  const unpinnedConditions = {
-    $or: [{ pinned: false }, { pinned: null }, { pinned: { $exists: false } }],
-  };
-  const unpinnedQuery = {
-    $and: [...(baseQuery.$and || []), unpinnedConditions],
-  };
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [pinnedCategories, unpinnedCategories, totalFiltered] =
+  const [categories, totalFiltered] =
     await Promise.all([
       page === 1
-        ? categoryRepo.getCategoriesWithFilters(pinnedQuery, 0, 0)
+        ? categoryRepo.getCategoriesWithFilters(baseQuery, skip,
+          limit === 0 ? 0 : limit)
         : [],
-      categoryRepo.getCategoriesWithFilters(
-        unpinnedQuery,
-        skip,
-        limit === 0 ? 0 : limit
-      ),
       categoryRepo.countCategories(baseQuery),
     ]);
 
-  const totalPages =
-    limit && totalFiltered != null ? Math.ceil(totalFiltered / limit) : 1;
+  let meta = generateMeta(page, limit, totalFiltered);
 
-  const categories = {
-    pinned: pinnedCategories,
-    unpinned: unpinnedCategories,
-  };
-  let meta = {
-    page,
-    limit,
-    totalPages,
-    total: totalFiltered,
-  };
   return {
     categories,
     meta,
@@ -128,8 +97,8 @@ const updateCategory = async (id, data) => {
     ...(data.title !== undefined && { title: data.title }),
     ...(data.image !== undefined && { image: data.image }),
     ...(data.status !== undefined && { status: data.status }),
-    ...(data.pinned !== undefined && { pinned: data.pinned }),
     ...(data.image !== undefined && { image: data.image }),
+    ...(data.order !== undefined && { order: data.order }),
 
   };
 

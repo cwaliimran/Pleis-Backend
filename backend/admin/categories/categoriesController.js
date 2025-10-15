@@ -9,7 +9,7 @@ const {
 const categoriesService = require("./categoriesService");
 
 const createCategory = async (req, res) => {
-  const { image, title, status = "active" } = req.body;
+  const { image, title, status = "active", order = 0 } = req.body;
 
   if (!validateParams(req, res, { rawData: ["title"] })) return;
 
@@ -18,7 +18,7 @@ const createCategory = async (req, res) => {
       image,
       title,
       status: "active",
-      pinned: false,
+      order,
     });
 
     return sendResponse({
@@ -41,7 +41,7 @@ const createCategory = async (req, res) => {
 const getCategories = async (req, res) => {
 
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, pinned, date } = req.query;
+  const { keyword, status, date } = req.query;
 
   try {
 
@@ -56,7 +56,7 @@ const getCategories = async (req, res) => {
       limit,
       keyword,
       status,
-      pinned, date
+      date
     });
 
     return sendResponse({
@@ -113,7 +113,7 @@ const getPublicCategories = async (req, res) => {
 
 const updateCategory = async (req, res) => {
   const { id } = req.params;
-  const { title, status, pinned, image } = req.body;
+  const { title, status, image, order } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -127,8 +127,8 @@ const updateCategory = async (req, res) => {
     const updated = await categoriesService.updateCategory(id, {
       title,
       status,
-      pinned,
-      image
+      image,
+      order
     });
 
     if (!updated) {

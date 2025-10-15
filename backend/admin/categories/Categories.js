@@ -19,9 +19,9 @@ const categoriesSchema = new mongoose.Schema(
       enum: ["active", "inactive", "deleted"],
       default: "active",
     },
-    pinned: {
-      type: Boolean,
-      default: false,
+    order: {
+      type: Number,
+      default: 0,
     },
   },
   {

@@ -231,7 +231,6 @@ const updateEvent = async (req, res) => {
     status,
     venues,
     location,
-    pinned,
     image,
     tags,
     description,

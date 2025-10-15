@@ -7,10 +7,10 @@ const createCategory = async (data) => {
   return await category.save();
 };
 
-// Get all with filters
+// Get all with filters, sorted by 'order' ascending and then 'createdAt' descending
 const getCategoriesWithFilters = async (query, skip, limit) => {
   return Categories.find(query)
-    .sort({ createdAt: -1 })
+    .sort({ order: 1 })
     .skip(skip)
     .limit(limit);
 };

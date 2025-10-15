@@ -17,10 +17,6 @@ const tagsSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    pinned: {
-      type: Boolean,
-      default: false,
-    },
   },
   {
     timestamps: true,

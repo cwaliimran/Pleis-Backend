@@ -101,7 +101,6 @@ const updateEvent = async (id, data) => {
     status,
     venues,
     location,
-    pinned,
     image,
     tags,
     description,
@@ -149,7 +148,6 @@ const updateEvent = async (id, data) => {
   if (status !== undefined) event.status = status;
   if (venues !== undefined) event.venues = venues;
   if (location !== undefined) event.location = location;
-  if (pinned !== undefined) event.pinned = pinned;
   if (image !== undefined) event.image = image;
   if (tags !== undefined) event.tags = tags;
   if (description !== undefined) {

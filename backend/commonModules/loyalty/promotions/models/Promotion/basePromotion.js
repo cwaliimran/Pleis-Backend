@@ -11,7 +11,7 @@ const basePromotionsSchema = new mongoose.Schema(
     promotionType: {
       type: String,
       required: true,
-      enum: ["happyHour", "buyMenuItem", "productSale"],
+      enum: ["happyHour", "claimPromotion", "buyMenuItem", "productSale"],
     },
 
     startDate: { type: Date, default: null }, //contains date/time in happyHour case otherwise just date
