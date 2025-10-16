@@ -5,6 +5,7 @@ const {
   getPublicCategories,
   updateCategory,
   deleteCategory,
+  reorderCategory,
 } = require("./categoriesController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -30,5 +31,8 @@ router.put("/:id", roleMiddleware(["admin"]), updateCategory);
 
 // Delete a category
 router.delete("/:id", roleMiddleware(["admin"]), deleteCategory);
+
+// Reorder categories
+router.post("/reorder", roleMiddleware(["admin"]), reorderCategory);
 
 module.exports = router;

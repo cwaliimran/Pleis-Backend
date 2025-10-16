@@ -4,27 +4,26 @@ const {
   validateParams,
   generateMeta,
   getReadableErrorMessage,
-} = require("../../helperUtils/responseUtil");
+} = require("../../../helperUtils/responseUtil");
 
-const categoriesService = require("./categoriesService");
+const topPromosService = require("./topPromosService");
 
-const createCategory = async (req, res) => {
-  const { image, title, status = "active" } = req.body;
+const createTopPromo = async (req, res) => {
+  const { event, status = "active" } = req.body;
 
-  if (!validateParams(req, res, { rawData: ["title"] })) return;
+  if (!validateParams(req, res, { rawData: ["event"], objectIdFields: ["event"] })) return;
 
   try {
-    const category = await categoriesService.createCategory({
-      image,
-      title,
-      status: "active",
+    const topPromo = await topPromosService.createTopPromo({
+      event,
+      status,
     });
 
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "category_created_successfully",
-      data: category,
+      translationKey: "top_promo_created_successfully",
+      data: topPromo,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -37,20 +36,18 @@ const createCategory = async (req, res) => {
   }
 };
 
-const getCategories = async (req, res) => {
-
+const getTopPromos = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date, orderSort } = req.query;
 
   try {
-
     if (date && !validateParams(req, res, {
       dateFields: {
         date: "YYYY-MM-DD",
       },
     })) return;
 
-    const { categories, meta } = await categoriesService.getCategories({
+    const { topPromos, meta } = await topPromosService.getTopPromos({
       page,
       limit,
       keyword,
@@ -59,46 +56,19 @@ const getCategories = async (req, res) => {
       orderSort
     });
 
+    const populatedTopPromos = await Promise.all(topPromos.map(async (promo) => {
+      return await promo.populate('event');
+    }));
+
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "categories_fetched_successfully",
-      data: categories,
-      meta
-    });
-  } catch (error) {
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: error.message,
-    });
-  }
-};
-
-const getPublicCategories = async (req, res) => {
-  const { page, limit } = parsePaginationParams(req);
-  const { keyword, date,  } = req.query;
-  try {
-    if (date && !validateParams(req, res, {
-      dateFields: {
-        date: "YYYY-MM-DD",
+      translationKey: "top_promos_fetched_successfully",
+      data: populatedTopPromos,
+      meta: {
+        ...generateMeta(page, limit, meta.total),
+        topPromosCount: meta.topPromosCount,
       },
-    })) return;
-
-    const { categories, meta } = await categoriesService.getPublicCategories({
-      page,
-      limit,
-      keyword,
-      date
-    });
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "categories_fetched_successfully",
-      data: categories,
-      meta,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -111,9 +81,10 @@ const getPublicCategories = async (req, res) => {
   }
 };
 
-const updateCategory = async (req, res) => {
+
+const updateTopPromo = async (req, res) => {
   const { id } = req.params;
-  const { title, status, image } = req.body;
+  const { event, status, order } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -124,24 +95,24 @@ const updateCategory = async (req, res) => {
     return;
 
   try {
-    const updated = await categoriesService.updateCategory(id, {
-      title,
+    const updated = await topPromosService.updateTopPromo(id, {
+      event,
       status,
-      image,
+      order,
     });
 
     if (!updated) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "category_not_found",
+        translationKey: "top_promo_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "category_updated_successfully",
+      translationKey: "top_promo_updated_successfully",
       data: updated,
     });
   } catch (error) {
@@ -155,7 +126,7 @@ const updateCategory = async (req, res) => {
   }
 };
 
-const deleteCategory = async (req, res) => {
+const deleteTopPromo = async (req, res) => {
   const { id } = req.params;
 
   if (
@@ -167,31 +138,32 @@ const deleteCategory = async (req, res) => {
     return;
 
   try {
-    const deleted = await categoriesService.deleteCategory(id);
+    const deleted = await topPromosService.deleteTopPromo(id);
     if (!deleted) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "category_not_found",
+        translationKey: "top_promo_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "category_deleted_successfully",
+      translationKey: "top_promo_deleted_successfully",
     });
   } catch (error) {
+    const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: error.message,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
     });
   }
 };
 
-const reorderCategory = async (req, res) => {
+const reorderTopPromo = async (req, res) => {
   const { movedId, previousOrder, newOrder } = req.body;
   if (
     !validateParams(req, res, {
@@ -202,7 +174,7 @@ const reorderCategory = async (req, res) => {
     return;
 
   try {
-    const reordered = await categoriesService.reorderCategory(
+    const reordered = await topPromosService.reorderTopPromo(
       movedId,
       previousOrder,
       newOrder
@@ -212,14 +184,14 @@ const reorderCategory = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "category_not_found",
+        translationKey: "top_promo_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "category_reordered_successfully",
+      translationKey: "top_promo_reordered_successfully",
     });
   } catch (error) {
     return sendResponse({
@@ -231,13 +203,10 @@ const reorderCategory = async (req, res) => {
   }
 };
 
-
-
 module.exports = {
-  createCategory,
-  getCategories,
-  getPublicCategories,
-  updateCategory,
-  deleteCategory,
-  reorderCategory,
+  createTopPromo,
+  getTopPromos,
+  updateTopPromo,
+  deleteTopPromo,
+  reorderTopPromo,
 };

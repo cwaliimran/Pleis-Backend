@@ -256,5 +256,12 @@
   "unauthorized_to_set_promotion": "Unauthorized to set promotion",
   "user_interests_updated_successfully": "User interests updated successfully",
   "user_interests_not_found": "User interests not found",
-  "user_interests_fetched_successfully": "User interests fetched successfully"
+  "user_interests_fetched_successfully": "User interests fetched successfully",
+  "top_promo_created_successfully": "Top promo created successfully",
+  "top_promos_fetched_successfully": "Top promos fetched successfully",
+  "top_promo_not_found": "Top promo not found",
+  "top_promo_updated_successfully": "Top promo updated successfully",
+  "top_promo_deleted_successfully": "Top promo deleted successfully",
+  "top_promo_reordered_successfully": "Top promo reordered successfully",
+  "category_reordered_successfully": "Category reordered successfully"
 }

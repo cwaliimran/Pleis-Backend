@@ -1,54 +1,53 @@
 // services/categoryService.js
 const { generateMeta } = require("../../helperUtils/responseUtil");
+const Categories = require("./Categories");
 const categoryRepo = require("./categoriesRepository");
+const mongoose = require("mongoose");
 
-const createCategory = async ({ image, title, status, order }) => {
-  return await categoryRepo.createCategory({ image, title, status, order });
+const createCategory = async ({ image, title, status }) => {
+  return await categoryRepo.createCategory({ image, title, status });
 };
-const getCategories = async ({ page, limit, keyword, status, date }) => {
+const getCategories = async ({ page, limit, keyword, status, date, orderSort = "asc" }) => {
   const query = {};
-  if (status) {
-    query.status = status;
-  } else {
-    query.status = { $ne: "deleted" };
-  }
-  // if date is available then match createdAt with date current date format is yyyy-mm-dd
+
+  // ✅ Filter by status
+  query.status = status ? status : { $ne: "deleted" };
+
+  // ✅ Date filter (format: yyyy-mm-dd)
   if (date) {
     query.createdAt = {
       $gte: new Date(date),
       $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
     };
   }
+
+  // ✅ Keyword search
   if (keyword) {
     query.$or = [{ title: { $regex: keyword, $options: "i" } }];
   }
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [categories, totalFiltered, total, active, inactive] =
-    await Promise.all([
-      categoryRepo.getCategoriesWithFilters(
-        query,
-        skip,
-        limit === 0 ? 0 : limit
-      ),
-      categoryRepo.countCategories(query),
-      categoryRepo.countCategories({ status: { $ne: "deleted" } }),
-      categoryRepo.countCategories({ status: "active" }),
-      categoryRepo.countCategories({ status: "inactive" }),
-    ]);
+  const sort = { order: orderSort === "desc" ? -1 : 1 };
 
-  let meta = generateMeta(page, limit, totalFiltered);
+  const [categories, totalFiltered, total, active, inactive] = await Promise.all([
+    categoryRepo.getCategoriesWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
+    categoryRepo.countCategories(query),
+    categoryRepo.countCategories({ status: { $ne: "deleted" } }),
+    categoryRepo.countCategories({ status: "active" }),
+    categoryRepo.countCategories({ status: "inactive" }),
+  ]);
+
+  const meta = generateMeta(page, limit, totalFiltered);
   meta.categoriesCount = { total, active, inactive };
-  return {
-    categories,
-    meta,
-  };
+
+  return { categories, meta };
 };
-const getPublicCategories = async ({ page, limit, keyword, date }) => {
+
+const getPublicCategories = async ({ page, limit, keyword, date, orderSort }) => {
   const baseFilters = [{ status: "active" }];
 
-  // if date is available then match createdAt with date current date format is yyyy-mm-dd
+  // ✅ Date filter
   if (date) {
     baseFilters.push({
       createdAt: {
@@ -58,37 +57,26 @@ const getPublicCategories = async ({ page, limit, keyword, date }) => {
     });
   }
 
-
-
+  // ✅ Keyword filter
   if (keyword) {
-    baseFilters.push({
-      $or: [
-        { title: { $regex: keyword, $options: "i" } },
-        { description: { $regex: keyword, $options: "i" } },
-      ],
-    });
+    baseFilters.push({ title: { $regex: keyword, $options: "i" } });
   }
 
-  const baseQuery = baseFilters.length ? { $and: baseFilters } : {};
-
+  const query = baseFilters.length ? { $and: baseFilters } : {};
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [categories, totalFiltered] =
-    await Promise.all([
-      page === 1
-        ? categoryRepo.getCategoriesWithFilters(baseQuery, skip,
-          limit === 0 ? 0 : limit)
-        : [],
-      categoryRepo.countCategories(baseQuery),
-    ]);
+  // ✅ Dynamic sort
+  const sort = { order: orderSort === "desc" ? -1 : 1 };
 
-  let meta = generateMeta(page, limit, totalFiltered);
+  const [categories, totalFiltered] = await Promise.all([
+    categoryRepo.getCategoriesWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
+    categoryRepo.countCategories(query),
+  ]);
 
-  return {
-    categories,
-    meta,
-  };
+  const meta = generateMeta(page, limit, totalFiltered);
+
+  return { categories, meta };
 };
 
 const updateCategory = async (id, data) => {
@@ -98,8 +86,6 @@ const updateCategory = async (id, data) => {
     ...(data.image !== undefined && { image: data.image }),
     ...(data.status !== undefined && { status: data.status }),
     ...(data.image !== undefined && { image: data.image }),
-    ...(data.order !== undefined && { order: data.order }),
-
   };
 
   if (Object.keys(updateData).length === 0) {
@@ -116,7 +102,40 @@ const deleteCategory = async (id) => {
     status: "deleted",
   });
   if (!updated) return null;
+  await categoryRepo.normalizeOrders();
+
   return true;
+};
+
+
+const reorderCategory = async (movedId, previousOrder,
+      newOrder) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    if (previousOrder > newOrder) {
+      await Categories.updateMany(
+        { order: { $gte: newOrder, $lt: previousOrder } },
+        { $inc: { order: 1 } },
+        { session }
+      );
+    } else {
+      await Categories.updateMany(
+        { order: { $gt: previousOrder, $lte: newOrder } },
+        { $inc: { order: -1 } },
+        { session }
+      );
+    }
+
+    await Categories.findByIdAndUpdate(movedId, { order: newOrder }, { session });
+    await session.commitTransaction();
+    session.endSession();
+    return true;
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    throw err;
+  }
 };
 
 module.exports = {
@@ -125,4 +144,5 @@ module.exports = {
   updateCategory,
   deleteCategory,
   getPublicCategories,
+  reorderCategory,
 };

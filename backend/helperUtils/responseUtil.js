@@ -27,10 +27,12 @@ const sendResponse = ({
   if (translateMessage) {
     // Get the translation key from the locale file and replace the placeholders using the provided values
     let message = res?.req?.__(translationKey);
+    console.log("message", message)
 
     // If the message is missing, undefined, or equals the raw translationKey, fall back to translationKey
     if (!message || message.trim() === "" || message === translationKey) {
-      message = translationKey;
+      // Fallback: Convert key to readable text
+      message = keyToReadableText(translationKey);
     }
 
     // If values are provided, replace placeholders in the translation
@@ -42,6 +44,7 @@ const sendResponse = ({
     }
     response.message = message;
   } else {
+
     response.message = translationKey;
   }
 
@@ -96,6 +99,12 @@ const sendResponse = ({
   // Send the response with the appropriate status code
   res.status(statusCode).json(response);
 };
+
+// Helper: Convert key to readable default translation
+function keyToReadableText(key) {
+  const withSpaces = key.replace(/[_\.]+/g, " ");
+  return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1);
+}
 
 // Helper function to parse pagination parameters
 const parsePaginationParams = (req) => {
