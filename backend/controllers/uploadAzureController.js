@@ -126,7 +126,7 @@ const deleteFiles = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "file_deletion",
-      error: error.message,
+      error,
     });
   }
 };

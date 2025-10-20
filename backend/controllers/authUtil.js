@@ -18,7 +18,7 @@ const registerUserUtility = async (req, res, options = {}) => {
     autoVerify = false, // true if created by admin, false if app user
   } = options;
 
-  const {
+  let {
     email,
     phoneNumber,
     profileIcon,
@@ -37,6 +37,7 @@ const registerUserUtility = async (req, res, options = {}) => {
     deviceId,
     referralCode = "",
     deviceType,
+    profileCompleted = true,
   } = req.body;
 
   let verificationStatus = "active";
@@ -59,6 +60,7 @@ const registerUserUtility = async (req, res, options = {}) => {
       rawData.push("dob", "gender", "username", "phoneNumber");
       dateFields = { dob: "YYYY-MM-DD" };
       enumFields = { gender: ["", "Male", "Female", "Other"] };
+      profileCompleted = false;
     }
     if (userType === "staff") {
       rawData.push("organizations", "phoneNumber");
@@ -198,7 +200,7 @@ const registerUserUtility = async (req, res, options = {}) => {
       organizationName,
       password,
       timezone,
-      accountState: { userType, status: verificationStatus },
+      accountState: { userType, status: verificationStatus, profileCompleted },
       verificationStatus: {
         email: autoVerify ? "verified" : "pending",
         phoneNumber: "pending",

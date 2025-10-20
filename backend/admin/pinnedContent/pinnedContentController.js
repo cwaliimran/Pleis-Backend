@@ -6,25 +6,25 @@ const {
   getReadableErrorMessage,
 } = require("../../helperUtils/responseUtil");
 
-const categoriesService = require("./categoriesService");
+const pinnedContentService = require("./pinnedContentService");
 
-const createCategory = async (req, res) => {
-  const { image, title, status = "active" } = req.body;
+const createPinnedContent = async (req, res) => {
+  const { status = "active", type, object } = req.body;
 
-  if (!validateParams(req, res, { rawData: ["title"] })) return;
+  if (!validateParams(req, res, { rawData: ["type", "object"], enumFields: { type: ["categories", "tags", "venues"] } })) return;
 
   try {
-    const category = await categoriesService.createCategory({
-      image,
-      title,
-      status: "active",
+    const pinnedContent = await pinnedContentService.createPinnedContent({
+      status,
+      type,
+      object,
     });
 
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "category_created_successfully",
-      data: category,
+      translationKey: "pinned_content_created_successfully",
+      data: pinnedContent,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -37,20 +37,18 @@ const createCategory = async (req, res) => {
   }
 };
 
-const getCategories = async (req, res) => {
-
+const getPinnedContent = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date, orderSort } = req.query;
 
   try {
-
     if (date && !validateParams(req, res, {
       dateFields: {
         date: "YYYY-MM-DD",
       },
     })) return;
 
-    const { categories, meta } = await categoriesService.getCategories({
+    const { pinnedContent, meta } = await pinnedContentService.getPinnedContent({
       page,
       limit,
       keyword,
@@ -59,11 +57,15 @@ const getCategories = async (req, res) => {
       orderSort
     });
 
+    const populatedPinnedContent = await Promise.all(pinnedContent.map(async (content) => {
+      return await content.populate('object');
+    }));
+
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "categories_fetched_successfully",
-      data: categories,
+      translationKey: "pinned_content_fetched_successfully",
+      data: populatedPinnedContent,
       meta
     });
   } catch (error) {
@@ -76,44 +78,9 @@ const getCategories = async (req, res) => {
   }
 };
 
-const getPublicCategories = async (req, res) => {
-  const { page, limit } = parsePaginationParams(req);
-  const { keyword, date,  } = req.query;
-  try {
-    if (date && !validateParams(req, res, {
-      dateFields: {
-        date: "YYYY-MM-DD",
-      },
-    })) return;
-
-    const { categories, meta } = await categoriesService.getPublicCategories({
-      page,
-      limit,
-      keyword,
-      date
-    });
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "categories_fetched_successfully",
-      data: categories,
-      meta,
-    });
-  } catch (error) {
-    const readableError = getReadableErrorMessage(error);
-    return sendResponse({
-      res,
-      statusCode: readableError.statusCode,
-      translationKey: readableError.message,
-      error,
-    });
-  }
-};
-
-const updateCategory = async (req, res) => {
+const updatePinnedContent = async (req, res) => {
   const { id } = req.params;
-  const { title, status, image } = req.body;
+  const { status, type, object } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -124,24 +91,24 @@ const updateCategory = async (req, res) => {
     return;
 
   try {
-    const updated = await categoriesService.updateCategory(id, {
-      title,
+    const updated = await pinnedContentService.updatePinnedContent(id, {
       status,
-      image,
+      type,
+      object,
     });
 
     if (!updated) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "category_not_found",
+        translationKey: "pinned_content_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "category_updated_successfully",
+      translationKey: "pinned_content_updated_successfully",
       data: updated,
     });
   } catch (error) {
@@ -155,7 +122,7 @@ const updateCategory = async (req, res) => {
   }
 };
 
-const deleteCategory = async (req, res) => {
+const deletePinnedContent = async (req, res) => {
   const { id } = req.params;
 
   if (
@@ -167,19 +134,19 @@ const deleteCategory = async (req, res) => {
     return;
 
   try {
-    const deleted = await categoriesService.deleteCategory(id);
+    const deleted = await pinnedContentService.deletePinnedContent(id);
     if (!deleted) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "category_not_found",
+        translationKey: "pinned_content_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "category_deleted_successfully",
+      translationKey: "pinned_content_deleted_successfully",
     });
   } catch (error) {
     return sendResponse({
@@ -191,7 +158,7 @@ const deleteCategory = async (req, res) => {
   }
 };
 
-const reorderCategory = async (req, res) => {
+const reorderPinnedContent = async (req, res) => {
   const { movedId, previousOrder, newOrder } = req.body;
   if (
     !validateParams(req, res, {
@@ -202,7 +169,7 @@ const reorderCategory = async (req, res) => {
     return;
 
   try {
-    const reordered = await categoriesService.reorderCategory(
+    const reordered = await pinnedContentService.reorderPinnedContent(
       movedId,
       previousOrder,
       newOrder
@@ -212,14 +179,14 @@ const reorderCategory = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "category_not_found",
+        translationKey: "pinned_content_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "category_reordered_successfully",
+      translationKey: "pinned_content_reordered_successfully",
     });
   } catch (error) {
     return sendResponse({
@@ -231,13 +198,10 @@ const reorderCategory = async (req, res) => {
   }
 };
 
-
-
 module.exports = {
-  createCategory,
-  getCategories,
-  getPublicCategories,
-  updateCategory,
-  deleteCategory,
-  reorderCategory,
+  createPinnedContent,
+  getPinnedContent,
+  updatePinnedContent,
+  deletePinnedContent,
+  reorderPinnedContent,
 };

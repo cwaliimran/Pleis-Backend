@@ -1,4 +1,5 @@
 
+const { getCategories } = require("../../admin/categories/categoriesService");
 const { getPromotedEventsByFilters } = require("../../commonModules/events/eventService");
 const { Highlights } = require("../../commonModules/highlights/Highlight");
 const { getPublicHighlights } = require("../../commonModules/highlights/highlightService");
@@ -6,6 +7,11 @@ const { getPublicHighlights } = require("../../commonModules/highlights/highligh
 const getHomeService = async () => {
 
   try {
+
+
+    //get categories
+
+    const categories = await getCategories();
 
     //get promoted events
     const promotedEvents = await getPromotedEventsByFilters({ limit: 10 });
@@ -19,7 +25,7 @@ const getHomeService = async () => {
       return new Highlights(highlight).toCustomJSON(highlight);
     });
 
-    var data = { promotedEvents, highlights };
+    var data = { categories, promotedEvents, highlights };
 
     return {
       status: true,

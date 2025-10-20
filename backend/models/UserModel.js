@@ -179,6 +179,10 @@ const userSchema = new mongoose.Schema(
         type: String,
         default: "",
       },
+      profileCompleted: {
+        type: Boolean,
+        default: true,
+      },
     },
 
     otpInfo: {

@@ -30,6 +30,7 @@ const formatUserResponse = (
       twoFactorAuth: userObject.twoFA?.isEnabled || false,
       userType: userType || "user",
       status: userObject.accountState?.status || "active",
+      profileCompleted: userObject.accountState?.profileCompleted || false,
       verificationStatus: {
         email: userObject.verificationStatus?.email || "pending",
         phoneNumber: userObject.verificationStatus?.phoneNumber || "pending",

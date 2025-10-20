@@ -1146,7 +1146,7 @@ const changePassword = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "an_error_occurred",
-      error: error.message,
+      error,
     });
   }
 };

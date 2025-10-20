@@ -2,12 +2,12 @@ const fs = require("fs");
 const path = require("path");
 
 // ============== CONFIG ==============
-const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/admin/browserControl/top10PromoSection";
+const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/admin/pinnedContent";
 
-const oldSingular = "Tag";
-const oldPlural = "Tags";
-const newSingular = "TopPromo";
-const newPlural = "TopPromos";
+const oldSingular = "CustomCategory";
+const oldPlural = "CustomCategories";
+const newSingular = "pinnedContent";
+const newPlural = "pinnedContent";
 // =====================================
 
 // Helper to convert to different cases
@@ -60,10 +60,8 @@ function replaceText(text, replacements) {
   result = handleTranslationKeys(result);
   
   replacements.forEach(({ from, to }) => {
-    // Use split and join method for exact string replacement
-    while (result.includes(from)) {
-      result = result.split(from).join(to);
-    }
+    if (!from || !to || from === to) return;
+    result = result.split(from).join(to);
   });
   
   return result;

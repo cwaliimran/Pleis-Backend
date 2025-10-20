@@ -132,6 +132,7 @@ const updateUser = async (req, res, options = {}) => {
     deviceId,
     deviceType,
     termsAccepted,
+    profileCompleted,
     status,
     location,
     notifications
@@ -199,6 +200,7 @@ const updateUser = async (req, res, options = {}) => {
     if (gender) user.gender = gender;
     if (dob) user.dob = dob;
     if (status) user.accountState.status = status;
+    if (profileCompleted !== undefined) user.accountState.profileCompleted = profileCompleted;
     if (location) user.location = location;
     if (notifications && typeof notifications === "object") {
       if (typeof notifications.email === "boolean") {

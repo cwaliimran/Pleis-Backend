@@ -6,25 +6,26 @@ const {
   getReadableErrorMessage,
 } = require("../../helperUtils/responseUtil");
 
-const categoriesService = require("./categoriesService");
+const customCategoriesService = require("./customCategoriesService");
 
-const createCategory = async (req, res) => {
-  const { image, title, status = "active" } = req.body;
+const createCustomCategory = async (req, res) => {
+  const { title, status = "active", type, objects } = req.body;
 
-  if (!validateParams(req, res, { rawData: ["title"] })) return;
+  if (!validateParams(req, res, { rawData: ["title", "type", "objects"], enumFields: { type: ["event", "user", "organizations"] } })) return;
 
   try {
-    const category = await categoriesService.createCategory({
-      image,
+    const customCategory = await customCategoriesService.createCustomCategory({
       title,
-      status: "active",
+      status,
+      type,
+      objects,
     });
 
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "category_created_successfully",
-      data: category,
+      translationKey: "custom_category_created_successfully",
+      data: customCategory,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -37,20 +38,18 @@ const createCategory = async (req, res) => {
   }
 };
 
-const getCategories = async (req, res) => {
-
+const getCustomCategories = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date, orderSort } = req.query;
 
   try {
-
     if (date && !validateParams(req, res, {
       dateFields: {
         date: "YYYY-MM-DD",
       },
     })) return;
 
-    const { categories, meta } = await categoriesService.getCategories({
+    const { customCategories, meta } = await customCategoriesService.getCustomCategories({
       page,
       limit,
       keyword,
@@ -59,11 +58,15 @@ const getCategories = async (req, res) => {
       orderSort
     });
 
+    const populatedCategories = await Promise.all(customCategories.map(async (category) => {
+      return await category.populate('objects');
+    }));
+
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "categories_fetched_successfully",
-      data: categories,
+      translationKey: "custom_categories_fetched_successfully",
+      data: populatedCategories,
       meta
     });
   } catch (error) {
@@ -76,44 +79,9 @@ const getCategories = async (req, res) => {
   }
 };
 
-const getPublicCategories = async (req, res) => {
-  const { page, limit } = parsePaginationParams(req);
-  const { keyword, date,  } = req.query;
-  try {
-    if (date && !validateParams(req, res, {
-      dateFields: {
-        date: "YYYY-MM-DD",
-      },
-    })) return;
-
-    const { categories, meta } = await categoriesService.getPublicCategories({
-      page,
-      limit,
-      keyword,
-      date
-    });
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "categories_fetched_successfully",
-      data: categories,
-      meta,
-    });
-  } catch (error) {
-    const readableError = getReadableErrorMessage(error);
-    return sendResponse({
-      res,
-      statusCode: readableError.statusCode,
-      translationKey: readableError.message,
-      error,
-    });
-  }
-};
-
-const updateCategory = async (req, res) => {
+const updateCustomCategory = async (req, res) => {
   const { id } = req.params;
-  const { title, status, image } = req.body;
+  const { title, status, type, objects } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -124,24 +92,25 @@ const updateCategory = async (req, res) => {
     return;
 
   try {
-    const updated = await categoriesService.updateCategory(id, {
+    const updated = await customCategoriesService.updateCustomCategory(id, {
       title,
       status,
-      image,
+      type,
+      objects,
     });
 
     if (!updated) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "category_not_found",
+        translationKey: "custom_categorynot_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "category_updated_successfully",
+      translationKey: "custom_category_updated_successfully",
       data: updated,
     });
   } catch (error) {
@@ -155,7 +124,7 @@ const updateCategory = async (req, res) => {
   }
 };
 
-const deleteCategory = async (req, res) => {
+const deleteCustomCategory = async (req, res) => {
   const { id } = req.params;
 
   if (
@@ -167,19 +136,19 @@ const deleteCategory = async (req, res) => {
     return;
 
   try {
-    const deleted = await categoriesService.deleteCategory(id);
+    const deleted = await customCategoriesService.deleteCustomCategory(id);
     if (!deleted) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "category_not_found",
+        translationKey: "custom_category_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "category_deleted_successfully",
+      translationKey: "custom_category_deleted_successfully",
     });
   } catch (error) {
     return sendResponse({
@@ -191,7 +160,7 @@ const deleteCategory = async (req, res) => {
   }
 };
 
-const reorderCategory = async (req, res) => {
+const reorderCustomCategory = async (req, res) => {
   const { movedId, previousOrder, newOrder } = req.body;
   if (
     !validateParams(req, res, {
@@ -202,7 +171,7 @@ const reorderCategory = async (req, res) => {
     return;
 
   try {
-    const reordered = await categoriesService.reorderCategory(
+    const reordered = await customCategoriesService.reorderCustomCategory(
       movedId,
       previousOrder,
       newOrder
@@ -212,14 +181,14 @@ const reorderCategory = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "category_not_found",
+        translationKey: "custom_category_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "category_reordered_successfully",
+      translationKey: "custom_category_reordered_successfully",
     });
   } catch (error) {
     return sendResponse({
@@ -231,13 +200,10 @@ const reorderCategory = async (req, res) => {
   }
 };
 
-
-
 module.exports = {
-  createCategory,
-  getCategories,
-  getPublicCategories,
-  updateCategory,
-  deleteCategory,
-  reorderCategory,
+  createCustomCategory,
+  getCustomCategories,
+  updateCustomCategory,
+  deleteCustomCategory,
+  reorderCustomCategory,
 };

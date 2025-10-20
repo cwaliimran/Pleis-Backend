@@ -179,7 +179,7 @@ const getEvents = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
@@ -208,7 +208,7 @@ const getPublicEvents = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
@@ -314,7 +314,7 @@ const updateEvent = async (req, res) => {
       res,
       statusCode: error.name === "ValidationError" ? 400 : 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
@@ -350,7 +350,7 @@ const deleteEvent = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
@@ -405,7 +405,7 @@ const getEventDetails = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
@@ -441,7 +441,7 @@ const cloneEvent = async (req, res) => {
       res,
       statusCode: error.name === "ValidationError" ? 400 : 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
