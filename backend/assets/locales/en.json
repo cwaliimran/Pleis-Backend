@@ -263,5 +263,9 @@
   "top_promo_updated_successfully": "Top promo updated successfully",
   "top_promo_deleted_successfully": "Top promo deleted successfully",
   "top_promo_reordered_successfully": "Top promo reordered successfully",
-  "category_reordered_successfully": "Category reordered successfully"
+  "category_reordered_successfully": "Category reordered successfully",
+  "forbidden": "Forbidden",
+  "unauthorized_admin_signup": "Unauthorized admin signup",
+  "admin_already_exists": "Admin already exists",
+  "admin_created_successfully": "Admin created successfully"
 }

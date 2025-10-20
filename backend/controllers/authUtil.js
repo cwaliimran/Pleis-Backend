@@ -73,7 +73,16 @@ const registerUserUtility = async (req, res, options = {}) => {
       rawData,
       objectIdFields,
       dateFields,
-      enumFields: { userType: USER_TYPES, modules: FEATURE_KEYS, gender: ["", "Male", "Female", "Other"] },
+      enumFields: {
+        userType: [
+          "guest",
+          "user",
+          "manager",
+          "staff",
+          "organizer",
+        ],
+        modules: FEATURE_KEYS, gender: ["", "Male", "Female", "Other"]
+      },
       minLengthFields: { password: 6 },
     };
 
@@ -93,8 +102,8 @@ const registerUserUtility = async (req, res, options = {}) => {
       return { responseSent: true };
     }
 
-    // ✅ Admin token check for admin creation
-    if (userType === "admin" || userType === "guest") {
+    // ✅ Admin token check for guest creation
+    if (userType === "guest") {
       const adminToken = req.header("x-admin-access-token");
       if (adminToken !== process.env.ADMIN_ACCESS_TOKEN) {
         sendResponse({

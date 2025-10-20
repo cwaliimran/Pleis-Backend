@@ -2,12 +2,12 @@ const fs = require("fs");
 const path = require("path");
 
 // ============== CONFIG ==============
-const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/loyalty/challenges";
+const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/admin/browserControl/top10PromoSection";
 
-const oldSingular = "Preset";
-const oldPlural = "Presets";
-const newSingular = "Challenge";
-const newPlural = "Challenges";
+const oldSingular = "Tag";
+const oldPlural = "Tags";
+const newSingular = "TopPromo";
+const newPlural = "TopPromos";
 // =====================================
 
 // Helper to convert to different cases

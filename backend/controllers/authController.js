@@ -19,6 +19,85 @@ const validator = require("validator");
 const crypto = require("crypto");
 const { registerUserUtility } = require("./authUtil");
 const { validatePhoneNumber } = require("../helperUtils/validationsUtil");
+
+const createAdmin = async (req, res) => {
+  try {
+    // ✅ Whitelist both localhost + your public IP
+    const allowedIPs = ["223.123.44.6", "127.0.0.1", "::1"];
+    
+    // ✅ Express behind reverse proxies (like Nginx)
+    const ip =
+      (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "")
+        .split(",")[0]
+        .trim()
+        .replace("::ffff:", "");
+
+    if (!allowedIPs.includes(ip)) {
+      return sendResponse({
+        res,
+        statusCode: 403,
+        translationKey: "forbidden",
+      });
+    }
+
+    // ✅ Require internal admin secret key (backend only)
+    const key = req.headers["x-admin-access-token-signup"];
+    if (key !== process.env.ADMIN_ACCESS_TOKEN_SIGNUP) {
+      return sendResponse({
+        res,
+        statusCode: 401,
+        translationKey: "unauthorized_admin_signup",
+      });
+    }
+
+    //validation
+    const validationOptions = {
+      rawData: ["email", "name", "password", "timezone"],
+      minLengthFields: {
+        password: 6, // Password must be at least 6 characters long
+      },
+    };
+    if (!validateParams(req, res, validationOptions)) {
+      return;
+    }
+
+    const { email, name, password, timezone } = req.body;
+
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "admin_already_exists",
+      });
+    }
+
+    const user = new User({
+      email,
+      name,
+      password,
+      timezone,
+      accountState: { userType: "admin" },
+      verificationStatus: { email: "verified", phoneNumber: "verified" },
+    });
+
+    await user.save();
+
+    return sendResponse({
+      res,
+      statusCode: 201,
+      translationKey: "admin_created_successfully",
+    });
+  } catch (err) {
+    console.error("Error in createAdmin:", err);
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server_error",
+    });
+  }
+};
+
 //register
 const register = async (req, res) => {
   const result = await registerUserUtility(req, res, {
@@ -1073,6 +1152,7 @@ const changePassword = async (req, res) => {
 };
 
 module.exports = {
+  createAdmin,
   register,
   companyDetails,
   login,

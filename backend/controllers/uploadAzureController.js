@@ -131,4 +131,4 @@ const deleteFiles = async (req, res) => {
   }
 };
 
-module.exports = { uploadFiles, deleteFiles };
+module.exports = { uploadFiles, deleteFiles, uploadFilesToAzure };
