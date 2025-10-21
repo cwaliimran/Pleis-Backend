@@ -10,10 +10,10 @@ const createCategory = async ({ image, title, status }) => {
 const getCategories = async ({ page, limit, keyword, status, date, orderSort = "asc" }) => {
   const query = {};
 
-  // ✅ Filter by status
+  //Filter by status
   query.status = status ? status : { $ne: "deleted" };
 
-  // ✅ Date filter (format: yyyy-mm-dd)
+  //Date filter (format: yyyy-mm-dd)
   if (date) {
     query.createdAt = {
       $gte: new Date(date),
@@ -21,7 +21,7 @@ const getCategories = async ({ page, limit, keyword, status, date, orderSort = "
     };
   }
 
-  // ✅ Keyword search
+  //Keyword search
   if (keyword) {
     query.$or = [{ title: { $regex: keyword, $options: "i" } }];
   }
@@ -44,10 +44,10 @@ const getCategories = async ({ page, limit, keyword, status, date, orderSort = "
   return { categories, meta };
 };
 
-const getPublicCategories = async ({ page, limit, keyword, date, orderSort }) => {
+const getPublicCategories = async ({ page = 1, limit = 10, keyword, date, orderSort }) => {
   const baseFilters = [{ status: "active" }];
 
-  // ✅ Date filter
+  //Date filter
   if (date) {
     baseFilters.push({
       createdAt: {
@@ -57,20 +57,20 @@ const getPublicCategories = async ({ page, limit, keyword, date, orderSort }) =>
     });
   }
 
-  // ✅ Keyword filter
+  //Keyword filter
   if (keyword) {
     baseFilters.push({ title: { $regex: keyword, $options: "i" } });
   }
 
   const query = baseFilters.length ? { $and: baseFilters } : {};
-
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-
-  // ✅ Dynamic sort
   const sort = { order: orderSort === "desc" ? -1 : 1 };
 
+  //only return selected fields
+  const selectFields = "title image";
+
   const [categories, totalFiltered] = await Promise.all([
-    categoryRepo.getCategoriesWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
+    categoryRepo.getCategoriesWithFilters(query, skip, limit === 0 ? 0 : limit, sort, selectFields),
     categoryRepo.countCategories(query),
   ]);
 
@@ -78,6 +78,7 @@ const getPublicCategories = async ({ page, limit, keyword, date, orderSort }) =>
 
   return { categories, meta };
 };
+
 
 const updateCategory = async (id, data) => {
   // Only update provided fields

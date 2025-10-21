@@ -115,7 +115,7 @@ const updateOrganization = async ({ id, data }) => {
     title,
   } = data;
 
-  // ✅ Safe assignment logic
+  // Safe assignment logic
   if (basicInfo) {
     organization.basicInfo = {
       ...organization.basicInfo,

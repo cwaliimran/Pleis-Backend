@@ -11,10 +11,10 @@ const createPinnedContent = async ({ type, object, status }) => {
 const getPinnedContent = async ({ page, limit, keyword, status, date, orderSort = "asc" }) => {
   const query = {};
 
-  // ✅ Filter by status
+  // Filter by status
   query.status = status ? status : { $ne: "deleted" };
 
-  // ✅ Date filter (format: yyyy-mm-dd)
+  // Date filter (format: yyyy-mm-dd)
   if (date) {
     query.createdAt = {
       $gte: new Date(date),
@@ -26,14 +26,11 @@ const getPinnedContent = async ({ page, limit, keyword, status, date, orderSort 
 
   const sort = { order: orderSort === "desc" ? -1 : 1 };
 
-  const [pinnedContent, totalFiltered, total, active, inactive] = await Promise.all([
+  const [pinnedContent, getPinnedContentCounts] = await Promise.all([
     pinnedContentRepo.getPinnedContentWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
-    pinnedContentRepo.countPinnedContent(query),
-    pinnedContentRepo.countPinnedContent({ status: { $ne: "deleted" } }),
-    pinnedContentRepo.countPinnedContent({ status: "active" }),
-    pinnedContentRepo.countPinnedContent({ status: "inactive" }),
+    pinnedContentRepo.getPinnedContentCounts(query),
   ]);
-
+  const { totalFiltered, total, active, inactive } =  getPinnedContentCounts;
   const meta = generateMeta(page, limit, totalFiltered);
   meta.pinnedContentCount = { total, active, inactive };
 
@@ -96,10 +93,17 @@ const reorderPinnedContent = async (movedId, previousOrder, newOrder) => {
   }
 };
 
+
+const countItemsByFilter = async (condition) => {
+  return await pinnedContentRepo.countPinnedContent(condition);
+};
+
+
 module.exports = {
   createPinnedContent,
   getPinnedContent,
   updatePinnedContent,
   deletePinnedContent,
   reorderPinnedContent,
+  countItemsByFilter,
 };

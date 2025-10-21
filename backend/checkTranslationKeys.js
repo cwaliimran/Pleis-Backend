@@ -121,7 +121,7 @@ function keyToReadableText(key) {
   fs.writeFileSync(missingFile, JSON.stringify(missingKeys, null, 2), "utf-8");
   fs.writeFileSync(extraFile, JSON.stringify(extraKeys, null, 2), "utf-8");
 
-  logger.log(`✅ Updated ${baseLangFile}`);
+  logger.log(`Updated ${baseLangFile}`);
   logger.log(`📁 Missing keys saved to: ${missingFile}`);
   logger.log(`🧹 Extra keys saved to: ${extraFile}`);
 })();

@@ -199,22 +199,6 @@ const cloneEvent = async (id) => {
   return await eventRepo.createEvent(clonedData);
 };
 
-const getPromotedEventsByFilters = async (limit) => {
-  const query = {
-    status: "active",
-    "promotion.isPromoted": true,
-    // "schedule.startDateTime": { $gte: new Date() } // Upcoming events only
-  };
-
-  const events = await eventRepo.getEventsWithFilters(
-    query,
-    0,
-    limit
-  );
-
-  return events;
-};
-
 
 module.exports = {
   createEvent,
@@ -224,5 +208,4 @@ module.exports = {
   deleteEvent,
   getPublicEvents,
   getEventDetails,
-  getPromotedEventsByFilters,
 };

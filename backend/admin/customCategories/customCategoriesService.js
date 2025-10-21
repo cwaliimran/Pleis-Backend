@@ -11,10 +11,10 @@ const createCustomCategory = async ({ title, type, objects, status }) => {
 const getCustomCategories = async ({ page, limit, keyword, status, date, orderSort = "asc" }) => {
   const query = {};
 
-  // ✅ Filter by status
+  // Filter by status
   query.status = status ? status : { $ne: "deleted" };
 
-  // ✅ Date filter (format: yyyy-mm-dd)
+  // Date filter (format: yyyy-mm-dd)
   if (date) {
     query.createdAt = {
       $gte: new Date(date),
@@ -22,7 +22,7 @@ const getCustomCategories = async ({ page, limit, keyword, status, date, orderSo
     };
   }
 
-  // ✅ Keyword search
+  // Keyword search
   if (keyword) {
     query.$or = [{ title: { $regex: keyword, $options: "i" } }];
   }
@@ -31,18 +31,27 @@ const getCustomCategories = async ({ page, limit, keyword, status, date, orderSo
 
   const sort = { order: orderSort === "desc" ? -1 : 1 };
 
-  const [customCategories, totalFiltered, total, active, inactive] = await Promise.all([
+  const [customCategories, customCategoriesCounts] = await Promise.all([
     customCategoryRepo.getCustomCategoriesWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
-    customCategoryRepo.countCustomCategories(query),
-    customCategoryRepo.countCustomCategories({ status: { $ne: "deleted" } }),
-    customCategoryRepo.countCustomCategories({ status: "active" }),
-    customCategoryRepo.countCustomCategories({ status: "inactive" }),
+    customCategoryRepo.getCustomCategoriesCounts(query),
   ]);
+  const { totalFiltered, total, active, inactive } =  customCategoriesCounts;
 
   const meta = generateMeta(page, limit, totalFiltered);
   meta.customCategoriesCount = { total, active, inactive };
 
   return { customCategories, meta };
+};
+
+
+//get 30 items for public view
+const getPublicCustomCategories = async () => {
+  return await customCategoryRepo.getCustomCategoriesWithFilters(
+    { status: "active" },
+    0,
+    30,
+    { order: 1 }
+  );
 };
 
 const updateCustomCategory = async (id, data) => {
@@ -59,7 +68,7 @@ const updateCustomCategory = async (id, data) => {
     return customCategory;
   }
 
-  const updated = await customCategoryRepo.findByIdAndUpdate(id, updateData, { new: true }).populate('objects');
+  const updated = await customCategoryRepo.findByIdAndUpdate(id, updateData, { new: true });
   return updated;
 };
 

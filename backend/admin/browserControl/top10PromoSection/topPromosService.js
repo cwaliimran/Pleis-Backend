@@ -3,11 +3,11 @@ const TopPromos = require("./TopPromos");
 const topPromoRepo = require("./topPromosRepository");
 const mongoose = require("mongoose");
 
-const createTopPromo = async ({ event, status }) => {
-  return await topPromoRepo.createTopPromo({ event, status });
+const createTopPromo = async ({ event, isTop10, status }) => {
+  return await topPromoRepo.createTopPromo({ event, isTop10, status });
 };
 
-const getTopPromos = async ({ page, limit, keyword, status, date, orderSort = "asc" }) => {
+const getTopPromos = async ({ page, limit, keyword, status, date, orderSort = "asc", }) => {
   const filters = [];
 
   if (date) {
@@ -32,15 +32,11 @@ const getTopPromos = async ({ page, limit, keyword, status, date, orderSort = "a
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const sort = { order: orderSort === "desc" ? -1 : 1 };
 
-
-  const [topPromos, totalFiltered, total, active, inactive] = await Promise.all([
+  const [topPromos, getTopPromosCounts] = await Promise.all([
     topPromoRepo.getTopPromosWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
-    topPromoRepo.countTopPromos(query),
-    topPromoRepo.countTopPromos({ status: { $ne: "deleted" } }),
-    topPromoRepo.countTopPromos({ status: "active" }),
-    topPromoRepo.countTopPromos({ status: "inactive" }),
+    topPromoRepo.getTopPromosCounts(query),
   ]);
-
+  const { totalFiltered, total, active, inactive } = getTopPromosCounts;
   return {
     topPromos,
     meta: {
@@ -50,6 +46,12 @@ const getTopPromos = async ({ page, limit, keyword, status, date, orderSort = "a
       topPromosCount: { total, active, inactive },
     },
   };
+
+};
+
+const getTop10Promos= async (filters) => {
+  const topPromos = await topPromoRepo.getTop10Promos(filters);
+  return topPromos;
 };
 
 
@@ -57,10 +59,11 @@ const getTopPromos = async ({ page, limit, keyword, status, date, orderSort = "a
 const updateTopPromo = async (id, data) => {
   const updateData = {
     ...(data.status !== undefined && { status: data.status }),
+    ...(data.isTop10 !== undefined && { isTop10: data.isTop10 }),
   };
 
   if (Object.keys(updateData).length === 0) {
-    const topPromo = await topPromoRepo.findTopPromoById(id).populate('event');
+    const topPromo = await topPromoRepo.findTopPromoById(id);
     return topPromo;
   }
 
@@ -113,4 +116,5 @@ module.exports = {
   updateTopPromo,
   deleteTopPromo,
   reorderTopPromo,
+  getTop10Promos,
 };

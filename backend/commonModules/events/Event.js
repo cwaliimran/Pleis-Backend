@@ -103,26 +103,6 @@ const eventSchema = new mongoose.Schema(
         default: "",
       },
     },
-    promotion: {// Top 10/Promo Section
-      isPromoted: {
-        type: Boolean,
-        default: false,
-      },
-      promotedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Users",
-        default: null,
-      },
-      promotedAt: {
-        type: Date,
-        default: null,
-      },
-      //promotion order in the promoted list
-      order: {
-        type: Number,
-        default: 0,
-      },
-    }
   },
   {
     timestamps: true,

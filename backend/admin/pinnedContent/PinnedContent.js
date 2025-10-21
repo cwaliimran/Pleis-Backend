@@ -5,8 +5,8 @@ const pinnedContentSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      enum: ["categories", "tags", "venues"],
-      default: "categories",
+      enum: ["Categories", "Tags", "Venues"],
+      default: "Categories",
     },
     //type refers to schemas and it will be an array of object ids
     object:

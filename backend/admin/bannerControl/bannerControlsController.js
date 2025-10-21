@@ -2,29 +2,39 @@ const {
   sendResponse,
   parsePaginationParams,
   validateParams,
-  generateMeta,
   getReadableErrorMessage,
-} = require("../../../helperUtils/responseUtil");
+} = require("../../helperUtils/responseUtil");
 
-const topPromosService = require("./topPromosService");
+const bannerControlsService = require("./bannerControlsService");
 
-const createTopPromo = async (req, res) => {
-  const { event, status = "active", isTop10 } = req.body;
+const createBannerControls = async (req, res) => {
+  const { status = "active", type, object, title, image } = req.body;
 
-  if (!validateParams(req, res, { rawData: ["event"], objectIdFields: ["event"] })) return;
+  if (!validateParams(req, res, { rawData: ["type", "object"], enumFields: { type: ["Organizer", "Event", "LoyaltyProgram"] } })) return;
 
   try {
-    const topPromo = await topPromosService.createTopPromo({
-      event,
-      isTop10,
+    const existing = await bannerControlsService.countItemsByFilter({ object, status: { $ne: "deleted" } });
+    if (existing) {
+      return sendResponse({
+        res,
+        statusCode: 409,
+        translationKey: "banner_controls_already_exists",
+      });
+    }
+
+    const bannerControls = await bannerControlsService.createBannerControls({
       status,
+      type,
+      object,
+      title,
+      image,
     });
 
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "top_promo_created_successfully",
-      data: topPromo,
+      translationKey: "banner_controls_created_successfully",
+      data: bannerControls,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -37,7 +47,7 @@ const createTopPromo = async (req, res) => {
   }
 };
 
-const getTopPromos = async (req, res) => {
+const getBannerControls = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date, orderSort } = req.query;
 
@@ -48,7 +58,7 @@ const getTopPromos = async (req, res) => {
       },
     })) return;
 
-    const { topPromos, meta } = await topPromosService.getTopPromos({
+    const { bannerControls, meta } = await bannerControlsService.getBannerControls({
       page,
       limit,
       keyword,
@@ -57,35 +67,30 @@ const getTopPromos = async (req, res) => {
       orderSort
     });
 
-    const populatedTopPromos = await Promise.all(topPromos.map(async (promo) => {
-      return await promo.populate('event');
+    const populatedBannerControls = await Promise.all(bannerControls.map(async (content) => {
+      return await content.populate('object');
     }));
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "top_promos_fetched_successfully",
-      data: populatedTopPromos,
-      meta: {
-        ...generateMeta(page, limit, meta.total),
-        topPromosCount: meta.topPromosCount,
-      },
+      translationKey: "banner_controls_fetched_successfully",
+      data: populatedBannerControls,
+      meta
     });
   } catch (error) {
-    const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
-      statusCode: readableError.statusCode,
-      translationKey: readableError.message,
+      statusCode: 500,
+      translationKey: "internal_server",
       error,
     });
   }
 };
 
-
-const updateTopPromo = async (req, res) => {
+const updateBannerControls = async (req, res) => {
   const { id } = req.params;
-  const { event, isTop10, status, order } = req.body;
+  const { status, type, object } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -96,25 +101,24 @@ const updateTopPromo = async (req, res) => {
     return;
 
   try {
-    const updated = await topPromosService.updateTopPromo(id, {
-      event,
-      isTop10,
+    const updated = await bannerControlsService.updateBannerControls(id, {
       status,
-      order,
+      type,
+      object,
     });
 
     if (!updated) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "top_promo_not_found",
+        translationKey: "banner_controls_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "top_promo_updated_successfully",
+      translationKey: "banner_controls_updated_successfully",
       data: updated,
     });
   } catch (error) {
@@ -128,7 +132,7 @@ const updateTopPromo = async (req, res) => {
   }
 };
 
-const deleteTopPromo = async (req, res) => {
+const deleteBannerControls = async (req, res) => {
   const { id } = req.params;
 
   if (
@@ -140,32 +144,31 @@ const deleteTopPromo = async (req, res) => {
     return;
 
   try {
-    const deleted = await topPromosService.deleteTopPromo(id);
+    const deleted = await bannerControlsService.deleteBannerControls(id);
     if (!deleted) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "top_promo_not_found",
+        translationKey: "banner_controls_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "top_promo_deleted_successfully",
+      translationKey: "banner_controls_deleted_successfully",
     });
   } catch (error) {
-    const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
-      statusCode: readableError.statusCode,
-      translationKey: readableError.message,
+      statusCode: 500,
+      translationKey: "internal_server",
       error,
     });
   }
 };
 
-const reorderTopPromo = async (req, res) => {
+const reorderBannerControls = async (req, res) => {
   const { movedId, previousOrder, newOrder } = req.body;
   if (
     !validateParams(req, res, {
@@ -176,7 +179,7 @@ const reorderTopPromo = async (req, res) => {
     return;
 
   try {
-    const reordered = await topPromosService.reorderTopPromo(
+    const reordered = await bannerControlsService.reorderBannerControls(
       movedId,
       previousOrder,
       newOrder
@@ -186,14 +189,14 @@ const reorderTopPromo = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "top_promo_not_found",
+        translationKey: "banner_controls_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "top_promo_reordered_successfully",
+      translationKey: "banner_controls_reordered_successfully",
     });
   } catch (error) {
     return sendResponse({
@@ -206,9 +209,9 @@ const reorderTopPromo = async (req, res) => {
 };
 
 module.exports = {
-  createTopPromo,
-  getTopPromos,
-  updateTopPromo,
-  deleteTopPromo,
-  reorderTopPromo,
+  createBannerControls,
+  getBannerControls,
+  updateBannerControls,
+  deleteBannerControls,
+  reorderBannerControls,
 };

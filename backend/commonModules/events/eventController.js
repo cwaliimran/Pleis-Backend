@@ -236,26 +236,9 @@ const updateEvent = async (req, res) => {
     description,
     title,
     schedule,
-    promotion,
   } = req.body);
 
   try {
-
-    //if userType not admin then throw error
-    if (data.promotion) {
-      if (req.user.userType !== 'admin') {
-        return sendResponse({
-          res,
-          statusCode: 403,
-          translationKey: "unauthorized_to_set_promotion",
-        });
-      } else {
-        promotion.promotedBy = req.user._id;
-        promotion.promotedAt = new Date();
-      }
-    }
-
-
     // Now validate schedule if provided
     if (data.schedule !== undefined) {
       let validateData = { rawData: [], dateFields: {} };

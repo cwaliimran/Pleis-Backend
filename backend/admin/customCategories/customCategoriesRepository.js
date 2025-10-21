@@ -31,6 +31,53 @@ const countCustomCategories = async (query = {}) => {
   return CustomCategories.countDocuments(query);
 };
 
+
+
+// Single efficient helper
+const getCustomCategoriesCounts = async (filterQuery = {}) => {
+  const [filteredCount, globalCounts] = await Promise.all([
+    // count only filtered set (dynamic filters)
+    CustomCategories.countDocuments(filterQuery),
+
+    // facet for global status-based counts
+    CustomCategories.aggregate([
+      {
+        $facet: {
+          total: [
+            { $match: { status: { $ne: "deleted" } } },
+            { $count: "count" },
+          ],
+          active: [
+            { $match: { status: "active" } },
+            { $count: "count" },
+          ],
+          inactive: [
+            { $match: { status: "inactive" } },
+            { $count: "count" },
+          ],
+        },
+      },
+      {
+        $project: {
+          total: { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
+          active: { $ifNull: [{ $arrayElemAt: ["$active.count", 0] }, 0] },
+          inactive: { $ifNull: [{ $arrayElemAt: ["$inactive.count", 0] }, 0] },
+        },
+      },
+    ]),
+  ]);
+
+  const counts = globalCounts[0] || {};
+  return {
+    totalFiltered: filteredCount || 0,
+    total: counts.total || 0,
+    active: counts.active || 0,
+    inactive: counts.inactive || 0,
+  };
+};
+
+
+
 // Find by ID
 const findCustomCategoryById = async (id) => {
   return CustomCategories.findById(id).populate('objects');
@@ -74,6 +121,7 @@ module.exports = {
   createCustomCategory,
   getCustomCategoriesWithFilters,
   countCustomCategories,
+  getCustomCategoriesCounts,
   findCustomCategoryById,
   updateCustomCategoryData,
   deleteCustomCategoryById,

@@ -512,7 +512,7 @@ userSchema.methods.generatePasswordResetToken = function (timezone = "UTC") {
   const user = this;
   const now = Date.now();
 
-  // ✅ Ensure parent object exists
+  // Ensure parent object exists
   if (!user.passwordReset) {
     user.passwordReset = {};
   }

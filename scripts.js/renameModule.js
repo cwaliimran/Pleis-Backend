@@ -2,12 +2,12 @@ const fs = require("fs");
 const path = require("path");
 
 // ============== CONFIG ==============
-const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/admin/pinnedContent";
+const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/admin/bannerControl"; // Directory to process
 
-const oldSingular = "CustomCategory";
-const oldPlural = "CustomCategories";
-const newSingular = "pinnedContent";
-const newPlural = "pinnedContent";
+const oldSingular = "BrowserControl";
+const oldPlural = "BrowserControl";
+const newSingular = "BannerControl";
+const newPlural = "BannerControls";
 // =====================================
 
 // Helper to convert to different cases
@@ -179,7 +179,7 @@ function processDirectory() {
     console.log('');
   });
   
-  console.log(`✅ Processing complete!`);
+  console.log(`Processing complete!`);
   console.log(`🎯 Transformation: ${oldSingular}/${oldPlural} → ${newSingular}/${newPlural}`);
 }
 

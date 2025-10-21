@@ -11,9 +11,21 @@ const pinnedContentService = require("./pinnedContentService");
 const createPinnedContent = async (req, res) => {
   const { status = "active", type, object } = req.body;
 
-  if (!validateParams(req, res, { rawData: ["type", "object"], enumFields: { type: ["categories", "tags", "venues"] } })) return;
+  if (!validateParams(req, res, { rawData: ["type", "object"], enumFields: { type: ["Categories", "Tags", "Venues"] } })) return;
 
   try {
+
+    // Validate if the pinned content already exists
+
+    const existing = await pinnedContentService.countItemsByFilter({ object, status: { $ne: "deleted" } });
+    if (existing) {
+      return sendResponse({
+        res,
+        statusCode: 409,
+        translationKey: "pinned_content_already_exists",
+      });
+    }
+
     const pinnedContent = await pinnedContentService.createPinnedContent({
       status,
       type,

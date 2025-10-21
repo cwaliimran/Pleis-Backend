@@ -22,10 +22,10 @@ const { validatePhoneNumber } = require("../helperUtils/validationsUtil");
 
 const createAdmin = async (req, res) => {
   try {
-    // ✅ Whitelist both localhost + your public IP
+    // Whitelist both localhost + your public IP
     const allowedIPs = ["223.123.44.6", "127.0.0.1", "::1"];
     
-    // ✅ Express behind reverse proxies (like Nginx)
+    // Express behind reverse proxies (like Nginx)
     const ip =
       (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "")
         .split(",")[0]
@@ -40,7 +40,7 @@ const createAdmin = async (req, res) => {
       });
     }
 
-    // ✅ Require internal admin secret key (backend only)
+    // Require internal admin secret key (backend only)
     const key = req.headers["x-admin-access-token-signup"];
     if (key !== process.env.ADMIN_ACCESS_TOKEN_SIGNUP) {
       return sendResponse({
@@ -727,7 +727,7 @@ const verifyPasswordResetLink = async (req, res) => {
     });
   }
 
-  // ✅ Redirect to your frontend's reset password form
+  // Redirect to your frontend's reset password form
   return res.redirect(`${process.env.PASSWORD_RESET_FRONTEND_URL}${token}`);
 };
 
@@ -750,7 +750,7 @@ const resetPasswordViaLink = async (req, res) => {
     });
   }
 
-  // ✅ Set new password
+  // Set new password
   user.password = newPassword;
   user.passwordReset.used = true;
   user.passwordReset.otpRequestCount = 0;

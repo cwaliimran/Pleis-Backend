@@ -20,9 +20,18 @@ const createCategory = async (data) => {
 };
 
 // Get all with filters, sorted by 'order' ascending and then 'createdAt' descending
-const getCategoriesWithFilters = async (filter, skip, limit, sort = { order: 1 }) => {
+const getCategoriesWithFilters = async (
+  filter,
+  skip,
+  limit,
+  sort = { order: 1 },
+  selectFields = null
+) => {
   const query = Categories.find(filter).sort(sort);
+
+  if (selectFields) query.select(selectFields); // apply select dynamically
   if (limit > 0) query.skip(skip).limit(limit);
+
   return query.exec();
 };
 

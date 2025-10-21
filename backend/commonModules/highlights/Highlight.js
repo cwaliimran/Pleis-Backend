@@ -99,7 +99,7 @@ highlightSchema.methods.toCustomJSON = function (highlightData) {
     mediaUrl = getFullImageUrl(mediaName);
   }
 
-  // ✅ Always attach root-level mediaInfo
+  // Always attach root-level mediaInfo
   highlightObject.mediaInfo = {
     name: mediaName,
     type: mediaType,

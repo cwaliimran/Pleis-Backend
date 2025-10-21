@@ -12,7 +12,7 @@ const { validatePhoneNumber } = require("../helperUtils/validationsUtil");
 const { sendEmailViaMailgun } = require("../helperUtils/emailUtil");
 const { registrationViaLinkEmailTemplate, registrationViaOtpEmailTemplate } = require("../helperUtils/emailTemplates");
 
-// ✅ Main utility function
+// Main utility function
 const registerUserUtility = async (req, res, options = {}) => {
   const {
     autoVerify = false, // true if created by admin, false if app user
@@ -89,10 +89,10 @@ const registerUserUtility = async (req, res, options = {}) => {
     };
 
     if (!validateParams(req, res, validationOptions)) {
-      return { responseSent: true }; // ✅ Mark that response is already sent
+      return { responseSent: true }; // Mark that response is already sent
     }
 
-    // ✅ Validate profile icon
+    // Validate profile icon
     if (profileIcon && profileIcon.startsWith("http")) {
       sendResponse({
         res,
@@ -104,7 +104,7 @@ const registerUserUtility = async (req, res, options = {}) => {
       return { responseSent: true };
     }
 
-    // ✅ Admin token check for guest creation
+    // Admin token check for guest creation
     if (userType === "guest") {
       const adminToken = req.header("x-admin-access-token");
       if (adminToken !== process.env.ADMIN_ACCESS_TOKEN) {
@@ -118,7 +118,7 @@ const registerUserUtility = async (req, res, options = {}) => {
       }
     }
 
-    // ✅ Check if email exists
+    // Check if email exists
     const existingUser = await User.findOne({ email: email.trim().toLowerCase() });
     if (existingUser && existingUser.verificationStatus.email === "verified") {
       sendResponse({
@@ -129,7 +129,7 @@ const registerUserUtility = async (req, res, options = {}) => {
       return { responseSent: true };
     }
 
-    // ✅ Validate phone number
+    // Validate phone number
     if (phoneNumber) {
       if (
         typeof phoneNumber !== "object" ||
@@ -156,7 +156,7 @@ const registerUserUtility = async (req, res, options = {}) => {
       }
     }
 
-    // ✅ Validate organizations for manager/staff
+    // Validate organizations for manager/staff
     let organizationsDocs;
     if (userType == "manager" || userType == "staff") {
       if (organizations && organizations.length > 0) {
@@ -185,7 +185,7 @@ const registerUserUtility = async (req, res, options = {}) => {
       }
     }
 
-    // ✅ Create or reuse user
+    // Create or reuse user
     let user = existingUser || new User();
     Object.assign(user, {
       email,
@@ -208,7 +208,7 @@ const registerUserUtility = async (req, res, options = {}) => {
       companyDetails: companyDetails || null,
     });
 
-    // ✅ Handle organizations for staff and manager
+    // Handle organizations for staff and manager
     if (userType === "staff" && Array.isArray(organizationsDocs) && organizationsDocs.length > 0) {
       for (const orgDoc of organizationsDocs) {
         const staffIndex = orgDoc.staff?.findIndex(
@@ -244,7 +244,7 @@ const registerUserUtility = async (req, res, options = {}) => {
       }
     }
 
-    // ✅ Generate email verification token if not auto-verified
+    // Generate email verification token if not auto-verified
     let emailVerificationLink = null;
     if (!autoVerify) {
       if (userType === "user") {
@@ -264,7 +264,7 @@ const registerUserUtility = async (req, res, options = {}) => {
 
     await user.save({ session });
 
-    // ✅ Optional device handling
+    // Optional device handling
     if (deviceId && deviceType) {
       createOrSkipDevice(user._id, deviceId, deviceType);
     }

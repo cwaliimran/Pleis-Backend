@@ -147,12 +147,12 @@ const updateUser = async (req, res, options = {}) => {
 
     const userType = user.accountState.userType;
 
-    // ✅ Validate profileIcon
+    // Validate profileIcon
     if (profileIcon && profileIcon.startsWith("http")) {
       return { errorCode: 400, message: "url_not_accepted", field: "profileIcon" };
     }
 
-    /*   // ✅ Check if email exists
+    /*   // Check if email exists
       const existingUser = await User.findOne({ _id: { $ne: userId }, email: email.trim().toLowerCase() });
       if (existingUser && existingUser.verificationStatus.email === "verified") {
         sendResponse({
@@ -164,7 +164,7 @@ const updateUser = async (req, res, options = {}) => {
       }
    */
 
-    // ✅ Validate phone number if provided
+    // Validate phone number if provided
     if (phoneNumber) {
       if (
         typeof phoneNumber !== "object" ||
@@ -190,7 +190,7 @@ const updateUser = async (req, res, options = {}) => {
       user.verificationStatus.phoneNumber = "pending";
     }
 
-    // ✅ Basic field updates (only if provided)
+    // Basic field updates (only if provided)
     if (firstName) user.firstName = firstName;
     if (lastName) user.lastName = lastName;
     if (profileIcon) user.profileIcon = profileIcon;
@@ -211,7 +211,7 @@ const updateUser = async (req, res, options = {}) => {
       }
     }
 
-    // ✅ Handle organization changes for manager/staff
+    // Handle organization changes for manager/staff
     if ((userType === "staff" || userType === "manager") && Array.isArray(organizations)) {
       // Find all organizations where this user is currently staff
       const currentOrgs = await Organizations.find({ "staff.user": user._id }).session(session);
@@ -257,7 +257,7 @@ const updateUser = async (req, res, options = {}) => {
       user.organizationName = organizationName;
     }
 
-    // ✅ Update company details for organizer
+    // Update company details for organizer
     if (userType === "organizer" && companyDetails) {
       user.companyDetails = {
         name: companyDetails.name ?? user.companyDetails?.name,
@@ -278,7 +278,7 @@ const updateUser = async (req, res, options = {}) => {
 
     await user.save({ session });
 
-    // ✅ Device handling
+    // Device handling
     if (deviceId && deviceType) {
       createOrSkipDevice(user._id, deviceId, deviceType);
     }

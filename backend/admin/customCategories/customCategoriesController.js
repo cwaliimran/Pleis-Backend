@@ -11,7 +11,7 @@ const customCategoriesService = require("./customCategoriesService");
 const createCustomCategory = async (req, res) => {
   const { title, status = "active", type, objects } = req.body;
 
-  if (!validateParams(req, res, { rawData: ["title", "type", "objects"], enumFields: { type: ["event", "user", "organizations"] } })) return;
+  if (!validateParams(req, res, { rawData: ["title", "type", "objects"], enumFields: { type: ["Event", "User", "Organizations"] } })) return;
 
   try {
     const customCategory = await customCategoriesService.createCustomCategory({

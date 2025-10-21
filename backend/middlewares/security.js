@@ -15,7 +15,7 @@ const securityMiddleware = (app, options = {}) => {
     rateLimitMax = 200, // limit each IP to 200 requests per windowMs
   } = options;
 
-  // ✅ Security headers with Helmet
+  // Security headers with Helmet
   app.use(
     helmet({
       contentSecurityPolicy: {
@@ -35,13 +35,13 @@ const securityMiddleware = (app, options = {}) => {
     })
   );
 
-  // ✅ Prevent HTTP Parameter Pollution
+  // Prevent HTTP Parameter Pollution
   app.use(hpp());
 
-  // ✅ Enable GZIP compression
+  // Enable GZIP compression
   app.use(compression());
 
-  // ✅ Rate Limiting
+  // Rate Limiting
   const limiter = rateLimit({
     windowMs: rateLimitWindow,
     max: rateLimitMax,
@@ -52,11 +52,11 @@ const securityMiddleware = (app, options = {}) => {
   });
   app.use(limiter);
 
-  // ✅ Body parser limits (Express)
+  // Body parser limits (Express)
   app.use(express.json({ limit: maxRequestSize }));
   app.use(express.urlencoded({ extended: true, limit: maxRequestSize }));
 
-  // ✅ CORS
+  // CORS
   const corsOptions = {
     origin: function (origin, callback) {
       // If Origin is undefined, assume same-origin (browser-to-same-server)
@@ -84,7 +84,7 @@ const securityMiddleware = (app, options = {}) => {
 
 
 
-  // ✅ Optional: Admin IP whitelist for sensitive routes
+  // Optional: Admin IP whitelist for sensitive routes
   if (adminIPWhitelist.length > 0) {
     app.use("/api/admin", (req, res, next) => {
       const clientIP =
