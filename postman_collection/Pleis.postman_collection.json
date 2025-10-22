@@ -1962,6 +1962,144 @@
 									]
 								}
 							},
+							"response": [
+								{
+									"name": "get",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    // \"category\":\"68ee3310924370d02dbacc41\",\n    // \"time\": \"\", //\"\",live, today, tomorrow, thisWeek\n    // \"\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}home/",
+											"host": [
+												"{{url}}home"
+											],
+											"path": [
+												""
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "",
+									"header": [
+										{
+											"key": "X-Powered-By",
+											"value": "Express"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "5402"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"151a-4JHd+Mtmf/EP3Y49OiEr62Vo8cg\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 22 Oct 2025 15:20:51 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"message\": \"Data fetched successfully\",\n    \"data\": [\n        {\n            \"key\": \"categories\",\n            \"title\": \"Categories\",\n            \"data\": [\n                {\n                    \"_id\": \"68f0d6b0a92f125fd26a5831\",\n                    \"title\": \"Bar\",\n                    \"imageInfo\": {\n                        \"name\": \"24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\"\n                    }\n                },\n                {\n                    \"_id\": \"68f0d4d3c6eb4a5cf2c0f201\",\n                    \"title\": \"Dance\",\n                    \"imageInfo\": {\n                        \"name\": \"24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\"\n                    }\n                },\n                {\n                    \"_id\": \"68ee3310924370d02dbacc41\",\n                    \"title\": \"Nightlife\",\n                    \"imageInfo\": {\n                        \"name\": \"24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\"\n                    }\n                }\n            ]\n        },\n        {\n            \"key\": \"top10\",\n            \"title\": \"Top 10\",\n            \"data\": [\n                {\n                    \"_id\": \"68f0fe3455b07139a883835e\",\n                    \"event\": {\n                        \"basicInfo\": {\n                            \"venueLocation\": {\n                                \"coordinates\": [\n                                    74.4269194,\n                                    31.5022231\n                                ],\n                                \"type\": \"Point\"\n                            },\n                            \"title\": \"Summer Music Festival\",\n                            \"description\": \"A fun-filled day of live music and food.\",\n                            \"organization\": \"68d91de3e9ed2f5900dca083\",\n                            \"venue\": \"68ee4c95a0e89aae25bd1eca\",\n                            \"categories\": [],\n                            \"tags\": [],\n                            \"partnerOrganizer\": null,\n                            \"mediaInfo\": {\n                                \"name\": \"event-banner.jpg\",\n                                \"type\": \"image\",\n                                \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/event-banner.jpg\"\n                            }\n                        },\n                        \"schedule\": {\n                            \"type\": \"oneTime\",\n                            \"startDateTime\": \"2025-10-25 10:00 PM\",\n                            \"endDateTime\": \"2025-10-26 11:00 PM\",\n                            \"recurringDetails\": null\n                        },\n                        \"_id\": \"68de33b7bcddb74bfc2d9dd8\"\n                    },\n                    \"status\": \"active\",\n                    \"order\": 1,\n                    \"createdAt\": \"2025-10-16T14:16:20.679Z\",\n                    \"updatedAt\": \"2025-10-21T11:08:21.918Z\",\n                    \"__v\": 0,\n                    \"isTop10\": true\n                }\n            ]\n        },\n        {\n            \"key\": \"banners\",\n            \"title\": \"Banners\",\n            \"data\": [\n                {\n                    \"_id\": \"68f7860bcc10f7ab3f1038a6\",\n                    \"title\": \"Spring Sale\",\n                    \"type\": \"Event\",\n                    \"object\": \"68de33b7bcddb74bfc2d9dd8\",\n                    \"status\": \"active\",\n                    \"order\": 1,\n                    \"objectModel\": \"Event\",\n                    \"createdAt\": \"2025-10-21T13:09:31.007Z\",\n                    \"updatedAt\": \"2025-10-21T13:09:31.007Z\",\n                    \"__v\": 0,\n                    \"imageInfo\": {\n                        \"name\": \"spring_sale_banner.jpg\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/spring_sale_banner.jpg\"\n                    }\n                }\n            ]\n        },\n        {\n            \"key\": \"forYou\",\n            \"title\": \"For You\",\n            \"data\": []\n        },\n        {\n            \"key\": \"nearYou\",\n            \"title\": \"Near You\",\n            \"data\": [\n                {\n                    \"_id\": \"68de33b7bcddb74bfc2d9dd8\",\n                    \"basicInfo\": {\n                        \"media\": {\n                            \"type\": \"image\",\n                            \"name\": \"event-banner.jpg\"\n                        },\n                        \"title\": \"Summer Music Festival\",\n                        \"description\": \"A fun-filled day of live music and food.\",\n                        \"organization\": {\n                            \"_id\": \"68d91de3e9ed2f5900dca083\",\n                            \"basicInfo\": {\n                                \"media\": {\n                                    \"logo\": {\n                                        \"name\": \"org-logo_pic1.png\",\n                                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-logo_pic1.png\"\n                                    },\n                                    \"cover\": {\n                                        \"name\": \"org-cover.jpg\",\n                                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-cover.jpg\"\n                                    }\n                                },\n                                \"name\": \"Lex Events\"\n                            }\n                        },\n                        \"venue\": {\n                            \"_id\": \"68ee4c95a0e89aae25bd1eca\",\n                            \"title\": \"Venue Sea View\",\n                            \"location\": {\n                                \"type\": \"Point\",\n                                \"coordinates\": [\n                                    74.4269194,\n                                    31.5022231\n                                ],\n                                \"fullAddress\": \"123 Seaside Blvd\",\n                                \"city\": \"Split\",\n                                \"country\": \"Croatia\",\n                                \"state\": \"Col\",\n                                \"postalCode\": \"21000\"\n                            }\n                        },\n                        \"categories\": [],\n                        \"tags\": []\n                    },\n                    \"schedule\": {\n                        \"type\": \"oneTime\",\n                        \"startDateTime\": \"2025-10-25 10:00 PM\",\n                        \"endDateTime\": \"2025-10-26 11:00 PM\",\n                        \"recurringDetails\": null\n                    },\n                    \"distance\": 8545686.13\n                }\n            ]\n        },\n        {\n            \"key\": \"customCategory\",\n            \"title\": \"Concerts Hall\",\n            \"objects\": [\n                {\n                    \"_id\": \"68de33b7bcddb74bfc2d9dd8\",\n                    \"basicInfo\": {\n                        \"title\": \"Summer Music Festival\",\n                        \"description\": \"A fun-filled day of live music and food.\",\n                        \"organization\": \"68d91de3e9ed2f5900dca083\",\n                        \"venue\": \"68ee4c95a0e89aae25bd1eca\",\n                        \"categories\": [],\n                        \"tags\": [],\n                        \"partnerOrganizer\": null,\n                        \"venueLocation\": {\n                            \"coordinates\": [\n                                74.4269194,\n                                31.5022231\n                            ],\n                            \"type\": \"Point\"\n                        },\n                        \"mediaInfo\": {\n                            \"name\": \"event-banner.jpg\",\n                            \"type\": \"image\",\n                            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/event-banner.jpg\"\n                        }\n                    },\n                    \"schedule\": {\n                        \"type\": \"oneTime\",\n                        \"startDateTime\": \"2025-10-25 10:00 PM\",\n                        \"endDateTime\": \"2025-10-26 11:00 PM\",\n                        \"recurringDetails\": null\n                    }\n                }\n            ]\n        },\n        {\n            \"key\": \"topPicks\",\n            \"title\": \"Top Picks\",\n            \"data\": []\n        },\n        {\n            \"key\": \"highlights\",\n            \"title\": \"Highlights\",\n            \"data\": [\n                {\n                    \"_id\": \"68ee4cdca0e89aae25bd1ed4\",\n                    \"title\": \"Amazing Highlight\",\n                    \"type\": \"organization\",\n                    \"object\": {\n                        \"_id\": \"68ee4cbba0e89aae25bd1ece\",\n                        \"basicInfo\": {\n                            \"name\": \"Lex Events\",\n                            \"mediaInfo\": {\n                                \"logo\": {\n                                    \"name\": \"org-logo_pic1.png\",\n                                    \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-logo_pic1.png\"\n                                },\n                                \"cover\": {\n                                    \"name\": \"org-cover.jpg\",\n                                    \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-cover.jpg\"\n                                }\n                            }\n                        }\n                    },\n                    \"status\": \"active\",\n                    \"meta\": {\n                        \"views\": 0\n                    },\n                    \"createdAt\": \"2025-10-14T13:15:08.464Z\",\n                    \"mediaInfo\": {\n                        \"name\": \"highlight_video.mp4\",\n                        \"type\": \"video\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/highlight_video.mp4\"\n                    }\n                }\n            ]\n        },\n        {\n            \"key\": \"customCategory\",\n            \"title\": \"Celebrities\",\n            \"objects\": [\n                {\n                    \"_id\": \"68ed03f2f600828e48b9a186\",\n                    \"firstName\": \"Hollie.Osinski31\",\n                    \"lastName\": \"M\",\n                    \"profileIcon\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/noImage1.png\"\n                }\n            ]\n        },\n        {\n            \"key\": \"loyaltyEvents\",\n            \"title\": \"Loyalty Events\",\n            \"data\": []\n        },\n        {\n            \"key\": \"customCategory\",\n            \"title\": \"Best Companies\",\n            \"objects\": [\n                {\n                    \"_id\": \"68ee4cbba0e89aae25bd1ece\",\n                    \"basicInfo\": {\n                        \"media\": {\n                            \"logo\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-logo_pic1.png\",\n                            \"cover\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-cover.jpg\"\n                        },\n                        \"name\": \"Lex Events\",\n                        \"socialLinks\": {\n                            \"youtube\": \"https://youtube.com/lexevents\",\n                            \"facebook\": \"https://facebook.com/lexevents\",\n                            \"instagram\": \"https://instagram.com/lexevents\",\n                            \"linkedin\": \"https://linkedin.com/company/lexevents\"\n                        }\n                    }\n                }\n            ]\n        },\n        {\n            \"key\": \"challenges\",\n            \"title\": \"Challenges\",\n            \"data\": []\n        },\n        {\n            \"key\": \"promotions\",\n            \"title\": \"Promotions\",\n            \"data\": []\n        }\n    ]\n}"
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "Events",
+					"item": [
+						{
+							"name": "get - nearby",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}events/nearby/?page=1&limit=10&latitude=31.5023621&longitude=74.426454",
+									"host": [
+										"{{url}}events"
+									],
+									"path": [
+										"nearby",
+										""
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "latitude",
+											"value": "31.5023621"
+										},
+										{
+											"key": "longitude",
+											"value": "74.426454"
+										}
+									]
+								}
+							},
 							"response": []
 						}
 					]
@@ -4497,7 +4635,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -4507,7 +4646,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -4527,7 +4667,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}events/?status=active&organization=68bfbd72fdaea1e1b6b52acb",
+									"raw": "{{url}}events/?status=active",
 									"host": [
 										"{{url}}events"
 									],
@@ -4558,7 +4698,8 @@
 										},
 										{
 											"key": "organization",
-											"value": "68bfbd72fdaea1e1b6b52acb"
+											"value": "68bfbd72fdaea1e1b6b52acb",
+											"disabled": true
 										}
 									]
 								}
@@ -8266,7 +8407,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -8276,7 +8418,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -8285,7 +8428,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n     //    \"title\": \"Sunrise Beach Club\"\n     \"organization\":\"68b6eefd13e2a962c92c0e8a\",\n//   \"venueType\":\"68b04d7baee9eb2e14335e1a\",\n\"isPrimary\":\"true\"\n// \"pinned\":true\n\n}\n",
+									"raw": "{\n     //    \"title\": \"Sunrise Beach Club\"\n    //  \"organization\":\"68b6eefd13e2a962c92c0e8a\",\n//   \"venueType\":\"68b04d7baee9eb2e14335e1a\",\n// \"isPrimary\":\"true\"\n// \"pinned\":true\n\"location\": {\n        \"fullAddress\":\"123 Seaside Blvd\",\n        \"state\":\"Col\",\n        \"city\": \"Split\",\n        \"postalCode\": \"21000\",\n        \"country\": \"Croatia\",\n        \"coordinates\": [\n            74.4269194, //lng\n            31.5022231 //lat\n        ]\n    }\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -8303,7 +8446,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68b04e1daee9eb2e14335e3c"
+											"value": "68ee4c95a0e89aae25bd1eca"
 										}
 									]
 								},
@@ -8382,7 +8525,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -8392,7 +8536,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -8435,9 +8580,9 @@
 											"value": "10"
 										},
 										{
-											"key": "pinned",
-											"value": "false",
-											"description": "true/false",
+											"key": "orderSort",
+											"value": "asc",
+											"description": "asc, desc",
 											"disabled": true
 										},
 										{
@@ -8524,7 +8669,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -8534,7 +8680,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -8543,7 +8690,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"title\": \"New category\",\n    \"status\": \"active\",\n    \"image\":\"24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\"\n  }",
+									"raw": "{\n    \"title\": \"Bar\",\n    \"status\": \"active\",\n    \"image\":\"24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\"\n  }",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -8557,6 +8704,59 @@
 									],
 									"path": [
 										"categories",
+										""
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						},
+						{
+							"name": "reorder",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"movedId\":\"68f0d4d3c6eb4a5cf2c0f201\",\n    \"previousOrder\":\"3\",\n    \"newOrder\":\"2\"\n  }",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/categories/reorder/",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"categories",
+										"reorder",
 										""
 									]
 								},
@@ -9113,7 +9313,85 @@
 									]
 								}
 							},
-							"response": []
+							"response": [
+								{
+									"name": "get",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}events/",
+											"host": [
+												"{{url}}events"
+											],
+											"path": [
+												""
+											],
+											"query": [
+												{
+													"key": "startDate",
+													"value": "2025-08-15",
+													"disabled": true
+												},
+												{
+													"key": "endDate",
+													"value": "2025-08-06",
+													"disabled": true
+												},
+												{
+													"key": "organization",
+													"value": "68bfbd72fdaea1e1b6b52acb",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "X-Powered-By",
+											"value": "Express"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "917"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"395-Mkd8hrDE5cy+44NT3U2qsdO7m6Q\""
+										},
+										{
+											"key": "Date",
+											"value": "Tue, 21 Oct 2025 11:31:30 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"message\": \"Events fetched successfully\",\n    \"data\": [\n        {\n            \"basicInfo\": {\n                \"title\": \"Summer Music Festival\",\n                \"description\": \"A fun-filled day of live music and food.\",\n                \"organization\": null,\n                \"venue\": null,\n                \"categories\": [],\n                \"tags\": [],\n                \"partnerOrganizer\": null,\n                \"mediaInfo\": {\n                    \"name\": \"event-banner.jpg\",\n                    \"type\": \"image\",\n                    \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/event-banner.jpg\"\n                }\n            },\n            \"schedule\": {\n                \"type\": \"oneTime\",\n                \"startDateTime\": \"2025-10-25 10:00 PM\",\n                \"endDateTime\": \"2025-10-26 11:00 PM\",\n                \"recurringDetails\": null\n            },\n            \"meta\": {\n                \"revenue\": 0,\n                \"views\": 0,\n                \"region\": \"\"\n            },\n            \"_id\": \"68de33b7bcddb74bfc2d9dd8\",\n            \"creator\": \"68d69157fbccb319035eb118\",\n            \"status\": \"active\",\n            \"createdAt\": \"2025-10-02T08:11:35.492Z\",\n            \"updatedAt\": \"2025-10-21T11:31:21.742Z\",\n            \"__v\": 0,\n            \"promotion\": {\n                \"isPromoted\": true,\n                \"promotedBy\": \"68d69157fbccb319035eb118\",\n                \"promotedAt\": \"2025-10-14T14:11:47.428Z\",\n                \"order\": 1\n            }\n        }\n    ],\n    \"meta\": {\n        \"currentPage\": 1,\n        \"totalPages\": 1,\n        \"totalRecords\": 1,\n        \"limit\": 10\n    }\n}"
+								}
+							]
 						},
 						{
 							"name": "get details",
@@ -9125,7 +9403,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -9135,7 +9414,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -9165,7 +9445,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68ca807990911b8a6b2fc288"
+											"value": "68de33b7bcddb74bfc2d9dd8"
 										}
 									]
 								}
@@ -9182,7 +9462,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -9192,7 +9473,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -9201,7 +9483,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"type\": \"image\",\n            \"name\": \"event-banner.jpg\"\n        },\n        \"title\": \"Summer Music Festival\",\n        \"description\": \"A fun-filled day of live music and food.\",\n        \"organization\": \"68b97c3650bb90128c47511f\",\n        \"venue\": \"68831477f990daf522ff311e\",\n        \"categories\": [\"68bf1f5b62e71e3681c53dba\",\"68c028637c376b15157d9ecc\"],\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"6883208feec25d5f951a8c74\"\n        ]\n    },\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-08-15 10:00 PM\",\n        \"endDateTime\": \"2025-08-15 11:00 PM\"\n\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n\n        /*Ending on specific date*/\n        // ,\n        // \"recurringDetails\": {\n        //   \"isEnabled\": true,\n        //   \"frequency\": \"weekly\",\n        //   \"interval\": 1,\n        //   \"daysOfWeek\": [\"fri\"],\n        //   \"endType\": \"onDate\",\n        //   \"endDate\": \"2025-12-31T00:00:00.000Z\"\n        // }\n        \n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    }\n}",
+									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"type\": \"image\",\n            \"name\": \"event-banner.jpg\"\n        },\n        \"title\": \"Summer Music Festival\",\n        \"description\": \"A fun-filled day of live music and food.\",\n        \"organization\": \"68b97c3650bb90128c47511f\",\n        \"venue\": \"68ee4c95a0e89aae25bd1eca\",\n        \"categories\": [\"68bf1f5b62e71e3681c53dba\",\"68c028637c376b15157d9ecc\"],\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"6883208feec25d5f951a8c74\"\n        ]\n    },\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-08-15 10:00 PM\",\n        \"endDateTime\": \"2025-08-15 11:00 PM\"\n\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n\n        /*Ending on specific date*/\n        // ,\n        // \"recurringDetails\": {\n        //   \"isEnabled\": true,\n        //   \"frequency\": \"weekly\",\n        //   \"interval\": 1,\n        //   \"daysOfWeek\": [\"fri\"],\n        //   \"endType\": \"onDate\",\n        //   \"endDate\": \"2025-12-31T00:00:00.000Z\"\n        // }\n        \n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -9252,7 +9534,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    //   \"title\": \"Sample title\",\n    //   \"description\": \"description of item\"\n\n    \n    \"promotion\": { //promote event\n        \"isPromoted\": true,\n        \"order\": \"1\"\n    }\n}",
+									"raw": "{\n    //    \"schedule\": {\n    //     \"type\": \"oneTime\",\n    //     \"startDateTime\": \"2025-10-25 10:00 PM\",\n    //     \"endDateTime\": \"2025-10-26 11:00 PM\"\n    //     }\n    \"basicInfo\": {\n        \"organization\": \"68b97c3650bb90128c47511f\",\n        \"venue\": \"68ee4c95a0e89aae25bd1eca\"\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -15759,6 +16041,1242 @@
 												{
 													"key": "id",
 													"value": "68df69b47a82e5f63bee9466"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "Browser Control",
+					"item": [
+						{
+							"name": "Top 10 / Promo Section",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/top-promos?page=1&limit=10",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"top-promos"
+											],
+											"query": [
+												{
+													"key": "orderSort",
+													"value": "desc",
+													"description": "asc, desc",
+													"disabled": true
+												},
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n \"event\": \"68de33b7bcddb74bfc2d9dd9\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/top-promos",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"top-promos"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "update",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"isTop10\": true\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/top-promos/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"top-promos",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "68f0fe3455b07139a883835e"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/top-promos/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"top-promos",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "68f7637adbdc2187ec458beb"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "reorder",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"movedId\":\"68f0fe3455b07139a883835e\",\n    \"previousOrder\":\"1\",\n    \"newOrder\":\"1\"\n  }",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/top-promos/reorder",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"top-promos",
+												"reorder"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Quick Access",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/categories?page=1&limit=10&orderSort=asc&status=active",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"categories"
+											],
+											"query": [
+												{
+													"key": "keyword",
+													"value": "Gastronomy",
+													"description": "search",
+													"disabled": true
+												},
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "orderSort",
+													"value": "asc",
+													"description": "asc, desc"
+												},
+												{
+													"key": "status",
+													"value": "active",
+													"description": "active/inactive"
+												},
+												{
+													"key": "date",
+													"value": "2025-07-25",
+													"description": "yyyy-mm-dd",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "reorder",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"movedId\":\"68f0d4d3c6eb4a5cf2c0f201\",\n    \"previousOrder\":\"3\",\n    \"newOrder\":\"2\"\n  }",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/categories/reorder/",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"categories",
+												"reorder",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Custom Categories",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/custom-categories/?page=1&limit=10",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"custom-categories",
+												""
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"title\": \"Best Companies\",\n  \"type\": \"Organizations\", //\"Event\", \"User\", \"Organizations\"\n  \"objects\": [\n    \"68ee4cbba0e89aae25bd1ece\"\n  ]\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/custom-categories/",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"custom-categories",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "update",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"title\": \"Concerts Hall\"\n//   \"type\": \"event\", //\"Event\", \"User\", \"Organizations\"\n//   \"objects\": [\n//     \"60d5ec49c6f8e2d1b0a4c8a3\",\n//     \"60d5ec49c6f8e2d1b0a4c8a4\"\n//   ]\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/custom-categories/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"custom-categories",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "68f7334b71a523a91d29c794"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/custom-categories/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"custom-categories",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": ""
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Pinned Content",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/pinned-content/",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"pinned-content",
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add - Categories",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"type\": \"Categories\", //\"Categories\", \"Tags\", \"Venues\"\n  \"object\": \"68f0d4d3c6eb4a5cf2c0f201\",\n  \"status\": \"active\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/pinned-content/",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"pinned-content",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "add- Tags",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"type\": \"Tags\", //\"Categories\", \"Tags\", \"Venues\"\n  \"object\": \"68ee33f1924370d02dbacc71\",\n  \"status\": \"active\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/pinned-content/",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"pinned-content",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "add - Venues",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"type\": \"Venues\", //\"Categories\", \"Tags\", \"Venues\"\n  \"object\": \"68ee4c95a0e89aae25bd1eca\",\n  \"status\": \"active\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/pinned-content/",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"pinned-content",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "update",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n//   \"type\": \"Categories\", //\"Categories\", \"Tags\", \"Venues\"\n//   \"object\": \"507f1f77bcf86cd799439011\",\n  \"status\": \"active\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/pinned-content/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"pinned-content",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "68f752a463bf53beb2f0f1a6"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/pinned-content/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"pinned-content",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "68f7553f63bf53beb2f0f1ba"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Banner Control",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/banners/",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"banners",
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"title\": \"Spring Sale\",\n  \"image\": \"spring_sale_banner.jpg\",\n  \"type\": \"Event\", //\"Organizer\", \"Event\", \"LoyaltyProgram\"\n  \"object\": \"68de33b7bcddb74bfc2d9dd8\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/banners/",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"banners",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "update",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"title\": \"Sample title\",\n  \"description\": \"description of item\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/banners/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"banners",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": ""
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/banners/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"banners",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": ""
 												}
 											]
 										},

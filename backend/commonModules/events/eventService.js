@@ -1,6 +1,8 @@
 // services/eventService.js
 
-const { validateParams } = require("../../helperUtils/responseUtil");
+const { pipeline } = require("supertest/lib/test");
+const { validateParams, getCurrentDateInTimezone, convertUtcToTimezone } = require("../../helperUtils/responseUtil");
+const Organizations = require("../organizations/Organization");
 const eventRepo = require("./eventRepository");
 
 const createEvent = async ({ data }) => {
@@ -91,14 +93,27 @@ const getPublicEvents = async ({ page, limit, keyword, timezone = "Asia/Karachi"
   };
 };
 
-const getNearbyEvents = async ({
-  longitude,
-  latitude,
-  radiusKm = 50,
-  page = 1,
-  limit = 10,
-  timezone = "Asia/Karachi"
-}) => {
+const getNearbyEvents = async (queryData) => {
+  console.log("queryData", queryData)
+  let {
+    longitude = 0,
+    latitude = 0,
+    radiusKm = 0,
+    page = 1,
+    limit = 10,
+    timezone = "Asia/Karachi",
+  } = queryData || {};
+
+  // If radiusKm is not provided, use an approximate "whole world" radius
+  // (half Earth's circumference) in kilometers so geoNear covers the globe.
+  const rawRadiusKm = (radiusKm === 0 || radiusKm === undefined || radiusKm === null || radiusKm === '')
+    ? 20037.5
+    : radiusKm;
+
+  radiusKm = parseFloat(rawRadiusKm);
+  longitude = parseFloat(longitude);
+  latitude = parseFloat(latitude);
+
   // Validate coordinates
   if (typeof longitude !== 'number' || typeof latitude !== 'number') {
     throw new Error('Valid user longitude and latitude are required');
@@ -109,7 +124,7 @@ const getNearbyEvents = async ({
   }
 
   const radiusInMeters = radiusKm * 1000;
-  const now = new Date();
+  const now = getCurrentDateInTimezone({ timezone });
   const skip = Math.max(0, (page - 1) * limit);
 
   try {
@@ -120,7 +135,7 @@ const getNearbyEvents = async ({
             type: "Point",
             coordinates: [longitude, latitude],
           },
-          key: "basicInfo.venueLocation", // <- Important!
+          key: "basicInfo.venueLocation",
           distanceField: "distance",
           spherical: true,
           maxDistance: radiusInMeters,
@@ -130,15 +145,33 @@ const getNearbyEvents = async ({
           },
         },
       },
+      // Only keep schedule, basicInfo and distance from the main event document
+      { $project: { schedule: 1, basicInfo: 1, distance: 1 } },
+
       {
         $lookup: {
           from: "venues",
           localField: "basicInfo.venue",
           foreignField: "_id",
+          pipeline: [{ $project: { title: 1, location: 1 } }],
           as: "basicInfo.venue",
-        }
+        },
       },
       { $unwind: "$basicInfo.venue" },
+
+      {
+        $lookup: {
+          from: "organizations",
+          let: { orgId: "$basicInfo.organization" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$orgId"] } } },
+            { $project: { basicInfo: 1 } },
+          ],
+          as: "basicInfo.organization",
+        },
+      },
+      { $unwind: { path: "$basicInfo.organization", preserveNullAndEmptyArrays: true } },
+
       { $sort: { distance: 1 } },
       { $skip: skip },
       { $limit: parseInt(limit) },
@@ -154,7 +187,7 @@ const getNearbyEvents = async ({
             type: "Point",
             coordinates: [longitude, latitude],
           },
-          key: "basicInfo.venueLocation", // <-- Include here too
+          key: "basicInfo.venueLocation",
           distanceField: "distance",
           spherical: true,
           maxDistance: radiusInMeters,
@@ -170,9 +203,49 @@ const getNearbyEvents = async ({
 
     const totalResult = await eventRepo.aggregateEvents(totalCountPipeline);
     const totalFiltered = totalResult[0]?.total || 0;
+    // Convert event dates to user's timezone and round distances to 2 decimals
+    const formattedEvents = events.map(event => {
+      let formattedEvent = JSON.parse(JSON.stringify(event));
+      delete formattedEvent.basicInfo.venueLocation;
+      delete formattedEvent.basicInfo.partnerOrganizer;
+
+
+
+      if (formattedEvent.schedule && formattedEvent.schedule.startDateTime) {
+        formattedEvent.schedule.startDateTime = convertUtcToTimezone(
+          formattedEvent.schedule.startDateTime,
+          timezone,
+          "YYYY-MM-DD hh:mm A"
+        );
+      }
+      if (formattedEvent.schedule && formattedEvent.schedule.endDateTime) {
+        formattedEvent.schedule.endDateTime = convertUtcToTimezone(
+          formattedEvent.schedule.endDateTime,
+          timezone,
+          "YYYY-MM-DD hh:mm A"
+        );
+      }
+
+      // Round distance to 2 decimal places if present
+      if (formattedEvent.distance !== undefined && formattedEvent.distance !== null) {
+        const dist = Number(formattedEvent.distance);
+        if (Number.isFinite(dist)) {
+          formattedEvent.distance = Math.round(dist * 100) / 100;
+        }
+      }
+
+      //format organization basicInfo only
+      if (formattedEvent.basicInfo && formattedEvent.basicInfo.organization) {
+        let orgData = formattedEvent.basicInfo.organization;
+        delete orgData.basicInfo.socialLinks;
+        formattedEvent.basicInfo.organization = new Organizations().formatResponse(orgData);
+      }
+
+      return formattedEvent;
+    });
 
     return {
-      events,
+      events: formattedEvents,
       meta: {
         page,
         limit,

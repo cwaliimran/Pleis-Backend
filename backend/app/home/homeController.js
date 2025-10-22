@@ -10,9 +10,18 @@ const {
 const { getHomeService } = require("./homeService");
 
 const getHome = async (req, res) => {
+
   try {
-    let { timezone } = req.user
-    const { status, data } = await getHomeService({ timezone });
+    const { latitude = 0, longitude = 0, radiusKm = 50 } = req.query;
+    let { timezone } = req.user;
+    let queryData = {
+      timezone: timezone || "Asia/Karachi",
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+      radiusKm: parseFloat(radiusKm),
+    };
+
+    const { status, data } = await getHomeService({ queryData });
 
     if (status === false) {
       return sendResponse({
