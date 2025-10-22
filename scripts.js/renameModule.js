@@ -2,12 +2,12 @@ const fs = require("fs");
 const path = require("path");
 
 // ============== CONFIG ==============
-const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/loyalty/challenges";
+const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/admin/bannerControl"; // Directory to process
 
-const oldSingular = "Preset";
-const oldPlural = "Presets";
-const newSingular = "Challenge";
-const newPlural = "Challenges";
+const oldSingular = "BrowserControl";
+const oldPlural = "BrowserControl";
+const newSingular = "BannerControl";
+const newPlural = "BannerControls";
 // =====================================
 
 // Helper to convert to different cases
@@ -60,10 +60,8 @@ function replaceText(text, replacements) {
   result = handleTranslationKeys(result);
   
   replacements.forEach(({ from, to }) => {
-    // Use split and join method for exact string replacement
-    while (result.includes(from)) {
-      result = result.split(from).join(to);
-    }
+    if (!from || !to || from === to) return;
+    result = result.split(from).join(to);
   });
   
   return result;
@@ -181,7 +179,7 @@ function processDirectory() {
     console.log('');
   });
   
-  console.log(`✅ Processing complete!`);
+  console.log(`Processing complete!`);
   console.log(`🎯 Transformation: ${oldSingular}/${oldPlural} → ${newSingular}/${newPlural}`);
 }
 

@@ -247,7 +247,6 @@ const deleteUser = async (req, res) => {
 
 const getUserDetails = async (req, res) => {
   const { id } = req.params;
-console.log("here", id)
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
@@ -372,7 +371,70 @@ const disableTwoFAController = async (req, res) => {
   }
 };
 
+const createUserInterests = async (req, res) => {
+  const { _id } = req.user;
+  console.log("_id", _id)
+  const { categories, venueTypes, tags } = req.body;
 
+  if (
+    !validateParams(req, res, {
+      objectIdFields: ["categories", "venueTypes", "tags"],
+    })
+  )
+    return;
+
+  let data = {
+    categories,
+    venueTypes,
+    tags
+  };
+  try {
+    const updatedUser = await usersService.updateUserInterests(_id, data);
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "user_interests_updated_successfully",
+      data: updatedUser,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+
+
+const getUserInterestsByUserId = async (req, res) => {
+  const { _id } = req.user;
+
+  try {
+    let interests = await usersService.getUserInterestsByUserId(_id);
+    if (!interests) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "user_interests_not_found",
+      });
+    }
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "user_interests_fetched_successfully",
+      data: interests,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
 
 module.exports = {
   createUser,
@@ -382,5 +444,7 @@ module.exports = {
   confirmTwoFAController,
   disableTwoFAController,
   deleteUser,
-  getUserDetails
+  getUserDetails,
+  createUserInterests,
+  getUserInterestsByUserId
 };

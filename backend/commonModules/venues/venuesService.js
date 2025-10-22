@@ -174,11 +174,11 @@ const updateVenue = async (id, data) => {
     organizationChanged = true;
   }
 
-  // ✅ Step 1: Update venue fields
+  // Step 1: Update venue fields
   Object.assign(venue, updateData);
   await venue.save();
 
-  // ✅ Step 2: If isPrimary = true
+  // Step 2: If isPrimary = true
   if (updateData.isPrimary) {
     // Ensure only one primary per organization
     await Venues.updateMany(
@@ -191,7 +191,7 @@ const updateVenue = async (id, data) => {
     );
   }
 
-  // ✅ Step 3: If organization changed and isPrimary = true, double-check previous organization
+  // Step 3: If organization changed and isPrimary = true, double-check previous organization
   if (organizationChanged && updateData.isPrimary) {
     // Just to make sure previous org doesn't keep old primary (edge case)
     await Venues.updateMany(
@@ -214,8 +214,8 @@ const deleteVenue = async (id) => {
   if (!updated) return null;
   return true;
 };
-const getVenueDetails = async (id) => {
-  const venue = await venueRepo.findVenueById(id);
+const getVenueDetails = async (id, select = []) => {
+  const venue = await venueRepo.findVenueById(id, select);
   if (!venue) return null;
   return venue;
 };

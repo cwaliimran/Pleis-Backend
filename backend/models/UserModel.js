@@ -73,6 +73,11 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
+    referralCode: {
+      type: String,
+      default: "",
+    },
+
     organizationName: {
       type: String,
       default: "",
@@ -173,6 +178,10 @@ const userSchema = new mongoose.Schema(
       reason: {
         type: String,
         default: "",
+      },
+      profileCompleted: {
+        type: Boolean,
+        default: true,
       },
     },
 
@@ -313,9 +322,20 @@ const userSchema = new mongoose.Schema(
         default: false,
       },
     },
+    notifications: {
+      email: {
+        type: Boolean,
+        default: true,
+      },
+      push: {
+        type: Boolean,
+        default: true,
+      },
+    }
   },
   {
     timestamps: true,
+    // discriminatorKey: "userType"
   }
 );
 
@@ -492,7 +512,7 @@ userSchema.methods.generatePasswordResetToken = function (timezone = "UTC") {
   const user = this;
   const now = Date.now();
 
-  // ✅ Ensure parent object exists
+  // Ensure parent object exists
   if (!user.passwordReset) {
     user.passwordReset = {};
   }

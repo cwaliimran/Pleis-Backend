@@ -8,6 +8,2001 @@
 	},
 	"item": [
 		{
+			"name": "App",
+			"item": [
+				{
+					"name": "Auth",
+					"item": [
+						{
+							"name": "Signup/Login",
+							"item": [
+								{
+									"name": "check email exists",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"// Generate a random 7-digit number for the phone number",
+													"let randomPhoneNumber = Math.floor(1000000 + Math.random() * 9000000);",
+													"",
+													"// Choose a valid mobile network code in Pakistan",
+													"let validMobileNetworkCode = Math.floor(300 + Math.random() * 8); // Random number between 300 and 307 (valid codes)",
+													"",
+													"// Set the phone number with Pakistan country code",
+													"let internationalPhoneNumber = `+92${validMobileNetworkCode}${randomPhoneNumber}`;",
+													"",
+													"// Store the generated phone number in an environment variable",
+													"pm.environment.set(\"randomPhoneNumber\", internationalPhoneNumber);",
+													"",
+													"console.log(\"Generated Phone Number:\", internationalPhoneNumber);",
+													"",
+													"",
+													"// Generate a random number",
+													"let randomNumber = Math.floor(Math.random() * 10000); // Generates a number between 0 and 9999",
+													"",
+													"// Create a random email using the random number",
+													"let randomEmail = `testuser${randomNumber}@gmail.com`;",
+													"",
+													"// Store the generated email in an environment variable",
+													"pm.environment.set(\"randomEmail\", randomEmail);",
+													"",
+													"console.log(\"Generated Email:\", randomEmail);",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"email\": \"{{emailUser}}\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}auth/check-email-exists",
+											"host": [
+												"{{url}}auth"
+											],
+											"path": [
+												"check-email-exists"
+											]
+										},
+										"description": "### Register User\n\nThis endpoint is used to register a new user.\n\n#### Request Body\n\n- `profileIcon` (string): Unique identifier referencing a profile Bitmoji.\n    \n- `name` (string): The user's full name.\n    \n- `annonymousName` (string): A randomly generated username.\n    \n- `email` (string): The user's email address.\n    \n- `phoneNumber` (string): The user's phone number.\n    \n- `phoneNote` (string): Additional note about the phone number.\n    \n- `password` (string): The user's chosen password.\n    \n- `deviceType` (string): The type of device (android/ios).\n    \n- `deviceId` (string): The device ID from Firebase FCM.\n    \n- `timezone` (string): The user's timezone.\n    \n\n#### Response (JSON Schema)\n\n``` json\n{\n    \"type\": \"object\",\n    \"properties\": {\n        \"message\": {\n            \"type\": \"string\"\n        },\n        \"data\": {\n            \"type\": \"object\",\n            \"properties\": {\n                \"basicInfo\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                        \"profileIcon\": {\n                            \"type\": \"string\"\n                        },\n                        \"name\": {\n                            \"type\": \"string\"\n                        },\n                        \"annonymousName\": {\n                            \"type\": \"string\"\n                        },\n                        \"email\": {\n                            \"type\": \"string\"\n                        },\n                        \"phoneNumber\": {\n                            \"type\": \"string\"\n                        },\n                        \"phoneNote\": {\n                            \"type\": \"string\"\n                        }\n                    }\n                },\n                \"accountState\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                        \"userType\": {\n                            \"type\": \"string\"\n                        },\n                        \"status\": {\n                            \"type\": \"string\"\n                        },\n                        \"verificationStatus\": {\n                            \"type\": \"string\"\n                        }\n                    }\n                },\n                \"profileCompletionStatus\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                        \"personalDetails\": {\n                            \"type\": \"boolean\"\n                        },\n                        \"pregnancyDetails\": {\n                            \"type\": \"boolean\"\n                        },\n                        \"lossDetails\": {\n                            \"type\": \"boolean\"\n                        },\n                        \"healingDetails\": {\n                            \"type\": \"boolean\"\n                        }\n                    }\n                },\n                \"metadata\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                        \"_id\": {\n                            \"type\": \"string\"\n                        },\n                        \"timezone\": {\n                            \"type\": \"string\"\n                        },\n                        \"createdAt\": {\n                            \"type\": \"string\"\n                        },\n                        \"updatedAt\": {\n                            \"type\": \"string\"\n                        },\n                        \"__v\": {\n                            \"type\": \"integer\"\n                        }\n                    }\n                },\n                \"otpInfo\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                        \"otp\": {\n                            \"type\": \"string\"\n                        },\n                        \"otpUsed\": {\n                            \"type\": \"boolean\"\n                        },\n                        \"otpExpires\": {\n                            \"type\": \"string\"\n                        }\n                    }\n                }\n            }\n        }\n    }\n}\n\n ```"
+									},
+									"response": []
+								},
+								{
+									"name": "signup",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 201\", function () {",
+													"    pm.response.to.have.status(201);",
+													"",
+													"  var jsonData = pm.response.json();",
+													"    pm.test(\"Token\", function () {",
+													"      ",
+													"        pm.environment.set(\"emailUser\", jsonData.data.basicInfo.email);",
+													"",
+													"        pm.environment.set(\"emailOtpUser\", jsonData.data.otpInfo.emailOtp.otp);",
+													"",
+													"        let requestBody = JSON.parse(pm.request.body.raw);",
+													"        pm.environment.set(\"passwordUser\", requestBody.password);",
+													"        ",
+													"    });",
+													"});",
+													"",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"// Generate a random 7-digit number for the phone number",
+													"let randomPhoneNumber = Math.floor(1000000 + Math.random() * 9000000);",
+													"",
+													"// Choose a valid mobile network code in Pakistan",
+													"let validMobileNetworkCode = Math.floor(300 + Math.random() * 8); // Random number between 300 and 307 (valid codes)",
+													"",
+													"// Set the phone number with Pakistan country code",
+													"let internationalPhoneNumber = `+92${validMobileNetworkCode}${randomPhoneNumber}`;",
+													"",
+													"// Store the generated phone number in an environment variable",
+													"pm.environment.set(\"randomPhoneNumber\", internationalPhoneNumber);",
+													"",
+													"console.log(\"Generated Phone Number:\", internationalPhoneNumber);",
+													"",
+													"",
+													"// Generate a random number",
+													"let randomNumber = Math.floor(Math.random() * 10000); // Generates a number between 0 and 9999",
+													"",
+													"// Create a random email using the random number",
+													"let randomEmail = `testuser${randomNumber}@gmail.com`;",
+													"",
+													"// Store the generated email in an environment variable",
+													"pm.environment.set(\"randomEmail\", randomEmail);",
+													"",
+													"console.log(\"Generated Email:\", randomEmail);",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"Mike\",\n    \"username\":\"ckmike11\",\n    // \"email\": \"{{$randomExampleEmail}}\",\n    \"email\":\"wisaji6979@djkux.com\",\n    \"phoneNumber\": {\n        \"code\": \"+385\",\n        \"number\": \"998798769\"\n    },\n    \"password\": \"{{passwordOrganizer}}\",\n    \"dob\":\"2005-10-16\",\n    \"gender\":\"Male\",\n    \"referralCode\":\"2xa99\",\n    \"deviceType\": \"ios\", //andoird/ios/web\n    \"userType\": \"user\", //organizer, user, admin\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}auth/register",
+											"host": [
+												"{{url}}auth"
+											],
+											"path": [
+												"register"
+											]
+										},
+										"description": "### Register User\n\nThis endpoint is used to register a new user.\n\n#### Request Body\n\n- `profileIcon` (string): Unique identifier referencing a profile Bitmoji.\n    \n- `name` (string): The user's full name.\n    \n- `annonymousName` (string): A randomly generated username.\n    \n- `email` (string): The user's email address.\n    \n- `phoneNumber` (string): The user's phone number.\n    \n- `phoneNote` (string): Additional note about the phone number.\n    \n- `password` (string): The user's chosen password.\n    \n- `deviceType` (string): The type of device (android/ios).\n    \n- `deviceId` (string): The device ID from Firebase FCM.\n    \n- `timezone` (string): The user's timezone.\n    \n\n#### Response (JSON Schema)\n\n``` json\n{\n    \"type\": \"object\",\n    \"properties\": {\n        \"message\": {\n            \"type\": \"string\"\n        },\n        \"data\": {\n            \"type\": \"object\",\n            \"properties\": {\n                \"basicInfo\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                        \"profileIcon\": {\n                            \"type\": \"string\"\n                        },\n                        \"name\": {\n                            \"type\": \"string\"\n                        },\n                        \"annonymousName\": {\n                            \"type\": \"string\"\n                        },\n                        \"email\": {\n                            \"type\": \"string\"\n                        },\n                        \"phoneNumber\": {\n                            \"type\": \"string\"\n                        },\n                        \"phoneNote\": {\n                            \"type\": \"string\"\n                        }\n                    }\n                },\n                \"accountState\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                        \"userType\": {\n                            \"type\": \"string\"\n                        },\n                        \"status\": {\n                            \"type\": \"string\"\n                        },\n                        \"verificationStatus\": {\n                            \"type\": \"string\"\n                        }\n                    }\n                },\n                \"profileCompletionStatus\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                        \"personalDetails\": {\n                            \"type\": \"boolean\"\n                        },\n                        \"pregnancyDetails\": {\n                            \"type\": \"boolean\"\n                        },\n                        \"lossDetails\": {\n                            \"type\": \"boolean\"\n                        },\n                        \"healingDetails\": {\n                            \"type\": \"boolean\"\n                        }\n                    }\n                },\n                \"metadata\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                        \"_id\": {\n                            \"type\": \"string\"\n                        },\n                        \"timezone\": {\n                            \"type\": \"string\"\n                        },\n                        \"createdAt\": {\n                            \"type\": \"string\"\n                        },\n                        \"updatedAt\": {\n                            \"type\": \"string\"\n                        },\n                        \"__v\": {\n                            \"type\": \"integer\"\n                        }\n                    }\n                },\n                \"otpInfo\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                        \"otp\": {\n                            \"type\": \"string\"\n                        },\n                        \"otpUsed\": {\n                            \"type\": \"boolean\"\n                        },\n                        \"otpExpires\": {\n                            \"type\": \"string\"\n                        }\n                    }\n                }\n            }\n        }\n    }\n}\n\n ```"
+									},
+									"response": []
+								},
+								{
+									"name": "social Auth",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 201\", function () {",
+													"    pm.response.to.have.status(201);",
+													"",
+													"  var jsonData = pm.response.json();",
+													"    pm.test(\"Token\", function () {      ",
+													"        pm.environment.set(\"emailUser\", jsonData.data.basicInfo.email);",
+													"            pm.environment.set(\"tokenUser\", jsonData.data.token);",
+													"",
+													"",
+													"    });",
+													"});",
+													"",
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"",
+													"  var jsonData = pm.response.json();",
+													"    pm.test(\"Token\", function () {",
+													"          // Setting environment variables",
+													"    pm.environment.set(\"tokenUser\", jsonData.data.token);",
+													"        pm.environment.set(\"emailUser\", jsonData.data.basicInfo.email);",
+													"            pm.environment.set(\"tokenUser\", jsonData.data.token);",
+													"",
+													"        ",
+													"    });",
+													"});",
+													"",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"// Generate a random 7-digit number for the phone number",
+													"let randomPhoneNumber = Math.floor(1000000 + Math.random() * 9000000);",
+													"",
+													"// Choose a valid mobile network code in Pakistan",
+													"let validMobileNetworkCode = Math.floor(300 + Math.random() * 8); // Random number between 300 and 307 (valid codes)",
+													"",
+													"// Set the phone number with Pakistan country code",
+													"let internationalPhoneNumber = `+92${validMobileNetworkCode}${randomPhoneNumber}`;",
+													"",
+													"// Store the generated phone number in an environment variable",
+													"pm.environment.set(\"randomPhoneNumber\", internationalPhoneNumber);",
+													"",
+													"console.log(\"Generated Phone Number:\", internationalPhoneNumber);",
+													"",
+													"",
+													"// Generate a random number",
+													"let randomNumber = Math.floor(Math.random() * 10000); // Generates a number between 0 and 9999",
+													"",
+													"// Create a random email using the random number",
+													"let randomEmail = `testuser${randomNumber}@gmail.com`;",
+													"",
+													"// Store the generated email in an environment variable",
+													"pm.environment.set(\"randomEmail\", randomEmail);",
+													"",
+													"console.log(\"Generated Email:\", randomEmail);",
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"provider\": \"facebook\", //\"google\", \"facebook\", \"apple\",\n    \"socialId\": \"123456789012345678424\",\n    \"profileIcon\": \"noImage.png\",\n    \"firstName\": \"Kathlyn68\",\n    \"lastName\": \"M\",\n    // \"email\": \"{{$randomExampleEmail}}\",\n    \"password\": \"123456\",\n    \"deviceType\": \"android\", //andoird/ios/web\n    \"userType\": \"user\", //organizer, user, admin\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}auth/social-auth",
+											"host": [
+												"{{url}}auth"
+											],
+											"path": [
+												"social-auth"
+											]
+										},
+										"description": "Email is optional only send if user provides it.\n\n\"provider\": \"facebook\", //\"google\", \"facebook\", \"apple\","
+									},
+									"response": []
+								},
+								{
+									"name": "login",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Set Variables on Environment and Collection\", function () {",
+													"    var jsonData = pm.response.json();",
+													"",
+													"    // Setting environment variables",
+													"    pm.environment.set(\"tokenUser\", jsonData.data.token);",
+													"",
+													"    // Extracting password from request body",
+													"    let requestBody = JSON.parse(pm.request.body.raw);",
+													"    pm.environment.set(\"passwordUser\", requestBody.password);",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"email\": \"{{emailUser}}\",\n    \"password\": \"{{passwordUser}}\",\n    \"userType\": \"user\", //user, organizer, admin, manager\n    \"deviceType\": \"android\", //andoird/ios\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}auth/login",
+											"host": [
+												"{{url}}auth"
+											],
+											"path": [
+												"login"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Locations - Countries/Cities",
+							"item": [
+								{
+									"name": "countries",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"auth": {
+											"type": "noauth"
+										},
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}locations/countries",
+											"host": [
+												"{{url}}locations"
+											],
+											"path": [
+												"countries"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "cities",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}locations/cities/country/:id",
+											"host": [
+												"{{url}}locations"
+											],
+											"path": [
+												"cities",
+												"country",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "167"
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Verification Via OTP",
+							"item": [
+								{
+									"name": "verify otp email",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"",
+													"",
+													"    pm.test(\"Token\", function () {",
+													"        var jsonData = pm.response.json();",
+													"        pm.environment.set(\"tokenUser\", jsonData.data.token);",
+													"        pm.environment.set(\"resetTokenUser\", jsonData.data.resetToken);",
+													"          ",
+													"    });",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"email\": \"{{emailUser}}\",\n    \"otp\":\"{{emailOtpUser}}\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}auth/verify-otp/email",
+											"host": [
+												"{{url}}auth"
+											],
+											"path": [
+												"verify-otp",
+												"email"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "resend otp email",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 201\", function () {",
+													"    pm.response.to.have.status(201);",
+													"        var jsonData = pm.response.json();",
+													"",
+													"   pm.environment.set(\"emailOtpUser\", jsonData.data.otp);",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"email\": \"{{emailUser}}\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}auth/resend-otp/email",
+											"host": [
+												"{{url}}auth"
+											],
+											"path": [
+												"resend-otp",
+												"email"
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "resend Otp",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"email\": \"{{email}}\"\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}auth/resendOtp",
+													"host": [
+														"{{url}}auth"
+													],
+													"path": [
+														"resendOtp"
+													]
+												}
+											},
+											"status": "Created",
+											"code": 201,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "64"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"40-oye20bxRJrALgWIj0xrnLqBXatE\""
+												},
+												{
+													"key": "Date",
+													"value": "Sat, 07 Sep 2024 07:08:34 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"OTP generated successfully\",\n    \"data\": {\n        \"otp\": \"533891\"\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "reset Password",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"",
+													"",
+													"    pm.test(\"Token\", function () {",
+													"        var jsonData = pm.response.json();",
+													"        pm.environment.set(\"tokenOrganizer\", jsonData.data.token);",
+													"    });",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"email\": \"{{emailUser}}\",\n    \"newPassword\": \"123456\",\n    \"resetToken\" : \"{{resetTokenUser}}\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}auth/reset-password",
+											"host": [
+												"{{url}}auth"
+											],
+											"path": [
+												"reset-password"
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "reset Password",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"email\": \"{{email}}\",\n    \"newPassword\": \"123456\"\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}auth/resetPassword",
+													"host": [
+														"{{url}}auth"
+													],
+													"path": [
+														"resetPassword"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "831"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"33f-bY8MshiSg9Afm0jRElowG2P6dCI\""
+												},
+												{
+													"key": "Date",
+													"value": "Sat, 07 Sep 2024 07:08:58 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Password has been reset\",\n    \"data\": {\n        \"basicInfo\": {\n            \"_id\": \"66dbfbd9bdc2225f6d6ae086\",\n            \"profileIcon\": \"file-1724144046518.png\",\n            \"name\": \"Jameson97\",\n            \"annonymousName\": \"Breanne7\",\n            \"email\": \"haleigh87@gmail.com\",\n            \"phoneNumber\": \"426-410-7389\",\n            \"phoneNote\": \"Personal number\",\n            \"isAnonymous\": true\n        },\n        \"accountState\": {\n            \"userType\": \"user\",\n            \"status\": \"active\",\n            \"verificationStatus\": \"verified\"\n        },\n        \"profileCompletionStatus\": {\n            \"personalDetails\": false,\n            \"pregnancyDetails\": false,\n            \"lossDetails\": false,\n            \"healingDetails\": false\n        },\n        \"metadata\": {\n            \"timezone\": \"Asia/Karachi\",\n            \"createdAt\": \"2024-09-07T07:08:10.002Z\",\n            \"updatedAt\": \"2024-09-07T07:08:57.773Z\",\n            \"__v\": 0\n        },\n        \"otpInfo\": {\n            \"otp\": \"\",\n            \"otpUsed\": true,\n            \"otpExpires\": null\n        },\n        \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2NmRiZmJkOWJkYzIyMjVmNmQ2YWUwODYiLCJpYXQiOjE3MjU2OTI5Mzh9.Ud_NTU_R7hJ_SeODCmJYDb5USwENWdx3tQcibdPJgtI\"\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "forgot Password",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"",
+													"",
+													"    pm.test(\"Token\", function () {",
+													"        var jsonData = pm.response.json();",
+													"        pm.environment.set(\"tokenOrganizer\", jsonData.data.token);",
+													"    });",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"email\": \"{{emailUser}}\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}auth/forgot-password",
+											"host": [
+												"{{url}}auth"
+											],
+											"path": [
+												"forgot-password"
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "reset Password",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"email\": \"{{email}}\",\n    \"newPassword\": \"123456\"\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}auth/resetPassword",
+													"host": [
+														"{{url}}auth"
+													],
+													"path": [
+														"resetPassword"
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "831"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"33f-bY8MshiSg9Afm0jRElowG2P6dCI\""
+												},
+												{
+													"key": "Date",
+													"value": "Sat, 07 Sep 2024 07:08:58 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Password has been reset\",\n    \"data\": {\n        \"basicInfo\": {\n            \"_id\": \"66dbfbd9bdc2225f6d6ae086\",\n            \"profileIcon\": \"file-1724144046518.png\",\n            \"name\": \"Jameson97\",\n            \"annonymousName\": \"Breanne7\",\n            \"email\": \"haleigh87@gmail.com\",\n            \"phoneNumber\": \"426-410-7389\",\n            \"phoneNote\": \"Personal number\",\n            \"isAnonymous\": true\n        },\n        \"accountState\": {\n            \"userType\": \"user\",\n            \"status\": \"active\",\n            \"verificationStatus\": \"verified\"\n        },\n        \"profileCompletionStatus\": {\n            \"personalDetails\": false,\n            \"pregnancyDetails\": false,\n            \"lossDetails\": false,\n            \"healingDetails\": false\n        },\n        \"metadata\": {\n            \"timezone\": \"Asia/Karachi\",\n            \"createdAt\": \"2024-09-07T07:08:10.002Z\",\n            \"updatedAt\": \"2024-09-07T07:08:57.773Z\",\n            \"__v\": 0\n        },\n        \"otpInfo\": {\n            \"otp\": \"\",\n            \"otpUsed\": true,\n            \"otpExpires\": null\n        },\n        \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2NmRiZmJkOWJkYzIyMjVmNmQ2YWUwODYiLCJpYXQiOjE3MjU2OTI5Mzh9.Ud_NTU_R7hJ_SeODCmJYDb5USwENWdx3tQcibdPJgtI\"\n    }\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "Account Management",
+							"item": [
+								{
+									"name": "TwoFA",
+									"item": [
+										{
+											"name": "setup",
+											"request": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}users/twofa/setup",
+													"host": [
+														"{{url}}users"
+													],
+													"path": [
+														"twofa",
+														"setup"
+													]
+												}
+											},
+											"response": [
+												{
+													"name": "setup",
+													"originalRequest": {
+														"method": "POST",
+														"header": [],
+														"body": {
+															"mode": "raw",
+															"raw": "",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{url}}users/twofa/setup",
+															"host": [
+																"{{url}}users"
+															],
+															"path": [
+																"twofa",
+																"setup"
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": null,
+													"header": [
+														{
+															"key": "X-Powered-By",
+															"value": "Express"
+														},
+														{
+															"key": "Access-Control-Allow-Origin",
+															"value": "*"
+														},
+														{
+															"key": "Content-Type",
+															"value": "application/json; charset=utf-8"
+														},
+														{
+															"key": "Content-Length",
+															"value": "3149"
+														},
+														{
+															"key": "ETag",
+															"value": "W/\"c4d-LSc5tZmiu62JO4P1Psu3kwAohM8\""
+														},
+														{
+															"key": "Date",
+															"value": "Mon, 01 Sep 2025 00:50:04 GMT"
+														},
+														{
+															"key": "Connection",
+															"value": "keep-alive"
+														},
+														{
+															"key": "Keep-Alive",
+															"value": "timeout=5"
+														}
+													],
+													"cookie": [],
+													"body": "{\n    \"message\": \"2fa qr generated\",\n    \"data\": {\n        \"qrCode\": \"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMQAAADECAYAAADApo5rAAAAAklEQVR4AewaftIAAAi6SURBVO3BQY4kx7IgQdVA3f/KOo2/cNjKgUBmNck3JmJ/sNb6Pw9rreNhrXU8rLWOh7XW8bDWOh7WWsfDWut4WGsdD2ut42GtdTystY6HtdbxsNY6HtZax8Na6/jhQyp/U8WNyicqblSmim9SuamYVKaK36RyUzGp/E0Vn3hYax0Pa63jYa11/PBlFd+k8k9SmSomlaliUpkqJpWbiknlDZWpYlJ5o2JSeaPim1S+6WGtdTystY6Htdbxwy9TeaPiDZWp4m+qeENlqrhRuam4qZhUpopJZaqYVKaKT6i8UfGbHtZax8Na63hYax0//I9T+SaVqeITKr9J5UZlqphUpor/ZQ9rreNhrXU8rLWOH/7HqLxR8YbKb6qYVG5Upoqp4kZlUpkqJpWp4n/Jw1rreFhrHQ9rreOHX1bxN1X8popPVEwqk8pUcaPyhsonKr6p4t/kYa11PKy1joe11vHDl6n8m6hMFZPKVDGpTBWTylTxiYpJZap4Q2WqmFSmikllqphUpooblX+zh7XW8bDWOh7WWscPH6r4L1GZKiaVqWJSeaPiDZU3Km4qJpU3Kj5R8V/ysNY6HtZax8Na67A/+IDKVDGpfFPFJ1SmiknlpmJSuamYVKaKG5WpYlK5qZhUPlHxhso3Vfymh7XW8bDWOh7WWscPf1nFb1J5Q2WqmFQmlZuKm4pJ5Q2VqeKNiknlDZWp4o2KSeXf5GGtdTystY6HtdZhf/BFKlPFpDJVTCo3FZPKGxWTyk3FjcpUMalMFTcqU8UbKlPFpDJVTCpTxSdUflPFNz2stY6HtdbxsNY6fviQylQxqdyoTBX/pIpJ5b+kYlK5UZkqJpWbiknlpuJGZaq4UZkqPvGw1joe1lrHw1rr+OHLVG4q3lCZKt6omFRuVKaKSWWqmFSmijcqJpWp4kZlqphUblSmiknlb1KZKn7Tw1rreFhrHQ9rreOHL6uYVG5UpoqpYlK5qZhUbiomlTdUblSmiknlpmJSmSqmiknljYpJZaq4qZhUJpWbihuV3/Sw1joe1lrHw1rrsD/4IpWbikllqphUpopJ5aZiUvlExTepTBWTylQxqdxUvKHyRsVvUpkqftPDWut4WGsdD2ut44d/WMWkMlW8UTGpvFHxhsrfpPJNKlPFpDJV/E0Vk8pNxSce1lrHw1rreFhrHT98WcWk8kbFpDJVvFExqUwVk8pNxU3FJ1TeqLhRuamYVKaKSWWqeENlqphUbiomlW96WGsdD2ut42GtdfzwIZWp4kbljYqbiknlDZVvUrmpmFSmihuVG5WbipuKSeVGZaqYVG5U/k0e1lrHw1rreFhrHfYHH1D5N6m4UXmj4g2VqWJSmSomlTcqJpWpYlL5RMWkclMxqdxUTCo3Fd/0sNY6HtZax8Na67A/+IDKVHGjclPxhsobFTcqU8Wk8k0Vb6jcVEwqn6i4UZkq3lC5qfibHtZax8Na63hYax0/fKhiUrmpuFF5o2JS+U0Vn1B5Q2Wq+ETFjcobFZ+ouFGZKn7Tw1rreFhrHQ9rrcP+4BepTBWTylRxozJVTCpTxaQyVXxCZaqYVD5RMam8UXGj8k0Vk8pU8QmVm4pPPKy1joe11vGw1jrsD/4ilaliUvk3qZhUbiomlaliUpkqPqHyRsWkMlXcqEwVk8o3Vfymh7XW8bDWOh7WWscPX6YyVUwVNxU3KlPFpHJTMalMFZPKVDGpfKJiUrmpuKmYVKaKSWWquFH5J6ncVHziYa11PKy1joe11vHDh1R+k8obFZ9QmSomlRuVqeJGZap4Q2Wq+ITKVPGJim9SmSq+6WGtdTystY6Htdbxw4cq3lB5o2JSuVF5o+JGZaqYVN5QmSomlaliUpkqJpW/qeJGZaqYVG4q/qaHtdbxsNY6HtZah/3BB1RuKm5UvqniRuWm4p+kclMxqUwVNyqfqLhRmSpuVKaKG5Wp4pse1lrHw1rreFhrHT/8MpWp4qbiDZVJZaqYKiaVSeWm4g2Vm4pPVNyoTBWTylQxqXyTyo3KVDFV/KaHtdbxsNY6HtZah/3BF6n8popPqLxRcaNyU3GjMlVMKjcVk8pUcaNyUzGp3FRMKlPFjconKj7xsNY6HtZax8Na67A/+IDKTcU3qbxRMancVHyTyk3FpPI3Vdyo3FRMKp+ouFG5qfjEw1rreFhrHQ9rreOHL6t4Q2WqmFSmijdUvkllqphU3lC5qZhUpopJ5ZsqJpWbijdUPlHxTQ9rreNhrXU8rLUO+4MPqEwVk8pNxW9SeaPiN6lMFZPKVHGjclPxm1RuKv5LHtZax8Na63hYax0//GUVk8pUMal8ouJGZVKZKiaVqWJSmSqmik+oTBWfULmpmFTeUHmjYlKZKn7Tw1rreFhrHQ9rrcP+4D9M5Y2KSeWmYlK5qfgmlTcqJpWp4kZlqrhRmSreULmpmFRuKj7xsNY6HtZax8Na6/jhQyp/U8VUMalMFTcVk8pNxaRyo3JTcVPxhspUMalMFVPFjcobKlPFN1V808Na63hYax0Pa63jhy+r+CaVG5UblU+ofKLiRmWquFGZKqaKN1Smim+q+C95WGsdD2ut42Gtdfzwy1TeqPhExSdUvknlpuJG5UblExWTylQxVUwqk8o3qfxND2ut42GtdTystY4f/j+jMlVMFTcqb1RMKpPKTcWkclPxhspUcaNyU/GbVH7Tw1rreFhrHQ9rreOH/zEqU8UnVN5QmSqmihuVSWWq+ITKJypuVL6pYqr4TQ9rreNhrXU8rLWOH35ZxW+qmFQmlaliUpkqPlHxb1YxqdyoTBWTyk3FjcpUcaMyVXzTw1rreFhrHQ9rreOHL1P5m1TeUJkqbiomlU+o3FS8ofJGxVQxqUwVk8pUMalMKlPFJyp+08Na63hYax0Pa63D/mCt9X8e1lrHw1rreFhrHQ9rreNhrXU8rLWOh7XW8bDWOh7WWsfDWut4WGsdD2ut42GtdTystY6Htdbx/wBgFZXC44G0UwAAAABJRU5ErkJggg==\"\n    }\n}"
+												}
+											]
+										},
+										{
+											"name": "confirm or enable",
+											"request": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"token\": \"948769\"\n}\n",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}users/twofa/confirm",
+													"host": [
+														"{{url}}users"
+													],
+													"path": [
+														"twofa",
+														"confirm"
+													]
+												},
+												"description": "Confirming will enable it automatically"
+											},
+											"response": [
+												{
+													"name": "confirm",
+													"originalRequest": {
+														"method": "POST",
+														"header": [],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n  \"token\": \"901901\"\n}\n",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{url}}users/twofa/confirm",
+															"host": [
+																"{{url}}users"
+															],
+															"path": [
+																"twofa",
+																"confirm"
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": null,
+													"header": [
+														{
+															"key": "X-Powered-By",
+															"value": "Express"
+														},
+														{
+															"key": "Access-Control-Allow-Origin",
+															"value": "*"
+														},
+														{
+															"key": "Content-Type",
+															"value": "application/json; charset=utf-8"
+														},
+														{
+															"key": "Content-Length",
+															"value": "39"
+														},
+														{
+															"key": "ETag",
+															"value": "W/\"27-UfCE2+e3T6aATsmrBA+hqFGVfwQ\""
+														},
+														{
+															"key": "Date",
+															"value": "Sat, 30 Aug 2025 14:18:07 GMT"
+														},
+														{
+															"key": "Connection",
+															"value": "keep-alive"
+														},
+														{
+															"key": "Keep-Alive",
+															"value": "timeout=5"
+														}
+													],
+													"cookie": [],
+													"body": "{\n    \"message\": \"2fa verified successfully\"\n}"
+												}
+											]
+										},
+										{
+											"name": "disable",
+											"request": {
+												"method": "POST",
+												"header": [],
+												"url": {
+													"raw": "{{url}}users/twofa/disable",
+													"host": [
+														"{{url}}users"
+													],
+													"path": [
+														"twofa",
+														"disable"
+													]
+												}
+											},
+											"response": [
+												{
+													"name": "disable",
+													"originalRequest": {
+														"method": "POST",
+														"header": [],
+														"url": {
+															"raw": "{{url}}users/twofa/disable",
+															"host": [
+																"{{url}}users"
+															],
+															"path": [
+																"twofa",
+																"disable"
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": null,
+													"header": [
+														{
+															"key": "X-Powered-By",
+															"value": "Express"
+														},
+														{
+															"key": "Access-Control-Allow-Origin",
+															"value": "*"
+														},
+														{
+															"key": "Content-Type",
+															"value": "application/json; charset=utf-8"
+														},
+														{
+															"key": "Content-Length",
+															"value": "39"
+														},
+														{
+															"key": "ETag",
+															"value": "W/\"27-AwL5GpezvwMDTSMawpLeoHo01n4\""
+														},
+														{
+															"key": "Date",
+															"value": "Mon, 01 Sep 2025 01:20:55 GMT"
+														},
+														{
+															"key": "Connection",
+															"value": "keep-alive"
+														},
+														{
+															"key": "Keep-Alive",
+															"value": "timeout=5"
+														}
+													],
+													"cookie": [],
+													"body": "{\n    \"message\": \"2fa disabled successfully\"\n}"
+												}
+											]
+										}
+									]
+								},
+								{
+									"name": "profile",
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}users/:id",
+											"host": [
+												"{{url}}users"
+											],
+											"path": [
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "68ed03f2f600828e48b9a186"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "update profile",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"profileIcon\": \"noImage1.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"M\",\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122104\"\n    },\n    \"location\": {\n        \"coordinates\": [\n            43.5081,\n            16.4402\n        ],\n        \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n        \"country\": \"USA\",\n        \"city\": \"New York\",\n        \"state\": \"NYKaff\",\n        \"postalCode\": \"10012\"\n    },\n    \"dob\": \"2005-10-16\",\n    \"gender\": \"Male\",\n    \"notifications\":{\n        \"email\":true,\n        \"push\":false\n    },\n    \"deviceType\": \"web\", //andoird/ios/web\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}users/:id",
+											"host": [
+												"{{url}}users"
+											],
+											"path": [
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "68ed03f2f600828e48b9a186"
+												}
+											]
+										},
+										"description": "When you continue with social auth you can use thie api to add organizationName and phoneNumber"
+									},
+									"response": []
+								},
+								{
+									"name": "logout",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"deviceId\": \"1234\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}auth/logout",
+											"host": [
+												"{{url}}auth"
+											],
+											"path": [
+												"logout"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "deleteAccount",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}auth/delete-account",
+											"host": [
+												"{{url}}auth"
+											],
+											"path": [
+												"delete-account"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "change password",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"oldPassword\":\"112233\",\n    \"newPassword\":\"112233\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}auth/change-password",
+											"host": [
+												"{{url}}auth"
+											],
+											"path": [
+												"change-password"
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"auth": {
+								"type": "bearer",
+								"bearer": [
+									{
+										"key": "token",
+										"value": "{{tokenUser}}",
+										"type": "string"
+									}
+								]
+							},
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											""
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											""
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "Interests",
+							"item": [
+								{
+									"name": "categories",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}categories/global?page=1&limit=10",
+											"host": [
+												"{{url}}categories"
+											],
+											"path": [
+												"global"
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "keyword",
+													"value": "Shows",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "categories",
+											"originalRequest": {
+												"method": "GET",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}categories/global?page=1&limit=10",
+													"host": [
+														"{{url}}categories"
+													],
+													"path": [
+														"global"
+													],
+													"query": [
+														{
+															"key": "page",
+															"value": "1"
+														},
+														{
+															"key": "limit",
+															"value": "10"
+														},
+														{
+															"key": "keyword",
+															"value": "Shows",
+															"disabled": true
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": null,
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "469"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"1d5-aUr3ZXp0FLofXLMKezW1luPBP8w\""
+												},
+												{
+													"key": "Date",
+													"value": "Wed, 15 Oct 2025 11:43:31 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Categories fetched successfully\",\n    \"data\": [\n        {\n            \"order\": 0,\n            \"_id\": \"68ee3310924370d02dbacc41\",\n            \"title\": \"Nightlife\",\n            \"status\": \"active\",\n            \"pinned\": false,\n            \"createdAt\": \"2025-10-14T11:25:04.699Z\",\n            \"updatedAt\": \"2025-10-14T11:25:41.702Z\",\n            \"__v\": 0,\n            \"imageInfo\": {\n                \"name\": \"24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\",\n                \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\"\n            }\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 10,\n        \"totalPages\": 1,\n        \"total\": 1\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "venue types",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}venue-types/global?page=1&limit=10",
+											"host": [
+												"{{url}}venue-types"
+											],
+											"path": [
+												"global"
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "keyword",
+													"value": "club",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "venue types",
+											"originalRequest": {
+												"method": "GET",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}venue-types/global?page=1&limit=10",
+													"host": [
+														"{{url}}venue-types"
+													],
+													"path": [
+														"global"
+													],
+													"query": [
+														{
+															"key": "page",
+															"value": "1"
+														},
+														{
+															"key": "limit",
+															"value": "10"
+														},
+														{
+															"key": "keyword",
+															"value": "club",
+															"disabled": true
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": null,
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "418"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"1a2-TNckSrboP9CT1temjuKVHEbDtdc\""
+												},
+												{
+													"key": "Date",
+													"value": "Wed, 15 Oct 2025 12:13:56 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Venue types fetched successfully\",\n    \"data\": [\n        {\n            \"_id\": \"68ee3430924370d02dbacc89\",\n            \"title\": \"Free Events\",\n            \"status\": \"active\",\n            \"pinned\": false,\n            \"createdAt\": \"2025-10-14T11:29:52.516Z\",\n            \"updatedAt\": \"2025-10-14T11:29:52.516Z\",\n            \"__v\": 0,\n            \"imageInfo\": {\n                \"name\": \"noimage.png\",\n                \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/noimage.png\"\n            }\n        }\n    ],\n    \"meta\": {\n        \"currentPage\": 1,\n        \"totalPages\": 1,\n        \"totalRecords\": 1,\n        \"limit\": 10\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "tags",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}tags/global?page=1&limit=10",
+											"host": [
+												"{{url}}tags"
+											],
+											"path": [
+												"global"
+											],
+											"query": [
+												{
+													"key": "keyword",
+													"value": "night",
+													"disabled": true
+												},
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												}
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "tags",
+											"originalRequest": {
+												"method": "GET",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}tags/global?page=1&limit=10",
+													"host": [
+														"{{url}}tags"
+													],
+													"path": [
+														"global"
+													],
+													"query": [
+														{
+															"key": "keyword",
+															"value": "night",
+															"disabled": true
+														},
+														{
+															"key": "page",
+															"value": "1"
+														},
+														{
+															"key": "limit",
+															"value": "10"
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": null,
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "501"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"1f5-ltW8je3glRGCwIXlZF5oY89QLb0\""
+												},
+												{
+													"key": "Date",
+													"value": "Wed, 15 Oct 2025 12:11:40 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Tags fetched successfully\",\n    \"data\": [\n        {\n            \"_id\": \"68ee33f1924370d02dbacc71\",\n            \"title\": \"festival\",\n            \"status\": \"active\",\n            \"type\": \"primary\",\n            \"pinned\": false,\n            \"createdAt\": \"2025-10-14T11:28:49.759Z\",\n            \"updatedAt\": \"2025-10-14T11:28:49.759Z\",\n            \"__v\": 0\n        },\n        {\n            \"_id\": \"68ee33e1924370d02dbacc6e\",\n            \"title\": \"healing head\",\n            \"status\": \"active\",\n            \"type\": \"primarya\",\n            \"pinned\": false,\n            \"createdAt\": \"2025-10-14T11:28:33.694Z\",\n            \"updatedAt\": \"2025-10-14T11:28:33.694Z\",\n            \"__v\": 0\n        }\n    ],\n    \"meta\": {\n        \"currentPage\": 1,\n        \"totalPages\": 1,\n        \"totalRecords\": 2,\n        \"limit\": 10\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "add interests",
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"categories\":[\"68ee3310924370d02dbacc41\"],\n    \"venueTypes\":[\"68ee3430924370d02dbacc89\"],\n    \"tags\":[\"68ee33f1924370d02dbacc71\"]\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}users/interests",
+											"host": [
+												"{{url}}users"
+											],
+											"path": [
+												"interests"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "get interests",
+									"request": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{url}}users/interests",
+											"host": [
+												"{{url}}users"
+											],
+											"path": [
+												"interests"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "Home",
+					"item": [
+						{
+							"name": "get",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    // \"category\":\"68ee3310924370d02dbacc41\",\n    // \"time\": \"\", //\"\",live, today, tomorrow, thisWeek\n    // \"\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}home/",
+									"host": [
+										"{{url}}home"
+									],
+									"path": [
+										""
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				}
+			],
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{tokenUser}}",
+						"type": "string"
+					}
+				]
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {},
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		},
+		{
 			"name": "Organizer",
 			"item": [
 				{
@@ -105,8 +2100,6 @@
 													"      ",
 													"        pm.environment.set(\"emailOrganizer\", jsonData.data.basicInfo.email);",
 													"",
-													"        pm.environment.set(\"emailOtpOrganizer\", jsonData.data.otpInfo.emailOtp.otp);",
-													"",
 													"        let requestBody = JSON.parse(pm.request.body.raw);",
 													"        pm.environment.set(\"passwordOrganizer\", requestBody.password);",
 													"        ",
@@ -162,7 +2155,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"M\",\n    \"organizationName\": \"Tech Innovators Ltd.\",\n    \"email\": \"{{$randomExampleEmail}}\",\n    \"phoneNumber\": {\n        \"code\": \"+385\",\n        \"number\": \"998798769\"\n    },\n    \"password\": \"{{passwordOrganizer}}\",\n    \"deviceType\": \"web\", //andoird/ios/web\n    \"userType\": \"organizer\", //organizer, user, admin\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n    //optional\n    ,\n    \"companyDetails\": {\n        \"name\": \"Tech Innovators Ltd\",\n        \"oib\": \"4\",\n        \"bankAccountNumber\": \"HR1234567890001234567\",\n        \"representativeName\": \"Alice Johnson\",\n        \"location\": {\n          \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYK\",\n            \"postalCode\": \"10011\"\n        },\n        \"suppliers\": [\n            \"6881002e5b438e9b241870f9\",\n            \"68810088acb33f97130688f4\"\n        ]\n    }\n}",
+											"raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"M\",\n    \"organizationName\": \"Tech Innovators Ltd.\",\n    \"email\": \"{{$randomExampleEmail}}\",\n    \"phoneNumber\": {\n        \"code\": \"+385\",\n        \"number\": \"998798769\"\n    },\n    \"password\": \"{{passwordOrganizer}}\",\n    \"deviceType\": \"web\", //andoird/ios/web\n    \"userType\": \"organizer\", //organizer, user, admin\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n    //optional\n    ,\n    \"companyDetails\": {\n        \"name\": \"Tech Innovators Ltd\",\n        \"oib\": \"4\",\n        \"bankAccountNumber\": \"HR1234567890001234567\",\n        \"representativeName\": \"Alice Johnson\",\n        \"location\": {\n          \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYK\",\n            \"postalCode\": \"10011\"\n        },\n        \"suppliers\": [\n            \"68ee4b7ba0e89aae25bd1e9b\"\n        ]\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -1688,7 +3681,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    // \"profileIcon\": \"noImage.png\",\n    // \"firstName\": \"{{$randomUserName}}\",\n    // \"lastName\": \"M\",\n    // \"organizationName\":\"Tech Innovators Ltd\",\n    // \"phoneNumber\": {\n    //     \"code\": \"+92\",\n    //     \"number\": \"3001122104\"\n    // },\n      \"location\": {\n          \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYKaff\",\n            \"postalCode\": \"10012\"\n        },\n    // \"deviceType\": \"web\", //andoird/ios/web\n    // \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    // \"timezone\": \"Asia/Karachi\"\n    \n    // ,\n    \"companyDetails\":{\n        \"oib\": \"5492948232\",\n        \"location\": {\n          \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYKa\",\n            \"postalCode\": \"10012\"\n        }\n    },\n\n    \"termsAccepted\":true\n}",
+											"raw": "{\n    // \"profileIcon\": \"noImage.png\",\n    // \"firstName\": \"{{$randomUserName}}\",\n    // \"lastName\": \"M\",\n    // \"organizationName\":\"Tech Innovators Ltd\",\n    // \"phoneNumber\": {\n    //     \"code\": \"+92\",\n    //     \"number\": \"3001122104\"\n    // },\n      \"location\": {\n          \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYKaff\",\n            \"postalCode\": \"10012\"\n        },\n    // \"deviceType\": \"web\", //andoird/ios/web\n    // \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    // \"timezone\": \"Asia/Karachi\"\n    \n    // ,\n    \"companyDetails\":{\n        \"oib\": \"5492948232\",\n        \"location\": {\n          \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYKa\",\n            \"postalCode\": \"10012\"\n        },\n        \"loyaltySettings\":{\n            \"model\":\"essential\",\n            \"pointValuePercentage\":2.5\n        }\n    },\n\n\n    \"termsAccepted\":true\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -1990,7 +3983,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -2000,7 +3994,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -2009,7 +4004,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"logo\": \"org-logo_pic1.png\",\n            \"cover\": \"org-cover.jpg\"\n        },\n        \"name\": \"Lex Events\",\n        \"socialLinks\": {\n            \"youtube\": \"https://youtube.com/lexevents\",\n            \"facebook\": \"https://facebook.com/lexevents\",\n            \"instagram\": \"https://instagram.com/lexevents\",\n            \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        }\n    },\n    \"otherInfo\": {\n        \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n        \"minAge\": 18,\n        \"tags\": [\n            \"64f7206e442c7dfc4aa00001\"\n        ],\n        \"categories\": [\n            \"64f7206e442c7dfc4aa00002\"\n        ],\n        \"galleryMedia\": [\n            \"gallery1.jpg\",\n            \"gallery2.jpg\"\n        ]\n    },\n    \"operatingHours\": {\n        \"monday\": {\n            \"from\": \"10:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"tuesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"wednesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"thursday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"friday\": {\n            \"from\": \"09:00\",\n            \"to\": \"20:00\",\n            \"break\": {\n                \"from\": \"14:00\",\n                \"to\": \"15:00\"\n            },\n            \"isOpen\": false\n        },\n        \"saturday\": {\n            \"from\": \"12:00\",\n            \"to\": \"22:00\",\n            \"break\": {\n                \"from\": \"16:00\",\n                \"to\": \"17:00\"\n            },\n            \"isOpen\": false\n        },\n        \"sunday\": {\n            \"from\": \"\",\n            \"to\": \"\",\n            \"break\": {\n                \"from\": \"\",\n                \"to\": \"\"\n            },\n            \"isOpen\": true\n        }\n    },\n    \"status\": \"active\",\n    \"venue\": \"688b7c55b1d6bd76d70645a1\"\n}",
+									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"logo\": \"org-logo_pic1.png\",\n            \"cover\": \"org-cover.jpg\"\n        },\n        \"name\": \"Lex Events\",\n        \"socialLinks\": {\n            \"youtube\": \"https://youtube.com/lexevents\",\n            \"facebook\": \"https://facebook.com/lexevents\",\n            \"instagram\": \"https://instagram.com/lexevents\",\n            \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        }\n    },\n    \"otherInfo\": {\n        \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n        \"minAge\": 18,\n        \"tags\": [\n            \"68ee33f1924370d02dbacc71\"\n        ],\n        \"categories\": [\n            \"68ee3310924370d02dbacc41\"\n        ],\n        \"galleryMedia\": [\n            \"gallery1.jpg\",\n            \"gallery2.jpg\"\n        ]\n    },\n    \"operatingHours\": {\n        \"monday\": {\n            \"from\": \"10:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"tuesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"wednesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"thursday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"friday\": {\n            \"from\": \"09:00\",\n            \"to\": \"20:00\",\n            \"break\": {\n                \"from\": \"14:00\",\n                \"to\": \"15:00\"\n            },\n            \"isOpen\": false\n        },\n        \"saturday\": {\n            \"from\": \"12:00\",\n            \"to\": \"22:00\",\n            \"break\": {\n                \"from\": \"16:00\",\n                \"to\": \"17:00\"\n            },\n            \"isOpen\": false\n        },\n        \"sunday\": {\n            \"from\": \"\",\n            \"to\": \"\",\n            \"break\": {\n                \"from\": \"\",\n                \"to\": \"\"\n            },\n            \"isOpen\": true\n        }\n    },\n    \"status\": \"active\",\n    \"venue\": \"68ee4c95a0e89aae25bd1eca\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -2889,7 +4884,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -2899,7 +4895,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -2919,7 +4916,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}highlights/?page=1&limit=10&keyword=Big Event",
+									"raw": "{{url}}highlights/?page=1&limit=10",
 									"host": [
 										"{{url}}highlights"
 									],
@@ -2942,7 +4939,8 @@
 										},
 										{
 											"key": "keyword",
-											"value": "Big Event"
+											"value": "Big Event",
+											"disabled": true
 										}
 									]
 								}
@@ -3100,7 +5098,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -3110,7 +5109,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -3119,7 +5119,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"media\": {\n    \"type\": \"video\",\n    \"name\": \"highlight_video.mp4\"\n  },\n  \"title\": \"Amazing Highlight\",\n  \"type\": \"organization\",\n  \"object\": \"68932a0dce6408026b883458\",//event/organization\n  \"status\": \"active\"\n}\n",
+									"raw": "{\n  \"media\": {\n    \"type\": \"video\",\n    \"name\": \"highlight_video.mp4\"\n  },\n  \"title\": \"Amazing Highlight\",\n  \"type\": \"organization\",\n  \"object\": \"68ee4cbba0e89aae25bd1ece\",//event/organization\n  \"status\": \"active\"\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -3699,7 +5699,8 @@
 									""
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						},
 						{
@@ -3709,7 +5710,8 @@
 									""
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],
@@ -3729,7 +5731,7 @@
 							}
 						},
 						"url": {
-							"raw": "{{url}}categories/global?page=1&limit=10&date=2025-07-25",
+							"raw": "{{url}}categories/global?page=1&limit=10",
 							"host": [
 								"{{url}}categories"
 							],
@@ -3753,7 +5755,8 @@
 								{
 									"key": "date",
 									"value": "2025-07-25",
-									"description": "yyyy-mm-dd"
+									"description": "yyyy-mm-dd",
+									"disabled": true
 								}
 							]
 						}
@@ -5205,7 +7208,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -5215,7 +7219,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -5224,7 +7229,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"title\": \"Sample title\",\n  \"description\": \"description of item\"\n}\n",
+									"raw": "{\n  \"title\": \"Global Party PVT.\",\n  \"description\": \"description of item\"\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -5242,7 +7247,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": ""
+											"value": "68ee4b7ba0e89aae25bd1e9b"
 										}
 									]
 								},
@@ -5455,7 +7460,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -5465,7 +7471,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -5474,7 +7481,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"title\": \"#healing head\",\n    // \"description\": \"Going out for events\",\n    \"status\": \"active\",\n    \"type\":\"prim\"\n  }",
+									"raw": "{\n    \"title\": \"festival\",\n    // \"description\": \"Going out for events\",\n    \"status\": \"active\",\n    \"type\":\"primary\"\n  }",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -5622,7 +7629,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -5632,7 +7640,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -5757,7 +7766,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -5767,7 +7777,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -5776,7 +7787,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"title\": \"Gallery\"\n}\n",
+									"raw": "{\n  \"title\": \"Free Events\"\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -6207,7 +8218,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -6217,7 +8229,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -6226,7 +8239,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"title\": \"Club De Moon\",\n    \"floorPlan\": \"a0aa3def-47ef-4e43-a5da-8fb36fa0c529.png\",\n    \"venueType\": \"68b2a8c62e76b4cdac8be34d\",\n    \"organization\": \"68932a0dce6408026b883458\", //optional\n    \"location\": {\n        \"fullAddress\":\"123 Seaside Blvd\",\n        \"state\":\"Col\",\n        \"city\": \"Split\",\n        \"postalCode\": \"21000\",\n        \"country\": \"Croatia\",\n        \"coordinates\": [\n            43.5081, //lng\n            16.4402 //lat\n        ]\n    }\n}",
+									"raw": "{\n    \"title\": \"Venue Sea View\",\n    \"floorPlan\": \"a0aa3def-47ef-4e43-a5da-8fb36fa0c529.png\",\n    \"venueType\": \"68ee3430924370d02dbacc89\",\n    // \"organization\": \"68932a0dce6408026b883458\", //optional\n    \"location\": {\n        \"fullAddress\":\"123 Seaside Blvd\",\n        \"state\":\"Col\",\n        \"city\": \"Split\",\n        \"postalCode\": \"21000\",\n        \"country\": \"Croatia\",\n        \"coordinates\": [\n            43.5081, //lng\n            16.4402 //lat\n        ]\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -6561,7 +8574,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -6571,7 +8585,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -6580,7 +8595,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n//  \"pinned\":true\n\"image\":\"24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\"\n}\n",
+									"raw": "{\n//  \"pinned\":true\n// \"image\":\"24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\"\n\"title\":\"Nightlife\"\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -6599,7 +8614,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68b071d0a1330ed23f83e08d"
+											"value": "68ee3310924370d02dbacc41"
 										}
 									]
 								},
@@ -7216,7 +9231,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -7226,7 +9242,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -7235,7 +9252,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"title\": \"Sample title\",\n  \"description\": \"description of item\"\n}\n",
+									"raw": "{\n    //   \"title\": \"Sample title\",\n    //   \"description\": \"description of item\"\n\n    \n    \"promotion\": { //promote event\n        \"isPromoted\": true,\n        \"order\": \"1\"\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -7253,7 +9270,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": ""
+											"value": "68de33b7bcddb74bfc2d9dd8"
 										}
 									]
 								},
@@ -7985,7 +10002,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "68d69376fbccb319035eb13e"
+													"value": "68de726e80b634b07eade829"
 												}
 											]
 										}
@@ -8109,6 +10126,64 @@
 									]
 								},
 								{
+									"name": "duplicate",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"venue\": \"68de734580b634b07eade84c\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}menu/duplicate/:menuId",
+											"host": [
+												"{{url}}menu"
+											],
+											"path": [
+												"duplicate",
+												":menuId"
+											],
+											"variable": [
+												{
+													"key": "menuId",
+													"value": "68de726e80b634b07eade829"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
 									"name": "update",
 									"event": [
 										{
@@ -8214,7 +10289,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "68d693c7fbccb319035eb152"
+													"value": "68de735980b634b07eade851"
 												}
 											]
 										},
@@ -8638,7 +10713,7 @@
 											"query": [
 												{
 													"key": "menu",
-													"value": "68d69376fbccb319035eb13e",
+													"value": "68de726e80b634b07eade829",
 													"disabled": true
 												},
 												{
@@ -8765,7 +10840,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"image\": \"burger.png\",\n  \"title\": \"Cheese Burger\",\n  \"description\": \"A delicious cheeseburger with lettuce, tomato, and fries.\",\n  \"type\": \"food\",\n  \"category\": \"68d699f66513527e7a236563\",\n  \"basePrice\": 10.99,\n  \"discountPrice\": 8.99,\n  \"taxPercent\": 5,\n  \"menu\": \"68d69376fbccb319035eb13e\",\n  \"startTime\": \"10:30 AM\",\n  \"endTime\": \"05:30 PM\",\n  \"status\": \"active\"\n}\n",
+											"raw": "{\n  \"image\": \"burger.png\",\n  \"title\": \"Cheese Burger\",\n  \"description\": \"A delicious cheeseburger with lettuce, tomato, and fries.\",\n  \"type\": \"food\",\n  \"category\": \"68d699f66513527e7a236563\",\n  \"basePrice\": 10.99,\n  \"discountPrice\": 8.99,\n  \"taxPercent\": 5,\n  \"menu\": \"68de726e80b634b07eade829\",\n  \"startTime\": \"10:30 AM\",\n  \"endTime\": \"05:30 PM\",\n  \"status\": \"active\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -10918,7 +12993,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68da7aa1e6f099d42e32da71"
+											"value": "68ee4bb7a0e89aae25bd1eab"
 										}
 									]
 								},
@@ -11813,7 +13888,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"organization\":\"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe to claim this challenge\",\n    \"taskType\": \"visit\", //\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 5\n    }\n}",
+											"raw": "{\n    \"companyOrganizer\":\"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe to claim this challenge\",\n    \"taskType\": \"visit\",\n    \"taskValue\": 500,\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 5\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -11840,7 +13915,7 @@
 												"header": [],
 												"body": {
 													"mode": "raw",
-													"raw": "{\n    \"organization\":\"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe to claim this challenge\",\n    \"taskType\": \"visit\", //\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 5\n    }\n}",
+													"raw": "{\n    \"companyOrganizer\":\"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe to claim this challenge\",\n    \"taskType\": \"visit\", //\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 5\n    }\n}",
 													"options": {
 														"raw": {
 															"language": "json"
@@ -11896,7 +13971,7 @@
 												}
 											],
 											"cookie": [],
-											"body": "{\n    \"message\": \"Challenge created successfully\",\n    \"data\": {\n        \"title\": \"Check in at Cafe\",\n        \"description\": \"Visit our cafe to claim this challenge\",\n        \"taskType\": \"visit\",\n        \"claimLimit\": 1,\n        \"endDate\": \"2025-12-30T19:00:00.000Z\",\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"status\": \"active\",\n        \"reward\": {\n            \"rewardType\": \"points\",\n            \"rewardValue\": 5\n        },\n        \"_id\": \"68dbad3cb24d98832f06267c\",\n        \"createdAt\": \"2025-09-30T10:13:16.729Z\",\n        \"updatedAt\": \"2025-09-30T10:13:16.729Z\",\n        \"__v\": 0,\n        \"id\": \"68dbad3cb24d98832f06267c\"\n    }\n}"
+											"body": "{\n    \"message\": \"Challenge created successfully\",\n    \"data\": {\n        \"title\": \"Check in at Cafe\",\n        \"description\": \"Visit our cafe to claim this challenge\",\n        \"taskType\": \"visit\",\n        \"claimLimit\": 1,\n        \"endDate\": \"2025-12-30T19:00:00.000Z\",\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n        \"status\": \"active\",\n        \"reward\": {\n            \"rewardType\": \"points\",\n            \"rewardValue\": 5\n        },\n        \"_id\": \"68dbad3cb24d98832f06267c\",\n        \"createdAt\": \"2025-09-30T10:13:16.729Z\",\n        \"updatedAt\": \"2025-09-30T10:13:16.729Z\",\n        \"__v\": 0,\n        \"id\": \"68dbad3cb24d98832f06267c\"\n    }\n}"
 										}
 									]
 								},
@@ -11931,7 +14006,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Walk 10,000 steps\",\n    \"description\": \"Earn points by being active\",\n    \"taskType\": \"earnPoints\",\n    \"taskValue\": 500,\n    \"claimLimit\": 5,\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\": \"68d7ee19c9469f7d754b5c99\"\n    }\n}",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Walk 10,000 steps\",\n    \"description\": \"Earn points by being active\",\n    \"taskType\": \"earnPoints\",\n    \"taskValue\": 500,\n    \"claimLimit\": 5,\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\": \"68d7ee19c9469f7d754b5c99\"\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -11958,7 +14033,7 @@
 												"header": [],
 												"body": {
 													"mode": "raw",
-													"raw": "{\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Walk 10,000 steps\",\n    \"description\": \"Earn points by being active\",\n    \"taskType\": \"earnPoints\",\n    \"taskValue\": 500,\n    \"claimLimit\": 5,\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\": \"68d7ee19c9469f7d754b5c99\"\n    }\n}",
+													"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Walk 10,000 steps\",\n    \"description\": \"Earn points by being active\",\n    \"taskType\": \"earnPoints\",\n    \"taskValue\": 500,\n    \"claimLimit\": 5,\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\": \"68d7ee19c9469f7d754b5c99\"\n    }\n}",
 													"options": {
 														"raw": {
 															"language": "json"
@@ -12048,7 +14123,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -12075,7 +14150,7 @@
 												"header": [],
 												"body": {
 													"mode": "raw",
-													"raw": "{\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
+													"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
 													"options": {
 														"raw": {
 															"language": "json"
@@ -12165,7 +14240,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Invite your friends\",\n    \"description\": \"Refer 3 friends to unlock rewards\",\n    \"taskType\": \"referUsers\",\n    \"taskValue\": 3,\n    \"claimLimit\": 10,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"customReward\",\n        \"customReward\": {\n            \"image\": \"68d7ee19c9469f7d754b5c99.png\",\n            \"title\": \"VIP Badge\",\n            \"description\": \"Special recognition for referring friends\"\n        }\n    }\n}",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Invite your friends\",\n    \"description\": \"Refer 3 friends to unlock rewards\",\n    \"taskType\": \"referUsers\",\n    \"taskValue\": 3,\n    \"claimLimit\": 10,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"customReward\",\n        \"customReward\": {\n            \"image\": \"68d7ee19c9469f7d754b5c99.png\",\n            \"title\": \"VIP Badge\",\n            \"description\": \"Special recognition for referring friends\"\n        }\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -12192,7 +14267,7 @@
 												"header": [],
 												"body": {
 													"mode": "raw",
-													"raw": "{\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"title\": \"Invite your friends\",\n    \"description\": \"Refer 3 friends to unlock rewards\",\n    \"taskType\": \"referUsers\",\n    \"taskValue\": 3,\n    \"claimLimit\": 10,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"customReward\",\n        \"customReward\": {\n            \"image\": \"68d7ee19c9469f7d754b5c99.png\",\n            \"title\": \"VIP Badge\",\n            \"description\": \"Special recognition for referring friends\"\n        }\n    }\n}",
+													"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Invite your friends\",\n    \"description\": \"Refer 3 friends to unlock rewards\",\n    \"taskType\": \"referUsers\",\n    \"taskValue\": 3,\n    \"claimLimit\": 10,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"customReward\",\n        \"customReward\": {\n            \"image\": \"68d7ee19c9469f7d754b5c99.png\",\n            \"title\": \"VIP Badge\",\n            \"description\": \"Special recognition for referring friends\"\n        }\n    }\n}",
 													"options": {
 														"raw": {
 															"language": "json"
@@ -12516,7 +14591,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"happyHour\", //[\"happyHour\", \"buyMenuItem\", \"productSale\"]\n    \"title\": \"Sample title\",\n    \"description\": \"description of item\",\n    \"startDate\":\"2025-11-05 05:00 AM\",\n    \"endDate\": \"2025-11-05 11:00 AM\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"pointsMultiplier\":\"1.5\",\n    \"status\": \"active\"\n}",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"happyHour\", //[\"happyHour\", \"buyMenuItem\", \"productSale\"]\n    \"title\": \"Sample title\",\n    \"description\": \"description of item\",\n    \"startDate\":\"2025-11-05 05:00 AM\",\n    \"endDate\": \"2025-11-05 11:00 AM\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"pointsMultiplier\":\"1.5\",\n    \"status\": \"active\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -12568,7 +14643,59 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"buyMenuItem\",\n    \"title\": \"Buy Coffee\",\n    \"description\": \"Best coffee to make your day\",\n    \"startDate\":\"2025-11-05\",\n    \"endDate\": \"2025-11-15\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"extraPoints\": 5,\n    \"status\": \"active\"\n}",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"buyMenuItem\",\n    \"title\": \"Buy Coffee\",\n    \"description\": \"Best coffee to make your day\",\n    \"startDate\":\"2025-11-05\",\n    \"endDate\": \"2025-11-15\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"extraPoints\": 5,\n    \"status\": \"active\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/promotions/",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"promotions",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "add - claim Promotion",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"claimPromotion\",\n    \"title\": \"Buy Coffee\",\n    \"description\": \"Best coffee to make your day\",\n    \"startDate\":\"2025-11-05\",\n    \"endDate\": \"2025-11-15\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"extraPoints\": 5,\n    \"status\": \"active\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -12816,7 +14943,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "68de364aa3e78f8d2560e89e"
+													"value": "68de3771d928079c34f32824"
 												}
 											]
 										}
@@ -12854,7 +14981,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"rewardType\": \"customReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Custom Reward\",\n    \"description\": \"A custom reward for special achievements.\", //optional\n    \"sortingType\": \"food\",\n    \"minPointsRequiredToClaim\": 50, //optional\n    \"claimLimit\": 5, //optional\n    \"percentOff\": 0, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"status\": \"active\",\n    \"customReward\": {\n        \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Special Custom Title\",\n        \"description\": \"A custom description for the reward.\"\n    }\n}",
+											"raw": "{\n    \"rewardType\": \"customReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Custom Reward\",\n    \"description\": \"A custom reward for special achievements.\", //optional\n    \"sortingType\": \"food\",\n    \"minPointsRequiredToClaim\": 50, //optional\n    \"claimLimit\": 5, //optional\n    \"percentOff\": 0, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"status\": \"active\",\n    \"customReward\": {\n        \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Special Custom Title\",\n        \"description\": \"A custom description for the reward.\"\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -12881,7 +15008,7 @@
 												"header": [],
 												"body": {
 													"mode": "raw",
-													"raw": "{\n    \"rewardType\": \"customReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Custom Reward\",\n    \"description\": \"A custom reward for special achievements.\", //optional\n    \"sortingType\": \"food\",\n    \"minPointsRequiredToClaim\": 50, //optional\n    \"claimLimit\": 5, //optional\n    \"percentOff\": 0, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"status\": \"active\",\n    \"customReward\": {\n        \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Special Custom Title\",\n        \"description\": \"A custom description for the reward.\"\n    }\n}",
+													"raw": "{\n    \"rewardType\": \"customReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Custom Reward\",\n    \"description\": \"A custom reward for special achievements.\", //optional\n    \"sortingType\": \"food\",\n    \"minPointsRequiredToClaim\": 50, //optional\n    \"claimLimit\": 5, //optional\n    \"percentOff\": 0, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"status\": \"active\",\n    \"customReward\": {\n        \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Special Custom Title\",\n        \"description\": \"A custom description for the reward.\"\n    }\n}",
 													"options": {
 														"raw": {
 															"language": "json"
@@ -12901,7 +15028,7 @@
 											},
 											"status": "Created",
 											"code": 201,
-											"_postman_previewlanguage": "",
+											"_postman_previewlanguage": null,
 											"header": [
 												{
 													"key": "X-Powered-By",
@@ -12937,7 +15064,7 @@
 												}
 											],
 											"cookie": [],
-											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"title\": \"Custom Reward\",\n        \"description\": \"A custom reward for special achievements.\",\n        \"rewardType\": \"customReward\",\n        \"sortingType\": \"food\",\n        \"minPointsRequiredToClaim\": 50,\n        \"claimLimit\": 5,\n        \"percentOff\": 0,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"status\": \"active\",\n        \"_id\": \"68de3627a3e78f8d2560e898\",\n        \"customReward\": {\n            \"title\": \"Special Custom Title\",\n            \"description\": \"A custom description for the reward.\",\n            \"mediaInfo\": {\n                \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n                \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/78d8f3b5d9a10a4e5d408a5c.png\"\n            }\n        },\n        \"createdAt\": \"2025-10-02T08:21:59.691Z\",\n        \"updatedAt\": \"2025-10-02T08:21:59.691Z\",\n        \"__v\": 0,\n        \"mediaInfo\": {\n            \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/68d8f3b5d9a10a4e5d408a5c.png\"\n        }\n    }\n}"
+											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"title\": \"Custom Reward\",\n        \"description\": \"A custom reward for special achievements.\",\n        \"rewardType\": \"customReward\",\n        \"sortingType\": \"food\",\n        \"minPointsRequiredToClaim\": 50,\n        \"claimLimit\": 5,\n        \"percentOff\": 0,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n        \"status\": \"active\",\n        \"_id\": \"68de3627a3e78f8d2560e898\",\n        \"customReward\": {\n            \"title\": \"Special Custom Title\",\n            \"description\": \"A custom description for the reward.\",\n            \"mediaInfo\": {\n                \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n                \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/78d8f3b5d9a10a4e5d408a5c.png\"\n            }\n        },\n        \"createdAt\": \"2025-10-02T08:21:59.691Z\",\n        \"updatedAt\": \"2025-10-02T08:21:59.691Z\",\n        \"__v\": 0,\n        \"mediaInfo\": {\n            \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/68d8f3b5d9a10a4e5d408a5c.png\"\n        }\n    }\n}"
 										}
 									]
 								},
@@ -12972,7 +15099,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"rewardType\": \"ticketReward\",\n  \"image\": \"image_url\",\n  \"title\": \"Ticket Reward\",\n  \"description\": \"Get a free ticket for a special event.\", //optional\n  \"sortingType\": \"category\", //optional\n  \"minPointsRequiredToClaim\": 200, //optional\n  \"claimLimit\": 1, //optional\n  \"percentOff\": 0, //optional\n   \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n  \"status\": \"active\",\n  \"event\": \"68de33b7bcddb74bfc2d9dd8\"\n}\n",
+											"raw": "{\n  \"rewardType\": \"ticketReward\",\n  \"image\": \"image_url\",\n  \"title\": \"Ticket Reward\",\n  \"description\": \"Get a free ticket for a special event.\", //optional\n  \"sortingType\": \"category\", //optional\n  \"minPointsRequiredToClaim\": 200,\n  \"claimLimit\": 1, //optional\n  \"percentOff\": 0, //optional\n   \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n  \"status\": \"active\",\n  \"event\": \"68de33b7bcddb74bfc2d9dd8\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -12999,7 +15126,7 @@
 												"header": [],
 												"body": {
 													"mode": "raw",
-													"raw": "{\n  \"rewardType\": \"ticketReward\",\n  \"image\": \"image_url\",\n  \"title\": \"Ticket Reward\",\n  \"description\": \"Get a free ticket for a special event.\", //optional\n  \"sortingType\": \"category\", //optional\n  \"minPointsRequiredToClaim\": 200, //optional\n  \"claimLimit\": 1, //optional\n  \"percentOff\": 0, //optional\n   \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n  \"status\": \"active\",\n  \"event\": \"68de33b7bcddb74bfc2d9dd8\"\n}\n",
+													"raw": "{\n  \"rewardType\": \"ticketReward\",\n  \"image\": \"image_url\",\n  \"title\": \"Ticket Reward\",\n  \"description\": \"Get a free ticket for a special event.\", //optional\n  \"sortingType\": \"category\", //optional\n  \"minPointsRequiredToClaim\": 200, //optional\n  \"claimLimit\": 1, //optional\n  \"percentOff\": 0, //optional\n   \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n  \"status\": \"active\",\n  \"event\": \"68de33b7bcddb74bfc2d9dd8\"\n}\n",
 													"options": {
 														"raw": {
 															"language": "json"
@@ -13019,7 +15146,7 @@
 											},
 											"status": "Created",
 											"code": 201,
-											"_postman_previewlanguage": "",
+											"_postman_previewlanguage": null,
 											"header": [
 												{
 													"key": "X-Powered-By",
@@ -13055,7 +15182,7 @@
 												}
 											],
 											"cookie": [],
-											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"title\": \"Ticket Reward\",\n        \"description\": \"Get a free ticket for a special event.\",\n        \"rewardType\": \"ticketReward\",\n        \"sortingType\": \"category\",\n        \"minPointsRequiredToClaim\": 200,\n        \"claimLimit\": 1,\n        \"percentOff\": 0,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"status\": \"active\",\n        \"_id\": \"68de3641a3e78f8d2560e89b\",\n        \"event\": \"68de33b7bcddb74bfc2d9dd8\",\n        \"createdAt\": \"2025-10-02T08:22:25.516Z\",\n        \"updatedAt\": \"2025-10-02T08:22:25.516Z\",\n        \"__v\": 0,\n        \"mediaInfo\": {\n            \"image\": \"image_url\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/image_url\"\n        }\n    }\n}"
+											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"title\": \"Ticket Reward\",\n        \"description\": \"Get a free ticket for a special event.\",\n        \"rewardType\": \"ticketReward\",\n        \"sortingType\": \"category\",\n        \"minPointsRequiredToClaim\": 200,\n        \"claimLimit\": 1,\n        \"percentOff\": 0,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n        \"status\": \"active\",\n        \"_id\": \"68de3641a3e78f8d2560e89b\",\n        \"event\": \"68de33b7bcddb74bfc2d9dd8\",\n        \"createdAt\": \"2025-10-02T08:22:25.516Z\",\n        \"updatedAt\": \"2025-10-02T08:22:25.516Z\",\n        \"__v\": 0,\n        \"mediaInfo\": {\n            \"image\": \"image_url\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/image_url\"\n        }\n    }\n}"
 										}
 									]
 								},
@@ -13090,7 +15217,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"rewardType\": \"buyMenuItemReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
+											"raw": "{\n    \"rewardType\": \"buyMenuItemReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -13117,7 +15244,7 @@
 												"header": [],
 												"body": {
 													"mode": "raw",
-													"raw": "{\n    \"rewardType\": \"buyMenuItemReward2\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
+													"raw": "{\n    \"rewardType\": \"buyMenuItemReward2\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
 													"options": {
 														"raw": {
 															"language": "json"
@@ -13173,7 +15300,7 @@
 												}
 											],
 											"cookie": [],
-											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Buy a Menu Item Reward\",\n        \"description\": \"Get a free item after purchasing a menu item.\",\n        \"rewardType\": \"buyMenuItemReward\",\n        \"sortingType\": \"category\",\n        \"minPointsRequiredToClaim\": 100,\n        \"claimLimit\": 1,\n        \"percentOff\": 20,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"status\": \"active\",\n        \"_id\": \"68de1ad95dfd5818fb763433\",\n        \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n        \"createdAt\": \"2025-10-02T06:25:29.084Z\",\n        \"updatedAt\": \"2025-10-02T06:25:29.084Z\",\n        \"__v\": 0\n    }\n}"
+											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Buy a Menu Item Reward\",\n        \"description\": \"Get a free item after purchasing a menu item.\",\n        \"rewardType\": \"buyMenuItemReward\",\n        \"sortingType\": \"category\",\n        \"minPointsRequiredToClaim\": 100,\n        \"claimLimit\": 1,\n        \"percentOff\": 20,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n        \"status\": \"active\",\n        \"_id\": \"68de1ad95dfd5818fb763433\",\n        \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n        \"createdAt\": \"2025-10-02T06:25:29.084Z\",\n        \"updatedAt\": \"2025-10-02T06:25:29.084Z\",\n        \"__v\": 0\n    }\n}"
 										},
 										{
 											"name": "add - buy Menu Item",
@@ -13182,7 +15309,7 @@
 												"header": [],
 												"body": {
 													"mode": "raw",
-													"raw": "{\n    \"rewardType\": \"buyMenuItemReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"organization\": \"68d91de3e9ed2f5900dca083\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
+													"raw": "{\n    \"rewardType\": \"buyMenuItemReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
 													"options": {
 														"raw": {
 															"language": "json"
@@ -13202,7 +15329,7 @@
 											},
 											"status": "Created",
 											"code": 201,
-											"_postman_previewlanguage": "",
+											"_postman_previewlanguage": null,
 											"header": [
 												{
 													"key": "X-Powered-By",
@@ -13238,7 +15365,7 @@
 												}
 											],
 											"cookie": [],
-											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"title\": \"Buy a Menu Item Reward\",\n        \"description\": \"Get a free item after purchasing a menu item.\",\n        \"rewardType\": \"buyMenuItemReward\",\n        \"sortingType\": \"Fresh\",\n        \"minPointsRequiredToClaim\": 100,\n        \"claimLimit\": 1,\n        \"percentOff\": 20,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"status\": \"active\",\n        \"_id\": \"68de364aa3e78f8d2560e89e\",\n        \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n        \"createdAt\": \"2025-10-02T08:22:34.639Z\",\n        \"updatedAt\": \"2025-10-02T08:22:34.639Z\",\n        \"__v\": 0,\n        \"mediaInfo\": {\n            \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/68d8f3b5d9a10a4e5d408a5c.png\"\n        }\n    }\n}"
+											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"title\": \"Buy a Menu Item Reward\",\n        \"description\": \"Get a free item after purchasing a menu item.\",\n        \"rewardType\": \"buyMenuItemReward\",\n        \"sortingType\": \"Fresh\",\n        \"minPointsRequiredToClaim\": 100,\n        \"claimLimit\": 1,\n        \"percentOff\": 20,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n        \"status\": \"active\",\n        \"_id\": \"68de364aa3e78f8d2560e89e\",\n        \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n        \"createdAt\": \"2025-10-02T08:22:34.639Z\",\n        \"updatedAt\": \"2025-10-02T08:22:34.639Z\",\n        \"__v\": 0,\n        \"mediaInfo\": {\n            \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/68d8f3b5d9a10a4e5d408a5c.png\"\n        }\n    }\n}"
 										}
 									]
 								},
@@ -13351,6 +15478,287 @@
 												{
 													"key": "id",
 													"value": "68daa70cc6b557bd920a31c8"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Loyalty Club Collaboration",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/club-collaborations",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"club-collaborations"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "get details",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}endpoint/:id",
+											"host": [
+												"{{url}}endpoint"
+											],
+											"path": [
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": ""
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"sender\": \"68d69157fbccb319035eb118\",\n  \"receiver\": \"68da7aa1e6f099d42e32da71\",\n  \"notes\": \"Looking forward to collaborating on the upcoming event.\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/club-collaborations",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"club-collaborations"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "update",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"title\": \"Sample title\",\n  \"description\": \"description of item\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/club-collaborations/::id",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"club-collaborations",
+												"::id"
+											],
+											"variable": [
+												{
+													"key": ":id",
+													"value": "68da7aa1e6f099d42e32da71"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/club-collaborations?id=68df69b47a82e5f63bee9466",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"club-collaborations"
+											],
+											"query": [
+												{
+													"key": "id",
+													"value": "68df69b47a82e5f63bee9466"
 												}
 											]
 										},

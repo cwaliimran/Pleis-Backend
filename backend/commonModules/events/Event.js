@@ -37,6 +37,24 @@ const eventSchema = new mongoose.Schema(
         ref: "Venues",
         required: true,
       },
+      venueLocation: { //only used for nearby events without populating venue
+        type: {
+          type: String,
+          enum: ['Point'],
+          default: 'Point',
+        },
+        coordinates: {
+          type: [Number], // [longitude, latitude]
+          required: true,
+          validate: {
+            validator: function (arr) {
+              return Array.isArray(arr) && arr.length === 2;
+            },
+            message: 'venueLocation.coordinates must be [longitude, latitude]',
+          },
+        },
+      },
+
       categories: [
         {
           type: mongoose.Schema.Types.ObjectId,
@@ -133,6 +151,43 @@ function transformDoc(doc, ret) {
   delete ret.id;
   return ret;
 }
+
+// provide a named instance method so it's not invoked automatically
+eventSchema.method("toPublicJSON", function (eventData) {
+  let eventObject;
+
+  if (eventData && typeof eventData === "object" && !Array.isArray(eventData)) {
+    // Case 1: explicitly provided plain object
+    eventObject = { ...eventData };
+  } else if (typeof this.toObject === "function") {
+    // Case 2: called on a mongoose doc
+    eventObject = this.toObject({ virtuals: true });
+  } else {
+    // Case 3: fallback if it's already a plain object
+    eventObject = { ...this };
+  }
+
+  // Ensure basicInfo exists
+  if (!eventObject.basicInfo) eventObject.basicInfo = {};
+
+  // Ensure mediaInfo virtual is present when a plain object was provided
+  const media = eventObject.basicInfo.media || {};
+  eventObject.basicInfo.mediaInfo = {
+    name: media.name || "",
+    type: media.type || "image",
+    url: getFullImageUrl(media.name),
+  };
+
+  // Apply the same schema-level transform used by toObject/toJSON
+  // transformDoc signature: function(doc, ret) { ... }
+  // We don't have the original doc here when a plain object was passed, so pass null
+  transformDoc(null, eventObject);
+
+  return eventObject;
+});
+
+//Add geospatial index
+eventSchema.index({ "basicInfo.venueLocation": '2dsphere' });
 
 const Events = mongoose.model("Event", eventSchema);
 

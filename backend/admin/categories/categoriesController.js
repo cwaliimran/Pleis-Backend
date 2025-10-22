@@ -18,7 +18,6 @@ const createCategory = async (req, res) => {
       image,
       title,
       status: "active",
-      pinned: false,
     });
 
     return sendResponse({
@@ -41,7 +40,7 @@ const createCategory = async (req, res) => {
 const getCategories = async (req, res) => {
 
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, pinned, date } = req.query;
+  const { keyword, status, date, orderSort } = req.query;
 
   try {
 
@@ -56,7 +55,8 @@ const getCategories = async (req, res) => {
       limit,
       keyword,
       status,
-      pinned, date
+      date,
+      orderSort
     });
 
     return sendResponse({
@@ -71,14 +71,14 @@ const getCategories = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
 
 const getPublicCategories = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, date } = req.query;
+  const { keyword, date,  } = req.query;
   try {
     if (date && !validateParams(req, res, {
       dateFields: {
@@ -113,7 +113,7 @@ const getPublicCategories = async (req, res) => {
 
 const updateCategory = async (req, res) => {
   const { id } = req.params;
-  const { title, status, pinned, image } = req.body;
+  const { title, status, image } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -127,8 +127,7 @@ const updateCategory = async (req, res) => {
     const updated = await categoriesService.updateCategory(id, {
       title,
       status,
-      pinned,
-      image
+      image,
     });
 
     if (!updated) {
@@ -187,10 +186,52 @@ const deleteCategory = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
+
+const reorderCategory = async (req, res) => {
+  const { movedId, previousOrder, newOrder } = req.body;
+  if (
+    !validateParams(req, res, {
+      rawData: ["movedId", "previousOrder", "newOrder"],
+      objectIdFields: ["movedId"],
+    })
+  )
+    return;
+
+  try {
+    const reordered = await categoriesService.reorderCategory(
+      movedId,
+      previousOrder,
+      newOrder
+    );
+
+    if (!reordered) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "category_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "category_reordered_successfully",
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server_error",
+      error: error
+    });
+  }
+};
+
+
 
 module.exports = {
   createCategory,
@@ -198,4 +239,5 @@ module.exports = {
   getPublicCategories,
   updateCategory,
   deleteCategory,
+  reorderCategory,
 };

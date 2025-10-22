@@ -49,7 +49,7 @@ const getHighlightsWithFilters = async (query,keyword, skip, limit) => {
     }
   ];
 
-  // ✅ Apply keyword filter AFTER lookup
+  // Apply keyword filter AFTER lookup
   if (keyword) {
     const regex = { $regex: keyword, $options: "i" };
 

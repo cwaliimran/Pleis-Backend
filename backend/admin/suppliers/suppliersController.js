@@ -33,7 +33,7 @@ const createSupplier = async (req, res) => {
         error.code === 11000
           ? "supplier_title_unique_violation"
           : "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
@@ -70,7 +70,7 @@ const getSuppliers = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
@@ -98,7 +98,7 @@ const getPublicSuppliers = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
@@ -141,7 +141,7 @@ const updateSupplier = async (req, res) => {
       res,
       statusCode: error.name === "ValidationError" ? 400 : 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
@@ -177,7 +177,7 @@ const deleteSupplier = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };

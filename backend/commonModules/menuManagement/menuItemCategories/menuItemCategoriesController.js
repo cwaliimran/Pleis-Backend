@@ -200,7 +200,7 @@ const deleteCategory = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };

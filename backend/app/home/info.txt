@@ -1,0 +1,22 @@
+Ordering on home page
+*Categories
+*Top 10
+*Banner
+For you
+Near you
+*Custom Category
+Top picks
+Highlights
+Recently viewed
+Custom Category
+Loyalty events
+Custom Category
+Challenges
+Custom Category
+Promotions
+Fill with Custom Categorys till 30 sections total
+
+
+For pinning categories etc. - this will make dynamic sections always show those specific pinned
+
+For instance we sign a lot of restoraunts so i want everyone to have restaurants on home feed

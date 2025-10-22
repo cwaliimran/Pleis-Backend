@@ -37,14 +37,14 @@ const presetsSchema = new mongoose.Schema(
 );
 
 
-// ✅ Virtual field `icon` (computed image + full URL)
+// Virtual field `icon` (computed image + full URL)
 presetsSchema.virtual("imageInfo").get(function () {
   const image = this.image || "noimage.png";
   const url = getFullImageUrl(image);
   return { name: image, url };
 });
 
-// ✅ Custom transformation — applies automatically to .toJSON() and .toObject()
+// Custom transformation — applies automatically to .toJSON() and .toObject()
 function transformDoc(doc, ret) {
   delete ret.image; // remove original image string
   delete ret.id; // remove original image string

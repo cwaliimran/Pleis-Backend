@@ -18,7 +18,6 @@ const createVenueType = async (req, res) => {
       image,
       title,
       status: "active",
-      pinned: false,
     });
 
     return sendResponse({
@@ -40,7 +39,7 @@ const createVenueType = async (req, res) => {
 
 const getVenueTypes = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, pinned, date } = req.query;
+  const { keyword, status, date } = req.query;
 
   try {
 
@@ -51,12 +50,11 @@ const getVenueTypes = async (req, res) => {
     })) return;
 
 
-    const { venuetypes, meta } = await venuetypesService.getVenueTypes({
+    const { venueTypes, meta } = await venuetypesService.getVenueTypes({
       page,
       limit,
       keyword,
       status,
-      pinned,
       date
     });
 
@@ -64,7 +62,7 @@ const getVenueTypes = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "venue_types_fetched_successfully",
-      data: venuetypes,
+      data: venueTypes,
       meta,
     });
   } catch (error) {
@@ -72,7 +70,7 @@ const getVenueTypes = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
@@ -89,7 +87,7 @@ const getPublicVenueTypes = async (req, res) => {
     })) return;
 
 
-    const { venuetypes, meta } = await venuetypesService.getPublicVenueTypes({
+    const { venueTypes, meta } = await venuetypesService.getPublicVenueTypes({
       page,
       limit,
       keyword,
@@ -100,7 +98,7 @@ const getPublicVenueTypes = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "venue_types_fetched_successfully",
-      data: venuetypes,
+      data: venueTypes,
       meta
     });
   } catch (error) {
@@ -108,14 +106,14 @@ const getPublicVenueTypes = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
 
 const updateVenueType = async (req, res) => {
   const { id } = req.params;
-  const { title, status, pinned } = req.body;
+  const { title, status } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -129,7 +127,6 @@ const updateVenueType = async (req, res) => {
     const updated = await venuetypesService.updateVenueType(id, {
       title,
       status,
-      pinned,
     });
 
     if (!updated) {
@@ -188,7 +185,7 @@ const deleteVenueType = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };

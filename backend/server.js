@@ -11,19 +11,28 @@ const routes = require("./routes");
 const adminRoutes = require("./admin/routes");
 const { sendResponse } = require("./helperUtils/responseUtil");
 const connectToDB = require("./helperUtils/server-setup");
+const { backupMongoDB } = require("./helperUtils/dataBaseBackup.js");
+const { securityMiddleware } = require("./middlewares/security.js");
 
 // Express app
 const app = express();
 
-// Enable CORS middleware
-const corsOptions = {
-  origin: "*", // Allow all origins
-  methods: "*", // Allow all methods
-  allowedHeaders: ["Content-Type", "Authorization", "x-admin-access-token"],
-};
-
-app.use(cors(corsOptions)); // Apply CORS middleware
-
+// ================== Security Middleware ================== //
+/* const allowedOrigins = [
+  "https://pleis.com",
+  "https://www.pleis.com",
+  "https://dev.pleis.com",
+  "https://www.dev.pleis.com",
+  "http://localhost:4003",
+];
+securityMiddleware(app, {
+  allowedOrigins,
+  adminIPWhitelist: [], // Example whitelist
+  maxRequestSize: "10mb",
+  rateLimitWindow: 15 * 60 * 1000, // 15 minutes
+  rateLimitMax: 200, // max requests per window
+});
+ */
 
 app.use(i18nConfig.init);
 app.use(loggerMiddleware);
@@ -46,6 +55,10 @@ app.use((req, res) => {
 
 // Connect to DB and start server
 connectToDB(app);
+
+// Start MongoDB backup timer (24 hours)
+const backupTime = 24 * 60 * 60 * 1000;
+setInterval(() => backupMongoDB(), backupTime);
 
 //export app
 // module.exports = { app };

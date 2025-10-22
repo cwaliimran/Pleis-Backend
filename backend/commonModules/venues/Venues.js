@@ -55,14 +55,14 @@ const venuesSchema = new mongoose.Schema(
   }
 );
 
-// ✅ Virtual field `floorPlanInfo` (computed image + full URL)
+// Virtual field `floorPlanInfo` (computed image + full URL)
 venuesSchema.virtual("floorPlanInfo").get(function () {
   const floorPlan = this.floorPlan || "noimage.png";
   const url = getFullImageUrl(floorPlan);
   return { name: floorPlan, url };
 });
 
-// ✅ Custom transformation — applies automatically to .toJSON() and .toObject()
+// Custom transformation — applies automatically to .toJSON() and .toObject()
 function transformDoc(doc, ret) {
   delete ret.id; // remove original image string
   return ret;

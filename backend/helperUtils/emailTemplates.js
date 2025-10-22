@@ -3,7 +3,7 @@ const APP_NAME = "Pleis App"; // Define the app name as a constant at the top
 const currentYear = new Date().getFullYear(); // Dynamically get the current year
 
 // Function to generate Registration link email template
-const registrationEmailTemplate = (verificationLink) => `
+const registrationViaLinkEmailTemplate = (verificationLink) => `
  <!DOCTYPE html>
 <html>
   <head>
@@ -18,6 +18,11 @@ const registrationEmailTemplate = (verificationLink) => `
         color: white;
         text-align: center;
         padding: 10px 0;
+        color: #ffffff;
+      }
+        .email-header h2 {
+        color: white;
+        margin: 0;
       }
       .email-body {
         margin: 20px;
@@ -72,8 +77,7 @@ const registrationEmailTemplate = (verificationLink) => `
 
 `;
 
-// Function to generate Forgot Password Verification Link email template
-const forgotPasswordEmailTemplate = (resetLink) => `
+const registrationViaOtpEmailTemplate = (otp) => `
 <!DOCTYPE html>
 <html>
   <head>
@@ -88,6 +92,73 @@ const forgotPasswordEmailTemplate = (resetLink) => `
         color: white;
         text-align: center;
         padding: 10px 0;
+      }
+        .email-header h2 {
+        color: white;
+        margin: 0;
+      }
+      .email-body {
+        margin: 20px;
+      }
+      .otp-code {
+        display: inline-block;
+        padding: 15px 25px;
+        margin: 15px 0;
+        background-color: #1B1A1D;
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        border-radius: 5px;
+        text-align: center;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 20px;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="email-header">
+        <h2>Welcome to ${APP_NAME}</h2>
+      </div>
+      <div class="email-body">
+        <p>Hello,</p>
+        <p>Thank you for registering with us. Use the OTP below to complete your registration:</p>
+        <div class="otp-code">${otp}</div>
+        <p>This OTP is valid for 10 minutes. If you didn't initiate this request, please ignore this email.</p>
+      </div>
+      <div class="footer">
+        &copy; ${currentYear} ${APP_NAME}. All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>
+`;
+
+
+// Function to generate Forgot Password Verification Link email template
+const forgotPasswordViaLinkEmailTemplate = (resetLink) => `
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      .email-container {
+        font-family: Arial, sans-serif;
+        line-height: 1.5;
+        color: #333;
+      }
+      .email-header {
+        background-color: #1B1A1D;
+        color: white;
+        text-align: center;
+        padding: 10px 0;
+      }
+        .email-header h2 {
+        color: white;
+        margin: 0;
       }
       .email-body {
         margin: 20px;
@@ -140,6 +211,69 @@ const forgotPasswordEmailTemplate = (resetLink) => `
   </body>
 </html>
 `;
+
+
+const forgotPasswordViaOtpEmailTemplate = (otp) => `
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      .email-container {
+        font-family: Arial, sans-serif;
+        line-height: 1.5;
+        color: #333;
+      }
+      .email-header {
+        background-color: #1B1A1D;
+        color: white;
+        text-align: center;
+        padding: 10px 0;
+      }
+      .email-header h2 {
+        color: white;
+        margin: 0;
+      }
+      .email-body {
+        margin: 20px;
+      }
+      .otp-code {
+        display: inline-block;
+        padding: 15px 25px;
+        margin: 15px 0;
+        background-color: #1B1A1D;
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        border-radius: 5px;
+        text-align: center;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 20px;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="email-header">
+        <h2>Password Reset Request</h2>
+      </div>
+      <div class="email-body">
+        <p>Hello,</p>
+        <p>We received a request to reset your password for your account at ${APP_NAME}. Use the OTP below to reset your password:</p>
+        <div class="otp-code">${otp}</div>
+        <p>This OTP is valid for 10 minutes. If you didn't request this, please ignore this email.</p>
+      </div>
+      <div class="footer">
+        &copy; ${currentYear} ${APP_NAME}. All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>
+`;
+
 
 
 /**
@@ -239,6 +373,10 @@ const stripeEmailTemplate = ({ name, link }) => `
           text-align: center;
           padding: 10px 0;
         }
+        .email-header h2 {
+        color: white;
+        margin: 0;
+        }
         .email-body {
           margin: 20px;
         }
@@ -313,8 +451,10 @@ const stripeEmailTemplate = ({ name, link }) => `
 
 // Export both functions
 module.exports = {
-  registrationEmailTemplate,
-  forgotPasswordEmailTemplate,
+  registrationViaLinkEmailTemplate,
+  registrationViaOtpEmailTemplate,
+  forgotPasswordViaLinkEmailTemplate,
+  forgotPasswordViaOtpEmailTemplate,
   accountStatusEmailTemplate,
   stripeEmailTemplate,
 };

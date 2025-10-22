@@ -2,6 +2,8 @@
 
 const { User } = require("../../models/UserModel");
 
+const { UserInterests } = require("../../models/UserInterests");
+
 // Create
 const createUser = async (data) => {
   const user = new Users(data);
@@ -155,6 +157,32 @@ const updateTwoFA = async (userId, data) => {
   return User.findByIdAndUpdate(userId, data, { new: true });
 };
 
+const updateUserInterests = async (userId, data) => {
+  let userInterests = await UserInterests.findOne({ user: userId });
+  if (userInterests) {
+    // Update existing
+    userInterests.categories = data.categories || userInterests.categories;
+    userInterests.venueTypes = data.venueTypes || userInterests.venueTypes;
+    userInterests.tags = data.tags || userInterests.tags;
+  } else {
+    // Create new
+    userInterests = new UserInterests({
+      user: userId,
+      categories: data.categories || [],
+      venueTypes: data.venueTypes || [],
+      tags: data.tags || []
+    });
+  }
+  return await userInterests.save();
+};
+
+//get user interests by userId and populate references
+const getUserInterestsByUserId = async (userId) => {
+  return UserInterests.findOne({ user: userId })
+    .populate("categories")
+    .populate("venueTypes")
+    .populate("tags");
+};
 
 module.exports = {
   createUser,
@@ -166,5 +194,6 @@ module.exports = {
   deleteUserById,
   findByIdAndUpdate,
   updateTwoFA,
-
+  updateUserInterests,
+  getUserInterestsByUserId,
 };

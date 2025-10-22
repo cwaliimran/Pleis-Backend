@@ -21,6 +21,11 @@ const createChallenge = async (req, res) => {
     objectIdFields.push("menuItem")
   }
 
+  if (taskType === "visit" || taskType === "earnPoints" || taskType === "referUsers") {
+    rawData.push("taskValue")
+  }
+
+
   var rewardType = req.body.reward?.rewardType || ""
   if (rewardType === "points") {
     rawData.push("reward.rewardValue")

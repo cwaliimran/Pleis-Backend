@@ -10,15 +10,15 @@ const Organizations = require("../commonModules/organizations/Organization");
 const { FEATURE_KEYS } = require("../admin/features/Feature");
 const { validatePhoneNumber } = require("../helperUtils/validationsUtil");
 const { sendEmailViaMailgun } = require("../helperUtils/emailUtil");
-const { registrationEmailTemplate } = require("../helperUtils/emailTemplates");
+const { registrationViaLinkEmailTemplate, registrationViaOtpEmailTemplate } = require("../helperUtils/emailTemplates");
 
-// ✅ Main utility function
+// Main utility function
 const registerUserUtility = async (req, res, options = {}) => {
   const {
     autoVerify = false, // true if created by admin, false if app user
   } = options;
 
-  const {
+  let {
     email,
     phoneNumber,
     profileIcon,
@@ -35,7 +35,9 @@ const registerUserUtility = async (req, res, options = {}) => {
     organizations = [], // multiple organizations for managers
     modules = [],
     deviceId,
+    referralCode = "",
     deviceType,
+    profileCompleted = true,
   } = req.body;
 
   let verificationStatus = "active";
@@ -57,7 +59,8 @@ const registerUserUtility = async (req, res, options = {}) => {
     if (userType === "user") {
       rawData.push("dob", "gender", "username", "phoneNumber");
       dateFields = { dob: "YYYY-MM-DD" };
-      // enumFields = { gender: ["", "Male", "Female", "Other"] };
+      enumFields = { gender: ["", "Male", "Female", "Other"] };
+      profileCompleted = false;
     }
     if (userType === "staff") {
       rawData.push("organizations", "phoneNumber");
@@ -72,15 +75,24 @@ const registerUserUtility = async (req, res, options = {}) => {
       rawData,
       objectIdFields,
       dateFields,
-      enumFields: { userType: USER_TYPES, modules: FEATURE_KEYS, gender: ["", "Male", "Female", "Other"] },
+      enumFields: {
+        userType: [
+          "guest",
+          "user",
+          "manager",
+          "staff",
+          "organizer",
+        ],
+        modules: FEATURE_KEYS, gender: ["", "Male", "Female", "Other"]
+      },
       minLengthFields: { password: 6 },
     };
 
     if (!validateParams(req, res, validationOptions)) {
-      return { responseSent: true }; // ✅ Mark that response is already sent
+      return { responseSent: true }; // Mark that response is already sent
     }
 
-    // ✅ Validate profile icon
+    // Validate profile icon
     if (profileIcon && profileIcon.startsWith("http")) {
       sendResponse({
         res,
@@ -92,8 +104,8 @@ const registerUserUtility = async (req, res, options = {}) => {
       return { responseSent: true };
     }
 
-    // ✅ Admin token check for admin creation
-    if (userType === "admin" || userType === "guest") {
+    // Admin token check for guest creation
+    if (userType === "guest") {
       const adminToken = req.header("x-admin-access-token");
       if (adminToken !== process.env.ADMIN_ACCESS_TOKEN) {
         sendResponse({
@@ -106,7 +118,7 @@ const registerUserUtility = async (req, res, options = {}) => {
       }
     }
 
-    // ✅ Check if email exists
+    // Check if email exists
     const existingUser = await User.findOne({ email: email.trim().toLowerCase() });
     if (existingUser && existingUser.verificationStatus.email === "verified") {
       sendResponse({
@@ -117,7 +129,7 @@ const registerUserUtility = async (req, res, options = {}) => {
       return { responseSent: true };
     }
 
-    // ✅ Validate phone number
+    // Validate phone number
     if (phoneNumber) {
       if (
         typeof phoneNumber !== "object" ||
@@ -144,7 +156,7 @@ const registerUserUtility = async (req, res, options = {}) => {
       }
     }
 
-    // ✅ Validate organizations for manager/staff
+    // Validate organizations for manager/staff
     let organizationsDocs;
     if (userType == "manager" || userType == "staff") {
       if (organizations && organizations.length > 0) {
@@ -173,7 +185,7 @@ const registerUserUtility = async (req, res, options = {}) => {
       }
     }
 
-    // ✅ Create or reuse user
+    // Create or reuse user
     let user = existingUser || new User();
     Object.assign(user, {
       email,
@@ -184,10 +196,11 @@ const registerUserUtility = async (req, res, options = {}) => {
       username,
       gender,
       dob,
+      referralCode,
       organizationName,
       password,
       timezone,
-      accountState: { userType, status: verificationStatus },
+      accountState: { userType, status: verificationStatus, profileCompleted },
       verificationStatus: {
         email: autoVerify ? "verified" : "pending",
         phoneNumber: "pending",
@@ -195,7 +208,7 @@ const registerUserUtility = async (req, res, options = {}) => {
       companyDetails: companyDetails || null,
     });
 
-    // ✅ Handle organizations for staff and manager
+    // Handle organizations for staff and manager
     if (userType === "staff" && Array.isArray(organizationsDocs) && organizationsDocs.length > 0) {
       for (const orgDoc of organizationsDocs) {
         const staffIndex = orgDoc.staff?.findIndex(
@@ -231,19 +244,27 @@ const registerUserUtility = async (req, res, options = {}) => {
       }
     }
 
-    // ✅ Generate email verification token if not auto-verified
+    // Generate email verification token if not auto-verified
     let emailVerificationLink = null;
     if (!autoVerify) {
-      const tokenData = user.generateEmailVerificationToken();
-      emailVerificationLink = tokenData.rawToken;
-      user.emailVerificationLink = tokenData.rawToken;
-      const mBody = registrationEmailTemplate(tokenData.verificationLink);
-      await sendEmailViaMailgun(user.email, "Email Verification", mBody);
+      if (userType === "user") {
+        //send otp
+        const otp = user.generateOtp("email", user.timezone);
+        const mBody = registrationViaOtpEmailTemplate(otp);
+        await sendEmailViaMailgun(user.email, "Email Verification", mBody);
+      } else {
+        // send email verification link
+        const tokenData = user.generateEmailVerificationToken();
+        emailVerificationLink = tokenData.rawToken;
+        user.emailVerificationLink = tokenData.rawToken;
+        const mBody = registrationViaLinkEmailTemplate(tokenData.verificationLink);
+        await sendEmailViaMailgun(user.email, "Email Verification", mBody);
+      }
     }
 
     await user.save({ session });
 
-    // ✅ Optional device handling
+    // Optional device handling
     if (deviceId && deviceType) {
       createOrSkipDevice(user._id, deviceId, deviceType);
     }

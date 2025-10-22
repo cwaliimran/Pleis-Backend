@@ -37,6 +37,9 @@ router.use("/menu", require("./menuRoutes"));
 //loyalty
 router.use("/loyalty", require("./loyaltyRoutes"));
 
+//home
+router.use("/home", require("./homeRoutes"));
+
 
 
 module.exports = router;

@@ -12,6 +12,7 @@ const { buildKeywordQueryFromModel } = require("../../helperUtils/queryUtil");
 const { validatePhoneNumber } = require("../../helperUtils/validationsUtil");
 const { accountStatusEmailTemplate } = require("../../helperUtils/emailTemplates");
 const { sendEmailViaMailgun } = require("../../helperUtils/emailUtil");
+const { createOrSkipDevice } = require("../../models/Devices");
 
 const APP_NAME = "Pleis App";
 
@@ -131,8 +132,10 @@ const updateUser = async (req, res, options = {}) => {
     deviceId,
     deviceType,
     termsAccepted,
+    profileCompleted,
     status,
-    location
+    location,
+    notifications
   } = req.body;
 
   const session = await mongoose.startSession();
@@ -144,12 +147,12 @@ const updateUser = async (req, res, options = {}) => {
 
     const userType = user.accountState.userType;
 
-    // ✅ Validate profileIcon
+    // Validate profileIcon
     if (profileIcon && profileIcon.startsWith("http")) {
       return { errorCode: 400, message: "url_not_accepted", field: "profileIcon" };
     }
 
-    /*   // ✅ Check if email exists
+    /*   // Check if email exists
       const existingUser = await User.findOne({ _id: { $ne: userId }, email: email.trim().toLowerCase() });
       if (existingUser && existingUser.verificationStatus.email === "verified") {
         sendResponse({
@@ -161,7 +164,7 @@ const updateUser = async (req, res, options = {}) => {
       }
    */
 
-    // ✅ Validate phone number if provided
+    // Validate phone number if provided
     if (phoneNumber) {
       if (
         typeof phoneNumber !== "object" ||
@@ -187,7 +190,7 @@ const updateUser = async (req, res, options = {}) => {
       user.verificationStatus.phoneNumber = "pending";
     }
 
-    // ✅ Basic field updates (only if provided)
+    // Basic field updates (only if provided)
     if (firstName) user.firstName = firstName;
     if (lastName) user.lastName = lastName;
     if (profileIcon) user.profileIcon = profileIcon;
@@ -197,10 +200,18 @@ const updateUser = async (req, res, options = {}) => {
     if (gender) user.gender = gender;
     if (dob) user.dob = dob;
     if (status) user.accountState.status = status;
+    if (profileCompleted !== undefined) user.accountState.profileCompleted = profileCompleted;
     if (location) user.location = location;
+    if (notifications && typeof notifications === "object") {
+      if (typeof notifications.email === "boolean") {
+        user.notifications.email = notifications.email;
+      }
+      if (typeof notifications.push === "boolean") {
+        user.notifications.push = notifications.push;
+      }
+    }
 
-
-    // ✅ Handle organization changes for manager/staff
+    // Handle organization changes for manager/staff
     if ((userType === "staff" || userType === "manager") && Array.isArray(organizations)) {
       // Find all organizations where this user is currently staff
       const currentOrgs = await Organizations.find({ "staff.user": user._id }).session(session);
@@ -246,7 +257,7 @@ const updateUser = async (req, res, options = {}) => {
       user.organizationName = organizationName;
     }
 
-    // ✅ Update company details for organizer
+    // Update company details for organizer
     if (userType === "organizer" && companyDetails) {
       user.companyDetails = {
         name: companyDetails.name ?? user.companyDetails?.name,
@@ -261,13 +272,13 @@ const updateUser = async (req, res, options = {}) => {
           model: companyDetails.loyaltySettings?.model ?? user.companyDetails?.loyaltySettings?.model ?? "essential",
           pointValuePercentage: companyDetails.loyaltySettings?.pointValuePercentage ?? user.companyDetails?.loyaltySettings?.pointValuePercentage ?? 0
         }
-        
+
       };
     }
 
     await user.save({ session });
 
-    // ✅ Device handling
+    // Device handling
     if (deviceId && deviceType) {
       createOrSkipDevice(user._id, deviceId, deviceType);
     }
@@ -375,6 +386,16 @@ const disableTwoFA = async (userId) => {
   return true;
 };
 
+const updateUserInterests = async (userId, data) => {
+  // Update user interests in the database
+  console.log("data", data)
+  await userRepo.updateUserInterests(userId, data);
+  return true;
+}
+
+const getUserInterestsByUserId = async (userId) => {
+  return await userRepo.getUserInterestsByUserId(userId);
+};
 
 
 module.exports = {
@@ -385,5 +406,7 @@ module.exports = {
   getUserDetails,
   setupTwoFA,
   confirmTwoFA,
-  disableTwoFA
+  disableTwoFA,
+  updateUserInterests,
+  getUserInterestsByUserId
 };

@@ -6,7 +6,7 @@ const createTag = async ({ title, status, type }) => {
   return await tagRepo.createTag({ title, status, type });
 };
 
-const getTags = async ({ page, limit, keyword, type, status, pinned, date }) => {
+const getTags = async ({ page, limit, keyword, type, status, date }) => {
   const filters = [];
 
   // if date is available then match createdAt with date current date format is yyyy-mm-dd
@@ -35,9 +35,6 @@ const getTags = async ({ page, limit, keyword, type, status, pinned, date }) => 
     });
   }
 
-  if (pinned !== undefined) {
-    filters.push({ pinned });
-  }
 
   const query = filters.length ? { $and: filters } : {};
 
@@ -79,37 +76,15 @@ const getPublicTags = async ({ page, limit, keyword }) => {
   // Final base query (e.g., status + keyword)
   const baseQuery = baseFilters.length ? { $and: baseFilters } : {};
 
-  // Pinned filter
-  const pinnedQuery = { ...baseQuery, pinned: true };
-
-  // Unpinned filter
-  const unpinnedConditions = {
-    $or: [
-      { pinned: false },
-      { pinned: null },
-      { pinned: { $exists: false } },
-    ]
-  };
-  const unpinnedQuery = {
-    $and: [...(baseQuery.$and || []), unpinnedConditions],
-  };
-
-  // Always paginate unpinned
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [pinnedTags, unpinnedTags, totalFiltered] = await Promise.all([
-    page === 1 ? tagRepo.getTagsWithFilters(pinnedQuery, 0, 0) : [],
-    tagRepo.getTagsWithFilters(unpinnedQuery, skip, limit === 0 ? 0 : limit),
+  const [tags, totalFiltered] = await Promise.all([
+    tagRepo.getTagsWithFilters(baseQuery, skip, limit === 0 ? 0 : limit),
     tagRepo.countTags(baseQuery),
   ]);
 
-  const totalPages = (limit && totalFiltered != null) ? Math.ceil(totalFiltered / limit) : 1;
 
-  const tags = {
-    pinned: pinnedTags,
-    unpinned: unpinnedTags,
-  };
-  let meta = generateMeta(page, limit, totalPages);
+  let meta = generateMeta(page, limit, totalFiltered);
   return {
     tags,
     meta,
@@ -123,7 +98,6 @@ const updateTag = async (id, data) => {
   // Only update provided fields
   const updateData = {
     ...(data.title !== undefined && { title: data.title }),
-    ...(data.pinned !== undefined && { pinned: data.pinned }),
     ...(data.status !== undefined && { status: data.status }),
     ...(data.type !== undefined && { type: data.type }),
   };
