@@ -214,8 +214,8 @@ const deleteVenue = async (id) => {
   if (!updated) return null;
   return true;
 };
-const getVenueDetails = async (id) => {
-  const venue = await venueRepo.findVenueById(id);
+const getVenueDetails = async (id, select = []) => {
+  const venue = await venueRepo.findVenueById(id, select);
   if (!venue) return null;
   return venue;
 };

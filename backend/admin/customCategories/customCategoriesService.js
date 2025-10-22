@@ -1,5 +1,9 @@
 // services/customCategoryService.js
-const { generateMeta } = require("../../helperUtils/responseUtil");
+const { Events } = require("../../commonModules/events/Event");
+const Organizations = require("../../commonModules/organizations/Organization");
+const { getFullImageUrl } = require("../../helperUtils/imageHelper");
+const { generateMeta, convertUtcToTimezone } = require("../../helperUtils/responseUtil");
+const { User } = require("../../models/UserModel");
 const CustomCategories = require("./CustomCategories");
 const customCategoryRepo = require("./customCategoriesRepository");
 const mongoose = require("mongoose");
@@ -8,7 +12,18 @@ const createCustomCategory = async ({ title, type, objects, status }) => {
   return await customCategoryRepo.createCustomCategory({ title, type, objects, status });
 };
 
-const getCustomCategories = async ({ page, limit, keyword, status, date, orderSort = "asc" }) => {
+
+
+// Service layer
+const getCustomCategories = async ({
+  timezone,
+  page = 1,
+  limit = 10,
+  keyword,
+  status,
+  date,
+  orderSort = "asc",
+}) => {
   const query = {};
 
   // Filter by status
@@ -28,31 +43,132 @@ const getCustomCategories = async ({ page, limit, keyword, status, date, orderSo
   }
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-
   const sort = { order: orderSort === "desc" ? -1 : 1 };
 
+  // Fetch custom categories and counts using aggregation
   const [customCategories, customCategoriesCounts] = await Promise.all([
-    customCategoryRepo.getCustomCategoriesWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
+    customCategoryRepo.getCustomCategoriesWithFilters(
+      query,
+      skip,
+      limit === 0 ? 0 : limit,
+      sort
+    ),
     customCategoryRepo.getCustomCategoriesCounts(query),
   ]);
-  const { totalFiltered, total, active, inactive } =  customCategoriesCounts;
 
-  const meta = generateMeta(page, limit, totalFiltered);
-  meta.customCategoriesCount = { total, active, inactive };
+  // Generate meta information
+  const meta = {
+    currentPage: limit === 0 ? 1 : Math.floor(skip / limit) + 1,
+    totalPages: limit === 0 ? 1 : Math.ceil(customCategoriesCounts.totalFiltered / limit),
+    totalRecords: customCategoriesCounts.totalFiltered,
+    limit: limit,
+    customCategoriesCount: {
+      total: customCategoriesCounts.total,
+      active: customCategoriesCounts.active,
+      inactive: customCategoriesCounts.inactive,
+    },
+  };
 
-  return { customCategories, meta };
+  // Check if objects are populated correctly and apply transformations
+  customCategories.forEach((category) => {
+    if (category?.objects?.length === 0) {
+      console.log(`No objects found for category ${category._id}`);
+    }
+
+    category.objects = category.objects.map((obj) => {
+      if (!obj) return null;
+      return transformObject(obj, category.type, timezone);
+    });
+  });
+
+
+  return {
+    customCategories,
+    meta,
+  };
 };
 
 
-//get 30 items for public view
-const getPublicCustomCategories = async () => {
-  return await customCategoryRepo.getCustomCategoriesWithFilters(
-    { status: "active" },
-    0,
-    30,
-    { order: 1 }
-  );
+
+/**
+ * Transform objects based on their type
+ * Applies icon paths, URLs, and removes sensitive data
+ */
+const transformObject = (obj, type, timezone) => {
+
+  if (type === "User") {
+    return new User(obj).toJSON(obj);
+  } else if (type === "Event") {
+
+    if (obj.schedule && obj.schedule.startDateTime) {
+      obj.schedule.startDateTime = convertUtcToTimezone(
+        obj.schedule.startDateTime,
+        timezone,
+        "YYYY-MM-DD hh:mm A"
+      );
+    }
+    if (obj.schedule && obj.schedule.endDateTime) {
+      obj.schedule.endDateTime = convertUtcToTimezone(
+        obj.schedule.endDateTime,
+        timezone,
+        "YYYY-MM-DD hh:mm A"
+      );
+    }
+
+
+    return new Events(obj).toPublicJSON(obj);
+  } else if (type === "Organizations") {
+    return transformOrganization(obj);
+  }
+
+  return obj;
 };
+
+
+/**
+ * Transform organization object - attach icon/logo/cover URLs
+ */
+const transformOrganization = (organization) => {
+  const transformed = { ...organization };
+
+  if (!transformed.basicInfo) return transformed;
+
+  // Ensure media exists on basicInfo
+  transformed.basicInfo.media = transformed.basicInfo.media || {};
+
+  // Logo now lives under basicInfo.media.logo per schema
+  if (transformed.basicInfo.media.logo) {
+    transformed.basicInfo.media.logo = transformed.basicInfo.media.logo.startsWith("http")
+      ? transformed.basicInfo.media.logo
+      : getFullImageUrl(transformed.basicInfo.media.logo);
+  } else {
+    // default logo when missing/empty
+    transformed.basicInfo.media.logo = getFullImageUrl("noImage.png");
+  }
+
+  // Cover image (optional)
+  if (transformed.basicInfo.media.cover) {
+    transformed.basicInfo.media.cover = transformed.basicInfo.media.cover.startsWith("http")
+      ? transformed.basicInfo.media.cover
+      : getFullImageUrl(transformed.basicInfo.media.cover);
+  }
+
+  return transformed;
+};
+// Function to get Mongoose model based on type
+const getModelFromType = (type) => {
+  switch (type) {
+    case "Event":
+      return Events
+    case "User":
+      return User
+    case "Organizations":
+      return Organizations
+    default:
+      throw new Error(`Unknown type: ${type}`);
+  }
+};
+
 
 const updateCustomCategory = async (id, data) => {
   // Only update provided fields

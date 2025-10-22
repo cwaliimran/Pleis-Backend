@@ -43,13 +43,16 @@ const getCustomCategories = async (req, res) => {
   const { keyword, status, date, orderSort } = req.query;
 
   try {
+    // Validate date parameter if provided
     if (date && !validateParams(req, res, {
       dateFields: {
         date: "YYYY-MM-DD",
       },
     })) return;
 
+    // Get custom categories from service (no need to populate here)
     const { customCategories, meta } = await customCategoriesService.getCustomCategories({
+      timezone: req.user.timezone,
       page,
       limit,
       keyword,
@@ -58,15 +61,12 @@ const getCustomCategories = async (req, res) => {
       orderSort
     });
 
-    const populatedCategories = await Promise.all(customCategories.map(async (category) => {
-      return await category.populate('objects');
-    }));
-
+    // Send the response with the already populated custom categories
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "custom_categories_fetched_successfully",
-      data: populatedCategories,
+      data: customCategories,  // Custom categories are already populated
       meta
     });
   } catch (error) {

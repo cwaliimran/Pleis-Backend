@@ -11,8 +11,8 @@ const { getHomeService } = require("./homeService");
 
 const getHome = async (req, res) => {
   try {
-
-    const { status, data } = await getHomeService();
+    let { timezone } = req.user
+    const { status, data } = await getHomeService({ timezone });
 
     if (status === false) {
       return sendResponse({

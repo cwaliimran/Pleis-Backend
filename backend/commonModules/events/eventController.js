@@ -7,6 +7,7 @@ const {
   convertTimezoneToUtc,
   convertUtcToTimezone,
 } = require("../../helperUtils/responseUtil");
+const { getVenueDetails } = require("../venues/venuesService");
 
 const eventService = require("./eventService");
 
@@ -27,9 +28,17 @@ const createEvent = async (req, res) => {
       "basicInfo.categories",
     ],
     objectIdFields: ["basicInfo.organization", "basicInfo.venue", "basicInfo.categories"],
-
   }
 
+  //find if venue exists
+  const venueItem = await getVenueDetails(basicInfo.venue, ['location.coordinates']);
+  if (!venueItem) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "invalid_venue",
+    });
+  }
 
   let eventType = schedule.type || "oneTime";
 
@@ -79,6 +88,7 @@ const createEvent = async (req, res) => {
       description: basicInfo.description?.trim() || "",
       organization: basicInfo.organization,
       venue: basicInfo.venue,
+      venueLocation: venueItem.location, //set venueLocation from venue
       categories: Array.isArray(basicInfo.categories) ? basicInfo.categories : [],
       tags: Array.isArray(basicInfo.tags) ? basicInfo.tags : [],
     },
@@ -90,7 +100,6 @@ const createEvent = async (req, res) => {
     },
     creator: userId,
   };
-
 
   try {
     const event = await eventService.createEvent({ data: eventData });
@@ -171,7 +180,7 @@ const getEvents = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "events_fetched_successfully",
-      data: formattedEvents,
+      data: events,
       meta: generateMeta(page, limit, meta.total),
     });
   } catch (error) {
@@ -213,6 +222,72 @@ const getPublicEvents = async (req, res) => {
   }
 };
 
+const getNearbyEvents = async (req, res) => {
+  const { latitude, longitude, radiusKm = 50 } = req.query;
+
+  const { page, limit } = parsePaginationParams(req);
+  let { timezone } = req.user;
+
+  if (!validateParams(req, res, {
+    queryParams: ["latitude", "longitude"],
+  })) return;
+
+  try {
+    const {events, meta} = await eventService.getNearbyEvents({
+      longitude: parseFloat(longitude),
+      latitude: parseFloat(latitude),
+      radiusKm: parseFloat(radiusKm),
+      page,
+      limit,
+      timezone,
+    });
+    //check if events is empty
+    if (!events || events.length === 0) {
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "nearby_events_fetched_successfully",
+        data: [],
+      });
+    } 
+
+    // Convert event dates to user's timezone
+    const formattedEvents = events.map(event => {
+      let formattedEvent = JSON.parse(JSON.stringify(event));
+      if (formattedEvent.schedule && formattedEvent.schedule.startDateTime) {
+        formattedEvent.schedule.startDateTime = convertUtcToTimezone(
+          formattedEvent.schedule.startDateTime,
+          timezone,
+          "YYYY-MM-DD hh:mm A"
+        );
+      }
+      if (formattedEvent.schedule && formattedEvent.schedule.endDateTime) {
+        formattedEvent.schedule.endDateTime = convertUtcToTimezone(
+          formattedEvent.schedule.endDateTime,
+          timezone,
+          "YYYY-MM-DD hh:mm A"
+        );
+      }
+      return formattedEvent;
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "nearby_events_fetched_successfully",
+      data: formattedEvents,
+      meta
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+}
+
 const updateEvent = async (req, res) => {
   const { id } = req.params;
 
@@ -229,7 +304,6 @@ const updateEvent = async (req, res) => {
     otherInfo,
     operatingHours,
     status,
-    venues,
     location,
     image,
     tags,
@@ -437,4 +511,5 @@ module.exports = {
   updateEvent,
   deleteEvent,
   getEventDetails,
+  getNearbyEvents,
 };

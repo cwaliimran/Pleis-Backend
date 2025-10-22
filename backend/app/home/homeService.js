@@ -6,130 +6,105 @@ const { getCustomCategories } = require("../../admin/customCategories/customCate
 const { Highlights } = require("../../commonModules/highlights/Highlight");
 const { getPublicHighlights } = require("../../commonModules/highlights/highlightService");
 
-const getHomeService = async () => {
+const getHomeService = async ({ timezone }) => {
   try {
-    // Fetching all static and dynamic data in parallel for efficiency
-    let [
-      categories,
-      promotedEvents,
-      banners,
+    // Fetch all data in parallel
+    const [
+      categoriesRes,
+      top10,
+      bannersRes,
       forYou,
       nearYou,
-      customCategories,
-      highlights,
+      customCategoriesRes,
+      highlightsRes,
       topPicks,
       loyaltyEvents,
       challenges,
       promotions,
     ] = await Promise.all([
       getPublicCategories({}),
-      getTop10Promos({}),
+      getTop10Promos({ timezone }),
       getBannerControls({ page: 1, limit: 10, status: "active" }),
-      [], // getForYou({ page: 1, limit: 10, status: "active" }),
-      [], // getNearYou({ page: 1, limit: 10, status: "active" }),
+      [],//getForYou({ page: 1, limit: 10, status: "active" }),
+      [],//getNearYou({ page: 1, limit: 10, status: "active" }),
       getCustomCategories({ page: 1, limit: 10, status: "active" }),
       getPublicHighlights({ page: 1, limit: 10, keyword: "" }),
-      [], // getTopPicks({ page: 1, limit: 10, status: "active" }),
-      [], // getLoyaltyEvents({ page: 1, limit: 10, status: "active" }),
-      [], // getChallenges({ page: 1, limit: 10, status: "active" }),
-      [], // getPromotions({ page: 1, limit: 10, status: "active" }),
+      [],//getTopPicks({ page: 1, limit: 10, status: "active" }),
+      [],//getLoyaltyEvents({ page: 1, limit: 10, status: "active" }),
+      [],//getChallenges({ page: 1, limit: 10, status: "active" }),
+      [],//getPromotions({ page: 1, limit: 10, status: "active" }),
     ]);
 
-    // Format highlights
-    if (!highlights || !Array.isArray(highlights.highlights) || highlights.highlights.length === 0) {
-      highlights = [];
-    } else {
-      highlights = highlights.highlights.map((highlight) => {
-        return new Highlights(highlight).toCustomJSON(highlight);
-      });
-    }
+    // Normalize all fetched data
+    const categories = categoriesRes?.categories || [];
+    const banners = bannersRes?.bannerControls || [];
+    const customCategories = customCategoriesRes?.customCategories || [];
 
-    // Prepare static sections
-    const staticSections = [
-      { key: "categories", data: categories?.categories || [] },
-      { key: "promotedEvents", data: promotedEvents || [] },
-      { key: "banners", data: banners?.bannerControls || [] },
-      { key: "forYou", data: forYou || [] },
-      { key: "nearYou", data: nearYou || [] },
-      { key: "topPicks", data: topPicks || [] },
-      { key: "highlights", data: highlights || [] },
-      { key: "loyaltyEvents", data: loyaltyEvents || [] },
-      { key: "challenges", data: challenges || [] },
-      { key: "promotions", data: promotions || [] },
-    ];
+    const highlights = Array.isArray(highlightsRes?.highlights)
+      ? highlightsRes.highlights.map((h) => new Highlights(h).toCustomJSON(h))
+      : [];
 
-    // Insert dynamic sections (custom categories) at the specified positions
-    const interleavedSections = [];
+    // Define section structure and order — uses static titles and includes dynamic (customCategory)
     const sectionOrder = [
-      { staticKey: "categories", dynamicIndex: null },
-      { staticKey: "promotedEvents", dynamicIndex: null },
-      { staticKey: "banners", dynamicIndex: null },
-      { staticKey: "forYou", dynamicIndex: null },
-      { staticKey: "nearYou", dynamicIndex: null },
-      { staticKey: "customCategory", dynamicIndex: 0 }, // Custom Category from index 0
-      { staticKey: "topPicks", dynamicIndex: null },
-      { staticKey: "highlights", dynamicIndex: null },
-      { staticKey: "customCategory", dynamicIndex: 1 }, // Custom Category from index 1
-      { staticKey: "loyaltyEvents", dynamicIndex: null },
-      { staticKey: "customCategory", dynamicIndex: 2 }, // Custom Category from index 2
-      { staticKey: "challenges", dynamicIndex: null },
-      { staticKey: "customCategory", dynamicIndex: 3 }, // Custom Category from index 3
-      { staticKey: "promotions", dynamicIndex: null },
+      { key: "categories", title: "Categories", data: categories },
+      { key: "top10", title: "Top 10", data: top10 },
+      { key: "banners", title: "Banners", data: banners },
+      { key: "forYou", title: "For You", data: forYou },
+      { key: "nearYou", title: "Near You", data: nearYou },
+      { key: "customCategory", title: "Custom Category", index: 0 },
+      { key: "topPicks", title: "Top Picks", data: topPicks },
+      { key: "highlights", title: "Highlights", data: highlights },
+      { key: "customCategory", title: "Custom Category", index: 1 },
+      { key: "loyaltyEvents", title: "Loyalty Events", data: loyaltyEvents },
+      { key: "customCategory", title: "Custom Category", index: 2 },
+      { key: "challenges", title: "Challenges", data: challenges },
+      { key: "customCategory", title: "Custom Category", index: 3 },
+      { key: "promotions", title: "Promotions", data: promotions },
     ];
 
-     // Add static sections and interleave with dynamic custom categories
-    let dynamicCategoryIndex = 0;
-
-    sectionOrder.forEach((section) => {
-      // Check if there is a dynamic section to insert
-      if (section.dynamicIndex !== null && dynamicCategoryIndex < customCategories.customCategories.length) {
-        const customCategory = customCategories.customCategories[dynamicCategoryIndex];
-        // Ensure custom category has valid objects (events data)
-        if (customCategory && customCategory.objects && customCategory.objects.length > 0) {
-          interleavedSections.push({
-            key: "customCategory", // Use a generic key for dynamic categories
-            title: customCategory.title || `Dynamic Section ${dynamicCategoryIndex + 1}`,
-            objects: customCategory.objects || [],  // Add objects (events)
+    // Build final ordered sections
+    const interleavedSections = sectionOrder.reduce((acc, section) => {
+      if (section.key === "customCategory") {
+        const cat = customCategories[section.index];
+        if (cat?.objects?.length) {
+          acc.push({
+            key: "customCategory",
+            title: cat.title || `Dynamic Section ${section.index + 1}`,
+            objects: cat.objects,
           });
         }
-        dynamicCategoryIndex++;
+      } else
+      //if (Array.isArray(section.data) && section.data.length)  //enable it only if you want to skip empty sections
+      {
+        acc.push({
+          key: section.key,
+          title: section.title,
+          data: section.data,
+        });
       }
+      return acc;
+    }, []);
 
-      // If there is no dynamic section to insert, push the static section
-      else if (section.staticKey && staticSections.length) {
-        const staticSection = staticSections.find((sec) => sec.key === section.staticKey);
-        if (staticSection) {
-          interleavedSections.push(staticSection);
-        }
-      }
-    });
-
-    // Ensure the total number of sections does not exceed 30
-    const sectionsToAdd = 30 - interleavedSections.length;
-    for (let i = 0; i < sectionsToAdd; i++) {
-      // Only add custom categories if available
-      if (dynamicCategoryIndex < customCategories.customCategories.length) {
-        const customCategory = customCategories.customCategories[dynamicCategoryIndex];
+    // Fill up to 30 sections with remaining custom categories (if any)
+    for (
+      let i = interleavedSections.length;
+      i < 30 && i - sectionOrder.length < customCategories.length;
+      i++
+    ) {
+      const extra = customCategories[i - sectionOrder.length];
+      if (extra?.objects?.length) {
         interleavedSections.push({
           key: "customCategory",
-          title: customCategory?.title || `Dynamic Section ${dynamicCategoryIndex + 1}`,
-          objects: customCategory?.objects || [],  // Add objects (events)
+          title: extra.title || `Dynamic Section ${i + 1}`,
+          objects: extra.objects,
         });
-        dynamicCategoryIndex++;
-      }
+      } else break;
     }
 
-    // Return the final structured response
-    return {
-      status: true,
-      data: interleavedSections,
-    };
+    return { status: true, data: interleavedSections };
   } catch (error) {
-    // Optionally log error
-    return {
-      status: false,
-      data: error,
-    };
+    console.error("getHomeService error:", error);
+    return { status: false, data: error.message || error };
   }
 };
 

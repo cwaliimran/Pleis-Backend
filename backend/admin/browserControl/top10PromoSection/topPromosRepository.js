@@ -129,10 +129,10 @@ const getTop10Promos = async (filters = {}) => {
   const topPromos = await TopPromos.find({ ...filters, isTop10: true })
     .populate({
       path: "event",
+      select: "schedule basicInfo",
       match: {
         // include events that are not one-time OR one-time events whose end (or start) is in the future
         $or: [
-          // { "schedule.type": { $ne: "oneTime" } },
           { "schedule.endDateTime": { $gte: now } },
           { "schedule.startDateTime": { $gte: now } },
         ],

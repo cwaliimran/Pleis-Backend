@@ -49,6 +49,7 @@ const getEvents = async ({ page, limit, keyword, status, creator, startDate, end
       eventRepo.countEvents({ status: "inactive" }),
     ]);
 
+
   return {
     events,
     meta: {
@@ -60,7 +61,7 @@ const getEvents = async ({ page, limit, keyword, status, creator, startDate, end
   };
 };
 
-const getPublicEvents = async ({ page, limit, keyword }) => {
+const getPublicEvents = async ({ page, limit, keyword, timezone = "Asia/Karachi" }) => {
   const query = { status: "active" };
   if (keyword) {
     query.$or = [
@@ -89,6 +90,117 @@ const getPublicEvents = async ({ page, limit, keyword }) => {
     },
   };
 };
+
+const getNearbyEvents = async ({
+  longitude,
+  latitude,
+  radiusKm = 50,
+  page = 1,
+  limit = 10,
+  timezone = "Asia/Karachi"
+}) => {
+  // Validate coordinates
+  if (typeof longitude !== 'number' || typeof latitude !== 'number') {
+    throw new Error('Valid user longitude and latitude are required');
+  }
+
+  if (radiusKm <= 0) {
+    throw new Error('Radius must be greater than 0');
+  }
+
+  const radiusInMeters = radiusKm * 1000;
+  const now = new Date();
+  const skip = Math.max(0, (page - 1) * limit);
+
+  try {
+    const pipeline = [
+      {
+        $geoNear: {
+          near: {
+            type: "Point",
+            coordinates: [longitude, latitude],
+          },
+          key: "basicInfo.venueLocation", // <- Important!
+          distanceField: "distance",
+          spherical: true,
+          maxDistance: radiusInMeters,
+          query: {
+            status: "active",
+            "schedule.startDateTime": { $gte: now },
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: "venues",
+          localField: "basicInfo.venue",
+          foreignField: "_id",
+          as: "basicInfo.venue",
+        }
+      },
+      { $unwind: "$basicInfo.venue" },
+      { $sort: { distance: 1 } },
+      { $skip: skip },
+      { $limit: parseInt(limit) },
+    ];
+
+    const events = await eventRepo.aggregateEvents(pipeline);
+
+    // Count total without skip/limit
+    const totalCountPipeline = [
+      {
+        $geoNear: {
+          near: {
+            type: "Point",
+            coordinates: [longitude, latitude],
+          },
+          key: "basicInfo.venueLocation", // <-- Include here too
+          distanceField: "distance",
+          spherical: true,
+          maxDistance: radiusInMeters,
+          query: {
+            status: "active",
+            "schedule.startDateTime": { $gte: now },
+          },
+        },
+      },
+      { $count: "total" },
+    ];
+
+
+    const totalResult = await eventRepo.aggregateEvents(totalCountPipeline);
+    const totalFiltered = totalResult[0]?.total || 0;
+
+    return {
+      events,
+      meta: {
+        page,
+        limit,
+        total: totalFiltered,
+        radiusKm,
+        userLocation: {
+          lng: longitude,
+          lat: latitude,
+        },
+      },
+    };
+  } catch (error) {
+    throw new Error(`Failed to fetch nearby events: ${error.message}`);
+  }
+};
+
+const updateEventsWithVenueLocation = async (venueId, location) => {
+
+  const filter = { "basicInfo.venue": venueId };
+  location.type = "Point";
+  const update = { $set: { "basicInfo.venueLocation": location } };
+
+  // updateMany to update all matching events and only set the location field
+  const result = await eventRepo.updateMany(filter, update);
+
+  return result;
+};
+
 
 const updateEvent = async (id, data) => {
   const event = await eventRepo.findEventById(id);
@@ -204,8 +316,10 @@ module.exports = {
   createEvent,
   getEvents,
   cloneEvent,
+  getNearbyEvents,
   updateEvent,
   deleteEvent,
   getPublicEvents,
   getEventDetails,
+  updateEventsWithVenueLocation
 };

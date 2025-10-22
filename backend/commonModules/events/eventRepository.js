@@ -1,6 +1,6 @@
 // repositories/eventRepository.js
 const { create } = require("lodash");
-const {Events} = require("./Event");
+const { Events } = require("./Event");
 
 // Create
 const createEvent = async (data) => {
@@ -11,13 +11,13 @@ const createEvent = async (data) => {
 // Get all with filters
 const getEventsWithFilters = async (query, skip, limit) => {
   return Events.find(query)
-  .populate("basicInfo.venue", "title location floorPlan")
-  .populate("basicInfo.categories", "title image")
-  .populate("basicInfo.tags", "title")
-  .populate("basicInfo.organization", "basicInfo.name basicInfo.media otherInfo.description")
-  .sort({ createdAt: -1 })
-  .skip(skip)
-  .limit(limit);
+    .populate("basicInfo.venue", "title location floorPlan")
+    .populate("basicInfo.categories", "title image")
+    .populate("basicInfo.tags", "title")
+    .populate("basicInfo.organization", "basicInfo.name basicInfo.media otherInfo.description")
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
 };
 
 // Count by condition
@@ -43,11 +43,26 @@ const deleteEventById = async (event) => {
 const findByIdAndUpdate = async (id, data) => {
   return Events.findByIdAndUpdate(id, { $set: data }, { new: true });
 };
+
+// Aggregate pipeline
+const aggregateEvents = async (pipeline) => {
+  return Events.aggregate(pipeline)
+    .option({ allowDiskUse: true }) // Optional: helpful for large datasets
+    .exec();
+};
+
+const updateMany = async (filter, update) => {
+  return Events.updateMany(filter, update);
+};
+
+
 module.exports = {
   createEvent,
   getEventsWithFilters,
   countEvents,
+  aggregateEvents,
   findEventById,
   deleteEventById,
   findByIdAndUpdate,
+  updateMany,
 };
