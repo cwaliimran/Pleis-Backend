@@ -3,10 +3,12 @@ const { getBannerControls } = require("../../admin/bannerControl/bannerControlsS
 const { getTop10Promos } = require("../../admin/browserControl/top10PromoSection/topPromosService");
 const { getPublicCategories } = require("../../admin/categories/categoriesService");
 const { getCustomCategories } = require("../../admin/customCategories/customCategoriesService");
+const { getNearbyEvents } = require("../../commonModules/events/eventService");
 const { Highlights } = require("../../commonModules/highlights/Highlight");
 const { getPublicHighlights } = require("../../commonModules/highlights/highlightService");
 
-const getHomeService = async ({ timezone }) => {
+const getHomeService = async ({ queryData }) => {
+  const { timezone } = queryData;
   try {
     // Fetch all data in parallel
     const [
@@ -26,7 +28,7 @@ const getHomeService = async ({ timezone }) => {
       getTop10Promos({ timezone }),
       getBannerControls({ page: 1, limit: 10, status: "active" }),
       [],//getForYou({ page: 1, limit: 10, status: "active" }),
-      [],//getNearYou({ page: 1, limit: 10, status: "active" }),
+      getNearbyEvents(queryData),
       getCustomCategories({ page: 1, limit: 10, status: "active" }),
       getPublicHighlights({ page: 1, limit: 10, keyword: "" }),
       [],//getTopPicks({ page: 1, limit: 10, status: "active" }),
@@ -73,6 +75,13 @@ const getHomeService = async ({ timezone }) => {
             objects: cat.objects,
           });
         }
+      } else if (section.key === "nearYou") {
+        //only add nearYou section if data is available
+          acc.push({
+            key: section.key,
+            title: section.title,
+            data: section.data?.events || [],
+          });
       } else
       //if (Array.isArray(section.data) && section.data.length)  //enable it only if you want to skip empty sections
       {

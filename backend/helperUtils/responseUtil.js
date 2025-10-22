@@ -545,6 +545,7 @@ const convertTimezoneToUtc = (
 };
 
 // Get the current date in user's timezone
+//Emphasizes the returned value is UTC-based, calculated using a timezone
 const getCurrentDateInTimezone = ({
   timezone,
   isDateOnly = false,
