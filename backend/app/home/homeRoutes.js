@@ -1,8 +1,8 @@
 const express = require('express');
 const {
   getHome,
-} = require('../app/home/homeController');
-const auth = require('../middlewares/authMiddleware');
+} = require('./homeController');
+const auth = require('../../middlewares/authMiddleware');
 
 const router = express.Router();
 router.use(auth);

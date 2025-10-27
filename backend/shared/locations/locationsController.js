@@ -128,9 +128,103 @@ const getCitiesByCountryId = (req, res) => {
   }
 };
 
+const getNearbyCities = (req, res) => {
+  let { latitude, longitude } = req.query;
+
+  if (!latitude || !longitude) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "latitude_and_longitude_required",
+    });
+  }
+
+  latitude = parseFloat(latitude);
+  longitude = parseFloat(longitude);
+
+  // Helper to calculate distance (Haversine) in kilometers, rounded to 2 decimals
+  const getDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const straightLine = R * c;
+
+    // Apply road-distance multiplier (approx)
+    const drivingApprox = straightLine * 1.2;
+
+    return Math.round(drivingApprox * 100) / 100; // km, 2 decimals
+  };
+
+
+
+  // Flatten all cities
+  const allCities = countriesData.flatMap((country) =>
+    (country.states || []).flatMap((state) =>
+      (state.cities || []).map((city) => ({
+        id: city.id,
+        name: city.name,
+        latitude: parseFloat(city.latitude),
+        longitude: parseFloat(city.longitude),
+        country: country.name,
+        countryId: country.id,
+        state: state.name,
+      }))
+    )
+  );
+
+  // Step 1: Find nearest city overall — to identify which country we're in
+  const nearestCity = allCities
+    .map((city) => ({
+      ...city,
+      distance: getDistance(latitude, longitude, city.latitude, city.longitude),
+    }))
+    .sort((a, b) => a.distance - b.distance)[0];
+
+  if (!nearestCity) {
+    return sendResponse({
+      res,
+      statusCode: 404,
+      translationKey: "no_nearby_cities_found",
+    });
+  }
+
+  // Step 2: Filter all cities from the same country
+  const sameCountryCities = allCities.filter(
+    (city) => city.countryId === nearestCity.countryId
+  );
+
+  // Step 3: Sort by distance and return top 10 (excluding the nearest city itself)
+  const nearbyCities = sameCountryCities
+    .map((city) => ({
+      ...city,
+      distance: getDistance(latitude, longitude, city.latitude, city.longitude),
+    }))
+    .filter((city) => city.distance > 0.1) // exclude the given location itself
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 10);
+
+  //split first 5 as nearby and rest as suggested
+  const nearbyCitiesFinal = nearbyCities.slice(0, 5);
+  const suggestedCities = nearbyCities.slice(5);
+
+  return sendResponse({
+    res,
+    statusCode: 200,
+    translationKey: "nearby_cities_fetched_successfully",
+    data: { nearbyCities: nearbyCitiesFinal, suggestedCities },
+  });
+};
+
 module.exports = {
   getCountries,
   getStatesByCountryId,
   getCitiesByStateId,
   getCitiesByCountryId,
+  getNearbyCities
 };

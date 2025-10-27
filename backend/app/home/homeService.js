@@ -29,7 +29,7 @@ const getHomeService = async ({ queryData }) => {
       getBannerControls({ page: 1, limit: 10, status: "active" }),
       [],//getForYou({ page: 1, limit: 10, status: "active" }),
       getNearbyEvents(queryData),
-      getCustomCategories({ page: 1, limit: 10, status: "active" }),
+      getCustomCategories({ timezone, page: 1, limit: 10, status: "active" }),
       getPublicHighlights({ page: 1, limit: 10, keyword: "" }),
       [],//getTopPicks({ page: 1, limit: 10, status: "active" }),
       [],//getLoyaltyEvents({ page: 1, limit: 10, status: "active" }),

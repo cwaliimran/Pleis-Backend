@@ -4,6 +4,7 @@ const { pipeline } = require("supertest/lib/test");
 const { validateParams, getCurrentDateInTimezone, convertUtcToTimezone } = require("../../helperUtils/responseUtil");
 const Organizations = require("../organizations/Organization");
 const eventRepo = require("./eventRepository");
+const _ = require("lodash");
 
 const createEvent = async ({ data }) => {
   return await eventRepo.createEvent(data);
@@ -94,14 +95,13 @@ const getPublicEvents = async ({ page, limit, keyword, timezone = "Asia/Karachi"
 };
 
 const getNearbyEvents = async (queryData) => {
-  console.log("queryData", queryData)
   let {
     longitude = 0,
     latitude = 0,
-    radiusKm = 0,
     page = 1,
     limit = 10,
     timezone = "Asia/Karachi",
+    radiusKm = 0,
   } = queryData || {};
 
   // If radiusKm is not provided, use an approximate "whole world" radius
@@ -110,7 +110,7 @@ const getNearbyEvents = async (queryData) => {
     ? 20037.5
     : radiusKm;
 
-  radiusKm = parseFloat(rawRadiusKm);
+   radiusKm = parseFloat(rawRadiusKm);
   longitude = parseFloat(longitude);
   latitude = parseFloat(latitude);
 
@@ -285,7 +285,6 @@ const updateEvent = async (id, data) => {
     operatingHours,
     status,
     venues,
-    location,
     image,
     tags,
     description,
@@ -294,69 +293,105 @@ const updateEvent = async (id, data) => {
     promotion,
   } = data;
 
+  // --- BASIC INFO ---
   if (basicInfo) {
-    event.basicInfo = {
-      ...event.basicInfo,
-      ...basicInfo,
-      media: {
-        ...event.basicInfo.media,
-        ...(basicInfo.media || {})
-      },
-      socialLinks: {
-        ...event.basicInfo.socialLinks,
-        ...(basicInfo.socialLinks || {})
-      }
-    };
+    // ensure basicInfo exists
+    if (!event.basicInfo) event.basicInfo = {};
+
+    if (basicInfo.media) {
+      event.basicInfo.media = {
+        ...(event.basicInfo.media || {}),
+        ...basicInfo.media,
+      };
+    }
+
+    if (basicInfo.socialLinks) {
+      event.basicInfo.socialLinks = {
+        ...(event.basicInfo.socialLinks || {}),
+        ...basicInfo.socialLinks,
+      };
+    }
+
+    if (basicInfo.organization !== undefined)
+      event.basicInfo.organization = basicInfo.organization;
+
+    if (basicInfo.venue !== undefined)
+      event.basicInfo.venue = basicInfo.venue;
+
+    if (basicInfo.categories !== undefined)
+      event.basicInfo.categories = basicInfo.categories;
+
+    if (basicInfo.tags !== undefined)
+      event.basicInfo.tags = basicInfo.tags;
+
+    if (basicInfo.partnerOrganizer !== undefined)
+      event.basicInfo.partnerOrganizer = basicInfo.partnerOrganizer;
+
+    if (basicInfo.title !== undefined)
+      event.basicInfo.title = basicInfo.title;
+
+    if (basicInfo.description !== undefined)
+      event.basicInfo.description = basicInfo.description;
   }
 
+  // --- OTHER INFO ---
   if (otherInfo) {
-    event.otherInfo = {
-      ...event.otherInfo,
-      ...otherInfo
-    };
+    if (!event.otherInfo) event.otherInfo = {};
+    for (const key in otherInfo) {
+      event.otherInfo[key] = otherInfo[key];
+    }
   }
 
+  // --- OPERATING HOURS ---
   if (operatingHours) {
-    event.operatingHours = {
-      ...event.operatingHours,
-      ...operatingHours
-    };
+    if (!event.operatingHours) event.operatingHours = {};
+    for (const key in operatingHours) {
+      event.operatingHours[key] = operatingHours[key];
+    }
   }
 
+  // --- PROMOTION ---
   if (promotion) {
-    event.promotion = {
-      ...event.promotion,
-      ...promotion
-    };
+    if (!event.promotion) event.promotion = {};
+    for (const key in promotion) {
+      event.promotion[key] = promotion[key];
+    }
   }
 
+  // --- SIMPLE FIELDS ---
   if (status !== undefined) event.status = status;
   if (venues !== undefined) event.venues = venues;
-  if (location !== undefined) event.location = location;
   if (image !== undefined) event.image = image;
-  if (tags !== undefined) event.tags = tags;
+  if (tags !== undefined) event.basicInfo.tags = tags;
+
+  // --- DESCRIPTION (legacy support) ---
   if (description !== undefined) {
     if (!event.otherInfo) event.otherInfo = {};
     event.otherInfo.description = description;
   }
+
+  // --- TITLE (legacy support) ---
   if (title !== undefined) {
     if (!event.basicInfo) event.basicInfo = {};
-    event.basicInfo.name = title;
+    event.basicInfo.title = title;
   }
 
-  if (schedule !== undefined) {
+  // --- SCHEDULE ---
+  if (schedule) {
     if (!event.schedule) event.schedule = {};
-    event.schedule = {
-      ...event.schedule,
-      ...schedule
-    };
+    if (schedule.type !== undefined) event.schedule.type = schedule.type;
+    if (schedule.startDateTime !== undefined)
+      event.schedule.startDateTime = schedule.startDateTime;
+    if (schedule.endDateTime !== undefined)
+      event.schedule.endDateTime = schedule.endDateTime;
+    if (schedule.recurringDetails !== undefined)
+      event.schedule.recurringDetails = schedule.recurringDetails;
   }
-
 
   await event.save();
-
   return event;
 };
+
 
 
 const deleteEvent = async (id) => {

@@ -287,5 +287,9 @@
   "pinned_content_not_found": "Pinned content not found",
   "pinned_content_updated_successfully": "Pinned content updated successfully",
   "pinned_content_deleted_successfully": "Pinned content deleted successfully",
-  "pinned_content_reordered_successfully": "Pinned content reordered successfully"
+  "pinned_content_reordered_successfully": "Pinned content reordered successfully",
+  "invalid_venue": "Invalid venue",
+  "nearby_events_fetched_successfully": "Nearby events fetched successfully",
+  "latitude_and_longitude_required": "Latitude and longitude required",
+  "nearby_cities_fetched_successfully": "Nearby cities fetched successfully"
 }

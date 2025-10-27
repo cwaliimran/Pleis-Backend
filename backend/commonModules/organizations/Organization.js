@@ -93,7 +93,8 @@ const organizationSchema = new mongoose.Schema(
     },
     location: {
       type: LocationSchema,
-      default: {},
+      required: false,
+
     },
     staff: [ // Staff members associated with the organization e.g staff, managers
       {
@@ -195,6 +196,9 @@ organizationSchema.methods.formatResponse = function (orgData) {
   return org;
 };
 
+
+//Add geospatial index
+organizationSchema.index({ "location": '2dsphere' });
 
 const Organizations = mongoose.model("Organizations", organizationSchema);
 

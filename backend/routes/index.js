@@ -10,7 +10,7 @@ router.use("/notifications", require("./notificationsRoutes"));
 router.use("/support", require("./supportRoutes"));
 router.use("/contact-us", require("./contactUsRoutes"));
 router.use("/languages", require("./languageRoutes"));
-router.use("/home", require("./homeRoutes"));
+router.use("/home", require("../app/home/homeRoutes"));
 router.use("/util", require("./dbRoutes"));
 
 //organizer routes
@@ -38,7 +38,9 @@ router.use("/menu", require("./menuRoutes"));
 router.use("/loyalty", require("./loyaltyRoutes"));
 
 //home
-router.use("/home", require("./homeRoutes"));
+router.use("/home", require("../app/home/homeRoutes"));
+//maps
+router.use("/maps", require("../app/maps/mapsRoutes"));
 
 
 
