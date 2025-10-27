@@ -25,15 +25,11 @@ const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit, sor
   const now = getCurrentDateInTimezone({ timezone });
 
   const pipeline = [
-    // Match based on the provided filter (e.g., status, date, etc.)
     { $match: filter },
-
-    // Sort the results by 'order'
     { $sort: sort },
-
-    // Apply pagination if limit is provided
     ...(limit > 0 ? [{ $skip: skip }, { $limit: limit }] : []),
 
+    // --- Lookup Users ---
     {
       $lookup: {
         from: "users",
@@ -52,7 +48,8 @@ const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit, sor
         ],
       },
     },
-    // Lookup events (filter out past events)
+
+    // --- Lookup Events (with organization populated) ---
     {
       $lookup: {
         from: "events",
@@ -67,6 +64,29 @@ const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit, sor
             },
           },
           {
+            $lookup: {
+              from: "organizations",
+              localField: "basicInfo.organization",
+              foreignField: "_id",
+              as: "organizationInfo",
+              pipeline: [
+                {
+                  $project: {
+                    _id: 1,
+                    basicInfo: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $addFields: {
+              "basicInfo.organization": {
+                $arrayElemAt: ["$organizationInfo", 0],
+              },
+            },
+          },
+          {
             $project: {
               _id: 1,
               basicInfo: 1,
@@ -76,6 +96,8 @@ const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit, sor
         ],
       },
     },
+
+    // --- Lookup Organizations ---
     {
       $lookup: {
         from: "organizations",
@@ -86,6 +108,7 @@ const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit, sor
           {
             $project: {
               _id: 1,
+              title: 1,
               basicInfo: 1,
             },
           },
@@ -93,7 +116,7 @@ const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit, sor
       },
     },
 
-    // Conditionally set objects based on type
+    // --- Conditional merge of objects ---
     {
       $project: {
         _id: 1,
@@ -104,25 +127,22 @@ const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit, sor
         createdAt: 1,
         updatedAt: 1,
         objects: {
-          $cond: [
-            { $eq: ["$type", "User"] },
-            "$userObjects",
-            {
-              $cond: [
-                { $eq: ["$type", "Event"] },
-                "$eventObjects",
-                "$organizationObjects",
-              ],
-            },
-          ],
+          $switch: {
+            branches: [
+              { case: { $eq: ["$type", "User"] }, then: "$userObjects" },
+              { case: { $eq: ["$type", "Event"] }, then: "$eventObjects" },
+              { case: { $eq: ["$type", "Organization"] }, then: "$organizationObjects" },
+            ],
+            default: [],
+          },
         },
       },
     },
   ];
 
-  // Execute the aggregation query
   const result = await CustomCategories.aggregate(pipeline);
 
+  console.log("✅ Result:", JSON.stringify(result, null, 2));
   return result;
 };
 

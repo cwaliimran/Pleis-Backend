@@ -6,7 +6,7 @@ const {
   getCurrentDateInTimezone,
   validateParams,
 } = require("../../helperUtils/responseUtil");
-const { getEvents } = require("./mapsService");
+const { getEvents, getPlaces } = require("./mapsService");
 
 const getMapsData = async (req, res) => {
 
@@ -19,12 +19,30 @@ const getMapsData = async (req, res) => {
     requestData.limit = limit;
     requestData.timezone = req.user.timezone || "Asia/Karachi";
 
-    if (!validateParams(req, res, { enumFields: { "filter.type": ["events", "places", "all"] } })) return;
+    let keysEnum = []
+    if (requestData?.filter?.type === "events") {
+      keysEnum = ["live", "today", "thisWeek"]
+    } else if (requestData?.filter?.type === "places") {
+      keysEnum = ["openNow", "topRated", "trending"]
+    } else if (requestData?.filter?.type === "all") {
+      keysEnum = ["live", "today", "thisWeek"]
+    }
+
+    if (!validateParams(req, res, {
+      enumFields: {
+        "filter.type": ["events", "places", "all"],
+        "filter.key": keysEnum
+      }
+    })) return;
 
     let status = true;
     let result = {};
     if (requestData?.filter?.type === "events") {
       ({ status, result } = await getEvents(requestData));
+    } else if (requestData?.filter?.type === "places") {
+      ({ status, result } = await getPlaces(requestData));
+    } else { //"all"
+      //({ status, result } = await getAllData(requestData));
     }
 
     if (status === false) {

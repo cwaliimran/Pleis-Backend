@@ -96,11 +96,10 @@ const getCustomCategories = async ({
  * Applies icon paths, URLs, and removes sensitive data
  */
 const transformObject = (obj, type, timezone) => {
-
+    obj.type = type;
   if (type === "User") {
     return new User(obj).toJSON(obj);
   } else if (type === "Event") {
-
     if (obj.schedule && obj.schedule.startDateTime) {
       obj.schedule.startDateTime = convertUtcToTimezone(
         obj.schedule.startDateTime,
@@ -116,6 +115,9 @@ const transformObject = (obj, type, timezone) => {
       );
     }
 
+    let organizationInfo = obj.basicInfo.organization;
+
+    obj.basicInfo.organization = new Organizations().formatResponse(organizationInfo);
 
     return new Events(obj).toPublicJSON(obj);
   } else if (type === "Organizations") {

@@ -139,27 +139,27 @@ const getNearbyCities = (req, res) => {
     });
   }
 
-   latitude = parseFloat(latitude);
-   longitude = parseFloat(longitude);
+  latitude = parseFloat(latitude);
+  longitude = parseFloat(longitude);
 
-// Helper to calculate distance (Haversine) in kilometers, rounded to 2 decimals
-const getDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
+  // Helper to calculate distance (Haversine) in kilometers, rounded to 2 decimals
+  const getDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
       Math.cos((lat2 * Math.PI) / 180) *
       Math.sin(dLon / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const straightLine = R * c;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const straightLine = R * c;
 
-  // Apply road-distance multiplier (approx)
-  const drivingApprox = straightLine * 1.2;
+    // Apply road-distance multiplier (approx)
+    const drivingApprox = straightLine * 1.2;
 
-  return Math.round(drivingApprox * 100) / 100; // km, 2 decimals
-};
+    return Math.round(drivingApprox * 100) / 100; // km, 2 decimals
+  };
 
 
 
@@ -209,11 +209,15 @@ const getDistance = (lat1, lon1, lat2, lon2) => {
     .sort((a, b) => a.distance - b.distance)
     .slice(0, 10);
 
+  //split first 5 as nearby and rest as suggested
+  const nearbyCitiesFinal = nearbyCities.slice(0, 5);
+  const suggestedCities = nearbyCities.slice(5);
+
   return sendResponse({
     res,
     statusCode: 200,
     translationKey: "nearby_cities_fetched_successfully",
-    data: nearbyCities,
+    data: { nearbyCities: nearbyCitiesFinal, suggestedCities },
   });
 };
 

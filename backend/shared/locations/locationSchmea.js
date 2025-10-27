@@ -8,7 +8,7 @@ const LocationSchema = new mongoose.Schema(
       default: "Point", // Default type is 'Point'
     },
     coordinates: {
-      type: [Number], 
+      type: [Number],
       required: false,
       validate: {
         validator: function (arr) {
