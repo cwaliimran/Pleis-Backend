@@ -278,6 +278,10 @@ const updateUser = async (req, res, options = {}) => {
 
     await user.save({ session });
 
+  /*   if(location && location.coordinates && location.coordinates.length === 2) {
+      //add in location history for suggested cities
+    } */
+
     // Device handling
     if (deviceId && deviceType) {
       createOrSkipDevice(user._id, deviceId, deviceType);

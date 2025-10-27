@@ -41,6 +41,7 @@ const createCustomCategory = async (req, res) => {
 const getCustomCategories = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date, orderSort } = req.query;
+  const { timezone } = req.user || { timezone: "Asia/Karachi" };
 
   try {
     // Validate date parameter if provided
@@ -51,8 +52,9 @@ const getCustomCategories = async (req, res) => {
     })) return;
 
     // Get custom categories from service (no need to populate here)
+    
     const { customCategories, meta } = await customCategoriesService.getCustomCategories({
-      timezone: req.user.timezone,
+      timezone,
       page,
       limit,
       keyword,

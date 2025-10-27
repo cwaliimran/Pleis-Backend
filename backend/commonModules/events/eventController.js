@@ -285,7 +285,6 @@ const updateEvent = async (req, res) => {
     otherInfo,
     operatingHours,
     status,
-    location,
     image,
     tags,
     description,

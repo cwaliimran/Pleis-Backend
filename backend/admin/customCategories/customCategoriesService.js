@@ -48,6 +48,7 @@ const getCustomCategories = async ({
   // Fetch custom categories and counts using aggregation
   const [customCategories, customCategoriesCounts] = await Promise.all([
     customCategoryRepo.getCustomCategoriesWithFilters(
+      timezone,
       query,
       skip,
       limit === 0 ? 0 : limit,

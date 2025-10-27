@@ -1,4 +1,5 @@
 // repositories/customCategoryRepository.js
+const { getCurrentDateInTimezone } = require("../../helperUtils/responseUtil");
 const CustomCategories = require("./CustomCategories");
 
 // Create
@@ -20,7 +21,9 @@ const createCustomCategory = async (data) => {
 };
 
 // Get all with filters, sorted by 'order' ascending and then 'createdAt' descending
-const getCustomCategoriesWithFilters = async (filter, skip, limit, sort = { order: 1 }) => {
+const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit, sort = { order: 1 }) => {
+  const now = getCurrentDateInTimezone({ timezone });
+
   const pipeline = [
     // Match based on the provided filter (e.g., status, date, etc.)
     { $match: filter },
@@ -31,7 +34,7 @@ const getCustomCategoriesWithFilters = async (filter, skip, limit, sort = { orde
     // Apply pagination if limit is provided
     ...(limit > 0 ? [{ $skip: skip }, { $limit: limit }] : []),
 
-     {
+    {
       $lookup: {
         from: "users",
         localField: "objects",
@@ -49,6 +52,7 @@ const getCustomCategoriesWithFilters = async (filter, skip, limit, sort = { orde
         ],
       },
     },
+    // Lookup events (filter out past events)
     {
       $lookup: {
         from: "events",
@@ -56,6 +60,12 @@ const getCustomCategoriesWithFilters = async (filter, skip, limit, sort = { orde
         foreignField: "_id",
         as: "eventObjects",
         pipeline: [
+          {
+            $match: {
+              status: "active",
+              "schedule.startDateTime": { $gte: now },
+            },
+          },
           {
             $project: {
               _id: 1,

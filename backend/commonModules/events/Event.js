@@ -45,7 +45,6 @@ const eventSchema = new mongoose.Schema(
         },
         coordinates: {
           type: [Number], // [longitude, latitude]
-          required: true,
           validate: {
             validator: function (arr) {
               return Array.isArray(arr) && arr.length === 2;

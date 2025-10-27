@@ -4,6 +4,7 @@ const {
   getStatesByCountryId,
   getCitiesByStateId,
   getCitiesByCountryId,
+  getNearbyCities
 } = require("./locationsController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 
@@ -15,6 +16,7 @@ const apiRateLimiterStates = createRateLimiter("states");
 // Define routes for countries, states, and cities
 router.get("/countries", apiRateLimiterCountries, getCountries);
 router.get("/states/:countryId", apiRateLimiterStates, getStatesByCountryId);
+router.get("/cities/nearby", apiRateLimiterCities, getNearbyCities);
 router.get("/cities/:stateId", apiRateLimiterCities, getCitiesByStateId);
 router.get("/cities/country/:countryId", apiRateLimiterCities, getCitiesByCountryId);
 
