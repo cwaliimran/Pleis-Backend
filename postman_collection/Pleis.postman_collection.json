@@ -466,6 +466,70 @@
 										}
 									},
 									"response": []
+								},
+								{
+									"name": "cities - nearby",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}locations/cities/nearby?latitude=31.5023621&longitude=74.426454",
+											"host": [
+												"{{url}}locations"
+											],
+											"path": [
+												"cities",
+												"nearby"
+											],
+											"query": [
+												{
+													"key": "latitude",
+													"value": "31.5023621"
+												},
+												{
+													"key": "longitude",
+													"value": "74.426454"
+												}
+											]
+										}
+									},
+									"response": []
 								}
 							]
 						},
@@ -1953,12 +2017,27 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}home/",
+									"raw": "{{url}}home/?latitude=31.5023621&longitude=74.426454",
 									"host": [
 										"{{url}}home"
 									],
 									"path": [
 										""
+									],
+									"query": [
+										{
+											"key": "latitude",
+											"value": "31.5023621"
+										},
+										{
+											"key": "longitude",
+											"value": "74.426454"
+										},
+										{
+											"key": "radiusKm",
+											"value": "50",
+											"disabled": true
+										}
 									]
 								}
 							},
@@ -1989,7 +2068,7 @@
 									},
 									"status": "OK",
 									"code": 200,
-									"_postman_previewlanguage": "",
+									"_postman_previewlanguage": null,
 									"header": [
 										{
 											"key": "X-Powered-By",
@@ -2096,6 +2175,354 @@
 										{
 											"key": "longitude",
 											"value": "74.426454"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Map",
+					"item": [
+						{
+							"name": "categories",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}categories/global?page=1&limit=10",
+									"host": [
+										"{{url}}categories"
+									],
+									"path": [
+										"global"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "keyword",
+											"value": "Shows",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "categories",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}categories/global?page=1&limit=10",
+											"host": [
+												"{{url}}categories"
+											],
+											"path": [
+												"global"
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "keyword",
+													"value": "Shows",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "X-Powered-By",
+											"value": "Express"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "469"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"1d5-aUr3ZXp0FLofXLMKezW1luPBP8w\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 15 Oct 2025 11:43:31 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"message\": \"Categories fetched successfully\",\n    \"data\": [\n        {\n            \"order\": 0,\n            \"_id\": \"68ee3310924370d02dbacc41\",\n            \"title\": \"Nightlife\",\n            \"status\": \"active\",\n            \"pinned\": false,\n            \"createdAt\": \"2025-10-14T11:25:04.699Z\",\n            \"updatedAt\": \"2025-10-14T11:25:41.702Z\",\n            \"__v\": 0,\n            \"imageInfo\": {\n                \"name\": \"24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\",\n                \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\"\n            }\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 10,\n        \"totalPages\": 1,\n        \"total\": 1\n    }\n}"
+								}
+							]
+						},
+						{
+							"name": "get - events",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    // \"category\": \"68f0d6b0a92f125fd26a5831\", //optional\n    \"filter\": {\n        \"type\": \"events\" //events, places, all\n        // ,\"key\": \"live\" // live, today, thisWeek\n    },\n    \"latitude\": 31.5023621,\n    \"longitude\": 74.426454\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}maps/?page=1&limit=10",
+									"host": [
+										"{{url}}maps"
+									],
+									"path": [
+										""
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "keywrod",
+											"value": null,
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get - places",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"category\": \"68d668f59a1bf2d8cd50a220\", //optional\n    \"filter\": {\n        \"type\": \"places\" //events, places, all\n        ,\"key\": \"openNow\" //\"\",openNow, topRated, trending\n    },\n    \"latitude\": 31.5023621,\n    \"longitude\": 74.426454\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}maps/?page=1&limit=10",
+									"host": [
+										"{{url}}maps"
+									],
+									"path": [
+										""
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "keywrod",
+											"value": null,
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get - all",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    // \"category\": \"68f0d6b0a92f125fd26a5831\", //optional\n    \"filter\": {\n        \"type\": \"all\" //events, places, all\n       // \"key\": \"live\" // live, today, thisWeek\n    },\n    \"latitude\": 31.5023621,\n    \"longitude\": 74.426454\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}maps/?page=1&limit=10",
+									"host": [
+										"{{url}}maps"
+									],
+									"path": [
+										""
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "keywrod",
+											"value": null,
+											"disabled": true
 										}
 									]
 								}
@@ -2293,7 +2720,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"M\",\n    \"organizationName\": \"Tech Innovators Ltd.\",\n    \"email\": \"{{$randomExampleEmail}}\",\n    \"phoneNumber\": {\n        \"code\": \"+385\",\n        \"number\": \"998798769\"\n    },\n    \"password\": \"{{passwordOrganizer}}\",\n    \"deviceType\": \"web\", //andoird/ios/web\n    \"userType\": \"organizer\", //organizer, user, admin\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n    //optional\n    ,\n    \"companyDetails\": {\n        \"name\": \"Tech Innovators Ltd\",\n        \"oib\": \"4\",\n        \"bankAccountNumber\": \"HR1234567890001234567\",\n        \"representativeName\": \"Alice Johnson\",\n        \"location\": {\n          \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYK\",\n            \"postalCode\": \"10011\"\n        },\n        \"suppliers\": [\n            \"68ee4b7ba0e89aae25bd1e9b\"\n        ]\n    }\n}",
+											"raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"M\",\n    \"organizationName\": \"Tech Innovators Ltd.\",\n    // \"email\": \"{{$randomExampleEmail}}\",\n    \"email\": \"organizerusama@gmail.com\",\n    \"phoneNumber\": {\n        \"code\": \"+385\",\n        \"number\": \"998798769\"\n    },\n    \"password\": \"{{passwordOrganizer}}\",\n    \"deviceType\": \"web\", //andoird/ios/web\n    \"userType\": \"organizer\", //organizer, user, admin\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n    //optional\n    ,\n    \"companyDetails\": {\n        \"name\": \"Tech Innovators Ltd\",\n        \"oib\": \"4\",\n        \"bankAccountNumber\": \"HR1234567890001234567\",\n        \"representativeName\": \"Alice Johnson\",\n        \"location\": {\n          \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYK\",\n            \"postalCode\": \"10011\"\n        },\n        \"suppliers\": [\n            \"68ee4b7ba0e89aae25bd1e9b\"\n        ]\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -4064,7 +4491,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -4074,7 +4502,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -4104,7 +4533,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": ""
+											"value": "69005ee107c29bc8fee4324d"
 										}
 									]
 								}
@@ -4142,7 +4571,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"logo\": \"org-logo_pic1.png\",\n            \"cover\": \"org-cover.jpg\"\n        },\n        \"name\": \"Lex Events\",\n        \"socialLinks\": {\n            \"youtube\": \"https://youtube.com/lexevents\",\n            \"facebook\": \"https://facebook.com/lexevents\",\n            \"instagram\": \"https://instagram.com/lexevents\",\n            \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        }\n    },\n    \"otherInfo\": {\n        \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n        \"minAge\": 18,\n        \"tags\": [\n            \"68ee33f1924370d02dbacc71\"\n        ],\n        \"categories\": [\n            \"68ee3310924370d02dbacc41\"\n        ],\n        \"galleryMedia\": [\n            \"gallery1.jpg\",\n            \"gallery2.jpg\"\n        ]\n    },\n    \"operatingHours\": {\n        \"monday\": {\n            \"from\": \"10:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"tuesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"wednesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"thursday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"friday\": {\n            \"from\": \"09:00\",\n            \"to\": \"20:00\",\n            \"break\": {\n                \"from\": \"14:00\",\n                \"to\": \"15:00\"\n            },\n            \"isOpen\": false\n        },\n        \"saturday\": {\n            \"from\": \"12:00\",\n            \"to\": \"22:00\",\n            \"break\": {\n                \"from\": \"16:00\",\n                \"to\": \"17:00\"\n            },\n            \"isOpen\": false\n        },\n        \"sunday\": {\n            \"from\": \"\",\n            \"to\": \"\",\n            \"break\": {\n                \"from\": \"\",\n                \"to\": \"\"\n            },\n            \"isOpen\": true\n        }\n    },\n    \"status\": \"active\",\n    \"venue\": \"68ee4c95a0e89aae25bd1eca\"\n}",
+									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"logo\": \"4f3394ec-9685-4686-a9aa-b9b06421561a.png\",\n            \"cover\": \"12ae8ecf-af8c-4a33-acb1-82b27d8cb792.jpg\"\n        },\n        \"name\": \"Lex Events\",\n        \"socialLinks\": {\n            \"youtube\": \"https://youtube.com/lexevents\",\n            \"facebook\": \"https://facebook.com/lexevents\",\n            \"instagram\": \"https://instagram.com/lexevents\",\n            \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        }\n    },\n    \"otherInfo\": {\n        \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n        \"minAge\": 18,\n        \"tags\": [\n            \"68be613e7c77db01423c1277\"\n        ],\n        \"categories\": [\n            \"68d668f59a1bf2d8cd50a220\"\n        ],\n        \"galleryMedia\": [\n            \"71a19fdc-edea-44b1-96fb-e40f27baf1eb.jpg\",\n            \"b4de65c6-5dd8-4703-949c-b3317217e595.jpg\"\n        ]\n    },\n    \"location\": {\n        \"address\": \"100 Tech Avenue\",\n        \"city\": \"Split\",\n        \"postalCode\": \"21000\",\n        \"country\": \"Croatia\",\n        \"coordinates\": [\n            43.5081,\n            16.4402\n        ]\n    },\n    \"operatingHours\": {\n        \"monday\": {\n            \"from\": \"10:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": true\n        },\n        \"tuesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"wednesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"thursday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"friday\": {\n            \"from\": \"09:00\",\n            \"to\": \"20:00\",\n            \"break\": {\n                \"from\": \"14:00\",\n                \"to\": \"15:00\"\n            },\n            \"isOpen\": false\n        },\n        \"saturday\": {\n            \"from\": \"12:00\",\n            \"to\": \"22:00\",\n            \"break\": {\n                \"from\": \"16:00\",\n                \"to\": \"17:00\"\n            },\n            \"isOpen\": false\n        },\n        \"sunday\": {\n            \"from\": \"\",\n            \"to\": \"\",\n            \"break\": {\n                \"from\": \"\",\n                \"to\": \"\"\n            },\n            \"isOpen\": false\n        }\n    },\n    \"status\": \"active\",\n    \"venue\": \"68ff55f964f683816a6013f4\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -4241,7 +4670,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -4251,7 +4681,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -4260,7 +4691,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"logo\": \"org-logo_pic1.png\",\n            \"cover\": \"org-cover.jpg\"\n        },\n        \"name\": \"Lex Events\",\n        \"socialLinks\": {\n            \"youtube\": \"https://youtube.com/lexevents\",\n            \"facebook\": \"https://facebook.com/lexevents\",\n            \"instagram\": \"https://instagram.com/lexevents\",\n            \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        }\n    },\n    \"otherInfo\": {\n        \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n        \"minAge\": 18,\n        \"tags\": [\n            \"64f7206e442c7dfc4aa00001\"\n        ],\n        \"categories\": [\n            \"64f7206e442c7dfc4aa00002\"\n        ],\n        \"galleryMedia\": [\n            \"gallery1.jpg\",\n            \"gallery2.jpg\"\n        ]\n    },\n    \"operatingHours\": {\n        \"monday\": {\n            \"from\": \"10:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"tuesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"wednesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"thursday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"friday\": {\n            \"from\": \"09:00\",\n            \"to\": \"20:00\",\n            \"break\": {\n                \"from\": \"14:00\",\n                \"to\": \"15:00\"\n            },\n            \"isOpen\": false\n        },\n        \"saturday\": {\n            \"from\": \"12:00\",\n            \"to\": \"22:00\",\n            \"break\": {\n                \"from\": \"16:00\",\n                \"to\": \"17:00\"\n            },\n            \"isOpen\": false\n        },\n        \"sunday\": {\n            \"from\": \"\",\n            \"to\": \"\",\n            \"break\": {\n                \"from\": \"\",\n                \"to\": \"\"\n            },\n            \"isOpen\": true\n        }\n    },\n    \"creator\": \"64f6e8abc024134d503e0001\",\n    \"status\": \"active\",\n    \"venue\": \"6884b4d95d70498454a2aa11\",\n    \"location\": {\n        \"address\": \"100 Tech Avenue\",\n        \"city\": \"Split\",\n        \"postalCode\": \"21000\",\n        \"country\": \"Croatia\",\n        \"coordinates\": [\n            43.5081,\n            16.4402\n        ]\n    }\n}",
+									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"logo\": \"org-logo_pic1.png\",\n            \"cover\": \"org-cover.jpg\"\n        },\n        \"name\": \"Lex Events\",\n        \"socialLinks\": {\n            \"youtube\": \"https://youtube.com/lexevents\",\n            \"facebook\": \"https://facebook.com/lexevents\",\n            \"instagram\": \"https://instagram.com/lexevents\",\n            \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        }\n    },\n    \"otherInfo\": {\n        \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n        \"minAge\": 18,\n        \"tags\": [\n            \"64f7206e442c7dfc4aa00001\"\n        ],\n        \"categories\": [\n            \"64f7206e442c7dfc4aa00002\"\n        ],\n        \"galleryMedia\": [\n            \"gallery1.jpg\",\n            \"gallery2.jpg\"\n        ]\n    },\n    \"location\": {\n        \"address\": \"100 Tech Avenue\",\n        \"city\": \"Split\",\n        \"postalCode\": \"21000\",\n        \"country\": \"Croatia\",\n        \"coordinates\": [\n            43.5081,\n            16.4402\n        ]\n    },\n    \"operatingHours\": {\n        \"monday\": {\n            \"from\": \"10:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"tuesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": true\n        },\n        \"wednesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"thursday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"friday\": {\n            \"from\": \"09:00\",\n            \"to\": \"20:00\",\n            \"break\": {\n                \"from\": \"14:00\",\n                \"to\": \"15:00\"\n            },\n            \"isOpen\": false\n        },\n        \"saturday\": {\n            \"from\": \"12:00\",\n            \"to\": \"22:00\",\n            \"break\": {\n                \"from\": \"16:00\",\n                \"to\": \"17:00\"\n            },\n            \"isOpen\": false\n        },\n        \"sunday\": {\n            \"from\": \"\",\n            \"to\": \"\",\n            \"break\": {\n                \"from\": \"\",\n                \"to\": \"\"\n            },\n            \"isOpen\": true\n        }\n    },\n    \"creator\": \"64f6e8abc024134d503e0001\",\n    \"status\": \"active\",\n    \"venue\": \"6884b4d95d70498454a2aa11\",\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -4278,7 +4709,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "6884bc2cea0037a3d1263cff"
+											"value": "69005ee107c29bc8fee4324d"
 										}
 									]
 								},
@@ -4471,7 +4902,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -4481,7 +4913,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -4490,7 +4923,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"title\": \"Sunset Beach Club\",\n    \"floorPlan\": \"\",\n    \"venueType\": \"6884861c721543813c533a73\",\n    \"organization\": \"6884bc2cea0037a3d1263cff\",\n    \"location\": {\n        \"fullAddress\":\"123 Seaside Blvd\",\n        \"state\":\"Col\",\n        \"city\": \"Split\",\n        \"postalCode\": \"21000\",\n        \"country\": \"Croatia\",\n        \"coordinates\": [\n            43.5081,\n            16.4402\n        ]\n    }\n}",
+									"raw": "{\n    \"title\": \"Sunset Beach Club\",\n    \"floorPlan\": \"\",\n    \"venueType\": \"68bbfd767c77db01423c0714\",\n    // \"organization\": \"6884bc2cea0037a3d1263cff\",\n    \"location\": {\n        \"fullAddress\":\"123 Seaside Blvd\",\n        \"state\":\"Col\",\n        \"city\": \"Split\",\n        \"postalCode\": \"21000\",\n        \"country\": \"Croatia\",\n        \"coordinates\": [\n            43.5081,\n            16.4402\n        ]\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -4861,7 +5294,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -4871,7 +5305,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -4880,7 +5315,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"basicInfo\": {\n    \"media\": {\n      \"type\": \"image\",\n      \"name\": \"event-banner.jpg\"\n    },\n    \"title\": \"Summer Music Festival\",\n    \"description\": \"A fun-filled day of live music and food.\",\n    \"organization\": \"68932a0dce6408026b883458\",\n    \"venue\": \"68831477f990daf522ff311e\",\n    \"category\": \"68831477f990daf522ff3110\",\n    \"tags\": [\n      \"68822a624ebf07788604301b\",\n      \"6883208feec25d5f951a8c74\"\n    ]\n  },\n  \"schedule\": {\n    \"type\": \"oneTime\",\n    \"startDateTime\": \"2025-08-15 10:00 PM\",\n    \"endDateTime\": \"2025-08-15 11:00 PM\"\n    // ,\n    // \"recurringDetails\": {\n    //   \"isEnabled\": true,\n    //   \"frequency\": \"weekly\",\n    //   \"interval\": 1,\n    //   \"daysOfWeek\": [\"fri\"],\n    //   \"endType\": \"onDate\",\n    //   \"endDate\": \"2025-12-31\"\n    // }\n  }\n}\n",
+									"raw": "{\n  \"basicInfo\": {\n    \"media\": {\n      \"type\": \"image\",\n      \"name\": \"657bda9b-5e8f-431d-b29b-e59e0942a79a.jpg\"\n    },\n    \"title\": \"Summer Music Festival\",\n    \"description\": \"A fun-filled day of live music and food.\",\n    \"organization\": \"68ff560564f683816a6013f8\",\n    \"venue\": \"68ff55f964f683816a6013f4\",\n    \"categories\": [\"68d668f59a1bf2d8cd50a220\"],\n    \"tags\": [\n      \"68be613e7c77db01423c1277\"\n    ]\n  },\n  \"schedule\": {\n    \"type\": \"oneTime\",\n    \"startDateTime\": \"2025-11-03 10:00 AM\",\n    \"endDateTime\": \"2025-11-15 11:00 PM\"\n    // ,\n    // \"recurringDetails\": {\n    //   \"isEnabled\": true,\n    //   \"frequency\": \"weekly\",\n    //   \"interval\": 1,\n    //   \"daysOfWeek\": [\"fri\"],\n    //   \"endType\": \"onDate\",\n    //   \"endDate\": \"2025-12-31\"\n    // }\n  }\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -8302,7 +8737,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -8312,7 +8748,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -8342,7 +8779,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68b9922df267724e756b8990"
+											"value": "68ee4c95a0e89aae25bd1eca"
 										}
 									]
 								}
@@ -9483,7 +9920,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"type\": \"image\",\n            \"name\": \"event-banner.jpg\"\n        },\n        \"title\": \"Summer Music Festival\",\n        \"description\": \"A fun-filled day of live music and food.\",\n        \"organization\": \"68b97c3650bb90128c47511f\",\n        \"venue\": \"68ee4c95a0e89aae25bd1eca\",\n        \"categories\": [\"68bf1f5b62e71e3681c53dba\",\"68c028637c376b15157d9ecc\"],\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"6883208feec25d5f951a8c74\"\n        ]\n    },\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-08-15 10:00 PM\",\n        \"endDateTime\": \"2025-08-15 11:00 PM\"\n\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n\n        /*Ending on specific date*/\n        // ,\n        // \"recurringDetails\": {\n        //   \"isEnabled\": true,\n        //   \"frequency\": \"weekly\",\n        //   \"interval\": 1,\n        //   \"daysOfWeek\": [\"fri\"],\n        //   \"endType\": \"onDate\",\n        //   \"endDate\": \"2025-12-31T00:00:00.000Z\"\n        // }\n        \n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    }\n}",
+									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"type\": \"image\",\n            \"name\": \"event-banner.jpg\"\n        },\n        \"title\": \"Monday Fun day\",\n        \"description\": \"A fun-filled day of live music and food.\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"venue\": \"68ee4c95a0e89aae25bd1eca\",\n        \"categories\": [\"68f0d6b0a92f125fd26a5831\",\"68c028637c376b15157d9ecc\"],\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"6883208feec25d5f951a8c74\"\n        ]\n    },\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-10-27 10:00 AM\",\n        \"endDateTime\": \"2025-10-27 05:00 PM\"\n\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n\n        /*Ending on specific date*/\n        // ,\n        // \"recurringDetails\": {\n        //   \"isEnabled\": true,\n        //   \"frequency\": \"weekly\",\n        //   \"interval\": 1,\n        //   \"daysOfWeek\": [\"fri\"],\n        //   \"endType\": \"onDate\",\n        //   \"endDate\": \"2025-12-31T00:00:00.000Z\"\n        // }\n        \n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -9534,7 +9971,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    //    \"schedule\": {\n    //     \"type\": \"oneTime\",\n    //     \"startDateTime\": \"2025-10-25 10:00 PM\",\n    //     \"endDateTime\": \"2025-10-26 11:00 PM\"\n    //     }\n    \"basicInfo\": {\n        \"organization\": \"68b97c3650bb90128c47511f\",\n        \"venue\": \"68ee4c95a0e89aae25bd1eca\"\n    }\n}",
+									"raw": "{\n    //    \"schedule\": {\n    //     \"type\": \"oneTime\",\n    //     \"startDateTime\": \"2025-10-25 10:00 PM\",\n    //     \"endDateTime\": \"2025-10-26 11:00 PM\"\n    //     }\n    \"basicInfo\": {\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"venue\": \"68ee4c95a0e89aae25bd1eca\",\n        \"categories\": [\n            \"68f0d6b0a92f125fd26a5831\"\n        ]\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -9552,7 +9989,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68de33b7bcddb74bfc2d9dd8"
+											"value": "68ff18be8cd2d2f52b25be0a"
 										}
 									]
 								},
@@ -13275,7 +13712,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68ee4bb7a0e89aae25bd1eab"
+											"value": "68ff53eb64f683816a6013ac"
 										}
 									]
 								},
@@ -16158,7 +16595,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n \"event\": \"68de33b7bcddb74bfc2d9dd9\"\n}\n",
+											"raw": "{\n \"event\": \"68ff18ed8cd2d2f52b25be1a\",\n \"isTop10\": true\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -16349,149 +16786,6 @@
 							]
 						},
 						{
-							"name": "Quick Access",
-							"item": [
-								{
-									"name": "get",
-									"event": [
-										{
-											"listen": "test",
-											"script": {
-												"exec": [
-													""
-												],
-												"type": "text/javascript",
-												"packages": {},
-												"requests": {}
-											}
-										},
-										{
-											"listen": "prerequest",
-											"script": {
-												"exec": [
-													""
-												],
-												"type": "text/javascript",
-												"packages": {},
-												"requests": {}
-											}
-										}
-									],
-									"protocolProfileBehavior": {
-										"disableBodyPruning": true
-									},
-									"request": {
-										"method": "GET",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "{{url}}admin/categories?page=1&limit=10&orderSort=asc&status=active",
-											"host": [
-												"{{url}}admin"
-											],
-											"path": [
-												"categories"
-											],
-											"query": [
-												{
-													"key": "keyword",
-													"value": "Gastronomy",
-													"description": "search",
-													"disabled": true
-												},
-												{
-													"key": "page",
-													"value": "1"
-												},
-												{
-													"key": "limit",
-													"value": "10"
-												},
-												{
-													"key": "orderSort",
-													"value": "asc",
-													"description": "asc, desc"
-												},
-												{
-													"key": "status",
-													"value": "active",
-													"description": "active/inactive"
-												},
-												{
-													"key": "date",
-													"value": "2025-07-25",
-													"description": "yyyy-mm-dd",
-													"disabled": true
-												}
-											]
-										}
-									},
-									"response": []
-								},
-								{
-									"name": "reorder",
-									"event": [
-										{
-											"listen": "test",
-											"script": {
-												"exec": [
-													""
-												],
-												"type": "text/javascript",
-												"packages": {},
-												"requests": {}
-											}
-										},
-										{
-											"listen": "prerequest",
-											"script": {
-												"exec": [
-													""
-												],
-												"type": "text/javascript",
-												"packages": {},
-												"requests": {}
-											}
-										}
-									],
-									"request": {
-										"method": "POST",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "{\n    \"movedId\":\"68f0d4d3c6eb4a5cf2c0f201\",\n    \"previousOrder\":\"3\",\n    \"newOrder\":\"2\"\n  }",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "{{url}}admin/categories/reorder/",
-											"host": [
-												"{{url}}admin"
-											],
-											"path": [
-												"categories",
-												"reorder",
-												""
-											]
-										},
-										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
-									},
-									"response": []
-								}
-							]
-						},
-						{
 							"name": "Custom Categories",
 							"item": [
 								{
@@ -16589,7 +16883,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Best Companies\",\n  \"type\": \"Organizations\", //\"Event\", \"User\", \"Organizations\"\n  \"objects\": [\n    \"68ee4cbba0e89aae25bd1ece\"\n  ]\n}",
+											"raw": "{\n  \"title\": \"Best Companies\",\n  \"type\": \"Organizations\", //\"Event\", \"User\", \"Organizations\"\n  \"objects\": [\n    \"68ee4cbba0e89aae25bd1ece\"\n  ],\n  \"order\": 2\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -16641,7 +16935,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Concerts Hall\"\n//   \"type\": \"event\", //\"Event\", \"User\", \"Organizations\"\n//   \"objects\": [\n//     \"60d5ec49c6f8e2d1b0a4c8a3\",\n//     \"60d5ec49c6f8e2d1b0a4c8a4\"\n//   ]\n}",
+											"raw": "{\n    \"title\": \"Concerts Hall\",\n    //   \"type\": \"event\", //\"Event\", \"User\", \"Organizations\"\n    //   \"objects\": [\n    //     \"60d5ec49c6f8e2d1b0a4c8a3\",\n    //     \"60d5ec49c6f8e2d1b0a4c8a4\"\n    //   ],\n    \"order\": 4\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -16720,6 +17014,58 @@
 													"key": "id",
 													"value": ""
 												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "reorder",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"movedId\":\"68f0fe3455b07139a883835e\",\n    \"previousOrder\":\"1\",\n    \"newOrder\":\"1\"\n  }",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/custom-categories/reorder",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"custom-categories",
+												"reorder"
 											]
 										},
 										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
@@ -17285,6 +17631,149 @@
 									"response": []
 								}
 							]
+						},
+						{
+							"name": "Quick Access",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/categories?page=1&limit=10&orderSort=asc&status=active",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"categories"
+											],
+											"query": [
+												{
+													"key": "keyword",
+													"value": "Gastronomy",
+													"description": "search",
+													"disabled": true
+												},
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "orderSort",
+													"value": "asc",
+													"description": "asc, desc"
+												},
+												{
+													"key": "status",
+													"value": "active",
+													"description": "active/inactive"
+												},
+												{
+													"key": "date",
+													"value": "2025-07-25",
+													"description": "yyyy-mm-dd",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "reorder",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"movedId\":\"68f0d4d3c6eb4a5cf2c0f201\",\n    \"previousOrder\":\"3\",\n    \"newOrder\":\"2\"\n  }",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/categories/reorder/",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"categories",
+												"reorder",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
 						}
 					]
 				},
@@ -17794,7 +18283,7 @@
 								{
 									"key": "files",
 									"type": "file",
-									"src": "/Users/s/Desktop/Development/_FreeLancing/samples_mobile/Circle Images/Circle Images/avatars/Mask Group 12.png"
+									"src": "/Users/s/Desktop/Development/Projects/Pleis/test-images/dj-music-night-club-video-banner-design-template-613d8caa0e65688663b029d3cf5fc49f_screen.jpg"
 								}
 							]
 						},

@@ -5,6 +5,7 @@ const mapsRepo = require("./mapsRepository");
 const moment = require("moment-timezone");
 const mongoose = require("mongoose");
 const { Events } = require("../../commonModules/events/Event");
+const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
 
 
 const getEvents = async (queryData) => {
@@ -75,7 +76,6 @@ const getEvents = async (queryData) => {
 
   try {
     const categoryObjId = new mongoose.Types.ObjectId(category);
-    console.log("categoryObjId", categoryObjId)
     const pipeline = [
       {
         $geoNear: {
@@ -187,8 +187,8 @@ const getEvents = async (queryData) => {
     });
 
     let meta = generateMeta(page, limit, totalFiltered);
-    meta.radiusKm = radiusKm;
-    meta.userLocation = { lng: longitude, lat: latitude };
+    // meta.radiusKm = radiusKm;
+    // meta.userLocation = { lng: longitude, lat: latitude };
     return {
       status: true,
       result: {
@@ -230,41 +230,40 @@ const getPlaces = async (queryData) => {
   if (radiusKm <= 0) throw new Error("Radius must be greater than 0");
 
   const radiusInMeters = radiusKm * 1000;
-  const now = getCurrentDateInTimezone({ timezone });
   const skip = Math.max(0, (page - 1) * limit);
 
-  // Convert current local time to HH:mm for openNow comparison
-  const currentTime = moment.tz(timezone).format("HH:mm");
-  const currentDay = moment.tz(timezone).format("dddd").toLowerCase();
-
-  // 🔹 Dynamic filter for “places”
+  const nowUtc = moment.utc();
+  const currentMinutes = nowUtc.hours() * 60 + nowUtc.minutes();
+  const currentDay = nowUtc.format("dddd").toLowerCase();
+  // Dynamic filter for “places”
   let dynamicFilter = {};
   switch (filter?.key) {
     case "openNow":
       // Checks if the place is open right now
       dynamicFilter = {
         [`operatingHours.${currentDay}.isOpen`]: true,
-        [`operatingHours.${currentDay}.from`]: { $lte: currentTime },
-        [`operatingHours.${currentDay}.to`]: { $gte: currentTime },
+        [`operatingHours.${currentDay}.from`]: { $lte: currentMinutes },
+        [`operatingHours.${currentDay}.to`]: { $gte: currentMinutes },
       };
       break;
 
-    case "topRated":
-      // Placeholder — requires rating field in schema
-      dynamicFilter = { "meta.rating": { $gte: 4 } };
-      break;
 
-    case "trending":
-      // Placeholder — requires views or check-ins field
-      dynamicFilter = { "meta.views": { $gte: 50 } };
-      break;
-
+    // TODO: Implement these filters in future releases
+    /* 
+        case "topRated":
+          // Placeholder — requires rating field in schema
+          dynamicFilter = { "meta.rating": { $gte: 4 } };
+          break;
+    
+        case "trending":
+          // Placeholder — requires views or check-ins field
+          dynamicFilter = { "meta.views": { $gte: 50 } };
+          break;
+     */
     default:
       dynamicFilter = {}; // No special filter
       break;
   }
-
-  console.log("dynamicFilter",dynamicFilter)
 
   try {
     const categoryObjId = category ? new mongoose.Types.ObjectId(category) : null;
@@ -300,7 +299,6 @@ const getPlaces = async (queryData) => {
       { $limit: parseInt(limit) },
     ];
 
-    console.log("pipeline", JSON.stringify(pipeline, null, 2));
 
     const organizations = await Organizations.aggregate(pipeline);
 
@@ -330,32 +328,28 @@ const getPlaces = async (queryData) => {
 
     // Format and finalize output
     const formattedPlaces = organizations.map((org) => {
-      const formatted = new Organizations().formatResponse(org);
+      let formatted = new Organizations().formatResponse(org);
 
       // Round distance
       if (Number.isFinite(org.distance)) {
         formatted.distance = Math.round(org.distance * 100) / 100;
       }
 
-      // Attach open status info
-      const today = moment.tz(timezone).format("dddd").toLowerCase();
-      const todaysTiming = org.operatingHours?.[today];
-      if (todaysTiming) {
-        formatted.isOpenNow =
-          todaysTiming.isOpen &&
-          todaysTiming.from <= currentTime &&
-          todaysTiming.to >= currentTime;
-      } else {
-        formatted.isOpenNow = false;
+      if (formatted.operatingHours) {
+        formatted.operatingHours = transformOperatingHoursToLocal(
+          formatted.operatingHours,
+          timezone
+        );
       }
+
 
       return formatted;
     });
 
     let meta = generateMeta(page, limit, totalFiltered);
-    meta.radiusKm = radiusKm;
-    meta.userLocation = { lng: longitude, lat: latitude };
-  
+    // meta.radiusKm = radiusKm;
+    // meta.userLocation = { lng: longitude, lat: latitude };
+
 
     return { status: true, result: { data: formattedPlaces, meta } };
   } catch (error) {
@@ -364,8 +358,30 @@ const getPlaces = async (queryData) => {
 };
 
 
+//get both events and places
+const getAllData = async (queryData) => {
+  try {
+    const [eventsResult, placesResult] = await Promise.all([
+      getEvents(queryData),
+      getPlaces(queryData),
+    ]);
+
+    //don't combine data and meta separately, just combine data arrays and use events meta
+    let combinedData = {};
+    combinedData.events = eventsResult.result;
+    combinedData.places = placesResult.result;
+
+
+
+    return { status: true, result: { data: combinedData } };
+  } catch (error) {
+    throw new Error(`Failed to fetch combined data: ${error.message}`);
+  }
+}
+
 
 module.exports = {
   getEvents,
   getPlaces,
+  getAllData,
 };
