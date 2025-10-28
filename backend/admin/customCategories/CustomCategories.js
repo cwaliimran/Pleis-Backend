@@ -22,16 +22,16 @@ const customCategoriesSchema = new mongoose.Schema(
         refPath: "type",
       },
     ],
-      status: {
-        type: String,
-        enum: ["active", "inactive", "deleted"],
-        default: "active",
-      },
-      order: {
-        type: Number,
-        default: 0,
-      },
+    status: {
+      type: String,
+      enum: ["active", "inactive", "deleted"],
+      default: "active",
     },
+    order: {
+      type: Number,
+      default: 0,
+    },
+  },
   {
     timestamps: true,
   }

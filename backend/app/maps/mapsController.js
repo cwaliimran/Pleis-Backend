@@ -2,8 +2,6 @@ const { User } = require("../../models/UserModel"); // Assuming this is the User
 const {
   sendResponse,
   parsePaginationParams,
-  generateMeta,
-  getCurrentDateInTimezone,
   validateParams,
 } = require("../../helperUtils/responseUtil");
 const { getEvents, getPlaces } = require("./mapsService");

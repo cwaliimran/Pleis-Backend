@@ -3,6 +3,7 @@ const { LocationSchema } = require("../../shared/locations/locationSchmea");
 const { getFullImageUrl } = require("../../helperUtils/imageHelper");
 const {
   OperatingHoursSchema,
+  transformOperatingHoursToLocal,
 } = require("../../shared/commonSchemas/operatingHours");
 const { FEATURE_KEYS } = require("../../admin/features/Feature");
 
