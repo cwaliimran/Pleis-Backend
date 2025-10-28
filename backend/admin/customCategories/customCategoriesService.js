@@ -8,8 +8,8 @@ const CustomCategories = require("./CustomCategories");
 const customCategoryRepo = require("./customCategoriesRepository");
 const mongoose = require("mongoose");
 
-const createCustomCategory = async ({ title, type, objects, status }) => {
-  return await customCategoryRepo.createCustomCategory({ title, type, objects, status });
+const createCustomCategory = async ({ title, type, objects, status, order }) => {
+  return await customCategoryRepo.createCustomCategory({ title, type, objects, status, order });
 };
 
 
@@ -180,6 +180,7 @@ const updateCustomCategory = async (id, data) => {
     ...(data.status !== undefined && { status: data.status }),
     ...(data.objects !== undefined && { objects: data.objects }),
     ...(data.type !== undefined && { type: data.type }),
+    ...(data.order !== undefined && { order: data.order }),
   };
 
   if (Object.keys(updateData).length === 0) {

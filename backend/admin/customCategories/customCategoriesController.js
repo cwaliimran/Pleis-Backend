@@ -9,7 +9,7 @@ const {
 const customCategoriesService = require("./customCategoriesService");
 
 const createCustomCategory = async (req, res) => {
-  const { title, status = "active", type, objects } = req.body;
+  const { title, status = "active", type, objects, order } = req.body;
 
   if (!validateParams(req, res, { rawData: ["title", "type", "objects"], enumFields: { type: ["Event", "User", "Organizations"] } })) return;
 
@@ -19,6 +19,7 @@ const createCustomCategory = async (req, res) => {
       status,
       type,
       objects,
+      order
     });
 
     return sendResponse({
@@ -83,7 +84,7 @@ const getCustomCategories = async (req, res) => {
 
 const updateCustomCategory = async (req, res) => {
   const { id } = req.params;
-  const { title, status, type, objects } = req.body;
+  const { title, status, type, objects, order } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -99,6 +100,7 @@ const updateCustomCategory = async (req, res) => {
       status,
       type,
       objects,
+      order
     });
 
     if (!updated) {
