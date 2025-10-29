@@ -44,6 +44,7 @@ const auth = async (req, res, next) => {
       "profileIcon",
       "timezone",
       "language",
+      "location",
       "userType",
       "accountState"
     ];
@@ -52,7 +53,7 @@ const auth = async (req, res, next) => {
       !user || requiredFields.some((field) => !hasField(user, field));
 
     if (!user || isMissingRequiredFields) {
-      const selectFields = "firstName lastName profileIcon email timezone language accountState";
+      const selectFields = "firstName lastName profileIcon email timezone language location accountState";
       user = await User.findById(userId).select(selectFields);
 
       if (!user) {

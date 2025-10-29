@@ -154,6 +154,7 @@ const getEvents = async (queryData) => {
 
     // Format output
     const formattedEvents = events.map((event) => {
+      
       const formattedEvent = new Events(event).toPublicJSON(event);
       delete formattedEvent.basicInfo.venueLocation;
       delete formattedEvent.basicInfo.partnerOrganizer;
@@ -267,32 +268,39 @@ const getPlaces = async (queryData) => {
 
   try {
     const categoryObjId = category ? new mongoose.Types.ObjectId(category) : null;
-
     const pipeline = [
       {
-        $geoNear: {
-          near: { type: "Point", coordinates: [longitude, latitude] },
-          key: "location",
-          distanceField: "distance",
-          spherical: true,
-          maxDistance: radiusInMeters,
-          query: {
-            status: "active",
-            ...(categoryObjId
-              ? { "otherInfo.categories": { $in: [categoryObjId] } }
-              : {}),
-            ...dynamicFilter,
-          },
+      $geoNear: {
+        near: { type: "Point", coordinates: [longitude, latitude] },
+        key: "location",
+        distanceField: "distance",
+        spherical: true,
+        maxDistance: radiusInMeters,
+        query: {
+        status: "active",
+        ...(categoryObjId
+          ? { "otherInfo.categories": { $in: [categoryObjId] } }
+          : {}),
+        ...dynamicFilter,
         },
       },
+      },
       {
-        $project: {
-          basicInfo: 1,
-          otherInfo: 1,
-          operatingHours: 1,
-          location: 1,
-          distance: 1,
-        },
+      $lookup: {
+        from: "categories",
+        localField: "otherInfo.categories",
+        foreignField: "_id",
+        as: "otherInfo.categories",
+      },
+      },
+      {
+      $project: {
+        basicInfo: 1,
+        otherInfo: 1,
+        operatingHours: 1,
+        location: 1,
+        distance: 1,
+      },
       },
       { $sort: { distance: 1 } },
       { $skip: skip },
@@ -328,6 +336,7 @@ const getPlaces = async (queryData) => {
 
     // Format and finalize output
     const formattedPlaces = organizations.map((org) => {
+    
       let formatted = new Organizations().formatResponse(org);
 
       // Round distance
@@ -341,7 +350,6 @@ const getPlaces = async (queryData) => {
           timezone
         );
       }
-
 
       return formatted;
     });

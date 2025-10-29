@@ -6,6 +6,7 @@ const { getCustomCategories } = require("../../admin/customCategories/customCate
 const { getNearbyEvents } = require("../../commonModules/events/eventService");
 const { Highlights } = require("../../commonModules/highlights/Highlight");
 const { getPublicHighlights } = require("../../commonModules/highlights/highlightService");
+const { index } = require("../../commonModules/loyalty/challenges/models/Reward/rewardSchema");
 
 const getHomeService = async ({ queryData }) => {
   const { timezone } = queryData;
@@ -50,17 +51,19 @@ const getHomeService = async ({ queryData }) => {
     const sectionOrder = [
       { key: "categories", title: "Categories", data: categories },
       { key: "top10", title: "Top 10", data: top10 },
-      { key: "banners", title: "Banners", data: banners },
       { key: "forYou", title: "For You", data: forYou },
       { key: "nearYou", title: "Near You", data: nearYou },
+      { key: "banners", title: "Banners", data: banners, index: 0 },
       { key: "customCategory", title: "Custom Category", index: 0 },
       { key: "topPicks", title: "Top Picks", data: topPicks },
       { key: "highlights", title: "Highlights", data: highlights },
       { key: "customCategory", title: "Custom Category", index: 1 },
+      { key: "banners", title: "Banners", data: banners, index: 1 },
       { key: "loyaltyEvents", title: "Loyalty Events", data: loyaltyEvents },
       { key: "customCategory", title: "Custom Category", index: 2 },
       { key: "challenges", title: "Challenges", data: challenges },
       { key: "customCategory", title: "Custom Category", index: 3 },
+      { key: "banners", title: "Banners", data: banners, index: 2 },
       { key: "promotions", title: "Promotions", data: promotions },
     ];
 
@@ -75,13 +78,23 @@ const getHomeService = async ({ queryData }) => {
             objects: cat.objects,
           });
         }
-      } else if (section.key === "nearYou") {
-        //only add nearYou section if data is available
+      } else if (section.key === "banners") {
+        const banner = banners[section.index];
+        if (banner) {
           acc.push({
-            key: section.key,
-            title: section.title,
-            data: section.data?.events || [],
+            key: "banners",
+            title: "Banners",
+            data: banner,
           });
+        }
+      }
+      else if (section.key === "nearYou") {
+        //only add nearYou section if data is available
+        acc.push({
+          key: section.key,
+          title: section.title,
+          data: section.data?.events || [],
+        });
       } else
       //if (Array.isArray(section.data) && section.data.length)  //enable it only if you want to skip empty sections
       {
@@ -93,8 +106,9 @@ const getHomeService = async ({ queryData }) => {
       }
       return acc;
     }, []);
-
     // Fill up to 30 sections with remaining custom categories (if any)
+    // Insert a banner after every 4 customCategory if available
+    let bannerInsertIndex = 0;
     for (
       let i = interleavedSections.length;
       i < 30 && i - sectionOrder.length < customCategories.length;
@@ -102,11 +116,20 @@ const getHomeService = async ({ queryData }) => {
     ) {
       const extra = customCategories[i - sectionOrder.length];
       if (extra?.objects?.length) {
+      interleavedSections.push({
+        key: "customCategory",
+        title: extra.title || `Dynamic Section ${i + 1}`,
+        objects: extra.objects,
+      });
+      // After every 4th customCategory, insert a banner if available
+      if ((interleavedSections.filter(s => s.key === "customCategory").length) % 4 === 0 && banners[bannerInsertIndex]) {
         interleavedSections.push({
-          key: "customCategory",
-          title: extra.title || `Dynamic Section ${i + 1}`,
-          objects: extra.objects,
+        key: "banners",
+        title: "Banners",
+        data: banners[bannerInsertIndex],
         });
+        bannerInsertIndex++;
+      }
       } else break;
     }
 

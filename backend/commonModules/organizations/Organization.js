@@ -6,6 +6,7 @@ const {
   transformOperatingHoursToLocal,
 } = require("../../shared/commonSchemas/operatingHours");
 const { FEATURE_KEYS } = require("../../admin/features/Feature");
+const Categories = require("../../admin/categories/Categories");
 
 const organizationSchema = new mongoose.Schema(
   {
@@ -40,6 +41,10 @@ const organizationSchema = new mongoose.Schema(
           default: "",
         },
         linkedin: {
+          type: String,
+          default: "",
+        },
+        website: {
           type: String,
           default: "",
         },
@@ -95,7 +100,6 @@ const organizationSchema = new mongoose.Schema(
     location: {
       type: LocationSchema,
       required: false,
-
     },
     staff: [ // Staff members associated with the organization e.g staff, managers
       {
@@ -192,6 +196,31 @@ organizationSchema.methods.formatResponse = function (orgData) {
   }
   if (org.basicInfo?.mediaInfo?.cover?.name) {
     org.basicInfo.mediaInfo.cover.url = getFullImageUrl(org.basicInfo.mediaInfo.cover.name);
+  }
+
+  // also transform otherInfo.categories if they are populated
+  if (org.otherInfo?.categories && Array.isArray(org.otherInfo.categories)) {
+    org.otherInfo.categories = org.otherInfo.categories.map(cat => {
+      if (cat && typeof cat === 'object' && cat._id) {
+        // Create a temporary Categories instance to use its method
+        const categoryInstance = new Categories(cat);
+        return categoryInstance.formatResponse();
+      }
+      return cat;
+    });
+  }
+
+  //format tags if populated
+  if (org.otherInfo?.tags && Array.isArray(org.otherInfo.tags)) {
+    org.otherInfo.tags = org.otherInfo.tags.map(tag => {
+      if (tag && typeof tag === 'object' && tag._id) {
+        return {
+          id: tag._id,
+          title: tag.title,
+        };
+      }
+      return tag;
+    });
   }
 
   return org;

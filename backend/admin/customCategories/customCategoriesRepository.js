@@ -141,8 +141,7 @@ const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit, sor
   ];
 
   const result = await CustomCategories.aggregate(pipeline);
-
-  console.log("✅ Result:", JSON.stringify(result, null, 2));
+  
   return result;
 };
 

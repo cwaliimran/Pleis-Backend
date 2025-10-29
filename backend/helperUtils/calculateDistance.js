@@ -24,7 +24,10 @@ function calculateDistance(lat1, lon1, lat2, lon2, unit = "kilometer") {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = R * c;
 
-  return distance;
+  return {
+    distance: Number(distance.toFixed(2)),
+    unit: unit === "mile" ? "mi" : "km",
+  };
 }
 
 module.exports = { calculateDistance };

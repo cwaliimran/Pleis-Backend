@@ -68,7 +68,6 @@ function utcMinutesToLocalTime(utcMinutes, timezone) {
 }
 
 function transformOperatingHoursToLocal(operatingHours, timezone = "Asia/Karachi") {
-  console.log("operatingHours",operatingHours)
   if (!operatingHours) return operatingHours;
 
   const days = Object.keys(operatingHours);
