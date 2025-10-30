@@ -18,8 +18,8 @@ const createMenu = async (data) => {
 const getMenusWithFilters = async (query = {}, skip = 0, limit = 10) => {
   return Menus.find(query)
     .populate({
-      path: "venue",
-      select: "*"
+      path: "organization",
+      select: "basicInfo.name"
     })
     .sort({ createdAt: -1 })
     .skip(skip)

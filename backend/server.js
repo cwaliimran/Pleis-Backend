@@ -14,8 +14,13 @@ const connectToDB = require("./helperUtils/server-setup");
 const { backupMongoDB } = require("./helperUtils/dataBaseBackup.js");
 const { securityMiddleware } = require("./middlewares/security.js");
 
+const swaggerUi = require('swagger-ui-express');
+const swaggerFile = require('../swagger/swagger_output.json');
+
+
 // Express app
 const app = express();
+
 
 // ================== Security Middleware ================== //
 /* const allowedOrigins = [
@@ -37,8 +42,8 @@ securityMiddleware(app, {
 app.use(i18nConfig.init);
 app.use(loggerMiddleware);
 if (process.env.NODE_ENV != "prod") {
-  app.use(morgan("dev"));
 }
+app.use(morgan("dev"));
 app.use(express.json());
 
 
@@ -47,6 +52,8 @@ app.use(express.json());
 app.use("/api/v1", routes);
 // Admin routes
 app.use("/api/v1/admin", adminRoutes);
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
 
 // Fallback Route
 app.use((req, res) => {
@@ -59,6 +66,7 @@ connectToDB(app);
 // Start MongoDB backup timer (24 hours)
 const backupTime = 24 * 60 * 60 * 1000;
 setInterval(() => backupMongoDB(), backupTime);
+
 
 //export app
 // module.exports = { app };

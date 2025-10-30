@@ -4,7 +4,7 @@ const {
   parsePaginationParams,
   validateParams,
 } = require("../../helperUtils/responseUtil");
-const { getEvents, getPlaces } = require("./mapsService");
+const { getEvents, getPlaces, getAllData } = require("./mapsService");
 
 const getMapsData = async (req, res) => {
 
@@ -40,7 +40,7 @@ const getMapsData = async (req, res) => {
     } else if (requestData?.filter?.type === "places") {
       ({ status, result } = await getPlaces(requestData));
     } else { //"all"
-      //({ status, result } = await getAllData(requestData));
+      ({ status, result } = await getAllData(requestData));
     }
 
     if (status === false) {

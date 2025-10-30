@@ -7,6 +7,7 @@ const {
   convertTimezoneToUtc,
   convertUtcToTimezone,
 } = require("../../helperUtils/responseUtil");
+const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
 const { getVenueDetails } = require("../venues/venuesService");
 
 const eventService = require("./eventService");
@@ -241,7 +242,7 @@ const getNearbyEvents = async (req, res) => {
   })) return;
 
   try {
-    const {events, meta} = await eventService.getNearbyEvents(queryData);
+    const { events, meta } = await eventService.getNearbyEvents(queryData);
     //check if events is empty
     if (!events || events.length === 0) {
       return sendResponse({
@@ -250,7 +251,7 @@ const getNearbyEvents = async (req, res) => {
         translationKey: "nearby_events_fetched_successfully",
         data: [],
       });
-    } 
+    }
 
     return sendResponse({
       res,
@@ -429,6 +430,12 @@ const getEventDetails = async (req, res) => {
         timezone,
         "YYYY-MM-DD hh:mm A"
       );
+    }
+
+    // Convert organization operatingHours to local timezone if present
+    const org = event.basicInfo?.organization;
+    if (org?.operatingHours) {
+      org.operatingHours = transformOperatingHoursToLocal(org.operatingHours, timezone);
     }
 
     return sendResponse({

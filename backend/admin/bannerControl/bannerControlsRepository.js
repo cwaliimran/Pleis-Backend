@@ -75,7 +75,7 @@ const getBannerControlsCounts = async (filterQuery = {}) => {
 
 // Find by ID
 const findBannerControlsById = async (id) => {
-  return BannerControls.findById(id).populate('object');
+  return BannerControls.findById(id).populate('objectModel');
 };
 
 // Update and save
@@ -91,7 +91,7 @@ const deleteBannerControlsById = async (bannerControls) => {
 
 //findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
-  return BannerControls.findByIdAndUpdate(id, data, { new: true }).populate('object');
+  return BannerControls.findByIdAndUpdate(id, data, { new: true }).populate('objectModel');
 };
 
 // Reorder helper — bulk update many

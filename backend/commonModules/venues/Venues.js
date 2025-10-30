@@ -84,6 +84,7 @@ venuesSchema.methods.formatResponse = function (venueData) {
   return venue;
 };
 
+venuesSchema.index({ organization: 1 });
 
 const Venues = mongoose.model("Venues", venuesSchema);
 

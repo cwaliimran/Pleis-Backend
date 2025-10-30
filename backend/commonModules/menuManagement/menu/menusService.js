@@ -1,7 +1,7 @@
 // services/menuService.js
 const { buildKeywordQueryFromModels } = require("../../../helperUtils/queryUtil");
 const { generateMeta } = require("../../../helperUtils/responseUtil");
-const Venues = require("../../venues/Venues");
+const Organizations = require("../../organizations/Organization");
 const Menus = require("./Menus");
 const menuRepo = require("./menusRepository");
 const mongoose = require("mongoose");
@@ -10,22 +10,30 @@ const createMenu = async (data) => {
   return await menuRepo.createMenu(data);
 };
 
-// Populate venue data for menus
-const getMenus = async ({ page, limit, keyword, status, userId, date, venue }) => {
+// Populate organization data for menus, but merge into "organization" field
+const getMenus = async ({ page, limit, keyword, status, userId, date, organization }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const pipeline = [
-    // Join with Venues collection
+    // Join with organizations collection
     {
       $lookup: {
-        from: "venues",
-        localField: "venue",
+        from: "organizations",
+        localField: "organization",
         foreignField: "_id",
-        as: "venueData"
+        as: "organizationData",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              "basicInfo.name": 1
+            }
+          }
+        ]
       }
     },
-    // Flatten venueData array for easier matching
-    { $unwind: { path: "$venueData", preserveNullAndEmptyArrays: true } },
+    // Flatten organizationData array for easier matching
+    { $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true } },
     // Match user access (menu creator)
     {
       $match: {
@@ -35,10 +43,10 @@ const getMenus = async ({ page, limit, keyword, status, userId, date, venue }) =
   ];
 
   // Apply filters
-  if (venue) {
+  if (organization) {
     pipeline.push({
       $match: {
-        venue: new mongoose.Types.ObjectId(venue)
+        organization: new mongoose.Types.ObjectId(organization)
       }
     });
   }
@@ -62,7 +70,7 @@ const getMenus = async ({ page, limit, keyword, status, userId, date, venue }) =
   const keywordMatch = buildKeywordQueryFromModels(
     [
       { schema: Menus.schema },           // Menu fields
-      { schema: Venues.schema, prefix: 'venueData.' } // Venue fields (with prefix)
+      { schema: Organizations.schema, prefix: 'organizationData.' } // Organization fields (with prefix)
     ],
     keyword
   );
@@ -72,6 +80,18 @@ const getMenus = async ({ page, limit, keyword, status, userId, date, venue }) =
   }
 
   pipeline.push({ $sort: { createdAt: -1 } });
+
+  // Merge organizationData into organization field and remove organizationData
+  pipeline.push({
+    $addFields: {
+      organization: "$organizationData"
+    }
+  });
+  pipeline.push({
+    $project: {
+      organizationData: 0
+    }
+  });
 
   // Apply pagination + counts using $facet
   pipeline.push({
@@ -96,25 +116,11 @@ const getMenus = async ({ page, limit, keyword, status, userId, date, venue }) =
     Menus.countDocuments({ status: "inactive", creator: userId })
   ]);
 
-  const formattedMenus = menus.map(menu => {
-    const menuDoc = new Menus(menu);
-    let formattedMenu = menuDoc.formatResponse ? menuDoc.formatResponse() : menuDoc.toObject();
-
-    // Attach venue data if present
-    if (menu.venueData) {
-      formattedMenu.venue = Venues.prototype.formatResponse
-        ? Venues.prototype.formatResponse(menu.venueData)
-        : menu.venueData;
-    }
-
-    return formattedMenu;
-  });
-
   const meta = generateMeta(page, limit, totalFiltered);
   meta.menusCount = { total, active, inactive };
 
   return {
-    menus: formattedMenus,
+    menus,
     meta
   };
 };
@@ -127,7 +133,7 @@ const updateMenu = async (id, data) => {
   const allowedFields = [
     "title",
     "description",
-    "venue",
+    "organization",
     "status"
   ];
   const updateData = {};
@@ -162,7 +168,7 @@ const getMenuDetails = async (id) => {
 };
 
 
-const duplicateMenuAndItems = async (menuId, venue) => {
+const duplicateMenuAndItems = async (menuId, organization) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -173,21 +179,21 @@ const duplicateMenuAndItems = async (menuId, venue) => {
       throw new Error('Menu not found');
     }
 
-    if (menu.venue.toString() === venue.toString()) {
-      throw new Error('Old and new venue cannot be the same');
+    if (menu.organization.toString() === organization.toString()) {
+      throw new Error('Old and new organization cannot be the same');
     }
 
-    //check if new venue has already a menu with
-    const existingMenu = await Menus.findOne({ venue: venue, status: { $ne: 'deleted' } }).session(session);
+    //check if new organization has already a menu with
+    const existingMenu = await Menus.findOne({ organization: organization, status: { $ne: 'deleted' } }).session(session);
     if (existingMenu) {
-      throw new Error('A menu already exists for this venue');
+      throw new Error('A menu already exists for this organization');
     }
 
     const duplicatedMenu = {
       ...menu.toObject(),
       _id: new mongoose.Types.ObjectId(),
-      title: `${menu.title}`,  // Optionally append "(Copy)" to the title
-      venue: venue,
+      title: `${menu.title}`, 
+      organization: organization,
     };
 
     const savedDuplicatedMenu = await menuRepo.createDuplicatedMenu(duplicatedMenu, session);

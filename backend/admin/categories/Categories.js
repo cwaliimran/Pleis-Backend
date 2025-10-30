@@ -45,6 +45,25 @@ function transformDoc(doc, ret) {
   return ret;
 }
 
+/**
+ * Format category response (works for both Mongoose doc and plain object)
+ */
+categoriesSchema.methods.formatResponse = function () {
+  const cat = this.toObject ? this.toObject() : this;
+
+  const image = cat.image || "noimage.png";
+  const formatted = {
+    _id: cat._id,
+    title: cat.title || "",
+    imageInfo: {
+      name: image,
+      url: getFullImageUrl(image),
+    },
+  };
+
+  return formatted;
+};
+
 const Categories = mongoose.model("Categories", categoriesSchema);
 
 module.exports = Categories;

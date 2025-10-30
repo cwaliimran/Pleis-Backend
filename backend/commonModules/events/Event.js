@@ -53,7 +53,6 @@ const eventSchema = new mongoose.Schema(
           },
         },
       },
-
       categories: [
         {
           type: mongoose.Schema.Types.ObjectId,
@@ -110,7 +109,15 @@ const eventSchema = new mongoose.Schema(
         type: Number,
         default: 0,
       },
-      views: {
+      favoritesCount: {
+        type: Number,
+        default: 0,
+      },
+      viewsCount: {
+        type: Number,
+        default: 0,
+      },
+      attendeesCount: {
         type: Number,
         default: 0,
       },

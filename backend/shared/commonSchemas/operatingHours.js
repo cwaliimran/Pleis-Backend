@@ -68,7 +68,6 @@ function utcMinutesToLocalTime(utcMinutes, timezone) {
 }
 
 function transformOperatingHoursToLocal(operatingHours, timezone = "Asia/Karachi") {
-  console.log("operatingHours",operatingHours)
   if (!operatingHours) return operatingHours;
 
   const days = Object.keys(operatingHours);
@@ -76,14 +75,18 @@ function transformOperatingHoursToLocal(operatingHours, timezone = "Asia/Karachi
 
   for (const day of days) {
     const dayData = operatingHours[day] || {};
+    const from = utcMinutesToLocalTime(dayData.from, timezone);
+    const to = utcMinutesToLocalTime(dayData.to, timezone);
+    // If from or to is null, force isOpen to false
+    const isOpen = (from !== null && to !== null) ? (dayData.isOpen ?? false) : false;
     converted[day] = {
-      from: utcMinutesToLocalTime(dayData.from, timezone),
-      to: utcMinutesToLocalTime(dayData.to, timezone),
+      from,
+      to,
       break: {
         from: utcMinutesToLocalTime(dayData.break?.from, timezone),
         to: utcMinutesToLocalTime(dayData.break?.to, timezone),
       },
-      isOpen: dayData.isOpen ?? false,
+      isOpen,
     };
   }
 

@@ -37,10 +37,11 @@ router.use("/menu", require("./menuRoutes"));
 //loyalty
 router.use("/loyalty", require("./loyaltyRoutes"));
 
-//home
-router.use("/home", require("../app/home/homeRoutes"));
-//maps
-router.use("/maps", require("../app/maps/mapsRoutes"));
+//app routes
+router.use("/app", require("./appRoutes"));
+
+//admin routes
+router.use("/admin", require("./adminRoutes"));
 
 
 
