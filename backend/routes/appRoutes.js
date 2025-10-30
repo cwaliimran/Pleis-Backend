@@ -8,5 +8,7 @@ router.use("/home", require("../app/home/homeRoutes"));
 router.use("/maps", require("../app/maps/mapsRoutes"));
 //organizations
 router.use("/organizations", require("../app/organizationProfile/organizationProfileRoutes"));
+//favorites
+router.use("/favorites", require("../commonModules/favorites/favoriteRoutes"));
 
 module.exports = router;

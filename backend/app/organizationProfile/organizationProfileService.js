@@ -2,10 +2,13 @@
 const Organizations = require("../../commonModules/organizations/Organization");
 const mongoose = require("mongoose");
 const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
-const { findOrganizationById, findEventsByOrganization, countEventsByOrganization } = require("./organizationProfileRepository");
+const { findOrganizationById, findEventsByOrganization, countEventsByOrganization, getOrganizationMenuWithItems, getRecommendedOrganizations } = require("./organizationProfileRepository");
 const { getCurrentDateInTimezone, generateMeta, convertUtcToTimezone } = require("../../helperUtils/responseUtil");
 const { Events } = require("../../commonModules/events/Event");
 const { calculateDistance } = require("../../helperUtils/calculateDistance");
+const Menus = require("../../commonModules/menuManagement/menu/Menus");
+const MenuItems = require("../../commonModules/menuManagement/menuItems/MenuItems");
+const { Favorites } = require("../../commonModules/favorites/Favorite");
 
 
 
@@ -14,23 +17,27 @@ const { calculateDistance } = require("../../helperUtils/calculateDistance");
  */
 const getOrganizationProfile = async (queryData) => {
   try {
-    const { organizationId, timezone } = queryData || {};
+    const { organizationId, filter = "upcoming", timezone, userId } = queryData || {};
 
-    const [org, orgEvents, reservations, menu, loyaltyPrograms, reviews, similarOrganizations] = await Promise.all([
-      findOrganizationById(organizationId),
-      getOrganizationEvents({ organizationId, filter: "upcoming", timezone, userLocation: queryData.userLocation }),
+    const [orgProfile, orgEvents, reservations, menu, loyaltyPrograms, reviews, similarOrganizations] = await Promise.all([
+      findOrganizationById(userId, organizationId),
+      getOrganizationEvents({ organizationId, filter, timezone, userLocation: queryData.userLocation, userId }), //filter: "upcoming" or "past"
       getOrganizationReservations(organizationId),
       getOrganizationMenu(organizationId),
       getOrganizationLoyaltyPrograms(organizationId),
       getOrganizationReviews(organizationId),
       getSimilarOrganizations(organizationId),
     ])
-    if (!org) {
+
+    if (!orgProfile.org) {
       throw new Error("Organization not found");
     }
 
     // Use schema helper for formatting
-    let orgProfileInfo = org.formatResponse();
+    let orgProfileInfo = orgProfile.org.formatResponse();
+    orgProfileInfo.isFavorite = orgProfile.isFavorite;
+    orgProfileInfo.venue = orgProfile.orgVenue;
+    delete orgProfileInfo?.venue?.floorPlan
 
     // Localize operating hours
     if (orgProfileInfo.operatingHours) {
@@ -53,33 +60,41 @@ const getOrganizationProfile = async (queryData) => {
  */
 const getOrganizationEvents = async (queryData) => {
   try {
-    let { page, limit } = queryData || {};
+    let { page, limit, userId, organizationId, filter, timezone, userLocation } = queryData || {};
     page = parseInt(page) || 1;
     limit = parseInt(limit) || 10;
     const skip = (page - 1) * limit;
-    const { organizationId, filter, timezone } = queryData || {};
+
 
     const now = getCurrentDateInTimezone({ timezone });
-
-    // Determine filter condition for events
+    // Determine time filter
     let timeFilter = {};
     if (filter === "upcoming") {
-      timeFilter = { "schedule.startDateTime": { $gte: now } };
+      timeFilter = { "schedule.endDateTime": { $gte: now } };
     } else if (filter === "past") {
       timeFilter = { "schedule.endDateTime": { $lt: now } };
     }
 
-    let organizationObjectId = new mongoose.Types.ObjectId(organizationId);
+    const organizationObjectId = new mongoose.Types.ObjectId(organizationId);
 
-    const [events, pastUpcomingMeta] = await Promise.all([
+    // Fetch events + counts concurrently
+    const [events, pastUpcomingMeta, favorites] = await Promise.all([
       findEventsByOrganization(organizationObjectId, timeFilter, skip, limit),
       countEventsByOrganization(organizationObjectId, now),
+      Favorites.find({ user: userId, targetType: "event" }).select("targetId"),
     ]);
 
-    // Format for public output
-    let formatted = events.map((event) => {
+    // 🔍 Get all favorite event IDs for this user
+    let favoriteEventIds = [];
+    if (userId) {
+      favoriteEventIds = favorites.map((f) => f.targetId.toString());
+    }
+    // Format events
+    const formatted = events.map((event) => {
+      console.log("event")
       const formattedEvent = new Events(event).toPublicJSON();
 
+      // Convert times to timezone
       if (formattedEvent.schedule?.startDateTime) {
         formattedEvent.schedule.startDateTime = convertUtcToTimezone(
           formattedEvent.schedule.startDateTime,
@@ -95,36 +110,40 @@ const getOrganizationEvents = async (queryData) => {
         );
       }
 
-      let distance = calculateDistance(
-        event.basicInfo.venue.location.coordinates[1],
-        event.basicInfo.venue.location.coordinates[0],
-        queryData.userLocation?.coordinates[1],
-        queryData.userLocation?.coordinates[0]
-      );
-      if (distance !== null) {
+      // Calculate distance
+      if (event.basicInfo?.venue?.location?.coordinates && userLocation?.coordinates) {
+        const distance = calculateDistance(
+          event.basicInfo.venue.location.coordinates[1],
+          event.basicInfo.venue.location.coordinates[0],
+          userLocation.coordinates[1],
+          userLocation.coordinates[0]
+        );
         formattedEvent.distance = distance;
       } else {
         formattedEvent.distance = null;
       }
 
+      // ✅ Add isFavorite flag
+      formattedEvent.isFavorite = favoriteEventIds.includes(event._id.toString());
+
       return formattedEvent;
     });
 
-
-    let totalFiltered = (pastUpcomingMeta.upcoming || 0) + (pastUpcomingMeta.past || 0);
-
+    const totalFiltered = (pastUpcomingMeta.upcoming || 0) + (pastUpcomingMeta.past || 0);
 
     return {
-      status: true, result: {
+      status: true,
+      result: {
         data: formatted,
         meta: generateMeta(page, limit, totalFiltered),
-        pastUpcomingMeta
-      }
+        pastUpcomingMeta,
+      },
     };
   } catch (error) {
     throw new Error(`Failed to fetch organization events: ${error.message}`);
   }
 };
+
 
 const getOrganizationReservations = async (organizationId) => {
   // Placeholder for future implementation
@@ -132,8 +151,12 @@ const getOrganizationReservations = async (organizationId) => {
 };
 
 const getOrganizationMenu = async (organizationId) => {
-  // Placeholder for future implementation
-  return [];
+  let result = await getOrganizationMenuWithItems(organizationId);
+  const formatted = result.map(menu => ({
+    ...menu,
+    items: menu.items.map(item => MenuItems.formatResponse(item)),
+  }));
+  return formatted || [];
 };
 
 //loyalty
@@ -150,8 +173,8 @@ const getOrganizationReviews = async (organizationId) => {
 
 //you might also like
 const getSimilarOrganizations = async (organizationId) => {
-  // Placeholder for future implementation
-  return [];
+  let result = await getRecommendedOrganizations(organizationId);
+  return result || [];
 };
 
 module.exports = {

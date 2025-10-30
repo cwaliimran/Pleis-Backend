@@ -42,8 +42,8 @@ securityMiddleware(app, {
 app.use(i18nConfig.init);
 app.use(loggerMiddleware);
 if (process.env.NODE_ENV != "prod") {
-  app.use(morgan("dev"));
 }
+app.use(morgan("dev"));
 app.use(express.json());
 
 

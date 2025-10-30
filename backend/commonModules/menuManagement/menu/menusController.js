@@ -12,14 +12,14 @@ const createMenu = async (req, res) => {
   const {
     title,
     description = "",
-    venue,
+    organization,
     status = "active",
   } = req.body;
 
   if (
     !validateParams(req, res, {
       rawData: ["title"],
-      objectIdFields: ["venue"],
+      objectIdFields: ["organization"],
     })
   )
     return;
@@ -27,13 +27,13 @@ const createMenu = async (req, res) => {
   let data = {
     title,
     description,
-    venue,
+    organization,
     status,
     creator: req.user._id,
   };
 
-  //convert venue to array if it's not
-  data.venue = [data.venue];
+  //convert organization to array if it's not
+  data.organization = [data.organization];
 
   try {
     const menu = await menusService.createMenu(data);
@@ -63,7 +63,7 @@ const createMenu = async (req, res) => {
 
 const getMenus = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", venue, date } = req.query;
+  const { keyword, status = "active", organization, date } = req.query;
   const userId = req.user._id;
   try {
     const { menus, meta } = await menusService.getMenus({
@@ -71,7 +71,7 @@ const getMenus = async (req, res) => {
       limit,
       keyword,
       status,
-      venue,
+      organization,
       userId,
       date,
     });
@@ -137,14 +137,14 @@ const updateMenu = async (req, res) => {
   const {
     title,
     description,
-    venue,
+    organization,
     status = "active",
   } = req.body;
 
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
-      objectIdFields: ["id", "venue"],
+      objectIdFields: ["id", "organization"],
     })
   )
     return;
@@ -152,7 +152,7 @@ const updateMenu = async (req, res) => {
   let data = {
     title,
     description,
-    venue,
+    organization,
     status,
   };
 
@@ -222,18 +222,18 @@ const deleteMenu = async (req, res) => {
 };
 const duplicateMenuAndItems = async (req, res) => {
   const { id: menu } = req.params;
-  const { venue } = req.body;
+  const { organization } = req.body;
 
   if (
     !validateParams(req, res, {
-      rawData: ["venue"],
+      rawData: ["organization"],
       pathParams: ["id"],
-      objectIdFields: ["id", "venue"],
+      objectIdFields: ["id", "organization"],
     })
   )
     return;
   try {
-    const duplicatedMenu = await menusService.duplicateMenuAndItems(menu, venue);
+    const duplicatedMenu = await menusService.duplicateMenuAndItems(menu, organization);
     if (!duplicatedMenu) {
       return sendResponse({
         res,

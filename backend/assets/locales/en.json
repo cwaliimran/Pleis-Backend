@@ -291,5 +291,10 @@
   "invalid_venue": "Invalid venue",
   "nearby_events_fetched_successfully": "Nearby events fetched successfully",
   "latitude_and_longitude_required": "Latitude and longitude required",
-  "nearby_cities_fetched_successfully": "Nearby cities fetched successfully"
+  "nearby_cities_fetched_successfully": "Nearby cities fetched successfully",
+  "favorites_fetched_successfully": "Favorites fetched successfully",
+  "favorite_count_fetched_successfully": "Favorite count fetched successfully",
+  "no_nearby_cities_found": "No nearby cities found",
+  "added_to_favorites_successfully": "Added to favorites successfully",
+  "removed_from_favorites_successfully": "Removed from favorites successfully"
 }

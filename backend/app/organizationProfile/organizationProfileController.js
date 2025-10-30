@@ -6,6 +6,8 @@ const { getOrganizationProfile } = require("./organizationProfileService");
 
 const getOrganizationProfileData = async (req, res) => {
 
+  const { _id } = req.user;
+
   try {
     if (!validateParams(req, res, {
       objectIdFields: ["organizationId"]
@@ -13,10 +15,11 @@ const getOrganizationProfileData = async (req, res) => {
 
     var organizationId = req.params.organizationId;
     let { timezone, location } = req.user;
+    let { filter } = req.query;
 
     let status = true;
     let result = {};
-    ({ status, result } = await getOrganizationProfile({ organizationId, timezone, userLocation: location }));
+    ({ status, result } = await getOrganizationProfile({ organizationId, timezone, userLocation: location, userId: _id, filter }));
 
     if (status === false) {
       return sendResponse({

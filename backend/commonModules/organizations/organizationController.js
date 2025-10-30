@@ -101,7 +101,56 @@ const getOrganizations = async (req, res) => {
       statusCode: 200,
       translationKey: "organizations_fetched_successfully",
       data: organizations,
-      meta: generateMeta(page, limit, meta.total, meta.tagsCount),
+      meta
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+
+const getOrganizationsAdmin = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  const { keyword, date, status = "active" } = req.query;
+  let { timezone } = req.user;
+  try {
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+    let { organizations, meta } = await organizationService.getOrganizationsByAdmin({
+      page,
+      limit,
+      keyword,
+      status,
+      date,
+    });
+
+    // Transform to local time safely
+    organizations = organizations.map((org) => {
+      const orgObj = org.toObject ? org.toObject() : org;
+
+      if (orgObj.operatingHours) {
+        orgObj.operatingHours = transformOperatingHoursToLocal(
+          orgObj.operatingHours,
+          timezone
+        );
+      }
+
+      return orgObj;
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "organizations_fetched_successfully",
+      data: organizations,
+      meta
     });
   } catch (error) {
     return sendResponse({
@@ -297,4 +346,5 @@ module.exports = {
   getOrganizationDetails,
   updateOrganization,
   deleteOrganization,
+  getOrganizationsAdmin,
 };

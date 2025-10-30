@@ -5,6 +5,7 @@ const { buildKeywordQueryFromModel } = require("../../helperUtils/queryUtil");
 const Venues = require("../venues/Venues");
 const Organizations = require("./Organization");
 const organizationRepo = require("./organizationRepository");
+const { generateMeta } = require("../../helperUtils/responseUtil");
 
 const createOrganization = async ({ data }) => {
   return await organizationRepo.createOrganization(data);
@@ -37,27 +38,77 @@ const getOrganizations = async ({ page, limit, keyword, status, creator, date })
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [organizations, totalFiltered, total, active, inactive] =
+  const [organizations, counts] =
     await Promise.all([
       organizationRepo.getOrganizationsWithFilters(
         query,
         skip,
         limit === 0 ? 0 : limit
       ),
-      organizationRepo.countOrganizations(query),
-      organizationRepo.countOrganizations({ status: { $ne: "deleted" } }),
-      organizationRepo.countOrganizations({ status: "active" }),
-      organizationRepo.countOrganizations({ status: "inactive" }),
+      organizationRepo.getOrganizationCounts(query),
     ]);
+
+    console.log("counts",counts)
+
+  const totalFiltered = counts?.totalFiltered || 0;
+  const total = counts?.total || 0;
+  const active = counts?.active || 0;
+  const inactive = counts?.inactive || 0;
+  let meta = generateMeta(page, limit, totalFiltered);
+  meta.tagsCount = { total, active, inactive };
 
   return {
     organizations,
-    meta: {
-      page,
-      limit,
-      total: totalFiltered,
-      tagsCount: { total, active, inactive },
-    },
+    meta
+  };
+};
+
+const getOrganizationsByAdmin = async ({ page, limit, keyword, status, date }) => {
+  const query = {};
+ 
+  if (status) {
+    query.status = status;
+  } else {
+    query.status = { $ne: "deleted" };
+  }
+
+  if (date) {
+    const start = new Date(date);
+    const end = new Date(new Date(date).setDate(start.getDate() + 1));
+    query.createdAt = { $gte: start, $lt: end };
+  }
+
+  if (keyword && keyword.trim() !== "") {
+    Object.assign(
+      query,
+      buildKeywordQueryFromModel(Organizations, keyword)
+    );
+  }
+
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+
+  const [organizations, counts] =
+    await Promise.all([
+      organizationRepo.getOrganizationsWithFilters(
+        query,
+        skip,
+        limit === 0 ? 0 : limit
+      ),
+      organizationRepo.getOrganizationCounts(query),
+    ]);
+
+    console.log("counts",counts)
+
+  const totalFiltered = counts?.totalFiltered || 0;
+  const total = counts?.total || 0;
+  const active = counts?.active || 0;
+  const inactive = counts?.inactive || 0;
+  let meta = generateMeta(page, limit, totalFiltered);
+  meta.tagsCount = { total, active, inactive };
+
+  return {
+    organizations,
+    meta
   };
 };
 
@@ -217,6 +268,7 @@ const getOrganizationsAsStaff = async (id) => {
 module.exports = {
   createOrganization,
   getOrganizations,
+  getOrganizationsByAdmin,
   updateOrganization,
   findOrganizationById,
   deleteOrganization,

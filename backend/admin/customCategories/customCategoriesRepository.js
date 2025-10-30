@@ -90,7 +90,6 @@ const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit, sor
             $project: {
               _id: 1,
               basicInfo: 1,
-              schedule: 1,
             },
           },
         ],
@@ -108,8 +107,8 @@ const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit, sor
           {
             $project: {
               _id: 1,
-              title: 1,
-              basicInfo: 1,
+              "basicInfo.name": 1,
+              "basicInfo.image": 1,
             },
           },
         ],
@@ -131,7 +130,7 @@ const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit, sor
             branches: [
               { case: { $eq: ["$type", "User"] }, then: "$userObjects" },
               { case: { $eq: ["$type", "Event"] }, then: "$eventObjects" },
-              { case: { $eq: ["$type", "Organization"] }, then: "$organizationObjects" },
+              { case: { $eq: ["$type", "Organizations"] }, then: "$organizationObjects" },
             ],
             default: [],
           },

@@ -1,0 +1,35 @@
+const express = require("express");
+const {
+  createOrganization,
+  getOrganizationsAdmin,
+  updateOrganization,
+  deleteOrganization,
+  getOrganizationDetails,
+} = require("./organizationController");
+const createRateLimiter = require("../../helperUtils/rateLimiter");
+const auth = require("../../middlewares/authMiddleware");
+const roleMiddleware = require("../../middlewares/roleMiddleware");
+
+const router = express.Router();
+
+router.use(auth);
+
+// Create a rate limiter for Organizations
+const apiRateLimiter = createRateLimiter("Organizations");
+
+// Create a new organization
+router.post("/", roleMiddleware(["organizer", "admin", "manager"]), createOrganization);
+
+// Get all organizations with pagination
+router.get("/", apiRateLimiter, getOrganizationsAdmin);
+
+//get details
+router.get("/:id", getOrganizationDetails);
+
+// Update an existing organization
+router.put("/:id", roleMiddleware(["organizer", "admin", "manager", "staff"]), updateOrganization);
+
+// Delete a organization
+router.delete("/:id", deleteOrganization);
+
+module.exports = router;

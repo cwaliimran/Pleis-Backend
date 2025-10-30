@@ -92,6 +92,35 @@ function transformDoc(doc, ret) {
 }
 
 
+/**
+ * Universal formatter — works for both Mongoose docs & plain JS objects.
+ * Detects type automatically.
+ */
+menuItemsSchema.statics.formatResponse = function (input) {
+  if (!input) return null;
+
+  // Detect if it's a Mongoose document
+  const isDoc = typeof input.toObject === "function";
+  const item = isDoc ? input.toObject() : { ...input };
+
+  // Format image
+  const imageName = item.image || "noimage.png";
+  item.imageInfo = {
+    name: imageName,
+    url: getFullImageUrl(imageName),
+  };
+
+  delete item.__v;
+  delete item.image;
+  return item;
+};
+
+// (Optional alias for readability — can call via instance too)
+menuItemsSchema.methods.formatResponse = function () {
+  return this.constructor.formatResponse(this);
+};
+
+
 const MenuItems = mongoose.model("MenuItems", menuItemsSchema);
 
 module.exports = MenuItems;

@@ -1,10 +1,11 @@
 // services/eventService.js
 
 const { pipeline } = require("supertest/lib/test");
-const { validateParams, getCurrentDateInTimezone, convertUtcToTimezone } = require("../../helperUtils/responseUtil");
+const { validateParams, getCurrentDateInTimezone, convertUtcToTimezone, generateMeta } = require("../../helperUtils/responseUtil");
 const Organizations = require("../organizations/Organization");
 const eventRepo = require("./eventRepository");
 const _ = require("lodash");
+const { generate } = require("shortid");
 
 const createEvent = async ({ data }) => {
   return await eventRepo.createEvent(data);
@@ -113,6 +114,7 @@ const getNearbyEvents = async (queryData) => {
    radiusKm = parseFloat(rawRadiusKm);
   longitude = parseFloat(longitude);
   latitude = parseFloat(latitude);
+  console.log("radiusKm",radiusKm)
 
   // Validate coordinates
   if (typeof longitude !== 'number' || typeof latitude !== 'number') {
@@ -141,7 +143,7 @@ const getNearbyEvents = async (queryData) => {
           maxDistance: radiusInMeters,
           query: {
             status: "active",
-            "schedule.startDateTime": { $gte: now },
+            "schedule.endDateTime": { $gte: now },
           },
         },
       },
@@ -244,18 +246,10 @@ const getNearbyEvents = async (queryData) => {
       return formattedEvent;
     });
 
+    let meta = generateMeta(page, limit, totalFiltered);
     return {
       events: formattedEvents,
-      meta: {
-        page,
-        limit,
-        total: totalFiltered,
-        radiusKm,
-        userLocation: {
-          lng: longitude,
-          lat: latitude,
-        },
-      },
+      meta
     };
   } catch (error) {
     throw new Error(`Failed to fetch nearby events: ${error.message}`);

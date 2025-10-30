@@ -229,6 +229,9 @@ organizationSchema.methods.formatResponse = function (orgData) {
 
 //Add geospatial index
 organizationSchema.index({ "location": '2dsphere' });
+organizationSchema.index({ status: 1 });
+organizationSchema.index({ "otherInfo.categories": 1 });
+organizationSchema.index({ "otherInfo.tags": 1 });
 
 const Organizations = mongoose.model("Organizations", organizationSchema);
 

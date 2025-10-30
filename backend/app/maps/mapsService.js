@@ -68,31 +68,34 @@ const getEvents = async (queryData) => {
       break;
 
     default:
-      // default: future events only
-      dateFilter = { "schedule.startDateTime": { $gte: now } };
+      // default: events whoose endDateTime is in the future
+      dateFilter = { "schedule.endDateTime": { $gte: now } };
       break;
   }
 
 
   try {
     const categoryObjId = new mongoose.Types.ObjectId(category);
+
+    let geoNearOptions = {
+      near: {
+        type: "Point",
+        coordinates: [longitude, latitude],
+      },
+      key: "basicInfo.venueLocation",
+      distanceField: "distance",
+      spherical: true,
+      maxDistance: radiusInMeters,
+      query: {
+        status: "active",
+        ...dateFilter,
+        ...(category ? { "basicInfo.categories": { $in: [categoryObjId] } } : {}),
+      },
+    };
     const pipeline = [
       {
-        $geoNear: {
-          near: {
-            type: "Point",
-            coordinates: [longitude, latitude],
-          },
-          key: "basicInfo.venueLocation",
-          distanceField: "distance",
-          spherical: true,
-          maxDistance: radiusInMeters,
-          query: {
-            status: "active",
-            ...dateFilter,
-            ...(category ? { "basicInfo.categories": { $in: [categoryObjId] } } : {}),
-          },
-        },
+        $geoNear: geoNearOptions,
+
       },
       { $project: { schedule: 1, basicInfo: 1, distance: 1 } },
 
@@ -106,7 +109,16 @@ const getEvents = async (queryData) => {
         },
       },
       { $unwind: "$basicInfo.venue" },
-
+      //lookup tags
+      {
+        $lookup: {
+          from: "tags",
+          localField: "basicInfo.tags",
+          foreignField: "_id",
+          pipeline: [{ $project: { title: 1 } }],
+          as: "basicInfo.tags",
+        },
+      },
       {
         $lookup: {
           from: "organizations",
@@ -130,21 +142,7 @@ const getEvents = async (queryData) => {
     // Count total (same filter)
     const totalCountPipeline = [
       {
-        $geoNear: {
-          near: {
-            type: "Point",
-            coordinates: [longitude, latitude],
-          },
-          key: "basicInfo.venueLocation",
-          distanceField: "distance",
-          spherical: true,
-          maxDistance: radiusInMeters,
-          query: {
-            status: "active",
-            ...dateFilter,
-            ...(category ? { "basicInfo.categories": { $in: [categoryObjId] } } : {}),
-          },
-        },
+        $geoNear: geoNearOptions,
       },
       { $count: "total" },
     ];
@@ -154,7 +152,7 @@ const getEvents = async (queryData) => {
 
     // Format output
     const formattedEvents = events.map((event) => {
-      
+
       const formattedEvent = new Events(event).toPublicJSON(event);
       delete formattedEvent.basicInfo.venueLocation;
       delete formattedEvent.basicInfo.partnerOrganizer;
@@ -270,37 +268,37 @@ const getPlaces = async (queryData) => {
     const categoryObjId = category ? new mongoose.Types.ObjectId(category) : null;
     const pipeline = [
       {
-      $geoNear: {
-        near: { type: "Point", coordinates: [longitude, latitude] },
-        key: "location",
-        distanceField: "distance",
-        spherical: true,
-        maxDistance: radiusInMeters,
-        query: {
-        status: "active",
-        ...(categoryObjId
-          ? { "otherInfo.categories": { $in: [categoryObjId] } }
-          : {}),
-        ...dynamicFilter,
+        $geoNear: {
+          near: { type: "Point", coordinates: [longitude, latitude] },
+          key: "location",
+          distanceField: "distance",
+          spherical: true,
+          maxDistance: radiusInMeters,
+          query: {
+            status: "active",
+            ...(categoryObjId
+              ? { "otherInfo.categories": { $in: [categoryObjId] } }
+              : {}),
+            ...dynamicFilter,
+          },
         },
       },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "otherInfo.categories",
+          foreignField: "_id",
+          as: "otherInfo.categories",
+        },
       },
       {
-      $lookup: {
-        from: "categories",
-        localField: "otherInfo.categories",
-        foreignField: "_id",
-        as: "otherInfo.categories",
-      },
-      },
-      {
-      $project: {
-        basicInfo: 1,
-        otherInfo: 1,
-        operatingHours: 1,
-        location: 1,
-        distance: 1,
-      },
+        $project: {
+          basicInfo: 1,
+          otherInfo: 1,
+          operatingHours: 1,
+          location: 1,
+          distance: 1,
+        },
       },
       { $sort: { distance: 1 } },
       { $skip: skip },
@@ -336,7 +334,7 @@ const getPlaces = async (queryData) => {
 
     // Format and finalize output
     const formattedPlaces = organizations.map((org) => {
-    
+
       let formatted = new Organizations().formatResponse(org);
 
       // Round distance
