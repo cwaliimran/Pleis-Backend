@@ -7,9 +7,17 @@ const {
 } = require("../../shared/commonSchemas/operatingHours");
 const { FEATURE_KEYS } = require("../../admin/features/Feature");
 const Categories = require("../../admin/categories/Categories");
+const { nanoid } = require("nanoid");
+
 
 const organizationSchema = new mongoose.Schema(
   {
+    publicId: {
+      type: String,
+      unique: true,
+      index: true,
+      default: () => nanoid(),
+    },
     basicInfo: {
       media: {
         logo: {
@@ -232,6 +240,7 @@ organizationSchema.index({ "location": '2dsphere' });
 organizationSchema.index({ status: 1 });
 organizationSchema.index({ "otherInfo.categories": 1 });
 organizationSchema.index({ "otherInfo.tags": 1 });
+
 
 const Organizations = mongoose.model("Organizations", organizationSchema);
 

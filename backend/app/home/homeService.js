@@ -3,10 +3,11 @@ const { getBannerControls } = require("../../admin/bannerControl/bannerControlsS
 const { getTop10Promos } = require("../../admin/browserControl/top10PromoSection/topPromosService");
 const { getPublicCategories } = require("../../admin/categories/categoriesService");
 const { getCustomCategories } = require("../../admin/customCategories/customCategoriesService");
-const { getNearbyEvents } = require("../../commonModules/events/eventService");
 const { Highlights } = require("../../commonModules/highlights/Highlight");
 const { getPublicHighlights } = require("../../commonModules/highlights/highlightService");
 const { index } = require("../../commonModules/loyalty/challenges/models/Reward/rewardSchema");
+const { sendResponse } = require("../../helperUtils/responseUtil");
+const { getNearbyEvents } = require("../events/eventService");
 
 const getHomeService = async ({ queryData }) => {
   const { timezone } = queryData;
@@ -24,6 +25,7 @@ const getHomeService = async ({ queryData }) => {
       loyaltyEvents,
       challenges,
       promotions,
+      suggestedLoyaltyClubs
     ] = await Promise.all([
       getPublicCategories({}),
       getTop10Promos({ timezone }),
@@ -36,6 +38,7 @@ const getHomeService = async ({ queryData }) => {
       [],//getLoyaltyEvents({ page: 1, limit: 10, status: "active" }),
       [],//getChallenges({ page: 1, limit: 10, status: "active" }),
       [],//getPromotions({ page: 1, limit: 10, status: "active" }),
+      [],//getSuggestedLoyaltyClubs({ page: 1, limit: 10, status: "active" }),
     ]);
 
     // Normalize all fetched data
@@ -136,7 +139,11 @@ const getHomeService = async ({ queryData }) => {
     return { status: true, data: interleavedSections };
   } catch (error) {
     console.error("getHomeService error:", error);
-    return { status: false, data: error.message || error };
+    return sendResponse({
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error,
+    });
   }
 };
 

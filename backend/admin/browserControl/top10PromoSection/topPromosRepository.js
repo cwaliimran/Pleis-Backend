@@ -131,13 +131,16 @@ const getTop10Promos = async (filters = {}) => {
       path: "event",
       select: "schedule basicInfo",
       match: {
-        // include events that are not one-time OR one-time events whose end (or start) is in the future
         $or: [
           { "schedule.endDateTime": { $gte: now } },
           { "schedule.startDateTime": { $gte: now } },
         ],
         status: { $ne: "deleted" },
       },
+      populate: {
+        path: "basicInfo.organization",
+        select: "basicInfo.media basicInfo.name",
+      }
     });
 
   // remove promos whose event did not pass the populate match (event will be null)

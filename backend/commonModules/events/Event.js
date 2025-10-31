@@ -1,9 +1,16 @@
 const mongoose = require("mongoose");
 const { getFullImageUrl } = require("../../helperUtils/imageHelper");
 const { RecurringEventSchema } = require("./RecurringEventSchema");
+const { nanoid } = require("nanoid");
 
 const eventSchema = new mongoose.Schema(
   {
+    publicId: {
+      type: String,
+      unique: true,
+      index: true,
+      default: () => nanoid(),
+    },
     basicInfo: {
       media: {
         type: {
@@ -192,8 +199,13 @@ eventSchema.method("toPublicJSON", function (eventData) {
   return eventObject;
 });
 
-//Add geospatial index
+//Add indexes
 eventSchema.index({ "basicInfo.venueLocation": '2dsphere' });
+eventSchema.index({ "basicInfo.organization": 1, status: 1 });
+eventSchema.index({ "basicInfo.venue": 1 });
+eventSchema.index({ "basicInfo.tags": 1 });
+eventSchema.index({ "basicInfo.categories": 1 });
+
 
 const Events = mongoose.model("Event", eventSchema);
 

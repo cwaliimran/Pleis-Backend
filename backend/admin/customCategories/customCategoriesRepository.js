@@ -60,7 +60,7 @@ const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit, sor
           {
             $match: {
               status: "active",
-              "schedule.startDateTime": { $gte: now },
+              "schedule.endDateTime": { $gte: now },
             },
           },
           {
@@ -108,7 +108,7 @@ const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit, sor
             $project: {
               _id: 1,
               "basicInfo.name": 1,
-              "basicInfo.image": 1,
+              "basicInfo.media": 1,
             },
           },
         ],

@@ -1,12 +1,6 @@
 // repositories/eventRepository.js
-const { create } = require("lodash");
-const { Events } = require("./Event");
 
-// Create
-const createEvent = async (data) => {
-  const event = new Events(data);
-  return await event.save();
-};
+const { Events } = require("../../commonModules/events/Event");
 
 // Get all with filters
 const getEventsWithFilters = async (query, skip, limit) => {
@@ -33,7 +27,7 @@ const findEventById = async (id) => {
     .populate("basicInfo.tags", "title otherInfo")
     .populate({
       path: "basicInfo.organization",
-      select: "basicInfo otherInfo operatingHours",
+      select: "basicInfo otherInfo operatingHours location",
       populate: [
         {
           path: "otherInfo.categories",
@@ -47,15 +41,7 @@ const findEventById = async (id) => {
     });
 };
 
-// Delete
-const deleteEventById = async (event) => {
-  return await event.deleteOne();
-};
 
-// Optional: keep this only for non-nested shallow updates
-const findByIdAndUpdate = async (id, data) => {
-  return Events.findByIdAndUpdate(id, { $set: data }, { new: true });
-};
 
 // Aggregate pipeline
 const aggregateEvents = async (pipeline) => {
@@ -73,13 +59,10 @@ const findEventByNanoid = async (nanoid) => {
 }
 
 module.exports = {
-  createEvent,
   getEventsWithFilters,
   countEvents,
   aggregateEvents,
   findEventById,
-  deleteEventById,
-  findByIdAndUpdate,
   updateMany,
   findEventByNanoid,
 };

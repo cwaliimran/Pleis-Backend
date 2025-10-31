@@ -3,6 +3,7 @@ const { generateMeta } = require("../../helperUtils/responseUtil");
 const Categories = require("./Categories");
 const categoryRepo = require("./categoriesRepository");
 const mongoose = require("mongoose");
+const { formatCategories } = require("./formatters/categoryFormatter");
 
 const createCategory = async ({ image, title, status }) => {
   return await categoryRepo.createCategory({ image, title, status });
@@ -30,7 +31,7 @@ const getCategories = async ({ page, limit, keyword, status, date, orderSort = "
 
   const sort = { order: orderSort === "desc" ? -1 : 1 };
 
-  const [categories, totalFiltered, total, active, inactive] = await Promise.all([
+  let [categories, totalFiltered, total, active, inactive] = await Promise.all([
     categoryRepo.getCategoriesWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
     categoryRepo.countCategories(query),
     categoryRepo.countCategories({ status: { $ne: "deleted" } }),
@@ -40,6 +41,8 @@ const getCategories = async ({ page, limit, keyword, status, date, orderSort = "
 
   const meta = generateMeta(page, limit, totalFiltered);
   meta.categoriesCount = { total, active, inactive };
+
+  categories = formatCategories(categories);
 
   return { categories, meta };
 };

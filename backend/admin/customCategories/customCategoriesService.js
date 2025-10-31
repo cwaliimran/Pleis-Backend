@@ -1,5 +1,6 @@
 // services/customCategoryService.js
 const { Events } = require("../../commonModules/events/Event");
+const { formatEventResponse } = require("../../commonModules/events/formatter/eventFormatter");
 const Organizations = require("../../commonModules/organizations/Organization");
 const { getFullImageUrl } = require("../../helperUtils/imageHelper");
 const { generateMeta, convertUtcToTimezone } = require("../../helperUtils/responseUtil");
@@ -90,7 +91,6 @@ const getCustomCategories = async ({
 };
 
 
-
 /**
  * Transform objects based on their type
  * Applies icon paths, URLs, and removes sensitive data
@@ -100,26 +100,10 @@ const transformObject = (obj, type, timezone) => {
   if (type === "User") {
     return new User(obj).toJSON(obj);
   } else if (type === "Event") {
-    if (obj.schedule && obj.schedule.startDateTime) {
-      obj.schedule.startDateTime = convertUtcToTimezone(
-        obj.schedule.startDateTime,
-        timezone,
-        "YYYY-MM-DD hh:mm A"
-      );
-    }
-    if (obj.schedule && obj.schedule.endDateTime) {
-      obj.schedule.endDateTime = convertUtcToTimezone(
-        obj.schedule.endDateTime,
-        timezone,
-        "YYYY-MM-DD hh:mm A"
-      );
-    }
 
-    let organizationInfo = obj.basicInfo.organization;
+    return formatEventResponse(obj, timezone);
 
-    obj.basicInfo.organization = new Organizations().formatResponse(organizationInfo);
-
-    return new Events(obj).toPublicJSON(obj);
+    // return new Events(obj).toPublicJSON(obj);
   } else if (type === "Organizations") {
     return transformOrganization(obj);
   }

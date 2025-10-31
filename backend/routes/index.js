@@ -43,6 +43,8 @@ router.use("/app", require("./appRoutes"));
 //admin routes
 router.use("/admin", require("./adminRoutes"));
 
+//helper route for generating shareable links
+router.use("/share", require("./shareRoute"));
 
 
 module.exports = router;

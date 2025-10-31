@@ -10,5 +10,7 @@ router.use("/maps", require("../app/maps/mapsRoutes"));
 router.use("/organizations", require("../app/organizationProfile/organizationProfileRoutes"));
 //favorites
 router.use("/favorites", require("../commonModules/favorites/favoriteRoutes"));
+//events
+router.use("/events", require("../app/events/eventRoutes"));
 
 module.exports = router;

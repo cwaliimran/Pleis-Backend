@@ -6,8 +6,8 @@ const {
   getReadableErrorMessage,
   convertTimezoneToUtc,
   convertUtcToTimezone,
+  isValidNanoid,
 } = require("../../helperUtils/responseUtil");
-const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
 const { getVenueDetails } = require("../venues/venuesService");
 
 const eventService = require("./eventService");
@@ -223,53 +223,6 @@ const getPublicEvents = async (req, res) => {
   }
 };
 
-const getNearbyEvents = async (req, res) => {
-  const { latitude, longitude, radiusKm = 50 } = req.query;
-  const { page, limit } = parsePaginationParams(req);
-  let { timezone } = req.user;
-
-  let queryData = {
-    latitude,
-    longitude,
-    radiusKm,
-    page,
-    limit,
-    timezone,
-  };
-
-  if (!validateParams(req, res, {
-    queryParams: ["latitude", "longitude"],
-  })) return;
-
-  try {
-    const { events, meta } = await eventService.getNearbyEvents(queryData);
-    //check if events is empty
-    if (!events || events.length === 0) {
-      return sendResponse({
-        res,
-        statusCode: 200,
-        translationKey: "nearby_events_fetched_successfully",
-        data: [],
-      });
-    }
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "nearby_events_fetched_successfully",
-      data: events,
-      meta
-    });
-  } catch (error) {
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error,
-    });
-  }
-}
-
 const updateEvent = async (req, res) => {
   const { id } = req.params;
 
@@ -394,55 +347,37 @@ const deleteEvent = async (req, res) => {
 };
 
 const getEventDetails = async (req, res) => {
-  const { id } = req.params;
+  let { id } = req.params;
   let { timezone } = req.user;
-
+  // Accept both nanoid and ObjectId for event id
   if (
-    !validateParams(req, res, {
+    (!isValidNanoid(id) && !validateParams(req, res, {
       pathParams: ["id"],
       objectIdFields: ["id"],
-    })
+    }))
   ) return;
 
+  if (isValidNanoid(id)) {
+    // If nanoid, resolve to ObjectId
+    id = await eventService.getEventIdByNanoid(id);
+  }
+
+
   try {
-    let event = await eventService.getEventDetails(id);
-    if (!event) {
+    let data = await eventService.getEventDetails(id, timezone);
+    if (!data) {
       return sendResponse({
         res,
         statusCode: 404,
         translationKey: "event_not_found",
       });
     }
-
-    // Convert dates to user's timezone
-    //convert event to object
-    event = JSON.parse(JSON.stringify(event));
-    if (event.schedule && event.schedule.startDateTime) {
-      event.schedule.startDateTime = convertUtcToTimezone(
-        event.schedule.startDateTime,
-        timezone,
-        "YYYY-MM-DD hh:mm A"
-      );
-    }
-    if (event.schedule && event.schedule.endDateTime) {
-      event.schedule.endDateTime = convertUtcToTimezone(
-        event.schedule.endDateTime,
-        timezone,
-        "YYYY-MM-DD hh:mm A"
-      );
-    }
-
-    // Convert organization operatingHours to local timezone if present
-    const org = event.basicInfo?.organization;
-    if (org?.operatingHours) {
-      org.operatingHours = transformOperatingHoursToLocal(org.operatingHours, timezone);
-    }
-
+    
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "event_details_fetched_successfully",
-      data: event,
+      data,
     });
   } catch (error) {
     return sendResponse({
@@ -498,5 +433,4 @@ module.exports = {
   updateEvent,
   deleteEvent,
   getEventDetails,
-  getNearbyEvents,
 };
