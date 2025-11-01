@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const { getFullImageUrl } = require("../../helperUtils/imageHelper");
 
 const bannerControlsSchema = new mongoose.Schema(
   {
@@ -16,7 +15,7 @@ const bannerControlsSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      enum: ["Organizer", "Event", "LoyaltyProgram"],
+      enum: ["Organizer", "Event", "LoyaltyProgram", "Other"],
       default: "Event",
     },
 
@@ -25,17 +24,33 @@ const bannerControlsSchema = new mongoose.Schema(
     objectModel: {
       type: String,
       default: function () {
-        return this.type === "LoyaltyProgram" || this.type === "Organizer"
-          ? "User"
-          : this.type;
+        if (this.type === "LoyaltyProgram" || this.type === "Organizer") {
+          return "User";
+        } else if (this.type === "Event") {
+          return "Event";
+        } else {
+          return null; // For "Other", no ref
+        }
       },
       select: false, // hide by default in queries
     },
 
-    // object refs the model name stored in `objectModel`
+    // object is either a document ref or a simple URL string, depending on type
     object: {
-      type: mongoose.Schema.Types.ObjectId,
-      refPath: "objectModel",
+      type: mongoose.Schema.Types.Mixed,
+      required: false,
+      validate: {
+        validator: function (v) {
+          if (this.type === "Other") {
+            // Should be a string (URL)
+            return typeof v === "string";
+          } else {
+            // Should be an ObjectId
+            return mongoose.Types.ObjectId.isValid(v);
+          }
+        },
+        message: props => `Invalid object value for type ${props.instance.type}`,
+      },
     },
 
     status: {
@@ -50,24 +65,8 @@ const bannerControlsSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true, transform: transformDoc },
-    toObject: { virtuals: true, transform: transformDoc },
   }
 );
-
-// Virtual field `icon` (computed image + full URL)
-bannerControlsSchema.virtual("imageInfo").get(function () {
-  const image = this.image || "noimage.png";
-  const url = getFullImageUrl(image);
-  return { name: image, url };
-});
-
-// Custom transformation — applies automatically to .toJSON() and .toObject()
-function transformDoc(doc, ret) {
-  delete ret.image; // remove original image string
-  delete ret.id; // remove original image string
-  return ret;
-}
 
 const BannerControls = mongoose.model("BannerControls", bannerControlsSchema);
 

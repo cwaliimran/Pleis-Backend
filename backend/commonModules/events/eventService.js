@@ -10,7 +10,7 @@ const createEvent = async ({ data }) => {
   return await eventRepo.createEvent(data);
 };
 
-const getEvents = async ({ page, limit, keyword, status, creator, startDate, endDate, organization }) => {
+const getEvents = async ({ page, limit, keyword, status, creator, startDate, endDate, organization, timezone }) => {
   const query = {};
   if (creator) query.creator = creator;
   if (status) {
@@ -39,22 +39,22 @@ const getEvents = async ({ page, limit, keyword, status, creator, startDate, end
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [events, totalFiltered, total, active, inactive] =
+  const [events, eventsCounts] =
     await Promise.all([
       eventRepo.getEventsWithFilters(
         query,
         skip,
         limit === 0 ? 0 : limit
       ),
-      eventRepo.countEvents(query),
-      eventRepo.countEvents({ status: { $ne: "deleted" } }),
-      eventRepo.countEvents({ status: "active" }),
-      eventRepo.countEvents({ status: "inactive" }),
+      eventRepo.getEventsCounts(query),
     ]);
 
+  let { totalFiltered = 0, total = 0, active = 0, inactive = 0 } = eventsCounts || {};
+
+  let formattedEvents = events.map(event => formatEventResponse(event, { timezone }));
 
   return {
-    events,
+    events: formattedEvents,
     meta: {
       page,
       limit,
@@ -236,6 +236,7 @@ const deleteEvent = async (id) => {
 
 const getEventDetails = async (id, timezone) => {
   const event = await eventRepo.findEventById(id);
+  console.log("organization", event.basicInfo.organization)
   let data = formatEventResponse(event, { timezone });
   return data
 };

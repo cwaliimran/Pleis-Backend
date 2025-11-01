@@ -1,5 +1,5 @@
 // services/venueService.js
-const { buildKeywordQueryFromModel, buildKeywordQueryFromModels } = require("../../helperUtils/queryUtil");
+const { buildKeywordQueryFromModel, buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
 const { generateMeta } = require("../../helperUtils/responseUtil");
 const Organizations = require("../organizations/Organization");
 const Venues = require("./Venues");

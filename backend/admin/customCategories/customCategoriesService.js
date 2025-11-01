@@ -101,9 +101,8 @@ const transformObject = (obj, type, timezone) => {
     return new User(obj).toJSON(obj);
   } else if (type === "Event") {
 
-    return formatEventResponse(obj, timezone);
+    return formatEventResponse(obj, { timezone });
 
-    // return new Events(obj).toPublicJSON(obj);
   } else if (type === "Organizations") {
     return transformOrganization(obj);
   }

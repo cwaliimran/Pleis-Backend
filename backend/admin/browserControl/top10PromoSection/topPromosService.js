@@ -1,6 +1,6 @@
 // services/topPromoService.js
 const { Events } = require("../../../commonModules/events/Event");
-const { convertUtcToTimezone } = require("../../../helperUtils/responseUtil");
+const { convertUtcToTimezone } = require("@utils/responseUtil");
 const TopPromos = require("./TopPromos");
 const topPromoRepo = require("./topPromosRepository");
 const mongoose = require("mongoose");
@@ -52,7 +52,7 @@ const getTopPromos = async ({ page, limit, keyword, status, date, orderSort = "a
 };
 
 const getTop10Promos = async ({ timezone, filters }) => {
-  const topPromos = await topPromoRepo.getTop10Promos(filters);
+  const topPromos = await topPromoRepo.getTop10Promos(filters, timezone);
 
   const processed = topPromos.map(doc => {
     const obj = doc.toObject(); // convert to plain JS object

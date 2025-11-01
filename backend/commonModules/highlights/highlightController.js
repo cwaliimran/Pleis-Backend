@@ -116,11 +116,7 @@ const getHighlights = async (req, res) => {
       date
     });
 
-  /*   //transform highlight to .toCustomJSON()
-    highlights = highlights.map((highlight) => {
-      return new Highlights(highlight).toCustomJSON(highlight);
-    });
- */
+
     return sendResponse({
       res,
       statusCode: 200,

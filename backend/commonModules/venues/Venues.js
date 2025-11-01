@@ -4,7 +4,7 @@ const { LocationSchema } = require("../../shared/locations/locationSchmea");
 
 const venuesSchema = new mongoose.Schema(
   {
-    floorPlan: {
+    floorPlan: { //image
       type: String,
       default: "",
     },
@@ -50,23 +50,9 @@ const venuesSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true, transform: transformDoc },
-    toObject: { virtuals: true, transform: transformDoc },
   }
 );
 
-// Virtual field `floorPlanInfo` (computed image + full URL)
-venuesSchema.virtual("floorPlanInfo").get(function () {
-  const floorPlan = this.floorPlan || "noimage.png";
-  const url = getFullImageUrl(floorPlan);
-  return { name: floorPlan, url };
-});
-
-// Custom transformation — applies automatically to .toJSON() and .toObject()
-function transformDoc(doc, ret) {
-  delete ret.id; // remove original image string
-  return ret;
-}
 
 venuesSchema.methods.formatResponse = function (venueData) {
   const venue = venueData ? venueData : this.toObject();
@@ -75,11 +61,7 @@ venuesSchema.methods.formatResponse = function (venueData) {
   delete venue.id; // Remove redundant id field
 
   // Attach full image URL for floorPlan
-  venue.floorPlanInfo = {
-    name: venue.floorPlan || "noimage.png",
-    url: getFullImageUrl(venue.floorPlan || "noimage.png"),
-  };
-  delete venue.floorPlan;
+  venue.floorPlan = getFullImageUrl(venue.floorPlan || "noimage.png");
 
   return venue;
 };

@@ -94,6 +94,7 @@ const sendResponse = ({
         // If the error is a primitive value (string, boolean, number, etc.)
         response.error = error;
       }
+      console.log(error)
     }
   }
   // Send the response with the appropriate status code

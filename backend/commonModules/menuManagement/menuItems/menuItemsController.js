@@ -6,11 +6,12 @@ const {
   getReadableErrorMessage,
   convertDateFormat,
   convertTimezoneToUtc,
-} = require("../../../helperUtils/responseUtil");
+} = require("@utils/responseUtil");
 
 const menuItemsService = require("./menuItemsService");
 
 const createMenuItem = async (req, res) => {
+  let { timezone } = req.user;
   const {
     image,
     title,
@@ -55,8 +56,8 @@ const createMenuItem = async (req, res) => {
   };
 
   if (startTime && endTime) {
-    data.startTime = convertTimezoneToUtc(startTime, req.user.timezone, "hh:mm A");
-    data.endTime = convertTimezoneToUtc(endTime, req.user.timezone, "hh:mm A");
+    data.startTime = convertTimezoneToUtc(startTime, timezone, "hh:mm A");
+    data.endTime = convertTimezoneToUtc(endTime, timezone, "hh:mm A");
 
     if (data.startTime >= data.endTime) {
       return sendResponse({
@@ -68,7 +69,8 @@ const createMenuItem = async (req, res) => {
   }
 
   try {
-    const menuItem = await menuItemsService.createMenuItem(data);
+
+    const menuItem = await menuItemsService.createMenuItem(data, timezone);
     if (!menuItem) {
       return sendResponse({
         res,
@@ -180,6 +182,7 @@ const getMenuItemDetails = async (req, res) => {
 
 const updateMenuItem = async (req, res) => {
   const { id } = req.params;
+  let { timezone } = req.user;
   const {
     image,
     title,
@@ -236,7 +239,7 @@ const updateMenuItem = async (req, res) => {
       }
     }
 
-    const updated = await menuItemsService.updateMenuItem(id, data);
+    const updated = await menuItemsService.updateMenuItem(id, data, timezone);
 
     if (!updated) {
       return sendResponse({

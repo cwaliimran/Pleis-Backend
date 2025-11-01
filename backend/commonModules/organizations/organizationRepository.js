@@ -2,6 +2,8 @@
 const Venues = require("../venues/Venues");
 const Organizations = require("./Organization");
 
+const { getModelCounts } = require("@dbUtils/queryUtil");
+
 // Create
 const createOrganization = async (data) => {
   const organization = new Organizations(data);
@@ -22,53 +24,9 @@ const countOrganizations = async (query = {}) => {
 };
 
 
-/**
- * Get filtered and global organization counts efficiently
- * @param {Object} filterQuery - filters applied to organization listing
- * @returns {Object} - { totalFiltered, total, active, inactive }
- */
-const getOrganizationCounts = async (filterQuery = {}) => {
-  const [filteredCount, globalCounts] = await Promise.all([
-    // count only filtered results
-    Organizations.countDocuments(filterQuery),
-
-    // aggregate global status counts
-    Organizations.aggregate([
-      {
-        $facet: {
-          total: [
-            { $match: { status: { $ne: "deleted" } } },
-            { $count: "count" },
-          ],
-          active: [
-            { $match: { status: "active" } },
-            { $count: "count" },
-          ],
-          inactive: [
-            { $match: { status: "inactive" } },
-            { $count: "count" },
-          ],
-        },
-      },
-      {
-        $project: {
-          total: { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
-          active: { $ifNull: [{ $arrayElemAt: ["$active.count", 0] }, 0] },
-          inactive: { $ifNull: [{ $arrayElemAt: ["$inactive.count", 0] }, 0] },
-        },
-      },
-    ]),
-  ]);
-
-  const counts = globalCounts[0] || {};
-  return {
-    totalFiltered: filteredCount || 0,
-    total: counts.total || 0,
-    active: counts.active || 0,
-    inactive: counts.inactive || 0,
-  };
-};
-
+const getOrganizationCounts = async (query) => {
+  return getModelCounts({ model: Organizations, filterQuery: query });
+}
 
 // Find by ID
 const findOrganizationById = async (id) => {

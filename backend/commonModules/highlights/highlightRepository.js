@@ -1,7 +1,7 @@
 // repositories/highlightRepository.js
-const { create } = require("lodash");
 const { Highlights } = require("./Highlight");
-const { Mongoose, default: mongoose } = require("mongoose");
+const { default: mongoose } = require("mongoose");
+const { getModelCounts } = require("@dbUtils/queryUtil");
 
 // Create
 const createHighlight = async (data) => {
@@ -83,7 +83,6 @@ const getHighlightsWithFilters = async (query,keyword, skip, limit) => {
       status: 1,
       title: 1,
       media: 1,
-      mediaInfo: 1
     }
   });
 
@@ -91,6 +90,9 @@ const getHighlightsWithFilters = async (query,keyword, skip, limit) => {
 };
 
 
+const getHighlightsCounts = async (query) => {
+  return getModelCounts({ model: Highlights, filterQuery: query });
+}
 
 // Count by condition
 const countHighlights = async (query = {}) => {
@@ -171,7 +173,7 @@ const findHighlightById = async (id) => {
         meta: 1,
         status: 1,
         title: 1,
-        mediaInfo: 1
+        media: 1
       }
     }
   ]);
@@ -201,4 +203,5 @@ module.exports = {
   findHighlightDocById,
   deleteHighlightById,
   findByIdAndUpdate,
+  getHighlightsCounts,
 };

@@ -129,6 +129,7 @@ const getOrganizationsAdmin = async (req, res) => {
       keyword,
       status,
       date,
+      timezone
     });
 
     // Transform to local time safely

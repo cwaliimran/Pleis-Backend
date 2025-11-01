@@ -3,6 +3,7 @@ const { generateMeta } = require("../../helperUtils/responseUtil");
 const BannerControls = require("./BannerControls");
 const bannerControlsRepo = require("./bannerControlsRepository");
 const mongoose = require("mongoose");
+const { formatBannerObject } = require("./fomatter/formatBannerObject");
 
 const createBannerControls = async ({ title, image, type, object, status }) => {
   return await bannerControlsRepo.createBannerControls({ title, image, type, object, status });
@@ -22,14 +23,20 @@ const getBannerControls = async ({ page, limit, keyword, status, date, orderSort
     };
   }
 
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const sort = { order: orderSort === "desc" ? -1 : 1 };
 
-  const [bannerControls, getBannerControlsCounts] = await Promise.all([
-    bannerControlsRepo.getBannerControlsWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
+  let [bannerControls, getBannerControlsCounts] = await Promise.all([
+    bannerControlsRepo.getBannerControlsWithFilters(query, page, limit === 0 ? 0 : limit, sort),
     bannerControlsRepo.getBannerControlsCounts(query),
   ]);
+
+
+  //format bannerControls
+  bannerControls = bannerControls.map(item => {
+    return formatBannerObject(item);
+  });
+
   const { totalFiltered, total, active, inactive } = getBannerControlsCounts;
   const meta = generateMeta(page, limit, totalFiltered);
   meta.bannerControlsCount = { total, active, inactive };

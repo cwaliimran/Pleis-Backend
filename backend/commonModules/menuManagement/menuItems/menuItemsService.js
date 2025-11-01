@@ -1,15 +1,18 @@
 // services/menuItemService.js
-const { buildKeywordQueryFromModels } = require("../../../helperUtils/queryUtil");
-const { generateMeta, convertUtcToTimezone } = require("../../../helperUtils/responseUtil");
+const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
+const { generateMeta, convertUtcToTimezone } = require("@utils/responseUtil");
 const menuItemRepo = require("./menuItemsRepository");
 const mongoose = require("mongoose");
 const MenuItems = require("./MenuItems");
 const Menus = require("../menu/Menus");
 const Venues = require("../../venues/Venues");
-const MenuItemCategories = require("../menuItemCategories/menuItemCategories");
+const MenuItemCategories = require("../menuItemCategories/MenuItemCategories");
+const { formatMenuItems } = require("./fomatter/formatMenuItems");
 
-const createMenuItem = async (data) => {
-  return await menuItemRepo.createMenuItem(data);
+const createMenuItem = async (data, timezone) => {
+  let doc = await menuItemRepo.createMenuItem(data);
+  let obj = formatMenuItems(doc, timezone);
+  return obj;
 };
 
 // Populate menu data for menuItems
@@ -111,19 +114,8 @@ const getMenuItems = async ({ page, limit, keyword, status, userId, date, menu, 
 
   // Shape final docs
   const formattedMenuItems = menuItems.map(doc => {
-    const obj = new MenuItems(doc).toObject();
-
-    // Convert stored UTC times to user timezone (display only)
-    if (obj.startTime && obj.endTime) {
-      obj.startTime = convertUtcToTimezone(obj.startTime, timezone, "hh:mm A");
-      obj.endTime   = convertUtcToTimezone(obj.endTime,   timezone, "hh:mm A");
-    }
-
-    // Attach nested menu (with venue inside) and category
-    obj.menu = doc.menuData || null;
-    obj.category = doc.categoryData || null;
-
-    // No separate top-level venue — it's nested under obj.menu.venue
+    let obj = formatMenuItems(doc, timezone);
+  
     return obj;
   });
 
@@ -134,7 +126,7 @@ const getMenuItems = async ({ page, limit, keyword, status, userId, date, menu, 
 };
 
 
-const updateMenuItem = async (id, data) => {
+const updateMenuItem = async (id, data, timezone) => {
   const menuItem = await menuItemRepo.findMenuItemById(id);
   if (!menuItem) return null;
 
@@ -166,7 +158,10 @@ const updateMenuItem = async (id, data) => {
   Object.assign(menuItem, updateData);
   await menuItem.save();
 
-  return menuItem;
+  // Return updated menuItem
+  let obj = formatMenuItems(menuItem, timezone);
+
+  return obj;
 };
 
 const deleteMenuItem = async (id) => {

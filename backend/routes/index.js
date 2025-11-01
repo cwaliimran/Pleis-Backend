@@ -37,9 +37,6 @@ router.use("/menu", require("./menuRoutes"));
 //loyalty
 router.use("/loyalty", require("./loyaltyRoutes"));
 
-//app routes
-router.use("/app", require("./appRoutes"));
-
 //admin routes
 router.use("/admin", require("./adminRoutes"));
 

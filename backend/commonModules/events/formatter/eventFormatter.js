@@ -1,5 +1,5 @@
 const { getFullImageUrl } = require("../../../helperUtils/imageHelper");
-const { convertUtcToTimezone } = require("../../../helperUtils/responseUtil");
+const { convertUtcToTimezone } = require("@utils/responseUtil");
 const { transformOperatingHoursToLocal } = require("../../../shared/commonSchemas/operatingHours");
 
 /**
@@ -22,11 +22,7 @@ const formatEventResponse = (eventObject, options = {}) => {
     title: event.basicInfo?.title || "",
     description: event.basicInfo?.description || "",
     venueLocation: event.basicInfo?.venueLocation || null,
-    mediaInfo: event.basicInfo?.mediaInfo || {
-      name: event.basicInfo?.media?.name || "",
-      type: event.basicInfo?.media?.type || "image",
-      url: getFullImageUrl(event.basicInfo?.media?.name),
-    },
+    media: getFullImageUrl(event.basicInfo?.media?.name),
     partnerOrganizer: event.basicInfo?.partnerOrganizer || null,
   };
 
@@ -39,9 +35,9 @@ const formatEventResponse = (eventObject, options = {}) => {
       basicInfo: {
         name: org.basicInfo?.name || "",
         socialLinks: org.basicInfo?.socialLinks || {},
-        mediaInfo: {
-          logo: org.basicInfo?.mediaInfo?.logo || getFullImageUrl(org.basicInfo?.media?.logo),
-          cover: org.basicInfo?.mediaInfo?.cover || getFullImageUrl(org.basicInfo?.media?.cover),
+        media: {
+          logo: getFullImageUrl(org.basicInfo?.media?.logo),
+          cover: getFullImageUrl(org.basicInfo?.media?.cover),
         },
       },
       location: org.location || null,
@@ -55,13 +51,11 @@ const formatEventResponse = (eventObject, options = {}) => {
         categories: (org.otherInfo?.categories || []).map((c) => ({
           _id: c._id,
           title: c.title,
-          imageInfo: c.imageInfo || {
-            name: c.image || "",
-            url: getFullImageUrl(c.image),
-          },
+          image: getFullImageUrl(c.image),
         })),
-        galleryMediaInfo: (org.otherInfo?.galleryMediaInfo || []).map((g) => ({
+        galleryMedia: (org.otherInfo?.galleryMedia || []).map((g) => ({
           name: g.name,
+          type: g.type,
           url: getFullImageUrl(g.name),
         })),
       },
@@ -76,25 +70,24 @@ const formatEventResponse = (eventObject, options = {}) => {
       _id: venue._id,
       title: venue.title,
       location: venue.location,
-      floorPlan: venue.floorPlan || "",
-      floorPlanInfo: venue.floorPlan
-        ? {
-          name: venue.floorPlan,
-          url: getFullImageUrl(venue.floorPlan),
-        }
-        : null,
+      floorPlan: getFullImageUrl(venue.floorPlan),
     };
   }
 
   // ---------- CATEGORIES & TAGS ----------
-  basicInfo.categories = (event.basicInfo?.categories || []).map((cat) => ({
-    _id: cat._id,
-    title: cat.title,
-    imageInfo: cat.imageInfo || {
-      name: cat.image || "",
-      url: getFullImageUrl(cat.image),
-    },
-  }));
+  // Only map categories if they are objects, not just ObjectIds (strings)
+  if (
+    Array.isArray(event.basicInfo?.categories) &&
+    event.basicInfo.categories.length > 0 &&
+    typeof event.basicInfo.categories[0] === "object" &&
+    event.basicInfo.categories[0] !== null
+  ) {
+    basicInfo.categories = event.basicInfo.categories.map((cat) => ({
+      _id: cat._id,
+      title: cat.title,
+      image: getFullImageUrl(cat.image),
+    }));
+  }
 
   basicInfo.tags = (event.basicInfo?.tags || []).map((tag) => ({
     _id: tag._id,

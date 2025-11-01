@@ -1,11 +1,12 @@
 // services/organizationService.js
 
 const { default: mongoose } = require("mongoose");
-const { buildKeywordQueryFromModel } = require("../../helperUtils/queryUtil");
+const { buildKeywordQueryFromModel } = require("../../helperUtils/dbUtils/queryUtil");
 const Venues = require("../venues/Venues");
 const Organizations = require("./Organization");
 const organizationRepo = require("./organizationRepository");
 const { generateMeta } = require("../../helperUtils/responseUtil");
+const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
 
 const createOrganization = async ({ data }) => {
   return await organizationRepo.createOrganization(data);
@@ -48,7 +49,7 @@ const getOrganizations = async ({ page, limit, keyword, status, creator, date })
       organizationRepo.getOrganizationCounts(query),
     ]);
 
-    console.log("counts",counts)
+  console.log("counts", counts)
 
   const totalFiltered = counts?.totalFiltered || 0;
   const total = counts?.total || 0;
@@ -63,9 +64,9 @@ const getOrganizations = async ({ page, limit, keyword, status, creator, date })
   };
 };
 
-const getOrganizationsByAdmin = async ({ page, limit, keyword, status, date }) => {
+const getOrganizationsByAdmin = async ({ page, limit, keyword, status, date, timezone }) => {
   const query = {};
- 
+
   if (status) {
     query.status = status;
   } else {
@@ -97,14 +98,10 @@ const getOrganizationsByAdmin = async ({ page, limit, keyword, status, date }) =
       organizationRepo.getOrganizationCounts(query),
     ]);
 
-    console.log("counts",counts)
-
-  const totalFiltered = counts?.totalFiltered || 0;
-  const total = counts?.total || 0;
-  const active = counts?.active || 0;
-  const inactive = counts?.inactive || 0;
+  const { totalFiltered, total, active, inactive } = counts;
   let meta = generateMeta(page, limit, totalFiltered);
   meta.tagsCount = { total, active, inactive };
+
 
   return {
     organizations,

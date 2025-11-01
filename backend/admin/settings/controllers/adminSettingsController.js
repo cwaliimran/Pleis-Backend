@@ -1,4 +1,4 @@
-const { sendResponse, parsePaginationParams, generateMeta } = require("../../../helperUtils/responseUtil");
+const { sendResponse, parsePaginationParams, generateMeta } = require("@utils/responseUtil");
 const { User } = require("../../../models/UserModel");
 const AdminSettings = require("../models/AdminSettings");
 const Faq = require("../models/Faq");

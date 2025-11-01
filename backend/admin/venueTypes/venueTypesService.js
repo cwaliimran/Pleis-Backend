@@ -1,5 +1,6 @@
 // services/venuetypeService.js
 const { generateMeta } = require("../../helperUtils/responseUtil");
+const { formatVenueType } = require("./fomatter/formatVenueType");
 const venuetypeRepo = require("./venueTypesRepository");
 
 const createVenueType = async ({ image, title, status }) => {
@@ -31,24 +32,25 @@ const getVenueTypes = async ({ page, limit, keyword, status, date }) => {
 
   const query = andConditions.length > 0 ? { $and: andConditions } : {};
 
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [venueTypes, totalFiltered, total, active, inactive] =
+  const [venueTypes, counts] =
     await Promise.all([
       venuetypeRepo.getVenueTypesWithFilters(
         query,
-        skip,
-        limit === 0 ? 0 : limit
+        page,
+        limit
       ),
-      venuetypeRepo.countVenueTypes(query),
-      venuetypeRepo.countVenueTypes({ status: { $ne: "deleted" } }),
-      venuetypeRepo.countVenueTypes({ status: "active" }),
-      venuetypeRepo.countVenueTypes({ status: "inactive" }),
+      venuetypeRepo.getCounts(query),
     ]);
+
+  //format venueTypes
+  const formattedVenueTypes = venueTypes.map(item => formatVenueType(item));
+
+  const { totalFiltered, total, active, inactive } = counts;
   let meta = generateMeta(page, limit, totalFiltered);
   meta.venueTypesCount = { total, active, inactive };
   return {
-    venueTypes,
+    venueTypes: formattedVenueTypes,
     meta,
   };
 };
@@ -76,23 +78,23 @@ const getPublicVenueTypes = async ({ page, limit, keyword, date }) => {
 
   const baseQuery = baseFilters.length ? { $and: baseFilters } : {};
 
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const [venueTypes, totalFiltered] =
     await Promise.all([
       page === 1
-        ? venuetypeRepo.getVenueTypesWithFilters(baseQuery, skip,
-          limit === 0 ? 0 : limit)
+        ? venuetypeRepo.getVenueTypesWithFilters(baseQuery, page,
+          limit)
         : [],
 
       venuetypeRepo.countVenueTypes(baseQuery),
     ]);
 
+    const formattedVenueTypes = venueTypes.map(item => formatVenueType(item));
 
   let meta = generateMeta(page, limit, totalFiltered);
 
   return {
-    venueTypes,
+    venueTypes: formattedVenueTypes,
     meta,
   };
 };

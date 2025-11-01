@@ -6,11 +6,17 @@
   "scripts": {
     "test": "mocha test/**/*.test.js --timeout 10000",
     "start": "node backend/server.js",
+    "update:alias": "node aliasConfig/update-aliases.js",
     "localhost": "NODE_ENV=localhost nodemon backend/server.js",
-    "dev": "NODE_ENV=dev nodemon backend/server.js",
-    "prod": "NODE_ENV=prod node backend/server.js",
+    "dev": "NODE_ENV=dev npm run nodemon backend/server.js",
+    "prod": "NODE_ENV=prod npm run node backend/server.js",
     "d": "npm run dev",
     "p": "npm run prod"
+  },
+  "_moduleAliases": {
+    "@utils": "backend/helperUtils",
+    "@dbUtils": "backend/helperUtils/dbUtils",
+    "@getFullImageUrl": "backend/helperUtils/imageHelper"
   },
   "keywords": [],
   "author": "",
@@ -34,6 +40,7 @@
     "mailgun.js": "^12.0.3",
     "mime": "^4.0.4",
     "mime-types": "^2.1.35",
+    "module-alias": "^2.2.3",
     "moment-timezone": "^0.5.45",
     "mongoose": "^8.4.4",
     "morgan": "^1.10.0",

@@ -1,5 +1,7 @@
 // repositories/venueTypeRepository.js
 
+const { getWithFilters, getModelCounts } = require('@dbUtils/queryUtil');
+
 const VenueTypesModel = require("./VenueTypesModel");
 
 // Create
@@ -9,12 +11,17 @@ const createVenueType = async (data) => {
 };
 
 // Get all with filters
-const getVenueTypesWithFilters = async (query, skip, limit) => {
-  return VenueTypesModel.find(query)
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
+const getVenueTypesWithFilters = async (query, page, limit) => {
+   return getWithFilters({
+    model: VenueTypesModel,
+    query,
+    options: { page, limit },
+  });
 };
+
+const getCounts = async (query) => {
+  return getModelCounts({ model: VenueTypesModel, filterQuery: query });
+}
 
 // Count by condition
 const countVenueTypes = async (query = {}) => {
@@ -50,4 +57,5 @@ module.exports = {
   updateVenueTypeData,
   deleteVenueTypeById,
   findByIdAndUpdate,
+  getCounts,
 };

@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { generateMeta } = require("../../../helperUtils/responseUtil");
+const { generateMeta } = require("@utils/responseUtil");
 const { Events } = require("../../../commonModules/events/Event");
 const { formatEventResponse } = require("../../../commonModules/events/formatter/eventFormatter");
 
@@ -96,7 +96,7 @@ const getRecommendedEvents = async (eventId, options = {}) => {
           localField: "basicInfo.organization",
           foreignField: "_id",
           as: "basicInfo.organization",
-          pipeline: [{ $project: { _id: 1, "basicInfo.name": 1, "basicInfo.mediaInfo": 1 } }],
+          pipeline: [{ $project: { _id: 1, "basicInfo.name": 1, "basicInfo.media": 1 } }],
         },
       },
       { $unwind: { path: "$basicInfo.organization", preserveNullAndEmptyArrays: true } },
@@ -194,7 +194,7 @@ async function runEventSimilarityQuery({
         localField: "basicInfo.organization",
         foreignField: "_id",
         as: "basicInfo.organization",
-        pipeline: [{ $project: { _id: 1, "basicInfo.name": 1, "basicInfo.mediaInfo": 1 } }],
+        pipeline: [{ $project: { _id: 1, "basicInfo.name": 1, "basicInfo.media": 1 } }],
       },
     },
     { $unwind: { path: "$basicInfo.organization", preserveNullAndEmptyArrays: true } },

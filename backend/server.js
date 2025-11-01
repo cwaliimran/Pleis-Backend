@@ -5,10 +5,23 @@ const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
 
+// --- Load aliases dynamically from config ---
+const path = require("path");
+const moduleAlias = require("module-alias");
+const aliases = require("../aliasConfig/pathAliases.config");
+
+for (const [alias, target] of Object.entries(aliases)) {
+  moduleAlias.addAlias(alias, path.join(__dirname, "..", target));
+}
+
+require('module-alias/register');
+
+
 const { i18nConfig } = require("./config/i18nConfig");
 const { loggerMiddleware } = require("./middlewares/logger");
 const routes = require("./routes");
 const adminRoutes = require("./admin/routes");
+const appRoutes = require("./routes/appRoutes");
 const { sendResponse } = require("./helperUtils/responseUtil");
 const connectToDB = require("./helperUtils/server-setup");
 const { backupMongoDB } = require("./helperUtils/dataBaseBackup.js");
@@ -49,6 +62,9 @@ app.use(express.json());
 
 
 // Routes
+//app routes
+app.use("/api/v1/app", appRoutes);
+
 app.use("/api/v1", routes);
 // Admin routes
 app.use("/api/v1/admin", adminRoutes);

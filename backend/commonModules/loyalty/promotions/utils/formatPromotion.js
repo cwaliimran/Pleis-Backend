@@ -15,10 +15,7 @@ function formatPromotion(promotion, timezone) {
 
     //attach full image URL
     if (obj?.image) {
-        obj.mediaInfo = {
-            image: obj.image,
-            url: getFullImageUrl(obj.image),
-        };
+        obj.media = getFullImageUrl(obj.image);
     }
 
     // Adjust obj properties based on promotionType

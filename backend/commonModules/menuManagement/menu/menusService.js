@@ -1,6 +1,6 @@
 // services/menuService.js
-const { buildKeywordQueryFromModels } = require("../../../helperUtils/queryUtil");
-const { generateMeta } = require("../../../helperUtils/responseUtil");
+const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
+const { generateMeta } = require("@utils/responseUtil");
 const Organizations = require("../../organizations/Organization");
 const Menus = require("./Menus");
 const menuRepo = require("./menusRepository");

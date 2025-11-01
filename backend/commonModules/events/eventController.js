@@ -155,27 +155,10 @@ const getEvents = async (req, res) => {
       creator: _id,
       startDate,
       endDate,
-      organization
+      organization,
+      timezone,
     });
-    // Deep clone events to avoid mutating original objects (especially if using Mongoose docs)
-    let formattedEvents = events.map(event => {
-      let formattedEvent = JSON.parse(JSON.stringify(event));
-      if (formattedEvent.schedule && formattedEvent.schedule.startDateTime) {
-        formattedEvent.schedule.startDateTime = convertUtcToTimezone(
-          formattedEvent.schedule.startDateTime,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-      }
-      if (formattedEvent.schedule && formattedEvent.schedule.endDateTime) {
-        formattedEvent.schedule.endDateTime = convertUtcToTimezone(
-          formattedEvent.schedule.endDateTime,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-      }
-      return formattedEvent;
-    });
+
 
     return sendResponse({
       res,
@@ -372,7 +355,7 @@ const getEventDetails = async (req, res) => {
         translationKey: "event_not_found",
       });
     }
-    
+
     return sendResponse({
       res,
       statusCode: 200,

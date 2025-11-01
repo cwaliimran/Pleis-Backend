@@ -6,6 +6,7 @@ const moment = require("moment-timezone");
 const mongoose = require("mongoose");
 const { Events } = require("../../commonModules/events/Event");
 const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
+const { formatEventResponse } = require("../../commonModules/events/formatter/eventFormatter");
 
 
 const getEvents = async (queryData) => {
@@ -153,7 +154,7 @@ const getEvents = async (queryData) => {
     // Format output
     const formattedEvents = events.map((event) => {
 
-      const formattedEvent = new Events(event).toPublicJSON(event);
+      const formattedEvent = formatEventResponse(event, { timezone });
       delete formattedEvent.basicInfo.venueLocation;
       delete formattedEvent.basicInfo.partnerOrganizer;
 

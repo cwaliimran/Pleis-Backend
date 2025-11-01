@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./",
+    "paths": {
+      "@utils/*": [
+        "backend/helperUtils/*"
+      ],
+      "@dbUtils/*": [
+        "backend/helperUtils/dbUtils/*"
+      ],
+      "@getFullImageUrl/*": [
+        "backend/helperUtils/imageHelper/*"
+      ]
+    }
+  },
+  "exclude": [
+    "node_modules"
+  ]
+}
