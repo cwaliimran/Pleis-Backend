@@ -1,11 +1,5 @@
-const { User } = require("../../models/UserModel"); // Assuming this is the User model path
-const moment = require("moment-timezone");
 const {
   sendResponse,
-  parsePaginationParams,
-  generateMeta,
-  getCurrentDateInTimezone,
-  validateParams,
 } = require("../../helperUtils/responseUtil");
 const { getHomeService } = require("./homeService");
 
@@ -13,8 +7,9 @@ const getHome = async (req, res) => {
 
   try {
     const { latitude = 0, longitude = 0, radiusKm = 50 } = req.query;
-    let { timezone } = req.user;
+    let { location: userLocation, timezone } = req.user;
     let queryData = {
+      userLocation,
       timezone: timezone || "Asia/Karachi",
       latitude: parseFloat(latitude),
       longitude: parseFloat(longitude),

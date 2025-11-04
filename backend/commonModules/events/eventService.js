@@ -1,17 +1,16 @@
 // services/eventService.js
 
-const { pipeline } = require("supertest/lib/test");
-const { validateParams, getCurrentDateInTimezone, convertUtcToTimezone, generateMeta } = require("../../helperUtils/responseUtil");
+const { getCurrentDateInTimezone, convertUtcToTimezone, generateMeta } = require("../../helperUtils/responseUtil");
 const Organizations = require("../organizations/Organization");
 const eventRepo = require("./eventRepository");
 const _ = require("lodash");
-const { generate } = require("shortid");
+const { formatEventResponse } = require("./formatter/eventFormatter");
 
 const createEvent = async ({ data }) => {
   return await eventRepo.createEvent(data);
 };
 
-const getEvents = async ({ page, limit, keyword, status, creator, startDate, endDate, organization }) => {
+const getEvents = async ({ page, limit, keyword, status, creator, startDate, endDate, organization, timezone }) => {
   const query = {};
   if (creator) query.creator = creator;
   if (status) {
@@ -40,22 +39,22 @@ const getEvents = async ({ page, limit, keyword, status, creator, startDate, end
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [events, totalFiltered, total, active, inactive] =
+  const [events, eventsCounts] =
     await Promise.all([
       eventRepo.getEventsWithFilters(
         query,
         skip,
         limit === 0 ? 0 : limit
       ),
-      eventRepo.countEvents(query),
-      eventRepo.countEvents({ status: { $ne: "deleted" } }),
-      eventRepo.countEvents({ status: "active" }),
-      eventRepo.countEvents({ status: "inactive" }),
+      eventRepo.getEventsCounts(query),
     ]);
 
+  let { totalFiltered = 0, total = 0, active = 0, inactive = 0 } = eventsCounts || {};
+
+  let formattedEvents = events.map(event => formatEventResponse(event, { timezone }));
 
   return {
-    events,
+    events: formattedEvents,
     meta: {
       page,
       limit,
@@ -93,167 +92,6 @@ const getPublicEvents = async ({ page, limit, keyword, timezone = "Asia/Karachi"
       total: totalFiltered,
     },
   };
-};
-
-const getNearbyEvents = async (queryData) => {
-  let {
-    longitude = 0,
-    latitude = 0,
-    page = 1,
-    limit = 10,
-    timezone = "Asia/Karachi",
-    radiusKm = 0,
-  } = queryData || {};
-
-  // If radiusKm is not provided, use an approximate "whole world" radius
-  // (half Earth's circumference) in kilometers so geoNear covers the globe.
-  const rawRadiusKm = (radiusKm === 0 || radiusKm === undefined || radiusKm === null || radiusKm === '')
-    ? 20037.5
-    : radiusKm;
-
-   radiusKm = parseFloat(rawRadiusKm);
-  longitude = parseFloat(longitude);
-  latitude = parseFloat(latitude);
-  console.log("radiusKm",radiusKm)
-
-  // Validate coordinates
-  if (typeof longitude !== 'number' || typeof latitude !== 'number') {
-    throw new Error('Valid user longitude and latitude are required');
-  }
-
-  if (radiusKm <= 0) {
-    throw new Error('Radius must be greater than 0');
-  }
-
-  const radiusInMeters = radiusKm * 1000;
-  const now = getCurrentDateInTimezone({ timezone });
-  const skip = Math.max(0, (page - 1) * limit);
-
-  try {
-    const pipeline = [
-      {
-        $geoNear: {
-          near: {
-            type: "Point",
-            coordinates: [longitude, latitude],
-          },
-          key: "basicInfo.venueLocation",
-          distanceField: "distance",
-          spherical: true,
-          maxDistance: radiusInMeters,
-          query: {
-            status: "active",
-            "schedule.endDateTime": { $gte: now },
-          },
-        },
-      },
-      // Only keep schedule, basicInfo and distance from the main event document
-      { $project: { schedule: 1, basicInfo: 1, distance: 1 } },
-
-      {
-        $lookup: {
-          from: "venues",
-          localField: "basicInfo.venue",
-          foreignField: "_id",
-          pipeline: [{ $project: { title: 1, location: 1 } }],
-          as: "basicInfo.venue",
-        },
-      },
-      { $unwind: "$basicInfo.venue" },
-
-      {
-        $lookup: {
-          from: "organizations",
-          let: { orgId: "$basicInfo.organization" },
-          pipeline: [
-            { $match: { $expr: { $eq: ["$_id", "$$orgId"] } } },
-            { $project: { basicInfo: 1 } },
-          ],
-          as: "basicInfo.organization",
-        },
-      },
-      { $unwind: { path: "$basicInfo.organization", preserveNullAndEmptyArrays: true } },
-
-      { $sort: { distance: 1 } },
-      { $skip: skip },
-      { $limit: parseInt(limit) },
-    ];
-
-    const events = await eventRepo.aggregateEvents(pipeline);
-
-    // Count total without skip/limit
-    const totalCountPipeline = [
-      {
-        $geoNear: {
-          near: {
-            type: "Point",
-            coordinates: [longitude, latitude],
-          },
-          key: "basicInfo.venueLocation",
-          distanceField: "distance",
-          spherical: true,
-          maxDistance: radiusInMeters,
-          query: {
-            status: "active",
-            "schedule.startDateTime": { $gte: now },
-          },
-        },
-      },
-      { $count: "total" },
-    ];
-
-
-    const totalResult = await eventRepo.aggregateEvents(totalCountPipeline);
-    const totalFiltered = totalResult[0]?.total || 0;
-    // Convert event dates to user's timezone and round distances to 2 decimals
-    const formattedEvents = events.map(event => {
-      let formattedEvent = JSON.parse(JSON.stringify(event));
-      delete formattedEvent.basicInfo.venueLocation;
-      delete formattedEvent.basicInfo.partnerOrganizer;
-
-
-
-      if (formattedEvent.schedule && formattedEvent.schedule.startDateTime) {
-        formattedEvent.schedule.startDateTime = convertUtcToTimezone(
-          formattedEvent.schedule.startDateTime,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-      }
-      if (formattedEvent.schedule && formattedEvent.schedule.endDateTime) {
-        formattedEvent.schedule.endDateTime = convertUtcToTimezone(
-          formattedEvent.schedule.endDateTime,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-      }
-
-      // Round distance to 2 decimal places if present
-      if (formattedEvent.distance !== undefined && formattedEvent.distance !== null) {
-        const dist = Number(formattedEvent.distance);
-        if (Number.isFinite(dist)) {
-          formattedEvent.distance = Math.round(dist * 100) / 100;
-        }
-      }
-
-      //format organization basicInfo only
-      if (formattedEvent.basicInfo && formattedEvent.basicInfo.organization) {
-        let orgData = formattedEvent.basicInfo.organization;
-        delete orgData.basicInfo.socialLinks;
-        formattedEvent.basicInfo.organization = new Organizations().formatResponse(orgData);
-      }
-
-      return formattedEvent;
-    });
-
-    let meta = generateMeta(page, limit, totalFiltered);
-    return {
-      events: formattedEvents,
-      meta
-    };
-  } catch (error) {
-    throw new Error(`Failed to fetch nearby events: ${error.message}`);
-  }
 };
 
 const updateEventsWithVenueLocation = async (venueId, location) => {
@@ -398,8 +236,8 @@ const deleteEvent = async (id) => {
 
 const getEventDetails = async (id, timezone) => {
   const event = await eventRepo.findEventById(id);
-  if (!event) return null;
-  return event;
+  let data = formatEventResponse(event, { timezone });
+  return data
 };
 
 const cloneEvent = async (id) => {
@@ -413,12 +251,16 @@ const cloneEvent = async (id) => {
   return await eventRepo.createEvent(clonedData);
 };
 
+const getEventIdByNanoid = async (nanoid) => {
+  const event = await eventRepo.findEventByNanoid(nanoid);
+  return event ? event._id : null;
+};
 
 module.exports = {
   createEvent,
   getEvents,
+  getEventIdByNanoid,
   cloneEvent,
-  getNearbyEvents,
   updateEvent,
   deleteEvent,
   getPublicEvents,

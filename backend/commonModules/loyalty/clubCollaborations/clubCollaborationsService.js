@@ -1,6 +1,6 @@
 // services/clubCollaborationService.js
-const { buildKeywordQueryFromModels } = require("../../../helperUtils/queryUtil");
-const { generateMeta } = require("../../../helperUtils/responseUtil");
+const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
+const { generateMeta } = require("@utils/responseUtil");
 const ClubCollaborations = require("./ClubCollaborations");
 const clubCollaborationRepo = require("./clubCollaborationsRepository");
 const mongoose = require("mongoose");

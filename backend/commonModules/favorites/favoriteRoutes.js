@@ -2,7 +2,6 @@ const express = require("express");
 const {
   toggleFavorite,
   getUserFavorites,
-  getFavoriteCount,
   isFavorited,
 } = require("../../commonModules/favorites/favoriteController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
@@ -29,13 +28,6 @@ router.post("/toggle", apiRateLimiter, toggleFavorite);
  * @access Authenticated users
  */
 router.get("/", apiRateLimiter, getUserFavorites);
-
-/**
- * @route GET /api/v1/favorites/:targetType/:targetId/count
- * @desc Get favorite count for a specific target
- * @access Public
- */
-router.get("/:targetType/:targetId/count", apiRateLimiter, getFavoriteCount);
 
 /**
  * @route GET /api/v1/favorites/:targetType/:targetId/status

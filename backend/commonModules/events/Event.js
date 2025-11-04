@@ -1,9 +1,15 @@
 const mongoose = require("mongoose");
-const { getFullImageUrl } = require("../../helperUtils/imageHelper");
 const { RecurringEventSchema } = require("./RecurringEventSchema");
+const { nanoid } = require("nanoid");
 
 const eventSchema = new mongoose.Schema(
   {
+    publicId: {
+      type: String,
+      unique: true,
+      index: true,
+      default: () => nanoid(),
+    },
     basicInfo: {
       media: {
         type: {
@@ -130,70 +136,16 @@ const eventSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true, transform: transformDoc },
-    toObject: { virtuals: true, transform: transformDoc },
   }
 );
 
-/**
- * Adds mediaInfo as a virtual inside basicInfo.
- * This ensures the output is: basicInfo: { media: ..., mediaInfo: ... }
- */
-eventSchema.virtual("basicInfo.mediaInfo").get(function () {
-  const media = this.basicInfo?.media || {};
-  return {
-    name: media.name || "",
-    type: media.type || "image",
-    url: getFullImageUrl(media.name),
-  };
-});
-
-// Custom transformation — applies automatically to .toJSON() and .toObject()
-function transformDoc(doc, ret) {
-  // Remove raw image strings if you want to hide them
-  if (ret.basicInfo && ret.basicInfo.media) {
-    delete ret.basicInfo.media;
-  }
-  delete ret.id;
-  return ret;
-}
-
-// provide a named instance method so it's not invoked automatically
-eventSchema.method("toPublicJSON", function (eventData) {
-  let eventObject;
-
-  if (eventData && typeof eventData === "object" && !Array.isArray(eventData)) {
-    // Case 1: explicitly provided plain object
-    eventObject = { ...eventData };
-  } else if (typeof this.toObject === "function") {
-    // Case 2: called on a mongoose doc
-    eventObject = this.toObject({ virtuals: true });
-  } else {
-    // Case 3: fallback if it's already a plain object
-    eventObject = { ...this };
-  }
-
-  // Ensure basicInfo exists
-  if (!eventObject.basicInfo) eventObject.basicInfo = {};
-
-  // Ensure mediaInfo virtual is present when a plain object was provided
-  const media = eventObject.basicInfo.media || {};
-  eventObject.basicInfo.mediaInfo = {
-    name: media.name || "",
-    type: media.type || "image",
-    url: getFullImageUrl(media.name),
-  };
-
-  // Apply the same schema-level transform used by toObject/toJSON
-  // transformDoc signature: function(doc, ret) { ... }
-  // We don't have the original doc here when a plain object was passed, so pass null
-  transformDoc(null, eventObject);
-
-  return eventObject;
-});
-
-//Add geospatial index
+//Add indexes
 eventSchema.index({ "basicInfo.venueLocation": '2dsphere' });
+eventSchema.index({ "basicInfo.organization": 1, status: 1 });
+eventSchema.index({ "basicInfo.venue": 1 });
+eventSchema.index({ "basicInfo.tags": 1 });
+eventSchema.index({ "basicInfo.categories": 1 });
+
 
 const Events = mongoose.model("Event", eventSchema);
 

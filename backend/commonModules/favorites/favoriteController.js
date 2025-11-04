@@ -62,7 +62,7 @@ const toggleFavorite = async (req, res) => {
 const getUserFavorites = async (req, res) => {
     const { page, limit } = parsePaginationParams(req);
     const { targetType } = req.query;
-    const userId = req.user._id;
+    const {_id: userId, location, timezone} = req.user;
 
     try {
         if (
@@ -77,6 +77,8 @@ const getUserFavorites = async (req, res) => {
 
         const { favorites, meta } = await favoriteService.getUserFavorites({
             userId,
+            location,
+            timezone,
             targetType,
             page,
             limit,
@@ -88,45 +90,6 @@ const getUserFavorites = async (req, res) => {
             translationKey: "favorites_fetched_successfully",
             data: favorites,
             meta,
-        });
-    } catch (error) {
-        const readableError = getReadableErrorMessage(error);
-        return sendResponse({
-            res,
-            statusCode: readableError.statusCode,
-            translationKey: readableError.message,
-            error,
-        });
-    }
-};
-
-/**
- * @desc Get favorite count for target
- * @route GET /api/v1/favorites/:targetType/:targetId/count
- * @access Public
- */
-const getFavoriteCount = async (req, res) => {
-    const { targetType, targetId } = req.params;
-
-    if (
-        !validateParams(req, res, {
-            pathParams: ["targetType", "targetId"],
-            objectIdFields: ["targetId"],
-            enumFields: {
-                targetType: ["menu", "trainer", "session", "category"],
-            },
-        })
-    )
-        return;
-
-    try {
-        const count = await favoriteService.getFavoriteCount(targetId, targetType);
-
-        return sendResponse({
-            res,
-            statusCode: 200,
-            translationKey: "favorite_count_fetched_successfully",
-            data: { targetType, targetId, count },
         });
     } catch (error) {
         const readableError = getReadableErrorMessage(error);
@@ -184,6 +147,5 @@ const isFavorited = async (req, res) => {
 module.exports = {
     toggleFavorite,
     getUserFavorites,
-    getFavoriteCount,
     isFavorited,
 };

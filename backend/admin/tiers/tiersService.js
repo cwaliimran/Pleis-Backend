@@ -1,5 +1,5 @@
 // services/tierService.js
-const { buildKeywordQueryFromModels } = require("../../helperUtils/queryUtil");
+const { buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
 const { generateMeta } = require("../../helperUtils/responseUtil");
 const Tiers = require("./Tiers");
 const tierRepo = require("./tiersRepository");
@@ -75,16 +75,11 @@ const getTiers = async ({ page, limit, keyword, status, userId, date }) => {
     Tiers.countDocuments({ status: "inactive", ...(userId && { creator: userId }) })
   ]);
 
-  const formattedTiers = tiers.map(tier => {
-    const tierDoc = new Tiers(tier);
-    return tierDoc.formatResponse ? tierDoc.formatResponse() : tierDoc.toObject();
-  });
-
   const meta = generateMeta(page, limit, totalFiltered);
   meta.tiersCount = { total, active, inactive };
 
   return {
-    tiers: formattedTiers,
+    tiers,
     meta
   };
 };

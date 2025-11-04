@@ -74,7 +74,7 @@ const sendResponse = ({
   if (meta) {
     response.meta = meta;
   }
-  if (process.env.NODE_ENV === "dev") {
+  if (process.env.NODE_ENV === "dev" || process.env.NODE_ENV === "localhost") {
     if (error !== null && error !== undefined) {
       if (error instanceof Error) {
         // Extract important properties from the Error object
@@ -94,6 +94,7 @@ const sendResponse = ({
         // If the error is a primitive value (string, boolean, number, etc.)
         response.error = error;
       }
+      console.log(error)
     }
   }
   // Send the response with the appropriate status code
@@ -469,6 +470,14 @@ const validateParams = (req, res, options = {}) => {
   return true;
 };
 
+/**
+ * Check if a given ID is a valid nanoid (default 21 characters, a-zA-Z0-9, _ and -)
+ */
+function isValidNanoid(id) {
+  const nanoidRegex = /^[A-Za-z0-9_-]{21}$/;
+  return nanoidRegex.test(id);
+}
+
 const extractNestedFields = (obj, fieldPath) => {
   const fields = fieldPath.split(".");
   let value = obj;
@@ -661,6 +670,7 @@ module.exports = {
   generateMeta,
   validateObjectIdsArr,
   validateParams,
+  isValidNanoid,
   exampleMiddleware,
   convertUtcToTimezone,
   convertTimezoneToUtc,

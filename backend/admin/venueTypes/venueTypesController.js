@@ -113,7 +113,7 @@ const getPublicVenueTypes = async (req, res) => {
 
 const updateVenueType = async (req, res) => {
   const { id } = req.params;
-  const { title, status } = req.body;
+  const { image, title, status } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -125,6 +125,7 @@ const updateVenueType = async (req, res) => {
 
   try {
     const updated = await venuetypesService.updateVenueType(id, {
+      image,
       title,
       status,
     });

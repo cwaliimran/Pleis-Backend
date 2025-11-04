@@ -2017,7 +2017,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}home/?latitude=31.5023621&longitude=74.426454",
+									"raw": "{{url}}home/",
 									"host": [
 										"{{url}}home"
 									],
@@ -2027,11 +2027,13 @@
 									"query": [
 										{
 											"key": "latitude",
-											"value": "31.5023621"
+											"value": "31.5023621",
+											"disabled": true
 										},
 										{
 											"key": "longitude",
-											"value": "74.426454"
+											"value": "74.426454",
+											"disabled": true
 										},
 										{
 											"key": "radiusKm",
@@ -2151,7 +2153,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}events/nearby/?page=1&limit=10&latitude=31.5023621&longitude=74.426454",
+									"raw": "{{url}}events/nearby/?page=1&limit=10&latitude=31.5023621&longitude=74.426454&radiusKm=1000000",
 									"host": [
 										"{{url}}events"
 									],
@@ -2175,6 +2177,71 @@
 										{
 											"key": "longitude",
 											"value": "74.426454"
+										},
+										{
+											"key": "radiusKm",
+											"value": "1000000",
+											"description": "km"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get details",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}events/:id/",
+									"host": [
+										"{{url}}events"
+									],
+									"path": [
+										":id",
+										""
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "68ff18ed8cd2d2f52b25be1a"
 										}
 									]
 								}
@@ -2373,11 +2440,12 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}maps/?page=1&limit=10",
+									"raw": "{{url}}app/maps/?page=1&limit=10",
 									"host": [
-										"{{url}}maps"
+										"{{url}}app"
 									],
 									"path": [
+										"maps",
 										""
 									],
 									"query": [
@@ -2430,7 +2498,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"category\": \"68d668f59a1bf2d8cd50a220\", //optional\n    \"filter\": {\n        \"type\": \"places\" //events, places, all\n        ,\"key\": \"openNow\" //\"\",openNow, topRated, trending\n    },\n    \"latitude\": 31.5023621,\n    \"longitude\": 74.426454\n}",
+									"raw": "{\n    // \"category\": \"68ee3310924370d02dbacc41\", //optional\n    \"filter\": {\n        \"type\": \"places\" //events, places, all\n        // ,\"key\": \"openNow\" //\"\",openNow, topRated, trending\n    },\n    \"latitude\": 31.5023621,\n    \"longitude\": 74.426454\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -2438,11 +2506,12 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}maps/?page=1&limit=10",
+									"raw": "{{url}}app/maps/?page=1&limit=10",
 									"host": [
-										"{{url}}maps"
+										"{{url}}app"
 									],
 									"path": [
+										"maps",
 										""
 									],
 									"query": [
@@ -2503,11 +2572,12 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}maps/?page=1&limit=10",
+									"raw": "{{url}}app/maps/?page=1&limit=10",
 									"host": [
-										"{{url}}maps"
+										"{{url}}app"
 									],
 									"path": [
+										"maps",
 										""
 									],
 									"query": [
@@ -2526,6 +2596,184 @@
 										}
 									]
 								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Organization Profile",
+					"item": [
+						{
+							"name": "get profile",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/organizations/:id?filter=upcoming",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"organizations",
+										":id"
+									],
+									"query": [
+										{
+											"key": "filter",
+											"value": "upcoming",
+											"description": "upcoming, past"
+										}
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "68ff50e556462446dedae1ed"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Favorites",
+					"item": [
+						{
+							"name": "get",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{url}}app/favorites",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"favorites"
+									],
+									"query": [
+										{
+											"key": "targetType",
+											"value": "organization",
+											"description": "event, organization",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "add",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"targetId\": \"69005ee107c29bc8fee4324d\",\n  \"targetType\": \"organization\" // event, organization\n}\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/favorites/toggle",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"favorites",
+										"toggle"
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
 							},
 							"response": []
 						}
@@ -9330,7 +9578,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -9340,7 +9589,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -9360,11 +9610,12 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}organizations/?page=1&limit=10",
+									"raw": "{{url}}admin/organizations/?page=1&limit=10",
 									"host": [
-										"{{url}}organizations"
+										"{{url}}admin"
 									],
 									"path": [
+										"organizations",
 										""
 									],
 									"query": [
@@ -9920,7 +10171,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"type\": \"image\",\n            \"name\": \"event-banner.jpg\"\n        },\n        \"title\": \"Monday Fun day\",\n        \"description\": \"A fun-filled day of live music and food.\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"venue\": \"68ee4c95a0e89aae25bd1eca\",\n        \"categories\": [\"68f0d6b0a92f125fd26a5831\",\"68c028637c376b15157d9ecc\"],\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"6883208feec25d5f951a8c74\"\n        ]\n    },\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-10-27 10:00 AM\",\n        \"endDateTime\": \"2025-10-27 05:00 PM\"\n\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n\n        /*Ending on specific date*/\n        // ,\n        // \"recurringDetails\": {\n        //   \"isEnabled\": true,\n        //   \"frequency\": \"weekly\",\n        //   \"interval\": 1,\n        //   \"daysOfWeek\": [\"fri\"],\n        //   \"endType\": \"onDate\",\n        //   \"endDate\": \"2025-12-31T00:00:00.000Z\"\n        // }\n        \n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    }\n}",
+									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"type\": \"image\",\n            \"name\": \"event-banner.jpg\"\n        },\n        \"title\": \"Monday Fun day\",\n        \"description\": \"A fun-filled day of live music and food.\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"venue\": \"68f6250cba6361cef113b79c\",\n        \"categories\": [\"68f0d6b0a92f125fd26a5831\",\"68c028637c376b15157d9ecc\"],\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"6883208feec25d5f951a8c74\"\n        ]\n    },\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-10-27 10:00 AM\",\n        \"endDateTime\": \"2025-10-27 05:00 PM\"\n\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n\n        /*Ending on specific date*/\n        // ,\n        // \"recurringDetails\": {\n        //   \"isEnabled\": true,\n        //   \"frequency\": \"weekly\",\n        //   \"interval\": 1,\n        //   \"daysOfWeek\": [\"fri\"],\n        //   \"endType\": \"onDate\",\n        //   \"endDate\": \"2025-12-31T00:00:00.000Z\"\n        // }\n        \n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -10670,65 +10921,6 @@
 									]
 								},
 								{
-									"name": "get details",
-									"event": [
-										{
-											"listen": "test",
-											"script": {
-												"exec": [
-													""
-												],
-												"type": "text/javascript",
-												"packages": {},
-												"requests": {}
-											}
-										},
-										{
-											"listen": "prerequest",
-											"script": {
-												"exec": [
-													""
-												],
-												"type": "text/javascript",
-												"packages": {},
-												"requests": {}
-											}
-										}
-									],
-									"protocolProfileBehavior": {
-										"disableBodyPruning": true
-									},
-									"request": {
-										"method": "GET",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "{{url}}menu/:id",
-											"host": [
-												"{{url}}menu"
-											],
-											"path": [
-												":id"
-											],
-											"variable": [
-												{
-													"key": "id",
-													"value": "68de726e80b634b07eade829"
-												}
-											]
-										}
-									},
-									"response": []
-								},
-								{
 									"name": "add",
 									"event": [
 										{
@@ -10759,7 +10951,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Lunch Menu\",\n  \"description\": \"Special lunch menu with vegan options\",\n  \"venue\": \"68d69359fbccb319035eb13b\",\n  \"status\": \"active\"\n}\n",
+											"raw": "{\n  \"title\": \"Main Course Menu\",\n  \"description\": \"Special lunch menu with vegan options\",\n  \"organization\": \"69005ee107c29bc8fee4324d\",\n  \"status\": \"active\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -10875,7 +11067,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"venue\": \"68de734580b634b07eade84c\"\n}\n",
+											"raw": "{\n  \"organization\": \"68de734580b634b07eade84c\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -10933,7 +11125,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Lunch Menu\",\n  \"description\": \"Special lunch menu with vegan options\",\n  \"venue\": \"68d69359fbccb319035eb13b\",\n  \"status\": \"active\"\n}\n",
+											"raw": "{\n  \"title\": \"Lunch Menu\",\n  \"description\": \"Special lunch menu with vegan options\",\n  \"organization\": \"68d69359fbccb319035eb13b\",\n  \"status\": \"active\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -11422,7 +11614,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}menu/items",
+											"raw": "{{url}}menu/items?menu=6902f666260e5bb7dec7e6e9",
 											"host": [
 												"{{url}}menu"
 											],
@@ -11432,8 +11624,7 @@
 											"query": [
 												{
 													"key": "menu",
-													"value": "68de726e80b634b07eade829",
-													"disabled": true
+													"value": "6902f666260e5bb7dec7e6e9"
 												},
 												{
 													"key": "keyword",
@@ -11559,7 +11750,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"image\": \"burger.png\",\n  \"title\": \"Cheese Burger\",\n  \"description\": \"A delicious cheeseburger with lettuce, tomato, and fries.\",\n  \"type\": \"food\",\n  \"category\": \"68d699f66513527e7a236563\",\n  \"basePrice\": 10.99,\n  \"discountPrice\": 8.99,\n  \"taxPercent\": 5,\n  \"menu\": \"68de726e80b634b07eade829\",\n  \"startTime\": \"10:30 AM\",\n  \"endTime\": \"05:30 PM\",\n  \"status\": \"active\"\n}\n",
+											"raw": "{\n  \"image\": \"burger.png\",\n  \"title\": \"Cheese Burger\",\n  \"description\": \"A delicious cheeseburger with lettuce, tomato, and fries.\",\n  \"type\": \"food\",\n  \"category\": \"68de25760f668c9ac12f6a8f\",\n  \"basePrice\": 10.99,\n  \"discountPrice\": 8.99,\n  \"taxPercent\": 5,\n  \"menu\": \"6902f666260e5bb7dec7e6e9\",\n  \"startTime\": \"10:30 AM\",\n  \"endTime\": \"05:30 PM\",\n  \"status\": \"active\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -17493,7 +17684,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Spring Sale\",\n  \"image\": \"spring_sale_banner.jpg\",\n  \"type\": \"Event\", //\"Organizer\", \"Event\", \"LoyaltyProgram\"\n  \"object\": \"68de33b7bcddb74bfc2d9dd8\"\n}",
+											"raw": "{\n  \"title\": \"Happy moments\",\n  \"image\": \"drink.jpg\",\n  \"type\": \"Event\", //\"Organizer\", \"Event\", \"LoyaltyProgram\"\n  \"object\": \"68ff17cddd0a29b4afa90af4\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -17622,7 +17813,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": ""
+													"value": "6901b7a9cfd3a588f34894e2"
 												}
 											]
 										},
@@ -18979,6 +19170,62 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Swagger",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:4012/api-docs/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "4012",
+					"path": [
+						"api-docs",
+						""
+					]
+				}
+			},
+			"response": []
 		}
 	],
 	"auth": {

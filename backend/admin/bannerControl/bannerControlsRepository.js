@@ -1,77 +1,36 @@
+
+const { getWithFilters, getModelCounts, createWithAutoOrder } = require('@dbUtils/queryUtil');
+
 const BannerControls = require("./BannerControls");
 
-// Create
-// Create bannerControls and automatically assign next order
-const createBannerControls = async (data) => {
-  // Find the highest current order (excluding deleted)
-  const last = await BannerControls.findOne({ status: { $ne: "deleted" } })
-    .sort({ order: -1 })
-    .select("order");
+/**
+ * Create new BannerControls (auto order)
+ */
+const createBannerControls = async (data) => createWithAutoOrder({ model: BannerControls, data, orderField: "order" });
 
-  const nextOrder = last ? last.order + 1 : 1;
+/**
+ * Fetch BannerControls with dynamic population depending on the `type` field.
+ */
 
-  const bannerControls = new BannerControls({
-    ...data,
-    order: nextOrder,
-  });
+async function getBannerControlsWithFilters(filter, page = 1, limit = 10, sort = { order: 1 }) {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  return BannerControls.find(filter)
+    .sort(sort)
+    .skip(skip)
+    .limit(limit)
+}
 
-  return await bannerControls.save();
-};
 
-// Get all with filters, sorted by 'order' ascending and then 'createdAt' descending
-const getBannerControlsWithFilters = async (filter, skip, limit, sort = { order: 1 }) => {
-  const query = BannerControls.find(filter).sort(sort).populate('objectModel');
-  if (limit > 0) query.skip(skip).limit(limit);
-  return query.exec();
-};
+const getBannerControlsCounts = async (query) => {
+  return getModelCounts({ model: BannerControls, filterQuery: query });
+}
+
 
 // Count by condition
 const countBannerControls = async (query = {}) => {
-  return BannerControls.countDocuments(query);
+  return BannerControls.countDocuments({ ...query });
 };
 
-// Single efficient helper
-const getBannerControlsCounts = async (filterQuery = {}) => {
-  const [filteredCount, globalCounts] = await Promise.all([
-    // count only filtered set (dynamic filters)
-    BannerControls.countDocuments(filterQuery),
-
-    // facet for global status-based counts
-    BannerControls.aggregate([
-      {
-        $facet: {
-          total: [
-            { $match: { status: { $ne: "deleted" } } },
-            { $count: "count" },
-          ],
-          active: [
-            { $match: { status: "active" } },
-            { $count: "count" },
-          ],
-          inactive: [
-            { $match: { status: "inactive" } },
-            { $count: "count" },
-          ],
-        },
-      },
-      {
-        $project: {
-          total: { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
-          active: { $ifNull: [{ $arrayElemAt: ["$active.count", 0] }, 0] },
-          inactive: { $ifNull: [{ $arrayElemAt: ["$inactive.count", 0] }, 0] },
-        },
-      },
-    ]),
-  ]);
-
-  const counts = globalCounts[0] || {};
-  return {
-    totalFiltered: filteredCount || 0,
-    total: counts.total || 0,
-    active: counts.active || 0,
-    inactive: counts.inactive || 0,
-  };
-};
 
 // Find by ID
 const findBannerControlsById = async (id) => {
@@ -116,11 +75,11 @@ module.exports = {
   createBannerControls,
   getBannerControlsWithFilters,
   countBannerControls,
-  getBannerControlsCounts,
   findBannerControlsById,
   updateBannerControlsData,
   deleteBannerControlsById,
   findByIdAndUpdate,
   updateMany,
   normalizeOrders,
+  getBannerControlsCounts,
 };

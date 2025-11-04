@@ -3,6 +3,9 @@ const Organizations = require("../../commonModules/organizations/Organization");
 const Menus = require("../menuManagement/menu/Menus");
 const { Events } = require("../events/Event");
 const { generateMeta } = require("../../helperUtils/responseUtil");
+const { formatOrganization } = require("../organizations/formatter/formatOrganization");
+const { formatEventResponse } = require("../events/formatter/eventFormatter");
+const { formatFavoritesEventResponse, formatFavoritesOrganization } = require("./formatter/favoritesFormatter");
 
 /**
  * Maps target types to their corresponding Mongoose models.
@@ -20,8 +23,7 @@ const MODEL_MAP = {
  */
 const toggleFavorite = async (userId, targetId, targetType) => {
   const result = await favoriteRepo.toggleFavorite(userId, targetId, targetType);
-  const count = await favoriteRepo.countFavorites(targetId, targetType);
-
+  const count = await favoriteRepo.countFavorites({ targetType });
   // Update meta.favoritesCount in the appropriate model
   const Model = MODEL_MAP[targetType];
   if (Model) {
@@ -30,7 +32,6 @@ const toggleFavorite = async (userId, targetId, targetType) => {
 
   return {
     isFavorited: result.isFavorited,
-    favoritesCount: count,
   };
 };
 
@@ -45,27 +46,72 @@ const isFavorited = async (userId, targetId, targetType) => {
  * Count total favorites for a target
  */
 const getFavoriteCount = async (targetId, targetType) => {
-  return await favoriteRepo.countFavorites(targetId, targetType);
+  return await favoriteRepo.countFavorites({ targetId, targetType });
 };
 
 /**
  * Get a paginated list of user's favorites
  */
-const getUserFavorites = async ({ userId, targetType, page = 1, limit = 20 }) => {
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
+const getUserFavorites = async ({ userId, location, timezone, targetType, page = 1, limit = 20 }) => {
+  let favorites, counts;
 
-  const favorites = await favoriteRepo.getUserFavorites(
-    userId,
-    targetType,
-    skip,
-    limit
-  );
+  if (targetType) {
+    // Single targetType: get favorites and count as before
+    [favorites, counts] = await Promise.all([
+      favoriteRepo.getUserFavorites(
+        userId,
+        targetType,
+        page,
+        limit
+      ),
+      favoriteRepo.countFavorites({ user: userId, targetType }),
+    ]);
 
-  const total = favorites.length; // optionally replace with count if needed
-  const totalPages =
-    limit && total != null ? Math.ceil(total / limit) : 1;
+    favorites = favorites?.map((fav) => {
+      let formattedObject;
+      if (fav.targetType === 'organization') {
+        formattedObject = formatFavoritesOrganization(fav.object);
+      } else if (fav.targetType === 'event') {
+        formattedObject = formatFavoritesEventResponse(fav.object, { userLocation: location, timezone });
+      } else if (fav.targetType === 'menu') {
+        formattedObject = fav.object; // Add menu formatting if needed
+      } else {
+        formattedObject = fav.object;
+      }
+      return {
+        ...fav.toObject?.() || fav,
+        object: formattedObject,
+      };
+    });
+  } else {
+    // No targetType: get both events and organizations, each with their own limit
+    const [events, organizations] = await Promise.all([
+      favoriteRepo.getUserFavorites(userId, 'event', page, 10),
+      favoriteRepo.getUserFavorites(userId, 'organization', page, 10),
+    ]);
+    const [eventCount, orgCount] = await Promise.all([
+      favoriteRepo.countFavorites({ user: userId, targetType: 'event' }),
+      favoriteRepo.countFavorites({ user: userId, targetType: 'organization' }),
+    ]);
 
-  const meta = generateMeta(page, limit, total);
+    favorites = {
+      events: events?.map((fav) => ({
+        ...fav.toObject?.() || fav,
+        object: formatFavoritesEventResponse(fav.object, { userLocation: location, timezone }),
+      })),
+      organizations: organizations?.map((fav) => ({
+        ...fav.toObject?.() || fav,
+        object: formatFavoritesOrganization(fav.object),
+      })),
+    };
+    counts = {
+      events: eventCount,
+      organizations: orgCount,
+    };
+  }
+
+
+  const meta = generateMeta(page, limit, counts);
 
   return { favorites, meta };
 };

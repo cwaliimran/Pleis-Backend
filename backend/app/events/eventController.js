@@ -1,0 +1,111 @@
+const { isFavorited } = require("../../commonModules/favorites/favoriteService");
+const {
+  sendResponse,
+  parsePaginationParams,
+  validateParams,
+  isValidNanoid,
+} = require("../../helperUtils/responseUtil");
+
+const eventService = require("./eventService");
+
+
+const getNearbyEvents = async (req, res) => {
+  const { latitude, longitude, radiusKm = 50 } = req.query;
+  const { page, limit } = parsePaginationParams(req);
+  let { timezone } = req.user;
+
+  let queryData = {
+    latitude,
+    longitude,
+    radiusKm,
+    page,
+    limit,
+    timezone,
+  };
+
+  if (!validateParams(req, res, {
+    queryParams: ["latitude", "longitude"],
+  })) return;
+
+  try {
+    const { events, meta } = await eventService.getNearbyEvents(queryData);
+    //check if events is empty
+    if (!events || events.length === 0) {
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "nearby_events_fetched_successfully",
+        data: [],
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "nearby_events_fetched_successfully",
+      data: events,
+      meta
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+}
+
+
+
+const getEventDetails = async (req, res) => {
+  let { id } = req.params;
+  let { timezone, _id: userId, location: userLocation } = req.user;
+  // Accept both nanoid and ObjectId for event id
+  if (
+    (!isValidNanoid(id) && !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    }))
+  ) return;
+
+  if (isValidNanoid(id)) {
+    // If nanoid, resolve to ObjectId
+    id = await eventService.getEventIdByNanoid(id);
+  }
+
+
+  try {
+    let [data, isFavoriteEvent = false] = await Promise.all([
+      eventService.getEventDetails(userLocation, userId, id, timezone),
+      isFavorited(userId, id, 'event'),
+    ]);
+    if (!data.event) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "event_not_found",
+      });
+    }
+    data.event.isFavorite = isFavoriteEvent;
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "event_details_fetched_successfully",
+      data,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+
+module.exports = {
+  getEventDetails,
+  getNearbyEvents,
+};

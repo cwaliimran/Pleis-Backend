@@ -5,6 +5,7 @@ const Menus = require("../../commonModules/menuManagement/menu/Menus");
 const Organizations = require("../../commonModules/organizations/Organization");
 const mongoose = require("mongoose");
 const Venues = require("../../commonModules/venues/Venues");
+const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
 /**
  * Fetch one organization by ID (populated)
  */
@@ -151,7 +152,6 @@ const getOrganizationMenuWithItems = async (organizationId) => {
               basePrice: 1,
               discountPrice: 1,
               taxPercent: 1,
-              imageInfo: 1,
             },
           },
         ],
@@ -258,7 +258,6 @@ const getRecommendedOrganizations = async (organizationId, options = {}) => {
         _id: 1,
         "basicInfo.name": 1,
         "basicInfo.media": 1,
-        "basicInfo.mediaInfo": 1,
         "otherInfo.description": 1,
         "otherInfo.categories": 1,
         "otherInfo.tags": 1,
@@ -267,7 +266,7 @@ const getRecommendedOrganizations = async (organizationId, options = {}) => {
     },
   ]);
 
-  return result.map((org) => new Organizations(org).formatResponse(org));
+  return result.map((org) => formatOrganization(org));
 };
 
 /**

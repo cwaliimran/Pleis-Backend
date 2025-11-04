@@ -1,7 +1,7 @@
-const { buildKeywordQueryFromModels } = require("../../../helperUtils/queryUtil");
+const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
 const repository = require("./rewardsRepository");
 const mongoose = require("mongoose");
-const { generateMeta } = require("../../../helperUtils/responseUtil");
+const { generateMeta } = require("@utils/responseUtil");
 const formatData = require("./utils/formatReward");
 const { Reward } = require("./models");
 

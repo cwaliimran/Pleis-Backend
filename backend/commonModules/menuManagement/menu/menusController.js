@@ -4,7 +4,7 @@ const {
   validateParams,
   generateMeta,
   getReadableErrorMessage,
-} = require("../../../helperUtils/responseUtil");
+} = require("@utils/responseUtil");
 
 const menusService = require("./menusService");
 

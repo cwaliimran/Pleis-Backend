@@ -4,7 +4,7 @@ const {
   validateParams,
   getReadableErrorMessage,
   convertTimezoneToUtc,
-} = require("../../../helperUtils/responseUtil");
+} = require("@utils/responseUtil");
 
 const service = require("./promotionsService");
 

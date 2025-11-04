@@ -10,7 +10,7 @@ const bannerControlsService = require("./bannerControlsService");
 const createBannerControls = async (req, res) => {
   const { status = "active", type, object, title, image } = req.body;
 
-  if (!validateParams(req, res, { rawData: ["type", "object"], enumFields: { type: ["Organizer", "Event", "LoyaltyProgram"] } })) return;
+  if (!validateParams(req, res, { rawData: ["type", "object"], enumFields: { type: ["Organizer", "Event", "LoyaltyProgram", "Other"] } })) return;
 
   try {
     const existing = await bannerControlsService.countItemsByFilter({ object, status: { $ne: "deleted" } });
@@ -67,15 +67,11 @@ const getBannerControls = async (req, res) => {
       orderSort
     });
 
-    const populatedBannerControls = await Promise.all(bannerControls.map(async (content) => {
-      return await content.populate('object');
-    }));
-
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "banner_controls_fetched_successfully",
-      data: populatedBannerControls,
+      data: bannerControls,
       meta
     });
   } catch (error) {

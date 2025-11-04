@@ -3,12 +3,24 @@ global.logger = require("../backend/helperUtils/logger");
 
 const express = require("express");
 const morgan = require("morgan");
-const cors = require("cors");
+
+// --- Load aliases dynamically from config ---
+const path = require("path");
+const moduleAlias = require("module-alias");
+const aliases = require("../aliasConfig/pathAliases.config");
+
+for (const [alias, target] of Object.entries(aliases)) {
+  moduleAlias.addAlias(alias, path.join(__dirname, "..", target));
+}
+
+require('module-alias/register');
+
 
 const { i18nConfig } = require("./config/i18nConfig");
 const { loggerMiddleware } = require("./middlewares/logger");
 const routes = require("./routes");
 const adminRoutes = require("./admin/routes");
+const appRoutes = require("./routes/appRoutes");
 const { sendResponse } = require("./helperUtils/responseUtil");
 const connectToDB = require("./helperUtils/server-setup");
 const { backupMongoDB } = require("./helperUtils/dataBaseBackup.js");
@@ -21,14 +33,17 @@ const swaggerFile = require('../swagger/swagger_output.json');
 // Express app
 const app = express();
 
+app.set("trust proxy", 1); // trust first proxy to get correct IP in req.ip
 
 // ================== Security Middleware ================== //
-/* const allowedOrigins = [
+const allowedOrigins = [
   "https://pleis.com",
   "https://www.pleis.com",
   "https://dev.pleis.com",
   "https://www.dev.pleis.com",
   "http://localhost:4003",
+  "https://shipping-profession-merge-double.trycloudflare.com/",
+  "http://192.168.15.141:4003",
 ];
 securityMiddleware(app, {
   allowedOrigins,
@@ -37,7 +52,7 @@ securityMiddleware(app, {
   rateLimitWindow: 15 * 60 * 1000, // 15 minutes
   rateLimitMax: 200, // max requests per window
 });
- */
+
 
 app.use(i18nConfig.init);
 app.use(loggerMiddleware);
@@ -49,9 +64,13 @@ app.use(express.json());
 
 
 // Routes
-app.use("/api/v1", routes);
 // Admin routes
 app.use("/api/v1/admin", adminRoutes);
+
+//app routes
+app.use("/api/v1/app", appRoutes);
+
+app.use("/api/v1", routes);
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
 

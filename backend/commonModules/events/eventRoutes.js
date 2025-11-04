@@ -6,7 +6,6 @@ const {
   deleteEvent,
   getEventDetails,
   cloneEvent,
-  getNearbyEvents,
 } = require("./eventController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -24,9 +23,6 @@ router.post("/", roleMiddleware(["organizer", "admin", "manager"]), createEvent)
 
 // Get all events with pagination
 router.get("/", apiRateLimiter, getEvents);
-
-// Get nearby events
-router.get("/nearby", getNearbyEvents);
 
 //get event details
 router.get("/:id", getEventDetails);

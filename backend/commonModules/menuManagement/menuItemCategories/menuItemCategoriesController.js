@@ -3,7 +3,7 @@ const {
   parsePaginationParams,
   validateParams,
   getReadableErrorMessage,
-} = require("../../../helperUtils/responseUtil");
+} = require("@utils/responseUtil");
 
 const categoriesService = require("./menuItemCategoriesService");
 

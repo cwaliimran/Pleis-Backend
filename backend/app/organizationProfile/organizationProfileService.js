@@ -9,6 +9,9 @@ const { calculateDistance } = require("../../helperUtils/calculateDistance");
 const Menus = require("../../commonModules/menuManagement/menu/Menus");
 const MenuItems = require("../../commonModules/menuManagement/menuItems/MenuItems");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
+const { formatMenuItem } = require("../../commonModules/menuManagement/menuItems/formatter/formatMenuItems");
+const { formatEventResponse } = require("../../commonModules/events/formatter/eventFormatter");
+const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
 
 
 
@@ -23,7 +26,7 @@ const getOrganizationProfile = async (queryData) => {
       findOrganizationById(userId, organizationId),
       getOrganizationEvents({ organizationId, filter, timezone, userLocation: queryData.userLocation, userId }), //filter: "upcoming" or "past"
       getOrganizationReservations(organizationId),
-      getOrganizationMenu(organizationId),
+      getOrganizationMenu(organizationId, timezone),
       getOrganizationLoyaltyPrograms(organizationId),
       getOrganizationReviews(organizationId),
       getSimilarOrganizations(organizationId),
@@ -34,7 +37,7 @@ const getOrganizationProfile = async (queryData) => {
     }
 
     // Use schema helper for formatting
-    let orgProfileInfo = orgProfile.org.formatResponse();
+    let orgProfileInfo = formatOrganization(orgProfile.org);
     orgProfileInfo.isFavorite = orgProfile.isFavorite;
     orgProfileInfo.venue = orgProfile.orgVenue;
     delete orgProfileInfo?.venue?.floorPlan
@@ -91,24 +94,7 @@ const getOrganizationEvents = async (queryData) => {
     }
     // Format events
     const formatted = events.map((event) => {
-      console.log("event")
-      const formattedEvent = new Events(event).toPublicJSON();
-
-      // Convert times to timezone
-      if (formattedEvent.schedule?.startDateTime) {
-        formattedEvent.schedule.startDateTime = convertUtcToTimezone(
-          formattedEvent.schedule.startDateTime,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-      }
-      if (formattedEvent.schedule?.endDateTime) {
-        formattedEvent.schedule.endDateTime = convertUtcToTimezone(
-          formattedEvent.schedule.endDateTime,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-      }
+      const formattedEvent = formatEventResponse(event, { timezone });
 
       // Calculate distance
       if (event.basicInfo?.venue?.location?.coordinates && userLocation?.coordinates) {
@@ -150,11 +136,11 @@ const getOrganizationReservations = async (organizationId) => {
   return [];
 };
 
-const getOrganizationMenu = async (organizationId) => {
+const getOrganizationMenu = async (organizationId, timezone) => {
   let result = await getOrganizationMenuWithItems(organizationId);
   const formatted = result.map(menu => ({
     ...menu,
-    items: menu.items.map(item => MenuItems.formatResponse(item)),
+    items: menu.items.map(item => formatMenuItem(item, timezone)),
   }));
   return formatted || [];
 };

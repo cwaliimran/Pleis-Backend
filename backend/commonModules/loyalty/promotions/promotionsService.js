@@ -1,8 +1,8 @@
-const { buildKeywordQueryFromModels } = require("../../../helperUtils/queryUtil");
+const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
 const { Promotion } = require("./models/Promotion");
 const repository = require("./promotionsRepository");
 const mongoose = require("mongoose");
-const { generateMeta } = require("../../../helperUtils/responseUtil");
+const { generateMeta } = require("@utils/responseUtil");
 const formatPromotion = require("./utils/formatPromotion");
 
 const create = async (data) => {

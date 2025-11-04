@@ -1,5 +1,5 @@
 // controllers/bulkInsertController.js
-const { bulkInsert, deleteCollection } = require("../helperUtils/dbUtils");
+const { bulkInsert, deleteCollection } = require("../helperUtils/dbUtils/bulkOperationUtil");
 const { sendResponse } = require("../helperUtils/responseUtil");
 
 // Controller function to handle bulk insertion

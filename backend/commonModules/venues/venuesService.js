@@ -1,6 +1,7 @@
 // services/venueService.js
-const { buildKeywordQueryFromModel, buildKeywordQueryFromModels } = require("../../helperUtils/queryUtil");
+const { buildKeywordQueryFromModel, buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
 const { generateMeta } = require("../../helperUtils/responseUtil");
+const { formatOrganization } = require("../organizations/formatter/formatOrganization");
 const Organizations = require("../organizations/Organization");
 const Venues = require("./Venues");
 const venueRepo = require("./venuesRepository");
@@ -118,7 +119,7 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
     const formattedVenue = venueDoc.formatResponse();
 
     if (venue.organizationData) {
-      formattedVenue.organization = Organizations.prototype.formatResponse(venue.organizationData);
+      formattedVenue.organization = formatOrganization(venue.organizationData);
     }
 
     return formattedVenue;

@@ -1,7 +1,6 @@
 // repositories/eventRepository.js
-const { create } = require("lodash");
 const { Events } = require("./Event");
-
+const { getModelCounts, } = require('@dbUtils/queryUtil');
 // Create
 const createEvent = async (data) => {
   const event = new Events(data);
@@ -19,6 +18,12 @@ const getEventsWithFilters = async (query, skip, limit) => {
     .skip(skip)
     .limit(limit);
 };
+
+
+
+const getEventsCounts = async (query) => {
+  return getModelCounts({ model: Events, filterQuery: query });
+}
 
 // Count by condition
 const countEvents = async (query = {}) => {
@@ -68,6 +73,9 @@ const updateMany = async (filter, update) => {
   return Events.updateMany(filter, update);
 };
 
+const findEventByNanoid = async (nanoid) => {
+  return Events.findOne({ publicId: nanoid }).select("_id");
+}
 
 module.exports = {
   createEvent,
@@ -78,4 +86,6 @@ module.exports = {
   deleteEventById,
   findByIdAndUpdate,
   updateMany,
+  findEventByNanoid,
+  getEventsCounts
 };
