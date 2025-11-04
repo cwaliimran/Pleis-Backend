@@ -37,9 +37,6 @@ router.use("/menu", require("./menuRoutes"));
 //loyalty
 router.use("/loyalty", require("./loyaltyRoutes"));
 
-//admin routes
-router.use("/admin", require("./adminRoutes"));
-
 //helper route for generating shareable links
 router.use("/share", require("./shareRoute"));
 

@@ -16,6 +16,7 @@ const getMapsData = async (req, res) => {
     requestData.page = page;
     requestData.limit = limit;
     requestData.timezone = req.user.timezone || "Asia/Karachi";
+    requestData.userId = req.user._id;
 
     let keysEnum = []
     if (requestData?.filter?.type === "events") {

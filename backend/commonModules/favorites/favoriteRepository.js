@@ -1,5 +1,5 @@
-const mongoose = require("mongoose");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
+const { getWithFilters } = require('@dbUtils/queryUtil');
 
 /**
  * Toggle favorite for a user and target
@@ -30,22 +30,87 @@ const isFavorited = async (userId, targetId, targetType) => {
 /**
  * Count total favorites for a target
  */
-const countFavorites = async (targetId, targetType) => {
-    return Favorites.countDocuments({ targetId, targetType });
+const countFavorites = async (filter) => {
+    return Favorites.countDocuments(filter);
 };
 
-/**
- * Get all favorites of a user (optional pagination)
- */
-const getUserFavorites = async (userId, targetType, skip = 0, limit = 10) => {
-    const filter = { user: userId };
-    if (targetType) filter.targetType = targetType;
+const getUserFavorites = async (userId, targetType, page, limit) => {
+    let filter = { user: userId };
+    if (targetType) {
+        filter.targetType = targetType;
+        let filtered = getWithFilters({
+            model: Favorites,
+            query: filter,
+            refPath: "targetType",
+            localField: "targetId",
+            refLookups,
+            options: { page, limit },
+        });
+        return filtered;
+    } else {
+        //return 10 
+        let events = getWithFilters({
+            model: Favorites,
+            query: { targetType: 'event' },
+            refPath: "targetType",
+            localField: "targetId",
+            refLookups,
+            options: { page, limit: 10 },
+        });
+        let organizations = getWithFilters({
+            model: Favorites,
+            query: { targetType: 'organization' },
+            refPath: "targetType",
+            localField: "targetId",
+            refLookups,
+            options: { page, limit: 10 },
+        });
+        return {
+            events,
+            organizations,
+        }
+    }
 
-    return Favorites.find(filter)
-        .skip(skip)
-        .limit(limit)
-        .sort({ createdAt: -1 });
 };
+
+const refLookups = {
+    event: {
+        from: "events",
+        project: { "basicInfo.title": 1, "basicInfo.media": 1, "basicInfo.organization": 1, "basicInfo.venueLocation": 1, schedule: 1 },
+        subLookups: [
+            {
+                from: "organizations",
+                as: "basicInfo.organization",
+                localField: "basicInfo.organization",
+                project: { "basicInfo.name": 1, "basicInfo.media": 1, },
+                single: true,
+            },
+        ],
+    },
+    organization: {
+        from: "organizations",
+        project: {
+            "basicInfo.name": 1,
+            "basicInfo.media.logo": 1,
+            location: 1,
+            "otherInfo.categories": 1,
+        },
+        subLookups: [
+            {
+                from: "categories",
+                as: "otherInfo.categories",
+                localField: "otherInfo.categories",
+                project: { _id: 1, title: 1, image: 1 },
+            },
+        ],
+    },
+    menu: {
+        from: "menus",
+        project: { "title": 1, },
+
+    },
+
+}
 
 module.exports = {
     toggleFavorite,

@@ -5,6 +5,7 @@ const {
   updateCustomCategory,
   deleteCustomCategory,
   reorderCustomCategory,
+  getLoyaltyClubs,
 } = require("./customCategoriesController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -19,6 +20,9 @@ const apiRateLimiter = createRateLimiter("CustomCategories");
 
 // Create a new customCategory
 router.post("/", roleMiddleware(["admin"]), createCustomCategory);
+
+// Get all active loyalty clubs
+router.get("/loyalty-clubs", apiRateLimiter, getLoyaltyClubs);
 
 // Get all customCategories with pagination
 router.get("/", apiRateLimiter, getCustomCategories);

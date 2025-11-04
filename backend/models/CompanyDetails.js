@@ -51,6 +51,10 @@ const CompanySchema = new mongoose.Schema(
     default: [],
 
     loyaltySettings: {
+      title: {
+        type: String,
+        default: "",
+      },
       model: {
         type: String,
         enum: ["essential", "preferred", "premier"],

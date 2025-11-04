@@ -58,8 +58,6 @@ venuesSchema.methods.formatResponse = function (venueData) {
   const venue = venueData ? venueData : this.toObject();
 
   delete venue.__v;
-  delete venue.id; // Remove redundant id field
-
   // Attach full image URL for floorPlan
   venue.floorPlan = getFullImageUrl(venue.floorPlan || "noimage.png");
 

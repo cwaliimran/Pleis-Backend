@@ -4,6 +4,7 @@ const highlightRepo = require("./highlightRepository");
 const eventRepository = require("../events/eventRepository");
 const organizationRepo = require("../organizations/organizationRepository");
 const { Highlights } = require("./Highlight");
+const { formatPublicHighlightResponse } = require("./formatters/formatPublicHighlightResponse");
 
 const createHighlight = async ({ data }) => {
   return await highlightRepo.createHighlight(data);
@@ -44,7 +45,7 @@ const getHighlights = async ({ page, limit, keyword, status, creator, date }) =>
       highlightRepo.getHighlightsCounts(query),
     ]);
 
-    const { totalFiltered, total, active, inactive } = getHighlightsCounts;
+  const { totalFiltered, total, active, inactive } = getHighlightsCounts;
   highlights = highlights.map((highlight) => {
     return new Highlights(highlight).toCustomJSON(highlight);
   });
@@ -61,7 +62,7 @@ const getHighlights = async ({ page, limit, keyword, status, creator, date }) =>
   };
 };
 
-const getPublicHighlights = async ({ page, limit, keyword }) => {
+const getPublicHighlights = async ({ page, limit, keyword, userLocation }) => {
   const query = { status: "active" };
   if (keyword) {
     query.$or = [
@@ -73,8 +74,8 @@ const getPublicHighlights = async ({ page, limit, keyword }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
 
-  const [highlights, totalFiltered] = await Promise.all([
-    highlightRepo.getHighlightsWithFilters(
+  let [highlights, totalFiltered] = await Promise.all([
+    highlightRepo.getPublicHighlightsWithFilters(
       query,
       keyword,
       skip,
@@ -82,6 +83,10 @@ const getPublicHighlights = async ({ page, limit, keyword }) => {
     ),
     highlightRepo.countHighlights(query),
   ]);
+
+  highlights = highlights.map((highlight) => {
+    return formatPublicHighlightResponse(highlight, { userLocation });
+  });
 
   return {
     highlights,

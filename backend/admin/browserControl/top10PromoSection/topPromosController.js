@@ -4,7 +4,7 @@ const {
   validateParams,
   generateMeta,
   getReadableErrorMessage,
-} = require("@utils/responseUtil");
+} = require("../../../helperUtils/responseUtil");
 
 const topPromosService = require("./topPromosService");
 

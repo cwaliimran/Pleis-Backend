@@ -1,6 +1,6 @@
 // repositories/eventRepository.js
 const { Events } = require("./Event");
-const { getWithFilters, getModelCounts, } = require('@dbUtils/queryUtil');
+const { getModelCounts, } = require('@dbUtils/queryUtil');
 // Create
 const createEvent = async (data) => {
   const event = new Events(data);

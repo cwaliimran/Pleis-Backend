@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const { getFullImageUrl } = require("../../helperUtils/imageHelper");
 
 const categoriesSchema = new mongoose.Schema(
   {
@@ -12,7 +11,6 @@ const categoriesSchema = new mongoose.Schema(
       trim: true,
       required: true,
       default: "",
-      unique: true,
     },
     status: {
       type: String,

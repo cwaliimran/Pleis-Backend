@@ -11,5 +11,8 @@ router.use("/top-promos", require("../browserControl/top10PromoSection/topPromos
 router.use("/custom-categories", require("../customCategories/customCategoriesRoutes"));
 router.use("/pinned-content", require("../pinnedContent/pinnedContentRoutes"));
 router.use("/banners", require("../bannerControl/bannerControlsRoutes"));
+//organizations
+router.use("/organizations", require("../../commonModules/organizations/organizationRoutesAdmin.js"));
+
 
 module.exports = router;

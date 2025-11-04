@@ -269,18 +269,25 @@ const updateUser = async (req, res, options = {}) => {
 
         //update loyaltySettings if provided
         loyaltySettings: {
+          title: companyDetails.loyaltySettings?.title ?? user.companyDetails?.loyaltySettings?.title ?? "",
           model: companyDetails.loyaltySettings?.model ?? user.companyDetails?.loyaltySettings?.model ?? "essential",
           pointValuePercentage: companyDetails.loyaltySettings?.pointValuePercentage ?? user.companyDetails?.loyaltySettings?.pointValuePercentage ?? 0
         }
-
       };
+
+      if (user.companyDetails.loyaltySettings.title === "") {
+        user.companyDetails.loyaltySettings.title = companyDetails.name + " - Loyalty Club" || "Loyalty Club";
+      }
     }
+
+
+
 
     await user.save({ session });
 
-  /*   if(location && location.coordinates && location.coordinates.length === 2) {
-      //add in location history for suggested cities
-    } */
+    /*   if(location && location.coordinates && location.coordinates.length === 2) {
+        //add in location history for suggested cities
+      } */
 
     // Device handling
     if (deviceId && deviceType) {
@@ -392,7 +399,6 @@ const disableTwoFA = async (userId) => {
 
 const updateUserInterests = async (userId, data) => {
   // Update user interests in the database
-  console.log("data", data)
   await userRepo.updateUserInterests(userId, data);
   return true;
 }
@@ -401,6 +407,16 @@ const getUserInterestsByUserId = async (userId) => {
   return await userRepo.getUserInterestsByUserId(userId);
 };
 
+/* const getLoyaltyClubs = async () => {
+  const clubs = await Users.find({
+    status: "active",
+    //organizer
+    "loyaltySettings.model": { $ne: "none" }
+  }).select("name loyaltySettings");
+
+  return clubs;
+};
+ */
 
 module.exports = {
   getAllUsers,

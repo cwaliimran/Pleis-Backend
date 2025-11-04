@@ -6,6 +6,7 @@ const _ = require("lodash");
 const { getRecommendedEvents } = require("./recommendationSystem/eventsRecommender");
 const Organizations = require("../../commonModules/organizations/Organization");
 const { formatEventResponse } = require("../../commonModules/events/formatter/eventFormatter");
+const { formatMoreFromOrganizerEventResponse } = require("./formatter/recommendedEventFormatter");
 
 
 const getNearbyEvents = async (queryData) => {
@@ -27,7 +28,6 @@ const getNearbyEvents = async (queryData) => {
   radiusKm = parseFloat(rawRadiusKm);
   longitude = parseFloat(longitude);
   latitude = parseFloat(latitude);
-  console.log("radiusKm", radiusKm)
 
   // Validate coordinates
   if (typeof longitude !== 'number' || typeof latitude !== 'number') {
@@ -119,8 +119,8 @@ const getNearbyEvents = async (queryData) => {
     const totalResult = await eventRepo.aggregateEvents(totalCountPipeline);
     const totalFiltered = totalResult[0]?.total || 0;
     // Convert event dates to user's timezone and round distances to 2 decimals
-      const formattedEvents = events.map((event) => {
-        console.log(event.basicInfo.organization)
+    const formattedEvents = events.map((event) => {
+      console.log(event.basicInfo.organization)
       const formatted = formatEventResponse(event, { timezone });
 
       // Attach rounded distance
@@ -133,7 +133,6 @@ const getNearbyEvents = async (queryData) => {
 
       return formatted;
     });
-console.log("totalFiltered",totalFiltered)
     let meta = generateMeta(page, limit, totalFiltered);
     return {
       events: formattedEvents,
@@ -144,8 +143,10 @@ console.log("totalFiltered",totalFiltered)
   }
 };
 
-const getEventDetails = async (id, timezone) => {
+const getEventDetails = async (userLocation, userId, id, timezone) => {
   const event = await eventRepo.findEventById(id);
+  const now = getCurrentDateInTimezone({ timezone });
+
   const announcements = {
     updates: [
       {
@@ -167,17 +168,17 @@ const getEventDetails = async (id, timezone) => {
     options: [
       {
         "title": "Early Bird",
-        "price": "$50",
+        "price": "€50",
         "available": 30
       },
       {
         "title": "Promo Price",
-        "price": "$40",
+        "price": "€40",
         "available": 50
       },
       {
         "title": "Standard",
-        "price": "$60",
+        "price": "€60",
         "available": 10
       },
     ]
@@ -190,12 +191,23 @@ const getEventDetails = async (id, timezone) => {
     limit: 10,
   });
 
+
+  let moreFromOrganizer = await eventRepo.getMoreFromOrganizerEvents(userId, {
+    _id: { $ne: event._id },
+    "basicInfo.organization": event.basicInfo?.organization,
+    status: "active",
+    "schedule.endDateTime": { $gte: now },
+  }, 1, 10);
+
+  moreFromOrganizer = moreFromOrganizer.map(e => formatMoreFromOrganizerEventResponse(e, { userLocation, timezone }));
+
   let data = {
     event: formatEventResponse(event, { timezone }),
     announcements,
     ticketDetails,
     loyaltyPrograms,
     similarEvents,
+    moreFromOrganizer,
   };
   return data
 };

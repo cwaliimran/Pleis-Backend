@@ -7,11 +7,11 @@ const MenuItems = require("./MenuItems");
 const Menus = require("../menu/Menus");
 const Venues = require("../../venues/Venues");
 const MenuItemCategories = require("../menuItemCategories/MenuItemCategories");
-const { formatMenuItems } = require("./fomatter/formatMenuItems");
+const { formatMenuItem } = require("./formatter/formatMenuItems");
 
 const createMenuItem = async (data, timezone) => {
   let doc = await menuItemRepo.createMenuItem(data);
-  let obj = formatMenuItems(doc, timezone);
+  let obj = formatMenuItem(doc, timezone);
   return obj;
 };
 
@@ -114,7 +114,7 @@ const getMenuItems = async ({ page, limit, keyword, status, userId, date, menu, 
 
   // Shape final docs
   const formattedMenuItems = menuItems.map(doc => {
-    let obj = formatMenuItems(doc, timezone);
+    let obj = formatMenuItem(doc, timezone);
   
     return obj;
   });
@@ -159,7 +159,7 @@ const updateMenuItem = async (id, data, timezone) => {
   await menuItem.save();
 
   // Return updated menuItem
-  let obj = formatMenuItems(menuItem, timezone);
+  let obj = formatMenuItem(menuItem, timezone);
 
   return obj;
 };

@@ -1,9 +1,9 @@
 // services/topPromoService.js
-const { Events } = require("../../../commonModules/events/Event");
 const { convertUtcToTimezone } = require("@utils/responseUtil");
 const TopPromos = require("./TopPromos");
 const topPromoRepo = require("./topPromosRepository");
 const mongoose = require("mongoose");
+const { formatMoreFromOrganizerEventResponse } = require("../../../app/events/formatter/recommendedEventFormatter");
 
 const createTopPromo = async ({ event, isTop10, status }) => {
   return await topPromoRepo.createTopPromo({ event, isTop10, status });
@@ -34,10 +34,11 @@ const getTopPromos = async ({ page, limit, keyword, status, date, orderSort = "a
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const sort = { order: orderSort === "desc" ? -1 : 1 };
 
-  const [topPromos, getTopPromosCounts] = await Promise.all([
+  let [topPromos, getTopPromosCounts] = await Promise.all([
     topPromoRepo.getTopPromosWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
     topPromoRepo.getTopPromosCounts(query),
   ]);
+
   const { totalFiltered, total, active, inactive } = getTopPromosCounts;
   return {
     topPromos,
@@ -51,29 +52,11 @@ const getTopPromos = async ({ page, limit, keyword, status, date, orderSort = "a
 
 };
 
-const getTop10Promos = async ({ timezone, filters }) => {
+const getTop10Promos = async ({ userLocation, timezone, filters }) => {
   const topPromos = await topPromoRepo.getTop10Promos(filters, timezone);
-
   const processed = topPromos.map(doc => {
-    const obj = doc.toObject(); // convert to plain JS object
+    return formatMoreFromOrganizerEventResponse(doc.event, { userLocation, timezone });
 
-    if (obj.event?.schedule?.startDateTime) {
-      obj.event.schedule.startDateTime = convertUtcToTimezone(
-        obj.event.schedule.startDateTime,
-        timezone,
-        "YYYY-MM-DD hh:mm A"
-      );
-    }
-
-    if (obj.event?.schedule?.endDateTime) {
-      obj.event.schedule.endDateTime = convertUtcToTimezone(
-        obj.event.schedule.endDateTime,
-        timezone,
-        "YYYY-MM-DD hh:mm A"
-      );
-    }
-
-    return obj;
   });
 
   return processed;

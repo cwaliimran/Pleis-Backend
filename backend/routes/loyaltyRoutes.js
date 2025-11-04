@@ -3,6 +3,8 @@ const express = require("express");
 const router = express.Router();
 
 // Import individual route modules
+// TODO enable when settings are ready
+router.use("/listings", require("../commonModules/loyalty/listings/listingsRoutes"));
 router.use("/challenges", require("../commonModules/loyalty/challenges/challengesRoutes"));
 router.use("/promotions", require("../commonModules/loyalty/promotions/promotionsRoutes"));
 router.use("/rewards", require("../commonModules/loyalty/rewards/rewardsRoutes"));

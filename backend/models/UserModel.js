@@ -5,7 +5,6 @@ const moment = require("moment-timezone");
 const validator = require("validator");
 const { randomBytes } = require("crypto");
 const { CompanySchema } = require("./CompanyDetails");
-const crypto = require("crypto");
 const { generateSecureToken } = require("../helperUtils/secureToken");
 const { LocationSchema } = require("../shared/locations/locationSchmea");
 
@@ -46,7 +45,7 @@ const userSchema = new mongoose.Schema(
   {
     profileIcon: {
       type: String,
-      default: "",
+    default: "",
     },
 
     firstName: {

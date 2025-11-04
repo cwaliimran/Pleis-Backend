@@ -5,6 +5,7 @@ const Menus = require("../../commonModules/menuManagement/menu/Menus");
 const Organizations = require("../../commonModules/organizations/Organization");
 const mongoose = require("mongoose");
 const Venues = require("../../commonModules/venues/Venues");
+const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
 /**
  * Fetch one organization by ID (populated)
  */
@@ -265,7 +266,7 @@ const getRecommendedOrganizations = async (organizationId, options = {}) => {
     },
   ]);
 
-  return result.map((org) => new Organizations(org).formatResponse(org));
+  return result.map((org) => formatOrganization(org));
 };
 
 /**

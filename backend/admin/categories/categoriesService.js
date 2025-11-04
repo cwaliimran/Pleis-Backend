@@ -72,10 +72,12 @@ const getPublicCategories = async ({ page = 1, limit = 10, keyword, date, orderS
   //only return selected fields
   const selectFields = "title image";
 
-  const [categories, totalFiltered] = await Promise.all([
+  let [categories, totalFiltered] = await Promise.all([
     categoryRepo.getCategoriesWithFilters(query, skip, limit === 0 ? 0 : limit, sort, selectFields),
     categoryRepo.countCategories(query),
   ]);
+
+  categories = formatCategories(categories);
 
   const meta = generateMeta(page, limit, totalFiltered);
 

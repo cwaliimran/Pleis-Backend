@@ -3,6 +3,7 @@ const { generateMeta } = require("@utils/responseUtil");
 const { Events } = require("../../../commonModules/events/Event");
 const { formatEventResponse } = require("../../../commonModules/events/formatter/eventFormatter");
 
+// TODO future events only
 const getRecommendedEvents = async (eventId, options = {}) => {
   if (!eventId) return { data: [], meta: generateMeta(1, 10, 0) };
 

@@ -16,55 +16,57 @@ async function createWithAutoOrder({ model, data, orderField = "order", match = 
  * Recursively builds lookup pipelines, supporting nested subLookups and $in for arrays
  */
 function buildLookupPipeline(lookup) {
-  const pipeline = [];
+  if (!lookup.subLookups || !Array.isArray(lookup.subLookups)) return [];
 
-  // Apply subLookups recursively
-  if (lookup.subLookups?.length) {
-    lookup.subLookups.forEach((sub) => {
-      // Handle array-based lookups (categories, tags, etc.)
-      const subLookupStage = {
-        $lookup: {
-          from: sub.from,
-          as: sub.as,
-          let: { localField: `$${sub.localField}` },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $cond: [
-                    { $isArray: "$$localField" },
-                    { $in: ["$_id", "$$localField"] },
-                    { $eq: ["$_id", "$$localField"] },
-                  ],
-                },
+  const stages = [];
+
+  for (const sub of lookup.subLookups) {
+    stages.push({
+      $lookup: {
+        from: sub.from,
+        as: sub.as,
+        let: { localField: `$${sub.localField}` },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $cond: [
+                  { $isArray: "$$localField" },
+                  { $in: ["$_id", "$$localField"] },
+                  { $eq: ["$_id", "$$localField"] },
+                ],
               },
             },
-            ...(sub.project ? [{ $project: sub.project }] : []),
-            ...(sub.subLookups ? buildLookupPipeline(sub) : []),
-          ],
-        },
-      };
-
-      pipeline.push(subLookupStage);
+          },
+          ...(sub.project ? [{ $project: sub.project }] : []),
+          ...buildLookupPipeline(sub),
+        ],
+      },
     });
+
+    // 👇 Automatically convert single-reference lookups to an object
+    if (sub.single) {
+      stages.push({
+        $unwind: { path: `$${sub.as}`, preserveNullAndEmptyArrays: true },
+      });
+    }
   }
 
-  // Apply projection at this level (if provided)
-  if (lookup.project) pipeline.push({ $project: lookup.project });
-
-  return pipeline;
+  return stages;
 }
+
 
 /**
  * Generic dynamic aggregation-based query util
  * Supports refPath-based dynamic lookups, nested subLookups, and array refs
- */
+  */
 async function getWithFilters({
   model,
   query = {},
   populate = [],
   options = {},
   refPath,
+  localField = "object",
   refLookups = {},
 }) {
   const {
@@ -91,7 +93,7 @@ async function getWithFilters({
       $lookup: {
         from: lookup.from,
         as: "object",
-        let: { localField: "$object" },
+      let: { localField: `$${localField}` },
         pipeline: [
           {
             $match: {

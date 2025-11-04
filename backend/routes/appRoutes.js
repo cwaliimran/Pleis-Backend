@@ -1,4 +1,3 @@
-// loyaltyRoutes.js
 const express = require("express");
 const router = express.Router();
 
@@ -12,5 +11,9 @@ router.use("/organizations", require("../app/organizationProfile/organizationPro
 router.use("/favorites", require("../commonModules/favorites/favoriteRoutes"));
 //events
 router.use("/events", require("../app/events/eventRoutes"));
+
+//loyalty
+router.use("/loyalty/challenges", require("../app/loyalty/challenges/challengesRoutes"));
+router.use("/loyalty/promotions", require("../app/loyalty/promotions/promotionsRoutes"));
 
 module.exports = router;

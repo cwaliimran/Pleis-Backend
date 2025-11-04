@@ -1,0 +1,168 @@
+[
+  {
+    "base": "/api/v1/api/v1/app",
+    "file": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/routes/appRoutes.js",
+    "endpoints": [
+      {
+        "method": "USE",
+        "subRoute": "/home",
+        "handler": "",
+        "controller": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/home/homeRoutes.js",
+        "models": [],
+        "fullPath": "/api/v1/api/v1/app/home"
+      },
+      {
+        "method": "USE",
+        "subRoute": "/maps",
+        "handler": "",
+        "controller": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/maps/mapsRoutes.js",
+        "models": [],
+        "fullPath": "/api/v1/api/v1/app/maps"
+      },
+      {
+        "method": "USE",
+        "subRoute": "/organizations",
+        "handler": "",
+        "controller": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/organizationProfile/organizationProfileRoutes.js",
+        "models": [],
+        "fullPath": "/api/v1/api/v1/app/organizations"
+      },
+      {
+        "method": "USE",
+        "subRoute": "/favorites",
+        "handler": "",
+        "controller": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/favorites/favoriteRoutes.js",
+        "models": [
+          "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/favorites/favoriteController.js"
+        ],
+        "fullPath": "/api/v1/api/v1/app/favorites"
+      },
+      {
+        "method": "USE",
+        "subRoute": "/events",
+        "handler": "",
+        "controller": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/events/eventRoutes.js",
+        "models": [],
+        "fullPath": "/api/v1/api/v1/app/events"
+      }
+    ]
+  },
+  {
+    "base": "/api/v1/api/v1/app/home",
+    "file": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/home/homeRoutes.js",
+    "endpoints": [
+      {
+        "method": "POST",
+        "subRoute": "/",
+        "handler": "getHome",
+        "controller": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/home/homeController.js",
+        "models": [
+          "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/models/UserModel.js"
+        ],
+        "fullPath": "/api/v1/api/v1/app/home/"
+      }
+    ]
+  },
+  {
+    "base": "/api/v1/api/v1/app/maps",
+    "file": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/maps/mapsRoutes.js",
+    "endpoints": [
+      {
+        "method": "POST",
+        "subRoute": "/",
+        "handler": "getMapsData",
+        "controller": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/maps/mapsController.js",
+        "models": [
+          "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/models/UserModel.js"
+        ],
+        "fullPath": "/api/v1/api/v1/app/maps/"
+      }
+    ]
+  },
+  {
+    "base": "/api/v1/api/v1/app/organizations",
+    "file": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/organizationProfile/organizationProfileRoutes.js",
+    "endpoints": [
+      {
+        "method": "GET",
+        "subRoute": "/:organizationId",
+        "handler": "getOrganizationProfileData",
+        "controller": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/organizationProfile/organizationProfileController.js",
+        "models": [],
+        "fullPath": "/api/v1/api/v1/app/organizations/:organizationId"
+      }
+    ]
+  },
+  {
+    "base": "/api/v1/api/v1/app/favorites",
+    "file": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/favorites/favoriteRoutes.js",
+    "endpoints": [
+      {
+        "method": "POST",
+        "subRoute": "/toggle",
+        "handler": "toggleFavorite",
+        "controller": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/favorites/favoriteController.js",
+        "models": [
+          "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/favorites/Favorite.js",
+          "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/favorites/favoriteService.js"
+        ],
+        "fullPath": "/api/v1/api/v1/app/favorites/toggle"
+      },
+      {
+        "method": "GET",
+        "subRoute": "/",
+        "handler": "getUserFavorites",
+        "controller": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/favorites/favoriteController.js",
+        "models": [
+          "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/favorites/Favorite.js",
+          "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/favorites/favoriteService.js"
+        ],
+        "fullPath": "/api/v1/api/v1/app/favorites/"
+      },
+      {
+        "method": "GET",
+        "subRoute": "/:targetType/:targetId/count",
+        "handler": "getFavoriteCount",
+        "controller": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/favorites/favoriteController.js",
+        "models": [
+          "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/favorites/Favorite.js",
+          "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/favorites/favoriteService.js"
+        ],
+        "fullPath": "/api/v1/api/v1/app/favorites/:targetType/:targetId/count"
+      },
+      {
+        "method": "GET",
+        "subRoute": "/:targetType/:targetId/status",
+        "handler": "isFavorited",
+        "controller": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/favorites/favoriteController.js",
+        "models": [
+          "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/favorites/Favorite.js",
+          "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/favorites/favoriteService.js"
+        ],
+        "fullPath": "/api/v1/api/v1/app/favorites/:targetType/:targetId/status"
+      }
+    ]
+  },
+  {
+    "base": "/api/v1/api/v1/app/events",
+    "file": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/events/eventRoutes.js",
+    "endpoints": [
+      {
+        "method": "GET",
+        "subRoute": "/nearby",
+        "handler": "getNearbyEvents",
+        "controller": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/events/eventController.js",
+        "models": [],
+        "fullPath": "/api/v1/api/v1/app/events/nearby"
+      },
+      {
+        "method": "GET",
+        "subRoute": "/:id",
+        "handler": "getEventDetails",
+        "controller": "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/events/eventController.js",
+        "models": [],
+        "fullPath": "/api/v1/api/v1/app/events/:id"
+      }
+    ]
+  }
+]

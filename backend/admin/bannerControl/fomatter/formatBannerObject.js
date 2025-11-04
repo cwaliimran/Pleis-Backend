@@ -9,27 +9,24 @@ const { getFullImageUrl } = require("../../../helperUtils/imageHelper");
  * @returns {Object|null}
  */
 function formatBannerObject(item) {
-    let obj = typeof item.toObject === "function" ? item.toObject() : item;
-
-    if (!obj) return null;
-
-    let refObject = obj.object;
-    if (!refObject) return obj;
-    switch (obj.type) {
+    let refObject = typeof item.toObject === "function" ? item.toObject() : item;
+    if (!refObject) return null;
+    switch (refObject.type) {
         case "Event":
-            refObject.basicInfo.media = getFullImageUrl(refObject.basicInfo.media?.name)
+            refObject.image = getFullImageUrl(refObject.image)
             break;
 
-        //TODO loyalty program case when model is defined
         case "Organizer":
         case "LoyaltyProgram":
-            refObject.profileIcon = getFullImageUrl(refObject.profileIcon)
+            refObject.image = getFullImageUrl(refObject.image)
             break;
-
+        case "Other":
+            refObject.image = getFullImageUrl(refObject.image)
+            break;
         default: null
     }
 
-    return obj;
+    return refObject;
 }
 
 module.exports = { formatBannerObject };

@@ -70,12 +70,23 @@ highlightSchema.methods.toCustomJSON = function (highlightData) {
   if (object?.basicInfo?.media) {
     if (highlightObject.type === "organization") {
       // Organization: logo and cover
-      object.basicInfo.media = getFullImageUrl(object.basicInfo.media.logo);
-      object.basicInfo.cover = getFullImageUrl(object.basicInfo.media.cover);
+      const orgMedia = object.basicInfo.organization?.media;
+      if (orgMedia) {
+        object.basicInfo.organization.media = {
+          logo: getFullImageUrl(orgMedia.logo),
+          cover: getFullImageUrl(orgMedia.cover),
+        };
+      }
     } else {
       // Event: type and name
       const embeddedMedia = object.basicInfo.media;
-      object.basicInfo.media = getFullImageUrl(embeddedMedia.name);
+      object.basicInfo.media = getFullImageUrl(embeddedMedia.name || embeddedMedia);
+
+      // Attach organization logo and cover with baseurl if present
+      const org = object.basicInfo.organization;
+      if (org?.basicInfo?.media) {
+        org.basicInfo.media.logo = getFullImageUrl(org.basicInfo.media?.logo)
+      }
     }
   }
 

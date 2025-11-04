@@ -1,3 +1,4 @@
+const { isFavorited } = require("../../commonModules/favorites/favoriteService");
 const {
   sendResponse,
   parsePaginationParams,
@@ -59,7 +60,7 @@ const getNearbyEvents = async (req, res) => {
 
 const getEventDetails = async (req, res) => {
   let { id } = req.params;
-  let { timezone } = req.user;
+  let { timezone, _id: userId, location: userLocation } = req.user;
   // Accept both nanoid and ObjectId for event id
   if (
     (!isValidNanoid(id) && !validateParams(req, res, {
@@ -75,7 +76,10 @@ const getEventDetails = async (req, res) => {
 
 
   try {
-    let data = await eventService.getEventDetails(id, timezone);
+    let [data, isFavoriteEvent = false] = await Promise.all([
+      eventService.getEventDetails(userLocation, userId, id, timezone),
+      isFavorited(userId, id, 'event'),
+    ]);
     if (!data.event) {
       return sendResponse({
         res,
@@ -83,7 +87,8 @@ const getEventDetails = async (req, res) => {
         translationKey: "event_not_found",
       });
     }
-    
+    data.event.isFavorite = isFavoriteEvent;
+
     return sendResponse({
       res,
       statusCode: 200,

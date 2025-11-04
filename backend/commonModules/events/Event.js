@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const { getFullImageUrl } = require("../../helperUtils/imageHelper");
 const { RecurringEventSchema } = require("./RecurringEventSchema");
 const { nanoid } = require("nanoid");
 

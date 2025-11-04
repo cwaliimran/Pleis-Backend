@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const { getFullImageUrl } = require("../../helperUtils/imageHelper");
 
 const venuetypesSchema = new mongoose.Schema(
   {

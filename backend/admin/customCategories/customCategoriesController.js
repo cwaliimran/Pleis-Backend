@@ -42,7 +42,7 @@ const createCustomCategory = async (req, res) => {
 const getCustomCategories = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date, orderSort } = req.query;
-  const { timezone } = req.user || { timezone: "Asia/Karachi" };
+  const { timezone, _id: userId } = req.user || { timezone: "Asia/Karachi" };
 
   try {
     // Validate date parameter if provided
@@ -55,6 +55,7 @@ const getCustomCategories = async (req, res) => {
     // Get custom categories from service (no need to populate here)
     
     const { customCategories, meta } = await customCategoriesService.getCustomCategories({
+      userId,
       timezone,
       page,
       limit,
@@ -203,6 +204,25 @@ const reorderCustomCategory = async (req, res) => {
     });
   }
 };
+const getLoyaltyClubs = async (req, res) => {
+  try {
+    const loyaltyClubs = await customCategoriesService.getLoyaltyClubs();
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "loyalty_clubs_fetched_successfully",
+      data: loyaltyClubs,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server_error",
+      error: error
+    });
+  }
+}
 
 module.exports = {
   createCustomCategory,
@@ -210,4 +230,5 @@ module.exports = {
   updateCustomCategory,
   deleteCustomCategory,
   reorderCustomCategory,
+  getLoyaltyClubs,
 };

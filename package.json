@@ -7,9 +7,9 @@
     "test": "mocha test/**/*.test.js --timeout 10000",
     "start": "node backend/server.js",
     "update:alias": "node aliasConfig/update-aliases.js",
-    "localhost": "NODE_ENV=localhost nodemon backend/server.js",
-    "dev": "NODE_ENV=dev npm run nodemon backend/server.js",
-    "prod": "NODE_ENV=prod npm run node backend/server.js",
+    "localhost": "NODE_ENV=localhost node backend/server.js",
+    "dev": "NODE_ENV=dev nodemon backend/server.js",
+    "prod": "NODE_ENV=prod node backend/server.js",
     "d": "npm run dev",
     "p": "npm run prod"
   },

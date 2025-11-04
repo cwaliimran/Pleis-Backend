@@ -9,7 +9,7 @@ const { convertUtcToTimezone } = require("@utils/responseUtil");
  * @param {String} type - The type field ("Event", "Organizer", "LoyaltyProgram", etc.)
  * @returns {Object|null}
  */
-function formatMenuItems(item, timezone) {
+function formatMenuItem(item, timezone) {
     let obj = typeof item.toObject === "function" ? item.toObject() : item;
 
     if (!obj) return null;
@@ -32,4 +32,4 @@ function formatMenuItems(item, timezone) {
     return obj;
 }
 
-module.exports = { formatMenuItems };
+module.exports = { formatMenuItem };

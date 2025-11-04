@@ -7,6 +7,8 @@ const mongoose = require("mongoose");
 const { Events } = require("../../commonModules/events/Event");
 const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
 const { formatEventResponse } = require("../../commonModules/events/formatter/eventFormatter");
+const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
+const { Favorites } = require("../../commonModules/favorites/Favorite");
 
 
 const getEvents = async (queryData) => {
@@ -19,6 +21,7 @@ const getEvents = async (queryData) => {
     limit = 10,
     timezone = "Asia/Karachi",
     radiusKm = 0,
+    userId,
   } = queryData || {};
 
   const rawRadiusKm =
@@ -138,7 +141,28 @@ const getEvents = async (queryData) => {
       { $limit: parseInt(limit) },
     ];
 
-    const events = await mapsRepo.aggregateEvents(pipeline);
+    let events = await mapsRepo.aggregateEvents(pipeline);
+
+
+    // Add "favorite" flag if user is logged in
+    if (userId && events.length > 0) {
+      const eventIds = events.map((e) => e._id);
+      const userFavorites = await Favorites.find({
+        user: userId,
+        targetType: "event",
+        targetId: { $in: eventIds },
+      }).select("targetId");
+
+      const favoriteSet = new Set(userFavorites.map((f) => f.targetId.toString()));
+
+      events = events.map((event) => ({
+        ...event,
+        isFavorite: favoriteSet.has(event._id.toString()),
+      }));
+    }
+
+
+
 
     // Count total (same filter)
     const totalCountPipeline = [
@@ -180,7 +204,7 @@ const getEvents = async (queryData) => {
       if (formattedEvent.basicInfo?.organization) {
         const orgData = formattedEvent.basicInfo.organization;
         delete orgData.basicInfo.socialLinks;
-        formattedEvent.basicInfo.organization = new Organizations().formatResponse(orgData);
+        formattedEvent.basicInfo.organization = formatOrganization(orgData);
       }
 
       return formattedEvent;
@@ -213,6 +237,7 @@ const getPlaces = async (queryData) => {
     limit = 10,
     timezone = "Asia/Karachi",
     radiusKm = 0,
+    userId,
   } = queryData || {};
 
   const rawRadiusKm =
@@ -334,9 +359,9 @@ const getPlaces = async (queryData) => {
     const totalFiltered = totalResult[0]?.total || 0;
 
     // Format and finalize output
-    const formattedPlaces = organizations.map((org) => {
+    let formattedPlaces = organizations.map((org) => {
 
-      let formatted = new Organizations().formatResponse(org);
+      let formatted = formatOrganization(org);
 
       // Round distance
       if (Number.isFinite(org.distance)) {
@@ -356,6 +381,23 @@ const getPlaces = async (queryData) => {
     let meta = generateMeta(page, limit, totalFiltered);
     // meta.radiusKm = radiusKm;
     // meta.userLocation = { lng: longitude, lat: latitude };
+
+    //find favorites
+    if (userId && formattedPlaces.length > 0) {
+      const placeIds = formattedPlaces.map((p) => p._id);
+      const userFavorites = await Favorites.find({
+        user: userId,
+        targetType: "organization",
+        targetId: { $in: placeIds },
+      }).select("targetId");
+
+      const favoriteSet = new Set(userFavorites.map((f) => f.targetId.toString()));
+
+      formattedPlaces = formattedPlaces.map((place) => ({
+        ...place,
+        isFavorite: favoriteSet.has(place._id.toString()),
+      }));
+    }
 
 
     return { status: true, result: { data: formattedPlaces, meta } };

@@ -1,15 +1,15 @@
 // services/organizationService.js
-
-const { default: mongoose } = require("mongoose");
 const { buildKeywordQueryFromModel } = require("../../helperUtils/dbUtils/queryUtil");
 const Venues = require("../venues/Venues");
 const Organizations = require("./Organization");
 const organizationRepo = require("./organizationRepository");
 const { generateMeta } = require("../../helperUtils/responseUtil");
-const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
+
+const { formatOrganization } = require("./formatter/formatOrganization");
 
 const createOrganization = async ({ data }) => {
-  return await organizationRepo.createOrganization(data);
+  let org = await organizationRepo.createOrganization(data);
+  return formatOrganization(org);
 };
 
 const getOrganizations = async ({ page, limit, keyword, status, creator, date }) => {
@@ -39,7 +39,7 @@ const getOrganizations = async ({ page, limit, keyword, status, creator, date })
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [organizations, counts] =
+  let [organizations, counts] =
     await Promise.all([
       organizationRepo.getOrganizationsWithFilters(
         query,
@@ -49,14 +49,14 @@ const getOrganizations = async ({ page, limit, keyword, status, creator, date })
       organizationRepo.getOrganizationCounts(query),
     ]);
 
-  console.log("counts", counts)
-
   const totalFiltered = counts?.totalFiltered || 0;
   const total = counts?.total || 0;
   const active = counts?.active || 0;
   const inactive = counts?.inactive || 0;
   let meta = generateMeta(page, limit, totalFiltered);
   meta.tagsCount = { total, active, inactive };
+
+  organizations = organizations.map(org => formatOrganization(org));
 
   return {
     organizations,
@@ -88,7 +88,7 @@ const getOrganizationsByAdmin = async ({ page, limit, keyword, status, date, tim
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [organizations, counts] =
+  let [organizations, counts] =
     await Promise.all([
       organizationRepo.getOrganizationsWithFilters(
         query,
@@ -102,6 +102,7 @@ const getOrganizationsByAdmin = async ({ page, limit, keyword, status, date, tim
   let meta = generateMeta(page, limit, totalFiltered);
   meta.tagsCount = { total, active, inactive };
 
+  organizations = organizations.map(org => formatOrganization(org, timezone));
 
   return {
     organizations,
@@ -126,7 +127,7 @@ const getPublicOrganizations = async ({ page, limit, keyword, date }) => {
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [organizations, totalFiltered] = await Promise.all([
+  let [organizations, totalFiltered] = await Promise.all([
     organizationRepo.getOrganizationsWithFilters(
       query,
       skip,
@@ -134,6 +135,8 @@ const getPublicOrganizations = async ({ page, limit, keyword, date }) => {
     ),
     organizationRepo.countOrganizations(query),
   ]);
+
+  organizations = organizations.map(org => formatOrganization(org));
 
   return {
     organizations,
@@ -230,7 +233,8 @@ const updateOrganization = async ({ id, data }) => {
 
   await organization.save();
 
-  return organization;
+  //format organization before return
+  return formatOrganization(organization);
 };
 
 
@@ -248,11 +252,13 @@ const checkOrganizationExists = async (id) => {
 };
 
 const findOrganizationById = async (id) => {
-  return await organizationRepo.findOrganizationById(id);
+  let org = await organizationRepo.findOrganizationById(id);
+  return formatOrganization(org);
 };
 
 const getOrganizationDetails = async (id) => {
-  return await organizationRepo.getOrganizationDetails(id);
+  let org = await organizationRepo.getOrganizationDetails(id);
+  return formatOrganization(org);
 };
 
 const getOrganizationsAsStaff = async (id) => {

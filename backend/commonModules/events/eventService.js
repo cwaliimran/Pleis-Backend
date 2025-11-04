@@ -236,7 +236,6 @@ const deleteEvent = async (id) => {
 
 const getEventDetails = async (id, timezone) => {
   const event = await eventRepo.findEventById(id);
-  console.log("organization", event.basicInfo.organization)
   let data = formatEventResponse(event, { timezone });
   return data
 };

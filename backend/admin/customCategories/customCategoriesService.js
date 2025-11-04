@@ -3,7 +3,6 @@ const { Events } = require("../../commonModules/events/Event");
 const { formatEventResponse } = require("../../commonModules/events/formatter/eventFormatter");
 const Organizations = require("../../commonModules/organizations/Organization");
 const { getFullImageUrl } = require("../../helperUtils/imageHelper");
-const { generateMeta, convertUtcToTimezone } = require("../../helperUtils/responseUtil");
 const { User } = require("../../models/UserModel");
 const CustomCategories = require("./CustomCategories");
 const customCategoryRepo = require("./customCategoriesRepository");
@@ -17,6 +16,7 @@ const createCustomCategory = async ({ title, type, objects, status, order }) => 
 
 // Service layer
 const getCustomCategories = async ({
+  userId,
   timezone,
   page = 1,
   limit = 10,
@@ -47,7 +47,7 @@ const getCustomCategories = async ({
   const sort = { order: orderSort === "desc" ? -1 : 1 };
 
   // Fetch custom categories and counts using aggregation
-  const [customCategories, customCategoriesCounts] = await Promise.all([
+  let [customCategories, customCategoriesCounts] = await Promise.all([
     customCategoryRepo.getCustomCategoriesWithFilters(
       timezone,
       query,
@@ -71,15 +71,20 @@ const getCustomCategories = async ({
     },
   };
 
-  // Check if objects are populated correctly and apply transformations
-  customCategories.forEach((category) => {
-    if (category?.objects?.length === 0) {
-      console.log(`No objects found for category ${category._id}`);
+  // Remove categories with no objects
+  customCategories = customCategories.filter(category => {
+    if (!category?.objects || category.objects.length === 0) {
+      return false;
     }
+    return true;
+  });
 
+  // Apply transformations to objects
+  customCategories.forEach((category) => {
     category.objects = category.objects.map((obj) => {
       if (!obj) return null;
-      return transformObject(obj, category.type, timezone);
+      let mObj = transformObject(obj, category.type, timezone);
+      return mObj;
     });
   });
 
@@ -90,17 +95,15 @@ const getCustomCategories = async ({
   };
 };
 
-
 /**
  * Transform objects based on their type
  * Applies icon paths, URLs, and removes sensitive data
  */
 const transformObject = (obj, type, timezone) => {
-    obj.type = type;
+  obj.type = type;
   if (type === "User") {
     return new User(obj).toJSON(obj);
   } else if (type === "Event") {
-
     return formatEventResponse(obj, { timezone });
 
   } else if (type === "Organizations") {

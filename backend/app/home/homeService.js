@@ -8,9 +8,11 @@ const { getPublicHighlights } = require("../../commonModules/highlights/highligh
 const { index } = require("../../commonModules/loyalty/challenges/models/Reward/rewardSchema");
 const { sendResponse } = require("../../helperUtils/responseUtil");
 const { getNearbyEvents } = require("../events/eventService");
+const { getChallenges } = require("../loyalty/challenges/challengesService");
+const { getPromotions } = require("../loyalty/promotions/promotionsService");
 
 const getHomeService = async ({ queryData }) => {
-  const { timezone } = queryData;
+  const { userLocation, timezone } = queryData;
   try {
     // Fetch all data in parallel
     const [
@@ -25,20 +27,18 @@ const getHomeService = async ({ queryData }) => {
       loyaltyEvents,
       challenges,
       promotions,
-      suggestedLoyaltyClubs
     ] = await Promise.all([
       getPublicCategories({}),
-      getTop10Promos({ timezone }),
+      getTop10Promos({ userLocation, timezone }),
       getBannerControls({ page: 1, limit: 10, status: "active" }),
       [],//getForYou({ page: 1, limit: 10, status: "active" }),
       getNearbyEvents(queryData),
       getCustomCategories({ timezone, page: 1, limit: 10, status: "active" }),
-      getPublicHighlights({ page: 1, limit: 10, keyword: "" }),
+      getPublicHighlights({ page: 1, limit: 10, keyword: "", userLocation }),
       [],//getTopPicks({ page: 1, limit: 10, status: "active" }),
       [],//getLoyaltyEvents({ page: 1, limit: 10, status: "active" }),
-      [],//getChallenges({ page: 1, limit: 10, status: "active" }),
-      [],//getPromotions({ page: 1, limit: 10, status: "active" }),
-      [],//getSuggestedLoyaltyClubs({ page: 1, limit: 10, status: "active" }),
+      getChallenges({ page: 1, limit: 10, timezone }),
+      getPromotions({ page: 1, limit: 10, timezone }),
     ]);
 
     // Normalize all fetched data
@@ -46,9 +46,7 @@ const getHomeService = async ({ queryData }) => {
     const banners = bannersRes?.bannerControls || [];
     const customCategories = customCategoriesRes?.customCategories || [];
 
-    const highlights = Array.isArray(highlightsRes?.highlights)
-      ? highlightsRes.highlights.map((h) => new Highlights(h).toCustomJSON(h))
-      : [];
+    const highlights = highlightsRes?.highlights || [];
 
     // Define section structure and order — uses static titles and includes dynamic (customCategory)
     const sectionOrder = [
@@ -119,20 +117,20 @@ const getHomeService = async ({ queryData }) => {
     ) {
       const extra = customCategories[i - sectionOrder.length];
       if (extra?.objects?.length) {
-      interleavedSections.push({
-        key: "customCategory",
-        title: extra.title || `Dynamic Section ${i + 1}`,
-        objects: extra.objects,
-      });
-      // After every 4th customCategory, insert a banner if available
-      if ((interleavedSections.filter(s => s.key === "customCategory").length) % 4 === 0 && banners[bannerInsertIndex]) {
         interleavedSections.push({
-        key: "banners",
-        title: "Banners",
-        data: banners[bannerInsertIndex],
+          key: "customCategory",
+          title: extra.title || `Dynamic Section ${i + 1}`,
+          objects: extra.objects,
         });
-        bannerInsertIndex++;
-      }
+        // After every 4th customCategory, insert a banner if available
+        if ((interleavedSections.filter(s => s.key === "customCategory").length) % 4 === 0 && banners[bannerInsertIndex]) {
+          interleavedSections.push({
+            key: "banners",
+            title: "Banners",
+            data: banners[bannerInsertIndex],
+          });
+          bannerInsertIndex++;
+        }
       } else break;
     }
 

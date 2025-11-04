@@ -14,6 +14,7 @@ const favoriteSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             required: true,
             index: true,
+            refPath: "targetType",
         },
         targetType: {
             type: String,

@@ -11,6 +11,7 @@ const { registerUserUtility } = require("../../controllers/authUtil.js");
 const { User } = require("../../models/UserModel.js");
 const { getOrganizationsAsStaff } = require("../organizations/organizationService.js");
 const Organizations = require("../organizations/Organization.js");
+const { formatOrganization } = require("../organizations/formatter/formatOrganization.js");
 
 const createUser = async (req, res) => {
   const result = await registerUserUtility(req, res, {
@@ -58,7 +59,7 @@ const getUsers = async (req, res) => {
 
         if (formattedUser.organizations && Array.isArray(formattedUser.organizations)) {
           formattedUser.organizations = formattedUser.organizations.map(org => {
-            return Organizations.prototype.formatResponse(org);
+            return formatOrganization(org);
           });
         }
 
@@ -130,7 +131,7 @@ const getUsers = async (req, res) => {
 
         if (formattedUser.organizations && Array.isArray(formattedUser.organizations)) {
           formattedUser.organizations = formattedUser.organizations.map(org => {
-            return Organizations.prototype.formatResponse(org);
+            return formatOrganization(org);
           });
         }
 
@@ -273,7 +274,7 @@ const getUserDetails = async (req, res) => {
       // Format each organization response
       userObject.organizations = Array.isArray(organizations)
         ? organizations.map(org => {
-          return Organizations.prototype.formatResponse(org);
+          return formatOrganization(org);
         })
         : [];
     }

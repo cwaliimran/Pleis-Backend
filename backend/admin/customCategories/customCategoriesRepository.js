@@ -39,10 +39,10 @@ const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit, sor
         pipeline: [
           {
             $project: {
-              _id: 1,
               profileIcon: 1,
               firstName: 1,
               lastName: 1,
+              "companyDetails.loyaltySettings.title": 1,
             },
           },
         ],
@@ -139,7 +139,7 @@ const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit, sor
     },
   ];
 
-  const result = await CustomCategories.aggregate(pipeline);
+  let result = await CustomCategories.aggregate(pipeline);
   
   return result;
 };
@@ -195,7 +195,6 @@ const getCustomCategoriesCounts = async (filterQuery = {}) => {
     inactive: counts.inactive || 0,
   };
 };
-
 
 
 // Find by ID

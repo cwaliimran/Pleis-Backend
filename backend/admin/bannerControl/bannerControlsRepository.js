@@ -12,31 +12,14 @@ const createBannerControls = async (data) => createWithAutoOrder({ model: Banner
  * Fetch BannerControls with dynamic population depending on the `type` field.
  */
 
-async function getBannerControlsWithFilters(filter, page, limit, sort = { order: 1 }) {
-  return getWithFilters({
-    model: BannerControls,
-    query: filter,
-    refPath: "type",
-    refLookups: {
-      Event: {
-        from: "events",
-        project: { "basicInfo": 1, },
-        
-      },
-      Organizer: {
-        from: "users",
-        project: { firstName: 1, lastName: 1, profileIcon: 1 },
-        
-      },
-      LoyaltyProgram: {
-        from: "users",
-        project: { firstName: 1, lastName: 1, profileIcon: 1 },
-      },
-
-    },
-    options: { sort, page, limit },
-  });
+async function getBannerControlsWithFilters(filter, page = 1, limit = 10, sort = { order: 1 }) {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  return BannerControls.find(filter)
+    .sort(sort)
+    .skip(skip)
+    .limit(limit)
 }
+
 
 const getBannerControlsCounts = async (query) => {
   return getModelCounts({ model: BannerControls, filterQuery: query });
@@ -45,7 +28,7 @@ const getBannerControlsCounts = async (query) => {
 
 // Count by condition
 const countBannerControls = async (query = {}) => {
-  return countDocuments({ model: BannerControls, query });
+  return BannerControls.countDocuments({ ...query });
 };
 
 

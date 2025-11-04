@@ -10,146 +10,110 @@ const { transformOperatingHoursToLocal } = require("../../../shared/commonSchema
  * @param {Object} options - optional settings: { timezone, includeFields, excludeFields }
  */
 const formatEventResponse = (eventObject, options = {}) => {
-  if (!eventObject) return null;
+  let event = typeof eventObject.toObject === "function" ? eventObject.toObject() : eventObject;
+
+  if (!event) return null;
 
   const { timezone = "UTC", includeFields = [], excludeFields = [] } = options;
 
-  // Convert Mongoose document to plain object
-  const event = JSON.parse(JSON.stringify(eventObject));
+  // Update media URLs in-place
+  if (event.basicInfo?.media?.name) {
+    event.basicInfo.media.url = getFullImageUrl(event.basicInfo.media.name);
+  }
 
-  // ---------- BASIC INFO ----------
-  const basicInfo = {
-    title: event.basicInfo?.title || "",
-    description: event.basicInfo?.description || "",
-    venueLocation: event.basicInfo?.venueLocation || null,
-    media: getFullImageUrl(event.basicInfo?.media?.name),
-    partnerOrganizer: event.basicInfo?.partnerOrganizer || null,
-  };
-
-  // ---------- ORGANIZATION ----------
+  // Organization media and operating hours
   if (event.basicInfo?.organization) {
     const org = event.basicInfo.organization;
-
-    basicInfo.organization = {
-      _id: org._id,
-      basicInfo: {
-        name: org.basicInfo?.name || "",
-        socialLinks: org.basicInfo?.socialLinks || {},
-        media: {
-          logo: getFullImageUrl(org.basicInfo?.media?.logo),
-          cover: getFullImageUrl(org.basicInfo?.media?.cover),
-        },
-      },
-      location: org.location || null,
-      otherInfo: {
-        description: org.otherInfo?.description || "",
-        minAge: org.otherInfo?.minAge || null,
-        tags: (org.otherInfo?.tags || []).map((t) => ({
-          _id: t._id,
-          title: t.title,
-        })),
-        categories: (org.otherInfo?.categories || []).map((c) => ({
-          _id: c._id,
-          title: c.title,
-          image: getFullImageUrl(c.image),
-        })),
-        galleryMedia: (org.otherInfo?.galleryMedia || []).map((g) => ({
-          name: g.name,
-          type: g.type,
-          url: getFullImageUrl(g.name),
-        })),
-      },
-      operatingHours: transformOperatingHoursToLocal(org?.operatingHours, timezone),
-    };
+    if (org.basicInfo?.media) {
+      if (org.basicInfo.media.logo)
+        org.basicInfo.media.logo = getFullImageUrl(org.basicInfo.media.logo);
+      if (org.basicInfo.media.cover)
+        org.basicInfo.media.cover = getFullImageUrl(org.basicInfo.media.cover);
+    }
+    if (Array.isArray(org.otherInfo?.categories)) {
+      org.otherInfo.categories.forEach((c) => {
+        if (c.image) c.image = getFullImageUrl(c.image);
+      });
+    }
+    if (Array.isArray(org.otherInfo?.galleryMedia)) {
+      org.otherInfo.galleryMedia.forEach((g) => {
+        if (g.name) g.url = getFullImageUrl(g.name);
+      });
+    }
+    if (org.operatingHours) {
+      org.operatingHours = transformOperatingHoursToLocal(org.operatingHours, timezone);
+    }
   }
 
-  // ---------- VENUE ----------
-  if (event.basicInfo?.venue) {
-    const venue = event.basicInfo.venue;
-    basicInfo.venue = {
-      _id: venue._id,
-      title: venue.title,
-      location: venue.location,
-      floorPlan: getFullImageUrl(venue.floorPlan),
-    };
+  // Venue floor plan
+  if (event.basicInfo?.venue?.floorPlan) {
+    event.basicInfo.venue.floorPlan = getFullImageUrl(event.basicInfo.venue.floorPlan);
   }
 
-  // ---------- CATEGORIES & TAGS ----------
-  // Only map categories if they are objects, not just ObjectIds (strings)
+  // Categories images
   if (
     Array.isArray(event.basicInfo?.categories) &&
-    event.basicInfo.categories.length > 0 &&
     typeof event.basicInfo.categories[0] === "object" &&
     event.basicInfo.categories[0] !== null
   ) {
-    basicInfo.categories = event.basicInfo.categories.map((cat) => ({
-      _id: cat._id,
-      title: cat.title,
-      image: getFullImageUrl(cat.image),
-    }));
+    event.basicInfo.categories.forEach((cat) => {
+      if (cat.image) cat.image = getFullImageUrl(cat.image);
+    });
   }
 
-  basicInfo.tags = (event.basicInfo?.tags || []).map((tag) => ({
-    _id: tag._id,
-    title: tag.title,
-  }));
+  // Schedule formatting
+  if (event.schedule) {
+    event.schedule = formatEventSchedule(event.schedule, timezone);
+  }
 
-  // ---------- SCHEDULE ----------
-  const schedule = {
-    type: event.schedule?.type || "oneTime",
-    startDateTime: event.schedule?.startDateTime
-      ? convertUtcToTimezone(event.schedule.startDateTime, timezone, "YYYY-MM-DD hh:mm A")
-      : "",
-    endDateTime: event.schedule?.endDateTime
-      ? convertUtcToTimezone(event.schedule.endDateTime, timezone, "YYYY-MM-DD hh:mm A")
-      : "",
-    recurringDetails: event.schedule?.recurringDetails || null,
-  };
-
-  // ---------- META ----------
-  const meta = {
-    revenue: event.meta?.revenue || 0,
-    views: event.meta?.views || 0,
-    region: event.meta?.region || "",
-    favoritesCount: event.meta?.favoritesCount || 0,
-    attendeesCount: event.meta?.attendeesCount || 0,
-  };
-
-  // ---------- FINAL EVENT STRUCTURE ----------
-  const formattedEvent = {
-    _id: event._id,
-    basicInfo,
-    schedule,
-    meta,
-    creator: event.creator,
-    status: event.status,
-    createdAt: event.createdAt,
-    updatedAt: event.updatedAt,
-  };
-
-  // ---------- FIELD FILTERING ----------
+  // Field filtering
+  let result = event;
   if (includeFields.length > 0) {
-    const filtered = {};
+    result = {};
     includeFields.forEach((field) => {
-      if (formattedEvent[field]) filtered[field] = formattedEvent[field];
+      if (event[field] !== undefined) result[field] = event[field];
     });
-    return filtered;
+    return result;
   }
 
   if (excludeFields.length > 0) {
     excludeFields.forEach((fieldPath) => {
       const [mainField, subField] = fieldPath.split(".");
-      if (subField && formattedEvent[mainField]) {
-        delete formattedEvent[mainField][subField];
+      if (subField && result[mainField]) {
+        delete result[mainField][subField];
       } else {
-        delete formattedEvent[fieldPath];
+        delete result[fieldPath];
       }
     });
   }
 
-  return formattedEvent;
+  return result;
 };
+
+
+// Utility function to format schedule
+function formatEventSchedule(scheduleObj, timezone, format = "YYYY-MM-DD hh:mm A") {
+  if (!scheduleObj) return {};
+
+  const type = scheduleObj.type || "oneTime";
+  const formattedSchedule = {
+    type,
+    startDateTime: scheduleObj.startDateTime
+      ? convertUtcToTimezone(scheduleObj.startDateTime, timezone, format)
+      : "",
+    endDateTime: scheduleObj.endDateTime
+      ? convertUtcToTimezone(scheduleObj.endDateTime, timezone, format)
+      : "",
+  };
+
+  if (type !== "oneTime") {
+    formattedSchedule.recurringDetails = scheduleObj.recurringDetails || null;
+  }
+
+  return formattedSchedule;
+}
 
 module.exports = {
   formatEventResponse,
+  formatEventSchedule,
 };

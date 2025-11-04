@@ -11,7 +11,6 @@ const createBannerControls = async ({ title, image, type, object, status }) => {
 
 const getBannerControls = async ({ page, limit, keyword, status, date, orderSort = "asc" }) => {
   const query = {};
-
   // Filter by status
   query.status = status ? status : { $ne: "deleted" };
 
@@ -30,7 +29,6 @@ const getBannerControls = async ({ page, limit, keyword, status, date, orderSort
     bannerControlsRepo.getBannerControlsWithFilters(query, page, limit === 0 ? 0 : limit, sort),
     bannerControlsRepo.getBannerControlsCounts(query),
   ]);
-
 
   //format bannerControls
   bannerControls = bannerControls.map(item => {
