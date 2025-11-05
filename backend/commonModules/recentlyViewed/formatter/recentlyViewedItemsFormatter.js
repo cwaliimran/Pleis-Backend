@@ -10,7 +10,7 @@ const { formatCategories } = require("../../../admin/categories/formatters/categ
  * @param {Object} eventObject - Mongoose doc or plain object
  * @param {Object} options - optional settings: { timezone, includeFields, excludeFields }
  */
-const formatFavoritesEventResponse = (eventObject, options = {}) => {
+const formatRecentlyViewedEventResponse = (eventObject, options = {}) => {
   if (!eventObject) return null;
 
 
@@ -50,7 +50,6 @@ const formatFavoritesEventResponse = (eventObject, options = {}) => {
   // Format schedule
   event.schedule = formatEventSchedule(event.schedule, timezone);
   delete event.basicInfo?.venueLocation;
-  event.isFavorite = true;
   event.ticketInfo = {
     price: "€40"
   }
@@ -59,7 +58,7 @@ const formatFavoritesEventResponse = (eventObject, options = {}) => {
 };
 
 
-function formatFavoritesOrganization(item, options = {}) {
+function formatRecentlyViewedOrganization(item, options = {}) {
 
   let org = typeof item.toObject === "function" ? item.toObject() : item;
   if (!org) return null;
@@ -88,12 +87,11 @@ function formatFavoritesOrganization(item, options = {}) {
       org.otherInfo.categories = formatCategories(org.otherInfo.categories);
     }
   }
-  org.isFavorite = true;
   return org;
 }
 
 
 module.exports = {
-  formatFavoritesEventResponse,
-  formatFavoritesOrganization,
+  formatRecentlyViewedEventResponse,
+  formatRecentlyViewedOrganization,
 };

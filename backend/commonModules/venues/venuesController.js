@@ -116,8 +116,7 @@ const getVenueDetails = async (req, res) => {
       pathParams: ["id"],
       objectIdFields: ["id"],
     })
-  )
-    return;
+  ) return;
 
   try {
     const venue = await venuesService.getVenueDetails(id);
@@ -184,7 +183,7 @@ const updateVenue = async (req, res) => {
 
     //update all events with venue location if location is updated
     if (location) {
-       await updateEventsWithVenueLocation(id, location);
+      await updateEventsWithVenueLocation(id, location);
     }
 
     if (!updated) {

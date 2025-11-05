@@ -125,6 +125,16 @@ const organizationSchema = new mongoose.Schema(
       },
     ],
 
+    meta: {
+      favoritesCount: {
+        type: Number,
+        default: 0,
+      },
+      viewsCount: {
+        type: Number,
+        default: 0,
+      },
+    },
   },
   {
     timestamps: true,

@@ -62,7 +62,7 @@ const toggleFavorite = async (req, res) => {
 const getUserFavorites = async (req, res) => {
     const { page, limit } = parsePaginationParams(req);
     const { targetType } = req.query;
-    const {_id: userId, location, timezone} = req.user;
+    const { _id: userId, location, timezone } = req.user;
 
     try {
         if (

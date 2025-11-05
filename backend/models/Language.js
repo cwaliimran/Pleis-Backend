@@ -41,7 +41,7 @@ languageSchema.methods.toJSON = function () {
   if (languageObject.flag && !languageObject.flag.startsWith("http")) {
     languageObject.flag = `${baseUrl}${languageObject.flag}`;
   } else if (!languageObject.flag) {
-    languageObject.flag = `${baseUrl}noImage.png`;
+    languageObject.flag = `${baseUrl}noimage.png`;
   }
 
   return languageObject;

@@ -12,6 +12,7 @@ const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { formatMenuItem } = require("../../commonModules/menuManagement/menuItems/formatter/formatMenuItems");
 const { formatEventResponse } = require("../../commonModules/events/formatter/eventFormatter");
 const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
+const { addOrUpdateRecentlyViewedItem } = require("@recentlyViewed/recentlyViewedItemService");
 
 
 
@@ -49,6 +50,8 @@ const getOrganizationProfile = async (queryData) => {
         timezone
       );
     }
+
+    addOrUpdateRecentlyViewedItem(userId, organizationId, 'organization'); // Run in background, don't await
 
     return { status: true, result: { data: { orgProfileInfo, orgEvents: orgEvents.result, reservations, menu, loyaltyPrograms, reviews, similarOrganizations } } };
   } catch (error) {

@@ -7,9 +7,10 @@ const getHome = async (req, res) => {
 
   try {
     const { latitude = 0, longitude = 0, radiusKm = 50 } = req.query;
-    let { location: userLocation, timezone } = req.user;
+    let { location: userLocation, timezone, _id: userId } = req.user;
     let queryData = {
       userLocation,
+      userId,
       timezone: timezone || "Asia/Karachi",
       latitude: parseFloat(latitude),
       longitude: parseFloat(longitude),

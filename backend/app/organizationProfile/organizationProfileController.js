@@ -4,6 +4,7 @@ const {
 } = require("../../helperUtils/responseUtil");
 const { getOrganizationProfile } = require("./organizationProfileService");
 
+
 const getOrganizationProfileData = async (req, res) => {
 
   const { _id } = req.user;
@@ -29,6 +30,8 @@ const getOrganizationProfileData = async (req, res) => {
         error: result,
       });
     }
+
+    
 
     return sendResponse({
       res,

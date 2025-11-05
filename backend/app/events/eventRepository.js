@@ -34,8 +34,7 @@ const getMoreFromOrganizerEvents = async (userId, filter, page, limit) => {
   });
 
 
-
-  // Add "favorite" flag if user is logged in
+  // Add "favorite" flag
   if (userId && events.length > 0) {
     const eventIds = events.map((e) => e._id);
     const userFavorites = await Favorites.find({

@@ -1,7 +1,6 @@
 const { getFullImageUrl } = require("../../../helperUtils/imageHelper");
 const { calculateDistance } = require("../../../helperUtils/calculateDistance");
-const { formatEventSchedule } = require("../../events/formatter/eventFormatter");
-const { formatCategories } = require("../../../admin/categories/formatters/categoryFormatter");
+const { formatEventSchedule } = require("../../../commonModules/events/formatter/eventFormatter");
 
 /**
  * Formats an event document into a public-friendly JSON response.
@@ -10,7 +9,7 @@ const { formatCategories } = require("../../../admin/categories/formatters/categ
  * @param {Object} eventObject - Mongoose doc or plain object
  * @param {Object} options - optional settings: { timezone, includeFields, excludeFields }
  */
-const formatFavoritesEventResponse = (eventObject, options = {}) => {
+const formatCustomCategoryEventResponse = (eventObject, options = {}) => {
   if (!eventObject) return null;
 
 
@@ -50,7 +49,6 @@ const formatFavoritesEventResponse = (eventObject, options = {}) => {
   // Format schedule
   event.schedule = formatEventSchedule(event.schedule, timezone);
   delete event.basicInfo?.venueLocation;
-  event.isFavorite = true;
   event.ticketInfo = {
     price: "€40"
   }
@@ -58,42 +56,6 @@ const formatFavoritesEventResponse = (eventObject, options = {}) => {
   return event;
 };
 
-
-function formatFavoritesOrganization(item, options = {}) {
-
-  let org = typeof item.toObject === "function" ? item.toObject() : item;
-  if (!org) return null;
-
-  delete org.__v;
-
-  // Handle media transformation for aggregation structure
-  if (org.basicInfo?.media?.logo) {
-    const logoName = org.basicInfo.media.logo;
-    org.basicInfo.media.logo = getFullImageUrl(logoName);
-  }
-
-
-  // also transform otherInfo.categories if they are populated and not just ObjectIds
-  if (org.otherInfo?.categories && Array.isArray(org.otherInfo.categories)) {
-    // Check if at least one element is a populated object (not just ObjectId or string)
-    const hasPopulated = org.otherInfo.categories.some(
-      cat =>
-        cat &&
-        typeof cat === 'object' &&
-        cat._id &&
-        // Exclude plain ObjectId objects (which have only _id and no other keys)
-        (Object.keys(cat).length > 1 || (cat.title || cat.name))
-    );
-    if (hasPopulated) {
-      org.otherInfo.categories = formatCategories(org.otherInfo.categories);
-    }
-  }
-  org.isFavorite = true;
-  return org;
-}
-
-
 module.exports = {
-  formatFavoritesEventResponse,
-  formatFavoritesOrganization,
+  formatCustomCategoryEventResponse,
 };

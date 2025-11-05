@@ -1,7 +1,5 @@
 // services/customCategoryService.js
-const { Events } = require("../../commonModules/events/Event");
 const { formatEventResponse } = require("../../commonModules/events/formatter/eventFormatter");
-const Organizations = require("../../commonModules/organizations/Organization");
 const { getFullImageUrl } = require("../../helperUtils/imageHelper");
 const { User } = require("../../models/UserModel");
 const CustomCategories = require("./CustomCategories");
@@ -132,7 +130,7 @@ const transformOrganization = (organization) => {
       : getFullImageUrl(transformed.basicInfo.media.logo);
   } else {
     // default logo when missing/empty
-    transformed.basicInfo.media.logo = getFullImageUrl("noImage.png");
+    transformed.basicInfo.media.logo = getFullImageUrl("noimage.png");
   }
 
   // Cover image (optional)
@@ -143,19 +141,6 @@ const transformOrganization = (organization) => {
   }
 
   return transformed;
-};
-// Function to get Mongoose model based on type
-const getModelFromType = (type) => {
-  switch (type) {
-    case "Event":
-      return Events
-    case "User":
-      return User
-    case "Organizations":
-      return Organizations
-    default:
-      throw new Error(`Unknown type: ${type}`);
-  }
 };
 
 

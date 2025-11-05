@@ -1,18 +1,18 @@
 
 const { getBannerControls } = require("../../admin/bannerControl/bannerControlsService");
-const { getTop10Promos } = require("../../admin/browserControl/top10PromoSection/topPromosService");
-const { getPublicCategories } = require("../../admin/categories/categoriesService");
-const { getCustomCategories } = require("../../admin/customCategories/customCategoriesService");
-const { Highlights } = require("../../commonModules/highlights/Highlight");
 const { getPublicHighlights } = require("../../commonModules/highlights/highlightService");
-const { index } = require("../../commonModules/loyalty/challenges/models/Reward/rewardSchema");
+const { getUserRecentlyViewedItems } = require("../../commonModules/recentlyViewed/recentlyViewedItemService");
 const { sendResponse } = require("../../helperUtils/responseUtil");
-const { getNearbyEvents } = require("../events/eventService");
+const { getCustomCategories } = require("../customCategories/customCategoriesService");
+const { getNearbyEvents, getForYouEvents } = require("../events/eventService");
 const { getChallenges } = require("../loyalty/challenges/challengesService");
 const { getPromotions } = require("../loyalty/promotions/promotionsService");
+const { getPublicCategories } = require("../publicCategories/categoriesService");
+const { getTop10Promos } = require("../top10PromoSection/topPromosService");
 
 const getHomeService = async ({ queryData }) => {
-  const { userLocation, timezone } = queryData;
+  const { userId, userLocation, timezone } = queryData;
+
   try {
     // Fetch all data in parallel
     const [
@@ -23,18 +23,27 @@ const getHomeService = async ({ queryData }) => {
       nearYou,
       customCategoriesRes,
       highlightsRes,
+      recentlyViewed,
       topPicks,
       loyaltyEvents,
       challenges,
       promotions,
     ] = await Promise.all([
       getPublicCategories({}),
-      getTop10Promos({ userLocation, timezone }),
+      getTop10Promos({ userLocation, userId, timezone }),
       getBannerControls({ page: 1, limit: 10, status: "active" }),
-      [],//getForYou({ page: 1, limit: 10, status: "active" }),
+      getForYouEvents(userId, userLocation, timezone),
       getNearbyEvents(queryData),
-      getCustomCategories({ timezone, page: 1, limit: 10, status: "active" }),
+      getCustomCategories({ userLocation, userId, timezone, page: 1, limit: 10, status: "active" }),
       getPublicHighlights({ page: 1, limit: 10, keyword: "", userLocation }),
+      getUserRecentlyViewedItems({
+        userId,
+        location: userLocation,
+        timezone,
+        targetType: "event", //fetch only events for home screen
+        page: 1,
+        limit: 10,
+      }),
       [],//getTopPicks({ page: 1, limit: 10, status: "active" }),
       [],//getLoyaltyEvents({ page: 1, limit: 10, status: "active" }),
       getChallenges({ page: 1, limit: 10, timezone }),
@@ -52,12 +61,13 @@ const getHomeService = async ({ queryData }) => {
     const sectionOrder = [
       { key: "categories", title: "Categories", data: categories },
       { key: "top10", title: "Top 10", data: top10 },
-      { key: "forYou", title: "For You", data: forYou },
+      { key: "forYou", title: "For You", data: forYou.data || [] },
       { key: "nearYou", title: "Near You", data: nearYou },
       { key: "banners", title: "Banners", data: banners, index: 0 },
       { key: "customCategory", title: "Custom Category", index: 0 },
       { key: "topPicks", title: "Top Picks", data: topPicks },
       { key: "highlights", title: "Highlights", data: highlights },
+      { key: "recentlyViewed", title: "Recently Viewed", data: recentlyViewed?.recentlyViewedItems || [] },
       { key: "customCategory", title: "Custom Category", index: 1 },
       { key: "banners", title: "Banners", data: banners, index: 1 },
       { key: "loyaltyEvents", title: "Loyalty Events", data: loyaltyEvents },
@@ -133,10 +143,8 @@ const getHomeService = async ({ queryData }) => {
         }
       } else break;
     }
-
     return { status: true, data: interleavedSections };
   } catch (error) {
-    console.error("getHomeService error:", error);
     return sendResponse({
       statusCode: 500,
       translationKey: "internal_server",

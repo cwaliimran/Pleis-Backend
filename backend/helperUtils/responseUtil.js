@@ -98,7 +98,7 @@ const sendResponse = ({
     }
   }
   // Send the response with the appropriate status code
-  res.status(statusCode).json(response);
+    res.status(statusCode).json(response);
 };
 
 // Helper: Convert key to readable default translation

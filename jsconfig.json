@@ -10,6 +10,9 @@
       ],
       "@getFullImageUrl/*": [
         "backend/helperUtils/imageHelper/*"
+      ],
+      "@recentlyViewed/*": [
+        "backend/commonModules/recentlyViewed/*"
       ]
     }
   },

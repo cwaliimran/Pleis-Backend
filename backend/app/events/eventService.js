@@ -1,12 +1,15 @@
 // services/eventService.js
 
-const { getCurrentDateInTimezone, convertUtcToTimezone, generateMeta } = require("../../helperUtils/responseUtil");
+const { getCurrentDateInTimezone, generateMeta } = require("../../helperUtils/responseUtil");
 const eventRepo = require("./eventRepository");
 const _ = require("lodash");
 const { getRecommendedEvents } = require("./recommendationSystem/eventsRecommender");
-const Organizations = require("../../commonModules/organizations/Organization");
 const { formatEventResponse } = require("../../commonModules/events/formatter/eventFormatter");
 const { formatMoreFromOrganizerEventResponse } = require("./formatter/recommendedEventFormatter");
+const { addOrUpdateRecentlyViewedItem } = require("@recentlyViewed/recentlyViewedItemService");
+const { getUserInterestsIdsForRecommendation } = require("../../commonModules/usersManagement/usersRepository");
+const { getForYouEventsAgainstInterests } = require("./recommendationSystem/getForYouEventsAgainstInterests");
+const { Favorites } = require("../../commonModules/favorites/Favorite");
 
 
 const getNearbyEvents = async (queryData) => {
@@ -201,6 +204,9 @@ const getEventDetails = async (userLocation, userId, id, timezone) => {
 
   moreFromOrganizer = moreFromOrganizer.map(e => formatMoreFromOrganizerEventResponse(e, { userLocation, timezone }));
 
+  addOrUpdateRecentlyViewedItem(userId, id, 'event'); // Run in background, don't await
+
+
   let data = {
     event: formatEventResponse(event, { timezone }),
     announcements,
@@ -218,8 +224,45 @@ const getEventIdByNanoid = async (nanoid) => {
   return event ? event._id : null;
 };
 
+//get for you events for logged in user
+const getForYouEvents = async (userId, location, timezone) => {
+  // Fetch user preferences, interests, etc.
+  const userPreferences = await getUserInterestsIdsForRecommendation(userId);
+
+  // Get recommended events based on user preferences
+  let recommendedEvents = await getForYouEventsAgainstInterests({
+    location,
+    timezone,
+    preferences: userPreferences,
+  });
+
+  //TODO check if recommended events are less than limit, then fill with trending events
+
+  //check if events are isFavorite by user
+
+  // Add "favorite" flag
+  if (userId && recommendedEvents.data.length > 0) {
+    const eventIds = recommendedEvents.data.map((e) => e._id);
+    const userFavorites = await Favorites.find({
+      user: userId,
+      targetType: "event",
+      targetId: { $in: eventIds },
+    }).select("targetId");
+
+    const favoriteSet = new Set(userFavorites.map((f) => f.targetId.toString()));
+
+    recommendedEvents.data = recommendedEvents.data.map((event) => ({
+      ...event,
+      isFavorite: favoriteSet.has(event._id.toString()),
+    }));
+  }
+
+  return recommendedEvents;
+};
+
 module.exports = {
   getEventIdByNanoid,
   getNearbyEvents,
   getEventDetails,
+  getForYouEvents
 };
