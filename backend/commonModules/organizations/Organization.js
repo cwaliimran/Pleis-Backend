@@ -32,6 +32,22 @@ const organizationSchema = new mongoose.Schema(
         required: true,
         default: "",
       },
+      phoneNumber: {
+        code: {
+          // Country code for phone number
+          type: String,
+          default: "",
+        },
+        number: {
+          // Phone number without country code
+          type: String,
+          default: "",
+        },
+      },
+      website: {
+        type: String,
+        default: "",
+      },
       socialLinks: {
         youtube: {
           type: String,
@@ -46,10 +62,6 @@ const organizationSchema = new mongoose.Schema(
           default: "",
         },
         linkedin: {
-          type: String,
-          default: "",
-        },
-        website: {
           type: String,
           default: "",
         },

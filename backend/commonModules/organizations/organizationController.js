@@ -23,6 +23,8 @@ const createOrganization = async (req, res) => {
     tags,
     description,
     title,
+    phoneNumber,
+    website,
   } = req.body);
   let creator = req.user._id;
   if (req.user.userType === "admin") {

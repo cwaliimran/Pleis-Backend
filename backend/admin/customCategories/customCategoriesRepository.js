@@ -21,12 +21,12 @@ const createCustomCategory = async (data) => {
 };
 
 // Get all with filters, sorted by 'order' ascending and then 'createdAt' descending
-const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit, sort = { order: 1 }) => {
+const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit) => {
   const now = getCurrentDateInTimezone({ timezone });
 
   const pipeline = [
     { $match: filter },
-    { $sort: sort },
+    { $sort: { createdAt: -1 } },
     ...(limit > 0 ? [{ $skip: skip }, { $limit: limit }] : []),
 
     // --- Lookup Users ---

@@ -180,7 +180,7 @@ const userSchema = new mongoose.Schema(
       },
       profileCompleted: {
         type: Boolean,
-        default: true,
+        default: false,
       },
     },
 
