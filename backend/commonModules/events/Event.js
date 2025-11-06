@@ -109,7 +109,7 @@ const eventSchema = new mongoose.Schema(
       enum: ["active", "inactive", "completed", "deleted"],
       default: "active",
     },
-    // New addition
+    
     meta: {
       revenue: {
         type: Number,

@@ -10,23 +10,29 @@ const tiersService = require("./tiersService");
 
 const createTier = async (req, res) => {
   const {
+    image,
     title,
-    entryPoints = 0,
-    retainPoints = 0,
+    bonusPointsPerEuro,
+    essential,
+    preferred,
+    premier,
     status = "active",
   } = req.body;
 
   if (
     !validateParams(req, res, {
-      rawData: ["title"],
+      rawData: ["title", "bonusPointsPerEuro", "essential.entryPoints", "essential.retainPoints", "preferred.entryPoints", "preferred.retainPoints", "premier.entryPoints", "premier.retainPoints"],
     })
   )
     return;
 
   let data = {
+    image,
     title,
-    entryPoints,
-    retainPoints,
+    bonusPointsPerEuro,
+    essential,
+    preferred,
+    premier,
     status,
   };
 
@@ -127,9 +133,12 @@ const getTierDetails = async (req, res) => {
 const updateTier = async (req, res) => {
   const { id } = req.params;
   const {
+    image,
     title,
-    entryPoints,
-    retainPoints,
+    bonusPointsPerEuro,
+    essential,
+    preferred,
+    premier,
     status = "active",
   } = req.body;
 
@@ -142,9 +151,12 @@ const updateTier = async (req, res) => {
     return;
 
   let data = {
+    image,
     title,
-    entryPoints,
-    retainPoints,
+    bonusPointsPerEuro,
+    essential,
+    preferred,
+    premier,
     status,
   };
 

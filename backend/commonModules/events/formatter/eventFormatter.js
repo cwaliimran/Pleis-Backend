@@ -18,7 +18,7 @@ const formatEventResponse = (eventObject, options = {}) => {
 
   // Update media URLs in-place
   if (event.basicInfo?.media?.name) {
-    event.basicInfo.media.url = getFullImageUrl(event.basicInfo.media.name);
+    event.basicInfo.media = getFullImageUrl(event.basicInfo.media.name);
   }
 
   // Organization media and operating hours

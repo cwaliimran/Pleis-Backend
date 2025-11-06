@@ -3,8 +3,6 @@ const Organizations = require("../../commonModules/organizations/Organization");
 const Menus = require("../menuManagement/menu/Menus");
 const { Events } = require("../events/Event");
 const { generateMeta } = require("../../helperUtils/responseUtil");
-const { formatOrganization } = require("../organizations/formatter/formatOrganization");
-const { formatEventResponse } = require("../events/formatter/eventFormatter");
 const { formatFavoritesEventResponse, formatFavoritesOrganization } = require("./formatter/favoritesFormatter");
 
 /**

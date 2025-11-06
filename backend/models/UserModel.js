@@ -180,7 +180,7 @@ const userSchema = new mongoose.Schema(
       },
       profileCompleted: {
         type: Boolean,
-        default: true,
+        default: false,
       },
     },
 
@@ -573,7 +573,7 @@ userSchema.methods.toJSON = function (userData) {
   if (userObject.profileIcon && !userObject.profileIcon.startsWith("http")) {
     userObject.profileIcon = baseUrl + userObject.profileIcon;
   } else if (!userObject.profileIcon) {
-    userObject.profileIcon = baseUrl + "noImage.png";
+    userObject.profileIcon = baseUrl + "noimage.png";
   }
 
   delete userObject.password;

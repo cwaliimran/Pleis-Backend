@@ -3,6 +3,7 @@ const { buildKeywordQueryFromModel, buildKeywordQueryFromModels } = require("../
 const { generateMeta } = require("../../helperUtils/responseUtil");
 const { formatOrganization } = require("../organizations/formatter/formatOrganization");
 const Organizations = require("../organizations/Organization");
+const { formatVenue } = require("./formatter/formatVenue");
 const Venues = require("./Venues");
 const venueRepo = require("./venuesRepository");
 
@@ -21,7 +22,10 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
         from: "organizations",
         localField: "organization",
         foreignField: "_id",
-        as: "organizationData"
+        as: "organizationData",
+        pipeline: [
+          { $project: { basicInfo: 1 } }
+        ]
       }
     },
     // Flatten organizationData array for easier matching
@@ -143,7 +147,7 @@ const getUnassignedVenues = async (userId) => {
 
 
 const updateVenue = async (id, data) => {
-  const venue = await venueRepo.findVenueById(id);
+  let venue = await venueRepo.findVenueById(id);
   if (!venue) return null;
 
   const allowedFields = [
@@ -204,6 +208,9 @@ const updateVenue = async (id, data) => {
     );
   }
 
+  //get updated venue with venueDetails
+  console.log("venue._id",venue._id)
+  venue = await getVenueDetails(venue._id);
   return venue;
 };
 
@@ -216,8 +223,42 @@ const deleteVenue = async (id) => {
   return true;
 };
 const getVenueDetails = async (id, select = []) => {
-  const venue = await venueRepo.findVenueById(id, select);
+  // Aggregate to join organization data
+  const pipeline = [
+    { $match: { _id: new mongoose.Types.ObjectId(id) } },
+    {
+      $lookup: {
+        from: "organizations",
+        localField: "organization",
+        foreignField: "_id",
+        as: "organizationData",
+        pipeline: [
+          { $project: { basicInfo: 1 } }
+        ]
+      }
+    },
+    { $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true } }
+  ];
+
+  // Optionally project selected fields
+  if (select.length > 0) {
+    const projection = {};
+    select.forEach(field => projection[field] = 1);
+    projection.organizationData = 1;
+    pipeline.push({ $project: projection });
+  }
+
+  const result = await Venues.aggregate(pipeline);
+  let venue = result[0];
   if (!venue) return null;
+  // Format venue response
+
+  venue = formatVenue(venue);
+
+  if (venue.organizationData) {
+    venue.organization = formatOrganization(venue.organizationData);
+  }
+
   return venue;
 };
 

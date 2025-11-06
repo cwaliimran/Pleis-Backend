@@ -76,7 +76,6 @@ const createChallenge = async (req, res) => {
 const getChallenges = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date } = req.query;
-
   try {
     const { challenges, meta } = await challengeService.getChallenges({
       page,

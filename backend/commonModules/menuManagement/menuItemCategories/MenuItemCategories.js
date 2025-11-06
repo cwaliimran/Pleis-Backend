@@ -8,7 +8,6 @@ const menuItemCategoriesSchema = new mongoose.Schema(
       trim: true,
       required: true,
       default: "",
-      unique: true,
     },
     status: {
       type: String,

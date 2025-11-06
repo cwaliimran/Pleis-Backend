@@ -293,8 +293,14 @@
   "latitude_and_longitude_required": "Latitude and longitude required",
   "nearby_cities_fetched_successfully": "Nearby cities fetched successfully",
   "favorites_fetched_successfully": "Favorites fetched successfully",
-  "favorite_count_fetched_successfully": "Favorite count fetched successfully",
   "no_nearby_cities_found": "No nearby cities found",
   "added_to_favorites_successfully": "Added to favorites successfully",
-  "removed_from_favorites_successfully": "Removed from favorites successfully"
+  "removed_from_favorites_successfully": "Removed from favorites successfully",
+  "loyalty_clubs_fetched_successfully": "Loyalty clubs fetched successfully",
+  "listings_fetched_successfully": "Listings fetched successfully",
+  "recently_viewed_item_added_or_updated": "Recently viewed item added or updated",
+  "recently_viewed_items_fetched_successfully": "Recently viewed items fetched successfully",
+  "invalid_type": "Invalid type",
+  "share_link_generated_successfully": "Share link generated successfully",
+  "invalid_parameters": "Invalid parameters"
 }

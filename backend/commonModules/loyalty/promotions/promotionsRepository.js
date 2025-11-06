@@ -9,7 +9,7 @@ const mongoose = require("mongoose");
 // Decide which discriminator model to use
 const getModelByTaskType = (taskType) => {
   switch (taskType) {
-    
+
     case "buyMenuItem":
       return BuyMenuItemPromotion;
     case "happyHour":
@@ -37,10 +37,10 @@ const create = async (data) => {
 const getWithFilters = async (query = {}, skip = 0, limit = 10) => {
   return Promotion.find(query)
     .populate("menuItem")
-    .populate("tierLimit")
+    .populate({ path: "tierLimit", select: "image title" })
     .sort({ createdAt: -1 })
     .skip(skip)
-    .limit(limit);
+    .limit(limit).lean().exec();
 };
 
 // Count
@@ -52,7 +52,7 @@ const count = async (query = {}) => {
 const findById = async (id) => {
   return Promotion.findById(id)
     .populate("menuItem")
-    .populate("tierLimit");
+    .populate({ path: "tierLimit", select: "image title" }).exec();
 };
 
 // Update and save

@@ -1,4 +1,4 @@
-// models/ContactUs.js
+//UserInterests.js
 const mongoose = require('mongoose');
 
 const UserInterestsSchema = new mongoose.Schema({

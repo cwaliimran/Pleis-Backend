@@ -21,6 +21,10 @@ function formatPromotion(promotion, timezone) {
         obj.companyOrganizer.profileIcon = getFullImageUrl(obj.companyOrganizer.profileIcon);
     }
 
+    if (obj?.tierLimit?.image) {
+        obj.tierLimit.image = getFullImageUrl(obj.tierLimit.image);
+    }
+
     // Adjust obj properties based on promotionType
     switch (obj.promotionType) {
         case "happyHour":

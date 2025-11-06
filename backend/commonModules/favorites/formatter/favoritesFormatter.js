@@ -18,7 +18,6 @@ const formatFavoritesEventResponse = (eventObject, options = {}) => {
 
   // Convert Mongoose document to plain object
   const event = JSON.parse(JSON.stringify(eventObject));
-
   // Only mutate/format fields that need formatting, keep rest as is
   if (event.basicInfo) {
     // Format media
@@ -50,7 +49,7 @@ const formatFavoritesEventResponse = (eventObject, options = {}) => {
 
   // Format schedule
   event.schedule = formatEventSchedule(event.schedule, timezone);
-  delete event.basicInfo.venueLocation;
+  delete event.basicInfo?.venueLocation;
   event.isFavorite = true;
   event.ticketInfo = {
     price: "€40"

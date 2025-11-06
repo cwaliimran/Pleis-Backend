@@ -184,6 +184,11 @@ const getUserInterestsByUserId = async (userId) => {
     .populate("tags");
 };
 
+//get user interests by userId and populate references
+const getUserInterestsIdsForRecommendation = async (userId) => {
+  return UserInterests.findOne({ user: userId })
+};
+
 module.exports = {
   createUser,
   getUsersWithFilters,
@@ -196,4 +201,5 @@ module.exports = {
   updateTwoFA,
   updateUserInterests,
   getUserInterestsByUserId,
+  getUserInterestsIdsForRecommendation
 };

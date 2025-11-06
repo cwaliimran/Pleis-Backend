@@ -1,0 +1,178 @@
+const { Events } = require("../../../commonModules/events/Event");
+const { generateMeta } = require("@utils/responseUtil");
+const { formatRecentlyViewedEventResponse } = require("../../../commonModules/recentlyViewed/formatter/recentlyViewedItemsFormatter");
+
+/**
+ * @desc Fetch personalized "For You" events for a user based on interests
+ * Prioritizes active, future, and popular events.
+ */
+const getForYouEventsAgainstInterests = async ({
+  location,
+  timezone,
+  preferences = {},
+  page = 1,
+  limit = 20,
+}) => {
+  const now = new Date();
+  const skip = Math.max((page - 1) * limit, 0);
+
+  const { categories = [], tags = [], venueTypes = [] } = preferences;
+
+  const baseMatch = {
+    status: "active",
+    "schedule.endDateTime": { $gte: now },
+  };
+
+  const hasInterests =
+    (categories?.length || tags?.length || venueTypes?.length) > 0;
+
+  let pipeline = [];
+
+  if (hasInterests) {
+    pipeline = [
+      { $match: baseMatch },
+      {
+        $addFields: {
+          matchedTags: {
+            $setIntersection: [
+              { $ifNull: ["$basicInfo.tags", []] },
+              tags || [],
+            ],
+          },
+          matchedCategories: {
+            $setIntersection: [
+              { $ifNull: ["$basicInfo.categories", []] },
+              categories || [],
+            ],
+          },
+          matchedVenueTypes: {
+            $cond: [
+              { $gt: [venueTypes.length, 0] },
+              {
+                $setIntersection: [
+                  { $ifNull: ["$basicInfo.venueType", []] },
+                  venueTypes,
+                ],
+              },
+              [],
+            ],
+          },
+        },
+      },
+      {
+        $addFields: {
+          matchScore: {
+            $add: [
+              { $multiply: [{ $size: { $ifNull: ["$matchedTags", []] } }, 1.0] },
+              { $multiply: [{ $size: { $ifNull: ["$matchedCategories", []] } }, 1.2] },
+              { $multiply: [{ $size: { $ifNull: ["$matchedVenueTypes", []] } }, 1.0] },
+              { $divide: [{ $ifNull: ["$meta.viewsCount", 0] }, 100] },
+              { $divide: [{ $ifNull: ["$meta.favoritesCount", 0] }, 50] },
+            ],
+          },
+        },
+      },
+      // filter out invalid scores
+      { $match: { matchScore: { $gt: 0 } } },
+      {
+        $sort: {
+          matchScore: -1,
+          "meta.viewsCount": -1,
+          createdAt: -1,
+        },
+      },
+      { $skip: skip },
+      { $limit: limit },
+      ...getEventLookups(),
+    ];
+  } else {
+    // --- Fallback: Trending events ---
+    pipeline = [
+      { $match: baseMatch },
+      {
+        $addFields: {
+          trendingScore: {
+            $add: [
+              { $multiply: [{ $ifNull: ["$meta.viewsCount", 0] }, 0.5] },
+              { $multiply: [{ $ifNull: ["$meta.favoritesCount", 0] }, 1.5] },
+              { $multiply: [{ $ifNull: ["$meta.attendeesCount", 0] }, 1.0] },
+            ],
+          },
+        },
+      },
+      {
+        $sort: {
+          trendingScore: -1,
+          createdAt: -1,
+        },
+      },
+      { $skip: skip },
+      { $limit: limit },
+      ...getEventLookups(),
+    ];
+  }
+
+  let results = [];
+  try {
+    results = await Events.aggregate(pipeline).allowDiskUse(true);
+  } catch (err) {
+    console.error("❌ [getForYouEventsAgainstInterests] Aggregation failed:", err);
+    throw new Error("Failed to fetch personalized events");
+  }
+
+  if (!Array.isArray(results)) results = [];
+
+  // ✅ Format results consistently
+  const formatted = results.map((event) =>
+    formatRecentlyViewedEventResponse(event, { userLocation: location, timezone })
+  );
+
+  const meta = generateMeta(page, limit, formatted.length);
+
+  return { data: formatted, meta };
+};
+
+/**
+ * Helper: shared $lookups for enrichment
+ */
+function getEventLookups() {
+  return [
+    {
+      $lookup: {
+        from: "categories",
+        localField: "basicInfo.categories",
+        foreignField: "_id",
+        as: "basicInfo.categories",
+        pipeline: [{ $project: { _id: 1, title: 1, image: 1 } }],
+      },
+    },
+    {
+      $lookup: {
+        from: "tags",
+        localField: "basicInfo.tags",
+        foreignField: "_id",
+        as: "basicInfo.tags",
+        pipeline: [{ $project: { _id: 1, title: 1 } }],
+      },
+    },
+    {
+      $lookup: {
+        from: "organizations",
+        localField: "basicInfo.organization",
+        foreignField: "_id",
+        as: "basicInfo.organization",
+        pipeline: [
+          { $project: { _id: 1, "basicInfo.name": 1, "basicInfo.media": 1 } },
+        ],
+      },
+    },
+    {
+      $unwind: {
+        path: "$basicInfo.organization",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+  ];
+}
+
+module.exports = { getForYouEventsAgainstInterests };

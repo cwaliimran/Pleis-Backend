@@ -9,6 +9,10 @@ router.use("/maps", require("../app/maps/mapsRoutes"));
 router.use("/organizations", require("../app/organizationProfile/organizationProfileRoutes"));
 //favorites
 router.use("/favorites", require("../commonModules/favorites/favoriteRoutes"));
+
+//recently viewed items
+router.use("/recently-viewed", require("../commonModules/recentlyViewed/recentlyViewedItemRoutes"));
+
 //events
 router.use("/events", require("../app/events/eventRoutes"));
 

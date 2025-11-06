@@ -64,13 +64,16 @@ app.use(express.json());
 
 
 // Routes
+
+
+app.use("/api/v1", routes);
+
 // Admin routes
 app.use("/api/v1/admin", adminRoutes);
 
 //app routes
 app.use("/api/v1/app", appRoutes);
 
-app.use("/api/v1", routes);
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
 

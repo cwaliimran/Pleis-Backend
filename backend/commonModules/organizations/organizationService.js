@@ -102,7 +102,7 @@ const getOrganizationsByAdmin = async ({ page, limit, keyword, status, date, tim
   let meta = generateMeta(page, limit, totalFiltered);
   meta.tagsCount = { total, active, inactive };
 
-  organizations = organizations.map(org => formatOrganization(org, timezone));
+  organizations = organizations.map(org => formatOrganization(org, []));
 
   return {
     organizations,
@@ -229,7 +229,6 @@ const updateOrganization = async ({ id, data }) => {
       await existingVenue.save();
     }
   }
-
 
   await organization.save();
 

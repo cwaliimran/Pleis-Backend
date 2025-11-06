@@ -52,18 +52,6 @@ const getTopPromos = async ({ page, limit, keyword, status, date, orderSort = "a
 
 };
 
-const getTop10Promos = async ({ userLocation, timezone, filters }) => {
-  const topPromos = await topPromoRepo.getTop10Promos(filters, timezone);
-  const processed = topPromos.map(doc => {
-    return formatMoreFromOrganizerEventResponse(doc.event, { userLocation, timezone });
-
-  });
-
-  return processed;
-};
-
-
-
 const updateTopPromo = async (id, data) => {
   const updateData = {
     ...(data.status !== undefined && { status: data.status }),
@@ -124,5 +112,4 @@ module.exports = {
   updateTopPromo,
   deleteTopPromo,
   reorderTopPromo,
-  getTop10Promos,
 };

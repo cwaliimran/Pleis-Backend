@@ -8,6 +8,9 @@ function formatReward(reward, timezone) {
     if (obj?.image) {
         obj.media = getFullImageUrl(obj.image)
     }
+    if (obj?.tierLimit?.image) {
+        obj.tierLimit.image = getFullImageUrl(obj.tierLimit.image);
+    }
 
 
     // Adjust obj properties based on rewardType

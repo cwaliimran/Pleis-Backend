@@ -124,29 +124,6 @@ const normalizeOrders = async () => {
   return true;
 };
 
-const getTop10Promos = async (filters = {}) => {
-  const now = new Date();
-  const topPromos = await TopPromos.find({ ...filters, isTop10: true })
-    .populate({
-      path: "event",
-      select: "schedule basicInfo",
-      match: {
-        $or: [
-          { "schedule.endDateTime": { $gte: now } },
-          { "schedule.startDateTime": { $gte: now } },
-        ],
-        status: { $ne: "deleted" },
-      },
-      populate: {
-        path: "basicInfo.organization",
-        select: "basicInfo.media basicInfo.name",
-      }
-    });
-
-  // remove promos whose event did not pass the populate match (event will be null)
-  return topPromos.filter((p) => p.event);
-};
-
 module.exports = {
   createTopPromo,
   getTopPromosWithFilters,
@@ -158,5 +135,4 @@ module.exports = {
   updateMany,
   normalizeOrders,
   getTopPromosCounts,
-  getTop10Promos,
 };
