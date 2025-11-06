@@ -83,7 +83,9 @@ const securityMiddleware = (app, options = {}) => {
 
 
   app.use(cors(corsOptions));
-
+  app.options('*', cors(corsOptions), (req, res) => {
+    res.sendStatus(200);
+  });
   // Optional JSON error for CORS
   app.use((err, req, res, next) => {
     if (err && err.message === "CORS Forbidden") {
