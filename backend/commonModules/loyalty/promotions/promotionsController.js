@@ -9,6 +9,8 @@ const {
 const service = require("./promotionsService");
 
 const create = async (req, res) => {
+  let { timezone } = req.user;
+  let recurringDetails = req.body?.recurringDetails || {};
 
   var dateFields = {}
   var rawData = ["image", "title", "promotionType", "startDate", "endDate", "companyOrganizer"]
@@ -38,6 +40,31 @@ const create = async (req, res) => {
     objectIdFields
   })) return;
 
+
+  let validateData = {
+    rawData: [],
+    dateFields: {},
+  };
+
+  if (recurringDetails?.isEnabled) {
+
+    validateData.rawData.push("recurringDetails");
+    validateData.rawData.push("recurringDetails.frequency");
+    validateData.rawData.push("recurringDetails.interval");
+    validateData.rawData.push("recurringDetails.endType");
+
+    // Conditional validation based on endType
+    if (recurringDetails.endType === "onDate") {
+      validateData.dateFields["recurringDetails.endDate"] = "YYYY-MM-DD";
+    }
+
+    // Validate daysOfWeek if frequency is weekly or monthly
+    if (["weekly", "monthly"].includes(recurringDetails.frequency)) {
+      validateData.rawData.push("recurringDetails.daysOfWeek");
+    }
+  }
+
+  if (!validateParams(req, res, validateData)) return;
 
 
   try {
@@ -69,7 +96,7 @@ const create = async (req, res) => {
         translationKey: "end_date_cannot_be_before_start_date",
       });
     }
-    const response = await service.create(req.body);
+    const response = await service.create(req.body, timezone);
     return sendResponse({
       res,
       statusCode: 201,
@@ -115,8 +142,9 @@ const get = async (req, res) => {
 
 const getDetails = async (req, res) => {
   if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
+  let { timezone } = req.user;
   try {
-    const response = await service.getDetails(req.params.id);
+    const response = await service.getDetails(req.params.id, timezone);
     if (!response) {
       return sendResponse({ res, statusCode: 404, translationKey: "promotion_not_found" });
     }

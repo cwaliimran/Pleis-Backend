@@ -148,6 +148,8 @@ const getNearbyEvents = async (queryData) => {
 
 const getEventDetails = async (userLocation, userId, id, timezone) => {
   const event = await eventRepo.findEventById(id);
+  //return if event not found
+  if (!event) return null;
   const now = getCurrentDateInTimezone({ timezone });
 
   const announcements = {

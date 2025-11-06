@@ -169,8 +169,8 @@ const updateUser = async (req, res, options = {}) => {
       if (
         typeof phoneNumber !== "object" ||
         !phoneNumber.code ||
-        !phoneNumber.number ||
-        !validatePhoneNumber(`${phoneNumber.code}${phoneNumber.number}`).valid
+        !phoneNumber.number
+        // !validatePhoneNumber(`${phoneNumber.code}${phoneNumber.number}`).valid
       ) {
         return { errorCode: 400, message: "invalid_phone" };
       }

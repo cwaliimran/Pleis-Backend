@@ -1,6 +1,6 @@
 
 const { getBannerControls } = require("../../admin/bannerControl/bannerControlsService");
-const { getPublicHighlights } = require("../../commonModules/highlights/highlightService");
+const { getPublicHighlights } = require("../highlights/highlightService");
 const { getUserRecentlyViewedItems } = require("../../commonModules/recentlyViewed/recentlyViewedItemService");
 const { sendResponse } = require("../../helperUtils/responseUtil");
 const { getCustomCategories } = require("../customCategories/customCategoriesService");
@@ -35,7 +35,7 @@ const getHomeService = async ({ queryData }) => {
       getForYouEvents(userId, userLocation, timezone),
       getNearbyEvents(queryData),
       getCustomCategories({ userLocation, userId, timezone, page: 1, limit: 10, status: "active" }),
-      getPublicHighlights({ page: 1, limit: 10, keyword: "", userLocation }),
+      getPublicHighlights({ userId, page: 1, limit: 10, keyword: "", userLocation }),
       getUserRecentlyViewedItems({
         userId,
         location: userLocation,

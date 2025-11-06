@@ -15,7 +15,7 @@ function formatPromotion(promotion, timezone) {
 
     //attach full image URL
     if (obj?.image) {
-        obj.media = getFullImageUrl(obj.image);
+        obj.image = getFullImageUrl(obj.image);
     }
     if (obj?.companyOrganizer?.profileIcon) {
         obj.companyOrganizer.profileIcon = getFullImageUrl(obj.companyOrganizer.profileIcon);
@@ -52,6 +52,15 @@ function formatPromotion(promotion, timezone) {
             break;
         default:
             break;
+    }
+
+    obj.recurringDetails = obj?.recurringDetails || null;
+    if (obj.recurringDetails && obj.recurringDetails.endDate) {
+        obj.recurringDetails.endDate = convertUtcToTimezone(
+            obj.recurringDetails.endDate,
+            timezone,
+            "YYYY-MM-DD"
+        );
     }
 
     return obj;
