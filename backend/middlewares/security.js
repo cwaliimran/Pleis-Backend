@@ -24,7 +24,17 @@ const securityMiddleware = (app, options = {}) => {
           scriptSrc: ["'self'", "'unsafe-inline'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", "data:"],
-          connectSrc: ["'self'"],
+          connectSrc: [
+          "'self'",
+          "https://pleis.com",
+          "https://www.pleis.com",
+          "https://dev.pleis.com",
+          "https://www.dev.pleis.com",
+          "http://localhost:4003",
+          "https://pleis.vercel.app",
+          "https://shipping-profession-merge-double.trycloudflare.com",
+          "http://192.168.15.141:4003",
+        ],
         },
       },
       referrerPolicy: { policy: "no-referrer" },
@@ -73,7 +83,9 @@ const securityMiddleware = (app, options = {}) => {
 
 
   app.use(cors(corsOptions));
-
+  app.options('*', cors(corsOptions), (req, res) => {
+    res.sendStatus(200);
+  });
   // Optional JSON error for CORS
   app.use((err, req, res, next) => {
     if (err && err.message === "CORS Forbidden") {
