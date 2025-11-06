@@ -1,13 +1,16 @@
 // services/presetService.js
-const { buildKeywordQueryFromModels } = require("../../../helperUtils/queryUtil");
-const { generateMeta } = require("../../../helperUtils/responseUtil");
-const Venues = require("../../venues/Venues");
+const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
+const { getFullImageUrl } = require("@utils/imageHelper"); 
+
+const { generateMeta } = require("@utils/responseUtil");
 const Presets = require("./Presets");
 const presetRepo = require("./presetsRepository");
 const mongoose = require("mongoose");
 
 const createPreset = async (data) => {
-  return await presetRepo.createPreset(data);
+  let preset = await presetRepo.createPreset(data);
+  preset.image = getFullImageUrl(preset.image || "noimage.png");
+  return preset;
 };
 
 // Populate venue data for presets (updated for new schema)
@@ -76,10 +79,12 @@ const getPresets = async ({ page, limit, keyword, status, userId, date }) => {
     Presets.countDocuments({ status: "inactive", ...(userId && { creator: userId }) })
   ]);
 
-  const formattedPresets = presets.map(preset => {
-    const presetDoc = new Presets(preset);
-    return presetDoc.formatResponse ? presetDoc.formatResponse() : presetDoc.toObject();
-  });
+   //format presets
+    const formattedPresets = presets.map(preset => ({
+      ...preset,
+      image : getFullImageUrl(preset.image || "noimage.png")
+    }));
+
 
   const meta = generateMeta(page, limit, totalFiltered);
   meta.presetsCount = { total, active, inactive };
@@ -114,6 +119,8 @@ const updatePreset = async (id, data) => {
 
   Object.assign(preset, updateData);
   await preset.save();
+
+  preset.image = getFullImageUrl(preset.image || "noimage.png");
 
   return preset;
 };

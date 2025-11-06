@@ -37,7 +37,7 @@ const baseChallengeSchema = new mongoose.Schema(
   { timestamps: true, discriminatorKey: "taskType" }
 );
 
-// ✅ Centralized transformation logic
+// Centralized transformation logic
 baseChallengeSchema.methods.toJSON = function () {
   const obj = this.toObject({ virtuals: true });
 

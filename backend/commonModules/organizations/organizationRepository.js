@@ -2,6 +2,8 @@
 const Venues = require("../venues/Venues");
 const Organizations = require("./Organization");
 
+const { getModelCounts } = require("@dbUtils/queryUtil");
+
 // Create
 const createOrganization = async (data) => {
   const organization = new Organizations(data);
@@ -20,6 +22,11 @@ const getOrganizationsWithFilters = async (query, skip, limit) => {
 const countOrganizations = async (query = {}) => {
   return Organizations.countDocuments(query);
 };
+
+
+const getOrganizationCounts = async (query) => {
+  return getModelCounts({ model: Organizations, filterQuery: query });
+}
 
 // Find by ID
 const findOrganizationById = async (id) => {
@@ -82,6 +89,7 @@ module.exports = {
   createOrganization,
   getOrganizationsWithFilters,
   countOrganizations,
+  getOrganizationCounts,
   findOrganizationById,
   deleteOrganizationById,
   findByIdAndUpdate,

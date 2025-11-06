@@ -9,7 +9,7 @@ const {
 const tagsService = require("./tagsService");
 
 const createTag = async (req, res) => {
-  const { title, status = "active", pinned = false, type } = req.body;
+  const { title, status = "active", type } = req.body;
 
   if (!validateParams(req, res, { rawData: ["title", "type"] })) return;
 
@@ -18,7 +18,6 @@ const createTag = async (req, res) => {
       title,
       status,
       type,
-      pinned,
     });
 
     return sendResponse({
@@ -40,7 +39,7 @@ const createTag = async (req, res) => {
 
 const getTags = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, type, status, pinned, date } = req.query;
+  const { keyword, type, status, date } = req.query;
 
   try {
 
@@ -56,7 +55,7 @@ const getTags = async (req, res) => {
       keyword,
       type,
       status,
-      pinned, date
+       date
     });
 
     return sendResponse({
@@ -110,7 +109,7 @@ const getPublicTags = async (req, res) => {
 
 const updateTag = async (req, res) => {
   const { id } = req.params;
-  const { title, status, pinned, type } = req.body;
+  const { title, status, type } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -124,7 +123,6 @@ const updateTag = async (req, res) => {
     const updated = await tagsService.updateTag(id, {
       title,
       status,
-      pinned,
       type,
     });
 

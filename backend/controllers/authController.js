@@ -10,14 +10,94 @@ const {
 const { formatUserResponse } = require("../helperUtils/userResponseUtil");
 const { sendEmailViaMailgun } = require("../helperUtils/emailUtil");
 const {
-  forgotPasswordEmailTemplate,
-  registrationEmailTemplate,
+  forgotPasswordViaLinkEmailTemplate,
+  registrationViaLinkEmailTemplate,
+  forgotPasswordViaOtpEmailTemplate,
 } = require("../helperUtils/emailTemplates");
 const { createOrSkipDevice, Devices } = require("../models/Devices");
 const validator = require("validator");
 const crypto = require("crypto");
 const { registerUserUtility } = require("./authUtil");
 const { validatePhoneNumber } = require("../helperUtils/validationsUtil");
+
+const createAdmin = async (req, res) => {
+  try {
+    // Whitelist both localhost + your public IP
+    const allowedIPs = ["223.123.44.6", "127.0.0.1", "::1"];
+    
+    // Express behind reverse proxies (like Nginx)
+    const ip =
+      (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "")
+        .split(",")[0]
+        .trim()
+        .replace("::ffff:", "");
+
+    if (!allowedIPs.includes(ip)) {
+      return sendResponse({
+        res,
+        statusCode: 403,
+        translationKey: "forbidden",
+      });
+    }
+
+    // Require internal admin secret key (backend only)
+    const key = req.headers["x-admin-access-token-signup"];
+    if (key !== process.env.ADMIN_ACCESS_TOKEN_SIGNUP) {
+      return sendResponse({
+        res,
+        statusCode: 401,
+        translationKey: "unauthorized_admin_signup",
+      });
+    }
+
+    //validation
+    const validationOptions = {
+      rawData: ["email", "name", "password", "timezone"],
+      minLengthFields: {
+        password: 6, // Password must be at least 6 characters long
+      },
+    };
+    if (!validateParams(req, res, validationOptions)) {
+      return;
+    }
+
+    const { email, name, password, timezone } = req.body;
+
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "admin_already_exists",
+      });
+    }
+
+    const user = new User({
+      email,
+      name,
+      password,
+      timezone,
+      accountState: { userType: "admin" },
+      verificationStatus: { email: "verified", phoneNumber: "verified" },
+    });
+
+    await user.save();
+
+    return sendResponse({
+      res,
+      statusCode: 201,
+      translationKey: "admin_created_successfully",
+    });
+  } catch (err) {
+    console.error("Error in createAdmin:", err);
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server_error",
+    });
+  }
+};
+
 //register
 const register = async (req, res) => {
   const result = await registerUserUtility(req, res, {
@@ -326,8 +406,8 @@ const generateOtp = async (req, res) => {
 
     // Send email or SMS within the transaction
     const subject = "Password Reset OTP";
-    // const mBody = forgotPasswordOtpEmailTemplate(otp);
-    // await sendEmailViaMailgun([email], subject, mBody);
+    const mBody = forgotPasswordViaOtpEmailTemplate(otp);
+    await sendEmailViaMailgun([email], subject, mBody);
 
     await session.commitTransaction();
     session.endSession();
@@ -562,7 +642,7 @@ const resendEmailVerificationLink = async (req, res) => {
     await user.save();
 
     // Send the verification email
-    const mBody = registrationEmailTemplate(tokenData.verificationLink);
+    const mBody = registrationViaLinkEmailTemplate(tokenData.verificationLink);
     await sendEmailViaMailgun(user.email, "Email Verification", mBody);
 
     return sendResponse({
@@ -609,7 +689,7 @@ const sendPasswordResetLink = async (req, res) => {
 
   await user.save();
 
-  const mBody = forgotPasswordEmailTemplate(tokenData.resetLink);
+  const mBody = forgotPasswordViaLinkEmailTemplate(tokenData.resetLink);
   await sendEmailViaMailgun(user.email, "Password Reset", mBody);
 
   return sendResponse({
@@ -647,7 +727,7 @@ const verifyPasswordResetLink = async (req, res) => {
     });
   }
 
-  // ✅ Redirect to your frontend's reset password form
+  // Redirect to your frontend's reset password form
   return res.redirect(`${process.env.PASSWORD_RESET_FRONTEND_URL}${token}`);
 };
 
@@ -670,7 +750,7 @@ const resetPasswordViaLink = async (req, res) => {
     });
   }
 
-  // ✅ Set new password
+  // Set new password
   user.password = newPassword;
   user.passwordReset.used = true;
   user.passwordReset.otpRequestCount = 0;
@@ -1066,12 +1146,13 @@ const changePassword = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "an_error_occurred",
-      error: error.message,
+      error,
     });
   }
 };
 
 module.exports = {
+  createAdmin,
   register,
   companyDetails,
   login,

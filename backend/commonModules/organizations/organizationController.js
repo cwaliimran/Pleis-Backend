@@ -5,10 +5,14 @@ const {
   generateMeta,
   getReadableErrorMessage,
 } = require("../../helperUtils/responseUtil");
+const { transformOperatingHoursToUtc, transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
 
 const organizationService = require("./organizationService");
 
 const createOrganization = async (req, res) => {
+
+  let { timezone } = req.user
+
   let data = ({
     basicInfo,
     otherInfo,
@@ -19,6 +23,8 @@ const createOrganization = async (req, res) => {
     tags,
     description,
     title,
+    phoneNumber,
+    website,
   } = req.body);
   let creator = req.user._id;
   if (req.user.userType === "admin") {
@@ -29,6 +35,12 @@ const createOrganization = async (req, res) => {
   data.creator = creator;
 
   if (!validateParams(req, res, { rawData: ["basicInfo"] })) return;
+
+  //Convert times to UTC minutes before saving
+  if (operatingHours) {
+    operatingHours = transformOperatingHoursToUtc(operatingHours, timezone);
+    data.operatingHours = operatingHours;
+  }
 
   try {
     const organization = await organizationService.createOrganization({
@@ -56,14 +68,14 @@ const createOrganization = async (req, res) => {
 const getOrganizations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, date, status = "active" } = req.query;
-  let { _id } = req.user;
+  let { _id, timezone } = req.user;
   try {
     if (date && !validateParams(req, res, {
       dateFields: {
         date: "YYYY-MM-DD",
       },
     })) return;
-    const { organizations, meta } = await organizationService.getOrganizations({
+    let { organizations, meta } = await organizationService.getOrganizations({
       page,
       limit,
       keyword,
@@ -72,19 +84,83 @@ const getOrganizations = async (req, res) => {
       date,
     });
 
+    // Transform to local time safely
+    organizations = organizations.map((org) => {
+      const orgObj = org.toObject ? org.toObject() : org;
+
+      if (orgObj.operatingHours) {
+        orgObj.operatingHours = transformOperatingHoursToLocal(
+          orgObj.operatingHours,
+          timezone
+        );
+      }
+
+      return orgObj;
+    });
+
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "organizations_fetched_successfully",
       data: organizations,
-      meta: generateMeta(page, limit, meta.total, meta.tagsCount),
+      meta
     });
   } catch (error) {
     return sendResponse({
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
+    });
+  }
+};
+
+const getOrganizationsAdmin = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  const { keyword, date, status = "active" } = req.query;
+  let { timezone } = req.user;
+  try {
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+    let { organizations, meta } = await organizationService.getOrganizationsByAdmin({
+      page,
+      limit,
+      keyword,
+      status,
+      date,
+      timezone
+    });
+
+    // Transform to local time safely
+    organizations = organizations.map((org) => {
+      const orgObj = org.toObject ? org.toObject() : org;
+
+      if (orgObj.operatingHours) {
+        orgObj.operatingHours = transformOperatingHoursToLocal(
+          orgObj.operatingHours,
+          timezone
+        );
+      }
+
+      return orgObj;
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "organizations_fetched_successfully",
+      data: organizations,
+      meta
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
     });
   }
 };
@@ -100,13 +176,27 @@ const getPublicOrganizations = async (req, res) => {
       },
     })) return;
 
-    const { organizations, meta } =
+    let { organizations, meta } =
       await organizationService.getPublicOrganizations({
         page,
         limit,
         keyword,
         date,
       });
+
+    // Transform to local time safely
+    organizations = organizations.map((org) => {
+      const orgObj = org.toObject ? org.toObject() : org;
+
+      if (orgObj.operatingHours) {
+        orgObj.operatingHours = transformOperatingHoursToLocal(
+          orgObj.operatingHours,
+          timezone
+        );
+      }
+
+      return orgObj;
+    });
 
     return sendResponse({
       res,
@@ -120,13 +210,14 @@ const getPublicOrganizations = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
 
 const updateOrganization = async (req, res) => {
   const { id } = req.params;
+  let { timezone } = req.user;
 
   if (
     !validateParams(req, res, {
@@ -149,6 +240,12 @@ const updateOrganization = async (req, res) => {
     description,
     title,
   } = req.body);
+
+  //Convert times to UTC minutes before saving
+  if (operatingHours) {
+    operatingHours = transformOperatingHoursToUtc(operatingHours, timezone);
+    data.operatingHours = operatingHours;
+  }
 
   try {
     const updated = await organizationService.updateOrganization({ id, data });
@@ -208,13 +305,14 @@ const deleteOrganization = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
 
 const getOrganizationDetails = async (req, res) => {
   const { id } = req.params;
+  let { timezone } = req.user;
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
@@ -229,6 +327,11 @@ const getOrganizationDetails = async (req, res) => {
       statusCode: 404,
       translationKey: "organization_not_found",
     });
+  }
+
+
+  if (organization.operatingHours) {
+    organization.operatingHours = transformOperatingHoursToLocal(organization.operatingHours, timezone);
   }
 
   return sendResponse({
@@ -246,4 +349,5 @@ module.exports = {
   getOrganizationDetails,
   updateOrganization,
   deleteOrganization,
+  getOrganizationsAdmin,
 };

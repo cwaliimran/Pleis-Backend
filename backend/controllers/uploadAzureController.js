@@ -126,9 +126,9 @@ const deleteFiles = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "file_deletion",
-      error: error.message,
+      error,
     });
   }
 };
 
-module.exports = { uploadFiles, deleteFiles };
+module.exports = { uploadFiles, deleteFiles, uploadFilesToAzure };

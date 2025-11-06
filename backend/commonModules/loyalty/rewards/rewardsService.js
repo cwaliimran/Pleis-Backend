@@ -1,7 +1,7 @@
-const { buildKeywordQueryFromModels } = require("../../../helperUtils/queryUtil");
+const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
 const repository = require("./rewardsRepository");
 const mongoose = require("mongoose");
-const { generateMeta } = require("../../../helperUtils/responseUtil");
+const { generateMeta } = require("@utils/responseUtil");
 const formatData = require("./utils/formatReward");
 const { Reward } = require("./models");
 
@@ -12,42 +12,25 @@ const create = async (data) => {
 const get = async ({ page, limit, keyword, status, userId, date, timezone }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const pipeline = [
-    { $match: { ...(userId && { creator: new mongoose.Types.ObjectId(userId) }) } }
-  ];
-
-  if (status) {
-    pipeline.push({ $match: { status } });
-  } else {
-    pipeline.push({ $match: { status: { $ne: "deleted" } } });
-  }
-
+  // Build query object
+  const query = {};
+  if (userId) query.creator = userId;
+  if (status) query.status = status;
+  else query.status = { $ne: "deleted" };
   if (date) {
     const start = new Date(date);
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
-    pipeline.push({
-      $match: { createdAt: { $gte: start, $lt: end } }
-    });
+    query.createdAt = { $gte: start, $lt: end };
+  }
+  if (keyword) {
+    const keywordMatch = buildKeywordQueryFromModels([{ schema: Reward.schema }], keyword);
+    Object.assign(query, keywordMatch);
   }
 
-  const keywordMatch = buildKeywordQueryFromModels([{ schema: Reward.schema }], keyword);
-  if (Object.keys(keywordMatch).length) {
-    pipeline.push({ $match: keywordMatch });
-  }
+  // Get rewards with population
+  const records = await repository.getWithFilters(query, skip, limit);
 
-  pipeline.push({ $sort: { createdAt: -1 } });
-
-  pipeline.push({
-    $facet: {
-      data: [{ $skip: skip }, ...(limit === 0 ? [] : [{ $limit: limit }])],
-      totalFiltered: [{ $count: "count" }],
-    },
-  });
-
-  const result = await Reward.aggregate(pipeline);
-
-  const records = result[0]?.data || [];
-  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+  const totalFiltered = await Reward.countDocuments(query);
 
   const [total, active, inactive] = await Promise.all([
     Reward.countDocuments({ ...(userId && { creator: userId }), status: { $ne: "deleted" } }),
@@ -59,15 +42,16 @@ const get = async ({ page, limit, keyword, status, userId, date, timezone }) => 
   meta.counts = { total, active, inactive };
   const formatted = records.map(item => formatData(item, timezone));
 
-
   return { responses: formatted, meta };
 };
 
 const update = async (id, data) => {
-  const item = await repository.findById(id);
+  let item = await repository.findById(id);
   if (!item) return null;
   Object.assign(item, data);
   await item.save();
+  //fetch updated item and return
+  item = await getDetails(id);
   return item;
 };
 
@@ -77,7 +61,12 @@ const deleteItem = async (id) => {
 };
 
 const getDetails = async (id) => {
-  return await repository.findById(id);
+  let item = await repository.findById(id);
+  //format item
+  if (item) {
+    item = formatData(item.toObject());
+  }
+  return item;
 };
 
 module.exports = {

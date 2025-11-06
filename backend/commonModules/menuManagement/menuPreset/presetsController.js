@@ -1,10 +1,11 @@
+
 const {
   sendResponse,
   parsePaginationParams,
   validateParams,
   generateMeta,
   getReadableErrorMessage,
-} = require("../../../helperUtils/responseUtil");
+} = require("@utils/responseUtil");
 
 const presetsService = require("./presetsService");
 

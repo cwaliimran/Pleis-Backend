@@ -138,3 +138,5 @@ backend/missingTranslations.json
 backend/extraTranslations.json
 /scripts.js
 scripts.js/renameModule.js
+/backend/database_backups
+.env.localhost

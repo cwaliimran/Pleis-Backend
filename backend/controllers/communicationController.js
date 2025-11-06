@@ -237,6 +237,13 @@ const sendNotification = async (recipients, payload) => {
   // const additionalToken = "cYp8RW8gREO3vhzf_nHlCB:APA91bHR17qarpZDNK7SlZw-ybhb7JmHHbBGLZGDdYFh_6XJFPzfCCC0HdrOv3R-N36ZnoUrY_3I0h5-nFONRhIyQV8QRbAqkvdadYPOFB4EIavJUdfyXtTJYcMNoJKSeTZ0noJqLp4k";
   // androidTokens.push(additionalToken);
 
+    // Add a random string as notificationId to payload.data
+  const notificationId = Math.floor(1000000000 + Math.random() * 9000000000).toString();
+  payload.data = {
+    ...payload.data,
+    notificationId: notificationId,
+  };
+
   // Notification payload for Android
   const androidPayload = {
     notification: {

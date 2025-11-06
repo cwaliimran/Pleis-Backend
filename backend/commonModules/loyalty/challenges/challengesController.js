@@ -4,7 +4,7 @@ const {
   validateParams,
   getReadableErrorMessage,
   convertTimezoneToUtc,
-} = require("../../../helperUtils/responseUtil");
+} = require("@utils/responseUtil");
 
 const challengeService = require("./challengesService");
 
@@ -20,6 +20,11 @@ const createChallenge = async (req, res) => {
     rawData.push("menuItem")
     objectIdFields.push("menuItem")
   }
+
+  if (taskType === "visit" || taskType === "earnPoints" || taskType === "referUsers") {
+    rawData.push("taskValue")
+  }
+
 
   var rewardType = req.body.reward?.rewardType || ""
   if (rewardType === "points") {
@@ -71,7 +76,6 @@ const createChallenge = async (req, res) => {
 const getChallenges = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date } = req.query;
-
   try {
     const { challenges, meta } = await challengeService.getChallenges({
       page,

@@ -23,8 +23,6 @@ const formatUserResponse = (
     country: userObject.country,
   };
 
-
-
   // Main response object
   let response = {
     basicInfo,
@@ -32,6 +30,7 @@ const formatUserResponse = (
       twoFactorAuth: userObject.twoFA?.isEnabled || false,
       userType: userType || "user",
       status: userObject.accountState?.status || "active",
+      profileCompleted: userObject.accountState?.profileCompleted || false,
       verificationStatus: {
         email: userObject.verificationStatus?.email || "pending",
         phoneNumber: userObject.verificationStatus?.phoneNumber || "pending",
@@ -40,6 +39,12 @@ const formatUserResponse = (
       ...(userObject.accountState?.reason && {
         reason: userObject.accountState.reason,
       }),
+    },
+    preferences: {
+      notifications: {
+        email: userObject.notifications?.email,
+        push: userObject.notifications?.push,
+      },
     },
     metadata: {
       timezone: userObject.timezone,
@@ -53,6 +58,8 @@ const formatUserResponse = (
     basicInfo.dob = userObject.dob || "";
     basicInfo.gender = userObject.gender || "";
     basicInfo.username = userObject.username || "";
+    //location
+    response.location = userObject.location || "";
   }
 
   if (userType === "organizer") {

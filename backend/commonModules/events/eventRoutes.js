@@ -36,4 +36,6 @@ router.delete("/:id", deleteEvent);
 // Clone an existing event
 router.post("/:id/clone", roleMiddleware(["organizer", "admin", "manager"]), cloneEvent);
 
+
+
 module.exports = router;

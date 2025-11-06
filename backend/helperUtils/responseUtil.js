@@ -27,10 +27,12 @@ const sendResponse = ({
   if (translateMessage) {
     // Get the translation key from the locale file and replace the placeholders using the provided values
     let message = res?.req?.__(translationKey);
+    // console.log("message", message)
 
     // If the message is missing, undefined, or equals the raw translationKey, fall back to translationKey
     if (!message || message.trim() === "" || message === translationKey) {
-      message = translationKey;
+      // Fallback: Convert key to readable text
+      message = keyToReadableText(translationKey);
     }
 
     // If values are provided, replace placeholders in the translation
@@ -42,6 +44,7 @@ const sendResponse = ({
     }
     response.message = message;
   } else {
+
     response.message = translationKey;
   }
 
@@ -71,7 +74,7 @@ const sendResponse = ({
   if (meta) {
     response.meta = meta;
   }
-  if (process.env.NODE_ENV === "dev") {
+  if (process.env.NODE_ENV === "dev" || process.env.NODE_ENV === "localhost") {
     if (error !== null && error !== undefined) {
       if (error instanceof Error) {
         // Extract important properties from the Error object
@@ -91,11 +94,18 @@ const sendResponse = ({
         // If the error is a primitive value (string, boolean, number, etc.)
         response.error = error;
       }
+      console.log(error)
     }
   }
   // Send the response with the appropriate status code
-  res.status(statusCode).json(response);
+    res.status(statusCode).json(response);
 };
+
+// Helper: Convert key to readable default translation
+function keyToReadableText(key) {
+  const withSpaces = key.replace(/[_\.]+/g, " ");
+  return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1);
+}
 
 // Helper function to parse pagination parameters
 const parsePaginationParams = (req) => {
@@ -460,6 +470,14 @@ const validateParams = (req, res, options = {}) => {
   return true;
 };
 
+/**
+ * Check if a given ID is a valid nanoid (default 21 characters, a-zA-Z0-9, _ and -)
+ */
+function isValidNanoid(id) {
+  const nanoidRegex = /^[A-Za-z0-9_-]{21}$/;
+  return nanoidRegex.test(id);
+}
+
 const extractNestedFields = (obj, fieldPath) => {
   const fields = fieldPath.split(".");
   let value = obj;
@@ -536,6 +554,7 @@ const convertTimezoneToUtc = (
 };
 
 // Get the current date in user's timezone
+//Emphasizes the returned value is UTC-based, calculated using a timezone
 const getCurrentDateInTimezone = ({
   timezone,
   isDateOnly = false,
@@ -651,6 +670,7 @@ module.exports = {
   generateMeta,
   validateObjectIdsArr,
   validateParams,
+  isValidNanoid,
   exampleMiddleware,
   convertUtcToTimezone,
   convertTimezoneToUtc,

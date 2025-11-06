@@ -10,7 +10,7 @@ router.use("/notifications", require("./notificationsRoutes"));
 router.use("/support", require("./supportRoutes"));
 router.use("/contact-us", require("./contactUsRoutes"));
 router.use("/languages", require("./languageRoutes"));
-router.use("/home", require("./homeRoutes"));
+router.use("/home", require("../app/home/homeRoutes"));
 router.use("/util", require("./dbRoutes"));
 
 //organizer routes
@@ -37,6 +37,8 @@ router.use("/menu", require("./menuRoutes"));
 //loyalty
 router.use("/loyalty", require("./loyaltyRoutes"));
 
+//helper route for generating shareable links
+router.use("/share", require("./shareRoute"));
 
 
 module.exports = router;

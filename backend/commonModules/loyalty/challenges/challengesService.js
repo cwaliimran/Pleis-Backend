@@ -1,8 +1,7 @@
-const { buildKeywordQueryFromModels } = require("../../../helperUtils/queryUtil");
+const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
 const { Challenge } = require("./models/Challenge");
 const challengeRepo = require("./challengesRepository");
-const mongoose = require("mongoose");
-const { generateMeta } = require("../../../helperUtils/responseUtil");
+const { generateMeta } = require("@utils/responseUtil");
 const formatChallenge = require("./utils/formatChallenge");
 
 const createChallenge = async (data) => {
@@ -12,53 +11,34 @@ const createChallenge = async (data) => {
 const getChallenges = async ({ page, limit, keyword, status, userId, date, timezone }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const pipeline = [
-    { $match: { ...(userId && { creator: new mongoose.Types.ObjectId(userId) }) } }
-  ];
-
-  if (status) {
-    pipeline.push({ $match: { status } });
-  } else {
-    pipeline.push({ $match: { status: { $ne: "deleted" } } });
-  }
-
+  // Build query object
+  const query = {};
+  if (userId) query.creator = userId;
+  if (status) query.status = status;
+  else query.status = { $ne: "deleted" };
   if (date) {
     const start = new Date(date);
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
-    pipeline.push({
-      $match: { createdAt: { $gte: start, $lt: end } }
-    });
+    query.createdAt = { $gte: start, $lt: end };
+  }
+  if (keyword) {
+    Object.assign(query, buildKeywordQueryFromModels([{ schema: Challenge.schema }], keyword));
   }
 
-  const keywordMatch = buildKeywordQueryFromModels([{ schema: Challenge.schema }], keyword);
-  if (Object.keys(keywordMatch).length) {
-    pipeline.push({ $match: keywordMatch });
-  }
+  // Get challenges with population
+  const challenges = await challengeRepo.getChallengesWithFilters(query, skip, limit);
 
-  pipeline.push({ $sort: { createdAt: -1 } });
-
-  pipeline.push({
-    $facet: {
-      data: [{ $skip: skip }, ...(limit === 0 ? [] : [{ $limit: limit }])],
-      totalFiltered: [{ $count: "count" }],
-    },
-  });
-
-  const result = await Challenge.aggregate(pipeline);
-
-  const challenges = result[0]?.data || [];
-  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
-
-  const [total, active, inactive] = await Promise.all([
+  // Get counts
+  const [total, active, inactive, totalFiltered] = await Promise.all([
     Challenge.countDocuments({ ...(userId && { creator: userId }), status: { $ne: "deleted" } }),
     Challenge.countDocuments({ status: "active", ...(userId && { creator: userId }) }),
     Challenge.countDocuments({ status: "inactive", ...(userId && { creator: userId }) }),
+    Challenge.countDocuments(query),
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
   meta.challengesCount = { total, active, inactive };
   const formattedChallenges = challenges.map(challenge => formatChallenge(challenge, timezone));
-
 
   return { challenges: formattedChallenges, meta };
 };

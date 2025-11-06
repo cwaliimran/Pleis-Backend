@@ -5,7 +5,6 @@ const moment = require("moment-timezone");
 const validator = require("validator");
 const { randomBytes } = require("crypto");
 const { CompanySchema } = require("./CompanyDetails");
-const crypto = require("crypto");
 const { generateSecureToken } = require("../helperUtils/secureToken");
 const { LocationSchema } = require("../shared/locations/locationSchmea");
 
@@ -46,7 +45,7 @@ const userSchema = new mongoose.Schema(
   {
     profileIcon: {
       type: String,
-      default: "",
+    default: "",
     },
 
     firstName: {
@@ -69,6 +68,11 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
     dob: {
+      type: String,
+      default: "",
+    },
+
+    referralCode: {
       type: String,
       default: "",
     },
@@ -173,6 +177,10 @@ const userSchema = new mongoose.Schema(
       reason: {
         type: String,
         default: "",
+      },
+      profileCompleted: {
+        type: Boolean,
+        default: false,
       },
     },
 
@@ -313,9 +321,20 @@ const userSchema = new mongoose.Schema(
         default: false,
       },
     },
+    notifications: {
+      email: {
+        type: Boolean,
+        default: true,
+      },
+      push: {
+        type: Boolean,
+        default: true,
+      },
+    }
   },
   {
     timestamps: true,
+    // discriminatorKey: "userType"
   }
 );
 
@@ -492,7 +511,7 @@ userSchema.methods.generatePasswordResetToken = function (timezone = "UTC") {
   const user = this;
   const now = Date.now();
 
-  // ✅ Ensure parent object exists
+  // Ensure parent object exists
   if (!user.passwordReset) {
     user.passwordReset = {};
   }
@@ -554,7 +573,7 @@ userSchema.methods.toJSON = function (userData) {
   if (userObject.profileIcon && !userObject.profileIcon.startsWith("http")) {
     userObject.profileIcon = baseUrl + userObject.profileIcon;
   } else if (!userObject.profileIcon) {
-    userObject.profileIcon = baseUrl + "noImage.png";
+    userObject.profileIcon = baseUrl + "noimage.png";
   }
 
   delete userObject.password;

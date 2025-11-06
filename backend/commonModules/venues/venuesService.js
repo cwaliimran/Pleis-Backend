@@ -1,7 +1,9 @@
 // services/venueService.js
-const { buildKeywordQueryFromModel, buildKeywordQueryFromModels } = require("../../helperUtils/queryUtil");
+const { buildKeywordQueryFromModel, buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
 const { generateMeta } = require("../../helperUtils/responseUtil");
+const { formatOrganization } = require("../organizations/formatter/formatOrganization");
 const Organizations = require("../organizations/Organization");
+const { formatVenue } = require("./formatter/formatVenue");
 const Venues = require("./Venues");
 const venueRepo = require("./venuesRepository");
 
@@ -20,7 +22,10 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
         from: "organizations",
         localField: "organization",
         foreignField: "_id",
-        as: "organizationData"
+        as: "organizationData",
+        pipeline: [
+          { $project: { basicInfo: 1 } }
+        ]
       }
     },
     // Flatten organizationData array for easier matching
@@ -118,7 +123,7 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
     const formattedVenue = venueDoc.formatResponse();
 
     if (venue.organizationData) {
-      formattedVenue.organization = Organizations.prototype.formatResponse(venue.organizationData);
+      formattedVenue.organization = formatOrganization(venue.organizationData);
     }
 
     return formattedVenue;
@@ -142,7 +147,7 @@ const getUnassignedVenues = async (userId) => {
 
 
 const updateVenue = async (id, data) => {
-  const venue = await venueRepo.findVenueById(id);
+  let venue = await venueRepo.findVenueById(id);
   if (!venue) return null;
 
   const allowedFields = [
@@ -174,11 +179,11 @@ const updateVenue = async (id, data) => {
     organizationChanged = true;
   }
 
-  // ✅ Step 1: Update venue fields
+  // Step 1: Update venue fields
   Object.assign(venue, updateData);
   await venue.save();
 
-  // ✅ Step 2: If isPrimary = true
+  // Step 2: If isPrimary = true
   if (updateData.isPrimary) {
     // Ensure only one primary per organization
     await Venues.updateMany(
@@ -191,7 +196,7 @@ const updateVenue = async (id, data) => {
     );
   }
 
-  // ✅ Step 3: If organization changed and isPrimary = true, double-check previous organization
+  // Step 3: If organization changed and isPrimary = true, double-check previous organization
   if (organizationChanged && updateData.isPrimary) {
     // Just to make sure previous org doesn't keep old primary (edge case)
     await Venues.updateMany(
@@ -203,6 +208,9 @@ const updateVenue = async (id, data) => {
     );
   }
 
+  //get updated venue with venueDetails
+  console.log("venue._id",venue._id)
+  venue = await getVenueDetails(venue._id);
   return venue;
 };
 
@@ -214,9 +222,43 @@ const deleteVenue = async (id) => {
   if (!updated) return null;
   return true;
 };
-const getVenueDetails = async (id) => {
-  const venue = await venueRepo.findVenueById(id);
+const getVenueDetails = async (id, select = []) => {
+  // Aggregate to join organization data
+  const pipeline = [
+    { $match: { _id: new mongoose.Types.ObjectId(id) } },
+    {
+      $lookup: {
+        from: "organizations",
+        localField: "organization",
+        foreignField: "_id",
+        as: "organizationData",
+        pipeline: [
+          { $project: { basicInfo: 1 } }
+        ]
+      }
+    },
+    { $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true } }
+  ];
+
+  // Optionally project selected fields
+  if (select.length > 0) {
+    const projection = {};
+    select.forEach(field => projection[field] = 1);
+    projection.organizationData = 1;
+    pipeline.push({ $project: projection });
+  }
+
+  const result = await Venues.aggregate(pipeline);
+  let venue = result[0];
   if (!venue) return null;
+  // Format venue response
+
+  venue = formatVenue(venue);
+
+  if (venue.organizationData) {
+    venue.organization = formatOrganization(venue.organizationData);
+  }
+
   return venue;
 };
 

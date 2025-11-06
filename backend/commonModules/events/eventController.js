@@ -6,7 +6,9 @@ const {
   getReadableErrorMessage,
   convertTimezoneToUtc,
   convertUtcToTimezone,
+  isValidNanoid,
 } = require("../../helperUtils/responseUtil");
+const { getVenueDetails } = require("../venues/venuesService");
 
 const eventService = require("./eventService");
 
@@ -27,9 +29,17 @@ const createEvent = async (req, res) => {
       "basicInfo.categories",
     ],
     objectIdFields: ["basicInfo.organization", "basicInfo.venue", "basicInfo.categories"],
-
   }
 
+  //find if venue exists
+  const venueItem = await getVenueDetails(basicInfo.venue, ['location.coordinates']);
+  if (!venueItem) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "invalid_venue",
+    });
+  }
 
   let eventType = schedule.type || "oneTime";
 
@@ -79,6 +89,7 @@ const createEvent = async (req, res) => {
       description: basicInfo.description?.trim() || "",
       organization: basicInfo.organization,
       venue: basicInfo.venue,
+      venueLocation: venueItem.location, //set venueLocation from venue
       categories: Array.isArray(basicInfo.categories) ? basicInfo.categories : [],
       tags: Array.isArray(basicInfo.tags) ? basicInfo.tags : [],
     },
@@ -90,7 +101,6 @@ const createEvent = async (req, res) => {
     },
     creator: userId,
   };
-
 
   try {
     const event = await eventService.createEvent({ data: eventData });
@@ -118,8 +128,8 @@ const getEvents = async (req, res) => {
   let { _id, timezone } = req.user;
   try {
 
-   
-    if(organization){
+
+    if (organization) {
       if (!validateParams(req, res, {
         objectIdFields: ["organization"],
       })) return;
@@ -145,33 +155,16 @@ const getEvents = async (req, res) => {
       creator: _id,
       startDate,
       endDate,
-      organization
+      organization,
+      timezone,
     });
-    // Deep clone events to avoid mutating original objects (especially if using Mongoose docs)
-    let formattedEvents = events.map(event => {
-      let formattedEvent = JSON.parse(JSON.stringify(event));
-      if (formattedEvent.schedule && formattedEvent.schedule.startDateTime) {
-        formattedEvent.schedule.startDateTime = convertUtcToTimezone(
-          formattedEvent.schedule.startDateTime,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-      }
-      if (formattedEvent.schedule && formattedEvent.schedule.endDateTime) {
-        formattedEvent.schedule.endDateTime = convertUtcToTimezone(
-          formattedEvent.schedule.endDateTime,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-      }
-      return formattedEvent;
-    });
+
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "events_fetched_successfully",
-      data: formattedEvents,
+      data: events,
       meta: generateMeta(page, limit, meta.total),
     });
   } catch (error) {
@@ -179,7 +172,7 @@ const getEvents = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
@@ -208,7 +201,7 @@ const getPublicEvents = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
@@ -229,9 +222,6 @@ const updateEvent = async (req, res) => {
     otherInfo,
     operatingHours,
     status,
-    venues,
-    location,
-    pinned,
     image,
     tags,
     description,
@@ -240,43 +230,41 @@ const updateEvent = async (req, res) => {
   } = req.body);
 
   try {
+    // Now validate schedule if provided
+    if (data.schedule !== undefined) {
+      let validateData = { rawData: [], dateFields: {} };
+      const recurringDetails = data.schedule.recurringDetails;
 
-    
-  // Now validate schedule if provided
-  if (data.schedule !== undefined) {
-    let validateData = { rawData: [], dateFields: {} };
-    const recurringDetails = data.schedule.recurringDetails;
+      if (recurringDetails && recurringDetails.isEnabled) {
+        validateData.dateFields = {
+          "schedule.startDateTime": "YYYY-MM-DD hh:mm A",
+        };
 
-    if (recurringDetails && recurringDetails.isEnabled) {
-      validateData.dateFields = {
-        "schedule.startDateTime": "YYYY-MM-DD hh:mm A",
-      };
+        validateData.rawData.push("schedule.recurringDetails");
+        validateData.rawData.push("schedule.recurringDetails.frequency");
+        validateData.rawData.push("schedule.recurringDetails.interval");
+        validateData.rawData.push("schedule.recurringDetails.endType");
 
-      validateData.rawData.push("schedule.recurringDetails");
-      validateData.rawData.push("schedule.recurringDetails.frequency");
-      validateData.rawData.push("schedule.recurringDetails.interval");
-      validateData.rawData.push("schedule.recurringDetails.endType");
+        if (recurringDetails.endType === "onDate") {
+          validateData.dateFields["schedule.recurringDetails.endDate"] = "YYYY-MM-DD";
+        } else if (recurringDetails.endType === "afterOccurrences") {
+          validateData.rawData.push("schedule.recurringDetails.occurrences");
+        }
 
-      if (recurringDetails.endType === "onDate") {
-        validateData.dateFields["schedule.recurringDetails.endDate"] = "YYYY-MM-DD";
-      } else if (recurringDetails.endType === "afterOccurrences") {
-        validateData.rawData.push("schedule.recurringDetails.occurrences");
+        if (["weekly", "monthly"].includes(recurringDetails.frequency)) {
+          validateData.rawData.push("schedule.recurringDetails.daysOfWeek");
+        }
+
+        if (!validateParams(req, res, validateData)) return;
+      } else {
+        validateData.dateFields = {
+          "schedule.startDateTime": "YYYY-MM-DD hh:mm A",
+          "schedule.endDateTime": "YYYY-MM-DD hh:mm A",
+        };
+
+        if (!validateParams(req, res, validateData)) return;
       }
-
-      if (["weekly", "monthly"].includes(recurringDetails.frequency)) {
-        validateData.rawData.push("schedule.recurringDetails.daysOfWeek");
-      }
-
-      if (!validateParams(req, res, validateData)) return;
-    } else {
-      validateData.dateFields = {
-        "schedule.startDateTime": "YYYY-MM-DD hh:mm A",
-        "schedule.endDateTime": "YYYY-MM-DD hh:mm A",
-      };
-
-      if (!validateParams(req, res, validateData)) return;
     }
-  }
 
 
     const updated = await eventService.updateEvent(id, data);
@@ -300,7 +288,7 @@ const updateEvent = async (req, res) => {
       res,
       statusCode: error.name === "ValidationError" ? 400 : 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
@@ -336,25 +324,31 @@ const deleteEvent = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
 
 const getEventDetails = async (req, res) => {
-  const { id } = req.params;
+  let { id } = req.params;
   let { timezone } = req.user;
-
+  // Accept both nanoid and ObjectId for event id
   if (
-    !validateParams(req, res, {
+    (!isValidNanoid(id) && !validateParams(req, res, {
       pathParams: ["id"],
       objectIdFields: ["id"],
-    })
+    }))
   ) return;
 
+  if (isValidNanoid(id)) {
+    // If nanoid, resolve to ObjectId
+    id = await eventService.getEventIdByNanoid(id);
+  }
+
+
   try {
-    let event = await eventService.getEventDetails(id);
-    if (!event) {
+    let data = await eventService.getEventDetails(id, timezone);
+    if (!data) {
       return sendResponse({
         res,
         statusCode: 404,
@@ -362,36 +356,18 @@ const getEventDetails = async (req, res) => {
       });
     }
 
-    // Convert dates to user's timezone
-    //convert event to object
-    event = JSON.parse(JSON.stringify(event));
-    if (event.schedule && event.schedule.startDateTime) {
-      event.schedule.startDateTime = convertUtcToTimezone(
-        event.schedule.startDateTime,
-        timezone,
-        "YYYY-MM-DD hh:mm A"
-      );
-    }
-    if (event.schedule && event.schedule.endDateTime) {
-      event.schedule.endDateTime = convertUtcToTimezone(
-        event.schedule.endDateTime,
-        timezone,
-        "YYYY-MM-DD hh:mm A"
-      );
-    }
-
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "event_details_fetched_successfully",
-      data: event,
+      data,
     });
   } catch (error) {
     return sendResponse({
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };
@@ -427,7 +403,7 @@ const cloneEvent = async (req, res) => {
       res,
       statusCode: error.name === "ValidationError" ? 400 : 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };

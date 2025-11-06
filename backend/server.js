@@ -3,41 +3,79 @@ global.logger = require("../backend/helperUtils/logger");
 
 const express = require("express");
 const morgan = require("morgan");
-const cors = require("cors");
+
+// --- Load aliases dynamically from config ---
+const path = require("path");
+const moduleAlias = require("module-alias");
+const aliases = require("../aliasConfig/pathAliases.config");
+
+for (const [alias, target] of Object.entries(aliases)) {
+  moduleAlias.addAlias(alias, path.join(__dirname, "..", target));
+}
+
+require('module-alias/register');
+
 
 const { i18nConfig } = require("./config/i18nConfig");
 const { loggerMiddleware } = require("./middlewares/logger");
 const routes = require("./routes");
 const adminRoutes = require("./admin/routes");
+const appRoutes = require("./routes/appRoutes");
 const { sendResponse } = require("./helperUtils/responseUtil");
 const connectToDB = require("./helperUtils/server-setup");
+const { backupMongoDB } = require("./helperUtils/dataBaseBackup.js");
+const { securityMiddleware } = require("./middlewares/security.js");
+
+const swaggerUi = require('swagger-ui-express');
+const swaggerFile = require('../swagger/swagger_output.json');
+
 
 // Express app
 const app = express();
 
-// Enable CORS middleware
-const corsOptions = {
-  origin: "*", // Allow all origins
-  methods: "*", // Allow all methods
-  allowedHeaders: ["Content-Type", "Authorization", "x-admin-access-token"],
-};
+app.set("trust proxy", 1); // trust first proxy to get correct IP in req.ip
 
-app.use(cors(corsOptions)); // Apply CORS middleware
+// ================== Security Middleware ================== //
+const allowedOrigins = [
+  "https://pleis.com",
+  "https://www.pleis.com",
+  "https://dev.pleis.com",
+  "https://www.dev.pleis.com",
+  "http://localhost:4003",
+  "https://shipping-profession-merge-double.trycloudflare.com/",
+  "http://192.168.15.141:4003",
+];
+securityMiddleware(app, {
+  allowedOrigins,
+  adminIPWhitelist: [], // Example whitelist
+  maxRequestSize: "10mb",
+  rateLimitWindow: 15 * 60 * 1000, // 15 minutes
+  rateLimitMax: 200, // max requests per window
+});
 
 
 app.use(i18nConfig.init);
 app.use(loggerMiddleware);
 if (process.env.NODE_ENV != "prod") {
-  app.use(morgan("dev"));
 }
+app.use(morgan("dev"));
 app.use(express.json());
 
 
 
 // Routes
+
+
 app.use("/api/v1", routes);
+
 // Admin routes
 app.use("/api/v1/admin", adminRoutes);
+
+//app routes
+app.use("/api/v1/app", appRoutes);
+
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
 
 // Fallback Route
 app.use((req, res) => {
@@ -46,6 +84,11 @@ app.use((req, res) => {
 
 // Connect to DB and start server
 connectToDB(app);
+
+// Start MongoDB backup timer (24 hours)
+const backupTime = 24 * 60 * 60 * 1000;
+setInterval(() => backupMongoDB(), backupTime);
+
 
 //export app
 // module.exports = { app };

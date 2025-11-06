@@ -1,7 +1,7 @@
 // repositories/highlightRepository.js
-const { create } = require("lodash");
 const { Highlights } = require("./Highlight");
-const { Mongoose, default: mongoose } = require("mongoose");
+const { default: mongoose } = require("mongoose");
+const { getModelCounts } = require("@dbUtils/queryUtil");
 
 // Create
 const createHighlight = async (data) => {
@@ -10,7 +10,7 @@ const createHighlight = async (data) => {
 };
 
 // Get highlights with filters
-const getHighlightsWithFilters = async (query,keyword, skip, limit) => {
+const getHighlightsWithFilters = async (query, keyword, skip, limit) => {
   const pipeline = [
     { $match: query },
     { $sort: { createdAt: -1 } },
@@ -49,7 +49,7 @@ const getHighlightsWithFilters = async (query,keyword, skip, limit) => {
     }
   ];
 
-  // ✅ Apply keyword filter AFTER lookup
+  // Apply keyword filter AFTER lookup
   if (keyword) {
     const regex = { $regex: keyword, $options: "i" };
 
@@ -83,7 +83,6 @@ const getHighlightsWithFilters = async (query,keyword, skip, limit) => {
       status: 1,
       title: 1,
       media: 1,
-      mediaInfo: 1
     }
   });
 
@@ -91,6 +90,127 @@ const getHighlightsWithFilters = async (query,keyword, skip, limit) => {
 };
 
 
+const getPublicHighlightsWithFilters = async (query, keyword, skip, limit) => {
+  const pipeline = [
+    { $match: query },
+    { $sort: { createdAt: -1 } },
+    { $skip: skip },
+    { $limit: limit },
+
+    // --- Lookup from Events (and populate organization) ---
+    {
+      $lookup: {
+        from: "events",
+        localField: "object",
+        foreignField: "_id",
+        as: "eventObject",
+        pipeline: [
+          {
+            $lookup: {
+              from: "organizations",
+              localField: "basicInfo.organization",
+              foreignField: "_id",
+              as: "organizationInfo",
+              pipeline: [
+                {
+                  $project: {
+                    _id: 1,
+                    "basicInfo.media.logo": 1,
+                    "basicInfo.name": 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $addFields: {
+              "basicInfo.organization": { $arrayElemAt: ["$organizationInfo", 0] },
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              basicInfo: 1,
+              schedule: 1,
+              status: 1,
+            },
+          },
+        ],
+      },
+    },
+
+    // --- Lookup from Organizations (direct highlight reference) ---
+    {
+      $lookup: {
+        from: "organizations",
+        localField: "object",
+        foreignField: "_id",
+        as: "orgObject",
+      },
+    },
+
+    // --- Merge correct object based on highlight type ---
+    {
+      $addFields: {
+        object: {
+          $cond: [
+            { $eq: ["$type", "event"] },
+            { $arrayElemAt: ["$eventObject", 0] },
+            { $arrayElemAt: ["$orgObject", 0] },
+          ],
+        },
+      },
+    },
+  ];
+
+  // --- Keyword filter after lookups ---
+  if (keyword) {
+    const regex = { $regex: keyword, $options: "i" };
+
+    pipeline.push({
+      $match: {
+        $or: [
+          { title: regex }, // highlight title
+          { "media.name": regex }, // highlight media
+          { "object.basicInfo.title": regex }, // event title
+          { "object.basicInfo.name": regex }, // org name
+          { "object.basicInfo.description": regex }, // event/org description
+          { "object.basicInfo.organization.basicInfo.name": regex }, // nested org inside event
+          { "object.basicInfo.socialLinks.facebook": regex },
+          { "object.basicInfo.socialLinks.instagram": regex },
+          { "object.basicInfo.socialLinks.linkedin": regex },
+          { "object.basicInfo.socialLinks.youtube": regex },
+        ],
+      },
+    });
+  }
+
+  // --- Final projection ---
+  pipeline.push({
+    $project: {
+      "object._id": 1,
+      "object.basicInfo.title": 1,
+      "object.basicInfo.name": 1,
+      "object.basicInfo.venueLocation": 1,
+      "object.basicInfo.media": 1,
+      "object.basicInfo.description": 1,
+      "object.basicInfo.organization.basicInfo.name": 1,
+      "object.basicInfo.organization.basicInfo.media": 1,
+      type: 1,
+      createdAt: 1,
+      meta: 1,
+      status: 1,
+      title: 1,
+      media: 1,
+    },
+  });
+
+  return Highlights.aggregate(pipeline);
+};
+
+const getHighlightsCounts = async (query) => {
+  return getModelCounts({ model: Highlights, filterQuery: query });
+}
 
 // Count by condition
 const countHighlights = async (query = {}) => {
@@ -171,7 +291,7 @@ const findHighlightById = async (id) => {
         meta: 1,
         status: 1,
         title: 1,
-        mediaInfo: 1
+        media: 1
       }
     }
   ]);
@@ -201,4 +321,6 @@ module.exports = {
   findHighlightDocById,
   deleteHighlightById,
   findByIdAndUpdate,
+  getPublicHighlightsWithFilters,
+  getHighlightsCounts,
 };

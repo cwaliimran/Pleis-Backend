@@ -15,10 +15,14 @@ function formatPromotion(promotion, timezone) {
 
     //attach full image URL
     if (obj?.image) {
-        obj.mediaInfo = {
-            image: obj.image,
-            url: getFullImageUrl(obj.image),
-        };
+        obj.media = getFullImageUrl(obj.image);
+    }
+    if (obj?.companyOrganizer?.profileIcon) {
+        obj.companyOrganizer.profileIcon = getFullImageUrl(obj.companyOrganizer.profileIcon);
+    }
+
+    if (obj?.tierLimit?.image) {
+        obj.tierLimit.image = getFullImageUrl(obj.tierLimit.image);
     }
 
     // Adjust obj properties based on promotionType
@@ -39,6 +43,14 @@ function formatPromotion(promotion, timezone) {
         case "productSale":
             delete obj.extraPoints;
             convertPromotionDates(obj, timezone, "YYYY-MM-DD");
+            break;
+        case "claimPromotion":
+            delete obj.extraPoints;
+            delete obj.discountedPrice;
+            delete obj.menuItem;
+            convertPromotionDates(obj, timezone, "YYYY-MM-DD");
+            break;
+        default:
             break;
     }
 

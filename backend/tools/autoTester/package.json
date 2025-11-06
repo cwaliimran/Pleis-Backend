@@ -1,0 +1,13 @@
+{
+  "name": "pleis-auto-tester",
+  "version": "1.0.2",
+  "description": "Automated route discovery and API testing for Pleis Backend",
+  "main": "src/index.js",
+  "scripts": {
+    "discover": "node src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.0",
+    "mongoose": "^7.8.1"
+  }
+}

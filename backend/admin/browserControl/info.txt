@@ -1,0 +1,18 @@
+Top 10 / Promo Section
+Add New Promo Event
+use PUT events/:id api to set promotion
+ "promotion": { //promote event
+        "isPromoted": true,
+        "order": "1"
+    }
+
+
+//Custom Categories
+User creates own categories against (Events, Loyalty Clubs, Organization)
+
+//Pinned Content
+The content against these (category, tags or venue) will be always shown in app
+
+//Quick Access
+These are categories sorted on top of screen
+

@@ -52,7 +52,12 @@ const countVenues = async (query = {}) => {
 };
 
 // Find by ID
-const findVenueById = async (id) => {
+//with select option
+//select example ['title', 'location']
+const findVenueById = async (id, select = []) => {
+  if (select.length > 0) {
+    return Venues.findById(id).select(select.join(" "));
+  }
   return Venues.findById(id);
 };
 
@@ -81,7 +86,7 @@ const getUnassignedVenues = async (userId) => {
     creator: userId
   });
 };
-  
+
 
 module.exports = {
   createVenue,

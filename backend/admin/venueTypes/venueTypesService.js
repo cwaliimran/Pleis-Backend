@@ -1,11 +1,12 @@
 // services/venuetypeService.js
 const { generateMeta } = require("../../helperUtils/responseUtil");
+const { formatVenueType } = require("./fomatter/formatVenueType");
 const venuetypeRepo = require("./venueTypesRepository");
 
-const createVenueType = async ({ image, title, status, pinned }) => {
-  return await venuetypeRepo.createVenueType({ image, title, status, pinned });
+const createVenueType = async ({ image, title, status }) => {
+  return await venuetypeRepo.createVenueType({ image, title, status });
 };
-const getVenueTypes = async ({ page, limit, keyword, status, pinned, date }) => {
+const getVenueTypes = async ({ page, limit, keyword, status, date }) => {
   const andConditions = [];
   // if date is available then match createdAt with date current date format is yyyy-mm-dd
   if (date) {
@@ -29,40 +30,27 @@ const getVenueTypes = async ({ page, limit, keyword, status, pinned, date }) => 
     });
   }
 
-  if (pinned !== undefined) {
-    if (pinned === true) {
-      andConditions.push({ pinned: true });
-    } else {
-      andConditions.push({
-        $or: [
-          { pinned: false },
-          { pinned: null },
-          { pinned: { $exists: false } },
-        ],
-      });
-    }
-  }
-
   const query = andConditions.length > 0 ? { $and: andConditions } : {};
 
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [venuetypes, totalFiltered, total, active, inactive] =
+  const [venueTypes, counts] =
     await Promise.all([
       venuetypeRepo.getVenueTypesWithFilters(
         query,
-        skip,
-        limit === 0 ? 0 : limit
+        page,
+        limit
       ),
-      venuetypeRepo.countVenueTypes(query),
-      venuetypeRepo.countVenueTypes({ status: { $ne: "deleted" } }),
-      venuetypeRepo.countVenueTypes({ status: "active" }),
-      venuetypeRepo.countVenueTypes({ status: "inactive" }),
+      venuetypeRepo.getCounts(query),
     ]);
+
+  //format venueTypes
+  const formattedVenueTypes = venueTypes.map(item => formatVenueType(item));
+
+  const { totalFiltered, total, active, inactive } = counts;
   let meta = generateMeta(page, limit, totalFiltered);
   meta.venueTypesCount = { total, active, inactive };
   return {
-    venuetypes,
+    venueTypes: formattedVenueTypes,
     meta,
   };
 };
@@ -90,39 +78,23 @@ const getPublicVenueTypes = async ({ page, limit, keyword, date }) => {
 
   const baseQuery = baseFilters.length ? { $and: baseFilters } : {};
 
-  const pinnedQuery = { ...baseQuery, pinned: true };
 
-  const unpinnedConditions = {
-    $or: [{ pinned: false }, { pinned: null }, { pinned: { $exists: false } }],
-  };
-  const unpinnedQuery = {
-    $and: [...(baseQuery.$and || []), unpinnedConditions],
-  };
-
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
-
-  const [pinnedVenueTypes, unpinnedVenueTypes, totalFiltered] =
+  const [venueTypes, totalFiltered] =
     await Promise.all([
       page === 1
-        ? venuetypeRepo.getVenueTypesWithFilters(pinnedQuery, 0, 0)
+        ? venuetypeRepo.getVenueTypesWithFilters(baseQuery, page,
+          limit)
         : [],
-      venuetypeRepo.getVenueTypesWithFilters(
-        unpinnedQuery,
-        skip,
-        limit === 0 ? 0 : limit
-      ),
+
       venuetypeRepo.countVenueTypes(baseQuery),
     ]);
 
+    const formattedVenueTypes = venueTypes.map(item => formatVenueType(item));
 
-  const venuetypes = {
-    pinned: pinnedVenueTypes,
-    unpinned: unpinnedVenueTypes,
-  };
   let meta = generateMeta(page, limit, totalFiltered);
 
   return {
-    venuetypes,
+    venueTypes: formattedVenueTypes,
     meta,
   };
 };
@@ -133,7 +105,6 @@ const updateVenueType = async (id, data) => {
     ...(data.title !== undefined && { title: data.title }),
     ...(data.image !== undefined && { image: data.image }),
     ...(data.status !== undefined && { status: data.status }),
-    ...(data.pinned !== undefined && { pinned: data.pinned }),
   };
 
   if (Object.keys(updateData).length === 0) {

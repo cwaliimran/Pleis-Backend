@@ -3,7 +3,7 @@ const {
   parsePaginationParams,
   validateParams,
   getReadableErrorMessage,
-} = require("../../../helperUtils/responseUtil");
+} = require("@utils/responseUtil");
 
 const categoriesService = require("./menuItemCategoriesService");
 
@@ -200,7 +200,7 @@ const deleteCategory = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error.message,
+      error,
     });
   }
 };

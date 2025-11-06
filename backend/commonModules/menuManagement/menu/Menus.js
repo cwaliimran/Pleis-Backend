@@ -15,9 +15,9 @@ const menusSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    venue: {
+    organization: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Venues",
+      ref: "Organizations",
       required: true,
     },
     creator: {

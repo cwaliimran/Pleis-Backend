@@ -1,9 +1,15 @@
 const mongoose = require("mongoose");
-const { getFullImageUrl } = require("../../helperUtils/imageHelper");
 const { RecurringEventSchema } = require("./RecurringEventSchema");
+const { nanoid } = require("nanoid");
 
 const eventSchema = new mongoose.Schema(
   {
+    publicId: {
+      type: String,
+      unique: true,
+      index: true,
+      default: () => nanoid(),
+    },
     basicInfo: {
       media: {
         type: {
@@ -36,6 +42,22 @@ const eventSchema = new mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId,
         ref: "Venues",
         required: true,
+      },
+      venueLocation: { //only used for nearby events without populating venue
+        type: {
+          type: String,
+          enum: ['Point'],
+          default: 'Point',
+        },
+        coordinates: {
+          type: [Number], // [longitude, latitude]
+          validate: {
+            validator: function (arr) {
+              return Array.isArray(arr) && arr.length === 2;
+            },
+            message: 'venueLocation.coordinates must be [longitude, latitude]',
+          },
+        },
       },
       categories: [
         {
@@ -87,13 +109,21 @@ const eventSchema = new mongoose.Schema(
       enum: ["active", "inactive", "completed", "deleted"],
       default: "active",
     },
-    // New addition
+    
     meta: {
       revenue: {
         type: Number,
         default: 0,
       },
-      views: {
+      favoritesCount: {
+        type: Number,
+        default: 0,
+      },
+      viewsCount: {
+        type: Number,
+        default: 0,
+      },
+      attendeesCount: {
         type: Number,
         default: 0,
       },
@@ -106,33 +136,16 @@ const eventSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true, transform: transformDoc },
-    toObject: { virtuals: true, transform: transformDoc },
   }
 );
 
-/**
- * Adds mediaInfo as a virtual inside basicInfo.
- * This ensures the output is: basicInfo: { media: ..., mediaInfo: ... }
- */
-eventSchema.virtual("basicInfo.mediaInfo").get(function () {
-  const media = this.basicInfo?.media || {};
-  return {
-    name: media.name || "",
-    type: media.type || "image",
-    url: getFullImageUrl(media.name),
-  };
-});
+//Add indexes
+eventSchema.index({ "basicInfo.venueLocation": '2dsphere' });
+eventSchema.index({ "basicInfo.organization": 1, status: 1 });
+eventSchema.index({ "basicInfo.venue": 1 });
+eventSchema.index({ "basicInfo.tags": 1 });
+eventSchema.index({ "basicInfo.categories": 1 });
 
-// Custom transformation — applies automatically to .toJSON() and .toObject()
-function transformDoc(doc, ret) {
-  // Remove raw image strings if you want to hide them
-  if (ret.basicInfo && ret.basicInfo.media) {
-    delete ret.basicInfo.media;
-  }
-  delete ret.id;
-  return ret;
-}
 
 const Events = mongoose.model("Event", eventSchema);
 

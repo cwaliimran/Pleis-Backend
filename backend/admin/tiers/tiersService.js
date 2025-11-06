@@ -1,12 +1,14 @@
 // services/tierService.js
-const { buildKeywordQueryFromModels } = require("../../helperUtils/queryUtil");
+const { buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
 const { generateMeta } = require("../../helperUtils/responseUtil");
+const { tiersFormatter } = require("./formatters/tiersFormatter");
 const Tiers = require("./Tiers");
 const tierRepo = require("./tiersRepository");
 const mongoose = require("mongoose");
 
 const createTier = async (data) => {
-  return await tierRepo.createTier(data);
+  let tier = await tierRepo.createTier(data);
+  return tiersFormatter(tier);
 };
 
 // Populate venue data for tiers (updated for new schema)
@@ -65,7 +67,7 @@ const getTiers = async ({ page, limit, keyword, status, userId, date }) => {
 
   const result = await Tiers.aggregate(pipeline);
 
-  const tiers = result[0]?.data || [];
+  let tiers = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   // Additional counts for meta (active/inactive/total by userId as creator)
@@ -75,16 +77,14 @@ const getTiers = async ({ page, limit, keyword, status, userId, date }) => {
     Tiers.countDocuments({ status: "inactive", ...(userId && { creator: userId }) })
   ]);
 
-  const formattedTiers = tiers.map(tier => {
-    const tierDoc = new Tiers(tier);
-    return tierDoc.formatResponse ? tierDoc.formatResponse() : tierDoc.toObject();
-  });
-
   const meta = generateMeta(page, limit, totalFiltered);
   meta.tiersCount = { total, active, inactive };
 
+  //format tiers
+  tiers = tiers.map(item => tiersFormatter(item));
+
   return {
-    tiers: formattedTiers,
+    tiers,
     meta
   };
 };
@@ -94,9 +94,12 @@ const updateTier = async (id, data) => {
   if (!tier) return null;
 
   const allowedFields = [
+    "image",
     "title",
-    "entryPoints",
-    "retainPoints",
+    "bonusPointsPerEuro",
+    "essential",
+    "preferred",
+    "premier",
     "status"
   ];
   const updateData = {};
@@ -113,7 +116,7 @@ const updateTier = async (id, data) => {
   Object.assign(tier, updateData);
   await tier.save();
 
-  return tier;
+  return tiersFormatter(tier);
 };
 
 const deleteTier = async (id) => {
@@ -127,7 +130,7 @@ const deleteTier = async (id) => {
 const getTierDetails = async (id) => {
   const tier = await tierRepo.findTierById(id);
   if (!tier) return null;
-  return tier;
+  return tiersFormatter(tier);
 };
 
 module.exports = {

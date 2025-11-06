@@ -3,6 +3,11 @@ const mongoose = require("mongoose");
 const tiersSchema = new mongoose.Schema(
   {
 
+    image: {
+      type: String,
+      default: "",
+    },
+
     title: {
       type: String,
       trim: true,
@@ -10,14 +15,45 @@ const tiersSchema = new mongoose.Schema(
       default: "",
     },
 
-    entryPoints: {
+    bonusPointsPerEuro: {
       type: Number,
       default: 0,
     },
-    retainPoints: {
-      type: Number,
-      default: 0,
+    
+    essential: {
+      entryPoints: {
+        type: Number,
+        default: 0,
+      },
+      retainPoints: {
+        type: Number,
+        default: 0,
+      },
     },
+
+    preferred: {
+      entryPoints: {
+        type: Number,
+        default: 0,
+      },
+      retainPoints: {
+        type: Number,
+        default: 0,
+      },
+    },
+
+    premier: {
+      entryPoints: {
+        type: Number,
+        default: 0,
+      },
+      retainPoints: {
+        type: Number,
+        default: 0,
+      },
+    },
+
+
     status: {
       type: String,
       enum: ["active", "inactive", "deleted"],

@@ -1,5 +1,5 @@
 // services/categoryService.js
-const { generateMeta } = require("../../../helperUtils/responseUtil");
+const { generateMeta } = require("@utils/responseUtil");
 const categoryRepo = require("./menuItemCategoriesRepository");
 const createCategory = async ({ title, status }) => {
   return await categoryRepo.createCategory({ title, status });

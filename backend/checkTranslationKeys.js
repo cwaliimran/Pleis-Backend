@@ -40,14 +40,23 @@ function scanFiles(dir) {
   return results;
 }
 
-// Extract translation keys used via translationKey: "key"
+// Extract translation keys used via translationKey: "key" or translationKey = "key"
 function extractTranslationKeys(content) {
-  const regex = /translationKey\s*:\s*['"]([^'"]+)['"]/g;
   const keys = new Set();
+
+  // Match translationKey: "key" or translationKey: 'key'
+  const colonRegex = /translationKey\s*:\s*['"]([^'"]+)['"]/g;
   let match;
-  while ((match = regex.exec(content)) !== null) {
+  while ((match = colonRegex.exec(content)) !== null) {
     keys.add(match[1]);
   }
+
+  // Match translationKey = "key" or translationKey = 'key'
+  const equalsRegex = /translationKey\s*=\s*['"]([^'"]+)['"]/g;
+  while ((match = equalsRegex.exec(content)) !== null) {
+    keys.add(match[1]);
+  }
+
   return Array.from(keys);
 }
 
@@ -121,7 +130,7 @@ function keyToReadableText(key) {
   fs.writeFileSync(missingFile, JSON.stringify(missingKeys, null, 2), "utf-8");
   fs.writeFileSync(extraFile, JSON.stringify(extraKeys, null, 2), "utf-8");
 
-  logger.log(`✅ Updated ${baseLangFile}`);
+  logger.log(`Updated ${baseLangFile}`);
   logger.log(`📁 Missing keys saved to: ${missingFile}`);
   logger.log(`🧹 Extra keys saved to: ${extraFile}`);
 })();

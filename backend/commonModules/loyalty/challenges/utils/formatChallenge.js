@@ -1,11 +1,18 @@
+const { tiersFormatter } = require("../../../../admin/tiers/formatters/tiersFormatter");
 const { getFullImageUrl } = require("../../../../helperUtils/imageHelper");
 const { convertUtcToTimezone } = require("../../../../helperUtils/responseUtil");
 
 // utils/formatChallenge.js
 function formatChallenge(challenge, timezone) {
     const obj = { ...challenge };
+    if (obj?.companyOrganizer?.profileIcon) {
+        obj.companyOrganizer.profileIcon = getFullImageUrl(obj.companyOrganizer.profileIcon);
+    }
 
-
+    //format tierLimit if exists
+    if (obj?.tierLimit) {
+        obj.tierLimit = tiersFormatter(obj.tierLimit);
+    }
 
     if (obj.reward) {
         switch (obj.reward.rewardType) {
@@ -23,10 +30,7 @@ function formatChallenge(challenge, timezone) {
                 delete obj.reward.rewardMenuItem;
                 //attach full image URL
                 if (obj.reward.customReward?.image) {
-                    obj.reward.customReward.mediaInfo = {
-                        image: obj.reward.customReward.image,
-                        url: getFullImageUrl(obj.reward.customReward.image),
-                    };
+                    obj.reward.customReward.media = getFullImageUrl(obj.reward.customReward.image)
                 }
                 delete obj.reward.customReward.image;
                 break;

@@ -40,10 +40,15 @@ const getChallengesWithFilters = async (query = {}, skip = 0, limit = 10) => {
   return Challenge.find(query)
     .populate("taskMenuItem")
     .populate("reward.rewardMenuItem")
-    .populate("tierLimit")
+    .populate({
+      path: "tierLimit",
+      select: "image title"
+    })
     .sort({ createdAt: -1 })
     .skip(skip)
-    .limit(limit);
+    .limit(limit)
+    .lean()
+    .exec();
 };
 
 // Count
