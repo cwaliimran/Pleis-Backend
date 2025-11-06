@@ -183,12 +183,6 @@ const duplicateMenuAndItems = async (menuId, organization) => {
       throw new Error('Old and new organization cannot be the same');
     }
 
-    //check if new organization has already a menu with
-    const existingMenu = await Menus.findOne({ organization: organization, status: { $ne: 'deleted' } }).session(session);
-    if (existingMenu) {
-      throw new Error('A menu already exists for this organization');
-    }
-
     const duplicatedMenu = {
       ...menu.toObject(),
       _id: new mongoose.Types.ObjectId(),

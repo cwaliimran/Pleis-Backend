@@ -1929,7 +1929,7 @@
 									]
 								},
 								{
-									"name": "add interests",
+									"name": "add/update interests",
 									"request": {
 										"method": "POST",
 										"header": [],
@@ -2017,12 +2017,9 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}home/",
+									"raw": "{{url}}home",
 									"host": [
 										"{{url}}home"
-									],
-									"path": [
-										""
 									],
 									"query": [
 										{
@@ -2153,11 +2150,12 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}events/nearby/?page=1&limit=10&latitude=31.5023621&longitude=74.426454&radiusKm=1000000",
+									"raw": "{{url}}app/events/nearby/?page=1&limit=10&latitude=31.5023621&longitude=74.426454&radiusKm=1000000",
 									"host": [
-										"{{url}}events"
+										"{{url}}app"
 									],
 									"path": [
+										"events",
 										"nearby",
 										""
 									],
@@ -2230,18 +2228,19 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}events/:id/",
+									"raw": "{{url}}app/events/:id/",
 									"host": [
-										"{{url}}events"
+										"{{url}}app"
 									],
 									"path": [
+										"events",
 										":id",
 										""
 									],
 									"variable": [
 										{
 											"key": "id",
-											"value": "68ff18ed8cd2d2f52b25be1a"
+											"value": "68de33b7bcddb74bfc2d9dd8"
 										}
 									]
 								}
@@ -2706,7 +2705,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{url}}app/favorites",
+									"raw": "{{url}}app/favorites?targetType=event&page=1&limit=10",
 									"host": [
 										"{{url}}app"
 									],
@@ -2719,6 +2718,136 @@
 											"value": "organization",
 											"description": "event, organization",
 											"disabled": true
+										},
+										{
+											"key": "targetType",
+											"value": "event"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "add/remove toggle",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"targetId\": \"690887e1a8adad86a7cfeec2\",\n  \"targetType\": \"event\" // event, organization\n}\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/favorites/toggle",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"favorites",
+										"toggle"
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Recently Viewed Items",
+					"item": [
+						{
+							"name": "get",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{url}}app/recently-viewed?targetType=event&page=1&limit=10",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"recently-viewed"
+									],
+									"query": [
+										{
+											"key": "targetType",
+											"value": "organization",
+											"description": "event, organization",
+											"disabled": true
+										},
+										{
+											"key": "targetType",
+											"value": "event"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
 										}
 									]
 								}
@@ -2756,7 +2885,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"targetId\": \"69005ee107c29bc8fee4324d\",\n  \"targetType\": \"organization\" // event, organization\n}\n",
+									"raw": "{\n  \"targetId\": \"690887e1a8adad86a7cfeec2\",\n  \"targetType\": \"event\" // event, organization\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -2764,18 +2893,463 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}app/favorites/toggle",
+									"raw": "{{url}}app/recently-viewed/",
 									"host": [
 										"{{url}}app"
 									],
 									"path": [
-										"favorites",
-										"toggle"
+										"recently-viewed",
+										""
 									]
 								},
 								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
 							},
 							"response": []
+						}
+					]
+				},
+				{
+					"name": "Share",
+					"item": [
+						{
+							"name": "share link",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}share/:type/:id",
+									"host": [
+										"{{url}}share"
+									],
+									"path": [
+										":type",
+										":id"
+									],
+									"query": [
+										{
+											"key": "keyword",
+											"value": "Shows",
+											"disabled": true
+										}
+									],
+									"variable": [
+										{
+											"key": "type",
+											"value": "event"
+										},
+										{
+											"key": "id",
+											"value": "68ff18ed8cd2d2f52b25be1a"
+										}
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "categories",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}categories/global?page=1&limit=10",
+											"host": [
+												"{{url}}categories"
+											],
+											"path": [
+												"global"
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "keyword",
+													"value": "Shows",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "X-Powered-By",
+											"value": "Express"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "469"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"1d5-aUr3ZXp0FLofXLMKezW1luPBP8w\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 15 Oct 2025 11:43:31 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"message\": \"Categories fetched successfully\",\n    \"data\": [\n        {\n            \"order\": 0,\n            \"_id\": \"68ee3310924370d02dbacc41\",\n            \"title\": \"Nightlife\",\n            \"status\": \"active\",\n            \"pinned\": false,\n            \"createdAt\": \"2025-10-14T11:25:04.699Z\",\n            \"updatedAt\": \"2025-10-14T11:25:41.702Z\",\n            \"__v\": 0,\n            \"imageInfo\": {\n                \"name\": \"24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\",\n                \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\"\n            }\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 10,\n        \"totalPages\": 1,\n        \"total\": 1\n    }\n}"
+								}
+							]
+						},
+						{
+							"name": "share link test",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:4009/api/v1/share?type=event&id=C6KM2Li7OxCQcDbdQzPsJ",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "4009",
+									"path": [
+										"api",
+										"v1",
+										"share"
+									],
+									"query": [
+										{
+											"key": "type",
+											"value": "event"
+										},
+										{
+											"key": "id",
+											"value": "C6KM2Li7OxCQcDbdQzPsJ"
+										},
+										{
+											"key": "keyword",
+											"value": "Shows",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "categories",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}categories/global?page=1&limit=10",
+											"host": [
+												"{{url}}categories"
+											],
+											"path": [
+												"global"
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "keyword",
+													"value": "Shows",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "X-Powered-By",
+											"value": "Express"
+										},
+										{
+											"key": "Access-Control-Allow-Origin",
+											"value": "*"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "469"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"1d5-aUr3ZXp0FLofXLMKezW1luPBP8w\""
+										},
+										{
+											"key": "Date",
+											"value": "Wed, 15 Oct 2025 11:43:31 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"message\": \"Categories fetched successfully\",\n    \"data\": [\n        {\n            \"order\": 0,\n            \"_id\": \"68ee3310924370d02dbacc41\",\n            \"title\": \"Nightlife\",\n            \"status\": \"active\",\n            \"pinned\": false,\n            \"createdAt\": \"2025-10-14T11:25:04.699Z\",\n            \"updatedAt\": \"2025-10-14T11:25:41.702Z\",\n            \"__v\": 0,\n            \"imageInfo\": {\n                \"name\": \"24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\",\n                \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\"\n            }\n        }\n    ],\n    \"meta\": {\n        \"page\": 1,\n        \"limit\": 10,\n        \"totalPages\": 1,\n        \"total\": 1\n    }\n}"
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "Loyalty",
+					"item": [
+						{
+							"name": "Loyalty Copy",
+							"item": [
+								{
+									"name": "challenges",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/loyalty/challenges",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"loyalty",
+												"challenges"
+											],
+											"query": [
+												{
+													"key": "keyword",
+													"value": "cafe",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Promotions",
+							"item": [
+								{
+									"name": "promotions",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/loyalty/promotions",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"loyalty",
+												"promotions"
+											],
+											"query": [
+												{
+													"key": "keyword",
+													"value": "",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							]
 						}
 					]
 				}
@@ -3435,7 +4009,8 @@
 													"});"
 												],
 												"type": "text/javascript",
-												"packages": {}
+												"packages": {},
+												"requests": {}
 											}
 										},
 										{
@@ -3445,7 +4020,8 @@
 													""
 												],
 												"type": "text/javascript",
-												"packages": {}
+												"packages": {},
+												"requests": {}
 											}
 										}
 									],
@@ -4494,7 +5070,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    // \"profileIcon\": \"noImage.png\",\n    // \"firstName\": \"{{$randomUserName}}\",\n    // \"lastName\": \"M\",\n    // \"organizationName\":\"Tech Innovators Ltd\",\n    // \"phoneNumber\": {\n    //     \"code\": \"+92\",\n    //     \"number\": \"3001122104\"\n    // },\n      \"location\": {\n          \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYKaff\",\n            \"postalCode\": \"10012\"\n        },\n    // \"deviceType\": \"web\", //andoird/ios/web\n    // \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    // \"timezone\": \"Asia/Karachi\"\n    \n    // ,\n    \"companyDetails\":{\n        \"oib\": \"5492948232\",\n        \"location\": {\n          \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYKa\",\n            \"postalCode\": \"10012\"\n        },\n        \"loyaltySettings\":{\n            \"model\":\"essential\",\n            \"pointValuePercentage\":2.5\n        }\n    },\n\n\n    \"termsAccepted\":true\n}",
+											"raw": "{\n    // \"profileIcon\": \"noImage.png\",\n    // \"firstName\": \"{{$randomUserName}}\",\n    // \"lastName\": \"M\",\n    // \"organizationName\":\"Tech Innovators Ltd\",\n    // \"phoneNumber\": {\n    //     \"code\": \"+92\",\n    //     \"number\": \"3001122104\"\n    // },\n    //   \"location\": {\n    //       \"coordinates\": [43.5081,16.4402],\n    //         \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n    //         \"country\": \"USA\",\n    //         \"city\": \"New York\",\n    //         \"state\": \"NYKaff\",\n    //         \"postalCode\": \"10012\"\n    //     },\n    // \"deviceType\": \"web\", //andoird/ios/web\n    // \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    // \"timezone\": \"Asia/Karachi\"\n    \n    // ,\n    \"companyDetails\":{\n        \"oib\": \"5492948232\",\n        \"location\": {\n          \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYKa\",\n            \"postalCode\": \"10012\"\n        },\n        \"loyaltySettings\":{\n            \"title\": \"Beast Club Loyalty\",\n            \"model\":\"essential\", // \"essential\", \"preferred\", \"premier\"\n            \"pointValuePercentage\":2.5\n        }\n    },\n    \"termsAccepted\":true\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -5485,7 +6061,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -5495,7 +6072,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -5525,7 +6103,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "6893380bac0794c59a13d5e8"
+											"value": "68ff18be8cd2d2f52b25be0a"
 										}
 									]
 								}
@@ -8523,64 +9101,6 @@
 							"response": []
 						},
 						{
-							"name": "get details",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {}
-									}
-								}
-							],
-							"protocolProfileBehavior": {
-								"disableBodyPruning": true
-							},
-							"request": {
-								"method": "GET",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}admin/venue-types/:id",
-									"host": [
-										"{{url}}admin"
-									],
-									"path": [
-										"venue-types",
-										":id"
-									],
-									"variable": [
-										{
-											"key": "id",
-											"value": ""
-										}
-									]
-								}
-							},
-							"response": []
-						},
-						{
 							"name": "add",
 							"event": [
 								{
@@ -8642,7 +9162,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -8652,7 +9173,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -8661,7 +9183,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"pinned\":true\n}\n",
+									"raw": "{\n  \n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -8680,7 +9202,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68848633721543813c533a7f"
+											"value": "68ee3430924370d02dbacc89"
 										}
 									]
 								},
@@ -9375,7 +9897,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"title\": \"Bar\",\n    \"status\": \"active\",\n    \"image\":\"24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\"\n  }",
+									"raw": "{\n    \"title\": \"Nightlife\",\n    \"status\": \"active\",\n    \"image\":\"24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\"\n  }",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -9653,7 +10175,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -9663,7 +10186,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -9693,7 +10217,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68c009fffdaea1e1b6b535b6"
+											"value": "69087dfc024d8c4b6e430a5c"
 										}
 									]
 								}
@@ -9710,7 +10234,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -9720,7 +10245,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -9729,7 +10255,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"logo\": \"org-logo_pic1.png\",\n            \"cover\": \"org-cover.jpg\"\n        },\n        \"name\": \"Lex Events\",\n        \"user\":\"68c2a6f5896889fb5455b5d7\",\n        \"socialLinks\": {\n            \"youtube\": \"https://youtube.com/lexevents\",\n            \"facebook\": \"https://facebook.com/lexevents\",\n            \"instagram\": \"https://instagram.com/lexevents\",\n            \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        }\n    }\n}",
+									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"logo\": \"org-logo_pic1.png\",\n            \"cover\": \"org-cover.jpg\"\n        },\n        \"name\": \"Lex Events\",\n        \"user\":\"68c2a6f5896889fb5455b5d7\",\n        \"phoneNumber\": {\n            \"code\": \"+385\",\n            \"number\": \"998798769\"\n        },\n        \"website\": \"http:lex.com\",\n        \"socialLinks\": {\n            \"youtube\": \"https://youtube.com/lexevents\",\n            \"facebook\": \"https://facebook.com/lexevents\",\n            \"instagram\": \"https://instagram.com/lexevents\",\n            \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        }\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -9828,7 +10354,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -9838,7 +10365,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -9847,7 +10375,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"logo\": \"org-logo_pic1.png\",\n            \"cover\": \"org-cover.jpg\"\n        },\n        \"name\": \"Lex Events\",\n        \"socialLinks\": {\n            \"youtube\": \"https://youtube.com/lexevents\",\n            \"facebook\": \"https://facebook.com/lexevents\",\n            \"instagram\": \"https://instagram.com/lexevents\",\n            \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        }\n    },\n    \"otherInfo\": {\n        \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n        \"minAge\": 18,\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\"68b294c4a09f4da7cdf23d47\"\n        ],\n        \"categories\": [\n            \"64f7206e442c7dfc4aa00002\"\n        ],\n        \"galleryMedia\": [\n            \"gallery1.jpg\",\n            \"gallery2.jpg\"\n        ]\n    },\n    \"operatingHours\": {\n        \"monday\": {\n            \"from\": \"10:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"tuesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"wednesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"thursday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"friday\": {\n            \"from\": \"09:00\",\n            \"to\": \"20:00\",\n            \"break\": {\n                \"from\": \"14:00\",\n                \"to\": \"15:00\"\n            },\n            \"isOpen\": false\n        },\n        \"saturday\": {\n            \"from\": \"12:00\",\n            \"to\": \"22:00\",\n            \"break\": {\n                \"from\": \"16:00\",\n                \"to\": \"17:00\"\n            },\n            \"isOpen\": false\n        },\n        \"sunday\": {\n            \"from\": \"\",\n            \"to\": \"\",\n            \"break\": {\n                \"from\": \"\",\n                \"to\": \"\"\n            },\n            \"isOpen\": true\n        }\n    },\n    \"status\": \"active\",\n    \"venue\": \"68b680ef739209915c262222\",\n    \"location\": {\n        \"address\": \"100 Tech Avenue\",\n        \"fullAddress\":\"100 Tech Avenue, Split, 2100\",\n        \"city\": \"Split\",\n        \"postalCode\": \"21000\",\n        \"country\": \"Croatia\",\n        \"coordinates\": [\n            43.5081,\n            16.4402\n        ]\n    }\n}",
+									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"logo\": \"org-logo_pic1.png\",\n            \"cover\": \"org-cover.jpg\"\n        },\n        \"name\": \"Lex Events\",\n        \"phoneNumber\": {\n            \"code\": \"+385\",\n            \"number\": \"998798769\"\n        },\n        \"website\": \"http:lex.com\",\n        \"socialLinks\": {\n            \"youtube\": \"https://youtube.com/lexevents\",\n            \"facebook\": \"https://facebook.com/lexevents\",\n            \"instagram\": \"https://instagram.com/lexevents\",\n            \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        }\n    },\n    \"otherInfo\": {\n        \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n        \"minAge\": 18,\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"68b294c4a09f4da7cdf23d47\"\n        ],\n        \"categories\": [\n            \"64f7206e442c7dfc4aa00002\"\n        ],\n        \"galleryMedia\": [\n            \"gallery1.jpg\",\n            \"gallery2.jpg\"\n        ]\n    },\n    \"operatingHours\": {\n        \"monday\": {\n            \"from\": \"10:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"tuesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"wednesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"thursday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": false\n        },\n        \"friday\": {\n            \"from\": \"09:00\",\n            \"to\": \"20:00\",\n            \"break\": {\n                \"from\": \"14:00\",\n                \"to\": \"15:00\"\n            },\n            \"isOpen\": false\n        },\n        \"saturday\": {\n            \"from\": \"12:00\",\n            \"to\": \"22:00\",\n            \"break\": {\n                \"from\": \"16:00\",\n                \"to\": \"17:00\"\n            },\n            \"isOpen\": false\n        },\n        \"sunday\": {\n            \"from\": \"\",\n            \"to\": \"\",\n            \"break\": {\n                \"from\": \"\",\n                \"to\": \"\"\n            },\n            \"isOpen\": true\n        }\n    },\n    \"status\": \"active\",\n    \"venue\": \"68b680ef739209915c262222\",\n    \"location\": {\n        \"address\": \"100 Tech Avenue\",\n        \"fullAddress\": \"100 Tech Avenue, Split, 2100\",\n        \"city\": \"Split\",\n        \"postalCode\": \"21000\",\n        \"country\": \"Croatia\",\n        \"coordinates\": [\n            43.5081,\n            16.4402\n        ]\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -9865,7 +10393,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68b97c3650bb90128c47511f"
+											"value": "69087dfc024d8c4b6e430a5c"
 										}
 									]
 								},
@@ -10133,7 +10661,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68de33b7bcddb74bfc2d9dd8"
+											"value": "68ff18be8cd2d2f52b25be0a"
 										}
 									]
 								}
@@ -10171,7 +10699,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"type\": \"image\",\n            \"name\": \"event-banner.jpg\"\n        },\n        \"title\": \"Monday Fun day\",\n        \"description\": \"A fun-filled day of live music and food.\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"venue\": \"68f6250cba6361cef113b79c\",\n        \"categories\": [\"68f0d6b0a92f125fd26a5831\",\"68c028637c376b15157d9ecc\"],\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"6883208feec25d5f951a8c74\"\n        ]\n    },\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-10-27 10:00 AM\",\n        \"endDateTime\": \"2025-10-27 05:00 PM\"\n\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n\n        /*Ending on specific date*/\n        // ,\n        // \"recurringDetails\": {\n        //   \"isEnabled\": true,\n        //   \"frequency\": \"weekly\",\n        //   \"interval\": 1,\n        //   \"daysOfWeek\": [\"fri\"],\n        //   \"endType\": \"onDate\",\n        //   \"endDate\": \"2025-12-31T00:00:00.000Z\"\n        // }\n        \n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    }\n}",
+									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"type\": \"image\", //image or video\n            \"name\": \"event-banner.jpg\"\n        },\n        \"title\": \"Monday Fun day\",\n        \"description\": \"A fun-filled day of live music and food.\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"venue\": \"68f6250cba6361cef113b79c\",\n        \"categories\": [\"68f0d6b0a92f125fd26a5831\",\"68c028637c376b15157d9ecc\"],\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"6883208feec25d5f951a8c74\"\n        ]\n    },\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-10-27 10:00 AM\",\n        \"endDateTime\": \"2025-10-27 05:00 PM\"\n\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n\n        /*Ending on specific date*/\n        // ,\n        // \"recurringDetails\": {\n        //   \"isEnabled\": true,\n        //   \"frequency\": \"weekly\",\n        //   \"interval\": 1,\n        //   \"daysOfWeek\": [\"fri\"],\n        //   \"endType\": \"onDate\",\n        //   \"endDate\": \"2025-12-31T00:00:00.000Z\"\n        // }\n        \n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -10432,138 +10960,6 @@
 									]
 								},
 								{
-									"name": "get details",
-									"event": [
-										{
-											"listen": "test",
-											"script": {
-												"exec": [
-													""
-												],
-												"type": "text/javascript",
-												"packages": {},
-												"requests": {}
-											}
-										},
-										{
-											"listen": "prerequest",
-											"script": {
-												"exec": [
-													""
-												],
-												"type": "text/javascript",
-												"packages": {},
-												"requests": {}
-											}
-										}
-									],
-									"protocolProfileBehavior": {
-										"disableBodyPruning": true
-									},
-									"request": {
-										"method": "GET",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "{{url}}menu/presets/:id",
-											"host": [
-												"{{url}}menu"
-											],
-											"path": [
-												"presets",
-												":id"
-											],
-											"variable": [
-												{
-													"key": "id",
-													"value": "68d7dcbcbceec05c711a13fe"
-												}
-											]
-										}
-									},
-									"response": [
-										{
-											"name": "get details",
-											"originalRequest": {
-												"method": "GET",
-												"header": [],
-												"body": {
-													"mode": "raw",
-													"raw": "",
-													"options": {
-														"raw": {
-															"language": "json"
-														}
-													}
-												},
-												"url": {
-													"raw": "{{url}}menu/presets/:id",
-													"host": [
-														"{{url}}menu"
-													],
-													"path": [
-														"presets",
-														":id"
-													],
-													"variable": [
-														{
-															"key": "id",
-															"value": "68d7dcbcbceec05c711a13fe"
-														}
-													]
-												}
-											},
-											"status": "OK",
-											"code": 200,
-											"_postman_previewlanguage": null,
-											"header": [
-												{
-													"key": "X-Powered-By",
-													"value": "Express"
-												},
-												{
-													"key": "Access-Control-Allow-Origin",
-													"value": "*"
-												},
-												{
-													"key": "Content-Type",
-													"value": "application/json; charset=utf-8"
-												},
-												{
-													"key": "Content-Length",
-													"value": "439"
-												},
-												{
-													"key": "ETag",
-													"value": "W/\"1b7-OTEZiQEmGwg4PxbbUcHZHcW5lh4\""
-												},
-												{
-													"key": "Date",
-													"value": "Thu, 02 Oct 2025 07:06:28 GMT"
-												},
-												{
-													"key": "Connection",
-													"value": "keep-alive"
-												},
-												{
-													"key": "Keep-Alive",
-													"value": "timeout=5"
-												}
-											],
-											"cookie": [],
-											"body": "{\n    \"message\": \"Preset details fetched successfully\",\n    \"data\": {\n        \"_id\": \"68d7dcbcbceec05c711a13fe\",\n        \"title\": \"Lunch Menu\",\n        \"description\": \"Special lunch menu with vegan options\",\n        \"basePrice\": \"0\",\n        \"status\": \"active\",\n        \"createdAt\": \"2025-09-27T12:46:52.444Z\",\n        \"updatedAt\": \"2025-09-27T12:46:52.444Z\",\n        \"__v\": 0,\n        \"imageInfo\": {\n            \"name\": \"68d69359fbccb319035eb13b.png\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/68d69359fbccb319035eb13b.png\"\n        }\n    }\n}"
-										}
-									]
-								},
-								{
 									"name": "add",
 									"event": [
 										{
@@ -10731,7 +11127,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "68d69376fbccb319035eb13e"
+													"value": "6905e582b472b04cbd1b6795"
 												}
 											]
 										},
@@ -11143,7 +11539,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "68d69376fbccb319035eb13e"
+													"value": "6902fcb223fe2dee04f3a30e"
 												}
 											]
 										},
@@ -11821,7 +12217,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "68d7ee19c9469f7d754b5c99"
+													"value": "6902fcb223fe2dee04f3a30e"
 												}
 											]
 										},
@@ -11879,7 +12275,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "68d7e573caf2ee6603a98e22"
+													"value": "690b54c7c3240e244bd17384"
 												}
 											]
 										},
@@ -12001,7 +12397,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68d8f3b5d9a10a4e5d408a5c"
+											"value": "690b3bbccce30d936155fab2"
 										}
 									]
 								}
@@ -12039,7 +12435,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"title\": \"Basic\",\n  \"entryPoints\": 10,\n  \"retainPoints\": 20,\n  \"status\": \"active\"\n}",
+									"raw": "{\n    \"image\": \"a4dda067-f862-4aeb-9244-4833922bf54d.png\",\n    \"title\": \"Silver Tier\",\n    \"bonusPointsPerEuro\": 1.2,\n    \"essential\": {\n        \"entryPoints\": 500,\n        \"retainPoints\": 400\n    },\n    \"preferred\": {\n        \"entryPoints\": 2500,\n        \"retainPoints\": 2000\n    },\n    \"premier\": {\n        \"entryPoints\": 7000,\n        \"retainPoints\": 6000\n    },\n    \"status\": \"active\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -12091,7 +12487,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"title\": \"Basic\",\n  \"entryPoints\": 10,\n  \"retainPoints\": 25,\n  \"status\": \"active\"\n}",
+									"raw": "{\n  \"image\": \"a4dda067-f862-4aeb-9244-4833922bf54d.png\",\n  \"title\": \"Gold Tier\",\n  \"bonusPointsPerEuro\": 1.5,\n  \"essential\": {\n    \"entryPoints\": 1000,\n    \"retainPoints\": 800\n  },\n  \"preferred\": {\n    \"entryPoints\": 5000,\n    \"retainPoints\": 4000\n  },\n  \"premier\": {\n    \"entryPoints\": 10000,\n    \"retainPoints\": 8000\n  },\n  \"status\": \"active\"\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -12110,7 +12506,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68d8f3b5d9a10a4e5d408a5c"
+											"value": "690b3bbccce30d936155fab2"
 										}
 									]
 								},
@@ -12333,7 +12729,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -12343,7 +12740,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -12373,7 +12771,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68b70084579e17d53432a25c"
+											"value": "6905fe48f527cd8f3da3e983"
 										}
 									]
 								}
@@ -12390,7 +12788,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -12400,7 +12799,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -12409,7 +12809,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"media\": {\n    \"type\": \"video\", //\n    \"name\": \"highlight_video.mp4\"\n  },\n  \"title\": \"Amazing Highlight\",\n  \"type\": \"organization\", ////event/organization\n  \"object\": \"68b6dfaa9fe2039595d9d0b4\",//event/organization\n  \"status\": \"active\"\n}\n",
+									"raw": "{\n  \"media\": {\n    \"type\": \"video\", //\n    \"name\": \"highlight_video.mp4\"\n  },\n  \"title\": \"Event Highlight\",\n  \"type\": \"event\", ////event/organization\n  \"object\": \"68ff18ed8cd2d2f52b25be1a\",//event/organization\n  \"status\": \"active\"\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -15267,7 +15667,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Sample title\",\n  \"description\": \"description of item\"\n}\n",
+											"raw": "{\n//   \"title\": \"Sample title\",\n//   \"description\": \"description of item\",\n  \"tierLimit\":\"690b3cea8d15be3d21bdd31d\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -15286,7 +15686,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": ""
+													"value": "68de85fc33a8c2051670dd61"
 												}
 											]
 										},
@@ -15349,6 +15749,74 @@
 											]
 										},
 										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Listings",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/listings?page=1&limit=10",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"listings"
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												}
+											]
+										}
 									},
 									"response": []
 								}
@@ -15463,7 +15931,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": ""
+													"value": "69099c8731c9226aeed16dd7"
 												}
 											]
 										}
@@ -15627,6 +16095,58 @@
 									"response": []
 								},
 								{
+									"name": "add - productSale",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"productSale\",\n    \"title\": \"Buy Coffee\",\n    \"description\": \"Best coffee to make your day\",\n    \"startDate\":\"2025-11-05\",\n    \"endDate\": \"2025-11-15\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"discountedPrice\":\"40\",\n    \"extraPoints\": 5,\n    \"status\": \"active\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/promotions/",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"promotions",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
 									"name": "update",
 									"event": [
 										{
@@ -15657,7 +16177,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Sample title\",\n  \"description\": \"description of item\"\n}\n",
+											"raw": "{\n//   \"title\": \"Sample title\",\n//   \"description\": \"description of item\",\n  \"tierLimit\":\"690b3cea8d15be3d21bdd31d\"\n\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -15676,7 +16196,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": ""
+													"value": "69099c8731c9226aeed16dd7"
 												}
 											]
 										},
@@ -15853,7 +16373,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "68de3771d928079c34f32824"
+													"value": "690884a8ded4098135749e46"
 												}
 											]
 										}
@@ -16310,7 +16830,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Sample title\",\n  \"description\": \"description of item\"\n}\n",
+											"raw": "{\n//   \"title\": \"Sample title\",\n//   \"description\": \"description of item\"\n  \"tierLimit\":\"690b3cea8d15be3d21bdd31d\"\n\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -16329,7 +16849,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": ""
+													"value": "690884a8ded4098135749e46"
 												}
 											]
 										},
@@ -17021,7 +17541,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/custom-categories/?page=1&limit=10",
+											"raw": "{{url}}admin/custom-categories/?page=1&limit=10&order=asc",
 											"host": [
 												"{{url}}admin"
 											],
@@ -17037,6 +17557,10 @@
 												{
 													"key": "limit",
 													"value": "10"
+												},
+												{
+													"key": "order",
+													"value": "asc"
 												}
 											]
 										}
@@ -17074,7 +17598,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Best Companies\",\n  \"type\": \"Organizations\", //\"Event\", \"User\", \"Organizations\"\n  \"objects\": [\n    \"68ee4cbba0e89aae25bd1ece\"\n  ],\n  \"order\": 2\n}",
+											"raw": "{\n  \"title\": \"Best Clubs\",\n  \"type\": \"User\", //\"Event\", \"User\" //aka LoyaltyClub, \"Organizations\"\n  \"objects\": [\n    \"68da7aa1e6f099d42e32da71\",\n    \"68ee4bb7a0e89aae25bd1eab\"\n  ],\n  \"order\": 3\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -17641,13 +18165,23 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/banners/",
+											"raw": "{{url}}admin/banners/?page=1&limit=10",
 											"host": [
 												"{{url}}admin"
 											],
 											"path": [
 												"banners",
 												""
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												}
 											]
 										}
 									},
@@ -17684,7 +18218,59 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Happy moments\",\n  \"image\": \"drink.jpg\",\n  \"type\": \"Event\", //\"Organizer\", \"Event\", \"LoyaltyProgram\"\n  \"object\": \"68ff17cddd0a29b4afa90af4\"\n}",
+											"raw": "{\n  \"title\": \"Best Organizer\",\n  \"image\": \"organizer.jpg\",\n  \"type\": \"Event\", //\"Organizer\", \"Event\", \"LoyaltyProgram\", \"Other\"\n  \"object\": \"68ee4bb7a0e89aae25bd1eab\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/banners/",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"banners",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "add - other",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"title\": \"Best Organizer\",\n  \"image\": \"organizer.jpg\",\n  \"type\": \"Other\", //\"Organizer\", \"Event\", \"LoyaltyProgram\", \"Other\"\n  \"object\": \"http://facebook.com/\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -17736,7 +18322,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Sample title\",\n  \"description\": \"description of item\"\n}\n",
+											"raw": "{\n  \"title\": \"Sample updated\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -17755,7 +18341,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": ""
+													"value": "68f7860bcc10f7ab3f1038a6"
 												}
 											]
 										},
@@ -18474,7 +19060,7 @@
 								{
 									"key": "files",
 									"type": "file",
-									"src": "/Users/s/Desktop/Development/Projects/Pleis/test-images/dj-music-night-club-video-banner-design-template-613d8caa0e65688663b029d3cf5fc49f_screen.jpg"
+									"src": "/Users/s/Desktop/Development/Projects/Pleis/test-images/venueType.jpg"
 								}
 							]
 						},

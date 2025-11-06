@@ -65,7 +65,6 @@ function formatOrganization(item, excludeFields = []) {
   }
 
     // Handle excludeFields
-    console.log("excludeFields",excludeFields)
   if (excludeFields.length > 0) {
     excludeFields.forEach((fieldPath) => {
       const [mainField, subField] = fieldPath.split(".");

@@ -5,7 +5,6 @@ const {
   generateMeta,
   getReadableErrorMessage,
   convertTimezoneToUtc,
-  convertUtcToTimezone,
   isValidNanoid,
 } = require("../../helperUtils/responseUtil");
 const { getVenueDetails } = require("../venues/venuesService");
@@ -103,7 +102,7 @@ const createEvent = async (req, res) => {
   };
 
   try {
-    const event = await eventService.createEvent({ data: eventData });
+    const event = await eventService.createEvent({ data: eventData }, timezone);
 
     return sendResponse({
       res,
@@ -209,6 +208,8 @@ const getPublicEvents = async (req, res) => {
 const updateEvent = async (req, res) => {
   const { id } = req.params;
 
+  let { timezone } = req.user;
+
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
@@ -277,11 +278,14 @@ const updateEvent = async (req, res) => {
       });
     }
 
+    //get updated event details
+    const updatedEvent = await eventService.getEventDetails(id, timezone);
+
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "event_updated_successfully",
-      data: updated,
+      data: updatedEvent,
     });
   } catch (error) {
     return sendResponse({

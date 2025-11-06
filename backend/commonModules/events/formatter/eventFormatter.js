@@ -106,8 +106,13 @@ function formatEventSchedule(scheduleObj, timezone, format = "YYYY-MM-DD hh:mm A
       : "",
   };
 
-  if (type !== "oneTime") {
-    formattedSchedule.recurringDetails = scheduleObj.recurringDetails || null;
+  formattedSchedule.recurringDetails = scheduleObj?.recurringDetails || null;
+  if (formattedSchedule.recurringDetails && formattedSchedule.recurringDetails.endDate) {
+    formattedSchedule.recurringDetails.endDate = convertUtcToTimezone(
+      formattedSchedule.recurringDetails.endDate,
+      timezone,
+      "YYYY-MM-DD"
+    );
   }
 
   return formattedSchedule;

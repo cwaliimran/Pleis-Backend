@@ -5,8 +5,9 @@ const mongoose = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
 const formatPromotion = require("./utils/formatPromotion");
 
-const create = async (data) => {
-  return await repository.create(data);
+const create = async (data,timezone) => {
+  let promotion = await repository.create(data);
+  return formatPromotion(promotion, timezone);
 };
 
 const get = async ({ page, limit, keyword, status, userId, date, timezone }) => {
@@ -67,11 +68,11 @@ const deleteItem = async (id) => {
   return !!updated;
 };
 
-const getDetails = async (id) => {
+const getDetails = async (id, timezone) => {
   let item = await repository.findById(id);
   //format item
   if (item) {
-    item = formatPromotion(item.toObject());
+    item = formatPromotion(item.toObject(), timezone);
   }
   return item;
 };

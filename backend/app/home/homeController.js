@@ -6,14 +6,20 @@ const { getHomeService } = require("./homeService");
 const getHome = async (req, res) => {
 
   try {
-    const { latitude = 0, longitude = 0, radiusKm = 50 } = req.query;
+    const { latitude = 0, longitude = 0, radiusKm = 150 } = req.query;
     let { location: userLocation, timezone, _id: userId } = req.user;
+
+    if (latitude && longitude) {
+      userLocation = {
+        type: "Point",
+        coordinates: [parseFloat(longitude), parseFloat(latitude)],
+      };
+    }
+
     let queryData = {
       userLocation,
       userId,
       timezone: timezone || "Asia/Karachi",
-      latitude: parseFloat(latitude),
-      longitude: parseFloat(longitude),
       radiusKm: parseFloat(radiusKm),
     };
 

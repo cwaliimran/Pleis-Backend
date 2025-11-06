@@ -27,7 +27,6 @@ const sendResponse = ({
   if (translateMessage) {
     // Get the translation key from the locale file and replace the placeholders using the provided values
     let message = res?.req?.__(translationKey);
-    // console.log("message", message)
 
     // If the message is missing, undefined, or equals the raw translationKey, fall back to translationKey
     if (!message || message.trim() === "" || message === translationKey) {

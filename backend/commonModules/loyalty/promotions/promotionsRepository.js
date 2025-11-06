@@ -26,8 +26,8 @@ const create = async (data) => {
   try {
     const Model = getModelByTaskType(data.taskType);
     const item = new Model(data);
-    await item.save();
-    return item;
+    const saved = await item.save();
+    return saved.toObject(); // Removes Mongoose internals
   } catch (err) {
     throw err;
   }
