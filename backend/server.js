@@ -42,6 +42,7 @@ const allowedOrigins = [
   "https://dev.pleis.com",
   "https://www.dev.pleis.com",
   "http://localhost:4003",
+  "https://pleis.vercel.app",
   "https://shipping-profession-merge-double.trycloudflare.com/",
   "http://192.168.15.141:4003",
 ];
