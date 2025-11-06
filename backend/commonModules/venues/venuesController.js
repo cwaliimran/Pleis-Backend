@@ -257,9 +257,6 @@ const deleteVenue = async (req, res) => {
 
 const getUnassignedVenues = async (req, res) => {
   const { _id } = req.user;
-  logger.log("object", _id);
-  logger.log("object", req.user);
-  logger.log("here")
 
   try {
     const venues = await venuesService.getUnassignedVenues(_id);

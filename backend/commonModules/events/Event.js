@@ -83,7 +83,7 @@ const eventSchema = new mongoose.Schema(
     schedule: {
       type: {
         type: String,
-        enum: ["oneTime", "slots"],
+        enum: ["oneTime"],
         default: "oneTime",
       },
       startDateTime: {

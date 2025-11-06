@@ -199,7 +199,6 @@ const updateUser = async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.log("error", error);
     return sendResponse({
       res,
       statusCode: 500,
@@ -374,7 +373,6 @@ const disableTwoFAController = async (req, res) => {
 
 const createUserInterests = async (req, res) => {
   const { _id } = req.user;
-  console.log("_id", _id)
   const { categories, venueTypes, tags } = req.body;
 
   if (

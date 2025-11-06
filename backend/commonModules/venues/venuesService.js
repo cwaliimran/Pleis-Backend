@@ -209,7 +209,6 @@ const updateVenue = async (id, data) => {
   }
 
   //get updated venue with venueDetails
-  console.log("venue._id",venue._id)
   venue = await getVenueDetails(venue._id);
   return venue;
 };

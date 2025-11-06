@@ -13,6 +13,8 @@ router.use("/pinned-content", require("../pinnedContent/pinnedContentRoutes"));
 router.use("/banners", require("../bannerControl/bannerControlsRoutes"));
 //organizations
 router.use("/organizations", require("../../commonModules/organizations/organizationRoutesAdmin.js"));
+//ticketings
+router.use("/ticketing", require("../ticketing/ticketingsRoutes"));
 
 
 module.exports = router;
