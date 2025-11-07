@@ -5,6 +5,7 @@ const {
   validateParams,
   isValidNanoid,
 } = require("../../helperUtils/responseUtil");
+const { getTicketings } = require("../ticketing/ticketingsService");
 
 const eventService = require("./eventService");
 
@@ -105,7 +106,40 @@ const getEventDetails = async (req, res) => {
   }
 };
 
+const getEventTicketings = async (req, res) => {
+  let { id } = req.params;
+  let { timezone } = req.user;
+
+  // ObjectId for event id
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })) return;
+
+
+  try {
+    const ticketings = await getTicketings({ timezone, eventId: id });
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "event_ticketings_fetched_successfully",
+      data: ticketings,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+
+
+
 module.exports = {
   getEventDetails,
   getNearbyEvents,
+  getEventTicketings
 };

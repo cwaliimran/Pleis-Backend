@@ -64,7 +64,7 @@ function formatOrganization(item, excludeFields = []) {
     });
   }
 
-    // Handle excludeFields
+  // Handle excludeFields
   if (excludeFields.length > 0) {
     excludeFields.forEach((fieldPath) => {
       const [mainField, subField] = fieldPath.split(".");
@@ -76,6 +76,17 @@ function formatOrganization(item, excludeFields = []) {
         delete org[fieldPath];
       }
     });
+  }
+
+  //attach distance if exists
+  if (item.distance !== undefined && item.distance !== null) {
+    const dist = Number(item.distance);
+    if (Number.isFinite(dist)) {
+      org.distance = {
+        distance: Math.round(dist * 100) / 100,
+        unit: "km"
+      }
+    }
   }
 
   return org;

@@ -10,6 +10,7 @@ const { addOrUpdateRecentlyViewedItem } = require("@recentlyViewed/recentlyViewe
 const { getUserInterestsIdsForRecommendation } = require("../../commonModules/usersManagement/usersRepository");
 const { getForYouEventsAgainstInterests } = require("./recommendationSystem/getForYouEventsAgainstInterests");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
+const { getTicketings } = require("../ticketing/ticketingsService");
 
 
 const getNearbyEvents = async (queryData) => {
@@ -121,19 +122,9 @@ const getNearbyEvents = async (queryData) => {
 
     const totalResult = await eventRepo.aggregateEvents(totalCountPipeline);
     const totalFiltered = totalResult[0]?.total || 0;
-    // Convert event dates to user's timezone and round distances to 2 decimals
     const formattedEvents = events.map((event) => {
       console.log(event.basicInfo.organization)
       const formatted = formatEventResponse(event, { timezone });
-
-      // Attach rounded distance
-      if (event.distance !== undefined && event.distance !== null) {
-        const dist = Number(event.distance);
-        if (Number.isFinite(dist)) {
-          formatted.distance = Math.round(dist * 100) / 100;
-        }
-      }
-
       return formatted;
     });
     let meta = generateMeta(page, limit, totalFiltered);
@@ -168,26 +159,7 @@ const getEventDetails = async (userLocation, userId, id, timezone) => {
     giveaways: [],
   };
 
-  const ticketDetails = {
-    image: "https://example.com/event-ticket.png",
-    options: [
-      {
-        "title": "Early Bird",
-        "price": "€50",
-        "available": 30
-      },
-      {
-        "title": "Promo Price",
-        "price": "€40",
-        "available": 50
-      },
-      {
-        "title": "Standard",
-        "price": "€60",
-        "available": 10
-      },
-    ]
-  }
+  const ticketings = await getTicketings({ timezone, eventId: id });
   // TODO 
   const loyaltyPrograms = []
 
@@ -211,11 +183,11 @@ const getEventDetails = async (userLocation, userId, id, timezone) => {
 
   let data = {
     event: formatEventResponse(event, { timezone }),
-    announcements,
-    ticketDetails,
-    loyaltyPrograms,
-    similarEvents,
-    moreFromOrganizer,
+    announcements: announcements || [],
+    ticketings: ticketings || [],
+    loyaltyPrograms: loyaltyPrograms || [],
+    similarEvents: similarEvents.data || [],
+    moreFromOrganizer: moreFromOrganizer || [],
   };
   return data
 };

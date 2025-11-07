@@ -10,13 +10,14 @@ const create = async (data,timezone) => {
   return formatPromotion(promotion, timezone);
 };
 
-const get = async ({ page, limit, keyword, status, userId, date, timezone }) => {
+const get = async ({ companyOrganizer, page, limit, keyword, status, date, timezone }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const query = {};
+  const query = {
+  };
 
-  if (userId) {
-    query.creator = userId;
+  if (companyOrganizer) {
+    query.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
   }
 
   if (status) {
@@ -41,9 +42,9 @@ const get = async ({ page, limit, keyword, status, userId, date, timezone }) => 
 
   // Get total counts
   const [total, active, inactive, totalFiltered] = await Promise.all([
-    Promotion.countDocuments({ ...(userId && { creator: userId }), status: { $ne: "deleted" } }),
-    Promotion.countDocuments({ status: "active", ...(userId && { creator: userId }) }),
-    Promotion.countDocuments({ status: "inactive", ...(userId && { creator: userId }) }),
+    Promotion.countDocuments({ ...(companyOrganizer && { companyOrganizer }), status: { $ne: "deleted" } }),
+    Promotion.countDocuments({ status: "active", ...(companyOrganizer && { companyOrganizer }) }),
+    Promotion.countDocuments({ status: "inactive", ...(companyOrganizer && { companyOrganizer }) }),
     Promotion.countDocuments(query),
   ]);
 

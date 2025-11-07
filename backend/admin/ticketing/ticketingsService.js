@@ -80,6 +80,7 @@ const updateTicketing = async (id, data, timezone) => {
     fastTrackEntry,
     requiresReservation,
     status,
+    scheduledPublishAt
   } = data;
 
   // --- BASIC FIELDS ---
@@ -91,6 +92,7 @@ const updateTicketing = async (id, data, timezone) => {
   if (resaleProtection !== undefined) ticketing.resaleProtection = resaleProtection;
   if (transferFee !== undefined) ticketing.transferFee = transferFee;
   if (status !== undefined) ticketing.status = status;
+  if (scheduledPublishAt !== undefined) ticketing.scheduledPublishAt = scheduledPublishAt;
 
   // --- TIMING SLOTS ---
   if (timingSlots) {

@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const {
   sendResponse,
   parsePaginationParams,
@@ -67,8 +68,12 @@ const createOrganization = async (req, res) => {
 
 const getOrganizations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, date, status = "active" } = req.query;
+  const { keyword, date, status = "active", companyOrganizer } = req.query;
+
   let { _id, timezone } = req.user;
+  if (companyOrganizer) {
+    _id = new mongoose.Types.ObjectId(companyOrganizer);
+  }
   try {
     if (date && !validateParams(req, res, {
       dateFields: {
@@ -117,7 +122,7 @@ const getOrganizations = async (req, res) => {
 
 const getOrganizationsAdmin = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, date, status = "active" } = req.query;
+  const { keyword, date, status = "active", companyOrganizer } = req.query;
   let { timezone } = req.user;
   try {
     if (date && !validateParams(req, res, {
@@ -126,6 +131,7 @@ const getOrganizationsAdmin = async (req, res) => {
       },
     })) return;
     let { organizations, meta } = await organizationService.getOrganizationsByAdmin({
+      companyOrganizer,
       page,
       limit,
       keyword,

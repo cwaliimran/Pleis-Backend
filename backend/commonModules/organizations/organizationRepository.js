@@ -85,6 +85,8 @@ const getOrganizationsAsStaff = async (userId) => {
   });
 };
 
+//get user organizations
+
 module.exports = {
   createOrganization,
   getOrganizationsWithFilters,

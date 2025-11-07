@@ -57,10 +57,11 @@ const create = async (req, res) => {
 
 const get = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date } = req.query;
+  const { keyword, status, date,companyOrganizer } = req.query;
 
   try {
     const { responses, meta } = await service.get({
+      companyOrganizer,
       page,
       limit,
       keyword,

@@ -64,8 +64,11 @@ const getOrganizations = async ({ page, limit, keyword, status, creator, date })
   };
 };
 
-const getOrganizationsByAdmin = async ({ page, limit, keyword, status, date, timezone }) => {
+const getOrganizationsByAdmin = async ({ companyOrganizer, page, limit, keyword, status, date, timezone }) => {
   const query = {};
+  if (companyOrganizer) {
+    query.creator = new mongoose.Types.ObjectId(companyOrganizer);
+  }
 
   if (status) {
     query.status = status;

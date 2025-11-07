@@ -182,25 +182,6 @@ const getEvents = async (queryData) => {
       delete formattedEvent.basicInfo.venueLocation;
       delete formattedEvent.basicInfo.partnerOrganizer;
 
-      if (formattedEvent.schedule?.startDateTime) {
-        formattedEvent.schedule.startDateTime = convertUtcToTimezone(
-          formattedEvent.schedule.startDateTime,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-      }
-      if (formattedEvent.schedule?.endDateTime) {
-        formattedEvent.schedule.endDateTime = convertUtcToTimezone(
-          formattedEvent.schedule.endDateTime,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-      }
-
-      if (Number.isFinite(formattedEvent.distance)) {
-        formattedEvent.distance = Math.round(formattedEvent.distance * 100) / 100;
-      }
-
       if (formattedEvent.basicInfo?.organization) {
         const orgData = formattedEvent.basicInfo.organization;
         delete orgData.basicInfo.socialLinks;
@@ -360,14 +341,7 @@ const getPlaces = async (queryData) => {
 
     // Format and finalize output
     let formattedPlaces = organizations.map((org) => {
-
       let formatted = formatOrganization(org);
-
-      // Round distance
-      if (Number.isFinite(org.distance)) {
-        formatted.distance = Math.round(org.distance * 100) / 100;
-      }
-
       if (formatted.operatingHours) {
         formatted.operatingHours = transformOperatingHoursToLocal(
           formatted.operatingHours,

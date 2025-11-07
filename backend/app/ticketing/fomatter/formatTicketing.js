@@ -52,23 +52,6 @@ function formatTicketing(timezone, item) {
 
         obj.timeSensitivePricing = { earlyBird, lastMinute };
     }
-
-
-    //format event
-    if (obj.event && obj.event.basicInfo) {
-        obj.event.basicInfo.media = getFullImageUrl(obj.event.basicInfo?.media.name);
-    }
-
-    if (obj.status === "scheduled" && obj.scheduledPublishAt) {
-        obj.scheduledPublishAt = convertUtcToTimezone(
-            obj.scheduledPublishAt,
-            timezone,
-            "YYYY-MM-DD hh:mm A"
-        );
-    } else {
-        delete obj.scheduledPublishAt;
-    }
-
     return obj;
 }
 

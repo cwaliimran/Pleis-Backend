@@ -9,12 +9,13 @@ const create = async (data) => {
   return await repository.create(data);
 };
 
-const get = async ({ page, limit, keyword, status, userId, date, timezone }) => {
+const get = async ({ companyOrganizer, page, limit, keyword, status, date, timezone }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   // Build query object
-  const query = {};
-  if (userId) query.creator = userId;
+  const query = {
+    companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
+  };
   if (status) query.status = status;
   else query.status = { $ne: "deleted" };
   if (date) {
@@ -33,9 +34,9 @@ const get = async ({ page, limit, keyword, status, userId, date, timezone }) => 
   const totalFiltered = await Reward.countDocuments(query);
 
   const [total, active, inactive] = await Promise.all([
-    Reward.countDocuments({ ...(userId && { creator: userId }), status: { $ne: "deleted" } }),
-    Reward.countDocuments({ status: "active", ...(userId && { creator: userId }) }),
-    Reward.countDocuments({ status: "inactive", ...(userId && { creator: userId }) }),
+    Reward.countDocuments({ ...(companyOrganizer && { companyOrganizer }), status: { $ne: "deleted" } }),
+    Reward.countDocuments({ status: "active", ...(companyOrganizer && { companyOrganizer }) }),
+    Reward.countDocuments({ status: "inactive", ...(companyOrganizer && { companyOrganizer }) }),
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);

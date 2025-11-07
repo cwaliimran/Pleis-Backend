@@ -63,8 +63,10 @@ const createMenu = async (req, res) => {
 
 const getMenus = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", organization, date } = req.query;
+  const { keyword, status = "active", organization, date, companyOrganizer } = req.query;
+
   const userId = req.user._id;
+  
   try {
     const { menus, meta } = await menusService.getMenus({
       page,

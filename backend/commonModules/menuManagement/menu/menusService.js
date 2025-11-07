@@ -43,10 +43,12 @@ const getMenus = async ({ page, limit, keyword, status, userId, date, organizati
   ];
 
   // Apply filters
-  if (organization) {
+  let organizationIds = [];
+  if (organization && Array.isArray(organization) && organization.length > 0) {
+    organizationIds = organization.map(id => new mongoose.Types.ObjectId(id));
     pipeline.push({
       $match: {
-        organization: new mongoose.Types.ObjectId(organization)
+        organization: { $in: organizationIds }
       }
     });
   }

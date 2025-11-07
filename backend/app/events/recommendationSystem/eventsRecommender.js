@@ -105,6 +105,13 @@ const getRecommendedEvents = async (eventId, options = {}) => {
     results = [...results, ...trending];
   }
 
+
+  // ✅ Remove duplicates by _id
+  results = results.filter(
+    (event, index, self) =>
+      index === self.findIndex((e) => e._id.toString() === event._id.toString())
+  );
+
   // ✅ Use formatEventResponse for consistent formatting + timezone handling
   const formatted = results.map((event) =>
     formatEventResponse(event, { timezone })

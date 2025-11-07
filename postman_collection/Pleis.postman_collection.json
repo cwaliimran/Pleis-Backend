@@ -10661,7 +10661,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68ff18be8cd2d2f52b25be0a"
+											"value": "690c9f974cf55e352d18b74e"
 										}
 									]
 								}
@@ -10699,7 +10699,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"type\": \"image\", //image or video\n            \"name\": \"event-banner.jpg\"\n        },\n        \"title\": \"Monday Fun day\",\n        \"description\": \"A fun-filled day of live music and food.\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"venue\": \"68f6250cba6361cef113b79c\",\n        \"categories\": [\"68f0d6b0a92f125fd26a5831\",\"68c028637c376b15157d9ecc\"],\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"6883208feec25d5f951a8c74\"\n        ]\n    },\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-10-27 10:00 AM\",\n        \"endDateTime\": \"2025-10-27 05:00 PM\"\n\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n\n        /*Ending on specific date*/\n        // ,\n        // \"recurringDetails\": {\n        //   \"isEnabled\": true,\n        //   \"frequency\": \"weekly\",\n        //   \"interval\": 1,\n        //   \"daysOfWeek\": [\"fri\"],\n        //   \"endType\": \"onDate\",\n        //   \"endDate\": \"2025-12-31T00:00:00.000Z\"\n        // }\n        \n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    }\n}",
+									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"type\": \"image\", //image or video\n            \"name\": \"event-banner.jpg\"\n        },\n        \"title\": \"Monday Fun day\",\n        \"description\": \"A fun-filled day of live music and food.\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"venue\": \"68d69359fbccb319035eb13b\",\n        \"categories\": [\"68f0d6b0a92f125fd26a5831\",\"68c028637c376b15157d9ecc\"],\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"6883208feec25d5f951a8c74\"\n        ]\n    },\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-10-27 10:00 AM\",\n        \"endDateTime\": \"2025-10-27 05:00 PM\"\n\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n\n        /*Ending on specific date*/\n        ,\n        \"recurringDetails\": {\n          \"isEnabled\": true,\n          \"frequency\": \"weekly\",\n          \"interval\": 1,\n          \"daysOfWeek\": [\"fri\"],\n          \"endType\": \"onDate\",\n          \"endDate\": \"2025-12-31\"\n        }\n        \n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -10750,7 +10750,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    //    \"schedule\": {\n    //     \"type\": \"oneTime\",\n    //     \"startDateTime\": \"2025-10-25 10:00 PM\",\n    //     \"endDateTime\": \"2025-10-26 11:00 PM\"\n    //     }\n    \"basicInfo\": {\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"venue\": \"68ee4c95a0e89aae25bd1eca\",\n        \"categories\": [\n            \"68f0d6b0a92f125fd26a5831\"\n        ]\n    }\n}",
+									"raw": "{\n    //    \"schedule\": {\n    //     \"type\": \"oneTime\",\n    //     \"startDateTime\": \"2025-10-25 10:00 PM\",\n    //     \"endDateTime\": \"2025-10-26 11:00 PM\"\n    //     }\n    // \"basicInfo\": {\n    //     \"organization\": \"68d91de3e9ed2f5900dca083\",\n    //     \"venue\": \"68ee4c95a0e89aae25bd1eca\",\n    //     \"categories\": [\n    //         \"68f0d6b0a92f125fd26a5831\"\n    //     ]\n    // }\n\n     \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-10-28 10:00 AM\",\n        \"endDateTime\": \"2025-10-29 05:00 PM\"\n\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n\n        /*Ending on specific date*/\n        // ,\n        // \"recurringDetails\": {\n        //   \"isEnabled\": true,\n        //   \"frequency\": \"weekly\",\n        //   \"interval\": 2,\n        //   \"daysOfWeek\": [\"fri\",\"mon\"],\n        //   \"endType\": \"onDate\",\n        //   \"endDate\": \"2025-12-30\"\n        // }\n        \n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -10768,7 +10768,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68ff18be8cd2d2f52b25be0a"
+											"value": "690caa9599dc5b9de4608d5a"
 										}
 									]
 								},
@@ -10818,6 +10818,298 @@
 										"{{url}}events"
 									],
 									"path": [
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": ""
+										}
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Ticketing",
+					"item": [
+						{
+							"name": "get",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/ticketing?eventId=690adffbc2919614884f8e51",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"ticketing"
+									],
+									"query": [
+										{
+											"key": "eventId",
+											"value": "690adffbc2919614884f8e51"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get details",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/ticketing/:id",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"ticketing",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "690c793c58b6c3719a7cc602"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "add",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"title\": \"Early Bird Entry\",\n    \"quantity\": 100,\n    \"price\": 30,\n    \"taxPercentage\": 5,\n    \"event\": \"690adffbc2919614884f8e51\",\n    \"timingSlots\": {\n        \"enabled\": true,\n        \"dateTimeSlots\": [\n            {\n                \"date\": \"2025-12-16\",\n                \"timeSlots\": [\n                    {\n                        \"startTime\": \"12:00 PM\",\n                        \"endTime\": \"12:30 PM\"\n                    },\n                    {\n                        \"startTime\": \"12:30 PM\",\n                        \"endTime\": \"01:00 PM\"\n                    }\n                ]\n            },\n            {\n                \"date\": \"2025-12-17\",\n                \"timeSlots\": [\n                    {\n                        \"startTime\": \"12:00 PM\",\n                        \"endTime\": \"12:30 PM\"\n                    },\n                    {\n                        \"startTime\": \"12:30 PM\",\n                        \"endTime\": \"01:00 PM\"\n                    }\n                ]\n            }\n        ]\n    },\n    \"repeatable\": {\n        \"isRepeatable\": true,\n        \"visits\": 2\n    },\n    \"resaleProtection\": \"nameSurnamePid\",\n    \"transferFee\": 10,\n    \"timeSensitivePricing\": {\n        \"earlyBird\": {\n            \"endDate\": \"2025-12-20\",\n            \"discountedPrice\": 25\n        },\n        \"lastMinute\": {\n            \"startDate\": \"2025-12-28\",\n            \"discountedPrice\": 35\n        }\n    },\n    \"fastTrackEntry\": {\n        \"enabled\": true,\n        \"quantity\": 50,\n        \"extraPrice\": 15\n    },\n    \"requiresReservation\": {\n        \"enabled\": true,\n        \"type\": \"vip\"\n    },\n    \"status\": \"inactive\", //\"active\", \"scheduled\", \"inactive\",\n    \"scheduledPublishAt\":\"2025-12-28 10:30 AM\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/ticketing/",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"ticketing",
+										""
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						},
+						{
+							"name": "update",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"title\": \"Early Bird Entry\",\n    \"quantity\": 100,\n    \"price\": 30,\n    \"taxPercentage\": 5,\n    \"event\": \"690adffbc2919614884f8e51\",\n    \"timingSlots\": {\n        \"enabled\": false,\n        \"dateTimeSlots\": [\n            {\n                \"date\": \"2025-12-16\",\n                \"timeSlots\": [\n                    {\n                        \"startTime\": \"12:00 PM\",\n                        \"endTime\": \"12:30 PM\"\n                    },\n                    {\n                        \"startTime\": \"12:30 PM\",\n                        \"endTime\": \"01:00 PM\"\n                    }\n                ]\n            },\n            {\n                \"date\": \"2025-12-17\",\n                \"timeSlots\": [\n                    {\n                        \"startTime\": \"12:00 PM\",\n                        \"endTime\": \"12:30 PM\"\n                    },\n                    {\n                        \"startTime\": \"12:30 PM\",\n                        \"endTime\": \"01:00 PM\"\n                    }\n                ]\n            }\n        ]\n    },\n    \"repeatable\": {\n        \"isRepeatable\": true,\n        \"visits\": 2\n    },\n    \"resaleProtection\": \"nameSurnamePid\",\n    \"transferFee\": 10,\n    \"timeSensitivePricing\": {\n        \"earlyBird\": {\n            \"endDate\": \"2025-12-20\",\n            \"discountedPrice\": 25\n        },\n        \"lastMinute\": {\n            \"startDate\": \"2025-12-28\",\n            \"discountedPrice\": 35\n        }\n    },\n    \"fastTrackEntry\": {\n        \"enabled\": true,\n        \"quantity\": 50,\n        \"extraPrice\": 15\n    },\n    \"requiresReservation\": {\n        \"enabled\": true,\n        \"type\": \"vip\"\n    },\n    \"status\": \"active\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/ticketing/:id",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"ticketing",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "690c7db316381d04765a11ba"
+										}
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						},
+						{
+							"name": "delete",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/ticketing/:id",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"ticketing",
 										":id"
 									],
 									"variable": [
@@ -15931,7 +16223,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "69099c8731c9226aeed16dd7"
+													"value": "690cb15cedf8a43c90fb8992"
 												}
 											]
 										}
@@ -15969,7 +16261,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"happyHour\", //[\"happyHour\", \"buyMenuItem\", \"productSale\"]\n    \"title\": \"Sample title\",\n    \"description\": \"description of item\",\n    \"startDate\":\"2025-11-05 05:00 AM\",\n    \"endDate\": \"2025-11-05 11:00 AM\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"pointsMultiplier\":\"1.5\",\n    \"status\": \"active\"\n}",
+											"raw": "{\n    \"companyOrganizer\": \"68d69157fbccb319035eb118\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"happyHour\", //[\"happyHour\", \"buyMenuItem\", \"productSale\"]\n    \"title\": \"Sample title\",\n    \"description\": \"description of item\",\n    \"startDate\":\"2025-11-05 05:00 AM\",\n    \"endDate\": \"2025-11-05 11:00 AM\",\n    \"tierLimit\": \"690c821e1fe6edd47cca0695\",\n    \"pointsMultiplier\":\"1.5\",\n    \"status\": \"active\"\n\n        /*Ending on specific date*/\n        ,\n        \"recurringDetails\": {\n          \"isEnabled\": true,\n          \"frequency\": \"weekly\",\n          \"interval\": 1,\n          \"daysOfWeek\": [\"fri\"],\n          \"endType\": \"onDate\",\n          \"endDate\": \"2025-11-05\" //date value from promotion endDate\n        }\n        \n}",
 											"options": {
 												"raw": {
 													"language": "json"

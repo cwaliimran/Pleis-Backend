@@ -66,6 +66,17 @@ const formatEventResponse = (eventObject, options = {}) => {
     event.schedule = formatEventSchedule(event.schedule, timezone);
   }
 
+  // Attach rounded distance
+  if (event.distance !== undefined && event.distance !== null) {
+    const dist = Number(event.distance);
+    if (Number.isFinite(dist)) {
+      event.distance = {
+        distance: Math.round(dist * 100) / 100,
+        unit: "km"
+      }
+    }
+  }
+
   // Field filtering
   let result = event;
   if (includeFields.length > 0) {
@@ -87,6 +98,8 @@ const formatEventResponse = (eventObject, options = {}) => {
     });
   }
 
+
+
   return result;
 };
 
@@ -94,7 +107,6 @@ const formatEventResponse = (eventObject, options = {}) => {
 // Utility function to format schedule
 function formatEventSchedule(scheduleObj, timezone, format = "YYYY-MM-DD hh:mm A") {
   if (!scheduleObj) return {};
-
   const type = scheduleObj.type || "oneTime";
   const formattedSchedule = {
     type,

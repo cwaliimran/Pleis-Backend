@@ -21,7 +21,7 @@ const create = async (req, res) => {
     dateFields.endDate = "YYYY-MM-DD hh:mm A"
     rawData.push("pointsMultiplier")
   }
-  if (req.body.promotionType === "buyMenuItem") {
+  if (req.body.promotionType === "buyMenuItemPromotion") {
     dateFields.startDate = "YYYY-MM-DD"
     dateFields.endDate = "YYYY-MM-DD"
     rawData.push("menuItem", "extraPoints")
@@ -116,10 +116,20 @@ const create = async (req, res) => {
 
 const get = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date } = req.query;
+  const { keyword, status, date, companyOrganizer } = req.query;
 
   try {
+    //companyOrganizer is required to filter for specific company
+    if (!companyOrganizer) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "company_organizer_is_required",
+      });
+    }
+    
     const { responses, meta } = await service.get({
+      companyOrganizer,
       page,
       limit,
       keyword,

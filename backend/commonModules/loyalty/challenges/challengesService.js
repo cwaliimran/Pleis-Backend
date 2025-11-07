@@ -8,12 +8,13 @@ const createChallenge = async (data) => {
   return await challengeRepo.createChallenge(data);
 };
 
-const getChallenges = async ({ page, limit, keyword, status, userId, date, timezone }) => {
+const getChallenges = async ({ companyOrganizer, page, limit, keyword, status, date, timezone }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   // Build query object
-  const query = {};
-  if (userId) query.creator = userId;
+  const query = {
+    companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
+  };
   if (status) query.status = status;
   else query.status = { $ne: "deleted" };
   if (date) {
@@ -30,9 +31,9 @@ const getChallenges = async ({ page, limit, keyword, status, userId, date, timez
 
   // Get counts
   const [total, active, inactive, totalFiltered] = await Promise.all([
-    Challenge.countDocuments({ ...(userId && { creator: userId }), status: { $ne: "deleted" } }),
-    Challenge.countDocuments({ status: "active", ...(userId && { creator: userId }) }),
-    Challenge.countDocuments({ status: "inactive", ...(userId && { creator: userId }) }),
+    Challenge.countDocuments({ ...(companyOrganizer && { companyOrganizer }), status: { $ne: "deleted" } }),
+    Challenge.countDocuments({ status: "active", ...(companyOrganizer && { companyOrganizer }) }),
+    Challenge.countDocuments({ status: "inactive", ...(companyOrganizer && { companyOrganizer }) }),
     Challenge.countDocuments(query),
   ]);
 
