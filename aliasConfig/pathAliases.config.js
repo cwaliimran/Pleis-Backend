@@ -2,4 +2,12 @@ module.exports = {
     "@utils": "backend/helperUtils",
     "@dbUtils": "backend/helperUtils/dbUtils",
     "@recentlyViewed": "backend/commonModules/recentlyViewed",
+    "@OrganizationModel": "backend/commonModules/organizations/Organization.js",
+    "@VenuesModel": "backend/commonModules/venues/Venues.js",
+    "@SuppliersModel": "backend/commonModules/suppliers/Suppliers.js",
+    "@TagsModel": "backend/admin/tags/Tags.js",
+    "@CategoriesModel": "backend/admin/categories/Categories.js",
+    "@VenueTypesModel": "backend/admin/venueTypes/VenueTypesModel.js",
+    "@TiersModel": "backend/admin/tiers/Tiers.js",
+    "@EventsModel": "backend/commonModules/events/Event.js"
 };

@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
+//common routes
+router.use("/", require("./index"));
 //home
 router.use("/home", require("../app/home/homeRoutes"));
 //maps
@@ -8,10 +10,10 @@ router.use("/maps", require("../app/maps/mapsRoutes"));
 //organizations
 router.use("/organizations", require("../app/organizationProfile/organizationProfileRoutes"));
 //favorites
-router.use("/favorites", require("../commonModules/favorites/favoriteRoutes"));
+router.use("/favorites", require("../app/favorites/favoriteRoutes"));
 
 //recently viewed items
-router.use("/recently-viewed", require("../commonModules/recentlyViewed/recentlyViewedItemRoutes"));
+router.use("/recently-viewed", require("../app/recentlyViewed/recentlyViewedItemRoutes"));
 
 //events
 router.use("/events", require("../app/events/eventRoutes"));

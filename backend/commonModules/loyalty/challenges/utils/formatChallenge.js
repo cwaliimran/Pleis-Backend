@@ -9,8 +9,12 @@ function formatChallenge(challenge, timezone) {
         obj.companyOrganizer.profileIcon = getFullImageUrl(obj.companyOrganizer.profileIcon);
     }
 
-    //format tierLimit if exists
-    if (obj?.tierLimit) {
+    // If tierLimit is an object with an 'image' property, format it; otherwise, leave as is (likely ObjectId)
+    if (
+        obj?.tierLimit &&
+        typeof obj.tierLimit === "object" &&
+        obj.tierLimit.image
+    ) {
         obj.tierLimit = tiersFormatter(obj.tierLimit);
     }
 
@@ -28,11 +32,11 @@ function formatChallenge(challenge, timezone) {
             case "customReward":
                 delete obj.reward.rewardValue;
                 delete obj.reward.rewardMenuItem;
-                //attach full image URL
+                // attach full image URL
                 if (obj.reward.customReward?.image) {
                     obj.reward.customReward.media = getFullImageUrl(obj.reward.customReward.image)
                 }
-                delete obj.reward.customReward.image;
+                delete obj.reward.customReward?.image;
                 break;
         }
     }

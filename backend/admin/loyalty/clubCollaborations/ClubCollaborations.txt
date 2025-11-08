@@ -1,0 +1,14 @@
+{
+  "sender": {
+    "id": "60d5ec49f1b2c8a1a8f1a8b4",
+    "status": "pending"
+  },
+  "receiver": {
+    "id": "60d5ec49f1b2c8a1a8f1a8b5",
+    "status": "pending"
+  },
+  "notes": "Looking forward to collaborating on this project.",
+  "expiryDate": "2023-11-30T00:00:00Z",
+  "createdAt": "2023-10-01T12:00:00Z",
+  "updatedAt": "2023-10-01T12:00:00Z"
+}

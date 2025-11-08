@@ -1,18 +1,14 @@
 
-const Organizations = require("../../commonModules/organizations/Organization");
 const mongoose = require("mongoose");
 const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
 const { findOrganizationById, findEventsByOrganization, countEventsByOrganization, getOrganizationMenuWithItems, getRecommendedOrganizations } = require("./organizationProfileRepository");
 const { getCurrentDateInTimezone, generateMeta, convertUtcToTimezone } = require("../../helperUtils/responseUtil");
-const { Events } = require("../../commonModules/events/Event");
 const { calculateDistance } = require("../../helperUtils/calculateDistance");
-const Menus = require("../../commonModules/menuManagement/menu/Menus");
-const MenuItems = require("../../commonModules/menuManagement/menuItems/MenuItems");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { formatMenuItem } = require("../../commonModules/menuManagement/menuItems/formatter/formatMenuItems");
-const { formatEventResponse } = require("../../commonModules/events/formatter/eventFormatter");
+const { formatEventResponse } = require("../events/formatter/eventFormatter");
 const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
-const { addOrUpdateRecentlyViewedItem } = require("@recentlyViewed/recentlyViewedItemService");
+// const { addOrUpdateRecentlyViewedItem } = require("backend/app/recentlyViewed/recentlyViewedItemService");
 
 
 
@@ -51,7 +47,8 @@ const getOrganizationProfile = async (queryData) => {
       );
     }
 
-    addOrUpdateRecentlyViewedItem(userId, organizationId, 'organization'); // Run in background, don't await
+    //TODO enable
+    // addOrUpdateRecentlyViewedItem(userId, organizationId, 'organization'); // Run in background, don't await
 
     return { status: true, result: { data: { orgProfileInfo, orgEvents: orgEvents.result, reservations, menu, loyaltyPrograms, reviews, similarOrganizations } } };
   } catch (error) {

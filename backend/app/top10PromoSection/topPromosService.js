@@ -1,5 +1,5 @@
 // services/topPromoService.js
-const { formatMoreFromOrganizerEventResponse } = require("../events/formatter/recommendedEventFormatter");
+const { formatMoreFromOrganizerEventResponse } = require("../events/formatter/eventFormatter");
 const topPromoRepo = require("./topPromosRepository");
 const mongoose = require("mongoose");
 

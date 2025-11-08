@@ -6,7 +6,7 @@ const moment = require("moment-timezone");
 const mongoose = require("mongoose");
 const { Events } = require("../../commonModules/events/Event");
 const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
-const { formatEventResponse } = require("../../commonModules/events/formatter/eventFormatter");
+const { formatEventResponse } = require("../events/formatter/eventFormatter");
 const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
 

@@ -1,6 +1,6 @@
 const { Events } = require("../../../commonModules/events/Event");
 const { generateMeta } = require("@utils/responseUtil");
-const { formatRecentlyViewedEventResponse } = require("../../../commonModules/recentlyViewed/formatter/recentlyViewedItemsFormatter");
+const { formatRecentlyViewedEventResponse } = require("../../recentlyViewed/formatter/recentlyViewedItemsFormatter");
 
 /**
  * @desc Fetch personalized "For You" events for a user based on interests

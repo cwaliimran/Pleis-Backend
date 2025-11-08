@@ -1,6 +1,6 @@
 const { getFullImageUrl } = require("../../../helperUtils/imageHelper");
 const { calculateDistance } = require("../../../helperUtils/calculateDistance");
-const { formatEventSchedule } = require("../../../commonModules/events/formatter/eventFormatter");
+const { formatEventSchedule } = require("../../events/formatter/eventFormatter");
 
 /**
  * Formats an event document into a public-friendly JSON response.
@@ -55,6 +55,8 @@ const formatCustomCategoryEventResponse = (eventObject, options = {}) => {
 
   return event;
 };
+
+
 
 module.exports = {
   formatCustomCategoryEventResponse,

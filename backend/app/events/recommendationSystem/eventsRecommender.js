@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
 const { Events } = require("../../../commonModules/events/Event");
-const { formatEventResponse } = require("../../../commonModules/events/formatter/eventFormatter");
+const { formatEventResponse } = require("../formatter/eventFormatter");
 
 // TODO future events only
 const getRecommendedEvents = async (eventId, options = {}) => {

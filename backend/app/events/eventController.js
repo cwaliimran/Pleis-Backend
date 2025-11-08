@@ -1,4 +1,4 @@
-const { isFavorited } = require("../../commonModules/favorites/favoriteService");
+const { isFavorited } = require("../favorites/favoriteService");
 const {
   sendResponse,
   parsePaginationParams,

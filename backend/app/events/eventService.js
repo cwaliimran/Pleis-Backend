@@ -4,13 +4,13 @@ const { getCurrentDateInTimezone, generateMeta } = require("../../helperUtils/re
 const eventRepo = require("./eventRepository");
 const _ = require("lodash");
 const { getRecommendedEvents } = require("./recommendationSystem/eventsRecommender");
-const { formatEventResponse } = require("../../commonModules/events/formatter/eventFormatter");
-const { formatMoreFromOrganizerEventResponse } = require("./formatter/recommendedEventFormatter");
-const { addOrUpdateRecentlyViewedItem } = require("@recentlyViewed/recentlyViewedItemService");
-const { getUserInterestsIdsForRecommendation } = require("../../commonModules/usersManagement/usersRepository");
+const { formatEventResponse } = require("../events/formatter/eventFormatter");
+const { formatMoreFromOrganizerEventResponse } = require("./formatter/eventFormatter");
+const { getUserInterestsIdsForRecommendation } = require("../usersManagement/usersRepository");
 const { getForYouEventsAgainstInterests } = require("./recommendationSystem/getForYouEventsAgainstInterests");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { getTicketings } = require("../ticketing/ticketingsService");
+const { addOrUpdateRecentlyViewedItem } = require("../recentlyViewed/recentlyViewedItemRepository");
 
 
 const getNearbyEvents = async (queryData) => {
@@ -198,6 +198,7 @@ const getEventIdByNanoid = async (nanoid) => {
   return event ? event._id : null;
 };
 
+// TODO when user has skipped the interests selection we will show events based on his recent activity
 //get for you events for logged in user
 const getForYouEvents = async (userId, location, timezone) => {
   // Fetch user preferences, interests, etc.

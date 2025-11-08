@@ -1,7 +1,7 @@
 
 const { getBannerControls } = require("../../admin/bannerControl/bannerControlsService");
 const { getPublicHighlights } = require("../highlights/highlightService");
-const { getUserRecentlyViewedItems } = require("../../commonModules/recentlyViewed/recentlyViewedItemService");
+const { getUserRecentlyViewedItems } = require("../recentlyViewed/recentlyViewedItemService");
 const { sendResponse } = require("../../helperUtils/responseUtil");
 const { getCustomCategories } = require("../customCategories/customCategoriesService");
 const { getNearbyEvents, getForYouEvents } = require("../events/eventService");
