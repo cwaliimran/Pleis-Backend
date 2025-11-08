@@ -3,10 +3,10 @@ const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
 const { generateMeta, convertUtcToTimezone } = require("@utils/responseUtil");
 const menuItemRepo = require("./menuItemsRepository");
 const mongoose = require("mongoose");
-const MenuItems = require("./MenuItems");
-const Menus = require("../menu/Menus");
-const Venues = require("../../venues/Venues");
-const MenuItemCategories = require("../menuItemCategories/MenuItemCategories");
+const MenuItems = require("@MenuItemsModel");
+const Menus = require("@MenusModel");
+const Venues = require("@VenuesModel");
+const MenuItemCategories = require("@MenuItemCategoriesModel");
 const { formatMenuItem } = require("./formatter/formatMenuItems");
 
 const createMenuItem = async (data, timezone) => {

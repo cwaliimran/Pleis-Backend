@@ -1,21 +1,37 @@
 // services/menuService.js
 const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
 const { generateMeta } = require("@utils/responseUtil");
-const Organizations = require("../../organizations/Organization");
-const Menus = require("./Menus");
+const Organizations = require("@OrganizationModel");
+const Menus = require("@MenusModel");
 const menuRepo = require("./menusRepository");
 const mongoose = require("mongoose");
+const { getOrganizationIdsByCompanyOrganizer } = require("../../organizations/organizationRepository");
 
 const createMenu = async (data) => {
   return await menuRepo.createMenu(data);
 };
 
 // Populate organization data for menus, but merge into "organization" field
-const getMenus = async ({ page, limit, keyword, status, userId, date, organization }) => {
+const getMenus = async ({ page, limit, keyword, status, date, organizations, companyOrganizer }) => {
+  let organizationIds = [];
+
+  // 1️⃣ If organizations explicitly provided, use them directly
+  if (Array.isArray(organizations) && organizations.length > 0) {
+    organizationIds = organizations.map(id => new mongoose.Types.ObjectId(id));
+  // 2️⃣ Otherwise, if companyOrganizer provided, get orgs created by it
+  } else if (companyOrganizer) {
+    const organizationIds = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
+    if (organizationIds.length === 0) {
+      return {
+        menus: [],
+        meta: generateMeta(page, limit, 0, { total: 0, active: 0, inactive: 0 })
+      };
+    }
+  }
+  // 3️⃣ Pagination setup
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const pipeline = [
-    // Join with organizations collection
     {
       $lookup: {
         from: "organizations",
@@ -32,20 +48,11 @@ const getMenus = async ({ page, limit, keyword, status, userId, date, organizati
         ]
       }
     },
-    // Flatten organizationData array for easier matching
     { $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true } },
-    // Match user access (menu creator)
-    {
-      $match: {
-        creator: new mongoose.Types.ObjectId(userId)
-      }
-    }
   ];
 
-  // Apply filters
-  let organizationIds = [];
-  if (organization && Array.isArray(organization) && organization.length > 0) {
-    organizationIds = organization.map(id => new mongoose.Types.ObjectId(id));
+  // 4️⃣ Apply filters dynamically
+  if (organizationIds.length > 0) {
     pipeline.push({
       $match: {
         organization: { $in: organizationIds }
@@ -63,59 +70,52 @@ const getMenus = async ({ page, limit, keyword, status, userId, date, organizati
     const start = new Date(date);
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
     pipeline.push({
-      $match: {
-        createdAt: { $gte: start, $lt: end }
-      }
+      $match: { createdAt: { $gte: start, $lt: end } }
     });
   }
 
+  // Keyword search across Menu and Organization fields
   const keywordMatch = buildKeywordQueryFromModels(
     [
-      { schema: Menus.schema },           // Menu fields
-      { schema: Organizations.schema, prefix: 'organizationData.' } // Organization fields (with prefix)
+      { schema: Menus.schema },
+      { schema: Organizations.schema, prefix: "organizationData." }
     ],
     keyword
   );
 
-  if (Object.keys(keywordMatch).length) {
+  if (Object.keys(keywordMatch).length > 0) {
     pipeline.push({ $match: keywordMatch });
   }
 
+  // Sort, merge, clean
   pipeline.push({ $sort: { createdAt: -1 } });
+  pipeline.push(
+    { $addFields: { organization: "$organizationData" } },
+    { $project: { organizationData: 0 } }
+  );
 
-  // Merge organizationData into organization field and remove organizationData
-  pipeline.push({
-    $addFields: {
-      organization: "$organizationData"
-    }
-  });
-  pipeline.push({
-    $project: {
-      organizationData: 0
-    }
-  });
-
-  // Apply pagination + counts using $facet
+  // Pagination + count
   pipeline.push({
     $facet: {
-      data: [
-        { $skip: skip },
-        ...(limit === 0 ? [] : [{ $limit: limit }])
-      ],
+      data: [{ $skip: skip }, ...(limit === 0 ? [] : [{ $limit: limit }])],
       totalFiltered: [{ $count: "count" }]
     }
   });
 
   const result = await Menus.aggregate(pipeline);
-
   const menus = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-  // Additional counts for meta (active/inactive/total by userId as creator)
+  // 5️⃣ Counts for meta
+  const baseFilter =
+    organizationIds.length > 0
+      ? { organization: { $in: organizationIds } }
+      : {}; // ✅ fetch all if no orgs or organizer
+
   const [total, active, inactive] = await Promise.all([
-    Menus.countDocuments({ creator: userId, status: { $ne: "deleted" } }),
-    Menus.countDocuments({ status: "active", creator: userId }),
-    Menus.countDocuments({ status: "inactive", creator: userId })
+    Menus.countDocuments({ ...baseFilter, status: { $ne: "deleted" } }),
+    Menus.countDocuments({ ...baseFilter, status: "active" }),
+    Menus.countDocuments({ ...baseFilter, status: "inactive" })
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
@@ -126,6 +126,7 @@ const getMenus = async ({ page, limit, keyword, status, userId, date, organizati
     meta
   };
 };
+
 
 
 const updateMenu = async (id, data) => {
@@ -188,7 +189,7 @@ const duplicateMenuAndItems = async (menuId, organization) => {
     const duplicatedMenu = {
       ...menu.toObject(),
       _id: new mongoose.Types.ObjectId(),
-      title: `${menu.title}`, 
+      title: `${menu.title}`,
       organization: organization,
     };
 

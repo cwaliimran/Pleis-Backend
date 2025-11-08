@@ -1,6 +1,5 @@
 // repositories/menuRepository.js
-const Menus = require("./Menus");
-const mongoose = require("mongoose");
+const Menus = require("@MenusModel");
 
 // Create menu in a transaction and update organization
 const createMenu = async (data) => {

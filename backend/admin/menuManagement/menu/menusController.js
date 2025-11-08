@@ -63,18 +63,30 @@ const createMenu = async (req, res) => {
 
 const getMenus = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", organization, date, companyOrganizer } = req.query;
-
-  const userId = req.user._id;
+  let { keyword, status = "active", organizations, date, companyOrganizer } = req.query;
   
   try {
+    // arse organizations if it’s a JSON string (e.g. '["id1","id2"]')
+    if (typeof organizations === "string") {
+      try {
+        organizations = JSON.parse(organizations);
+      } catch (e) {
+        console.warn("Invalid organizations format, ignoring parse:", organizations);
+      }
+    }
+
+    // Ensure it's an array or undefined
+    if (!Array.isArray(organizations)) {
+      organizations = undefined;
+    }
+
     const { menus, meta } = await menusService.getMenus({
       page,
       limit,
       keyword,
       status,
-      organization,
-      userId,
+      organizations,
+      companyOrganizer,
       date,
     });
 

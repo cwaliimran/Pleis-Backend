@@ -1,5 +1,5 @@
 // repositories/categoryRepository.js
-const MenuItemCategories = require("./MenuItemCategories");
+const MenuItemCategories = require("@MenuItemCategoriesModel");
 
 // Create
 const createCategory = async (data) => {

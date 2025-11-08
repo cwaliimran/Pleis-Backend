@@ -9,5 +9,9 @@ module.exports = {
     "@CategoriesModel": "backend/admin/categories/Categories.js",
     "@VenueTypesModel": "backend/admin/venueTypes/VenueTypesModel.js",
     "@TiersModel": "backend/admin/tiers/Tiers.js",
-    "@EventsModel": "backend/commonModules/events/Event.js"
+    "@EventsModel": "backend/commonModules/events/Event.js",
+    "@MenusModel": "backend/commonModules/menuManagement/menu/Menus.js",
+    "@PresetsModel": "backend/commonModules/menuManagement/menuPreset/Presets.js",
+    "@MenuItemsModel": "backend/commonModules/menuManagement/menuItems/MenuItems.js",
+    "@MenuItemCategoriesModel": "backend/commonModules/menuManagement/menuItemCategories/MenuItemCategories.js"
 };

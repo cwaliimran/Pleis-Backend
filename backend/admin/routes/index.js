@@ -1,6 +1,9 @@
 const express = require("express");
+const auth = require("../../middlewares/authMiddleware");
+const roleMiddleware = require("../../middlewares/roleMiddleware");
 const router = express.Router();
 router.use("/", require("../../routes/index"));
+router.use(auth, roleMiddleware(["admin"]));
 router.use("/settings", require("../settings/adminSettingsRoutes"));
 router.use("/suppliers", require("../suppliers/suppliersRoutes"));
 router.use("/tags", require("../tags/tagsRoutes"));
@@ -13,6 +16,9 @@ router.use("/custom-categories", require("../customCategories/customCategoriesRo
 router.use("/pinned-content", require("../pinnedContent/pinnedContentRoutes"));
 router.use("/banners", require("../bannerControl/bannerControlsRoutes"));
 router.use("/users", require("../usersManagement/usersRoutes"));
+
+//menu management
+router.use("/menu", require("../menuManagement/menuManagementRoutes"));
 
 //organizations
 router.use("/organizations", require("../organizations/organizationRoutes.js"));

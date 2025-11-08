@@ -86,6 +86,12 @@ const getOrganizationsAsStaff = async (userId) => {
   });
 };
 
+//get organization ids by company organizer
+const getOrganizationIdsByCompanyOrganizer = async (companyOrganizer) => {
+  const organizations = await Organizations.find({ creator: companyOrganizer }).select("_id").lean();
+  return organizations.map(org => org._id);
+};
+
 //get user organizations
 
 module.exports = {
@@ -97,5 +103,6 @@ module.exports = {
   deleteOrganizationById,
   findByIdAndUpdate,
   getOrganizationDetails,
-  getOrganizationsAsStaff
+  getOrganizationsAsStaff,
+  getOrganizationIdsByCompanyOrganizer
 };
