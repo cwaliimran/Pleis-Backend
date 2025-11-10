@@ -1,14 +1,61 @@
 // repositories/customCategoryRepository.js
 const CustomCategories = require("../../admin/customCategories/CustomCategories");
-const { getCurrentDateInTimezone } = require("../../helperUtils/responseUtil");
+const { getCurrentDateInTimezone, getStartAndEndOfWeek, getStartAndEndOfDay } = require("../../helperUtils/responseUtil");
 
 
 // Get all with filters, sorted by 'order' ascending and then 'createdAt' descending
 const mongoose = require("mongoose");
 
-const getCustomCategoriesWithFilters = async (userId, timezone, filter, skip, limit, sort = { order: 1 }) => {
+const getCustomCategoriesWithFilters = async (
+  userId,
+  timezone,
+  filter,
+  skip,
+  limit,
+  sort = { order: 1 },
+  category,
+  time
+) => {
   const now = getCurrentDateInTimezone({ timezone });
   const userObjectId = new mongoose.Types.ObjectId(userId);
+  const catObjId = category ? new mongoose.Types.ObjectId(category) : null;
+
+  const categoryFilter = category
+    ? { "basicInfo.categories": { $in: [catObjId] } }
+    : {};
+
+  // --- Time filter ---
+  let dateFilter = {};
+  if (time && time !== "all") {
+    let start, end;
+    switch (time) {
+      case "live":
+        dateFilter = { "schedule.startDateTime": { $lte: now }, "schedule.endDateTime": { $gte: now } };
+        break;
+
+      case "today":
+        ({ start, end } = getStartAndEndOfDay(now, timezone));
+        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+        break;
+
+      case "tomorrow":
+        const tomorrow = new Date(now);
+        tomorrow.setDate(now.getDate() + 1);
+        ({ start, end } = getStartAndEndOfDay(tomorrow, timezone));
+        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+        break;
+
+      case "thisWeek":
+        ({ start, end } = getStartAndEndOfWeek(now, timezone));
+        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+        break;
+
+      default:
+        dateFilter = { "schedule.endDateTime": { $gte: now } };
+    }
+  } else {
+    dateFilter = { "schedule.endDateTime": { $gte: now } };
+  }
 
   const pipeline = [
     { $match: filter },
@@ -35,7 +82,7 @@ const getCustomCategoriesWithFilters = async (userId, timezone, filter, skip, li
       },
     },
 
-    // --- Lookup Events (with organization populated + favorites) ---
+    // --- Lookup Events (with organization populated + favorites + time filter) ---
     {
       $lookup: {
         from: "events",
@@ -46,7 +93,8 @@ const getCustomCategoriesWithFilters = async (userId, timezone, filter, skip, li
           {
             $match: {
               status: "active",
-              "schedule.endDateTime": { $gte: now },
+              ...categoryFilter,
+              ...dateFilter, // <-- added time filter here
             },
           },
           {
@@ -55,20 +103,14 @@ const getCustomCategoriesWithFilters = async (userId, timezone, filter, skip, li
               localField: "basicInfo.organization",
               foreignField: "_id",
               as: "organizationInfo",
-              pipeline: [
-                { $project: { _id: 1, basicInfo: 1 } },
-              ],
+              pipeline: [{ $project: { _id: 1, basicInfo: 1 } }],
             },
           },
           {
             $addFields: {
-              "basicInfo.organization": {
-                $arrayElemAt: ["$organizationInfo", 0],
-              },
+              "basicInfo.organization": { $arrayElemAt: ["$organizationInfo", 0] },
             },
           },
-
-          // --- Add Favorites Lookup ---
           {
             $lookup: {
               from: "favorites",
@@ -91,18 +133,10 @@ const getCustomCategoriesWithFilters = async (userId, timezone, filter, skip, li
             },
           },
           {
-            $addFields: {
-              isFavorite: { $gt: [{ $size: "$favoriteInfo" }, 0] },
-            },
+            $addFields: { isFavorite: { $gt: [{ $size: "$favoriteInfo" }, 0] } },
           },
-
           {
-            $project: {
-              _id: 1,
-              basicInfo: 1,
-              schedule: 1,
-              isFavorite: 1,
-            },
+            $project: { _id: 1, basicInfo: 1, schedule: 1, isFavorite: 1 },
           },
         ],
       },
@@ -152,9 +186,9 @@ const getCustomCategoriesWithFilters = async (userId, timezone, filter, skip, li
   ];
 
   const result = await CustomCategories.aggregate(pipeline);
-
   return result;
 };
+
 
 
 

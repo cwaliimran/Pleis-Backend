@@ -1,5 +1,5 @@
 // repositories/supplierRepository.js
-const Supplier = require("./Suppliers");
+const Supplier = require("@SuppliersModel");
 
 // Create
 const createSupplier = async (data) => {

@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
 const { Events } = require("../../../commonModules/events/Event");
-const { formatEventResponse } = require("../../../commonModules/events/formatter/eventFormatter");
+const { formatEventResponse } = require("../formatter/eventFormatter");
 
 // TODO future events only
 const getRecommendedEvents = async (eventId, options = {}) => {
@@ -104,6 +104,13 @@ const getRecommendedEvents = async (eventId, options = {}) => {
     ]);
     results = [...results, ...trending];
   }
+
+
+  // ✅ Remove duplicates by _id
+  results = results.filter(
+    (event, index, self) =>
+      index === self.findIndex((e) => e._id.toString() === event._id.toString())
+  );
 
   // ✅ Use formatEventResponse for consistent formatting + timezone handling
   const formatted = results.map((event) =>

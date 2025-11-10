@@ -3,7 +3,7 @@ const { convertUtcToTimezone } = require("@utils/responseUtil");
 const TopPromos = require("./TopPromos");
 const topPromoRepo = require("./topPromosRepository");
 const mongoose = require("mongoose");
-const { formatMoreFromOrganizerEventResponse } = require("../../../app/events/formatter/recommendedEventFormatter");
+const { formatMoreFromOrganizerEventResponse } = require("../../../app/events/formatter/eventFormatter");
 
 const createTopPromo = async ({ event, isTop10, status }) => {
   return await topPromoRepo.createTopPromo({ event, isTop10, status });

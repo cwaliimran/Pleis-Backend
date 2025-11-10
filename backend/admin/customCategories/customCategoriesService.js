@@ -1,5 +1,5 @@
 // services/customCategoryService.js
-const { formatEventResponse } = require("../../commonModules/events/formatter/eventFormatter");
+const { formatEventResponse } = require("../events/formatter/eventFormatter");
 const { getFullImageUrl } = require("../../helperUtils/imageHelper");
 const { User } = require("../../models/UserModel");
 const CustomCategories = require("./CustomCategories");

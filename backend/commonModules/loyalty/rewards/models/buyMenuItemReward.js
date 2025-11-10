@@ -1,4 +1,4 @@
-const Reward = require("./baseReward");
+const Reward = require("./BaseReward");
 const mongoose = require("mongoose");
 
 const BuyMenuItemReward = Reward.discriminator(

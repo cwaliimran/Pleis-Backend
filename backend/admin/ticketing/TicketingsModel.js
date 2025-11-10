@@ -118,24 +118,17 @@ const ticketingsSchema = new mongoose.Schema(
       }
     },
 
-    publishingOptions: {
-      type: {
-        type: String,
-        enum: ["instant", "scheduled", "manual"],
-        default: "instant",
-      },
-      scheduledDate: { // for "scheduled" type
-        type: Date,
-        default: null,
-      }
-
-    },
-
-    status: {
+    status: { //publishingOptions
       type: String,
-      enum: ["active", "inactive", "deleted"],
+      //active/instant , inactive/manual
+      enum: ["active", "scheduled", "inactive", "deleted"], 
       default: "active",
     },
+    //TODO scheduled publish date for "scheduled" status via bullMQ
+    scheduledPublishAt: { // for "scheduled" type
+      type: Date,
+      default: null,
+    }
   },
   {
     timestamps: true,

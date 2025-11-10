@@ -1,0 +1,35 @@
+const express = require("express");
+const {
+  createSupplier,
+  getSuppliers,
+  updateSupplier,
+  deleteSupplier,
+  getPublicSuppliers,
+} = require("./suppliersController");
+const createRateLimiter = require("../../helperUtils/rateLimiter");
+const auth = require("../../middlewares/authMiddleware");
+const roleMiddleware = require("../../middlewares/roleMiddleware");
+
+const router = express.Router();
+
+//public routes
+router.get("/global", getPublicSuppliers);
+
+router.use(auth);
+
+// Create a rate limiter for Suppliers
+const apiRateLimiter = createRateLimiter("Suppliers");
+
+// Create a new supplier
+router.post("/", roleMiddleware(["admin"]), createSupplier);
+
+// Get all suppliers with pagination
+router.get("/", apiRateLimiter, getSuppliers);
+
+// Update an existing supplier
+router.put("/:id", roleMiddleware(["admin"]), updateSupplier);
+
+// Delete a supplier
+router.delete("/:id", roleMiddleware(["admin"]), deleteSupplier);
+
+module.exports = router;

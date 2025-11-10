@@ -8,11 +8,62 @@
       "@dbUtils/*": [
         "backend/helperUtils/dbUtils/*"
       ],
-      "@getFullImageUrl/*": [
-        "backend/helperUtils/imageHelper/*"
-      ],
       "@recentlyViewed/*": [
         "backend/commonModules/recentlyViewed/*"
+      ],
+      "@OrganizationModel": [
+        "backend/commonModules/organizations/Organization.js"
+      ],
+      "@VenuesModel": [
+        "backend/commonModules/venues/Venues.js"
+      ],
+      "@SuppliersModel": [
+        "backend/commonModules/suppliers/Suppliers.js"
+      ],
+      "@TagsModel": [
+        "backend/admin/tags/Tags.js"
+      ],
+      "@CategoriesModel": [
+        "backend/admin/categories/Categories.js"
+      ],
+      "@VenueTypesModel": [
+        "backend/admin/venueTypes/VenueTypesModel.js"
+      ],
+      "@TiersModel": [
+        "backend/admin/tiers/Tiers.js"
+      ],
+      "@EventsModel": [
+        "backend/commonModules/events/Event.js"
+      ],
+      "@MenusModel": [
+        "backend/commonModules/menuManagement/menu/Menus.js"
+      ],
+      "@PresetsModel": [
+        "backend/commonModules/menuManagement/menuPreset/Presets.js"
+      ],
+      "@MenuItemsModel": [
+        "backend/commonModules/menuManagement/menuItems/MenuItems.js"
+      ],
+      "@MenuItemCategoriesModel": [
+        "backend/commonModules/menuManagement/menuItemCategories/MenuItemCategories.js"
+      ],
+      "@HighlightsModel": [
+        "backend/commonModules/highlights/Highlight.js"
+      ],
+      "@ChallengeModel": [
+        "backend/commonModules/loyalty/challenges/models/Challenge/BaseChallenge.js"
+      ],
+      "@PromotionModel": [
+        "backend/commonModules/loyalty/promotions/models/Promotion/BasePromotion.js"
+      ],
+      "@RewardModel": [
+        "backend/commonModules/loyalty/rewards/models/BaseReward.js"
+      ],
+      "@ListingModel": [
+        "backend/commonModules/loyalty/listings/Listing.js"
+      ],
+      "@ClubCollaborationModel": [
+        "backend/commonModules/loyalty/clubCollaborations/ClubCollaborations.js"
       ]
     }
   },
