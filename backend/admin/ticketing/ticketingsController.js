@@ -14,9 +14,16 @@ const createTicketing = async (req, res) => {
 
   // Base validation
   const validateData = {
-    rawData: ["title", "event", "quantity", "price"],
+    rawData: ["title", "event", "price"],
     objectIdFields: ["event"],
   };
+
+  if(data?.timingSlots?.enabled == false){
+    validateData.rawData.push("quantity");
+  }else{
+    // quantity is required for each slot when timingSlots is enabled
+    validateData.rawData.push("timingSlots.dateTimeSlots");
+  }
 
   // Add conditional validation for timeSensitivePricing
   if (data.timeSensitivePricing) {

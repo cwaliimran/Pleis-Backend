@@ -48,6 +48,7 @@ const ticketingsSchema = new mongoose.Schema(
             date: { type: Date, },
             timeSlots: [
               {
+                quantity: { type: Number, default: 0 },
                 startTime: { type: Date, },
                 endTime: { type: Date, },
               }
@@ -121,7 +122,7 @@ const ticketingsSchema = new mongoose.Schema(
     status: { //publishingOptions
       type: String,
       //active/instant , inactive/manual
-      enum: ["active", "scheduled", "inactive", "deleted"], 
+      enum: ["active", "scheduled", "inactive", "deleted"],
       default: "active",
     },
     //TODO scheduled publish date for "scheduled" status via bullMQ

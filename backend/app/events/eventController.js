@@ -72,7 +72,7 @@ const getNearbyEventsWithAdvanceFilters = async (req, res) => {
     categories = [],
     venueTypes = [],
     genre = [],
-    vibe = [],
+    tags = [],
   } = advanceFilters;
 
   // --- Validation ---
@@ -124,8 +124,8 @@ const getNearbyEventsWithAdvanceFilters = async (req, res) => {
       dateTo,
       categories,
       venueTypes,
+      tags,
       genre,
-      vibe,
     },
   };
 
