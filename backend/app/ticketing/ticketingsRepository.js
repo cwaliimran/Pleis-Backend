@@ -1,5 +1,5 @@
 const { getWithFilters } = require("@dbUtils/queryUtil");
-const TicketingsModel = require("../../admin/ticketing/TicketingsModel");
+const TicketingsModel = require("@TicketingsModel");
 
 // Get all with filters (e.g. filter by eventId)
 const getTicketingsWithFilters = async (query) => {

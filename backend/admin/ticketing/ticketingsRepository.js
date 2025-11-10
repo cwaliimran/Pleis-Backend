@@ -1,5 +1,5 @@
 const { getWithFilters, getModelCounts } = require("@dbUtils/queryUtil");
-const TicketingsModel = require("./TicketingsModel");
+const TicketingsModel = require("@TicketingsModel");
 
 // Create
 const createTicketing = async (data) => {

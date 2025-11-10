@@ -64,6 +64,9 @@
       ],
       "@ClubCollaborationModel": [
         "backend/commonModules/loyalty/clubCollaborations/ClubCollaborations.js"
+      ],
+      "@TicketingsModel": [
+        "backend/commonModules/ticketing/TicketingsModel.js"
       ]
     }
   },

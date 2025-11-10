@@ -31,10 +31,6 @@ function formatTicketing(timezone, item) {
         });
     }
 
-    if (obj.timingSlots && obj.timingSlots.enabled === true) {
-        delete obj.quantity;
-    }
-
     // Format timeSensitivePricing dates
     if (obj.timeSensitivePricing) {
         const { earlyBird, lastMinute } = obj.timeSensitivePricing;
