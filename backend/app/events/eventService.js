@@ -187,7 +187,7 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
     categories = [],
     venueTypes = [],
     genre = [],
-    vibe = [],
+    tags = [],
   } = advanceFilters;
 
   longitude = parseFloat(longitude);
@@ -240,19 +240,21 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
     dateFilter = { "schedule.endDateTime": { $gte: now } };
   }
 
-  // --- Categories / Genre / Vibe filter ---
+  // --- Categories / Genre / tags filter ---
   const categoryFilter = categories.length
     ? { "basicInfo.categories": { $in: categories.map((id) => new mongoose.Types.ObjectId(id)) } }
     : {};
   const genreFilter = genre.length ? { "basicInfo.genre": { $in: genre } } : {};
-  const vibeFilter = vibe.length ? { "basicInfo.vibe": { $in: vibe } } : {};
+  const tagsFilter = tags.length
+    ? { "basicInfo.tags": { $in: tags.map((id) => new mongoose.Types.ObjectId(id)) } }
+    : {};
 
   const combinedFilter = {
     status: "active",
     ...dateFilter,
     ...categoryFilter,
     ...genreFilter,
-    ...vibeFilter,
+    ...tagsFilter,
   };
 
   try {
