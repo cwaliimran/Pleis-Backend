@@ -31,8 +31,23 @@ const createTicketing = async (req, res) => {
     }
   }
 
+  if (data.status == "scheduled") {
+    validateData.dateFields["scheduledPublishAt"] = "YYYY-MM-DD hh:mm A"
+  }
+
   // Validate required fields first
   if (!validateParams(req, res, validateData)) return;
+
+  // Convert scheduledPublishAt to UTC
+  if (data.status == "scheduled" && data.scheduledPublishAt) {
+    data.scheduledPublishAt = convertTimezoneToUtc(
+      data.scheduledPublishAt,
+      timezone,
+      "YYYY-MM-DD hh:mm A"
+    );
+  } else {
+    data.scheduledPublishAt = null;
+  }
 
   // Timing slots validation
   if (data.timingSlots?.enabled) {
@@ -233,6 +248,8 @@ const updateTicketing = async (req, res) => {
 
   // --- Base field validation ---
   const validateData = {
+    rawData: [],
+    dateFields: {},
     objectIdFields: ["event"],
   };
 
@@ -249,8 +266,24 @@ const updateTicketing = async (req, res) => {
     }
   }
 
+  if (data.status == "scheduled") {
+    validateData.rawData.push("scheduledPublishAt");
+    validateData.dateFields["scheduledPublishAt"] = "YYYY-MM-DD hh:mm A"
+  }
+
   // --- Run basic validations ---
   if (!validateParams(req, res, validateData)) return;
+
+  // --- Convert scheduledPublishAt to UTC ---
+  if (data.status == "scheduled" && data.scheduledPublishAt) {
+    data.scheduledPublishAt = convertTimezoneToUtc(
+      data.scheduledPublishAt,
+      timezone,
+      "YYYY-MM-DD hh:mm A"
+    );
+  } else {
+    data.scheduledPublishAt = null;
+  }
 
   // --- Validate timing slots if enabled ---
   if (data.timingSlots?.enabled) {

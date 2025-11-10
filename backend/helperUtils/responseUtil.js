@@ -573,6 +573,20 @@ const getCurrentDateInTimezone = ({
   return now.toDate();
 };
 
+
+const getStartAndEndOfDay = (date, timezone) => {
+  const start = moment(date).tz(timezone).startOf("day").toDate();
+  const end = moment(date).tz(timezone).endOf("day").toDate();
+  return { start, end };
+};
+
+const getStartAndEndOfWeek = (date, timezone) => {
+  const start = moment(date).tz(timezone).startOf("week").toDate();
+  const end = moment(date).tz(timezone).endOf("week").toDate();
+  return { start, end };
+};
+
+
 /**
  * Converts a date from a specified input format to a specified output format.
  * If the timezone is null or not provided, it formats the date without applying a timezone.
@@ -676,4 +690,6 @@ module.exports = {
   convertDateFormat,
   getCurrentDateInTimezone,
   getReadableErrorMessage,
+  getStartAndEndOfDay,
+  getStartAndEndOfWeek,
 };

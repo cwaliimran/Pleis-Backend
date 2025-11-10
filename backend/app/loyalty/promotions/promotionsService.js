@@ -5,7 +5,7 @@ const { generateMeta, getCurrentDateInTimezone } = require("@utils/responseUtil"
 const formatPromotion = require("../../../commonModules/loyalty/promotions/utils/formatPromotion");
 
 
-const getPromotions = async ({ page, limit, keyword, timezone }) => {
+const getPromotions = async ({ page, limit, keyword, timezone, category }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const now = getCurrentDateInTimezone({ timezone });
 

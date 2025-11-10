@@ -139,6 +139,7 @@ const userSchema = new mongoose.Schema(
         type: String,
         default: "",
       },
+      default: {},
     },
     verificationStatus: {
       email: {

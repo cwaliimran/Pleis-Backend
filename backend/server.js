@@ -20,6 +20,7 @@ const { i18nConfig } = require("./config/i18nConfig");
 const { loggerMiddleware } = require("./middlewares/logger");
 const routes = require("./routes");
 const adminRoutes = require("./admin/routes");
+const organizerRoutes = require("./organizer/routes");
 const appRoutes = require("./routes/appRoutes");
 const { sendResponse } = require("./helperUtils/responseUtil");
 const connectToDB = require("./helperUtils/server-setup");
@@ -43,7 +44,7 @@ const allowedOrigins = [
   "https://www.dev.pleis.com",
   "http://localhost:4003",
   "https://pleis.vercel.app",
-  "https://shipping-profession-merge-double.trycloudflare.com/",
+  "https://nelson-sponsor-santa-interact.trycloudflare.com",
   "http://192.168.15.141:4003",
 ];
 securityMiddleware(app, {
@@ -67,13 +68,16 @@ app.use(express.json());
 // Routes
 
 
-app.use("/api/v1", routes);
-
-// Admin routes
-app.use("/api/v1/admin", adminRoutes);
 
 //app routes
 app.use("/api/v1/app", appRoutes);
+// Admin routes
+app.use("/api/v1/admin", adminRoutes);
+// Organizer routes
+app.use("/api/v1/organizer", organizerRoutes);
+
+app.use("/api/v1", routes);
+
 
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));

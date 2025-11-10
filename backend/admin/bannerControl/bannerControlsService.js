@@ -9,7 +9,7 @@ const createBannerControls = async ({ title, image, type, object, status }) => {
   return await bannerControlsRepo.createBannerControls({ title, image, type, object, status });
 };
 
-const getBannerControls = async ({ page, limit, keyword, status, date, orderSort = "asc" }) => {
+const getBannerControls = async ({ page, limit, keyword, status, date, orderSort = "asc",category }) => {
   const query = {};
   // Filter by status
   query.status = status ? status : { $ne: "deleted" };

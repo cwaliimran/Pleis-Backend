@@ -43,6 +43,7 @@ const organizationSchema = new mongoose.Schema(
           type: String,
           default: "",
         },
+        default: {},
       },
       website: {
         type: String,
@@ -103,7 +104,7 @@ const organizationSchema = new mongoose.Schema(
       type: OperatingHoursSchema,
       default: {},
     },
-    creator: {
+    creator: { //companyOrganizer
       type: mongoose.Schema.Types.ObjectId,
       ref: "Users",
       required: true,
