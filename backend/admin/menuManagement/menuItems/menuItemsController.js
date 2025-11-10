@@ -106,8 +106,8 @@ const getMenuItems = async (req, res) => {
     startTime,
     endTime,
     date,
+    companyOrganizer
   } = req.query;
-  const userId = req.user?._id;
   try {
     const { menuItems, meta } = await menuItemsService.getMenuItems({
       page,
@@ -119,9 +119,9 @@ const getMenuItems = async (req, res) => {
       category,
       startTime,
       endTime,
-      userId,
       timezone: req.user?.timezone,
       date,
+      companyOrganizer,
     });
 
     return sendResponse({

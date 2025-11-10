@@ -1,4 +1,4 @@
-const Challenge = require("./baseChallenge");
+const Challenge = require("./BaseChallenge");
 const mongoose = require("mongoose");
 
 const VisitChallenge = Challenge.discriminator(

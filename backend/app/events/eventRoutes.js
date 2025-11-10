@@ -1,8 +1,8 @@
 const express = require("express");
 const {
   getEventDetails,
-  getNearbyEvents,
   getEventTicketings,
+  getNearbyEventsWithAdvanceFilters
 } = require("./eventController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -15,7 +15,7 @@ router.use(auth);
 const apiRateLimiter = createRateLimiter("AppEvents");
 
 // Get nearby events
-router.get("/nearby", apiRateLimiter, getNearbyEvents);
+router.post("/nearby", apiRateLimiter, getNearbyEventsWithAdvanceFilters);
 
 //get event details
 router.get("/:id", apiRateLimiter, getEventDetails);

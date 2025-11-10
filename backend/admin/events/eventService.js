@@ -1,7 +1,7 @@
 // services/eventService.js
 
 const { getCurrentDateInTimezone, convertUtcToTimezone, generateMeta } = require("../../helperUtils/responseUtil");
-const Organizations = require("../organizations/Organization");
+const Organizations = require("@OrganizationModel");
 const eventRepo = require("./eventRepository");
 const _ = require("lodash");
 const { formatEventResponse } = require("./formatter/eventFormatter");

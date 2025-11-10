@@ -1,26 +1,83 @@
 const { Events } = require("../../../commonModules/events/Event");
 const { generateMeta } = require("@utils/responseUtil");
 const { formatRecentlyViewedEventResponse } = require("../../recentlyViewed/formatter/recentlyViewedItemsFormatter");
+const { default: mongoose } = require("mongoose");
 
 /**
  * @desc Fetch personalized "For You" events for a user based on interests
  * Prioritizes active, future, and popular events.
  */
+const { getCurrentDateInTimezone, getStartAndEndOfDay, getStartAndEndOfWeek } = require("../../../helperUtils/responseUtil");
+
 const getForYouEventsAgainstInterests = async ({
   location,
   timezone,
+  category,
+  time,
   preferences = {},
   page = 1,
   limit = 20,
 }) => {
-  const now = new Date();
+  const now = getCurrentDateInTimezone({ timezone });
   const skip = Math.max((page - 1) * limit, 0);
 
-  const { categories = [], tags = [], venueTypes = [] } = preferences;
+  const { categories = [], tags = [], venueTypes = [] } = preferences || {};
 
+  // Single category filter (from query param)
+  const catObjId = category ? new mongoose.Types.ObjectId(category) : null;
+  const categoryFilter = category
+    ? { "basicInfo.categories": { $in: [catObjId] } }
+    : {};
+
+  // --- Time filter ---
+  let dateFilter = {};
+  if (time && time !== "all") {
+    let start, end;
+
+    switch (time) {
+      case "live":
+        dateFilter = { "schedule.startDateTime": { $lte: now }, "schedule.endDateTime": { $gte: now } };
+        break;
+
+      case "today":
+        ({ start, end } = getStartAndEndOfDay(now, timezone));
+        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+        break;
+
+      case "tomorrow":
+        const tomorrow = new Date(now);
+        tomorrow.setDate(now.getDate() + 1);
+        ({ start, end } = getStartAndEndOfDay(tomorrow, timezone));
+        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+        break;
+
+      case "thisWeek":
+        ({ start, end } = getStartAndEndOfWeek(now, timezone));
+        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+        break;
+
+      default:
+        dateFilter = {
+          $or: [
+            { "schedule.endDateTime": { $gte: now } },
+            { "schedule.startDateTime": { $gte: now } },
+          ],
+        };
+    }
+  } else {
+    // Default: upcoming events
+    dateFilter = {
+      $or: [
+        { "schedule.endDateTime": { $gte: now } },
+        { "schedule.startDateTime": { $gte: now } },
+      ],
+    };
+  }
+
+  // Base match including category + date filters
   const baseMatch = {
     status: "active",
-    "schedule.endDateTime": { $gte: now },
+    ...categoryFilter,
   };
 
   const hasInterests =
@@ -30,30 +87,19 @@ const getForYouEventsAgainstInterests = async ({
 
   if (hasInterests) {
     pipeline = [
-      { $match: baseMatch },
+      { $match: { ...baseMatch, ...dateFilter } },
       {
         $addFields: {
           matchedTags: {
-            $setIntersection: [
-              { $ifNull: ["$basicInfo.tags", []] },
-              tags || [],
-            ],
+            $setIntersection: [{ $ifNull: ["$basicInfo.tags", []] }, tags || []],
           },
           matchedCategories: {
-            $setIntersection: [
-              { $ifNull: ["$basicInfo.categories", []] },
-              categories || [],
-            ],
+            $setIntersection: [{ $ifNull: ["$basicInfo.categories", []] }, categories || []],
           },
           matchedVenueTypes: {
             $cond: [
               { $gt: [venueTypes.length, 0] },
-              {
-                $setIntersection: [
-                  { $ifNull: ["$basicInfo.venueType", []] },
-                  venueTypes,
-                ],
-              },
+              { $setIntersection: [{ $ifNull: ["$basicInfo.venueType", []] }, venueTypes] },
               [],
             ],
           },
@@ -72,23 +118,15 @@ const getForYouEventsAgainstInterests = async ({
           },
         },
       },
-      // filter out invalid scores
       { $match: { matchScore: { $gt: 0 } } },
-      {
-        $sort: {
-          matchScore: -1,
-          "meta.viewsCount": -1,
-          createdAt: -1,
-        },
-      },
+      { $sort: { matchScore: -1, "meta.viewsCount": -1, createdAt: -1 } },
       { $skip: skip },
       { $limit: limit },
       ...getEventLookups(),
     ];
   } else {
-    // --- Fallback: Trending events ---
     pipeline = [
-      { $match: baseMatch },
+      { $match: { ...baseMatch, ...dateFilter } },
       {
         $addFields: {
           trendingScore: {
@@ -100,12 +138,7 @@ const getForYouEventsAgainstInterests = async ({
           },
         },
       },
-      {
-        $sort: {
-          trendingScore: -1,
-          createdAt: -1,
-        },
-      },
+      { $sort: { trendingScore: -1, createdAt: -1 } },
       { $skip: skip },
       { $limit: limit },
       ...getEventLookups(),
@@ -122,7 +155,6 @@ const getForYouEventsAgainstInterests = async ({
 
   if (!Array.isArray(results)) results = [];
 
-  // ✅ Format results consistently
   const formatted = results.map((event) =>
     formatRecentlyViewedEventResponse(event, { userLocation: location, timezone })
   );

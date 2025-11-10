@@ -6,6 +6,7 @@ const organizationRepo = require("./organizationRepository");
 const { generateMeta } = require("../../helperUtils/responseUtil");
 
 const { formatOrganization } = require("./formatter/formatOrganization");
+const { default: mongoose } = require("mongoose");
 
 const createOrganization = async ({ data }) => {
   let org = await organizationRepo.createOrganization(data);
@@ -152,9 +153,6 @@ const getPublicOrganizations = async ({ page, limit, keyword, date }) => {
 };
 
 const updateOrganization = async ({ id, data }) => {
-  const organization = await organizationRepo.findOrganizationById(id);
-  if (!organization) return null;
-
   const {
     basicInfo,
     otherInfo,
@@ -169,75 +167,96 @@ const updateOrganization = async ({ id, data }) => {
     title,
   } = data;
 
-  // Safe assignment logic
-  if (basicInfo) {
-    organization.basicInfo = {
-      ...organization.basicInfo,
-      ...basicInfo,
-      media: {
-        ...organization.basicInfo.media,
-        ...(basicInfo.media || {})
-      },
-      socialLinks: {
-        ...organization.basicInfo.socialLinks,
-        ...(basicInfo.socialLinks || {})
-      }
-    };
-  }
 
-  if (otherInfo) {
-    organization.otherInfo = {
-      ...organization.otherInfo,
-      ...otherInfo
-    };
-  }
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  if (operatingHours) {
-    organization.operatingHours = {
-      ...organization.operatingHours,
-      ...operatingHours
-    };
-  }
+  try {
+    const organization = await Organizations.findById(id).session(session);
+    if (!organization) throw new Error("Organization not found");
 
-  if (status !== undefined) organization.status = status;
-  if (location !== undefined) organization.location = location;
-  if (pinned !== undefined) organization.pinned = pinned;
-  if (image !== undefined) organization.image = image;
-  if (tags !== undefined) organization.tags = tags;
-  if (description !== undefined) {
-    if (!organization.otherInfo) organization.otherInfo = {};
-    organization.otherInfo.description = description;
-  }
-  if (title !== undefined) {
+    // ---------- ENSURE NESTED OBJECTS EXIST ----------
     if (!organization.basicInfo) organization.basicInfo = {};
-    organization.basicInfo.name = title;
-  }
+    if (!organization.basicInfo.phoneNumber) organization.basicInfo.phoneNumber = { code: '', number: '' };
+    if (!organization.basicInfo.socialLinks) organization.basicInfo.socialLinks = { youtube: '', facebook: '', instagram: '', linkedin: '' };
+    if (!organization.basicInfo.media) organization.basicInfo.media = { logo: '', cover: '' };
 
-  if (venue !== undefined) {
-    // 1. Set all previous venues' isPrimary to false for this organization
-    await Venues.updateMany(
-      { organization: organization._id, isPrimary: true },
-      { isPrimary: false }
-    );
+    if (!organization.otherInfo) organization.otherInfo = {};
 
-    // 2. Make current venue isPrimary true and assign organization if not assigned
-    const existingVenue = await Venues.findOne({ _id: venue });
+    // ---------- CLEAN INCOMING DATA (remove undefined values) ----------
+    const cleanBasicInfo = basicInfo ? Object.fromEntries(
+      Object.entries(basicInfo).filter(([_, v]) => v !== undefined)
+    ) : null;
 
-    if (existingVenue) {
-      // Assign organization if not already assigned
-      if (!existingVenue.organization || String(existingVenue.organization) !== String(organization._id)) {
-        existingVenue.organization = organization._id;
-      }
-      existingVenue.isPrimary = true;
-      await existingVenue.save();
+    const cleanOtherInfo = otherInfo ? Object.fromEntries(
+      Object.entries(otherInfo).filter(([_, v]) => v !== undefined)
+    ) : null;
+
+    const cleanOperatingHours = operatingHours ? Object.fromEntries(
+      Object.entries(operatingHours).filter(([_, v]) => v !== undefined)
+    ) : null;
+
+    // ---------- UPDATE FIELDS ----------
+    if (cleanBasicInfo) {
+      // Ensure nested objects exist in incoming data (don't pass undefined)
+      if (cleanBasicInfo.phoneNumber === undefined) cleanBasicInfo.phoneNumber = organization.basicInfo.phoneNumber;
+      if (cleanBasicInfo.socialLinks === undefined) cleanBasicInfo.socialLinks = organization.basicInfo.socialLinks;
+      if (cleanBasicInfo.media === undefined) cleanBasicInfo.media = organization.basicInfo.media;
+
+      organization.basicInfo = deepMergeSafe(organization.basicInfo, cleanBasicInfo);
     }
+
+    if (cleanOtherInfo) {
+      organization.otherInfo = deepMergeSafe(organization.otherInfo, cleanOtherInfo);
+    }
+
+    if (cleanOperatingHours) {
+      organization.operatingHours = deepMergeSafe(organization.operatingHours, cleanOperatingHours);
+    }
+
+    if (status !== undefined) organization.status = status;
+    if (location !== undefined) organization.location = location;
+    if (pinned !== undefined) organization.pinned = pinned;
+    if (image !== undefined) organization.image = image;
+    if (tags !== undefined) organization.tags = tags;
+    if (description !== undefined) organization.otherInfo.description = description;
+    if (title !== undefined) organization.basicInfo.name = title;
+
+    // ---------- VENUE HANDLING ----------
+    if (venue !== undefined) {
+      await Venues.updateMany(
+        { organization: organization._id, isPrimary: true },
+        { isPrimary: false },
+        { session }
+      );
+
+      const existingVenue = await Venues.findById(venue).session(session);
+      if (existingVenue) {
+        if (!existingVenue.organization || String(existingVenue.organization) !== String(organization._id)) {
+          existingVenue.organization = organization._id;
+        }
+        existingVenue.isPrimary = true;
+        await existingVenue.save({ session });
+      }
+    }
+
+    // ---------- SAVE ORGANIZATION ----------
+    await organization.save({ session });
+
+    await session.commitTransaction();
+
+    // Return formatted organization
+    return formatOrganization(organization);
+
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
   }
-
-  await organization.save();
-
-  //format organization before return
-  return formatOrganization(organization);
 };
+
+
 
 
 const deleteOrganization = async (id) => {
@@ -267,8 +286,30 @@ const getOrganizationsAsStaff = async (id) => {
   return await organizationRepo.getOrganizationsAsStaff(id);
 };
 
+const getOrganizationNamesByCompanyOrganizer = async (companyOrganizer) => {
+  return await organizationRepo.getOrganizationNamesByCompanyOrganizer(companyOrganizer);
+}
 
-
+    // ---------- DEEP MERGE FUNCTION ----------
+    const deepMergeSafe = (target = {}, source = {}) => {
+      const result = { ...target };
+      for (const key in source) {
+        const value = source[key];
+        if (value === undefined) continue;
+        if (
+          value &&
+          typeof value === "object" &&
+          !Array.isArray(value) &&
+          typeof target[key] === "object" &&
+          !Array.isArray(target[key])
+        ) {
+          result[key] = deepMergeSafe(target[key], value);
+        } else {
+          result[key] = value;
+        }
+      }
+      return result;
+    };
 
 module.exports = {
   createOrganization,
@@ -280,5 +321,6 @@ module.exports = {
   getPublicOrganizations,
   checkOrganizationExists,
   getOrganizationsAsStaff,
-  getOrganizationDetails
+  getOrganizationDetails,
+  getOrganizationNamesByCompanyOrganizer
 };

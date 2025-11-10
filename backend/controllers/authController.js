@@ -23,8 +23,8 @@ const { validatePhoneNumber } = require("../helperUtils/validationsUtil");
 const createAdmin = async (req, res) => {
   try {
     // Whitelist both localhost + your public IP
-    const allowedIPs = ["223.123.44.6", "127.0.0.1", "::1"];
-    
+    const allowedIPs = ["223.123.44.6", "127.0.0.1", "::1", "192.168.15.40"];
+
     // Express behind reverse proxies (like Nginx)
     const ip =
       (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "")
@@ -52,7 +52,7 @@ const createAdmin = async (req, res) => {
 
     //validation
     const validationOptions = {
-      rawData: ["email", "name", "password", "timezone"],
+      rawData: ["email", "firstName", "lastName", "password", "timezone", "deviceType", "deviceId"],
       minLengthFields: {
         password: 6, // Password must be at least 6 characters long
       },
@@ -61,7 +61,7 @@ const createAdmin = async (req, res) => {
       return;
     }
 
-    const { email, name, password, timezone } = req.body;
+    const { email, firstName, lastName, profileIcon, password, timezone, deviceId, deviceType } = req.body;
 
     const existing = await User.findOne({ email });
     if (existing) {
@@ -74,14 +74,19 @@ const createAdmin = async (req, res) => {
 
     const user = new User({
       email,
-      name,
+      profileIcon,
+      firstName,
+      lastName,
       password,
       timezone,
-      accountState: { userType: "admin" },
+      accountState: { userType: "admin", status: "active" },
       verificationStatus: { email: "verified", phoneNumber: "verified" },
     });
 
     await user.save();
+
+    //deviceId and deviceToken store in db
+    createOrSkipDevice(user._id, deviceId, deviceType);
 
     return sendResponse({
       res,

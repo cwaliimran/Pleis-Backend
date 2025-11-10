@@ -46,7 +46,7 @@ const resetPasswordViaLinkRateLimiter = createRateLimiter("link/reset-password",
 const changePasswordRateLimiter = createRateLimiter("changePassword", 15, 5);
 
 // Apply rate limiters to routes
-// router.post("/internal/admin/create", signupRateLimiter, createAdmin);
+router.post("/internal/admin/create", signupRateLimiter, createAdmin);
 router.post("/check-email-exists", checkEmailExistsAndVerified);
 router.post("/register", signupRateLimiter, register);
 router.post("/login", loginRateLimiter, login);

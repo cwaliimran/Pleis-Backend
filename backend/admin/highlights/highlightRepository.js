@@ -1,5 +1,5 @@
 // repositories/highlightRepository.js
-const { Highlights } = require("./Highlight");
+const { Highlights } = require("@HighlightsModel");
 const { default: mongoose } = require("mongoose");
 const { getModelCounts } = require("@dbUtils/queryUtil");
 

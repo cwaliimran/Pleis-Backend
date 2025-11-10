@@ -4,8 +4,7 @@ const {
   EarnPointsChallenge,
   BuyMenuItemChallenge,
   ReferUsersChallenge,
-} = require("./models/Challenge");
-const mongoose = require("mongoose");
+} = require("../../../commonModules/loyalty/challenges/models/Challenge");
 
 // Decide which discriminator model to use
 const getModelByTaskType = (taskType) => {

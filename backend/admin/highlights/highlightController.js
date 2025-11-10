@@ -7,7 +7,7 @@ const {
   convertTimezoneToUtc,
   convertUtcToTimezone,
 } = require("../../helperUtils/responseUtil");
-const { Highlights } = require("./Highlight");
+const { Highlights } = require("@HighlightsModel");
 
 const highlightService = require("./highlightService");
 

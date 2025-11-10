@@ -3,7 +3,7 @@ const {
   TicketReward,
   CustomReward,
   Reward,
-} = require("./models");
+} = require("../../../commonModules/loyalty/rewards/models");
 const formatReward = require("./utils/formatReward");
 
 // Decide which discriminator model to use

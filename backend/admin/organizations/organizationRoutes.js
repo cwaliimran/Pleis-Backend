@@ -5,6 +5,7 @@ const {
   updateOrganization,
   deleteOrganization,
   getOrganizationDetails,
+  getOrganizationNamesByCompanyOrganizer,
 } = require("./organizationController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -31,5 +32,8 @@ router.put("/:id", roleMiddleware(["organizer", "admin", "manager", "staff"]), u
 
 // Delete a organization
 router.delete("/:id", deleteOrganization);
+
+//getOrganizationNamesByCompanyOrganizer
+router.get("/names/by-company-organizer/:companyOrganizer", apiRateLimiter, getOrganizationNamesByCompanyOrganizer);
 
 module.exports = router;

@@ -9,9 +9,8 @@ const { formatUserResponse } = require("../../helperUtils/userResponseUtil.js");
 const usersService = require("./usersService.js");
 const { registerUserUtility } = require("../../controllers/authUtil.js");
 const { User } = require("../../models/UserModel.js");
-const { getOrganizationsAsStaff } = require("../organizations/organizationService.js");
-const Organizations = require("@OrganizationModel");
-const { formatOrganization } = require("../organizations/formatter/formatOrganization.js");
+const { getOrganizationsAsStaff } = require("../../admin/organizations/organizationService.js");
+const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization.js");
 
 const createUser = async (req, res) => {
   const result = await registerUserUtility(req, res, {

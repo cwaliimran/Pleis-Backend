@@ -64,7 +64,7 @@ const createMenu = async (req, res) => {
 const getMenus = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let { keyword, status = "active", organizations, date, companyOrganizer } = req.query;
-  
+
   try {
     // arse organizations if it’s a JSON string (e.g. '["id1","id2"]')
     if (typeof organizations === "string") {
@@ -273,11 +273,41 @@ const duplicateMenuAndItems = async (req, res) => {
   }
 }
 
+const getMenuNamesByCompanyOrganizer = async (req, res) => {
+  const { companyOrganizer } = req.params;
+
+  try {
+    //validate companyOrganizer
+    if (
+      !validateParams(req, res, {
+        objectIdFields: ["companyOrganizer"],
+      })
+    ) return;
+
+    const menuNames = await menusService.getMenuNamesByCompanyOrganizer(companyOrganizer);
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "menus_fetched_successfully",
+      data: menuNames,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+}
+
 module.exports = {
   createMenu,
   getMenus,
   updateMenu,
   deleteMenu,
   getMenuDetails,
-  duplicateMenuAndItems
+  duplicateMenuAndItems,
+  getMenuNamesByCompanyOrganizer
 };

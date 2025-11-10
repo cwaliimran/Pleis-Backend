@@ -5,7 +5,8 @@ const {
   updateMenu,
   deleteMenu,
   getMenuDetails,
-  duplicateMenuAndItems
+  duplicateMenuAndItems,
+  getMenuNamesByCompanyOrganizer
 
 } = require("./menusController");
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
@@ -40,6 +41,13 @@ router.post(
   "/duplicate/:id",
   roleMiddleware(["admin", "organizer", "staff", "manager"]),
   duplicateMenuAndItems
+);
+
+//getMenuNamesByCompanyOrganizer
+router.get(
+  "/names/by-company-organizer/:companyOrganizer",
+  apiRateLimiter,
+  getMenuNamesByCompanyOrganizer
 );
 
 module.exports = router;

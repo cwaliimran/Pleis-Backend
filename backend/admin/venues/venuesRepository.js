@@ -1,5 +1,5 @@
 // repositories/venueRepository.js
-const Venues = require("./Venues");
+const Venues = require("@VenuesModel");
 const mongoose = require("mongoose");
 
 // Create venue in a transaction and update organization

@@ -1,4 +1,4 @@
-const Promotion = require("./basePromotion");
+const Promotion = require("./BasePromotion");
 const mongoose = require("mongoose");
 
 const ClaimPromotion = Promotion.discriminator(

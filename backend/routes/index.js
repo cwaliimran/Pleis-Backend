@@ -17,19 +17,7 @@ router.use("/suppliers", require("../admin/suppliers/suppliersRoutes"));
 router.use("/tags", require("../admin/tags/tagsRoutes"));
 router.use("/categories", require("../admin/categories/categoriesRoutes"));
 router.use("/venue-types", require("../admin/venueTypes/venueTypesRoutes"));
-/* //events
-router.use("/events", require("../commonModules/events/eventRoutes"));
-//highlights
-router.use("/highlights", require("../commonModules/highlights/highlightRoutes"));
 
-//locations
-router.use("/locations", require("../shared/locations/routes"));
-
-// All menu-related routes now fall under "/menu"
-router.use("/menu", require("./menuRoutes"));
-
-//loyalty
-router.use("/loyalty", require("./loyaltyRoutes")); */
 
 //helper route for generating shareable links
 router.use("/share", require("./shareRoute"));

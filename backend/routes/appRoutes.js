@@ -22,4 +22,7 @@ router.use("/events", require("../app/events/eventRoutes"));
 router.use("/loyalty/challenges", require("../app/loyalty/challenges/challengesRoutes"));
 router.use("/loyalty/promotions", require("../app/loyalty/promotions/promotionsRoutes"));
 
+router.use("/users", require("../app/usersManagement/usersRoutes"));
+
+
 module.exports = router;

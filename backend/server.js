@@ -44,7 +44,7 @@ const allowedOrigins = [
   "https://www.dev.pleis.com",
   "http://localhost:4003",
   "https://pleis.vercel.app",
-  "https://telecom-occasion-granted-highlight.trycloudflare.com",
+  "https://nelson-sponsor-santa-interact.trycloudflare.com",
   "http://192.168.15.141:4003",
 ];
 securityMiddleware(app, {

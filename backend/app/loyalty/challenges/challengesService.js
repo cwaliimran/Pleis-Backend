@@ -2,7 +2,7 @@ const challengeRepo = require("./challengesRepository");
 const { generateMeta, getCurrentDateInTimezone } = require("@utils/responseUtil");
 const { Challenge } = require("../../../commonModules/loyalty/challenges/models/Challenge");
 const { buildKeywordQueryFromModels } = require("../../../helperUtils/dbUtils/queryUtil");
-const formatChallenge = require("../../../commonModules/loyalty/challenges/utils/formatChallenge");
+const formatChallenge = require("../../../commonModules/loyalty/challenges/formatters/formatChallenge");
 
 
 const getChallenges = async ({ page, limit, timezone, keyword }) => {

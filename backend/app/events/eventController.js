@@ -4,10 +4,12 @@ const {
   parsePaginationParams,
   validateParams,
   isValidNanoid,
+  getReadableErrorMessage,
 } = require("../../helperUtils/responseUtil");
 const { getTicketings } = require("../ticketing/ticketingsService");
 
 const eventService = require("./eventService");
+const { default: mongoose } = require("mongoose");
 
 
 const getNearbyEvents = async (req, res) => {
@@ -56,6 +58,99 @@ const getNearbyEvents = async (req, res) => {
     });
   }
 }
+
+const getNearbyEventsWithAdvanceFilters = async (req, res) => {
+  const { latitude, longitude, radiusKm = 50 } = req.query;
+  const { page, limit } = parsePaginationParams(req);
+  let { timezone } = req.user;
+
+  const { sort = "asc", advanceFilters = {} } = req.body;
+  const {
+    time,
+    dateFrom,
+    dateTo,
+    categories = [],
+    venueTypes = [],
+    genre = [],
+    vibe = [],
+  } = advanceFilters;
+
+  // --- Validation ---
+  const validateData = {
+    queryParams: ["latitude", "longitude"],
+    rawData: [],
+    objectIdFields: [],
+  };
+
+  // Validate sort
+  if (sort && !["asc", "desc"].includes(sort)) {
+    return sendResponse({ res, statusCode: 400, translationKey: "invalid_sort_order" });
+  }
+
+  // Validate time filter
+  const validTimes = ["live", "today", "tomorrow", "thisWeek", "all"];
+  if (time && !validTimes.includes(time)) {
+    return sendResponse({ res, statusCode: 400, translationKey: "invalid_time_filter" });
+  }
+
+  // Validate dateFrom and dateTo using dateFields in validateParams
+  if (dateFrom && !validateParams(req, res, { dateFields: { dateFrom: "YYYY-MM-DD" } })) return;
+  if (dateTo && !validateParams(req, res, { dateFields: { dateTo: "YYYY-MM-DD" } })) return;
+
+  // Validate categories
+  if (categories && Array.isArray(categories)) {
+    for (const categoryId of categories) {
+      if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+        return sendResponse({ res, statusCode: 400, translationKey: "invalid_category_id" });
+      }
+    }
+  }
+
+  // Use centralized query validation
+  if (!validateParams(req, res, validateData)) return;
+
+  // --- Build queryData ---
+  const queryData = {
+    latitude,
+    longitude,
+    radiusKm,
+    page,
+    limit,
+    timezone,
+    sort,
+    advanceFilters: {
+      time,
+      dateFrom,
+      dateTo,
+      categories,
+      venueTypes,
+      genre,
+      vibe,
+    },
+  };
+
+  try {
+    const { events, meta } = await eventService.getNearbyEventsWithAdvanceFilters(queryData);
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "nearby_events_fetched_successfully",
+      data: events || [],
+      meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode || 500,
+      translationKey: readableError.message || "internal_server",
+      error,
+    });
+  }
+};
+
+
 
 
 
@@ -141,5 +236,6 @@ const getEventTicketings = async (req, res) => {
 module.exports = {
   getEventDetails,
   getNearbyEvents,
+  getNearbyEventsWithAdvanceFilters,
   getEventTicketings
 };

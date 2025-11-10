@@ -11,7 +11,7 @@ const { getPublicCategories } = require("../publicCategories/categoriesService")
 const { getTop10Promos } = require("../top10PromoSection/topPromosService");
 
 const getHomeService = async ({ queryData }) => {
-  const { userId, userLocation, timezone } = queryData;
+  const { userId, userLocation, timezone, category, time } = queryData;
 
   try {
     // Fetch all data in parallel
@@ -30,12 +30,12 @@ const getHomeService = async ({ queryData }) => {
       promotions,
     ] = await Promise.all([
       getPublicCategories({}),
-      getTop10Promos({ userLocation, userId, timezone }),
-      getBannerControls({ page: 1, limit: 10, status: "active" }),
-      getForYouEvents(userId, userLocation, timezone),
+      getTop10Promos({ userLocation, userId, timezone, category, time }),
+      getBannerControls({ page: 1, limit: 10, status: "active", category }),
+      getForYouEvents(userId, userLocation, timezone, category, time),
       getNearbyEvents(queryData),
-      getCustomCategories({ userLocation, userId, timezone, page: 1, limit: 10, status: "active" }),
-      getPublicHighlights({ userId, page: 1, limit: 10, keyword: "", userLocation }),
+      getCustomCategories({ userLocation, userId, timezone, page: 1, limit: 10, status: "active", category, time }),
+      getPublicHighlights({ userId, page: 1, limit: 10, keyword: "", userLocation, category, time, timezone }),
       getUserRecentlyViewedItems({
         userId,
         location: userLocation,
@@ -47,7 +47,7 @@ const getHomeService = async ({ queryData }) => {
       [],//getTopPicks({ page: 1, limit: 10, status: "active" }),
       [],//getLoyaltyEvents({ page: 1, limit: 10, status: "active" }),
       getChallenges({ page: 1, limit: 10, timezone }),
-      getPromotions({ page: 1, limit: 10, timezone }),
+      getPromotions({ page: 1, limit: 10, timezone, category }),
     ]);
 
     // Normalize all fetched data

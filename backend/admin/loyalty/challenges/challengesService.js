@@ -1,8 +1,9 @@
 const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
-const { Challenge } = require("./models/Challenge");
+const Challenge = require("@ChallengeModel");
 const challengeRepo = require("./challengesRepository");
 const { generateMeta } = require("@utils/responseUtil");
-const formatChallenge = require("./utils/formatChallenge");
+const formatChallenge = require("../../../commonModules/loyalty/challenges/formatters/formatChallenge");
+const { default: mongoose } = require("mongoose");
 
 const createChallenge = async (data) => {
   return await challengeRepo.createChallenge(data);

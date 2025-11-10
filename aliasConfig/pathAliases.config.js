@@ -13,5 +13,11 @@ module.exports = {
     "@MenusModel": "backend/commonModules/menuManagement/menu/Menus.js",
     "@PresetsModel": "backend/commonModules/menuManagement/menuPreset/Presets.js",
     "@MenuItemsModel": "backend/commonModules/menuManagement/menuItems/MenuItems.js",
-    "@MenuItemCategoriesModel": "backend/commonModules/menuManagement/menuItemCategories/MenuItemCategories.js"
+    "@MenuItemCategoriesModel": "backend/commonModules/menuManagement/menuItemCategories/MenuItemCategories.js",
+    "@HighlightsModel": "backend/commonModules/highlights/Highlight.js",
+    "@ChallengeModel": "backend/commonModules/loyalty/challenges/models/Challenge/BaseChallenge.js",
+    "@PromotionModel": "backend/commonModules/loyalty/promotions/models/Promotion/BasePromotion.js",
+    "@RewardModel": "backend/commonModules/loyalty/rewards/models/BaseReward.js",
+    "@ListingModel": "backend/commonModules/loyalty/listings/Listing.js",
+    "@ClubCollaborationModel": "backend/commonModules/loyalty/clubCollaborations/ClubCollaborations.js"
 };

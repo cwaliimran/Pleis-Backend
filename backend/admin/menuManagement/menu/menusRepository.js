@@ -1,5 +1,6 @@
 // repositories/menuRepository.js
 const Menus = require("@MenusModel");
+const { getOrganizationIdsByCompanyOrganizer } = require("../../organizations/organizationRepository");
 
 // Create menu in a transaction and update organization
 const createMenu = async (data) => {
@@ -76,6 +77,16 @@ const createDuplicatedMenuItem = async (itemData, session = null) => {
   return await duplicatedItem.save({ session });
 };
 
+//get menu ids by company organizer
+const getMenuNamesByCompanyOrganizer = async (companyOrganizer) => {
+  const organizationIds = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
+  const menus = await Menus.find({ organization: { $in: organizationIds } })
+    .select("_id title")
+    .lean();
+  return menus;
+};
+
+
 
 module.exports = {
   createMenu,
@@ -89,4 +100,5 @@ module.exports = {
   updateMenuData,
   deleteMenuById,
   findByIdAndUpdate,
+  getMenuNamesByCompanyOrganizer,
 };

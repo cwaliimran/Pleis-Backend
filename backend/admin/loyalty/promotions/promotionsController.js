@@ -33,6 +33,12 @@ const create = async (req, res) => {
     rawData.push("menuItem", "discountedPrice")
     objectIdFields.push("menuItem")
   }
+  if (req.body.promotionType === "claimPromotion") {
+    dateFields.startDate = "YYYY-MM-DD"
+    dateFields.endDate = "YYYY-MM-DD"
+    rawData.push("reward", "claimPoints")
+    objectIdFields.push("reward")
+  }
 
   if (!validateParams(req, res, {
     rawData,

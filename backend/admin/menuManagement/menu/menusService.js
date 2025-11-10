@@ -220,6 +220,10 @@ const duplicateMenuAndItems = async (menuId, organization) => {
   }
 };
 
+const getMenuNamesByCompanyOrganizer = async (companyOrganizer) => {
+  return await menuRepo.getMenuNamesByCompanyOrganizer(companyOrganizer);
+}
+
 module.exports = {
   createMenu,
   getMenus,
@@ -227,4 +231,5 @@ module.exports = {
   getMenuDetails,
   duplicateMenuAndItems,
   deleteMenu,
+  getMenuNamesByCompanyOrganizer,
 };

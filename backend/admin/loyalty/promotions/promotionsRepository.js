@@ -3,19 +3,21 @@ const {
   BuyMenuItemPromotion,
   HappyHourPromotion,
   ProductSalePromotion,
-} = require("./models/Promotion");
-const mongoose = require("mongoose");
+  ClaimPromotion,
+} = require("../../../commonModules/loyalty/promotions/models/Promotion/");
 
 // Decide which discriminator model to use
 const getModelByTaskType = (taskType) => {
   switch (taskType) {
 
-    case "buyMenuItem":
+    case "buyMenuItemPromotion":
       return BuyMenuItemPromotion;
     case "happyHour":
       return HappyHourPromotion;
     case "productSale":
       return ProductSalePromotion;
+    case "claimPromotion":
+      return ClaimPromotion;
     default:
       return Promotion; // fallback
   }
@@ -33,15 +35,85 @@ const create = async (data) => {
   }
 };
 
-// Get promotions with population
-const getWithFilters = async (query = {}, skip = 0, limit = 10) => {
-  return Promotion.find(query)
-    .populate("menuItem")
-    .populate({ path: "tierLimit", select: "image title" })
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit).lean().exec();
+
+const getWithFilters = async (query, skip = 0, limit = 20) => {
+  // Build aggregation pipeline
+  const pipeline = [
+    { $match: query },
+    { $sort: { createdAt: -1 } },
+    { $skip: skip },
+  ];
+
+  if (limit > 0) pipeline.push({ $limit: limit });
+
+  // --- Lookup reward (for claimPromotion) ---
+  pipeline.push({
+    $lookup: {
+      from: "rewards",
+      localField: "reward",
+      foreignField: "_id",
+      as: "reward",
+    },
+  });
+
+  // --- Lookup menuItem (for buyMenuItemPromotion and productSale) ---
+  pipeline.push({
+    $lookup: {
+      from: "menuitems",
+      localField: "menuItem",
+      foreignField: "_id",
+      as: "menuItem",
+    },
+  });
+
+  // --- Lookup tierLimit (populate tier title and image) ---
+  pipeline.push({
+    $lookup: {
+      from: "tiers",
+      localField: "tierLimit",
+      foreignField: "_id",
+      as: "tierLimit",
+      pipeline: [
+        { $project: { _id: 1, title: 1, } }
+      ]
+    }
+  });
+
+  // --- Conditionally include the correct populated field based on promotionType ---
+  pipeline.push({
+    $addFields: {
+      reward: {
+        $cond: [
+          { $eq: ["$promotionType", "claimPromotion"] },
+          { $arrayElemAt: ["$reward", 0] },
+          null,
+        ],
+      },
+      menuItem: {
+        $cond: [
+          { $in: ["$promotionType", ["buyMenuItemPromotion", "productSale"]] },
+          { $arrayElemAt: ["$menuItem", 0] },
+          null,
+        ],
+      },
+      tierLimit: {
+        $cond: [
+          { $ne: ["$tierLimit", []] },
+          { $arrayElemAt: ["$tierLimit", 0] },
+          null,
+        ],
+      },
+    },
+  });
+
+  const results = await Promotion.aggregate(pipeline).allowDiskUse(true);
+  return results;
 };
+
+module.exports = {
+  getWithFilters,
+};
+
 
 // Count
 const count = async (query = {}) => {

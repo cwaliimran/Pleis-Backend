@@ -348,6 +348,36 @@ const getOrganizationDetails = async (req, res) => {
   });
 };
 
+
+const getOrganizationNamesByCompanyOrganizer = async (req, res) => {
+  const { companyOrganizer } = req.params;
+
+  try {
+    //validate companyOrganizer
+    if (
+      !validateParams(req, res, {
+        objectIdFields: ["companyOrganizer"],
+      })
+    ) return;
+
+    const organizationNames = await organizationService.getOrganizationNamesByCompanyOrganizer(companyOrganizer);
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "organizations_fetched_successfully",
+      data: organizationNames,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+}
+
 module.exports = {
   createOrganization,
   getOrganizations,
@@ -356,4 +386,5 @@ module.exports = {
   updateOrganization,
   deleteOrganization,
   getOrganizationsAdmin,
+  getOrganizationNamesByCompanyOrganizer,
 };

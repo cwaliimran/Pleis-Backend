@@ -11,6 +11,7 @@ const challengeService = require("./challengesService");
 const createChallenge = async (req, res) => {
 
   //"visit", "earnPoints", "buyMenuItem", "referUsers"
+  const taskType = req.body.taskType;
 
   var dateFields = {}
   var rawData = ["title", "taskType", "reward", "endDate", "companyOrganizer", "reward", "reward.rewardType"]

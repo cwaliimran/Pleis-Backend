@@ -1,5 +1,5 @@
 // repositories/clubCollaborationRepository.js
-const ClubCollaborations = require("./ClubCollaborations");
+const ClubCollaborations = require("@ClubCollaborationModel");
 const mongoose = require("mongoose");
 
 // Create clubCollaboration in a transaction and update organization

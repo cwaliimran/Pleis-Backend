@@ -3,7 +3,7 @@
 const highlightRepo = require("./highlightRepository");
 const { formatPublicHighlightResponse } = require("../../commonModules/highlights/formatters/formatPublicHighlightResponse");
 
-const getPublicHighlights = async ({ userId, page, limit, keyword, userLocation }) => {
+const getPublicHighlights = async ({ userId, page, limit, keyword, userLocation, category,time, timezone }) => {
   const query = { status: "active" };
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
@@ -15,7 +15,10 @@ const getPublicHighlights = async ({ userId, page, limit, keyword, userLocation 
       query,
       keyword,
       skip,
-      limit === 0 ? 0 : limit
+      limit === 0 ? 0 : limit,
+      category,
+      time,
+      timezone
     ),
   ]);
 

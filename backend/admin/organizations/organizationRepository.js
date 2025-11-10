@@ -2,7 +2,7 @@
 const Venues = require("@VenuesModel");
 
 const Organizations = require("@OrganizationModel");
-
+const Menus = require("@MenusModel");
 const { getModelCounts } = require("@dbUtils/queryUtil");
 
 // Create
@@ -92,7 +92,18 @@ const getOrganizationIdsByCompanyOrganizer = async (companyOrganizer) => {
   return organizations.map(org => org._id);
 };
 
-//get user organizations
+//get organization names by company organizer
+const getOrganizationNamesByCompanyOrganizer = async (companyOrganizer) => {
+  const organizations = await Organizations.find({ creator: companyOrganizer }).select("basicInfo.name").lean();
+  return organizations;
+};
+
+//getMenuIdsByCompanyOrganizer
+const getMenuIdsByCompanyOrganizer = async (companyOrganizer) => {
+  const organizationIds = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
+  const menus = await Menus.find({ organization: { $in: organizationIds } }).select("_id").lean();
+  return menus.map(menu => menu._id);
+};
 
 module.exports = {
   createOrganization,
@@ -104,5 +115,7 @@ module.exports = {
   findByIdAndUpdate,
   getOrganizationDetails,
   getOrganizationsAsStaff,
-  getOrganizationIdsByCompanyOrganizer
+  getOrganizationIdsByCompanyOrganizer,
+  getMenuIdsByCompanyOrganizer,
+  getOrganizationNamesByCompanyOrganizer,
 };

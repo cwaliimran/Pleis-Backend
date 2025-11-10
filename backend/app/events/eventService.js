@@ -1,6 +1,6 @@
 // services/eventService.js
 
-const { getCurrentDateInTimezone, generateMeta } = require("../../helperUtils/responseUtil");
+const { getCurrentDateInTimezone, getStartAndEndOfDay, getStartAndEndOfWeek, generateMeta } = require("../../helperUtils/responseUtil");
 const eventRepo = require("./eventRepository");
 const _ = require("lodash");
 const { getRecommendedEvents } = require("./recommendationSystem/eventsRecommender");
@@ -11,6 +11,7 @@ const { getForYouEventsAgainstInterests } = require("./recommendationSystem/getF
 const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { getTicketings } = require("../ticketing/ticketingsService");
 const { addOrUpdateRecentlyViewedItem } = require("../recentlyViewed/recentlyViewedItemRepository");
+const { default: mongoose } = require("mongoose");
 
 
 const getNearbyEvents = async (queryData) => {
@@ -21,50 +22,91 @@ const getNearbyEvents = async (queryData) => {
     limit = 10,
     timezone = "Asia/Karachi",
     radiusKm = 0,
+    category,
+    time,
   } = queryData || {};
 
+  const catObjId = category ? new mongoose.Types.ObjectId(category) : null;
+  const categoryFilter = category
+    ? { "basicInfo.categories": { $in: [catObjId] } }
+    : {};
+
   // If radiusKm is not provided, use an approximate "whole world" radius
-  // (half Earth's circumference) in kilometers so geoNear covers the globe.
-  const rawRadiusKm = (radiusKm === 0 || radiusKm === undefined || radiusKm === null || radiusKm === '')
-    ? 20037.5
-    : radiusKm;
+  const rawRadiusKm =
+    !radiusKm || radiusKm === "" ? 20037.5 : parseFloat(radiusKm);
 
   radiusKm = parseFloat(rawRadiusKm);
   longitude = parseFloat(longitude);
   latitude = parseFloat(latitude);
 
-  // Validate coordinates
-  if (typeof longitude !== 'number' || typeof latitude !== 'number') {
-    throw new Error('Valid user longitude and latitude are required');
+  if (typeof longitude !== "number" || typeof latitude !== "number") {
+    throw new Error("Valid user longitude and latitude are required");
   }
 
   if (radiusKm <= 0) {
-    throw new Error('Radius must be greater than 0');
+    throw new Error("Radius must be greater than 0");
   }
 
   const radiusInMeters = radiusKm * 1000;
   const now = getCurrentDateInTimezone({ timezone });
   const skip = Math.max(0, (page - 1) * limit);
 
+  // --- Time filter ---
+  let dateFilter = {};
+  if (time && time !== "all") {
+    let start, end;
+
+    switch (time) {
+      case "live":
+        dateFilter = { "schedule.startDateTime": { $lte: now }, "schedule.endDateTime": { $gte: now } };
+        break;
+
+      case "today":
+        ({ start, end } = getStartAndEndOfDay(now, timezone));
+        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+        break;
+
+      case "tomorrow":
+        const tomorrow = new Date(now);
+        tomorrow.setDate(now.getDate() + 1);
+        ({ start, end } = getStartAndEndOfDay(tomorrow, timezone));
+        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+        break;
+
+      case "thisWeek":
+        ({ start, end } = getStartAndEndOfWeek(now, timezone));
+        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+        break;
+
+      default:
+        dateFilter = {
+          $or: [
+            { "schedule.endDateTime": { $gte: now } },
+            { "schedule.startDateTime": { $gte: now } },
+          ],
+        };
+    }
+  } else {
+    dateFilter = {
+      $or: [
+        { "schedule.endDateTime": { $gte: now } },
+        { "schedule.startDateTime": { $gte: now } },
+      ],
+    };
+  }
+
   try {
     const pipeline = [
       {
         $geoNear: {
-          near: {
-            type: "Point",
-            coordinates: [longitude, latitude],
-          },
+          near: { type: "Point", coordinates: [longitude, latitude] },
           key: "basicInfo.venueLocation",
           distanceField: "distance",
           spherical: true,
           maxDistance: radiusInMeters,
-          query: {
-            status: "active",
-            "schedule.endDateTime": { $gte: now },
-          },
+          query: { status: "active", ...categoryFilter, ...dateFilter },
         },
       },
-      // Only keep schedule, basicInfo and distance from the main event document
       { $project: { schedule: 1, basicInfo: 1, distance: 1 } },
 
       {
@@ -102,40 +144,205 @@ const getNearbyEvents = async (queryData) => {
     const totalCountPipeline = [
       {
         $geoNear: {
-          near: {
-            type: "Point",
-            coordinates: [longitude, latitude],
-          },
+          near: { type: "Point", coordinates: [longitude, latitude] },
           key: "basicInfo.venueLocation",
           distanceField: "distance",
           spherical: true,
           maxDistance: radiusInMeters,
-          query: {
-            status: "active",
-            "schedule.startDateTime": { $gte: now },
-          },
+          query: { status: "active", ...categoryFilter, ...dateFilter },
         },
       },
       { $count: "total" },
     ];
 
-
     const totalResult = await eventRepo.aggregateEvents(totalCountPipeline);
     const totalFiltered = totalResult[0]?.total || 0;
-    const formattedEvents = events.map((event) => {
-      console.log(event.basicInfo.organization)
-      const formatted = formatEventResponse(event, { timezone });
-      return formatted;
-    });
-    let meta = generateMeta(page, limit, totalFiltered);
-    return {
-      events: formattedEvents,
-      meta
-    };
+
+    const formattedEvents = events.map((event) =>
+      formatEventResponse(event, { timezone })
+    );
+
+    const meta = generateMeta(page, limit, totalFiltered);
+    return { events: formattedEvents, meta };
   } catch (error) {
     throw new Error(`Failed to fetch nearby events: ${error.message}`);
   }
 };
+
+const getNearbyEventsWithAdvanceFilters = async (queryData) => {
+  let {
+    longitude = 0,
+    latitude = 0,
+    page = 1,
+    limit = 10,
+    timezone = "Asia/Karachi",
+    radiusKm = 0,
+    advanceFilters = {},
+  } = queryData || {};
+
+  const {
+    time,
+    dateFrom,
+    dateTo,
+    categories = [],
+    venueTypes = [],
+    genre = [],
+    vibe = [],
+  } = advanceFilters;
+
+  longitude = parseFloat(longitude);
+  latitude = parseFloat(latitude);
+  radiusKm = !radiusKm || radiusKm === "" ? 20037.5 : parseFloat(radiusKm);
+  const radiusInMeters = radiusKm * 1000;
+  const skip = Math.max(0, (page - 1) * limit);
+  const now = getCurrentDateInTimezone({ timezone });
+
+  if (typeof longitude !== "number" || typeof latitude !== "number") {
+    throw new Error("Valid user longitude and latitude are required");
+  }
+  if (radiusKm <= 0) {
+    throw new Error("Radius must be greater than 0");
+  }
+
+  // --- Time / Date Range Filter ---
+  let dateFilter = {};
+  if (dateFrom || dateTo) {
+    const start = dateFrom ? new Date(dateFrom) : new Date("1970-01-01");
+    const end = dateTo ? new Date(dateTo) : new Date("2999-12-31");
+    dateFilter = {
+      "schedule.startDateTime": { $lte: end },
+      "schedule.endDateTime": { $gte: start },
+    };
+  } else if (time && time !== "all") {
+    let start, end;
+    switch (time) {
+      case "live":
+        dateFilter = { "schedule.startDateTime": { $lte: now }, "schedule.endDateTime": { $gte: now } };
+        break;
+      case "today":
+        ({ start, end } = getStartAndEndOfDay(now, timezone));
+        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+        break;
+      case "tomorrow":
+        const tomorrow = new Date(now);
+        tomorrow.setDate(now.getDate() + 1);
+        ({ start, end } = getStartAndEndOfDay(tomorrow, timezone));
+        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+        break;
+      case "thisWeek":
+        ({ start, end } = getStartAndEndOfWeek(now, timezone));
+        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+        break;
+      default:
+        dateFilter = { "schedule.endDateTime": { $gte: now } };
+    }
+  } else {
+    dateFilter = { "schedule.endDateTime": { $gte: now } };
+  }
+
+  // --- Categories / Genre / Vibe filter ---
+  const categoryFilter = categories.length
+    ? { "basicInfo.categories": { $in: categories.map((id) => new mongoose.Types.ObjectId(id)) } }
+    : {};
+  const genreFilter = genre.length ? { "basicInfo.genre": { $in: genre } } : {};
+  const vibeFilter = vibe.length ? { "basicInfo.vibe": { $in: vibe } } : {};
+
+  const combinedFilter = {
+    status: "active",
+    ...dateFilter,
+    ...categoryFilter,
+    ...genreFilter,
+    ...vibeFilter,
+  };
+
+  try {
+    const pipeline = [
+      {
+        $geoNear: {
+          near: { type: "Point", coordinates: [longitude, latitude] },
+          key: "basicInfo.venueLocation",
+          distanceField: "distance",
+          spherical: true,
+          maxDistance: radiusInMeters,
+          query: combinedFilter,
+        },
+      },
+      // Lookup venues to filter by venueType
+      {
+        $lookup: {
+          from: "venues",
+          localField: "basicInfo.venue",
+          foreignField: "_id",
+          as: "venue",
+          pipeline: [
+            { $project: { title: 1, venueType: 1, location: 1 } },
+            ...(venueTypes.length
+              ? [{ $match: { venueType: { $in: venueTypes.map((id) => new mongoose.Types.ObjectId(id)) } } }]
+              : []),
+          ],
+        },
+      },
+      { $unwind: "$venue" },
+      { $project: { schedule: 1, basicInfo: 1, distance: 1, venue: 1 } },
+      {
+        $lookup: {
+          from: "organizations",
+          let: { orgId: "$basicInfo.organization" },
+          pipeline: [{ $match: { $expr: { $eq: ["$_id", "$$orgId"] } } }, { $project: { basicInfo: 1 } }],
+          as: "basicInfo.organization",
+        },
+      },
+      { $unwind: { path: "$basicInfo.organization", preserveNullAndEmptyArrays: true } },
+      { $sort: { distance: 1 } },
+      { $skip: skip },
+      { $limit: parseInt(limit) },
+    ];
+
+    const events = await eventRepo.aggregateEvents(pipeline);
+
+    // Count total
+    const totalCountPipeline = [
+      {
+        $geoNear: {
+          near: { type: "Point", coordinates: [longitude, latitude] },
+          key: "basicInfo.venueLocation",
+          distanceField: "distance",
+          spherical: true,
+          maxDistance: radiusInMeters,
+          query: combinedFilter,
+        },
+      },
+      {
+        $lookup: {
+          from: "venues",
+          localField: "basicInfo.venue",
+          foreignField: "_id",
+          as: "venue",
+          pipeline: [
+            ...(venueTypes.length
+              ? [{ $match: { venueType: { $in: venueTypes.map((id) => new mongoose.Types.ObjectId(id)) } } }]
+              : []),
+          ],
+        },
+      },
+      { $unwind: "$venue" },
+      { $count: "total" },
+    ];
+
+    const totalResult = await eventRepo.aggregateEvents(totalCountPipeline);
+    const totalFiltered = totalResult[0]?.total || 0;
+
+    const formattedEvents = events.map((event) => formatEventResponse(event, { timezone }));
+
+    const meta = generateMeta(page, limit, totalFiltered);
+    return { events: formattedEvents, meta };
+  } catch (error) {
+    throw new Error(`Failed to fetch nearby events: ${error.message}`);
+  }
+};
+
+
+
 
 const getEventDetails = async (userLocation, userId, id, timezone) => {
   const event = await eventRepo.findEventById(id);
@@ -200,7 +407,7 @@ const getEventIdByNanoid = async (nanoid) => {
 
 // TODO when user has skipped the interests selection we will show events based on his recent activity
 //get for you events for logged in user
-const getForYouEvents = async (userId, location, timezone) => {
+const getForYouEvents = async (userId, location, timezone, category, time) => {
   // Fetch user preferences, interests, etc.
   const userPreferences = await getUserInterestsIdsForRecommendation(userId);
 
@@ -208,6 +415,8 @@ const getForYouEvents = async (userId, location, timezone) => {
   let recommendedEvents = await getForYouEventsAgainstInterests({
     location,
     timezone,
+    category,
+    time,
     preferences: userPreferences,
   });
 
@@ -238,6 +447,7 @@ const getForYouEvents = async (userId, location, timezone) => {
 module.exports = {
   getEventIdByNanoid,
   getNearbyEvents,
+  getNearbyEventsWithAdvanceFilters,
   getEventDetails,
   getForYouEvents
 };

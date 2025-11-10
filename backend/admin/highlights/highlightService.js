@@ -3,7 +3,7 @@
 const highlightRepo = require("./highlightRepository");
 const eventRepository = require("../events/eventRepository");
 const organizationRepo = require("../organizations/organizationRepository");
-const { Highlights } = require("./Highlight");
+const { Highlights } = require("@HighlightsModel");
 const { formatPublicHighlightResponse } = require("./formatters/formatPublicHighlightResponse");
 
 const createHighlight = async ({ data }) => {

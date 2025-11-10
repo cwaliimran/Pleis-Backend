@@ -4,7 +4,7 @@ const {
   EarnPointsChallenge,
   BuyMenuItemChallenge,
   ReferUsersChallenge,
-} = require("./models/Challenge");
+} = require("@ChallengeModel");
 const mongoose = require("mongoose");
 
 // Decide which discriminator model to use

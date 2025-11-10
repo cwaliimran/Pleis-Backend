@@ -3,7 +3,7 @@ const repository = require("./rewardsRepository");
 const mongoose = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
 const formatData = require("./utils/formatReward");
-const { Reward } = require("./models");
+const BaseReward = require("@RewardModel");
 
 const create = async (data) => {
   return await repository.create(data);
@@ -24,19 +24,19 @@ const get = async ({ companyOrganizer, page, limit, keyword, status, date, timez
     query.createdAt = { $gte: start, $lt: end };
   }
   if (keyword) {
-    const keywordMatch = buildKeywordQueryFromModels([{ schema: Reward.schema }], keyword);
+    const keywordMatch = buildKeywordQueryFromModels([{ schema: BaseReward.schema }], keyword);
     Object.assign(query, keywordMatch);
   }
 
   // Get rewards with population
   const records = await repository.getWithFilters(query, skip, limit);
 
-  const totalFiltered = await Reward.countDocuments(query);
+  const totalFiltered = await BaseReward.countDocuments(query);
 
   const [total, active, inactive] = await Promise.all([
-    Reward.countDocuments({ ...(companyOrganizer && { companyOrganizer }), status: { $ne: "deleted" } }),
-    Reward.countDocuments({ status: "active", ...(companyOrganizer && { companyOrganizer }) }),
-    Reward.countDocuments({ status: "inactive", ...(companyOrganizer && { companyOrganizer }) }),
+    BaseReward.countDocuments({ ...(companyOrganizer && { companyOrganizer }), status: { $ne: "deleted" } }),
+    BaseReward.countDocuments({ status: "active", ...(companyOrganizer && { companyOrganizer }) }),
+    BaseReward.countDocuments({ status: "inactive", ...(companyOrganizer && { companyOrganizer }) }),
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
