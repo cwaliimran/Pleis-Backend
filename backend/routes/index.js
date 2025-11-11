@@ -15,6 +15,7 @@ router.use("/languages", require("./languageRoutes"));
 //global routes
 router.use("/suppliers", require("../admin/suppliers/suppliersRoutes"));
 router.use("/tags", require("../admin/tags/tagsRoutes"));
+router.use("/tags-types", require("../admin/tags/tagsRoutes"));
 router.use("/categories", require("../admin/categories/categoriesRoutes"));
 router.use("/venue-types", require("../admin/venueTypes/venueTypesRoutes"));
 
