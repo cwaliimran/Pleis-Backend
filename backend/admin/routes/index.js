@@ -37,6 +37,6 @@ router.use("/locations", require("../../shared/locations/routes"));
 //loyalty
 router.use("/loyalty", require("../loyalty/loyaltyRoutes")); 
 
-
-
+// reservation
+router.use("/reservations", require("../reservation/reservationRoutes"));
 module.exports = router;

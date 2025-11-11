@@ -585,6 +585,11 @@ const getStartAndEndOfWeek = (date, timezone) => {
   const end = moment(date).tz(timezone).endOf("week").toDate();
   return { start, end };
 };
+const getStartAndEndOfMonth = (date, timezone) => {
+  const start = moment(date).tz(timezone).startOf("month").toDate();
+  const end = moment(date).tz(timezone).endOf("month").toDate();
+  return { start, end };
+};
 
 
 /**
@@ -692,4 +697,5 @@ module.exports = {
   getReadableErrorMessage,
   getStartAndEndOfDay,
   getStartAndEndOfWeek,
+  getStartAndEndOfMonth,
 };

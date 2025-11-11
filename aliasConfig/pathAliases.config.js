@@ -20,5 +20,6 @@ module.exports = {
     "@RewardModel": "backend/commonModules/loyalty/rewards/models/BaseReward.js",
     "@ListingModel": "backend/commonModules/loyalty/listings/Listing.js",
     "@ClubCollaborationModel": "backend/commonModules/loyalty/clubCollaborations/ClubCollaborations.js",
-    "@TicketingsModel": "backend/commonModules/ticketing/TicketingsModel.js"
+    "@TicketingsModel": "backend/commonModules/ticketing/TicketingsModel.js",
+    "@ReservationsModel": "backend/commonModules/reservations/Reservation.js"
 };
