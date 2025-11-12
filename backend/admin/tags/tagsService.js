@@ -61,6 +61,8 @@ const getTags = async ({ page, limit, keyword, type, status, date }) => {
 };
 
 
+
+
 const getPublicTags = async ({ page, limit, keyword }) => {
   const baseFilters = [{ status: "active" }];
 
@@ -89,6 +91,13 @@ const getPublicTags = async ({ page, limit, keyword }) => {
     tags,
     meta,
   };
+};
+
+
+const getTagsGroupedByType = async () => {
+  // Final base query (e.g., status + keyword)
+  return tags = await tagRepo.getTagsGroupedByType({ status: "active" })
+
 };
 
 
@@ -123,4 +132,5 @@ module.exports = {
   updateTag,
   deleteTag,
   getPublicTags,
+  getTagsGroupedByType,
 };

@@ -412,6 +412,38 @@ const cloneEvent = async (req, res) => {
   }
 };
 
+const getMinimalEventsInfo = async (req, res) => {
+  const { organization } = req.query;
+  let { timezone } = req.user;
+  try {
+
+
+    if (organization) {
+      if (!validateParams(req, res, {
+        objectIdFields: ["organization"],
+      })) return;
+    }
+
+    let { events } = await eventService.getMinimalEventsInfo({
+      organization,
+      timezone,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "events_fetched_successfully",
+      data: events,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
 module.exports = {
   createEvent,
   getEvents,
@@ -420,4 +452,5 @@ module.exports = {
   updateEvent,
   deleteEvent,
   getEventDetails,
+  getMinimalEventsInfo,
 };

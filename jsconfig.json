@@ -70,6 +70,9 @@
       ],
       "@ReservationsModel": [
         "backend/commonModules/reservations/Reservation.js"
+        ],
+      "@OrdersModel": [
+        "backend/commonModules/menuItemsAndOrders/orders.js"
       ]
     }
   },

@@ -176,12 +176,15 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
     page = 1,
     limit = 10,
     timezone = "Asia/Karachi",
-    radiusKm = 0,
     advanceFilters = {},
+    userId,
+    sort = "asc", // asc = oldest first, desc = latest first
   } = queryData || {};
 
   const {
     time,
+    distanceFrom = 0,
+    distanceTo = 50,
     dateFrom,
     dateTo,
     categories = [],
@@ -192,16 +195,13 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
 
   longitude = parseFloat(longitude);
   latitude = parseFloat(latitude);
-  radiusKm = !radiusKm || radiusKm === "" ? 20037.5 : parseFloat(radiusKm);
-  const radiusInMeters = radiusKm * 1000;
+  const distanceToMeters = distanceTo * 1000;
+  const distanceFromMeters = distanceFrom * 1000;
   const skip = Math.max(0, (page - 1) * limit);
   const now = getCurrentDateInTimezone({ timezone });
 
   if (typeof longitude !== "number" || typeof latitude !== "number") {
     throw new Error("Valid user longitude and latitude are required");
-  }
-  if (radiusKm <= 0) {
-    throw new Error("Radius must be greater than 0");
   }
 
   // --- Time / Date Range Filter ---
@@ -240,7 +240,7 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
     dateFilter = { "schedule.endDateTime": { $gte: now } };
   }
 
-  // --- Categories / Genre / tags filter ---
+  // --- Categories / Genre / Tags Filter ---
   const categoryFilter = categories.length
     ? { "basicInfo.categories": { $in: categories.map((id) => new mongoose.Types.ObjectId(id)) } }
     : {};
@@ -265,11 +265,11 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
           key: "basicInfo.venueLocation",
           distanceField: "distance",
           spherical: true,
-          maxDistance: radiusInMeters,
+          maxDistance: distanceToMeters,
           query: combinedFilter,
         },
       },
-      // Lookup venues to filter by venueType
+      ...(distanceFrom > 0 ? [{ $match: { distance: { $gte: distanceFromMeters } } }] : []),
       {
         $lookup: {
           from: "venues",
@@ -285,7 +285,6 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
         },
       },
       { $unwind: "$venue" },
-      { $project: { schedule: 1, basicInfo: 1, distance: 1, venue: 1 } },
       {
         $lookup: {
           from: "organizations",
@@ -295,46 +294,38 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
         },
       },
       { $unwind: { path: "$basicInfo.organization", preserveNullAndEmptyArrays: true } },
-      { $sort: { distance: 1 } },
-      { $skip: skip },
-      { $limit: parseInt(limit) },
-    ];
-
-    const events = await eventRepo.aggregateEvents(pipeline);
-
-    // Count total
-    const totalCountPipeline = [
+      // --- Sort by event start date ---
+      { $sort: { "schedule.startDateTime": sort === "desc" ? -1 : 1 } },
       {
-        $geoNear: {
-          near: { type: "Point", coordinates: [longitude, latitude] },
-          key: "basicInfo.venueLocation",
-          distanceField: "distance",
-          spherical: true,
-          maxDistance: radiusInMeters,
-          query: combinedFilter,
+        $facet: {
+          events: [{ $skip: skip }, { $limit: parseInt(limit) }],
+          totalCount: [{ $count: "total" }],
         },
       },
-      {
-        $lookup: {
-          from: "venues",
-          localField: "basicInfo.venue",
-          foreignField: "_id",
-          as: "venue",
-          pipeline: [
-            ...(venueTypes.length
-              ? [{ $match: { venueType: { $in: venueTypes.map((id) => new mongoose.Types.ObjectId(id)) } } }]
-              : []),
-          ],
-        },
-      },
-      { $unwind: "$venue" },
-      { $count: "total" },
     ];
 
-    const totalResult = await eventRepo.aggregateEvents(totalCountPipeline);
-    const totalFiltered = totalResult[0]?.total || 0;
+    const result = await eventRepo.aggregateEvents(pipeline);
+    const events = result[0]?.events || [];
+    const totalFiltered = result[0]?.totalCount[0]?.total || 0;
 
-    const formattedEvents = events.map((event) => formatEventResponse(event, { timezone }));
+    // Get favorite events
+    let favoriteSet = new Set();
+    if (userId && events.length > 0) {
+      const eventIds = events.map((e) => e._id);
+      const userFavorites = await Favorites.find({
+        user: userId,
+        targetType: "event",
+        targetId: { $in: eventIds },
+      }).select("targetId");
+      favoriteSet = new Set(userFavorites.map((f) => f.targetId.toString()));
+    }
+
+    const formattedEvents = events.map((event) =>
+      formatEventResponse(
+        { ...event, isFavorite: favoriteSet.has(event._id.toString()) },
+        { timezone }
+      )
+    );
 
     const meta = generateMeta(page, limit, totalFiltered);
     return { events: formattedEvents, meta };
@@ -342,6 +333,8 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
     throw new Error(`Failed to fetch nearby events: ${error.message}`);
   }
 };
+
+
 
 
 

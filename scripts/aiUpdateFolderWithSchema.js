@@ -3,8 +3,8 @@ const path = require("path");
 const OpenAI = require("openai");
 
 // ---------------- CONFIG ----------------
-const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/admin/bannerControl";
-const schemaFileName = "BannerControls.js"; // schema reference file
+const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/admin/statusBadges";
+const schemaFileName = "StatusBadges.js"; // schema reference file
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 if (!OPENAI_API_KEY) {
@@ -63,43 +63,31 @@ Update the following file "${fileName}" according to this schema.
 
 follow the schema strictly as we have single object instead of objects array.
 const mongoose = require("mongoose");
-const { getFullImageUrl } = require("../../helperUtils/imageHelper");
 
-const bannerControlsSchema = new mongoose.Schema(
+const statusBadgesSchema = new mongoose.Schema(
   {
+    image: {
+      type: String,
+      default: "",
+    },
+    backgroundImage: {
+      type: String,
+      default: "",
+    },
     title: {
       type: String,
       trim: true,
       required: true,
       default: "",
     },
-    image: {
-      type: String,
-      default: "",
+    entryPoints: {
+      type: Number,
+      default: 0,
     },
-
-    type: {
-      type: String,
-      enum: ["User", "Event", "LoyaltyProgram"],
-      default: "User",
+    retainPoints: {
+      type: Number,
+      default: 0,
     },
-
-    // internal field that holds the actual model name used for refPath
-    // LoyaltyProgram should reference the User model (difference is only for UI)
-    objectModel: {
-      type: String,
-      default: function () {
-        return this.type === "LoyaltyProgram" ? "User" : this.type;
-      },
-      select: false, // hide by default in queries
-    },
-
-    // object refs the model name stored in 
-    object: {
-      type: mongoose.Schema.Types.ObjectId,
-      refPath: "objectModel",
-    },
-
     status: {
       type: String,
       enum: ["active", "inactive", "deleted"],
@@ -112,14 +100,14 @@ const bannerControlsSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    toJSON: { virtuals: true, transform: transformDoc },
-    toObject: { virtuals: true, transform: transformDoc },
   }
 );
 
-const BannerControls = mongoose.model("BannerControls", bannerControlsSchema);
 
-module.exports = BannerControls;
+const StatusBadges = mongoose.model("StatusBadges", statusBadgesSchema);
+
+module.exports = StatusBadges;
+
 File content
 ${fileContent}
 `;

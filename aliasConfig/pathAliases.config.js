@@ -22,4 +22,6 @@ module.exports = {
     "@ClubCollaborationModel": "backend/commonModules/loyalty/clubCollaborations/ClubCollaborations.js",
     "@TicketingsModel": "backend/commonModules/ticketing/TicketingsModel.js",
     "@ReservationsModel": "backend/commonModules/reservations/Reservation.js"
+    "@OrdersModel": "backend/commonModules/menuItemsAndOrders/orders.js",
+
 };

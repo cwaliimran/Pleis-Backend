@@ -24,5 +24,9 @@ router.use("/loyalty/promotions", require("../app/loyalty/promotions/promotionsR
 
 router.use("/users", require("../app/usersManagement/usersRoutes"));
 
+//menu items
+router.use("/menu/items", require("../app/menuItemsAndOrdering/menuItems/menuItemsRoutes"));
+router.use("/menu/orders", require("../app/menuItemsAndOrdering/orders/orderRoutes"));
+
 
 module.exports = router;
