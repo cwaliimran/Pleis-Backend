@@ -14,7 +14,7 @@ const {
   availableReservations,
   maxCapacityPerReservation,
   conditionType,
-amount,
+  amount,
   ticketType,
   customText,
   taxPercentage,
@@ -23,7 +23,17 @@ amount,
   status,
   organizationId
 } = req.body;
+
 const userId = req.user._id;
+if (conditionType === "minimumSpendOnLocation") {
+  if (!amount && !customText) {
+     return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "either_amount_or_customText_must_be_provided_when_conditionType_is_'minimumSpendOnLocation'",
+      });
+  }
+}
 if (
   !validateParams(req, res, {
     rawData: [
@@ -35,11 +45,26 @@ if (
       "needsConfirmation",
       "status",
       "organizationId",
-      "amount"
-
     ],
   })
 ) return;
+if (conditionType == "fixedPrice" || conditionType == "prepayOption") {
+  if (
+    !validateParams(req, res, {
+      rawData: [
+        "title", 
+        "availableReservations", 
+        "maxCapacityPerReservation",
+        "conditionType", 
+        "taxPercentage",
+        "needsConfirmation",
+        "status",
+        "organizationId",
+        "amount"
+      ],
+    })
+  ) return;
+}
 
   let data = {
     userId,
@@ -84,9 +109,20 @@ title,
 
 const getReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range ,organizationsId} = req.query;
+  const { keyword, status = "active", date, range ,organizationsId , companyId} = req.query;
   try {
-    const userId = req.user._id;
+if (
+  (!companyId || companyId === "undefined" || companyId === "null") && 
+  (!organizationsId || !Array.isArray(JSON.parse(organizationsId)) || JSON.parse(organizationsId).length === 0)
+) {
+  return sendResponse({
+    res,
+    statusCode: 400,
+    translationKey: "companyId_or_organizationsId_is_required",
+  });
+}
+
+    const userId = companyId;
     const timezone = req.user.timezone;
     const { reservations, meta } = await reservationService.getReservations({
         timezone,

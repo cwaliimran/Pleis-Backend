@@ -34,9 +34,17 @@ const getReservations = async ({ timezone,page, limit, keyword, status, userId, 
 
 const updateReservation = async (id, data) => {
   const Reservation = await ReservationRepo.findReservationById(id);
-    if (Reservation.conditionType !== data.conditionType && (data.amount === undefined || data.amount === null) &&! (data.conditionType === "ticketRequirement" || data.conditionType === "noCondition"|| data.conditionType === "customText")) {
-    return { error: "amount_is_required_when_conditionType_changes." };
+if (Reservation.conditionType !== data.conditionType) { 
+  if (data.conditionType === "minimumSpendOnLocation") {
+    if (!(data.amount || data.customText)) {
+      return { error: "amount_or_customText_is_required_when_conditionType_changes_to_minimumSpendOnLocation." };
+    }
   }
+  else if (!data.amount) {
+    return { error: "amount_is_required_when_conditionType_changes_and_is_not_minimumSpendOnLocation." };
+  }
+}
+
       if (data.conditionType == "ticketRequirement" && (data.ticketType === undefined || data.ticketType === null) ) {
     return { error: "ticket_type_is_required_when_conditionType_is_ticketRequirement." };
   }
