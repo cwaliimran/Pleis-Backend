@@ -114,8 +114,14 @@ const formatEventResponse = (eventObject, options = {}) => {
       });
     }
     if (Array.isArray(org.otherInfo?.galleryMedia)) {
-      org.otherInfo.galleryMedia.forEach((g) => {
-        if (g.name) g.url = getFullImageUrl(g.name);
+      // Convert galleryMedia items to direct URL strings
+      org.otherInfo.galleryMedia = org.otherInfo.galleryMedia.map((item) => {
+      if (typeof item === "string") {
+        return getFullImageUrl(item);
+      } else if (item && typeof item === "object" && item.name) {
+        return getFullImageUrl(item.name);
+      }
+      return item;
       });
     }
     if (org.operatingHours) {

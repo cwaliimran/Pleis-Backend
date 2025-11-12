@@ -66,6 +66,27 @@ const getEvents = async ({ page, limit, keyword, status, creator, startDate, end
   };
 };
 
+const getMinimalEventsInfo = async ({ organization, timezone }) => {
+  const query = {
+    status: "active"
+  };
+  if (organization) {
+    query["basicInfo.organization"] = organization;
+  }
+  const [events] =
+    await Promise.all([
+      eventRepo.getMinimalEventsWithFilters(
+        query,
+      ),
+    ]);
+
+  let formattedEvents = events?.map(event => formatEventResponse(event, { timezone }));
+
+  return {
+    events: formattedEvents,
+  };
+};
+
 const getPublicEvents = async ({ page, limit, keyword, timezone = "Asia/Karachi" }) => {
   const query = { status: "active" };
   if (keyword) {
@@ -267,5 +288,6 @@ module.exports = {
   deleteEvent,
   getPublicEvents,
   getEventDetails,
-  updateEventsWithVenueLocation
+  updateEventsWithVenueLocation,
+  getMinimalEventsInfo
 };

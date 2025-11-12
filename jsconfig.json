@@ -67,6 +67,9 @@
       ],
       "@TicketingsModel": [
         "backend/commonModules/ticketing/TicketingsModel.js"
+      ],
+      "@OrdersModel": [
+        "backend/commonModules/menuItemsAndOrders/orders.js"
       ]
     }
   },

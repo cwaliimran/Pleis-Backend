@@ -57,7 +57,7 @@ const createTicketing = async (req, res) => {
   }
 
   // Timing slots validation
-  if (data.timingSlots?.enabled) {
+  if (data.timingSlots?.enabled === true) {
     const slots = data.timingSlots.dateTimeSlots || [];
 
     if (!Array.isArray(slots) || slots.length === 0) {
@@ -112,6 +112,32 @@ const createTicketing = async (req, res) => {
         slot.endTime = endUtc;
       }
     }
+  }else{
+    //don't check for empty array if timingSlots is disabled only apply format conversion
+      const slots = data.timingSlots.dateTimeSlots || [];
+      for (const dateBlock of slots) {
+        if (!dateBlock.date) continue;
+
+        for (const slot of dateBlock.timeSlots) {
+          if (!slot.startTime || !slot.endTime) continue;
+
+          // Convert to UTC DateTime strings
+          const startUtc = convertTimezoneToUtc(
+            `${dateBlock.date} ${slot.startTime}`,
+            timezone,
+            "YYYY-MM-DD hh:mm A"
+          );
+          const endUtc = convertTimezoneToUtc(
+            `${dateBlock.date} ${slot.endTime}`,
+            timezone,
+            "YYYY-MM-DD hh:mm A"
+          );
+
+          // Replace in object
+          slot.startTime = startUtc;
+          slot.endTime = endUtc;
+        }
+      }
   }
 
   // Transform timeSensitivePricing date fields to UTC

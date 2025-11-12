@@ -18,6 +18,11 @@ const getEventsWithFilters = async (query, skip, limit) => {
     .skip(skip)
     .limit(limit);
 };
+// Get all with filters
+const getMinimalEventsWithFilters = async (query) => {
+  return Events.find(query).select("basicInfo.title schedule")
+  .sort({ createdAt: -1 })
+};
 
 
 
@@ -87,5 +92,6 @@ module.exports = {
   findByIdAndUpdate,
   updateMany,
   findEventByNanoid,
-  getEventsCounts
+  getEventsCounts,
+  getMinimalEventsWithFilters
 };

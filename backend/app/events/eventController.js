@@ -60,13 +60,15 @@ const getNearbyEvents = async (req, res) => {
 }
 
 const getNearbyEventsWithAdvanceFilters = async (req, res) => {
-  const { latitude, longitude, radiusKm = 50 } = req.query;
+  const { latitude, longitude } = req.query;
   const { page, limit } = parsePaginationParams(req);
-  let { timezone } = req.user;
+  let { timezone, _id: userId } = req.user;
 
   const { sort = "asc", advanceFilters = {} } = req.body;
   const {
     time,
+    distanceFrom = 0,
+    distanceTo = 50,
     dateFrom,
     dateTo,
     categories = [],
@@ -82,10 +84,10 @@ const getNearbyEventsWithAdvanceFilters = async (req, res) => {
     objectIdFields: [],
   };
 
-  // Validate sort
-  if (sort && !["asc", "desc"].includes(sort)) {
-    return sendResponse({ res, statusCode: 400, translationKey: "invalid_sort_order" });
-  }
+  // // Validate sort
+  // if (sort && !["asc", "desc"].includes(sort)) {
+  //   return sendResponse({ res, statusCode: 400, translationKey: "invalid_sort_order" });
+  // }
 
   // Validate time filter
   const validTimes = ["live", "today", "tomorrow", "thisWeek", "all"];
@@ -113,13 +115,15 @@ const getNearbyEventsWithAdvanceFilters = async (req, res) => {
   const queryData = {
     latitude,
     longitude,
-    radiusKm,
     page,
     limit,
     timezone,
     sort,
+    userId,
     advanceFilters: {
       time,
+      distanceFrom,
+      distanceTo,
       dateFrom,
       dateTo,
       categories,
@@ -176,7 +180,7 @@ const getEventDetails = async (req, res) => {
       eventService.getEventDetails(userLocation, userId, id, timezone),
       isFavorited(userId, id, 'event'),
     ]);
-    if (!data.event) {
+    if (!data?.event) {
       return sendResponse({
         res,
         statusCode: 404,
