@@ -5,7 +5,7 @@
   "main": "backend/server.js",
   "scripts": {
     "test": "mocha test/**/*.test.js --timeout 10000",
-    "start": "node backend/server.js",
+    "start": "nodemon backend/server.js",
     "update:alias": "node aliasConfig/update-aliases.js",
     "localhost": "NODE_ENV=localhost node backend/server.js",
     "dev": "NODE_ENV=dev nodemon backend/server.js",
@@ -36,6 +36,7 @@
     "@ListingModel": "backend/commonModules/loyalty/listings/Listing.js",
     "@ClubCollaborationModel": "backend/commonModules/loyalty/clubCollaborations/ClubCollaborations.js",
     "@TicketingsModel": "backend/commonModules/ticketing/TicketingsModel.js",
+    "@ReservationsModel": "backend/commonModules/reservations/Reservation.js"
     "@OrdersModel": "backend/commonModules/menuItemsAndOrders/orders.js"
   },
   "keywords": [],
