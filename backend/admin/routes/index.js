@@ -37,6 +37,8 @@ router.use("/locations", require("../../shared/locations/routes"));
 //loyalty
 router.use("/loyalty", require("../loyalty/loyaltyRoutes")); 
 
+//status badges
+router.use("/status-badges", require("../statusBadges/statusBadgesRoutes"));
 
 
 module.exports = router;

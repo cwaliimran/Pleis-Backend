@@ -37,6 +37,7 @@ const getRecommendedItems = async (menuItemId, limit = 10) => {
   // Build query to find similar items
   const query = {
     _id: { $ne: new mongoose.Types.ObjectId(menuItemId) }, // exclude the current item
+    menu: menuItem.menu,
     status: "active",
     category: menuItem.category,
     // Use case-insensitive partial match for type
@@ -58,5 +59,5 @@ module.exports = {
   findMenuItemById,
   getMenuIdByOrganization,
   getRecommendedItems,
-  
+
 };
