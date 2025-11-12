@@ -196,20 +196,29 @@ title,
 
 const getReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range ,organizationsId , companyId} = req.query;
+  let { keyword, status = "active", date, eventId, organizationId } = req.query;
   try {
-if (
-  (!companyId || companyId === "undefined" || companyId === "null") && 
-  (!organizationsId || !Array.isArray(JSON.parse(organizationsId)) || JSON.parse(organizationsId).length === 0)
-) {
-  return sendResponse({
-    res,
-    statusCode: 400,
-    translationKey: "companyId_or_organizationsId_is_required",
-  });
-}
+    if (
+      !date ||
+      (!eventId && (eventId === "undefined" || eventId === "null")) &&
+      (!organizationId && (organizationId === "undefined" || organizationId === "null"))
+    ) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "date_and_eventId_or_organizationId_is_required",
+    });
+  }
+const userId = req.user._id;
+eventId, organizationId;
 
-    const userId = companyId;
+  if (eventId && eventId !== "undefined" && eventId !== "null") {
+    eventId = eventId;
+  } else if (organizationId && organizationId !== "undefined" && organizationId !== "null") {
+    organizationId = organizationId;
+  }
+  console.log("Event ID:", eventId);
+  console.log("Organization ID:", organizationId);
     const timezone = req.user.timezone;
     const { reservations, meta } = await reservationService.getReservations({
         timezone,
@@ -218,9 +227,9 @@ if (
       keyword,
       status,
       userId,
-      organizationsId,
+      eventId,
+      organizationId,
       date,
-      range
     });
 
     return sendResponse({

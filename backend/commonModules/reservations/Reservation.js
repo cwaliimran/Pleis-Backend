@@ -89,7 +89,26 @@ const ReservationsSchema = new mongoose.Schema(
       required: true,
       default: "",
     },
-
+ timingSlots: {
+      enabled: {
+        type: Boolean,
+        default: false,
+      },
+      dateTimeSlots: {
+        type: [
+          {
+            date: { type: Date, },
+            timeSlots: [
+              {
+                startTime: { type: Date, },
+                endTime: { type: Date, },
+              }
+            ]
+          }
+        ],
+        default: [],
+      },
+    },
     needsConfirmation: {
       type: Boolean,
       required: true,

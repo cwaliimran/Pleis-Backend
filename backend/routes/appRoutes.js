@@ -29,4 +29,8 @@ router.use("/menu/items", require("../app/menuItemsAndOrdering/menuItems/menuIte
 router.use("/menu/orders", require("../app/menuItemsAndOrdering/orders/orderRoutes"));
 
 
+// reservatio
+router.use("/reservations", require("../app/reservations/reservationRoutes"));
+
+
 module.exports = router;
