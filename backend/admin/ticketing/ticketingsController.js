@@ -18,9 +18,9 @@ const createTicketing = async (req, res) => {
     objectIdFields: ["event"],
   };
 
-  if(data?.timingSlots?.enabled == false){
+  if (data?.timingSlots?.enabled == false) {
     validateData.rawData.push("quantity");
-  }else{
+  } else {
     // quantity is required for each slot when timingSlots is enabled
     validateData.rawData.push("timingSlots.dateTimeSlots");
   }
@@ -31,15 +31,15 @@ const createTicketing = async (req, res) => {
     validateData.dateFields = {};
 
     if (earlyBird?.endDate) {
-      validateData.dateFields["timeSensitivePricing.earlyBird.endDate"] = "YYYY-MM-DD";
+      validateData.dateFields = { "timeSensitivePricing.earlyBird.endDate": "YYYY-MM-DD" };
     }
     if (lastMinute?.startDate) {
-      validateData.dateFields["timeSensitivePricing.lastMinute.startDate"] = "YYYY-MM-DD";
+      validateData.dateFields = { "timeSensitivePricing.lastMinute.startDate": "YYYY-MM-DD" };
     }
   }
 
   if (data.status == "scheduled") {
-    validateData.dateFields["scheduledPublishAt"] = "YYYY-MM-DD hh:mm A"
+    validateData.dateFields = { scheduledPublishAt: "YYYY-MM-DD hh:mm A" };
   }
 
   // Validate required fields first
@@ -112,32 +112,32 @@ const createTicketing = async (req, res) => {
         slot.endTime = endUtc;
       }
     }
-  }else{
+  } else {
     //don't check for empty array if timingSlots is disabled only apply format conversion
-      const slots = data.timingSlots.dateTimeSlots || [];
-      for (const dateBlock of slots) {
-        if (!dateBlock.date) continue;
+    const slots = data.timingSlots.dateTimeSlots || [];
+    for (const dateBlock of slots) {
+      if (!dateBlock.date) continue;
 
-        for (const slot of dateBlock.timeSlots) {
-          if (!slot.startTime || !slot.endTime) continue;
+      for (const slot of dateBlock.timeSlots) {
+        if (!slot.startTime || !slot.endTime) continue;
 
-          // Convert to UTC DateTime strings
-          const startUtc = convertTimezoneToUtc(
-            `${dateBlock.date} ${slot.startTime}`,
-            timezone,
-            "YYYY-MM-DD hh:mm A"
-          );
-          const endUtc = convertTimezoneToUtc(
-            `${dateBlock.date} ${slot.endTime}`,
-            timezone,
-            "YYYY-MM-DD hh:mm A"
-          );
+        // Convert to UTC DateTime strings
+        const startUtc = convertTimezoneToUtc(
+          `${dateBlock.date} ${slot.startTime}`,
+          timezone,
+          "YYYY-MM-DD hh:mm A"
+        );
+        const endUtc = convertTimezoneToUtc(
+          `${dateBlock.date} ${slot.endTime}`,
+          timezone,
+          "YYYY-MM-DD hh:mm A"
+        );
 
-          // Replace in object
-          slot.startTime = startUtc;
-          slot.endTime = endUtc;
-        }
+        // Replace in object
+        slot.startTime = startUtc;
+        slot.endTime = endUtc;
       }
+    }
   }
 
   // Transform timeSensitivePricing date fields to UTC
@@ -226,6 +226,40 @@ const getTicketings = async (req, res) => {
   }
 };
 
+const getOrganizationTicketings = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  const { keyword, status, date } = req.query;
+  const { id: organization } = req.params;
+  const { timezone } = req.user;
+
+  try {
+    const { ticketings, meta } = await ticketingsService.getOrganizationTicketings({
+      timezone,
+      page,
+      limit,
+      keyword,
+      status,
+      date,
+      organization,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "ticketings_fetched_successfully",
+      data: ticketings,
+      meta,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+
 const getTicketingDetails = async (req, res) => {
   const { id } = req.params;
   const { timezone } = req.user;
@@ -292,16 +326,15 @@ const updateTicketing = async (req, res) => {
     validateData.dateFields = {};
 
     if (earlyBird?.endDate) {
-      validateData.dateFields["timeSensitivePricing.earlyBird.endDate"] = "YYYY-MM-DD";
+      validateData.dateFields = { "timeSensitivePricing.earlyBird.endDate": "YYYY-MM-DD" };
     }
     if (lastMinute?.startDate) {
-      validateData.dateFields["timeSensitivePricing.lastMinute.startDate"] = "YYYY-MM-DD";
+      validateData.dateFields = { "timeSensitivePricing.lastMinute.startDate": "YYYY-MM-DD" };
     }
   }
 
   if (data.status == "scheduled") {
-    validateData.rawData.push("scheduledPublishAt");
-    validateData.dateFields["scheduledPublishAt"] = "YYYY-MM-DD hh:mm A"
+    validateData.dateFields = { scheduledPublishAt: "YYYY-MM-DD hh:mm A" };
   }
 
   // --- Run basic validations ---
@@ -483,6 +516,7 @@ const deleteTicketing = async (req, res) => {
 module.exports = {
   createTicketing,
   getTicketings,
+  getOrganizationTicketings,
   updateTicketing,
   deleteTicketing,
   getTicketingDetails,

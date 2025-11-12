@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const { customAlphabet } = require("nanoid");
+const generateOrderId = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 6);
 
 const OrderItemSchema = new mongoose.Schema({
     menuItem: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItems" },
@@ -9,6 +11,13 @@ const OrderItemSchema = new mongoose.Schema({
 
 const OrdersSchema = new mongoose.Schema(
     {
+        orderNumber: {
+            type: String,
+            unique: true,
+            index: true,
+            default: () => `ORD-${generateOrderId()}`,
+        },
+        organization: { type: mongoose.Schema.Types.ObjectId, ref: "Organizations", required: true },
         user: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true },
         items: [OrderItemSchema],
         totalPrice: { type: Number, required: true },
@@ -17,12 +26,12 @@ const OrdersSchema = new mongoose.Schema(
             enum: ["pending", "confirmed", "completed", "cancelled"],
             default: "pending",
         },
-        deliveryAddress: { type: String, required: true },
+        notes: { type: String, required: true },
         paymentMethod: {
             type: String, required: true,
-             enum: ["applePay", "card", "cash", "payLater"], default: "card"
+            enum: ["applePay", "card", "cash", "payLater"], default: "card"
         },
-        pickupType: { type: String, enum: ["counter", "tableService"], default: "counter" },
+        pickupType: { type: String, enum: ["counter", "tableService", "togo"], default: "counter" },
         tableNumber: {
             type: String,
             required: function () { return this.pickupType === "tableService"; },

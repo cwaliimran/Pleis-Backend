@@ -9,6 +9,10 @@ function menuItemOrderFormatter(order, timezone) {
 
   const obj = typeof order.toObject === "function" ? order.toObject() : order;
 
+  if (obj.organization && obj.organization.basicInfo && obj.organization.basicInfo.media) {
+    obj.organization.basicInfo.media.logo = getFullImageUrl(obj.organization.basicInfo.media.logo || "noimage.png");
+  }
+
   if (Array.isArray(obj.items)) {
     obj.items = obj.items.map((item) => {
       if (item.menuItemSnapShot) {

@@ -1,4 +1,5 @@
 const { generateMeta } = require("../../helperUtils/responseUtil");
+const { getEventIdsByOrganization } = require("../events/eventRepository");
 const { formatTicketing } = require("./fomatter/formatTicketing");
 const ticketingRepo = require("./ticketingsRepository");
 
@@ -181,10 +182,57 @@ const deleteTicketing = async (id) => {
   return true;
 };
 
+const getOrganizationTicketings = async ({ timezone, page, limit, keyword, status, date, organization }) => {
+
+  const organizationEvents = await getEventIdsByOrganization(organization);
+  const eventIds = organizationEvents.map(event => event._id);
+
+  const andConditions = [];
+  andConditions.push({ event: { $in: eventIds } });
+
+  if (date) {
+    andConditions.push({
+      createdAt: {
+        $gte: new Date(date),
+        $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
+      },
+    });
+  }
+
+  if (status) {
+    andConditions.push({ status });
+  } else {
+    andConditions.push({ status: { $ne: "deleted" } });
+  }
+
+  if (keyword) {
+    andConditions.push({
+      $or: [{ title: { $regex: keyword, $options: "i" } }],
+    });
+  }
+
+  const query = andConditions.length ? { $and: andConditions } : {};
+  const [ticketings, counts] = await Promise.all([
+    ticketingRepo.getTicketingsWithFilters(query, page, limit),
+    ticketingRepo.getCounts(query),
+  ]);
+
+  const formattedTicketings = ticketings.map((item) => formatTicketing(timezone, item));
+  const { totalFiltered, total, active, inactive } = counts;
+
+  const meta = {
+    ...generateMeta(page, limit, totalFiltered),
+    ticketingsCount: { total, active, inactive },
+  };
+
+  return { ticketings: formattedTicketings, meta };
+};
+
 module.exports = {
   createTicketing,
   getTicketings,
   getTicketingDetails,
   updateTicketing,
   deleteTicketing,
+  getOrganizationTicketings
 };

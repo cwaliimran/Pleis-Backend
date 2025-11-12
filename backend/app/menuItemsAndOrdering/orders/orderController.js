@@ -1,8 +1,8 @@
 const orderService = require("./orderService");
-const { sendResponse, getReadableErrorMessage, validateParams } = require("@utils/responseUtil");
+const { sendResponse, getReadableErrorMessage, validateParams, parsePaginationParams } = require("@utils/responseUtil");
 
 const placeOrder = async (req, res) => {
-  const { items, deliveryAddress, paymentMethod, pickupType,
+  const { items, notes, paymentMethod, pickupType,
     tableNumber, } = req.body;
   try {
 
@@ -11,10 +11,10 @@ const placeOrder = async (req, res) => {
         "items",
         "pickupType",
         "paymentMethod",
-        "deliveryAddress",
+        "notes",
       ],
       enumFields: {
-        pickupType: ["counter", "tableService"],
+        pickupType: ["counter", "tableService", "togo"],
         paymentMethod: ["applePay", "card", "cash", "payLater"],
       },
     }
@@ -30,7 +30,7 @@ const placeOrder = async (req, res) => {
       userId: req.user._id,
       timezone: req.user.timezone,
       items,
-      deliveryAddress,
+      notes,
       paymentMethod,
       pickupType,
       tableNumber,
@@ -84,12 +84,17 @@ const getOrderDetails = async (req, res) => {
 
 const getUserOrders = async (req, res) => {
   try {
-    const { orders } = await orderService.getUserOrders(req.user._id);
+      const { page, limit } = parsePaginationParams(req);
+    
+    const { orders, meta } = await orderService.getUserOrders(req.user._id, page, limit);
+
+
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "orders_fetched_successfully",
       data: orders,
+      meta,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);

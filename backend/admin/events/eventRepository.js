@@ -1,10 +1,27 @@
 // repositories/eventRepository.js
 const { Events } = require("@EventsModel");
+const TicketingsModel = require("@TicketingsModel");
 const { getModelCounts, } = require('@dbUtils/queryUtil');
 // Create
-const createEvent = async (data) => {
-  const event = new Events(data);
-  return await event.save();
+const createEvent = async (data, ticketingData) => {
+  const session = await Events.startSession();
+  session.startTransaction();
+  try {
+    let event = new Events(data);
+    event = await event.save({ session });
+    if (ticketingData) {
+      ticketingData.event = event._id;
+      const ticketing = new TicketingsModel(ticketingData);
+      await ticketing.save({ session });
+    }
+    await session.commitTransaction();
+    session.endSession();
+    return event;
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    throw err;
+  }
 };
 
 // Get all with filters
@@ -21,7 +38,7 @@ const getEventsWithFilters = async (query, skip, limit) => {
 // Get all with filters
 const getMinimalEventsWithFilters = async (query) => {
   return Events.find(query).select("basicInfo.title schedule")
-  .sort({ createdAt: -1 })
+    .sort({ createdAt: -1 })
 };
 
 
@@ -82,6 +99,10 @@ const findEventByNanoid = async (nanoid) => {
   return Events.findOne({ publicId: nanoid }).select("_id");
 }
 
+const getEventIdsByOrganization = async (organization) => {
+  return Events.find({ "basicInfo.organization": organization }).select("_id");
+}
+
 module.exports = {
   createEvent,
   getEventsWithFilters,
@@ -93,5 +114,6 @@ module.exports = {
   updateMany,
   findEventByNanoid,
   getEventsCounts,
-  getMinimalEventsWithFilters
+  getMinimalEventsWithFilters,
+  getEventIdsByOrganization
 };

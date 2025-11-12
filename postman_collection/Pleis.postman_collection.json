@@ -1904,6 +1904,138 @@
 									]
 								},
 								{
+									"name": "tags - genre",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}tags/types/grouped",
+											"host": [
+												"{{url}}tags"
+											],
+											"path": [
+												"types",
+												"grouped"
+											],
+											"query": [
+												{
+													"key": "keyword",
+													"value": "night",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "tags",
+											"originalRequest": {
+												"method": "GET",
+												"header": [],
+												"url": {
+													"raw": "{{url}}tags/global?page=1&limit=10",
+													"host": [
+														"{{url}}tags"
+													],
+													"path": [
+														"global"
+													],
+													"query": [
+														{
+															"key": "keyword",
+															"value": "night",
+															"disabled": true
+														},
+														{
+															"key": "page",
+															"value": "1"
+														},
+														{
+															"key": "limit",
+															"value": "10"
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "Text",
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "501"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"1f5-ltW8je3glRGCwIXlZF5oY89QLb0\""
+												},
+												{
+													"key": "Date",
+													"value": "Wed, 15 Oct 2025 12:11:40 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Tags fetched successfully\",\n    \"data\": [\n        {\n            \"_id\": \"68ee33f1924370d02dbacc71\",\n            \"title\": \"festival\",\n            \"status\": \"active\",\n            \"type\": \"primary\",\n            \"pinned\": false,\n            \"createdAt\": \"2025-10-14T11:28:49.759Z\",\n            \"updatedAt\": \"2025-10-14T11:28:49.759Z\",\n            \"__v\": 0\n        },\n        {\n            \"_id\": \"68ee33e1924370d02dbacc6e\",\n            \"title\": \"healing head\",\n            \"status\": \"active\",\n            \"type\": \"primarya\",\n            \"pinned\": false,\n            \"createdAt\": \"2025-10-14T11:28:33.694Z\",\n            \"updatedAt\": \"2025-10-14T11:28:33.694Z\",\n            \"__v\": 0\n        }\n    ],\n    \"meta\": {\n        \"currentPage\": 1,\n        \"totalPages\": 1,\n        \"totalRecords\": 2,\n        \"limit\": 10\n    }\n}"
+										}
+									]
+								},
+								{
 									"name": "add/update interests",
 									"request": {
 										"method": "POST",
@@ -2117,7 +2249,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"sort\": \"asc\", //asc/desc\n    \"advanceFilters\": {\n        \"time\": \"live\", //live, today, thisWeek\n        \"dateFrom\": \"2025-11-13\", //YYYY-MM-DD\n        \"dateTo\": \"2025-11-16\",\n        \"categories\": [\n            \"6911bd65d49fc086aabd254e\"\n        ],\n        \"venueTypes\": [\n            \"6911bb4922299f710c7a9441\"\n        ],\n        \"tags\": [\"6911bdc2d49fc086aabd25e2\"], // vies are tags\n        \"genre\": [] //are subtypes of tags\n    }\n}",
+									"raw": "{\n    \"sort\": \"desc\", //asc/desc\n    \"advanceFilters\": {\n        \"distanceFrom\":20,\n        \"distanceTo\":45555555\n        // ,\n        // \"time\": \"live\", //live, today, thisWeek\n        // \"dateFrom\": \"2025-11-13\", //YYYY-MM-DD\n        // \"dateTo\": \"2025-11-16\",\n        // \"categories\": [\n        //     \"6911bd65d49fc086aabd254e\"\n        // ],\n        // \"venueTypes\": [\n        //     \"6911bb4922299f710c7a9441\"\n        // ],\n        // \"tags\": [\"6911bdc2d49fc086aabd25e2\"], // vies are tags\n        // \"genre\": [] //are subtypes of tags\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -2125,14 +2257,13 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}app/events/nearby/?page=1&limit=10&latitude=31.5023621&longitude=74.426454&radiusKm=1000000",
+									"raw": "{{url}}app/events/nearby?page=1&limit=10&latitude=31.5023621&longitude=74.426454",
 									"host": [
 										"{{url}}app"
 									],
 									"path": [
 										"events",
-										"nearby",
-										""
+										"nearby"
 									],
 									"query": [
 										{
@@ -2150,11 +2281,6 @@
 										{
 											"key": "longitude",
 											"value": "74.426454"
-										},
-										{
-											"key": "radiusKm",
-											"value": "1000000",
-											"description": "km"
 										}
 									]
 								}
@@ -2215,7 +2341,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "690c9f974cf55e352d18b74e"
+											"value": "6911be7fd49fc086aabd2668"
 										}
 									]
 								}
@@ -3382,6 +3508,441 @@
 													"key": "keyword",
 													"value": "",
 													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "Menu and Ordering",
+					"item": [
+						{
+							"name": "Orders",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/menu/orders/?page=1&limit=10",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"menu",
+												"orders",
+												""
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "get details",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/menu/orders/:id",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"menu",
+												"orders",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "6914928ed4ab4bca5895f9f2"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"items\": [\n    {\n      \"menuItem\": \"6911d21601e061abb7bbc00b\",\n      \"quantity\": 2\n    },\n    {\n      \"menuItem\": \"6911c3cb6aca10eb719d6f9e\",\n      \"quantity\": 1\n    },\n    {\n      \"menuItem\": \"6911c3516aca10eb719d6f72\",\n      \"quantity\": 3\n    }\n  ],\n  \"pickupType\":\"tableService\", //counter, tableService, togo\n  \"tableNumber\":\"5\", //required in tableService case\n  \"notes\": \"No spice please.\",\n  \"paymentMethod\": \"card\" //\"applePay\", \"card\", \"cash\", \"payLater\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/menu/orders",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"menu",
+												"orders"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/menu/orders/:id",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"menu",
+												"orders",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": ""
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "pickup options",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/menu/items/pickup-options/:organization",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"menu",
+												"items",
+												"pickup-options",
+												":organization"
+											],
+											"variable": [
+												{
+													"key": "organization",
+													"value": "6911cc376aca10eb719d7322"
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Menu Items",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/menu/items?organization=6911cc376aca10eb719d7322",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"menu",
+												"items"
+											],
+											"query": [
+												{
+													"key": "organization",
+													"value": "6911cc376aca10eb719d7322"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "get details",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/menu/items/:id",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"menu",
+												"items",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "6911d21601e061abb7bbc00b"
 												}
 											]
 										}
@@ -10754,6 +11315,136 @@
 							]
 						},
 						{
+							"name": "get events minimal info",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/events/organization/:organizationId",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"events",
+										"organization",
+										":organizationId"
+									],
+									"variable": [
+										{
+											"key": "organizationId",
+											"value": "6911bc8b2280acc8015fe1e6"
+										}
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "get",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{url}}events/",
+											"host": [
+												"{{url}}events"
+											],
+											"path": [
+												""
+											],
+											"query": [
+												{
+													"key": "startDate",
+													"value": "2025-08-15",
+													"disabled": true
+												},
+												{
+													"key": "endDate",
+													"value": "2025-08-06",
+													"disabled": true
+												},
+												{
+													"key": "organization",
+													"value": "68bfbd72fdaea1e1b6b52acb",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "Text",
+									"header": [
+										{
+											"key": "X-Powered-By",
+											"value": "Express"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "Content-Length",
+											"value": "917"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"395-Mkd8hrDE5cy+44NT3U2qsdO7m6Q\""
+										},
+										{
+											"key": "Date",
+											"value": "Tue, 21 Oct 2025 11:31:30 GMT"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"message\": \"Events fetched successfully\",\n    \"data\": [\n        {\n            \"basicInfo\": {\n                \"title\": \"Summer Music Festival\",\n                \"description\": \"A fun-filled day of live music and food.\",\n                \"organization\": null,\n                \"venue\": null,\n                \"categories\": [],\n                \"tags\": [],\n                \"partnerOrganizer\": null,\n                \"mediaInfo\": {\n                    \"name\": \"event-banner.jpg\",\n                    \"type\": \"image\",\n                    \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/event-banner.jpg\"\n                }\n            },\n            \"schedule\": {\n                \"type\": \"oneTime\",\n                \"startDateTime\": \"2025-10-25 10:00 PM\",\n                \"endDateTime\": \"2025-10-26 11:00 PM\",\n                \"recurringDetails\": null\n            },\n            \"meta\": {\n                \"revenue\": 0,\n                \"views\": 0,\n                \"region\": \"\"\n            },\n            \"_id\": \"68de33b7bcddb74bfc2d9dd8\",\n            \"creator\": \"68d69157fbccb319035eb118\",\n            \"status\": \"active\",\n            \"createdAt\": \"2025-10-02T08:11:35.492Z\",\n            \"updatedAt\": \"2025-10-21T11:31:21.742Z\",\n            \"__v\": 0,\n            \"promotion\": {\n                \"isPromoted\": true,\n                \"promotedBy\": \"68d69157fbccb319035eb118\",\n                \"promotedAt\": \"2025-10-14T14:11:47.428Z\",\n                \"order\": 1\n            }\n        }\n    ],\n    \"meta\": {\n        \"currentPage\": 1,\n        \"totalPages\": 1,\n        \"totalRecords\": 1,\n        \"limit\": 10\n    }\n}"
+								}
+							]
+						},
+						{
 							"name": "get details",
 							"event": [
 								{
@@ -10844,7 +11535,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"type\": \"image\", //image or video\n            \"name\": \"event-banner.jpg\"\n        },\n        \"title\": \"Monday Fun day\",\n        \"description\": \"A fun-filled day of live music and food.\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"venue\": \"68d69359fbccb319035eb13b\",\n        \"categories\": [\"68f0d6b0a92f125fd26a5831\",\"68c028637c376b15157d9ecc\"],\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"6883208feec25d5f951a8c74\"\n        ]\n    },\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-10-27 10:00 AM\",\n        \"endDateTime\": \"2025-10-27 05:00 PM\"\n\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n\n        /*Ending on specific date*/\n        ,\n        \"recurringDetails\": {\n          \"isEnabled\": true,\n          \"frequency\": \"weekly\",\n          \"interval\": 1,\n          \"daysOfWeek\": [\"fri\"],\n          \"endType\": \"onDate\",\n          \"endDate\": \"2025-12-31\"\n        }\n        \n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    }\n}",
+									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"type\": \"image\", //image or video\n            \"name\": \"event-banner.jpg\"\n        },\n        \"title\": \"Monday Fun day\",\n        \"description\": \"A fun-filled day of live music and food.\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"venue\": \"691469d5167faf035385ce27\",\n        \"categories\": [\n            \"68f0d6b0a92f125fd26a5831\",\n            \"68c028637c376b15157d9ecc\"\n        ],\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"6883208feec25d5f951a8c74\"\n        ]\n    },\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-10-27 10:00 AM\",\n        \"endDateTime\": \"2025-10-27 05:00 PM\"\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n        /*Ending on specific date*/\n        ,\n        \"recurringDetails\": {\n            \"isEnabled\": true,\n            \"frequency\": \"weekly\",\n            \"interval\": 1,\n            \"daysOfWeek\": [\n                \"fri\"\n            ],\n            \"endType\": \"onDate\",\n            \"endDate\": \"2025-12-31\"\n        }\n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    },\n    \"ticketing\": {\n        \"title\": \"Standard\",\n        //\"quantity\": 200, // skip when timingSlots enabled\n        \"price\": 10,\n        \"taxPercentage\": 5,\n        \"event\": \"690c9f974cf55e352d18b74e\",\n        \"timingSlots\": {\n            \"enabled\": true,\n            \"dateTimeSlots\": [\n                {\n                    \"date\": \"2025-10-27\",\n                    \"timeSlots\": [\n                        {\n                            \"quantity\": \"10\",\n                            \"startTime\": \"02:00 PM\",\n                            \"endTime\": \"02:30 PM\"\n                        },\n                        {\n                            \"quantity\": \"5\",\n                            \"startTime\": \"12:30 PM\",\n                            \"endTime\": \"01:00 PM\"\n                        }\n                    ]\n                },\n                {\n                    \"date\": \"2025-10-27\",\n                    \"timeSlots\": [\n                        {\n                            \"quantity\": \"10\",\n                            \"startTime\": \"12:00 PM\",\n                            \"endTime\": \"12:30 PM\"\n                        },\n                        {\n                            \"quantity\": \"10\",\n                            \"startTime\": \"12:30 PM\",\n                            \"endTime\": \"01:00 PM\"\n                        }\n                    ]\n                }\n            ]\n        },\n        \"repeatable\": {\n            \"isRepeatable\": true,\n            \"visits\": 2\n        },\n        \"resaleProtection\": \"nameSurnamePid\",\n        \"transferFee\": 10,\n        \"timeSensitivePricing\": {\n            \"earlyBird\": {\n                \"endDate\": \"2025-12-20\",\n                \"discountedPrice\": 25\n            },\n            \"lastMinute\": {\n                \"startDate\": \"2025-12-28\",\n                \"discountedPrice\": 35\n            }\n        },\n        \"fastTrackEntry\": {\n            \"enabled\": true,\n            \"quantity\": 50,\n            \"extraPrice\": 15\n        },\n        \"requiresReservation\": {\n            \"enabled\": true,\n            \"type\": \"vip\"\n        },\n        \"status\": \"scheduled\", //\"active\", \"scheduled\", \"inactive\",\n        \"scheduledPublishAt\": \"2025-12-28 10:30 AM\"\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -11028,7 +11719,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}admin/ticketing?eventId=690c9f974cf55e352d18b74e",
+									"raw": "{{url}}admin/ticketing?eventId=69149fa4bef44f5456ed45d7",
 									"host": [
 										"{{url}}admin"
 									],
@@ -11038,7 +11729,198 @@
 									"query": [
 										{
 											"key": "eventId",
-											"value": "690c9f974cf55e352d18b74e"
+											"value": "69149fa4bef44f5456ed45d7"
+										}
+									]
+								}
+							},
+							"response": [
+								{
+									"name": "get details",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{url}}admin/ticketing?eventId=690c9f974cf55e352d18b74e",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"ticketing"
+											],
+											"query": [
+												{
+													"key": "eventId",
+													"value": "690c9f974cf55e352d18b74e"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "Text",
+									"header": [
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';script-src 'self' 'unsafe-inline';style-src 'self' 'unsafe-inline';img-src 'self' data:;connect-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';object-src 'none';script-src-attr 'none';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Embedder-Policy",
+											"value": "require-corp"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "X-RateLimit-Limit",
+											"value": "200"
+										},
+										{
+											"key": "X-RateLimit-Remaining",
+											"value": "189"
+										},
+										{
+											"key": "Date",
+											"value": "Fri, 07 Nov 2025 09:52:05 GMT"
+										},
+										{
+											"key": "X-RateLimit-Reset",
+											"value": "1762509663"
+										},
+										{
+											"key": "Vary",
+											"value": "Origin, Accept-Encoding"
+										},
+										{
+											"key": "Access-Control-Allow-Credentials",
+											"value": "true"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"d71-+JGN3hBMeqRLiduQQAY4mFOXmJE\""
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "br"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										},
+										{
+											"key": "Transfer-Encoding",
+											"value": "chunked"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"message\": \"Ticketings fetched successfully\",\n    \"data\": [\n        {\n            \"_id\": \"690dc0eea037dd8492b4ac6f\",\n            \"title\": \"Standard\",\n            \"quantity\": 200,\n            \"price\": 10,\n            \"taxPercentage\": 5,\n            \"event\": {\n                \"_id\": \"690c9f974cf55e352d18b74e\",\n                \"basicInfo\": {\n                    \"media\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/noimage.png\",\n                    \"title\": \"Glowingsoft Event\"\n                }\n            },\n            \"timingSlots\": {\n                \"enabled\": false,\n                \"dateTimeSlots\": []\n            },\n            \"repeatable\": {\n                \"isRepeatable\": true,\n                \"visits\": 2\n            },\n            \"resaleProtection\": \"nameSurnamePid\",\n            \"transferFee\": 10,\n            \"timeSensitivePricing\": {\n                \"earlyBird\": {\n                    \"endDate\": \"2025-12-20\",\n                    \"discountedPrice\": 25\n                },\n                \"lastMinute\": {\n                    \"startDate\": \"2025-12-28\",\n                    \"discountedPrice\": 35\n                }\n            },\n            \"fastTrackEntry\": {\n                \"enabled\": true,\n                \"quantity\": 50,\n                \"extraPrice\": 15\n            },\n            \"requiresReservation\": {\n                \"enabled\": true,\n                \"type\": \"vip\"\n            },\n            \"status\": \"active\",\n            \"createdAt\": \"2025-11-07T09:50:38.962Z\",\n            \"updatedAt\": \"2025-11-07T09:50:38.962Z\",\n            \"__v\": 0\n        },\n        {\n            \"_id\": \"690d9d4d9b66aabcd730fc73\",\n            \"title\": \"Early Bird Entry\",\n            \"quantity\": 100,\n            \"price\": 30,\n            \"taxPercentage\": 5,\n            \"event\": {\n                \"_id\": \"690c9f974cf55e352d18b74e\",\n                \"basicInfo\": {\n                    \"media\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/noimage.png\",\n                    \"title\": \"Glowingsoft Event\"\n                }\n            },\n            \"timingSlots\": {\n                \"enabled\": false,\n                \"dateTimeSlots\": [\n                    {\n                        \"date\": \"2025-11-07\",\n                        \"timeSlots\": [\n                            {\n                                \"startTime\": \"12:00 PM\",\n                                \"endTime\": \"12:30 PM\",\n                                \"_id\": \"690d9ebb9b66aabcd730fcd3\"\n                            },\n                            {\n                                \"startTime\": \"12:30 PM\",\n                                \"endTime\": \"01:00 PM\",\n                                \"_id\": \"690d9ebb9b66aabcd730fcd4\"\n                            }\n                        ],\n                        \"_id\": \"690d9ebb9b66aabcd730fcd2\"\n                    },\n                    {\n                        \"date\": \"2025-11-08\",\n                        \"timeSlots\": [\n                            {\n                                \"startTime\": \"12:00 PM\",\n                                \"endTime\": \"12:30 PM\",\n                                \"_id\": \"690d9ebb9b66aabcd730fcd6\"\n                            },\n                            {\n                                \"startTime\": \"12:30 PM\",\n                                \"endTime\": \"01:00 PM\",\n                                \"_id\": \"690d9ebb9b66aabcd730fcd7\"\n                            }\n                        ],\n                        \"_id\": \"690d9ebb9b66aabcd730fcd5\"\n                    }\n                ]\n            },\n            \"repeatable\": {\n                \"isRepeatable\": true,\n                \"visits\": 2\n            },\n            \"resaleProtection\": \"nameSurnamePid\",\n            \"transferFee\": 10,\n            \"timeSensitivePricing\": {\n                \"earlyBird\": {\n                    \"endDate\": \"2025-11-15\",\n                    \"discountedPrice\": 25\n                },\n                \"lastMinute\": {\n                    \"startDate\": \"2025-11-20\",\n                    \"discountedPrice\": 35\n                }\n            },\n            \"fastTrackEntry\": {\n                \"enabled\": true,\n                \"quantity\": 50,\n                \"extraPrice\": 15\n            },\n            \"requiresReservation\": {\n                \"enabled\": true,\n                \"type\": \"vip\"\n            },\n            \"status\": \"active\",\n            \"createdAt\": \"2025-11-07T07:18:37.214Z\",\n            \"updatedAt\": \"2025-11-07T07:24:43.429Z\",\n            \"__v\": 1\n        },\n        {\n            \"_id\": \"690d9d439b66aabcd730fc6a\",\n            \"title\": \"VIP Passes\",\n            \"quantity\": 5,\n            \"price\": 60,\n            \"taxPercentage\": 15,\n            \"event\": {\n                \"_id\": \"690c9f974cf55e352d18b74e\",\n                \"basicInfo\": {\n                    \"media\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/noimage.png\",\n                    \"title\": \"Glowingsoft Event\"\n                }\n            },\n            \"timingSlots\": {\n                \"enabled\": false,\n                \"dateTimeSlots\": [\n                    {\n                        \"date\": \"2025-11-07\",\n                        \"timeSlots\": [\n                            {\n                                \"startTime\": \"12:00 PM\",\n                                \"endTime\": \"12:30 PM\",\n                                \"_id\": \"690d9e7a9b66aabcd730fcb8\"\n                            },\n                            {\n                                \"startTime\": \"12:30 PM\",\n                                \"endTime\": \"01:00 PM\",\n                                \"_id\": \"690d9e7a9b66aabcd730fcb9\"\n                            }\n                        ],\n                        \"_id\": \"690d9e7a9b66aabcd730fcb7\"\n                    },\n                    {\n                        \"date\": \"2025-11-08\",\n                        \"timeSlots\": [\n                            {\n                                \"startTime\": \"12:00 PM\",\n                                \"endTime\": \"12:30 PM\",\n                                \"_id\": \"690d9e7a9b66aabcd730fcbb\"\n                            },\n                            {\n                                \"startTime\": \"12:30 PM\",\n                                \"endTime\": \"01:00 PM\",\n                                \"_id\": \"690d9e7a9b66aabcd730fcbc\"\n                            }\n                        ],\n                        \"_id\": \"690d9e7a9b66aabcd730fcba\"\n                    }\n                ]\n            },\n            \"repeatable\": {\n                \"isRepeatable\": true,\n                \"visits\": 2\n            },\n            \"resaleProtection\": \"nameSurnamePid\",\n            \"transferFee\": 10,\n            \"timeSensitivePricing\": {\n                \"earlyBird\": {\n                    \"endDate\": \"2025-11-15\",\n                    \"discountedPrice\": 25\n                },\n                \"lastMinute\": {\n                    \"startDate\": \"2025-11-20\",\n                    \"discountedPrice\": 35\n                }\n            },\n            \"fastTrackEntry\": {\n                \"enabled\": true,\n                \"quantity\": 50,\n                \"extraPrice\": 15\n            },\n            \"requiresReservation\": {\n                \"enabled\": true,\n                \"type\": \"vip\"\n            },\n            \"status\": \"active\",\n            \"createdAt\": \"2025-11-07T07:18:27.659Z\",\n            \"updatedAt\": \"2025-11-07T07:23:38.090Z\",\n            \"__v\": 3\n        }\n    ],\n    \"meta\": {\n        \"currentPage\": 1,\n        \"totalPages\": 1,\n        \"totalRecords\": 3,\n        \"limit\": 10,\n        \"ticketingsCount\": {\n            \"total\": 11,\n            \"active\": 5,\n            \"inactive\": 5\n        }\n    }\n}"
+								}
+							]
+						},
+						{
+							"name": "get organization events tickets",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/ticketing/organization/:id",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"ticketing",
+										"organization",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "6911c1b36fc7cbd864e74659"
 										}
 									]
 								}
@@ -11397,7 +12279,59 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"title\": \"Standard\",\n    //\"quantity\": 200, // skip when timingSlots enabled\n    \"price\": 10,\n    \"taxPercentage\": 5,\n    \"event\": \"690c9f974cf55e352d18b74e\",\n    \"timingSlots\": {\n        \"enabled\": true,\n        \"dateTimeSlots\": [\n            {\n                \"date\": \"2025-12-16\",\n                \"timeSlots\": [\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:00 PM\",\n                        \"endTime\": \"12:30 PM\"\n                    },\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:30 PM\",\n                        \"endTime\": \"01:00 PM\"\n                    }\n                ]\n            },\n            {\n                \"date\": \"2025-12-17\",\n                \"timeSlots\": [\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:00 PM\",\n                        \"endTime\": \"12:30 PM\"\n                    },\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:30 PM\",\n                        \"endTime\": \"01:00 PM\"\n                    }\n                ]\n            }\n        ]\n    },\n    \"repeatable\": {\n        \"isRepeatable\": true,\n        \"visits\": 2\n    },\n    \"resaleProtection\": \"nameSurnamePid\",\n    \"transferFee\": 10,\n    \"timeSensitivePricing\": {\n        \"earlyBird\": {\n            \"endDate\": \"2025-12-20\",\n            \"discountedPrice\": 25\n        },\n        \"lastMinute\": {\n            \"startDate\": \"2025-12-28\",\n            \"discountedPrice\": 35\n        }\n    },\n    \"fastTrackEntry\": {\n        \"enabled\": true,\n        \"quantity\": 50,\n        \"extraPrice\": 15\n    },\n    \"requiresReservation\": {\n        \"enabled\": true,\n        \"type\": \"vip\"\n    },\n    \"status\": \"active\", //\"active\", \"scheduled\", \"inactive\",\n    \"scheduledPublishAt\":\"2025-12-28 10:30 AM\"\n}",
+									"raw": "{\n    \"title\": \"Standard\",\n    //\"quantity\": 200, // skip when timingSlots enabled\n    \"price\": 10,\n    \"taxPercentage\": 5,\n    \"event\": \"69149fa4bef44f5456ed45d7\",\n    \"timingSlots\": {\n        \"enabled\": true,\n        \"dateTimeSlots\": [\n            {\n                \"date\": \"2025-12-16\",\n                \"timeSlots\": [\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:00 PM\",\n                        \"endTime\": \"12:30 PM\"\n                    },\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:30 PM\",\n                        \"endTime\": \"01:00 PM\"\n                    }\n                ]\n            },\n            {\n                \"date\": \"2025-12-17\",\n                \"timeSlots\": [\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:00 PM\",\n                        \"endTime\": \"12:30 PM\"\n                    },\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:30 PM\",\n                        \"endTime\": \"01:00 PM\"\n                    }\n                ]\n            }\n        ]\n    },\n    \"repeatable\": {\n        \"isRepeatable\": true,\n        \"visits\": 2\n    },\n    \"resaleProtection\": \"nameSurnamePid\",\n    \"transferFee\": 10,\n    \"timeSensitivePricing\": {\n        \"earlyBird\": {\n            \"endDate\": \"2025-12-20\",\n            \"discountedPrice\": 25\n        },\n        \"lastMinute\": {\n            \"startDate\": \"2025-12-28\",\n            \"discountedPrice\": 35\n        }\n    },\n    \"fastTrackEntry\": {\n        \"enabled\": true,\n        \"quantity\": 50,\n        \"extraPrice\": 15\n    },\n    \"requiresReservation\": {\n        \"enabled\": true,\n        \"type\": \"vip\"\n    },\n    \"status\": \"active\", //\"active\", \"scheduled\", \"inactive\",\n    \"scheduledPublishAt\":\"2025-12-28 10:30 AM\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/ticketing/",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"ticketing",
+										""
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						},
+						{
+							"name": "add Copy",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"title\": \"Test\",\n  \"price\": 1200,\n  \"taxPercentage\": 13,\n  \"event\": \"691469fb167faf035385ce33\",\n  \"status\": \"scheduled\",\n  \"timingSlots\": { \"enabled\": false },\n  \"repeatable\": { \"isRepeatable\": false },\n  \"resaleProtection\": \"none\",\n  \"fastTrackEntry\": { \"enabled\": false },\n  \"requiresReservation\": { \"enabled\": false },\n  \"quantity\": 12200,\n  \"scheduledPublishAt\": \"2025-11-12 07:21 PM\"\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -19332,6 +20266,310 @@
 									"response": []
 								}
 							]
+						}
+					]
+				},
+				{
+					"name": "Status Badges",
+					"item": [
+						{
+							"name": "get",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/status-badges?page=1&limit=10",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"status-badges"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "keyword",
+											"value": "silver",
+											"disabled": true
+										},
+										{
+											"key": "status",
+											"value": "active",
+											"description": "active/inactive or empty for all",
+											"disabled": true
+										},
+										{
+											"key": "date",
+											"value": "2025-11-12",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "add",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"image\": \"badge1.png\",\n  \"backgroundImage\": \"background1.png\",\n  \"title\": \"Top Contributor\",\n  \"entryPoints\": 50,\n  \"retainPoints\": 35,\n  \"status\": \"active\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/status-badges/",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"status-badges",
+										""
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						},
+						{
+							"name": "reorder",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"movedId\":\"69141f5c9169abdffce957e6\",\n    \"previousOrder\":\"3\",\n    \"newOrder\":\"2\"\n  }",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/status-badges/reorder",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"status-badges",
+										"reorder"
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						},
+						{
+							"name": "update",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"image\": \"badge1.png\",\n  \"backgroundImage\": \"background1.png\",\n  \"title\": \"Silver\",\n  \"entryPoints\": 150,\n  \"retainPoints\": 75,\n  \"status\": \"inactive\",\n  \"order\": 1\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/status-badges/:id",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"status-badges",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "69141f5c9169abdffce957e6"
+										}
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						},
+						{
+							"name": "delete",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/status-badges/:id",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"status-badges",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "691420117da60d8f50a83d6a"
+										}
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
 						}
 					]
 				},
