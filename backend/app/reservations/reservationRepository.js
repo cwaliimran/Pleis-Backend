@@ -1,7 +1,7 @@
 // repositories/ReservationRepository.js
 const Reservations = require("@ReservationsModel");
 const mongoose = require("mongoose");
-const { reservationsFormatter } = require("../../app/reservations/formaters/reservationFormetter");
+const { reservationsFormatter } = require("./formaters/reservationFormetter");
 const {
   sendResponse,
   parsePaginationParams,
@@ -58,62 +58,58 @@ const findByIdAndUpdate = async (id, data) => {
 
 
 
-const getReservations = async ({ timezone,page, limit, keyword, status, userId, organizationsId, date, range,today,skip }) => {
-let organizationsIds = Array.isArray(organizationsId) 
-  ? organizationsId 
-  : JSON.parse(organizationsId || '[]');
-organizationsIds = organizationsIds.map(id => new mongoose.Types.ObjectId(id));
+const getReservations = async ({ timezone,page,limit,keyword,status,userId,eventId,organizationId,date}) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+    const organizationIdObj = organizationId ? new mongoose.Types.ObjectId(organizationId) : null;
+
   const pipeline = [
   {
     $match: {
-      ...(userId && { userId: new mongoose.Types.ObjectId(userId) }),
-      ...(organizationsIds.length > 0 && { organizationId: { $in: organizationsIds } }) // Match as ObjectId
-    }
+        ...(eventId && { optionalEventId: eventId }), 
+        ...(organizationIdObj && { 
+          organizationId: organizationIdObj 
+        }),
+      }
   }
 ];
-if (range == "monthly") {
-  const { start, end } = getStartAndEndOfMonth(today, timezone);
-  console.log("Month Range:", { start, end });
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
-if (range == "weekly") {
-  const { start, end } = getStartAndEndOfWeek(today, timezone);
-  console.log("Week Range:", { start, end });
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
-if (range == "today") {
-    const start = new Date(today);
-    const end = new Date(new Date(today).setDate(start.getDate() + 1));
-  console.log("Today Range:", { start, end });
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
   // Apply filters
   if (status) {
     pipeline.push({ $match: { status } });
   } else {
     pipeline.push({ $match: { status: { $ne: "deleted" } } });
   }
-
   if (date) {
-    const start = new Date(date);
-    const end = new Date(new Date(date).setDate(start.getDate() + 1));
-    pipeline.push({
-      $match: {
-        createdAt: { $gte: start, $lt: end }
+    const start = new Date(date);  
+    const end = new Date(new Date(date).setDate(start.getDate() + 1)); 
+    pipeline.push(
+      { $unwind: "$timingSlots.dateTimeSlots" }, 
+      {
+        $project: {
+          title: 1,  // Keep other fields
+          availableReservations: 1,
+          maxCapacityPerReservation: 1,
+          conditionType: 1,
+          organizationId: 1,
+          taxPercentage: 1,
+          timingSlots: 1,  
+          needsConfirmation: 1,
+          optionalEventId: 1,
+          status: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          __v: 1,
+          date: {
+            $dateToString: { format: "%Y-%m-%d", date: "$timingSlots.dateTimeSlots.date" } 
+          }
+        }
+      },
+      {
+        $match: {
+          "timingSlots.enabled": true, 
+          date: { $gte: start.toISOString().split("T")[0], $lt: end.toISOString().split("T")[0] } 
+        }
       }
-    });
+    );
   }
 
 if (keyword) {
@@ -130,8 +126,6 @@ if (keyword) {
 }
 
   pipeline.push({ $sort: { createdAt: -1 } });
-
-  // Apply pagination + counts using $facet
   pipeline.push({
     $facet: {
       data: [
@@ -143,11 +137,10 @@ if (keyword) {
   });
 
   const result = await Reservations.aggregate(pipeline);
-
+  console.log(result);
   let reservations = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-  // Additional counts for meta (active/inactive/total by userId as creator)
   const [total, active, inactive] = await Promise.all([
     Reservations.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "deleted" } }),
     Reservations.countDocuments({ status: "active", ...(userId && { userId: userId }) }),
@@ -174,6 +167,7 @@ if (keyword) {
   });
   return {reservations , meta}
 }
+
 
 module.exports = {
   createReservation,

@@ -21,7 +21,7 @@ module.exports = {
     "@ListingModel": "backend/commonModules/loyalty/listings/Listing.js",
     "@ClubCollaborationModel": "backend/commonModules/loyalty/clubCollaborations/ClubCollaborations.js",
     "@TicketingsModel": "backend/commonModules/ticketing/TicketingsModel.js",
-    "@ReservationsModel": "backend/commonModules/reservations/Reservation.js"
+    "@ReservationsModel": "backend/commonModules/reservations/Reservation.js",
     "@OrdersModel": "backend/commonModules/menuItemsAndOrders/orders.js",
 
 };
