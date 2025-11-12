@@ -17,7 +17,8 @@ const createEvent = async (req, res) => {
 
   const {
     basicInfo = {},
-    schedule = {}
+    schedule = {},
+    ticketing = {},
   } = req.body;
 
   let validateData = {
@@ -29,6 +30,172 @@ const createEvent = async (req, res) => {
     ],
     objectIdFields: ["basicInfo.organization", "basicInfo.venue", "basicInfo.categories"],
   }
+
+  let ticketingData = null;
+  //if ticketing is provided, validate ticketing fields
+  if (ticketing && Object.keys(ticketing).length > 0) {
+    validateData.rawData.push("ticketing.title", "ticketing.price");
+
+    if (ticketing?.timingSlots?.enabled == false) {
+      validateData.rawData.push("ticketing.quantity");
+    } else {
+      // quantity is required for each slot when timingSlots is enabled
+      validateData.rawData.push("ticketing.timingSlots.dateTimeSlots");
+    }
+
+
+    // Add conditional validation for timeSensitivePricing
+    if (ticketing.timeSensitivePricing) {
+      const { earlyBird, lastMinute } = ticketing.timeSensitivePricing;
+      validateData.dateFields = {};
+
+      if (earlyBird?.endDate) {
+        validateData.dateFields["ticketing.timeSensitivePricing.earlyBird.endDate"] = "YYYY-MM-DD";
+      }
+      if (lastMinute?.startDate) {
+        validateData.dateFields["ticketing.timeSensitivePricing.lastMinute.startDate"] = "YYYY-MM-DD";
+      }
+    }
+
+    if (ticketing.status == "scheduled") {
+      validateData.dateFields["ticketing.scheduledPublishAt"] = "YYYY-MM-DD hh:mm A"
+    }
+
+
+    // Convert scheduledPublishAt to UTC
+    if (ticketing.status == "scheduled" && ticketing.scheduledPublishAt) {
+      ticketing.scheduledPublishAt = convertTimezoneToUtc(
+        ticketing.scheduledPublishAt,
+        timezone,
+        "YYYY-MM-DD hh:mm A"
+      );
+    } else {
+      ticketing.scheduledPublishAt = null;
+    }
+
+    // Timing slots validation
+    if (ticketing.timingSlots?.enabled === true) {
+      const slots = ticketing.timingSlots?.dateTimeSlots || [];
+
+      if (!Array.isArray(slots) || slots.length === 0) {
+        return sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "timing_slots_required_when_enabled",
+        });
+      }
+
+      // Validate and convert each date/time
+      for (const dateBlock of slots) {
+        if (!dateBlock.date) {
+          return sendResponse({
+            res,
+            statusCode: 400,
+            translationKey: "invalid_date_in_timing_slots",
+          });
+        }
+
+        if (!Array.isArray(dateBlock.timeSlots) || dateBlock.timeSlots.length === 0) {
+          return sendResponse({
+            res,
+            statusCode: 400,
+            translationKey: "time_slots_required_for_date",
+          });
+        }
+
+        for (const slot of dateBlock.timeSlots) {
+          if (!slot.startTime || !slot.endTime) {
+            return sendResponse({
+              res,
+              statusCode: 400,
+              translationKey: "invalid_start_or_end_time_in_slot",
+            });
+          }
+
+          // Convert to UTC DateTime strings
+          const startUtc = convertTimezoneToUtc(
+            `${dateBlock.date} ${slot.startTime}`,
+            timezone,
+            "YYYY-MM-DD hh:mm A"
+          );
+          const endUtc = convertTimezoneToUtc(
+            `${dateBlock.date} ${slot.endTime}`,
+            timezone,
+            "YYYY-MM-DD hh:mm A"
+          );
+
+          // Replace in object
+          slot.startTime = startUtc;
+          slot.endTime = endUtc;
+        }
+      }
+    } else {
+      //don't check for empty array if timingSlots is disabled only apply format conversion
+      const slots = ticketing.timingSlots?.dateTimeSlots || [];
+      for (const dateBlock of slots) {
+        if (!dateBlock.date) continue;
+
+        for (const slot of dateBlock.timeSlots) {
+          if (!slot.startTime || !slot.endTime) continue;
+
+          // Convert to UTC DateTime strings
+          const startUtc = convertTimezoneToUtc(
+            `${dateBlock.date} ${slot.startTime}`,
+            timezone,
+            "YYYY-MM-DD hh:mm A"
+          );
+          const endUtc = convertTimezoneToUtc(
+            `${dateBlock.date} ${slot.endTime}`,
+            timezone,
+            "YYYY-MM-DD hh:mm A"
+          );
+
+          // Replace in object
+          slot.startTime = startUtc;
+          slot.endTime = endUtc;
+        }
+      }
+    }
+
+    // Transform timeSensitivePricing date fields to UTC
+    if (ticketing.timeSensitivePricing) {
+      const { earlyBird, lastMinute } = ticketing.timeSensitivePricing;
+
+      if (earlyBird?.endDate) {
+        earlyBird.endDate = convertTimezoneToUtc(
+          earlyBird.endDate,
+          timezone,
+          "YYYY-MM-DD"
+        );
+      }
+      if (lastMinute?.startDate) {
+        lastMinute.startDate = convertTimezoneToUtc(
+          lastMinute.startDate,
+          timezone,
+          "YYYY-MM-DD"
+        );
+      }
+    }
+
+    // Construct final payload
+    ticketingData = {
+      ...ticketing,
+      title: ticketing.title.trim(),
+      timingSlots: ticketing.timingSlots || { enabled: false, dateTimeSlots: [] },
+      repeatable: ticketing.repeatable || { isRepeatable: false, visits: 1 },
+      resaleProtection: ticketing.resaleProtection || "none",
+      transferFee: ticketing.transferFee || 0,
+      timeSensitivePricing: ticketing.timeSensitivePricing || {},
+      fastTrackEntry: {
+        enabled: ticketing.fastTrackEntry?.enabled || false
+      },
+      requiresReservation: {
+        enabled: ticketing.requiresReservation?.enabled || false,
+        type: ticketing.requiresReservation?.type || "any"
+      },
+    };
+  }
+
 
   //find if venue exists
   const venueItem = await getVenueDetails(basicInfo.venue, ['location.coordinates']);
@@ -102,7 +269,7 @@ const createEvent = async (req, res) => {
   };
 
   try {
-    const event = await eventService.createEvent({ data: eventData }, timezone);
+    const event = await eventService.createEvent({ data: eventData, ticketingData }, timezone);
 
     return sendResponse({
       res,
@@ -232,9 +399,9 @@ const updateEvent = async (req, res) => {
 
   try {
     // Now validate schedule if provided
-    if (data.schedule !== undefined) {
+    if (ticketing.schedule !== undefined) {
       let validateData = { rawData: [], dateFields: {} };
-      const recurringDetails = data.schedule.recurringDetails;
+      const recurringDetails = ticketing.schedule.recurringDetails;
 
       if (recurringDetails && recurringDetails.isEnabled) {
         validateData.dateFields = {

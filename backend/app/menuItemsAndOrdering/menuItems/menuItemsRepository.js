@@ -8,6 +8,12 @@ const getMenuItemsWithFilters = async (query = {}) => {
     .sort({ createdAt: -1 })
 };
 
+const getOrganizationIdByMenuItemId = async (menuId) => {
+  const menuItem = await Menus.findById(menuId).select("organization");
+  if (!menuItem || !menuItem.organization) throw new Error("Menu item or menu not found");
+  return menuItem.organization;
+};
+
 //recommended items
 //fetch item and its category, type then fetch relevant items based on category and type 
 
@@ -59,5 +65,6 @@ module.exports = {
   findMenuItemById,
   getMenuIdByOrganization,
   getRecommendedItems,
+  getOrganizationIdByMenuItemId
 
 };

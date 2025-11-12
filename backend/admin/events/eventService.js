@@ -6,8 +6,8 @@ const eventRepo = require("./eventRepository");
 const _ = require("lodash");
 const { formatEventResponse } = require("./formatter/eventFormatter");
 
-const createEvent = async ({ data }, timezone) => {
-  let event = await eventRepo.createEvent(data);
+const createEvent = async ({ data, ticketingData }, timezone) => {
+  let event = await eventRepo.createEvent(data, ticketingData);
   if (!event) return null;
   return formatEventResponse(event, { timezone });
 };

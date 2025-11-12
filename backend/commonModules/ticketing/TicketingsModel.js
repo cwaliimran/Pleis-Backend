@@ -114,8 +114,8 @@ const ticketingsSchema = new mongoose.Schema(
       },
       type: {
         type: String,
-        enum: ["any", "table", "vip", "booth"],
-        default: "any",
+        enum: ["", "any", "table", "vip", "booth"],
+        default: "",
       }
     },
 

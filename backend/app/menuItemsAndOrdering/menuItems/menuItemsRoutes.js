@@ -2,6 +2,7 @@ const express = require("express");
 const {
   getMenuItems,
   getMenuItemDetails,
+  getPickupOptions
 } = require("./menuItemsController");
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
@@ -17,6 +18,7 @@ const apiRateLimiterDetails = createRateLimiter("MenuItems/:id");
 
 // Get all menuItems with pagination
 router.get("/", apiRateLimiter, getMenuItems);
+router.get("/pickup-options/:id", apiRateLimiter, getPickupOptions);
 
 //get menuItem details
 router.get("/:id", apiRateLimiterDetails, getMenuItemDetails);

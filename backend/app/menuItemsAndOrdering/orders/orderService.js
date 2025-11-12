@@ -2,10 +2,11 @@ const orderRepo = require("./orderRepository");
 const menuItemRepo = require("../menuItems/menuItemsRepository");
 const mongoose = require("mongoose");
 const { menuItemOrderFormatter } = require("./formatter/menuItemOrderFormatter");
+const { generateMeta } = require("../../../helperUtils/responseUtil");
 
 // 1️⃣ Place an order
 
-const placeOrder = async ({ userId, timezone, items, deliveryAddress, paymentMethod,
+const placeOrder = async ({ userId, timezone, items, notes, paymentMethod,
   pickupType,
   tableNumber, }) => {
   if (!items || !items.length) throw new Error("Cart is empty");
@@ -16,6 +17,8 @@ const placeOrder = async ({ userId, timezone, items, deliveryAddress, paymentMet
 
   if (!menuItems.length) throw new Error("Invalid items in cart");
 
+  //find organization from first menu item
+  const organizationId = await menuItemRepo.getOrganizationIdByMenuItemId(menuItems[0].menu);
   let totalPrice = 0;
 
   // 2️⃣ Prepare order items with snapshot inside the item object
@@ -38,9 +41,10 @@ const placeOrder = async ({ userId, timezone, items, deliveryAddress, paymentMet
   // 3️⃣ Create order document
   const orderData = {
     user: userId,
+    organization: organizationId,
     items: orderItems,
     totalPrice,
-    deliveryAddress,
+    notes,
     paymentMethod,
     status: "pending",
     pickupType,
@@ -63,10 +67,15 @@ const getOrderDetails = async (orderId) => {
 };
 
 // 3️⃣ Get all orders for user
-const getUserOrders = async (userId) => {
-  let orders = await orderRepo.getOrdersByUser(userId);
+const getUserOrders = async (userId, page, limit) => {
+  let [orders, counts] = await Promise.all([orderRepo.getOrdersByUser(userId, page, limit),
+    orderRepo.getCounts({ user: userId })]);
   let formattedOrders = orders.map(order => menuItemOrderFormatter(order));
-  return { orders: formattedOrders };
+
+  let { pending, confirmed, completed, cancelled, totalFiltered } = counts;
+  let meta = generateMeta(page, limit, totalFiltered);
+  meta.counts = { pending, confirmed, completed, cancelled };
+  return { orders: formattedOrders, meta, };
 };
 
 // 4️⃣ Update order status (admin or automated)
