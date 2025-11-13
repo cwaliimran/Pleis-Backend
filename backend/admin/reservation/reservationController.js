@@ -11,7 +11,7 @@ const reservationService = require("./reservationService");
 
 const createReservation = async (req, res) => {
 const {
-  title,
+  name,
   availableReservations,
   maxCapacityPerReservation,
   conditionType,
@@ -40,12 +40,11 @@ if (conditionType === "minimumSpendOnLocation") {
 if (
   !validateParams(req, res, {
     rawData: [
-      "title", 
+      "name", 
       "availableReservations", 
       "maxCapacityPerReservation",
       "conditionType", 
       "taxPercentage",
-      "needsConfirmation",
       "status",
       "organizationId",
     ],
@@ -55,7 +54,7 @@ if (conditionType == "fixedPrice" || conditionType == "prepayOption") {
   if (
     !validateParams(req, res, {
       rawData: [
-        "title", 
+        "name", 
         "availableReservations", 
         "maxCapacityPerReservation",
         "conditionType", 
@@ -154,7 +153,7 @@ if (conditionType == "fixedPrice" || conditionType == "prepayOption") {
 
   let data = {
     userId,
-title,
+name,
   availableReservations,
   maxCapacityPerReservation,
   conditionType,
@@ -282,7 +281,7 @@ const getReservationDetails = async (req, res) => {
 const updateReservation = async (req, res) => {
   const { id } = req.params;
 const {
-  title,
+  name,
   availableReservations,
   maxCapacityPerReservation,
   conditionType,
@@ -310,7 +309,7 @@ const timezone = req.user.timezone;
 
   let data = {
     userId,
-title,
+name,
   availableReservations,
   maxCapacityPerReservation,
   conditionType,

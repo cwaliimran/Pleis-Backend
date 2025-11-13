@@ -25,17 +25,14 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
   try {
     let { reservations, meta } = await ReservationRepo.getReservations({ timezone, page, limit, keyword, status, userId, eventId, organizationId, date });
     if (!reservations || reservations.length === 0) {
-      console.log("No reservations found.");
       return { reservations: [], meta };
     }
     reservations = reservations.map(reservation => reservationsFormatter(reservation, timezone));
-    console.log("Formatted reservations:", reservations);
     return {
       reservations,
       meta
     };
   } catch (error) {
-    console.error("Error fetching reservations:", error);
     return {
       reservations: [],
       meta: { totalRecords: 0, currentPage: 1, totalPages: 1, limit: 10 }

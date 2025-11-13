@@ -22,7 +22,7 @@ const apiRateLimiterDetails = createRateLimiter("Reservations/:id");
 router.post("/", auth, createReservation);
 
 // Get all Reservations with pagination
-router.get("/",  getReservations);
+router.get("/", auth, getReservations);
 
 // //get Reservation details
 // router.get("/:id", apiRateLimiterDetails, getReservationDetails);

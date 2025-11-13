@@ -60,7 +60,7 @@ const updateReservation = async (id, data) => {
 
   // Allowed fields for update
   const allowedFields = [
-    "title",
+    "name",
     "availableReservations",
     "maxCapacityPerReservation",
     "conditionType",

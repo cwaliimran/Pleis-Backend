@@ -7,7 +7,7 @@ const ReservationsSchema = new mongoose.Schema(
       ref: "User", // Reference to the "User" model
       required: true, // Assuming a user is required for each reservation
     },
-    title: {
+    name: {
       type: String,
       trim: true,
       required: true,
