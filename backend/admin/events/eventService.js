@@ -5,6 +5,7 @@ const Organizations = require("@OrganizationModel");
 const eventRepo = require("./eventRepository");
 const _ = require("lodash");
 const { formatEventResponse } = require("./formatter/eventFormatter");
+const { getTicketingsByEventId } = require("../ticketing/ticketingsService");
 
 const createEvent = async ({ data, ticketingData }, timezone) => {
   let event = await eventRepo.createEvent(data, ticketingData);
@@ -258,8 +259,11 @@ const deleteEvent = async (id) => {
 };
 
 const getEventDetails = async (id, timezone) => {
-  const event = await eventRepo.findEventById(id);
+  const [event, ticketing] = await Promise.all([eventRepo.findEventById(id),
+  getTicketingsByEventId({ timezone, eventId: id })
+  ])
   let data = formatEventResponse(event, { timezone });
+  data.ticketing = ticketing?.ticketings || [];
   return data
 };
 

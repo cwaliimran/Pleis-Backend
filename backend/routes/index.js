@@ -18,6 +18,8 @@ router.use("/tags", require("../admin/tags/tagsRoutes"));
 router.use("/tags-types", require("../admin/tags/tagsRoutes"));
 router.use("/categories", require("../admin/categories/categoriesRoutes"));
 router.use("/venue-types", require("../admin/venueTypes/venueTypesRoutes"));
+//locations
+router.use("/locations", require("../shared/locations/routes"));
 
 
 //helper route for generating shareable links

@@ -27,6 +27,9 @@ router.use("/users", require("../app/usersManagement/usersRoutes"));
 //menu items
 router.use("/menu/items", require("../app/menuItemsAndOrdering/menuItems/menuItemsRoutes"));
 router.use("/menu/orders", require("../app/menuItemsAndOrdering/orders/orderRoutes"));
+//users streaks
+router.use("/checkin", require("../app/usersStreaks/usersStreaksRoutes"));
+
 
 
 module.exports = router;

@@ -43,14 +43,14 @@ function formatTicketing(timezone, item) {
             earlyBird.endDate = convertUtcToTimezone(
                 earlyBird.endDate,
                 timezone,
-                "YYYY-MM-DD"
+                "YYYY-MM-DD hh:mm A"
             );
         }
         if (lastMinute?.startDate) {
             lastMinute.startDate = convertUtcToTimezone(
                 lastMinute.startDate,
                 timezone,
-                "YYYY-MM-DD"
+                "YYYY-MM-DD hh:mm A"
             );
         }
 
