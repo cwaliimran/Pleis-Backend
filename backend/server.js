@@ -43,6 +43,7 @@ const allowedOrigins = [
   "https://dev.pleis.com",
   "https://www.dev.pleis.com",
   "http://localhost:4003",
+  "http://192.168.15.45:4003",
   "https://pleis.vercel.app",
   "https://nelson-sponsor-santa-interact.trycloudflare.com",
   "https://specification-medicine-exec-deaf.trycloudflare.com",

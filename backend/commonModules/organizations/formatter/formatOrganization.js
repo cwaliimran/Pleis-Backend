@@ -29,8 +29,14 @@ function formatOrganization(item, excludeFields = []) {
     org.basicInfo.media.cover = getFullImageUrl(coverName)
   }
 
-  org.basicInfo.media.logo.url = getFullImageUrl(org.basicInfo?.media?.logo?.name);
-  org.basicInfo.media.cover.url = getFullImageUrl(org.basicInfo?.media?.cover?.name);
+  if (org.basicInfo?.media?.logo && typeof org.basicInfo.media.logo === 'object') {
+    org.basicInfo.media.logo.url = getFullImageUrl(org.basicInfo.media.logo.name);
+  }
+  if (org.basicInfo?.media?.cover && typeof org.basicInfo.media.cover === 'object') {
+    org.basicInfo.media.cover.url = getFullImageUrl(org.basicInfo.media.cover.name);
+  }
+
+
   if (org.otherInfo?.galleryMedia && Array.isArray(org.otherInfo.galleryMedia)) {
     org.otherInfo.galleryMedia = org.otherInfo.galleryMedia.map((mediaName) => (getFullImageUrl(mediaName)));
   }
@@ -91,5 +97,37 @@ function formatOrganization(item, excludeFields = []) {
 
   return org;
 }
+function formatNearByOrganization(item, excludeFields = []) {
 
-module.exports = { formatOrganization };
+  let org = typeof item.toObject === "function" ? item.toObject() : item;
+
+  if (!org) return null;
+  // Handle media transformation for aggregation structure
+  if (org.basicInfo?.media?.logo) {
+    const logoName = org.basicInfo.media.logo;
+    org.basicInfo.media.logo = getFullImageUrl(logoName);
+  }
+
+  if (org.basicInfo?.media?.cover) {
+    const coverName = org.basicInfo.media.cover;
+    org.basicInfo.media.cover = getFullImageUrl(coverName)
+  }
+
+  org.companyOrganizer = org.creator;
+  delete org.creator;
+
+  //attach distance if exists
+  if (item.distance !== undefined && item.distance !== null) {
+    const dist = Number(item.distance);
+    if (Number.isFinite(dist)) {
+      org.distance = {
+        distance: Math.round(dist * 100) / 100,
+        unit: "km"
+      }
+    }
+  }
+
+  return org;
+}
+
+module.exports = { formatOrganization, formatNearByOrganization };

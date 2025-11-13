@@ -65,12 +65,18 @@
       "@ClubCollaborationModel": [
         "backend/commonModules/loyalty/clubCollaborations/ClubCollaborations.js"
       ],
+      "@StreaksModel": [
+        "backend/commonModules/loyalty/streaks/Streaks.js"
+      ],
+      "@UsersStreaksModel": [
+        "backend/commonModules/loyalty/streaks/UsersStreaks.js"
+      ],
       "@TicketingsModel": [
         "backend/commonModules/ticketing/TicketingsModel.js"
       ],
       "@ReservationsModel": [
         "backend/commonModules/reservations/Reservation.js"
-        ],
+      ],
       "@OrdersModel": [
         "backend/commonModules/menuItemsAndOrders/orders.js"
       ]

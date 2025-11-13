@@ -2,7 +2,6 @@
 const { getModelCounts } = require("../../helperUtils/dbUtils/queryUtil");
 const StatusBadges = require("./StatusBadges");
 
-// Create
 // Create statusBadge and automatically assign next order
 const createStatusBadge = async (data) => {
   // Find the highest current order (excluding deleted)

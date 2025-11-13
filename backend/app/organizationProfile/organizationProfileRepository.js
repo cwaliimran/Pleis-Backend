@@ -280,6 +280,74 @@ function getSimilarityWeights(options = {}) {
   };
 }
 
+
+const getNearbyOrganizations = async ({ location, radiusKm, timezone, page, limit }) => {
+  const skip = (page - 1) * limit;
+  const radiusMeters = radiusKm * 1000;
+
+  // MongoDB geospatial query
+  const pipeline = [
+    {
+      $geoNear: {
+        near: { type: "Point", coordinates: location },
+        distanceField: "distance",
+        spherical: true,
+        maxDistance: radiusMeters,
+        query: { status: "active" },
+      },
+    },
+    {
+      $sort: { distance: 1 },
+    },
+    {
+      $skip: skip,
+    },
+    {
+      $limit: limit,
+    },
+    {
+      $project: {
+        _id: 1,
+        creator: 1,
+        "basicInfo.name": 1,
+        "basicInfo.media.logo": 1,
+        distance: 1,
+      },
+    },
+  ];
+
+  const organizations = await Organizations.aggregate(pipeline);
+
+  // const totalCountAgg = await Organizations.aggregate([
+  //   {
+  //     $geoNear: {
+  //       near: { type: "Point", coordinates: location },
+  //       distanceField: "distance",
+  //       spherical: true,
+  //       maxDistance: radiusMeters,
+  //       query: { status: "active" },
+  //     },
+  //   },
+  //   {
+  //     $count: "total",
+  //   },
+  // ]);
+
+  // const totalRecords = totalCountAgg.length > 0 ? totalCountAgg[0].total : 0;
+  // const totalPages = limit > 0 ? Math.ceil(totalRecords / limit) : 1;
+
+  return {
+    organizations,
+    // meta: {
+    //   currentPage: page,
+    //   totalPages,
+    //   totalRecords,
+    //   limit,
+    // },
+  };
+};
+
+
 module.exports = {
   getOrganizationMenuWithItems,
   findEventsByOrganization,
@@ -289,4 +357,6 @@ module.exports = {
   findOrganizations,
   countOrganizations,
   updateMany,
+  getNearbyOrganizations,
+
 };

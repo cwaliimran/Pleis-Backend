@@ -56,6 +56,17 @@ const getTicketings = async ({ timezone, page, limit, keyword, status, date, eve
   return { ticketings: formattedTicketings, meta };
 };
 
+const getTicketingsByEventId = async ({ timezone, eventId }) => {
+
+  const query = { event: eventId }
+  const [ticketings] = await Promise.all([
+    ticketingRepo.getTicketingsByEventId(query),
+  ]);
+  const formattedTicketings = ticketings.map((item) => formatTicketing(timezone, item));
+
+  return { ticketings: formattedTicketings };
+};
+
 
 const getTicketingDetails = async (id, timezone) => {
   const ticketing = await ticketingRepo.findTicketingById(id);
@@ -234,5 +245,6 @@ module.exports = {
   getTicketingDetails,
   updateTicketing,
   deleteTicketing,
-  getOrganizationTicketings
+  getOrganizationTicketings,
+  getTicketingsByEventId
 };
