@@ -5,6 +5,7 @@ const {
   updateReservation,
   deleteReservation,
   getReservationDetails,
+  getUserReservations,
 } = require("./reservationController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -28,9 +29,12 @@ router.get("/", auth, getReservations);
 // router.get("/:id", apiRateLimiterDetails, getReservationDetails);
 
 // Update an existing Reservation
-router.put("/:id", updateReservation);
+router.put("/:id",auth, updateReservation);
 
 // Delete a Reservation
-router.delete("/:id",  deleteReservation);
+router.delete("/:id",  auth,deleteReservation);
+
+// get all user reservations
+router.get("/all",auth,  getUserReservations);
 
 module.exports = router;

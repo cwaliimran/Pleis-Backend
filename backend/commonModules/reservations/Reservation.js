@@ -7,11 +7,22 @@ const ReservationsSchema = new mongoose.Schema(
       ref: "User", // Reference to the "User" model
       required: true, // Assuming a user is required for each reservation
     },
-    name: {
+      companyOrganizer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // Reference to the "User" model
+      required: true, // Assuming a user is required for each reservation
+    },
+    reservationType: {
       type: String,
-      trim: true,
-      required: true,
-      default: "",
+      enum: [
+        "regular",
+        "vip",
+        "outdoor",
+        "private",
+        "bar",
+        "window",
+      ],
+      default: "regular",
     },
 
     availableReservations: {

@@ -3,6 +3,7 @@ const { buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/query
 const { generateMeta, getCurrentDateInTimezone } = require("../../helperUtils/responseUtil");
 const { reservationsFormatter } = require("./formaters/reservationFormetter");
 const Reservations = require("@ReservationsModel");
+const UserReservations = require("@UserReservationsModel");
 const ReservationRepo = require("./reservationRepository");
 const mongoose = require("mongoose");
 const {
@@ -42,83 +43,64 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
 
 
 const updateReservation = async (id, data) => {
-  const Reservation = await ReservationRepo.findReservationById(id);
-  if (!Reservation) {
-    return { error: "Reservation_not_found" }; 
-  }
-
-  if (Reservation.conditionType !== data.conditionType) {
-    if (data.conditionType === "minimumSpendOnLocation") {
-      if (!(data.amount || data.customText)) {
-        return { error: "amount_or_customText_is_required_when_conditionType_changes_to_minimumSpendOnLocation." };
-      }
-    } else if (!data.amount) {
-      return { error: "amount_is_required_when_conditionType_changes_and_is_not_minimumSpendOnLocation." };
-    }
-  }
-
-  // Ensure ticketType is provided when conditionType is 'ticketRequirement'
-  if (data.conditionType === "ticketRequirement" && (data.ticketType === undefined || data.ticketType === null)) {
-    return { error: "ticket_type_is_required_when_conditionType_is_ticketRequirement." };
-  }
-
-  // Ensure customText is provided when conditionType is 'customText'
-  if (data.conditionType === "customText" && (data.customText === undefined || data.customText === null)) {
-    return { error: "custom_text_is_required_when_conditionType_is_customText." };
+  const UserReservation = await ReservationRepo.findUserReservationById(id);
+  
+  if (!UserReservation) {
+    return { error: "reservation_not_found" };  // Clear error message
   }
 
   // Allowed fields for update
   const allowedFields = [
-    "title",
-    "availableReservations",
-    "maxCapacityPerReservation",
-    "conditionType",
-    "amount",
-    "minimumSpend",
-    "prepayAmount",
-    "ticketType",
-    "customText",
-    "timingSlots",
-    "taxPercentage",
-    "needsConfirmation",
+    "partySize",
+    "reservationType",
     "optionalEventId",
-    "status",
-    "organizationId"
+    "organizationId",
+    "timingSlots",
   ];
 
-  // Handle timingSlots
+  // Handle timingSlots separately since it's a nested object
   if (data.timingSlots) {
-    if (!Reservation.timingSlots) Reservation.timingSlots = { enabled: false, dateTimeSlots: [] };
+    if (!UserReservation.timingSlots) {
+      UserReservation.timingSlots = { enabled: false, dateTimeSlots: [] };  // Default if not present
+    }
 
     if (data.timingSlots.enabled !== undefined) {
-      Reservation.timingSlots.enabled = data.timingSlots.enabled;
+      UserReservation.timingSlots.enabled = data.timingSlots.enabled;
     }
 
     if (Array.isArray(data.timingSlots.dateTimeSlots)) {
-      Reservation.timingSlots.dateTimeSlots = data.timingSlots.dateTimeSlots;
+      UserReservation.timingSlots.dateTimeSlots = data.timingSlots.dateTimeSlots;
     }
   }
 
-  // Prepare update data
+  // Prepare the update data object with the allowed fields
   const updateData = {};
   for (const key of allowedFields) {
     if (data[key] !== undefined) {
-      updateData[key] = data[key];
+      updateData[key] = data[key];  // Only add valid fields
     }
   }
 
-  // If there's nothing to update, return the reservation as is
+  // If nothing to update, return the original reservation
   if (Object.keys(updateData).length === 0) {
-    return Reservation; // nothing to update
+    return UserReservation;  // No update needed
   }
 
-  // Update the reservation
-  Object.assign(Reservation, updateData);
-  await Reservation.save();
+  try {
+    // Update the reservation with the new data
+    Object.assign(UserReservation, updateData);
+    
+    // Save the updated reservation
+    await UserReservation.save();
 
-  // Return the formatted reservation
-  return reservationsFormatter(Reservation);
+    // Return the formatted reservation
+    return reservationsFormatter(UserReservation);
+  } catch (error) {
+
+    return { error: "Error updating reservation" };  // Error handling if save fails
+  }
 };
+
 
 
 const deleteReservation = async (id) => {
@@ -129,16 +111,30 @@ const deleteReservation = async (id) => {
   return true;
 };
 
-const getReservationDetails = async (id) => {
-  const Reservation = await ReservationRepo.findReservationById(id);
-  if (!Reservation) return null;
-  return reservationsFormatter(Reservation);
+const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, date }) => {
+  try{
+
+    let { reservations, meta } = await ReservationRepo.getUserReservations({timezone, page, limit, keyword, status, userId, date });
+    if (!reservations || reservations.length === 0) {
+      return { reservations: [], meta };
+    }
+    // reservations = reservations.map(reservation => reservationsFormatter(reservation, timezone));
+    return {
+      reservations,
+      meta
+    };
+  } catch (error) {
+    return {
+      reservations: [],
+      meta: { totalRecords: 0, currentPage: 1, totalPages: 1, limit: 10 }
+    };
+  }
 };
 
 module.exports = {
   createReservation,
   getReservations,
   updateReservation,
-  getReservationDetails,
+  getUserReservations,
   deleteReservation,
 };

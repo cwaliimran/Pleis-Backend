@@ -3,6 +3,7 @@ const { buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/query
 const { generateMeta, getCurrentDateInTimezone } = require("../../helperUtils/responseUtil");
 const { reservationsFormatter } = require("../../app/reservations/formaters/reservationFormetter");
 const Reservations = require("@ReservationsModel");
+const UserReservations = require("@UserReservationsModel");
 const ReservationRepo = require("./reservationRepository");
 const mongoose = require("mongoose");
 const {
@@ -126,10 +127,36 @@ const getReservationDetails = async (id) => {
   return reservationsFormatter(Reservation);
 };
 
+
+
+
+
+const getUserReservations = async ({ timezone,page, limit, keyword, status, userId, organizationsId, date, range,reservationStatus }) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const today = getCurrentDateInTimezone({timezone,isDateOnly:true});
+  let {reservations,meta} = await ReservationRepo.getUserReservations( { timezone,page, limit, keyword, status, userId, organizationsId, date, range,today,skip,reservationStatus } );
+
+  return {
+    reservations,
+    meta
+  };
+};
+
+const updateUserReservation = async (id, value) => {
+  const updated = await UserReservations.findByIdAndUpdate(id, {
+    reservationStatus: value,
+  });
+  if (!updated) return null;
+  return true;
+};
+
+
 module.exports = {
   createReservation,
   getReservations,
   updateReservation,
   getReservationDetails,
   deleteReservation,
+  getUserReservations,
+  updateUserReservation,
 };

@@ -33,5 +33,49 @@ function reservationsFormatter(item, timezone) {
 
   return { ...cat };
 }
+function reservationsFormatterAdjustDates(item, timezone) {
+  if (!item) return null;
 
-module.exports = { reservationsFormatter };
+  const cat = item.toObject ? item.toObject() : { ...item };
+
+  // Adjust timingSlots and dateTimeSlots
+  if (cat.timingSlots && cat.timingSlots.dateTimeSlots) {
+    const dateTimeSlots = Array.isArray(cat.timingSlots.dateTimeSlots)
+      ? cat.timingSlots.dateTimeSlots
+      : [cat.timingSlots.dateTimeSlots];
+
+    dateTimeSlots.forEach(slot => {
+      // Format the date field (convert to YYYY-MM-DD)
+      if (slot.date) {
+        const formattedDate = moment(slot.date).format("YYYY-MM-DD"); // Convert to "YYYY-MM-DD"
+        slot.date = formattedDate;
+      }
+
+      // Handle timeSlots if present
+      if (slot.timeSlots && Array.isArray(slot.timeSlots)) {
+        slot.timeSlots.forEach(timeSlot => {
+          let startTime = timeSlot.startTime;
+          let endTime = timeSlot.endTime;
+
+          // Check if startTime is a valid time format and convert to ISO string
+          if (moment(startTime, "hh:mm A", true).isValid()) {
+            startTime = moment(startTime, "hh:mm A").toISOString();
+          }
+
+          // Check if endTime is a valid time format and convert to ISO string
+          if (moment(endTime, "hh:mm A", true).isValid()) {
+            endTime = moment(endTime, "hh:mm A").toISOString();
+          }
+
+          // Convert times to the desired timezone (adjusting for start and end times)
+          timeSlot.startTime = convertUtcToTimezoneAMPM(startTime, timezone);
+          timeSlot.endTime = convertUtcToTimezoneAMPM(endTime, timezone);
+        });
+      }
+    });
+  }
+
+  return { ...cat };
+}
+
+module.exports = { reservationsFormatter,reservationsFormatterAdjustDates };
