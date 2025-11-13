@@ -32,4 +32,8 @@ router.use("/checkin", require("../app/usersStreaks/usersStreaksRoutes"));
 
 
 
+// reservatio
+router.use("/reservations", require("../app/reservations/reservationRoutes"));
+
+
 module.exports = router;

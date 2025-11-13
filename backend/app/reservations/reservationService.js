@@ -1,0 +1,140 @@
+// services/reservationservice.js
+const { buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
+const { generateMeta, getCurrentDateInTimezone } = require("../../helperUtils/responseUtil");
+const { reservationsFormatter } = require("./formaters/reservationFormetter");
+const Reservations = require("@ReservationsModel");
+const UserReservations = require("@UserReservationsModel");
+const ReservationRepo = require("./reservationRepository");
+const mongoose = require("mongoose");
+const {
+  sendResponse,
+  parsePaginationParams,
+  validateParams,
+  getReadableErrorMessage,
+  convertTimezoneToUtc,
+  getStartAndEndOfMonth,
+  getStartAndEndOfWeek,
+} = require("@utils/responseUtil");
+
+const createReservation = async (data) => {
+  let Reservation = await ReservationRepo.createReservation(data);
+  return reservationsFormatter(Reservation);
+};
+
+// Populate venue data for reservations (updated for new schema)
+const getReservations = async ({ timezone, page, limit, keyword, status, userId, eventId, organizationId, date }) => {
+  try {
+    let { reservations, meta } = await ReservationRepo.getReservations({ timezone, page, limit, keyword, status, userId, eventId, organizationId, date });
+    if (!reservations || reservations.length === 0) {
+      return { reservations: [], meta };
+    }
+    reservations = reservations.map(reservation => reservationsFormatter(reservation, timezone));
+    return {
+      reservations,
+      meta
+    };
+  } catch (error) {
+    return {
+      reservations: [],
+      meta: { totalRecords: 0, currentPage: 1, totalPages: 1, limit: 10 }
+    };
+  }
+};
+
+
+const updateReservation = async (id, data) => {
+  const UserReservation = await ReservationRepo.findUserReservationById(id);
+  
+  if (!UserReservation) {
+    return { error: "reservation_not_found" };  // Clear error message
+  }
+
+  // Allowed fields for update
+  const allowedFields = [
+    "partySize",
+    "reservationType",
+    "optionalEventId",
+    "organizationId",
+    "timingSlots",
+  ];
+
+  // Handle timingSlots separately since it's a nested object
+  if (data.timingSlots) {
+    if (!UserReservation.timingSlots) {
+      UserReservation.timingSlots = { enabled: false, dateTimeSlots: [] };  // Default if not present
+    }
+
+    if (data.timingSlots.enabled !== undefined) {
+      UserReservation.timingSlots.enabled = data.timingSlots.enabled;
+    }
+
+    if (Array.isArray(data.timingSlots.dateTimeSlots)) {
+      UserReservation.timingSlots.dateTimeSlots = data.timingSlots.dateTimeSlots;
+    }
+  }
+
+  // Prepare the update data object with the allowed fields
+  const updateData = {};
+  for (const key of allowedFields) {
+    if (data[key] !== undefined) {
+      updateData[key] = data[key];  // Only add valid fields
+    }
+  }
+
+  // If nothing to update, return the original reservation
+  if (Object.keys(updateData).length === 0) {
+    return UserReservation;  // No update needed
+  }
+
+  try {
+    // Update the reservation with the new data
+    Object.assign(UserReservation, updateData);
+    
+    // Save the updated reservation
+    await UserReservation.save();
+
+    // Return the formatted reservation
+    return reservationsFormatter(UserReservation);
+  } catch (error) {
+
+    return { error: "Error updating reservation" };  // Error handling if save fails
+  }
+};
+
+
+
+const deleteReservation = async (id) => {
+  const updated = await ReservationRepo.findByIdAndUpdate(id, {
+    status: "deleted",
+  });
+  if (!updated) return null;
+  return true;
+};
+
+const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, date }) => {
+  try{
+
+    let { reservations, meta } = await ReservationRepo.getUserReservations({timezone, page, limit, keyword, status, userId, date });
+    if (!reservations || reservations.length === 0) {
+      return { reservations: [], meta };
+    }
+    // reservations = reservations.map(reservation => reservationsFormatter(reservation, timezone));
+    return {
+      reservations,
+      meta
+    };
+  } catch (error) {
+    return {
+      reservations: [],
+      meta: { totalRecords: 0, currentPage: 1, totalPages: 1, limit: 10 }
+    };
+  }
+};
+
+module.exports = {
+  createReservation,
+  getReservations,
+  updateReservation,
+  getUserReservations,
+  deleteReservation,
+};

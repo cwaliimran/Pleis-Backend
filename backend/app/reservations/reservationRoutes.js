@@ -6,7 +6,6 @@ const {
   deleteReservation,
   getReservationDetails,
   getUserReservations,
-  updateUserReservation,
 } = require("./reservationController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -21,25 +20,21 @@ const apiRateLimiter = createRateLimiter("Reservations");
 const apiRateLimiterDetails = createRateLimiter("Reservations/:id");
 
 // Create a new Reservation
-router.post("/", auth,roleMiddleware(["admin"]), createReservation);
+router.post("/", auth, createReservation);
 
 // Get all Reservations with pagination
-router.get("/", roleMiddleware(["admin"]),apiRateLimiter, getReservations);
-
-// Get all Users Reservations with pagination
-router.get("/users",roleMiddleware(["admin"]), apiRateLimiter, getUserReservations);
-
+router.get("/", auth, getReservations);
 
 // //get Reservation details
 // router.get("/:id", apiRateLimiterDetails, getReservationDetails);
 
 // Update an existing Reservation
-router.put("/:id", roleMiddleware(["admin"]), updateReservation);
-// cancel user reservation
-router.put("/:id/:value", roleMiddleware(["admin"]), updateUserReservation);
-
+router.put("/:id",auth, updateReservation);
 
 // Delete a Reservation
-router.delete("/:id", roleMiddleware(["admin"]), deleteReservation);
+router.delete("/:id",  auth,deleteReservation);
+
+// get all user reservations
+router.get("/all",auth,  getUserReservations);
 
 module.exports = router;

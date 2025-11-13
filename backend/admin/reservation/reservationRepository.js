@@ -1,7 +1,10 @@
 // repositories/ReservationRepository.js
 const Reservations = require("@ReservationsModel");
+const UserReservations = require("@UserReservationsModel");
+const User = require("../../models/UserModel");
+const Event = require("@EventsModel");
 const mongoose = require("mongoose");
-const { reservationsFormatter } = require("./formaters/reservationFormetter");
+const { reservationsFormatter, reservationsFormatterAdjustDates } = require("../../app/reservations/formaters/reservationFormetter");
 const {
   sendResponse,
   parsePaginationParams,
@@ -73,7 +76,7 @@ organizationsIds = organizationsIds.map(id => new mongoose.Types.ObjectId(id));
 ];
 if (range == "monthly") {
   const { start, end } = getStartAndEndOfMonth(today, timezone);
-  console.log("Month Range:", { start, end });
+
   pipeline.push({
     $match: {
       createdAt: { $gte: start, $lt: end }
@@ -82,7 +85,7 @@ if (range == "monthly") {
 }
 if (range == "weekly") {
   const { start, end } = getStartAndEndOfWeek(today, timezone);
-  console.log("Week Range:", { start, end });
+
   pipeline.push({
     $match: {
       createdAt: { $gte: start, $lt: end }
@@ -92,7 +95,7 @@ if (range == "weekly") {
 if (range == "today") {
     const start = new Date(today);
     const end = new Date(new Date(today).setDate(start.getDate() + 1));
-  console.log("Today Range:", { start, end });
+
   pipeline.push({
     $match: {
       createdAt: { $gte: start, $lt: end }
@@ -175,6 +178,175 @@ if (keyword) {
   return {reservations , meta}
 }
 
+
+const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationStatus }) => {
+  let organizationsIds = Array.isArray(organizationsId)
+    ? organizationsId
+    : JSON.parse(organizationsId || '[]');
+  organizationsIds = organizationsIds.map(id => new mongoose.Types.ObjectId(id));
+
+  const pipeline = [
+    {
+      $match: {
+        ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
+        ...(organizationsIds.length > 0 && { organizationId: { $in: organizationsIds } }),
+        ...(reservationStatus && { reservationStatus: "pending" })  // Filter by reservationStatus "pending"
+      }
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "userId",
+        foreignField: "_id",
+        as: "user"
+      }
+    },
+    { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        validEventId: {
+          $cond: {
+            if: { $and: [{ $ne: ["$optionalEventId", ""] }, { $ne: ["$optionalEventId", null] }] },
+            then: { $toObjectId: "$optionalEventId" },
+            else: null
+          }
+        }
+      }
+    },
+    {
+      $lookup: {
+        from: "events",
+        localField: "validEventId",
+        foreignField: "_id",
+        as: "event"
+      }
+    },
+    { $unwind: { path: "$event", preserveNullAndEmptyArrays: true } },
+    {
+      $project: {
+        _id: 1,
+        userId: 1,
+        userName: { $concat: ["$user.firstName", " ", "$user.lastName"] },
+        partySize: 1,
+        reservationType: 1,
+        organizationId: 1,
+        reservationStatus: 1,
+        companyOrganizer: 1,
+        timingSlots: 1,
+        status: 1,
+        optionalEventId: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        member: "Gold",
+        eventTitle: { $ifNull: ["$event.basicInfo.title", "No Event Title"] }
+      }
+    }
+  ];
+
+
+if (range == "monthly") {
+  const { start, end } = getStartAndEndOfMonth(today, timezone);
+
+  pipeline.push({
+    $match: {
+      createdAt: { $gte: start, $lt: end }
+    }
+  });
+}
+if (range == "weekly") {
+  const { start, end } = getStartAndEndOfWeek(today, timezone);
+
+  pipeline.push({
+    $match: {
+      createdAt: { $gte: start, $lt: end }
+    }
+  });
+}
+if (range == "today") {
+    const start = new Date(today);
+    const end = new Date(new Date(today).setDate(start.getDate() + 1));
+
+  pipeline.push({
+    $match: {
+      createdAt: { $gte: start, $lt: end }
+    }
+  });
+}
+  // Apply filters
+  if (status) {
+    pipeline.push({ $match: { status } });
+  } else {
+    pipeline.push({ $match: { status: { $ne: "deleted" } } });
+  }
+
+  if (date) {
+    const start = new Date(date);
+    const end = new Date(new Date(date).setDate(start.getDate() + 1));
+    pipeline.push({
+      $match: {
+        createdAt: { $gte: start, $lt: end }
+      }
+    });
+  }
+
+if (keyword) {
+  const keywordMatch = buildKeywordQueryFromModels(
+    [
+      { schema: UserReservations.schema }
+    ],
+    keyword
+  );
+
+  if (Object.keys(keywordMatch).length) {
+    pipeline.push({ $match: keywordMatch });
+  }
+}
+
+  pipeline.push({ $sort: { createdAt: -1 } });
+
+  // Apply pagination + counts using $facet
+  pipeline.push({
+    $facet: {
+      data: [
+        { $skip: skip },
+        ...(limit === 0 ? [] : [{ $limit: limit }])
+      ],
+      totalFiltered: [{ $count: "count" }]
+    }
+  });
+
+  const result = await UserReservations.aggregate(pipeline);
+
+  let reservations = result[0]?.data || [];
+  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+
+  // Additional counts for meta (active/inactive/total by userId as creator)
+  const [total, active, inactive] = await Promise.all([
+    UserReservations.countDocuments({ ...(userId && { userId: userId }), reservationStatus: { $ne: "cancelled" } }),
+    UserReservations.countDocuments({ reservationStatus: "active", ...(userId && { userId: userId }) }),
+    UserReservations.countDocuments({ reservationStatus: "inactive", ...(userId && { userId: userId }) })
+  ]);
+
+  const meta = generateMeta(page, limit, totalFiltered);
+  meta.reservationsCount = { total, active, inactive };
+
+
+  reservations = reservations.map(item => {
+    const formatted = reservationsFormatterAdjustDates(item);
+    if (formatted.conditionType == "noCondition"||formatted.conditionType=="ticketRequirement"||formatted.conditionType=="customText"||formatted.conditionType=="ticketRequirement") {
+      delete formatted.amount;
+      if(formatted.conditionType == "noCondition")
+      {
+      delete formatted.ticketType;
+      }
+    }
+    else{
+            delete formatted.ticketType;
+    }
+    return formatted;
+  });
+  return {reservations , meta}
+}
 module.exports = {
   createReservation,
   getReservationsWithFilters,
@@ -184,4 +356,5 @@ module.exports = {
   deleteReservationById,
   findByIdAndUpdate,
   getReservations,
+  getUserReservations,
 };

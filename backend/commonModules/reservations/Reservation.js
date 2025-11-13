@@ -7,11 +7,22 @@ const ReservationsSchema = new mongoose.Schema(
       ref: "User", // Reference to the "User" model
       required: true, // Assuming a user is required for each reservation
     },
-    title: {
+      companyOrganizer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // Reference to the "User" model
+      required: true, // Assuming a user is required for each reservation
+    },
+    reservationType: {
       type: String,
-      trim: true,
-      required: true,
-      default: "",
+      enum: [
+        "regular",
+        "vip",
+        "outdoor",
+        "private",
+        "bar",
+        "window",
+      ],
+      default: "regular",
     },
 
     availableReservations: {
@@ -89,7 +100,26 @@ const ReservationsSchema = new mongoose.Schema(
       required: true,
       default: "",
     },
-
+ timingSlots: {
+      enabled: {
+        type: Boolean,
+        default: false,
+      },
+      dateTimeSlots: {
+        type: [
+          {
+            date: { type: Date, },
+            timeSlots: [
+              {
+                startTime: { type: Date, },
+                endTime: { type: Date, },
+              }
+            ]
+          }
+        ],
+        default: [],
+      },
+    },
     needsConfirmation: {
       type: Boolean,
       required: true,

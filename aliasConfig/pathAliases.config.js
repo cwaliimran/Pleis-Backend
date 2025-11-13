@@ -24,6 +24,7 @@ module.exports = {
     "@UsersStreaksModel": "backend/commonModules/loyalty/streaks/UsersStreaks.js",
     "@TicketingsModel": "backend/commonModules/ticketing/TicketingsModel.js",
     "@ReservationsModel": "backend/commonModules/reservations/Reservation.js",
+    "@UserReservationsModel": "backend/commonModules/reservations/UsersReservation.js",
     "@OrdersModel": "backend/commonModules/menuItemsAndOrders/orders.js",
 
 };
