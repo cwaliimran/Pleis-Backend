@@ -31,9 +31,6 @@ router.use("/ticketing", require("../ticketing/ticketingsRoutes"));
 //highlights
 router.use("/highlights", require("../highlights/highlightRoutes"));
 
-//locations
-router.use("/locations", require("../../shared/locations/routes"));
-
 //loyalty
 router.use("/loyalty", require("../loyalty/loyaltyRoutes")); 
 // reservation

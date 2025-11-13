@@ -1,13 +1,13 @@
 
 const mongoose = require("mongoose");
 const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
-const { findOrganizationById, findEventsByOrganization, countEventsByOrganization, getOrganizationMenuWithItems, getRecommendedOrganizations } = require("./organizationProfileRepository");
+const { findOrganizationById, findEventsByOrganization, countEventsByOrganization, getOrganizationMenuWithItems, getRecommendedOrganizations, getNearbyOrganizations } = require("./organizationProfileRepository");
 const { getCurrentDateInTimezone, generateMeta, convertUtcToTimezone } = require("../../helperUtils/responseUtil");
 const { calculateDistance } = require("../../helperUtils/calculateDistance");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { formatMenuItem } = require("../../commonModules/menuManagement/menuItems/formatter/formatMenuItems");
 const { formatEventResponse } = require("../events/formatter/eventFormatter");
-const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
+const { formatOrganization, formatNearByOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
 // const { addOrUpdateRecentlyViewedItem } = require("backend/app/recentlyViewed/recentlyViewedItemService");
 
 
@@ -163,7 +163,15 @@ const getSimilarOrganizations = async (organizationId) => {
   return result || [];
 };
 
+const getNearbyOrganizationsService = async ({ location, radiusKm, timezone, page, limit }) => {
+  let result = await getNearbyOrganizations({ location, radiusKm, timezone, page, limit });
+  result.organizations = result.organizations.map(org => formatNearByOrganization(org));
+
+  return result
+};
+
 module.exports = {
   getOrganizationEvents,
   getOrganizationProfile,
+  getNearbyOrganizationsService,
 };

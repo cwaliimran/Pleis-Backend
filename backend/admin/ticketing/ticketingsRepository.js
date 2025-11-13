@@ -24,6 +24,19 @@ const getTicketingsWithFilters = async (query, page, limit) => {
     },
   });
 };
+// Get all with filters (e.g. filter by eventId)
+const getTicketingsByEventId = async (query) => {
+  return getWithFilters({
+    model: TicketingsModel,
+    query,
+    populate: [
+      {
+        path: "event",
+        select: "basicInfo.media basicInfo.title",
+      },
+    ],
+  });
+};
 
 
 const getCounts = async (query) => {
@@ -74,5 +87,6 @@ module.exports = {
   deleteTicketingById,
   findByIdAndUpdate,
   getCounts,
-  findById
+  findById,
+  getTicketingsByEventId
 };

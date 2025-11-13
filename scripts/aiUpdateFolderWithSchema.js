@@ -3,8 +3,8 @@ const path = require("path");
 const OpenAI = require("openai");
 
 // ---------------- CONFIG ----------------
-const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/admin/statusBadges";
-const schemaFileName = "StatusBadges.js"; // schema reference file
+const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/admin/loyalty/usersStreaks";
+const schemaFileName = "UsersStreaks.js"; // schema reference file
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 if (!OPENAI_API_KEY) {
@@ -64,49 +64,87 @@ Update the following file "${fileName}" according to this schema.
 follow the schema strictly as we have single object instead of objects array.
 const mongoose = require("mongoose");
 
-const statusBadgesSchema = new mongoose.Schema(
+const usersStreaksSchema = new mongoose.Schema(
   {
-    image: {
-      type: String,
-      default: "",
-    },
-    backgroundImage: {
-      type: String,
-      default: "",
-    },
-    title: {
-      type: String,
-      trim: true,
-      required: true,
-      default: "",
-    },
-    entryPoints: {
-      type: Number,
-      default: 0,
-    },
-    retainPoints: {
-      type: Number,
-      default: 0,
-    },
-    status: {
-      type: String,
-      enum: ["active", "inactive", "deleted"],
-      default: "active",
-    },
-    order: {
-      type: Number,
-      default: 0,
-    },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", required: true },
+
+    visits: { type: Number, default: 0 },
+    streak: { type: Number, default: 0 },
+    longestStreak: { type: Number, default: 0 },
+    points: { type: Number, default: 0 },
+
+    lastVisitAt: { type: Date },
+
+    // Dynamic points rules
+    pointsRules: [
+      {
+        visits: { type: Number, required: true }, // e.g., 5th, 10th, 20th visit
+        points: { type: Number, required: true }, // points to give on that visit
+      }
+    ],
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
+usersStreaksSchema.index({ user: 1, company: 1 }, { unique: true });
 
-const StatusBadges = mongoose.model("StatusBadges", statusBadgesSchema);
+const Streaks = mongoose.model("UsersStreaks", usersStreaksSchema);
+module.exports = Streaks;
 
-module.exports = StatusBadges;
+example add visit 
+async function addVisit(userId, companyId) {
+  let streakDoc = await Streaks.findOne({ user: userId, company: companyId });
+
+  if (!streakDoc) {
+    // First visit
+    streakDoc = await Streaks.create({
+      user: userId,
+      company: companyId,
+      visits: 1,
+      streak: 1,
+      longestStreak: 1,
+      points: 0,
+      pointsRules: [
+        { visits: 5, points: 50 },
+        { visits: 10, points: 150 },
+        { visits: 20, points: 300 }
+      ],
+    });
+    return streakDoc;
+  }
+
+  // Increment visits and streak
+  let newVisits = streakDoc.visits + 1;
+  let newStreak = streakDoc.streak + 1;
+  let newLongest = Math.max(streakDoc.longestStreak, newStreak);
+  let newPoints = streakDoc.points;
+
+  // Apply dynamic points rules
+  if (streakDoc.pointsRules && streakDoc.pointsRules.length) {
+    streakDoc.pointsRules.forEach(rule => {
+      if (newVisits === rule.visits) {
+        newPoints += rule.points;
+      }
+    });
+  }
+
+  // Update document
+  streakDoc = await Streaks.findByIdAndUpdate(
+    streakDoc._id,
+    {
+      visits: newVisits,
+      streak: newStreak,
+      longestStreak: newLongest,
+      points: newPoints,
+      lastVisitAt: new Date(),
+    },
+    { new: true }
+  );
+
+  return streakDoc;
+}
+
 
 File content
 ${fileContent}
