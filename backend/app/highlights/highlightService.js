@@ -1,7 +1,7 @@
 // services/highlightService.js
 
 const highlightRepo = require("./highlightRepository");
-const { formatPublicHighlightResponse } = require("../../commonModules/highlights/formatters/formatPublicHighlightResponse");
+const { formatHighlightsResponse } = require("./formatters/formatHighlightsResponse");
 
 const getPublicHighlights = async ({ userId, page, limit, keyword, userLocation, category,time, timezone }) => {
   const query = { status: "active" };
@@ -22,8 +22,9 @@ const getPublicHighlights = async ({ userId, page, limit, keyword, userLocation,
     ),
   ]);
 
+  
   highlights = highlights?.map((highlight) => {
-    return formatPublicHighlightResponse(highlight, { userLocation });
+    return formatHighlightsResponse(highlight, { userLocation });
   });
 
   return {

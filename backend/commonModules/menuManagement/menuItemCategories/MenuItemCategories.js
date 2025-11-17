@@ -17,6 +17,11 @@ const menuItemCategoriesSchema = new mongoose.Schema(
       enum: ["active", "inactive", "deleted"],
       default: "active",
     },
+    companyOrganizer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Users",
+      default: null,
+    },
   },
   {
     timestamps: true,

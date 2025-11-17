@@ -9,7 +9,7 @@ const { convertUtcToTimezone } = require("@utils/responseUtil");
  * @param {Object} object - Mongoose doc or plain object
  * @param {Object} options - optional settings: { timezone, includeFields, excludeFields }
  */
-const formatPublicHighlightResponse = (object = {}, options = {}) => {
+const formatHighlightsResponse = (object = {}, options = {}) => {
   if (!object) return null;
   let highlightObject = typeof object.toObject === "function" ? object.toObject() : object;
   if (!highlightObject) return null;
@@ -23,15 +23,14 @@ const formatPublicHighlightResponse = (object = {}, options = {}) => {
 
   if (highlightObject.object?.basicInfo?.media) {
     if (highlightObject.type === "organization") {
-      // Organization: logo and cover
-      const orgMedia = highlightObject.object.basicInfo.organization?.media ;
+      const orgMedia = highlightObject.object?.basicInfo?.media;
       if (orgMedia) {
-        highlightObject.object.basicInfo.organization.media = {
-          logo: getFullImageUrl(orgMedia.logo),
-          cover: getFullImageUrl(orgMedia.cover),
-        };
+        highlightObject.object.basicInfo.media = getFullImageUrl(orgMedia.logo);
       }
-    } else {
+    }
+
+
+    else {
       // Event: type and name
       const embeddedMedia = highlightObject.object.basicInfo.media;
       if (embeddedMedia) {
@@ -60,5 +59,5 @@ const formatPublicHighlightResponse = (object = {}, options = {}) => {
 
 
 module.exports = {
-  formatPublicHighlightResponse,
+  formatHighlightsResponse,
 };

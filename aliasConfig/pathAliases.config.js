@@ -26,4 +26,6 @@ module.exports = {
     "@ReservationsModel": "backend/commonModules/reservations/Reservation.js",
     "@UserReservationsModel": "backend/commonModules/reservations/UsersReservation.js",
     "@OrdersModel": "backend/commonModules/menuItemsAndOrders/orders.js",
+    "@ClubMembersModel": "backend/commonModules/loyalty/clubMembers/ClubMembers.js",
+    
 };

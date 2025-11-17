@@ -49,7 +49,6 @@ function formatChallenge(challenge, timezone) {
 
     switch (obj.taskType) {
         case "visit":
-            delete obj.taskValue;
             delete obj.taskMenuItem;
             break;
         case "earnPoints":

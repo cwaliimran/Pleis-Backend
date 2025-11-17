@@ -1,13 +1,15 @@
 
 const mongoose = require("mongoose");
 const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
-const { findOrganizationById, findEventsByOrganization, countEventsByOrganization, getOrganizationMenuWithItems, getRecommendedOrganizations, getNearbyOrganizations } = require("./organizationProfileRepository");
+const { findOrganizationById, findEventsByOrganization, countEventsByOrganization, getOrganizationMenuWithItems, getRecommendedOrganizations, getNearbyOrganizations, getSuggestedLoyaltyClubsForUser } = require("./organizationProfileRepository");
 const { getCurrentDateInTimezone, generateMeta, convertUtcToTimezone } = require("../../helperUtils/responseUtil");
 const { calculateDistance } = require("../../helperUtils/calculateDistance");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { formatMenuItem } = require("../../commonModules/menuManagement/menuItems/formatter/formatMenuItems");
 const { formatEventResponse } = require("../events/formatter/eventFormatter");
 const { formatOrganization, formatNearByOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
+const { isClubMember } = require("../loyalty/clubMembers/clubMembersRepository");
+const { formatSuggestedClubOrganization } = require("../../commonModules/organizations/formatter/formatSuggestedClubs");
 // const { addOrUpdateRecentlyViewedItem } = require("backend/app/recentlyViewed/recentlyViewedItemService");
 
 
@@ -35,6 +37,10 @@ const getOrganizationProfile = async (queryData) => {
 
     // Use schema helper for formatting
     let orgProfileInfo = formatOrganization(orgProfile.org);
+
+    let member = await isClubMember(userId, orgProfileInfo.creator);
+    orgProfileInfo.isClubMember = member ? true : false;
+
     orgProfileInfo.isFavorite = orgProfile.isFavorite;
     orgProfileInfo.venue = orgProfile.orgVenue;
     delete orgProfileInfo?.venue?.floorPlan
@@ -170,8 +176,16 @@ const getNearbyOrganizationsService = async ({ location, radiusKm, timezone, pag
   return result
 };
 
+const getSuggestedLoyaltyClubs = async ({ page = 1, limit = 10, userId }) => {
+  let result = await getSuggestedLoyaltyClubsForUser({ page, limit, userId });
+  const formatted = result.map(org => formatSuggestedClubOrganization(org));
+  return formatted || [];
+};
+
+
 module.exports = {
   getOrganizationEvents,
   getOrganizationProfile,
   getNearbyOrganizationsService,
+  getSuggestedLoyaltyClubs,
 };

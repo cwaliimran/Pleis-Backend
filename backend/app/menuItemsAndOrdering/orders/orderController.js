@@ -11,7 +11,6 @@ const placeOrder = async (req, res) => {
         "items",
         "pickupType",
         "paymentMethod",
-        "notes",
       ],
       enumFields: {
         pickupType: ["counter", "tableService", "togo"],

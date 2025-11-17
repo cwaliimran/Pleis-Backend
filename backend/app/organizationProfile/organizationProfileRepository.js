@@ -5,7 +5,8 @@ const Organizations = require("../../commonModules/organizations/Organization");
 const mongoose = require("mongoose");
 const Venues = require("../../commonModules/venues/Venues");
 const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
-const MenuOrders = require("@OrdersModel");
+const Orders = require("@OrdersModel");
+const { getUserJoinedClubs } = require("../loyalty/clubMembers/clubMembersRepository");
 /**
  * Fetch one organization by ID (populated)
  */
@@ -326,7 +327,7 @@ const getNearbyOrganizations = async ({ location, radiusKm, timezone, page, limi
   if (userId) {
     const orgIds = organizations.map(org => org._id);
     // Find active orders for this user and these organizations
-    const orders = await MenuOrders.find({
+    const orders = await Orders.find({
       user: userId,
       organization: { $in: orgIds },
       status: { $in: ["pending", "confirmed"] },
@@ -358,6 +359,19 @@ const findOrganizationWithSelectFilter = async (organizationId, selectFields) =>
     .select(selectFields).lean().exec();
 };
 
+//get suggested loyalty clubs
+const getSuggestedLoyaltyClubsForUser = async ({ page = 1, limit = 10, userId }) => {
+  const joinedClubs = await getUserJoinedClubs(userId);
+  const joinedClubIds = joinedClubs.map(club => club.companyOrganizer.toString());
+  const filter = {
+    _id: { $nin: joinedClubIds },
+    status: "active",
+  };
+  let result = Organizations.find(filter).select("basicInfo.name basicInfo.media.logo").lean()
+    .skip((page - 1) * limit)
+    .limit(limit);
+  return result;
+};
 
 module.exports = {
   getOrganizationMenuWithItems,
@@ -370,4 +384,5 @@ module.exports = {
   updateMany,
   getNearbyOrganizations,
   findOrganizationWithSelectFilter,
+  getSuggestedLoyaltyClubsForUser,
 };

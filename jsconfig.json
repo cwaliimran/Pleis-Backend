@@ -82,6 +82,9 @@
       ],
       "@OrdersModel": [
         "backend/commonModules/menuItemsAndOrders/orders.js"
+      ],
+      "@ClubMembersModel": [
+        "backend/commonModules/loyalty/clubMembers/ClubMembers.js"
       ]
     }
   },
