@@ -6,6 +6,7 @@ const { generateMeta } = require("@utils/responseUtil");
 const Presets = require("@PresetsModel");
 const presetRepo = require("./presetsRepository");
 const mongoose = require("mongoose");
+const { formatItemCategory } = require("../menuItems/formatter/formatMenuItems");
 
 const createPreset = async (data) => {
   let preset = await presetRepo.createPreset(data);
@@ -56,6 +57,31 @@ const getPresets = async ({ page, limit, keyword, status, userId, date }) => {
 
   pipeline.push({ $sort: { createdAt: -1 } });
 
+  // Populate category and project only _id, image, and title
+  pipeline.push({
+    $lookup: {
+      from: "menuitemcategories",
+      localField: "category",
+      foreignField: "_id",
+      as: "category",
+      pipeline: [
+        {
+          $project: {
+            _id: 1,
+            image: 1,
+            title: 1
+          }
+        }
+      ]
+    }
+  });
+  pipeline.push({
+    $unwind: {
+      path: "$category",
+      preserveNullAndEmptyArrays: true
+    }
+  });
+
   // Apply pagination + counts using $facet
   pipeline.push({
     $facet: {
@@ -79,12 +105,12 @@ const getPresets = async ({ page, limit, keyword, status, userId, date }) => {
     Presets.countDocuments({ status: "inactive", ...(userId && { creator: userId }) })
   ]);
 
-   //format presets
-    const formattedPresets = presets.map(preset => ({
-      ...preset,
-      image : getFullImageUrl(preset.image || "noimage.png")
-    }));
-
+  //format presets
+  const formattedPresets = presets.map(preset => ({
+    ...preset,
+    category: formatItemCategory(preset.category),
+    image: getFullImageUrl(preset.image || "noimage.png")
+  }));
 
   const meta = generateMeta(page, limit, totalFiltered);
   meta.presetsCount = { total, active, inactive };
@@ -102,6 +128,7 @@ const updatePreset = async (id, data) => {
   const allowedFields = [
     "image",
     "title",
+    "category",
     "description",
     "basePrice",
     "status"
@@ -120,9 +147,12 @@ const updatePreset = async (id, data) => {
   Object.assign(preset, updateData);
   await preset.save();
 
-  preset.image = getFullImageUrl(preset.image || "noimage.png");
+  //get updated preset with populated category
+  const updatedPreset = await presetRepo.findPresetById(preset._id);
+  updatedPreset.image = getFullImageUrl(updatedPreset.image || "noimage.png");
+  updatedPreset.category = formatItemCategory(updatedPreset.category);
 
-  return preset;
+  return updatedPreset;
 };
 
 const deletePreset = async (id) => {
@@ -136,6 +166,8 @@ const deletePreset = async (id) => {
 const getPresetDetails = async (id) => {
   const preset = await presetRepo.findPresetById(id);
   if (!preset) return null;
+  preset.image = getFullImageUrl(preset.image || "noimage.png");
+  preset.category = formatItemCategory(preset.category);
   return preset;
 };
 

@@ -11,6 +11,11 @@ const presetsSchema = new mongoose.Schema(
       required: true,
       default: "",
     },
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MenuItemCategories",
+      required: true,
+    },
 
     description: {
       type: String,

@@ -16,6 +16,7 @@ const createPreset = async (data) => {
 // Get all presets with their assigned organization populated, sorted by createdAt descending
 const getPresetsWithFilters = async (query = {}, skip = 0, limit = 10) => {
   return Presets.find(query)
+    .populate("category", "_id image title")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
@@ -28,7 +29,7 @@ const countPresets = async (query = {}) => {
 
 // Find by ID
 const findPresetById = async (id) => {
-  return Presets.findById(id);
+  return Presets.findById(id).populate("category", "_id image title");
 };
 
 // Update and save

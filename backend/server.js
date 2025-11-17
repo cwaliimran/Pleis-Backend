@@ -45,6 +45,7 @@ const allowedOrigins = [
   "http://localhost:4003",
   "http://192.168.15.45:4003",
   "https://pleis.vercel.app",
+  " https://latex-industry-bridges-wines.trycloudflare.com",
   "https://nelson-sponsor-santa-interact.trycloudflare.com",
   "https://specification-medicine-exec-deaf.trycloudflare.com",
   "https://willow-zealand-currency-fortune.trycloudflare.com",

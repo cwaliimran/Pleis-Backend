@@ -73,6 +73,7 @@ const getNearbyOrganizationsByLocation = async (req, res) => {
       timezone,
       page,
       limit,
+      userId: req.user._id
     });
 
     return sendResponse({

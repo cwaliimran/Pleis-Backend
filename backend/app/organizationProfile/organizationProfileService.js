@@ -163,8 +163,8 @@ const getSimilarOrganizations = async (organizationId) => {
   return result || [];
 };
 
-const getNearbyOrganizationsService = async ({ location, radiusKm, timezone, page, limit }) => {
-  let result = await getNearbyOrganizations({ location, radiusKm, timezone, page, limit });
+const getNearbyOrganizationsService = async ({ location, radiusKm, timezone, page, limit, userId }) => {
+  let result = await getNearbyOrganizations({ location, radiusKm, timezone, page, limit, userId });
   result.organizations = result.organizations.map(org => formatNearByOrganization(org));
 
   return result

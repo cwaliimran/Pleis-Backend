@@ -1,8 +1,10 @@
 // services/categoryService.js
 const { generateMeta } = require("@utils/responseUtil");
 const categoryRepo = require("./menuItemCategoriesRepository");
-const createCategory = async ({ title, status }) => {
-  return await categoryRepo.createCategory({ title, status });
+const { formatItemCategory } = require("../menuItems/formatter/formatMenuItems");
+const createCategory = async ({ image, title, status }) => {
+  let category = await categoryRepo.createCategory({ image, title, status });
+  return formatItemCategory(category);
 };
 
 const getCategories = async ({ page, limit, keyword, status, date }) => {
@@ -39,8 +41,9 @@ const getCategories = async ({ page, limit, keyword, status, date }) => {
 
   let meta = generateMeta(page, limit, totalFiltered);
   meta.categoriesCount = { total, active, inactive };
+  let formattedCategories = categories?.map((cat) => formatItemCategory(cat));
   return {
-    categories,
+    categories: formattedCategories,
     meta,
   };
 };
@@ -85,8 +88,9 @@ const getPublicCategories = async ({ page, limit, keyword, date }) => {
     totalPages,
     total: totalFiltered,
   };
+  let formattedCategories = categories?.map((cat) => formatItemCategory(cat));
   return {
-    categories,
+    categories: formattedCategories,
     meta,
   };
 };
@@ -95,6 +99,7 @@ const updateCategory = async (id, data) => {
   const updateData = {
     ...(data.title !== undefined && { title: data.title }),
     ...(data.status !== undefined && { status: data.status }),
+    ...(data.image !== undefined && { image: data.image }),
   };
 
   if (Object.keys(updateData).length === 0) {
@@ -102,7 +107,10 @@ const updateCategory = async (id, data) => {
     return category;
   }
 
-  const updated = await categoryRepo.findByIdAndUpdate(id, updateData);
+  let updated = await categoryRepo.findByIdAndUpdate(id, updateData);
+  if (!updated) return null;
+  let updatedCategory = await categoryRepo.findCategoryById(id);
+  updated = formatItemCategory(updatedCategory);
   return updated;
 };
 

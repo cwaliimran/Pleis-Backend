@@ -2,7 +2,10 @@ const mongoose = require("mongoose");
 
 const menuItemCategoriesSchema = new mongoose.Schema(
   {
-  
+    image: {
+      type: String,
+      default: "",
+    },
     title: {
       type: String,
       trim: true,

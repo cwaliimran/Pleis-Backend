@@ -1,3 +1,25 @@
-Filters in events
-Timezone in public events
-Timezone in public highlights
+http://localhost:4012/api/v1/
+https://pleis-backend-dev-bgd6a6hxefgwbzg5.germanywestcentral-01.azurewebsites.net/api/v1/
+Streaks=>
+working hours, 
+
+5AM mid of night instead of 12AM - 24 hours only 1 checkin in a restaurant
+only 1 time they can get points but they can checkin as many times as they want
+
+Max 5 restaurants a day - only 1 time get point against each
+
+Challenges=> Visits rules will be same as Streaks - users can get multiple points based on active challenge or streaks
+
+Item category in Menu Presets
+Auto populate category when using preset
+
+Add image in loyalty challenges, rewards, promotions 
+
+
+
+promo codes on menu items checkout - e.g 15% off CODE #OFF15PLEIS
+
+
+friends
+
+
