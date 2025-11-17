@@ -1,3 +1,4 @@
+const UserReservations = require("@UserReservationsModel");
 const {
   sendResponse,
   parsePaginationParams,
@@ -536,9 +537,8 @@ if (
 
 
 
-const updateUserReservation = async (req, res) => {
+const   updateUserReservationStatus = async (req, res) => {
   const { id , value} = req.params;
-  console.log("value is ",value );
   const validStatuses = ["confirmed", "rejected", "pending", "cancelled"];
   if (!validStatuses.includes(value)) {
     return res.status(404).json({
@@ -554,7 +554,7 @@ const updateUserReservation = async (req, res) => {
     return;
 
   try {
-    const deleted = await reservationService.updateUserReservation(id,value);
+    const deleted = await reservationService.updateUserReservationStatus(id,value);
     if (!deleted) {
       return sendResponse({
         res,
@@ -579,6 +579,146 @@ const updateUserReservation = async (req, res) => {
   }
 };
 
+const updateUserReservation = async (req, res) => {
+  const { id, userId } = req.params;
+
+
+const {
+firstName,
+lastName,
+  partySize,
+  phoneNumber,
+  reservationType,
+  timingSlots,
+} = req.body;
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })
+  )
+    return;
+    const timezone = req.user.timezone;
+
+  let data = {
+    id,
+    userId,
+firstName,
+lastName,
+  partySize,
+  phoneNumber,
+  reservationType,
+  timingSlots,
+
+  };
+
+  if (data.timeSlots) {
+    const slots = data.timingSlots.dateTimeSlots || [];
+
+    if (!Array.isArray(slots) || slots.length === 0) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "timing_slots_required_when_enabled",
+      });
+    }
+
+    for (const dateBlock of slots) {
+      if (!dateBlock.date) {
+        return sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "invalid_date_in_timing_slots",
+        });
+      }
+
+      if (!Array.isArray(dateBlock.timeSlots) || dateBlock.timeSlots.length === 0) {
+        return sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "time_slots_required_for_date",
+        });
+      }
+
+
+      for (const slot of dateBlock.timeSlots) {
+
+        if (!slot.startTime || !slot.endTime) {
+          return sendResponse({
+            res,
+            statusCode: 400,
+            translationKey: "invalid_start_or_end_time_in_slot",
+          });
+        }
+
+        // Convert times to UTC
+        slot.startTime = convertTimezoneToUtc(
+          `${dateBlock.date} ${slot.startTime}`,
+          timezone,
+          "YYYY-MM-DD hh:mm A"
+        );
+
+        slot.endTime = convertTimezoneToUtc(
+          `${dateBlock.date} ${slot.endTime}`,
+          timezone,
+          "YYYY-MM-DD hh:mm A"
+        );
+              console.log("start time ",slots.startTime );
+
+      }
+
+    }
+  }
+
+  
+  // Validate params
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id", "userId"],
+      objectIdFields: ["id", "userId"],
+    })
+  ) {
+    return; // Ensure you return if validation fails
+  }
+      const currentUser = req.user;
+      // Only admin, manager, or organizer can update other users' profiles
+      if (
+        currentUser._id.toString() !== id &&
+        !["admin", "manager", "organizer"].includes(currentUser.userType)
+      ) {
+        return sendResponse({
+          res,
+          statusCode: 403,
+          translationKey: "unauthorized_to_perform_this_action",
+        });
+      }
+
+  try {
+    const update = await reservationService.updateUserReservation(data);
+    if (!update) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "Reservation_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "Reservation_updated_successfully",
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
 
 
 module.exports = {
@@ -588,6 +728,6 @@ module.exports = {
   deleteReservation,
   getReservationDetails,
   getUserReservations,
-  
+  updateUserReservationStatus,
   updateUserReservation,
 };

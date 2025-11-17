@@ -1,7 +1,7 @@
 // repositories/ReservationRepository.js
 const Reservations = require("@ReservationsModel");
 const UserReservations = require("@UserReservationsModel");
-const User = require("../../models/UserModel");
+const { User } = require("../../models/UserModel");
 const Event = require("@EventsModel");
 const mongoose = require("mongoose");
 const { reservationsFormatter, reservationsFormatterAdjustDates } = require("../../app/reservations/formaters/reservationFormetter");
@@ -190,7 +190,7 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
       $match: {
         ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
         ...(organizationsIds.length > 0 && { organizationId: { $in: organizationsIds } }),
-        ...(reservationStatus && { reservationStatus: "pending" })  // Filter by reservationStatus "pending"
+        ...(reservationStatus && { reservationStatus:reservationStatus }) 
       }
     },
     {
@@ -232,6 +232,7 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
         organizationId: 1,
         reservationStatus: 1,
         companyOrganizer: 1,
+        reservationId: 1,
         timingSlots: 1,
         status: 1,
         optionalEventId: 1,
@@ -347,6 +348,17 @@ if (keyword) {
   });
   return {reservations , meta}
 }
+
+
+
+const findUserReservationById = async (id, data) => {
+  return UserReservations.findByIdAndUpdate(id, data, { new: true });
+};
+
+const findUserById = async (id) => {
+  return User.findById(id);
+};
+
 module.exports = {
   createReservation,
   getReservationsWithFilters,
@@ -357,4 +369,6 @@ module.exports = {
   findByIdAndUpdate,
   getReservations,
   getUserReservations,
+  findUserReservationById,
+  findUserById,
 };
