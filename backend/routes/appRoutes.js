@@ -21,6 +21,7 @@ router.use("/events", require("../app/events/eventRoutes"));
 //loyalty
 router.use("/loyalty/challenges", require("../app/loyalty/challenges/challengesRoutes"));
 router.use("/loyalty/promotions", require("../app/loyalty/promotions/promotionsRoutes"));
+router.use("/loyalty/club", require("../app/loyalty/clubMembers/clubMembersRoutes"));
 
 router.use("/users", require("../app/usersManagement/usersRoutes"));
 

@@ -42,14 +42,14 @@ const createTicketing = async (req, res) => {
       earlyBird.endDate = convertTimezoneToUtc(
         earlyBird.endDate,
         timezone,
-        "YYYY-MM-DD"
+        "YYYY-MM-DD hh:mm A"
       );
     }
     if (lastMinute?.startDate) {
       lastMinute.startDate = convertTimezoneToUtc(
         lastMinute.startDate,
         timezone,
-        "YYYY-MM-DD"
+        "YYYY-MM-DD hh:mm A"
       );
     }
   };
@@ -74,10 +74,10 @@ const createTicketing = async (req, res) => {
   if (data.timeSensitivePricing) {
     const { earlyBird, lastMinute } = data.timeSensitivePricing;
     if (earlyBird?.endDate) {
-      validateData.dateFields["timeSensitivePricing.earlyBird.endDate"] = "YYYY-MM-DD";
+      validateData.dateFields["timeSensitivePricing.earlyBird.endDate"] = "YYYY-MM-DD hh:mm A";
     }
     if (lastMinute?.startDate) {
-      validateData.dateFields["timeSensitivePricing.lastMinute.startDate"] = "YYYY-MM-DD";
+      validateData.dateFields["timeSensitivePricing.lastMinute.startDate"] = "YYYY-MM-DD hh:mm A";
     }
   }
 
@@ -392,7 +392,7 @@ const updateTicketing = async (req, res) => {
       earlyBird.endDate = convertTimezoneToUtc(
         earlyBird.endDate,
         timezone,
-        "YYYY-MM-DD"
+        "YYYY-MM-DD hh:mm A"
       );
     }
 

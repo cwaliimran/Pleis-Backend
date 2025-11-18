@@ -6,7 +6,7 @@ const Streaks = require("@StreaksModel");
 // Create usersStreak and automatically assign next order
 const createUsersStreak = async (data) => {
   // Fetch all streak rules for the company
-  const { user: userId, companyOrganizer: companyOrganizerId } = data;
+  const { user: userId, companyOrganizer: companyOrganizerId, organization } = data;
   const streakRules = await Streaks.find({
     companyOrganizer: companyOrganizerId,
     status: "active",
@@ -20,12 +20,14 @@ const createUsersStreak = async (data) => {
   let userStreak = await UsersStreaks.findOne({
     user: userId,
     companyOrganizer: companyOrganizerId,
+    organization
   });
 
   if (!userStreak) {
     userStreak = new UsersStreaks({
       user: userId,
       companyOrganizer: companyOrganizerId,
+      organization,
       visits: 0,
       points: 0,
       streak: 0,
@@ -50,6 +52,7 @@ const createUsersStreak = async (data) => {
   return {
     userId,
     companyOrganizer: companyOrganizerId,
+    organization,
     visits: userStreak.visits,
     points: userStreak.points,
     rewardGiven: reward ? reward.points : 0,

@@ -10,12 +10,7 @@ const clubCollaborationsService = require("./clubCollaborationsService");
 
 
 const createClubCollaboration = async (req, res) => {
-  const {
-    sender,
-    receiver,
-    notes,
-    expiryDate,
-  } = req.body;
+  const { sender, receiver, notes, expiryDate } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -23,27 +18,16 @@ const createClubCollaboration = async (req, res) => {
     })
   ) return;
 
-  // Set initial status as 'pending' for both sender and receiver
-  let data = {
-    sender: { id: sender, status: "pending" },
-    receiver: { id: receiver, status: "pending" },
-    notes,
-    expiryDate,
-  };
-
   try {
-    // Check if the collaboration already exists between the same sender and receiver
-    const existing = await clubCollaborationsService.getClubCollaborations({
-      page: 1,
-      limit: 1,
-      keyword: "",
-      status: { $ne: "deleted" },
-      date: null,
-      userId: sender,
-      receiverId: receiver,
+    const result = await clubCollaborationsService.createClubCollaboration({
+      sender,
+      receiver,
+      notes,
+      expiryDate
     });
 
-    if (existing.clubCollaborations.length > 0) {
+    // Already exists
+    if (result.exists) {
       return sendResponse({
         res,
         statusCode: 400,
@@ -51,21 +35,23 @@ const createClubCollaboration = async (req, res) => {
       });
     }
 
-    // Create the collaboration
-    const clubCollaboration = await clubCollaborationsService.createClubCollaboration(data);
-    if (!clubCollaboration) {
+    // Check creation failure
+    if (!result.clubCollaboration) {
       return sendResponse({
         res,
         statusCode: 400,
         translationKey: "club_collaboration_creation_failed",
       });
     }
+
+    // Success
     return sendResponse({
       res,
       statusCode: 201,
       translationKey: "club_collaboration_created_successfully",
-      data: clubCollaboration,
+      data: result.clubCollaboration,
     });
+
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
     return sendResponse({
@@ -76,6 +62,7 @@ const createClubCollaboration = async (req, res) => {
     });
   }
 };
+
 
 const getClubCollaborations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);

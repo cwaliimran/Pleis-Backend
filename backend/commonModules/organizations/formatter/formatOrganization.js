@@ -11,7 +11,6 @@ const { formatCategories } = require("../../../admin/categories/formatters/categ
  * @returns {Object|null}
  */
 function formatOrganization(item, excludeFields = []) {
-
   let org = typeof item.toObject === "function" ? item.toObject() : item;
 
   if (!org) return null;

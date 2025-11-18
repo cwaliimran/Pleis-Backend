@@ -15,7 +15,7 @@ router.use(auth);
 const apiRateLimiter = createRateLimiter("AppEvents");
 
 // Get nearby events
-router.post("/nearby", apiRateLimiter, getNearbyEventsWithAdvanceFilters);
+router.post("/filter", apiRateLimiter, getNearbyEventsWithAdvanceFilters); // also gets nearby events with advanced filters by default
 
 //get event details
 router.get("/:id", apiRateLimiter, getEventDetails);

@@ -3,6 +3,10 @@ const rewardSchema = require("../Reward/rewardSchema");
 
 const baseChallengeSchema = new mongoose.Schema(
   {
+    image: {
+      type: String,
+      default: "",
+    },
     title: { type: String, trim: true, required: true },
     description: { type: String, default: "" },
     taskType: {

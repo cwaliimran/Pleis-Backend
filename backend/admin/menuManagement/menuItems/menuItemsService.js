@@ -7,8 +7,8 @@ const MenuItems = require("@MenuItemsModel");
 const Menus = require("@MenusModel");
 const Venues = require("@VenuesModel");
 const MenuItemCategories = require("@MenuItemCategoriesModel");
-const { formatMenuItem } = require("./formatter/formatMenuItems");
 const { getMenuIdsByCompanyOrganizer } = require("../../organizations/organizationRepository");
+const { formatMenuItem } = require("../menuItemCategories/formatter/formatItemCategories");
 
 const createMenuItem = async (data, timezone) => {
   let doc = await menuItemRepo.createMenuItem(data);
@@ -240,6 +240,12 @@ const getMenuItemDetails = async (id) => {
 };
 
 
+const getMenuItemsByMenuId = async (menuId, timezone) => {
+  const menuItems = await menuItemRepo.findMenuItemsByMenuId(menuId);
+  const formattedItems = menuItems.map(item => formatMenuItem(item, timezone));
+  return formattedItems;
+};
+
 
 module.exports = {
   createMenuItem,
@@ -247,4 +253,5 @@ module.exports = {
   updateMenuItem,
   getMenuItemDetails,
   deleteMenuItem,
+  getMenuItemsByMenuId
 };

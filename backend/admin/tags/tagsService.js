@@ -120,6 +120,7 @@ const updateTag = async (id, data) => {
   return updated;
 };
 
+
 const deleteTag = async (id) => {
   const updated = await tagRepo.findTagByIdAndUpdate(id, { status: "deleted" });
   if (!updated) return null;

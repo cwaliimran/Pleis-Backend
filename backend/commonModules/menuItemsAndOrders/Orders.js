@@ -26,11 +26,14 @@ const OrdersSchema = new mongoose.Schema(
             enum: ["pending", "confirmed", "completed", "cancelled"],
             default: "pending",
         },
-        notes: { type: String, required: true },
+        notes: { type: String, default: "" },
         paymentMethod: {
             type: String, required: true,
             enum: ["applePay", "card", "cash", "payLater"], default: "card"
         },
+        //with payLater user can add more items to cart
+        // for applePay/card order can't be cancelled
+
         pickupType: { type: String, enum: ["counter", "tableService", "togo"], default: "counter" },
         tableNumber: {
             type: String,

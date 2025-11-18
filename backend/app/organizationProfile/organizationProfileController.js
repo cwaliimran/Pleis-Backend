@@ -3,7 +3,7 @@ const {
   validateParams,
   parsePaginationParams,
 } = require("../../helperUtils/responseUtil");
-const { getOrganizationProfile, getNearbyOrganizationsService } = require("./organizationProfileService");
+const { getOrganizationProfile, getNearbyOrganizationsService, joinOrgLoyaltyClub } = require("./organizationProfileService");
 
 
 const getOrganizationProfileData = async (req, res) => {
@@ -61,7 +61,7 @@ const getNearbyOrganizationsByLocation = async (req, res) => {
         translationKey: "user_location_not_provided",
       });
     }
-    
+
 
     let { page, limit } = parsePaginationParams(req);
 
@@ -73,6 +73,7 @@ const getNearbyOrganizationsByLocation = async (req, res) => {
       timezone,
       page,
       limit,
+      userId: req.user._id
     });
 
     return sendResponse({
@@ -92,7 +93,8 @@ const getNearbyOrganizationsByLocation = async (req, res) => {
   }
 };
 
+
 module.exports = {
   getOrganizationProfileData,
-  getNearbyOrganizationsByLocation
+  getNearbyOrganizationsByLocation,
 };

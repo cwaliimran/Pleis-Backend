@@ -21,6 +21,8 @@ const getOrganizerUsersWithFilters = async ({ skip = 0, limit = 10, keyword }) =
       $match: {
         $or: [
           { "profile.name": regex },
+          { "companyDetails.name": regex },
+          { "companyDetails.loyaltySettings.title": regex },
           { email: regex },
           { username: regex },
         ],
