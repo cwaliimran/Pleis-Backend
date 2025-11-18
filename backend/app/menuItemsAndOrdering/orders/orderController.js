@@ -11,7 +11,6 @@ const placeOrder = async (req, res) => {
         "items",
         "pickupType",
         "paymentMethod",
-        "notes",
       ],
       enumFields: {
         pickupType: ["counter", "tableService", "togo"],
@@ -52,6 +51,42 @@ const placeOrder = async (req, res) => {
     });
   }
 };
+
+const addMoreItemsToOrder = async (req, res) => {
+  const { orderId, items } = req.body;
+  try {
+    let validateData = {
+      rawData: [
+        "orderId",
+        "items",
+      ],
+    }
+
+    if (!validateParams(req, res, validateData)) return;
+
+    const { order } = await orderService.addMoreItemsToOrder({
+      userId: req.user._id,
+      timezone: req.user.timezone,
+      orderId,
+      items,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "items_added_to_order_successfully",
+      data: order,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode || 400,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+}
 
 const getOrderDetails = async (req, res) => {
   const { id } = req.params;
@@ -107,4 +142,4 @@ const getUserOrders = async (req, res) => {
   }
 };
 
-module.exports = { placeOrder, getOrderDetails, getUserOrders };
+module.exports = { placeOrder, getOrderDetails, getUserOrders, addMoreItemsToOrder };

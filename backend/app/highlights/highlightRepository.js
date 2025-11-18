@@ -127,7 +127,34 @@ const getPublicHighlightsWithFilters = async (
         localField: "object",
         foreignField: "_id",
         as: "orgObject",
-        pipeline: [{ $match: { status: "active", ...categoryFilterOrganization } }],
+        pipeline: [
+          { $match: { status: "active", ...categoryFilterOrganization } },
+
+          // Favorite lookup for organizations
+          {
+            $lookup: {
+              from: "favorites",
+              let: { orgId: "$_id" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $and: [
+                        { $eq: ["$targetId", "$$orgId"] },
+                        { $eq: ["$user", userObjectId] },
+                        { $eq: ["$targetType", "organization"] },
+                      ],
+                    },
+                  },
+                },
+                { $limit: 1 },
+              ],
+              as: "favoriteInfo",
+            },
+          },
+
+          { $addFields: { isFavorite: { $gt: [{ $size: "$favoriteInfo" }, 0] } } },
+        ],
       },
     },
 
@@ -137,13 +164,19 @@ const getPublicHighlightsWithFilters = async (
         object: {
           $switch: {
             branches: [
-              { case: { $eq: ["$type", "Event"] }, then: { $arrayElemAt: ["$eventObjects", 0] } },
-              { case: { $eq: ["$type", "Organizations"] }, then: { $arrayElemAt: ["$orgObject", 0] } },
+              {
+                case: { $eq: ["$type", "event"] },
+                then: { $arrayElemAt: ["$eventObjects", 0] }
+              },
+              {
+                case: { $eq: ["$type", "organization"] },
+                then: { $arrayElemAt: ["$orgObject", 0] }
+              }
             ],
-            default: null,
-          },
-        },
-      },
+            default: null
+          }
+        }
+      }
     },
   ];
 
@@ -181,6 +214,7 @@ const getPublicHighlightsWithFilters = async (
       "object.basicInfo.title": 1,
       "object.basicInfo.name": 1,
       "object.basicInfo.venueLocation": 1,
+      "object.location": 1,
       "object.basicInfo.media": 1,
       "object.basicInfo.description": 1,
       "object.basicInfo.organization.basicInfo.name": 1,

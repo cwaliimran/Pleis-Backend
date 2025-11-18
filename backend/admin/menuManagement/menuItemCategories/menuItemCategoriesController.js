@@ -8,7 +8,7 @@ const {
 const categoriesService = require("./menuItemCategoriesService");
 
 const createCategory = async (req, res) => {
-  const { title, status = "active" } = req.body;
+  const { image, title, status = "active" } = req.body;
 
   if (!validateParams(req, res, {
     rawData: ["title"], enumFields: {
@@ -19,6 +19,7 @@ const createCategory = async (req, res) => {
 
   try {
     const category = await categoriesService.createCategory({
+      image,
       title,
       status,
     });
@@ -124,7 +125,7 @@ const getPublicCategories = async (req, res) => {
 
 const updateCategory = async (req, res) => {
   const { id } = req.params;
-  const { title, status } = req.body;
+  const { image, title, status } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -140,6 +141,7 @@ const updateCategory = async (req, res) => {
 
   try {
     const updated = await categoriesService.updateCategory(id, {
+      image,
       title,
       status,
     });

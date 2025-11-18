@@ -9,20 +9,21 @@ const {
 const usersUsersStreaksService = require("./usersStreaksService");
 
 const createUsersStreak = async (req, res) => {
-  const { companyOrganizer } = req.body;
+  const { companyOrganizer, organization } = req.body;
 
-  if (!validateParams(req, res, { rawData: ["companyOrganizer"], objectIdFields: ["companyOrganizer"] })) return;
+  if (!validateParams(req, res, { rawData: ["companyOrganizer", "organization"], objectIdFields: ["companyOrganizer", "organization"] })) return;
 
   try {
     const usersStreak = await usersUsersStreaksService.createUsersStreak({
       companyOrganizer,
+      organization,
       user: req.user._id,
     });
 
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "users_usersStreak_created_successfully",
+      translationKey: "users_streak_created_successfully",
       data: usersStreak,
     });
   } catch (error) {

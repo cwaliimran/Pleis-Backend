@@ -12,6 +12,7 @@ const presetsService = require("./presetsService");
 const createPreset = async (req, res) => {
   const {
     image,
+    category,
     title,
     description = "",
     basePrice = "0",
@@ -28,6 +29,7 @@ const createPreset = async (req, res) => {
   let data = {
     image,
     title,
+    category,
     description,
     basePrice,
     status,

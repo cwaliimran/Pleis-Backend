@@ -17,7 +17,7 @@ const getMenuItems = async (req, res) => {
     organization
   } = req.query;
   try {
-    const { recommended, menu } = await menuItemsService.getMenuItems({
+    const { organizationDetails, recommended, menu } = await menuItemsService.getMenuItems({
       status,
       timezone: req.user?.timezone,
       organization,
@@ -27,7 +27,7 @@ const getMenuItems = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "menu_items_fetched_successfully",
-      data: { recommended, menu },
+      data: { organization: organizationDetails, recommended, menu },
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -122,10 +122,10 @@ const getPickupOptions = async (req, res) => {
       error,
     });
   }
-  }
+}
 
-  module.exports = {
-    getMenuItems,
-    getMenuItemDetails,
-    getPickupOptions,
-  };
+module.exports = {
+  getMenuItems,
+  getMenuItemDetails,
+  getPickupOptions,
+};

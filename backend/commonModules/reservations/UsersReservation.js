@@ -25,12 +25,21 @@ const UserReservationsSchema = new mongoose.Schema(
       ],
       default: "regular",
     },
-
+    amount: {
+      type: Number,
+      min: [0, "Price must be positive"],
+    },
     organizationId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organization",
       required: true,
     },
+        reservationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Reservations",
+      required: true,
+    },
+    
       companyOrganizer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User", // Reference to the "User" model

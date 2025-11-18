@@ -1,4 +1,3 @@
-const { result } = require("lodash");
 const { Events } = require("../../commonModules/events/Event");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
 const Menus = require("../../commonModules/menuManagement/menu/Menus");
@@ -6,6 +5,8 @@ const Organizations = require("../../commonModules/organizations/Organization");
 const mongoose = require("mongoose");
 const Venues = require("../../commonModules/venues/Venues");
 const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
+const Orders = require("@OrdersModel");
+const { getUserJoinedClubs } = require("../loyalty/clubMembers/clubMembersRepository");
 /**
  * Fetch one organization by ID (populated)
  */
@@ -281,10 +282,14 @@ function getSimilarityWeights(options = {}) {
 }
 
 
-const getNearbyOrganizations = async ({ location, radiusKm, timezone, page, limit }) => {
+/**
+ * Get nearby organizations and include active order number for the user (if any).
+ * @param {Object} params - { location, radiusKm, timezone, page, limit, userId }
+ * @returns {Promise<{ organizations: Array }>}
+ */
+const getNearbyOrganizations = async ({ location, radiusKm, timezone, page, limit, userId }) => {
   const skip = (page - 1) * limit;
   const radiusMeters = radiusKm * 1000;
-
   // MongoDB geospatial query
   const pipeline = [
     {
@@ -316,37 +321,57 @@ const getNearbyOrganizations = async ({ location, radiusKm, timezone, page, limi
     },
   ];
 
-  const organizations = await Organizations.aggregate(pipeline);
+  let organizations = await Organizations.aggregate(pipeline);
 
-  // const totalCountAgg = await Organizations.aggregate([
-  //   {
-  //     $geoNear: {
-  //       near: { type: "Point", coordinates: location },
-  //       distanceField: "distance",
-  //       spherical: true,
-  //       maxDistance: radiusMeters,
-  //       query: { status: "active" },
-  //     },
-  //   },
-  //   {
-  //     $count: "total",
-  //   },
-  // ]);
+  // If userId is provided, fetch active order for each organization
+  if (userId) {
+    const orgIds = organizations.map(org => org._id);
+    // Find active orders for this user and these organizations
+    const orders = await Orders.find({
+      user: userId,
+      organization: { $in: orgIds },
+      status: { $in: ["pending", "confirmed"] },
+    }).select("organization orderNumber").lean();
 
-  // const totalRecords = totalCountAgg.length > 0 ? totalCountAgg[0].total : 0;
-  // const totalPages = limit > 0 ? Math.ceil(totalRecords / limit) : 1;
+    // Map orgId to orderNumber
+    const orgOrderMap = {};
+    orders.forEach(order => {
+      orgOrderMap[order.organization.toString()] = order.orderNumber;
+    });
+
+
+    // Attach orderNumber to each organization if exists
+    organizations = organizations.map(org => ({
+      ...org,
+      orderNumber: orgOrderMap[org._id.toString()] || null,
+    }));
+  }
 
   return {
     organizations,
-    // meta: {
-    //   currentPage: page,
-    //   totalPages,
-    //   totalRecords,
-    //   limit,
-    // },
   };
 };
 
+//get organization with custom .select filters
+const findOrganizationWithSelectFilter = async (organizationId, selectFields) => {
+  return Organizations.findById(organizationId)
+    .where({ status: "active" })
+    .select(selectFields).lean().exec();
+};
+
+//get suggested loyalty clubs
+const getSuggestedLoyaltyClubsForUser = async ({ page = 1, limit = 10, userId }) => {
+  const joinedClubs = await getUserJoinedClubs(userId);
+  const joinedClubIds = joinedClubs.map(club => club.companyOrganizer.toString());
+  const filter = {
+    _id: { $nin: joinedClubIds },
+    status: "active",
+  };
+  let result = Organizations.find(filter).select("basicInfo.name basicInfo.media.logo").lean()
+    .skip((page - 1) * limit)
+    .limit(limit);
+  return result;
+};
 
 module.exports = {
   getOrganizationMenuWithItems,
@@ -358,5 +383,6 @@ module.exports = {
   countOrganizations,
   updateMany,
   getNearbyOrganizations,
-
+  findOrganizationWithSelectFilter,
+  getSuggestedLoyaltyClubsForUser,
 };

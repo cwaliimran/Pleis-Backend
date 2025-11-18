@@ -2,7 +2,10 @@ const mongoose = require("mongoose");
 
 const menuItemCategoriesSchema = new mongoose.Schema(
   {
-  
+    image: {
+      type: String,
+      default: "",
+    },
     title: {
       type: String,
       trim: true,
@@ -13,6 +16,11 @@ const menuItemCategoriesSchema = new mongoose.Schema(
       type: String,
       enum: ["active", "inactive", "deleted"],
       default: "active",
+    },
+    companyOrganizer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Users",
+      default: null,
     },
   },
   {

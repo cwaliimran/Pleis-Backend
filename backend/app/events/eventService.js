@@ -173,6 +173,7 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
   let {
     longitude = 0,
     latitude = 0,
+    keyword = "",
     page = 1,
     limit = 10,
     timezone = "Asia/Karachi",
@@ -249,12 +250,23 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
     ? { "basicInfo.tags": { $in: tags.map((id) => new mongoose.Types.ObjectId(id)) } }
     : {};
 
+  //keyword filter
+  const keywordFilter = keyword && keyword.trim() !== ""
+    ? {
+      $or: [
+        { "basicInfo.title": { $regex: keyword, $options: "i" } },
+        { "basicInfo.description": { $regex: keyword, $options: "i" } },
+      ],
+    }
+    : {};
+
   const combinedFilter = {
     status: "active",
     ...dateFilter,
     ...categoryFilter,
     ...genreFilter,
     ...tagsFilter,
+    ...keywordFilter,
   };
 
   try {

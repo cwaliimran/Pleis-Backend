@@ -6,7 +6,8 @@ const formatChallenge = require("../../../commonModules/loyalty/challenges/forma
 const { default: mongoose } = require("mongoose");
 
 const createChallenge = async (data) => {
-  return await challengeRepo.createChallenge(data);
+  let challenge = await challengeRepo.createChallenge(data);
+  return formatChallenge(challenge.toObject());
 };
 
 const getChallenges = async ({ companyOrganizer, page, limit, keyword, status, date, timezone }) => {
@@ -50,7 +51,8 @@ const updateChallenge = async (id, data) => {
   if (!challenge) return null;
   Object.assign(challenge, data);
   await challenge.save();
-  return challenge;
+
+  return formatChallenge(challenge.toObject());
 };
 
 const deleteChallenge = async (id) => {

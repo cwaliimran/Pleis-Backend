@@ -58,6 +58,52 @@ const placeOrder = async ({ userId, timezone, items, notes, paymentMethod,
   return { order: formattedOrder };
 };
 
+const addMoreItemsToOrder = async ({ orderId, items }) => {
+  if (!items || !items.length) throw new Error("No items to add");
+
+  // Fetch the existing order
+  let order = await orderRepo.getOrderById(orderId);
+  if (!order) throw new Error("Order not found");
+  if (order.status === "cancelled") throw new Error("Cannot add items to a cancelled order");
+  // if paymentMethod is not payLater, cannot add more items
+  if (order.paymentMethod !== "payLater") throw new Error("Cannot add items to this order");
+
+  // Fetch all menu items being added
+  const itemIds = items.map(i => new mongoose.Types.ObjectId(i.menuItem));
+  const menuItems = await menuItemRepo.getMenuItemsWithFilters({ _id: { $in: itemIds } });
+
+  if (!menuItems.length) throw new Error("Invalid items to add");
+
+  let additionalTotalPrice = 0;
+
+  // Prepare new order items with snapshot inside the item object
+  const newOrderItems = items.map(i => {
+    const menuItem = menuItems.find(m => m._id.toString() === i.menuItem);
+    if (!menuItem) throw new Error(`Invalid menu item: ${i.menuItem}`);
+
+    const price = menuItem.discountPrice || menuItem.basePrice;
+    const finalPrice = price * i.quantity;
+    additionalTotalPrice += finalPrice;
+
+    return {
+      menuItem: menuItem._id,
+      quantity: i.quantity,
+      finalPrice,
+      menuItemSnapShot: JSON.parse(JSON.stringify(menuItem)), // snapshot inside item
+    };
+  });
+
+  // Update order with new items and total price
+  order.items = order.items.concat(newOrderItems);
+  order.totalPrice += additionalTotalPrice;
+
+  // Save updated order
+  let updatedOrder = await order.save();
+  let formattedOrder = menuItemOrderFormatter(updatedOrder);
+
+  return { order: formattedOrder };
+};
+
 // 2️⃣ Get order by ID
 const getOrderDetails = async (orderId) => {
   let order = await orderRepo.getOrderById(orderId);
@@ -98,4 +144,5 @@ module.exports = {
   getUserOrders,
   updateOrderStatus,
   cancelOrder,
+  addMoreItemsToOrder
 };

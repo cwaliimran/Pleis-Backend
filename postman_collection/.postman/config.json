@@ -1,0 +1,16 @@
+{
+  "workspace": {
+    "id": ""
+  },
+  "entities": {
+    "collections": [
+      "../postman/collections/Pleis.postman_collection.json"
+    ],
+    "environments": [
+      "../postman/environments/Pleis.postman_environment.json"
+    ],
+    "specs": [],
+    "flows": [],
+    "globals": []
+  }
+}

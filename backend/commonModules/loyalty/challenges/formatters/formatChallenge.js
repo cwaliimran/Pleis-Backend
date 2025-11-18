@@ -8,6 +8,12 @@ function formatChallenge(challenge, timezone) {
     if (obj?.companyOrganizer?.profileIcon) {
         obj.companyOrganizer.profileIcon = getFullImageUrl(obj.companyOrganizer.profileIcon);
     }
+    if(obj?.image){
+        obj.image = getFullImageUrl(obj.image);
+    }else{
+        //noimage.png
+        obj.image = getFullImageUrl("noimage.png");
+    }
 
     // If tierLimit is an object with an 'image' property, format it; otherwise, leave as is (likely ObjectId)
     if (
@@ -43,7 +49,6 @@ function formatChallenge(challenge, timezone) {
 
     switch (obj.taskType) {
         case "visit":
-            delete obj.taskValue;
             delete obj.taskMenuItem;
             break;
         case "earnPoints":

@@ -2,12 +2,11 @@ const {
   sendResponse,
   parsePaginationParams,
   validateParams,
-  generateMeta,
   getReadableErrorMessage,
   convertTimezoneToUtc,
 } = require("../../helperUtils/responseUtil");
-
 const reservationService = require("./reservationService");
+
 
 const createReservation = async (req, res) => {
   const {
@@ -16,6 +15,7 @@ const createReservation = async (req, res) => {
     companyOrganizer,
     optionalEventId,
     organizationId,
+    reservationId,
     timingSlots,
   } = req.body;
 
@@ -31,6 +31,7 @@ const createReservation = async (req, res) => {
         "timingSlots",
         "organizationId",
         "companyOrganizer",
+        "reservationId",
       ],
     })
   )
@@ -130,6 +131,7 @@ const createReservation = async (req, res) => {
     optionalEventId,
     organizationId,
     companyOrganizer,
+    reservationId,
     timingSlots: timingSlots || { enabled: false, dateTimeSlots: [] },
   };
 
@@ -159,8 +161,6 @@ const createReservation = async (req, res) => {
     });
   }
 };
-
-
 const getReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let { keyword, status = "active", date, eventId, organizationId } = req.query;
@@ -221,11 +221,11 @@ if (
     });
   }
 };
-
 const getReservationDetails = async (req, res) => {
-  const { id } = req.params;
+  const { id } = req.params;  // Capture the ID from params
+  const timezone = req.user.timezone;
 
-  if (
+ if (
     !validateParams(req, res, {
       pathParams: ["id"],
       objectIdFields: ["id"],
@@ -233,9 +233,15 @@ const getReservationDetails = async (req, res) => {
   )
     return;
 
+
   try {
-    const Reservation = await reservationService.getReservationDetails(id);
-    if (!Reservation) {
+
+
+    // Call the service directly with the ID
+    const reservationDetails = await reservationService.getReservationDetails(id,timezone);
+
+
+    if (!reservationDetails) {
       return sendResponse({
         res,
         statusCode: 404,
@@ -243,11 +249,12 @@ const getReservationDetails = async (req, res) => {
       });
     }
 
+    // Send the response with the reservation details
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "Reservation_details_fetched_successfully",
-      data: Reservation,
+      data: reservationDetails,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -259,7 +266,6 @@ const getReservationDetails = async (req, res) => {
     });
   }
 };
-
 const updateReservation = async (req, res) => {
   const { id } = req.params;
   const {
@@ -400,7 +406,6 @@ const updateReservation = async (req, res) => {
     });
   }
 };
-
 const deleteReservation = async (req, res) => {
   const { id } = req.params;
 
@@ -437,80 +442,12 @@ const deleteReservation = async (req, res) => {
     });
   }
 };
-
-
-
-// const getUserReservations = async (req, res) => {
-//   const { page, limit } = parsePaginationParams(req);
-//   let { keyword, status = "active", date, eventId, organizationId } = req.query;
-//   try {
-// if (
-//   !date || // Check if date is missing
-//   (
-//     (eventId === undefined || eventId === null || eventId === "undefined" || eventId === "null") && // Check if eventId is missing or invalid
-//     (organizationId === undefined || organizationId === null || organizationId === "undefined" || organizationId === "null") // Check if organizationId is missing or invalid
-//   )
-// ) {
-//   return sendResponse({
-//     res,
-//     statusCode: 400,
-//     translationKey: "date_and_eventId_or_organizationId_is_required",
-//   });
-// }
-
-//     const userId = req.user._id;
-//     eventId, organizationId;
-
-//     if (eventId && eventId !== "undefined" && eventId !== "null") {
-//       eventId = eventId;
-//     } else if (
-//       organizationId &&
-//       organizationId !== "undefined" &&
-//       organizationId !== "null"
-//     ) {
-//       organizationId = organizationId;
-//     }
-//     const timezone = req.user.timezone;
-//     const { reservations, meta } = await reservationService.getReservations({
-//       timezone,
-//       page,
-//       limit,
-//       keyword,
-//       status,
-//       userId,
-//       eventId,
-//       organizationId,
-//       date,
-//     });
-
-//     return sendResponse({
-//       res,
-//       statusCode: 200,
-//       translationKey: "reservations_fetched_successfully",
-//       data: reservations,
-//       meta,
-//     });
-//   } catch (error) {
-//     const readableError = getReadableErrorMessage(error);
-//     return sendResponse({
-//       res,
-//       statusCode: readableError.statusCode,
-//       translationKey: readableError.message,
-//       error,
-//     });
-//   }
-// };
-
 const getUserReservations = async (req, res) => {
 
  const { page, limit } = parsePaginationParams(req);
   let { keyword, status = "active",  date} = req.query;
   try {
-
-
     const userId = req.user._id;
-
-
     const timezone = req.user.timezone;
 const { reservations, meta } = await reservationService.getUserReservations({
   timezone,
@@ -539,13 +476,11 @@ const { reservations, meta } = await reservationService.getUserReservations({
     });
   }
 };
-
-
-
 module.exports = {
   createReservation,
   getReservations,
   updateReservation,
   deleteReservation,
   getUserReservations,
+  getReservationDetails,
 };

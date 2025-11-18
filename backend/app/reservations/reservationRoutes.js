@@ -25,8 +25,8 @@ router.post("/", auth, createReservation);
 // Get all Reservations with pagination
 router.get("/", auth, getReservations);
 
-// //get Reservation details
-// router.get("/:id", apiRateLimiterDetails, getReservationDetails);
+//get Reservation details
+router.get("/details/:id", apiRateLimiterDetails, getReservationDetails);
 
 // Update an existing Reservation
 router.put("/:id",auth, updateReservation);

@@ -1,10 +1,10 @@
 {
 	"info": {
-		"_postman_id": "9e6b9007-0f4d-4547-a6a3-4e72c9f62bd8",
+		"_postman_id": "1ef3b220-6fe1-4a98-b6c0-16ae96fa7c63",
 		"name": "Pleis",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "3104553",
-		"_collection_link": "https://warped-escape-145657.postman.co/workspace/Pleis~a2e3d8c2-3c4d-4997-9d2c-e3231a7c419f/collection/3104553-9e6b9007-0f4d-4547-a6a3-4e72c9f62bd8?action=share&source=collection_link&creator=3104553"
+		"_collection_link": "https://warped-escape-145657.postman.co/workspace/Pleis~a2e3d8c2-3c4d-4997-9d2c-e3231a7c419f/collection/3104553-1ef3b220-6fe1-4a98-b6c0-16ae96fa7c63?action=share&source=collection_link&creator=3104553"
 	},
 	"item": [
 		{
@@ -2116,7 +2116,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n   // \"category\":\"68f0d6b0a92f125fd26a5831\"\n    \"time\": \"live\" // all,live, today, tomorrow, thisWeek\n    // \"\"\n}",
+									"raw": "{\n   // \"category\":\"68f0d6b0a92f125fd26a5831\"\n    // \"time\": \"live\" // all,live, today, tomorrow, thisWeek\n    // \"\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -2212,6 +2212,116 @@
 									"body": "{\n    \"message\": \"Data fetched successfully\",\n    \"data\": [\n        {\n            \"key\": \"categories\",\n            \"title\": \"Categories\",\n            \"data\": [\n                {\n                    \"_id\": \"68f0d6b0a92f125fd26a5831\",\n                    \"title\": \"Bar\",\n                    \"imageInfo\": {\n                        \"name\": \"24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\"\n                    }\n                },\n                {\n                    \"_id\": \"68f0d4d3c6eb4a5cf2c0f201\",\n                    \"title\": \"Dance\",\n                    \"imageInfo\": {\n                        \"name\": \"24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\"\n                    }\n                },\n                {\n                    \"_id\": \"68ee3310924370d02dbacc41\",\n                    \"title\": \"Nightlife\",\n                    \"imageInfo\": {\n                        \"name\": \"24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/24a0939b-8cc4-4f56-a5fa-1d635c14ec8c.png\"\n                    }\n                }\n            ]\n        },\n        {\n            \"key\": \"top10\",\n            \"title\": \"Top 10\",\n            \"data\": [\n                {\n                    \"_id\": \"68f0fe3455b07139a883835e\",\n                    \"event\": {\n                        \"basicInfo\": {\n                            \"venueLocation\": {\n                                \"coordinates\": [\n                                    74.4269194,\n                                    31.5022231\n                                ],\n                                \"type\": \"Point\"\n                            },\n                            \"title\": \"Summer Music Festival\",\n                            \"description\": \"A fun-filled day of live music and food.\",\n                            \"organization\": \"68d91de3e9ed2f5900dca083\",\n                            \"venue\": \"68ee4c95a0e89aae25bd1eca\",\n                            \"categories\": [],\n                            \"tags\": [],\n                            \"partnerOrganizer\": null,\n                            \"mediaInfo\": {\n                                \"name\": \"event-banner.jpg\",\n                                \"type\": \"image\",\n                                \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/event-banner.jpg\"\n                            }\n                        },\n                        \"schedule\": {\n                            \"type\": \"oneTime\",\n                            \"startDateTime\": \"2025-10-25 10:00 PM\",\n                            \"endDateTime\": \"2025-10-26 11:00 PM\",\n                            \"recurringDetails\": null\n                        },\n                        \"_id\": \"68de33b7bcddb74bfc2d9dd8\"\n                    },\n                    \"status\": \"active\",\n                    \"order\": 1,\n                    \"createdAt\": \"2025-10-16T14:16:20.679Z\",\n                    \"updatedAt\": \"2025-10-21T11:08:21.918Z\",\n                    \"__v\": 0,\n                    \"isTop10\": true\n                }\n            ]\n        },\n        {\n            \"key\": \"banners\",\n            \"title\": \"Banners\",\n            \"data\": [\n                {\n                    \"_id\": \"68f7860bcc10f7ab3f1038a6\",\n                    \"title\": \"Spring Sale\",\n                    \"type\": \"Event\",\n                    \"object\": \"68de33b7bcddb74bfc2d9dd8\",\n                    \"status\": \"active\",\n                    \"order\": 1,\n                    \"objectModel\": \"Event\",\n                    \"createdAt\": \"2025-10-21T13:09:31.007Z\",\n                    \"updatedAt\": \"2025-10-21T13:09:31.007Z\",\n                    \"__v\": 0,\n                    \"imageInfo\": {\n                        \"name\": \"spring_sale_banner.jpg\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/spring_sale_banner.jpg\"\n                    }\n                }\n            ]\n        },\n        {\n            \"key\": \"forYou\",\n            \"title\": \"For You\",\n            \"data\": []\n        },\n        {\n            \"key\": \"nearYou\",\n            \"title\": \"Near You\",\n            \"data\": [\n                {\n                    \"_id\": \"68de33b7bcddb74bfc2d9dd8\",\n                    \"basicInfo\": {\n                        \"media\": {\n                            \"type\": \"image\",\n                            \"name\": \"event-banner.jpg\"\n                        },\n                        \"title\": \"Summer Music Festival\",\n                        \"description\": \"A fun-filled day of live music and food.\",\n                        \"organization\": {\n                            \"_id\": \"68d91de3e9ed2f5900dca083\",\n                            \"basicInfo\": {\n                                \"media\": {\n                                    \"logo\": {\n                                        \"name\": \"org-logo_pic1.png\",\n                                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-logo_pic1.png\"\n                                    },\n                                    \"cover\": {\n                                        \"name\": \"org-cover.jpg\",\n                                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-cover.jpg\"\n                                    }\n                                },\n                                \"name\": \"Lex Events\"\n                            }\n                        },\n                        \"venue\": {\n                            \"_id\": \"68ee4c95a0e89aae25bd1eca\",\n                            \"title\": \"Venue Sea View\",\n                            \"location\": {\n                                \"type\": \"Point\",\n                                \"coordinates\": [\n                                    74.4269194,\n                                    31.5022231\n                                ],\n                                \"fullAddress\": \"123 Seaside Blvd\",\n                                \"city\": \"Split\",\n                                \"country\": \"Croatia\",\n                                \"state\": \"Col\",\n                                \"postalCode\": \"21000\"\n                            }\n                        },\n                        \"categories\": [],\n                        \"tags\": []\n                    },\n                    \"schedule\": {\n                        \"type\": \"oneTime\",\n                        \"startDateTime\": \"2025-10-25 10:00 PM\",\n                        \"endDateTime\": \"2025-10-26 11:00 PM\",\n                        \"recurringDetails\": null\n                    },\n                    \"distance\": 8545686.13\n                }\n            ]\n        },\n        {\n            \"key\": \"customCategory\",\n            \"title\": \"Concerts Hall\",\n            \"objects\": [\n                {\n                    \"_id\": \"68de33b7bcddb74bfc2d9dd8\",\n                    \"basicInfo\": {\n                        \"title\": \"Summer Music Festival\",\n                        \"description\": \"A fun-filled day of live music and food.\",\n                        \"organization\": \"68d91de3e9ed2f5900dca083\",\n                        \"venue\": \"68ee4c95a0e89aae25bd1eca\",\n                        \"categories\": [],\n                        \"tags\": [],\n                        \"partnerOrganizer\": null,\n                        \"venueLocation\": {\n                            \"coordinates\": [\n                                74.4269194,\n                                31.5022231\n                            ],\n                            \"type\": \"Point\"\n                        },\n                        \"mediaInfo\": {\n                            \"name\": \"event-banner.jpg\",\n                            \"type\": \"image\",\n                            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/event-banner.jpg\"\n                        }\n                    },\n                    \"schedule\": {\n                        \"type\": \"oneTime\",\n                        \"startDateTime\": \"2025-10-25 10:00 PM\",\n                        \"endDateTime\": \"2025-10-26 11:00 PM\",\n                        \"recurringDetails\": null\n                    }\n                }\n            ]\n        },\n        {\n            \"key\": \"topPicks\",\n            \"title\": \"Top Picks\",\n            \"data\": []\n        },\n        {\n            \"key\": \"highlights\",\n            \"title\": \"Highlights\",\n            \"data\": [\n                {\n                    \"_id\": \"68ee4cdca0e89aae25bd1ed4\",\n                    \"title\": \"Amazing Highlight\",\n                    \"type\": \"organization\",\n                    \"object\": {\n                        \"_id\": \"68ee4cbba0e89aae25bd1ece\",\n                        \"basicInfo\": {\n                            \"name\": \"Lex Events\",\n                            \"mediaInfo\": {\n                                \"logo\": {\n                                    \"name\": \"org-logo_pic1.png\",\n                                    \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-logo_pic1.png\"\n                                },\n                                \"cover\": {\n                                    \"name\": \"org-cover.jpg\",\n                                    \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-cover.jpg\"\n                                }\n                            }\n                        }\n                    },\n                    \"status\": \"active\",\n                    \"meta\": {\n                        \"views\": 0\n                    },\n                    \"createdAt\": \"2025-10-14T13:15:08.464Z\",\n                    \"mediaInfo\": {\n                        \"name\": \"highlight_video.mp4\",\n                        \"type\": \"video\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/highlight_video.mp4\"\n                    }\n                }\n            ]\n        },\n        {\n            \"key\": \"customCategory\",\n            \"title\": \"Celebrities\",\n            \"objects\": [\n                {\n                    \"_id\": \"68ed03f2f600828e48b9a186\",\n                    \"firstName\": \"Hollie.Osinski31\",\n                    \"lastName\": \"M\",\n                    \"profileIcon\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/noImage1.png\"\n                }\n            ]\n        },\n        {\n            \"key\": \"loyaltyEvents\",\n            \"title\": \"Loyalty Events\",\n            \"data\": []\n        },\n        {\n            \"key\": \"customCategory\",\n            \"title\": \"Best Companies\",\n            \"objects\": [\n                {\n                    \"_id\": \"68ee4cbba0e89aae25bd1ece\",\n                    \"basicInfo\": {\n                        \"media\": {\n                            \"logo\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-logo_pic1.png\",\n                            \"cover\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-cover.jpg\"\n                        },\n                        \"name\": \"Lex Events\",\n                        \"socialLinks\": {\n                            \"youtube\": \"https://youtube.com/lexevents\",\n                            \"facebook\": \"https://facebook.com/lexevents\",\n                            \"instagram\": \"https://instagram.com/lexevents\",\n                            \"linkedin\": \"https://linkedin.com/company/lexevents\"\n                        }\n                    }\n                }\n            ]\n        },\n        {\n            \"key\": \"challenges\",\n            \"title\": \"Challenges\",\n            \"data\": []\n        },\n        {\n            \"key\": \"promotions\",\n            \"title\": \"Promotions\",\n            \"data\": []\n        }\n    ]\n}"
 								}
 							]
+						},
+						{
+							"name": "checkin to organization",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n   \"companyOrganizer\":\"6911b8946c940af405a4a603\",\n   \"organization\":\"6911b9cd1902fd1c55eb4842\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/checkin",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"checkin"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "nearby organizations",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/organizations/nearby?radiusKm=1000000000",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"organizations",
+										"nearby"
+									],
+									"query": [
+										{
+											"key": "radiusKm",
+											"value": "1000000000"
+										}
+									]
+								}
+							},
+							"response": []
 						}
 					]
 				},
@@ -2219,7 +2329,7 @@
 					"name": "Events",
 					"item": [
 						{
-							"name": "get - nearby",
+							"name": "get - advance filters",
 							"event": [
 								{
 									"listen": "test",
@@ -2257,13 +2367,13 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}app/events/nearby?page=1&limit=10&latitude=31.5023621&longitude=74.426454",
+									"raw": "{{url}}app/events/filter?page=1&limit=10&latitude=31.5023621&longitude=74.426454",
 									"host": [
 										"{{url}}app"
 									],
 									"path": [
 										"events",
-										"nearby"
+										"filter"
 									],
 									"query": [
 										{
@@ -2281,6 +2391,11 @@
 										{
 											"key": "longitude",
 											"value": "74.426454"
+										},
+										{
+											"key": "keyword",
+											"value": "Islamabad Tech Summit 2025",
+											"disabled": true
 										}
 									]
 								}
@@ -2341,7 +2456,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "6911be7fd49fc086aabd2668"
+											"value": "6915c3e448a5a4c172122332"
 										}
 									]
 								}
@@ -2407,7 +2522,7 @@
 									"variable": [
 										{
 											"key": "eventId",
-											"value": "690c9f974cf55e352d18b74e"
+											"value": "6915c3e448a5a4c172122332"
 										}
 									]
 								}
@@ -2617,7 +2732,7 @@
 										},
 										{
 											"key": "keywrod",
-											"value": null,
+											"value": "",
 											"disabled": true
 										}
 									]
@@ -2683,7 +2798,7 @@
 										},
 										{
 											"key": "keywrod",
-											"value": null,
+											"value": "",
 											"disabled": true
 										}
 									]
@@ -2749,7 +2864,7 @@
 										},
 										{
 											"key": "keywrod",
-											"value": null,
+											"value": "",
 											"disabled": true
 										}
 									]
@@ -2816,13 +2931,13 @@
 										{
 											"key": "filter",
 											"value": "upcoming",
-											"description": "upcoming, past"
+											"description": "upcoming, past // for events"
 										}
 									],
 									"variable": [
 										{
 											"key": "id",
-											"value": "68ff50e556462446dedae1ed"
+											"value": "6911cc376aca10eb719d7322"
 										}
 									]
 								}
@@ -3451,6 +3566,139 @@
 							]
 						},
 						{
+							"name": "Join/Leave Club",
+							"item": [
+								{
+									"name": "join",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/loyalty/club/join",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"loyalty",
+												"club",
+												"join"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "leave",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"companyOrganizer\": \"6911cc376aca10eb719d7322\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/loyalty/club/leave",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"loyalty",
+												"club",
+												"leave"
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											""
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											""
+										]
+									}
+								}
+							]
+						},
+						{
 							"name": "Promotions",
 							"item": [
 								{
@@ -3696,6 +3944,59 @@
 											"path": [
 												"menu",
 												"orders"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "add more items",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"items\": [\n    {\n      \"menuItem\": \"6911c3516aca10eb719d6f72\",\n      \"quantity\": 1\n    }\n  ],\n  \"orderId\": \"6914928ed4ab4bca5895f9f2\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/menu/orders/add-more",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"menu",
+												"orders",
+												"add-more"
 											]
 										},
 										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
@@ -7848,12 +8149,11 @@
 							}
 						},
 						"url": {
-							"raw": "{{url}}organizer//suppliers/global?page=1&limit=10",
+							"raw": "{{url}}organizer/suppliers/global?page=1&limit=10",
 							"host": [
 								"{{url}}organizer"
 							],
 							"path": [
-								"",
 								"suppliers",
 								"global"
 							],
@@ -7916,12 +8216,11 @@
 							}
 						},
 						"url": {
-							"raw": "{{url}}organizer//features/global?page=1&limit=10",
+							"raw": "{{url}}organizer/features/global?page=1&limit=10",
 							"host": [
 								"{{url}}organizer"
 							],
 							"path": [
-								"",
 								"features",
 								"global"
 							],
@@ -11497,7 +11796,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "690c9f974cf55e352d18b74e"
+											"value": "6915bb183b3db876c07b0977"
 										}
 									]
 								}
@@ -11535,7 +11834,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"type\": \"image\", //image or video\n            \"name\": \"event-banner.jpg\"\n        },\n        \"title\": \"Monday Fun day\",\n        \"description\": \"A fun-filled day of live music and food.\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"venue\": \"691469d5167faf035385ce27\",\n        \"categories\": [\n            \"68f0d6b0a92f125fd26a5831\",\n            \"68c028637c376b15157d9ecc\"\n        ],\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"6883208feec25d5f951a8c74\"\n        ]\n    },\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-10-27 10:00 AM\",\n        \"endDateTime\": \"2025-10-27 05:00 PM\"\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n        /*Ending on specific date*/\n        ,\n        \"recurringDetails\": {\n            \"isEnabled\": true,\n            \"frequency\": \"weekly\",\n            \"interval\": 1,\n            \"daysOfWeek\": [\n                \"fri\"\n            ],\n            \"endType\": \"onDate\",\n            \"endDate\": \"2025-12-31\"\n        }\n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    },\n    \"ticketing\": {\n        \"title\": \"Standard\",\n        //\"quantity\": 200, // skip when timingSlots enabled\n        \"price\": 10,\n        \"taxPercentage\": 5,\n        \"event\": \"690c9f974cf55e352d18b74e\",\n        \"timingSlots\": {\n            \"enabled\": true,\n            \"dateTimeSlots\": [\n                {\n                    \"date\": \"2025-10-27\",\n                    \"timeSlots\": [\n                        {\n                            \"quantity\": \"10\",\n                            \"startTime\": \"02:00 PM\",\n                            \"endTime\": \"02:30 PM\"\n                        },\n                        {\n                            \"quantity\": \"5\",\n                            \"startTime\": \"12:30 PM\",\n                            \"endTime\": \"01:00 PM\"\n                        }\n                    ]\n                },\n                {\n                    \"date\": \"2025-10-27\",\n                    \"timeSlots\": [\n                        {\n                            \"quantity\": \"10\",\n                            \"startTime\": \"12:00 PM\",\n                            \"endTime\": \"12:30 PM\"\n                        },\n                        {\n                            \"quantity\": \"10\",\n                            \"startTime\": \"12:30 PM\",\n                            \"endTime\": \"01:00 PM\"\n                        }\n                    ]\n                }\n            ]\n        },\n        \"repeatable\": {\n            \"isRepeatable\": true,\n            \"visits\": 2\n        },\n        \"resaleProtection\": \"nameSurnamePid\",\n        \"transferFee\": 10,\n        \"timeSensitivePricing\": {\n            \"earlyBird\": {\n                \"endDate\": \"2025-12-20\",\n                \"discountedPrice\": 25\n            },\n            \"lastMinute\": {\n                \"startDate\": \"2025-12-28\",\n                \"discountedPrice\": 35\n            }\n        },\n        \"fastTrackEntry\": {\n            \"enabled\": true,\n            \"quantity\": 50,\n            \"extraPrice\": 15\n        },\n        \"requiresReservation\": {\n            \"enabled\": true,\n            \"type\": \"vip\"\n        },\n        \"status\": \"scheduled\", //\"active\", \"scheduled\", \"inactive\",\n        \"scheduledPublishAt\": \"2025-12-28 10:30 AM\"\n    }\n}",
+									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"type\": \"image\", //image or video\n            \"name\": \"event-banner.jpg\"\n        },\n        \"title\": \"Monday Fun day\",\n        \"description\": \"A fun-filled day of live music and food.\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"venue\": \"691469d5167faf035385ce27\",\n        \"categories\": [\n            \"68f0d6b0a92f125fd26a5831\",\n            \"68c028637c376b15157d9ecc\"\n        ],\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"6883208feec25d5f951a8c74\"\n        ]\n    },\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-10-27 10:00 AM\",\n        \"endDateTime\": \"2025-10-27 05:00 PM\"\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n        /*Ending on specific date*/\n        ,\n        \"recurringDetails\": {\n            \"isEnabled\": true,\n            \"frequency\": \"weekly\",\n            \"interval\": 1,\n            \"daysOfWeek\": [\n                \"fri\"\n            ],\n            \"endType\": \"onDate\",\n            \"endDate\": \"2025-12-31\"\n        }\n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    }\n    ,\n    \"ticketing\": {\n        \"title\": \"Standard\",\n        //\"quantity\": 200, // skip when timingSlots enabled\n        \"price\": 10,\n        \"taxPercentage\": 5,\n        \"event\": \"690c9f974cf55e352d18b74e\",\n        \"timingSlots\": {\n            \"enabled\": true,\n            \"dateTimeSlots\": [\n                {\n                    \"date\": \"2025-10-27\",\n                    \"timeSlots\": [\n                        {\n                            \"quantity\": \"10\",\n                            \"startTime\": \"02:00 PM\",\n                            \"endTime\": \"02:30 PM\"\n                        },\n                        {\n                            \"quantity\": \"5\",\n                            \"startTime\": \"12:30 PM\",\n                            \"endTime\": \"01:00 PM\"\n                        }\n                    ]\n                },\n                {\n                    \"date\": \"2025-10-27\",\n                    \"timeSlots\": [\n                        {\n                            \"quantity\": \"10\",\n                            \"startTime\": \"12:00 PM\",\n                            \"endTime\": \"12:30 PM\"\n                        },\n                        {\n                            \"quantity\": \"10\",\n                            \"startTime\": \"12:30 PM\",\n                            \"endTime\": \"01:00 PM\"\n                        }\n                    ]\n                }\n            ]\n        },\n        \"repeatable\": {\n            \"isRepeatable\": true,\n            \"visits\": 2\n        },\n        \"resaleProtection\": \"nameSurnamePid\",\n        \"transferFee\": 10,\n        \"timeSensitivePricing\": {\n            \"earlyBird\": {\n                \"endDate\": \"2025-12-20\",\n                \"discountedPrice\": 25\n            },\n            \"lastMinute\": {\n                \"startDate\": \"2025-12-28\",\n                \"discountedPrice\": 35\n            }\n        },\n        \"fastTrackEntry\": {\n            \"enabled\": true,\n            \"quantity\": 50,\n            \"extraPrice\": 15\n        },\n        \"requiresReservation\": {\n            \"enabled\": true,\n            \"type\": \"vip\"\n        },\n        \"status\": \"scheduled\", //\"active\", \"scheduled\", \"inactive\",\n        \"scheduledPublishAt\": \"2025-12-28 10:30 AM\"\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -11719,7 +12018,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}admin/ticketing?eventId=69149fa4bef44f5456ed45d7",
+									"raw": "{{url}}admin/ticketing?eventId=6914a0ff908ae1810ace6bfd",
 									"host": [
 										"{{url}}admin"
 									],
@@ -11729,7 +12028,7 @@
 									"query": [
 										{
 											"key": "eventId",
-											"value": "69149fa4bef44f5456ed45d7"
+											"value": "6914a0ff908ae1810ace6bfd"
 										}
 									]
 								}
@@ -12619,7 +12918,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"image\": \"68d69359fbccb319035eb13b.png\",\n    \"title\": \"Lunch Menu\",\n    \"description\": \"Special lunch menu with vegan options\",\n    \"status\": \"active\"\n}",
+											"raw": "{\n    \"image\": \"68d69359fbccb319035eb13b.png\",\n    \"title\": \"Lunch Menu\",\n    \"category\":\"691abb7e48d92a7f0f35e20c\",\n    \"description\": \"Special lunch menu with vegan options\",\n    \"status\": \"active\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -12758,7 +13057,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "6905e582b472b04cbd1b6795"
+													"value": "691abe27738f1b359d4df157"
 												}
 											]
 										},
@@ -12872,7 +13171,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/menu/",
+											"raw": "{{url}}admin/menu/?organizations=[\"6911cc376aca10eb719d7322\"]",
 											"host": [
 												"{{url}}admin"
 											],
@@ -12888,9 +13187,8 @@
 												},
 												{
 													"key": "organizations",
-													"value": "[\"69085defb8f4eb8ee1c38067\"]",
-													"description": "array of object ids",
-													"disabled": true
+													"value": "[\"6911cc376aca10eb719d7322\"]",
+													"description": "array of object ids"
 												}
 											]
 										}
@@ -13102,7 +13400,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Main Course Menu\",\n  \"description\": \"Special lunch menu with vegan options\",\n  \"organization\": \"69005ee107c29bc8fee4324d\",\n  \"status\": \"active\"\n}\n",
+											"raw": "{\n  \"title\": \"Main Course Menu\",\n  \"description\": \"Special lunch menu with vegan options\",\n  \"organization\": \"69005ee107c29bc8fee4324d\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -13511,7 +13809,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Food\",\n  \"status\": \"active\"\n}\n",
+											"raw": "{\n  \"title\": \"Food\",\n  \"status\": \"active\",\n  \"image\":\"burger.png\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -13630,7 +13928,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Drinks\",\n  \"status\": \"inactive\"\n}\n",
+											"raw": "{\n  \"title\": \"Drinks\",\n  \"status\": \"active\", //active, inactive\n  \"image\":\"burger.png\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -13650,7 +13948,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "68d69a0e6513527e7a23656c"
+													"value": "691abb7e48d92a7f0f35e20c"
 												}
 											]
 										},
@@ -13709,7 +14007,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "68d69a0e6513527e7a23656c"
+													"value": "691abb9a48d92a7f0f35e217"
 												}
 											]
 										},
@@ -13764,7 +14062,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/menu/items?menu=6902f666260e5bb7dec7e6e9&companyOrganizer=68ee4bb7a0e89aae25bd1eab",
+											"raw": "{{url}}admin/menu/items?menu=6902f666260e5bb7dec7e6e9",
 											"host": [
 												"{{url}}admin"
 											],
@@ -13779,7 +14077,8 @@
 												},
 												{
 													"key": "companyOrganizer",
-													"value": "68ee4bb7a0e89aae25bd1eab"
+													"value": "68ee4bb7a0e89aae25bd1eab",
+													"disabled": true
 												},
 												{
 													"key": "keyword",
@@ -13790,6 +14089,154 @@
 													"key": "status",
 													"value": "inactive",
 													"disabled": true
+												}
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "get",
+											"originalRequest": {
+												"method": "GET",
+												"header": [],
+												"url": {
+													"raw": "{{url}}menu/items/",
+													"host": [
+														"{{url}}menu"
+													],
+													"path": [
+														"items",
+														""
+													],
+													"query": [
+														{
+															"key": "menu",
+															"value": "68d69376fbccb319035eb13e",
+															"disabled": true
+														},
+														{
+															"key": "keyword",
+															"value": "up",
+															"disabled": true
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "Text",
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "873"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"369-S0aN4KJoY/o0Qu9dX4NOwykJp6M\""
+												},
+												{
+													"key": "Date",
+													"value": "Sat, 27 Sep 2025 14:34:30 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Menu items fetched successfully\",\n    \"data\": [\n        {\n            \"title\": \"Cheese Burger\",\n            \"description\": \"A delicious cheeseburger with lettuce, tomato, and fries.\",\n            \"type\": \"food\",\n            \"category\": {\n                \"_id\": \"68d699f66513527e7a236563\",\n                \"title\": \"Drinks\"\n            },\n            \"basePrice\": 10.99,\n            \"discountPrice\": 8.99,\n            \"taxPercent\": 5,\n            \"menu\": {\n                \"_id\": \"68d69376fbccb319035eb13e\",\n                \"title\": \"Lunch Menu up\",\n                \"venue\": {\n                    \"_id\": \"68d69359fbccb319035eb13b\",\n                    \"title\": \"Club De Moon\"\n                }\n            },\n            \"startTime\": \"10:30 AM\",\n            \"endTime\": \"05:30 PM\",\n            \"creator\": \"68d69157fbccb319035eb118\",\n            \"status\": \"active\",\n            \"_id\": \"68d7ee19c9469f7d754b5c99\",\n            \"createdAt\": \"2025-09-27T14:00:57.870Z\",\n            \"updatedAt\": \"2025-09-27T14:00:57.870Z\",\n            \"__v\": 0,\n            \"imageInfo\": {\n                \"name\": \"burger.png\",\n                \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/burger.png\"\n            }\n        }\n    ],\n    \"meta\": {\n        \"currentPage\": 1,\n        \"totalPages\": 1,\n        \"totalRecords\": 1,\n        \"limit\": 10,\n        \"menuItemsCount\": {\n            \"total\": 1,\n            \"active\": 1,\n            \"inactive\": 0\n        }\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "get items by menuId",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/menu/items/menu/:menuId",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"menu",
+												"items",
+												"menu",
+												":menuId"
+											],
+											"query": [
+												{
+													"key": "companyOrganizer",
+													"value": "68ee4bb7a0e89aae25bd1eab",
+													"disabled": true
+												},
+												{
+													"key": "keyword",
+													"value": "up",
+													"disabled": true
+												},
+												{
+													"key": "status",
+													"value": "inactive",
+													"disabled": true
+												}
+											],
+											"variable": [
+												{
+													"key": "menuId",
+													"value": "6911c1dc6fc7cbd864e74678"
 												}
 											]
 										}
@@ -16780,14 +17227,19 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/loyalty/challenges/",
+											"raw": "{{url}}admin/loyalty/challenges?companyOrganizer=6911b8946c940af405a4a603",
 											"host": [
 												"{{url}}admin"
 											],
 											"path": [
 												"loyalty",
-												"challenges",
-												""
+												"challenges"
+											],
+											"query": [
+												{
+													"key": "companyOrganizer",
+													"value": "6911b8946c940af405a4a603"
+												}
 											]
 										}
 									},
@@ -16880,7 +17332,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"companyOrganizer\":\"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe to claim this challenge\",\n    \"taskType\": \"visit\",\n    \"taskValue\": 500,\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 5\n    }\n}",
+											"raw": "{\n    \"companyOrganizer\":\"6911b8946c940af405a4a603\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe to claim this challenge\",\n    \"taskType\": \"visit\",\n    \"taskValue\": 500,\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 5\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -16999,7 +17451,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Walk 10,000 steps\",\n    \"description\": \"Earn points by being active\",\n    \"taskType\": \"earnPoints\",\n    \"taskValue\": 500,\n    \"claimLimit\": 5,\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\": \"68d7ee19c9469f7d754b5c99\"\n    }\n}",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Walk 10,000 steps\",\n    \"description\": \"Earn points by being active\",\n    \"taskType\": \"earnPoints\",\n    \"taskValue\": 500,\n    \"claimLimit\": 5,\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\": \"68d7ee19c9469f7d754b5c99\"\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -17117,7 +17569,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -17353,7 +17805,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n//   \"title\": \"Sample title\",\n//   \"description\": \"description of item\",\n  \"tierLimit\":\"690b3cea8d15be3d21bdd31d\"\n}\n",
+											"raw": "{\n//   \"title\": \"Sample title\",\n//   \"description\": \"description of item\",\n//   \"tierLimit\":\"690b3cea8d15be3d21bdd31d\"\n\"image\":\"ch2.png\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -17373,7 +17825,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "68de85fc33a8c2051670dd61"
+													"value": "691ac6b4f6ee20e3f835e159"
 												}
 											]
 										},
@@ -17487,7 +17939,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/loyalty/listings?page=1&limit=10",
+											"raw": "{{url}}admin/loyalty/listings?page=1&limit=10&keyword=Glowingsoft",
 											"host": [
 												"{{url}}admin"
 											],
@@ -17503,6 +17955,10 @@
 												{
 													"key": "limit",
 													"value": "10"
+												},
+												{
+													"key": "keyword",
+													"value": "Glowingsoft"
 												}
 											]
 										}
@@ -18012,13 +18468,19 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/loyalty/rewards",
+											"raw": "{{url}}admin/loyalty/rewards?companyOrganizer=6911c14b6fc7cbd864e745b6",
 											"host": [
 												"{{url}}admin"
 											],
 											"path": [
 												"loyalty",
 												"rewards"
+											],
+											"query": [
+												{
+													"key": "companyOrganizer",
+													"value": "6911c14b6fc7cbd864e745b6"
+												}
 											]
 										}
 									},
@@ -18773,7 +19235,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"sender\": \"68d69157fbccb319035eb118\",\n  \"receiver\": \"68da7aa1e6f099d42e32da71\",\n  \"notes\": \"Looking forward to collaborating on the upcoming event.\"\n}",
+											"raw": "{\n  \"sender\": \"68d69157fbccb319035eb118\",\n  \"receiver\": \"68da7aa1e6f099d42e32da72\",\n  \"notes\": \"Looking forward to collaborating on the upcoming event.\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -18908,6 +19370,328 @@
 											]
 										},
 										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Streaks",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/loyalty/streaks/?page=1&limit=1&status=active&companyOrganizer=6911c14b6fc7cbd864e745b6",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"loyalty",
+												"streaks",
+												""
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "1"
+												},
+												{
+													"key": "status",
+													"value": "active"
+												},
+												{
+													"key": "companyOrganizer",
+													"value": "6911c14b6fc7cbd864e745b6"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"visits\": 5,\n  \"points\": 100,\n  \"companyOrganizer\": \"6911b8946c940af405a4a603\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/loyalty/streaks/",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"loyalty",
+												"streaks",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "update",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"visits\": 11,\n  \"points\": 100\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/loyalty/streaks/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"loyalty",
+												"streaks",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "6915aac63c521a7ce1581700"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/loyalty/streaks/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"loyalty",
+												"streaks",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": ""
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Users Streaks",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/loyalty/users-streaks?page=1&limit=1&companyOrganizer=6911c14b6fc7cbd864e745b6",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"loyalty",
+												"users-streaks"
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "1"
+												},
+												{
+													"key": "companyOrganizer",
+													"value": "6911c14b6fc7cbd864e745b6"
+												}
+											]
+										}
 									},
 									"response": []
 								}
@@ -20266,6 +21050,292 @@
 									"response": []
 								}
 							]
+						}
+					]
+				},
+				{
+					"name": "Bundles",
+					"item": [
+						{
+							"name": "get",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/bundles",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"bundles"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get details",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/bundles/:id",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"bundles",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "691c3c68ba1513e4066880b3"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "add",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"organization\": \"6911c1b36fc7cbd864e74659\",\n  \"name\": \"Premium Event Bundle\",\n  \"description\": \"Includes tickets, and pre-order items.\",\n  \"originalPrice\": 150,\n  \"discountedPrice\": 120,\n  \"discountPercentage\":10,\n  \"startDate\": \"2025-12-01 10:00 AM\",\n  \"endDate\": \"2025-12-31 11:59 PM\",\n  \"event\": \"6915c3e448a5a4c172122332\",\n  \"bundleDetails\": {\n    \"ticketings\": [\n      {\n        \"ticketType\": \"6915c3e448a5a4c172122335\",\n        \"quantity\": 2\n      },\n      {\n        \"ticketType\": \"691abb59fc26ab786b01973d\",\n        \"quantity\": 1\n      }\n    ],\n    \"reservations\": [\n    ],\n    \"preOrderItems\": [\n      {\n        \"menuItem\": \"6911c3cb6aca10eb719d6f9e\",\n        \"quantity\": 5\n      },\n      {\n        \"menuItem\": \"6911d21601e061abb7bbc00b\",\n        \"quantity\": 2\n      }\n    ]\n  }\n}\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/bundles/",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"bundles",
+										""
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						},
+						{
+							"name": "update",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"organization\": \"6911c1b36fc7cbd864e74659\",\n  \"name\": \"Premium Event Bundle\",\n  \"description\": \"Includes tickets, and pre-order items.\",\n  \"originalPrice\": 150,\n  \"discountedPrice\": 120,\n  \"discountPercentage\":10,\n  \"startDate\": \"2025-12-01 10:00 AM\",\n  \"endDate\": \"2025-12-31 11:59 PM\",\n  \"event\": \"6915c3e448a5a4c172122332\",\n  \"bundleDetails\": {\n    \"ticketings\": [\n      {\n        \"ticketType\": \"6915c3e448a5a4c172122335\",\n        \"quantity\": 3\n      }\n    ],\n    \"reservations\": [\n        {\n        \"reservationType\": \"650f1a3b5d2c4a0055566778\",\n        \"quantity\": 3\n      }\n    ],\n    \"preOrderItems\": [\n      {\n        \"menuItem\": \"6911c3cb6aca10eb719d6f9e\",\n        \"quantity\": 5\n      },\n      {\n        \"menuItem\": \"6911d21601e061abb7bbc00b\",\n        \"quantity\": 2\n      }\n    ]\n  }\n}\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/bundles/:id",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"bundles",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "691c3c68ba1513e4066880b3"
+										}
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						},
+						{
+							"name": "delete",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/bundles/:id",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"bundles",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "691c3c68ba1513e4066880b3"
+										}
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
 						}
 					]
 				},

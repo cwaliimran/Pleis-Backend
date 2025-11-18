@@ -6,6 +6,7 @@ const {
   deleteReservation,
   getReservationDetails,
   getUserReservations,
+  updateUserReservationStatus,
   updateUserReservation,
 } = require("./reservationController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
@@ -36,7 +37,10 @@ router.get("/users",roleMiddleware(["admin"]), apiRateLimiter, getUserReservatio
 // Update an existing Reservation
 router.put("/:id", roleMiddleware(["admin"]), updateReservation);
 // cancel user reservation
-router.put("/:id/:value", roleMiddleware(["admin"]), updateUserReservation);
+router.put("/updateStatus/:id/:value", roleMiddleware(["admin"]), updateUserReservationStatus);
+
+// update user reservation
+router.put("/:userId/:id", roleMiddleware(["admin"]), updateUserReservation);
 
 
 // Delete a Reservation

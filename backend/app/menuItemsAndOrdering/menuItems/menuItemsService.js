@@ -1,8 +1,9 @@
 // services/menuItemService.js
 const menuItemRepo = require("./menuItemsRepository");
-const mongoose = require("mongoose");
+const { getFullImageUrl } = require("@utils/imageHelper");
 const { formatMenuItem } = require("./formatter/formatMenuItems");
 const MenuItemCategories = require("@MenuItemCategoriesModel");
+const { findOrganizationWithSelectFilter } = require("../../organizationProfile/organizationProfileRepository");
 
 const getMenuItems = async ({ timezone, organization }) => {
   // 1️⃣ Get menu ID for the organization
@@ -51,8 +52,15 @@ const getMenuItems = async ({ timezone, organization }) => {
     })),
   }));
 
+  let organizationDetails = await findOrganizationWithSelectFilter(organization, "_id basicInfo.name basicInfo.media.logo");
+
+  if (organizationDetails?.basicInfo?.media?.logo) {
+    organizationDetails.basicInfo.media.logo = getFullImageUrl(organizationDetails.basicInfo.media.logo);
+  }
+
+
   //TODO user recommended items based on previous orders
-  return { recommended: [], menu };
+  return { organizationDetails, recommended: [], menu };
 };
 
 

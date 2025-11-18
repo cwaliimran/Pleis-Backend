@@ -67,7 +67,7 @@ const getCustomCategories = async ({
   customCategories.forEach((category) => {
     category.objects = category.objects.map((obj) => {
       if (!obj) return null;
-      let mObj = transformObject(obj, category.type, userLocation, timezone);
+      let mObj = transformCustomCategoryObjects(obj, category.type, userLocation, timezone);
       return mObj;
     });
   });
@@ -82,7 +82,7 @@ const getCustomCategories = async ({
  * Transform objects based on their type
  * Applies icon paths, URLs, and removes sensitive data
  */
-const transformObject = (obj, type, userLocation, timezone) => {
+const transformCustomCategoryObjects = (obj, type, userLocation, timezone) => {
   obj.type = type;
   if (type === "User") {
     return new User(obj).toJSON(obj);
@@ -130,4 +130,5 @@ const transformOrganization = (organization) => {
 
 module.exports = {
   getCustomCategories,
+  transformCustomCategoryObjects,
 };

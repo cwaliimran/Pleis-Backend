@@ -4,8 +4,8 @@ const usersStreakRepo = require("./usersStreaksRepository");
 const { formatUsersStreaks } = require("./formatters/usersStreaksFormatter");
 const { default: mongoose } = require("mongoose");
 
-const createUsersStreak = async ({ user, companyOrganizer}) => {
-  return await usersStreakRepo.createUsersStreak({ user, companyOrganizer });
+const createUsersStreak = async ({ user, companyOrganizer, organization}) => {
+  return await usersStreakRepo.createUsersStreak({ user, companyOrganizer, organization });
 };
 
 const getUsersUsersStreaks = async ({ companyOrganizer, page, limit, keyword, status, date, orderSort = "asc" }) => {
