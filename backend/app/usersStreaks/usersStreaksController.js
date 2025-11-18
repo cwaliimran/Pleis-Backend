@@ -23,7 +23,7 @@ const createUsersStreak = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "users_usersStreak_created_successfully",
+      translationKey: "users_streak_created_successfully",
       data: usersStreak,
     });
   } catch (error) {
