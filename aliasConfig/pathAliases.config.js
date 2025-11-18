@@ -26,5 +26,5 @@ module.exports = {
     "@ReservationsModel": "backend/commonModules/reservations/Reservation.js",
     "@UserReservationsModel": "backend/commonModules/reservations/UsersReservation.js",
     "@OrdersModel": "backend/commonModules/menuItemsAndOrders/orders.js",
-
+    "@PromoCodeModel": "backend/commonModules/PromoCode/PromoCode.js",
 };

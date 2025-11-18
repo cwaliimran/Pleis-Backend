@@ -1,4 +1,4 @@
-const UserReservations = require("@UserReservationsModel");
+
 const {
   sendResponse,
   parsePaginationParams,

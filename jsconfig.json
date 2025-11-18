@@ -82,6 +82,9 @@
       ],
       "@OrdersModel": [
         "backend/commonModules/menuItemsAndOrders/orders.js"
+      ],
+      "@PromoCodeModel": [
+        "backend/commonModules/PromoCode/PromoCode.js"
       ]
     }
   },
