@@ -1,5 +1,6 @@
 
 const {PromoCode }= require("@PromoCodeModel"); 
+const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const { generateMeta } = require("@utils/responseUtil");
 const mongoose = require("mongoose");
 
@@ -73,7 +74,7 @@ if (range == "today") {
 if (keyword) {
   const keywordMatch = buildKeywordQueryFromModels(
     [
-      { schema: PromoCode.PromoCode.schema }
+      { schema: PromoCode.schema }
     ],
     keyword
   );

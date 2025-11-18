@@ -179,7 +179,7 @@ if (keyword) {
 }
 
 
-const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationStatus }) => {
+const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationStatus,reservationId }) => {
   let organizationsIds = Array.isArray(organizationsId)
     ? organizationsId
     : JSON.parse(organizationsId || '[]');
@@ -190,7 +190,8 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
       $match: {
         ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
         ...(organizationsIds.length > 0 && { organizationId: { $in: organizationsIds } }),
-        ...(reservationStatus && { reservationStatus:reservationStatus }) 
+        ...(reservationStatus && { reservationStatus:reservationStatus }),
+        ...(reservationId && { reservationId: new mongoose.Types.ObjectId(reservationId) })
       }
     },
     {

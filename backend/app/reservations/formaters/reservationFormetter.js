@@ -85,51 +85,49 @@ const userReservationsFormatter = (item, timezone) => {
 
   const cat = item.toObject ? item.toObject() : { ...item };
 
-  // Adjust timingSlots and flatten the structure
+// ---------------------------
+// 1. HANDLE eventStartDate  → eventDate + eventTime
+// ---------------------------
+if (cat.eventStartDate) {
+  const start = moment(cat.eventStartDate);   // original UTC datetime
+
+  // Extract date
+  cat.eventDate = start.format("YYYY-MM-DD");
+
+  // Extract time in AM/PM converted to user's timezone
+  cat.eventTime = convertUtcToTimezoneAMPM(start.toISOString(), timezone);
+   delete cat.eventStartDate;
+}
+
+
+  // ---------------------------
+  // 2. HANDLE dateTimeSlots ARRAY
+  // ---------------------------
   if (cat.timingSlots && cat.timingSlots.dateTimeSlots) {
-    const dateTimeSlot = cat.timingSlots.dateTimeSlots;  // Get the dateTimeSlots array
+    const dateTimeSlot = cat.timingSlots.dateTimeSlots;
 
-    // If there's only one item, move the data directly to timingSlots
     if (Array.isArray(dateTimeSlot) && dateTimeSlot.length === 1) {
-      const slot = dateTimeSlot[0];  // Get the first item in the array
+      const slot = dateTimeSlot[0];
 
-      // Flatten the structure directly into timingSlots
-      cat.timingSlots.date = slot.date;
-      cat.timingSlots.startTime = slot.timeSlots[0]?.startTime;  // Assuming one time slot
-      cat.timingSlots.endTime = slot.timeSlots[0]?.endTime;  // Assuming one time slot
-      cat.timingSlots._id = slot._id;
-      delete cat.timingSlots.dateTimeSlots;  // Remove dateTimeSlots after flattening
+      cat.timingSlots.date = moment(slot.date).format("YYYY-MM-DD");
+
+      const start = slot.timeSlots?.[0]?.startTime;
+      const end = slot.timeSlots?.[0]?.endTime;
+
+      if (start) {
+        cat.timingSlots.startTime = convertUtcToTimezoneAMPM(start, timezone);
+      }
+      if (end) {
+        cat.timingSlots.endTime = convertUtcToTimezoneAMPM(end, timezone);
+      }
+
+      delete cat.timingSlots.dateTimeSlots;
     }
-  }
-
-  // Format the date field in timingSlots if it's present
-  if (cat.timingSlots && cat.timingSlots.date) {
-    const formattedDate = moment(cat.timingSlots.date).format("YYYY-MM-DD"); // Convert to "YYYY-MM-DD"
-    cat.timingSlots.date = formattedDate;
-  }
-
-  // Handle time conversion for startTime and endTime
-  if (cat.timingSlots && cat.timingSlots.startTime && cat.timingSlots.endTime) {
-    let startTime = cat.timingSlots.startTime;
-    let endTime = cat.timingSlots.endTime;
-
-    // Check if startTime is a valid time format and convert to ISO string
-    if (moment(startTime, "hh:mm A", true).isValid()) {
-      startTime = moment(startTime, "hh:mm A").toISOString();
-    }
-
-    // Check if endTime is a valid time format and convert to ISO string
-    if (moment(endTime, "hh:mm A", true).isValid()) {
-      endTime = moment(endTime, "hh:mm A").toISOString();
-    }
-
-    // Convert times to the desired timezone (adjusting for start and end times)
-    cat.timingSlots.startTime = convertUtcToTimezoneAMPM(startTime, timezone);
-    cat.timingSlots.endTime = convertUtcToTimezoneAMPM(endTime, timezone);
   }
 
   return { ...cat };
 };
+
 
 const generateQRCode = async (reservation) => {
   // Convert the reservation object into a JSON string

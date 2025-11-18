@@ -1,5 +1,4 @@
-const mongoose = require("mongoose"); 
-const crypto = require("crypto"); // For generating random unique strings
+const mongoose = require("mongoose");
 
 // Define discount types
 const DiscountType = {
@@ -7,21 +6,13 @@ const DiscountType = {
   FIXED_AMOUNT: "amount",
 };
 
-// Function to generate a unique promo code
-const generatePromoCode = () => {
-  const timestamp = Date.now().toString(36);  // Timestamp to ensure uniqueness
-  const randomString = crypto.randomBytes(3).toString("hex"); // Random part for extra uniqueness
-  return `PROMO-${timestamp}-${randomString}`; // Combine both parts
-};
-
 // Define the PromoCode schema
 const promoCodeSchema = new mongoose.Schema(
   {
     promoCode: {
       type: String,
-      unique: true, // Ensure the promo code is unique in the collection
-      required: true,
-      default: generatePromoCode, // Generate a unique promo code by default
+      unique: true, // Ensure the promo code is unique across all users
+      required: true, // Admin will provide the promo code
     },
     title: {
       type: String,
@@ -64,7 +55,7 @@ const promoCodeSchema = new mongoose.Schema(
     },
     companyOrganizer: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // Assuming you have a User model for the company organizer
+      ref: "User", // The admin or user who created the promo code
       required: true,
     },
     maxUsage: {
@@ -79,7 +70,7 @@ const promoCodeSchema = new mongoose.Schema(
     },
     maxCountPerUser: {
       type: Number,
-default: 1,
+      default: 1,
       min: 1, // At least one usage per user
     },
     usersUsed: {
@@ -87,11 +78,11 @@ default: 1,
       of: Object, // Each userId will be the key, and the value will be an object with `count`
       default: {}, // Default to an empty object
     },
-    status: {
-      type: String,
-      enum: ["active", "canceled", "deleted"],
-      default: "active", // Default status is "active"
-    },
+status: {
+  type: String,
+  enum: ["active", "inactive", "canceled", "deleted"], // Added "inactive" status
+  default: "active", // Default status is "active"
+},
     createdAt: {
       type: Date,
       default: Date.now,
@@ -115,7 +106,7 @@ promoCodeSchema.pre("save", function (next) {
 // Method to check if a promo code is still valid
 promoCodeSchema.methods.isValid = function () {
   const now = new Date();
-  return this.isActive && now < this.expiryDate && this.usedCount < this.maxUsage;
+  return this.status === "active" && now < this.expiryDate && this.usedCount < this.maxUsage;
 };
 
 // Method to apply the promo code to a given amount (using discountValue for both percentage and fixed amount)
@@ -171,6 +162,20 @@ promoCodeSchema.methods.incrementUsage = async function (userId) {
     return true;
   }
   return false;
+};
+
+// Method to ensure a user can only create a unique promo code (no duplication across users)
+promoCodeSchema.statics.createPromoCodeForUser = async function (userId, data) {
+  // Check if the promo code already exists for the given user
+  const existingPromoCode = await this.findOne({ promoCode: data.promoCode, companyOrganizer: userId });
+  if (existingPromoCode) {
+    throw new Error("A promo code with this code already exists for this user.");
+  }
+
+  // Create and save a new promo code
+  const promoCode = new this(data);
+  await promoCode.save();
+  return promoCode;
 };
 
 const PromoCode = mongoose.model("PromoCode", promoCodeSchema);

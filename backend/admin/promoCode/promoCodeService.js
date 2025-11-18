@@ -25,8 +25,7 @@ const updatePromoCode = async (id, data) => {
   // -----------------------------
   // VALIDATIONS
   // -----------------------------
-  console.log("(promoCode.discountType",(promoCode.discountType) );
-  console.log("(data.discountType)", data.discountType);
+
   if(data.discountType){
   if (promoCode.discountType !== data.discountType) {
       if (!data.discountValue) {
@@ -34,17 +33,17 @@ const updatePromoCode = async (id, data) => {
   }
 }
 }
-console.log("data is n",data );
-
 
   // -----------------------------
   // ALLOWED FIELDS
   // -----------------------------
   const allowedFields = [
     "title",
+    "promoCode",
     "description",
     "discountType",
     "discountValue",
+    "status",
     "maxDiscountCap",
     "maxCountPerUser",
     "expiryDate",

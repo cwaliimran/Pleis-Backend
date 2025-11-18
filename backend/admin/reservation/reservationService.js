@@ -136,10 +136,10 @@ const getReservationDetails = async (id) => {
 
 
 
-const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, reservationStatus }) => {
+const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, reservationStatus,reservationId }) => {
       const skip = limit === 0 ? 0 : (page - 1) * limit;
       const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-      let { reservations, meta } = await ReservationRepo.getUserReservations({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationStatus });
+      let { reservations, meta } = await ReservationRepo.getUserReservations({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationStatus, reservationId });
 
       return {
         reservations,

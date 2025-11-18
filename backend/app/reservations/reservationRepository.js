@@ -498,6 +498,7 @@ const pipeline = [
     $project: {
       organizationName: "$organization.basicInfo.name",
       eventName: "$event.basicInfo.title",
+      eventStartDate: "$event.schedule.startDateTime",
       userName: { $concat: ["$user.firstName", " ", "$user.lastName"] },
       venueFullAddress: "$venue.location.fullAddress",
 

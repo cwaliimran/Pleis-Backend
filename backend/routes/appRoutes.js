@@ -34,6 +34,8 @@ router.use("/checkin", require("../app/usersStreaks/usersStreaksRoutes"));
 
 // reservatio
 router.use("/reservations", require("../app/reservations/reservationRoutes"));
+//Promo Codes
+router.use("/promo-codes", require("../app/promoCode/promoCodeRoutes"));
 
 
 module.exports = router;

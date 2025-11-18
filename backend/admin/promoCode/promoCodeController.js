@@ -17,6 +17,7 @@ const createPromoCode = async (req, res) => {
 let {
   title,
   description,
+  promoCode,
   discountType,
   discountValue,
   maxDiscountCap,
@@ -37,6 +38,7 @@ if (
       "discountValue", 
       "expiryDate",
       "maxUsage",
+      "promoCode"
     ],
   })
 ) return;
@@ -47,6 +49,7 @@ if (
   let data = {
     companyOrganizer:userId,
 title,
+promoCode,
   description,
   discountType,
   discountValue,
@@ -123,8 +126,10 @@ let {
   description,
   discountType,
   discountValue,
+  promoCode,
   maxDiscountCap,
   maxCountPerUser,
+  status,
   expiryDate,
   maxUsage,
 } = req.body;
@@ -147,8 +152,10 @@ console.log("expiryDate",expiryDate );
     companyOrganizer:userId,
 title,
   description,
+  promoCode,
   discountType,
   discountValue,
+  status,
   maxDiscountCap,
   expiryDate,
   maxUsage,
