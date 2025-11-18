@@ -1,6 +1,6 @@
 const { convertUtcToTimezoneAMPM } = require("@utils/responseUtil");
 const moment = require('moment');
-
+const qrcode = require("qrcode");
 function reservationsFormatter(item, timezone) {
   if (!item) return null;
 
@@ -78,4 +78,71 @@ function reservationsFormatterAdjustDates(item, timezone) {
   return { ...cat };
 }
 
-module.exports = { reservationsFormatter,reservationsFormatterAdjustDates };
+
+
+const userReservationsFormatter = (item, timezone) => {
+  if (!item) return null;
+
+  const cat = item.toObject ? item.toObject() : { ...item };
+
+// ---------------------------
+// 1. HANDLE eventStartDate  → eventDate + eventTime
+// ---------------------------
+if (cat.eventStartDate) {
+  const start = moment(cat.eventStartDate);   // original UTC datetime
+
+  // Extract date
+  cat.eventDate = start.format("YYYY-MM-DD");
+
+  // Extract time in AM/PM converted to user's timezone
+  cat.eventTime = convertUtcToTimezoneAMPM(start.toISOString(), timezone);
+   delete cat.eventStartDate;
+}
+
+
+  // ---------------------------
+  // 2. HANDLE dateTimeSlots ARRAY
+  // ---------------------------
+  if (cat.timingSlots && cat.timingSlots.dateTimeSlots) {
+    const dateTimeSlot = cat.timingSlots.dateTimeSlots;
+
+    if (Array.isArray(dateTimeSlot) && dateTimeSlot.length === 1) {
+      const slot = dateTimeSlot[0];
+
+      cat.timingSlots.date = moment(slot.date).format("YYYY-MM-DD");
+
+      const start = slot.timeSlots?.[0]?.startTime;
+      const end = slot.timeSlots?.[0]?.endTime;
+
+      if (start) {
+        cat.timingSlots.startTime = convertUtcToTimezoneAMPM(start, timezone);
+      }
+      if (end) {
+        cat.timingSlots.endTime = convertUtcToTimezoneAMPM(end, timezone);
+      }
+
+      delete cat.timingSlots.dateTimeSlots;
+    }
+  }
+
+  return { ...cat };
+};
+
+
+const generateQRCode = async (reservation) => {
+  // Convert the reservation object into a JSON string
+  const reservationString = JSON.stringify(reservation);  
+
+  // Pass the string as the URL (or data for QR code)
+  return qrcode.toDataURL(reservationString);  
+};
+const logQRCode = async (reservation) => {
+  try {
+    const qrCode = await generateQRCode(reservation); 
+       return qrCode;  
+  } catch (error) {
+    console.error("Error generating QR code:", error);
+  }
+};
+
+module.exports = {logQRCode, reservationsFormatter,reservationsFormatterAdjustDates,userReservationsFormatter };

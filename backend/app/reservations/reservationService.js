@@ -1,11 +1,12 @@
 // services/reservationservice.js
 const { buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
 const { generateMeta, getCurrentDateInTimezone } = require("../../helperUtils/responseUtil");
-const { reservationsFormatter } = require("./formaters/reservationFormetter");
+const { reservationsFormatter,userReservationsFormatter, logQRCode } = require("./formaters/reservationFormetter");
 const Reservations = require("@ReservationsModel");
 const UserReservations = require("@UserReservationsModel");
 const ReservationRepo = require("./reservationRepository");
 const mongoose = require("mongoose");
+const { generate2FASecret, generateQRCode, verify2FAToken } = require("../usersManagement/twoFactorAuth");
 const {
   sendResponse,
   parsePaginationParams,
@@ -15,7 +16,7 @@ const {
   getStartAndEndOfMonth,
   getStartAndEndOfWeek,
 } = require("@utils/responseUtil");
-
+const qrcode = require("qrcode");
 const createReservation = async (data) => {
   let Reservation = await ReservationRepo.createReservation(data);
   return reservationsFormatter(Reservation);
@@ -118,7 +119,10 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
     if (!reservations || reservations.length === 0) {
       return { reservations: [], meta };
     }
-    // reservations = reservations.map(reservation => reservationsFormatter(reservation, timezone));
+
+    reservations = reservations.map(reservation => userReservationsFormatter(reservation, timezone));
+
+
     return {
       reservations,
       meta
@@ -131,10 +135,51 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
   }
 };
 
+
+
+
+const getReservationDetails = async (id,timezone) => {
+
+
+  try {
+    // Fetch the reservation by id
+    let reservation = await ReservationRepo.getReservationDetails(id);
+
+    // Check if the reservation exists
+    if (!reservation) {
+      console.log("Reservation not found for ID:", id); // Log if reservation is not found
+      return { reservation: null };  // Return null for reservation
+    }
+
+    // Format the reservation if necessary
+    reservation = userReservationsFormatter(reservation, timezone);
+    reservation.qrCode = await logQRCode(reservation);
+
+    // Return the reservation object in the response
+    return {
+      reservation,
+    };
+
+  } catch (error) {
+    // Log and return a default response in case of an error
+    console.error("Error fetching reservation details:", error); // Log the error
+    return {
+      reservation: null,
+      meta: { totalRecords: 0, currentPage: 1, totalPages: 1, limit: 10 },
+    };
+  }
+};
+
+
+
+
+
+
 module.exports = {
   createReservation,
   getReservations,
   updateReservation,
   getUserReservations,
   deleteReservation,
+  getReservationDetails
 };

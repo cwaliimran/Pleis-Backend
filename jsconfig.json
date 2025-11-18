@@ -94,6 +94,8 @@
       ],
       "@BundleModel": [
         "backend/commonModules/bundles/Bundle.js"
+      "@PromoCodeModel": [
+        "backend/commonModules/PromoCode/PromoCode.js"
       ]
     }
   },

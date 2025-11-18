@@ -31,4 +31,5 @@ module.exports = {
     "@CustomCategoriesModel": "backend/admin/customCategories/CustomCategories.js",
     "@BundleModel": "backend/commonModules/bundles/Bundle.js"
     
+    "@PromoCodeModel": "backend/commonModules/PromoCode/PromoCode.js",
 };
