@@ -1,6 +1,6 @@
 const express = require("express");
 const auth = require("../../../middlewares/authMiddleware");
-const { placeOrder, getOrderDetails, getUserOrders } = require("./orderController");
+const { placeOrder, getOrderDetails, getUserOrders, addMoreItemsToOrder } = require("./orderController");
 
 const router = express.Router();
 
@@ -8,6 +8,7 @@ router.use(auth);
 
 // Place a new order
 router.post("/", placeOrder);
+router.post("/add-more", addMoreItemsToOrder);
 
 // Get details of an order
 router.get("/:id", getOrderDetails);

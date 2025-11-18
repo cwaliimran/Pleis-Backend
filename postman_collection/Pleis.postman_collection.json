@@ -2244,7 +2244,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n   \"companyOrganizer\":\"6911c14b6fc7cbd864e745b6\"\n}",
+									"raw": "{\n   \"companyOrganizer\":\"6911b8946c940af405a4a603\",\n   \"organization\":\"6911b9cd1902fd1c55eb4842\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -2329,7 +2329,7 @@
 					"name": "Events",
 					"item": [
 						{
-							"name": "get - nearby",
+							"name": "get - advance filters",
 							"event": [
 								{
 									"listen": "test",
@@ -2367,13 +2367,13 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}app/events/nearby?page=1&limit=10&latitude=31.5023621&longitude=74.426454",
+									"raw": "{{url}}app/events/filter?page=1&limit=10&latitude=31.5023621&longitude=74.426454",
 									"host": [
 										"{{url}}app"
 									],
 									"path": [
 										"events",
-										"nearby"
+										"filter"
 									],
 									"query": [
 										{
@@ -2391,6 +2391,11 @@
 										{
 											"key": "longitude",
 											"value": "74.426454"
+										},
+										{
+											"key": "keyword",
+											"value": "Islamabad Tech Summit 2025",
+											"disabled": true
 										}
 									]
 								}
@@ -2926,13 +2931,13 @@
 										{
 											"key": "filter",
 											"value": "upcoming",
-											"description": "upcoming, past"
+											"description": "upcoming, past // for events"
 										}
 									],
 									"variable": [
 										{
 											"key": "id",
-											"value": "6911ccb36aca10eb719d7358"
+											"value": "6911cc376aca10eb719d7322"
 										}
 									]
 								}
@@ -3939,6 +3944,59 @@
 											"path": [
 												"menu",
 												"orders"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "add more items",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"items\": [\n    {\n      \"menuItem\": \"6911c3516aca10eb719d6f72\",\n      \"quantity\": 1\n    }\n  ],\n  \"orderId\": \"6914928ed4ab4bca5895f9f2\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/menu/orders/add-more",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"menu",
+												"orders",
+												"add-more"
 											]
 										},
 										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
@@ -13342,7 +13400,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Main Course Menu\",\n  \"description\": \"Special lunch menu with vegan options\",\n  \"organization\": \"69005ee107c29bc8fee4324d\",\n  \"status\": \"active\"\n}\n",
+											"raw": "{\n  \"title\": \"Main Course Menu\",\n  \"description\": \"Special lunch menu with vegan options\",\n  \"organization\": \"69005ee107c29bc8fee4324d\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -17881,7 +17939,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/loyalty/listings?page=1&limit=10",
+											"raw": "{{url}}admin/loyalty/listings?page=1&limit=10&keyword=Glowingsoft",
 											"host": [
 												"{{url}}admin"
 											],
@@ -17897,6 +17955,10 @@
 												{
 													"key": "limit",
 													"value": "10"
+												},
+												{
+													"key": "keyword",
+													"value": "Glowingsoft"
 												}
 											]
 										}
@@ -18406,13 +18468,19 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/loyalty/rewards",
+											"raw": "{{url}}admin/loyalty/rewards?companyOrganizer=6911c14b6fc7cbd864e745b6",
 											"host": [
 												"{{url}}admin"
 											],
 											"path": [
 												"loyalty",
 												"rewards"
+											],
+											"query": [
+												{
+													"key": "companyOrganizer",
+													"value": "6911c14b6fc7cbd864e745b6"
+												}
 											]
 										}
 									},
@@ -19167,7 +19235,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"sender\": \"68d69157fbccb319035eb118\",\n  \"receiver\": \"68da7aa1e6f099d42e32da71\",\n  \"notes\": \"Looking forward to collaborating on the upcoming event.\"\n}",
+											"raw": "{\n  \"sender\": \"68d69157fbccb319035eb118\",\n  \"receiver\": \"68da7aa1e6f099d42e32da72\",\n  \"notes\": \"Looking forward to collaborating on the upcoming event.\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -20982,6 +21050,292 @@
 									"response": []
 								}
 							]
+						}
+					]
+				},
+				{
+					"name": "Bundles",
+					"item": [
+						{
+							"name": "get",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/bundles",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"bundles"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get details",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/bundles/:id",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"bundles",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "691c3c68ba1513e4066880b3"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "add",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"organization\": \"6911c1b36fc7cbd864e74659\",\n  \"name\": \"Premium Event Bundle\",\n  \"description\": \"Includes tickets, and pre-order items.\",\n  \"originalPrice\": 150,\n  \"discountedPrice\": 120,\n  \"discountPercentage\":10,\n  \"startDate\": \"2025-12-01 10:00 AM\",\n  \"endDate\": \"2025-12-31 11:59 PM\",\n  \"event\": \"6915c3e448a5a4c172122332\",\n  \"bundleDetails\": {\n    \"ticketings\": [\n      {\n        \"ticketType\": \"6915c3e448a5a4c172122335\",\n        \"quantity\": 2\n      },\n      {\n        \"ticketType\": \"691abb59fc26ab786b01973d\",\n        \"quantity\": 1\n      }\n    ],\n    \"reservations\": [\n    ],\n    \"preOrderItems\": [\n      {\n        \"menuItem\": \"6911c3cb6aca10eb719d6f9e\",\n        \"quantity\": 5\n      },\n      {\n        \"menuItem\": \"6911d21601e061abb7bbc00b\",\n        \"quantity\": 2\n      }\n    ]\n  }\n}\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/bundles/",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"bundles",
+										""
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						},
+						{
+							"name": "update",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"organization\": \"6911c1b36fc7cbd864e74659\",\n  \"name\": \"Premium Event Bundle\",\n  \"description\": \"Includes tickets, and pre-order items.\",\n  \"originalPrice\": 150,\n  \"discountedPrice\": 120,\n  \"discountPercentage\":10,\n  \"startDate\": \"2025-12-01 10:00 AM\",\n  \"endDate\": \"2025-12-31 11:59 PM\",\n  \"event\": \"6915c3e448a5a4c172122332\",\n  \"bundleDetails\": {\n    \"ticketings\": [\n      {\n        \"ticketType\": \"6915c3e448a5a4c172122335\",\n        \"quantity\": 3\n      }\n    ],\n    \"reservations\": [\n        {\n        \"reservationType\": \"650f1a3b5d2c4a0055566778\",\n        \"quantity\": 3\n      }\n    ],\n    \"preOrderItems\": [\n      {\n        \"menuItem\": \"6911c3cb6aca10eb719d6f9e\",\n        \"quantity\": 5\n      },\n      {\n        \"menuItem\": \"6911d21601e061abb7bbc00b\",\n        \"quantity\": 2\n      }\n    ]\n  }\n}\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/bundles/:id",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"bundles",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "691c3c68ba1513e4066880b3"
+										}
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
+						},
+						{
+							"name": "delete",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/bundles/:id",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"bundles",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "691c3c68ba1513e4066880b3"
+										}
+									]
+								},
+								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+							},
+							"response": []
 						}
 					]
 				},

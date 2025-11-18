@@ -3,13 +3,33 @@ const Menus = require("@MenusModel");
 const { getOrganizationIdsByCompanyOrganizer } = require("../../organizations/organizationRepository");
 
 // Create menu in a transaction and update organization
+
 const createMenu = async (data) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
-    // Create menu
+    // Only deactivate old menus if organization is provided
+    if (data.organization) {
+      await Menus.updateMany(
+        { organization: data.organization, status: "active" },
+        { $set: { status: "inactive" } },
+        { session }
+      );
+    }
+
+    // Create new menu
     const menu = new Menus(data);
-    await menu.save();
+    await menu.save({ session });
+
+    // Commit transaction
+    await session.commitTransaction();
+    session.endSession();
+
     return menu;
   } catch (err) {
+    // Rollback transaction if anything fails
+    await session.abortTransaction();
+    session.endSession();
     throw err;
   }
 };

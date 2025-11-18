@@ -4,60 +4,116 @@ const { getModelCounts } = require("@dbUtils/queryUtil");
 const Streaks = require("@StreaksModel");
 
 // Create usersStreak and automatically assign next order
+const { getTodayResetTime, MAX_ORGANIZATIONS_PER_DAY,
+  MAX_CHECKINS_PER_DAY,
+  CHECKIN_COOLDOWN_MINUTES, } = require("./configs/streakSettings");
+const { default: mongoose } = require("mongoose");
+
 const createUsersStreak = async (data) => {
-  // Fetch all streak rules for the company
-  const { user: userId, companyOrganizer: companyOrganizerId, organization } = data;
-  const streakRules = await Streaks.find({
-    companyOrganizer: companyOrganizerId,
+  const { user: userId, companyOrganizer, organization, timezone = "UTC" } = data;
+
+  const todayReset = getTodayResetTime(timezone);
+
+  let companyOrganizerObjectId = new mongoose.Types.ObjectId(companyOrganizer);
+  // 1) Fetch all streak rules
+  const streaks = await Streaks.find({
+    companyOrganizer: companyOrganizerObjectId,
     status: "active",
-  }).sort({ visits: 1 }); // optional, just for clarity
+  });
 
-  if (!streakRules.length) {
-    throw new Error("No active streak rules found for this company.");
+  if (!streaks.length) {
+    return {
+      organization,
+      visits: 0,
+      streak: 0,
+      longestStreak: 0,
+      pointsEarned: 0,
+      totalPoints: 0,
+      success: true,
+      message: "No active streak rules found."
+    };
   }
-
-  // Find or create user streak record
+  // 2) Get or create user daily streak record
   let userStreak = await UsersStreaks.findOne({
     user: userId,
-    companyOrganizer: companyOrganizerId,
+    companyOrganizer,
     organization
   });
 
   if (!userStreak) {
     userStreak = new UsersStreaks({
       user: userId,
-      companyOrganizer: companyOrganizerId,
+      companyOrganizer,
       organization,
       visits: 0,
-      points: 0,
       streak: 0,
       longestStreak: 0,
+      points: 0
     });
   }
 
-  // Increment visits
+  // 3) DAILY RESET CHECK (5AM LOGIC)
+  if (!userStreak.lastVisitAt || new Date(userStreak.lastVisitAt) < todayReset) {
+    userStreak.visits = 0;
+    userStreak.streak = 0;
+  }
+
+  // 4) Limit: 5 check-ins per day
+  const todayCheckinCount = await UsersStreaks.countDocuments({
+    user: userId,
+    lastVisitAt: { $gte: todayReset }
+  });
+  if (todayCheckinCount >= MAX_CHECKINS_PER_DAY) {
+    throw new Error("Daily check-in limit reached (5 per day).");
+  }
+
+  // 5) Cooldown: 30-minute rule
+  if (userStreak.lastVisitAt) {
+    const diffMinutes = (Date.now() - new Date(userStreak.lastVisitAt).getTime()) / (1000 * 60);
+    if (diffMinutes < CHECKIN_COOLDOWN_MINUTES) {
+      throw new Error(`Please wait ${Math.ceil(CHECKIN_COOLDOWN_MINUTES - diffMinutes)} minutes before checking in again.`);
+    }
+  }
+
+  // 6) Limit: Only 5 unique organizations per day
+  const uniqueOrgsToday = await UsersStreaks.distinct("organization", {
+    user: userId,
+    lastVisitAt: { $gte: todayReset }
+  });
+
+  const alreadyChecked = uniqueOrgsToday.includes(organization.toString());
+  if (!alreadyChecked && uniqueOrgsToday.length >= MAX_ORGANIZATIONS_PER_DAY) {
+    throw new Error("You can check in at a maximum of 5 organizations per day.");
+  }
+
+  // 7) Award points only once per organization per day
+  let pointsToAward = 0;
+
+  if (!alreadyChecked) {
+    const rule = streaks.find(r => r.visits === userStreak.visits + 1);
+    if (rule) pointsToAward = rule.points;
+  }
+
+
+  // 8) Update streak
   userStreak.visits += 1;
   userStreak.streak += 1;
   userStreak.longestStreak = Math.max(userStreak.longestStreak, userStreak.streak);
+  userStreak.points += pointsToAward;
   userStreak.lastVisitAt = new Date();
-
-  // Check if current visit matches any reward tier
-  const reward = streakRules.find(rule => rule.visits === userStreak.visits);
-  if (reward) {
-    userStreak.points += reward.points;
-  }
 
   await userStreak.save();
 
   return {
-    userId,
-    companyOrganizer: companyOrganizerId,
     organization,
     visits: userStreak.visits,
-    points: userStreak.points,
-    rewardGiven: reward ? reward.points : 0,
+    streak: userStreak.streak,
+    longestStreak: userStreak.longestStreak,
+    pointsEarned: pointsToAward,
+    totalPoints: userStreak.points,
   };
 };
+
 
 // Get all with filters, sorted by 'order' ascending and then 'createdAt' descending
 const getUsersStreaksWithFilters = async (
