@@ -37,4 +37,8 @@ router.use("/loyalty", require("../loyalty/loyaltyRoutes"));
 router.use("/reservations", require("../reservation/reservationRoutes"));
 //status badges
 router.use("/status-badges", require("../statusBadges/statusBadgesRoutes"));
+
+//bundles
+router.use("/bundles", require("../bundles/bundleRoutes"));
+
 module.exports = router;

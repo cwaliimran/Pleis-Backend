@@ -18,6 +18,14 @@ const getClubCollaborationsWithFilters = async (pipeline) => {
   return ClubCollaborations.aggregate(pipeline);
 };
 
+const checkExistingCollaboration = async ({ senderId, receiverId }) => {
+  return ClubCollaborations.findOne({
+    "sender.id": senderId,
+    "receiver.id": receiverId,
+    "sender.status": { $ne: "deleted" }
+  });
+};
+
 
 // Count by condition
 const countClubCollaborations = async (query = {}) => {
@@ -52,4 +60,5 @@ module.exports = {
   findClubCollaborationById,
   updateClubCollaborationData,
   findByIdAndUpdate,
+  checkExistingCollaboration
 };

@@ -3,10 +3,14 @@ https://pleis-backend-dev-bgd6a6hxefgwbzg5.germanywestcentral-01.azurewebsites.n
 Streaks=>
 working hours, 
 
-5AM mid of night instead of 12AM - 24 hours only 1 checkin in a restaurant
+5AM mid of night instead of 12AM - 24 hours only 1 checkin in a organization
 only 1 time they can get points but they can checkin as many times as they want
 
-Max 5 restaurants a day - only 1 time get point against each
+Max 5 organizations a day - only 1 time get point against each
+Check-in will be available on the organizer profile page with a 30-minute active window after the last transaction after 30 minutes user can checkin again
+limiting users to 5 check-ins per day with 30 minutes between each check-in
+Users can only earn points once per venue per day, with the day reset occurring at 5 AM instead of midnight
+The goal is to prevent system abuse, such as repeatedly checking into venues without genuine engagement
 
 Challenges=> Visits rules will be same as Streaks - users can get multiple points based on active challenge or streaks
 

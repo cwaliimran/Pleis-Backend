@@ -1,10 +1,10 @@
 {
 	"info": {
-		"_postman_id": "9e6b9007-0f4d-4547-a6a3-4e72c9f62bd8",
+		"_postman_id": "1ef3b220-6fe1-4a98-b6c0-16ae96fa7c63",
 		"name": "Pleis",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "3104553",
-		"_collection_link": "https://warped-escape-145657.postman.co/workspace/Pleis~a2e3d8c2-3c4d-4997-9d2c-e3231a7c419f/collection/3104553-9e6b9007-0f4d-4547-a6a3-4e72c9f62bd8?action=share&source=collection_link&creator=3104553"
+		"_collection_link": "https://warped-escape-145657.postman.co/workspace/Pleis~a2e3d8c2-3c4d-4997-9d2c-e3231a7c419f/collection/3104553-1ef3b220-6fe1-4a98-b6c0-16ae96fa7c63?action=share&source=collection_link&creator=3104553"
 	},
 	"item": [
 		{
@@ -2116,7 +2116,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n   // \"category\":\"68f0d6b0a92f125fd26a5831\"\n    \"time\": \"live\" // all,live, today, tomorrow, thisWeek\n    // \"\"\n}",
+									"raw": "{\n   // \"category\":\"68f0d6b0a92f125fd26a5831\"\n    // \"time\": \"live\" // all,live, today, tomorrow, thisWeek\n    // \"\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -2451,7 +2451,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "6911be7fd49fc086aabd2668"
+											"value": "6915c3e448a5a4c172122332"
 										}
 									]
 								}
@@ -2517,7 +2517,7 @@
 									"variable": [
 										{
 											"key": "eventId",
-											"value": "690c9f974cf55e352d18b74e"
+											"value": "6915c3e448a5a4c172122332"
 										}
 									]
 								}
@@ -2727,7 +2727,7 @@
 										},
 										{
 											"key": "keywrod",
-											"value": null,
+											"value": "",
 											"disabled": true
 										}
 									]
@@ -2793,7 +2793,7 @@
 										},
 										{
 											"key": "keywrod",
-											"value": null,
+											"value": "",
 											"disabled": true
 										}
 									]
@@ -2859,7 +2859,7 @@
 										},
 										{
 											"key": "keywrod",
-											"value": null,
+											"value": "",
 											"disabled": true
 										}
 									]
@@ -2932,7 +2932,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68ff50e556462446dedae1ed"
+											"value": "6911ccb36aca10eb719d7358"
 										}
 									]
 								}
@@ -3529,6 +3529,139 @@
 													"value": "cafe",
 													"disabled": true
 												}
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											""
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											""
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "Join/Leave Club",
+							"item": [
+								{
+									"name": "join",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/loyalty/club/join",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"loyalty",
+												"club",
+												"join"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "leave",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"companyOrganizer\": \"6911cc376aca10eb719d7322\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/loyalty/club/leave",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"loyalty",
+												"club",
+												"leave"
 											]
 										}
 									},
@@ -7958,12 +8091,11 @@
 							}
 						},
 						"url": {
-							"raw": "{{url}}organizer//suppliers/global?page=1&limit=10",
+							"raw": "{{url}}organizer/suppliers/global?page=1&limit=10",
 							"host": [
 								"{{url}}organizer"
 							],
 							"path": [
-								"",
 								"suppliers",
 								"global"
 							],
@@ -8026,12 +8158,11 @@
 							}
 						},
 						"url": {
-							"raw": "{{url}}organizer//features/global?page=1&limit=10",
+							"raw": "{{url}}organizer/features/global?page=1&limit=10",
 							"host": [
 								"{{url}}organizer"
 							],
 							"path": [
-								"",
 								"features",
 								"global"
 							],
@@ -12729,7 +12860,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"image\": \"68d69359fbccb319035eb13b.png\",\n    \"title\": \"Lunch Menu\",\n    \"description\": \"Special lunch menu with vegan options\",\n    \"status\": \"active\"\n}",
+											"raw": "{\n    \"image\": \"68d69359fbccb319035eb13b.png\",\n    \"title\": \"Lunch Menu\",\n    \"category\":\"691abb7e48d92a7f0f35e20c\",\n    \"description\": \"Special lunch menu with vegan options\",\n    \"status\": \"active\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -12868,7 +12999,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "6905e582b472b04cbd1b6795"
+													"value": "691abe27738f1b359d4df157"
 												}
 											]
 										},
@@ -12982,7 +13113,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/menu/",
+											"raw": "{{url}}admin/menu/?organizations=[\"6911cc376aca10eb719d7322\"]",
 											"host": [
 												"{{url}}admin"
 											],
@@ -12998,9 +13129,8 @@
 												},
 												{
 													"key": "organizations",
-													"value": "[\"69085defb8f4eb8ee1c38067\"]",
-													"description": "array of object ids",
-													"disabled": true
+													"value": "[\"6911cc376aca10eb719d7322\"]",
+													"description": "array of object ids"
 												}
 											]
 										}
@@ -13621,7 +13751,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Food\",\n  \"status\": \"active\"\n}\n",
+											"raw": "{\n  \"title\": \"Food\",\n  \"status\": \"active\",\n  \"image\":\"burger.png\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -13740,7 +13870,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Drinks\",\n  \"status\": \"inactive\"\n}\n",
+											"raw": "{\n  \"title\": \"Drinks\",\n  \"status\": \"active\", //active, inactive\n  \"image\":\"burger.png\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -13760,7 +13890,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "68d69a0e6513527e7a23656c"
+													"value": "691abb7e48d92a7f0f35e20c"
 												}
 											]
 										},
@@ -13819,7 +13949,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "68d69a0e6513527e7a23656c"
+													"value": "691abb9a48d92a7f0f35e217"
 												}
 											]
 										},
@@ -13874,7 +14004,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/menu/items?menu=6902f666260e5bb7dec7e6e9&companyOrganizer=68ee4bb7a0e89aae25bd1eab",
+											"raw": "{{url}}admin/menu/items?menu=6902f666260e5bb7dec7e6e9",
 											"host": [
 												"{{url}}admin"
 											],
@@ -13889,7 +14019,8 @@
 												},
 												{
 													"key": "companyOrganizer",
-													"value": "68ee4bb7a0e89aae25bd1eab"
+													"value": "68ee4bb7a0e89aae25bd1eab",
+													"disabled": true
 												},
 												{
 													"key": "keyword",
@@ -13900,6 +14031,154 @@
 													"key": "status",
 													"value": "inactive",
 													"disabled": true
+												}
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "get",
+											"originalRequest": {
+												"method": "GET",
+												"header": [],
+												"url": {
+													"raw": "{{url}}menu/items/",
+													"host": [
+														"{{url}}menu"
+													],
+													"path": [
+														"items",
+														""
+													],
+													"query": [
+														{
+															"key": "menu",
+															"value": "68d69376fbccb319035eb13e",
+															"disabled": true
+														},
+														{
+															"key": "keyword",
+															"value": "up",
+															"disabled": true
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "Text",
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "873"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"369-S0aN4KJoY/o0Qu9dX4NOwykJp6M\""
+												},
+												{
+													"key": "Date",
+													"value": "Sat, 27 Sep 2025 14:34:30 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Menu items fetched successfully\",\n    \"data\": [\n        {\n            \"title\": \"Cheese Burger\",\n            \"description\": \"A delicious cheeseburger with lettuce, tomato, and fries.\",\n            \"type\": \"food\",\n            \"category\": {\n                \"_id\": \"68d699f66513527e7a236563\",\n                \"title\": \"Drinks\"\n            },\n            \"basePrice\": 10.99,\n            \"discountPrice\": 8.99,\n            \"taxPercent\": 5,\n            \"menu\": {\n                \"_id\": \"68d69376fbccb319035eb13e\",\n                \"title\": \"Lunch Menu up\",\n                \"venue\": {\n                    \"_id\": \"68d69359fbccb319035eb13b\",\n                    \"title\": \"Club De Moon\"\n                }\n            },\n            \"startTime\": \"10:30 AM\",\n            \"endTime\": \"05:30 PM\",\n            \"creator\": \"68d69157fbccb319035eb118\",\n            \"status\": \"active\",\n            \"_id\": \"68d7ee19c9469f7d754b5c99\",\n            \"createdAt\": \"2025-09-27T14:00:57.870Z\",\n            \"updatedAt\": \"2025-09-27T14:00:57.870Z\",\n            \"__v\": 0,\n            \"imageInfo\": {\n                \"name\": \"burger.png\",\n                \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/burger.png\"\n            }\n        }\n    ],\n    \"meta\": {\n        \"currentPage\": 1,\n        \"totalPages\": 1,\n        \"totalRecords\": 1,\n        \"limit\": 10,\n        \"menuItemsCount\": {\n            \"total\": 1,\n            \"active\": 1,\n            \"inactive\": 0\n        }\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "get items by menuId",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/menu/items/menu/:menuId",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"menu",
+												"items",
+												"menu",
+												":menuId"
+											],
+											"query": [
+												{
+													"key": "companyOrganizer",
+													"value": "68ee4bb7a0e89aae25bd1eab",
+													"disabled": true
+												},
+												{
+													"key": "keyword",
+													"value": "up",
+													"disabled": true
+												},
+												{
+													"key": "status",
+													"value": "inactive",
+													"disabled": true
+												}
+											],
+											"variable": [
+												{
+													"key": "menuId",
+													"value": "6911c1dc6fc7cbd864e74678"
 												}
 											]
 										}
@@ -16890,14 +17169,19 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/loyalty/challenges/",
+											"raw": "{{url}}admin/loyalty/challenges?companyOrganizer=6911b8946c940af405a4a603",
 											"host": [
 												"{{url}}admin"
 											],
 											"path": [
 												"loyalty",
-												"challenges",
-												""
+												"challenges"
+											],
+											"query": [
+												{
+													"key": "companyOrganizer",
+													"value": "6911b8946c940af405a4a603"
+												}
 											]
 										}
 									},
@@ -16990,7 +17274,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"companyOrganizer\":\"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe to claim this challenge\",\n    \"taskType\": \"visit\",\n    \"taskValue\": 500,\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 5\n    }\n}",
+											"raw": "{\n    \"companyOrganizer\":\"6911b8946c940af405a4a603\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe to claim this challenge\",\n    \"taskType\": \"visit\",\n    \"taskValue\": 500,\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 5\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -17109,7 +17393,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Walk 10,000 steps\",\n    \"description\": \"Earn points by being active\",\n    \"taskType\": \"earnPoints\",\n    \"taskValue\": 500,\n    \"claimLimit\": 5,\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\": \"68d7ee19c9469f7d754b5c99\"\n    }\n}",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Walk 10,000 steps\",\n    \"description\": \"Earn points by being active\",\n    \"taskType\": \"earnPoints\",\n    \"taskValue\": 500,\n    \"claimLimit\": 5,\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\": \"68d7ee19c9469f7d754b5c99\"\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -17227,7 +17511,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -17463,7 +17747,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n//   \"title\": \"Sample title\",\n//   \"description\": \"description of item\",\n  \"tierLimit\":\"690b3cea8d15be3d21bdd31d\"\n}\n",
+											"raw": "{\n//   \"title\": \"Sample title\",\n//   \"description\": \"description of item\",\n//   \"tierLimit\":\"690b3cea8d15be3d21bdd31d\"\n\"image\":\"ch2.png\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -17483,7 +17767,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "68de85fc33a8c2051670dd61"
+													"value": "691ac6b4f6ee20e3f835e159"
 												}
 											]
 										},

@@ -60,7 +60,7 @@ const getNearbyEvents = async (req, res) => {
 }
 
 const getNearbyEventsWithAdvanceFilters = async (req, res) => {
-  const { latitude, longitude } = req.query;
+  const { latitude, longitude, keyword } = req.query;
   const { page, limit } = parsePaginationParams(req);
   let { timezone, _id: userId } = req.user;
 
@@ -115,6 +115,7 @@ const getNearbyEventsWithAdvanceFilters = async (req, res) => {
   const queryData = {
     latitude,
     longitude,
+    keyword,
     page,
     limit,
     timezone,

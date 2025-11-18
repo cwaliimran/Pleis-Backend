@@ -1,102 +1,72 @@
 // services/clubCollaborationService.js
 const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
-const { generateMeta } = require("@utils/responseUtil");
+const { generateMeta, validateParams, getReadableErrorMessage, sendResponse } = require("@utils/responseUtil");
 const ClubCollaborations = require("@ClubCollaborationModel");
 const clubCollaborationRepo = require("./clubCollaborationsRepository");
 const mongoose = require("mongoose");
+const { formatClubCollaborations } = require("./formatters/clubCollaborationFormatter");
 
-const createClubCollaboration = async (req, res) => {
-  const {
-    sender,
-    receiver,
-    notes,
-    expiryDate,
-  } = req.body;
+const createClubCollaboration = async ({ sender, receiver, notes, expiryDate }) => {
+  // Check existing
+  const existing = await clubCollaborationRepo.checkExistingCollaboration({
+    senderId: sender,
+    receiverId: receiver
+  });
 
-  // Validate required fields
-  if (
-    !validateParams(req, res, {
-      rawData: ["sender", "receiver"],
-    })
-  ) return;
+  if (existing) {
+    return { exists: true };
+  }
 
-  // Set initial status as 'pending' for both sender and receiver
-  let data = {
+  // Create new
+  const data = {
     sender: { id: sender, status: "pending" },
     receiver: { id: receiver, status: "pending" },
     notes,
     expiryDate,
   };
 
-  try {
-    // Check if the collaboration already exists between the same sender and receiver
-    const existing = await clubCollaborationsService.getClubCollaborations({
-      page: 1,
-      limit: 1,
-      keyword: "",
-      status: { $ne: "deleted" },
-      date: null,
-      userId: sender,
-      receiverId: receiver,
-    });
+  const clubCollaboration = await clubCollaborationRepo.createClubCollaboration(data);
 
-    if (existing.clubCollaborations.length > 0) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "club_collaboration_already_exists",
-      });
-    }
-
-    // Create the collaboration
-    const clubCollaboration = await clubCollaborationsService.createClubCollaboration(data);
-
-    if (!clubCollaboration) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "club_collaboration_creation_failed",
-      });
-    }
-
-    return sendResponse({
-      res,
-      statusCode: 201,
-      translationKey: "club_collaboration_created_successfully",
-      data: clubCollaboration,
-    });
-  } catch (error) {
-    const readableError = getReadableErrorMessage(error);
-    return sendResponse({
-      res,
-      statusCode: readableError.statusCode,
-      translationKey: readableError.message,
-      error,
-    });
-  }
+  return { exists: false, clubCollaboration };
 };
+
+module.exports = {
+  createClubCollaboration
+};
+
 
 
 // Populate club data for clubCollaborations (updated for new schema)
 const getClubCollaborations = async ({ page, limit, keyword, status, userId, date }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const pipeline = [
-    // Match user access (clubCollaboration creator)
-    {
-      $match: {
-        ...(userId && { "sender.id": new mongoose.Types.ObjectId(userId) })
-      }
-    }
-  ];
+  const pipeline = [];
 
-  // Apply filters
+  // -----------------------------
+  // USER FILTER
+  // -----------------------------
+  pipeline.push({
+    $match: {
+      ...(userId && { "sender.id": new mongoose.Types.ObjectId(userId) })
+    }
+  });
+
+  // -----------------------------
+  // STATUS FILTER
+  // -----------------------------
   if (status) {
-    pipeline.push({ $match: { "sender.status": status } });
+    pipeline.push({
+      $match: { "sender.status": status }
+    });
   } else {
-    pipeline.push({ $match: { "sender.status": { $ne: "deleted" } } });
+    pipeline.push({
+      $match: { "sender.status": { $ne: "deleted" } }
+    });
   }
 
+  // -----------------------------
+  // DATE FILTER
+  // -----------------------------
   if (date) {
     const start = new Date(date);
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
@@ -107,10 +77,11 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
     });
   }
 
+  // -----------------------------
+  // KEYWORD FILTER
+  // -----------------------------
   const keywordMatch = buildKeywordQueryFromModels(
-    [
-      { schema: ClubCollaborations.schema }
-    ],
+    [{ schema: ClubCollaborations.schema }],
     keyword
   );
 
@@ -118,36 +89,82 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
     pipeline.push({ $match: keywordMatch });
   }
 
+  // SORT
   pipeline.push({ $sort: { createdAt: -1 } });
 
-  // Populate sender and receiver completely (not just the status)
+  // -----------------------------
+  // POPULATE SENDER USER
+  // -----------------------------
   pipeline.push({
     $lookup: {
       from: "users",
       localField: "sender.id",
       foreignField: "_id",
-      as: "sender"
+      as: "senderUser"
     }
   });
 
+  // -----------------------------
+  // POPULATE RECEIVER USER
+  // -----------------------------
   pipeline.push({
     $lookup: {
       from: "users",
       localField: "receiver.id",
       foreignField: "_id",
-      as: "receiver"
+      as: "receiverUser"
     }
   });
 
-  // Instead of using $unwind, check for a single user population
+  // -----------------------------
+  // MERGE POPULATED USERS INTO STRUCTURE
+  // -----------------------------
   pipeline.push({
     $addFields: {
-      sender: { $arrayElemAt: ["$sender", 0] }, // Get first (and only) element from the array
-      receiver: { $arrayElemAt: ["$receiver", 0] } // Same for receiver
+      sender: {
+        id: "$sender.id",
+        status: "$sender.status",
+        user: {
+          $let: {
+            vars: { u: { $arrayElemAt: ["$senderUser", 0] } },
+            in: {
+              _id: "$$u._id",
+              firstName: "$$u.firstName",
+              lastName: "$$u.lastName",
+              profileIcon: "$$u.profileIcon"
+            }
+          }
+        }
+      },
+      receiver: {
+        id: "$receiver.id",
+        status: "$receiver.status",
+        user: {
+          $let: {
+            vars: { u: { $arrayElemAt: ["$receiverUser", 0] } },
+            in: {
+              _id: "$$u._id",
+              firstName: "$$u.firstName",
+              lastName: "$$u.lastName",
+              profileIcon: "$$u.profileIcon"
+            }
+          }
+        }
+      }
     }
   });
 
-  // Apply pagination + counts using $facet
+  // Remove temp arrays
+  pipeline.push({
+    $project: {
+      senderUser: 0,
+      receiverUser: 0
+    }
+  });
+
+  // -----------------------------
+  // PAGINATION + COUNTS
+  // -----------------------------
   pipeline.push({
     $facet: {
       data: [
@@ -163,18 +180,29 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
   const clubCollaborations = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-  // Additional counts for meta (active/inactive/total by userId as sender)
+  // Extra counts
   const [total, active, inactive] = await Promise.all([
-    ClubCollaborations.countDocuments({ ...(userId && { "sender.id": userId }), "sender.status": { $ne: "deleted" } }),
-    ClubCollaborations.countDocuments({ "sender.status": "accepted", ...(userId && { "sender.id": userId }) }),
-    ClubCollaborations.countDocuments({ "sender.status": "rejected", ...(userId && { "sender.id": userId }) })
+    ClubCollaborations.countDocuments({
+      ...(userId && { "sender.id": userId }),
+      "sender.status": { $ne: "deleted" }
+    }),
+    ClubCollaborations.countDocuments({
+      "sender.status": "accepted",
+      ...(userId && { "sender.id": userId })
+    }),
+    ClubCollaborations.countDocuments({
+      "sender.status": "rejected",
+      ...(userId && { "sender.id": userId })
+    })
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
   meta.clubCollaborationsCount = { total, active, inactive };
 
+  let formatted = formatClubCollaborations(clubCollaborations);
+
   return {
-    clubCollaborations: clubCollaborations,
+    clubCollaborations: formatted,
     meta
   };
 };

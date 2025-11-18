@@ -3,13 +3,14 @@ const { getBannerControls } = require("../../admin/bannerControl/bannerControlsS
 const { getPublicHighlights } = require("../highlights/highlightService");
 const { getUserRecentlyViewedItems } = require("../recentlyViewed/recentlyViewedItemService");
 const { sendResponse } = require("../../helperUtils/responseUtil");
-const { getCustomCategories } = require("../customCategories/customCategoriesService");
+const { getCustomCategories, transformCustomCategoryObjects } = require("../customCategories/customCategoriesService");
 const { getNearbyEvents, getForYouEvents } = require("../events/eventService");
 const { getChallenges } = require("../loyalty/challenges/challengesService");
 const { getPromotions } = require("../loyalty/promotions/promotionsService");
 const { getPublicCategories } = require("../publicCategories/categoriesService");
 const { getTop10Promos } = require("../top10PromoSection/topPromosService");
 const { getSuggestedLoyaltyClubs } = require("../organizationProfile/organizationProfileService");
+const { getRemainingEventsAndUsersRepo, getRemainingEventsGroupedByVenueTypesRepo, getRemainingOrganizersRepo } = require("./homeRepository");
 
 const getHomeService = async ({ queryData }) => {
   const { userId, userLocation, timezone, category, time } = queryData;
@@ -29,6 +30,7 @@ const getHomeService = async ({ queryData }) => {
       challenges,
       promotions,
       suggestedLoyaltyClubs,
+      remainingEventsByVenueTypes,
     ] = await Promise.all([
       getPublicCategories({}),
       getTop10Promos({ userLocation, userId, timezone, category, time }),
@@ -49,6 +51,8 @@ const getHomeService = async ({ queryData }) => {
       getChallenges({ page: 1, limit: 10, timezone }),
       getPromotions({ page: 1, limit: 10, timezone, category }),
       getSuggestedLoyaltyClubs({ page: 1, limit: 10, }),
+      getRemainingEventsGroupedByVenueTypesRepo({ userId, timezone }),
+
     ]);
 
     // Normalize all fetched data
@@ -57,6 +61,17 @@ const getHomeService = async ({ queryData }) => {
     const customCategories = customCategoriesRes?.customCategories || [];
 
     const highlights = highlightsRes?.highlights || [];
+
+
+    // ALWAYS RETURN AS customCategory (Fix #1)
+    const remainingEventsGrouped = remainingEventsByVenueTypes?.map(group => ({
+      key: "customCategory",
+      title: group.title,
+      data: group?.data?.map(evt =>
+        transformCustomCategoryObjects(evt, "Event", userLocation, timezone)
+      )
+    })) || [];
+
 
     // Define section structure and order — uses static titles and includes dynamic (customCategory)
     const sectionOrder = [
@@ -77,7 +92,10 @@ const getHomeService = async ({ queryData }) => {
       { key: "banners", title: "Banners", data: banners, index: 2 },
       { key: "promotions", title: "Promotions", data: promotions },
       { key: "suggestedLoyaltyClubs", title: "Suggested Loyalty Clubs", data: suggestedLoyaltyClubs },
+
     ];
+
+
 
     // Build final ordered sections
     const interleavedSections = sectionOrder.reduce((acc, section) => {
@@ -144,6 +162,17 @@ const getHomeService = async ({ queryData }) => {
         }
       } else break;
     }
+
+    // Add venue-type grouped sections as customCategory (so they appear)
+    remainingEventsGrouped.forEach(g => {
+      interleavedSections.push({
+        key: "customCategory",
+        title: g.title,
+        data: g.data
+      });
+    });
+
+
     return { status: true, data: interleavedSections };
   } catch (error) {
     return sendResponse({
@@ -153,6 +182,7 @@ const getHomeService = async ({ queryData }) => {
     });
   }
 };
+
 
 
 

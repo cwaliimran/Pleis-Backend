@@ -50,6 +50,7 @@ const allowedOrigins = [
   "https://specification-medicine-exec-deaf.trycloudflare.com",
   "https://willow-zealand-currency-fortune.trycloudflare.com",
   "http://192.168.15.141:4003",
+  "https://expensive-certain-forth-rose.trycloudflare.com",
 ];
 securityMiddleware(app, {
   allowedOrigins,

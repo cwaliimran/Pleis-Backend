@@ -12,7 +12,7 @@ const customCategoriesSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["Event", "User", "Organizations"],
+      enum: ["Event", "User", "Organizations"], //"User" -> LoyaltyClub
       default: "Event",
     },
     //type refers to schemas and it will be an array of object ids
