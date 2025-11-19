@@ -3,8 +3,8 @@ const path = require("path");
 const OpenAI = require("openai");
 
 // ---------------- CONFIG ----------------
-const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/loyalty/clubMembers";
-const schemaFileName = "ClubMembers.js"; // schema reference file
+const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/bookings/ticketings";
+const schemaFileName = "TicketingBookings.js"; // schema reference file
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 if (!OPENAI_API_KEY) {
@@ -64,31 +64,68 @@ Update the following file "${fileName}" according to this schema.
 follow the schema strictly as we have single object instead of objects array.
 const mongoose = require("mongoose");
 
-
-const clubMembers = new mongoose.Schema(
+const bookedTicketSchema = new mongoose.Schema(
     {
+        ticketId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Ticketings",
+            required: true,
+        },
+
+        quantity: {
+            type: Number,
+            required: true,
+            min: 1,
+        },
+
+        snapshot: {
+            type: mongoose.Schema.Types.Mixed,
+            required: true,
+        },
+    },
+    { _id: false }
+);
+
+const ticketingBookingSchema = new mongoose.Schema(
+    {
+        organization: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Organizations",
+            required: true,
+            index: true,
+        },
+
         user: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Users",
+            ref: "User",
             required: true,
-            index: true,
         },
-        companyOrganizer: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Users",
+
+        tickets: {
+            type: [bookedTicketSchema],
             required: true,
-            index: true,
         },
+
+        status: {
+            type: String,
+            enum: ["pending", "confirmed", "cancelled"],
+            default: "pending",
+        },
+
+        orderPricing: {
+            subtotal: Number,
+            taxAmount: Number,
+            total: Number,
+            currency: { type: String, default: "€" },
+        },
+
+        paymentId: { type: String, default: null },
     },
     { timestamps: true }
 );
 
-//index to prevent duplicate club members
-clubMembers.index({ user: 1, companyOrganizer: 1 }, { unique: true });
+module.exports = mongoose.model("TicketingBookings", ticketingBookingSchema);
 
-
-const ClubMembers = mongoose.model("ClubMembers", clubMembers);
-module.exports = { ClubMembers };
 
 
 File content

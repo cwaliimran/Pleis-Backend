@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const protectionTypes = [
   "none", // None
   "nameSurname", // Name + Surname
-  "nameSurnamePid", // Name + Surname + PID/Date of Birth
+  "nameSurnamePid", // Name + Surname + PID of Birth
 ];
 
 const ticketingsSchema = new mongoose.Schema(

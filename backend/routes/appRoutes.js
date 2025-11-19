@@ -38,5 +38,7 @@ router.use("/reservations", require("../app/reservations/reservationRoutes"));
 //Promo Codes
 router.use("/promo-codes", require("../app/promoCode/promoCodeRoutes"));
 
+//ticketing bookings
+router.use("/ticketing-bookings", require("../app/bookings/ticketings/ticketingBookingRoutes"));
 
 module.exports = router;

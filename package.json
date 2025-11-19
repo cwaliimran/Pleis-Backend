@@ -45,7 +45,9 @@
     "@UserModel": "backend/models/UserModel.js",
     "@CustomCategoriesModel": "backend/admin/customCategories/CustomCategories.js",
     "@BundleModel": "backend/commonModules/bundles/Bundle.js",
-    "@PromoCodeModel": "backend/commonModules/PromoCode/PromoCode.js"
+    "@PromoCodeModel": "backend/commonModules/PromoCode/PromoCode.js",
+    "@StreakRulesModel": "backend/commonModules/loyalty/streaks/StreakRules.js",
+    "@TicketingBookingsModel": "backend/commonModules/bookings/ticketings/TicketingBookings.js"
   },
   "keywords": [],
   "author": "",
