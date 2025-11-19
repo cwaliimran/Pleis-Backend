@@ -21,40 +21,93 @@ const createGlobalReferral = async (data) => {
   return GlobalReferral;
 };
 
+const saveReferralData = async (data) => {
+
+  let GlobalReferral = await GlobalReferralRepo.saveReferralData(data);
+  return GlobalReferral;
+};
+
+const saveUserReferralData = async (id, ip) => {
+
+  let GlobalReferral = await GlobalReferralRepo.saveUserReferralData(id, ip);
+  return GlobalReferral;
+};
 // Populate venue data for reservations (updated for new schema)
 const getGlobalReferrals = async ({ timezone, page, limit, keyword, status, userId, date, range,type }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
   let { globalReferral, meta } = await GlobalReferralRepo.getGlobalReferrals({ timezone, page, limit, keyword, status, userId, date, range, today, skip,type });
-console.log("GlobalReferrals service ",globalReferral );
+
   return {
     globalReferral,
     meta
   };
 };
 
-const updateGlobalReferral = async (data) => {
-  console.log("id is ",data.id );
-  const GlobalReferral = await GlobalReferralRepo.findGlobalReferralsById(data.id);
-  if (!GlobalReferral) {
-    return { error: "GlobalReferral_not_found" };
+const updateReservation = async (id, data) => {
+  const Reservation = await ReservationRepo.findReservationById(id);
+  if (!Reservation) {
+    return { error: "Reservation_not_found" };
   }
 
+  // -----------------------------
+  // VALIDATIONS
+  // -----------------------------
+  if (Reservation.conditionType !== data.conditionType) {
+    if (data.conditionType === "minimumSpendOnLocation") {
+      if (!data.amount && !data.customText) {
+        return { error: "amount_or_customText_is_required_when_conditionType_changes_to_minimumSpendOnLocation." };
+      }
+    } else if (!data.amount) {
+      return { error: "amount_is_required_when_conditionType_changes_and_is_not_minimumSpendOnLocation." };
+    }
+  }
+
+  if (data.conditionType === "ticketRequirement" && !data.ticketType) {
+    return { error: "ticket_type_is_required_when_conditionType_is_ticketRequirement." };
+  }
+
+  if (data.conditionType === "customText" && !data.customText) {
+    return { error: "custom_text_is_required_when_conditionType_is_customText." };
+  }
 
   // -----------------------------
   // ALLOWED FIELDS
   // -----------------------------
   const allowedFields = [
-    "rewardAmount",
-    "minimumPurchases",
-    "purchaseThresholdAmount",
-    "expiryDate",
+    "name",
+    "availableReservations",
+    "maxCapacityPerReservation",
+    "conditionType",
+    "amount",
+    "minimumSpend",
+    "prepayAmount",
+    "ticketType",
+    "customText",
+    "timingSlots",
+    "taxPercentage",
+    "needsConfirmation",
+    "optionalEventId",
     "status",
-
+    "organizationId",
   ];
-if(data.expiryDate=="Invalid date"){
-    delete data.expiryDate;
-}
+
+  // -----------------------------
+  // TIMING SLOTS UPDATE
+  // -----------------------------
+  if (data.timingSlots) {
+    if (!Reservation.timingSlots) {
+      Reservation.timingSlots = { enabled: false, dateTimeSlots: [] };
+    }
+
+    if (data.timingSlots.enabled !== undefined) {
+      Reservation.timingSlots.enabled = data.timingSlots.enabled;
+    }
+
+    if (Array.isArray(data.timingSlots.dateTimeSlots)) {
+      Reservation.timingSlots.dateTimeSlots = data.timingSlots.dateTimeSlots;
+    }
+  }
 
   // -----------------------------
   // APPLY UPDATE FIELDS
@@ -67,17 +120,17 @@ if(data.expiryDate=="Invalid date"){
   }
 
   if (Object.keys(updateData).length === 0) {
-    return GlobalReferral;
+    return Reservation;
   }
 
-  Object.assign(GlobalReferral, updateData);
-  await GlobalReferral.save();
+  Object.assign(Reservation, updateData);
+  await Reservation.save();
 
-  return GlobalReferral;
+  return reservationsFormatter(Reservation);
 };
 
-  const deleteGlobalReferral = async (id) => {
-      const updated = await GlobalReferralRepo.findByIdAndUpdate(id, {
+  const deleteReservation = async (id) => {
+      const updated = await ReservationRepo.findByIdAndUpdate(id, {
         status: "deleted",
       });
       if (!updated) return null;
@@ -186,11 +239,12 @@ const updateUserReservation = async (data) => {
   module.exports = {
     createGlobalReferral,
     getGlobalReferrals,
-    updateGlobalReferral,
+    saveReferralData,
+    saveUserReferralData,
+    // updateReservation,
     // getReservationDetails,
     // deleteReservation,
     // getUserReservations,
     // updateUserReservationStatus,
     // updateUserReservation
-    deleteGlobalReferral
   };

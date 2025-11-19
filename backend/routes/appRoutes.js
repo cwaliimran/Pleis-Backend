@@ -37,6 +37,8 @@ router.use("/checkin", require("../app/usersStreaks/usersStreaksRoutes"));
 router.use("/reservations", require("../app/reservations/reservationRoutes"));
 //Promo Codes
 router.use("/promo-codes", require("../app/promoCode/promoCodeRoutes"));
+//Promo Codes
+router.use("/global-referral", require("../app/globalReferral/globalReferralRoutes"));
 
 
 module.exports = router;

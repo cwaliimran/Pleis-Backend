@@ -7,9 +7,9 @@
     "test": "mocha test/**/*.test.js --timeout 10000",
     "start": "nodemon backend/server.js",
     "update:alias": "node aliasConfig/update-aliases.js",
-    "localhost": "NODE_ENV=localhost node backend/server.js",
-    "dev": "NODE_ENV=dev nodemon backend/server.js",
-    "prod": "NODE_ENV=prod node backend/server.js",
+    "localhost": "cross-env NODE_ENV=localhost node backend/server.js",
+    "dev": "cross-env NODE_ENV=dev nodemon backend/server.js",
+    "prod": "cross-env NODE_ENV=prod node backend/server.js",
     "d": "npm run dev",
     "p": "npm run prod"
   },
@@ -45,7 +45,11 @@
     "@UserModel": "backend/models/UserModel.js",
     "@CustomCategoriesModel": "backend/admin/customCategories/CustomCategories.js",
     "@BundleModel": "backend/commonModules/bundles/Bundle.js",
-    "@PromoCodeModel": "backend/commonModules/PromoCode/PromoCode.js"
+    "@PromoCodeModel": "backend/commonModules/PromoCode/PromoCode.js",
+    "@StreakRulesModel": "backend/commonModules/loyalty/streaks/StreakRules.js",
+    "@GlobalReferralModel": "backend/commonModules/globalReferral/GlobalReferral.js",
+    "@ReferralReferenceModel": "backend/commonModules/globalReferral/referralReference.js",
+    "@ReferralRecordModel": "backend/commonModules/globalReferral/ReferralRecord.js"
   },
   "keywords": [],
   "author": "",
@@ -88,6 +92,7 @@
     "validator": "^13.12.0"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "mocha": "^11.7.1",
     "socket.io-client": "^4.8.0",
     "supertest": "^7.1.1"

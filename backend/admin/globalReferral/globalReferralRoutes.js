@@ -24,8 +24,8 @@ const apiRateLimiterDetails = createRateLimiter("GlobalReferrals/:id");
 // Create a new GlobalReferral
 router.post("/", auth,roleMiddleware(["admin"]), createGlobalReferral);
 
-// // Get all GlobalReferrals with pagination
-// router.get("/", roleMiddleware(["admin"]),apiRateLimiter, getGlobalReferrals);
+// Get all GlobalReferrals with pagination
+router.get("/", roleMiddleware(["admin"]),apiRateLimiter, getGlobalReferrals);
 
 // // Get all Users GlobalReferrals with pagination
 // router.get("/users",roleMiddleware(["admin"]), apiRateLimiter, getUserGlobalReferrals);
@@ -34,8 +34,8 @@ router.post("/", auth,roleMiddleware(["admin"]), createGlobalReferral);
 // // //get GlobalReferral details
 // // router.get("/:id", apiRateLimiterDetails, getGlobalReferralDetails);
 
-// // Update an existing GlobalReferral
-// router.put("/:id", roleMiddleware(["admin"]), updateGlobalReferral);
+// Update an existing GlobalReferral
+router.put("/:id/:creater", roleMiddleware(["admin"]), updateGlobalReferral);
 // // cancel user GlobalReferral
 // router.put("/updateStatus/:id/:value", roleMiddleware(["admin"]), updateUserGlobalReferralStatus);
 
@@ -43,7 +43,7 @@ router.post("/", auth,roleMiddleware(["admin"]), createGlobalReferral);
 // router.put("/:userId/:id", roleMiddleware(["admin"]), updateUserGlobalReferral);
 
 
-// // Delete a GlobalReferral
-// router.delete("/:id", roleMiddleware(["admin"]), deleteGlobalReferral);
+// Delete a GlobalReferral
+router.delete("/:id", roleMiddleware(["admin"]), deleteGlobalReferral);
 
 module.exports = router;

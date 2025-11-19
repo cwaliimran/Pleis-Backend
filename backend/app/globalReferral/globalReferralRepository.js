@@ -1,11 +1,12 @@
 // repositories/ReservationRepository.js
-const Reservations = require("@ReservationsModel");
+const {GlobalReferral} = require("@GlobalReferralModel");
+const {ReferralReference} = require("@ReferralReferenceModel");
+const {ReferralRecord} = require("@ReferralRecordModel");
 const UserReservations = require("@UserReservationsModel");
 const { User } = require("../../models/UserModel");
 const Event = require("@EventsModel");
 const mongoose = require("mongoose");
 const { reservationsFormatter, reservationsFormatterAdjustDates } = require("../../app/reservations/formaters/reservationFormetter");
-const Organizations = require("@OrganizationModel")
 const {
   sendResponse,
   parsePaginationParams,
@@ -15,53 +16,43 @@ const {
   getStartAndEndOfMonth,
   getStartAndEndOfWeek,
 } = require("../../helperUtils/responseUtil");
-const getCreatorFromOrganization = async (organizationId) => {
+const createGlobalReferral = async (data) => {
   try {
-    const result = await Organizations.aggregate([
-      {
-        $match: { _id:new mongoose.Types.ObjectId(organizationId) },  // Match the organization by its ID
-      },
-      {
-        $lookup: {
-          from: "users",  // Assuming the 'creator' is in the 'users' collection
-          localField: "creator",  // Field in the 'organizations' collection that references the creator
-          foreignField: "_id",  // Field in the 'users' collection to match with
-          as: "creatorDetails",  // Alias for the resulting array of creator data
-        },
-      },
-      {
-        $unwind: { path: "$creatorDetails", preserveNullAndEmptyArrays: true },  // Unwind creator details array (if it exists)
-      },
-      {
-        $project: {
-          creatorId: "$creatorDetails._id",  // Extract just the _id of the creator
-          _id: 0,  // Exclude the organization _id from the result
-        },
-      },
-    ]);
-
-    if (result.length > 0) {
-      return result[0].creatorId;  // Return the creator ID
-    } else {
-      return null;  // Return null if no matching organization is found
-    }
-  } catch (err) {
-    console.error("Error in aggregation:", err);
-    throw err;
-  }
-};
-const createReservation = async (data) => {
-  try {
-    console.log("Creating reservation with data:",await getCreatorFromOrganization(data.organizationId));
-    data.companyOrganizer = await getCreatorFromOrganization(data.organizationId);
-    const Reservation = new Reservations(data);
-    await Reservation.save();
-    return Reservation;
+    console.log("Creating global referral with data:", data);
+    const globalReferral = new GlobalReferral(data);
+    await globalReferral.save();
+    return globalReferral;
   } catch (err) {
     throw err;
   }
 };
-
+const saveReferralData = async (referralId) => {
+  try {
+    const data = {
+      referralId: referralId, // Use the referralId provided
+    };
+    const referralReference = new ReferralReference(data);
+    await referralReference.save();
+    return referralReference.publicId; 
+  } catch (err) {
+    console.error("Error saving referral reference:", err);
+    throw err; 
+  }
+};
+const saveUserReferralData = async (referralId, ip) => {
+  try {
+    const data = {
+      referralId: referralId, // Use the referralId provided
+      userIp: ip, // Use the ip provided
+    };
+    const referralReference = new ReferralRecord(data);
+    await referralReference.save();
+    return referralReference.referralId;  
+  } catch (err) {
+    console.error("Error saving referral reference:", err);
+    throw err; 
+  }
+};
 // Get all Reservations with their assigned organization populated, sorted by createdAt descending
 const getReservationsWithFilters = async (query = {}, skip = 0, limit = 10) => {
   return Reservations.find(query)
@@ -99,17 +90,13 @@ const findByIdAndUpdate = async (id, data) => {
 
 
 
-const getReservations = async ({ timezone,page, limit, keyword, status, userId, organizationsId, date, range,today,skip }) => {
-let organizationsIds = Array.isArray(organizationsId) 
-  ? organizationsId 
-  : JSON.parse(organizationsId || '[]');
-organizationsIds = organizationsIds.map(id => new mongoose.Types.ObjectId(id));
+const getGlobalReferrals = async ({ timezone,page, limit, keyword, status, userId, date, range,today,skip, type }) => {
+console.log("Fetching global referrals in repository");
   const pipeline = [
   {
-    $match: {
-      ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
-      ...(organizationsIds.length > 0 && { organizationId: { $in: organizationsIds } }) // Match as ObjectId
-    }
+$match: {
+  ...(type && { type: type }), // Match by type if provided (e.g., "global", "company", etc.)
+}
   }
 ];
 if (range == "monthly") {
@@ -160,7 +147,7 @@ if (range == "today") {
 if (keyword) {
   const keywordMatch = buildKeywordQueryFromModels(
     [
-      { schema: Reservations.schema }
+      { schema: GlobalReferral.schema }
     ],
     keyword
   );
@@ -182,38 +169,27 @@ if (keyword) {
       totalFiltered: [{ $count: "count" }]
     }
   });
-console.log("Pipeline:", JSON.stringify(pipeline, null, 2));
-  const result = await Reservations.aggregate(pipeline);
 
-  let reservations = result[0]?.data || [];
+  const result = await GlobalReferral.aggregate(pipeline);
+  console.log("result",result );
+
+  let globalReferral = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+
 
   // Additional counts for meta (active/inactive/total by userId as creator)
   const [total, active, inactive] = await Promise.all([
-    Reservations.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "deleted" } }),
-    Reservations.countDocuments({ status: "active", ...(userId && { userId: userId }) }),
-    Reservations.countDocuments({ status: "inactive", ...(userId && { userId: userId }) })
+    GlobalReferral.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "deleted" } }),
+    GlobalReferral.countDocuments({ status: "active", ...(userId && { userId: userId }) }),
+    GlobalReferral.countDocuments({ status: "inactive", ...(userId && { userId: userId }) })
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
-  meta.reservationsCount = { total, active, inactive };
+  meta.globalReferralCount = { total, active, inactive };
 
 
-  reservations = reservations.map(item => {
-    const formatted = reservationsFormatter(item);
-    if (formatted.conditionType == "noCondition"||formatted.conditionType=="ticketRequirement"||formatted.conditionType=="customText"||formatted.conditionType=="ticketRequirement") {
-      delete formatted.amount;
-      if(formatted.conditionType == "noCondition")
-      {
-      delete formatted.ticketType;
-      }
-    }
-    else{
-            delete formatted.ticketType;
-    }
-    return formatted;
-  });
-  return {reservations , meta}
+  console.log("globalReferral repository ",globalReferral );
+  return {globalReferral , meta}
 }
 
 
@@ -357,7 +333,7 @@ if (keyword) {
 
   const result = await UserReservations.aggregate(pipeline);
 
-  let reservations = result[0]?.data || [];
+  let GlobalReferrals = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   // Additional counts for meta (active/inactive/total by userId as creator)
@@ -399,15 +375,18 @@ const findUserById = async (id) => {
 };
 
 module.exports = {
-  createReservation,
-  getReservationsWithFilters,
-  countReservations,
-  findReservationById,
-  updateReservationData,
-  deleteReservationById,
-  findByIdAndUpdate,
-  getReservations,
-  getUserReservations,
-  findUserReservationById,
-  findUserById,
+  createGlobalReferral,
+  // getReservationsWithFilters,
+  // countReservations,
+  // findReservationById,
+  // updateReservationData,
+  // deleteReservationById,
+  // findByIdAndUpdate,
+  // getReservations,
+  // getUserReservations,
+  // findUserReservationById,
+  // findUserById,
+  getGlobalReferrals,
+  saveReferralData,
+  saveUserReferralData
 };

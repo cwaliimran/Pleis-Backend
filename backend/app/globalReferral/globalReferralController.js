@@ -8,181 +8,59 @@ const {
   convertTimezoneToUtc,
 } = require("../../helperUtils/responseUtil");
 
-const reservationService = require("./reservationService");
+const globalReferralService = require("./globalReferralService");
 
-const createReservation = async (req, res) => {
-const {
-  reservationType,
-  availableReservations,
-  maxCapacityPerReservation,
-  conditionType,
-  amount,
-  ticketType,
-  customText,
-  taxPercentage,
-  needsConfirmation,
-  optionalEventId,
+const createGlobalReferral = async (req, res) => {
+let {
+  rewardAmount,
+  type,
+  minimumPurchases,
+  purchaseThresholdAmount,
+  expiryDate,
   status,
-  organizationId,
-  timingSlots
 } = req.body;
-
 const userId = req.user._id;
 const timezone = req.user.timezone;
-if (conditionType === "minimumSpendOnLocation") {
-  if (!amount && !customText) {
-     return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "either_amount_or_customText_must_be_provided_when_conditionType_is_'minimumSpendOnLocation'",
-      });
-  }
-}
 if (
   !validateParams(req, res, {
     rawData: [
-      "reservationType", 
-      "availableReservations", 
-      "maxCapacityPerReservation",
-      "conditionType", 
-      "taxPercentage",
-      "status",
-      "organizationId",
+      "rewardAmount", 
+      "type", 
+      "minimumPurchases",
+      "expiryDate",
+      "purchaseThresholdAmount",
     ],
   })
 ) return;
-if (conditionType == "fixedPrice" || conditionType == "prepayOption") {
-  if (
-    !validateParams(req, res, {
-      rawData: [
-        "reservationType", 
-        "availableReservations", 
-        "maxCapacityPerReservation",
-        "conditionType", 
-        "taxPercentage",
-        "needsConfirmation",
-        "status",
-        "organizationId",
-        "amount"
-      ],
-    })
-  ) return;
-}
+
   // Timing slots validation
-  if (timingSlots?.enabled === true) {
-    const slots = timingSlots.dateTimeSlots || [];
-
-    if (!Array.isArray(slots) || slots.length === 0) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "timing_slots_required_when_enabled",
-      });
-    }
-
-    // Validate and convert each date/time
-    for (const dateBlock of slots) {
-      if (!dateBlock.date) {
-        return sendResponse({
-          res,
-          statusCode: 400,
-          translationKey: "invalid_date_in_timing_slots",
-        });
-      }
-
-      if (!Array.isArray(dateBlock.timeSlots) || dateBlock.timeSlots.length === 0) {
-        return sendResponse({
-          res,
-          statusCode: 400,
-          translationKey: "time_slots_required_for_date",
-        });
-      }
-
-      for (const slot of dateBlock.timeSlots) {
-        if (!slot.startTime || !slot.endTime) {
-          return sendResponse({
-            res,
-            statusCode: 400,
-            translationKey: "invalid_start_or_end_time_in_slot",
-          });
-        }
-
-        // Convert to UTC DateTime strings
-        const startUtc = convertTimezoneToUtc(
-          `${dateBlock.date} ${slot.startTime}`,
+        expiryDate = convertTimezoneToUtc(
+          expiryDate,
           timezone,
-          "YYYY-MM-DD hh:mm A"
         );
-        const endUtc = convertTimezoneToUtc(
-          `${dateBlock.date} ${slot.endTime}`,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-
-        // Replace in object
-        slot.startTime = startUtc;
-        slot.endTime = endUtc;
-      }
-    }
-  }else{
-    //don't check for empty array if timingSlots is disabled only apply format conversion
-      const slots = timingSlots.dateTimeSlots || [];
-      for (const dateBlock of slots) {
-        if (!dateBlock.date) continue;
-
-        for (const slot of dateBlock.timeSlots) {
-          if (!slot.startTime || !slot.endTime) continue;
-
-          // Convert to UTC DateTime strings
-          const startUtc = convertTimezoneToUtc(
-            `${dateBlock.date} ${slot.startTime}`,
-            timezone,
-            "YYYY-MM-DD hh:mm A"
-          );
-          const endUtc = convertTimezoneToUtc(
-            `${dateBlock.date} ${slot.endTime}`,
-            timezone,
-            "YYYY-MM-DD hh:mm A"
-          );
-
-          // Replace in object
-          slot.startTime = startUtc;
-          slot.endTime = endUtc;
-        }
-      }
-  }
-
   let data = {
-    userId,
-    // companyOrganizer:userId,
-reservationType,
-  availableReservations,
-  maxCapacityPerReservation,
-  conditionType,
-  amount,
-  ticketType,
-  customText,
-  taxPercentage,
-  needsConfirmation,
-  optionalEventId,
+    creator:userId,
+rewardAmount,
+  type,
+  minimumPurchases,
+  expiryDate,
+  purchaseThresholdAmount,
   status,
-  organizationId,
-  timingSlots: timingSlots || { enabled: false, dateTimeSlots: [] },
   };
   try {
-    const Reservation = await reservationService.createReservation(data);
-    if (!Reservation) {
+    const GlobalReferral = await globalReferralService.createGlobalReferral(data);
+    if (!GlobalReferral) {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "Reservation_creation_failed",
+        translationKey: "GlobalReferral_creation_failed",
       });
     }
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "Reservation_created_successfully",
-      data: Reservation,
+      translationKey: "GlobalReferral_created_successfully",
+      data: GlobalReferral,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -195,41 +73,31 @@ reservationType,
   }
 };
 
-const getReservations = async (req, res) => {
-  const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range ,organizationsId , companyOrganizer} = req.query;
-  try {
-console.log("companyOrganizer:", companyOrganizer);
-if (
-  (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") && 
-  (!organizationsId || !Array.isArray(JSON.parse(organizationsId)) || JSON.parse(organizationsId).length === 0)
-) {
-  return sendResponse({
-    res,
-    statusCode: 400,
-    translationKey: "companyOrganizer_or_organizationsId_is_required",
-  });
-}
+const getGlobalReferrals = async (req, res) => {
 
-    const userId = companyOrganizer;
+  const { page, limit } = parsePaginationParams(req);
+  const { keyword, status = "active", date, range,type="global" } = req.query;
+  try {
+    const userId = req.user._id;
     const timezone = req.user.timezone;
-    const { reservations, meta } = await reservationService.getReservations({
+      console.log("Fetching global referrals");
+    const { globalReferral, meta } = await globalReferralService.getGlobalReferrals({
         timezone,
       page,
       limit,
       keyword,
       status,
       userId,
-      organizationsId,
       date,
-      range
+      range,
+      type
     });
-
+console.log("GlobalReferrals",globalReferral );
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "reservations_fetched_successfully",
-      data: reservations,
+      translationKey: "GlobalReferrals_fetched_successfully",
+      data: globalReferral,
       meta,
     });
   } catch (error) {
@@ -727,16 +595,44 @@ lastName,
     });
   }
 };
+const saveReferralData = async (id) => {
 
+  try {
 
+    const GlobalReferral = await globalReferralService.saveReferralData(id);
 
+    if (!GlobalReferral) {
+      return GlobalReferral
+    }
+   return GlobalReferral
+  } catch (error) {
+    return null
+  }
+};
+const saveUserReferralData = async (id, ipAddress) => {
+
+  try {
+
+    const GlobalReferral = await globalReferralService.saveUserReferralData(id, ipAddress);
+    if (!GlobalReferral) {
+      return GlobalReferral
+    }
+   return GlobalReferral
+  } catch (error) {
+    return null
+  }
+};
+
+saveReferralData
 module.exports = {
-  createReservation,
-  getReservations,
-  updateReservation,
-  deleteReservation,
-  getReservationDetails,
-  getUserReservations,
-  updateUserReservationStatus,
-  updateUserReservation,
+  createGlobalReferral,
+  getGlobalReferrals,
+  saveReferralData,
+  saveUserReferralData
+  // updateReservation,
+  // deleteReservation,
+  // getReservationDetails,
+  // getUserReservations,
+  // updateUserReservationStatus,
+  // updateUserReservation,
 };
