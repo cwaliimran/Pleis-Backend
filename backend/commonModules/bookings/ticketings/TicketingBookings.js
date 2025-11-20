@@ -38,10 +38,10 @@ const ticketingBookingSchema = new mongoose.Schema(
             },
 
             protectionUserDetails: {
-                firstName: { type: String, required: true },
-                surName: { type: String, required: true },
-                dob: { type: String, required: false, default: "" },
-                pid: { type: String, required: false, default: "" },
+                firstName: { type: String, default: "" },
+                surName: { type: String, default: "" },
+                dob: { type: String, default: "" },
+                pid: { type: String, default: "" },
             },
         },
 

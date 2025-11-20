@@ -64,7 +64,7 @@ const createTicketingBookingService = async (data, timezone) => {
 
 
 
-const getTicketingBookingsService = async ({ page = 1, limit = 10, keyword, status = "active", date, orderSort = "asc", timezone = "UTC", userId }) => {
+const getTicketingBookingsService = async ({ page = 1, limit = 10, keyword, status = "valid", date, orderSort = "asc", timezone = "UTC", userId }) => {
   const query = {};
 
   // Status filter
