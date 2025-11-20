@@ -1,5 +1,6 @@
 const { getWithFilters, getModelCounts } = require("@dbUtils/queryUtil");
 const TicketingsModel = require("@TicketingsModel");
+const { TicketingBookings } = require("@TicketingBookingsModel");
 
 // Create
 const createTicketing = async (data) => {
@@ -78,6 +79,90 @@ const findByIdAndUpdate = async (id, data) => {
   return TicketingsModel.findByIdAndUpdate(id, data, { new: true }).populate("event");
 };
 
+
+
+const validateTicketsAndQuantity = async (ticketings) => {
+  const errors = [];
+  const ticketSnapshots = [];
+
+  for (const t of ticketings) {
+    const ticket = await TicketingsModel.findById(t.ticketId);
+
+    if (!ticket) {
+      errors.push({ ticketId: t.ticketId, message: "Ticket not found" });
+      continue;
+    }
+
+    let availableQuantity = ticket.quantity;
+
+    if (ticket.timingSlots?.enabled && t.timeSlot) {
+      const slot = ticket.timingSlots.dateTimeSlots.find(
+        (d) => d._id.toString() === t.timeSlot
+      );
+
+      if (!slot) {
+        errors.push({ ticketId: t.ticketId, message: "Time slot not found" });
+        continue;
+      }
+
+      const bookedQty = await TicketingBookings.countDocuments({
+        "ticket.ticketId": t.ticketId,
+        "ticket.timeSlot": t.timeSlot
+      });
+
+      availableQuantity = slot.quantity - bookedQty;
+
+    } else {
+      const bookedQty = await TicketingBookings.countDocuments({
+        "ticket.ticketId": t.ticketId
+      });
+      availableQuantity = ticket.quantity - bookedQty;
+    }
+
+    if (availableQuantity <= 0) {
+      errors.push({
+        ticketId: t.ticketId,
+        message: "No tickets available",
+        available: availableQuantity
+      });
+    } else {
+      ticketSnapshots.push({
+        ticketId: t.ticketId,
+        snapshot: ticket.toObject(),
+        timeSlot: t.timeSlot || null
+      });
+    }
+  }
+
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+
+  return { valid: true, ticketSnapshots };
+};
+
+const getOrganizationIdFromTicketId = async (ticketId) => {
+  const ticket = await TicketingsModel.findById(ticketId)
+    .populate({
+      path: "event",
+      select: "basicInfo.organization",
+    })
+    .lean(); // optional, gives plain JS object
+
+  if (!ticket) {
+    throw new Error("Ticket not found");
+  }
+
+  // event may be null if not found
+  if (!ticket.event) {
+    throw new Error("Event for this ticket not found");
+  }
+let organizationId = ticket.event.basicInfo.organization;
+  return organizationId;
+};
+
+
+
 module.exports = {
   createTicketing,
   getTicketingsWithFilters,
@@ -88,5 +173,7 @@ module.exports = {
   findByIdAndUpdate,
   getCounts,
   findById,
-  getTicketingsByEventId
+  getTicketingsByEventId,
+  validateTicketsAndQuantity,
+  getOrganizationIdFromTicketId
 };
