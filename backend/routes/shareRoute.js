@@ -140,7 +140,7 @@ router.get("/", async (req, res) => {
 
         const appLink = `com.pleis://${type}/${doc.publicId}`;
         const iosFallback = "https://apps.apple.com/app/pleisapp/id1234567890";
-        const androidFallback = "https://play.google.com/store/apps/details?id=com.pleis";
+        const androidFallback = "https://play.google.com/store/apps/details?id=com.pleis&referrer=39393939";
 
         // Smart redirect HTML
         return res.send(`
