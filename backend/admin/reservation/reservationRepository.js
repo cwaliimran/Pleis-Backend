@@ -14,12 +14,14 @@ const {
   getReadableErrorMessage,
   getStartAndEndOfMonth,
   getStartAndEndOfWeek,
+  getStartAndEndOfDay,
+  getCurrentDateInTimezone,
 } = require("../../helperUtils/responseUtil");
 const getCreatorFromOrganization = async (organizationId) => {
   try {
     const result = await Organizations.aggregate([
       {
-        $match: { _id:new mongoose.Types.ObjectId(organizationId) },  // Match the organization by its ID
+        $match: { _id: new mongoose.Types.ObjectId(organizationId) },  // Match the organization by its ID
       },
       {
         $lookup: {
@@ -52,7 +54,7 @@ const getCreatorFromOrganization = async (organizationId) => {
 };
 const createReservation = async (data) => {
   try {
-    console.log("Creating reservation with data:",await getCreatorFromOrganization(data.organizationId));
+    console.log("Creating reservation with data:", await getCreatorFromOrganization(data.organizationId));
     data.companyOrganizer = await getCreatorFromOrganization(data.organizationId);
     const Reservation = new Reservations(data);
     await Reservation.save();
@@ -99,47 +101,60 @@ const findByIdAndUpdate = async (id, data) => {
 
 
 
-const getReservations = async ({ timezone,page, limit, keyword, status, userId, organizationsId, date, range,today,skip }) => {
-let organizationsIds = Array.isArray(organizationsId) 
-  ? organizationsId 
-  : JSON.parse(organizationsId || '[]');
-organizationsIds = organizationsIds.map(id => new mongoose.Types.ObjectId(id));
+const getReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, skip }) => {
+  const now = getCurrentDateInTimezone({ timezone });
+
+
+  let organizationsIds = Array.isArray(organizationsId)
+    ? organizationsId
+    : JSON.parse(organizationsId || '[]');
+  organizationsIds = organizationsIds.map(id => new mongoose.Types.ObjectId(id));
   const pipeline = [
-  {
-    $match: {
-      ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
-      ...(organizationsIds.length > 0 && { organizationId: { $in: organizationsIds } }) // Match as ObjectId
+    {
+      $match: {
+        ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
+        ...(organizationsIds.length > 0 && { organizationId: { $in: organizationsIds } }) // Match as ObjectId
+      }
     }
+  ];
+  if (range == "monthly") {
+    const { start, end } = getStartAndEndOfMonth(now, timezone);
+
+    pipeline.push({
+      $match: {
+        "timingSlots.dateTimeSlots": {
+          $elemMatch: {
+            date: { $gte: start, $lt: end }
+          }
+        }
+      }
+    });
   }
-];
-if (range == "monthly") {
-  const { start, end } = getStartAndEndOfMonth(today, timezone);
+  if (range == "weekly") {
+    const { start, end } = getStartAndEndOfWeek(now, timezone);
 
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
-if (range == "weekly") {
-  const { start, end } = getStartAndEndOfWeek(today, timezone);
-
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
-if (range == "today") {
-    const start = new Date(today);
-    const end = new Date(new Date(today).setDate(start.getDate() + 1));
-
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
+    pipeline.push({
+      $match: {
+        "timingSlots.dateTimeSlots": {
+          $elemMatch: {
+            date: { $gte: start, $lt: end }
+          }
+        }
+      }
+    });
+  }
+  if (range == "today") {
+    const { start, end } = getStartAndEndOfDay(now, timezone);
+    pipeline.push({
+      $match: {
+        "timingSlots.dateTimeSlots": {
+          $elemMatch: {
+            date: { $gte: start, $lt: end }
+          }
+        }
+      }
+    });
+  }
   // Apply filters
   if (status) {
     pipeline.push({ $match: { status } });
@@ -148,27 +163,30 @@ if (range == "today") {
   }
 
   if (date) {
-    const start = new Date(date);
-    const end = new Date(new Date(date).setDate(start.getDate() + 1));
+    let { start, end } = getStartAndEndOfDay(date, timezone);
     pipeline.push({
       $match: {
-        createdAt: { $gte: start, $lt: end }
+        "timingSlots.dateTimeSlots": {
+          $elemMatch: {
+            date: { $gte: start, $lt: end }
+          }
+        }
       }
     });
   }
 
-if (keyword) {
-  const keywordMatch = buildKeywordQueryFromModels(
-    [
-      { schema: Reservations.schema }
-    ],
-    keyword
-  );
+  if (keyword) {
+    const keywordMatch = buildKeywordQueryFromModels(
+      [
+        { schema: Reservations.schema }
+      ],
+      keyword
+    );
 
-  if (Object.keys(keywordMatch).length) {
-    pipeline.push({ $match: keywordMatch });
+    if (Object.keys(keywordMatch).length) {
+      pipeline.push({ $match: keywordMatch });
+    }
   }
-}
 
   pipeline.push({ $sort: { createdAt: -1 } });
 
@@ -200,23 +218,24 @@ if (keyword) {
 
   reservations = reservations.map(item => {
     const formatted = reservationsFormatter(item);
-    if (formatted.conditionType == "noCondition"||formatted.conditionType=="ticketRequirement"||formatted.conditionType=="customText"||formatted.conditionType=="ticketRequirement") {
+    if (formatted.conditionType == "noCondition" || formatted.conditionType == "ticketRequirement" || formatted.conditionType == "customText" || formatted.conditionType == "ticketRequirement") {
       delete formatted.amount;
-      if(formatted.conditionType == "noCondition")
-      {
-      delete formatted.ticketType;
+      if (formatted.conditionType == "noCondition") {
+        delete formatted.ticketType;
       }
     }
-    else{
-            delete formatted.ticketType;
+    else {
+      delete formatted.ticketType;
     }
     return formatted;
   });
-  return {reservations , meta}
+  return { reservations, meta }
 }
 
 
-const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationStatus,reservationId }) => {
+const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationStatus, reservationId }) => {
+  const now = getCurrentDateInTimezone({ timezone });
+
   let organizationsIds = Array.isArray(organizationsId)
     ? organizationsId
     : JSON.parse(organizationsId || '[]');
@@ -227,7 +246,7 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
       $match: {
         ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
         ...(organizationsIds.length > 0 && { organizationId: { $in: organizationsIds } }),
-        ...(reservationStatus && { reservationStatus:reservationStatus }),
+        ...(reservationStatus && { reservationStatus: reservationStatus }),
         ...(reservationId && { reservationId: new mongoose.Types.ObjectId(reservationId) })
       }
     },
@@ -236,7 +255,21 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
         from: "users",
         localField: "userId",
         foreignField: "_id",
+        pipeline: [
+          {
+            $project: {
+              firstName: 1,
+              lastName: 1,
+              phoneNumber: 1,
+            }
+          }
+        ],
         as: "user"
+      }
+    },
+    {
+      $addFields: {
+        user: { $arrayElemAt: ["$user", 0] }
       }
     },
     { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
@@ -264,7 +297,7 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
       $project: {
         _id: 1,
         userId: 1,
-        userName: { $concat: ["$user.firstName", " ", "$user.lastName"] },
+        user: 1,
         partySize: 1,
         reservationType: 1,
         organizationId: 1,
@@ -283,34 +316,44 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
   ];
 
 
-if (range == "monthly") {
-  const { start, end } = getStartAndEndOfMonth(today, timezone);
+  if (range == "monthly") {
+    const { start, end } = getStartAndEndOfMonth(now, timezone);
 
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
-if (range == "weekly") {
-  const { start, end } = getStartAndEndOfWeek(today, timezone);
+    pipeline.push({
+      $match: {
+        "timingSlots.dateTimeSlots": {
+          $elemMatch: {
+            date: { $gte: start, $lt: end }
+          }
+        }
+      }
+    });
+  }
+  if (range == "weekly") {
+    const { start, end } = getStartAndEndOfWeek(now, timezone);
 
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
-if (range == "today") {
-    const start = new Date(today);
-    const end = new Date(new Date(today).setDate(start.getDate() + 1));
-
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
+    pipeline.push({
+      $match: {
+        "timingSlots.dateTimeSlots": {
+          $elemMatch: {
+            date: { $gte: start, $lt: end }
+          }
+        }
+      }
+    });
+  }
+  if (range == "today") {
+    const { start, end } = getStartAndEndOfDay(now, timezone);
+    pipeline.push({
+      $match: {
+        "timingSlots.dateTimeSlots": {
+          $elemMatch: {
+            date: { $gte: start, $lt: end }
+          }
+        }
+      }
+    });
+  }
   // Apply filters
   if (status) {
     pipeline.push({ $match: { status } });
@@ -328,18 +371,18 @@ if (range == "today") {
     });
   }
 
-if (keyword) {
-  const keywordMatch = buildKeywordQueryFromModels(
-    [
-      { schema: UserReservations.schema }
-    ],
-    keyword
-  );
+  if (keyword) {
+    const keywordMatch = buildKeywordQueryFromModels(
+      [
+        { schema: UserReservations.schema }
+      ],
+      keyword
+    );
 
-  if (Object.keys(keywordMatch).length) {
-    pipeline.push({ $match: keywordMatch });
+    if (Object.keys(keywordMatch).length) {
+      pipeline.push({ $match: keywordMatch });
+    }
   }
-}
 
   pipeline.push({ $sort: { createdAt: -1 } });
 
@@ -372,19 +415,18 @@ if (keyword) {
 
   reservations = reservations.map(item => {
     const formatted = reservationsFormatterAdjustDates(item);
-    if (formatted.conditionType == "noCondition"||formatted.conditionType=="ticketRequirement"||formatted.conditionType=="customText"||formatted.conditionType=="ticketRequirement") {
+    if (formatted.conditionType == "noCondition" || formatted.conditionType == "ticketRequirement" || formatted.conditionType == "customText" || formatted.conditionType == "ticketRequirement") {
       delete formatted.amount;
-      if(formatted.conditionType == "noCondition")
-      {
-      delete formatted.ticketType;
+      if (formatted.conditionType == "noCondition") {
+        delete formatted.ticketType;
       }
     }
-    else{
-            delete formatted.ticketType;
+    else {
+      delete formatted.ticketType;
     }
     return formatted;
   });
-  return {reservations , meta}
+  return { reservations, meta }
 }
 
 

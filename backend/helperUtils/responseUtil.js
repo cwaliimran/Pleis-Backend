@@ -97,7 +97,7 @@ const sendResponse = ({
     }
   }
   // Send the response with the appropriate status code
-    res.status(statusCode).json(response);
+  res.status(statusCode).json(response);
 };
 
 // Helper: Convert key to readable default translation
@@ -579,16 +579,17 @@ const convertUtcToTimezone = (
  * @param {string | string[]} [inputFormat="YYYY-MM-DDTHH:mm:ss.SSSZ"] - Optional input date format(s). Defaults to UTC format.
  * @returns {string} The converted date in UTC or formatted date if timezone is null.
  */
+
 const convertTimezoneToUtc = (
   date,
   timezone,
-  inputFormat = "YYYY-MM-DDTHH:mm:ss.SSSZ",
+  inputFormat = "YYYY-MM-DD hh:mm A",
   outputFormat = "YYYY-MM-DDTHH:mm:ss.SSSZ"
 ) => {
-  const momentDate = moment.tz(date, inputFormat, timezone);
-  // Convert to UTC and return in the output format
-  return momentDate.utc().format(outputFormat);
+  const momentDate = moment.tz(date, inputFormat, timezone).utc();
+  return momentDate.format(outputFormat); // return string
 };
+
 
 // Get the current date in user's timezone
 //Emphasizes the returned value is UTC-based, calculated using a timezone

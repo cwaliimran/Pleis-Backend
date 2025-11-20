@@ -241,6 +241,27 @@ const getOrganizationIdFromTicketId = async (ticketId) => {
 };
 
 
+const getTicketsByOrderIds = async (orderIds) => {
+  if (!orderIds.length) return {};
+
+  const tickets = await TicketingBookings.find({
+    order: { $in: orderIds }
+  })
+    .lean()
+    .select("-__v");
+
+  // Group tickets by orderId
+  const grouped = {};
+
+  tickets.forEach(t => {
+    const id = t.order.toString();
+    if (!grouped[id]) grouped[id] = [];
+    grouped[id].push(t);
+  });
+
+  return grouped;
+};
+
 
 module.exports = {
   createTicketing,
@@ -254,5 +275,6 @@ module.exports = {
   findById,
   getTicketingsByEventId,
   validateTicketsAndQuantity,
-  getOrganizationIdFromTicketId
+  getOrganizationIdFromTicketId,
+  getTicketsByOrderIds
 };

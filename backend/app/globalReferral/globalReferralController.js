@@ -443,7 +443,7 @@ const   updateUserReservationStatus = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Reservation_cancelled_successfully",
+      translationKey: "Reservation_updated_successfully",
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);

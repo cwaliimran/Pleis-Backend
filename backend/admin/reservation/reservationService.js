@@ -24,8 +24,7 @@ const createReservation = async (data) => {
 // Populate venue data for reservations (updated for new schema)
 const getReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { reservations, meta } = await ReservationRepo.getReservations({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip });
+  let { reservations, meta } = await ReservationRepo.getReservations({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, skip });
 
   return {
     reservations,
@@ -79,6 +78,7 @@ const updateReservation = async (id, data) => {
     "optionalEventId",
     "status",
     "organizationId",
+    "notes",
   ];
 
   // -----------------------------

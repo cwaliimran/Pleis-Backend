@@ -5,7 +5,7 @@ const UserReservationsSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true, 
+      required: true,
     },
 
     partySize: {
@@ -34,13 +34,13 @@ const UserReservationsSchema = new mongoose.Schema(
       ref: "Organization",
       required: true,
     },
-        reservationId: {
+    reservationId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Reservations",
       required: true,
     },
-    
-      companyOrganizer: {
+
+    companyOrganizer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User", // Reference to the "User" model
       required: true, // Assuming a user is required for each reservation
@@ -65,17 +65,22 @@ const UserReservationsSchema = new mongoose.Schema(
     },
 
 
-optionalEventId: {
+    optionalEventId: {
       type: String,
       default: "",
     },
 
-  reservationStatus: {
-    type: String,
-    enum: ["confirmed", "rejected", "pending", "cancelled"],
-    default: "pending",
-  },
-        status: {
+    notes: {
+      type: String,
+      default: "",
+    },
+
+    reservationStatus: {
+      type: String,
+      enum: ["confirmed", "rejected", "pending", "cancelled"],
+      default: "pending",
+    },
+    status: {
       type: String,
       enum: ["active", "inactive", "deleted"],
       default: "active",

@@ -45,4 +45,7 @@ router.use("/bundles", require("../bundles/bundleRoutes"));
 router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));
 //Promo Codes
 router.use("/global-referral", require("../globalReferral/globalReferralRoutes"));
+// transactions
+router.use("/transactions", require("../transactions/transactionsRoutes"));
+
 module.exports = router;
