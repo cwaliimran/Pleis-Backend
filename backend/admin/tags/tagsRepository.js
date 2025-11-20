@@ -15,6 +15,11 @@ const getTagsWithFilters = async (query, skip, limit) => {
     .limit(limit);
 };
 
+// Get all unique tag types
+const getTagsGroupedByType = async (query = {}) => {
+  return Tags.distinct("type", query);
+};
+
 // Count by condition
 const countTags = async (query = {}) => {
   return Tags.countDocuments(query);
@@ -49,4 +54,5 @@ module.exports = {
   updateTagData,
   deleteTagById,
   findTagByIdAndUpdate,
+  getTagsGroupedByType,
 };

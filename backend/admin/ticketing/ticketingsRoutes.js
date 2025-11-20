@@ -5,6 +5,7 @@ const {
   updateTicketing,
   deleteTicketing,
   getTicketingDetails,
+  getOrganizationTicketings,
 } = require("./ticketingsController");
 
 const auth = require("../../middlewares/authMiddleware");
@@ -21,6 +22,9 @@ router.use(auth);
  */
 router.post("/", roleMiddleware(["admin", "organizer", "manager"]), createTicketing);
 
+
+//getTicketingDetails
+router.get("/organization/:id", getOrganizationTicketings);
 
 //getTicketingDetails
 router.get("/:id", getTicketingDetails);

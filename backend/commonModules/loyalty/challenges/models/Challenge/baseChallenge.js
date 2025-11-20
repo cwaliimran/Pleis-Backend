@@ -3,6 +3,10 @@ const rewardSchema = require("../Reward/rewardSchema");
 
 const baseChallengeSchema = new mongoose.Schema(
   {
+    image: {
+      type: String,
+      default: "",
+    },
     title: { type: String, trim: true, required: true },
     description: { type: String, default: "" },
     taskType: {
@@ -22,7 +26,7 @@ const baseChallengeSchema = new mongoose.Schema(
 
     companyOrganizer: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Users",
+      ref: "User",
       required: true,
     },
 

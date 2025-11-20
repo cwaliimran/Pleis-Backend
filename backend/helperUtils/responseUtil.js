@@ -506,6 +506,44 @@ const exampleMiddleware = (req, res, next) => {
   next();
 };
 
+
+
+
+
+/**
+ * Convert UTC date to a specific timezone and format it as AM/PM
+ * @param {string} date - The date to be converted.
+ * @param {string} timezone - The timezone to convert to.
+ * @param {string} outputFormat - The desired output format (default is AM/PM format).
+ * @param {string} inputFormat - The input format for the date (default is ISO 8601).
+ * @returns {string} The formatted date in the specified timezone and format.
+ */
+const convertUtcToTimezoneAMPM = (
+  date,
+  timezone,
+  outputFormat = "hh:mm A",  // Default output format is AM/PM
+  inputFormat = "YYYY-MM-DDTHH:mm:ss.SSSZ"  // Default input format (ISO 8601)
+) => {
+  // Check if the date is valid before proceeding
+  if (!date || !moment(date, inputFormat, true).isValid()) {
+    console.error("Invalid date format:", date);
+    return "Invalid Date"; // Return a fallback value
+  }
+
+  const momentDate = moment(date, inputFormat, true); // Parse date with strict input format
+
+  if (timezone) {
+    // Apply timezone conversion if timezone is provided
+    return momentDate.tz(timezone).format(outputFormat);  // Return in AM/PM format
+  } else {
+    // Simply format the date without timezone conversion
+    return momentDate.format(outputFormat);  // Return in AM/PM format
+  }
+};
+
+
+
+
 /**
  * Converts a date from a specified input format to a specified user timezone.
  * If the timezone is null or not provided, it formats the date without applying a timezone.
@@ -583,6 +621,11 @@ const getStartAndEndOfDay = (date, timezone) => {
 const getStartAndEndOfWeek = (date, timezone) => {
   const start = moment(date).tz(timezone).startOf("week").toDate();
   const end = moment(date).tz(timezone).endOf("week").toDate();
+  return { start, end };
+};
+const getStartAndEndOfMonth = (date, timezone) => {
+  const start = moment(date).tz(timezone).startOf("month").toDate();
+  const end = moment(date).tz(timezone).endOf("month").toDate();
   return { start, end };
 };
 
@@ -692,4 +735,6 @@ module.exports = {
   getReadableErrorMessage,
   getStartAndEndOfDay,
   getStartAndEndOfWeek,
+  getStartAndEndOfMonth,
+  convertUtcToTimezoneAMPM,
 };

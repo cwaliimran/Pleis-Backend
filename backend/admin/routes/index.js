@@ -31,12 +31,18 @@ router.use("/ticketing", require("../ticketing/ticketingsRoutes"));
 //highlights
 router.use("/highlights", require("../highlights/highlightRoutes"));
 
-//locations
-router.use("/locations", require("../../shared/locations/routes"));
-
 //loyalty
 router.use("/loyalty", require("../loyalty/loyaltyRoutes")); 
+// reservation
+router.use("/reservations", require("../reservation/reservationRoutes"));
+//status badges
+router.use("/status-badges", require("../statusBadges/statusBadgesRoutes"));
 
+//bundles
+router.use("/bundles", require("../bundles/bundleRoutes"));
 
-
+//Promo Codes
+router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));
+//Promo Codes
+router.use("/global-referral", require("../globalReferral/globalReferralRoutes"));
 module.exports = router;

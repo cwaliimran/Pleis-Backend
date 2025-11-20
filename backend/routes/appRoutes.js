@@ -21,8 +21,24 @@ router.use("/events", require("../app/events/eventRoutes"));
 //loyalty
 router.use("/loyalty/challenges", require("../app/loyalty/challenges/challengesRoutes"));
 router.use("/loyalty/promotions", require("../app/loyalty/promotions/promotionsRoutes"));
+router.use("/loyalty/club", require("../app/loyalty/clubMembers/clubMembersRoutes"));
 
 router.use("/users", require("../app/usersManagement/usersRoutes"));
+
+//menu items
+router.use("/menu/items", require("../app/menuItemsAndOrdering/menuItems/menuItemsRoutes"));
+router.use("/menu/orders", require("../app/menuItemsAndOrdering/orders/orderRoutes"));
+//users streaks
+router.use("/checkin", require("../app/usersStreaks/usersStreaksRoutes"));
+
+
+
+// reservatio
+router.use("/reservations", require("../app/reservations/reservationRoutes"));
+//Promo Codes
+router.use("/promo-codes", require("../app/promoCode/promoCodeRoutes"));
+//Promo Codes
+router.use("/global-referral", require("../app/globalReferral/globalReferralRoutes"));
 
 
 module.exports = router;

@@ -5,11 +5,11 @@
   "main": "backend/server.js",
   "scripts": {
     "test": "mocha test/**/*.test.js --timeout 10000",
-    "start": "node backend/server.js",
+    "start": "nodemon backend/server.js",
     "update:alias": "node aliasConfig/update-aliases.js",
-    "localhost": "NODE_ENV=localhost node backend/server.js",
-    "dev": "NODE_ENV=dev nodemon backend/server.js",
-    "prod": "NODE_ENV=prod node backend/server.js",
+    "localhost": "cross-env NODE_ENV=localhost node backend/server.js",
+    "dev": "cross-env NODE_ENV=dev nodemon backend/server.js",
+    "prod": "cross-env NODE_ENV=prod node backend/server.js",
     "d": "npm run dev",
     "p": "npm run prod"
   },
@@ -35,7 +35,21 @@
     "@RewardModel": "backend/commonModules/loyalty/rewards/models/BaseReward.js",
     "@ListingModel": "backend/commonModules/loyalty/listings/Listing.js",
     "@ClubCollaborationModel": "backend/commonModules/loyalty/clubCollaborations/ClubCollaborations.js",
-    "@TicketingsModel": "backend/commonModules/ticketing/TicketingsModel.js"
+    "@StreaksModel": "backend/commonModules/loyalty/streaks/Streaks.js",
+    "@UsersStreaksModel": "backend/commonModules/loyalty/streaks/UsersStreaks.js",
+    "@TicketingsModel": "backend/commonModules/ticketing/TicketingsModel.js",
+    "@ReservationsModel": "backend/commonModules/reservations/Reservation.js",
+    "@UserReservationsModel": "backend/commonModules/reservations/UsersReservation.js",
+    "@OrdersModel": "backend/commonModules/menuItemsAndOrders/orders.js",
+    "@ClubMembersModel": "backend/commonModules/loyalty/clubMembers/ClubMembers.js",
+    "@UserModel": "backend/models/UserModel.js",
+    "@CustomCategoriesModel": "backend/admin/customCategories/CustomCategories.js",
+    "@BundleModel": "backend/commonModules/bundles/Bundle.js",
+    "@PromoCodeModel": "backend/commonModules/PromoCode/PromoCode.js",
+    "@StreakRulesModel": "backend/commonModules/loyalty/streaks/StreakRules.js",
+    "@GlobalReferralModel": "backend/commonModules/globalReferral/GlobalReferral.js",
+    "@ReferralReferenceModel": "backend/commonModules/globalReferral/referralReference.js",
+    "@ReferralRecordModel": "backend/commonModules/globalReferral/ReferralRecord.js"
   },
   "keywords": [],
   "author": "",
@@ -78,6 +92,7 @@
     "validator": "^13.12.0"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "mocha": "^11.7.1",
     "socket.io-client": "^4.8.0",
     "supertest": "^7.1.1"

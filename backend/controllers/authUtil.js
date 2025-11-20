@@ -183,6 +183,11 @@ const registerUserUtility = async (req, res, options = {}) => {
         });
         return { responseSent: true };
       }
+
+
+      companyDetails.loyaltySettings = companyDetails.loyaltySettings || {};
+      companyDetails.loyaltySettings.title = (companyDetails.name ? companyDetails.name + " - Loyalty Club" : "Loyalty Club");
+
     }
 
     // Create or reuse user

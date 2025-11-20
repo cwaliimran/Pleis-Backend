@@ -303,6 +303,36 @@ const deleteMenuItem = async (req, res) => {
   }
 };
 
+const getMenuItemsByMenuId = async (req, res) => {
+  const { menuId } = req.params;
+
+  if (
+    !validateParams(req, res, {
+      pathParams: ["menuId"],
+      objectIdFields: ["menuId"],
+    })
+  )
+    return;
+
+  try {
+    const menuItems = await menuItemsService.getMenuItemsByMenuId(menuId);
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "menu_items_fetched_successfully",
+      data: menuItems,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
 
 module.exports = {
   createMenuItem,
@@ -310,4 +340,5 @@ module.exports = {
   updateMenuItem,
   deleteMenuItem,
   getMenuItemDetails,
+  getMenuItemsByMenuId
 };

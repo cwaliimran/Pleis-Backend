@@ -40,7 +40,7 @@ const menuItemsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-
+    
     menu: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Menus",

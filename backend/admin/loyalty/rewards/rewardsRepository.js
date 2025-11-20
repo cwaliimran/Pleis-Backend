@@ -38,9 +38,8 @@ const create = async (data) => {
 // Get reward with population
 const getWithFilters = async (query = {}, skip = 0, limit = 10) => {
   return Reward.find(query)
-    .populate("menuItem")
-    .populate({ path: "tierLimit", select: "image title" })
-    .select("title image")
+    .populate("menuItem", "title")
+    .populate({ path: "tierLimit", select: "title" })
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)

@@ -5,7 +5,7 @@ const collaborationSchema = new mongoose.Schema(
     sender: {
       id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Users", // The user sending the collaboration request
+        ref: "User", // The user sending the collaboration request
         required: true,
       },
       status: {
@@ -17,7 +17,7 @@ const collaborationSchema = new mongoose.Schema(
     receiver: {
       id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Users", // The user receiving the collaboration request
+        ref: "User", // The user receiving the collaboration request
         required: true,
       },
       status: {

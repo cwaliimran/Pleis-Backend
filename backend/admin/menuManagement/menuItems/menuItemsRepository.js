@@ -61,7 +61,13 @@ const getUnassignedMenuItems = async (userId) => {
     creator: userId
   });
 };
-  
+
+const findMenuItemsByMenuId = async (menuId) => {
+  return MenuItems.find({
+    menu: menuId,
+    status: "active"
+  });
+};
 
 
 module.exports = {
@@ -73,4 +79,5 @@ module.exports = {
   updateMenuItemData,
   deleteMenuItemById,
   findByIdAndUpdate,
+  findMenuItemsByMenuId
 };

@@ -15,6 +15,7 @@ const formatPublicHighlightResponse = (object = {}, options = {}) => {
   if (!highlightObject) return null;
   const { userLocation } = options;
 
+
   // Always attach root-level media if present
   if (highlightObject.media && highlightObject.media.name) {
     highlightObject.media = getFullImageUrl(highlightObject.media.name);
@@ -23,7 +24,7 @@ const formatPublicHighlightResponse = (object = {}, options = {}) => {
   if (highlightObject.object?.basicInfo?.media) {
     if (highlightObject.type === "organization") {
       // Organization: logo and cover
-      const orgMedia = highlightObject.object.basicInfo.organization?.media;
+      const orgMedia = highlightObject.object.basicInfo.organization?.media ;
       if (orgMedia) {
         highlightObject.object.basicInfo.organization.media = {
           logo: getFullImageUrl(orgMedia.logo),

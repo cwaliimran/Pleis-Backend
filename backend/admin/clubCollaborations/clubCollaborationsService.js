@@ -109,7 +109,7 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
 
   const keywordMatch = buildKeywordQueryFromModels(
     [
-      { schema: ClubCollaborations.schema }
+      { schema: ClubCollaborations.schema },
     ],
     keyword
   );

@@ -5,9 +5,10 @@ const Organizations = require("@OrganizationModel");
 const eventRepo = require("./eventRepository");
 const _ = require("lodash");
 const { formatEventResponse } = require("./formatter/eventFormatter");
+const { getTicketingsByEventId } = require("../ticketing/ticketingsService");
 
-const createEvent = async ({ data }, timezone) => {
-  let event = await eventRepo.createEvent(data);
+const createEvent = async ({ data, ticketingData }, timezone) => {
+  let event = await eventRepo.createEvent(data, ticketingData);
   if (!event) return null;
   return formatEventResponse(event, { timezone });
 };
@@ -63,6 +64,27 @@ const getEvents = async ({ page, limit, keyword, status, creator, startDate, end
       total: totalFiltered,
       tagsCount: { total, active, inactive },
     },
+  };
+};
+
+const getMinimalEventsInfo = async ({ organization, timezone }) => {
+  const query = {
+    status: "active"
+  };
+  if (organization) {
+    query["basicInfo.organization"] = organization;
+  }
+  const [events] =
+    await Promise.all([
+      eventRepo.getMinimalEventsWithFilters(
+        query,
+      ),
+    ]);
+
+  let formattedEvents = events?.map(event => formatEventResponse(event, { timezone }));
+
+  return {
+    events: formattedEvents,
   };
 };
 
@@ -237,8 +259,11 @@ const deleteEvent = async (id) => {
 };
 
 const getEventDetails = async (id, timezone) => {
-  const event = await eventRepo.findEventById(id);
+  const [event, ticketing] = await Promise.all([eventRepo.findEventById(id),
+  getTicketingsByEventId({ timezone, eventId: id })
+  ])
   let data = formatEventResponse(event, { timezone });
+  data.ticketing = ticketing?.ticketings || [];
   return data
 };
 
@@ -267,5 +292,6 @@ module.exports = {
   deleteEvent,
   getPublicEvents,
   getEventDetails,
-  updateEventsWithVenueLocation
+  updateEventsWithVenueLocation,
+  getMinimalEventsInfo
 };

@@ -93,7 +93,7 @@ async function getWithFilters({
       $lookup: {
         from: lookup.from,
         as: "object",
-      let: { localField: `$${localField}` },
+        let: { localField: `$${localField}` },
         pipeline: [
           {
             $match: {
@@ -188,6 +188,7 @@ async function getModelCounts({
   const [filteredCount, globalCounts] = await Promise.all([
     model.countDocuments(filterQuery),
     model.aggregate([
+      { $match: filterQuery },
       { $facet: facetStages },
       {
         $project: {
