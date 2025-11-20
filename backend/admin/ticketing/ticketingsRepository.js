@@ -85,51 +85,126 @@ const validateTicketsAndQuantity = async (ticketings) => {
   const errors = [];
   const ticketSnapshots = [];
 
-  for (const t of ticketings) {
-    const ticket = await TicketingsModel.findById(t.ticketId);
+  // Count occurrences of each ticketId in payload
+  const ticketCounts = ticketings.reduce((acc, t) => {
+    const key = t.ticketId.toString();
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  for (const ticketId of Object.keys(ticketCounts)) {
+    const countInPayload = ticketCounts[ticketId];
+    const ticket = await TicketingsModel.findById(ticketId);
 
     if (!ticket) {
-      errors.push({ ticketId: t.ticketId, message: "Ticket not found" });
+      errors.push({ ticketId, message: "Ticket not found" });
       continue;
     }
 
-    let availableQuantity = ticket.quantity;
+    // Get total booked for ticket
+    const totalBooked = await TicketingBookings.countDocuments({
+      "ticket.ticketId": ticketId,
+    });
 
-    if (ticket.timingSlots?.enabled && t.timeSlot) {
-      const slot = ticket.timingSlots.dateTimeSlots.find(
-        (d) => d._id.toString() === t.timeSlot
-      );
+    const remainingGlobalQty = ticket.quantity - totalBooked;
 
-      if (!slot) {
-        errors.push({ ticketId: t.ticketId, message: "Time slot not found" });
-        continue;
-      }
-
-      const bookedQty = await TicketingBookings.countDocuments({
-        "ticket.ticketId": t.ticketId,
-        "ticket.timeSlot": t.timeSlot
+    if (remainingGlobalQty <= 0) {
+      errors.push({
+        ticketId,
+        message: "No tickets available (global limit reached)."
       });
-
-      availableQuantity = slot.quantity - bookedQty;
-
-    } else {
-      const bookedQty = await TicketingBookings.countDocuments({
-        "ticket.ticketId": t.ticketId
-      });
-      availableQuantity = ticket.quantity - bookedQty;
+      continue;
     }
 
-    if (availableQuantity <= 0) {
+    // CASE: Ticket has slots enabled
+    if (ticket.timingSlots?.enabled) {
+      
+      const requestsForTicket = ticketings.filter(
+        (t) => t.ticketId.toString() === ticketId
+      );
+
+      for (const req of requestsForTicket) {
+        const reqSlot = req.timeSlot;
+
+        // CASE A: Slot provided
+        if (reqSlot) {
+          const allSlots = ticket.timingSlots.dateTimeSlots.flatMap(d =>
+            d.timeSlots.map(s => ({
+              ...s.toObject(),
+              date: d.date
+            }))
+          );
+
+          const slot = allSlots.find(s => s._id.toString() === reqSlot);
+
+          if (!slot) {
+            errors.push({
+              ticketId,
+              message: `Time slot not found: ${reqSlot}`
+            });
+            continue;
+          }
+
+          const slotBooked = await TicketingBookings.countDocuments({
+            "ticket.ticketId": ticketId,
+            "ticket.timeSlot": reqSlot,
+          });
+
+          const remainingSlotQty = slot.quantity - slotBooked;
+
+          if (remainingSlotQty <= 0) {
+            errors.push({
+              ticketId,
+              message: `No tickets available for this slot`,
+            });
+            continue;
+          }
+
+          // Slot OK → push snapshot
+          ticketSnapshots.push({
+            ticketId,
+            snapshot: ticket.toObject(),
+            timeSlot: reqSlot
+          });
+
+        } else {
+          // CASE B: Slot NOT provided → fallback to global qty check
+          if (remainingGlobalQty < countInPayload) {
+            errors.push({
+              ticketId,
+              message: `Not enough tickets available (global)`,
+            });
+            continue;
+          }
+
+          ticketSnapshots.push({
+            ticketId,
+            snapshot: ticket.toObject(),
+            timeSlot: null
+          });
+        }
+      }
+
+      continue;
+    }
+
+    // CASE: No time slots → global quantity check
+    if (countInPayload > remainingGlobalQty) {
       errors.push({
-        ticketId: t.ticketId,
-        message: "No tickets available",
-        available: availableQuantity
+        ticketId,
+        message: `Not enough tickets available`,
+        requested: countInPayload,
+        available: remainingGlobalQty
       });
-    } else {
+      continue;
+    }
+
+    // Push snapshot for normal (non-slot) tickets
+    for (let i = 0; i < countInPayload; i++) {
       ticketSnapshots.push({
-        ticketId: t.ticketId,
+        ticketId,
         snapshot: ticket.toObject(),
-        timeSlot: t.timeSlot || null
+        timeSlot: null
       });
     }
   }
@@ -140,6 +215,10 @@ const validateTicketsAndQuantity = async (ticketings) => {
 
   return { valid: true, ticketSnapshots };
 };
+
+
+
+
 
 const getOrganizationIdFromTicketId = async (ticketId) => {
   const ticket = await TicketingsModel.findById(ticketId)
@@ -157,7 +236,7 @@ const getOrganizationIdFromTicketId = async (ticketId) => {
   if (!ticket.event) {
     throw new Error("Event for this ticket not found");
   }
-let organizationId = ticket.event.basicInfo.organization;
+  let organizationId = ticket.event.basicInfo.organization;
   return organizationId;
 };
 

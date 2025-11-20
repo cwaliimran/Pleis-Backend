@@ -182,7 +182,6 @@ if (keyword) {
       totalFiltered: [{ $count: "count" }]
     }
   });
-console.log("Pipeline:", JSON.stringify(pipeline, null, 2));
   const result = await Reservations.aggregate(pipeline);
 
   let reservations = result[0]?.data || [];

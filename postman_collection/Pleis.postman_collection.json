@@ -4253,6 +4253,561 @@
 							]
 						}
 					]
+				},
+				{
+					"name": "Bookings",
+					"item": [
+						{
+							"name": "Ticketings",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/ticketing-bookings/",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"ticketing-bookings",
+												""
+											],
+											"query": [
+												{
+													"key": "status",
+													"value": "valid",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "get details",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/ticketing-bookings/:id",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"ticketing-bookings",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "691eb3ef2bb12fa95df3b862"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add normal",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"ticketings\": [\n        {\n            \"ticketId\": \"691b290ecaf7c91d708e893f\"\n        }\n    ],\n    \"paymentDetails\": {\n        \"paymentMethod\": \"card\", //applyPay, card\n        \"cardId\": \"card1\" // only required with card\n\n    }\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/ticketing-bookings/",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"ticketing-bookings",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "add protected",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"ticketings\": [\n        {\n            \"ticketId\": \"691b290ecaf7c91d708e893f\",\n            \"protectionUserDetails\":{\n                \"firstName\":\"Ali\",\n                \"surName\":\"Imran\",\n                \"dob\":\"2005-11-23\",\n                \"pid\":\"4848858585\"\n            }\n        }\n    ],\n    \"paymentDetails\": {\n        \"paymentMethod\": \"card\", //applyPay, card\n        \"cardId\": \"card1\" // only required with card\n\n    }\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/ticketing-bookings/",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"ticketing-bookings",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": [
+										{
+											"name": "sample",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"ticketings\": [\n        {\n            \"ticketId\": \"691b290ecaf7c91d708e893f\",\n            \"quantity\": 2,\n            \"protectionUserDetails\":[{\n                \"firstName\":\"Ali\",\n                \"surName\":\"Imran\",\n                \"dob\":\"2005-11-23\",\n                \"pid\":\"4848858585\"\n            },\n            {\n                \"firstName\":\"Usama\",\n                \"surName\":\"Ahmad\",\n                \"dob\":\"2005-11-14\",\n                \"pid\":\"4848858587\"\n            }]\n        }\n    ],\n    \"paymentDetails\": {\n        \"paymentMethod\": \"card\", //applyPay, card\n        \"cardId\": \"card1\" // only required with card\n\n    }\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}app/ticketing-bookings/",
+													"host": [
+														"{{url}}app"
+													],
+													"path": [
+														"ticketing-bookings",
+														""
+													]
+												}
+											},
+											"status": "Created",
+											"code": 201,
+											"_postman_previewlanguage": null,
+											"header": [
+												{
+													"key": "Content-Security-Policy",
+													"value": "default-src 'self';script-src 'self' 'unsafe-inline';style-src 'self' 'unsafe-inline';img-src 'self' data:;connect-src 'self' https://pleis.com https://www.pleis.com https://dev.pleis.com https://www.dev.pleis.com http://localhost:4003 https://pleis.vercel.app https://shipping-profession-merge-double.trycloudflare.com http://192.168.15.141:4003;base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';object-src 'none';script-src-attr 'none';upgrade-insecure-requests"
+												},
+												{
+													"key": "Cross-Origin-Embedder-Policy",
+													"value": "require-corp"
+												},
+												{
+													"key": "Cross-Origin-Opener-Policy",
+													"value": "same-origin"
+												},
+												{
+													"key": "Cross-Origin-Resource-Policy",
+													"value": "same-origin"
+												},
+												{
+													"key": "Origin-Agent-Cluster",
+													"value": "?1"
+												},
+												{
+													"key": "Referrer-Policy",
+													"value": "no-referrer"
+												},
+												{
+													"key": "Strict-Transport-Security",
+													"value": "max-age=31536000; includeSubDomains"
+												},
+												{
+													"key": "X-Content-Type-Options",
+													"value": "nosniff"
+												},
+												{
+													"key": "X-DNS-Prefetch-Control",
+													"value": "off"
+												},
+												{
+													"key": "X-Download-Options",
+													"value": "noopen"
+												},
+												{
+													"key": "X-Frame-Options",
+													"value": "SAMEORIGIN"
+												},
+												{
+													"key": "X-Permitted-Cross-Domain-Policies",
+													"value": "none"
+												},
+												{
+													"key": "X-XSS-Protection",
+													"value": "0"
+												},
+												{
+													"key": "X-RateLimit-Limit",
+													"value": "200"
+												},
+												{
+													"key": "X-RateLimit-Remaining",
+													"value": "198"
+												},
+												{
+													"key": "Date",
+													"value": "Wed, 19 Nov 2025 14:02:55 GMT"
+												},
+												{
+													"key": "X-RateLimit-Reset",
+													"value": "1763561844"
+												},
+												{
+													"key": "Vary",
+													"value": "Origin, Accept-Encoding"
+												},
+												{
+													"key": "Access-Control-Allow-Credentials",
+													"value": "true"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"55b-W9f1r0glPZyeIf9cnWXqbwb6q5Q\""
+												},
+												{
+													"key": "Content-Encoding",
+													"value": "br"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												},
+												{
+													"key": "Transfer-Encoding",
+													"value": "chunked"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Ticketing booking created successfully\",\n    \"data\": {\n        \"organization\": \"6911c1b36fc7cbd864e74659\",\n        \"user\": \"6911ba17dd162801ff9b35d9\",\n        \"ticketings\": [\n            {\n                \"ticketId\": \"691b290ecaf7c91d708e893f\",\n                \"snapshot\": {\n                    \"timingSlots\": {\n                        \"enabled\": false,\n                        \"dateTimeSlots\": []\n                    },\n                    \"repeatable\": {\n                        \"isRepeatable\": true,\n                        \"visits\": 2\n                    },\n                    \"timeSensitivePricing\": {\n                        \"earlyBird\": {\n                            \"endDate\": null,\n                            \"discountedPrice\": 0\n                        },\n                        \"lastMinute\": {\n                            \"startDate\": null,\n                            \"discountedPrice\": 0\n                        }\n                    },\n                    \"fastTrackEntry\": {\n                        \"enabled\": false,\n                        \"quantity\": 0,\n                        \"extraPrice\": 0\n                    },\n                    \"requiresReservation\": {\n                        \"enabled\": false,\n                        \"type\": \"\"\n                    },\n                    \"_id\": \"691b290ecaf7c91d708e893f\",\n                    \"title\": \"VVIP\",\n                    \"quantity\": 1000,\n                    \"price\": 120,\n                    \"taxPercentage\": 25,\n                    \"event\": \"6915c3e448a5a4c172122332\",\n                    \"resaleProtection\": \"nameSurname\",\n                    \"transferFee\": 10,\n                    \"status\": \"active\",\n                    \"scheduledPublishAt\": null,\n                    \"createdAt\": \"2025-11-17T13:54:22.754Z\",\n                    \"updatedAt\": \"2025-11-17T13:54:22.754Z\",\n                    \"__v\": 0\n                },\n                \"timeSlot\": null,\n                \"quantity\": 2,\n                \"protectionUserDetails\": [\n                    {\n                        \"firstName\": \"Ali\",\n                        \"surName\": \"Imran\",\n                        \"dob\": \"2005-11-23\",\n                        \"pid\": \"4848858585\"\n                    },\n                    {\n                        \"firstName\": \"Usama\",\n                        \"surName\": \"Ahmad\",\n                        \"dob\": \"2005-11-14\",\n                        \"pid\": \"4848858587\"\n                    }\n                ]\n            }\n        ],\n        \"status\": \"pending\",\n        \"orderPricing\": {\n            \"subtotal\": 0,\n            \"taxAmount\": 0,\n            \"total\": 0,\n            \"currency\": \"€\"\n        },\n        \"paymentDetails\": {\n            \"cardId\": \"card1\",\n            \"paymentMethod\": \"card\",\n            \"paymentId\": null,\n            \"paymentStatus\": \"pending\"\n        },\n        \"_id\": \"691dce0f9861a928d3cfff14\",\n        \"createdAt\": \"2025-11-19T14:02:55.990Z\",\n        \"updatedAt\": \"2025-11-19T14:02:55.990Z\",\n        \"__v\": 0\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "add with timingSlots",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"ticketings\": [\n        {\n            \"ticketId\": \"6915c3e448a5a4c172122335\",\n            \"timeSlot\": \"6915c3e448a5a4c172122336\" //only if its slot booking\n            ,\n            \"protectionUserDetails\":{\n                \"firstName\":\"Ali\",\n                \"surName\":\"Imran\",\n                \"dob\":\"2005-11-23\",\n                \"pid\":\"4848858585\"\n            }\n        },\n        {\n            \"ticketId\": \"691abb59fc26ab786b01973d\",\n            \"timeSlot\": \"691ac86955de45eedc58b901\" //only if its slot booking\n            ,\n           \"protectionUserDetails\":{\n                \"firstName\":\"Ali\",\n                \"surName\":\"Imran\",\n                \"dob\":\"2005-11-23\",\n                \"pid\":\"4848858585\"\n            }\n        }\n    ],\n    \"paymentDetails\": {\n        \"paymentMethod\": \"card\", //applyPay, card\n        \"cardId\": \"card1\" // only required with card\n\n    }\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/ticketing-bookings/",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"ticketing-bookings",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": [
+										{
+											"name": "sample",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"ticketings\": [\n        {\n            \"ticketId\": \"6915c3e448a5a4c172122335\",\n            \"quantity\": 2,\n            \"timeSlot\": \"6915c3e448a5a4c172122336\" //only if its slot booking\n            ,\n            \"protectionUserDetails\":[{\n                \"firstName\":\"Ali\",\n                \"surName\":\"Imran\",\n                \"dob\":\"2005-11-23\",\n                \"pid\":\"4848858585\"\n            }]\n        },\n        {\n            \"ticketId\": \"691abb59fc26ab786b01973d\",\n            \"quantity\": 1,\n            \"timeSlot\": \"691ac86955de45eedc58b901\" //only if its slot booking\n            ,\n            \"protectionUserDetails\":[{\n                \"firstName\":\"Ali\",\n                \"surName\":\"Imran\",\n                \"dob\":\"2005-11-23\",\n                \"pid\":\"4848858585\"\n            }]\n        }\n    ],\n    \"paymentDetails\": {\n        \"paymentMethod\": \"card\", //applyPay, card\n        \"cardId\": \"card1\" // only required with card\n\n    }\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}app/ticketing-bookings/",
+													"host": [
+														"{{url}}app"
+													],
+													"path": [
+														"ticketing-bookings",
+														""
+													]
+												}
+											},
+											"status": "Created",
+											"code": 201,
+											"_postman_previewlanguage": null,
+											"header": [
+												{
+													"key": "Content-Security-Policy",
+													"value": "default-src 'self';script-src 'self' 'unsafe-inline';style-src 'self' 'unsafe-inline';img-src 'self' data:;connect-src 'self' https://pleis.com https://www.pleis.com https://dev.pleis.com https://www.dev.pleis.com http://localhost:4003 https://pleis.vercel.app https://shipping-profession-merge-double.trycloudflare.com http://192.168.15.141:4003;base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';object-src 'none';script-src-attr 'none';upgrade-insecure-requests"
+												},
+												{
+													"key": "Cross-Origin-Embedder-Policy",
+													"value": "require-corp"
+												},
+												{
+													"key": "Cross-Origin-Opener-Policy",
+													"value": "same-origin"
+												},
+												{
+													"key": "Cross-Origin-Resource-Policy",
+													"value": "same-origin"
+												},
+												{
+													"key": "Origin-Agent-Cluster",
+													"value": "?1"
+												},
+												{
+													"key": "Referrer-Policy",
+													"value": "no-referrer"
+												},
+												{
+													"key": "Strict-Transport-Security",
+													"value": "max-age=31536000; includeSubDomains"
+												},
+												{
+													"key": "X-Content-Type-Options",
+													"value": "nosniff"
+												},
+												{
+													"key": "X-DNS-Prefetch-Control",
+													"value": "off"
+												},
+												{
+													"key": "X-Download-Options",
+													"value": "noopen"
+												},
+												{
+													"key": "X-Frame-Options",
+													"value": "SAMEORIGIN"
+												},
+												{
+													"key": "X-Permitted-Cross-Domain-Policies",
+													"value": "none"
+												},
+												{
+													"key": "X-XSS-Protection",
+													"value": "0"
+												},
+												{
+													"key": "X-RateLimit-Limit",
+													"value": "200"
+												},
+												{
+													"key": "X-RateLimit-Remaining",
+													"value": "195"
+												},
+												{
+													"key": "Date",
+													"value": "Wed, 19 Nov 2025 13:58:54 GMT"
+												},
+												{
+													"key": "X-RateLimit-Reset",
+													"value": "1763561386"
+												},
+												{
+													"key": "Vary",
+													"value": "Origin, Accept-Encoding"
+												},
+												{
+													"key": "Access-Control-Allow-Credentials",
+													"value": "true"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"a61-JRCDdYQyij9fL7zrUOBZS/0YTpg\""
+												},
+												{
+													"key": "Content-Encoding",
+													"value": "br"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												},
+												{
+													"key": "Transfer-Encoding",
+													"value": "chunked"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Ticketing booking created successfully\",\n    \"data\": {\n        \"organization\": \"6911c1b36fc7cbd864e74659\",\n        \"user\": \"6911ba17dd162801ff9b35d9\",\n        \"ticketings\": [\n            {\n                \"ticketId\": \"6915c3e448a5a4c172122335\",\n                \"snapshot\": {\n                    \"timingSlots\": {\n                        \"enabled\": true,\n                        \"dateTimeSlots\": [\n                            {\n                                \"date\": \"2025-11-13T00:00:00.000Z\",\n                                \"timeSlots\": [\n                                    {\n                                        \"quantity\": 10,\n                                        \"startTime\": \"2025-11-13T04:00:00.000Z\",\n                                        \"endTime\": \"2025-11-13T05:00:00.000Z\",\n                                        \"_id\": \"6915c3e448a5a4c172122337\"\n                                    }\n                                ],\n                                \"_id\": \"6915c3e448a5a4c172122336\"\n                            }\n                        ]\n                    },\n                    \"repeatable\": {\n                        \"isRepeatable\": false,\n                        \"visits\": 1\n                    },\n                    \"timeSensitivePricing\": {\n                        \"earlyBird\": {\n                            \"endDate\": \"2025-11-12T19:00:00.000Z\",\n                            \"discountedPrice\": 10\n                        },\n                        \"lastMinute\": {\n                            \"startDate\": \"2025-11-27T19:00:00.000Z\",\n                            \"discountedPrice\": 10\n                        }\n                    },\n                    \"fastTrackEntry\": {\n                        \"enabled\": true,\n                        \"quantity\": 0,\n                        \"extraPrice\": 0\n                    },\n                    \"requiresReservation\": {\n                        \"enabled\": true,\n                        \"type\": \"vip\"\n                    },\n                    \"_id\": \"6915c3e448a5a4c172122335\",\n                    \"title\": \"Car Show Ticket\",\n                    \"quantity\": 0,\n                    \"price\": 120,\n                    \"taxPercentage\": 5,\n                    \"event\": \"6915c3e448a5a4c172122332\",\n                    \"resaleProtection\": \"nameSurname\",\n                    \"transferFee\": 49.95,\n                    \"status\": \"active\",\n                    \"scheduledPublishAt\": null,\n                    \"createdAt\": \"2025-11-13T11:41:24.984Z\",\n                    \"updatedAt\": \"2025-11-13T11:41:24.984Z\",\n                    \"__v\": 0\n                },\n                \"timeSlot\": \"6915c3e448a5a4c172122336\",\n                \"quantity\": 2,\n                \"protectionUserDetails\": {\n                    \"firstName\": \"Ali\",\n                    \"surName\": \"Imran\",\n                    \"dob\": \"2005-11-23\",\n                    \"pid\": \"4848858585\"\n                }\n            },\n            {\n                \"ticketId\": \"691abb59fc26ab786b01973d\",\n                \"snapshot\": {\n                    \"timingSlots\": {\n                        \"enabled\": true,\n                        \"dateTimeSlots\": [\n                            {\n                                \"date\": \"2025-11-20T00:00:00.000Z\",\n                                \"timeSlots\": [\n                                    {\n                                        \"quantity\": 100,\n                                        \"startTime\": \"2025-11-20T04:00:00.000Z\",\n                                        \"endTime\": \"2025-11-20T05:00:00.000Z\",\n                                        \"_id\": \"691ac86955de45eedc58b902\"\n                                    }\n                                ],\n                                \"_id\": \"691ac86955de45eedc58b901\"\n                            }\n                        ]\n                    },\n                    \"repeatable\": {\n                        \"isRepeatable\": false,\n                        \"visits\": 1\n                    },\n                    \"timeSensitivePricing\": {\n                        \"earlyBird\": {\n                            \"endDate\": \"2025-11-19T11:01:00.000Z\",\n                            \"discountedPrice\": 10\n                        },\n                        \"lastMinute\": {\n                            \"startDate\": null,\n                            \"discountedPrice\": 0\n                        }\n                    },\n                    \"fastTrackEntry\": {\n                        \"enabled\": false,\n                        \"quantity\": 0,\n                        \"extraPrice\": 0\n                    },\n                    \"requiresReservation\": {\n                        \"enabled\": false,\n                        \"type\": \"\"\n                    },\n                    \"_id\": \"691abb59fc26ab786b01973d\",\n                    \"title\": \"Testing Ticket\",\n                    \"quantity\": 0,\n                    \"price\": 120,\n                    \"taxPercentage\": 13,\n                    \"event\": \"6915c3e448a5a4c172122332\",\n                    \"resaleProtection\": \"none\",\n                    \"transferFee\": 0,\n                    \"status\": \"active\",\n                    \"scheduledPublishAt\": null,\n                    \"createdAt\": \"2025-11-17T06:06:17.522Z\",\n                    \"updatedAt\": \"2025-11-17T07:02:01.505Z\",\n                    \"__v\": 3\n                },\n                \"timeSlot\": \"691ac86955de45eedc58b901\",\n                \"quantity\": 1,\n                \"protectionUserDetails\": {\n                    \"firstName\": \"Ali\",\n                    \"surName\": \"Imran\",\n                    \"dob\": \"2005-11-23\",\n                    \"pid\": \"4848858585\"\n                }\n            }\n        ],\n        \"status\": \"pending\",\n        \"orderPricing\": {\n            \"subtotal\": 0,\n            \"taxAmount\": 0,\n            \"total\": 0,\n            \"currency\": \"€\"\n        },\n        \"paymentDetails\": {\n            \"cardId\": \"card1\",\n            \"paymentMethod\": \"card\",\n            \"paymentId\": null,\n            \"paymentStatus\": \"pending\"\n        },\n        \"_id\": \"691dcd1e0cfa855c9b389e09\",\n        \"createdAt\": \"2025-11-19T13:58:54.629Z\",\n        \"updatedAt\": \"2025-11-19T13:58:54.629Z\",\n        \"__v\": 0\n    }\n}"
+										}
+									]
+								}
+							]
+						}
+					]
 				}
 			],
 			"auth": {
@@ -12018,7 +12573,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}admin/ticketing?eventId=6914a0ff908ae1810ace6bfd",
+									"raw": "{{url}}admin/ticketing?eventId=6915c3e448a5a4c172122332",
 									"host": [
 										"{{url}}admin"
 									],
@@ -12028,7 +12583,7 @@
 									"query": [
 										{
 											"key": "eventId",
-											"value": "6914a0ff908ae1810ace6bfd"
+											"value": "6915c3e448a5a4c172122332"
 										}
 									]
 								}
@@ -14062,7 +14617,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/menu/items?menu=6902f666260e5bb7dec7e6e9",
+											"raw": "{{url}}admin/menu/items?menu=6902f666260e5bb7dec7e6e9&keyword=fo",
 											"host": [
 												"{{url}}admin"
 											],
@@ -14082,8 +14637,7 @@
 												},
 												{
 													"key": "keyword",
-													"value": "up",
-													"disabled": true
+													"value": "fo"
 												},
 												{
 													"key": "status",

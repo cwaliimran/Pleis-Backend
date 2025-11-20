@@ -1,7 +1,7 @@
 const { convertUtcToTimezone } = require("@utils/responseUtil"); // assume you have this util
 const { getFullImageUrl } = require("@utils/imageHelper");
 
-const formatTicketingBooking = (item, options = {}) => {
+const formatTransaction = (item, options = {}) => {
   if (!item) return null;
 
   let obj = typeof item.toObject === "function" ? item.toObject() : item;
@@ -67,4 +67,4 @@ const formatTicketingBooking = (item, options = {}) => {
   return obj;
 };
 
-module.exports = { formatTicketingBooking };
+module.exports = { formatTransaction };

@@ -27,6 +27,7 @@ const OrdersSchema = new mongoose.Schema(
             default: "pending",
         },
         notes: { type: String, default: "" },
+
         paymentMethod: {
             type: String, required: true,
             enum: ["applePay", "card", "cash", "payLater"], default: "card"

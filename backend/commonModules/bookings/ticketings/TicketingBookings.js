@@ -1,8 +1,16 @@
 const mongoose = require("mongoose");
+const { customAlphabet } = require("nanoid");
+const generateTicketId = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 6);
 
 
 const ticketingBookingSchema = new mongoose.Schema(
     {
+        ticketBookingId: {
+            type: String,
+            unique: true,
+            index: true,
+            default: () => `TBK-${generateTicketId()}`, //TBK for Ticketing Booking 
+        },
         order: { //reference to the order
             type: mongoose.Schema.Types.ObjectId,
             ref: "TicketingOrder",
