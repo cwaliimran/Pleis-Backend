@@ -32,6 +32,9 @@ module.exports = {
     "@BundleModel": "backend/commonModules/bundles/Bundle.js",
     "@PromoCodeModel": "backend/commonModules/PromoCode/PromoCode.js",
     "@StreakRulesModel": "backend/commonModules/loyalty/streaks/StreakRules.js",
+    "@GlobalReferralModel": "backend/commonModules/globalReferral/GlobalReferral.js",
+        "@ReferralReferenceModel": "backend/commonModules/globalReferral/referralReference.js",
+               "@ReferralRecordModel": "backend/commonModules/globalReferral/ReferralRecord.js",
     "@TicketingBookingsModel": "backend/commonModules/bookings/ticketings/TicketingBookings.js",
     "@TicketingOrdersModel": "backend/commonModules/bookings/ticketings/TicketingOrders.js",
 };
