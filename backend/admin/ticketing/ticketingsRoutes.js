@@ -13,7 +13,7 @@ const roleMiddleware = require("../../middlewares/roleMiddleware");
 
 const router = express.Router();
 
-// ✅ Apply authentication middleware globally
+// Apply authentication middleware globally
 router.use(auth);
 
 /**

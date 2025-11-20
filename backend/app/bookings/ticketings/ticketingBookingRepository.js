@@ -46,6 +46,10 @@ const getTicketingBookingsCount = async (query) => {
   });
 }
 
+const createManyTicketBookings = async (ticketingBookings) => {
+  return TicketingBookings.insertMany(ticketingBookings);
+}
+
 module.exports = {
   createTicketingBooking,
   getTicketingBookings,
@@ -53,5 +57,6 @@ module.exports = {
   updateTicketingBooking,
   deleteTicketingBooking,
   findTagByIdAndUpdate,
-  getTicketingBookingsCount
+  getTicketingBookingsCount,
+  createManyTicketBookings
 };

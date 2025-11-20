@@ -33,4 +33,5 @@ module.exports = {
     "@PromoCodeModel": "backend/commonModules/PromoCode/PromoCode.js",
     "@StreakRulesModel": "backend/commonModules/loyalty/streaks/StreakRules.js",
     "@TicketingBookingsModel": "backend/commonModules/bookings/ticketings/TicketingBookings.js",
+    "@TicketingOrdersModel": "backend/commonModules/bookings/ticketings/TicketingOrders.js",
 };

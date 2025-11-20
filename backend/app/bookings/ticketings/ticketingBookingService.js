@@ -2,9 +2,11 @@ const { generateMeta } = require("@utils/responseUtil");
 const ticketingBookingRepo = require("./ticketingBookingRepository");
 const { formatTicketingBooking } = require("./formatters/ticketingBookingFormatter");
 const { validateTicketsAndQuantity, getOrganizationIdFromTicketId } = require("../../../admin/ticketing/ticketingsRepository");
+const { TicketingOrders } = require("@TicketingOrdersModel");
+
 
 const createTicketingBookingService = async (data, timezone) => {
-  // 1️⃣ Validate tickets + quantities
+  // 1️⃣ Validate tickets individually
   const validationResult = await validateTicketsAndQuantity(data.ticketings);
 
   if (!validationResult.valid) {
@@ -16,29 +18,50 @@ const createTicketingBookingService = async (data, timezone) => {
     throw error;
   }
 
-  //find organizationId from first ticket's event
+  // 2️⃣ Create Order
   const firstTicketId = data.ticketings[0].ticketId;
   const organizationId = await getOrganizationIdFromTicketId(firstTicketId);
-  data.organization = organizationId;
-  // 2️⃣ Add snapshots from DB to each ticket
-  data.ticketings.forEach((t) => {
+  let eventId = null;
+  if (validationResult.ticketSnapshots.length > 0) {
+    eventId = validationResult.ticketSnapshots[0].snapshot.event;
+  }
+  const orderDoc = {
+    user: data.user,
+    organization: organizationId,
+    event: eventId,
+    status: "pending",
+    orderPricing: data.orderPricing || {},
+    paymentDetails: data.paymentDetails || {}
+  };
+
+  const order = await TicketingOrders.create(orderDoc);
+
+  // 3️⃣ Prepare individual tickets with orderId
+  const ticketDocs = data.ticketings.map((t) => {
     const snapshot = validationResult.ticketSnapshots.find(
-      ts => ts.ticketId.toString() === t.ticketId
+      ts => ts.ticketId.toString() === t.ticketId.toString()
     );
-    if (snapshot) {
-      t.snapshot = snapshot.snapshot;
-      t.timeSlot = t.timeSlot || snapshot.timeSlot || null;
-    }
+
+    return {
+      order: order._id,
+      user: data.user,
+      organization: organizationId,
+      ticket: {
+        ticketId: t.ticketId,
+        snapshot: snapshot.snapshot,
+        timeSlot: t.timeSlot || null,
+        protectionUserDetails: t.protectionUserDetails || {},
+      },
+      status: "valid"
+    };
   });
 
+  // 4️⃣ Bulk insert tickets
+  const createdTickets = await ticketingBookingRepo.createManyTicketBookings(ticketDocs);
 
-  //TODO add payment processing
-  //save in transactions collection
-
-  // 3️⃣ Save booking
-  const ticketingBooking = await ticketingBookingRepo.createTicketingBooking(data);
-  return ticketingBooking;
+  return { order, tickets: createdTickets };
 };
+
 
 
 const getTicketingBookingsService = async ({ page = 1, limit = 10, keyword, status = "active", date, orderSort = "asc", timezone = "UTC", userId }) => {

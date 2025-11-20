@@ -80,6 +80,7 @@ const findByIdAndUpdate = async (id, data) => {
 };
 
 
+
 const validateTicketsAndQuantity = async (ticketings) => {
   const errors = [];
   const ticketSnapshots = [];
@@ -94,7 +95,6 @@ const validateTicketsAndQuantity = async (ticketings) => {
 
     let availableQuantity = ticket.quantity;
 
-    // If using timeSlots, deduct already booked quantity for this slot
     if (ticket.timingSlots?.enabled && t.timeSlot) {
       const slot = ticket.timingSlots.dateTimeSlots.find(
         (d) => d._id.toString() === t.timeSlot
@@ -105,39 +105,31 @@ const validateTicketsAndQuantity = async (ticketings) => {
         continue;
       }
 
-      const bookedQty = await TicketingBookings.aggregate([
-        { $unwind: "$tickets" },
-        { $match: { "tickets.ticketId": ticket._id, "tickets.timeSlot": t.timeSlot } },
-        { $group: { _id: null, totalQty: { $sum: "$tickets.quantity" } } }
-      ]);
+      const bookedQty = await TicketingBookings.countDocuments({
+        "ticket.ticketId": t.ticketId,
+        "ticket.timeSlot": t.timeSlot
+      });
 
-      availableQuantity =
-        slot.timeSlots.reduce((sum, s) => sum + s.quantity, 0) -
-        (bookedQty[0]?.totalQty || 0);
+      availableQuantity = slot.quantity - bookedQty;
+
     } else {
-      // Total booked tickets (no time slot)
-      const bookedQty = await TicketingBookings.aggregate([
-        { $unwind: "$tickets" },
-        { $match: { "tickets.ticketId": ticket._id } },
-        { $group: { _id: null, totalQty: { $sum: "$tickets.quantity" } } }
-      ]);
-      availableQuantity = ticket.quantity - (bookedQty[0]?.totalQty || 0);
+      const bookedQty = await TicketingBookings.countDocuments({
+        "ticket.ticketId": t.ticketId
+      });
+      availableQuantity = ticket.quantity - bookedQty;
     }
 
-    if (t.quantity > availableQuantity) {
+    if (availableQuantity <= 0) {
       errors.push({
         ticketId: t.ticketId,
-        requested: t.quantity,
-        available: availableQuantity,
-        message: "Not enough tickets available",
+        message: "No tickets available",
+        available: availableQuantity
       });
     } else {
-      // Add snapshot
       ticketSnapshots.push({
         ticketId: t.ticketId,
-        snapshot: ticket.toObject(), // snapshot of ticket at this moment
-        quantity: t.quantity,
-        timeSlot: t.timeSlot || null,
+        snapshot: ticket.toObject(),
+        timeSlot: t.timeSlot || null
       });
     }
   }
