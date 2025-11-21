@@ -62,9 +62,9 @@ const eventSchema = new mongoose.Schema(
           default: [],
         },
       ],
-      partnerOrganizer: {
+      partnerOrganization: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Users",
+        ref: "Organizations",
         default: null,
       }
     },
@@ -89,7 +89,7 @@ const eventSchema = new mongoose.Schema(
     },
     creator: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Users",
+      ref: "User",
       required: true,
     },
 

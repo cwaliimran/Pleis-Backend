@@ -31,6 +31,7 @@ const getEventsWithFilters = async (query, skip, limit) => {
     .populate("basicInfo.categories", "title image")
     .populate("basicInfo.tags", "title")
     .populate("basicInfo.organization", "basicInfo.name basicInfo.media otherInfo.description")
+    .populate("basicInfo.partnerOrganization", "basicInfo.name basicInfo.media otherInfo.description")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
@@ -71,6 +72,10 @@ const findEventById = async (id) => {
           select: "title otherInfo",
         },
       ],
+    })
+    .populate({
+      path: "basicInfo.partnerOrganization",
+      select: "basicInfo.name otherInfo.description basicInfo.media.logo",
     });
 };
 

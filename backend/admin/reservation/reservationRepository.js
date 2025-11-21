@@ -309,6 +309,7 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
         optionalEventId: 1,
         createdAt: 1,
         updatedAt: 1,
+        notes: 1,
         member: "Gold",
         eventTitle: { $ifNull: ["$event.basicInfo.title", "No Event Title"] }
       }

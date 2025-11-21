@@ -6,16 +6,16 @@ const {
 const getTransactions = async (req, res) => {
   try {
     const { page, limit } = parsePaginationParams(req);
-    const { keyword, status = "active", date, range, organizationsId, companyOrganizer } = req.query;
+    const { keyword, status = "active", date, range, organizations, companyOrganizer } = req.query;
     let { timezone } = req.user;
     if (
       (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
-      (!organizationsId || !Array.isArray(JSON.parse(organizationsId)) || JSON.parse(organizationsId).length === 0)
+      (!organizations || !Array.isArray(JSON.parse(organizations)) || JSON.parse(organizations).length === 0)
     ) {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "companyOrganizer_or_organizationsId_is_required",
+        translationKey: "companyOrganizer_or_organizations_is_required",
       });
     }
     const userId = companyOrganizer;
@@ -27,7 +27,7 @@ const getTransactions = async (req, res) => {
       keyword,
       status,
       userId,
-      organizationsId,
+      organizations,
       date,
       range
     });

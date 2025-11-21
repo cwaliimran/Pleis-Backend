@@ -101,50 +101,48 @@ const validateTicketsAndQuantity = async (ticketings) => {
       continue;
     }
 
-    // Get total booked for ticket
+    // Fetch total booked for global capacity
     const totalBooked = await TicketingBookings.countDocuments({
       "ticket.ticketId": ticketId,
     });
 
     const remainingGlobalQty = ticket.quantity - totalBooked;
 
-    if (remainingGlobalQty <= 0) {
-      errors.push({
-        ticketId,
-        message: "No tickets available (global limit reached)."
-      });
-      continue;
-    }
-
-    // CASE: Ticket has slots enabled
+    // ------------------------------------------
+    // CASE 1: Ticket has time slots enabled
+    // ------------------------------------------
     if (ticket.timingSlots?.enabled) {
-      
       const requestsForTicket = ticketings.filter(
         (t) => t.ticketId.toString() === ticketId
+      );
+
+      // Flatten slots for easier matching
+      const allSlots = ticket.timingSlots.dateTimeSlots.flatMap(d =>
+        d.timeSlots.map(s => ({
+          ...s.toObject(),
+          date: d.date,
+          slotId: s._id.toString(),
+        }))
       );
 
       for (const req of requestsForTicket) {
         const reqSlot = req.timeSlot;
 
-        // CASE A: Slot provided
+        // ------------------------------------------
+        // CASE A: Slot is provided → validate slot only
+        // ------------------------------------------
         if (reqSlot) {
-          const allSlots = ticket.timingSlots.dateTimeSlots.flatMap(d =>
-            d.timeSlots.map(s => ({
-              ...s.toObject(),
-              date: d.date
-            }))
-          );
-
-          const slot = allSlots.find(s => s._id.toString() === reqSlot);
+          const slot = allSlots.find(s => s.slotId === reqSlot);
 
           if (!slot) {
             errors.push({
               ticketId,
-              message: `Time slot not found: ${reqSlot}`
+              message: `Time slot not found: ${reqSlot}`,
             });
             continue;
           }
 
+          // Count slot bookings
           const slotBooked = await TicketingBookings.countDocuments({
             "ticket.ticketId": ticketId,
             "ticket.timeSlot": reqSlot,
@@ -164,11 +162,13 @@ const validateTicketsAndQuantity = async (ticketings) => {
           ticketSnapshots.push({
             ticketId,
             snapshot: ticket.toObject(),
-            timeSlot: reqSlot
+            timeSlot: reqSlot,
           });
 
         } else {
-          // CASE B: Slot NOT provided → fallback to global qty check
+          // ------------------------------------------
+          // CASE B: Slot NOT provided → fallback to global quantity
+          // ------------------------------------------
           if (remainingGlobalQty < countInPayload) {
             errors.push({
               ticketId,
@@ -180,21 +180,32 @@ const validateTicketsAndQuantity = async (ticketings) => {
           ticketSnapshots.push({
             ticketId,
             snapshot: ticket.toObject(),
-            timeSlot: null
+            timeSlot: null,
           });
         }
       }
 
+      continue; // Skip non-slot logic
+    }
+
+    // ------------------------------------------
+    // CASE 2: Ticket has NO time slots → global only
+    // ------------------------------------------
+
+    if (remainingGlobalQty <= 0) {
+      errors.push({
+        ticketId,
+        message: "No tickets available (global limit reached).",
+      });
       continue;
     }
 
-    // CASE: No time slots → global quantity check
     if (countInPayload > remainingGlobalQty) {
       errors.push({
         ticketId,
         message: `Not enough tickets available`,
         requested: countInPayload,
-        available: remainingGlobalQty
+        available: remainingGlobalQty,
       });
       continue;
     }
@@ -204,19 +215,18 @@ const validateTicketsAndQuantity = async (ticketings) => {
       ticketSnapshots.push({
         ticketId,
         snapshot: ticket.toObject(),
-        timeSlot: null
+        timeSlot: null,
       });
     }
   }
 
+  // Final output
   if (errors.length > 0) {
     return { valid: false, errors };
   }
 
   return { valid: true, ticketSnapshots };
 };
-
-
 
 
 

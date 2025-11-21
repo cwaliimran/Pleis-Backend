@@ -108,6 +108,7 @@ const updateReservation = async (id, data) => {
     }
   }
 
+
   if (Object.keys(updateData).length === 0) {
     return Reservation;
   }
@@ -172,7 +173,7 @@ const updateUserReservation = async (data) => {
     "partySize",
     "reservationType",
     "timingSlots",
-
+    "notes",
   ];
 
   // -----------------------------
