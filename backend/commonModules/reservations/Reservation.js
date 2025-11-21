@@ -7,7 +7,7 @@ const ReservationsSchema = new mongoose.Schema(
       ref: "User", // Reference to the "User" model
       required: true, // Assuming a user is required for each reservation
     },
-      companyOrganizer: {
+    companyOrganizer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User", // Reference to the "User" model
       required: true, // Assuming a user is required for each reservation
@@ -100,7 +100,7 @@ const ReservationsSchema = new mongoose.Schema(
       required: true,
       default: "",
     },
- timingSlots: {
+    timingSlots: {
       enabled: {
         type: Boolean,
         default: false,

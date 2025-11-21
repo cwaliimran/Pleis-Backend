@@ -11,63 +11,63 @@ const {
 const reservationService = require("./reservationService");
 
 const createReservation = async (req, res) => {
-const {
-  reservationType,
-  availableReservations,
-  maxCapacityPerReservation,
-  conditionType,
-  amount,
-  ticketType,
-  customText,
-  taxPercentage,
-  needsConfirmation,
-  optionalEventId,
-  status,
-  organizationId,
-  timingSlots
-} = req.body;
+  const {
+    reservationType,
+    availableReservations,
+    maxCapacityPerReservation,
+    conditionType,
+    amount,
+    ticketType,
+    customText,
+    taxPercentage,
+    needsConfirmation,
+    optionalEventId,
+    status,
+    organizationId,
+    timingSlots
+  } = req.body;
 
-const userId = req.user._id;
-const timezone = req.user.timezone;
-if (conditionType === "minimumSpendOnLocation") {
-  if (!amount && !customText) {
-     return sendResponse({
+  const userId = req.user._id;
+  const timezone = req.user.timezone;
+  if (conditionType === "minimumSpendOnLocation") {
+    if (!amount && !customText) {
+      return sendResponse({
         res,
         statusCode: 400,
         translationKey: "either_amount_or_customText_must_be_provided_when_conditionType_is_'minimumSpendOnLocation'",
       });
+    }
   }
-}
-if (
-  !validateParams(req, res, {
-    rawData: [
-      "reservationType", 
-      "availableReservations", 
-      "maxCapacityPerReservation",
-      "conditionType", 
-      "taxPercentage",
-      "status",
-      "organizationId",
-    ],
-  })
-) return;
-if (conditionType == "fixedPrice" || conditionType == "prepayOption") {
   if (
     !validateParams(req, res, {
       rawData: [
-        "reservationType", 
-        "availableReservations", 
+        "reservationType",
+        "availableReservations",
         "maxCapacityPerReservation",
-        "conditionType", 
+        "conditionType",
         "taxPercentage",
-        "needsConfirmation",
         "status",
         "organizationId",
-        "amount"
       ],
     })
   ) return;
-}
+  if (conditionType == "fixedPrice" || conditionType == "prepayOption") {
+    if (
+      !validateParams(req, res, {
+        rawData: [
+          "reservationType",
+          "availableReservations",
+          "maxCapacityPerReservation",
+          "conditionType",
+          "taxPercentage",
+          "needsConfirmation",
+          "status",
+          "organizationId",
+          "amount"
+        ],
+      })
+    ) return;
+  }
   // Timing slots validation
   if (timingSlots?.enabled === true) {
     const slots = timingSlots.dateTimeSlots || [];
@@ -124,50 +124,50 @@ if (conditionType == "fixedPrice" || conditionType == "prepayOption") {
         slot.endTime = endUtc;
       }
     }
-  }else{
+  } else {
     //don't check for empty array if timingSlots is disabled only apply format conversion
-      const slots = timingSlots.dateTimeSlots || [];
-      for (const dateBlock of slots) {
-        if (!dateBlock.date) continue;
+    const slots = timingSlots.dateTimeSlots || [];
+    for (const dateBlock of slots) {
+      if (!dateBlock.date) continue;
 
-        for (const slot of dateBlock.timeSlots) {
-          if (!slot.startTime || !slot.endTime) continue;
+      for (const slot of dateBlock.timeSlots) {
+        if (!slot.startTime || !slot.endTime) continue;
 
-          // Convert to UTC DateTime strings
-          const startUtc = convertTimezoneToUtc(
-            `${dateBlock.date} ${slot.startTime}`,
-            timezone,
-            "YYYY-MM-DD hh:mm A"
-          );
-          const endUtc = convertTimezoneToUtc(
-            `${dateBlock.date} ${slot.endTime}`,
-            timezone,
-            "YYYY-MM-DD hh:mm A"
-          );
+        // Convert to UTC DateTime strings
+        const startUtc = convertTimezoneToUtc(
+          `${dateBlock.date} ${slot.startTime}`,
+          timezone,
+          "YYYY-MM-DD hh:mm A"
+        );
+        const endUtc = convertTimezoneToUtc(
+          `${dateBlock.date} ${slot.endTime}`,
+          timezone,
+          "YYYY-MM-DD hh:mm A"
+        );
 
-          // Replace in object
-          slot.startTime = startUtc;
-          slot.endTime = endUtc;
-        }
+        // Replace in object
+        slot.startTime = startUtc;
+        slot.endTime = endUtc;
       }
+    }
   }
 
   let data = {
     userId,
     // companyOrganizer:userId,
-reservationType,
-  availableReservations,
-  maxCapacityPerReservation,
-  conditionType,
-  amount,
-  ticketType,
-  customText,
-  taxPercentage,
-  needsConfirmation,
-  optionalEventId,
-  status,
-  organizationId,
-  timingSlots: timingSlots || { enabled: false, dateTimeSlots: [] },
+    reservationType,
+    availableReservations,
+    maxCapacityPerReservation,
+    conditionType,
+    amount,
+    ticketType,
+    customText,
+    taxPercentage,
+    needsConfirmation,
+    optionalEventId,
+    status,
+    organizationId,
+    timingSlots: timingSlots || { enabled: false, dateTimeSlots: [] },
   };
   try {
     const Reservation = await reservationService.createReservation(data);
@@ -197,24 +197,23 @@ reservationType,
 
 const getReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range ,organizationsId , companyOrganizer} = req.query;
+  const { keyword, status = "active", date, range, organizationsId, companyOrganizer } = req.query;
   try {
-console.log("companyOrganizer:", companyOrganizer);
-if (
-  (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") && 
-  (!organizationsId || !Array.isArray(JSON.parse(organizationsId)) || JSON.parse(organizationsId).length === 0)
-) {
-  return sendResponse({
-    res,
-    statusCode: 400,
-    translationKey: "companyOrganizer_or_organizationsId_is_required",
-  });
-}
+    if (
+      (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
+      (!organizationsId || !Array.isArray(JSON.parse(organizationsId)) || JSON.parse(organizationsId).length === 0)
+    ) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "companyOrganizer_or_organizationsId_is_required",
+      });
+    }
 
     const userId = companyOrganizer;
     const timezone = req.user.timezone;
     const { reservations, meta } = await reservationService.getReservations({
-        timezone,
+      timezone,
       page,
       limit,
       keyword,
@@ -283,25 +282,26 @@ const getReservationDetails = async (req, res) => {
 
 const updateReservation = async (req, res) => {
   const { id } = req.params;
-const {
-  reservationType,
-  availableReservations,
-  maxCapacityPerReservation,
-  conditionType,
-  amount,
-  minimumSpend,
-  prepayAmount,
-  ticketType,
-  customText,
-  taxPercentage,
-  needsConfirmation,
-  optionalEventId,
-  status,
-  timingSlots,
-  organizationId
-} = req.body;
-const userId = req.user._id;
-const timezone = req.user.timezone;
+  const {
+    reservationType,
+    availableReservations,
+    maxCapacityPerReservation,
+    conditionType,
+    amount,
+    minimumSpend,
+    prepayAmount,
+    ticketType,
+    customText,
+    taxPercentage,
+    needsConfirmation,
+    optionalEventId,
+    status,
+    timingSlots,
+    organizationId,
+    notes
+  } = req.body;
+  const userId = req.user._id;
+  const timezone = req.user.timezone;
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
@@ -312,23 +312,24 @@ const timezone = req.user.timezone;
 
   let data = {
     userId,
-reservationType,
-  availableReservations,
-  maxCapacityPerReservation,
-  conditionType,
-  amount,
-  minimumSpend,
-  prepayAmount,
-  ticketType,
-  timingSlots,
-  customText,
-  taxPercentage,
-  needsConfirmation,
-  optionalEventId,
-  status,
-  organizationId,
+    reservationType,
+    availableReservations,
+    maxCapacityPerReservation,
+    conditionType,
+    amount,
+    minimumSpend,
+    prepayAmount,
+    ticketType,
+    timingSlots,
+    customText,
+    taxPercentage,
+    needsConfirmation,
+    optionalEventId,
+    status,
+    organizationId,
+    notes,
   };
- // --- Validate timing slots if enabled ---
+  // --- Validate timing slots if enabled ---
   if (data.timingSlots?.enabled) {
     const slots = data.timingSlots.dateTimeSlots || [];
 
@@ -486,30 +487,30 @@ const deleteReservation = async (req, res) => {
 
 const getUserReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range ,organizationsId , companyOrganizer,reservationStatus="pending",reservationId} = req.query;
+  const { keyword, status = "active", date, range, organizationsId, companyOrganizer, reservationStatus = "pending", reservationId } = req.query;
   try {
-if (
-  (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") && 
-  (!organizationsId || !Array.isArray(JSON.parse(organizationsId)) || JSON.parse(organizationsId).length === 0)
-) {
-  return sendResponse({
-    res,
-    statusCode: 400,
-    translationKey: "companyOrganizer_or_organizationsIds_is_required",
-  });
-}
-if(!reservationId || reservationId === "undefined" || reservationId === "null"){
-   return sendResponse({
-    res,
-    statusCode: 400,
-    translationKey: "reservationId_is_required",
-  });
-}
+    if (
+      (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
+      (!organizationsId || !Array.isArray(JSON.parse(organizationsId)) || JSON.parse(organizationsId).length === 0)
+    ) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "companyOrganizer_or_organizationsIds_is_required",
+      });
+    }
+    if (!reservationId || reservationId === "undefined" || reservationId === "null") {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "reservationId_is_required",
+      });
+    }
 
     const userId = companyOrganizer;
     const timezone = req.user.timezone;
     const { reservations, meta } = await reservationService.getUserReservations({
-        timezone,
+      timezone,
       page,
       limit,
       keyword,
@@ -546,8 +547,8 @@ if(!reservationId || reservationId === "undefined" || reservationId === "null"){
 
 
 
-const   updateUserReservationStatus = async (req, res) => {
-  const { id , value} = req.params;
+const updateUserReservationStatus = async (req, res) => {
+  const { id, value } = req.params;
   const validStatuses = ["confirmed", "rejected", "pending", "cancelled"];
   if (!validStatuses.includes(value)) {
     return res.status(404).json({
@@ -563,7 +564,7 @@ const   updateUserReservationStatus = async (req, res) => {
     return;
 
   try {
-    const deleted = await reservationService.updateUserReservationStatus(id,value);
+    const deleted = await reservationService.updateUserReservationStatus(id, value);
     if (!deleted) {
       return sendResponse({
         res,
@@ -575,7 +576,7 @@ const   updateUserReservationStatus = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Reservation_cancelled_successfully",
+      translationKey: "Reservation_updated_successfully",
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -590,16 +591,15 @@ const   updateUserReservationStatus = async (req, res) => {
 
 const updateUserReservation = async (req, res) => {
   const { id, userId } = req.params;
-
-
-const {
-firstName,
-lastName,
-  partySize,
-  phoneNumber,
-  reservationType,
-  timingSlots,
-} = req.body;
+  const {
+    firstName,
+    lastName,
+    partySize,
+    phoneNumber,
+    reservationType,
+    timingSlots,
+    notes,
+  } = req.body;
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
@@ -607,21 +607,22 @@ lastName,
     })
   )
     return;
-    const timezone = req.user.timezone;
+  const timezone = req.user.timezone;
 
   let data = {
     id,
     userId,
-firstName,
-lastName,
-  partySize,
-  phoneNumber,
-  reservationType,
-  timingSlots,
+    firstName,
+    lastName,
+    partySize,
+    phoneNumber,
+    reservationType,
+    timingSlots,
+    notes,
 
   };
 
-  if (data.timeSlots) {
+  if (data.timingSlots) {
     const slots = data.timingSlots.dateTimeSlots || [];
 
     if (!Array.isArray(slots) || slots.length === 0) {
@@ -672,14 +673,14 @@ lastName,
           timezone,
           "YYYY-MM-DD hh:mm A"
         );
-              console.log("start time ",slots.startTime );
+        console.log("start time ", slots.startTime);
 
       }
 
     }
   }
 
-  
+
   // Validate params
   if (
     !validateParams(req, res, {
@@ -689,18 +690,18 @@ lastName,
   ) {
     return; // Ensure you return if validation fails
   }
-      const currentUser = req.user;
-      // Only admin, manager, or organizer can update other users' profiles
-      if (
-        currentUser._id.toString() !== id &&
-        !["admin", "manager", "organizer"].includes(currentUser.userType)
-      ) {
-        return sendResponse({
-          res,
-          statusCode: 403,
-          translationKey: "unauthorized_to_perform_this_action",
-        });
-      }
+  const currentUser = req.user;
+  // Only admin, manager, or organizer can update other users' profiles
+  if (
+    currentUser._id.toString() !== id &&
+    !["admin", "manager", "organizer"].includes(currentUser.userType)
+  ) {
+    return sendResponse({
+      res,
+      statusCode: 403,
+      translationKey: "unauthorized_to_perform_this_action",
+    });
+  }
 
   try {
     const update = await reservationService.updateUserReservation(data);

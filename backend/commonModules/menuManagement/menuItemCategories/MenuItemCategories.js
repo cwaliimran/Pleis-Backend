@@ -19,7 +19,7 @@ const menuItemCategoriesSchema = new mongoose.Schema(
     },
     companyOrganizer: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Users",
+      ref: "User",
       default: null,
     },
   },

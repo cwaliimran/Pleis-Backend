@@ -8,7 +8,7 @@ const OrganizationViewSchema = new mongoose.Schema(
       ref: "Organizations",
       required: true,
     },
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "Users", default: null },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     ipAddress: { type: String, default: null },
     lastViewedAt: { type: Date, default: Date.now },
   },

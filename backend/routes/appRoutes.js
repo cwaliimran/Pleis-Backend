@@ -40,5 +40,11 @@ router.use("/promo-codes", require("../app/promoCode/promoCodeRoutes"));
 //Promo Codes
 router.use("/global-referral", require("../app/globalReferral/globalReferralRoutes"));
 
+//ticketing bookings
+router.use("/ticketing-bookings", require("../app/bookings/ticketings/ticketingBookingRoutes"));
+//transactions
+router.use("/transactions", require("../app/bookings/transactions/transactionsRoutes"));
+//transactions
+router.use("/friend-request", require("../app/friendRequest/friendRequestRoutes"));
 
 module.exports = router;

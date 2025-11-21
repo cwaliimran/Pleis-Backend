@@ -188,6 +188,10 @@ const updateEvent = async (id, data) => {
 
     if (basicInfo.description !== undefined)
       event.basicInfo.description = basicInfo.description;
+
+
+    if (basicInfo.partnerOrganization !== undefined)
+      event.basicInfo.partnerOrganization = basicInfo.partnerOrganization;
   }
 
   // --- OTHER INFO ---

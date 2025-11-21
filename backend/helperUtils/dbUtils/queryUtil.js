@@ -188,7 +188,7 @@ async function getModelCounts({
   const [filteredCount, globalCounts] = await Promise.all([
     model.countDocuments(filterQuery),
     model.aggregate([
-      { $match: filterQuery },
+      // { $match: filterQuery },
       { $facet: facetStages },
       {
         $project: {

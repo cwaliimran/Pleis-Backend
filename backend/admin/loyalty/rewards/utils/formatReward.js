@@ -2,11 +2,12 @@ const { getFullImageUrl } = require("../../../../helperUtils/imageHelper");
 
 // utils/formatReward.js
 function formatReward(reward, timezone) {
-    const obj = { ...reward };
+    let obj = { ...reward };
 
+    
     //attach full image URL
     if (obj?.image) {
-        obj.media = getFullImageUrl(obj.image)
+        obj.image = getFullImageUrl(obj.image)
     }
     if (obj?.tierLimit?.image) {
         obj.tierLimit.image = getFullImageUrl(obj.tierLimit.image);
@@ -31,9 +32,6 @@ function formatReward(reward, timezone) {
             delete obj.customReward;
             break;
     }
-
-    //remove image
-    delete obj.image;
 
     return obj;
 }

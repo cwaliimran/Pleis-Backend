@@ -7,9 +7,9 @@
     "test": "mocha test/**/*.test.js --timeout 10000",
     "start": "nodemon backend/server.js",
     "update:alias": "node aliasConfig/update-aliases.js",
-    "localhost": "cross-env NODE_ENV=localhost node backend/server.js",
-    "dev": "cross-env NODE_ENV=dev nodemon backend/server.js",
-    "prod": "cross-env NODE_ENV=prod node backend/server.js",
+    "localhost": "NODE_ENV=localhost node backend/server.js",
+    "dev": "NODE_ENV=dev nodemon backend/server.js",
+    "prod": "NODE_ENV=prod node backend/server.js",
     "d": "npm run dev",
     "p": "npm run prod"
   },
@@ -49,7 +49,10 @@
     "@StreakRulesModel": "backend/commonModules/loyalty/streaks/StreakRules.js",
     "@GlobalReferralModel": "backend/commonModules/globalReferral/GlobalReferral.js",
     "@ReferralReferenceModel": "backend/commonModules/globalReferral/referralReference.js",
-    "@ReferralRecordModel": "backend/commonModules/globalReferral/ReferralRecord.js"
+    "@ReferralRecordModel": "backend/commonModules/globalReferral/ReferralRecord.js",
+    "@TicketingBookingsModel": "backend/commonModules/bookings/ticketings/TicketingBookings.js",
+    "@TicketingOrdersModel": "backend/commonModules/bookings/ticketings/TicketingOrders.js",
+    "@FriendRequestModel": "backend/commonModules/friendRequest/FriendRequest.js"
   },
   "keywords": [],
   "author": "",

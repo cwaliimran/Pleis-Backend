@@ -5,13 +5,13 @@ const clubMembers = new mongoose.Schema(
     {
         user: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Users",
+            ref: "User",
             required: true,
             index: true,
         },
         companyOrganizer: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Users",
+            ref: "User",
             required: true,
             index: true,
         },

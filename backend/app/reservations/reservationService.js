@@ -57,6 +57,7 @@ const updateReservation = async (id, data) => {
     "optionalEventId",
     "organizationId",
     "timingSlots",
+    "notes",
   ];
 
   // Handle timingSlots separately since it's a nested object
