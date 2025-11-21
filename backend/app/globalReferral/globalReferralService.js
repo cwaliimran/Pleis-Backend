@@ -1,0 +1,250 @@
+// services/reservationservice.js
+const { buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
+const { generateMeta, getCurrentDateInTimezone } = require("../../helperUtils/responseUtil");
+const { reservationsFormatter } = require("../../app/reservations/formaters/reservationFormetter");
+const Reservations = require("@ReservationsModel");
+const UserReservations = require("@UserReservationsModel");
+const GlobalReferralRepo = require("./globalReferralRepository");
+const mongoose = require("mongoose");
+const {
+  sendResponse,
+  parsePaginationParams,
+  validateParams,
+  getReadableErrorMessage,
+  convertTimezoneToUtc,
+  getStartAndEndOfMonth,
+  getStartAndEndOfWeek,
+} = require("@utils/responseUtil");
+
+const createGlobalReferral = async (data) => {
+  let GlobalReferral = await GlobalReferralRepo.createGlobalReferral(data);
+  return GlobalReferral;
+};
+
+const saveReferralData = async (data) => {
+
+  let GlobalReferral = await GlobalReferralRepo.saveReferralData(data);
+  return GlobalReferral;
+};
+
+const saveUserReferralData = async (id, ip) => {
+
+  let GlobalReferral = await GlobalReferralRepo.saveUserReferralData(id, ip);
+  return GlobalReferral;
+};
+// Populate venue data for reservations (updated for new schema)
+const getGlobalReferrals = async ({ timezone, page, limit, keyword, status, userId, date, range,type }) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
+  let { globalReferral, meta } = await GlobalReferralRepo.getGlobalReferrals({ timezone, page, limit, keyword, status, userId, date, range, today, skip,type });
+
+  return {
+    globalReferral,
+    meta
+  };
+};
+
+const updateReservation = async (id, data) => {
+  const Reservation = await ReservationRepo.findReservationById(id);
+  if (!Reservation) {
+    return { error: "Reservation_not_found" };
+  }
+
+  // -----------------------------
+  // VALIDATIONS
+  // -----------------------------
+  if (Reservation.conditionType !== data.conditionType) {
+    if (data.conditionType === "minimumSpendOnLocation") {
+      if (!data.amount && !data.customText) {
+        return { error: "amount_or_customText_is_required_when_conditionType_changes_to_minimumSpendOnLocation." };
+      }
+    } else if (!data.amount) {
+      return { error: "amount_is_required_when_conditionType_changes_and_is_not_minimumSpendOnLocation." };
+    }
+  }
+
+  if (data.conditionType === "ticketRequirement" && !data.ticketType) {
+    return { error: "ticket_type_is_required_when_conditionType_is_ticketRequirement." };
+  }
+
+  if (data.conditionType === "customText" && !data.customText) {
+    return { error: "custom_text_is_required_when_conditionType_is_customText." };
+  }
+
+  // -----------------------------
+  // ALLOWED FIELDS
+  // -----------------------------
+  const allowedFields = [
+    "name",
+    "availableReservations",
+    "maxCapacityPerReservation",
+    "conditionType",
+    "amount",
+    "minimumSpend",
+    "prepayAmount",
+    "ticketType",
+    "customText",
+    "timingSlots",
+    "taxPercentage",
+    "needsConfirmation",
+    "optionalEventId",
+    "status",
+    "organizationId",
+  ];
+
+  // -----------------------------
+  // TIMING SLOTS UPDATE
+  // -----------------------------
+  if (data.timingSlots) {
+    if (!Reservation.timingSlots) {
+      Reservation.timingSlots = { enabled: false, dateTimeSlots: [] };
+    }
+
+    if (data.timingSlots.enabled !== undefined) {
+      Reservation.timingSlots.enabled = data.timingSlots.enabled;
+    }
+
+    if (Array.isArray(data.timingSlots.dateTimeSlots)) {
+      Reservation.timingSlots.dateTimeSlots = data.timingSlots.dateTimeSlots;
+    }
+  }
+
+  // -----------------------------
+  // APPLY UPDATE FIELDS
+  // -----------------------------
+  const updateData = {};
+  for (const key of allowedFields) {
+    if (data[key] !== undefined) {
+      updateData[key] = data[key];
+    }
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return Reservation;
+  }
+
+  Object.assign(Reservation, updateData);
+  await Reservation.save();
+
+  return reservationsFormatter(Reservation);
+};
+
+  const deleteReservation = async (id) => {
+      const updated = await ReservationRepo.findByIdAndUpdate(id, {
+        status: "deleted",
+      });
+      if (!updated) return null;
+      return true;
+    };
+
+const getReservationDetails = async (id) => {
+      const Reservation = await ReservationRepo.findReservationById(id);
+      if (!Reservation) return null;
+      return reservationsFormatter(Reservation);
+    };
+
+
+
+
+
+const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, reservationStatus,reservationId }) => {
+      const skip = limit === 0 ? 0 : (page - 1) * limit;
+      const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
+      let { reservations, meta } = await ReservationRepo.getUserReservations({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationStatus, reservationId });
+
+      return {
+        reservations,
+        meta
+      };
+    };
+
+const updateUserReservationStatus = async (id, value) => {
+      const updated = await UserReservations.findByIdAndUpdate(id, {
+        reservationStatus: value,
+      });
+      if (!updated) return null;
+      return true;
+    };
+
+
+
+const updateUserReservation = async (data) => {
+  const UserReservation = await ReservationRepo.findUserReservationById(data.id);
+  const User = await ReservationRepo.findUserById(data.userId);
+
+
+  // -----------------------------
+  // ALLOWED FIELDS
+  // -----------------------------
+  const allowedFields = [
+    "firstName",
+    "lastName",
+    "phoneNumber",
+    "partySize",
+    "reservationType",
+    "timingSlots",
+
+  ];
+
+  // -----------------------------
+  // TIMING SLOTS UPDATE
+  // -----------------------------
+  if (data.timingSlots) {
+    if (!UserReservation.timingSlots) {
+      UserReservation.timingSlots = { enabled: false, dateTimeSlots: [] };
+    }
+
+    if (data.timingSlots.enabled !== undefined) {
+      UserReservation.timingSlots.enabled = data.timingSlots.enabled;
+    }
+
+    if (Array.isArray(data.timingSlots.dateTimeSlots)) {
+      // Directly update the dateTimeSlots without any date conversion
+      UserReservation.timingSlots.dateTimeSlots = data.timingSlots.dateTimeSlots;
+    }
+  }
+
+  // -----------------------------
+  // APPLY UPDATE FIELDS
+  // -----------------------------
+  const updateData = {};
+  for (const key of allowedFields) {
+    if (data[key] !== undefined) {
+      updateData[key] = data[key];
+    }
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return UserReservation;
+  }
+    if (data.firstName || data.lastName || data.phoneNumber) {
+    const updateUserData = {};
+    if (data.firstName) updateUserData.firstName = data.firstName;
+    if (data.lastName) updateUserData.lastName = data.lastName;
+    if (data.phoneNumber) updateUserData.phoneNumber = data.phoneNumber;
+
+    // Update the user details
+    Object.assign(User, updateUserData);
+    await User.save();
+  }
+
+  // Apply updates to the reservation
+  Object.assign(UserReservation, updateData);
+  await UserReservation.save();
+
+  return { message: "Reservation updated successfully", reservation: UserReservation };
+};
+
+
+  module.exports = {
+    createGlobalReferral,
+    getGlobalReferrals,
+    saveReferralData,
+    saveUserReferralData,
+    // updateReservation,
+    // getReservationDetails,
+    // deleteReservation,
+    // getUserReservations,
+    // updateUserReservationStatus,
+    // updateUserReservation
+  };

@@ -17,6 +17,7 @@ const createReservation = async (req, res) => {
     organizationId,
     reservationId,
     timingSlots,
+    notes,
   } = req.body;
 
   const userId = req.user._id;
@@ -132,6 +133,7 @@ const createReservation = async (req, res) => {
     organizationId,
     companyOrganizer,
     reservationId,
+    notes,
     timingSlots: timingSlots || { enabled: false, dateTimeSlots: [] },
   };
 
@@ -274,6 +276,7 @@ const updateReservation = async (req, res) => {
     optionalEventId,
     organizationId,
     timingSlots,
+    notes,
   } = req.body;
   const userId = req.user._id;
   const timezone = req.user.timezone;
@@ -292,6 +295,7 @@ const updateReservation = async (req, res) => {
     optionalEventId,
     organizationId,
     timingSlots,
+    notes,
   };
   // --- Validate timing slots if enabled ---
   if (data.timingSlots?.enabled) {

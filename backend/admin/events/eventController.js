@@ -133,7 +133,7 @@ const createEvent = async (req, res) => {
   // ==============================
   // VENUE VALIDATION (already done)
   // ==============================
-  const venueItem = await getVenueDetails(basicInfo.venue, ["location.coordinates"]);
+  const venueItem = await getVenueDetails(basicInfo.venue, []);
   if (!venueItem) {
     return sendResponse({
       res,
@@ -155,6 +155,7 @@ const createEvent = async (req, res) => {
       venueLocation: venueItem.location,
       categories: Array.isArray(basicInfo.categories) ? basicInfo.categories : [],
       tags: Array.isArray(basicInfo.tags) ? basicInfo.tags : [],
+      partnerOrganization: basicInfo.partnerOrganization || null,
     },
     schedule: {
       type: schedule.type || "oneTime",

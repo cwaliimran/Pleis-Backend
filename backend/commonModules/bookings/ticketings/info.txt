@@ -1,0 +1,7 @@
+*TicketingOrders.js
+TicketingOrders stores information of payments and being referenced in ticketingBookings
+
+*TicketingBookings.js
+Actual tickets list
+
+*Transactions are fetched from TicketingOrders

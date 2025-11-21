@@ -357,6 +357,7 @@ const getEventDetails = async (userLocation, userId, id, timezone) => {
   if (!event) return null;
   const now = getCurrentDateInTimezone({ timezone });
 
+  // TODO announcements - fetch from DB when implemented
   const announcements = {
     updates: [
       {

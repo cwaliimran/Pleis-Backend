@@ -9,6 +9,7 @@ const Venues = require("@VenuesModel");
 const MenuItemCategories = require("@MenuItemCategoriesModel");
 const { getMenuIdsByCompanyOrganizer } = require("../../organizations/organizationRepository");
 const { formatMenuItem } = require("../menuItemCategories/formatter/formatItemCategories");
+const Organizations = require("@OrganizationModel");
 
 const createMenuItem = async (data, timezone) => {
   let doc = await menuItemRepo.createMenuItem(data);
@@ -18,6 +19,7 @@ const createMenuItem = async (data, timezone) => {
 
 // Populate menu data for menuItems
 const getMenuItems = async ({ page, limit, keyword, status, date, menu, timezone, companyOrganizer }) => {
+  console.log("here")
   let menuIds = [];
 
   // 1️⃣ Get menus created by companyOrganizer

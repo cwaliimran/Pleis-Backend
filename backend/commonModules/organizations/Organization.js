@@ -106,7 +106,7 @@ const organizationSchema = new mongoose.Schema(
     },
     creator: { //companyOrganizer
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Users",
+      ref: "User",
       required: true,
     },
 

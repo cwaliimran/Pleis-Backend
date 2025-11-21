@@ -12,6 +12,8 @@ router.use("/club-collaborations", require("../loyalty/clubCollaborations/clubCo
 router.use("/streaks", require("../loyalty/streaks/streaksRoutes"));
 //users streaks
 router.use("/users-streaks", require("../loyalty/usersStreaks/usersStreaksRoutes"));
+router.use("/club-members", require("../loyalty/clubMembers/clubMembersRoutes"));
 // router.use("/", require("../commonModules/loyalty/"));  // default route
+
 
 module.exports = router;

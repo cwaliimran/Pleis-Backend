@@ -5,6 +5,7 @@ const { User } = require("../../models/UserModel");
 const Event = require("@EventsModel");
 const mongoose = require("mongoose");
 const { reservationsFormatter, reservationsFormatterAdjustDates } = require("../../app/reservations/formaters/reservationFormetter");
+const Organizations = require("@OrganizationModel")
 const {
   sendResponse,
   parsePaginationParams,
@@ -13,9 +14,48 @@ const {
   getReadableErrorMessage,
   getStartAndEndOfMonth,
   getStartAndEndOfWeek,
+  getStartAndEndOfDay,
+  getCurrentDateInTimezone,
 } = require("../../helperUtils/responseUtil");
+const getCreatorFromOrganization = async (organizationId) => {
+  try {
+    const result = await Organizations.aggregate([
+      {
+        $match: { _id: new mongoose.Types.ObjectId(organizationId) },  // Match the organization by its ID
+      },
+      {
+        $lookup: {
+          from: "users",  // Assuming the 'creator' is in the 'users' collection
+          localField: "creator",  // Field in the 'organizations' collection that references the creator
+          foreignField: "_id",  // Field in the 'users' collection to match with
+          as: "creatorDetails",  // Alias for the resulting array of creator data
+        },
+      },
+      {
+        $unwind: { path: "$creatorDetails", preserveNullAndEmptyArrays: true },  // Unwind creator details array (if it exists)
+      },
+      {
+        $project: {
+          creatorId: "$creatorDetails._id",  // Extract just the _id of the creator
+          _id: 0,  // Exclude the organization _id from the result
+        },
+      },
+    ]);
+
+    if (result.length > 0) {
+      return result[0].creatorId;  // Return the creator ID
+    } else {
+      return null;  // Return null if no matching organization is found
+    }
+  } catch (err) {
+    console.error("Error in aggregation:", err);
+    throw err;
+  }
+};
 const createReservation = async (data) => {
   try {
+    console.log("Creating reservation with data:", await getCreatorFromOrganization(data.organizationId));
+    data.companyOrganizer = await getCreatorFromOrganization(data.organizationId);
     const Reservation = new Reservations(data);
     await Reservation.save();
     return Reservation;
@@ -61,47 +101,60 @@ const findByIdAndUpdate = async (id, data) => {
 
 
 
-const getReservations = async ({ timezone,page, limit, keyword, status, userId, organizationsId, date, range,today,skip }) => {
-let organizationsIds = Array.isArray(organizationsId) 
-  ? organizationsId 
-  : JSON.parse(organizationsId || '[]');
-organizationsIds = organizationsIds.map(id => new mongoose.Types.ObjectId(id));
+const getReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, skip }) => {
+  const now = getCurrentDateInTimezone({ timezone });
+
+
+  let organizationsIds = Array.isArray(organizationsId)
+    ? organizationsId
+    : JSON.parse(organizationsId || '[]');
+  organizationsIds = organizationsIds.map(id => new mongoose.Types.ObjectId(id));
   const pipeline = [
-  {
-    $match: {
-      ...(userId && { userId: new mongoose.Types.ObjectId(userId) }),
-      ...(organizationsIds.length > 0 && { organizationId: { $in: organizationsIds } }) // Match as ObjectId
+    {
+      $match: {
+        ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
+        ...(organizationsIds.length > 0 && { organizationId: { $in: organizationsIds } }) // Match as ObjectId
+      }
     }
+  ];
+  if (range == "monthly") {
+    const { start, end } = getStartAndEndOfMonth(now, timezone);
+
+    pipeline.push({
+      $match: {
+        "timingSlots.dateTimeSlots": {
+          $elemMatch: {
+            date: { $gte: start, $lt: end }
+          }
+        }
+      }
+    });
   }
-];
-if (range == "monthly") {
-  const { start, end } = getStartAndEndOfMonth(today, timezone);
+  if (range == "weekly") {
+    const { start, end } = getStartAndEndOfWeek(now, timezone);
 
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
-if (range == "weekly") {
-  const { start, end } = getStartAndEndOfWeek(today, timezone);
-
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
-if (range == "today") {
-    const start = new Date(today);
-    const end = new Date(new Date(today).setDate(start.getDate() + 1));
-
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
+    pipeline.push({
+      $match: {
+        "timingSlots.dateTimeSlots": {
+          $elemMatch: {
+            date: { $gte: start, $lt: end }
+          }
+        }
+      }
+    });
+  }
+  if (range == "today") {
+    const { start, end } = getStartAndEndOfDay(now, timezone);
+    pipeline.push({
+      $match: {
+        "timingSlots.dateTimeSlots": {
+          $elemMatch: {
+            date: { $gte: start, $lt: end }
+          }
+        }
+      }
+    });
+  }
   // Apply filters
   if (status) {
     pipeline.push({ $match: { status } });
@@ -110,27 +163,30 @@ if (range == "today") {
   }
 
   if (date) {
-    const start = new Date(date);
-    const end = new Date(new Date(date).setDate(start.getDate() + 1));
+    let { start, end } = getStartAndEndOfDay(date, timezone);
     pipeline.push({
       $match: {
-        createdAt: { $gte: start, $lt: end }
+        "timingSlots.dateTimeSlots": {
+          $elemMatch: {
+            date: { $gte: start, $lt: end }
+          }
+        }
       }
     });
   }
 
-if (keyword) {
-  const keywordMatch = buildKeywordQueryFromModels(
-    [
-      { schema: Reservations.schema }
-    ],
-    keyword
-  );
+  if (keyword) {
+    const keywordMatch = buildKeywordQueryFromModels(
+      [
+        { schema: Reservations.schema }
+      ],
+      keyword
+    );
 
-  if (Object.keys(keywordMatch).length) {
-    pipeline.push({ $match: keywordMatch });
+    if (Object.keys(keywordMatch).length) {
+      pipeline.push({ $match: keywordMatch });
+    }
   }
-}
 
   pipeline.push({ $sort: { createdAt: -1 } });
 
@@ -144,7 +200,6 @@ if (keyword) {
       totalFiltered: [{ $count: "count" }]
     }
   });
-
   const result = await Reservations.aggregate(pipeline);
 
   let reservations = result[0]?.data || [];
@@ -163,23 +218,24 @@ if (keyword) {
 
   reservations = reservations.map(item => {
     const formatted = reservationsFormatter(item);
-    if (formatted.conditionType == "noCondition"||formatted.conditionType=="ticketRequirement"||formatted.conditionType=="customText"||formatted.conditionType=="ticketRequirement") {
+    if (formatted.conditionType == "noCondition" || formatted.conditionType == "ticketRequirement" || formatted.conditionType == "customText" || formatted.conditionType == "ticketRequirement") {
       delete formatted.amount;
-      if(formatted.conditionType == "noCondition")
-      {
-      delete formatted.ticketType;
+      if (formatted.conditionType == "noCondition") {
+        delete formatted.ticketType;
       }
     }
-    else{
-            delete formatted.ticketType;
+    else {
+      delete formatted.ticketType;
     }
     return formatted;
   });
-  return {reservations , meta}
+  return { reservations, meta }
 }
 
 
-const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationStatus,reservationId }) => {
+const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationStatus, reservationId }) => {
+  const now = getCurrentDateInTimezone({ timezone });
+
   let organizationsIds = Array.isArray(organizationsId)
     ? organizationsId
     : JSON.parse(organizationsId || '[]');
@@ -190,16 +246,30 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
       $match: {
         ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
         ...(organizationsIds.length > 0 && { organizationId: { $in: organizationsIds } }),
-        ...(reservationStatus && { reservationStatus:reservationStatus }),
+        ...(reservationStatus && { reservationStatus: reservationStatus }),
         ...(reservationId && { reservationId: new mongoose.Types.ObjectId(reservationId) })
       }
     },
     {
-      $lookup: {
-        from: "users",
-        localField: "userId",
-        foreignField: "_id",
-        as: "user"
+  $lookup: {
+    from: "userreservations",
+    localField: "_id",          // reservation _id
+    foreignField: "_id",        // reservation _id
+    pipeline: [
+      {
+        $project: {
+          firstName: 1,
+          lastName: 1,
+          phoneNumber: 1
+        }
+      }
+    ],
+    as: "user"
+  }
+},
+    {
+      $addFields: {
+        user: { $arrayElemAt: ["$user", 0] }
       }
     },
     { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
@@ -227,7 +297,7 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
       $project: {
         _id: 1,
         userId: 1,
-        userName: { $concat: ["$user.firstName", " ", "$user.lastName"] },
+        user: 1,
         partySize: 1,
         reservationType: 1,
         organizationId: 1,
@@ -239,6 +309,7 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
         optionalEventId: 1,
         createdAt: 1,
         updatedAt: 1,
+        notes: 1,
         member: "Gold",
         eventTitle: { $ifNull: ["$event.basicInfo.title", "No Event Title"] }
       }
@@ -246,34 +317,44 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
   ];
 
 
-if (range == "monthly") {
-  const { start, end } = getStartAndEndOfMonth(today, timezone);
+  if (range == "monthly") {
+    const { start, end } = getStartAndEndOfMonth(now, timezone);
 
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
-if (range == "weekly") {
-  const { start, end } = getStartAndEndOfWeek(today, timezone);
+    pipeline.push({
+      $match: {
+        "timingSlots.dateTimeSlots": {
+          $elemMatch: {
+            date: { $gte: start, $lt: end }
+          }
+        }
+      }
+    });
+  }
+  if (range == "weekly") {
+    const { start, end } = getStartAndEndOfWeek(now, timezone);
 
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
-if (range == "today") {
-    const start = new Date(today);
-    const end = new Date(new Date(today).setDate(start.getDate() + 1));
-
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
+    pipeline.push({
+      $match: {
+        "timingSlots.dateTimeSlots": {
+          $elemMatch: {
+            date: { $gte: start, $lt: end }
+          }
+        }
+      }
+    });
+  }
+  if (range == "today") {
+    const { start, end } = getStartAndEndOfDay(now, timezone);
+    pipeline.push({
+      $match: {
+        "timingSlots.dateTimeSlots": {
+          $elemMatch: {
+            date: { $gte: start, $lt: end }
+          }
+        }
+      }
+    });
+  }
   // Apply filters
   if (status) {
     pipeline.push({ $match: { status } });
@@ -291,18 +372,18 @@ if (range == "today") {
     });
   }
 
-if (keyword) {
-  const keywordMatch = buildKeywordQueryFromModels(
-    [
-      { schema: UserReservations.schema }
-    ],
-    keyword
-  );
+  if (keyword) {
+    const keywordMatch = buildKeywordQueryFromModels(
+      [
+        { schema: UserReservations.schema }
+      ],
+      keyword
+    );
 
-  if (Object.keys(keywordMatch).length) {
-    pipeline.push({ $match: keywordMatch });
+    if (Object.keys(keywordMatch).length) {
+      pipeline.push({ $match: keywordMatch });
+    }
   }
-}
 
   pipeline.push({ $sort: { createdAt: -1 } });
 
@@ -318,7 +399,7 @@ if (keyword) {
   });
 
   const result = await UserReservations.aggregate(pipeline);
-
+console.log("pipeline",result );
   let reservations = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
@@ -335,26 +416,26 @@ if (keyword) {
 
   reservations = reservations.map(item => {
     const formatted = reservationsFormatterAdjustDates(item);
-    if (formatted.conditionType == "noCondition"||formatted.conditionType=="ticketRequirement"||formatted.conditionType=="customText"||formatted.conditionType=="ticketRequirement") {
+    if (formatted.conditionType == "noCondition" || formatted.conditionType == "ticketRequirement" || formatted.conditionType == "customText" || formatted.conditionType == "ticketRequirement") {
       delete formatted.amount;
-      if(formatted.conditionType == "noCondition")
-      {
-      delete formatted.ticketType;
+      if (formatted.conditionType == "noCondition") {
+        delete formatted.ticketType;
       }
     }
-    else{
-            delete formatted.ticketType;
+    else {
+      delete formatted.ticketType;
     }
     return formatted;
   });
-  return {reservations , meta}
+  return { reservations, meta }
 }
 
 
 
-const findUserReservationById = async (id, data) => {
-  return UserReservations.findByIdAndUpdate(id, data, { new: true });
+const findUserReservationById = async (id) => {
+  return UserReservations.findById(id);
 };
+
 
 const findUserById = async (id) => {
   return User.findById(id);

@@ -1,5 +1,6 @@
 const { getWithFilters, getModelCounts } = require("@dbUtils/queryUtil");
 const TicketingsModel = require("@TicketingsModel");
+const { TicketingBookings } = require("@TicketingBookingsModel");
 
 // Create
 const createTicketing = async (data) => {
@@ -78,6 +79,200 @@ const findByIdAndUpdate = async (id, data) => {
   return TicketingsModel.findByIdAndUpdate(id, data, { new: true }).populate("event");
 };
 
+
+
+const validateTicketsAndQuantity = async (ticketings) => {
+  const errors = [];
+  const ticketSnapshots = [];
+
+  // Count occurrences of each ticketId in payload
+  const ticketCounts = ticketings.reduce((acc, t) => {
+    const key = t.ticketId.toString();
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  for (const ticketId of Object.keys(ticketCounts)) {
+    const countInPayload = ticketCounts[ticketId];
+    const ticket = await TicketingsModel.findById(ticketId);
+
+    if (!ticket) {
+      errors.push({ ticketId, message: "Ticket not found" });
+      continue;
+    }
+
+    // Fetch total booked for global capacity
+    const totalBooked = await TicketingBookings.countDocuments({
+      "ticket.ticketId": ticketId,
+    });
+
+    const remainingGlobalQty = ticket.quantity - totalBooked;
+
+    // ------------------------------------------
+    // CASE 1: Ticket has time slots enabled
+    // ------------------------------------------
+    if (ticket.timingSlots?.enabled) {
+      const requestsForTicket = ticketings.filter(
+        (t) => t.ticketId.toString() === ticketId
+      );
+
+      // Flatten slots for easier matching
+      const allSlots = ticket.timingSlots.dateTimeSlots.flatMap(d =>
+        d.timeSlots.map(s => ({
+          ...s.toObject(),
+          date: d.date,
+          slotId: s._id.toString(),
+        }))
+      );
+
+      for (const req of requestsForTicket) {
+        const reqSlot = req.timeSlot;
+
+        // ------------------------------------------
+        // CASE A: Slot is provided → validate slot only
+        // ------------------------------------------
+        if (reqSlot) {
+          const slot = allSlots.find(s => s.slotId === reqSlot);
+
+          if (!slot) {
+            errors.push({
+              ticketId,
+              message: `Time slot not found: ${reqSlot}`,
+            });
+            continue;
+          }
+
+          // Count slot bookings
+          const slotBooked = await TicketingBookings.countDocuments({
+            "ticket.ticketId": ticketId,
+            "ticket.timeSlot": reqSlot,
+          });
+
+          const remainingSlotQty = slot.quantity - slotBooked;
+
+          if (remainingSlotQty <= 0) {
+            errors.push({
+              ticketId,
+              message: `No tickets available for this slot`,
+            });
+            continue;
+          }
+
+          // Slot OK → push snapshot
+          ticketSnapshots.push({
+            ticketId,
+            snapshot: ticket.toObject(),
+            timeSlot: reqSlot,
+          });
+
+        } else {
+          // ------------------------------------------
+          // CASE B: Slot NOT provided → fallback to global quantity
+          // ------------------------------------------
+          if (remainingGlobalQty < countInPayload) {
+            errors.push({
+              ticketId,
+              message: `Not enough tickets available (global)`,
+            });
+            continue;
+          }
+
+          ticketSnapshots.push({
+            ticketId,
+            snapshot: ticket.toObject(),
+            timeSlot: null,
+          });
+        }
+      }
+
+      continue; // Skip non-slot logic
+    }
+
+    // ------------------------------------------
+    // CASE 2: Ticket has NO time slots → global only
+    // ------------------------------------------
+
+    if (remainingGlobalQty <= 0) {
+      errors.push({
+        ticketId,
+        message: "No tickets available (global limit reached).",
+      });
+      continue;
+    }
+
+    if (countInPayload > remainingGlobalQty) {
+      errors.push({
+        ticketId,
+        message: `Not enough tickets available`,
+        requested: countInPayload,
+        available: remainingGlobalQty,
+      });
+      continue;
+    }
+
+    // Push snapshot for normal (non-slot) tickets
+    for (let i = 0; i < countInPayload; i++) {
+      ticketSnapshots.push({
+        ticketId,
+        snapshot: ticket.toObject(),
+        timeSlot: null,
+      });
+    }
+  }
+
+  // Final output
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+
+  return { valid: true, ticketSnapshots };
+};
+
+
+
+const getOrganizationIdFromTicketId = async (ticketId) => {
+  const ticket = await TicketingsModel.findById(ticketId)
+    .populate({
+      path: "event",
+      select: "basicInfo.organization",
+    })
+    .lean(); // optional, gives plain JS object
+
+  if (!ticket) {
+    throw new Error("Ticket not found");
+  }
+
+  // event may be null if not found
+  if (!ticket.event) {
+    throw new Error("Event for this ticket not found");
+  }
+  let organizationId = ticket.event.basicInfo.organization;
+  return organizationId;
+};
+
+
+const getTicketsByOrderIds = async (orderIds) => {
+  if (!orderIds.length) return {};
+
+  const tickets = await TicketingBookings.find({
+    order: { $in: orderIds }
+  })
+    .lean()
+    .select("-__v");
+
+  // Group tickets by orderId
+  const grouped = {};
+
+  tickets.forEach(t => {
+    const id = t.order.toString();
+    if (!grouped[id]) grouped[id] = [];
+    grouped[id].push(t);
+  });
+
+  return grouped;
+};
+
+
 module.exports = {
   createTicketing,
   getTicketingsWithFilters,
@@ -88,5 +283,8 @@ module.exports = {
   findByIdAndUpdate,
   getCounts,
   findById,
-  getTicketingsByEventId
+  getTicketingsByEventId,
+  validateTicketsAndQuantity,
+  getOrganizationIdFromTicketId,
+  getTicketsByOrderIds
 };

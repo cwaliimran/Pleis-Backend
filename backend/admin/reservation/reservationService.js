@@ -24,8 +24,7 @@ const createReservation = async (data) => {
 // Populate venue data for reservations (updated for new schema)
 const getReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { reservations, meta } = await ReservationRepo.getReservations({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip });
+  let { reservations, meta } = await ReservationRepo.getReservations({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, skip });
 
   return {
     reservations,
@@ -79,6 +78,7 @@ const updateReservation = async (id, data) => {
     "optionalEventId",
     "status",
     "organizationId",
+    "notes",
   ];
 
   // -----------------------------
@@ -107,6 +107,7 @@ const updateReservation = async (id, data) => {
       updateData[key] = data[key];
     }
   }
+
 
   if (Object.keys(updateData).length === 0) {
     return Reservation;
@@ -159,12 +160,8 @@ const updateUserReservationStatus = async (id, value) => {
 
 const updateUserReservation = async (data) => {
   const UserReservation = await ReservationRepo.findUserReservationById(data.id);
-  const User = await ReservationRepo.findUserById(data.userId);
 
-
-  // -----------------------------
-  // ALLOWED FIELDS
-  // -----------------------------
+console.log("UserReservation", UserReservation);
   const allowedFields = [
     "firstName",
     "lastName",
@@ -172,12 +169,9 @@ const updateUserReservation = async (data) => {
     "partySize",
     "reservationType",
     "timingSlots",
-
+    "notes",
   ];
 
-  // -----------------------------
-  // TIMING SLOTS UPDATE
-  // -----------------------------
   if (data.timingSlots) {
     if (!UserReservation.timingSlots) {
       UserReservation.timingSlots = { enabled: false, dateTimeSlots: [] };
@@ -188,40 +182,25 @@ const updateUserReservation = async (data) => {
     }
 
     if (Array.isArray(data.timingSlots.dateTimeSlots)) {
-      // Directly update the dateTimeSlots without any date conversion
       UserReservation.timingSlots.dateTimeSlots = data.timingSlots.dateTimeSlots;
     }
   }
 
-  // -----------------------------
-  // APPLY UPDATE FIELDS
-  // -----------------------------
   const updateData = {};
   for (const key of allowedFields) {
-    if (data[key] !== undefined) {
+    if (data[key] !== undefined && key !== "timingSlots") {
       updateData[key] = data[key];
     }
   }
-
-  if (Object.keys(updateData).length === 0) {
-    return UserReservation;
-  }
-    if (data.firstName || data.lastName || data.phoneNumber) {
-    const updateUserData = {};
-    if (data.firstName) updateUserData.firstName = data.firstName;
-    if (data.lastName) updateUserData.lastName = data.lastName;
-    if (data.phoneNumber) updateUserData.phoneNumber = data.phoneNumber;
-
-    // Update the user details
-    Object.assign(User, updateUserData);
-    await User.save();
-  }
-
-  // Apply updates to the reservation
+console.log("updateData",updateData );
   Object.assign(UserReservation, updateData);
+
   await UserReservation.save();
 
-  return { message: "Reservation updated successfully", reservation: UserReservation };
+  return {
+    message: "Reservation updated successfully",
+    reservation: UserReservation
+  };
 };
 
 

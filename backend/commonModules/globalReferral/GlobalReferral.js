@@ -1,76 +1,91 @@
 const mongoose = require("mongoose");
+const { nanoid } = require("nanoid");
 
 // Global Referral Program Schema (admin-controlled)
 const globalReferralSchema = new mongoose.Schema({
-  // Referrer reward for successful referral (fixed reward)
-  referrerRewardAmount: { type: Number, required: true }, // Reward for the referrer (e.g., €40)
+  publicId: {
+    type: String,
+    unique: true,
+    index: true,
+    default: () => nanoid(),
+  },
 
-  // Referred user rewards
-  referredUserRewardAmount: { type: Number, required: true }, // Reward for referred user based on their purchase (e.g., €4 for every €5 purchase)
-  referredUserAddMoneyReward: { type: Number, required: true }, // Reward for referred user when they add money to their account (e.g., €15)
-  referredUserCardReward: { type: Number, required: true }, // Reward for referred user when they order a physical card (e.g., €20)
+  publicCreatorId: {
+    type: String,
+    unique: true,
+    index: true,
+    default: () => nanoid(),
+  },
 
-  // Conditions for referred user to qualify
-  minimumPurchases: { type: Number, required: true }, // Minimum number of purchases for referred user to qualify for reward
-  purchaseThreshold: { type: Number, required: true }, // Minimum amount for each purchase (e.g., €5)
-  
-  // Program settings
-  expiryDate: { type: Date, required: true }, // Expiry date of the referral program
+  rewardAmount: { type: Number, required: true },
+
+  minimumPurchases: { type: Number, required: true },
+  purchaseThresholdAmount: { type: Number, required: true },
+
+  creator: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User", // Reference to the User model
+    required: true,
+  },
+
+  expiryDate: { type: Date, required: true },
+
   status: {
     type: String,
-    enum: ["active", "inactive", "ended"], // Whether the program is active, inactive, or ended
-    default: "active", // Default status is "active"
+    enum: ["active", "inactive", "deleted"],
+    default: "active",
   },
-  createdAt: { type: Date, default: Date.now }, // When the program was created
-  updatedAt: { type: Date, default: Date.now }, // When the program was last updated
+
+  type: {
+    type: String,
+    enum: ["global", "company", "organizer", "user"],
+    required: true,
+  },
+
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
 });
 
-// Admin can update or manage the referral program settings
-globalReferralSchema.methods.updateProgram = async function (newData) {
-  // Update the global referral conditions
-  this.referrerRewardAmount = newData.referrerRewardAmount || this.referrerRewardAmount;
-  this.referredUserRewardAmount = newData.referredUserRewardAmount || this.referredUserRewardAmount;
-  this.referredUserAddMoneyReward = newData.referredUserAddMoneyReward || this.referredUserAddMoneyReward;
-  this.referredUserCardReward = newData.referredUserCardReward || this.referredUserCardReward;
-  this.minimumPurchases = newData.minimumPurchases || this.minimumPurchases;
-  this.purchaseThreshold = newData.purchaseThreshold || this.purchaseThreshold;
-  this.expiryDate = newData.expiryDate || this.expiryDate;
-  this.status = newData.status || this.status;
+// Pre-save hook to check for an existing active global referral program
+globalReferralSchema.pre('save', async function (next) {
+  if (this.status === "active" && this.type === "global") {
+    // Check if there's already an active global referral program
+    const existingGlobalReferral = await mongoose.models.GlobalReferral.findOne({
+      type: "global",
+      status: "active",
+    });
 
-  this.updatedAt = Date.now(); // Update timestamp
-  await this.save(); // Save the updated program conditions
-  return this; // Return the updated conditions
-};
-
-// Method to check if referred user meets the conditions for rewards
-globalReferralSchema.methods.checkConditions = function (purchasesMade, totalAmountSpent, addMoney, orderCard) {
-  // Check if the referred user has met the conditions for the "Spend €5 on 3 purchases" reward
-  if (purchasesMade >= this.minimumPurchases && totalAmountSpent >= this.purchaseThreshold * this.minimumPurchases) {
-    return {
-      rewardType: "spendPurchasesReward",
-      rewardAmount: this.referredUserRewardAmount,
-    };
+    if (existingGlobalReferral) {
+      const error = new Error("An active global referral program already exists.");
+      next(error);  // Stop saving the document
+      return;  // Ensure the next() call doesn't run
+    }
   }
+  next();  // Proceed with saving the document
+});
 
-  // Check if the referred user has added money to their account
-  if (addMoney) {
-    return {
-      rewardType: "addMoneyReward",
-      rewardAmount: this.referredUserAddMoneyReward,
-    };
+// Pre-update hook to prevent updating the status to 'active' if another global referral is already active
+globalReferralSchema.pre('findOneAndUpdate', async function (next) {
+  const update = this.getUpdate();
+
+  // Check if we're trying to set this document's status to 'active' and the type is 'global'
+  if (update.status === "active" && update.type === "global") {
+    // Check if there's already an active global referral program
+    const existingGlobalReferral = await mongoose.models.GlobalReferral.findOne({
+      type: "global",
+      status: "active",
+    });
+
+    if (existingGlobalReferral) {
+      const error = new Error("An active global referral program already exists.");
+      next(error);  // Stop updating the document
+      return;  // Ensure the next() call doesn't run
+    }
   }
+  next();  // Proceed with the update operation
+});
 
-  // Check if the referred user has ordered a physical card
-  if (orderCard) {
-    return {
-      rewardType: "cardReward",
-      rewardAmount: this.referredUserCardReward,
-    };
-  }
-
-  return { error: "Conditions not met for any rewards." };
-};
-
+// Model for the global referral schema
 const GlobalReferral = mongoose.model("GlobalReferral", globalReferralSchema);
 
 module.exports = {

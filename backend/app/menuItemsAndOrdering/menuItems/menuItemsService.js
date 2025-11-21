@@ -5,7 +5,7 @@ const { formatMenuItem } = require("./formatter/formatMenuItems");
 const MenuItemCategories = require("@MenuItemCategoriesModel");
 const { findOrganizationWithSelectFilter } = require("../../organizationProfile/organizationProfileRepository");
 
-const getMenuItems = async ({ timezone, organization }) => {
+const getMenuItems = async ({ userId, timezone, organization }) => {
   // 1️⃣ Get menu ID for the organization
   const menuId = await menuItemRepo.getMenuIdByOrganization(organization);
   if (!menuId) {
@@ -24,7 +24,10 @@ const getMenuItems = async ({ timezone, organization }) => {
   const categoryIds = [...new Set(menuItems.map(item => item.category.toString()))];
 
   // 4️⃣ Fetch category names in batch
-  const categories = await MenuItemCategories.find({ _id: { $in: categoryIds } }).select("_id title");
+  const [categories, recommended] = await Promise.all([
+    MenuItemCategories.find({ _id: { $in: categoryIds } }).select("_id title").lean(),
+    menuItemRepo.getOrganizationHybridRecommendedItems(userId, organization)
+  ]);
   const categoryMap = categories.reduce((acc, cat) => {
     acc[cat._id.toString()] = cat.title;
     return acc;
@@ -58,13 +61,10 @@ const getMenuItems = async ({ timezone, organization }) => {
     organizationDetails.basicInfo.media.logo = getFullImageUrl(organizationDetails.basicInfo.media.logo);
   }
 
+  let formattedRecommended = recommended?.map(item => formatMenuItem(item, timezone));
 
-  //TODO user recommended items based on previous orders
-  return { organizationDetails, recommended: [], menu };
+  return { organizationDetails, recommended: formattedRecommended, menu };
 };
-
-
-
 
 const getMenuItemDetails = async (id) => {
   const [menuItem, getRecommendedItems] = await Promise.all([
@@ -79,9 +79,19 @@ const getMenuItemDetails = async (id) => {
   return { menuItem: formattedMenuItem, recommended: formattedRecommended };
 };
 
+const getHybridRecommendedItems = async ({ userId, organization }) => {
+  const recommended = await menuItemRepo.getOrganizationHybridRecommendedItems(
+    userId,
+    organization,
+    10
+  );
+  let formatted = recommended.map(item => formatMenuItem(item));
+  return { recommended: formatted };
+};
 
 
 module.exports = {
   getMenuItems,
   getMenuItemDetails,
+  getHybridRecommendedItems
 };
