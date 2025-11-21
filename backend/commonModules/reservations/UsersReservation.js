@@ -63,7 +63,21 @@ const UserReservationsSchema = new mongoose.Schema(
         default: [],
       },
     },
-
+firstName: { type: String, default: "", }, 
+lastName: { type: String, default: "", },
+    phoneNumber: {
+      code: {
+        // Country code for phone number
+        type: String,
+        default: "",
+      },
+      number: {
+        // Phone number without country code
+        type: String,
+        default: "",
+      },
+      default: {},
+    },
 
     optionalEventId: {
       type: String,
