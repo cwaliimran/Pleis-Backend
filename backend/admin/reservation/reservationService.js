@@ -108,6 +108,7 @@ const updateReservation = async (id, data) => {
     }
   }
 
+
   if (Object.keys(updateData).length === 0) {
     return Reservation;
   }
@@ -167,7 +168,8 @@ console.log("UserReservation", UserReservation);
     "phoneNumber",
     "partySize",
     "reservationType",
-    "timingSlots"
+    "timingSlots",
+    "notes",
   ];
 
   if (data.timingSlots) {

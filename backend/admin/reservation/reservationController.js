@@ -381,7 +381,6 @@ const updateReservation = async (req, res) => {
       }
     }
   } else {
-    console.log("here")
     //don't check for empty array if timingSlots is disabled only apply format conversion
     if (data.timingSlots) {
       const slots = data.timingSlots.dateTimeSlots || [];
@@ -407,7 +406,6 @@ const updateReservation = async (req, res) => {
     }
   }
   try {
-    return;
     const updated = await reservationService.updateReservation(id, data);
     if (updated && updated.error) {
       return sendResponse({
@@ -600,6 +598,7 @@ const updateUserReservation = async (req, res) => {
     phoneNumber,
     reservationType,
     timingSlots,
+    notes,
   } = req.body;
   if (
     !validateParams(req, res, {
@@ -619,6 +618,7 @@ const updateUserReservation = async (req, res) => {
     phoneNumber,
     reservationType,
     timingSlots,
+    notes,
 
   };
 

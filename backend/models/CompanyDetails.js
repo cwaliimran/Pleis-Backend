@@ -70,7 +70,7 @@ const CompanySchema = new mongoose.Schema(
         {
           club: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Users",
+            ref: "User",
           },
           //club points and collaboration add here
         },

@@ -116,16 +116,26 @@ const formatEventResponse = (eventObject, options = {}) => {
     if (Array.isArray(org.otherInfo?.galleryMedia)) {
       // Convert galleryMedia items to direct URL strings
       org.otherInfo.galleryMedia = org.otherInfo.galleryMedia.map((item) => {
-      if (typeof item === "string") {
-        return getFullImageUrl(item);
-      } else if (item && typeof item === "object" && item.name) {
-        return getFullImageUrl(item.name);
-      }
-      return item;
+        if (typeof item === "string") {
+          return getFullImageUrl(item);
+        } else if (item && typeof item === "object" && item.name) {
+          return getFullImageUrl(item.name);
+        }
+        return item;
       });
     }
     if (org.operatingHours) {
       org.operatingHours = transformOperatingHoursToLocal(org.operatingHours, timezone);
+    }
+  }
+
+
+  if (event.basicInfo?.partnerOrganization) {
+    const org = event.basicInfo.partnerOrganization;
+    if (org.basicInfo?.media) {
+      if (org.basicInfo.media.logo)
+        org.basicInfo.media.logo = getFullImageUrl(org.basicInfo.media.logo);
+
     }
   }
 

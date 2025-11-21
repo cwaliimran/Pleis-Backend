@@ -82,9 +82,12 @@ const findEventById = async (id) => {
           select: "title otherInfo",
         },
       ],
+    })
+    .populate({
+      path: "basicInfo.partnerOrganization",
+      select: "basicInfo.name otherInfo.description basicInfo.media.logo",
     });
-};
-
+}
 
 
 // Aggregate pipeline

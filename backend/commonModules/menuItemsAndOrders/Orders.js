@@ -18,7 +18,7 @@ const OrdersSchema = new mongoose.Schema(
             default: () => `ORD-${generateOrderId()}`,
         },
         organization: { type: mongoose.Schema.Types.ObjectId, ref: "Organizations", required: true },
-        user: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true },
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
         items: [OrderItemSchema],
         totalPrice: { type: Number, required: true },
         status: {
@@ -39,7 +39,6 @@ const OrdersSchema = new mongoose.Schema(
         tableNumber: {
             type: String,
             required: function () { return this.pickupType === "tableService"; },
-            select: false,
         },
     },
     { timestamps: true }

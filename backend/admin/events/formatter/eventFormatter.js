@@ -44,6 +44,15 @@ const formatEventResponse = (eventObject, options = {}) => {
       org.operatingHours = transformOperatingHoursToLocal(org.operatingHours, timezone);
     }
   }
+  // partnerOrganization formatting
+  if (event.basicInfo?.partnerOrganization) {
+    const org = event.basicInfo.partnerOrganization;
+    if (org.basicInfo?.media) {
+      if (org.basicInfo.media.logo)
+        org.basicInfo.media.logo = getFullImageUrl(org.basicInfo.media.logo);
+    
+    }
+  }
 
   // Venue floor plan
   if (event.basicInfo?.venue?.floorPlan) {
