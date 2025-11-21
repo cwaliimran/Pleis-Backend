@@ -1,7 +1,7 @@
 const { convertUtcToTimezone } = require("@utils/responseUtil"); // assume you have this util
 const { getFullImageUrl } = require("@utils/imageHelper");
 
-const formatTicketingBooking = (item, options = {}) => {
+const formatTransaction = (item, options = {}) => {
   if (!item) return null;
 
   let obj = typeof item.toObject === "function" ? item.toObject() : item;
@@ -10,6 +10,11 @@ const formatTicketingBooking = (item, options = {}) => {
    if (obj.organization?.basicInfo?.media?.logo) {
       const logoName = obj.organization.basicInfo.media.logo;
       obj.organization.basicInfo.media.logo = getFullImageUrl(logoName);
+    }
+
+    if(obj.event?.basicInfo?.media){
+      const media = obj.event.basicInfo.media.name;
+      obj.event.basicInfo.media = getFullImageUrl(media);
     }
 
   // Convert event.schedule.startDateTime and endDateTime to timezone if present
@@ -67,4 +72,4 @@ const formatTicketingBooking = (item, options = {}) => {
   return obj;
 };
 
-module.exports = { formatTicketingBooking };
+module.exports = { formatTransaction };

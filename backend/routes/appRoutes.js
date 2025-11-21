@@ -42,5 +42,7 @@ router.use("/global-referral", require("../app/globalReferral/globalReferralRout
 
 //ticketing bookings
 router.use("/ticketing-bookings", require("../app/bookings/ticketings/ticketingBookingRoutes"));
+//transactions
+router.use("/transactions", require("../app/bookings/transactions/transactionsRoutes"));
 
 module.exports = router;

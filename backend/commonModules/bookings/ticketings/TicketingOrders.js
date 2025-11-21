@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 
 const ticketingOrderSchema = new mongoose.Schema(
     {
-
         user: { //person who made the booking
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
@@ -15,16 +14,29 @@ const ticketingOrderSchema = new mongoose.Schema(
             required: true,
             index: true,
         },
+
+        purpose: {
+            type: String,
+            enum: ["eventTicketPurchase", "reservation"],
+            default: "eventTicketPurchase",
+            required: true,
+        },
+
         event: { // event for which the booking is made
             type: mongoose.Schema.Types.ObjectId,
             ref: "Event",
-            required: true,
-            index: true,
+            default: null,
+            required: function () {
+                return this.purpose === "eventTicketPurchase";
+            }
         },
-        status: {
-            type: String,
-            enum: ["pending", "confirmed", "cancelled", "completed"],
-            default: "pending",
+        reservation: { // reservation for which the booking is made
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Reservations",
+            default: null,
+            required: function () {
+                return this.purpose === "reservation";
+            }
         },
 
         orderPricing: {
@@ -47,7 +59,17 @@ const ticketingOrderSchema = new mongoose.Schema(
                 enum: ["pending", "completed", "failed"],
                 default: "pending",
             },
-        }
+        },
+
+        ticketsPurchased: { type: Number, default: 0 },
+        pointsEarned: { type: Number, default: 0 },
+        pointsRedeemed: { type: Number, default: 0 },
+
+        status: {
+            type: String,
+            enum: ["pending", "confirmed", "cancelled", "completed"],
+            default: "pending",
+        },
     },
     { timestamps: true }
 );

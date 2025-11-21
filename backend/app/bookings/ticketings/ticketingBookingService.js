@@ -25,12 +25,42 @@ const createTicketingBookingService = async (data, timezone) => {
   if (validationResult.ticketSnapshots.length > 0) {
     eventId = validationResult.ticketSnapshots[0].snapshot.event;
   }
+
+  let sumOfPrices = data.ticketings.reduce((sum, t) => {
+    // Find the matching snapshot for this ticket
+    const snapshot = validationResult.ticketSnapshots.find(
+      ts => ts.ticketId.toString() === t.ticketId.toString()
+    );
+    // Add its price (or 0 if missing)
+    return sum + (snapshot?.snapshot.price || 0);
+  }, 0);
+
+  // Set tax rate (0 if no tax)
+  let taxRate = 0.0; // 0.1 for 10%, etc.
+
+  // Calculate tax amount
+  let taxAmount = taxRate > 0 ? parseFloat((sumOfPrices * taxRate).toFixed(2)) : 0.0;
+
+  // Calculate total
+  let totalAmount = parseFloat((sumOfPrices + taxAmount).toFixed(2));
+
+  let orderPricing = {
+    subtotal: parseFloat(sumOfPrices.toFixed(2)),
+    taxAmount,
+    total: totalAmount,
+    currency: "€",
+  };
+
   const orderDoc = {
     user: data.user,
     organization: organizationId,
     event: eventId,
-    status: "pending",
-    orderPricing: data.orderPricing || {},
+    status: "confirmed", // directly confirmed as payment is already processed
+    purpose: "eventTicketPurchase",
+    orderPricing,
+    pointsEarned: 120,
+    pointsRedeemed: 0,
+    ticketsPurchased: data.ticketings.length,
     paymentDetails: data.paymentDetails || {}
   };
 
@@ -42,13 +72,30 @@ const createTicketingBookingService = async (data, timezone) => {
       ts => ts.ticketId.toString() === t.ticketId.toString()
     );
 
+    // Only include the selected inner timeSlot in snapshot
+    let selectedTimeSlot = null;
+    if (snapshot.snapshot.timingSlots?.enabled && t.timeSlot) {
+      const allTimeSlots = snapshot.snapshot.timingSlots.dateTimeSlots.flatMap(d => d.timeSlots);
+      selectedTimeSlot = allTimeSlots.find(s => s._id.toString() === t.timeSlot);
+    }
+
+    const snapshotToSave = { ...snapshot.snapshot };
+    if (selectedTimeSlot) {
+      snapshotToSave.timingSlots = {
+        enabled: true,
+        selectedSlot: selectedTimeSlot
+      };
+    } else {
+      snapshotToSave.timingSlots = null; // or remove entirely
+    }
+
     return {
       order: order._id,
       user: data.user,
       organization: organizationId,
       ticket: {
         ticketId: t.ticketId,
-        snapshot: snapshot.snapshot,
+        snapshot: snapshotToSave,
         timeSlot: t.timeSlot || null,
         protectionUserDetails: t.protectionUserDetails || {},
       },

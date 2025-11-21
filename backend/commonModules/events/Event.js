@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const { RecurringEventSchema } = require("./RecurringEventSchema");
 const { nanoid } = require("nanoid");
+const { LocationSchema } = require("../../shared/locations/locationSchmea");
 
 const eventSchema = new mongoose.Schema(
   {
@@ -43,21 +44,9 @@ const eventSchema = new mongoose.Schema(
         ref: "Venues",
         required: true,
       },
-      venueLocation: { //only used for nearby events without populating venue
-        type: {
-          type: String,
-          enum: ['Point'],
-          default: 'Point',
-        },
-        coordinates: {
-          type: [Number], // [longitude, latitude]
-          validate: {
-            validator: function (arr) {
-              return Array.isArray(arr) && arr.length === 2;
-            },
-            message: 'venueLocation.coordinates must be [longitude, latitude]',
-          },
-        },
+      venueLocation: {
+        type: LocationSchema,
+        default: {},
       },
       categories: [
         {
@@ -109,7 +98,7 @@ const eventSchema = new mongoose.Schema(
       enum: ["active", "inactive", "completed", "deleted"],
       default: "active",
     },
-    
+
     meta: {
       revenue: {
         type: Number,

@@ -133,7 +133,7 @@ const createEvent = async (req, res) => {
   // ==============================
   // VENUE VALIDATION (already done)
   // ==============================
-  const venueItem = await getVenueDetails(basicInfo.venue, ["location.coordinates"]);
+  const venueItem = await getVenueDetails(basicInfo.venue, []);
   if (!venueItem) {
     return sendResponse({
       res,
