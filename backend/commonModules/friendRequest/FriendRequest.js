@@ -10,7 +10,7 @@ const friendRequestSchema = new mongoose.Schema(
       },
       status: {
         type: String,
-        enum: ["pending", "accepted", "rejected", "cancelled", "expired"],
+        enum: ["pending", "accept", "reject", "cancel", "expired"],
         default: "pending",
       },
     },
@@ -23,7 +23,7 @@ const friendRequestSchema = new mongoose.Schema(
       },
       status: {
         type: String,
-        enum: ["pending", "accepted", "rejected", "cancelled", "expired"],
+        enum: ["pending", "accept", "reject", "cancel", "expired"],
         default: "pending",
       },
     },
@@ -46,48 +46,41 @@ friendRequestSchema.index(
 // -----------------------------------------------
 // 🚀 PRE-SAVE VALIDATIONS (ALL LOGIC HERE)
 // -----------------------------------------------
-friendRequestSchema.pre("save", async function (next) {
+friendRequestSchema.pre('findOneAndUpdate', async function (next) {
   try {
-    const senderId = this.sender.id.toString();
-    const receiverId = this.receiver.id.toString();
+    const { sender, receiver } = this._update;
 
-    // 1️⃣ Prevent sending to yourself
+    // Extract user ids to check
+    const senderId = sender?.id || this.sender?.id;
+    const receiverId = receiver?.id || this.receiver?.id;
+
+    if (!senderId || !receiverId) return next();
+
+    // Prevent sending a request to yourself
     if (senderId === receiverId) {
       return next(new Error("You cannot send a request to yourself."));
     }
 
-    // 2️⃣ Check if sender already sent request before
+    // Check if a friend request already exists with "pending" status
     const existing = await mongoose.model("FriendRequest").findOne({
       "sender.id": senderId,
       "receiver.id": receiverId,
     });
 
-    if (existing) {
-      if (existing.sender.status === "pending") {
-        return next(new Error("Friend request already sent."));
-      }
-      if (existing.sender.status === "accepted") {
-        return next(new Error("You are already friends."));
-      }
+    if (existing && existing.sender.status === "pending") {
+      return next(new Error("Friend request already sent."));
     }
 
-    // 3️⃣ Check if receiver already sent request
     const reverse = await mongoose.model("FriendRequest").findOne({
       "sender.id": receiverId,
       "receiver.id": senderId,
     });
 
-    if (reverse) {
-      if (reverse.sender.status === "pending") {
-        return next(new Error("This person already sent you a request. Please accept it."));
-      }
-      if (reverse.sender.status === "accepted") {
-        return next(new Error("You are already friends."));
-      }
+    if (reverse && reverse.sender.status === "pending") {
+      return next(new Error("This person already sent you a request. Please accept it."));
     }
 
     next();
-
   } catch (err) {
     next(err);
   }

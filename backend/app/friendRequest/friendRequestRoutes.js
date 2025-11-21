@@ -3,6 +3,8 @@ const {
   getFriends,
   createFriendRequest,
   getFriendRequests,
+  updateFriendRequests,
+  unfriend
 } = require("./friendRequestController"); // Assuming you have a separate controller for promo codes
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -20,6 +22,8 @@ const promoCodeRateLimiter = createRateLimiter("PromoCodes");
 router.get("/", getFriends);
 router.post("/add-friend", createFriendRequest);
 router.get("/get-friend-requests", getFriendRequests);
+router.put("/update-friend-request/:id", updateFriendRequests);
+router.delete("/unfriend/:id", unfriend);
 
 
 module.exports = router;

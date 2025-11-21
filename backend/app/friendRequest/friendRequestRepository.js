@@ -195,7 +195,7 @@ const createFriendRequest = async (data) => {
   }
 };
 
-const getFriendRequests = async ({ page, limit, userId }) => {
+const getFriendRequests = async ({ page, limit, userId, status }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 console.log("userID",userId );
   const me = new mongoose.Types.ObjectId(userId);
@@ -205,7 +205,7 @@ const pipeline = [
   {
     $match: {
       "receiver.id": me,
-      "receiver.status": "pending"
+      "receiver.status": status
     }
   },
 
@@ -276,8 +276,92 @@ const pipeline = [
 };
 
 
+
+
+
+
+const updateFriendRequests = async ({  id, status, userId }) => {
+console.log("status",status );
+  const friendRequest = await FriendRequest.findById(id);
+console.log("friendRequest",friendRequest );
+
+  if (!friendRequest) {
+    return { error: "friend_request_not_found" };
+  }
+
+  if (friendRequest.receiver.id.toString() !== userId) {
+    return { error: "user_not_involved" };  
+  }
+
+
+if (friendRequest.receiver.id.toString() === userId) {
+    friendRequest.receiver.status = status;
+    friendRequest.sender.status = status; 
+  }
+
+  try {
+    await friendRequest.save();
+    return { message: "Friend request status updated successfully", friendRequest };
+  } catch (error) {
+    return { error: "Error updating friend request" };  // Error handling if save fails
+  }
+};
+const getFriendRequestById = async (id) => {
+  return FriendRequest.findById(id);
+};
+
+const unfriend = async (id, userId) => {
+  try {
+    const friendRequest = await getFriendRequestById(id);
+    console.log("Fetched FriendRequest:", friendRequest);
+
+    if (!friendRequest) {
+      console.log("Error: Friend request not found");
+      return { error: "friend_request_not_found" };
+    }
+
+    // Check if the user is either the sender or receiver
+    if (
+      friendRequest.sender.id.toString() !== userId.toString() &&
+      friendRequest.receiver.id.toString() !== userId.toString()
+    ) {
+      console.log("Error: User not involved in this request");
+      return { error: "user_not_involved" }; // User is neither sender nor receiver
+    }
+
+    // Check if the status is "accepted" before allowing deletion
+    if (friendRequest.sender.status !== "accept" && friendRequest.receiver.status !== "accept") {
+      console.log("Error: Cannot delete request, it is not accepted");
+      return { message: "Cannot delete request, it is not accepted" };
+    }
+
+    // Log before deletion
+    console.log(`Deleting friend request with ID: ${id} and userID: ${userId}`);
+
+    // Delete the friend request entry from the database
+    const result = await FriendRequest.deleteOne({ _id: id });
+    console.log("Deletion result:", result);
+
+    if (result.deletedCount === 0) {
+      console.log("Error: Friend request not found for deletion");
+      return { error: "friend_request_not_found" };
+    }
+
+    console.log("Success: Friend request deleted successfully");
+    return { message: "Friend request deleted successfully" };
+  } catch (error) {
+    console.log("Error deleting friend request:", error);
+    return { error: "Error deleting friend request" };
+  }
+};
+
+
+
 module.exports = {
   getFriends,
   createFriendRequest,
-  getFriendRequests
+  getFriendRequests,
+  getFriendRequestById,
+  updateFriendRequests,
+  unfriend,
 };
