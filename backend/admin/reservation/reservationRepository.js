@@ -251,22 +251,22 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
       }
     },
     {
-      $lookup: {
-        from: "users",
-        localField: "userId",
-        foreignField: "_id",
-        pipeline: [
-          {
-            $project: {
-              firstName: 1,
-              lastName: 1,
-              phoneNumber: 1,
-            }
-          }
-        ],
-        as: "user"
+  $lookup: {
+    from: "userreservations",
+    localField: "_id",          // reservation _id
+    foreignField: "_id",        // reservation _id
+    pipeline: [
+      {
+        $project: {
+          firstName: 1,
+          lastName: 1,
+          phoneNumber: 1
+        }
       }
-    },
+    ],
+    as: "user"
+  }
+},
     {
       $addFields: {
         user: { $arrayElemAt: ["$user", 0] }
@@ -399,7 +399,7 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
   });
 
   const result = await UserReservations.aggregate(pipeline);
-
+console.log("pipeline",result );
   let reservations = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
@@ -432,9 +432,10 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
 
 
 
-const findUserReservationById = async (id, data) => {
-  return UserReservations.findByIdAndUpdate(id, data, { new: true });
+const findUserReservationById = async (id) => {
+  return UserReservations.findById(id);
 };
+
 
 const findUserById = async (id) => {
   return User.findById(id);

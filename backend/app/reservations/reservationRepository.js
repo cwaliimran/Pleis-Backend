@@ -1,6 +1,7 @@
 // repositories/ReservationRepository.js
 const Reservations = require("@ReservationsModel");
 const UserReservations = require("@UserReservationsModel");
+const {User} = require("@UserModel");
 const mongoose = require("mongoose");
 const { reservationsFormatter } = require("./formaters/reservationFormetter");
 const {
@@ -14,34 +15,48 @@ const {
 } = require("../../helperUtils/responseUtil");
 const createReservation = async (data) => {
   try {
-    const { reservationId, partySize } = data;  // Get reservationId and partySize from input data
+    const { userId, reservationId, partySize } = data;
 
-    // Aggregate query to fetch the amount from Reservations collection
-    const reservation = await Reservations.aggregate([
-      {
-        $match: {
-          _id: new mongoose.Types.ObjectId(reservationId),  
-        },
-      },
+    const userData = await User.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(userId) } },
       {
         $project: {
-          _id: 0,         
-          amount: { $toDouble: { $ifNull: ["$amount", 0] } },  
-        },
-      },
+          firstName: 1,
+          lastName: 1,
+          phoneCode: "$phoneNumber.code",
+          phoneNumber: "$phoneNumber.number"
+        }
+      }
     ]);
 
-    // If no reservation is found, the amount will be 0
-    const amount = reservation.length > 0 ? reservation[0].amount : 0;
+    if (!userData || userData.length === 0) {
+      throw new Error("User not found");
+    }
 
-    // Calculate total based on partySize
-    data.amount = amount * partySize;  // Multiply the amount with partySize
+    data.firstName = userData[0].firstName || "";
+    data.lastName = userData[0].lastName || "";
+    data.phoneNumber = {
+      code: userData[0].phoneCode || "",
+      number: userData[0].phoneNumber || ""
+    };
 
-    const Reservation = new UserReservations(data);
-    await Reservation.save();
+    const reservation = await Reservations.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(reservationId) } },
+      {
+        $project: {
+          amount: { $toDouble: { $ifNull: ["$amount", 0] } }
+        }
+      }
+    ]);
 
-    // Return the created reservation
-    return Reservation;
+    const amountPerPerson = reservation.length > 0 ? reservation[0].amount : 0;
+
+    data.amount = amountPerPerson * partySize;
+
+    const userReservation = new UserReservations(data);
+    await userReservation.save();
+
+    return userReservation;
   } catch (err) {
     throw err;
   }
@@ -174,6 +189,7 @@ if (keyword) {
 
   let reservations = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+  console.log("reservations",reservations );
 
   const [total, active, inactive] = await Promise.all([
     Reservations.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "deleted" } }),

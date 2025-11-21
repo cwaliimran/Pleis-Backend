@@ -130,16 +130,28 @@ if (cat.eventStartDate) {
 
 
 const generateQRCode = async (reservation) => {
-  // Convert the reservation object into a JSON string
-  const reservationString = JSON.stringify(reservation);  
+  // Pick only required fields
+  const qrData = {
+    reservationType: reservation.reservationType,
+    amount: reservation.amount,
+    timingSlots: reservation.timingSlots,
+    organizationName: reservation.organizationName,
+    eventName: reservation.eventName,
+    userName: reservation.userName,
+    eventDate: reservation.eventDate,
+    eventTime: reservation.eventTime,
+  };
 
-  // Pass the string as the URL (or data for QR code)
-  return qrcode.toDataURL(reservationString);  
+  // Convert to string and generate QR
+  return await qrcode.toDataURL(JSON.stringify(qrData), {
+    errorCorrectionLevel: "H",
+  });
 };
+
 const logQRCode = async (reservation) => {
   try {
-    const qrCode = await generateQRCode(reservation); 
-       return qrCode;  
+    const qrCode = await generateQRCode(reservation);
+    return qrCode;
   } catch (error) {
     console.error("Error generating QR code:", error);
   }
