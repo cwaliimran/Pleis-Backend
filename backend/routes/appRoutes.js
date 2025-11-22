@@ -47,4 +47,10 @@ router.use("/transactions", require("../app/bookings/transactions/transactionsRo
 //transactions
 router.use("/friend-request", require("../app/friendRequest/friendRequestRoutes"));
 
+router.use("/global-loyalty/wallet", require("../app/userWalletService/walletManagement/userWalletRoutes"));
+//global loyalty wallet transactions
+router.use("/global-loyalty/wallet-transactions", require("../app/userWalletService/walletTransactions/globalTransactionsRoutes"));
+
+
+
 module.exports = router;

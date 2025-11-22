@@ -7,7 +7,7 @@ const createOrder = async (orderData) => {
 };
 
 const getOrderById = async (id) => {
-  return Orders.findById(id).populate("organization", "basicInfo.name basicInfo.media.logo");
+  return Orders.findById(id).populate("organization", "basicInfo.name basicInfo.media.logo location");
 };
 
 const getOrdersByUser = async (userId, page, limit, query = {}) => {

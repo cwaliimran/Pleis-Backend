@@ -480,8 +480,9 @@ function isValidNanoid(id) {
 const extractNestedFields = (obj, fieldPath) => {
   const fields = fieldPath.split(".");
   let value = obj;
+
   for (const field of fields) {
-    if (value && value[field]) {
+    if (value !== null && value !== undefined && value[field] !== undefined) {
       value = value[field];
     } else {
       return null;
@@ -489,6 +490,7 @@ const extractNestedFields = (obj, fieldPath) => {
   }
   return value;
 };
+
 
 // Example usage
 const exampleMiddleware = (req, res, next) => {

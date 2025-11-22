@@ -118,6 +118,15 @@
       ],
       "@FriendRequestModel": [
         "backend/commonModules/friendRequest/FriendRequest.js"
+      ],
+      "@GlobalStatusLevelsModel": [
+        "backend/admin/globalLoyalty/statusLevels/GlobalStatusLevels.js"
+      ],
+      "@UserWalletModel": [
+        "backend/commonModules/wallet/userWallet.js"
+      ],
+      "@GlobalWalletTransactionsModel": [
+        "backend/commonModules/wallet/GlobalWalletTransactions.js"
       ]
     }
   },
