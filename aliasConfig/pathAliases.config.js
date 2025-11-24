@@ -38,4 +38,8 @@ module.exports = {
     "@TicketingBookingsModel": "backend/commonModules/bookings/ticketings/TicketingBookings.js",
     "@TicketingOrdersModel": "backend/commonModules/bookings/ticketings/TicketingOrders.js",
     "@FriendRequestModel": "backend/commonModules/friendRequest/FriendRequest.js",
+    "@GlobalStatusLevelsModel": "backend/admin/globalLoyalty/statusLevels/GlobalStatusLevels.js",
+    "@UserWalletModel": "backend/commonModules/wallet/userWallet.js",
+    "@GlobalWalletTransactionsModel": "backend/commonModules/wallet/GlobalWalletTransactions.js",
+
 };
