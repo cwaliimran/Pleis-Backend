@@ -40,34 +40,43 @@ module.exports = {
 const getClubCollaborations = async ({ page, limit, keyword, status, userId, date, organizationId }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
+  // If organizationId exists, use it; otherwise, fall back to userId.
   userId = organizationId || userId;
   const pipeline = [];
-  console.log("user ID ", organizationId);
-  // -----------------------------
-  // USER FILTER
-  // -----------------------------
-  pipeline.push({
-    $match: {
-      ...(userId && { "receiver.id": new mongoose.Types.ObjectId(userId) })
-    }
-  });
 
-  // -----------------------------
-  // STATUS FILTER
-  // -----------------------------
-  if (status) {
+  // ----------------------------- USER FILTER -----------------------------
+  if (status === "accepted") {
+    pipeline.push({
+      $match: {
+        $or: [
+          { "receiver.id": new mongoose.Types.ObjectId(userId) },
+          { "sender.id": new mongoose.Types.ObjectId(userId) }
+        ],
+        "sender.status": "accepted"
+      }
+    });
+  } else {
+    // For other statuses (e.g., pending, rejected), only match receiverId and filter by sender's status.
+    pipeline.push({
+      $match: {
+        ...(userId && { "receiver.id": new mongoose.Types.ObjectId(userId) }),
+        "sender.status": { $ne: "deleted" }
+      }
+    });
+  }
+
+  // ----------------------------- STATUS FILTER -----------------------------
+  if (status && status !== "accepted") {
     pipeline.push({
       $match: { "sender.status": status }
     });
-  } else {
+  } else if (!status) {
     pipeline.push({
       $match: { "sender.status": { $ne: "deleted" } }
     });
   }
 
-  // -----------------------------
-  // DATE FILTER
-  // -----------------------------
+  // ----------------------------- DATE FILTER -----------------------------
   if (date) {
     const start = new Date(date);
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
@@ -78,9 +87,7 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
     });
   }
 
-  // -----------------------------
-  // KEYWORD FILTER
-  // -----------------------------
+  // ----------------------------- KEYWORD FILTER -----------------------------
   const keywordMatch = buildKeywordQueryFromModels(
     [{ schema: ClubCollaborations.schema }],
     keyword
@@ -90,12 +97,8 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
     pipeline.push({ $match: keywordMatch });
   }
 
-  // SORT
-  pipeline.push({ $sort: { createdAt: -1 } });
-
-  // -----------------------------
-  // POPULATE SENDER USER
-  // -----------------------------
+  // ----------------------------- POPULATE SENDER AND RECEIVER -----------------------------
+  // Populate the sender user details
   pipeline.push({
     $lookup: {
       from: "users",
@@ -105,9 +108,7 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
     }
   });
 
-  // -----------------------------
-  // POPULATE RECEIVER USER
-  // -----------------------------
+  // Populate the receiver user details
   pipeline.push({
     $lookup: {
       from: "users",
@@ -117,9 +118,7 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
     }
   });
 
-  // -----------------------------
-  // MERGE POPULATED USERS INTO STRUCTURE
-  // -----------------------------
+  // ----------------------------- MERGE POPULATED USERS -----------------------------
   pipeline.push({
     $addFields: {
       sender: {
@@ -132,6 +131,7 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
               _id: "$$u._id",
               firstName: "$$u.firstName",
               lastName: "$$u.lastName",
+              clubName: "$$u.companyDetails.loyaltySettings.title",
               profileIcon: "$$u.profileIcon"
             }
           }
@@ -147,6 +147,7 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
               _id: "$$u._id",
               firstName: "$$u.firstName",
               lastName: "$$u.lastName",
+              clubName: "$$u.companyDetails.loyaltySettings.title",
               profileIcon: "$$u.profileIcon"
             }
           }
@@ -155,7 +156,7 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
     }
   });
 
-  // Remove temp arrays
+  // ----------------------------- REMOVE TEMP ARRAYS -----------------------------
   pipeline.push({
     $project: {
       senderUser: 0,
@@ -163,9 +164,28 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
     }
   });
 
-  // -----------------------------
-  // PAGINATION + COUNTS
-  // -----------------------------
+  // ----------------------------- SELECTIVE FIELD RETURN (SENDER OR RECEIVER) -----------------------------
+  pipeline.push({
+    $addFields: {
+      selectedUserData: {
+        $cond: {
+          if: { $eq: ["$sender.id", new mongoose.Types.ObjectId(userId)] },
+          then: "$receiver", // If user is sender, return receiver's data
+          else: "$sender"    // If user is receiver, return sender's data
+        }
+      }
+    }
+  });
+
+  // ----------------------------- REMOVE OTHER SIDE -----------------------------
+  pipeline.push({
+    $project: {
+      sender: 0,
+      receiver: 0
+    }
+  });
+
+  // ----------------------------- PAGINATION + COUNTS -----------------------------
   pipeline.push({
     $facet: {
       data: [
@@ -181,7 +201,7 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
   const clubCollaborations = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-  // Extra counts
+  // Extra counts (e.g., total, active, inactive)
   const [total, active, inactive] = await Promise.all([
     ClubCollaborations.countDocuments({
       ...(userId && { "sender.id": userId }),
@@ -209,8 +229,12 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
 };
 
 
+
 const updateClubCollaboration = async (id, data, userId) => {
+  
+
   const clubCollaboration = await clubCollaborationRepo.findClubCollaborationById(id);
+ 
 
   if (!clubCollaboration) {
     throw new Error("Collaboration request not found");
@@ -218,21 +242,28 @@ const updateClubCollaboration = async (id, data, userId) => {
 
   let updated = false;
 
-  // Check if the requesting user is the sender
-  if (clubCollaboration.sender.id.toString() === userId.toString()) {
-    // Update the sender's status directly
-    clubCollaboration.sender.status = data.status;
-    updated = true;
-  }
+  // Check if sender exists and has a valid id
+  if (clubCollaboration.sender && clubCollaboration.sender.id && clubCollaboration.sender.id._id) {
+    const senderId = clubCollaboration.sender.id._id.toString(); // Ensure ObjectId is converted to 
+    if (senderId === userId.toString()) {
+      // Update the sender's status directly
+      clubCollaboration.sender.status = data.status;
+      clubCollaboration.receiver.status = data.status;
+      updated = true;
+    }
+  } 
 
-  // Check if the requesting user is the receiver
-  if (clubCollaboration.receiver.id.toString() === userId.toString()) {
-    // Update the receiver's status directly
-    clubCollaboration.receiver.status = data.status;
-    updated = true;
-  }
-
-  // If no valid update happened
+  // Check if receiver exists and has a valid id
+  if (clubCollaboration.receiver && clubCollaboration.receiver.id && clubCollaboration.receiver.id._id) {
+    const receiverId = clubCollaboration.receiver.id._id.toString(); // Ensure ObjectId is converted 
+    if (receiverId === userId.toString()) {
+      // Update the receiver's status directly
+      clubCollaboration.receiver.status = data.status;
+      clubCollaboration.sender.status = data.status;
+      updated = true;
+    }
+  } 
+  // If no valid update happened, throw an error
   if (!updated) {
     throw new Error("You do not have permission to update this collaboration status");
   }
@@ -249,6 +280,9 @@ const updateClubCollaboration = async (id, data, userId) => {
   await clubCollaboration.save();
   return clubCollaboration;
 };
+
+
+
 
 
 const deleteClubCollaboration = async (id) => {
