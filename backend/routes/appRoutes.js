@@ -49,10 +49,11 @@ router.use("/friend-request", require("../app/friendRequest/friendRequestRoutes"
 //friends-suggestions
 router.use("/friends-suggestions", require("../app/friendsSuggestion/friendsSuggestionRoutes"));
 
-
-router.use("/global-loyalty/wallet", require("../app/userWalletService/walletManagement/userWalletRoutes"));
 //global loyalty wallet transactions
 router.use("/global-loyalty/wallet-transactions", require("../app/userWalletService/walletTransactions/globalTransactionsRoutes"));
+
+router.use("/global-loyalty/wallet", require("../app/userWalletService/walletManagement/userWalletRoutes"));
+
 
 
 

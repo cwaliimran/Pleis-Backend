@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const userWalletSchema = new mongoose.Schema(
+const userGlobalWalletSchema = new mongoose.Schema(
     {
         user: {
             type: mongoose.Schema.Types.ObjectId,
@@ -21,6 +21,6 @@ const userWalletSchema = new mongoose.Schema(
     }
 );
 
-const UserWallet = mongoose.model("UserWallet", userWalletSchema);
+const UserGlobalWallet = mongoose.model("UserGlobalWallet", userGlobalWalletSchema);
 
-module.exports = { UserWallet };
+module.exports = { UserGlobalWallet };

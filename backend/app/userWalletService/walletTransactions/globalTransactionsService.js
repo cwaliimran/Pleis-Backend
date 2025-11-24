@@ -38,7 +38,7 @@ const updateGlobalTransaction = async (id, data) => {
   if (!globalTransaction) return null;
 
   const allowedFields = [
-    'type', 'source', 'context', 'points', 'closingBalance', 'description', 'statusLevelAtTime'
+    'type', 'source', 'points', 'closingBalance', 'description'
   ];
   const updateData = {};
   for (const key of allowedFields) {

@@ -1,5 +1,5 @@
-const { UserWallet } = require("@UserWalletModel");
-const { getFirstStatusLevel, getNextStatusLevel, getPreviousStatusLevel, getPreviousStatusLevelByRetainPoints } = require("../../../admin/globalLoyalty/statusLevels/statusLevelsRepository");
+const { UserGlobalWallet } = require("@UserGlobalWalletModel");
+const { getFirstStatusLevel, getNextStatusLevel, getPreviousStatusLevelByRetainPoints } = require("../../../admin/globalLoyalty/statusLevels/statusLevelsRepository");
 const { GlobalWalletTransactions } = require("@GlobalWalletTransactionsModel");
 const StatusLevels = require("../../../admin/globalLoyalty/statusLevels/StatusLevels");
 const { default: mongoose } = require("mongoose");
@@ -10,7 +10,7 @@ const createUserWallet = async (user) => {
     const userId = typeof user === "string" ? user : (user._id || user.id);
     if (!userId) throw new Error("Invalid user provided");
 
-    let wallet = await UserWallet.findOne({ user: userId });
+    let wallet = await UserGlobalWallet.findOne({ user: userId });
     if (wallet) return wallet;
 
     let defaultStatus = null;
@@ -30,7 +30,7 @@ const createUserWallet = async (user) => {
         }
     };
 
-    wallet = await UserWallet.create(walletData);
+    wallet = await UserGlobalWallet.create(walletData);
     return wallet;
 };
 
@@ -41,7 +41,7 @@ const getUserWallet = async (user) => {
     const userId = typeof user === "string" ? user : (user._id || user.id);
     if (!userId) throw new Error("Invalid user provided");
 
-    let wallet = await UserWallet.findOne({ user: userId }).populate({
+    let wallet = await UserGlobalWallet.findOne({ user: userId }).populate({
         path: "global.level",
         select: "image title type entryPoints retainPoints bonusPointsPerEuro",
     });
@@ -81,18 +81,18 @@ const getUserWallet = async (user) => {
         }
     };
 
-    wallet = await UserWallet.create(walletData);
+    wallet = await UserGlobalWallet.create(walletData);
     let updatedWallet = await getUserWallet(userId);
     return updatedWallet;
 };
 
-const updateGlobalPoints = async ({ user, pointsDelta = 0, allowNegative = false }) => {
+const updateGlobalPoints = async ({ user, pointsDelta = 0, allowNegative = false, objectId, objectType }) => {
     if (!user) throw new Error("User is required");
 
     const userId = typeof user === "string" ? user : (user._id || user.id);
 
     // 1. Fetch or create wallet
-    let walletDoc = await UserWallet.findOne({ user: userId });
+    let walletDoc = await UserGlobalWallet.findOne({ user: userId });
     if (!walletDoc) walletDoc = await createUserWallet(userId);
 
     // 2. Calculate new balance
@@ -115,7 +115,6 @@ const updateGlobalPoints = async ({ user, pointsDelta = 0, allowNegative = false
         user: userId,
         type: pointsDelta >= 0 ? "earn" : "adjustment",
         source: "system",
-        context: {},
         points: {
             base: pointsDelta,
             multiplier: 1,
@@ -123,7 +122,8 @@ const updateGlobalPoints = async ({ user, pointsDelta = 0, allowNegative = false
         },
         closingBalance: newBalance,
         description: "System points update",
-        statusLevelAtTime: walletDoc.global.level
+        objectId,
+        objectType
     });
 
     // 5. INSTANT PROMOTION CHECK
@@ -160,7 +160,7 @@ const checkPromotion = async (userId) => {
     const earned12Months = agg?.length ? agg[0].total : 0;
 
     // 2. Wallet + current level
-    const wallet = await UserWallet.findOne({ user: userId }).populate("global.level");
+    const wallet = await UserGlobalWallet.findOne({ user: userId }).populate("global.level");
     if (!wallet || !wallet.global.level) return;
 
     const currentLevel = wallet.global.level;
@@ -187,7 +187,7 @@ const checkPromotion = async (userId) => {
     if (!selectedLevel) return { promoted: false };
 
     // 5. Update wallet with highest eligible level
-    await UserWallet.updateOne(
+    await UserGlobalWallet.updateOne(
         { user: userId },
         {
             $set: {
@@ -218,15 +218,16 @@ const checkDemotion = async (userId) => {
     const earned12Months = agg.length ? agg[0].total : 0;
 
     // 2. Wallet + current level
-    const wallet = await UserWallet.findOne({ user: userId }).populate("global.level");
-    const currentLevel = wallet.global.level;
+    const wallet = await UserGlobalWallet.findOne({ user: userId }).populate("global.level");
+    const currentLevel = wallet?.global?.level || null;
 
+    if (!wallet || !currentLevel) return;
     // 3. If user didn't meet retainPoints → find correct fallback level
-    if (earned12Months < currentLevel.retainPoints) {
+    if (earned12Months < currentLevel?.retainPoints) {
         const fallback = await getPreviousStatusLevelByRetainPoints(earned12Months);
 
         if (fallback && fallback._id.toString() !== currentLevel._id.toString()) {
-            await UserWallet.updateOne(
+            await UserGlobalWallet.updateOne(
                 { user: userId },
                 {
                     $set: {

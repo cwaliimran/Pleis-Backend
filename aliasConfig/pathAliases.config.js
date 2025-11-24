@@ -39,7 +39,7 @@ module.exports = {
     "@TicketingOrdersModel": "backend/commonModules/bookings/ticketings/TicketingOrders.js",
     "@FriendRequestModel": "backend/commonModules/friendRequest/FriendRequest.js",
     "@GlobalStatusLevelsModel": "backend/admin/globalLoyalty/statusLevels/GlobalStatusLevels.js",
-    "@UserWalletModel": "backend/commonModules/wallet/userWallet.js",
+    "@UserGlobalWalletModel": "backend/commonModules/wallet/UserGlobalWallet.js",
     "@GlobalWalletTransactionsModel": "backend/commonModules/wallet/GlobalWalletTransactions.js",
 
 };

@@ -260,7 +260,7 @@ const deleteClubCollaboration = async (id) => {
 };
 
 const getClubCollaborationDetails = async (id) => {
-  const clubCollaboration = await clubCollaborationRepo.findClubCollaborationById(id).populate('sender.id receiver.id');
+  const clubCollaboration = await clubCollaborationRepo.findClubCollaborationById(id);
   if (!clubCollaboration) return null;
   return clubCollaboration;
 };
