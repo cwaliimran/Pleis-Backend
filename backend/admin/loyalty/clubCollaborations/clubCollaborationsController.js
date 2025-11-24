@@ -139,8 +139,9 @@ const getClubCollaborationDetails = async (req, res) => {
 
 const updateClubCollaboration = async (req, res) => {
   const { id } = req.params;
-  const { status, notes, expiryDate } = req.body;
-  const userId = req.user.id; // Get the authenticated user ID
+  const { status, notes, expiryDate, companyOrganizer } = req.body;
+  const userId = companyOrganizer || req.user._id;
+  console.log("userId", userId);
 
   if (
     !validateParams(req, res, {
