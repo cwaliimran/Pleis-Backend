@@ -37,17 +37,18 @@ module.exports = {
 
 
 // Populate club data for clubCollaborations (updated for new schema)
-const getClubCollaborations = async ({ page, limit, keyword, status, userId, date }) => {
+const getClubCollaborations = async ({ page, limit, keyword, status, userId, date, organizationId }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
+  userId = organizationId || userId;
   const pipeline = [];
-
+  console.log("user ID ", organizationId);
   // -----------------------------
   // USER FILTER
   // -----------------------------
   pipeline.push({
     $match: {
-      ...(userId && { "sender.id": new mongoose.Types.ObjectId(userId) })
+      ...(userId && { "receiver.id": new mongoose.Types.ObjectId(userId) })
     }
   });
 

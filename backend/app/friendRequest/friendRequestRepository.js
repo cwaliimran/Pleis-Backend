@@ -1,4 +1,3 @@
-const { PromoCode } = require('@PromoCodeModel'); // Adjust path to your PromoCode model
 const {User} = require('@UserModel');
 const { buildKeywordQueryFromModels } = require('@utils/dbUtils/queryUtil');
 const { generateMeta } = require('@utils/responseUtil');
@@ -20,7 +19,7 @@ const allRequests = await mongoose.model("FriendRequest").find({}).lean();
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const pipeline = [];
-  console.log("⛳ Excluding myself…");
+
   pipeline.push({
     $match: {
       _id: { $ne: new mongoose.Types.ObjectId(userId) }
@@ -82,7 +81,7 @@ const allRequests = await mongoose.model("FriendRequest").find({}).lean();
 }
 
 );
-  console.log("🔥 Adding relationshipStatus logic");
+
 
   pipeline.push({
     $addFields: {
@@ -194,10 +193,9 @@ const createFriendRequest = async (data) => {
     throw err;
   }
 };
-
-const getFriendRequests = async ({ page, limit, userId }) => {
+const getFriendRequests = async ({ page, limit, userId, status }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-console.log("userID",userId );
+
   const me = new mongoose.Types.ObjectId(userId);
 
 
@@ -205,7 +203,7 @@ const pipeline = [
   {
     $match: {
       "receiver.id": me,
-      "receiver.status": "pending"
+      "receiver.status": status
     }
   },
 
@@ -274,10 +272,161 @@ const pipeline = [
     }
   };
 };
+const updateFriendRequests = async ({  id, status, userId }) => {
+
+  const friendRequest = await FriendRequest.findById(id);
 
 
+  if (!friendRequest) {
+    return { error: "friend_request_not_found" };
+  }
+
+  if (friendRequest.receiver.id.toString() !== userId) {
+    return { error: "user_not_involved" };  
+  }
+
+
+if (friendRequest.receiver.id.toString() === userId) {
+    friendRequest.receiver.status = status;
+    friendRequest.sender.status = status; 
+  }
+
+  try {
+    await friendRequest.save();
+    return { message: "Friend request status updated successfully", friendRequest };
+  } catch (error) {
+    return { error: "Error updating friend request" };  // Error handling if save fails
+  }
+};
+const getFriendRequestById = async (id) => {
+  return FriendRequest.findById(id);
+};
+const unfriend = async (id, userId) => {
+  try {
+    const friendRequest = await getFriendRequestById(id);
+
+
+    if (!friendRequest) {
+     
+      return { error: "friend_request_not_found" };
+    }
+
+    // Check if the user is either the sender or receiver
+    if (
+      friendRequest.sender.id.toString() !== userId.toString() &&
+      friendRequest.receiver.id.toString() !== userId.toString()
+    ) {
+
+      return { error: "user_not_involved" }; // User is neither sender nor receiver
+    }
+
+    // Check if the status is "accepted" before allowing deletion
+    if (friendRequest.sender.status !== "accept" && friendRequest.receiver.status !== "accept") {
+
+      return { message: "Cannot delete request, it is not accepted" };
+    }
+
+
+
+    // Delete the friend request entry from the database
+    const result = await FriendRequest.deleteOne({ _id: id });
+
+
+    if (result.deletedCount === 0) {
+
+      return { error: "friend_request_not_found" };
+    }
+
+   
+    return { message: "Friend request deleted successfully" };
+  } catch (error) {
+
+    return { error: "Error deleting friend request" };
+  }
+};
+const getSentFriendRequests = async ({ page, limit, userId, status }) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+
+  const me = new mongoose.Types.ObjectId(userId);
+  console.log("me is ",me );
+
+  const pipeline = [
+    {
+      $match: {
+        "sender.id": me,         
+        "sender.status": status   
+      }
+    },
+
+    {
+      $lookup: {
+        from: "users",
+        let: { receiverId: "$receiver.id" },   
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$_id", "$$receiverId"] }
+            }
+          },
+          {
+            $project: {
+              firstName: 1,
+              lastName: 1,
+              phoneNumber: 1,
+              profileIcon: 1
+            }
+          }
+        ],
+        as: "receiverDetails"
+      }
+    },
+
+    { $unwind: "$receiverDetails" },
+
+    {
+      $project: {
+        _id: 1, // friend request ID
+        firstName: "$receiverDetails.firstName",
+        lastName: "$receiverDetails.lastName",
+        phoneNumber: "$receiverDetails.phoneNumber",
+        profileIcon: "$receiverDetails.profileIcon"
+      }
+    },
+
+    { $sort: { createdAt: -1 } },
+
+    {
+      $facet: {
+        data: [
+          { $skip: skip },
+          ...(limit === 0 ? [] : [{ $limit: limit }])
+        ],
+        totalFiltered: [{ $count: "count" }]
+      }
+    }
+  ];
+
+  const result = await FriendRequest.aggregate(pipeline);
+
+  const requests = result[0]?.data || [];
+  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+
+  return {
+    requests,
+    meta: {
+      page,
+      limit,
+      totalRecords: totalFiltered,
+      totalPages: limit === 0 ? 1 : Math.ceil(totalFiltered / limit)
+    }
+  };
+};
 module.exports = {
   getFriends,
   createFriendRequest,
-  getFriendRequests
+  getFriendRequests,
+  getFriendRequestById,
+  updateFriendRequests,
+  unfriend,
+  getSentFriendRequests
 };

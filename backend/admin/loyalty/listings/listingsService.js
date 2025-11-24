@@ -6,7 +6,7 @@ const { getOrganizerUsersWithFilters } = require("./listingsRepository");
 /**
  * Get paginated organizer user listings
  */
-const getListings = async ({ page = 1, limit = 10, keyword }) => {
+const getListings = async ({ page = 1, limit = 10, keyword,userId }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   // Get filtered users
@@ -14,6 +14,7 @@ const getListings = async ({ page = 1, limit = 10, keyword }) => {
     skip,
     limit,
     keyword,
+    userId
   });
 
   // Format listings

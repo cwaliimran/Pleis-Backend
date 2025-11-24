@@ -66,14 +66,17 @@ const createClubCollaboration = async (req, res) => {
 
 const getClubCollaborations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
+   const { organizationId } = req.params;
   const { keyword, status = "pending", date } = req.query;
   try {
+    console.log("organizationId", organizationId);
     const { clubCollaborations, meta } = await clubCollaborationsService.getClubCollaborations({
       page,
       limit,
       keyword,
       status,
       date,
+      organizationId
     });
 
     return sendResponse({
