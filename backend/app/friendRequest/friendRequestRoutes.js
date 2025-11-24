@@ -4,26 +4,29 @@ const {
   createFriendRequest,
   getFriendRequests,
   updateFriendRequests,
-  unfriend
+  unfriend,
+  getSentFriendRequests
 } = require("./friendRequestController"); // Assuming you have a separate controller for promo codes
-const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
-const roleMiddleware = require("../../middlewares/roleMiddleware");
-
 const router = express.Router();
-
 router.use(auth);
+// Search users (to send friend request)
+router.get("/search", getFriends);
 
-// Create a rate limiter for Promo Codes
-const promoCodeRateLimiter = createRateLimiter("PromoCodes");
+// Send a friend request
+router.post("/", createFriendRequest);
 
-// Routes for Promo Code Management
-// use  Promo Code
-router.get("/", getFriends);
-router.post("/add-friend", createFriendRequest);
-router.get("/get-friend-requests", getFriendRequests);
-router.put("/update-friend-request/:id", updateFriendRequests);
-router.delete("/unfriend/:id", unfriend);
+// All requests I RECEIVED
+router.get("/received", getFriendRequests);
+
+// All requests I SENT
+router.get("/sent", getSentFriendRequests);
+
+// Update request (accept / reject)
+router.put("/:id", updateFriendRequests);
+
+// Unfriend
+router.delete("/:id/unfriend", unfriend);
 
 
 module.exports = router;

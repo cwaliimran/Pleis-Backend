@@ -46,5 +46,8 @@ router.use("/ticketing-bookings", require("../app/bookings/ticketings/ticketingB
 router.use("/transactions", require("../app/bookings/transactions/transactionsRoutes"));
 //transactions
 router.use("/friend-request", require("../app/friendRequest/friendRequestRoutes"));
+//friends-suggestions
+router.use("/friends-suggestions", require("../app/friendsSuggestion/friendsSuggestionRoutes"));
+
 
 module.exports = router;

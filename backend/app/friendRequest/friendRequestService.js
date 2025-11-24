@@ -151,14 +151,32 @@ const unfriend = async (id, userId) => {
     return { error: "Error deleting friend request" }; 
   }
 };
-
+const getSentFriendRequests = async ({ timezone, page, limit, keyword, status, userId, date }) => {
+  try {
+    let { requests, meta } = await friendRequestRepo.getSentFriendRequests({ timezone, page, limit, keyword, status, userId, date });
+    if (!requests || requests.length === 0) {
+      return { requests: [], meta };
+    }
+    // friendRequests = friendRequests.map(friendRequest => friendRequestFormatter(friendRequest, timezone));
+    return {
+      requests,
+      meta
+    };
+  } catch (error) {
+    return {
+      requests: [],
+      meta: { totalRecords: 0, currentPage: 1, totalPages: 1, limit: 10 }
+    };
+  }
+};
 
 module.exports = {
   getFriends,
   createFriendRequest,
   getFriendRequests,
   updateFriendRequests,
-  unfriend
+  unfriend,
+  getSentFriendRequests
 
 
 };
