@@ -5,8 +5,8 @@ const bannerControlsRepo = require("./bannerControlsRepository");
 const mongoose = require("mongoose");
 const { formatBannerObject } = require("./fomatter/formatBannerObject");
 
-const createBannerControls = async ({ title, image, type, object, status }) => {
-  return await bannerControlsRepo.createBannerControls({ title, image, type, object, status });
+const createBannerControls = async ({ title, image, type, object, status,description }) => {
+  return await bannerControlsRepo.createBannerControls({ title, image, type, object, status, description });
 };
 
 const getBannerControls = async ({ page, limit, keyword, status, date, orderSort = "asc",category }) => {
@@ -50,6 +50,7 @@ const updateBannerControls = async (id, data) => {
     ...(data.type !== undefined && { type: data.type }),
     ...(data.title !== undefined && { title: data.title }),
     ...(data.image !== undefined && { image: data.image }),
+    ...(data.description !== undefined && { description: data.description }),
   };
 
   if (Object.keys(updateData).length === 0) {

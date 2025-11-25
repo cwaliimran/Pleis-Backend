@@ -286,9 +286,7 @@ const updateClubCollaboration = async (id, data, userId) => {
 
 
 const deleteClubCollaboration = async (id) => {
-  const updated = await clubCollaborationRepo.findByIdAndUpdate(id, {
-    "sender.status": "deleted",
-  });
+  const updated = await clubCollaborationRepo.findByIdAndDelete(id);
   if (!updated) return null;
   return true;
 };

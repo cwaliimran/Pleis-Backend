@@ -24,11 +24,12 @@ const venuesSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    venueType: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "VenueTypes",
-      required: true,
-    },
+venueType: [{
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "VenueTypes",
+  required: true,
+}]
+,
     organization: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organizations",

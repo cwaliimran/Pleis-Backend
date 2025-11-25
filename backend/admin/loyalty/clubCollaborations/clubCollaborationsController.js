@@ -195,6 +195,7 @@ const deleteClubCollaboration = async (req, res) => {
     })
   )
     return;
+    console.log("id is ",id );
 
   try {
     const deleted = await clubCollaborationsService.deleteClubCollaboration(id);
