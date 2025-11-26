@@ -50,6 +50,13 @@ router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));
 router.use("/global-referral", require("../globalReferral/globalReferralRoutes"));
 // transactions
 router.use("/transactions", require("../transactions/transactionsRoutes"));
+// global reward categories
+router.use("/global-reward-categories", require("../globalLoyalty/GlobalRewardCategories/GlobalRewardCategoriesRoutes"));
+// global Loyalty reward
+router.use("/global-loyalty-reward", require("../globalLoyalty/rewards/rewardsRoutes"));
+
+// global Loyalty reward
+router.use("/global-challange", require("../globalLoyalty/challenges/challengesRoutes"));
 
 
 
