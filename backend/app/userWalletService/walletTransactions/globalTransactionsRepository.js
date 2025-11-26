@@ -1,33 +1,51 @@
 // repositories/globalTransactionRepository.js
 const { GlobalWalletTransactions } = require("@GlobalWalletTransactionsModel");
-const { updateGlobalPoints, getUserWallet } = require("../walletManagement/userWalletRepository");
+const { updateGlobalPoints, getUserWallet, createUserWallet } = require("../walletManagement/userWalletRepository");
+const { UserGlobalWallet } = require("@UserGlobalWalletModel");
 
 // Create a wallet transaction
 const createGlobalTransaction = async (data) => {
   const session = await GlobalWalletTransactions.startSession();
   session.startTransaction();
   try {
-    // Update global points in user wallet within transaction
-    let { success, newBalance } = await updateGlobalPoints({
-      user: data.user,
-      pointsDelta: data.points.total,
-      session
-    });
-    if (!success) {
-      await session.abortTransaction();
-      session.endSession();
-      throw new Error("Failed to update global points for user");
+    const userId = data.user;
+    const pointsDelta = data.points.total;
+
+    // 1. Get wallet inside transaction
+    let walletDoc = await UserGlobalWallet.findOne({ user: userId }).session(session);
+    if (!walletDoc) {
+      walletDoc = await createUserWallet(userId, session); // must accept session
     }
 
-    // Optionally set closingBalance and statusLevelAtTime here
-    // data.closingBalance = newBalance;
+    // 2. Calculate new balance
+    const newBalance = walletDoc.global.points + pointsDelta;
 
-    const doc = new GlobalWalletTransactions(data);
-    await doc.save({ session });
+    if (!data.allowNegative && newBalance < 0) {
+      throw new Error("Insufficient global points");
+    }
 
+    // 3. Update wallet (IN TRANSACTION)
+    walletDoc.global.points = newBalance;
+    if (pointsDelta > 0) walletDoc.global.lifetimePoints += pointsDelta;
+
+    await walletDoc.save({ session });
+
+    // 4. Write ledger transaction (IN SAME TRANSACTION)
+    await GlobalWalletTransactions.create([{
+      user: userId,
+      type: pointsDelta >= 0 ? "earn" : "adjustment",
+      source: "system",
+      points: data.points,
+      closingBalance: newBalance,
+      objectId: data.objectId,
+      objectType: data.objectType
+    }], { session });
+
+    // 5. Commit
     await session.commitTransaction();
     session.endSession();
-    return doc;
+
+    return { success: true, newBalance };
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
@@ -35,11 +53,11 @@ const createGlobalTransaction = async (data) => {
   }
 };
 
+
 // Find with filters and pagination
 const getGlobalTransactionsWithFilters = async (query = {}, skip = 0, limit = 10) => {
   return GlobalWalletTransactions.find(query)
     .populate({ path: 'user', select: 'firstName lastName email profileIcon' })
-    .populate({ path: 'statusLevelAtTime' })
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
@@ -53,8 +71,7 @@ const countGlobalTransactions = async (query = {}) => {
 // Find by ID (with populates)
 const findGlobalTransactionById = async (id) => {
   return GlobalWalletTransactions.findById(id)
-    .populate({ path: 'user', select: 'firstName lastName email profileIcon' })
-    .populate({ path: 'statusLevelAtTime' });
+    .populate({ path: 'user', select: 'firstName lastName email profileIcon' });
 };
 
 // Update + save

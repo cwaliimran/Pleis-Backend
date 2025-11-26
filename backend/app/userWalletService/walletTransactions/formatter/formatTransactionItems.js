@@ -11,11 +11,9 @@ function formatTransactionItem(item) {
     wallet: doc.wallet,
     type: doc.type,
     source: doc.source,
-    context: doc.context || {},
     points: doc.points || {},
     closingBalance: doc.closingBalance,
     description: doc.description,
-    statusLevelAtTime: doc.statusLevelAtTime || null,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };

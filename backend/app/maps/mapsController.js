@@ -37,7 +37,82 @@ const getMapsData = async (req, res) => {
     let status = true;
     let result = {};
     if (requestData?.filter?.type === "events") {
-      ({ status, result } = await getEvents(requestData));
+
+      const { latitude, longitude, keyword } = req.query;
+      const { page, limit } = parsePaginationParams(req);
+      let { timezone, _id: userId } = req.user;
+
+      const { sort = "asc", advanceFilters = {} } = req.body;
+      const {
+        time,
+        distanceFrom = 0,
+        distanceTo = 50,
+        dateFrom,
+        dateTo,
+        categories = [],
+        venueTypes = [],
+        genre = [],
+        tags = [],
+      } = advanceFilters;
+
+      // --- Validation ---
+      const validateData = {
+        rawData: [],
+        objectIdFields: [],
+      };
+
+      // // Validate sort
+      // if (sort && !["asc", "desc"].includes(sort)) {
+      //   return sendResponse({ res, statusCode: 400, translationKey: "invalid_sort_order" });
+      // }
+
+      // Validate time filter
+      const validTimes = ["live", "today", "tomorrow", "thisWeek", "all"];
+      if (time && !validTimes.includes(time)) {
+        return sendResponse({ res, statusCode: 400, translationKey: "invalid_time_filter" });
+      }
+
+      // Validate dateFrom and dateTo using dateFields in validateParams
+      if (dateFrom && !validateParams(req, res, { dateFields: { dateFrom: "YYYY-MM-DD" } })) return;
+      if (dateTo && !validateParams(req, res, { dateFields: { dateTo: "YYYY-MM-DD" } })) return;
+
+      // Validate categories
+      if (categories && Array.isArray(categories)) {
+        for (const categoryId of categories) {
+          if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+            return sendResponse({ res, statusCode: 400, translationKey: "invalid_category_id" });
+          }
+        }
+      }
+
+      // Use centralized query validation
+      if (!validateParams(req, res, validateData)) return;
+
+      // --- Build queryData ---
+      const queryData = {
+        latitude,
+        longitude,
+        keyword,
+        page,
+        limit,
+        timezone,
+        sort,
+        userId,
+        advanceFilters: {
+          time,
+          distanceFrom,
+          distanceTo,
+          dateFrom,
+          dateTo,
+          categories,
+          venueTypes,
+          tags,
+          genre,
+        },
+      };
+
+
+      ({ status, result } = await getEvents(queryData));
     } else if (requestData?.filter?.type === "places") {
       ({ status, result } = await getPlaces(requestData));
     } else { //"all"
