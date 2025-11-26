@@ -9,6 +9,8 @@ function statusLevelsFormatter(item) {
     const obj = typeof item.toObject === "function" ? item.toObject() : { ...item };
 
     obj.image = getFullImageUrl(obj.image || "noimage.png");
+        obj.backgroundImage = getFullImageUrl(obj.backgroundImage || "noimage.png");
+
 
     return obj;
 }

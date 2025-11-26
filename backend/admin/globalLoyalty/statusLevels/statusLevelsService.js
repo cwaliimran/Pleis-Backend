@@ -15,6 +15,7 @@ const createStatusLevel = async (data) => {
     "entryPoints",
     "retainPoints",
     "status",
+    "backgroundImage",
   ];
 
   const payload = {};
@@ -114,6 +115,7 @@ const updateStatusLevel = async (id, data) => {
     "entryPoints",
     "retainPoints",
     "status",
+    "backgroundImage"
   ];
   const updateData = {};
   for (const key of allowedFields) {

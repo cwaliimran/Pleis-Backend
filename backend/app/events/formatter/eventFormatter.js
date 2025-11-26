@@ -129,13 +129,11 @@ const formatEventResponse = (eventObject, options = {}) => {
     }
   }
 
-
   if (event.basicInfo?.partnerOrganization) {
     const org = event.basicInfo.partnerOrganization;
     if (org.basicInfo?.media) {
       if (org.basicInfo.media.logo)
         org.basicInfo.media.logo = getFullImageUrl(org.basicInfo.media.logo);
-
     }
   }
 
@@ -167,7 +165,7 @@ const formatEventResponse = (eventObject, options = {}) => {
       event.distance = {
         distance: Math.round(dist * 100) / 100,
         unit: "km"
-      }
+      };
     }
   }
 
@@ -192,10 +190,15 @@ const formatEventResponse = (eventObject, options = {}) => {
     });
   }
 
+  // Extract unique venue ID
+  const uniqueVenueId = event.basicInfo?.venue ? event.basicInfo.venue.toString() : null;
 
+  // Log the unique venue ID
+  console.log("Unique Venue ID:", uniqueVenueId);
 
   return result;
 };
+
 
 module.exports = {
   formatEventSchedule,

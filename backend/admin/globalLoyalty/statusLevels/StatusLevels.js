@@ -7,6 +7,11 @@ const statusLevelsSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+        backgroundImage: {
+      type: String,
+      default: "",
+    },
+
 
     title: {
       type: String,
