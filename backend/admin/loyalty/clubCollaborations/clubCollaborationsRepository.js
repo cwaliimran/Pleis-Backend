@@ -34,7 +34,7 @@ const countClubCollaborations = async (query = {}) => {
 
 // Find by ID
 const findClubCollaborationById = async (id) => {
-  return ClubCollaborations.findById(id).populate('sender.id receiver.id');
+  return ClubCollaborations.findById(id);
 };
 
 // Update and save
@@ -52,6 +52,10 @@ const deleteClubCollaborationById = async (clubCollaboration) => {
 const findByIdAndUpdate = async (id, data) => {
   return ClubCollaborations.findByIdAndUpdate(id, data, { new: true }).populate('sender.id receiver.id');
 };
+const findByIdAndDelete = async (id) => {
+  return ClubCollaborations.findByIdAndDelete(id);
+};
+
 
 module.exports = {
   createClubCollaboration,
@@ -60,5 +64,6 @@ module.exports = {
   findClubCollaborationById,
   updateClubCollaborationData,
   findByIdAndUpdate,
-  checkExistingCollaboration
+  checkExistingCollaboration,
+  findByIdAndDelete
 };

@@ -41,5 +41,7 @@ module.exports = {
     "@GlobalStatusLevelsModel": "backend/admin/globalLoyalty/statusLevels/GlobalStatusLevels.js",
     "@UserWalletModel": "backend/commonModules/wallet/userWallet.js",
     "@GlobalWalletTransactionsModel": "backend/commonModules/wallet/GlobalWalletTransactions.js",
-
+    "@GlobalRewardCategories": "backend/commonModules/globalLoyalty/globalRewardCategories/GlobalRewardCategories.js",
+        "@GlobalLoyaltyReward": "backend/commonModules/globalLoyalty/rewards/models/reward/BaseReward.js",
+    "@GlobalChallengeModel": "backend/commonModules/globalLoyalty/rewards/models/Challenge/models/Challenge/BaseChallenge.js",
 };

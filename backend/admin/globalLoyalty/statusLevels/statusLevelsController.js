@@ -17,6 +17,7 @@ const createStatusLevel = async (req, res) => {
     entryPoints,
     retainPoints,
     status = "active",
+    backgroundImage,
   } = req.body;
 
   if (
@@ -34,6 +35,7 @@ const createStatusLevel = async (req, res) => {
     entryPoints,
     retainPoints,
     status,
+    backgroundImage
   };
 
   try {
@@ -140,6 +142,7 @@ const updateStatusLevel = async (req, res) => {
     entryPoints,
     retainPoints,
     status = "active",
+    backgroundImage,
   } = req.body;
 
   if (
@@ -158,6 +161,7 @@ const updateStatusLevel = async (req, res) => {
     entryPoints,
     retainPoints,
     status,
+    backgroundImage,
   };
 
   try {

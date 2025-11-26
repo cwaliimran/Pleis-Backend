@@ -8,7 +8,7 @@ const {
 const bannerControlsService = require("./bannerControlsService");
 
 const createBannerControls = async (req, res) => {
-  const { status = "active", type, object, title, image } = req.body;
+  const { status = "active", type, object, title, image ,description} = req.body;
 
   if (!validateParams(req, res, { rawData: ["type", "object"], enumFields: { type: ["Organizer", "Event", "LoyaltyProgram", "Other"] } })) return;
 
@@ -28,6 +28,7 @@ const createBannerControls = async (req, res) => {
       object,
       title,
       image,
+      description
     });
 
     return sendResponse({
@@ -86,7 +87,8 @@ const getBannerControls = async (req, res) => {
 
 const updateBannerControls = async (req, res) => {
   const { id } = req.params;
-  const { status, type, object } = req.body;
+  const { status, type, object, title, image,description } = req.body;
+  console.log("body is ", req.body);
 
   if (
     !validateParams(req, res, {
@@ -101,6 +103,9 @@ const updateBannerControls = async (req, res) => {
       status,
       type,
       object,
+      title,
+      image,
+      description
     });
 
     if (!updated) {
