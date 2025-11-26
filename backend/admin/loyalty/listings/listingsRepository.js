@@ -6,7 +6,6 @@ const mongoose = require("mongoose");
 
 const getOrganizerUsersWithFilters = async ({ skip = 0, limit = 10, keyword, userId }) => {
   const me = new mongoose.Types.ObjectId(userId);
-  console.log("me is ", me);
 
   const pipeline = [
     {

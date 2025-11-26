@@ -348,7 +348,6 @@ const getSentFriendRequests = async ({ page, limit, userId, status }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const me = new mongoose.Types.ObjectId(userId);
-  console.log("me is ",me );
 
   const pipeline = [
     {
