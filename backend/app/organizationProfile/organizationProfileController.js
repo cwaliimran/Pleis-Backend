@@ -16,6 +16,7 @@ const getOrganizationProfileData = async (req, res) => {
     })) return;
 
     var organizationId = req.params.organizationId;
+
     let { timezone, location } = req.user;
     let { filter } = req.query;
 

@@ -4,6 +4,7 @@ const Menus = require("../../commonModules/menuManagement/menu/Menus");
 const Organizations = require("../../commonModules/organizations/Organization");
 const mongoose = require("mongoose");
 const Venues = require("../../commonModules/venues/Venues");
+const VenueTypes = require("@VenueTypesModel");
 const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
 const Orders = require("@OrdersModel");
 const { getUserJoinedClubs } = require("../loyalty/clubMembers/clubMembersRepository");
@@ -17,16 +18,47 @@ const findOrganizationById = async (userId, organizationId) => {
       .populate("otherInfo.categories")
       .populate("otherInfo.tags"),
     Favorites.exists({ user: userId, targetType: "organization", targetId: organizationId }),
-    Venues.findOne({ organization: organizationId }).select("title floorPlan"),
+    Venues.findOne({ 
+      organization: organizationId, 
+      isPrimary: true  
+    }).select("title floorPlan venueType"),
   ]);
 
+  // Check if the organization is a favorite
   let isFavorite = !!favorite;
-  return orgProfile = {
-    org,
-    isFavorite,
-    orgVenue
-  };
+
+  // If venueType exists, fetch the titles of the related VenueTypes
+  let venueTypeTitles = [];
+  if (orgVenue && orgVenue.venueType && orgVenue.venueType.length > 0) {
+
+    
+    const venueTypes = await VenueTypes.find({ 
+      _id: { $in: orgVenue.venueType } 
+    }).select("title");
+
+
+    // Extract titles from the venueTypes documents
+    venueTypeTitles = venueTypes.map(venueType => venueType.title);
+  }
+
+  // If orgVenue is found, access the clean data using _doc and add venueTypeTitles
+  if (orgVenue) {
+    const cleanOrgVenue = orgVenue._doc;  // Access the actual data without internal Mongoose properties
+    cleanOrgVenue.venueTypeTitles = venueTypeTitles;  // Add venueTypeTitles to the clean 
+    return {
+      org,
+      isFavorite,
+      orgVenue: cleanOrgVenue,  
+    };
+  } else {
+    return {
+      org,
+      isFavorite,
+      orgVenue: null,
+    };
+  }
 };
+
 
 /**
  * Generic queries (if needed later)

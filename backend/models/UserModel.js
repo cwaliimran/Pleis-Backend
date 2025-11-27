@@ -7,6 +7,7 @@ const { randomBytes } = require("crypto");
 const { CompanySchema } = require("./CompanyDetails");
 const { generateSecureToken } = require("../helperUtils/secureToken");
 const { LocationSchema } = require("../shared/locations/locationSchmea");
+const { createUserWallet } = require("../app/userWalletService/walletManagement/userWalletService");
 
 // Define subscription statuses
 const SubscriptionType = {
@@ -45,7 +46,7 @@ const userSchema = new mongoose.Schema(
   {
     profileIcon: {
       type: String,
-    default: "",
+      default: "",
     },
 
     firstName: {
@@ -351,6 +352,7 @@ userSchema.pre("save", async function (next) {
   if (user.isModified("email")) {
     user.email = user.email.toLowerCase().trim();
   }
+  createUserWallet(user._id); // Call in background, don't await
 
   next();
 });

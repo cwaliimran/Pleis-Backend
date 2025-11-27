@@ -1243,17 +1243,18 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}users/:id",
+											"raw": "{{url}}app/users/:id",
 											"host": [
-												"{{url}}users"
+												"{{url}}app"
 											],
 											"path": [
+												"users",
 												":id"
 											],
 											"variable": [
 												{
 													"key": "id",
-													"value": "68ed03f2f600828e48b9a186"
+													"value": "6911ba17dd162801ff9b35d9"
 												}
 											]
 										}
@@ -2456,7 +2457,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "6915c3e448a5a4c172122332"
+											"value": "69206e7a4e1713f7a48b1361"
 										}
 									]
 								}
@@ -2522,7 +2523,7 @@
 									"variable": [
 										{
 											"key": "eventId",
-											"value": "6915c3e448a5a4c172122332"
+											"value": "691ec6b48b3b9e47b35fb335"
 										}
 									]
 								}
@@ -2705,7 +2706,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    // \"category\": \"68f0d6b0a92f125fd26a5831\", //optional\n    \"filter\": {\n        \"type\": \"events\" //events, places, all\n        // ,\"key\": \"live\" // live, today, thisWeek\n    },\n    \"latitude\": 31.5023621,\n    \"longitude\": 74.426454\n}",
+									"raw": "{\n    // \"category\": \"68f0d6b0a92f125fd26a5831\", //optional\n    \"filter\": {\n        \"type\": \"all\" //events, places, all\n        // ,\"key\": \"live\" // live, today, thisWeek\n    },\n    \"latitude\": 31.5023621,\n    \"longitude\": 74.426454,\n\n    \"sort\": \"desc\", //asc/desc\n    \"advanceFilters\": { \n        \"distanceFrom\": 20,\n        \"distanceTo\": 45555555\n        // ,\n        // \"time\": \"live\", //live, today, thisWeek\n        // \"dateFrom\": \"2025-11-13\", //YYYY-MM-DD\n        // \"dateTo\": \"2025-11-16\",\n        // \"categories\": [\n        //     \"6911bd65d49fc086aabd254e\"\n        // ],\n        // \"venueTypes\": [\n        //     \"6911bb4922299f710c7a9441\"\n        // ],\n        // \"tags\": [\"6911bdc2d49fc086aabd25e2\"], // vies are tags\n        // \"genre\": [] //are subtypes of tags\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -2738,7 +2739,156 @@
 									]
 								}
 							},
-							"response": []
+							"response": [
+								{
+									"name": "get - events",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    // \"category\": \"68f0d6b0a92f125fd26a5831\", //optional\n    \"filter\": {\n        \"type\": \"events\" //events, places, all\n        // ,\"key\": \"live\" // live, today, thisWeek\n    },\n    \"latitude\": 31.5023621,\n    \"longitude\": 74.426454\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/maps/?page=1&limit=10",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"maps",
+												""
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "keywrod",
+													"value": "",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": null,
+									"header": [
+										{
+											"key": "Content-Security-Policy",
+											"value": "default-src 'self';script-src 'self' 'unsafe-inline';style-src 'self' 'unsafe-inline';img-src 'self' data:;connect-src 'self' https://pleis.com https://www.pleis.com https://dev.pleis.com https://www.dev.pleis.com http://localhost:4003 https://pleis.vercel.app https://shipping-profession-merge-double.trycloudflare.com http://192.168.15.141:4003;base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';object-src 'none';script-src-attr 'none';upgrade-insecure-requests"
+										},
+										{
+											"key": "Cross-Origin-Embedder-Policy",
+											"value": "require-corp"
+										},
+										{
+											"key": "Cross-Origin-Opener-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Cross-Origin-Resource-Policy",
+											"value": "same-origin"
+										},
+										{
+											"key": "Origin-Agent-Cluster",
+											"value": "?1"
+										},
+										{
+											"key": "Referrer-Policy",
+											"value": "no-referrer"
+										},
+										{
+											"key": "Strict-Transport-Security",
+											"value": "max-age=31536000; includeSubDomains"
+										},
+										{
+											"key": "X-Content-Type-Options",
+											"value": "nosniff"
+										},
+										{
+											"key": "X-DNS-Prefetch-Control",
+											"value": "off"
+										},
+										{
+											"key": "X-Download-Options",
+											"value": "noopen"
+										},
+										{
+											"key": "X-Frame-Options",
+											"value": "SAMEORIGIN"
+										},
+										{
+											"key": "X-Permitted-Cross-Domain-Policies",
+											"value": "none"
+										},
+										{
+											"key": "X-XSS-Protection",
+											"value": "0"
+										},
+										{
+											"key": "X-RateLimit-Limit",
+											"value": "200"
+										},
+										{
+											"key": "X-RateLimit-Remaining",
+											"value": "199"
+										},
+										{
+											"key": "Date",
+											"value": "Mon, 24 Nov 2025 11:58:51 GMT"
+										},
+										{
+											"key": "X-RateLimit-Reset",
+											"value": "1763986432"
+										},
+										{
+											"key": "Vary",
+											"value": "Origin, Accept-Encoding"
+										},
+										{
+											"key": "Access-Control-Allow-Credentials",
+											"value": "true"
+										},
+										{
+											"key": "Content-Type",
+											"value": "application/json; charset=utf-8"
+										},
+										{
+											"key": "ETag",
+											"value": "W/\"245d-dTygQxca2c9ihB6XX19Xg4P5mdY\""
+										},
+										{
+											"key": "Content-Encoding",
+											"value": "br"
+										},
+										{
+											"key": "Connection",
+											"value": "keep-alive"
+										},
+										{
+											"key": "Keep-Alive",
+											"value": "timeout=5"
+										},
+										{
+											"key": "Transfer-Encoding",
+											"value": "chunked"
+										}
+									],
+									"cookie": [],
+									"body": "{\n    \"message\": \"Data fetched successfully\",\n    \"data\": [\n        {\n            \"_id\": \"691469fb167faf035385ce33\",\n            \"basicInfo\": {\n                \"media\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/99ffdc9f-0ff8-4650-b9e9-50d13bcf2136.webp\",\n                \"title\": \"Annual Cultural Fiesta\",\n                \"description\": \"This is Annual Cultural Fiesta\",\n                \"organization\": {\n                    \"_id\": \"6911c1b36fc7cbd864e74659\",\n                    \"basicInfo\": {\n                        \"media\": {\n                            \"logo\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/49d4d880-3b02-48fe-aa62-7317bc190b9c.jpg\",\n                            \"cover\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/32241c7d-98d7-4845-ba26-d20d83fef09a.webp\"\n                        },\n                        \"name\": \"Suheer Organization\",\n                        \"phoneNumber\": {\n                            \"code\": \"+92\",\n                            \"number\": \"3329328392\"\n                        },\n                        \"website\": \"https://suheer.com\"\n                    }\n                },\n                \"venue\": {\n                    \"_id\": \"6911bd4fd49fc086aabd2504\",\n                    \"title\": \"Jinnah Convention Centre\",\n                    \"location\": {\n                        \"type\": \"Point\",\n                        \"coordinates\": [\n                            31.482857,\n                            74.4557239\n                        ],\n                        \"fullAddress\": \"FFJ3+GFQ, Sector J DHA Phase 6, Lahore, 54000, Pakistan\",\n                        \"city\": \"Lahore\",\n                        \"country\": \"Pakistan\",\n                        \"state\": \"Punjab\",\n                        \"postalCode\": \"54000\"\n                    }\n                },\n                \"categories\": [\n                    \"6911bd65d49fc086aabd254e\",\n                    \"6911bd92d49fc086aabd2586\"\n                ],\n                \"tags\": [\n                    {\n                        \"_id\": \"6911bdc2d49fc086aabd25e2\",\n                        \"title\": \"TechConference\"\n                    },\n                    {\n                        \"_id\": \"6911bdcad49fc086aabd25e5\",\n                        \"title\": \"CorporateEvent\"\n                    }\n                ]\n            },\n            \"schedule\": {\n                \"type\": \"oneTime\",\n                \"startDateTime\": \"2025-11-12 12:00 PM\",\n                \"endDateTime\": \"2025-11-30 01:00 PM\",\n                \"recurringDetails\": {\n                    \"isEnabled\": true,\n                    \"frequency\": \"weekly\",\n                    \"interval\": 1,\n                    \"daysOfWeek\": [\n                        \"mon\",\n                        \"tue\",\n                        \"thu\"\n                    ],\n                    \"endType\": \"onDate\",\n                    \"endDate\": \"2025-11-20\",\n                    \"_id\": \"691efca10b344ea06c7436c5\"\n                }\n            },\n            \"distance\": {\n                \"distance\": 289.52,\n                \"unit\": \"km\"\n            },\n            \"isFavorite\": false\n        },\n        {\n            \"_id\": \"6915c3e448a5a4c172122332\",\n            \"basicInfo\": {\n                \"media\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/633b6ca9-82e4-4051-838d-db3e4fc76950.png\",\n                \"title\": \"Sequences / Red Axes\",\n                \"description\": \"Svirati ploče bez pritiska, jednostavno iz ljubavi prema zvukovima te njegovati umjetnost slušanja muzike. Misija je to jedinstvenog kluba Kasheme u Zürichu. \\nS ovim audiofilskim barom posebne koncepcije i uređenja upoznali smo se proljetos pri gostovanju njihove sjajne ekipe u Kupeu.\",\n                \"organization\": {\n                    \"_id\": \"6911c1b36fc7cbd864e74659\",\n                    \"basicInfo\": {\n                        \"media\": {\n                            \"logo\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/49d4d880-3b02-48fe-aa62-7317bc190b9c.jpg\",\n                            \"cover\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/32241c7d-98d7-4845-ba26-d20d83fef09a.webp\"\n                        },\n                        \"name\": \"Suheer Organization\",\n                        \"phoneNumber\": {\n                            \"code\": \"+92\",\n                            \"number\": \"3329328392\"\n                        },\n                        \"website\": \"https://suheer.com\"\n                    }\n                },\n                \"venue\": {\n                    \"_id\": \"6911bd4fd49fc086aabd2504\",\n                    \"title\": \"Jinnah Convention Centre\",\n                    \"location\": {\n                        \"type\": \"Point\",\n                        \"coordinates\": [\n                            31.482857,\n                            74.4557239\n                        ],\n                        \"fullAddress\": \"FFJ3+GFQ, Sector J DHA Phase 6, Lahore, 54000, Pakistan\",\n                        \"city\": \"Lahore\",\n                        \"country\": \"Pakistan\",\n                        \"state\": \"Punjab\",\n                        \"postalCode\": \"54000\"\n                    }\n                },\n                \"categories\": [\n                    \"6911bd7cd49fc086aabd257c\",\n                    \"6911bd92d49fc086aabd2586\"\n                ],\n                \"tags\": [\n                    {\n                        \"_id\": \"6911bdd5d49fc086aabd25eb\",\n                        \"title\": \"Networking\"\n                    },\n                    {\n                        \"_id\": \"6911bddbd49fc086aabd25ee\",\n                        \"title\": \"FoodFestival\"\n                    },\n                    {\n                        \"_id\": \"6911bde7d49fc086aabd25f1\",\n                        \"title\": \"OutdoorEvent\"\n                    }\n                ]\n            },\n            \"schedule\": {\n                \"type\": \"oneTime\",\n                \"startDateTime\": \"2025-11-13 02:00 PM\",\n                \"endDateTime\": \"2025-11-30 09:00 PM\",\n                \"recurringDetails\": {\n                    \"isEnabled\": true,\n                    \"frequency\": \"weekly\",\n                    \"interval\": 1,\n                    \"daysOfWeek\": [\n                        \"mon\",\n                        \"wed\",\n                        \"sat\"\n                    ],\n                    \"endType\": \"afterOccurrences\",\n                    \"occurrences\": 2,\n                    \"_id\": \"691efc7f0b344ea06c743640\"\n                }\n            },\n            \"distance\": {\n                \"distance\": 289.52,\n                \"unit\": \"km\"\n            },\n            \"isFavorite\": false\n        },\n        {\n            \"_id\": \"6920594e20da418e35d14047\",\n            \"basicInfo\": {\n                \"media\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/40b89b42-2a68-47ad-99c4-081846de71f2.webp\",\n                \"title\": \"21 Nov Testing\",\n                \"description\": \"This is 21 Nov Testing\",\n                \"organization\": {\n                    \"_id\": \"6911c1b36fc7cbd864e74659\",\n                    \"basicInfo\": {\n                        \"media\": {\n                            \"logo\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/49d4d880-3b02-48fe-aa62-7317bc190b9c.jpg\",\n                            \"cover\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/32241c7d-98d7-4845-ba26-d20d83fef09a.webp\"\n                        },\n                        \"name\": \"Suheer Organization\",\n                        \"phoneNumber\": {\n                            \"code\": \"+92\",\n                            \"number\": \"3329328392\"\n                        },\n                        \"website\": \"https://suheer.com\"\n                    }\n                },\n                \"venue\": {\n                    \"_id\": \"6911bd4fd49fc086aabd2504\",\n                    \"title\": \"Jinnah Convention Centre\",\n                    \"location\": {\n                        \"type\": \"Point\",\n                        \"coordinates\": [\n                            31.482857,\n                            74.4557239\n                        ],\n                        \"fullAddress\": \"FFJ3+GFQ, Sector J DHA Phase 6, Lahore, 54000, Pakistan\",\n                        \"city\": \"Lahore\",\n                        \"country\": \"Pakistan\",\n                        \"state\": \"Punjab\",\n                        \"postalCode\": \"54000\"\n                    }\n                },\n                \"categories\": [\n                    \"6911bd92d49fc086aabd2586\",\n                    \"6911bd65d49fc086aabd254e\"\n                ],\n                \"tags\": [\n                    {\n                        \"_id\": \"6911bdd5d49fc086aabd25eb\",\n                        \"title\": \"Networking\"\n                    },\n                    {\n                        \"_id\": \"6911bde7d49fc086aabd25f1\",\n                        \"title\": \"OutdoorEvent\"\n                    }\n                ],\n                \"partnerOrganization\": \"6911cb9b6aca10eb719d72c8\"\n            },\n            \"schedule\": {\n                \"type\": \"oneTime\",\n                \"startDateTime\": \"2025-11-21 01:00 PM\",\n                \"endDateTime\": \"2025-11-30 09:00 PM\",\n                \"recurringDetails\": {\n                    \"isEnabled\": false,\n                    \"frequency\": \"daily\",\n                    \"interval\": 1,\n                    \"daysOfWeek\": [],\n                    \"endType\": \"never\",\n                    \"_id\": \"69206e20825b2c2c857e9f2e\"\n                }\n            },\n            \"distance\": {\n                \"distance\": 5329997.16,\n                \"unit\": \"km\"\n            },\n            \"isFavorite\": false\n        },\n        {\n            \"_id\": \"69206ffc825b2c2c857ea12c\",\n            \"basicInfo\": {\n                \"media\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/6bba8b4d-cc88-4ca3-ad74-93a076923f61.webp\",\n                \"title\": \"21 Testing Event 2\",\n                \"description\": \"21 Testing Event 2\",\n                \"organization\": {\n                    \"_id\": \"6911c1b36fc7cbd864e74659\",\n                    \"basicInfo\": {\n                        \"media\": {\n                            \"logo\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/49d4d880-3b02-48fe-aa62-7317bc190b9c.jpg\",\n                            \"cover\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/32241c7d-98d7-4845-ba26-d20d83fef09a.webp\"\n                        },\n                        \"name\": \"Suheer Organization\",\n                        \"phoneNumber\": {\n                            \"code\": \"+92\",\n                            \"number\": \"3329328392\"\n                        },\n                        \"website\": \"https://suheer.com\"\n                    }\n                },\n                \"venue\": {\n                    \"_id\": \"6911bd4fd49fc086aabd2504\",\n                    \"title\": \"Jinnah Convention Centre\",\n                    \"location\": {\n                        \"type\": \"Point\",\n                        \"coordinates\": [\n                            31.482857,\n                            74.4557239\n                        ],\n                        \"fullAddress\": \"FFJ3+GFQ, Sector J DHA Phase 6, Lahore, 54000, Pakistan\",\n                        \"city\": \"Lahore\",\n                        \"country\": \"Pakistan\",\n                        \"state\": \"Punjab\",\n                        \"postalCode\": \"54000\"\n                    }\n                },\n                \"categories\": [\n                    \"6911bd65d49fc086aabd254e\",\n                    \"6911bd92d49fc086aabd2586\"\n                ],\n                \"tags\": [\n                    {\n                        \"_id\": \"6911bdd5d49fc086aabd25eb\",\n                        \"title\": \"Networking\"\n                    },\n                    {\n                        \"_id\": \"6911bddbd49fc086aabd25ee\",\n                        \"title\": \"FoodFestival\"\n                    }\n                ],\n                \"partnerOrganization\": \"6911cc376aca10eb719d7322\"\n            },\n            \"schedule\": {\n                \"type\": \"oneTime\",\n                \"startDateTime\": \"2025-11-21 10:00 AM\",\n                \"endDateTime\": \"2025-11-30 06:00 PM\",\n                \"recurringDetails\": {\n                    \"isEnabled\": false,\n                    \"frequency\": \"daily\",\n                    \"interval\": 1,\n                    \"daysOfWeek\": [],\n                    \"endType\": \"never\",\n                    \"_id\": \"6923fd314bc30ae91b80c278\"\n                }\n            },\n            \"distance\": {\n                \"distance\": 5329997.16,\n                \"unit\": \"km\"\n            },\n            \"isFavorite\": false\n        },\n        {\n            \"_id\": \"691f06598d9b5d3fe5e37abd\",\n            \"basicInfo\": {\n                \"media\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/716ed5a4-0068-4101-baa3-b1110a8fee0f.webp\",\n                \"title\": \"Testing\",\n                \"description\": \"Testing Desc\",\n                \"organization\": {\n                    \"_id\": \"6911c1b36fc7cbd864e74659\",\n                    \"basicInfo\": {\n                        \"media\": {\n                            \"logo\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/49d4d880-3b02-48fe-aa62-7317bc190b9c.jpg\",\n                            \"cover\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/32241c7d-98d7-4845-ba26-d20d83fef09a.webp\"\n                        },\n                        \"name\": \"Suheer Organization\",\n                        \"phoneNumber\": {\n                            \"code\": \"+92\",\n                            \"number\": \"3329328392\"\n                        },\n                        \"website\": \"https://suheer.com\"\n                    }\n                },\n                \"venue\": {\n                    \"_id\": \"6911bd4fd49fc086aabd2504\",\n                    \"title\": \"Jinnah Convention Centre\",\n                    \"location\": {\n                        \"type\": \"Point\",\n                        \"coordinates\": [\n                            31.482857,\n                            74.4557239\n                        ],\n                        \"fullAddress\": \"FFJ3+GFQ, Sector J DHA Phase 6, Lahore, 54000, Pakistan\",\n                        \"city\": \"Lahore\",\n                        \"country\": \"Pakistan\",\n                        \"state\": \"Punjab\",\n                        \"postalCode\": \"54000\"\n                    }\n                },\n                \"categories\": [\n                    \"6911bd65d49fc086aabd254e\",\n                    \"6911bd6bd49fc086aabd2561\",\n                    \"6911bd7cd49fc086aabd257c\"\n                ],\n                \"tags\": [\n                    {\n                        \"_id\": \"6911bdd5d49fc086aabd25eb\",\n                        \"title\": \"Networking\"\n                    },\n                    {\n                        \"_id\": \"6911bde7d49fc086aabd25f1\",\n                        \"title\": \"OutdoorEvent\"\n                    }\n                ]\n            },\n            \"schedule\": {\n                \"type\": \"oneTime\",\n                \"startDateTime\": \"2025-11-25 09:00 AM\",\n                \"endDateTime\": \"2025-11-30 10:00 PM\",\n                \"recurringDetails\": {\n                    \"isEnabled\": true,\n                    \"frequency\": \"weekly\",\n                    \"interval\": 2,\n                    \"daysOfWeek\": [\n                        \"mon\",\n                        \"wed\",\n                        \"fri\"\n                    ],\n                    \"endType\": \"onDate\",\n                    \"endDate\": \"2025-11-27\",\n                    \"_id\": \"692004ce04938ed2e0654269\"\n                }\n            },\n            \"distance\": {\n                \"distance\": 5329997.16,\n                \"unit\": \"km\"\n            },\n            \"isFavorite\": false\n        },\n        {\n            \"_id\": \"691f19ac5a83c7de34bada47\",\n            \"basicInfo\": {\n                \"media\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/7b6a1284-ed66-4f12-886e-c92e118c7a7a.webp\",\n                \"title\": \"Wilma Britt\",\n                \"description\": \"Reprehenderit sit n\",\n                \"organization\": {\n                    \"_id\": \"6911c1b36fc7cbd864e74659\",\n                    \"basicInfo\": {\n                        \"media\": {\n                            \"logo\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/49d4d880-3b02-48fe-aa62-7317bc190b9c.jpg\",\n                            \"cover\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/32241c7d-98d7-4845-ba26-d20d83fef09a.webp\"\n                        },\n                        \"name\": \"Suheer Organization\",\n                        \"phoneNumber\": {\n                            \"code\": \"+92\",\n                            \"number\": \"3329328392\"\n                        },\n                        \"website\": \"https://suheer.com\"\n                    }\n                },\n                \"venue\": {\n                    \"_id\": \"6911bd4fd49fc086aabd2504\",\n                    \"title\": \"Jinnah Convention Centre\",\n                    \"location\": {\n                        \"type\": \"Point\",\n                        \"coordinates\": [\n                            31.482857,\n                            74.4557239\n                        ],\n                        \"fullAddress\": \"FFJ3+GFQ, Sector J DHA Phase 6, Lahore, 54000, Pakistan\",\n                        \"city\": \"Lahore\",\n                        \"country\": \"Pakistan\",\n                        \"state\": \"Punjab\",\n                        \"postalCode\": \"54000\"\n                    }\n                },\n                \"categories\": [\n                    \"6911bd65d49fc086aabd254e\",\n                    \"6911bd6bd49fc086aabd2561\"\n                ],\n                \"tags\": [\n                    {\n                        \"_id\": \"6911bddbd49fc086aabd25ee\",\n                        \"title\": \"FoodFestival\"\n                    }\n                ],\n                \"partnerOrganization\": \"6911bc8b2280acc8015fe1e6\"\n            },\n            \"schedule\": {\n                \"type\": \"oneTime\",\n                \"startDateTime\": \"2025-11-20 01:51 PM\",\n                \"endDateTime\": \"2025-11-27 04:02 PM\",\n                \"recurringDetails\": {\n                    \"isEnabled\": true,\n                    \"frequency\": \"weekly\",\n                    \"interval\": 1,\n                    \"daysOfWeek\": [\n                        \"mon\",\n                        \"wed\",\n                        \"fri\"\n                    ],\n                    \"endType\": \"never\",\n                    \"_id\": \"69206f3d825b2c2c857ea0a6\"\n                }\n            },\n            \"distance\": {\n                \"distance\": 5329997.16,\n                \"unit\": \"km\"\n            },\n            \"isFavorite\": false\n        }\n    ],\n    \"meta\": {\n        \"currentPage\": 1,\n        \"totalPages\": 1,\n        \"totalRecords\": 6,\n        \"limit\": 10\n    }\n}"
+								}
+							]
 						},
 						{
 							"name": "get - places",
@@ -3891,7 +4041,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "6914928ed4ab4bca5895f9f2"
+													"value": "692066c7706763caa2596b70"
 												}
 											]
 										}
@@ -3929,7 +4079,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"items\": [\n    {\n      \"menuItem\": \"6911d21601e061abb7bbc00b\",\n      \"quantity\": 2\n    },\n    {\n      \"menuItem\": \"6911c3cb6aca10eb719d6f9e\",\n      \"quantity\": 1\n    },\n    {\n      \"menuItem\": \"6911c3516aca10eb719d6f72\",\n      \"quantity\": 3\n    }\n  ],\n  \"pickupType\":\"tableService\", //counter, tableService, togo\n  \"tableNumber\":\"5\", //required in tableService case\n  \"notes\": \"No spice please.\",\n  \"paymentMethod\": \"card\" //\"applePay\", \"card\", \"cash\", \"payLater\"\n}\n",
+											"raw": "{\n  \"items\": [\n    {\n      \"menuItem\": \"6911c3766aca10eb719d6f7e\",\n      \"quantity\": 2\n    }\n  ],\n  \"pickupType\":\"tableService\", //counter, tableService, togo\n  \"tableNumber\":\"5\", //required in tableService case\n  \"notes\": \"No spice please.\",\n  \"paymentMethod\": \"card\" //\"applePay\", \"card\", \"cash\", \"payLater\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -4171,7 +4321,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}app/menu/items?organization=6911cc376aca10eb719d7322",
+											"raw": "{{url}}app/menu/items?organization=6911c1b36fc7cbd864e74659",
 											"host": [
 												"{{url}}app"
 											],
@@ -4182,7 +4332,68 @@
 											"query": [
 												{
 													"key": "organization",
-													"value": "6911cc376aca10eb719d7322"
+													"value": "6911c1b36fc7cbd864e74659"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "recommended",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/menu/items/recommended?organization=6911c1b36fc7cbd864e74659",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"menu",
+												"items",
+												"recommended"
+											],
+											"query": [
+												{
+													"key": "organization",
+													"value": "6911c1b36fc7cbd864e74659"
 												}
 											]
 										}
@@ -4374,7 +4585,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "691eb3ef2bb12fa95df3b862"
+													"value": "691ef2a587ef4de78def6d82"
 												}
 											]
 										}
@@ -4412,7 +4623,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"ticketings\": [\n        {\n            \"ticketId\": \"691b290ecaf7c91d708e893f\"\n        }\n    ],\n    \"paymentDetails\": {\n        \"paymentMethod\": \"card\", //applyPay, card\n        \"cardId\": \"card1\" // only required with card\n\n    }\n}",
+											"raw": "{\n    \"ticketings\": [\n        {\n            \"ticketId\": \"691f175e5a83c7de34bad930\",\n            \"timeSlot\": \"69205c1c20da418e35d1420f\",\n            \"protectionUserDetails\": {\n                \"firstName\": \"Wajid\",\n                \"surName\": \"Ali\",\n                \"dob\": \"2000-01-01\",\n                \"pid\": \"3234234234\"\n            }\n        },\n        {\n            \"ticketId\": \"691f06598d9b5d3fe5e37ac0\"\n        },\n        {\n            \"ticketId\": \"691f06598d9b5d3fe5e37ac0\"\n        },\n        {\n            \"ticketId\": \"691f06598d9b5d3fe5e37ac0\"\n        },\n        {\n            \"ticketId\": \"691f06598d9b5d3fe5e37ac0\"\n        },\n        {\n            \"ticketId\": \"691f06598d9b5d3fe5e37ac0\"\n        }\n    ],\n    \"paymentDetails\": {\n        \"paymentMethod\": \"applePay\"\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -4650,7 +4861,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"ticketings\": [\n        {\n            \"ticketId\": \"6915c3e448a5a4c172122335\",\n            \"timeSlot\": \"6915c3e448a5a4c172122336\" //only if its slot booking\n            ,\n            \"protectionUserDetails\":{\n                \"firstName\":\"Ali\",\n                \"surName\":\"Imran\",\n                \"dob\":\"2005-11-23\",\n                \"pid\":\"4848858585\"\n            }\n        },\n        {\n            \"ticketId\": \"691abb59fc26ab786b01973d\",\n            \"timeSlot\": \"691ac86955de45eedc58b901\" //only if its slot booking\n            ,\n           \"protectionUserDetails\":{\n                \"firstName\":\"Ali\",\n                \"surName\":\"Imran\",\n                \"dob\":\"2005-11-23\",\n                \"pid\":\"4848858585\"\n            }\n        }\n    ],\n    \"paymentDetails\": {\n        \"paymentMethod\": \"card\", //applyPay, card\n        \"cardId\": \"card1\" // only required with card\n\n    }\n}",
+											"raw": "{\n    \"ticketings\": [\n        {\n            \"ticketId\": \"691ebc9e6a663cc31bc5cf7a\",\n            \"timeSlot\": \"691ebc9e6a663cc31bc5cf7b\" //only if its slot booking\n            ,\n            \"protectionUserDetails\":{\n                \"firstName\":\"Ali\",\n                \"surName\":\"Imran\",\n                \"dob\":\"2005-11-23\",\n                \"pid\":\"4848858585\"\n            }\n        }\n    ],\n    \"paymentDetails\": {\n        \"paymentMethod\": \"card\", //applyPay, card\n        \"cardId\": \"card1\" // only required with card\n\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -4806,6 +5017,629 @@
 									]
 								}
 							]
+						}
+					]
+				},
+				{
+					"name": "Transactions",
+					"item": [
+						{
+							"name": "get",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/transactions/?status=confirmed&page=1&limit=10",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"transactions",
+										""
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "confirmed",
+											"description": "\"pending\", \"confirmed\", \"cancelled\", \"completed\""
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Reservations",
+					"item": [
+						{
+							"name": "get available  slots",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{url}}app/reservations?eventId=690d824d79228e2591462eb4&date=2025-12-17",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"reservations"
+									],
+									"query": [
+										{
+											"key": "eventId",
+											"value": "690d824d79228e2591462eb4"
+										},
+										{
+											"key": "organizationId",
+											"value": "6901b980e762df10a0acc13f",
+											"disabled": true
+										},
+										{
+											"key": "date",
+											"value": "2025-12-17"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "add",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"optionalEventId\": \"69020862e762df10a0accaf1\", // Optional field\r\n    \"companyOrganizer\": \"68a80301c740faa65aefdae4\", // required\r\n    \"organizationId\": \"6901b980e762df10a0acc13f\", // Required\r\n    \"reservationId\": \"6916ddf71b65ac0ec760a7c7\", //required\r\n    \"partySize\": 2, // Required\r\n    \"reservationType\": \"vip\", // Required \r\n    \"notes\":\"Keep everything ready.\", //custom text\r\n    \"timingSlots\": { // Required\r\n        \"dateTimeSlots\": [\r\n            {\r\n                \"date\": \"2025-12-17\", // Required\r\n                \"timeSlots\": [\r\n                    {\r\n                        \"startTime\": \"12:00 PM\", // Required\r\n                        \"endTime\": \"12:30 PM\" // Required\r\n                    }\r\n                ]\r\n            }\r\n        ]\r\n    }\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/reservations",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"reservations"
+									],
+									"query": [
+										{
+											"key": "organizationId",
+											"value": "6901b980e762df10a0acc13f",
+											"disabled": true
+										},
+										{
+											"key": "date",
+											"value": "2025-12-17",
+											"disabled": true
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "dell",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n   \"optionalEventId\": \"690b3b568edb7659cb7a7884\",\r\n    \"organizationId\": \"6901b980e762df10a0acc13f\"\r\n     \r\n}"
+								},
+								"url": {
+									"raw": "{{url}}app/reservations/:id",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"reservations",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "691586784411239acc336af8"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get all user reservations",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{url}}app/reservations/all?page=1&limit=10",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"reservations",
+										"all"
+									],
+									"query": [
+										{
+											"key": "organizationId",
+											"value": "6901b980e762df10a0acc13f",
+											"disabled": true
+										},
+										{
+											"key": "date",
+											"value": "2025-12-17",
+											"disabled": true
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "update user reservation",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"optionalEventId\": \"690b3b568edb7659cb7a7884\",  // Optional field\r\n//   \"organizationId\": \"6901b980e762df10a0acc13f\",  // Required\r\n  \"partySize\": 20,  // Required\r\n  \"reservationType\": \"vip\",  // Required \r\n  \"timingSlots\": { // Required\r\n    \"dateTimeSlots\": [\r\n      {\r\n        \"date\": \"2025-12-16\",  // Required\r\n        \"timeSlots\": [\r\n          {\r\n            \"startTime\": \"12:00 PM\",  // Required\r\n            \"endTime\": \"12:30 PM\"     // Required\r\n          }\r\n        ]\r\n      }\r\n    ]\r\n  }\r\n}\r\n",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/reservations/:id",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"reservations",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "6915a7034896ed4625dab3d0"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get reservation details",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{url}}app/reservations/details/:id",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"reservations",
+										"details",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "691717cdfe2e6d31f69c2d8b"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "GlobalLoyalty",
+					"item": [
+						{
+							"name": "Transactions-test only",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/global-loyalty/wallet-transactions",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"global-loyalty",
+												"wallet-transactions"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "get details",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/global-loyalty/wallet-transactions/:id",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"global-loyalty",
+												"wallet-transactions",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": ""
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"user\": \"6911ba17dd162801ff9b35d9\",\n    \"type\": \"earn\",\n    \"objectType\": \"challenge\",\n    \"objectId\": \"6911ba17dd162801ff9b35d8\", //optional\n    \"points\": { \"base\": 50, \"multiplier\": 2, \"total\": 50 },\n    \"closingBalance\":50,\n    \"description\": \"Points Checkin to cafe\"\n  }",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/global-loyalty/wallet-transactions/",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"global-loyalty",
+												"wallet-transactions",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "update",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"title\": \"Sample title\",\n  \"description\": \"description of item\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/global-loyalty/wallet-transactions/:id",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"global-loyalty",
+												"wallet-transactions",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": ""
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/global-loyalty/wallet-transactions/:id",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"global-loyalty",
+												"wallet-transactions",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": ""
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Wallet",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/global-loyalty/wallet",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"global-loyalty",
+										"wallet"
+									]
+								}
+							},
+							"response": []
 						}
 					]
 				}
@@ -12351,7 +13185,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "6915bb183b3db876c07b0977"
+											"value": "69206e7a4e1713f7a48b1361"
 										}
 									]
 								}
@@ -12389,7 +13223,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"type\": \"image\", //image or video\n            \"name\": \"event-banner.jpg\"\n        },\n        \"title\": \"Monday Fun day\",\n        \"description\": \"A fun-filled day of live music and food.\",\n        \"organization\": \"68d91de3e9ed2f5900dca083\",\n        \"venue\": \"691469d5167faf035385ce27\",\n        \"categories\": [\n            \"68f0d6b0a92f125fd26a5831\",\n            \"68c028637c376b15157d9ecc\"\n        ],\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"6883208feec25d5f951a8c74\"\n        ]\n    },\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-10-27 10:00 AM\",\n        \"endDateTime\": \"2025-10-27 05:00 PM\"\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n        /*Ending on specific date*/\n        ,\n        \"recurringDetails\": {\n            \"isEnabled\": true,\n            \"frequency\": \"weekly\",\n            \"interval\": 1,\n            \"daysOfWeek\": [\n                \"fri\"\n            ],\n            \"endType\": \"onDate\",\n            \"endDate\": \"2025-12-31\"\n        }\n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    }\n    ,\n    \"ticketing\": {\n        \"title\": \"Standard\",\n        //\"quantity\": 200, // skip when timingSlots enabled\n        \"price\": 10,\n        \"taxPercentage\": 5,\n        \"event\": \"690c9f974cf55e352d18b74e\",\n        \"timingSlots\": {\n            \"enabled\": true,\n            \"dateTimeSlots\": [\n                {\n                    \"date\": \"2025-10-27\",\n                    \"timeSlots\": [\n                        {\n                            \"quantity\": \"10\",\n                            \"startTime\": \"02:00 PM\",\n                            \"endTime\": \"02:30 PM\"\n                        },\n                        {\n                            \"quantity\": \"5\",\n                            \"startTime\": \"12:30 PM\",\n                            \"endTime\": \"01:00 PM\"\n                        }\n                    ]\n                },\n                {\n                    \"date\": \"2025-10-27\",\n                    \"timeSlots\": [\n                        {\n                            \"quantity\": \"10\",\n                            \"startTime\": \"12:00 PM\",\n                            \"endTime\": \"12:30 PM\"\n                        },\n                        {\n                            \"quantity\": \"10\",\n                            \"startTime\": \"12:30 PM\",\n                            \"endTime\": \"01:00 PM\"\n                        }\n                    ]\n                }\n            ]\n        },\n        \"repeatable\": {\n            \"isRepeatable\": true,\n            \"visits\": 2\n        },\n        \"resaleProtection\": \"nameSurnamePid\",\n        \"transferFee\": 10,\n        \"timeSensitivePricing\": {\n            \"earlyBird\": {\n                \"endDate\": \"2025-12-20\",\n                \"discountedPrice\": 25\n            },\n            \"lastMinute\": {\n                \"startDate\": \"2025-12-28\",\n                \"discountedPrice\": 35\n            }\n        },\n        \"fastTrackEntry\": {\n            \"enabled\": true,\n            \"quantity\": 50,\n            \"extraPrice\": 15\n        },\n        \"requiresReservation\": {\n            \"enabled\": true,\n            \"type\": \"vip\"\n        },\n        \"status\": \"scheduled\", //\"active\", \"scheduled\", \"inactive\",\n        \"scheduledPublishAt\": \"2025-12-28 10:30 AM\"\n    }\n}",
+									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"type\": \"image\", //image or video\n            \"name\": \"event-banner.jpg\"\n        },\n        \"title\": \"Monday Fun day\",\n        \"description\": \"A fun-filled day of live music and food.\",\n        \"organization\": \"6911bc8b2280acc8015fe1e6\",\n        \"venue\": \"6911bb6822299f710c7a947e\",\n        \"categories\": [\n            \"68f0d6b0a92f125fd26a5831\",\n            \"68c028637c376b15157d9ecc\"\n        ],\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"6883208feec25d5f951a8c74\"\n        ],\n        \"partnerOrganization\":\"6911b9cd1902fd1c55eb4842\"\n    },\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-10-27 10:00 AM\",\n        \"endDateTime\": \"2025-10-27 05:00 PM\"\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n        /*Ending on specific date*/\n        ,\n        \"recurringDetails\": {\n            \"isEnabled\": true,\n            \"frequency\": \"weekly\",\n            \"interval\": 1,\n            \"daysOfWeek\": [\n                \"fri\"\n            ],\n            \"endType\": \"onDate\",\n            \"endDate\": \"2025-12-31\"\n        }\n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    }\n    ,\n    \"ticketing\": {\n        \"title\": \"Standard\",\n        //\"quantity\": 200, // skip when timingSlots enabled\n        \"price\": 10,\n        \"taxPercentage\": 5,\n        \"event\": \"690c9f974cf55e352d18b74e\",\n        \"timingSlots\": {\n            \"enabled\": true,\n            \"dateTimeSlots\": [\n                {\n                    \"date\": \"2025-10-27\",\n                    \"timeSlots\": [\n                        {\n                            \"quantity\": \"10\",\n                            \"startTime\": \"02:00 PM\",\n                            \"endTime\": \"02:30 PM\"\n                        },\n                        {\n                            \"quantity\": \"5\",\n                            \"startTime\": \"12:30 PM\",\n                            \"endTime\": \"01:00 PM\"\n                        }\n                    ]\n                },\n                {\n                    \"date\": \"2025-10-27\",\n                    \"timeSlots\": [\n                        {\n                            \"quantity\": \"10\",\n                            \"startTime\": \"12:00 PM\",\n                            \"endTime\": \"12:30 PM\"\n                        },\n                        {\n                            \"quantity\": \"10\",\n                            \"startTime\": \"12:30 PM\",\n                            \"endTime\": \"01:00 PM\"\n                        }\n                    ]\n                }\n            ]\n        },\n        \"repeatable\": {\n            \"isRepeatable\": true,\n            \"visits\": 2\n        },\n        \"resaleProtection\": \"nameSurnamePid\",\n        \"transferFee\": 10,\n        \"timeSensitivePricing\": {\n            \"earlyBird\": {\n                \"endDate\": \"2025-12-20 10:00 AM\",\n                \"discountedPrice\": 25\n            },\n            \"lastMinute\": {\n                \"startDate\": \"2025-12-28 10:00 AM\",\n                \"discountedPrice\": 35\n            }\n        },\n        \"fastTrackEntry\": {\n            \"enabled\": true,\n            \"quantity\": 50,\n            \"extraPrice\": 15\n        },\n        \"requiresReservation\": {\n            \"enabled\": true,\n            \"type\": \"vip\"\n        },\n        \"status\": \"scheduled\", //\"active\", \"scheduled\", \"inactive\",\n        \"scheduledPublishAt\": \"2025-12-28 10:30 AM\"\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -13103,7 +13937,7 @@
 							]
 						},
 						{
-							"name": "add",
+							"name": "add with timeslots",
 							"event": [
 								{
 									"listen": "test",
@@ -13133,7 +13967,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"title\": \"Standard\",\n    //\"quantity\": 200, // skip when timingSlots enabled\n    \"price\": 10,\n    \"taxPercentage\": 5,\n    \"event\": \"69149fa4bef44f5456ed45d7\",\n    \"timingSlots\": {\n        \"enabled\": true,\n        \"dateTimeSlots\": [\n            {\n                \"date\": \"2025-12-16\",\n                \"timeSlots\": [\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:00 PM\",\n                        \"endTime\": \"12:30 PM\"\n                    },\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:30 PM\",\n                        \"endTime\": \"01:00 PM\"\n                    }\n                ]\n            },\n            {\n                \"date\": \"2025-12-17\",\n                \"timeSlots\": [\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:00 PM\",\n                        \"endTime\": \"12:30 PM\"\n                    },\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:30 PM\",\n                        \"endTime\": \"01:00 PM\"\n                    }\n                ]\n            }\n        ]\n    },\n    \"repeatable\": {\n        \"isRepeatable\": true,\n        \"visits\": 2\n    },\n    \"resaleProtection\": \"nameSurnamePid\",\n    \"transferFee\": 10,\n    \"timeSensitivePricing\": {\n        \"earlyBird\": {\n            \"endDate\": \"2025-12-20\",\n            \"discountedPrice\": 25\n        },\n        \"lastMinute\": {\n            \"startDate\": \"2025-12-28\",\n            \"discountedPrice\": 35\n        }\n    },\n    \"fastTrackEntry\": {\n        \"enabled\": true,\n        \"quantity\": 50,\n        \"extraPrice\": 15\n    },\n    \"requiresReservation\": {\n        \"enabled\": true,\n        \"type\": \"vip\"\n    },\n    \"status\": \"active\", //\"active\", \"scheduled\", \"inactive\",\n    \"scheduledPublishAt\":\"2025-12-28 10:30 AM\"\n}",
+									"raw": "{\n    \"title\": \"Standard\",\n    //\"quantity\": 200, // skip when timingSlots enabled\n    \"price\": 10,\n    \"taxPercentage\": 5,\n    \"event\": \"69149fa4bef44f5456ed45d7\",\n    \"timingSlots\": {\n        \"enabled\": true,\n        \"dateTimeSlots\": [\n            {\n                \"date\": \"2025-12-16\",\n                \"timeSlots\": [\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:00 PM\",\n                        \"endTime\": \"12:30 PM\"\n                    },\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:30 PM\",\n                        \"endTime\": \"01:00 PM\"\n                    }\n                ]\n            },\n            {\n                \"date\": \"2025-12-17\",\n                \"timeSlots\": [\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:00 PM\",\n                        \"endTime\": \"12:30 PM\"\n                    },\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:30 PM\",\n                        \"endTime\": \"01:00 PM\"\n                    }\n                ]\n            }\n        ]\n    },\n    \"repeatable\": {\n        \"isRepeatable\": true,\n        \"visits\": 2\n    },\n    \"resaleProtection\": \"nameSurnamePid\",\n    \"transferFee\": 10,\n    \"timeSensitivePricing\": {\n        \"earlyBird\": {\n            \"endDate\": \"2025-12-20 12:30 PM\",\n            \"discountedPrice\": 25\n        },\n        \"lastMinute\": {\n            \"startDate\": \"2025-12-28 12:30 PM\",\n            \"discountedPrice\": 35\n        }\n    },\n    \"fastTrackEntry\": {\n        \"enabled\": true,\n        \"quantity\": 50,\n        \"extraPrice\": 15\n    },\n    \"requiresReservation\": {\n        \"enabled\": true,\n        \"type\": \"vip\"\n    },\n    \"status\": \"active\", //\"active\", \"scheduled\", \"inactive\",\n    \"scheduledPublishAt\":\"2025-12-28 10:30 AM\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -13155,7 +13989,7 @@
 							"response": []
 						},
 						{
-							"name": "add Copy",
+							"name": "add normal",
 							"event": [
 								{
 									"listen": "test",
@@ -13185,7 +14019,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"title\": \"Test\",\n  \"price\": 1200,\n  \"taxPercentage\": 13,\n  \"event\": \"691469fb167faf035385ce33\",\n  \"status\": \"scheduled\",\n  \"timingSlots\": { \"enabled\": false },\n  \"repeatable\": { \"isRepeatable\": false },\n  \"resaleProtection\": \"none\",\n  \"fastTrackEntry\": { \"enabled\": false },\n  \"requiresReservation\": { \"enabled\": false },\n  \"quantity\": 12200,\n  \"scheduledPublishAt\": \"2025-11-12 07:21 PM\"\n}\n",
+									"raw": "{\n  \"title\": \"VIP\",\n  \"price\": 1200,\n  \"taxPercentage\": 13,\n  \"event\": \"691ec6b48b3b9e47b35fb335\",\n  \"status\": \"scheduled\",\n  \"timingSlots\": { \"enabled\": false },\n  \"repeatable\": { \"isRepeatable\": false },\n  \"resaleProtection\": \"none\",\n  \"fastTrackEntry\": { \"enabled\": false },\n  \"requiresReservation\": { \"enabled\": false },\n  \"quantity\": 5,\n  \"scheduledPublishAt\": \"2025-11-12 07:21 PM\"\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -19688,13 +20522,19 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/loyalty/club-collaborations",
+											"raw": "{{url}}admin/loyalty/club-collaborations?status=pending",
 											"host": [
 												"{{url}}admin"
 											],
 											"path": [
 												"loyalty",
 												"club-collaborations"
+											],
+											"query": [
+												{
+													"key": "status",
+													"value": "pending"
+												}
 											]
 										}
 									},
@@ -19841,7 +20681,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Sample title\",\n  \"description\": \"description of item\"\n}\n",
+											"raw": "{\n  \"status\": \"accepted\", //\"pending\", \"accepted\", \"rejected\", \"expired\"\n  \"notes\": \"description of item\",\n  \"userId\":\"\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -20246,6 +21086,226 @@
 												}
 											]
 										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Transactions",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/transactions/?status=confirmed&page=1&limit=10&companyOrganizer=6911b8946c940af405a4a603",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"transactions",
+												""
+											],
+											"query": [
+												{
+													"key": "status",
+													"value": "confirmed",
+													"description": "\"pending\", \"confirmed\", \"cancelled\", \"completed\""
+												},
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "organizations",
+													"value": "[\"6911b9cd1902fd1c55eb4842\"]",
+													"disabled": true
+												},
+												{
+													"key": "companyOrganizer",
+													"value": "6911b8946c940af405a4a603"
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Club members",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/loyalty/club-members?companyOrganizer=6911cc376aca10eb719d7322&page=1&limit=10",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"loyalty",
+												"club-members"
+											],
+											"query": [
+												{
+													"key": "companyOrganizer",
+													"value": "6911cc376aca10eb719d7322"
+												},
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "keyword",
+													"value": "Ali",
+													"disabled": true
+												},
+												{
+													"key": "status",
+													"value": "active",
+													"description": "active/inactive",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "gift points",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"companyOrganizer\": \"6911cc376aca10eb719d7322\",\n  \"user\": \"691b2145caf7c91d708e8576\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/loyalty/club-members/gift-points",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"loyalty",
+												"club-members",
+												"gift-points"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
 									},
 									"response": []
 								}
@@ -22194,6 +23254,719 @@
 								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
 							},
 							"response": []
+						}
+					]
+				},
+				{
+					"name": "Reservation",
+					"item": [
+						{
+							"name": "add",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"reservationType\": \"outdoor\",       // [\"regular\",\"vip\",\"outdoor\", \"private\", \"bar\"\"window\",]\r\n    \"availableReservations\": 1,\r\n    \"maxCapacityPerReservation\": 10,\r\n    \"organizationId\": \"6901b980e762df10a0acc13f\", \r\n    // \"conditionType\": \"minimumSpendOnLocation\", // [ \"fixedPrice\", \"minimumSpendOnLocation\"prepayOption\", \"noCondition\", \"ticketRequirement\", \"customText\",],\r\n    // \"conditionType\": \"fixedPrice\",\r\n    \"conditionType\": \"prepayOption\",\r\n    \"amount\": 10,\r\n    // \"conditionType\": \"customText\",\r\n    // \"customText\": \" this is custome text\",\r\n    // \"conditionType\": \"ticketRequirement\",\r\n    // \"ticketType\": \"vipEventPass\",\r\n    // \"conditionType\": \"ticketRequirement\",\r\n    // \"ticketType\": \"generalAdmission\",\r\n    // \"conditionType\": \"ticketRequirement\",\r\n    // \"ticketType\": \"premiumAccess\",\r\n    // \"conditionType\": \"noCondition\",\r\n    \"taxPercentage\": \"5\",\r\n    \"needsConfirmation\": true,\r\n      \"optionalEventId\": \"690d824d79228e2591462eb4\",\r\n    \"timingSlots\": {\r\n        \"enabled\": true,\r\n        \"dateTimeSlots\": [\r\n            {\r\n                \"date\": \"2025-12-16\",\r\n                \"timeSlots\": [\r\n                    {\r\n                        \"startTime\": \"12:00 PM\",\r\n                        \"endTime\": \"12:30 PM\"\r\n                    },\r\n                    {\r\n                        \"startTime\": \" PM\",\r\n                        \"endTime\": \"01:00 PM\"\r\n                    }\r\n                ]\r\n            },\r\n            {\r\n                \"date\": \"2025-12-17\",\r\n                \"timeSlots\": [\r\n                    {\r\n\r\n                        \"startTime\": \"12:00 PM\",\r\n                        \"endTime\": \"12:30 PM\"\r\n                    },\r\n                    {\r\n                        \"startTime\": \"12:30 PM\",\r\n                        \"endTime\": \"01:00 PM\"\r\n                    }\r\n                ]\r\n            }\r\n        ]\r\n    },\r\n    \"status\": \"active\"     // [\"active\", \"inactive\", \"deleted\"],\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/reservations",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"reservations"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get",
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "{{url}}admin/reservations?date=2025-11-20&companyOrganizer=6911c14b6fc7cbd864e745b6",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"reservations"
+									],
+									"query": [
+										{
+											"key": "date",
+											"value": "2025-11-20"
+										},
+										{
+											"key": "range",
+											"value": "today",
+											"disabled": true
+										},
+										{
+											"key": "range",
+											"value": "monthly",
+											"disabled": true
+										},
+										{
+											"key": "range",
+											"value": "weekly",
+											"disabled": true
+										},
+										{
+											"key": "page",
+											"value": "2",
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": "10",
+											"disabled": true
+										},
+										{
+											"key": "organizationsId",
+											"value": "[\"6911c1b36fc7cbd864e74659\"]",
+											"disabled": true
+										},
+										{
+											"key": "companyOrganizer",
+											"value": "6911c14b6fc7cbd864e745b6"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "dell",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n  \"title\": \"Silver Tier\",\r\n  \"availableReservations\": 1,\r\n  \"maxCapacityPerReservation\": 10,\r\n  \"conditionType\": \"fixedPrice\",\r\n  \"fixedPrice\": 100,\r\n  \"minimumSpend\": null,\r\n  \"prepayAmount\": null,\r\n  \"ticketType\": null,\r\n  \"customText\": null,\r\n  \"taxPercentage\": \"15%\",\r\n  \"needsConfirmation\": true,\r\n  \"optionalEventLink\": \"http://example.com\",\r\n  \"status\": \"active\"\r\n \r\n}\r\n"
+								},
+								"url": {
+									"raw": "{{url}}admin/reservations/:id",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"reservations",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "691414501096bb3ea651c606"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "update",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"title\": \"Silver Reservation\",\r\n    \"availableReservations\": 1,\r\n    \"maxCapacityPerReservation\": 10,\r\n    \"organizationId\": \"6901b980e762df10a0acc13f\",\r\n    \"conditionType\": \"minimumSpendOnLocation\",\r\n    // \"conditionType\": \"fixedPrice\",\r\n    // \"conditionType\": \"prepayOption\",\r\n    \"amount\": 10,\r\n    // \"conditionType\": \"customText\",\r\n    // \"customText\": \" this is custome text\",\r\n    // \"conditionType\": \"ticketRequirement\",\r\n    // \"ticketType\": \"vipEventPass\",\r\n    // \"conditionType\": \"ticketRequirement\",\r\n    // \"ticketType\": \"generalAdmission\",\r\n    // \"conditionType\": \"ticketRequirement\",\r\n    // \"ticketType\": \"premiumAccess\",\r\n    // \"conditionType\": \"noCondition\",\r\n    \"taxPercentage\": \"5\",\r\n    \"needsConfirmation\": true,\r\n    //   \"optionalEventId\": \"690b3b568edb7659cb7a7884\",\r\n    \"timingSlots\": {\r\n        \"enabled\": false,\r\n        \"dateTimeSlots\": [\r\n            {\r\n                \"date\": \"2025-12-16\",\r\n                \"timeSlots\": [\r\n                    {\r\n                        \"startTime\": \"12:25 PM\",\r\n                        \"endTime\": \"12:30 PM\"\r\n                    },\r\n                    {\r\n                        \"startTime\": \"10:30 PM\",\r\n                        \"endTime\": \"01:00 PM\"\r\n                    }\r\n                ]\r\n            },\r\n            {\r\n                \"date\": \"2025-12-17\",\r\n                \"timeSlots\": [\r\n                    {\r\n\r\n                        \"startTime\": \"12:00 PM\",\r\n                        \"endTime\": \"12:30 PM\"\r\n                    },\r\n                    {\r\n                        \"startTime\": \"12:30 PM\",\r\n                        \"endTime\": \"01:00 PM\"\r\n                    }\r\n                ]\r\n            }\r\n        ]\r\n    },\r\n    \"status\": \"active\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/reservations/:id",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"reservations",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "6916ddf71b65ac0ec760a7c7"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get all users reservations",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{url}}admin/reservations/users?companyOrganizer=6911c14b6fc7cbd864e745b6&reservationId=691ebc4f62df7ea9abdbdf5d",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"reservations",
+										"users"
+									],
+									"query": [
+										{
+											"key": "organizationsId",
+											"value": "[\"690b3b568edb7659cb7a7884\",\"6901b980e762df10a0acc13f\"]",
+											"disabled": true
+										},
+										{
+											"key": "date",
+											"value": "2025-12-17",
+											"disabled": true
+										},
+										{
+											"key": "companyOrganizer",
+											"value": "6911c14b6fc7cbd864e745b6"
+										},
+										{
+											"key": "reservationStatus",
+											"value": "cancelled",
+											"disabled": true
+										},
+										{
+											"key": "reservationStatus",
+											"value": "pending",
+											"disabled": true
+										},
+										{
+											"key": "reservationId",
+											"value": "691ebc4f62df7ea9abdbdf5d"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "update status reservation of  user",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "enum: [\"confirmed\", \"rejected\", \"pending\", \"cancelled\"],",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/reservations/updateStatus/:id/:value",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"reservations",
+										"updateStatus",
+										":id",
+										":value"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "691f105e19c66cf25f0b618d"
+										},
+										{
+											"key": "value",
+											"value": "pending"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "update user reservation",
+							"request": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"firstName\": \"Ahmad\",\r\n    \"lastName\": \"Gill\",\r\n    \"phoneNumber\": {\r\n        \"code\": \"+92\",\r\n        \"number\": \"998798769\"\r\n    },\r\n    \"partySize\": 15,\r\n    \"reservationType\": \"window\",\r\n    \"timingSlots\": {\r\n        \"dateTimeSlots\": [\r\n            {\r\n                \"date\": \"2025-12-17\",\r\n                \"timeSlots\": [\r\n                    {\r\n                        \"startTime\": \"12:25 PM\",\r\n                        \"endTime\": \"12:30 PM\"\r\n                    }\r\n                ]\r\n            }\r\n        ]\r\n    }\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}admin/reservations/:userId/:id",
+									"host": [
+										"{{url}}admin"
+									],
+									"path": [
+										"reservations",
+										":userId",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "userId",
+											"value": "6911b9931902fd1c55eb480c"
+										},
+										{
+											"key": "id",
+											"value": "691f105e19c66cf25f0b618d"
+										}
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "GlobalLoyalty",
+					"item": [
+						{
+							"name": "Status Levels",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/status-levels/",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"status-levels",
+												""
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "get",
+											"originalRequest": {
+												"method": "GET",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}admin/global-loyalty/status-levels/",
+													"host": [
+														"{{url}}admin"
+													],
+													"path": [
+														"global-loyalty",
+														"status-levels",
+														""
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": null,
+											"header": [
+												{
+													"key": "Content-Security-Policy",
+													"value": "default-src 'self';script-src 'self' 'unsafe-inline';style-src 'self' 'unsafe-inline';img-src 'self' data:;connect-src 'self' https://pleis.com https://www.pleis.com https://dev.pleis.com https://www.dev.pleis.com http://localhost:4003 https://pleis.vercel.app https://shipping-profession-merge-double.trycloudflare.com http://192.168.15.141:4003;base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';object-src 'none';script-src-attr 'none';upgrade-insecure-requests"
+												},
+												{
+													"key": "Cross-Origin-Embedder-Policy",
+													"value": "require-corp"
+												},
+												{
+													"key": "Cross-Origin-Opener-Policy",
+													"value": "same-origin"
+												},
+												{
+													"key": "Cross-Origin-Resource-Policy",
+													"value": "same-origin"
+												},
+												{
+													"key": "Origin-Agent-Cluster",
+													"value": "?1"
+												},
+												{
+													"key": "Referrer-Policy",
+													"value": "no-referrer"
+												},
+												{
+													"key": "Strict-Transport-Security",
+													"value": "max-age=31536000; includeSubDomains"
+												},
+												{
+													"key": "X-Content-Type-Options",
+													"value": "nosniff"
+												},
+												{
+													"key": "X-DNS-Prefetch-Control",
+													"value": "off"
+												},
+												{
+													"key": "X-Download-Options",
+													"value": "noopen"
+												},
+												{
+													"key": "X-Frame-Options",
+													"value": "SAMEORIGIN"
+												},
+												{
+													"key": "X-Permitted-Cross-Domain-Policies",
+													"value": "none"
+												},
+												{
+													"key": "X-XSS-Protection",
+													"value": "0"
+												},
+												{
+													"key": "X-RateLimit-Limit",
+													"value": "200"
+												},
+												{
+													"key": "X-RateLimit-Remaining",
+													"value": "199"
+												},
+												{
+													"key": "Date",
+													"value": "Sat, 22 Nov 2025 09:32:21 GMT"
+												},
+												{
+													"key": "X-RateLimit-Reset",
+													"value": "1763804842"
+												},
+												{
+													"key": "Vary",
+													"value": "Origin, Accept-Encoding"
+												},
+												{
+													"key": "Access-Control-Allow-Credentials",
+													"value": "true"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"6da-yhXAzadXQTjYdxeAjkDOOGmrTNQ\""
+												},
+												{
+													"key": "Content-Encoding",
+													"value": "br"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												},
+												{
+													"key": "Transfer-Encoding",
+													"value": "chunked"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Status levels fetched successfully\",\n    \"data\": [\n        {\n            \"_id\": \"692178a42fdc7ad36320d905\",\n            \"image\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/blue.png\",\n            \"title\": \"Blue\",\n            \"type\": \"blue\",\n            \"bonusPointsPerEuro\": 0,\n            \"entryPoints\": 0,\n            \"retainPoints\": 0,\n            \"status\": \"active\",\n            \"createdAt\": \"2025-11-22T08:47:32.254Z\",\n            \"updatedAt\": \"2025-11-22T08:47:32.254Z\",\n            \"__v\": 0\n        },\n        {\n            \"_id\": \"692178d9dd3107a7545c05d0\",\n            \"image\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/silver.png\",\n            \"title\": \"Silver\",\n            \"type\": \"silver\",\n            \"bonusPointsPerEuro\": 1,\n            \"entryPoints\": 100,\n            \"retainPoints\": 80,\n            \"status\": \"active\",\n            \"createdAt\": \"2025-11-22T08:48:25.401Z\",\n            \"updatedAt\": \"2025-11-22T08:48:25.401Z\",\n            \"__v\": 0\n        },\n        {\n            \"_id\": \"692178fddd3107a7545c05d4\",\n            \"image\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/gold.png\",\n            \"title\": \"Gold\",\n            \"type\": \"gold\",\n            \"bonusPointsPerEuro\": 2,\n            \"entryPoints\": 300,\n            \"retainPoints\": 250,\n            \"status\": \"active\",\n            \"createdAt\": \"2025-11-22T08:49:01.842Z\",\n            \"updatedAt\": \"2025-11-22T08:49:01.842Z\",\n            \"__v\": 0\n        },\n        {\n            \"_id\": \"69217901dd3107a7545c05d8\",\n            \"image\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/platinum.png\",\n            \"title\": \"Platinum\",\n            \"type\": \"platinum\",\n            \"bonusPointsPerEuro\": 3,\n            \"entryPoints\": 700,\n            \"retainPoints\": 600,\n            \"status\": \"active\",\n            \"createdAt\": \"2025-11-22T08:49:05.906Z\",\n            \"updatedAt\": \"2025-11-22T08:49:05.906Z\",\n            \"__v\": 0\n        },\n        {\n            \"_id\": \"69217906dd3107a7545c05dc\",\n            \"image\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/black.png\",\n            \"title\": \"Black\",\n            \"type\": \"black\",\n            \"bonusPointsPerEuro\": 5,\n            \"entryPoints\": 1500,\n            \"retainPoints\": 1000,\n            \"status\": \"active\",\n            \"createdAt\": \"2025-11-22T08:49:10.458Z\",\n            \"updatedAt\": \"2025-11-22T08:51:15.044Z\",\n            \"__v\": 0\n        }\n    ],\n    \"meta\": {\n        \"currentPage\": 1,\n        \"totalPages\": 1,\n        \"totalRecords\": 5,\n        \"limit\": 10,\n        \"statusLevelsCount\": {\n            \"total\": 5,\n            \"active\": 5,\n            \"inactive\": 0\n        }\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "get details",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/status-levels/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"status-levels",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "690b3bbccce30d936155fab2"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"image\": \"black.png\",\n  \"title\": \"Black\",\n  \"type\": \"black\",\n  \"bonusPointsPerEuro\": 5,\n  \"entryPoints\": 1500,\n  \"retainPoints\": 1200\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/status-levels/",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"status-levels",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "update",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"retainPoints\": 1000\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/status-levels/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"status-levels",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "69217906dd3107a7545c05dc"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/status-levels/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"status-levels",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": ""
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
 						}
 					]
 				},

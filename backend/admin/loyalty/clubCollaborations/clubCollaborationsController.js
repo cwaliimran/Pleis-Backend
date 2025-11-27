@@ -66,14 +66,17 @@ const createClubCollaboration = async (req, res) => {
 
 const getClubCollaborations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
+   const { organizationId } = req.params;
   const { keyword, status = "pending", date } = req.query;
   try {
+    console.log("organizationId", organizationId);
     const { clubCollaborations, meta } = await clubCollaborationsService.getClubCollaborations({
       page,
       limit,
       keyword,
       status,
       date,
+      organizationId
     });
 
     return sendResponse({
@@ -136,8 +139,9 @@ const getClubCollaborationDetails = async (req, res) => {
 
 const updateClubCollaboration = async (req, res) => {
   const { id } = req.params;
-  const { status, notes, expiryDate } = req.body;
-  const userId = req.user.id; // Get the authenticated user ID
+  const { status, notes, expiryDate, companyOrganizer } = req.body;
+  const userId = companyOrganizer || req.user._id;
+  console.log("userId", userId);
 
   if (
     !validateParams(req, res, {
@@ -191,6 +195,7 @@ const deleteClubCollaboration = async (req, res) => {
     })
   )
     return;
+    console.log("id is ",id );
 
   try {
     const deleted = await clubCollaborationsService.deleteClubCollaboration(id);

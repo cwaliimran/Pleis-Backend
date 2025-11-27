@@ -22,6 +22,7 @@ const routes = require("./routes");
 const adminRoutes = require("./admin/routes");
 const organizerRoutes = require("./organizer/routes");
 const appRoutes = require("./routes/appRoutes");
+const staffRoutes = require("./routes/staffRoutes");
 const { sendResponse } = require("./helperUtils/responseUtil");
 const connectToDB = require("./helperUtils/server-setup");
 const { backupMongoDB } = require("./helperUtils/dataBaseBackup.js");
@@ -50,7 +51,7 @@ const allowedOrigins = [
   "https://specification-medicine-exec-deaf.trycloudflare.com",
   "https://willow-zealand-currency-fortune.trycloudflare.com",
   "http://192.168.12.121:4003",
-  "https://bills-reprints-virtual-highlight.trycloudflare.com",
+  "https://ebook-what-premiere-totals.trycloudflare.com",
 ];
 securityMiddleware(app, {
   allowedOrigins,
@@ -80,6 +81,8 @@ app.use("/api/v1/app", appRoutes);
 app.use("/api/v1/admin", adminRoutes);
 // Organizer routes
 app.use("/api/v1/organizer", organizerRoutes);
+// Organizer staff
+app.use("/api/v1/staff", staffRoutes);
 
 app.use("/api/v1", routes);
 

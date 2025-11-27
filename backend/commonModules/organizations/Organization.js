@@ -62,10 +62,11 @@ const organizationSchema = new mongoose.Schema(
           type: String,
           default: "",
         },
-        linkedin: {
-          type: String,
-          default: "",
-        },
+tiktok: {
+  type: String,
+  default: "",
+},
+
       },
     },
 

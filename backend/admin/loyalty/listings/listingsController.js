@@ -11,7 +11,9 @@ const service = require("./listingsService");
 
 const getListings = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date } = req.query;
+  const { keyword, status, date, companyOrganizer } = req.query;
+  const userId = companyOrganizer || req.user._id;
+  console.log("User ID:", userId);
 
   try {
     const { listings, meta } = await service.getListings({
@@ -21,6 +23,7 @@ const getListings = async (req, res) => {
       status,
       date,
       timezone: req.user?.timezone,
+      userId
     });
     return sendResponse({
       res,

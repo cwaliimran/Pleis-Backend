@@ -22,10 +22,10 @@ const apiRateLimiterDetails = createRateLimiter("ClubCollaborations/:id");
 router.post("/", roleMiddleware(["admin", "organizer", "manager"]), createClubCollaboration);
 
 // Get all clubCollaborations with pagination
-router.get("/", apiRateLimiter, getClubCollaborations);
+router.get("/:organizationId",  getClubCollaborations);
 
 //get clubCollaboration details
-router.get("/:id", apiRateLimiterDetails, getClubCollaborationDetails);
+router.get("/:id",  getClubCollaborationDetails);
 
 // Update an existing clubCollaboration
 router.put("/:id", roleMiddleware(["admin", "organizer", "manager"]), updateClubCollaboration);
