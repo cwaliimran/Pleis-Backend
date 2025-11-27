@@ -182,10 +182,17 @@ const getUserJoinedClubs = async (userId) => {
   return ClubMembers.find({ user: userId, status: { $ne: "left" } }).select("companyOrganizer");
 };
 
+
+const giftPoints = async (query = {}) => {
+  return ClubMembers.giftPoints(query);
+};
+
+
 module.exports = {
   countClubMembers,
   findClubMemberById,
   getMembers,
   isClubMember,
   getUserJoinedClubs,
+  giftPoints
 };
