@@ -37,12 +37,12 @@ const getOrganizationProfile = async (queryData) => {
 
     // Use schema helper for formatting
     let orgProfileInfo = formatOrganization(orgProfile.org);
-
     let member = await isClubMember(userId, orgProfileInfo.creator);
     orgProfileInfo.isClubMember = member ? true : false;
 
     orgProfileInfo.isFavorite = orgProfile.isFavorite;
     orgProfileInfo.venue = orgProfile.orgVenue;
+
     delete orgProfileInfo?.venue?.floorPlan
 
     // Localize operating hours

@@ -1,0 +1,1833 @@
+[{
+    "id": "0001",
+    "name": "Afghanistan",
+    "flag": "🇦🇫",
+    "code": "AF",
+    "dial_code": "+93",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0003",
+    "name": "Albania",
+    "flag": "🇦🇱",
+    "code": "AL",
+    "dial_code": "+355",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0004",
+    "name": "Algeria",
+    "flag": "🇩🇿",
+    "code": "DZ",
+    "dial_code": "+213",
+    "pattern": "000 00 00 00",
+    "limit": 17
+}, {
+    "id": "0005",
+    "name": "American Samoa",
+    "flag": "🇦🇸",
+    "code": "AS",
+    "dial_code": "+1684",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0006",
+    "name": "Andorra",
+    "flag": "🇦🇩",
+    "code": "AD",
+    "dial_code": "+376",
+    "pattern": "00 00 00",
+    "limit": 17
+}, {
+    "id": "0007",
+    "name": "Angola",
+    "flag": "🇦🇴",
+    "code": "AO",
+    "dial_code": "+244",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0008",
+    "name": "Anguilla",
+    "flag": "🇦🇮",
+    "code": "AI",
+    "dial_code": "+1264",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0010",
+    "name": "Antigua & Barbuda",
+    "flag": "🇦🇬",
+    "code": "AG",
+    "dial_code": "+1268",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0011",
+    "name": "Argentina",
+    "flag": "🇦🇷",
+    "code": "AR",
+    "dial_code": "+54",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0012",
+    "name": "Armenia",
+    "flag": "🇦🇲",
+    "code": "AM",
+    "dial_code": "+374",
+    "pattern": "00 000 000",
+    "limit": 17
+}, {
+    "id": "0013",
+    "name": "Aruba",
+    "flag": "🇦🇼",
+    "code": "AW",
+    "dial_code": "+297",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0014",
+    "name": "Australia",
+    "flag": "🇦🇺",
+    "code": "AU",
+    "dial_code": "+61",
+    "pattern": "0 0000 0000",
+    "limit": 17
+}, {
+    "id": "0015",
+    "name": "Austria",
+    "flag": "🇦🇹",
+    "code": "AT",
+    "dial_code": "+43",
+    "pattern": "000 000000",
+    "limit": 17
+}, {
+    "id": "0016",
+    "name": "Azerbaijan",
+    "flag": "🇦🇿",
+    "code": "AZ",
+    "dial_code": "+994",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0017",
+    "name": "Bahamas",
+    "flag": "🇧🇸",
+    "code": "BS",
+    "dial_code": "+1242",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0018",
+    "name": "Bahrain",
+    "flag": "🇧🇭",
+    "code": "BH",
+    "dial_code": "+973",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0019",
+    "name": "Bangladesh",
+    "flag": "🇧🇩",
+    "code": "BD",
+    "dial_code": "+880",
+    "pattern": "00 000 000",
+    "limit": 17
+}, {
+    "id": "0020",
+    "name": "Barbados",
+    "flag": "🇧🇧",
+    "code": "BB",
+    "dial_code": "+1246",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0021",
+    "name": "Belarus",
+    "flag": "🇧🇾",
+    "code": "BY",
+    "dial_code": "+375",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0022",
+    "name": "Belgium",
+    "flag": "🇧🇪",
+    "code": "BE",
+    "dial_code": "+32",
+    "pattern": "000 00 00 00",
+    "limit": 17
+}, {
+    "id": "0023",
+    "name": "Belize",
+    "flag": "🇧🇿",
+    "code": "BZ",
+    "dial_code": "+501",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0024",
+    "name": "Benin",
+    "flag": "🇧🇯",
+    "code": "BJ",
+    "dial_code": "+229",
+    "pattern": "00 000 000",
+    "limit": 17
+}, {
+    "id": "0025",
+    "name": "Bermuda",
+    "flag": "🇧🇲",
+    "code": "BM",
+    "dial_code": "+1441",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0026",
+    "name": "Bhutan",
+    "flag": "🇧🇹",
+    "code": "BT",
+    "dial_code": "+975",
+    "pattern": "00 000 000",
+    "limit": 17
+}, {
+    "id": "0027",
+    "name": "Bolivia",
+    "flag": "🇧🇴",
+    "code": "BO",
+    "dial_code": "+591",
+    "pattern": "0 000 0000",
+    "limit": 17
+}, {
+    "id": "0028",
+    "name": "Bosnia & Herzegovina",
+    "flag": "🇧🇦",
+    "code": "BA",
+    "dial_code": "+387",
+    "pattern": "00 000 000",
+    "limit": 17
+}, {
+    "id": "0029",
+    "name": "Botswana",
+    "flag": "🇧🇼",
+    "code": "BW",
+    "dial_code": "+267",
+    "pattern": "00 000 000",
+    "limit": 17
+}, {
+    "id": "0031",
+    "name": "Brazil",
+    "flag": "🇧🇷",
+    "code": "BR",
+    "dial_code": "+55",
+    "pattern": "00 00000 0000",
+    "limit": 17
+}, {
+    "id": "0032",
+    "name": "British Virgin Islands",
+    "flag": "🇻🇬",
+    "code": "IO",
+    "dial_code": "+1284",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0033",
+    "name": "Brunei Darussalam",
+    "flag": "🇧🇳",
+    "code": "BN",
+    "dial_code": "+673",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0034",
+    "name": "Bulgaria",
+    "flag": "🇧🇬",
+    "code": "BG",
+    "dial_code": "+359",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0035",
+    "name": "Burkina Faso",
+    "flag": "🇧🇫",
+    "code": "BF",
+    "dial_code": "+226",
+    "pattern": "00 00 00 00",
+    "limit": 17
+}, {
+    "id": "0036",
+    "name": "Burundi",
+    "flag": "🇧🇮",
+    "code": "BI",
+    "dial_code": "+257",
+    "pattern": "00 00 0000",
+    "limit": 17
+}, {
+    "id": "0037",
+    "name": "Cambodia",
+    "flag": "🇰🇭",
+    "code": "KH",
+    "dial_code": "+855",
+    "pattern": "00 000 000",
+    "limit": 17
+}, {
+    "id": "0038",
+    "name": "Cameroon",
+    "flag": "🇨🇲",
+    "code": "CM",
+    "dial_code": "+237",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0039",
+    "name": "Canada",
+    "flag": "🇨🇦",
+    "code": "CA",
+    "dial_code": "+1",
+    "pattern": "000 000 0000",
+    "limit": 17
+}, {
+    "id": "0040",
+    "name": "Cape Verde",
+    "flag": "🇨🇻",
+    "code": "CV",
+    "dial_code": "+238",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0041",
+    "name": "Cayman Islands",
+    "flag": "🇰🇾",
+    "code": "KY",
+    "dial_code": "+1345",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0042",
+    "name": "Central African Rep.",
+    "flag": "🇨🇫",
+    "code": "CF",
+    "dial_code": "+236",
+    "pattern": "00 00 00 00",
+    "limit": 17
+}, {
+    "id": "0043",
+    "name": "Chad",
+    "flag": "🇹🇩",
+    "code": "TD",
+    "dial_code": "+235",
+    "pattern": "00 00 00 00",
+    "limit": 17
+}, {
+    "id": "0044",
+    "name": "Chile",
+    "flag": "🇨🇱",
+    "code": "CL",
+    "dial_code": "+56",
+    "pattern": "0 0000 0000",
+    "limit": 17
+}, {
+    "id": "0045",
+    "name": "China",
+    "flag": "🇨🇳",
+    "code": "CN",
+    "dial_code": "+86",
+    "pattern": "000 0000 0000",
+    "limit": 17
+}, {
+    "id": "0048",
+    "name": "Colombia",
+    "flag": "🇨🇴",
+    "code": "CO",
+    "dial_code": "+57",
+    "pattern": "000 000 0000",
+    "limit": 17
+}, {
+    "id": "0049",
+    "name": "Comoros",
+    "flag": "🇰🇲",
+    "code": "KM",
+    "dial_code": "+269",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0050",
+    "name": "Congo (Rep.)",
+    "flag": "🇨🇬",
+    "code": "CG",
+    "dial_code": "+242",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0051",
+    "name": "Congo (Dem. Rep.)",
+    "flag": "🇨🇩",
+    "code": "CD",
+    "dial_code": "+243",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0052",
+    "name": "Cook Islands",
+    "flag": "🇨🇰",
+    "code": "CK",
+    "dial_code": "+682",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0053",
+    "name": "Costa Rica",
+    "flag": "🇨🇷",
+    "code": "CR",
+    "dial_code": "+506",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0054",
+    "name": "Cote d'Ivoire",
+    "flag": "🇨🇮",
+    "code": "CI",
+    "dial_code": "+225",
+    "pattern": "00 00 00 0000",
+    "limit": 17
+}, {
+    "id": "0055",
+    "name": "Croatia",
+    "flag": "🇭🇷",
+    "code": "HR",
+    "dial_code": "+385",
+    "pattern": "00 000 000",
+    "limit": 17
+}, {
+    "id": "0056",
+    "name": "Cuba",
+    "flag": "🇨🇺",
+    "code": "CU",
+    "dial_code": "+53",
+    "pattern": "0 000 0000",
+    "limit": 17
+}, {
+    "id": "0057",
+    "name": "Cyprus",
+    "flag": "🇨🇾",
+    "code": "CY",
+    "dial_code": "+357",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0058",
+    "name": "Czech Republic",
+    "flag": "🇨🇿",
+    "code": "CZ",
+    "dial_code": "+420",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0059",
+    "name": "Denmark",
+    "flag": "🇩🇰",
+    "code": "DK",
+    "dial_code": "+45",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "006011",
+    "name": "Diego Garcia",
+    "flag": "🇮🇴",
+    "code": "IO",
+    "dial_code": "+246",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0060",
+    "name": "Djibouti",
+    "flag": "🇩🇯",
+    "code": "DJ",
+    "dial_code": "+253",
+    "pattern": "00 00 00 00",
+    "limit": 17
+}, {
+    "id": "0061",
+    "name": "Dominica",
+    "flag": "🇩🇲",
+    "code": "DM",
+    "dial_code": "+1767",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0062",
+    "name": "Dominican Rep.",
+    "flag": "🇩🇴",
+    "code": "DO",
+    "dial_code": "+1809",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0063",
+    "name": "Ecuador",
+    "flag": "🇪🇨",
+    "code": "EC",
+    "dial_code": "+593",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0064",
+    "name": "Egypt",
+    "flag": "🇪🇬",
+    "code": "EG",
+    "dial_code": "+20",
+    "pattern": "00 0000 0000",
+    "limit": 17
+}, {
+    "id": "0065",
+    "name": "El Salvador",
+    "flag": "🇸🇻",
+    "code": "SV",
+    "dial_code": "+503",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0066",
+    "name": "Equatorial Guinea",
+    "flag": "🇬🇶",
+    "code": "GQ",
+    "dial_code": "+240",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0067",
+    "name": "Eritrea",
+    "flag": "🇪🇷",
+    "code": "ER",
+    "dial_code": "+291",
+    "pattern": "0 000 000",
+    "limit": 17
+}, {
+    "id": "0068",
+    "name": "Estonia",
+    "flag": "🇪🇪",
+    "code": "EE",
+    "dial_code": "+372",
+    "pattern": "0000 000",
+    "limit": 17
+}, {
+    "id": "006811",
+    "name": "Eswatini",
+    "flag": "🇸🇿",
+    "code": "SZ",
+    "dial_code": "+268",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0069",
+    "name": "Ethiopia",
+    "flag": "🇪🇹",
+    "code": "ET",
+    "dial_code": "+251",
+    "pattern": "00 000 000",
+    "limit": 17
+}, {
+    "id": "0070",
+    "name": "Falkland Islands",
+    "flag": "🇫🇰",
+    "code": "FK",
+    "dial_code": "+500",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0071",
+    "name": "Faroe Islands",
+    "flag": "🇫🇴",
+    "code": "FO",
+    "dial_code": "+298",
+    "pattern": "000 000",
+    "limit": 7
+}, {
+    "id": "0072",
+    "name": "Fiji",
+    "flag": "🇫🇯",
+    "code": "FJ",
+    "dial_code": "+679",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0073",
+    "name": "Finland",
+    "flag": "🇫🇮",
+    "code": "FI",
+    "dial_code": "+358",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0074",
+    "name": "France",
+    "flag": "🇫🇷",
+    "code": "FR",
+    "dial_code": "+33",
+    "pattern": "0 00 00 00 00",
+    "limit": 17
+}, {
+    "id": "0075",
+    "name": "French Guiana",
+    "flag": "🇬🇫",
+    "code": "GF",
+    "dial_code": "+594",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0076",
+    "name": "French Polynesia",
+    "flag": "🇵🇫",
+    "code": "PF",
+    "dial_code": "+689",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0078",
+    "name": "Gabon",
+    "flag": "🇬🇦",
+    "code": "GA",
+    "dial_code": "+241",
+    "pattern": "0 00 00 00",
+    "limit": 17
+}, {
+    "id": "0079",
+    "name": "Gambia",
+    "flag": "🇬🇲",
+    "code": "GM",
+    "dial_code": "+220",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0080",
+    "name": "Georgia",
+    "flag": "🇬🇪",
+    "code": "GE",
+    "dial_code": "+995",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0081",
+    "name": "Germany",
+    "flag": "🇩🇪",
+    "code": "DE",
+    "dial_code": "+49",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0082",
+    "name": "Ghana",
+    "flag": "🇬🇭",
+    "code": "GH",
+    "dial_code": "+233",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0083",
+    "name": "Gibraltar",
+    "flag": "🇬🇮",
+    "code": "GI",
+    "dial_code": "+350",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0084",
+    "name": "Greece",
+    "flag": "🇬🇷",
+    "code": "GR",
+    "dial_code": "+30",
+    "pattern": "000 000 0000",
+    "limit": 17
+}, {
+    "id": "0085",
+    "name": "Greenland",
+    "flag": "🇬🇱",
+    "code": "GL",
+    "dial_code": "+299",
+    "pattern": "000 000",
+    "limit": 17
+}, {
+    "id": "0086",
+    "name": "Grenada",
+    "flag": "🇬🇩",
+    "code": "GD",
+    "dial_code": "+1473",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0087",
+    "name": "Guadeloupe",
+    "flag": "🇬🇵",
+    "code": "GP",
+    "dial_code": "+590",
+    "pattern": "000 00 00 00",
+    "limit": 17
+}, {
+    "id": "0088",
+    "name": "Guam",
+    "flag": "🇬🇺",
+    "code": "GU",
+    "dial_code": "+1671",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0089",
+    "name": "Guatemala",
+    "flag": "🇬🇹",
+    "code": "GT",
+    "dial_code": "+502",
+    "pattern": "0 000 0000",
+    "limit": 17
+}, {
+    "id": "0091",
+    "name": "Guinea",
+    "flag": "🇬🇳",
+    "code": "GN",
+    "dial_code": "+224",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0092",
+    "name": "Guinea-Bissau",
+    "flag": "🇬🇼",
+    "code": "GW",
+    "dial_code": "+245",
+    "pattern": "000 00 00 00",
+    "limit": 17
+}, {
+    "id": "0093",
+    "name": "Guyana",
+    "flag": "🇬🇾",
+    "code": "GY",
+    "dial_code": "+592",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0094",
+    "name": "Haiti",
+    "flag": "🇭🇹",
+    "code": "HT",
+    "dial_code": "+509",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0097",
+    "name": "Honduras",
+    "flag": "🇭🇳",
+    "code": "HN",
+    "dial_code": "+504",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0098",
+    "name": "Hong Kong",
+    "flag": "🇭🇰",
+    "code": "HK",
+    "dial_code": "+852",
+    "pattern": "0 000 0000",
+    "limit": 17
+}, {
+    "id": "0099",
+    "name": "Hungary",
+    "flag": "🇭🇺",
+    "code": "HU",
+    "dial_code": "+36",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0100",
+    "name": "Iceland",
+    "flag": "🇮🇸",
+    "code": "IS",
+    "dial_code": "+354",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0101",
+    "name": "India",
+    "flag": "🇮🇳",
+    "code": "IN",
+    "dial_code": "+91",
+    "pattern": "00000 00000",
+    "limit": 17
+}, {
+    "id": "0102",
+    "name": "Indonesia",
+    "flag": "🇮🇩",
+    "code": "ID",
+    "dial_code": "+62",
+    "pattern": "000 000000",
+    "limit": 17
+}, {
+    "id": "0103",
+    "name": "Iran",
+    "flag": "🇮🇷",
+    "code": "IR",
+    "dial_code": "+98",
+    "pattern": "000 000 0000",
+    "limit": 17
+}, {
+    "id": "0104",
+    "name": "Iraq",
+    "flag": "🇮🇶",
+    "code": "IQ",
+    "dial_code": "+964",
+    "pattern": "000 000 0000",
+    "limit": 17
+}, {
+    "id": "0105",
+    "name": "Ireland",
+    "flag": "🇮🇪",
+    "code": "IE",
+    "dial_code": "+353",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0107",
+    "name": "Israel",
+    "flag": "🇮🇱",
+    "code": "IL",
+    "dial_code": "+972",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0108",
+    "name": "Italy",
+    "flag": "🇮🇹",
+    "code": "IT",
+    "dial_code": "+39",
+    "pattern": "000 000 0000",
+    "limit": 17
+}, {
+    "id": "0109",
+    "name": "Jamaica",
+    "flag": "🇯🇲",
+    "code": "JM",
+    "dial_code": "+1876",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0110",
+    "name": "Japan",
+    "flag": "🇯🇵",
+    "code": "JP",
+    "dial_code": "+81",
+    "pattern": "00 0000 0000",
+    "limit": 17
+}, {
+    "id": "0112",
+    "name": "Jordan",
+    "flag": "🇯🇴",
+    "code": "JO",
+    "dial_code": "+962",
+    "pattern": "0 0000 0000",
+    "limit": 17
+}, {
+    "id": "0113",
+    "name": "Kazakhstan",
+    "flag": "🇰🇿",
+    "code": "KZ",
+    "dial_code": "+7",
+    "pattern": "000 000 00 00",
+    "limit": 17
+}, {
+    "id": "0114",
+    "name": "Kenya",
+    "flag": "🇰🇪",
+    "code": "KE",
+    "dial_code": "+254",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0115",
+    "name": "Kiribati",
+    "flag": "🇰🇮",
+    "code": "KI",
+    "dial_code": "+686",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0116",
+    "name": "North Korea",
+    "flag": "🇰🇵",
+    "code": "KP",
+    "dial_code": "+850",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0117",
+    "name": "South Korea",
+    "flag": "🇰🇷",
+    "code": "KR",
+    "dial_code": "+82",
+    "pattern": "00 0000 000",
+    "limit": 17
+}, {
+    "id": "0118",
+    "name": "Kosovo",
+    "flag": "🇽🇰",
+    "code": "XK",
+    "dial_code": "+383",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0119",
+    "name": "Kuwait",
+    "flag": "🇰🇼",
+    "code": "KW",
+    "dial_code": "+965",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0120",
+    "name": "Kyrgyzstan",
+    "flag": "🇰🇬",
+    "code": "KG",
+    "dial_code": "+996",
+    "pattern": "000 000000",
+    "limit": 17
+}, {
+    "id": "0121",
+    "name": "Laos",
+    "flag": "🇱🇦",
+    "code": "LA",
+    "dial_code": "+856",
+    "pattern": "00 00 000 000",
+    "limit": 17
+}, {
+    "id": "0122",
+    "name": "Latvia",
+    "flag": "🇱🇻",
+    "code": "LV",
+    "dial_code": "+371",
+    "pattern": "000 00000",
+    "limit": 17
+}, {
+    "id": "0123",
+    "name": "Lebanon",
+    "flag": "🇱🇧",
+    "code": "LB",
+    "dial_code": "+961",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0124",
+    "name": "Lesotho",
+    "flag": "🇱🇸",
+    "code": "LS",
+    "dial_code": "+266",
+    "pattern": "00 000 000",
+    "limit": 17
+}, {
+    "id": "0125",
+    "name": "Liberia",
+    "flag": "🇱🇷",
+    "code": "LR",
+    "dial_code": "+231",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0126",
+    "name": "Libya",
+    "flag": "🇱🇾",
+    "code": "LY",
+    "dial_code": "+218",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0127",
+    "name": "Liechtenstein",
+    "flag": "🇱🇮",
+    "code": "LI",
+    "dial_code": "+423",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0128",
+    "name": "Lithuania",
+    "flag": "🇱🇹",
+    "code": "LT",
+    "dial_code": "+370",
+    "pattern": "000 00000",
+    "limit": 17
+}, {
+    "id": "0129",
+    "name": "Luxembourg",
+    "flag": "🇱🇺",
+    "code": "LU",
+    "dial_code": "+352",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0130",
+    "name": "Macau",
+    "flag": "🇲🇴",
+    "code": "MO",
+    "dial_code": "+853",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0131",
+    "name": "Macedonia",
+    "flag": "🇲🇰",
+    "code": "MK",
+    "dial_code": "+389",
+    "pattern": "00 000000",
+    "limit": 17
+}, {
+    "id": "0132",
+    "name": "Madagascar",
+    "flag": "🇲🇬",
+    "code": "MG",
+    "dial_code": "+261",
+    "pattern": "00 000000",
+    "limit": 17
+}, {
+    "id": "0133",
+    "name": "Malawi",
+    "flag": "🇲🇼",
+    "code": "MW",
+    "dial_code": "+265",
+    "pattern": "00 00 000 00",
+    "limit": 17
+}, {
+    "id": "0134",
+    "name": "Malaysia",
+    "flag": "🇲🇾",
+    "code": "MY",
+    "dial_code": "+60",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0135",
+    "name": "Maldives",
+    "flag": "🇲🇻",
+    "code": "MV",
+    "dial_code": "+960",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0136",
+    "name": "Mali",
+    "flag": "🇲🇱",
+    "code": "ML",
+    "dial_code": "+223",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0137",
+    "name": "Malta",
+    "flag": "🇲🇹",
+    "code": "MT",
+    "dial_code": "+356",
+    "pattern": "00 00 00 00",
+    "limit": 17
+}, {
+    "id": "0138",
+    "name": "Marshall Islands",
+    "flag": "🇲🇭",
+    "code": "MH",
+    "dial_code": "+692",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0139",
+    "name": "Martinique",
+    "flag": "🇲🇶",
+    "code": "MQ",
+    "dial_code": "+596",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0140",
+    "name": "Mauritania",
+    "flag": "🇲🇷",
+    "code": "MR",
+    "dial_code": "+222",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0141",
+    "name": "Mauritius",
+    "flag": "🇲🇺",
+    "code": "MU",
+    "dial_code": "+230",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0143",
+    "name": "Mexico",
+    "flag": "🇲🇽",
+    "code": "MX",
+    "dial_code": "+52",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0144",
+    "name": "Micronesia",
+    "flag": "🇫🇲",
+    "code": "FM",
+    "dial_code": "+691",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0145",
+    "name": "Moldova",
+    "flag": "🇲🇩",
+    "code": "MD",
+    "dial_code": "+373",
+    "pattern": "00 000 000",
+    "limit": 17
+}, {
+    "id": "0146",
+    "name": "Monaco",
+    "flag": "🇲🇨",
+    "code": "MC",
+    "dial_code": "+377",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0147",
+    "name": "Mongolia",
+    "flag": "🇲🇳",
+    "code": "MN",
+    "dial_code": "+976",
+    "pattern": "00 00 0000",
+    "limit": 17
+}, {
+    "id": "0148",
+    "name": "Montenegro",
+    "flag": "🇲🇪",
+    "code": "ME",
+    "dial_code": "+382",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0149",
+    "name": "Montserrat",
+    "flag": "🇲🇸",
+    "code": "MS",
+    "dial_code": "+1664",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0150",
+    "name": "Morocco",
+    "flag": "🇲🇦",
+    "code": "MA",
+    "dial_code": "+212",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0151",
+    "name": "Mozambique",
+    "flag": "🇲🇿",
+    "code": "MZ",
+    "dial_code": "+258",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0152",
+    "name": "Myanmar",
+    "flag": "🇲🇲",
+    "code": "MM",
+    "dial_code": "+95",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0153",
+    "name": "Namibia",
+    "flag": "🇳🇦",
+    "code": "NA",
+    "dial_code": "+264",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0154",
+    "name": "Nauru",
+    "flag": "🇳🇷",
+    "code": "NR",
+    "dial_code": "+674",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0155",
+    "name": "Nepal",
+    "flag": "🇳🇵",
+    "code": "NP",
+    "dial_code": "+977",
+    "pattern": "00 0000 0000",
+    "limit": 17
+}, {
+    "id": "0156",
+    "name": "Netherlands",
+    "flag": "🇳🇱",
+    "code": "NL",
+    "dial_code": "+31",
+    "pattern": "0 00 00 00 00",
+    "limit": 17
+}, {
+    "id": "0158",
+    "name": "New Caledonia",
+    "flag": "🇳🇨",
+    "code": "NC",
+    "dial_code": "+687",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0159",
+    "name": "New Zealand",
+    "flag": "🇳🇿",
+    "code": "NZ",
+    "dial_code": "+64",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0160",
+    "name": "Nicaragua",
+    "flag": "🇳🇮",
+    "code": "NI",
+    "dial_code": "+505",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0161",
+    "name": "Niger",
+    "flag": "🇳🇪",
+    "code": "NE",
+    "dial_code": "+227",
+    "pattern": "00 00 00 00",
+    "limit": 17
+}, {
+    "id": "0162",
+    "name": "Nigeria",
+    "flag": "🇳🇬",
+    "code": "NG",
+    "dial_code": "+234",
+    "pattern": "00 0000 0000",
+    "limit": 17
+}, {
+    "id": "0163",
+    "name": "Niue",
+    "flag": "🇳🇺",
+    "code": "NU",
+    "dial_code": "+683",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0164",
+    "name": "Norfolk Island",
+    "flag": "🇳🇫",
+    "code": "NF",
+    "dial_code": "+672",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0165",
+    "name": "Northern Mariana Islands",
+    "flag": "🇲🇵",
+    "code": "MP",
+    "dial_code": "+1670",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0166",
+    "name": "Norway",
+    "flag": "🇳🇴",
+    "code": "NO",
+    "dial_code": "+47",
+    "pattern": "000 00 000",
+    "limit": 17
+}, {
+    "id": "0167",
+    "name": "Oman",
+    "flag": "🇴🇲",
+    "code": "OM",
+    "dial_code": "+968",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0168",
+    "name": "Pakistan",
+    "flag": "🇵🇰",
+    "code": "PK",
+    "dial_code": "+92",
+    "pattern": "000 000 0000",
+    "limit": 17
+}, {
+    "id": "0169",
+    "name": "Palau",
+    "flag": "🇵🇼",
+    "code": "PW",
+    "dial_code": "+680",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0170",
+    "name": "Palestine",
+    "flag": "🇵🇸",
+    "code": "PS",
+    "dial_code": "+970",
+    "pattern": "000 00 0000",
+    "limit": 17
+}, {
+    "id": "0171",
+    "name": "Panama",
+    "flag": "🇵🇦",
+    "code": "PA",
+    "dial_code": "+507",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0172",
+    "name": "Papua New Guinea",
+    "flag": "🇵🇬",
+    "code": "PG",
+    "dial_code": "+675",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0173",
+    "name": "Paraguay",
+    "flag": "🇵🇾",
+    "code": "PY",
+    "dial_code": "+595",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0174",
+    "name": "Peru",
+    "flag": "🇵🇪",
+    "code": "PE",
+    "dial_code": "+51",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0175",
+    "name": "Philippines",
+    "flag": "🇵🇭",
+    "code": "PH",
+    "dial_code": "+63",
+    "pattern": "000 000 0000",
+    "limit": 17
+}, {
+    "id": "0177",
+    "name": "Poland",
+    "flag": "🇵🇱",
+    "code": "PL",
+    "dial_code": "+48",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0178",
+    "name": "Portugal",
+    "flag": "🇵🇹",
+    "code": "PT",
+    "dial_code": "+351",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0179",
+    "name": "Puerto Rico",
+    "flag": "🇵🇷",
+    "code": "PR",
+    "dial_code": "+1939",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0180",
+    "name": "Qatar",
+    "flag": "🇶🇦",
+    "code": "QA",
+    "dial_code": "+974",
+    "pattern": "00 000 000",
+    "limit": 17
+}, {
+    "id": "0181",
+    "name": "Romania",
+    "flag": "🇷🇴",
+    "code": "RO",
+    "dial_code": "+40",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0182",
+    "name": "Russia",
+    "flag": "🇷🇺",
+    "code": "RU",
+    "dial_code": "+7",
+    "pattern": "000 000 0000",
+    "limit": 17
+}, {
+    "id": "0183",
+    "name": "Rwanda",
+    "flag": "🇷🇼",
+    "code": "RW",
+    "dial_code": "+250",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0184",
+    "name": "Reunion",
+    "flag": "🇷🇪",
+    "code": "RE",
+    "dial_code": "+262",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0186",
+    "name": "Saint Helena",
+    "flag": "🇸🇭",
+    "code": "SH",
+    "dial_code": "+290",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0187",
+    "name": "Saint Kitts & Nevis",
+    "flag": "🇰🇳",
+    "code": "KN",
+    "dial_code": "+1869",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0188",
+    "name": "Saint Lucia",
+    "flag": "🇱🇨",
+    "code": "LC",
+    "dial_code": "+1758",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0190",
+    "name": "Saint Pierre & Miquelon",
+    "flag": "🇵🇲",
+    "code": "PM",
+    "dial_code": "+508",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0191",
+    "name": "Saint Vincent & the Grenadines",
+    "flag": "🇻🇨",
+    "code": "VC",
+    "dial_code": "+1784",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0192",
+    "name": "Samoa",
+    "flag": "🇼🇸",
+    "code": "WS",
+    "dial_code": "+685",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0193",
+    "name": "San Marino",
+    "flag": "🇸🇲",
+    "code": "SM",
+    "dial_code": "+378",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0194",
+    "name": "Sao Tome & Principe",
+    "flag": "🇸🇹",
+    "code": "ST",
+    "dial_code": "+239",
+    "pattern": "00 00000",
+    "limit": 17
+}, {
+    "id": "0195",
+    "name": "Saudi Arabia",
+    "flag": "🇸🇦",
+    "code": "SA",
+    "dial_code": "+966",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0196",
+    "name": "Senegal",
+    "flag": "🇸🇳",
+    "code": "SN",
+    "dial_code": "+221",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0197",
+    "name": "Serbia",
+    "flag": "🇷🇸",
+    "code": "RS",
+    "dial_code": "+381",
+    "pattern": "00 000 000",
+    "limit": 17
+}, {
+    "id": "0198",
+    "name": "Seychelles",
+    "flag": "🇸🇨",
+    "code": "SC",
+    "dial_code": "+248",
+    "pattern": "0 00 00 00",
+    "limit": 17
+}, {
+    "id": "0199",
+    "name": "Sierra Leone",
+    "flag": "🇸🇱",
+    "code": "SL",
+    "dial_code": "+232",
+    "pattern": "00 000 000",
+    "limit": 17
+}, {
+    "id": "0200",
+    "name": "Singapore",
+    "flag": "🇸🇬",
+    "code": "SG",
+    "dial_code": "+65",
+    "pattern": "0000 0000",
+    "limit": 17
+}, {
+    "id": "0201",
+    "name": "Slovakia",
+    "flag": "🇸🇰",
+    "code": "SK",
+    "dial_code": "+421",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0202",
+    "name": "Slovenia",
+    "flag": "🇸🇮",
+    "code": "SI",
+    "dial_code": "+386",
+    "pattern": "00 000 000",
+    "limit": 17
+}, {
+    "id": "0203",
+    "name": "Solomon Islands",
+    "flag": "🇸🇧",
+    "code": "SB",
+    "dial_code": "+677",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0204",
+    "name": "Somalia",
+    "flag": "🇸🇴",
+    "code": "SO",
+    "dial_code": "+252",
+    "pattern": "00 000 000",
+    "limit": 17
+}, {
+    "id": "0205",
+    "name": "South Africa",
+    "flag": "🇿🇦",
+    "code": "ZA",
+    "dial_code": "+27",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0206",
+    "name": "South Sudan",
+    "flag": "🇸🇸",
+    "code": "SS",
+    "dial_code": "+211",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0208",
+    "name": "Spain",
+    "flag": "🇪🇸",
+    "code": "ES",
+    "dial_code": "+34",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0209",
+    "name": "Sri Lanka",
+    "flag": "🇱🇰",
+    "code": "LK",
+    "dial_code": "+94",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0210",
+    "name": "Sudan",
+    "flag": "🇸🇩",
+    "code": "SD",
+    "dial_code": "+249",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0211",
+    "name": "Suriname",
+    "flag": "🇸🇷",
+    "code": "SR",
+    "dial_code": "+597",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0214",
+    "name": "Sweden",
+    "flag": "🇸🇪",
+    "code": "SE",
+    "dial_code": "+46",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0215",
+    "name": "Switzerland",
+    "flag": "🇨🇭",
+    "code": "CH",
+    "dial_code": "+41",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0216",
+    "name": "Syria",
+    "flag": "🇸🇾",
+    "code": "SY",
+    "dial_code": "+963",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0217",
+    "name": "Taiwan",
+    "flag": "🇹🇼",
+    "code": "TW",
+    "dial_code": "+886",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0218",
+    "name": "Tajikistan",
+    "flag": "🇹🇯",
+    "code": "TJ",
+    "dial_code": "+992",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0219",
+    "name": "Tanzania",
+    "flag": "🇹🇿",
+    "code": "TZ",
+    "dial_code": "+255",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0220",
+    "name": "Thailand",
+    "flag": "🇹🇭",
+    "code": "TH",
+    "dial_code": "+66",
+    "pattern": "0 0000 0000",
+    "limit": 17
+}, {
+    "id": "0221",
+    "name": "Timor-Leste",
+    "flag": "🇹🇱",
+    "code": "TL",
+    "dial_code": "+670",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0222",
+    "name": "Togo",
+    "flag": "🇹🇬",
+    "code": "TG",
+    "dial_code": "+228",
+    "pattern": "00 000 000",
+    "limit": 17
+}, {
+    "id": "0223",
+    "name": "Tokelau",
+    "flag": "🇹🇰",
+    "code": "TK",
+    "dial_code": "+690",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0224",
+    "name": "Tonga",
+    "flag": "🇹🇴",
+    "code": "TO",
+    "dial_code": "+676",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0225",
+    "name": "Trinidad & Tobago",
+    "flag": "🇹🇹",
+    "code": "TT",
+    "dial_code": "+1868",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0226",
+    "name": "Tunisia",
+    "flag": "🇹🇳",
+    "code": "TN",
+    "dial_code": "+216",
+    "pattern": "00 000 000",
+    "limit": 17
+}, {
+    "id": "0227",
+    "name": "Turkey",
+    "flag": "🇹🇷",
+    "code": "TR",
+    "dial_code": "+90",
+    "pattern": "000 000 0000",
+    "limit": 17
+}, {
+    "id": "0228",
+    "name": "Turkmenistan",
+    "flag": "🇹🇲",
+    "code": "TM",
+    "dial_code": "+993",
+    "pattern": "00 000000",
+    "limit": 17
+}, {
+    "id": "0229",
+    "name": "Turks & Caicos Islands",
+    "flag": "🇹🇨",
+    "code": "TC",
+    "dial_code": "+1649",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0230",
+    "name": "Tuvalu",
+    "flag": "🇹🇻",
+    "code": "TV",
+    "dial_code": "+688",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0231",
+    "name": "Uganda",
+    "flag": "🇺🇬",
+    "code": "UG",
+    "dial_code": "+256",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0232",
+    "name": "Ukraine",
+    "flag": "🇺🇦",
+    "code": "UA",
+    "dial_code": "+380",
+    "pattern": "00 000 00 00",
+    "limit": 17
+}, {
+    "id": "0233",
+    "name": "United Arab Emirates",
+    "flag": "🇦🇪",
+    "code": "AE",
+    "dial_code": "+971",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0234",
+    "name": "United Kingdom",
+    "flag": "🇬🇧",
+    "code": "GB",
+    "dial_code": "+44",
+    "pattern": "0000 000000",
+    "limit": 17
+}, {
+    "id": "0235",
+    "name": "USA",
+    "flag": "🇺🇸",
+    "code": "US",
+    "dial_code": "+1",
+    "pattern": "000 000 0000",
+    "limit": 17
+}, {
+    "id": "0236",
+    "name": "Uruguay",
+    "flag": "🇺🇾",
+    "code": "UY",
+    "dial_code": "+598",
+    "pattern": "0 000 0000",
+    "limit": 17
+}, {
+    "id": "0237",
+    "name": "Uzbekistan",
+    "flag": "🇺🇿",
+    "code": "UZ",
+    "dial_code": "+998",
+    "pattern": "00 000 00 00",
+    "limit": 17
+}, {
+    "id": "0238",
+    "name": "Vanuatu",
+    "flag": "🇻🇺",
+    "code": "VU",
+    "dial_code": "+678",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0239",
+    "name": "Venezuela",
+    "flag": "🇻🇪",
+    "code": "VE",
+    "dial_code": "+58",
+    "pattern": "000 000 0000",
+    "limit": 17
+}, {
+    "id": "0240",
+    "name": "Vietnam",
+    "flag": "🇻🇳",
+    "code": "VN",
+    "dial_code": "+84",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0241",
+    "name": "Virgin Islands, British",
+    "flag": "🇻🇬",
+    "code": "VG",
+    "dial_code": "+1284",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0242",
+    "name": "Virgin Islands, U.S.",
+    "flag": "🇻🇮",
+    "code": "VI",
+    "dial_code": "+1340",
+    "pattern": "000 0000",
+    "limit": 17
+}, {
+    "id": "0243",
+    "name": "Wallis & Futuna",
+    "flag": "🇼🇫",
+    "code": "WF",
+    "dial_code": "+681",
+    "pattern": "0",
+    "limit": 17
+}, {
+    "id": "0244",
+    "name": "Yemen",
+    "flag": "🇾🇪",
+    "code": "YE",
+    "dial_code": "+967",
+    "pattern": "000 000 000",
+    "limit": 17
+}, {
+    "id": "0245",
+    "name": "Zambia",
+    "flag": "🇿🇲",
+    "code": "ZM",
+    "dial_code": "+260",
+    "pattern": "00 000 0000",
+    "limit": 17
+}, {
+    "id": "0246",
+    "name": "Zimbabwe",
+    "flag": "🇿🇼",
+    "code": "ZW",
+    "dial_code": "+263",
+    "pattern": "00 000 0000",
+    "limit": 17
+}]

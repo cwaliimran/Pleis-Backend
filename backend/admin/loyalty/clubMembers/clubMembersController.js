@@ -43,7 +43,7 @@ const getMembers = async (req, res) => {
 
 // leave club member
 const giftPoints = async (req, res) => {
-  const { companyOrganizer, user, points } = req.body;
+  const { companyOrganizer, user, points, notes } = req.body;
 
   if (!validateParams(req, res, {
     bodyParams: ["companyOrganizer", "user"],
@@ -51,7 +51,7 @@ const giftPoints = async (req, res) => {
   })) return;
 
   try {
-    const result = await clubMemberService.giftPoints(user, points, companyOrganizer);
+    const result = await clubMemberService.giftPoints(user, points, companyOrganizer, notes);
     return sendResponse({
       res,
       statusCode: 200,

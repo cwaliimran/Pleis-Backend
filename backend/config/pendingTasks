@@ -1,3 +1,4 @@
+cloudflared tunnel --url http://localhost:4009
 http://localhost:4012/api/v1/
 https://pleis-backend-dev-bgd6a6hxefgwbzg5.germanywestcentral-01.azurewebsites.net/api/v1/
 Streaks=>
@@ -27,3 +28,46 @@ promo codes on menu items checkout - e.g 15% off CODE #OFF15PLEIS
 friends
 
 
+
+Tiers
+Organizer Loyalty Models
+
+Status Levels - Global
+Tiers - Organization
+Status Badges - A user earns e.g Best Refferer x5 
+
+ORG A
+2-4 % cashback
+1 euro 2% cashback = 0.02 euro = 10 points
+10 euro Reward = 10/0.02 * 10 = 5,000
+500 euro * 10 points = 5000 points
+
+USER A
+Blue Status
+Started Tier
+Reward 5000 points
+500 euro * 10 points = 5000
+
+500*0.02(cashback percent) = 10 euro
+
+USER B
+Black - 5
+Legend - 5
+Reward 5000 points
+250 euro * 20 points = 5000 points
+250*0.04(cash back) = 10 euro
+
+10 points is base 1x
+20 points x2 
+15 points x1.5 = 3% cashback
+
+
+USER C
+Silver - 2
+Elite - 3
+Reward 5000 points
+333.33 * 15 points = 5000 points
+333.33 * 0.03 = 10 euro
+
+Organization = 200 points
+Global transaction = 200 points

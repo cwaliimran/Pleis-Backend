@@ -2,20 +2,17 @@ const {
   sendResponse,
   parsePaginationParams,
   validateParams,
-  generateMeta,
   getReadableErrorMessage,
-  convertTimezoneToUtc,
 } = require("../../helperUtils/responseUtil");
-
+const { menuItemOrderFormatter } = require("./formater/helper");
 const friendRequestService = require("./friendRequestService");
 const getFriends = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
 
   // ✔ keyword stays separate
-  let { keyword, phoneNumber } = req.body;
+  let { keyword } = req.query;
 
-  console.log("keyword:", keyword);
-  console.log("phoneNumber:", phoneNumber);
+
 
   try {
     const timezone = req.user.timezone;
@@ -26,16 +23,14 @@ const getFriends = async (req, res) => {
       page,
       limit,
       keyword,            
-      phoneCode: phoneNumber?.code,  
-      phoneDigits: phoneNumber?.number,
       userId,
     });
-
+const formateUser= menuItemOrderFormatter(users, timezone);
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "friends_fetched_successfully",
-      data: users,
+      data: formateUser,
       meta,
     });
 
@@ -101,12 +96,9 @@ const createFriendRequest = async (req, res) => {
     });
   }
 };
-
-
-
 const getFriendRequests = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "active", date,} = req.query;
+  let { keyword, status = "pending", date,} = req.query;
   try {
 
     const userId = req.user._id;
@@ -119,6 +111,51 @@ const getFriendRequests = async (req, res) => {
       status,
       userId,
       date,
+    });
+const formateUser= menuItemOrderFormatter(requests, timezone);
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "friend_requests_fetched_successfully",
+      data: formateUser,
+      meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+const updateFriendRequests = async (req, res) => {
+  const { id } = req.params;   
+
+  let {  status = "accept", } = req.body;
+  try {
+      const validActions = ["accept", "reject", "cancel"];
+    if (!validActions.includes(status)) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_friend_request_action", // Translation key for invalid action
+
+      });
+    }
+
+ if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })
+  )
+    return;
+    const userId = req.user._id;
+
+    const { requests, meta } = await friendRequestService.updateFriendRequests({
+      id, status, userId
     });
 
     return sendResponse({
@@ -138,9 +175,117 @@ const getFriendRequests = async (req, res) => {
     });
   }
 };
+const unfriend = async (req, res) => {
+  const { id } = req.params;
+
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })
+  )
+    return;
+const userId = req.user._id;
+  try {
+    const deleted = await friendRequestService.unfriend(id, userId);
+    if (!deleted) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "friend_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "friend_deleted_successfully",
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+const getSentFriendRequests = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let { keyword, status = "pending", date,} = req.query;
+  try {
+
+    const userId = req.user._id;
+    const timezone = req.user.timezone;
+    const { requests, meta } = await friendRequestService.getSentFriendRequests({
+      timezone,
+      page,
+      limit,
+      keyword,
+      status,
+      userId,
+      date,
+    });
+const formateUser= menuItemOrderFormatter(requests, timezone);
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "friend_requests_fetched_successfully",
+      data: formateUser,
+      meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
+const seeFriends = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let { keyword, status = "accept", date,} = req.query;
+  try {
+
+    const userId = req.user._id;
+    const timezone = req.user.timezone;
+    const { requests, meta } = await friendRequestService.seeFriends({
+      timezone,
+      page,
+      limit,
+      keyword,
+      status,
+      userId,
+      date,
+    });
+const formateUser= menuItemOrderFormatter(requests, timezone);
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "friend_requests_fetched_successfully",
+      data: formateUser,
+      meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 module.exports = {
 getFriends,
 createFriendRequest,
 getFriendRequests,
-
+updateFriendRequests,
+unfriend,
+getSentFriendRequests,
+seeFriends
 };

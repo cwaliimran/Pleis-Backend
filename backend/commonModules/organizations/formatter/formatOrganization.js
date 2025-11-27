@@ -93,7 +93,7 @@ function formatOrganization(item, excludeFields = []) {
       }
     }
   }
-
+console.log("org",org );
   return org;
 }
 function formatNearByOrganization(item, excludeFields = []) {

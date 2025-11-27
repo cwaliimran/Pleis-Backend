@@ -52,6 +52,11 @@ const bannerControlsSchema = new mongoose.Schema(
         message: props => `Invalid object value for type ${props.instance.type}`,
       },
     },
+        description: {
+      type: String,
+      default: "",
+      trim: true,
+    },
 
     status: {
       type: String,

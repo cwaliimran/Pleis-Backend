@@ -488,6 +488,7 @@ const deleteReservation = async (req, res) => {
 const getUserReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status = "active", date, range, organizationsId, companyOrganizer, reservationStatus = "pending", reservationId } = req.query;
+  
   try {
     if (
       (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&

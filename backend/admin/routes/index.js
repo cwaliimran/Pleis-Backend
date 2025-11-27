@@ -33,6 +33,9 @@ router.use("/highlights", require("../highlights/highlightRoutes"));
 
 //loyalty
 router.use("/loyalty", require("../loyalty/loyaltyRoutes")); 
+
+//loyalty
+router.use("/global-loyalty", require("../globalLoyalty/loyaltyRoutes")); 
 // reservation
 router.use("/reservations", require("../reservation/reservationRoutes"));
 //status badges
@@ -47,5 +50,14 @@ router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));
 router.use("/global-referral", require("../globalReferral/globalReferralRoutes"));
 // transactions
 router.use("/transactions", require("../transactions/transactionsRoutes"));
+// global reward categories
+router.use("/global-reward-categories", require("../globalLoyalty/GlobalRewardCategories/GlobalRewardCategoriesRoutes"));
+// global Loyalty reward
+router.use("/global-loyalty-reward", require("../globalLoyalty/rewards/rewardsRoutes"));
+
+// global Loyalty reward
+router.use("/global-challange", require("../globalLoyalty/challenges/challengesRoutes"));
+
+
 
 module.exports = router;
