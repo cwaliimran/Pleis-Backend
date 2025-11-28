@@ -376,16 +376,6 @@ const getSentFriendRequests = async ({ page, limit, userId, status }) => {
     }
   };
 };
-
-
-
-
-
-
-
-
-
-
 const seeFriends = async ({ page, limit, userId, status }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
@@ -393,13 +383,18 @@ const seeFriends = async ({ page, limit, userId, status }) => {
 
   const pipeline = [
 {
-  $match: {
-    $and: [
-      { "sender.id": me },
-      { "sender.status": "accept" },
-      { "receiver.status": "accept" }
-    ]
-  }
+$match: {
+  $and: [
+    {
+      $or: [
+        { "sender.id": me },
+        { "receiver.id": me }
+      ]
+    },
+    { "sender.status": "accept" },
+    { "receiver.status": "accept" }
+  ]
+}
 },
 
 
