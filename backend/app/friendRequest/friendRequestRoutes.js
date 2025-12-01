@@ -5,7 +5,8 @@ const {
   getFriendRequests,
   updateFriendRequests,
   unfriend,
-  getSentFriendRequests
+  getSentFriendRequests,
+  seeFriends
 } = require("./friendRequestController"); // Assuming you have a separate controller for promo codes
 const auth = require("../../middlewares/authMiddleware");
 const router = express.Router();
@@ -18,6 +19,8 @@ router.post("/", createFriendRequest);
 
 // All requests I RECEIVED
 router.get("/received", getFriendRequests);
+// All requests I RECEIVED
+router.get("/", seeFriends);
 
 // All requests I SENT
 router.get("/sent", getSentFriendRequests);

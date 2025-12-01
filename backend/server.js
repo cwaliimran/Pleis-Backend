@@ -22,6 +22,7 @@ const routes = require("./routes");
 const adminRoutes = require("./admin/routes");
 const organizerRoutes = require("./organizer/routes");
 const appRoutes = require("./routes/appRoutes");
+const staffRoutes = require("./routes/staffRoutes");
 const { sendResponse } = require("./helperUtils/responseUtil");
 const connectToDB = require("./helperUtils/server-setup");
 const { backupMongoDB } = require("./helperUtils/dataBaseBackup.js");
@@ -80,6 +81,8 @@ app.use("/api/v1/app", appRoutes);
 app.use("/api/v1/admin", adminRoutes);
 // Organizer routes
 app.use("/api/v1/organizer", organizerRoutes);
+// Organizer staff
+app.use("/api/v1/staff", staffRoutes);
 
 app.use("/api/v1", routes);
 

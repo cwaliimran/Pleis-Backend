@@ -11,8 +11,6 @@ const getFriends = async ({
   page,
   limit,
   keyword,
-  phoneCode,
-  phoneDigits,
   status,
   userId,
   date
@@ -26,8 +24,6 @@ const getFriends = async ({
       page,
       limit,
       keyword,
-      phoneCode,     // <-- separated
-      phoneDigits,   // <-- separated
       status,
       userId,
       date,
@@ -112,6 +108,7 @@ const updateFriendRequests = async ({ id, status, userId }) => {
     if (friendRequest.sender.id.toString() === userObjectId.toString()) {
       // User is the sender, update their status
       console.log("Updating status for sender:", status);
+          friendRequest.receiver.status = status;
       friendRequest.sender.status = status;
     } else if (friendRequest.receiver.id.toString() === userObjectId.toString()) {
       // User is the receiver, update their status for both sender and receiver
@@ -170,13 +167,32 @@ const getSentFriendRequests = async ({ timezone, page, limit, keyword, status, u
   }
 };
 
+const seeFriends = async ({ timezone, page, limit, keyword, status, userId, date }) => {
+  try {
+    let { requests, meta } = await friendRequestRepo.seeFriends({ timezone, page, limit, keyword, status, userId, date });
+    if (!requests || requests.length === 0) {
+      return { requests: [], meta };
+    }
+    // friendRequests = friendRequests.map(friendRequest => friendRequestFormatter(friendRequest, timezone));
+    return {
+      requests,
+      meta
+    };
+  } catch (error) {
+    return {
+      requests: [],
+      meta: { totalRecords: 0, currentPage: 1, totalPages: 1, limit: 10 }
+    };
+  }
+};
 module.exports = {
   getFriends,
   createFriendRequest,
   getFriendRequests,
   updateFriendRequests,
   unfriend,
-  getSentFriendRequests
+  getSentFriendRequests,
+  seeFriends
 
 
 };

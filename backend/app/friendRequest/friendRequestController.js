@@ -4,12 +4,13 @@ const {
   validateParams,
   getReadableErrorMessage,
 } = require("../../helperUtils/responseUtil");
+const { menuItemOrderFormatter } = require("./formater/helper");
 const friendRequestService = require("./friendRequestService");
 const getFriends = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
 
   // ✔ keyword stays separate
-  let { keyword, phoneNumber } = req.body;
+  let { keyword } = req.query;
 
 
 
@@ -22,16 +23,14 @@ const getFriends = async (req, res) => {
       page,
       limit,
       keyword,            
-      phoneCode: phoneNumber?.code,  
-      phoneDigits: phoneNumber?.number,
       userId,
     });
-
+const formateUser= menuItemOrderFormatter(users, timezone);
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "friends_fetched_successfully",
-      data: users,
+      data: formateUser,
       meta,
     });
 
@@ -99,7 +98,7 @@ const createFriendRequest = async (req, res) => {
 };
 const getFriendRequests = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "active", date,} = req.query;
+  let { keyword, status = "pending", date,} = req.query;
   try {
 
     const userId = req.user._id;
@@ -113,12 +112,12 @@ const getFriendRequests = async (req, res) => {
       userId,
       date,
     });
-
+const formateUser= menuItemOrderFormatter(requests, timezone);
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "friend_requests_fetched_successfully",
-      data: requests,
+      data: formateUser,
       meta,
     });
   } catch (error) {
@@ -228,12 +227,12 @@ const getSentFriendRequests = async (req, res) => {
       userId,
       date,
     });
-
+const formateUser= menuItemOrderFormatter(requests, timezone);
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "friend_requests_fetched_successfully",
-      data: requests,
+      data: formateUser,
       meta,
     });
   } catch (error) {
@@ -247,11 +246,46 @@ const getSentFriendRequests = async (req, res) => {
   }
 };
 
+const seeFriends = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let { keyword, status = "accept", date,} = req.query;
+  try {
+
+    const userId = req.user._id;
+    const timezone = req.user.timezone;
+    const { requests, meta } = await friendRequestService.seeFriends({
+      timezone,
+      page,
+      limit,
+      keyword,
+      status,
+      userId,
+      date,
+    });
+const formateUser= menuItemOrderFormatter(requests, timezone);
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "friend_requests_fetched_successfully",
+      data: formateUser,
+      meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 module.exports = {
 getFriends,
 createFriendRequest,
 getFriendRequests,
 updateFriendRequests,
 unfriend,
-getSentFriendRequests
+getSentFriendRequests,
+seeFriends
 };

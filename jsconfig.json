@@ -136,6 +136,12 @@
       ],
       "@GlobalChallengeModel": [
         "backend/commonModules/globalLoyalty/rewards/models/Challenge/models/Challenge/BaseChallenge.js"
+      ],
+      "@GlobalStreaksModel": [
+        "backend/commonModules/globalLoyalty/streaks/Streaks.js"
+      ],
+      "@GlobalUsersStreaksModel": [
+        "backend/commonModules/globalLoyalty/streaks/UsersStreaks.js"
       ]
     }
   },
