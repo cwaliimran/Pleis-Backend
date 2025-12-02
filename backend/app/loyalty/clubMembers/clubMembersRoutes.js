@@ -2,6 +2,8 @@ const express = require("express");
 const {
   joinClub,
   leaveClub,
+  getUserJoinedClubsWithPoints,
+  getUserCompanyWallet
 } = require("./clubMembersController");
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
@@ -12,6 +14,9 @@ router.use(auth);
 
 const apiRateLimiter = createRateLimiter("ClubMembers");
 
+//get all joined clubs
+router.get("/wallet/:id", apiRateLimiter, getUserCompanyWallet);
+router.get("/joined-clubs", apiRateLimiter, getUserJoinedClubsWithPoints);
 router.post("/join", apiRateLimiter, joinClub);
 router.post("/leave", apiRateLimiter, leaveClub);
 

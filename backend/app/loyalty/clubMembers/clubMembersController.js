@@ -4,60 +4,134 @@ const {
   getReadableErrorMessage,
 } = require("@utils/responseUtil");
 
-const clubMemberService = require("./clubMembersService");
+const clubService = require("./clubMembersService");
 
-// join club member
 const joinClub = async (req, res) => {
   const { companyOrganizer } = req.body;
-  const { _id: userId } = req.user;
+  const userId = req.user._id;
 
-  if (!validateParams(req, res, {
-    bodyParams: ["companyOrganizer"],
-  })) return;
+  if (!validateParams(req, res, { bodyParams: ["companyOrganizer"] })) return;
 
   try {
-    const clubMember = await clubMemberService.joinClub(userId, companyOrganizer);
+    const data = await clubService.joinClub(userId, companyOrganizer);
+
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "club_joined_successfully",
-      data: clubMember,
+      data,
     });
-  } catch (error) {
-    let readableMessage = getReadableErrorMessage(error);
+
+  } catch (err) {
+    const readable = getReadableErrorMessage(err);
     return sendResponse({
       res,
       statusCode: 500,
-      translationKey: readableMessage.message,
-      error: readableMessage,
+      translationKey: readable.message,
+      error: readable,
     });
   }
 };
 
-// leave club member
 const leaveClub = async (req, res) => {
   const { companyOrganizer } = req.body;
-  const { _id: userId } = req.user;
+  const userId = req.user._id;
 
-  if (!validateParams(req, res, {
-    bodyParams: ["companyOrganizer"],
-  })) return;
+  if (!validateParams(req, res, { bodyParams: ["companyOrganizer"] })) return;
 
   try {
-    const result = await clubMemberService.leaveClub(userId, companyOrganizer);
+    const data = await clubService.leaveClub(userId, companyOrganizer);
+
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "club_left_successfully",
-      data: result,
+      data,
     });
-  } catch (error) {
-    let readableMessage = getReadableErrorMessage(error);
+
+  } catch (err) {
+    const readable = getReadableErrorMessage(err);
     return sendResponse({
       res,
       statusCode: 500,
-      translationKey: readableMessage.message,
-      error: readableMessage,
+      translationKey: readable.message,
+      error: readable,
+    });
+  }
+};
+
+const getUserJoinedClubsWithPoints = async (req, res) => {
+  const userId = req.user._id;
+
+  try {
+    const data = await clubService.getUserJoinedClubsWithPoints(userId);
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "user_joined_clubs_fetched_successfully",
+      data,
+    });
+
+  } catch (err) {
+    const readable = getReadableErrorMessage(err);
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: readable.message,
+      error: readable,
+    });
+  }
+}
+
+const getUserCompanyWallet = async (req, res) => {
+  const userId = req.user._id;
+  const { id: companyOrganizer } = req.params;
+
+  if (!validateParams(req, res, { pathParams: ["id"] })) return;
+
+  try {
+    const data = await clubService.getUserCompanyWallet(userId, companyOrganizer);
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "user_company_wallet_fetched_successfully",
+      data,
+    });
+
+  } catch (err) {
+    const readable = getReadableErrorMessage(err);
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: readable.message,
+      error: readable,
+    });
+  }
+};
+const updateUserCompanyPoints = async (req, res) => {
+  const { userId, companyOrganizer, pointsDelta, organization } = req.body;
+
+  if (!validateParams(req, res, { bodyParams: ["userId", "companyOrganizer", "pointsDelta", "organization"] })) return;
+
+  try {
+    const data = await clubService.updateUserCompanyPoints({ userId, companyOrganizer, pointsDelta, organization });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "user_company_points_updated_successfully",
+      data,
+    });
+
+  } catch (err) {
+    const readable = getReadableErrorMessage(err);
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: readable.message,
+      error: readable,
     });
   }
 };
@@ -65,4 +139,6 @@ const leaveClub = async (req, res) => {
 module.exports = {
   joinClub,
   leaveClub,
+  getUserJoinedClubsWithPoints,
+  getUserCompanyWallet
 };

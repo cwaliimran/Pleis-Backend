@@ -14,173 +14,251 @@ const getPublicHighlightsWithFilters = async (
   time,
   timezone = "Asia/Karachi"
 ) => {
+
   const userObjectId = new mongoose.Types.ObjectId(userId);
   const now = getCurrentDateInTimezone({ timezone });
   const catObjId = category ? new mongoose.Types.ObjectId(category) : null;
 
+  // ----------------------------
+  // CATEGORY FILTERS
+  // ----------------------------
   const categoryFilter = category
     ? { "basicInfo.categories": { $in: [catObjId] } }
     : {};
+
   const categoryFilterOrganization = category
     ? { "otherInfo.categories": { $in: [catObjId] } }
     : {};
 
-  // --- Time filter using utility pattern ---
+  // ----------------------------
+  // TIME FILTER – apply ONLY when user selects a filter
+  // ----------------------------
   let eventTimeFilter = {};
+
   if (time && time !== "all") {
     let start, end;
+
     switch (time) {
       case "live":
-        eventTimeFilter = { "schedule.startDateTime": { $lte: now }, "schedule.endDateTime": { $gte: now } };
+        eventTimeFilter = {
+          "schedule.startDateTime": { $lte: now },
+          "schedule.endDateTime": { $gte: now }
+        };
         break;
 
       case "today":
         ({ start, end } = getStartAndEndOfDay(now, timezone));
-        eventTimeFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+        eventTimeFilter = {
+          "schedule.startDateTime": { $lte: end },
+          "schedule.endDateTime": { $gte: start }
+        };
         break;
 
       case "tomorrow":
         const tomorrow = new Date(now);
         tomorrow.setDate(now.getDate() + 1);
         ({ start, end } = getStartAndEndOfDay(tomorrow, timezone));
-        eventTimeFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+        eventTimeFilter = {
+          "schedule.startDateTime": { $lte: end },
+          "schedule.endDateTime": { $gte: start }
+        };
         break;
 
       case "thisWeek":
         ({ start, end } = getStartAndEndOfWeek(now, timezone));
-        eventTimeFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+        eventTimeFilter = {
+          "schedule.startDateTime": { $lte: end },
+          "schedule.endDateTime": { $gte: start }
+        };
         break;
 
       default:
-        eventTimeFilter = { "schedule.endDateTime": { $gte: now } };
+        eventTimeFilter = {};
     }
-  } else {
-    eventTimeFilter = { "schedule.endDateTime": { $gte: now } };
+  }
+  // IMPORTANT FIX:
+  // If no time filter selected → DO NOT filter events by time
+  else {
+    eventTimeFilter = {}; 
   }
 
+  // ----------------------------
+  // AGGREGATION PIPELINE
+  // ----------------------------
   const pipeline = [
     { $match: query },
     { $sort: { createdAt: -1 } },
     { $skip: skip },
     { $limit: limit },
 
-    // --- Lookup Events with dynamic time filter + favorites + org ---
+    // ----------------------------
+    // EVENT LOOKUP (SAFE FIXED)
+    // ----------------------------
     {
-      $lookup: {
-        from: "events",
-        localField: "object",
-        foreignField: "_id",
-        as: "eventObjects",
-        pipeline: [
-          {
-            $match: {
-              status: "active",
-              ...categoryFilter,
-              ...eventTimeFilter, // <-- applied here
-            },
-          },
-          {
-            $lookup: {
-              from: "organizations",
-              localField: "basicInfo.organization",
-              foreignField: "_id",
-              as: "organizationInfo",
-              pipeline: [{ $project: { _id: 1, basicInfo: 1 } }],
-            },
-          },
-          {
-            $addFields: { "basicInfo.organization": { $arrayElemAt: ["$organizationInfo", 0] } },
-          },
-          {
-            $lookup: {
-              from: "favorites",
-              let: { eventId: "$_id" },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $and: [
-                        { $eq: ["$targetId", "$$eventId"] },
-                        { $eq: ["$user", userObjectId] },
-                        { $eq: ["$targetType", "event"] },
-                      ],
-                    },
-                  },
-                },
-                { $limit: 1 },
-              ],
-              as: "favoriteInfo",
-            },
-          },
-          {
-            $addFields: { isFavorite: { $gt: [{ $size: "$favoriteInfo" }, 0] } },
-          },
-          { $project: { _id: 1, basicInfo: 1, schedule: 1, status: 1, isFavorite: 1 } },
-        ],
+  $lookup: {
+    from: "events",
+    let: { eventId: "$object" },
+    pipeline: [
+      { $match: { $expr: { $eq: ["$_id", "$$eventId"] } } },
+      { $match: { status: "active", ...categoryFilter, ...eventTimeFilter } },
+
+      {
+        $lookup: {
+          from: "organizations",
+          localField: "basicInfo.organization",
+          foreignField: "_id",
+          as: "organizationInfo",
+          pipeline: [
+            { $project: { _id: 1, basicInfo: 1, location: 1 } }
+          ]
+        }
       },
+
+      {
+        $addFields: {
+          "basicInfo.organization": {
+            $arrayElemAt: ["$organizationInfo", 0]
+          }
+        }
+      },
+
+      {
+        $lookup: {
+          from: "favorites",
+          let: { eventId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$targetId", "$$eventId"] },
+                    { $eq: ["$user", userObjectId] },
+                    { $eq: ["$targetType", "event"] }
+                  ]
+                }
+              }
+            },
+            { $limit: 1 }
+          ],
+          as: "favoriteInfo"
+        }
+      },
+
+      { $addFields: { isFavorite: { $gt: [{ $size: "$favoriteInfo" }, 0] } } },
+
+      // ⭐ MINIMAL EVENT PROJECTION
+      {
+        $project: {
+          _id: 1,
+          basicInfo: {
+            media: "$basicInfo.media",
+            title: "$basicInfo.title",
+            description: "$basicInfo.description",
+            organization: {
+              _id: "$basicInfo.organization._id",
+              basicInfo: {
+                media: "$basicInfo.organization.basicInfo.media",
+                name: "$basicInfo.organization.basicInfo.name"
+              },
+              location: "$basicInfo.organization.location"
+            },
+            venueLocation: "$basicInfo.venueLocation"
+          },
+          schedule: 1,
+          isFavorite: 1
+        }
+      }
+    ],
+    as: "eventObjects"
+  }
     },
 
-    // --- Lookup Organizations ---
+    // ----------------------------
+    // ORGANIZATION LOOKUP
+    // ----------------------------
     {
-      $lookup: {
-        from: "organizations",
-        localField: "object",
-        foreignField: "_id",
-        as: "orgObject",
-        pipeline: [
-          { $match: { status: "active", ...categoryFilterOrganization } },
+  $lookup: {
+    from: "organizations",
+    localField: "object",
+    foreignField: "_id",
+    as: "orgObject",
+    pipeline: [
+      { $match: { status: "active", ...categoryFilterOrganization } },
 
-          // Favorite lookup for organizations
-          {
-            $lookup: {
-              from: "favorites",
-              let: { orgId: "$_id" },
-              pipeline: [
-                {
-                  $match: {
-                    $expr: {
-                      $and: [
-                        { $eq: ["$targetId", "$$orgId"] },
-                        { $eq: ["$user", userObjectId] },
-                        { $eq: ["$targetType", "organization"] },
-                      ],
-                    },
-                  },
-                },
-                { $limit: 1 },
-              ],
-              as: "favoriteInfo",
+      {
+        $lookup: {
+          from: "favorites",
+          let: { orgId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$targetId", "$$orgId"] },
+                    { $eq: ["$user", userObjectId] },
+                    { $eq: ["$targetType", "organization"] }
+                  ]
+                }
+              }
             },
-          },
-
-          { $addFields: { isFavorite: { $gt: [{ $size: "$favoriteInfo" }, 0] } } },
-        ],
+            { $limit: 1 }
+          ],
+          as: "favoriteInfo"
+        }
       },
-    },
 
-    // --- Merge based on type ---
+      { $addFields: { isFavorite: { $gt: [{ $size: "$favoriteInfo" }, 0] } } },
+
+      // ⭐ MINIMAL ORG PROJECTION
+      {
+        $project: {
+          _id: 1,
+          basicInfo: {
+            media: "$basicInfo.media",
+            name: "$basicInfo.name"
+          },
+          location: 1,
+          isFavorite: 1
+        }
+      }
+    ]
+  }
+},
+
+    // ----------------------------
+    // MERGE event/org object
+    // ----------------------------
     {
       $addFields: {
         object: {
-          $switch: {
-            branches: [
-              {
-                case: { $eq: ["$type", "event"] },
-                then: { $arrayElemAt: ["$eventObjects", 0] }
-              },
-              {
-                case: { $eq: ["$type", "organization"] },
-                then: { $arrayElemAt: ["$orgObject", 0] }
-              }
-            ],
-            default: null
-          }
+          $cond: [
+            { $eq: ["$type", "event"] },
+            { $arrayElemAt: ["$eventObjects", 0] },
+            { $arrayElemAt: ["$orgObject", 0] }
+          ]
         }
       }
     },
+
+    // ----------------------------
+    // SAFE PROJECTION
+    // ----------------------------
+    {
+      $project: {
+        type: 1,
+        createdAt: 1,
+        status: 1,
+        meta: 1,
+        title: 1,
+        media: 1,
+        object: 1
+      }
+    }
   ];
 
-  // --- Keyword filter ---
+  // ----------------------------
+  // KEYWORD SEARCH
+  // ----------------------------
   if (keyword) {
     const regex = { $regex: keyword, $options: "i" };
     pipeline.push({
@@ -196,39 +274,14 @@ const getPublicHighlightsWithFilters = async (
           { "object.basicInfo.socialLinks.instagram": regex },
           { "object.basicInfo.socialLinks.linkedin": regex },
           { "object.basicInfo.socialLinks.youtube": regex },
-        ],
-      },
+        ]
+      }
     });
   }
-
-  // --- Final projection ---
-  pipeline.push({
-    $project: {
-      type: 1,
-      createdAt: 1,
-      meta: 1,
-      status: 1,
-      title: 1,
-      media: 1,
-      "object._id": 1,
-      "object.basicInfo.title": 1,
-      "object.basicInfo.name": 1,
-      "object.basicInfo.venueLocation": 1,
-      "object.location": 1,
-      "object.basicInfo.media": 1,
-      "object.basicInfo.description": 1,
-      "object.basicInfo.organization.basicInfo.name": 1,
-      "object.basicInfo.organization.basicInfo.media": 1,
-      "object.schedule": 1,
-      "object.isFavorite": 1,
-    },
-  });
 
   return Highlights.aggregate(pipeline);
 };
 
-
 module.exports = {
-  getPublicHighlightsWithFilters,
-
+  getPublicHighlightsWithFilters
 };

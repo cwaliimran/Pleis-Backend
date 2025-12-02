@@ -1,7 +1,7 @@
 const { UserGlobalWallet } = require("@UserGlobalWalletModel");
-const { getFirstStatusLevel, getNextStatusLevel, getPreviousStatusLevelByRetainPoints } = require("../../../admin/globalLoyalty/statusLevels/statusLevelsRepository");
+const { getFirstStatusLevel, getNextStatusLevel, getPreviousStatusLevelByRetainPoints, getPreviousStatusLevel } = require("../../../../admin/globalLoyalty/statusLevels/statusLevelsRepository");
 const { GlobalWalletTransactions } = require("@GlobalWalletTransactionsModel");
-const StatusLevels = require("../../../admin/globalLoyalty/statusLevels/StatusLevels");
+const StatusLevels = require("../../../../admin/globalLoyalty/statusLevels/StatusLevels");
 const { default: mongoose } = require("mongoose");
 
 const createUserWallet = async (user) => {
@@ -224,7 +224,7 @@ const checkDemotion = async (userId) => {
     if (!wallet || !currentLevel) return;
     // 3. If user didn't meet retainPoints → find correct fallback level
     if (earned12Months < currentLevel?.retainPoints) {
-        const fallback = await getPreviousStatusLevelByRetainPoints(earned12Months);
+        const fallback = await getPreviousStatusLevel(earned12Months);
 
         if (fallback && fallback._id.toString() !== currentLevel._id.toString()) {
             await UserGlobalWallet.updateOne(
