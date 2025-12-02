@@ -1,6 +1,6 @@
 const { generateMeta } = require("../../helperUtils/responseUtil");
 const { getEventIdsByOrganization } = require("../events/eventRepository");
-const { formatTicketing } = require("./fomatter/formatTicketing");
+const { formatTicketing, formatEventTicketing } = require("./fomatter/formatTicketing");
 const ticketingRepo = require("./ticketingsRepository");
 
 const createTicketing = async (timezone, data) => {
@@ -239,6 +239,28 @@ const getOrganizationTicketings = async ({ timezone, page, limit, keyword, statu
   return { ticketings: formattedTicketings, meta };
 };
 
+
+
+
+
+
+
+const EventsgetTicketings = async ({ timezone, eventId }) => {
+
+  const query = { event: eventId, status: { $eq: "active" } };
+
+  let [ticketings] = await Promise.all([
+    ticketingRepo.getEventsTicketingsWithFilters(query),
+  ]);
+
+  ticketings = ticketings.map((item) => formatEventTicketing(timezone, item));
+
+
+  return ticketings;
+};
+
+
+
 module.exports = {
   createTicketing,
   getTicketings,
@@ -246,5 +268,6 @@ module.exports = {
   updateTicketing,
   deleteTicketing,
   getOrganizationTicketings,
-  getTicketingsByEventId
+  getTicketingsByEventId,
+  EventsgetTicketings
 };

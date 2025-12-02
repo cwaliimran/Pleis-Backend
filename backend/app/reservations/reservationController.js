@@ -4,6 +4,7 @@ const {
   validateParams,
   getReadableErrorMessage,
   convertTimezoneToUtc,
+  convertTimezoneToUtcDateOnly,
 } = require("../../helperUtils/responseUtil");
 const reservationService = require("./reservationService");
 
@@ -166,20 +167,29 @@ const createReservation = async (req, res) => {
 const getReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let { keyword, status = "active", date, eventId, organizationId } = req.query;
+  const timezone = req.user.timezone;
   try {
-if (
-  !date || // Check if date is missing
-  (
-    (eventId === undefined || eventId === null || eventId === "undefined" || eventId === "null") && // Check if eventId is missing or invalid
-    (organizationId === undefined || organizationId === null || organizationId === "undefined" || organizationId === "null") // Check if organizationId is missing or invalid
-  )
-) {
-  return sendResponse({
-    res,
-    statusCode: 400,
-    translationKey: "date_and_eventId_or_organizationId_is_required",
-  });
-}
+    if (
+      !date || // Check if date is missing
+      (
+        (eventId === undefined || eventId === null || eventId === "undefined" || eventId === "null") && // Check if eventId is missing or invalid
+        (organizationId === undefined || organizationId === null || organizationId === "undefined" || organizationId === "null") // Check if organizationId is missing or invalid
+      )
+
+    ) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "date_and_eventId_or_organizationId_is_required",
+      });
+    }
+console.log("date",date );
+ date = convertTimezoneToUtcDateOnly(
+    date,
+    timezone
+  );
+
+    console.log("Converted date:", date);
 
     const userId = req.user._id;
     eventId, organizationId;
@@ -193,7 +203,7 @@ if (
     ) {
       organizationId = organizationId;
     }
-    const timezone = req.user.timezone;
+
     const { reservations, meta } = await reservationService.getReservations({
       timezone,
       page,
@@ -227,7 +237,7 @@ const getReservationDetails = async (req, res) => {
   const { id } = req.params;  // Capture the ID from params
   const timezone = req.user.timezone;
 
- if (
+  if (
     !validateParams(req, res, {
       pathParams: ["id"],
       objectIdFields: ["id"],
@@ -240,7 +250,7 @@ const getReservationDetails = async (req, res) => {
 
 
     // Call the service directly with the ID
-    const reservationDetails = await reservationService.getReservationDetails(id,timezone);
+    const reservationDetails = await reservationService.getReservationDetails(id, timezone);
 
 
     if (!reservationDetails) {
@@ -448,20 +458,20 @@ const deleteReservation = async (req, res) => {
 };
 const getUserReservations = async (req, res) => {
 
- const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "active",  date} = req.query;
+  const { page, limit } = parsePaginationParams(req);
+  let { keyword, status = "active", date } = req.query;
   try {
     const userId = req.user._id;
     const timezone = req.user.timezone;
-const { reservations, meta } = await reservationService.getUserReservations({
-  timezone,
-  page,
-  limit,
-  keyword,
-  status,
-  userId,  
-  date,
-});
+    const { reservations, meta } = await reservationService.getUserReservations({
+      timezone,
+      page,
+      limit,
+      keyword,
+      status,
+      userId,
+      date,
+    });
 
     return sendResponse({
       res,

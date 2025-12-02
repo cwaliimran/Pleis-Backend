@@ -1,7 +1,8 @@
 const { getFullImageUrl } = require("../../../helperUtils/imageHelper");
 const { calculateDistance } = require("../../../helperUtils/calculateDistance");
-const { convertUtcToTimezone } = require("../../../helperUtils/responseUtil");
+const { convertUtcToTimezone, convertUtcToTimezoneAMPM } = require("../../../helperUtils/responseUtil");
 const { transformOperatingHoursToLocal } = require("../../../shared/commonSchemas/operatingHours");
+const moment = require("moment-timezone");
 
 /**
  * Formats an event document into a public-friendly JSON response.
@@ -190,18 +191,86 @@ const formatEventResponse = (eventObject, options = {}) => {
     });
   }
 
-  // Extract unique venue ID
-  const uniqueVenueId = event.basicInfo?.venue ? event.basicInfo.venue.toString() : null;
 
-  // Log the unique venue ID
-  console.log("Unique Venue ID:", uniqueVenueId);
 
   return result;
 };
+/**
+ * Attach venue type titles to event.basicInfo.venue
+ * @param {Object} event - Original event object
+ * @param {Array} venueTypeTitles - Array of venue type titles
+ * @returns {Object} - Event with added venueTypeTitles
+ */
+const attachVenueTypesToEvent = (event, venueTypeTitles = []) => {
+  if (!event) return event;
+
+  const plainEvent = event.toObject ? event.toObject() : event;
+
+  // Ensure venue object exists
+  if (!plainEvent.basicInfo?.venue) {
+    plainEvent.basicInfo = plainEvent.basicInfo || {};
+    plainEvent.basicInfo.venue = {};
+  }
+
+  // Attach venueTypeTitles
+  plainEvent.basicInfo.venue.venueTypeTitles = venueTypeTitles;
+
+  return plainEvent;
+};
+function reservationsFormatterAdjustDates(reservations, timezone) {
+  if (!reservations) return [];
+
+  const list = Array.isArray(reservations)
+    ? reservations
+    : Object.values(reservations); // remove numeric keys (0,1,2...)
+
+  return list.map((item) => {
+    if (!item) return null;
+
+    const cat = item.toObject ? item.toObject() : { ...item };
+
+    // Adjust timingSlots and dateTimeSlots
+    if (cat.timingSlots?.dateTimeSlots) {
+      const dateTimeSlots = Array.isArray(cat.timingSlots.dateTimeSlots)
+        ? cat.timingSlots.dateTimeSlots
+        : [cat.timingSlots.dateTimeSlots];
+
+      dateTimeSlots.forEach((slot) => {
+        // Convert date to YYYY-MM-DD
+        if (slot.date) {
+          slot.date = moment(slot.date).tz(timezone).format("YYYY-MM-DD");
+        }
+
+        // Convert times
+        if (Array.isArray(slot.timeSlots)) {
+          slot.timeSlots.forEach((timeSlot) => {
+            if (timeSlot.startTime) {
+              timeSlot.startTime = convertUtcToTimezoneAMPM(
+                timeSlot.startTime,
+                timezone
+              );
+            }
+            if (timeSlot.endTime) {
+              timeSlot.endTime = convertUtcToTimezoneAMPM(
+                timeSlot.endTime,
+                timezone
+              );
+            }
+          });
+        }
+      });
+    }
+
+    return cat;
+  });
+}
+
 
 
 module.exports = {
   formatEventSchedule,
   formatMoreFromOrganizerEventResponse,
   formatEventResponse,
+  attachVenueTypesToEvent,
+  reservationsFormatterAdjustDates,
 };

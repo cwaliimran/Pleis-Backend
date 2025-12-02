@@ -16,9 +16,6 @@ const get = async ({ companyOrganizer, page, limit, keyword, status, date, timez
   const query = {
   };
 
-  if (companyOrganizer) {
-    query.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
-  }
 
   if (status) {
     query.status = status;

@@ -9,42 +9,52 @@ const create = async (data) => {
   return await repository.create(data);
 };
 
-const get = async ({ companyOrganizer, page, limit, keyword, status, date, timezone }) => {
+const get = async ({ page, limit, keyword, status, date, timezone }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   // Build query object
-  const query = {
-    companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
-  };
+  const query = {};
+
   if (status) query.status = status;
   else query.status = { $ne: "deleted" };
+
   if (date) {
     const start = new Date(date);
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
     query.createdAt = { $gte: start, $lt: end };
   }
+
   if (keyword) {
-    const keywordMatch = buildKeywordQueryFromModels([{ schema: BaseReward.schema }], keyword);
+    const keywordMatch = buildKeywordQueryFromModels(
+      [{ schema: BaseReward.schema }],
+      keyword
+    );
     Object.assign(query, keywordMatch);
   }
 
-  // Get rewards with population
+  // Fetch rewards
   const records = await repository.getWithFilters(query, skip, limit);
 
+  // Filtered count
   const totalFiltered = await BaseReward.countDocuments(query);
 
+  // Summary counts (companyOrganizer removed)
   const [total, active, inactive] = await Promise.all([
-    BaseReward.countDocuments({ ...(companyOrganizer && { companyOrganizer }), status: { $ne: "deleted" } }),
-    BaseReward.countDocuments({ status: "active", ...(companyOrganizer && { companyOrganizer }) }),
-    BaseReward.countDocuments({ status: "inactive", ...(companyOrganizer && { companyOrganizer }) }),
+    BaseReward.countDocuments({ status: { $ne: "deleted" } }),
+    BaseReward.countDocuments({ status: "active" }),
+    BaseReward.countDocuments({ status: "inactive" }),
   ]);
 
+  // Meta
   const meta = generateMeta(page, limit, totalFiltered);
   meta.counts = { total, active, inactive };
+
+  // Format output
   const formatted = records.map(item => formatData(item, timezone));
 
   return { responses: formatted, meta };
 };
+
 
 const update = async (id, data) => {
   let item = await repository.findById(id);

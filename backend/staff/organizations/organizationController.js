@@ -1,30 +1,36 @@
 const {
   sendResponse,
 } = require("../../helperUtils/responseUtil");
-const { transformOperatingHoursToUtc, transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
 
+const {
+  transformOperatingHoursToLocal
+} = require("../../shared/commonSchemas/operatingHours");
+
+const { formatItemCategory } = require("./formatter/formatMenuItems");
 const organizationService = require("./organizationService");
 
 
 const getOrganizationsAsStaff = async (req, res) => {
   try {
     const userId = req.user._id;
+    const timezone = req.user.timezone;   // ✅ FIX #1
 
-    // service returns ONLY array
+    // Fetch organizations array
     let organizations = await organizationService.getOrganizationsAsStaff(userId);
 
-    // Transform to local time safely
     organizations = organizations.map((org) => {
-      const orgObj = org.toObject ? org.toObject() : org;
+      const obj = org.toObject ? org.toObject() : org;
 
-      if (orgObj.operatingHours) {
-        orgObj.operatingHours = transformOperatingHoursToLocal(
-          orgObj.operatingHours,
+      // Convert hours to local timezone
+      if (obj.operatingHours) {
+        obj.operatingHours = transformOperatingHoursToLocal(
+          obj.operatingHours,
           timezone
         );
       }
 
-      return orgObj;
+      // Apply image formatting
+      return formatItemCategory(obj);   // ✅ FIX #2
     });
 
     return sendResponse({
@@ -45,14 +51,6 @@ const getOrganizationsAsStaff = async (req, res) => {
 };
 
 
-
-
-
-
-
-
-
 module.exports = {
-
   getOrganizationsAsStaff,
 };

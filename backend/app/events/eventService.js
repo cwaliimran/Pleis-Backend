@@ -5,7 +5,8 @@ const eventRepo = require("./eventRepository");
 const _ = require("lodash");
 const { getRecommendedEvents } = require("./recommendationSystem/eventsRecommender");
 const { formatEventResponse } = require("../events/formatter/eventFormatter");
-const { formatMoreFromOrganizerEventResponse } = require("./formatter/eventFormatter");
+const { formatMoreFromOrganizerEventResponse,reservationsFormatterAdjustDates } = require("./formatter/eventFormatter");
+const { attachVenueTypesToEvent  } = require("./formatter/eventFormatter");
 const { getUserInterestsIdsForRecommendation } = require("../usersManagement/usersRepository");
 const { getForYouEventsAgainstInterests } = require("./recommendationSystem/getForYouEventsAgainstInterests");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
@@ -395,9 +396,12 @@ const getEventDetails = async (userLocation, userId, id, timezone) => {
 
   addOrUpdateRecentlyViewedItem(userId, id, 'event'); // Run in background, don't await
 
-
+    const formattedEvent = formatEventResponse(event, { timezone });
+    const titles =await eventRepo.getVenueTypeTitles(event.basicInfo.venue);
+    const updatedEvent =attachVenueTypesToEvent(event, titles);
   let data = {
-    event: formatEventResponse(event, { timezone }),
+    event: updatedEvent,
+
     announcements: announcements || [],
     ticketings: ticketings || [],
     loyaltyPrograms: loyaltyPrograms || [],
@@ -428,11 +432,7 @@ const getForYouEvents = async (userId, location, timezone, category, time) => {
     preferences: userPreferences,
   });
 
-  //TODO check if recommended events are less than limit, then fill with trending events
 
-  //check if events are isFavorite by user
-
-  // Add "favorite" flag
   if (userId && recommendedEvents.data.length > 0) {
     const eventIds = recommendedEvents.data.map((e) => e._id);
     const userFavorites = await Favorites.find({
@@ -451,11 +451,16 @@ const getForYouEvents = async (userId, location, timezone, category, time) => {
 
   return recommendedEvents;
 };
+const getEventReservations = async (nanoid,timezone) => {
+  const Reservations = await eventRepo.getEventReservations(nanoid);
 
+  return reservationsFormatterAdjustDates(Reservations, timezone)
+};
 module.exports = {
   getEventIdByNanoid,
   getNearbyEvents,
   getNearbyEventsWithAdvanceFilters,
   getEventDetails,
-  getForYouEvents
+  getForYouEvents,
+  getEventReservations
 };

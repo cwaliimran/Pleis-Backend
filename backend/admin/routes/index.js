@@ -51,5 +51,8 @@ router.use("/global-referral", require("../globalReferral/globalReferralRoutes")
 // transactions
 router.use("/transactions", require("../transactions/transactionsRoutes"));
 
+// thirdPParty
+router.use("/third-party", require("../thirdParty/thirdPartyRoutes"));
+
 
 module.exports = router;

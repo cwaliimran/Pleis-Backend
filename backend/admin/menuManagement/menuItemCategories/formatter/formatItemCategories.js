@@ -31,5 +31,22 @@ function formatMenuItem(item, timezone) {
 
   return obj;
 }
+function formatBundleMenuItem(item, timezone) {
+  let obj = typeof item.toObject === "function" ? item.toObject() : item;
+  if (!obj) return null;
 
-module.exports = { formatMenuItem };
+  // Keep formatting logic (if you need it for other use-cases)
+  if (obj.startTime && obj.endTime) {
+    obj.startTime = convertUtcToTimezone(obj.startTime, timezone, "hh:mm A");
+    obj.endTime = convertUtcToTimezone(obj.endTime, timezone, "hh:mm A");
+  }
+
+  // Return ONLY required fields
+  return {
+    _id: obj._id,
+    title: obj.title,
+    price: obj.basePrice || obj.discountPrice || 0, // choose price
+  };
+}
+
+module.exports = { formatMenuItem,formatBundleMenuItem };

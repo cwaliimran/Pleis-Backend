@@ -3,7 +3,10 @@
 const { Events } = require("../../commonModules/events/Event");
 const { getWithFilters } = require('@dbUtils/queryUtil');
 const { Favorites } = require("../../commonModules/favorites/Favorite");
+const  Venues  = require("@VenuesModel");
+const  VenueTypes = require("@VenueTypesModel");
 
+const  Reservations = require("@ReservationsModel");
 // Get all with filters
 const getEventsWithFilters = async (query, skip, limit) => {
   return Events.find(query)
@@ -105,6 +108,48 @@ const findEventByNanoid = async (nanoid) => {
   return Events.findOne({ publicId: nanoid }).select("_id");
 }
 
+const getVenueTypeTitles = async (venueId) => {
+  if (!venueId) return [];
+  const venue = await Venues.findById(venueId).select("venueType");
+
+  if (!venue || !Array.isArray(venue.venueType) || venue.venueType.length === 0) {
+    return [];
+  }
+  const venueTypes = await VenueTypes
+    .find({ _id: { $in: venue.venueType } })
+    .select("title");
+  return venueTypes.map(v => v.title);
+};
+
+
+
+
+
+
+
+
+const getEventReservations = async (eventId) => {
+  const pipeline = [
+    {
+      $match: {
+        optionalEventId: eventId,
+        status: { $ne: "deleted" }   // ignore deleted reservations
+      }
+    },
+    {
+      $project: {
+        timingSlots: 1,
+      }
+    }
+  ];
+
+  const reservations = await Reservations.aggregate(pipeline);
+  return reservations;
+};
+
+
+
+
 module.exports = {
   getEventsWithFilters,
   countEvents,
@@ -113,4 +158,6 @@ module.exports = {
   updateMany,
   findEventByNanoid,
   getMoreFromOrganizerEvents,
+  getVenueTypeTitles,
+  getEventReservations
 };

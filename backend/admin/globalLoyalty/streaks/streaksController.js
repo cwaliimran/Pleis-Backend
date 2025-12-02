@@ -44,14 +44,7 @@ const getStreaks = async (req, res) => {
 
   try {
 
-    //companyOrganizer is required to filter for specific company
-    if (!companyOrganizer) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "company_organizer_is_required",
-      });
-    }
+
 
     if (date && !validateParams(req, res, {
       dateFields: {

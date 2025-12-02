@@ -22,12 +22,47 @@ const getBundlesService = async ({ page = 1, limit = 10, keyword, status = "acti
   }
 
   // Keyword search (name or description)
-  if (keyword) {
-    query.$or = [
-      { name: { $regex: keyword, $options: "i" } },
-      { description: { $regex: keyword, $options: "i" } }
-    ];
-  }
+if (keyword) {
+  const regex = new RegExp(keyword, "i");
+
+  query.$or = [
+    // String fields (safe)
+    { name: { $regex: regex } },
+    { description: { $regex: regex } },
+
+    // Numeric fields converted to string
+    {
+      $expr: {
+        $regexMatch: {
+          input: { $toString: "$originalPrice" },
+          regex: keyword,
+          options: "i"
+        }
+      }
+    },
+
+    {
+      $expr: {
+        $regexMatch: {
+          input: { $toString: "$discountedPrice" },
+          regex: keyword,
+          options: "i"
+        }
+      }
+    },
+
+    {
+      $expr: {
+        $regexMatch: {
+          input: { $toString: "$discountPercentage" },
+          regex: keyword,
+          options: "i"
+        }
+      }
+    }
+  ];
+}
+
 
   // Pagination
   const skip = limit === 0 ? 0 : (page - 1) * limit;

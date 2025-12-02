@@ -23,4 +23,8 @@ router.use("/listings", require("../globalLoyalty/listings/listingsRoutes"));
 router.use("/listings", require("../globalLoyalty/listings/listingsRoutes"));
 //members
 router.use("/club-members", require("../globalLoyalty/clubMembers/clubMembersRoutes"));
+//referrals
+router.use("/referrals", require("../globalLoyalty/referrals/referralsRoutes"));
+//transactions
+router.use("/transactions", require("../globalLoyalty/transactions/transactionsRoutes"));
 module.exports = router;

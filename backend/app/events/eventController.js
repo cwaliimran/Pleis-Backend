@@ -177,10 +177,13 @@ const getEventDetails = async (req, res) => {
 
 
   try {
-    let [data, isFavoriteEvent = false] = await Promise.all([
+    let [data, Reservations,isFavoriteEvent = false] = await Promise.all([
       eventService.getEventDetails(userLocation, userId, id, timezone),
+      eventService.getEventReservations(id,timezone),
       isFavorited(userId, id, 'event'),
     ]);
+
+    console.log("Reservations", Reservations);
     if (!data?.event) {
       return sendResponse({
         res,
@@ -189,6 +192,7 @@ const getEventDetails = async (req, res) => {
       });
     }
     data.event.isFavorite = isFavoriteEvent;
+    data.Reservations = Reservations;
 
     return sendResponse({
       res,

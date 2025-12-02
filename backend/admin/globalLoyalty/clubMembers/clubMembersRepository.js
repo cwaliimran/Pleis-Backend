@@ -33,10 +33,7 @@ const getMembers = async (
 ) => {
 
   let companyOrganizerIds = [];
-  // If companyOrganizer provided, use it
-  if (companyOrganizer) {
-    companyOrganizerIds = [new mongoose.Types.ObjectId(companyOrganizer)];
-  }
+
 
   // Pagination setup
   const skip = limit === 0 ? 0 : (page - 1) * limit;

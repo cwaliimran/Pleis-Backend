@@ -10,6 +10,7 @@ const {
 const { getVenueDetails } = require("../venues/venuesService");
 
 const eventService = require("./eventService");
+const ticketingService = require("../ticketing/ticketingsService");
 
 const createEvent = async (req, res) => {
   let { timezone, _id: userId } = req.user;
@@ -513,6 +514,37 @@ const getMinimalEventsInfo = async (req, res) => {
     });
   }
 };
+
+
+const getEventTicketings = async (req, res) => {
+  let { id } = req.params;
+  let { timezone } = req.user;
+
+  // ObjectId for event id
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })) return;
+
+
+  try {
+    const ticketings = await ticketingService.EventsgetTicketings({ timezone, eventId: id });
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "event_ticketings_fetched_successfully",
+      data: ticketings,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
 module.exports = {
   createEvent,
   getEvents,
@@ -522,4 +554,5 @@ module.exports = {
   deleteEvent,
   getEventDetails,
   getMinimalEventsInfo,
+  getEventTicketings
 };

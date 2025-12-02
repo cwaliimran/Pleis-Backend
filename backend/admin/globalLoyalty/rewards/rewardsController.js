@@ -12,36 +12,46 @@ const create = async (req, res) => {
   // Initialize the fields for raw data, date fields, and objectId fields
   var dateFields = {};
   var rawData = [
-    "image", 
-    "title", 
-    "rewardType", 
-    "sortingType", 
-    "minPointsRequiredToClaim", 
-    "companyOrganizer",
+    "image",
+    "title",
+    "rewardType",
+    "sortingType",
+    "minPointsRequiredToClaim",
   ];
-  var objectIdFields = ["companyOrganizer"];
+
+  // No companyOrganizer anymore
+  var objectIdFields = [];
 
   // Check for specific reward types and adjust fields accordingly
-  const rewardType = req.body.rewardType;  // Ensure the casing is consistent
+  const rewardType = req.body.rewardType;
+
   if (rewardType === "GlobalTicketReward") {
     rawData.push("event");
     objectIdFields.push("event");
   }
 
   if (rewardType === "GlobalCustomReward") {
-    rawData.push("customReward", "customReward.image", "customReward.title", "customReward.description");
+    rawData.push(
+      "customReward",
+      "customReward.image",
+      "customReward.title",
+      "customReward.description"
+    );
   }
 
-  // Validate the incoming parameters
-  if (!validateParams(req, res, {
-    rawData,
-    dateFields,
-    objectIdFields,
-    enumFields: { "rewardType": ["GlobalTicketReward", "GlobalCustomReward"] },
-  })) return;
+  // Validate incoming params
+  if (
+    !validateParams(req, res, {
+      rawData,
+      dateFields,
+      objectIdFields,
+      enumFields: { rewardType: ["GlobalTicketReward", "GlobalCustomReward"] },
+    })
+  )
+    return;
 
   try {
-    // Call the service to create the reward and send the response
+    // Create reward
     const response = await service.create(req.body);
     return sendResponse({
       res,
@@ -50,7 +60,6 @@ const create = async (req, res) => {
       data: response,
     });
   } catch (error) {
-    // Handle errors and return a readable error message
     const readableError = getReadableErrorMessage(error);
     return sendResponse({
       res,
@@ -61,13 +70,14 @@ const create = async (req, res) => {
   }
 };
 
+
 const get = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date,companyOrganizer } = req.query;
+  const { keyword, status, date } = req.query;
 
   try {
     const { responses, meta } = await service.get({
-      companyOrganizer,
+
       page,
       limit,
       keyword,

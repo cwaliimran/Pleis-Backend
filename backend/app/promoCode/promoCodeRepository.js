@@ -4,12 +4,7 @@ const usePromoCode = async (data) => {
   try {
     const { promoCode, userId, companyOrganizer, amount } = data;
 
-    // Log for debugging purposes
-    console.log("Promo Code:", promoCode);
-    console.log("User ID:", userId);
-    console.log("Company Organizer:", companyOrganizer);
 
-    // Find the promo code by the given promo code and company organizer
     const foundPromoCode = await PromoCode.findOne({ promoCode, companyOrganizer });
 
     if (!foundPromoCode) {
@@ -44,16 +39,19 @@ const usePromoCode = async (data) => {
 
     // Increment the usage count for the user and the promo code
     const incremented = await foundPromoCode.incrementUsage(userId);
+    console.log("incremented",incremented );
 
     if (!incremented) {
       return { error: "Unable to increment usage for this promo code." };
     }
-
+console.log("discountResponse",discountResponse );
     // Return the successful response with the discount details
     return { 
       message: "Promo code applied successfully", 
-      discount: discountResponse.discount, 
-      finalAmount: discountResponse.finalAmount 
+discount: foundPromoCode.discountValue,
+maxDiscountCap: foundPromoCode.maxDiscountCap,
+discountType: foundPromoCode.discountType,
+
     };
   } catch (err) {
     console.error("Error in usePromoCode:", err);

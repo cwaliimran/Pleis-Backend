@@ -60,7 +60,8 @@
     "@GlobalLoyaltyReward": "backend/commonModules/globalLoyalty/rewards/models/reward/BaseReward.js",
     "@GlobalChallengeModel": "backend/commonModules/globalLoyalty/rewards/models/Challenge/models/Challenge/BaseChallenge.js",
     "@GlobalStreaksModel": "backend/commonModules/globalLoyalty/streaks/Streaks.js",
-    "@GlobalUsersStreaksModel": "backend/commonModules/globalLoyalty/streaks/UsersStreaks.js"
+    "@GlobalUsersStreaksModel": "backend/commonModules/globalLoyalty/streaks/UsersStreaks.js",
+    "@ThirdPartyModel": "backend/commonModules/globalLoyalty/thirdParty/ThirdParty.js"
   },
   "keywords": [],
   "author": "",

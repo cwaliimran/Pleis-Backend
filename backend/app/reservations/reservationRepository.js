@@ -105,76 +105,76 @@ const findByIdAndUpdate = async (id, data) => {
 
 
 
-const getReservations = async ({ timezone,page,limit,keyword,status,userId,eventId,organizationId,date}) => {
+const getReservations = async ({ timezone, page, limit, keyword, status, userId, eventId, organizationId, date }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-    const organizationIdObj = organizationId ? new mongoose.Types.ObjectId(organizationId) : null;
 
-  const pipeline = [
-  {
-    $match: {
-        ...(eventId && { optionalEventId: eventId }), 
-        ...(organizationIdObj && { 
-          organizationId: organizationIdObj 
-        }),
-      }
+  const pipeline = [];
+
+  // MATCH BASE FILTERS
+  const match = {};
+
+  if (eventId) {
+    match.optionalEventId = eventId;
   }
-];
-  // Apply filters
+
+  if (organizationId) {
+    match.organizationId = new mongoose.Types.ObjectId(organizationId);
+  }
+
+  pipeline.push({ $match: match });
+
+  // STATUS FILTER
   if (status) {
     pipeline.push({ $match: { status } });
   } else {
     pipeline.push({ $match: { status: { $ne: "deleted" } } });
   }
-  if (date) {
-    const start = new Date(date);  
-    const end = new Date(new Date(date).setDate(start.getDate() + 1)); 
-    pipeline.push(
-      { $unwind: "$timingSlots.dateTimeSlots" }, 
-      {
-        $project: {
-          reservationType: 1,  // Keep other fields
-          availableReservations: 1,
-          companyOrganizer: 1,
-          companyOrganizer: 1,
-          maxCapacityPerReservation: 1,
-          conditionType: 1,
-          organizationId: 1,
-          taxPercentage: 1,
-          timingSlots: 1,  
-          needsConfirmation: 1,
-          optionalEventId: 1,
-          status: 1,
-          createdAt: 1,
-          updatedAt: 1,
-          __v: 1,
-          date: {
-            $dateToString: { format: "%Y-%m-%d", date: "$timingSlots.dateTimeSlots.date" } 
-          }
-        }
-      },
-      {
-        $match: {
-          "timingSlots.enabled": true, 
-          date: { $gte: start.toISOString().split("T")[0], $lt: end.toISOString().split("T")[0] } 
-        }
+
+  // DATE FILTER
+  console.log("date",date );
+if (date) {
+  // Convert: "2025-12-16T19:00:00.000+00:00" -> "2025-12-16"
+  const dayOnly = date.split("T")[0];
+
+  // Build date range
+  const start = new Date(`${dayOnly}T00:00:00.000Z`);
+  const end   = new Date(`${dayOnly}T23:59:59.999Z`);
+
+  console.log("DATE RANGE:", start, end);
+
+  pipeline.push(
+    {
+      $unwind: {
+        path: "$timingSlots.dateTimeSlots",
+        preserveNullAndEmptyArrays: false
       }
-    );
-  }
-
-if (keyword) {
-  const keywordMatch = buildKeywordQueryFromModels(
-    [
-      { schema: Reservations.schema }
-    ],
-    keyword
+    },
+    {
+      $match: {
+        "timingSlots.enabled": true,
+        "timingSlots.dateTimeSlots.date": { $gte: start, $lte: end }
+      }
+    }
   );
-
-  if (Object.keys(keywordMatch).length) {
-    pipeline.push({ $match: keywordMatch });
-  }
 }
 
+
+
+
+
+  // KEYWORD SEARCH
+  if (keyword) {
+    const keywordMatch = buildKeywordQueryFromModels([{ schema: Reservations.schema }], keyword);
+
+    if (Object.keys(keywordMatch).length) {
+      pipeline.push({ $match: keywordMatch });
+    }
+  }
+
+  // SORT
   pipeline.push({ $sort: { createdAt: -1 } });
+
+  // PAGINATION
   pipeline.push({
     $facet: {
       data: [
@@ -184,39 +184,40 @@ if (keyword) {
       totalFiltered: [{ $count: "count" }]
     }
   });
-
+console.log("pipeline", pipeline);
   const result = await Reservations.aggregate(pipeline);
-
-  let reservations = result[0]?.data || [];
-  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+  const reservations = result[0]?.data || [];
   console.log("reservations",reservations );
+  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
+  // META COUNT
   const [total, active, inactive] = await Promise.all([
-    Reservations.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "deleted" } }),
-    Reservations.countDocuments({ status: "active", ...(userId && { userId: userId }) }),
-    Reservations.countDocuments({ status: "inactive", ...(userId && { userId: userId }) })
+    Reservations.countDocuments({ ...(userId && { userId }), status: { $ne: "deleted" } }),
+    Reservations.countDocuments({ status: "active", ...(userId && { userId }) }),
+    Reservations.countDocuments({ status: "inactive", ...(userId && { userId }) })
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
   meta.reservationsCount = { total, active, inactive };
 
-
-  reservations = reservations.map(item => {
+  // FORMAT OUTPUT
+  const finalReservations = reservations.map(item => {
     const formatted = reservationsFormatter(item);
-    if (formatted.conditionType == "noCondition"||formatted.conditionType=="ticketRequirement"||formatted.conditionType=="customText"||formatted.conditionType=="ticketRequirement") {
+    if (
+      formatted.conditionType === "noCondition" ||
+      formatted.conditionType === "ticketRequirement" ||
+      formatted.conditionType === "customText"
+    ) {
       delete formatted.amount;
-      if(formatted.conditionType == "noCondition")
-      {
+      if (formatted.conditionType === "noCondition") delete formatted.ticketType;
+    } else {
       delete formatted.ticketType;
-      }
-    }
-    else{
-            delete formatted.ticketType;
     }
     return formatted;
   });
-  return {reservations , meta}
-}
+
+  return { reservations: finalReservations, meta };
+};
 
 
 

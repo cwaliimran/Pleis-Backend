@@ -142,6 +142,9 @@
       ],
       "@GlobalUsersStreaksModel": [
         "backend/commonModules/globalLoyalty/streaks/UsersStreaks.js"
+      ],
+      "@ThirdPartyModel": [
+        "backend/commonModules/globalLoyalty/thirdParty/ThirdParty.js"
       ]
     }
   },
