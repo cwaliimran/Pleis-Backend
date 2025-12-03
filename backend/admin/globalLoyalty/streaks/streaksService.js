@@ -8,7 +8,7 @@ const createStreak = async ({ visits = 0, points = 0, companyOrganizer, status }
   return await streakRepo.createStreak({ visits, points, companyOrganizer, status });
 };
 
-const getStreaks = async ({ companyOrganizer, page, limit, keyword, status, date, orderSort = "asc" }) => {
+const getStreaks = async ({ page, limit, keyword, status, date, orderSort = "asc" }) => {
   const query = {
 
   };

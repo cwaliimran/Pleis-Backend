@@ -600,7 +600,6 @@ const saveReferralData = async (id) => {
   try {
 
     const GlobalReferral = await globalReferralService.saveReferralData(id);
-
     if (!GlobalReferral) {
       return GlobalReferral
     }
@@ -623,7 +622,6 @@ const saveUserReferralData = async (id, ipAddress) => {
   }
 };
 
-saveReferralData
 module.exports = {
   createGlobalReferral,
   getGlobalReferrals,

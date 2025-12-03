@@ -40,7 +40,7 @@ const createStreak = async (req, res) => {
 
 const getStreaks = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, orderSort, companyOrganizer } = req.query;
+  const { keyword, status, date, orderSort } = req.query;
 
   try {
 
@@ -53,7 +53,7 @@ const getStreaks = async (req, res) => {
     })) return;
 
     const { streaks, meta } = await streaksService.getStreaks({
-      companyOrganizer,
+
       page,
       limit,
       keyword,

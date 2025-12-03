@@ -12,6 +12,7 @@ function formatUsersStreak(streak) {
 
   if (streakObj.user && typeof streakObj.user === 'object') {
     streakObj.user.profileIcon = getFullImageUrl(streakObj.user.profileIcon || "noimage.png");
+     streakObj.organizationLogo = getFullImageUrl(streakObj.organizationLogo || "noimage.png");
   }
   return streakObj;
 }

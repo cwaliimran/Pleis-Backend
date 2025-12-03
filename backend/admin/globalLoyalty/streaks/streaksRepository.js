@@ -1,5 +1,5 @@
 // repositories/streakRepository.js
-const Streaks = require("@GlobalStreaksModel");
+const Streaks = require("@StreaksModel");
 const { getModelCounts } = require("@dbUtils/queryUtil");
 
 // Create

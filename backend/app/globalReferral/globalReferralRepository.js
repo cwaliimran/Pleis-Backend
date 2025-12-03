@@ -1,6 +1,5 @@
 // repositories/ReservationRepository.js
 const {GlobalReferral} = require("@GlobalReferralModel");
-const {ReferralReference} = require("@ReferralReferenceModel");
 const {ReferralRecord} = require("@ReferralRecordModel");
 const UserReservations = require("@UserReservationsModel");
 const { User } = require("../../models/UserModel");
@@ -26,33 +25,57 @@ const createGlobalReferral = async (data) => {
     throw err;
   }
 };
-const saveReferralData = async (referralId) => {
+const saveReferralData = async (referralId, type) => {
   try {
-    const data = {
-      referralId: referralId, // Use the referralId provided
-    };
-    const referralReference = new ReferralReference(data);
-    await referralReference.save();
-    return referralReference.publicId; 
+    // 1️⃣ Get user details first
+    const user = await User.findById(referralId).lean();
+
+    if (!user) {
+      throw new Error("User not found for referralId");
+    }
+
+    const userPublicId = user.publicId; 
+    return userPublicId;
+
   } catch (err) {
     console.error("Error saving referral reference:", err);
-    throw err; 
+    throw err;
   }
 };
+
+
 const saveUserReferralData = async (referralId, ip) => {
   try {
-    const data = {
-      referralId: referralId, // Use the referralId provided
-      userIp: ip, // Use the ip provided
-    };
-    const referralReference = new ReferralRecord(data);
-    await referralReference.save();
-    return referralReference.referralId;  
+    const existing = await ReferralRecord.findOne({ userIp: ip });
+
+    if (existing) {
+      console.log("IP already exists — updating referralId only");
+
+      existing.referralId = referralId;
+      existing.status = false;   // <<< RESET HERE
+      await existing.save();
+
+      return existing.referralId;
+    }
+console.log("=== BEFORE SAVE (incoming data) ===");
+console.log(JSON.stringify({ referralId, ip, status: false }, null, 2));
+
+    const newRecord = await ReferralRecord.create({
+      referralId,
+      userIp: ip,
+      status: false
+    });
+console.log("=== AFTER CREATE ===");
+console.log(newRecord);
+    return newRecord.referralId;
+
   } catch (err) {
-    console.error("Error saving referral reference:", err);
-    throw err; 
+    console.error("Error saving referral record:", err);
+    throw err;
   }
 };
+
+
 // Get all Reservations with their assigned organization populated, sorted by createdAt descending
 const getReservationsWithFilters = async (query = {}, skip = 0, limit = 10) => {
   return Reservations.find(query)

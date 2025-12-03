@@ -8,7 +8,7 @@ const { CompanySchema } = require("./CompanyDetails");
 const { generateSecureToken } = require("../helperUtils/secureToken");
 const { LocationSchema } = require("../shared/locations/locationSchmea");
 const { createUserWallet } = require("../app/userWalletService/walletManagement/userWalletService");
-
+const { nanoid } = require("nanoid");
 // Define subscription statuses
 const SubscriptionType = {
   PLAN1: "plan1", //free
@@ -154,6 +154,12 @@ const userSchema = new mongoose.Schema(
         default: "pending",
       },
     },
+  publicId: {
+    type: String,
+    unique: true,
+    index: true,
+    default: () => nanoid(),
+  },
 
     password: {
       type: String,

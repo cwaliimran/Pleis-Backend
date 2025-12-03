@@ -1,20 +1,16 @@
 const mongoose = require("mongoose");
 const { GlobalRecurringPromotionSchema } = require("./RecurringPromotionSchema");
 
-
 const globalBasePromotionSchema = new mongoose.Schema(
   {
-    image: {
-      type: String,
-      default: "",
-    },
+    image: { type: String, default: "" },
     title: { type: String, trim: true, required: true },
     description: { type: String, default: "" },
 
-    promotionType: {
+    globalPromotionType : {
       type: String,
       required: true,
-      enum: ["happyHour", "claimPromotion", "buyMenuItemPromotion", "productSale"],
+      enum: ["globalHappyHour", "globalClaimPromotion", "buyMenuItemPromotion", "productSale"],
     },
 
     startDate: { type: Date, default: null },
@@ -31,16 +27,18 @@ const globalBasePromotionSchema = new mongoose.Schema(
       default: null,
     },
 
-
-
     status: {
       type: String,
       enum: ["active", "inactive", "completed", "deleted"],
       default: "active",
     },
   },
-  { timestamps: true, discriminatorKey: "globalPromotionType" }
+  {
+    timestamps: true,
+    discriminatorKey: "globalPromotionType",
+  }
 );
 
-// Export as a Global Model
-module.exports = mongoose.model("GlobalBasePromotion", globalBasePromotionSchema);
+module.exports =
+  mongoose.models.GlobalBasePromotion ||
+  mongoose.model("GlobalBasePromotion", globalBasePromotionSchema);

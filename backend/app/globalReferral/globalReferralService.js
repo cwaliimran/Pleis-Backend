@@ -21,15 +21,15 @@ const createGlobalReferral = async (data) => {
   return GlobalReferral;
 };
 
-const saveReferralData = async (data) => {
+const saveReferralData = async (id) => {
 
-  let GlobalReferral = await GlobalReferralRepo.saveReferralData(data);
+  let GlobalReferral = await GlobalReferralRepo.saveReferralData(id);
   return GlobalReferral;
 };
 
-const saveUserReferralData = async (id, ip) => {
+const saveUserReferralData = async (id, ipAddress) => {
 
-  let GlobalReferral = await GlobalReferralRepo.saveUserReferralData(id, ip);
+  let GlobalReferral = await GlobalReferralRepo.saveUserReferralData(id, ipAddress);
   return GlobalReferral;
 };
 // Populate venue data for reservations (updated for new schema)

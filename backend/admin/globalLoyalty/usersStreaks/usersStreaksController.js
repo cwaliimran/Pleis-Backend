@@ -9,7 +9,7 @@ const {
 const UsersStreaksService = require("./usersStreaksService");
 
 const createUsersStreak = async (req, res) => {
-  const { visits = 0, points = 0, companyOrganizer, status = "active" } = req.body;
+  const { visits = 0, points = 0, status = "active" } = req.body;
 
   if (!validateParams(req, res, { rawData: ["points", "visits", "companyOrganizer"] })) return;
 
@@ -40,17 +40,10 @@ const createUsersStreak = async (req, res) => {
 
 const getUsersStreaks = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, orderSort, companyOrganizer } = req.query;
+  const { keyword, status, date, orderSort } = req.query;
 
   try {
-    // companyOrganizer is required to filter for specific companyOrganizer
-    if (!companyOrganizer) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "company_is_required",
-      });
-    }
+
 
     if (date && !validateParams(req, res, {
       dateFields: {
@@ -59,7 +52,7 @@ const getUsersStreaks = async (req, res) => {
     })) return;
 
     const { UsersStreaks, meta } = await UsersStreaksService.getUsersStreaks({
-      companyOrganizer,
+
       page,
       limit,
       keyword,

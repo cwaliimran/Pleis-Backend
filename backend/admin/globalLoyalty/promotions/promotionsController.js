@@ -12,103 +12,97 @@ const create = async (req, res) => {
   let { timezone } = req.user;
   let recurringDetails = req.body?.recurringDetails || {};
 
-  var dateFields = {};
-  var rawData = ["image", "title", "promotionType", "startDate", "endDate"]; 
-  var objectIdFields = []; // companyOrganizer removed
+  let dateFields = {};
+  let rawData = ["image", "title", "promotionType", "startDate", "endDate"];
+  let objectIdFields = [];
 
+  // ---------------- PROMOTION TYPE RULES ----------------
+
+  // HAPPY HOUR
   if (req.body.promotionType === "happyHour") {
+    req.body.globalPromotionType = "globalHappyHour"; // discriminator
     dateFields.startDate = "YYYY-MM-DD hh:mm A";
     dateFields.endDate = "YYYY-MM-DD hh:mm A";
     rawData.push("pointsMultiplier");
   }
 
+  // BUY MENU ITEM
   if (req.body.promotionType === "buyMenuItemPromotion") {
+    req.body.globalPromotionType = "buyMenuItemPromotion";
     dateFields.startDate = "YYYY-MM-DD";
     dateFields.endDate = "YYYY-MM-DD";
     rawData.push("menuItem", "extraPoints");
     objectIdFields.push("menuItem");
   }
 
+  // PRODUCT SALE
   if (req.body.promotionType === "productSale") {
+    req.body.globalPromotionType = "productSale";
     dateFields.startDate = "YYYY-MM-DD";
     dateFields.endDate = "YYYY-MM-DD";
     rawData.push("menuItem", "discountedPrice");
     objectIdFields.push("menuItem");
   }
 
+  // CLAIM PROMOTION
   if (req.body.promotionType === "claimPromotion") {
+    req.body.promotionType = "claimPromotion";
+    req.body.globalPromotionType = "globalClaimPromotion"; // discriminator
     dateFields.startDate = "YYYY-MM-DD";
     dateFields.endDate = "YYYY-MM-DD";
     rawData.push("reward", "claimPoints");
     objectIdFields.push("reward");
   }
 
-  if (
-    !validateParams(req, res, {
-      rawData,
-      dateFields,
-      objectIdFields,
-    })
-  )
-    return;
+  // ---------------- VALIDATION ----------------
+  if (!validateParams(req, res, { rawData, dateFields, objectIdFields })) return;
 
-  let validateData = {
-    rawData: [],
-    dateFields: {},
-  };
+  let recurringValidate = { rawData: [], dateFields: {} };
 
   if (recurringDetails?.isEnabled) {
-    validateData.rawData.push("recurringDetails");
-    validateData.rawData.push("recurringDetails.frequency");
-    validateData.rawData.push("recurringDetails.interval");
-    validateData.rawData.push("recurringDetails.endType");
+    recurringValidate.rawData.push(
+      "recurringDetails",
+      "recurringDetails.frequency",
+      "recurringDetails.interval",
+      "recurringDetails.endType"
+    );
 
     if (recurringDetails.endType === "onDate") {
-      validateData.dateFields["recurringDetails.endDate"] = "YYYY-MM-DD";
+      recurringValidate.dateFields["recurringDetails.endDate"] = "YYYY-MM-DD";
     }
 
     if (["weekly", "monthly"].includes(recurringDetails.frequency)) {
-      validateData.rawData.push("recurringDetails.daysOfWeek");
+      recurringValidate.rawData.push("recurringDetails.daysOfWeek");
     }
   }
 
-  if (!validateParams(req, res, validateData)) return;
+  if (!validateParams(req, res, recurringValidate)) return;
 
   try {
-    // Convert dates to UTC
-    if (req.body.promotionType === "happyHour") {
-      if (req.body.startDate) {
-        req.body.startDate = convertTimezoneToUtc(
-          req.body.startDate,
-          req.user.timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-      }
-      if (req.body.endDate) {
-        req.body.endDate = convertTimezoneToUtc(
-          req.body.endDate,
-          req.user.timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-      }
-    } else {
-      if (req.body.startDate) {
-        req.body.startDate = convertTimezoneToUtc(
-          req.body.startDate,
-          req.user.timezone,
-          "YYYY-MM-DD"
-        );
-      }
-      if (req.body.endDate) {
-        req.body.endDate = convertTimezoneToUtc(
-          req.body.endDate,
-          req.user.timezone,
-          "YYYY-MM-DD"
-        );
-      }
+    // ---------------- DATE CONVERSION ----------------
+
+    const fmt =
+      req.body.promotionType === "happyHour"
+        ? "YYYY-MM-DD hh:mm A"
+        : "YYYY-MM-DD";
+
+    if (req.body.startDate) {
+      req.body.startDate = convertTimezoneToUtc(
+        req.body.startDate,
+        timezone,
+        fmt
+      );
     }
 
-    // Check date order
+    if (req.body.endDate) {
+      req.body.endDate = convertTimezoneToUtc(
+        req.body.endDate,
+        timezone,
+        fmt
+      );
+    }
+
+    // ---------------- DATE VALIDATION ----------------
     if (
       req.body.startDate &&
       req.body.endDate &&
@@ -121,7 +115,7 @@ const create = async (req, res) => {
       });
     }
 
-    // Create promotion
+    // ---------------- CREATE PROMOTION ----------------
     const response = await service.create(req.body, timezone);
 
     return sendResponse({
@@ -140,6 +134,7 @@ const create = async (req, res) => {
     });
   }
 };
+
 
 
 const get = async (req, res) => {
