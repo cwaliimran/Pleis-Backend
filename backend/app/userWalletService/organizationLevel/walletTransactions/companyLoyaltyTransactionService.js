@@ -2,6 +2,8 @@ const { generateMeta } = require("../../../../helperUtils/responseUtil");
 const companyRepo = require("./companyLoyaltyTransactionRepository");
 const { formatTransactionItem } = require("./formatter/formatTransactionItems");
 
+//create company loyalty transaction
+//it also logs for global wallet transactions
 const createCompanyTransaction = async (data) => {
   const doc = await companyRepo.createCompanyTransaction(data);
   return formatTransactionItem(doc);

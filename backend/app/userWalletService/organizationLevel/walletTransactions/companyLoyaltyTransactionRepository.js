@@ -1,5 +1,6 @@
 const { UserCompanyLoyaltyWalletTransactions } = require("@UserCompanyLoyaltyWalletTransactionsModel");
 const { updatePoints } = require("../../../loyalty/clubMembers/clubMembersRepository");
+const { createGlobalTransaction } = require("../../global/walletTransactions/globalTransactionsRepository");
 /**
  * CREATE TRANSACTION (uses ClubMembers as wallet)
  */
@@ -7,7 +8,8 @@ const createCompanyTransaction = async ({
   user,
   companyOrganizer,
   organization,
-  points = {},
+  companyPoints = {},
+  globalPoints = {},
   allowNegative = false,
   type = "earn",
   description = "",
@@ -19,7 +21,6 @@ const createCompanyTransaction = async ({
 
   const userId = typeof user === "string" ? user : (user._id || user.id);
 
-  const pointsDelta = points.total;
 
   // Update main wallet (ClubMembers model)
   const wallet = await updatePoints({
@@ -28,8 +29,21 @@ const createCompanyTransaction = async ({
     organization,
     type,
     description,
-    pointsDelta,
+    companyPoints,
     allowNegative,
+    objectId,
+    objectType
+  });
+
+  //add global transaction record
+  const globalTransaction = await createGlobalTransaction({
+    user: userId,
+    companyOrganizer,
+    organization,
+    globalPoints,
+    allowNegative,
+    type,
+    description,
     objectId,
     objectType
   });

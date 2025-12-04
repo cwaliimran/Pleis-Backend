@@ -25,6 +25,7 @@ function formatUserWallet(item) {
     obj.level = {
       title: obj.level.title,
       image: obj.level.image,
+      bonusPointsPerEuro: obj.level.bonusPointsPerEuro,
       entryPoints: current?.entryPoints ?? null,
       retainPoints: current?.retainPoints ?? null
     };

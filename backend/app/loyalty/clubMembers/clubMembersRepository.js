@@ -8,9 +8,11 @@ const { User } = require("@UserModel");
 //
 // Utility: Get tier key (essential, preferred, premier)
 //
-const getTierKeyForCompany = async (companyId) => {
-  const company = await User.findById(companyId).select("companyDetails.loyaltySettings.model");
-  return company?.companyDetails?.loyaltySettings?.model || "essential";
+const getCompanyLoyaltyInfo = async (companyId) => {
+  const company = await User.findById(companyId).select("companyDetails.loyaltySettings.model companyDetails.loyaltySettings.pointValuePercentage");
+  let tierKey = company?.companyDetails?.loyaltySettings?.model || "essential";
+  let pointValuePercentage = company?.companyDetails?.loyaltySettings?.pointValuePercentage || 0;
+  return { tierKey, pointValuePercentage };
 };
 
 //
@@ -19,7 +21,7 @@ const getTierKeyForCompany = async (companyId) => {
 const ensureClubMemberWallet = async (userId, company) => {
   let member = await ClubMembers.findOne({ user: userId, companyOrganizer: company });
 
-  const tierKey = await getTierKeyForCompany(company);
+  const { tierKey, pointValuePercentage } = await getCompanyLoyaltyInfo(company);
 
 
   if (!member) {
@@ -28,6 +30,7 @@ const ensureClubMemberWallet = async (userId, company) => {
       user: userId,
       companyOrganizer: company,
       tierKey,
+      pointValuePercentage,
       points: 0,
       lifetimePoints: 0,
       level: defaultTier?._id || null,
@@ -44,8 +47,6 @@ const ensureClubMemberWallet = async (userId, company) => {
 const checkPromotion = async (userId, company, tierKey) => {
   const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
 
-  console.log(`[Promotion] Checking promotion for user ${userId} in company ${company} with tierKey ${tierKey}`);
-
   const agg = await UserCompanyLoyaltyWalletTransactions.aggregate([
     {
       $match: {
@@ -59,17 +60,14 @@ const checkPromotion = async (userId, company, tierKey) => {
   ]);
 
   const earned12Months = agg.length ? agg[0].total : 0;
-  console.log(`[Promotion] User ${userId} earned ${earned12Months} points in last 12 months`);
 
   const member = await ClubMembers.findOne({ user: userId, companyOrganizer: company }).populate("level");
   if (!member || !member.level) {
-    console.log(`[Promotion] No member or level found for user ${userId} in company ${company}`);
     return;
   }
 
   const currentLevel = member.level;
   const currentEntryPoints = currentLevel[tierKey]?.entryPoints || 0;
-  console.log(`[Promotion] Current level entryPoints for user ${userId}: ${currentEntryPoints}`);
 
   const higherTiers = await Tiers.find({
     [`${tierKey}.entryPoints`]: { $gt: currentEntryPoints }
@@ -79,12 +77,10 @@ const checkPromotion = async (userId, company, tierKey) => {
   for (const tier of higherTiers) {
     if (earned12Months >= tier[tierKey].entryPoints) {
       selected = tier;
-      console.log(`[Promotion] User ${userId} qualifies for tier ${tier.title} with entryPoints ${tier[tierKey].entryPoints}`);
     }
   }
 
   if (!selected) {
-    console.log(`[Promotion] No promotion for user ${userId}`);
     return;
   }
 
@@ -98,8 +94,6 @@ const checkPromotion = async (userId, company, tierKey) => {
     }
   );
 
-  console.log(`[Promotion] User ${userId} promoted to tier ${selected.title}`);
-
   return { promoted: true, newLevel: selected };
 };
 
@@ -108,8 +102,6 @@ const checkPromotion = async (userId, company, tierKey) => {
 //
 const checkDemotion = async (userId, company, tierKey) => {
   const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-
-  console.log(`[Demotion] Checking demotion for user ${userId} in company ${company} with tierKey ${tierKey}`);
 
   const agg = await UserCompanyLoyaltyWalletTransactions.aggregate([
     {
@@ -124,26 +116,21 @@ const checkDemotion = async (userId, company, tierKey) => {
   ]);
 
   const earned12Months = agg.length ? agg[0].total : 0;
-  console.log(`[Demotion] User ${userId} earned ${earned12Months} points in last 12 months`);
 
   const member = await ClubMembers.findOne({ user: userId, companyOrganizer: company }).populate("level");
   if (!member || !member.level) {
-    console.log(`[Demotion] No member or level found for user ${userId} in company ${company}`);
     return;
   }
 
   const currentLevel = member.level;
   const retainNeeded = currentLevel[tierKey]?.retainPoints || 0;
-  console.log(`[Demotion] Current level retainPoints for user ${userId}: ${retainNeeded}`);
 
   if (earned12Months >= retainNeeded) {
-    console.log(`[Demotion] User ${userId} retains current tier`);
     return;
   }
 
   const fallbackTier = await TierRepo.getPreviousTierByRetainPoints(tierKey, earned12Months);
   if (!fallbackTier || fallbackTier._id.toString() === currentLevel._id.toString()) {
-    console.log(`[Demotion] No demotion for user ${userId}`);
     return;
   }
 
@@ -157,8 +144,6 @@ const checkDemotion = async (userId, company, tierKey) => {
     }
   );
 
-  console.log(`[Demotion] User ${userId} demoted to tier ${fallbackTier.title}`);
-
   return { demoted: true, newLevel: fallbackTier };
 };
 
@@ -168,17 +153,21 @@ const checkDemotion = async (userId, company, tierKey) => {
 const updatePoints = async ({
   userId,
   company,
+  companyPoints,
   organization,
-  pointsDelta,
   allowNegative = false,
   objectId,
   objectType,
   type = "earn",
   description = ""
 }) => {
-  const tierKey = await getTierKeyForCompany(company);
+  const { tierKey, pointValuePercentage } = await getCompanyLoyaltyInfo(company);
 
   let member = await ensureClubMemberWallet(userId, company);
+
+  console.log("companyPoints",companyPoints)
+  const pointsDelta = companyPoints.total;
+
 
   const newBalance = member.points + pointsDelta;
   if (!allowNegative && newBalance < 0) {
@@ -197,11 +186,7 @@ const updatePoints = async ({
     organization,
     type, // earn, redeem, adjustment
     description,
-    points: {
-      base: pointsDelta,
-      total: pointsDelta,
-      multiplier: 1
-    },
+    points: companyPoints,
     closingBalance: newBalance,
     objectId,
     objectType,
@@ -219,7 +204,7 @@ const updatePoints = async ({
 // Get wallet (ClubMembers is wallet)
 //
 const getWallet = async (userId, company) => {
-  const tierKey = await getTierKeyForCompany(company);
+  const { tierKey, pointValuePercentage } = await getCompanyLoyaltyInfo(company);
 
   let wallet = await ClubMembers.findOne({
     user: userId,
@@ -316,15 +301,30 @@ const getUserJoinedClubsWithPoints = async (userId) => {
   return clubs
 };
 
+
+//update tierKey and pointValuePercentage when company loyalty settings change
+const updateCompanyLoyaltySettings = async (companyOrganizer, tierKey, pointValuePercentage) => {
+  await ClubMembers.updateMany(
+    { companyOrganizer },
+    {
+      $set: {
+        tierKey,
+        pointValuePercentage
+      }
+    }
+  );
+};
+
 module.exports = {
   joinClub,
   leaveClub,
   updatePoints,
   getWallet,
-
   isClubMember,
   countClubMembers,
   findClubMemberById,
   getUserJoinedClubs,
-  getUserJoinedClubsWithPoints
+  getUserJoinedClubsWithPoints,
+  getCompanyLoyaltyInfo,
+  updateCompanyLoyaltySettings
 };

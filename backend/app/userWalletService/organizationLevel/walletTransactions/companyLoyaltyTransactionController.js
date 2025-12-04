@@ -14,7 +14,6 @@ const createCompanyTransaction = async (req, res) => {
     organization,
     type = "earn",
     points,
-    closingBalance,
     description = "",
     objectType,
     objectId
@@ -37,7 +36,6 @@ const createCompanyTransaction = async (req, res) => {
       type,
       description,
       points,
-      closingBalance,
       objectType,
       objectId
     });

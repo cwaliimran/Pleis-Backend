@@ -18,9 +18,9 @@ const findOrganizationById = async (userId, organizationId) => {
       .populate("otherInfo.categories")
       .populate("otherInfo.tags"),
     Favorites.exists({ user: userId, targetType: "organization", targetId: organizationId }),
-    Venues.findOne({ 
-      organization: organizationId, 
-      isPrimary: true  
+    Venues.findOne({
+      organization: organizationId,
+      isPrimary: true
     }).select("title floorPlan venueType"),
   ]);
 
@@ -31,9 +31,9 @@ const findOrganizationById = async (userId, organizationId) => {
   let venueTypeTitles = [];
   if (orgVenue && orgVenue.venueType && orgVenue.venueType.length > 0) {
 
-    
-    const venueTypes = await VenueTypes.find({ 
-      _id: { $in: orgVenue.venueType } 
+
+    const venueTypes = await VenueTypes.find({
+      _id: { $in: orgVenue.venueType }
     }).select("title");
 
 
@@ -48,7 +48,7 @@ const findOrganizationById = async (userId, organizationId) => {
     return {
       org,
       isFavorite,
-      orgVenue: cleanOrgVenue,  
+      orgVenue: cleanOrgVenue,
     };
   } else {
     return {
@@ -405,6 +405,13 @@ const getSuggestedLoyaltyClubsForUser = async ({ page = 1, limit = 10, userId })
   return result;
 };
 
+//get organization creator
+const getOrgCompanyOrganizer = async (organizationId) => {
+  const org = await Organizations.findById(organizationId).select("creator").lean();
+  return org ? org.creator : null;
+}
+
+
 module.exports = {
   getOrganizationMenuWithItems,
   findEventsByOrganization,
@@ -417,4 +424,5 @@ module.exports = {
   getNearbyOrganizations,
   findOrganizationWithSelectFilter,
   getSuggestedLoyaltyClubsForUser,
+  getOrgCompanyOrganizer
 };

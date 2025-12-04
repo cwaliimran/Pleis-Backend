@@ -36,8 +36,6 @@ const createUserWallet = async (user) => {
 
 const getUserWallet = async (user) => {
     if (!user) throw new Error("User is required");
-    checkDemotion(user);
-
     const userId = typeof user === "string" ? user : (user._id || user.id);
     if (!userId) throw new Error("Invalid user provided");
 
@@ -202,6 +200,7 @@ const checkPromotion = async (userId) => {
 
 
 
+// TODO : implement demotion check via cron job
 const checkDemotion = async (userId) => {
     // 1. Earned last 12 months
     const agg = await GlobalWalletTransactions.aggregate([

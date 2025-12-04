@@ -1,3 +1,7 @@
+const { findUserByIdAndCheckExists } = require("../../usersManagement/usersRepository");
+const { getChallengesByCompanyOrganizerService } = require("../challenges/challengesService");
+const { getPromotionsByCompanyOrganizerService } = require("../promotions/promotionsService");
+const { getRewardsByCompanyOrganizerService } = require("../rewards/rewardsService");
 const clubMemberRepo = require("./clubMembersRepository");
 const { formatUserWallet, formatUserWallets } = require("./formatters/formatUserWallet");
 
@@ -13,6 +17,10 @@ const getClubMemberDetails = async (id) => {
 
 // Join club
 const joinClub = async (userId, companyOrganizer) => {
+  const isValidCompanyOrganizer = await findUserByIdAndCheckExists(companyOrganizer);
+  if (!isValidCompanyOrganizer) {
+    throw new Error("Invalid company organizer.");
+  }
   return clubMemberRepo.joinClub(userId, companyOrganizer);
 };
 
@@ -38,7 +46,7 @@ const getUserJoinedClubsWithPoints = async (userId) => {
 
 // 🔥 NEW: Get Wallet (points, current tier, next tier)
 const getUserCompanyWallet = async (userId, companyOrganizer) => {
-  let wallet= await clubMemberRepo.getWallet(userId, companyOrganizer);
+  let wallet = await clubMemberRepo.getWallet(userId, companyOrganizer);
   return formatUserWallet(wallet);
 };
 
@@ -46,6 +54,47 @@ const getUserCompanyWallet = async (userId, companyOrganizer) => {
 const updateUserCompanyPoints = async (payload) => {
   let wallet = await clubMemberRepo.updatePoints(payload);
   return formatUserWallet(wallet);
+};
+
+const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganizer) => {
+  const [profile, userCompanyWallet, rewards, challenges, promotions] = await Promise.all([
+    {},
+    clubMemberRepo.getWallet(userId, companyOrganizer),
+    getRewardsByCompanyOrganizerService({
+      page: 1,
+      limit: 10,
+      companyOrganizer,
+      timezone,
+    }),
+    getChallengesByCompanyOrganizerService({
+      page: 1,
+      limit: 10,
+      timezone,
+      companyOrganizer,
+    }),
+    getPromotionsByCompanyOrganizerService({
+      page: 1,
+      limit: 10,
+      timezone,
+      companyOrganizer,
+    }),
+  ]);
+  return {
+    profile,
+    userCompanyWallet: formatUserWallet(userCompanyWallet),
+    rewards: {
+      items: rewards.rewards,
+      meta: rewards.meta
+    },
+    challenges: {
+      items: challenges.challenges,
+      meta: challenges.meta
+    },
+    promotions: {
+      items: promotions.promotions,
+      meta: promotions.meta
+    }
+  };
 };
 
 module.exports = {
@@ -60,4 +109,5 @@ module.exports = {
   getUserCompanyWallet,
   updateUserCompanyPoints,
   getUserJoinedClubsWithPoints,
+  getCompanyProfileWithLoyaltyInfo
 };

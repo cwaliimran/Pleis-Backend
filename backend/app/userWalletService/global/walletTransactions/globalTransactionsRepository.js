@@ -6,10 +6,11 @@ const { UserGlobalWallet } = require("@UserGlobalWalletModel");
 // Create a wallet transaction
 const createGlobalTransaction = async ({
   user,
-  points = {},
+  companyOrganizer = null,
+  organization = null,
+  globalPoints = {},
   allowNegative = false,
   type = "earn",       // earn | adjustment | spend
-  source = "system",
   description = "",
   objectId = null,
   objectType = null
@@ -23,7 +24,7 @@ const createGlobalTransaction = async ({
   let walletDoc = await UserGlobalWallet.findOne({ user: userId });
   if (!walletDoc) walletDoc = await createUserWallet(userId);
 
-  const newBalance = walletDoc.global.points + points.total;
+  const newBalance = walletDoc.global.points + globalPoints.total;
 
   // 2. Prevent negative balance
   if (!allowNegative && newBalance < 0) {
@@ -32,8 +33,8 @@ const createGlobalTransaction = async ({
 
   // 3. Update balance + lifetime for earning
   walletDoc.global.points = newBalance;
-  if (points.total > 0 && type === "earn") {
-    walletDoc.global.lifetimePoints += points.total;
+  if (globalPoints.total > 0 && type === "earn") {
+    walletDoc.global.lifetimePoints += globalPoints.total;
   }
 
   let result = await walletDoc.save();
@@ -41,32 +42,26 @@ const createGlobalTransaction = async ({
   // 4. Write transaction (MUST ALWAYS HAPPEN)
   const trx = await GlobalWalletTransactions.create({
     user: userId,
+    companyOrganizer,
+    organization,
     type,
-    source,
-    points: {
-      base: points.base,
-      multiplier: 1,
-      total: points.total
-    },
+    points: globalPoints,
     closingBalance: newBalance,
     description,
     objectId,
     objectType
   });
 
-  await updateGlobalPoints({
+  const { walletView } = await updateGlobalPoints({
     user: userId,
-    pointsDelta: points.total,
+    pointsDelta: globalPoints.total,
     objectId,
     objectType
   })
 
-  // 5. Return updated wallet + transaction
-  const walletView = await getUserWallet(userId);
-
   return {
     success: true,
-    points,
+    points: globalPoints,
     newBalance,
     wallet: walletView,
     transaction: trx

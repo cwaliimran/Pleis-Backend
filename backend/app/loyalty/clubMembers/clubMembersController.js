@@ -136,9 +136,37 @@ const updateUserCompanyPoints = async (req, res) => {
   }
 };
 
+const getCompanyProfileWithLoyaltyInfo = async (req, res) => {
+  const { id: companyOrganizer } = req.params;
+  const { _id: userId, timezone } = req.user;
+
+  if (!validateParams(req, res, { pathParams: ["id"] })) return;
+
+  try {
+    const data = await clubService.getCompanyProfileWithLoyaltyInfo(timezone, userId, companyOrganizer);
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "company_profile_with_loyalty_info_fetched_successfully",
+      data,
+    });
+
+  } catch (err) {
+    const readable = getReadableErrorMessage(err);
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: readable.message,
+      error: err,
+    });
+  }
+};
+
 module.exports = {
   joinClub,
   leaveClub,
   getUserJoinedClubsWithPoints,
-  getUserCompanyWallet
+  getUserCompanyWallet,
+  getCompanyProfileWithLoyaltyInfo
 };

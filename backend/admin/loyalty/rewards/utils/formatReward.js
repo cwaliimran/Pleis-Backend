@@ -1,10 +1,15 @@
 const { getFullImageUrl } = require("../../../../helperUtils/imageHelper");
+const { convertUtcToTimezone } = require("../../../../helperUtils/responseUtil");
 
 // utils/formatReward.js
 function formatReward(reward, timezone) {
     let obj = { ...reward };
 
-    
+    if (obj.endDate) {
+        obj.endDate = convertUtcToTimezone(obj.endDate, timezone, "YYYY-MM-DD");
+    }
+
+
     //attach full image URL
     if (obj?.image) {
         obj.image = getFullImageUrl(obj.image)
