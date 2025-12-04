@@ -7,7 +7,7 @@ const {
   getReadableErrorMessage,
 } = require("../../helperUtils/responseUtil");
 const { getTicketings } = require("../ticketing/ticketingsService");
-
+const {reservationsFormatterAdjustDates_} = require("./formatter/eventFormatter")
 const eventService = require("./eventService");
 const { default: mongoose } = require("mongoose");
 
@@ -183,7 +183,6 @@ const getEventDetails = async (req, res) => {
       isFavorited(userId, id, 'event'),
     ]);
 
-    console.log("Reservations", Reservations);
     if (!data?.event) {
       return sendResponse({
         res,

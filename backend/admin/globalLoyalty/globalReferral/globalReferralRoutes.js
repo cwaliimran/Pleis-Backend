@@ -9,9 +9,9 @@ const {
   updateUserGlobalReferralStatus,
   updateUserGlobalReferral,
 } = require("./globalReferralController");
-const createRateLimiter = require("../../helperUtils/rateLimiter");
-const auth = require("../../middlewares/authMiddleware");
-const roleMiddleware = require("../../middlewares/roleMiddleware");
+const createRateLimiter = require("../../../helperUtils/rateLimiter");
+const auth = require("../../../middlewares/authMiddleware");
+const roleMiddleware = require("../../../middlewares/roleMiddleware");
 
 const router = express.Router();
 
@@ -26,6 +26,8 @@ router.post("/", auth,roleMiddleware(["admin"]), createGlobalReferral);
 
 // Get all GlobalReferrals with pagination
 router.get("/", roleMiddleware(["admin"]),apiRateLimiter, getGlobalReferrals);
+// Get all GlobalReferrals with pagination
+router.get("/user", roleMiddleware(["admin"]),apiRateLimiter, getUserGlobalReferrals);
 
 // // Get all Users GlobalReferrals with pagination
 // router.get("/users",roleMiddleware(["admin"]), apiRateLimiter, getUserGlobalReferrals);

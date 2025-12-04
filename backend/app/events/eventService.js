@@ -453,7 +453,7 @@ const getForYouEvents = async (userId, location, timezone, category, time) => {
 };
 const getEventReservations = async (nanoid,timezone) => {
   const Reservations = await eventRepo.getEventReservations(nanoid);
-
+console.log("Reservations",Reservations );
   return reservationsFormatterAdjustDates(Reservations, timezone)
 };
 module.exports = {

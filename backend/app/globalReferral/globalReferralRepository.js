@@ -1,9 +1,8 @@
 // repositories/ReservationRepository.js
 const {GlobalReferral} = require("@GlobalReferralModel");
-const {ReferralRecord} = require("@ReferralRecordModel");
+const {ReferredRecord} = require("@ReferredRecordModel");
 const UserReservations = require("@UserReservationsModel");
 const { User } = require("../../models/UserModel");
-const Event = require("@EventsModel");
 const mongoose = require("mongoose");
 const { reservationsFormatter, reservationsFormatterAdjustDates } = require("../../app/reservations/formaters/reservationFormetter");
 const {
@@ -27,91 +26,73 @@ const createGlobalReferral = async (data) => {
 };
 const saveReferralData = async (referralId, type) => {
   try {
-    // 1️⃣ Get user details first
     const user = await User.findById(referralId).lean();
+    console.log("user", user);
 
     if (!user) {
       throw new Error("User not found for referralId");
     }
+    if (!user.username) {
+      throw new Error("Please create a username first before sharing.");
+    }
 
-    const userPublicId = user.publicId; 
-    return userPublicId;
+    return user.username;
 
   } catch (err) {
-    console.error("Error saving referral reference:", err);
-    throw err;
+    throw err; 
   }
 };
 
 
-const saveUserReferralData = async (referralId, ip) => {
+const saveUserReferralData = async (username, ip) => {
   try {
-    const existing = await ReferralRecord.findOne({ userIp: ip });
+    const existing = await ReferredRecord.findOne({ userIp: ip });
 
     if (existing) {
-      console.log("IP already exists — updating referralId only");
+      if (existing.userId) {
+        return { userId: existing.userId, referrerUserName: existing.referrerUserName };
+      }
 
-      existing.referralId = referralId;
-      existing.status = false;   // <<< RESET HERE
-      await existing.save();
+      if (existing.referrerUserName !== username) {
+        existing.referrerUserName = username;
 
-      return existing.referralId;
+        // Step 1: Find the referrer by username to get the referrer userId
+        const referrer = await User.findOne({ username }).lean();  // Fetch user by username
+
+        if (!referrer) {
+          throw new Error("Referrer not found.");
+        }
+
+        // Step 2: Set referrerUserId with the referrer ObjectId
+        existing.referrerUserId = referrer._id;  // Set referrer userId (ObjectId)
+        
+        await existing.save();
+        return { userId: existing.userId, referrerUserName: existing.referrerUserName };
+      }
+
+      return { userId: existing.userId, referrerUserName: existing.referrerUserName };
     }
-console.log("=== BEFORE SAVE (incoming data) ===");
-console.log(JSON.stringify({ referralId, ip, status: false }, null, 2));
 
-    const newRecord = await ReferralRecord.create({
-      referralId,
+    // If no referral record exists for this IP, create a new one
+    const referrer = await User.findOne({ username }).lean();  // Fetch user by username
+
+    if (!referrer) {
+      throw new Error("Referrer not found.");
+    }
+
+    const newRecord = await ReferredRecord.create({
+      referrerUserName: username,
       userIp: ip,
-      status: false
+      referrerUserId: referrer._id,  // Set the referrer ObjectId
+      status: false,  // Default status is false
     });
-console.log("=== AFTER CREATE ===");
-console.log(newRecord);
-    return newRecord.referralId;
 
+    return { userId: newRecord.userId, referrerUserName: newRecord.referrerUserName };
   } catch (err) {
-    console.error("Error saving referral record:", err);
-    throw err;
+    console.error("Error saving referral data:", err);
+    throw err;  // Rethrow the error for handling in the calling function
   }
 };
-
-
-// Get all Reservations with their assigned organization populated, sorted by createdAt descending
-const getReservationsWithFilters = async (query = {}, skip = 0, limit = 10) => {
-  return Reservations.find(query)
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
-};
-
-// Count by condition
-const countReservations = async (query = {}) => {
-  return Reservations.countDocuments(query);
-};
-
-// Find by ID
-const findReservationById = async (id) => {
-  return Reservations.findById(id);
-};
-
-// Update and save
-const updateReservationData = async (Reservation, data) => {
-  Object.assign(Reservation, data);
-  return await Reservation.save();
-};
-
-// Delete
-const deleteReservationById = async (Reservation) => {
-  return await Reservation.deleteOne();
-};
-
-//findByIdAndUpdate
-const findByIdAndUpdate = async (id, data) => {
-  return Reservations.findByIdAndUpdate(id, data, { new: true });
-};
-
-
-
 
 const getGlobalReferrals = async ({ timezone,page, limit, keyword, status, userId, date, range,today,skip, type }) => {
 console.log("Fetching global referrals in repository");
@@ -215,201 +196,65 @@ if (keyword) {
   return {globalReferral , meta}
 }
 
+const createUserReferradrecord = async (data) => {
+  try {
+    const { username, userIp, userId } = data;  
+    const existing = await ReferredRecord.findOne({ userIp: userIp });
 
-const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationStatus,reservationId }) => {
-  let organizationsIds = Array.isArray(organizationsId)
-    ? organizationsId
-    : JSON.parse(organizationsId || '[]');
-  organizationsIds = organizationsIds.map(id => new mongoose.Types.ObjectId(id));
-
-  const pipeline = [
-    {
-      $match: {
-        ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
-        ...(organizationsIds.length > 0 && { organizationId: { $in: organizationsIds } }),
-        ...(reservationStatus && { reservationStatus:reservationStatus }),
-        ...(reservationId && { reservationId: new mongoose.Types.ObjectId(reservationId) })
-      }
-    },
-    {
-      $lookup: {
-        from: "users",
-        localField: "userId",
-        foreignField: "_id",
-        as: "user"
-      }
-    },
-    { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
-    {
-      $addFields: {
-        validEventId: {
-          $cond: {
-            if: { $and: [{ $ne: ["$optionalEventId", ""] }, { $ne: ["$optionalEventId", null] }] },
-            then: { $toObjectId: "$optionalEventId" },
-            else: null
-          }
+    if (existing) {
+      if (!existing.userId) {
+        const user = await User.findOne({ username }).lean();
+        if (!user) {
+          throw new Error("User not found.");
         }
+        existing.userId = userId;  // Set the userId
+        existing.referrerUserName = username;  // Update the referrerUserName
+        existing.referrerUserId = user._id;  // Set the referrer userId
+
+        // Save the updated referral record
+        await existing.save();
+
+        return { userId: existing.userId, referrerUserName: existing.referrerUserName };
       }
-    },
-    {
-      $lookup: {
-        from: "events",
-        localField: "validEventId",
-        foreignField: "_id",
-        as: "event"
-      }
-    },
-    { $unwind: { path: "$event", preserveNullAndEmptyArrays: true } },
-    {
-      $project: {
-        _id: 1,
-        userId: 1,
-        userName: { $concat: ["$user.firstName", " ", "$user.lastName"] },
-        partySize: 1,
-        reservationType: 1,
-        organizationId: 1,
-        reservationStatus: 1,
-        companyOrganizer: 1,
-        reservationId: 1,
-        timingSlots: 1,
-        status: 1,
-        optionalEventId: 1,
-        createdAt: 1,
-        updatedAt: 1,
-        member: "Gold",
-        eventTitle: { $ifNull: ["$event.basicInfo.title", "No Event Title"] }
-      }
+
+      throw new Error("You already have a referrer assigned.");
     }
-  ];
 
 
-if (range == "monthly") {
-  const { start, end } = getStartAndEndOfMonth(today, timezone);
+    const referrer = await User.findOne({ username }).lean();  
 
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
+    if (!referrer) {
+      throw new Error("User not found.");
     }
-  });
-}
-if (range == "weekly") {
-  const { start, end } = getStartAndEndOfWeek(today, timezone);
 
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
-if (range == "today") {
-    const start = new Date(today);
-    const end = new Date(new Date(today).setDate(start.getDate() + 1));
 
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
-  // Apply filters
-  if (status) {
-    pipeline.push({ $match: { status } });
-  } else {
-    pipeline.push({ $match: { status: { $ne: "deleted" } } });
-  }
-
-  if (date) {
-    const start = new Date(date);
-    const end = new Date(new Date(date).setDate(start.getDate() + 1));
-    pipeline.push({
-      $match: {
-        createdAt: { $gte: start, $lt: end }
-      }
+    const newRecord = await ReferredRecord.create({
+      referrerUserName: username,
+      userIp: userIp,
+      referrerUserId: referrer._id,  // Set the referrer userId
+      userId: userId,  // Set the userId when the user is signing up
+      status: false,  // Default status is false
     });
+
+    return { userId: newRecord.userId, referrerUserName: newRecord.referrerUserName };
+  } catch (err) {
+    console.error("Error saving referral data:", err);
+    throw err;  // Rethrow the error for handling in the calling function
   }
-
-if (keyword) {
-  const keywordMatch = buildKeywordQueryFromModels(
-    [
-      { schema: UserReservations.schema }
-    ],
-    keyword
-  );
-
-  if (Object.keys(keywordMatch).length) {
-    pipeline.push({ $match: keywordMatch });
-  }
-}
-
-  pipeline.push({ $sort: { createdAt: -1 } });
-
-  // Apply pagination + counts using $facet
-  pipeline.push({
-    $facet: {
-      data: [
-        { $skip: skip },
-        ...(limit === 0 ? [] : [{ $limit: limit }])
-      ],
-      totalFiltered: [{ $count: "count" }]
-    }
-  });
-
-  const result = await UserReservations.aggregate(pipeline);
-
-  let GlobalReferrals = result[0]?.data || [];
-  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
-
-  // Additional counts for meta (active/inactive/total by userId as creator)
-  const [total, active, inactive] = await Promise.all([
-    UserReservations.countDocuments({ ...(userId && { userId: userId }), reservationStatus: { $ne: "cancelled" } }),
-    UserReservations.countDocuments({ reservationStatus: "active", ...(userId && { userId: userId }) }),
-    UserReservations.countDocuments({ reservationStatus: "inactive", ...(userId && { userId: userId }) })
-  ]);
-
-  const meta = generateMeta(page, limit, totalFiltered);
-  meta.reservationsCount = { total, active, inactive };
-
-
-  reservations = reservations.map(item => {
-    const formatted = reservationsFormatterAdjustDates(item);
-    if (formatted.conditionType == "noCondition"||formatted.conditionType=="ticketRequirement"||formatted.conditionType=="customText"||formatted.conditionType=="ticketRequirement") {
-      delete formatted.amount;
-      if(formatted.conditionType == "noCondition")
-      {
-      delete formatted.ticketType;
-      }
-    }
-    else{
-            delete formatted.ticketType;
-    }
-    return formatted;
-  });
-  return {reservations , meta}
-}
-
-
-
-const findUserReservationById = async (id, data) => {
-  return UserReservations.findByIdAndUpdate(id, data, { new: true });
 };
 
-const findUserById = async (id) => {
-  return User.findById(id);
-};
+
+
+
+
+
+
+
 
 module.exports = {
   createGlobalReferral,
-  // getReservationsWithFilters,
-  // countReservations,
-  // findReservationById,
-  // updateReservationData,
-  // deleteReservationById,
-  // findByIdAndUpdate,
-  // getReservations,
-  // getUserReservations,
-  // findUserReservationById,
-  // findUserById,
   getGlobalReferrals,
   saveReferralData,
-  saveUserReferralData
+  saveUserReferralData,
+  createUserReferradrecord,
 };

@@ -5,6 +5,7 @@ const {
   getReadableErrorMessage,
   convertTimezoneToUtc,
   convertTimezoneToUtcDateOnly,
+  convertToUtcDateOnly,
 } = require("../../helperUtils/responseUtil");
 const reservationService = require("./reservationService");
 
@@ -184,10 +185,11 @@ const getReservations = async (req, res) => {
       });
     }
 console.log("date",date );
- date = convertTimezoneToUtcDateOnly(
+ date = convertToUtcDateOnly(
     date,
-    timezone
+    "UTC"
   );
+  console.log("date",date );
 
     console.log("Converted date:", date);
 

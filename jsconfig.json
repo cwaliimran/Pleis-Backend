@@ -102,13 +102,10 @@
         "backend/commonModules/loyalty/streaks/StreakRules.js"
       ],
       "@GlobalReferralModel": [
-        "backend/commonModules/globalReferral/GlobalReferral.js"
+        "backend/commonModules/globalReferral/GlobalReferralSettings.js"
       ],
-      "@ReferralReferenceModel": [
-        "backend/commonModules/globalReferral/referralReference.js"
-      ],
-      "@ReferralRecordModel": [
-        "backend/commonModules/globalReferral/ReferralRecord.js"
+      "@ReferredRecordModel": [
+        "backend/commonModules/globalReferral/ReferredRecord.js"
       ],
       "@TicketingBookingsModel": [
         "backend/commonModules/bookings/ticketings/TicketingBookings.js"

@@ -218,11 +218,111 @@ const attachVenueTypesToEvent = (event, venueTypeTitles = []) => {
   return plainEvent;
 };
 function reservationsFormatterAdjustDates(reservations, timezone) {
-  if (!reservations) return [];
+  console.log("timezone:", timezone);  // Log the timezone
+
+  if (!reservations) {
+    console.log("No reservations found.");
+    return [];
+  }
 
   const list = Array.isArray(reservations)
     ? reservations
-    : Object.values(reservations); // remove numeric keys (0,1,2...)
+    : Object.values(reservations); // Convert object to array
+
+  const currentDate = moment().tz(timezone).startOf('day');  // Get today's date in the provided timezone
+  console.log("Current Date in Timezone:", currentDate.format("YYYY-MM-DD"));  // Log today's date
+
+  // Filter out records that only have _id field and no other data
+  const filteredReservations = list.filter((item) => {
+    if (!item) return false; // Exclude null or invalid entries
+
+    const cat = item.toObject ? item.toObject() : { ...item };
+
+    // Check if the object has only the _id field
+    if (Object.keys(cat).length === 1 && cat._id) {
+      console.log("Excluding item with only _id:", cat._id);  // Log the exclusion of this record
+      return false;  // Exclude the record
+    }
+
+    // Further filtering to ensure empty dateTimeSlots are excluded
+    if (cat.timingSlots?.dateTimeSlots && cat.timingSlots.dateTimeSlots.length === 0) {
+      console.log("Excluding item with empty dateTimeSlots:", cat._id);
+      return false;  // Exclude the record if no valid dateTimeSlots are present
+    }
+
+    return true;  // Keep the record if it has valid data
+  });
+
+  console.log("Filtered Reservations (after excluding empty _id only records and empty dateTimeSlots):", filteredReservations);
+
+  return filteredReservations.map((item) => {
+    if (!item) return null;
+
+    const cat = item.toObject ? item.toObject() : { ...item };
+
+    // Adjust timingSlots and dateTimeSlots
+    if (cat.timingSlots?.dateTimeSlots) {
+      const dateTimeSlots = Array.isArray(cat.timingSlots.dateTimeSlots)
+        ? cat.timingSlots.dateTimeSlots
+        : [cat.timingSlots.dateTimeSlots];
+
+      console.log("Processing dateTimeSlots:", dateTimeSlots);  // Log the dateTimeSlots
+
+      // Filter out past dates and empty dateTimeSlots
+      const filteredSlots = dateTimeSlots.filter((slot) => {
+        if (slot.date) {
+          const slotDate = moment(slot.date).tz(timezone).startOf('day');  // Convert the slot date to start of day in the provided timezone
+          console.log("Checking slot date:", slot.date, "Converted to:", slotDate.format("YYYY-MM-DD"));
+          return slotDate.isSameOrAfter(currentDate) && slot.timeSlots?.length > 0;  // Keep only today and future dates, and non-empty time slots
+        }
+        return false;  // If there's no date, filter out
+      });
+
+      console.log("Filtered Slots (after filtering past dates and empty time slots):", filteredSlots);
+
+      // Update the dateTimeSlots with filtered results
+      cat.timingSlots.dateTimeSlots = filteredSlots;
+
+      // For each remaining date block, adjust time slots
+      filteredSlots.forEach((slot) => {
+        if (slot.date) {
+          // Convert date to the specified timezone
+          slot.date = convertUtcToTimezone(slot.date, timezone, "YYYY-MM-DD");
+          console.log("Converted Slot Date:", slot.date);  // Log the converted date
+        }
+
+        // Convert times
+        if (Array.isArray(slot.timeSlots)) {
+          slot.timeSlots.forEach((timeSlot) => {
+            if (timeSlot.startTime) {
+              timeSlot.startTime = convertUtcToTimezoneAMPM(timeSlot.startTime, timezone);
+              console.log("Converted Start Time:", timeSlot.startTime);  // Log the converted start time
+            }
+            if (timeSlot.endTime) {
+              timeSlot.endTime = convertUtcToTimezoneAMPM(timeSlot.endTime, timezone);
+              console.log("Converted End Time:", timeSlot.endTime);  // Log the converted end time
+            }
+          });
+        }
+      });
+    }
+
+    // If no valid dateTimeSlots remain, remove the timingSlots field altogether
+    if (cat.timingSlots?.dateTimeSlots.length === 0) {
+      console.log("No valid dateTimeSlots remain, removing timingSlots.");
+      delete cat.timingSlots;
+    }
+
+    return cat;
+  }).filter(item => item !== null);  // Remove null entries from the result
+}
+
+
+
+const reservationsFormatterAdjustDates_ = (reservations, timezone) => {
+  if (!reservations) return [];
+
+  const list = Array.isArray(reservations) ? reservations : Object.values(reservations);
 
   return list.map((item) => {
     if (!item) return null;
@@ -236,41 +336,24 @@ function reservationsFormatterAdjustDates(reservations, timezone) {
         : [cat.timingSlots.dateTimeSlots];
 
       dateTimeSlots.forEach((slot) => {
-        // Convert date to YYYY-MM-DD
+        // Convert date to timezone if it's valid
         if (slot.date) {
-          slot.date = moment(slot.date).tz(timezone).format("YYYY-MM-DD");
+          // Convert date from UTC to the specified timezone
+          slot.date = moment.utc(slot.date).tz(timezone).format("YYYY-MM-DD");
         }
 
-        // Convert times
-        if (Array.isArray(slot.timeSlots)) {
-          slot.timeSlots.forEach((timeSlot) => {
-            if (timeSlot.startTime) {
-              timeSlot.startTime = convertUtcToTimezoneAMPM(
-                timeSlot.startTime,
-                timezone
-              );
-            }
-            if (timeSlot.endTime) {
-              timeSlot.endTime = convertUtcToTimezoneAMPM(
-                timeSlot.endTime,
-                timezone
-              );
-            }
-          });
-        }
+        // Keep timeSlots (startTime, endTime) unchanged
       });
     }
 
     return cat;
   });
-}
-
-
-
+};
 module.exports = {
   formatEventSchedule,
   formatMoreFromOrganizerEventResponse,
   formatEventResponse,
   attachVenueTypesToEvent,
   reservationsFormatterAdjustDates,
+  reservationsFormatterAdjustDates_
 };

@@ -7,6 +7,7 @@ const {
   getReadableErrorMessage,
   convertTimezoneToUtc,
   convertTimezoneToUtcDateOnly,
+  convertToUtcDateOnly,
 } = require("../../helperUtils/responseUtil");
 
 const reservationService = require("./reservationService");
@@ -30,6 +31,7 @@ const createReservation = async (req, res) => {
 
   const userId = req.user._id;
   const timezone = req.user.timezone;
+
   if (conditionType === "minimumSpendOnLocation") {
     if (!amount && !customText) {
       return sendResponse({
@@ -39,6 +41,7 @@ const createReservation = async (req, res) => {
       });
     }
   }
+
   if (
     !validateParams(req, res, {
       rawData: [
@@ -52,6 +55,7 @@ const createReservation = async (req, res) => {
       ],
     })
   ) return;
+
   if (conditionType == "fixedPrice" || conditionType == "prepayOption") {
     if (
       !validateParams(req, res, {
@@ -69,6 +73,7 @@ const createReservation = async (req, res) => {
       })
     ) return;
   }
+
   // Timing slots validation
   if (timingSlots?.enabled === true) {
     const slots = timingSlots.dateTimeSlots || [];
@@ -81,7 +86,7 @@ const createReservation = async (req, res) => {
       });
     }
 
-    // Validate and convert each date/time
+    // Validate and convert each date/time slot
     for (const dateBlock of slots) {
       if (!dateBlock.date) {
         return sendResponse({
@@ -98,56 +103,46 @@ const createReservation = async (req, res) => {
           translationKey: "time_slots_required_for_date",
         });
       }
-      console.log("  ${dateBlock.date}", `${dateBlock.date}`);
+
+      // Convert the date to UTC (midnight) for each dateBlock
+      const dateUtc = convertTimezoneToUtcDateOnly(dateBlock.date, timezone);
+
+      // Loop over each time slot and convert start/end times to UTC
       for (const slot of dateBlock.timeSlots) {
+        // 1️⃣ Convert startTime and endTime to UTC using provided timezone
+        if (slot.startTime && slot.endTime) {
+          const startUtc = convertTimezoneToUtc(
+            `${dateBlock.date} ${slot.startTime}`,
+            timezone,
+            "YYYY-MM-DDTHH:mm:ss.SSSZ hh:mm A"
+          );
 
-        // 1️⃣ Convert only the date to UTC (midnight)
-        const dateUtc = convertTimezoneToUtcDateOnly(
-          dateBlock.date,
-          timezone
-        );
+          const endUtc = convertTimezoneToUtc(
+            `${dateBlock.date} ${slot.endTime}`,
+            timezone,
+            "YYYY-MM-DDTHH:mm:ss.SSSZ hh:mm A"
+          );
 
-        // Replace date with UTC date
-        dateBlock.date = dateUtc;
-
-        console.log("UTC DATE (dateBlock.date) =>", dateUtc);
-
-        // 2️⃣ Validate times
-        if (!slot.startTime || !slot.endTime) {
+          // 2️⃣ Replace startTime and endTime with the UTC converted values
+          slot.startTime = startUtc;
+          slot.endTime = endUtc;
+        } else {
           return sendResponse({
             res,
             statusCode: 400,
             translationKey: "invalid_start_or_end_time_in_slot",
           });
         }
-
-        // 3️⃣ Convert start/end to UTC based on new UTC date
-        const startUtc = convertTimezoneToUtc(
-          `${dateUtc} ${slot.startTime}`,
-          timezone,
-          "YYYY-MM-DDTHH:mm:ss.SSSZ hh:mm A"
-        );
-
-        const endUtc = convertTimezoneToUtc(
-          `${dateUtc} ${slot.endTime}`,
-          timezone,
-          "YYYY-MM-DDTHH:mm:ss.SSSZ hh:mm A"
-        );
-
-        // 4️⃣ Replace values
-        slot.startTime = startUtc;
-        slot.endTime = endUtc;
-
-        console.log("startUTC:", startUtc);
-        console.log("endUTC:", endUtc);
       }
 
+      // Replace the date with UTC date (adjusted for timezone)
+      dateBlock.date = convertToUtcDateOnly(dateBlock.date, timezone);
+      console.log("dateBlock.date",dateBlock.date );
     }
-  } 
+  }
 
   let data = {
     userId,
-    // companyOrganizer:userId,
     reservationType,
     availableReservations,
     maxCapacityPerReservation,
@@ -162,6 +157,7 @@ const createReservation = async (req, res) => {
     organizationId,
     timingSlots: timingSlots || { enabled: false, dateTimeSlots: [] },
   };
+
   try {
     const Reservation = await reservationService.createReservation(data);
     if (!Reservation) {
@@ -187,6 +183,7 @@ const createReservation = async (req, res) => {
     });
   }
 };
+
 
 const getavailableReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);

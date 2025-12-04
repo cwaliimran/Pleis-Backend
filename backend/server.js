@@ -52,6 +52,8 @@ const allowedOrigins = [
   "https://willow-zealand-currency-fortune.trycloudflare.com",
   "http://192.168.12.121:4003",
   "https://ebook-what-premiere-totals.trycloudflare.com",
+  "http://192.168.13.220:4003",
+  "http://192.168.13.221:4003"
 ];
 securityMiddleware(app, {
   allowedOrigins,

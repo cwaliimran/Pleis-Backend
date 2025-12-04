@@ -591,6 +591,16 @@ const convertTimezoneToUtc = (
   const momentDate = moment.tz(date, inputFormat, timezone).utc();
   return momentDate.format(outputFormat); // return string
 };
+const convertToUtcDateOnly = (date, timezone, inputFormat = "YYYY-MM-DD") => {
+
+
+  // Parse the date in the specified timezone but do not change the time zone
+  const momentDate = moment.tz(date, inputFormat, timezone);
+
+  // Format the date in the given timezone without changing the time zone
+  return momentDate.format("YYYY-MM-DD[T]HH:mm:ss.SSS[+00:00]");  // Return the formatted date
+};
+
 const convertTimezoneToUtcDateOnly = (
   date,
   timezone,
@@ -787,5 +797,6 @@ module.exports = {
   getStartAndEndOfMonth,
   convertUtcToTimezoneAMPM,
   convertTimezoneToUtcDateOnly,
-  getCurrentUtcDateOnly
+  getCurrentUtcDateOnly,
+  convertToUtcDateOnly
 };
