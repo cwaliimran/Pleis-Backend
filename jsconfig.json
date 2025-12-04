@@ -142,6 +142,9 @@
       ],
       "@GlobalUsersStreaksModel": [
         "backend/commonModules/globalLoyalty/streaks/UsersStreaks.js"
+      ],
+      "@UserCompanyLoyaltyWalletTransactionsModel": [
+        "backend/commonModules/wallet/UserCompanyLoyaltyWalletTransactions.js"
       ]
     }
   },

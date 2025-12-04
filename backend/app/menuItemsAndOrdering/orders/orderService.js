@@ -3,6 +3,9 @@ const menuItemRepo = require("../menuItems/menuItemsRepository");
 const mongoose = require("mongoose");
 const { menuItemOrderFormatter } = require("./formatter/menuItemOrderFormatter");
 const { generateMeta } = require("../../../helperUtils/responseUtil");
+const { calculatePointsRepo } = require("../../loyalty/calculatePointsEarning/pointsEarningsRepository");
+const { getOrgCompanyOrganizer } = require("../../organizationProfile/organizationProfileRepository");
+const { createCompanyTransaction } = require("../../userWalletService/organizationLevel/walletTransactions/companyLoyaltyTransactionService");
 
 // 1️⃣ Place an order
 
@@ -38,6 +41,7 @@ const placeOrder = async ({ userId, timezone, items, notes, paymentMethod,
     };
   });
 
+
   // 3️⃣ Create order document
   const orderData = {
     user: userId,
@@ -53,7 +57,52 @@ const placeOrder = async ({ userId, timezone, items, notes, paymentMethod,
 
   // 4️⃣ Save to DB
   let order = await orderRepo.createOrder(orderData);
+
+  //create transaction if payment method is applePay/card
+  if (paymentMethod === "applePay" || paymentMethod === "card") {
+    //TODO process payment here
+    //update payment status
+    order.paymentStatus = "paid";
+    // await order.save();
+
+    //add point to user wallet
+    //get company organizer from organization
+    const companyOrganizer = await getOrgCompanyOrganizer(organizationId);
+    //calculate points based on totalPrice
+    let pointsCalculation = await calculatePointsRepo(userId, companyOrganizer, totalPrice);
+
+    let globalPoints = {
+      base: pointsCalculation.global.earnedPoints,
+      multiplier: 1,
+      total: pointsCalculation.global.earnedPoints,
+      pointsPerEuro: pointsCalculation.global.pointsPerEuro,
+    };
+    let companyPoints = {
+      base: pointsCalculation.organizer.earnedPoints,
+      multiplier: 1,
+      total: pointsCalculation.organizer.earnedPoints,
+      pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
+    };
+
+    //log the transaction for both loyalty/global wallet
+    let data = {
+      user: userId,
+      companyOrganizer,
+      organization: organizationId,
+      companyPoints,
+      globalPoints,
+      allowNegative: false,
+      type: "earn",
+      description: "",
+      objectId: order._id,
+      objectType: "order"
+    }
+    let trx = createCompanyTransaction(data)
+  }
+
   let formattedOrder = menuItemOrderFormatter(order, timezone);
+
+
 
   return { order: formattedOrder };
 };
@@ -115,7 +164,7 @@ const getOrderDetails = async (orderId) => {
 // 3️⃣ Get all orders for user
 const getUserOrders = async (userId, page, limit) => {
   let [orders, counts] = await Promise.all([orderRepo.getOrdersByUser(userId, page, limit),
-    orderRepo.getCounts({ user: userId })]);
+  orderRepo.getCounts({ user: userId })]);
   let formattedOrders = orders.map(order => menuItemOrderFormatter(order));
 
   let { pending, confirmed, completed, cancelled, totalFiltered } = counts;

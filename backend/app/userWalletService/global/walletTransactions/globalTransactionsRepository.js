@@ -4,54 +4,70 @@ const { updateGlobalPoints, getUserWallet, createUserWallet } = require("../wall
 const { UserGlobalWallet } = require("@UserGlobalWalletModel");
 
 // Create a wallet transaction
-const createGlobalTransaction = async (data) => {
-  const session = await GlobalWalletTransactions.startSession();
-  session.startTransaction();
-  try {
-    const userId = data.user;
-    const pointsDelta = data.points.total;
+const createGlobalTransaction = async ({
+  user,
+  companyOrganizer = null,
+  organization = null,
+  globalPoints = {},
+  allowNegative = false,
+  type = "earn",       // earn | adjustment | spend
+  description = "",
+  objectId = null,
+  objectType = null
+}) => {
 
-    // 1. Get wallet inside transaction
-    let walletDoc = await UserGlobalWallet.findOne({ user: userId }).session(session);
-    if (!walletDoc) {
-      walletDoc = await createUserWallet(userId, session); // must accept session
-    }
+  if (!user) throw new Error("User is required");
 
-    // 2. Calculate new balance
-    const newBalance = walletDoc.global.points + pointsDelta;
+  const userId = typeof user === "string" ? user : (user._id || user.id);
 
-    if (!data.allowNegative && newBalance < 0) {
-      throw new Error("Insufficient global points");
-    }
+  // 1. Fetch or create wallet
+  let walletDoc = await UserGlobalWallet.findOne({ user: userId });
+  if (!walletDoc) walletDoc = await createUserWallet(userId);
 
-    // 3. Update wallet (IN TRANSACTION)
-    walletDoc.global.points = newBalance;
-    if (pointsDelta > 0) walletDoc.global.lifetimePoints += pointsDelta;
+  const newBalance = walletDoc.global.points + globalPoints.total;
 
-    await walletDoc.save({ session });
-
-    // 4. Write ledger transaction (IN SAME TRANSACTION)
-    await GlobalWalletTransactions.create([{
-      user: userId,
-      type: pointsDelta >= 0 ? "earn" : "adjustment",
-      source: "system",
-      points: data.points,
-      closingBalance: newBalance,
-      objectId: data.objectId,
-      objectType: data.objectType
-    }], { session });
-
-    // 5. Commit
-    await session.commitTransaction();
-    session.endSession();
-
-    return { success: true, newBalance };
-  } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-    throw err;
+  // 2. Prevent negative balance
+  if (!allowNegative && newBalance < 0) {
+    throw new Error("Insufficient global points");
   }
+
+  // 3. Update balance + lifetime for earning
+  walletDoc.global.points = newBalance;
+  if (globalPoints.total > 0 && type === "earn") {
+    walletDoc.global.lifetimePoints += globalPoints.total;
+  }
+
+  let result = await walletDoc.save();
+
+  // 4. Write transaction (MUST ALWAYS HAPPEN)
+  const trx = await GlobalWalletTransactions.create({
+    user: userId,
+    companyOrganizer,
+    organization,
+    type,
+    points: globalPoints,
+    closingBalance: newBalance,
+    description,
+    objectId,
+    objectType
+  });
+
+  const { walletView } = await updateGlobalPoints({
+    user: userId,
+    pointsDelta: globalPoints.total,
+    objectId,
+    objectType
+  })
+
+  return {
+    success: true,
+    points: globalPoints,
+    newBalance,
+    wallet: walletView,
+    transaction: trx
+  };
 };
+
 
 
 // Find with filters and pagination

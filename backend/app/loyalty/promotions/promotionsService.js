@@ -85,7 +85,43 @@ const getDetails = async (id) => {
   return await repository.findById(id);
 };
 
+
+const getPromotionsByCompanyOrganizerService = async ({
+  page,
+  limit,
+  timezone,
+  companyOrganizer,
+}) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const now = getCurrentDateInTimezone({ timezone });
+
+  // Step 1: DB fetch with correct filtering
+  const promotions = await repository.getPromotionsByCompanyOrganizer({
+    skip,
+    limit,
+    now,
+    companyOrganizer,
+  });
+
+  // Step 2: Count total from DB directly
+  const totalFiltered = await repository.count({
+    status: "active",
+    companyOrganizer,
+    endDate: { $gte: now },
+  });
+
+  // Step 3: meta
+  const meta = generateMeta(page, limit, totalFiltered);
+
+  // Step 4: formatting
+  const formatted = promotions.map((p) => formatPromotion(p, timezone));
+
+  return { promotions: formatted, meta };
+};
+
+
 module.exports = {
   getPromotions,
   getDetails,
+  getPromotionsByCompanyOrganizerService,
 };

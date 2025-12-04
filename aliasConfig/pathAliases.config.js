@@ -42,9 +42,9 @@ module.exports = {
     "@UserGlobalWalletModel": "backend/commonModules/wallet/UserGlobalWallet.js",
     "@GlobalWalletTransactionsModel": "backend/commonModules/wallet/GlobalWalletTransactions.js",
     "@GlobalRewardCategories": "backend/commonModules/globalLoyalty/globalRewardCategories/GlobalRewardCategories.js",
-        "@GlobalLoyaltyReward": "backend/commonModules/globalLoyalty/rewards/models/reward/BaseReward.js",
+    "@GlobalLoyaltyReward": "backend/commonModules/globalLoyalty/rewards/models/reward/BaseReward.js",
     "@GlobalChallengeModel": "backend/commonModules/globalLoyalty/rewards/models/Challenge/models/Challenge/BaseChallenge.js",
-
-        "@GlobalStreaksModel": "backend/commonModules/globalLoyalty/streaks/Streaks.js",
+    "@GlobalStreaksModel": "backend/commonModules/globalLoyalty/streaks/Streaks.js",
     "@GlobalUsersStreaksModel": "backend/commonModules/globalLoyalty/streaks/UsersStreaks.js",
+    "@UserCompanyLoyaltyWalletTransactionsModel": "backend/commonModules/wallet/UserCompanyLoyaltyWalletTransactions.js"
 };

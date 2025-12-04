@@ -20,7 +20,7 @@ const getMenus = async ({ page, limit, keyword, status, date, organizations, com
     organizationIds = organizations.map(id => new mongoose.Types.ObjectId(id));
   // 2️⃣ Otherwise, if companyOrganizer provided, get orgs created by it
   } else if (companyOrganizer) {
-    const organizationIds = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
+     organizationIds = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
     if (organizationIds.length === 0) {
       return {
         menus: [],

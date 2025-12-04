@@ -7,7 +7,7 @@ const { randomBytes } = require("crypto");
 const { CompanySchema } = require("./CompanyDetails");
 const { generateSecureToken } = require("../helperUtils/secureToken");
 const { LocationSchema } = require("../shared/locations/locationSchmea");
-const { createUserWallet } = require("../app/userWalletService/walletManagement/userWalletService");
+const { createUserWallet } = require("../app/userWalletService/global/walletManagement/userWalletService");
 
 // Define subscription statuses
 const SubscriptionType = {

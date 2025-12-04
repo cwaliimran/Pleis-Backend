@@ -43,16 +43,16 @@ ORG A
 500 euro * 10 points = 5000 points
 
 USER A
-Blue Status
-Started Tier
+Blue Status (Global) 
+Started Tier (Company)
 Reward 5000 points
 500 euro * 10 points = 5000
 
 500*0.02(cashback percent) = 10 euro
 
 USER B
-Black - 5
-Legend - 5
+Black - 5 (Global) 
+Legend - 5 (Company)
 Reward 5000 points
 250 euro * 20 points = 5000 points
 250*0.04(cash back) = 10 euro
@@ -63,11 +63,55 @@ Reward 5000 points
 
 
 USER C
-Silver - 2
-Elite - 3
+Silver - 2 (Global) 
+Elite - 3 (Company)
 Reward 5000 points
 333.33 * 15 points = 5000 points
 333.33 * 0.03 = 10 euro
 
 Organization = 200 points
 Global transaction = 200 points
+
+
+<!-- POINTS CALCULATOR AND TRANSACTION INSERTION -->
+  //create transaction if payment method is applePay/card
+  if (paymentMethod === "applePay" || paymentMethod === "card") {
+    //TODO process payment here
+    //update payment status
+    order.paymentStatus = "paid";
+    // await order.save();
+
+    //add point to user wallet
+    //get company organizer from organization
+    const companyOrganizer = await getOrgCompanyOrganizer(organizationId);
+    //calculate points based on totalPrice
+    let pointsCalculation = await calculatePointsRepo(userId, companyOrganizer, totalPrice);
+
+    let globalPoints = {
+      base: pointsCalculation.global.earnedPoints,
+      multiplier: 1,
+      total: pointsCalculation.global.earnedPoints,
+      pointsPerEuro: pointsCalculation.global.pointsPerEuro,
+    };
+    let companyPoints = {
+      base: pointsCalculation.organizer.earnedPoints,
+      multiplier: 1,
+      total: pointsCalculation.organizer.earnedPoints,
+      pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
+    };
+
+    //log the transaction for both loyalty/global wallet
+    let data = {
+      user: userId,
+      companyOrganizer,
+      organization: organizationId,
+      companyPoints,
+      globalPoints,
+      allowNegative: false,
+      type: "earn",
+      description: "",
+      objectId: order._id,
+      objectType: "order"
+    }
+    let trx = createCompanyTransaction(data)
+  }

@@ -134,6 +134,11 @@ const findUserById = async (id, projection = null) => {
   });
 };
 
+//get user by id and and select only _id and verify if exists
+const findUserByIdAndCheckExists = async (id) => {
+  return await User.findById(id).select("_id");
+};
+
 // Update and save
 const updateUserData = async (user, data) => {
   Object.assign(user, data);
@@ -189,6 +194,12 @@ const getUserInterestsIdsForRecommendation = async (userId) => {
   return UserInterests.findOne({ user: userId })
 };
 
+//get company pickup options
+const getInAppOrderingSettings = async (companyId) => {
+  const company = await User.findById(companyId).select("companyDetails.inAppOrderingSettings");
+  return company?.companyDetails?.inAppOrderingSettings || [];
+};
+
 module.exports = {
   createUser,
   getUsersWithFilters,
@@ -201,5 +212,7 @@ module.exports = {
   updateTwoFA,
   updateUserInterests,
   getUserInterestsByUserId,
-  getUserInterestsIdsForRecommendation
+  getUserInterestsIdsForRecommendation,
+  findUserByIdAndCheckExists,
+  getInAppOrderingSettings
 };

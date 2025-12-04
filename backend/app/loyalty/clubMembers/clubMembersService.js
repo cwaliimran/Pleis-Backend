@@ -1,44 +1,113 @@
+const { findUserByIdAndCheckExists } = require("../../usersManagement/usersRepository");
+const { getChallengesByCompanyOrganizerService } = require("../challenges/challengesService");
+const { getPromotionsByCompanyOrganizerService } = require("../promotions/promotionsService");
+const { getRewardsByCompanyOrganizerService } = require("../rewards/rewardsService");
 const clubMemberRepo = require("./clubMembersRepository");
-const { generateMeta, getCurrentDateInTimezone } = require("@utils/responseUtil");
-const { ClubMembers } = require("@ClubMembersModel");
-const { buildKeywordQueryFromModels } = require("../../../helperUtils/dbUtils/queryUtil");
+const { formatUserWallet, formatUserWallets } = require("./formatters/formatUserWallet");
 
-//count members
-
+// Count members
 const countClubMembers = async (filters = {}) => {
-  return await clubMemberRepo.countClubMembers(filters);
+  return clubMemberRepo.countClubMembers(filters);
 };
 
+// Get full details
 const getClubMemberDetails = async (id) => {
-  return await clubMemberRepo.findClubMemberById(id).populate('user companyOrganizer');
+  return clubMemberRepo.findClubMemberById(id);
 };
 
-// joinClub,
-
+// Join club
 const joinClub = async (userId, companyOrganizer) => {
-  return await clubMemberRepo.joinClub(userId, companyOrganizer);
+  const isValidCompanyOrganizer = await findUserByIdAndCheckExists(companyOrganizer);
+  if (!isValidCompanyOrganizer) {
+    throw new Error("Invalid company organizer.");
+  }
+  return clubMemberRepo.joinClub(userId, companyOrganizer);
 };
-// leaveClub,
 
+// Leave club
 const leaveClub = async (userId, companyOrganizer) => {
-  return await clubMemberRepo.leaveClub(userId, companyOrganizer);
+  return clubMemberRepo.leaveClub(userId, companyOrganizer);
 };
 
+// Check membership
 const isClubMember = async (userId, companyOrganizer) => {
-  return await clubMemberRepo.isClubMember(userId, companyOrganizer);
+  return clubMemberRepo.isClubMember(userId, companyOrganizer);
 };
 
-//get user joined clubs
+// Get user's active clubs
 const getUserJoinedClubs = async (userId) => {
-  return await clubMemberRepo.getUserJoinedClubs(userId);
+  return clubMemberRepo.getUserJoinedClubs(userId);
 };
 
+const getUserJoinedClubsWithPoints = async (userId) => {
+  let clubs = await clubMemberRepo.getUserJoinedClubsWithPoints(userId);
+  return formatUserWallets(clubs);
+};
+
+// 🔥 NEW: Get Wallet (points, current tier, next tier)
+const getUserCompanyWallet = async (userId, companyOrganizer) => {
+  let wallet = await clubMemberRepo.getWallet(userId, companyOrganizer);
+  return formatUserWallet(wallet);
+};
+
+// 🔥 NEW: Update Points & auto promotion/demotion
+const updateUserCompanyPoints = async (payload) => {
+  let wallet = await clubMemberRepo.updatePoints(payload);
+  return formatUserWallet(wallet);
+};
+
+const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganizer) => {
+  const [profile, userCompanyWallet, rewards, challenges, promotions] = await Promise.all([
+    {},
+    clubMemberRepo.getWallet(userId, companyOrganizer),
+    getRewardsByCompanyOrganizerService({
+      page: 1,
+      limit: 10,
+      companyOrganizer,
+      timezone,
+    }),
+    getChallengesByCompanyOrganizerService({
+      page: 1,
+      limit: 10,
+      timezone,
+      companyOrganizer,
+    }),
+    getPromotionsByCompanyOrganizerService({
+      page: 1,
+      limit: 10,
+      timezone,
+      companyOrganizer,
+    }),
+  ]);
+  return {
+    profile,
+    userCompanyWallet: formatUserWallet(userCompanyWallet),
+    rewards: {
+      items: rewards.rewards,
+      meta: rewards.meta
+    },
+    challenges: {
+      items: challenges.challenges,
+      meta: challenges.meta
+    },
+    promotions: {
+      items: promotions.promotions,
+      meta: promotions.meta
+    }
+  };
+};
 
 module.exports = {
   countClubMembers,
   getClubMemberDetails,
   joinClub,
   leaveClub,
+  isClubMember,
+  getUserJoinedClubs,
 
-  getUserJoinedClubs
+  // NEW loyalty methods
+  getUserCompanyWallet,
+  updateUserCompanyPoints,
+  getUserJoinedClubsWithPoints,
+  getCompanyProfileWithLoyaltyInfo
 };

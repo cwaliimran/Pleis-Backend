@@ -10,6 +10,8 @@ const globalTransactionsService = require("./globalTransactionsService");
 const createGlobalTransaction = async (req, res) => {
   const {
     user,
+    companyOrganizer = null,
+    organization = null,
     type,
     points,
     closingBalance,
@@ -32,6 +34,8 @@ const createGlobalTransaction = async (req, res) => {
 
   const data = {
     user,
+    companyOrganizer,
+    organization,
     type,
     points,
     closingBalance,
@@ -79,7 +83,7 @@ const getGlobalTransactionDetails = async (req, res) => {
 
 const updateGlobalTransaction = async (req, res) => {
   const { id } = req.params;
-  const { type,  points, closingBalance, description } = req.body;
+  const { type, points, closingBalance, description } = req.body;
 
   if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
 

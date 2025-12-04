@@ -11,6 +11,10 @@ const service = require("./rewardsService");
 const create = async (req, res) => {
 
   var dateFields = {}
+  dateFields.endDate = "YYYY-MM-DD"
+  if (req.body.endDate) {
+    req.body.endDate = convertTimezoneToUtc(req.body.endDate, req.user.timezone, "YYYY-MM-DD");
+  }
   var rawData = ["image", "title", "rewardType", "sortingType", "minPointsRequiredToClaim", "companyOrganizer",]
   var objectIdFields = ["companyOrganizer"]
 
@@ -57,7 +61,7 @@ const create = async (req, res) => {
 
 const get = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date,companyOrganizer } = req.query;
+  const { keyword, status, date, companyOrganizer } = req.query;
 
   try {
     const { responses, meta } = await service.get({

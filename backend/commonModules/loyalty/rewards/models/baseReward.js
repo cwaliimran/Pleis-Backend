@@ -18,6 +18,7 @@ const baseRewardsSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    endDate: { type: Date, default: null },
 
     minPointsRequiredToClaim: { type: Number, default: null },
     claimLimit: { type: Number, default: null },
