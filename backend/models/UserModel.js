@@ -332,7 +332,12 @@ const userSchema = new mongoose.Schema(
         type: Boolean,
         default: true,
       },
-    }
+    },
+    //last signed in
+    lastSignedIn: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

@@ -8,7 +8,8 @@ const {
 
 
 // Get rewards by company organizer
-const getRewardsByCompanyOrganizer = async ({ skip, limit, companyOrganizer, status }) => {
+// Get ALL rewards by company organizer (no pagination)
+const getRewardsByCompanyOrganizer = async ({ companyOrganizer, status }) => {
   const query = {
     companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
   };
@@ -19,11 +20,10 @@ const getRewardsByCompanyOrganizer = async ({ skip, limit, companyOrganizer, sta
   return Reward.find(query)
     .populate("menuItem", "title")
     .populate({ path: "tierLimit", select: "title image" })
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit)
+    .sort({ createdAt: -1 }) // still useful for ordering inside groups
     .lean();
 };
+
 
 // Count rewards by organizer
 const countRewardsByCompanyOrganizer = async ({ companyOrganizer, status }) => {

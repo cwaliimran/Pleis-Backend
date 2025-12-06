@@ -12,9 +12,7 @@ const create = async (req, res) => {
 
   var dateFields = {}
   dateFields.endDate = "YYYY-MM-DD"
-  if (req.body.endDate) {
-    req.body.endDate = convertTimezoneToUtc(req.body.endDate, req.user.timezone, "YYYY-MM-DD");
-  }
+
   var rawData = ["image", "title", "rewardType", "sortingType", "minPointsRequiredToClaim", "companyOrganizer",]
   var objectIdFields = ["companyOrganizer"]
 
@@ -37,7 +35,9 @@ const create = async (req, res) => {
     enumFields: { "rewardType": ["buyMenuItemReward", "customReward", "ticketReward"] },
   })) return;
 
-
+  if (req.body.endDate) {
+    req.body.endDate = convertTimezoneToUtc(req.body.endDate, req.user.timezone, "YYYY-MM-DD");
+  }
 
   try {
 

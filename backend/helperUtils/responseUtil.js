@@ -723,6 +723,8 @@ const getReadableErrorMessage = (error) => {
   return { code: error.code || null, statusCode, message: error.message };
 };
 
+
+
 module.exports = {
   sendResponse,
   parsePaginationParams,

@@ -9,12 +9,11 @@ const {
 const rewardService = require("./rewardsService");
 
 const getRewards = async (req, res) => {
-  const { page, limit } = parsePaginationParams(req);
   const keyword = req.query.keyword || "";
   try {
-    const { rewards, meta } = await rewardService.getRewards({
-      page,
-      limit,
+    const companyOrganizer = req.params.companyOrganizer;
+    const { rewards } = await rewardService.getRewardsByCompanyOrganizerService({
+      companyOrganizer,
       timezone: req.user?.timezone,
       keyword,
     });
@@ -23,7 +22,6 @@ const getRewards = async (req, res) => {
       statusCode: 200,
       translationKey: "rewards_fetched_successfully",
       data: rewards,
-      meta,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
