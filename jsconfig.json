@@ -148,6 +148,9 @@
       ],
       "@UserCompanyLoyaltyWalletTransactionsModel": [
         "backend/commonModules/wallet/UserCompanyLoyaltyWalletTransactions.js"
+      ],
+      "@SubscriptionSettings": [
+        "backend/commonModules/subscriptions/SubscriptionSettings.js"
       ]
     }
   },

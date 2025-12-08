@@ -10,27 +10,50 @@ const { LocationSchema } = require("../shared/locations/locationSchmea");
 const { createUserWallet } = require("../app/userWalletService/global/walletManagement/userWalletService");
 const { nanoid } = require("nanoid");
 // Define subscription statuses
-const SubscriptionType = {
-  PLAN1: "plan1", //free
-  PLAN2: "plan2", //monthly
-  PLAN3: "plan3", // yearly
+const SubscriptionTypes = {
+  FREE: "free",
+  ORDERING: "ordering",
+  LOYALTY: "loyalty",
+  RESERVATIONS: "reservations",
+  ANALYTICS: "analytics",
+};
+const PricingPlanType = {
+  MONTHLY: "monthly",
+  YEARLY: "yearly",
 };
 
 // Define subscription schema
 const subscriptionSchema = new mongoose.Schema({
-  type: {
-    type: String,
-    enum: Object.values(SubscriptionType),
+  subscriptionTypes: {
+    type: [String],
+    enum: Object.values(SubscriptionTypes),
+    default: [SubscriptionTypes.FREE], // default free subscription
     required: true,
-    default: SubscriptionType.PLAN1, // Default subscription for all users
+  },
+  pricingPlan: {
+    type: String,
+    enum: Object.values(PricingPlanType),
+    default: PricingPlanType.MONTHLY,
+  },
+  numberOfOrganizations: {
+    type: Number,
+    default: 1,
+    min: 1,
+  },
+
+  totalSubscriptionAmount: {
+    type: Number,
+    default: 0,
   },
   startDate: {
     type: Date,
-    default: Date.now, // Start date defaults to now for other subscriptions
+    default: Date.now,
   },
+
   endDate: {
-    type: Date, // Can be null for lifetime subscriptions (like spark connection)
+    type: Date,
   },
+
 });
 
 const USER_TYPES = [
@@ -275,17 +298,21 @@ const userSchema = new mongoose.Schema(
       default: [],
     },
 
-    // Subscription Details
-    subscriptions: {
-      type: [subscriptionSchema],
-      default: [
-        {
-          status: SubscriptionType.PLAN1,
-          startDate: null,
-          endDate: null, // No expiry for the default subscription
-        },
-      ],
-    },
+subscriptions: {
+  type: [subscriptionSchema],
+  default: [
+    {
+      subscriptionTypes: [SubscriptionTypes.FREE],  // default = FREE subscription
+      pricingPlan: PricingPlanType.MONTHLY,         // default plan type
+      numberOfOrganizations: 1,                     // single organization
+      totalSubscriptionAmount: 0,                   // free has zero cost
+      startDate: Date.now(),
+      endDate: null                                 // free → no expiry
+    }
+  ]
+},
+
+
 
     provider: {
       // Social provider details
@@ -309,6 +336,10 @@ const userSchema = new mongoose.Schema(
       type: LocationSchema,
       default: {},
     },
+globalReferralLimit: {
+  type: Number,
+  default: 10,
+},
 
     //company details
     companyDetails: {
@@ -615,7 +646,7 @@ const User = mongoose.model("User", userSchema);
 
 module.exports = {
   User,
-  SubscriptionType,
+  SubscriptionTypes,
   generateResetToken,
   createVerificationLink,
   USER_TYPES,

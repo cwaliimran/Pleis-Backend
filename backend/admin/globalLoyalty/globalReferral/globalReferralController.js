@@ -7,7 +7,7 @@ const {
   getReadableErrorMessage,
   convertTimezoneToUtc,
 } = require("../../../helperUtils/responseUtil");
-
+const formatLoyaltyListing = require("./formatter/formatLoyaltyListing");
 const globalReferralService = require("./globalReferralService");
 
 const createGlobalReferral = async (req, res) => {
@@ -252,7 +252,8 @@ const getUserGlobalReferrals = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "GlobalReferrals_fetched_successfully",
-      data: globalReferral,
+      data: globalReferral.map(item => formatLoyaltyListing(item))
+      ,
       meta,
     });
   } catch (error) {

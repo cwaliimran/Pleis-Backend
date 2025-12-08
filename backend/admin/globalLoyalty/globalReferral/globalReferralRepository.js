@@ -156,7 +156,11 @@ const findGlobalReferralsById = async (id) => {
 
 
 
-
+function getUserImage(userId) {
+  return User.findById(userId).lean().then(user => {
+    return user?.profileIcon || "noimage.png";
+  });
+}
 
 
 
@@ -219,7 +223,7 @@ const getUserGlobalReferrals = async ({
     }
   });
 
-  console.log("pipeline", pipeline);
+
   const result = await ReferredRecord.aggregate(pipeline);
 
   let globalReferral = result[0]?.data || [];
@@ -242,7 +246,7 @@ const getUserGlobalReferrals = async ({
 
   // Fetch global referral data for the given userId
   const globalReferrals = await GlobalReferral.find({ creator: userId, type: "global" }).lean();
-  console.log("globalReferrals", globalReferrals);
+
 
   // Create a map to count how many times each referrerUserId appears
   const referrerCountMap = globalReferral.reduce((acc, record) => {
@@ -250,35 +254,39 @@ const getUserGlobalReferrals = async ({
     return acc;
   }, {});
 
-  globalReferral = globalReferral.map(record => {
-    // Get the userName and referrerUserName based on userId and referrerUserId
+globalReferral = await Promise.all(
+  globalReferral.map(record => {
     const userName = userNames.find(user => user._id.toString() === record.userId.toString());
     const referrerName = referrerNames.find(user => user._id.toString() === record.referrerUserId.toString());
 
-    const referrerUserName = referrerName ? `${referrerName.firstName} ${referrerName.lastName}` : "";
-    const userFullName = userName ? `${userName.firstName} ${userName.lastName}` : "";
+    const referrerUserName = referrerName
+      ? `${referrerName.firstName} ${referrerName.lastName}`
+      : "";
 
-    // Find the global referral data for this referrer
-    const globalReferralData = globalReferrals.find(global => global.creator.toString() === record.referrerUserId.toString());
+    const userFullName = userName
+      ? `${userName.firstName} ${userName.lastName}`
+      : "";
 
-    // Log globalReferralData to check its values
-    console.log("globalReferralData", globalReferralData);
-  const referralLimit = globalReferrals[0].referralLimit
-    // Calculate the remaining referrals
-    const remainingReferrals = referralLimit - referrerCountMap[record.referrerUserId]
-     ;
+    const referralLimit = globalReferrals[0].referralLimit;
 
-    return {
-      ...record,
-      firstName: userName.firstName,
-      lastName: userName.lastName,
-      userImage: userName.profileIcon,
-      referrerUserName,
-      remainingReferrals,
-      referralLimit,
-      referrerCount: referrerCountMap[record.referrerUserId]
-    };
-  });
+    const remainingReferrals =
+      referralLimit - referrerCountMap[record.referrerUserId];
+
+    return getUserImage(record.userId).then(profileIcon => {
+      return {
+        ...record,
+        firstName: userName?.firstName,
+        lastName: userName?.lastName,
+        profileIcon,   // ← REAL image
+        referrerUserName,
+        remainingReferrals,
+        referralLimit,
+        referrerCount: referrerCountMap[record.referrerUserId],
+      };
+    });
+  })
+);
+
 
   const meta = generateMeta(page, limit, totalFiltered);
   meta.globalReferralCount = { total, active, inactive };

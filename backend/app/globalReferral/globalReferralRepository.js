@@ -1,5 +1,5 @@
 // repositories/ReservationRepository.js
-const {GlobalReferral} = require("@GlobalReferralModel");
+const GlobalReferral = require("@GlobalReferralModel");
 const {ReferredRecord} = require("@ReferredRecordModel");
 const UserReservations = require("@UserReservationsModel");
 const { User } = require("../../models/UserModel");
@@ -95,7 +95,6 @@ const saveUserReferralData = async (username, ip) => {
 };
 
 const getGlobalReferrals = async ({ timezone,page, limit, keyword, status, userId, date, range,today,skip, type }) => {
-console.log("Fetching global referrals in repository");
   const pipeline = [
   {
 $match: {
@@ -175,7 +174,7 @@ if (keyword) {
   });
 
   const result = await GlobalReferral.aggregate(pipeline);
-  console.log("result",result );
+
 
   let globalReferral = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;

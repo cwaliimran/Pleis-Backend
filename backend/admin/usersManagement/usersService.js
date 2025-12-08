@@ -135,7 +135,8 @@ const updateUser = async (req, res, options = {}) => {
     profileCompleted,
     status,
     location,
-    notifications
+    notifications,
+     subscriptions
   } = req.body;
 
   const session = await mongoose.startSession();
@@ -310,7 +311,95 @@ const updateUser = async (req, res, options = {}) => {
         user.companyDetails.loyaltySettings.title = companyDetails.name + " - Loyalty Club" || "Loyalty Club";
       }
     }
+// -------------------------------------------------------------
+// NORMALIZE SUBSCRIPTION PAYLOAD
+// Accept both:
+// 1) subscriptions: [{}]
+// 2) subscriptionTypes, pricingPlan, numberOfOrganizations, totalSubscriptionAmount
+// -------------------------------------------------------------
+let incomingSub = null;
 
+// Case 1 → User sends subscriptions array
+if (req.body.subscriptions && Array.isArray(req.body.subscriptions)) {
+  incomingSub = req.body.subscriptions[0];
+}
+
+// Case 2 → User sends flat fields (your case)
+else if (
+  req.body.subscriptionTypes ||
+  req.body.pricingPlan ||
+  req.body.numberOfOrganizations ||
+  req.body.totalSubscriptionAmount !== undefined
+) {
+  incomingSub = {
+    subscriptionTypes: req.body.subscriptionTypes,
+    pricingPlan: req.body.pricingPlan,
+    numberOfOrganizations: req.body.numberOfOrganizations,
+    totalSubscriptionAmount: req.body.totalSubscriptionAmount,
+    startDate: req.body.startDate,
+    endDate: req.body.endDate
+  };
+}
+
+// If still nothing → skip
+if (incomingSub) {
+  // If user has no subscription → create it
+  if (!user.subscriptions || user.subscriptions.length === 0) {
+    user.subscriptions = [
+      {
+        subscriptionTypes: incomingSub.subscriptionTypes || ["free"],
+        pricingPlan: incomingSub.pricingPlan || "monthly",
+        numberOfOrganizations: incomingSub.numberOfOrganizations || 1,
+        totalSubscriptionAmount: incomingSub.totalSubscriptionAmount || 0,
+        startDate: Date.now(),
+        endDate: incomingSub.endDate || null
+      }
+    ];
+  } 
+  else {
+    // UPDATE EXISTING SUBSCRIPTION (index 0)
+    const oldSub = user.subscriptions[0];
+
+    const typeChanged =
+      incomingSub.subscriptionTypes &&
+      JSON.stringify(incomingSub.subscriptionTypes.sort()) !==
+        JSON.stringify(oldSub.subscriptionTypes.sort());
+
+    const planChanged =
+      incomingSub.pricingPlan &&
+      incomingSub.pricingPlan !== oldSub.pricingPlan;
+
+    const orgChanged =
+      incomingSub.numberOfOrganizations &&
+      incomingSub.numberOfOrganizations !== oldSub.numberOfOrganizations;
+
+    const changed = typeChanged || planChanged || orgChanged;
+
+    if (changed) {
+      if (
+        incomingSub.totalSubscriptionAmount === undefined ||
+        typeof incomingSub.totalSubscriptionAmount !== "number" ||
+        incomingSub.totalSubscriptionAmount < 0
+      ) {
+        return {
+          errorCode: 400,
+          message: "totalSubscriptionAmount_required_when_subscription_changes"
+        };
+      }
+    }
+
+    user.subscriptions[0] = {
+      subscriptionTypes: incomingSub.subscriptionTypes || oldSub.subscriptionTypes,
+      pricingPlan: incomingSub.pricingPlan || oldSub.pricingPlan,
+      numberOfOrganizations:
+        incomingSub.numberOfOrganizations ?? oldSub.numberOfOrganizations,
+      totalSubscriptionAmount:
+        incomingSub.totalSubscriptionAmount ?? oldSub.totalSubscriptionAmount,
+      startDate: oldSub.startDate, // keep original
+      endDate: incomingSub.endDate ?? oldSub.endDate ?? null
+    };
+  }
+}
 
     //if isLoyaltySettingsUpdated then update all club members' tierKey and pointValuePercentage
     //so next time when they earn points it uses correct pointValuePercentage
