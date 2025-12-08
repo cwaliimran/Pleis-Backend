@@ -270,7 +270,9 @@ const getUserGlobalReferrals = async ({
 
     return {
       ...record,
-      userName: userFullName,
+      firstName: userName.firstName,
+      lastName: userName.lastName,
+      userImage: userName.profileIcon,
       referrerUserName,
       remainingReferrals,
       referralLimit,
