@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const { nanoid } = require('nanoid');
 
-// Global Referral Program Schema (admin-controlled)
 const globalReferralSchema = new mongoose.Schema(
   {
     publicId: {
@@ -11,18 +10,49 @@ const globalReferralSchema = new mongoose.Schema(
       default: () => nanoid(),
     },
 
-    rewardAmount: { type: Number, required: true, default: 40 },  // referrer points 
 
-    minimumPurchases: { type: Number, required: true },
-    purchaseThresholdAmount: { type: Number, required: true },
 
-    creator: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // Reference to the User model
+
+
+    // USER POINTS (reward earned by user)
+    userPoints: {
+      type: Number,
       required: true,
     },
 
-    expiryDate: { type: Date, required: true },
+    // REFERRER POINTS (reward earned by referrer)
+    referrerPoints: {
+      type: Number,
+      required: true,
+    },
+
+    // Conditions
+    minimumPurchases: {
+      type: Number,
+      required: true,
+    },
+
+    purchaseThresholdAmount: {
+      type: Number,
+      required: true,
+    },
+
+    // Max allowed referrals
+    referralLimit: {
+      type: Number,
+      default: 10,
+    },
+
+    creator: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    expiryDate: {
+      type: Date,
+      required: true,
+    },
 
     status: {
       type: String,
@@ -36,18 +66,10 @@ const globalReferralSchema = new mongoose.Schema(
       required: true,
     },
 
-    referralLimit: { type: Number, default: 10 },  // Referral limit default to 10
-    referrerPoints: { type: Number, default: 10 },  // Referrer points default to 10
-
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
 
-// Model for the global referral schema
-const GlobalReferral = mongoose.model("GlobalReferral", globalReferralSchema);
-
-module.exports = {
-  GlobalReferral,
-};
+module.exports = mongoose.model("GlobalReferral", globalReferralSchema);

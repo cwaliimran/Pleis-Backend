@@ -11,44 +11,47 @@ const {
 const globalReferralService = require("./globalReferralService");
 
 const createGlobalReferral = async (req, res) => {
-let {
-  rewardAmount,
-  type,
-  minimumPurchases,
-  purchaseThresholdAmount,
-  expiryDate,
-  status,
-} = req.body;
-const userId = req.user._id;
-const timezone = req.user.timezone;
-if (
-  !validateParams(req, res, {
-    rawData: [
-      "rewardAmount", 
-      "type", 
-      "minimumPurchases",
-      "expiryDate",
-      "purchaseThresholdAmount",
-    ],
-  })
-) return;
+  let {
+    userPoints,
+    referrerPoints,
+    minimumPurchases,
+    purchaseThresholdAmount,
+    expiryDate,
+  } = req.body;
 
-  // Timing slots validation
-        expiryDate = convertTimezoneToUtc(
-          expiryDate,
-          timezone,
-        );
+  const userId = req.user._id;
+  const timezone = req.user.timezone;
+
+  // Required fields validation
+  if (
+    !validateParams(req, res, {
+      rawData: [
+        "userPoints",
+        "referrerPoints",
+        "minimumPurchases",
+        "purchaseThresholdAmount"
+      ],
+    })
+  ) return;
+
+  // Convert expiry date to UTC
+  expiryDate = convertTimezoneToUtc(expiryDate, timezone);
+
+  // Prepare data for creation
   let data = {
-    creator:userId,
-rewardAmount,
-  type,
-  minimumPurchases,
-  expiryDate,
-  purchaseThresholdAmount,
-  status,
+    creator: userId,
+    userPoints,
+    referrerPoints,
+    type:"global",
+    minimumPurchases,
+    purchaseThresholdAmount,
+    expiryDate,
+    status:"active",
   };
+
   try {
     const GlobalReferral = await globalReferralService.createGlobalReferral(data);
+
     if (!GlobalReferral) {
       return sendResponse({
         res,
@@ -56,12 +59,14 @@ rewardAmount,
         translationKey: "GlobalReferral_creation_failed",
       });
     }
+
     return sendResponse({
       res,
       statusCode: 201,
       translationKey: "GlobalReferral_created_successfully",
       data: GlobalReferral,
     });
+
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
     return sendResponse({
@@ -72,6 +77,7 @@ rewardAmount,
     });
   }
 };
+
 
 const getGlobalReferrals = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
@@ -113,7 +119,7 @@ const getGlobalReferrals = async (req, res) => {
 const updateGlobalReferral = async (req, res) => {
   const { id, creater } = req.params;
 let {
-  rewardAmount,
+  userPoints,
   minimumPurchases,
   purchaseThresholdAmount,
   referralLimit,
@@ -126,19 +132,18 @@ const timezone = req.user.timezone;
 
   if (
     !validateParams(req, res, {
-      pathParams: ["id","creater"],
-      objectIdFields: ["id","creater"],
+      pathParams: ["id"],
+      objectIdFields: ["id"],
     })
   )
     return;
 
   let data = {
     id,
-    creater,
+    userPoints,
     referralLimit,
     referrerPoints,
     userId,
-rewardAmount,
   minimumPurchases,
   purchaseThresholdAmount,
   expiryDate,

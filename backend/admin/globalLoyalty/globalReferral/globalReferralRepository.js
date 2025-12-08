@@ -1,5 +1,5 @@
 // repositories/ReservationRepository.js
-const {GlobalReferral} = require("@GlobalReferralModel");
+const GlobalReferral = require("@GlobalReferralModel");
 const UserReservations = require("@UserReservationsModel");
 const { User } = require("../../../models/UserModel");
 const Event = require("@EventsModel");
@@ -17,72 +17,28 @@ const {
 } = require("../../../helperUtils/responseUtil");
 const createGlobalReferral = async (data) => {
   try {
-    // Destructure the necessary values from the `data` object
     const { type, status } = data;
-
-    // Check if the referral type is global and status is active
     if (type === "global" && status === "active") {
-      // Check if there's already an active global referral program
-      const existingGlobalReferral = await GlobalReferral.findOne({
+      const existing = await GlobalReferral.findOne({
         type: "global",
         status: "active",
       });
 
-      // If an active global referral program already exists, prevent creation
-      if (existingGlobalReferral) {
-        throw new Error("An active global referral program already exists.");
+      if (existing) {
+        const err = new Error("ACTIVE_GLOBAL_REFERRAL_EXISTS");
+        err.statusCode = 400;
+        throw err;
       }
     }
 
-    // Create the new global referral if no active global referral exists
-    const globalReferral = new GlobalReferral(data);
-
-    // Save the referral program
-    await globalReferral.save();
-
-    // Return the created global referral
+    // Create and save
+    const globalReferral = await GlobalReferral.create(data);
     return globalReferral;
+
   } catch (err) {
-    // Throw any errors that occur during creation
-    throw err;
+    throw err; 
   }
 };
-
-// Get all Reservations with their assigned organization populated, sorted by createdAt descending
-const getReservationsWithFilters = async (query = {}, skip = 0, limit = 10) => {
-  return Reservations.find(query)
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
-};
-
-// Count by condition
-const countReservations = async (query = {}) => {
-  return Reservations.countDocuments(query);
-};
-
-// Find by ID
-const findReservationById = async (id) => {
-  return Reservations.findById(id);
-};
-
-// Update and save
-const updateReservationData = async (Reservation, data) => {
-  Object.assign(Reservation, data);
-  return await Reservation.save();
-};
-
-// Delete
-// const deleteReservationById = async (Reservation) => {
-//   return await Reservation.deleteOne();
-// };
-
-//findByIdAndUpdate
-// const findByIdAndUpdate = async (id, data) => {
-//   return Reservations.findByIdAndUpdate(id, data, { new: true });
-// };
-
-
 
 
 const getGlobalReferrals = async ({ timezone,page, limit, keyword, status, userId, date, range,today,skip, type }) => {
@@ -317,6 +273,8 @@ const getUserGlobalReferrals = async ({
       userName: userFullName,
       referrerUserName,
       remainingReferrals,
+      referralLimit,
+      referrerCount: referrerCountMap[record.referrerUserId]
     };
   });
 
@@ -326,19 +284,17 @@ const getUserGlobalReferrals = async ({
   return { globalReferral, meta };
 };
 
+const findGlobalReferrals = async (filter = {}) => {
+  try {
+    return await GlobalReferral.find(filter);
+  } catch (err) {
+    throw err;
+  }
+};
 
 module.exports = {
   createGlobalReferral,
-  // getReservationsWithFilters,
-  // countReservations,
   findGlobalReferralsById,
-  // updateReservationData,
-  // deleteReservationById,
-  // findByIdAndUpdate,
-  // getReservations,
-  // getUserReservations,
-  // findUserReservationById,
-  // findUserById,
   getGlobalReferrals,
   findByIdAndUpdate,
   getUserGlobalReferrals

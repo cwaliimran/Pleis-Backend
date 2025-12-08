@@ -37,7 +37,7 @@ router.get("/user", roleMiddleware(["admin"]),apiRateLimiter, getUserGlobalRefer
 // // router.get("/:id", apiRateLimiterDetails, getGlobalReferralDetails);
 
 // Update an existing GlobalReferral
-router.put("/:id/:creater", roleMiddleware(["admin"]), updateGlobalReferral);
+router.put("/:id", roleMiddleware(["admin"]), updateGlobalReferral);
 // // cancel user GlobalReferral
 // router.put("/updateStatus/:id/:value", roleMiddleware(["admin"]), updateUserGlobalReferralStatus);
 

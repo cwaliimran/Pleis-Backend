@@ -47,4 +47,5 @@ module.exports = {
         "@GlobalStreaksModel": "backend/commonModules/globalLoyalty/streaks/Streaks.js",
     "@GlobalUsersStreaksModel": "backend/commonModules/globalLoyalty/streaks/UsersStreaks.js",
         "@ThirdPartyModel": "backend/commonModules/globalLoyalty/thirdParty/ThirdParty.js",
+             "@Marketing": "backend/commonModules/marketing/Marketing.js",
 };

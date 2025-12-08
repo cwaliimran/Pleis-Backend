@@ -54,6 +54,8 @@ router.use("/transactions", require("../transactions/transactionsRoutes"));
 router.use("/third-party", require("../thirdParty/thirdPartyRoutes"));
 // thirdPParty
 router.use("/referrals", require("../globalLoyalty/globalReferral/globalReferralRoutes"));
+// thirdPParty
+router.use("/marketing", require("../marketing/marketingRoutes"));
 
 
 module.exports = router;
