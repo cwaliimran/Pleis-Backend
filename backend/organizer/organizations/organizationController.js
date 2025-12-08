@@ -348,6 +348,41 @@ const getOrganizationDetails = async (req, res) => {
   });
 };
 
+const getOrganizationsAsStaff = async (req, res) => {
+  let { _id, timezone } = req.user;
+  try {
+    let organizations = await organizationService.getOrganizationsAsStaff(_id);
+
+    // Transform to local time safely
+    organizations = organizations.map((org) => {
+      const orgObj = org.toObject ? org.toObject() : org;
+
+      if (orgObj.operatingHours) {
+        orgObj.operatingHours = transformOperatingHoursToLocal(
+          orgObj.operatingHours,
+          timezone
+        );
+      }
+
+      return orgObj;
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "organizations_fetched_successfully",
+      data: organizations,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+}
+
 module.exports = {
   createOrganization,
   getOrganizations,
@@ -356,4 +391,5 @@ module.exports = {
   updateOrganization,
   deleteOrganization,
   getOrganizationsAdmin,
+  getOrganizationsAsStaff
 };

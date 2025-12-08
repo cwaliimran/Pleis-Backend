@@ -145,6 +145,8 @@
       ],
       "@Marketing": [
         "backend/commonModules/marketing/Marketing.js"
+      "@UserCompanyLoyaltyWalletTransactionsModel": [
+        "backend/commonModules/wallet/UserCompanyLoyaltyWalletTransactions.js"
       ]
     }
   },

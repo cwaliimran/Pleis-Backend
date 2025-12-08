@@ -12,6 +12,7 @@ const { validatePhoneNumber } = require("../../helperUtils/validationsUtil");
 const { accountStatusEmailTemplate } = require("../../helperUtils/emailTemplates");
 const { sendEmailViaMailgun } = require("../../helperUtils/emailUtil");
 const { createOrSkipDevice } = require("../../models/Devices");
+const { updateCompanyLoyaltySettings } = require("../../app/loyalty/clubMembers/clubMembersRepository");
 
 const APP_NAME = "Pleis App";
 
@@ -256,6 +257,17 @@ const updateUser = async (req, res, options = {}) => {
       user.organizationName = organizationName;
     }
 
+    let isLoyaltySettingsUpdated = false;
+    // Check if companyDetails.loyaltySettings is updated
+    if (userType === "organizer" && companyDetails && companyDetails.loyaltySettings) {
+      const newLoyaltySettings = companyDetails.loyaltySettings;
+      if (
+        newLoyaltySettings.model !== undefined ||
+        newLoyaltySettings.pointValuePercentage !== undefined
+      ) {
+        isLoyaltySettingsUpdated = true;
+      }
+    }
     // Update company details for organizer
     if (userType === "organizer" && companyDetails) {
       user.companyDetails = {
@@ -266,12 +278,32 @@ const updateUser = async (req, res, options = {}) => {
         location: companyDetails.location ?? user.companyDetails?.location,
         suppliers: companyDetails.suppliers ?? user.companyDetails?.suppliers,
 
-        //update loyaltySettings if provided
+        // update loyaltySettings if provided
         loyaltySettings: {
           title: companyDetails.loyaltySettings?.title ?? user.companyDetails?.loyaltySettings?.title ?? "",
           model: companyDetails.loyaltySettings?.model ?? user.companyDetails?.loyaltySettings?.model ?? "essential",
-          pointValuePercentage: companyDetails.loyaltySettings?.pointValuePercentage ?? user.companyDetails?.loyaltySettings?.pointValuePercentage ?? 0
-        }
+          pointValuePercentage: companyDetails.loyaltySettings?.pointValuePercentage ?? user.companyDetails?.loyaltySettings?.pointValuePercentage ?? 0,
+          linkedClubs: companyDetails.loyaltySettings?.linkedClubs ?? user.companyDetails?.loyaltySettings?.linkedClubs ?? [],
+        },
+
+        // update inAppOrderingSettings if provided
+        inAppOrderingSettings: {
+          paymentMethods: {
+            instantPayment: companyDetails.inAppOrderingSettings?.paymentMethods?.instantPayment ?? user.companyDetails?.inAppOrderingSettings?.paymentMethods?.instantPayment ?? false,
+            payLater: {
+              allow: companyDetails.inAppOrderingSettings?.paymentMethods?.payLater?.allow ?? user.companyDetails?.inAppOrderingSettings?.paymentMethods?.payLater?.allow ?? false,
+              enableOrderAcceptance: companyDetails.inAppOrderingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ?? user.companyDetails?.inAppOrderingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ?? false,
+              chargeOnAcceptance: companyDetails.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ?? user.companyDetails?.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ?? false,
+              chargeOnDelivery: companyDetails.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnDelivery ?? user.companyDetails?.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnDelivery ?? false,
+            },
+            cashPayment: companyDetails.inAppOrderingSettings?.paymentMethods?.cashPayment ?? user.companyDetails?.inAppOrderingSettings?.paymentMethods?.cashPayment ?? false,
+          },
+          deliveryMethods: {
+            counterPickup: companyDetails.inAppOrderingSettings?.deliveryMethods?.counterPickup ?? user.companyDetails?.inAppOrderingSettings?.deliveryMethods?.counterPickup ?? true,
+            tableDelivery: companyDetails.inAppOrderingSettings?.deliveryMethods?.tableDelivery ?? user.companyDetails?.inAppOrderingSettings?.deliveryMethods?.tableDelivery ?? false,
+            toGo: companyDetails.inAppOrderingSettings?.deliveryMethods?.toGo ?? user.companyDetails?.inAppOrderingSettings?.deliveryMethods?.toGo ?? false,
+          },
+        },
       };
 
       if (user.companyDetails.loyaltySettings.title === "") {
@@ -279,6 +311,14 @@ const updateUser = async (req, res, options = {}) => {
       }
     }
 
+
+    //if isLoyaltySettingsUpdated then update all club members' tierKey and pointValuePercentage
+    //so next time when they earn points it uses correct pointValuePercentage
+    if (isLoyaltySettingsUpdated) {
+      const tierKey = user.companyDetails.loyaltySettings.model;
+      const pointValuePercentage = user.companyDetails.loyaltySettings.pointValuePercentage;
+      await updateCompanyLoyaltySettings(user._id, tierKey, pointValuePercentage);
+    }
 
 
 

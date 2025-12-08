@@ -1,7 +1,7 @@
 const { UserGlobalWallet } = require("@UserGlobalWalletModel");
-const { getFirstStatusLevel, getNextStatusLevel, getPreviousStatusLevelByRetainPoints } = require("../../../admin/globalLoyalty/statusLevels/statusLevelsRepository");
+const { getFirstStatusLevel, getNextStatusLevel, getPreviousStatusLevelByRetainPoints, getPreviousStatusLevel } = require("../../../../admin/globalLoyalty/statusLevels/statusLevelsRepository");
 const { GlobalWalletTransactions } = require("@GlobalWalletTransactionsModel");
-const StatusLevels = require("../../../admin/globalLoyalty/statusLevels/StatusLevels");
+const StatusLevels = require("../../../../admin/globalLoyalty/statusLevels/StatusLevels");
 const { default: mongoose } = require("mongoose");
 
 const createUserWallet = async (user) => {
@@ -36,8 +36,6 @@ const createUserWallet = async (user) => {
 
 const getUserWallet = async (user) => {
     if (!user) throw new Error("User is required");
-    checkDemotion(user);
-
     const userId = typeof user === "string" ? user : (user._id || user.id);
     if (!userId) throw new Error("Invalid user provided");
 
@@ -202,6 +200,7 @@ const checkPromotion = async (userId) => {
 
 
 
+// TODO : implement demotion check via cron job
 const checkDemotion = async (userId) => {
     // 1. Earned last 12 months
     const agg = await GlobalWalletTransactions.aggregate([
@@ -224,7 +223,7 @@ const checkDemotion = async (userId) => {
     if (!wallet || !currentLevel) return;
     // 3. If user didn't meet retainPoints → find correct fallback level
     if (earned12Months < currentLevel?.retainPoints) {
-        const fallback = await getPreviousStatusLevelByRetainPoints(earned12Months);
+        const fallback = await getPreviousStatusLevel(earned12Months);
 
         if (fallback && fallback._id.toString() !== currentLevel._id.toString()) {
             await UserGlobalWallet.updateOne(

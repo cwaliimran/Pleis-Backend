@@ -79,7 +79,41 @@ const getChallengeDetails = async (id) => {
   return await challengeRepo.findChallengeById(id);
 };
 
+const getChallengesByCompanyOrganizerService = async ({
+  page,
+  limit,
+  timezone,
+  companyOrganizer,
+}) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const now = getCurrentDateInTimezone({ timezone });
+
+  // 1️⃣ & 2️⃣ Fetch challenges and count in parallel
+  const [challenges, totalFiltered] = await Promise.all([
+    challengeRepo.getChallengesByCompanyOrganizer({
+      skip,
+      limit,
+      companyOrganizer,
+      now,
+    }),
+    challengeRepo.countChallenges({
+      status: "active",
+      companyOrganizer,
+      endDate: { $gte: now },
+    }),
+  ]);
+
+  // 3️⃣ meta
+  const meta = generateMeta(page, limit, totalFiltered);
+
+  // 4️⃣ formatted output
+  const formattedChallenges = challenges.map(ch => formatChallenge(ch, timezone));
+
+  return { challenges: formattedChallenges, meta };
+};
+
 module.exports = {
+  getChallengesByCompanyOrganizerService,
   getChallenges,
   getChallengeDetails,
 };

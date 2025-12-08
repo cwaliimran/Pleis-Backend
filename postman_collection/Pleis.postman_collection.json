@@ -330,7 +330,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"email\": \"{{emailUser}}\",\n    \"password\": \"{{passwordUser}}\",\n    \"userType\": \"user\", //user, organizer, admin, manager\n    \"deviceType\": \"android\", //andoird/ios\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
+											"raw": "{\n    \"email\": \"{{emailUser}}\",\n    \"password\": \"{{passwordUser}}\",\n    \"userType\": \"user\", //user, organizer, admin, manager, guest\n    \"deviceType\": \"android\", //andoird/ios\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -2368,7 +2368,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}app/events/filter?page=1&limit=10&latitude=31.5023621&longitude=74.426454",
+									"raw": "{{url}}app/events/filter?page=1&limit=10&latitude=31.5023621&longitude=74.426454&keyword=Desc",
 									"host": [
 										"{{url}}app"
 									],
@@ -2395,8 +2395,7 @@
 										},
 										{
 											"key": "keyword",
-											"value": "Islamabad Tech Summit 2025",
-											"disabled": true
+											"value": "Desc"
 										}
 									]
 								}
@@ -3771,6 +3770,123 @@
 									"response": []
 								},
 								{
+									"name": "joined clubs",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/loyalty/club/joined-clubs",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"loyalty",
+												"club",
+												"joined-clubs"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "company wallet",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/loyalty/club/wallet/:companyOrganizer",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"loyalty",
+												"club",
+												"wallet",
+												":companyOrganizer"
+											],
+											"variable": [
+												{
+													"key": "companyOrganizer",
+													"value": "6911c14b6fc7cbd864e745b6"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
 									"name": "leave",
 									"event": [
 										{
@@ -3801,7 +3917,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"companyOrganizer\": \"6911cc376aca10eb719d7322\"\n}",
+											"raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -3907,6 +4023,117 @@
 													"value": "",
 													"disabled": true
 												}
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Transactions",
+							"item": [
+								{
+									"name": "add",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"user\": \"6911ba17dd162801ff9b35d9\",\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"type\": \"earn\",\n    \"objectType\": \"challenge\",\n    \"objectId\": \"6911ba17dd162801ff9b35d8\", //optional\n    \"points\": { \"base\": 50, \"multiplier\": 2, \"total\": 100 },\n    \"closingBalance\":100,\n    \"description\": \"Points Checkin to cafe\"\n  }",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/loyalty/wallet-transactions",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"loyalty",
+												"wallet-transactions"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/loyalty/wallet-transactions",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"loyalty",
+												"wallet-transactions"
 											]
 										}
 									},
@@ -5445,7 +5672,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"user\": \"6911ba17dd162801ff9b35d9\",\n    \"type\": \"earn\",\n    \"objectType\": \"challenge\",\n    \"objectId\": \"6911ba17dd162801ff9b35d8\", //optional\n    \"points\": { \"base\": 50, \"multiplier\": 2, \"total\": 50 },\n    \"closingBalance\":50,\n    \"description\": \"Points Checkin to cafe\"\n  }",
+											"raw": "{\n    \"user\": \"6911ba17dd162801ff9b35d9\",\n    \"type\": \"earn\",\n    \"objectType\": \"challenge\",\n    \"objectId\": \"6911ba17dd162801ff9b35d8\", //optional\n    \"points\": { \"base\": 50, \"multiplier\": 2, \"total\": 900 },\n    \"closingBalance\":900,\n    \"description\": \"Points Checkin to cafe\"\n  }",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -9692,7 +9919,8 @@
 									"});"
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						},
 						{
@@ -9702,7 +9930,8 @@
 									""
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],
@@ -9711,7 +9940,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\": \"jadon67@example.com\",\n    \"password\": \"{{passwordStaff}}\",\n    \"userType\": \"staff\",\n    \"deviceType\": \"android\", //andoird/ios\n    \"deviceId\": \"1234\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
+							"raw": "{\n    \"email\": \"johnathon42@example.net\",\n    \"password\": \"{{passwordStaff}}\",\n    \"userType\": \"staff\",\n    \"deviceType\": \"android\", //andoird/ios\n    \"deviceId\": \"1234\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -9805,7 +10034,8 @@
 									""
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						},
 						{
@@ -9815,7 +10045,8 @@
 									""
 								],
 								"type": "text/javascript",
-								"packages": {}
+								"packages": {},
+								"requests": {}
 							}
 						}
 					],
@@ -9835,32 +10066,13 @@
 							}
 						},
 						"url": {
-							"raw": "{{url}}organizations/?page=1&limit=10",
+							"raw": "{{url}}staff/organizations/",
 							"host": [
-								"{{url}}organizations"
+								"{{url}}staff"
 							],
 							"path": [
+								"organizations",
 								""
-							],
-							"query": [
-								{
-									"key": "page",
-									"value": "1"
-								},
-								{
-									"key": "limit",
-									"value": "10"
-								},
-								{
-									"key": "date",
-									"value": "2025-09-02",
-									"disabled": true
-								},
-								{
-									"key": "keyword",
-									"value": "Big hall",
-									"disabled": true
-								}
 							]
 						}
 					},
@@ -16075,7 +16287,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"image\": \"a4dda067-f862-4aeb-9244-4833922bf54d.png\",\n  \"title\": \"Gold Tier\",\n  \"bonusPointsPerEuro\": 1.5,\n  \"essential\": {\n    \"entryPoints\": 1000,\n    \"retainPoints\": 800\n  },\n  \"preferred\": {\n    \"entryPoints\": 5000,\n    \"retainPoints\": 4000\n  },\n  \"premier\": {\n    \"entryPoints\": 10000,\n    \"retainPoints\": 8000\n  },\n  \"status\": \"active\"\n}\n",
+									"raw": "{\n  \"image\": \"a4dda067-f862-4aeb-9244-4833922bf54d.png\"\n//   ,\n//   \"title\": \"Gold Tier\",\n//   \"bonusPointsPerEuro\": 1.5,\n//   \"essential\": {\n//     \"entryPoints\": 1000,\n//     \"retainPoints\": 800\n//   },\n//   \"preferred\": {\n//     \"entryPoints\": 5000,\n//     \"retainPoints\": 4000\n//   },\n//   \"premier\": {\n//     \"entryPoints\": 10000,\n//     \"retainPoints\": 8000\n//   },\n//   \"status\": \"active\"\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -16094,7 +16306,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "690b3bbccce30d936155fab2"
+											"value": "6911c41f6aca10eb719d6fc7"
 										}
 									]
 								},
@@ -17533,7 +17745,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -17568,7 +17781,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -17577,7 +17791,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"{{$randomUserName}}\",\n    \"email\": \"{{$randomExampleEmail}}\",\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122104\"\n    },\n    \"password\": \"123456\",\n    \"userType\": \"staff\",\n    \"organizations\":[\"68b11b3dda9c956a543970ab\",\"68932a0dce6408026b883458\"],\n    \"modules\":[\"inAppOrdering\",\"reservationManagement\",\"loyaltyScanning\",\"ticketing\"]\n}",
+									"raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"{{$randomUserName}}\",\n    \"email\": \"{{$randomExampleEmail}}\",\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122104\"\n    },\n    \"password\": \"123456\",\n    \"userType\": \"staff\",\n    \"organizations\":[\"6911ccb36aca10eb719d7358\"],\n    \"modules\":[\"inAppOrdering\",\"reservationManagement\",\"loyaltyScanning\",\"ticketing\"]\n}",
 									"options": {
 										"raw": {
 											"language": "json"

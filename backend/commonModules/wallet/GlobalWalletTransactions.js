@@ -7,6 +7,16 @@ const globalWalletTransactionSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    companyOrganizer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    organization: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organizations",
+      default: null,
+    },
     // -----------------------------
     // TYPE OF TRANSACTION
     // -----------------------------

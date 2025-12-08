@@ -407,17 +407,6 @@ const getUserInterestsByUserId = async (userId) => {
   return await userRepo.getUserInterestsByUserId(userId);
 };
 
-/* const getLoyaltyClubs = async () => {
-  const clubs = await Users.find({
-    status: "active",
-    //organizer
-    "loyaltySettings.model": { $ne: "none" }
-  }).select("name loyaltySettings");
-
-  return clubs;
-};
- */
-
 module.exports = {
   getAllUsers,
   getStaff,
