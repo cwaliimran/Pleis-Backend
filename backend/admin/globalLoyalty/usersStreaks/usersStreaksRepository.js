@@ -1,6 +1,7 @@
 // repositories/usersStreakRepository.js
 const UsersStreaks = require("@UsersStreaksModel");
 const { getModelCounts } = require("@dbUtils/queryUtil");
+const  Organizations  = require('@OrganizationModel');
 
 // Create
 // Create usersStreak and automatically assign next order
@@ -23,6 +24,7 @@ const getUsersStreaksWithFilters = async (
   }).sort(sort).lean();
 
   if (selectFields) query.select(selectFields); // apply select dynamically
+  
   if (limit > 0) query.skip(skip).limit(limit);
 
   return query.exec();
@@ -58,6 +60,46 @@ const findByIdAndUpdate = async (id, data) => {
   return UsersStreaks.findByIdAndUpdate(id, data, { new: true }).populate('user').populate('companyOrganizer');
 };
 
+
+
+
+
+
+const attachOrganizationDetailsToStreaks = async (streaks) => {
+  if (!streaks || streaks.length === 0) return [];
+
+  const organizerIds = [...new Set(streaks.map(s => s.companyOrganizer?.toString()))];
+
+  const organizers = await Organizations.find(
+    { creator: { $in: organizerIds } },
+    'creator basicInfo.name basicInfo.media.logo'
+  ).lean();
+
+  const organizerMap = {};
+  organizers.forEach(org => {
+    organizerMap[org.creator?.toString()] = {
+      name: org.basicInfo?.name || '',
+      logo: org.basicInfo?.media?.logo || ''
+    };
+  });
+
+  return streaks.map(streak => {
+    const orgId = streak.companyOrganizer?.toString();
+    const orgDetails = organizerMap[orgId] || { name: '', logo: '' };
+
+    return {
+      ...streak,
+      organizationName: orgDetails.name,
+      organizationLogo: orgDetails.logo
+    };
+  });
+};
+
+
+
+
+
+
 module.exports = {
   createUsersStreak,
   getUsersStreaksWithFilters,
@@ -67,4 +109,5 @@ module.exports = {
   deleteUsersStreakById,
   findByIdAndUpdate,
   getUsersStreaksCounts,
+  attachOrganizationDetailsToStreaks
 };

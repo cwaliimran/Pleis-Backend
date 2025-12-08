@@ -38,7 +38,6 @@ const create = async (data) => {
 
 
 const getWithFilters = async (query, skip = 0, limit = 20) => {
-  // Build aggregation pipeline
   const pipeline = [
     { $match: query },
     { $sort: { createdAt: -1 } },
@@ -47,68 +46,46 @@ const getWithFilters = async (query, skip = 0, limit = 20) => {
 
   if (limit > 0) pipeline.push({ $limit: limit });
 
-  // --- Lookup reward (for claimPromotion) ---
+  // Reward lookup for globalClaimPromotion
   pipeline.push({
     $lookup: {
-      from: "rewards",
+      from: "globalrewards",
       localField: "reward",
       foreignField: "_id",
-      as: "reward",
-    },
+      as: "reward"
+    }
   });
 
-  // --- Lookup menuItem (for buyMenuItemPromotion and productSale) ---
+  // Menu item
   pipeline.push({
     $lookup: {
       from: "menuitems",
       localField: "menuItem",
       foreignField: "_id",
-      as: "menuItem",
-    },
+      as: "menuItem"
+    }
   });
 
-  // --- Lookup tierLimit (populate tier title and image) ---
+  // Tier limit
   pipeline.push({
     $lookup: {
       from: "tiers",
       localField: "tierLimit",
       foreignField: "_id",
-      as: "tierLimit",
-      pipeline: [
-        { $project: { _id: 1, title: 1, } }
-      ]
+      as: "tierLimit"
     }
   });
 
-  // --- Conditionally include the correct populated field based on promotionType ---
+  // Flatten arrays (always return full data)
   pipeline.push({
     $addFields: {
-      reward: {
-        $cond: [
-          { $eq: ["$promotionType", "claimPromotion"] },
-          { $arrayElemAt: ["$reward", 0] },
-          null,
-        ],
-      },
-      menuItem: {
-        $cond: [
-          { $in: ["$promotionType", ["buyMenuItemPromotion", "productSale"]] },
-          { $arrayElemAt: ["$menuItem", 0] },
-          null,
-        ],
-      },
-      tierLimit: {
-        $cond: [
-          { $ne: ["$tierLimit", []] },
-          { $arrayElemAt: ["$tierLimit", 0] },
-          null,
-        ],
-      },
-    },
+      reward: { $arrayElemAt: ["$reward", 0] },
+      menuItem: { $arrayElemAt: ["$menuItem", 0] },
+      tierLimit: { $arrayElemAt: ["$tierLimit", 0] },
+    }
   });
 
-  const results = await GlobalBasePromotion.aggregate(pipeline).allowDiskUse(true);
-  return results;
+  return await GlobalBasePromotion.aggregate(pipeline).allowDiskUse(true);
 };
 
 module.exports = {

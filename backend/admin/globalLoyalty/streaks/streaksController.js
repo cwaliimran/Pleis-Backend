@@ -40,18 +40,11 @@ const createStreak = async (req, res) => {
 
 const getStreaks = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, orderSort, companyOrganizer } = req.query;
+  const { keyword, status, date, orderSort } = req.query;
 
   try {
 
-    //companyOrganizer is required to filter for specific company
-    if (!companyOrganizer) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "company_organizer_is_required",
-      });
-    }
+
 
     if (date && !validateParams(req, res, {
       dateFields: {
@@ -60,7 +53,7 @@ const getStreaks = async (req, res) => {
     })) return;
 
     const { streaks, meta } = await streaksService.getStreaks({
-      companyOrganizer,
+
       page,
       limit,
       keyword,

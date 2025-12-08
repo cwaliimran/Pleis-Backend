@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-
+const { nanoid } = require("nanoid");
 const globalWalletTransactionSchema = new mongoose.Schema(
   {
     user: {
@@ -25,6 +25,12 @@ const globalWalletTransactionSchema = new mongoose.Schema(
       enum: ["earn", "redeem", "adjustment"],
       required: true,
     },
+      publicId: {
+        type: String,
+        unique: true,
+        index: true,
+        default: () => nanoid(),
+      },
 
     // -----------------------------
     // SOURCE OF THE POINTS

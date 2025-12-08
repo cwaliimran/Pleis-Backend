@@ -46,10 +46,16 @@ router.use("/bundles", require("../bundles/bundleRoutes"));
 
 //Promo Codes
 router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));
-//Promo Codes
-router.use("/global-referral", require("../globalReferral/globalReferralRoutes"));
+
 // transactions
 router.use("/transactions", require("../transactions/transactionsRoutes"));
+
+// thirdPParty
+router.use("/third-party", require("../thirdParty/thirdPartyRoutes"));
+// thirdPParty
+router.use("/referrals", require("../globalLoyalty/globalReferral/globalReferralRoutes"));
+// thirdPParty
+router.use("/marketing", require("../marketing/marketingRoutes"));
 
 
 module.exports = router;

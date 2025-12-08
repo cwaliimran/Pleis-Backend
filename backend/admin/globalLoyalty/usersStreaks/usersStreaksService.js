@@ -10,13 +10,8 @@ const createUsersStreak = async ({ user, companyOrganizer, visits = 0, points = 
 
 const getUsersStreaks = async ({ companyOrganizer, page, limit, keyword, status, date, orderSort = "asc" }) => {
   const query = {
-    companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer)
+
   };
-
-  //Filter by status
-  // query.status = status ? status : { $ne: "deleted" };
-
-  //Date filter (format: yyyy-mm-dd)
   if (date) {
     query.createdAt = {
       $gte: new Date(date),
@@ -37,7 +32,8 @@ const getUsersStreaks = async ({ companyOrganizer, page, limit, keyword, status,
     usersStreakRepo.getUsersStreaksWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
     usersStreakRepo.getUsersStreaksCounts(query),
   ]);
-
+  UsersStreaks = await usersStreakRepo.attachOrganizationDetailsToStreaks(UsersStreaks);
+console.log("UsersStreaks",UsersStreaks );
   const { totalFiltered, total, active, inactive } = getUsersStreaksCounts;
   const meta = generateMeta(page, limit, totalFiltered);
   meta.UsersStreaksCount = { total, active, inactive };

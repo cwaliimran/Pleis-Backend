@@ -6,6 +6,8 @@ const {
   generateMeta,
   getReadableErrorMessage,
   convertTimezoneToUtc,
+  convertTimezoneToUtcDateOnly,
+  convertToUtcDateOnly,
 } = require("../../helperUtils/responseUtil");
 
 const reservationService = require("./reservationService");
@@ -29,6 +31,7 @@ const createReservation = async (req, res) => {
 
   const userId = req.user._id;
   const timezone = req.user.timezone;
+
   if (conditionType === "minimumSpendOnLocation") {
     if (!amount && !customText) {
       return sendResponse({
@@ -38,6 +41,7 @@ const createReservation = async (req, res) => {
       });
     }
   }
+
   if (
     !validateParams(req, res, {
       rawData: [
@@ -51,6 +55,7 @@ const createReservation = async (req, res) => {
       ],
     })
   ) return;
+
   if (conditionType == "fixedPrice" || conditionType == "prepayOption") {
     if (
       !validateParams(req, res, {
@@ -68,6 +73,7 @@ const createReservation = async (req, res) => {
       })
     ) return;
   }
+
   // Timing slots validation
   if (timingSlots?.enabled === true) {
     const slots = timingSlots.dateTimeSlots || [];
@@ -80,7 +86,7 @@ const createReservation = async (req, res) => {
       });
     }
 
-    // Validate and convert each date/time
+    // Validate and convert each date/time slot
     for (const dateBlock of slots) {
       if (!dateBlock.date) {
         return sendResponse({
@@ -98,63 +104,45 @@ const createReservation = async (req, res) => {
         });
       }
 
+      // Convert the date to UTC (midnight) for each dateBlock
+      const dateUtc = convertTimezoneToUtcDateOnly(dateBlock.date, timezone);
+
+      // Loop over each time slot and convert start/end times to UTC
       for (const slot of dateBlock.timeSlots) {
-        if (!slot.startTime || !slot.endTime) {
+        // 1️⃣ Convert startTime and endTime to UTC using provided timezone
+        if (slot.startTime && slot.endTime) {
+          const startUtc = convertTimezoneToUtc(
+            `${dateBlock.date} ${slot.startTime}`,
+            timezone,
+            "YYYY-MM-DDTHH:mm:ss.SSSZ hh:mm A"
+          );
+
+          const endUtc = convertTimezoneToUtc(
+            `${dateBlock.date} ${slot.endTime}`,
+            timezone,
+            "YYYY-MM-DDTHH:mm:ss.SSSZ hh:mm A"
+          );
+
+          // 2️⃣ Replace startTime and endTime with the UTC converted values
+          slot.startTime = startUtc;
+          slot.endTime = endUtc;
+        } else {
           return sendResponse({
             res,
             statusCode: 400,
             translationKey: "invalid_start_or_end_time_in_slot",
           });
         }
-
-        // Convert to UTC DateTime strings
-        const startUtc = convertTimezoneToUtc(
-          `${dateBlock.date} ${slot.startTime}`,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-        const endUtc = convertTimezoneToUtc(
-          `${dateBlock.date} ${slot.endTime}`,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-
-        // Replace in object
-        slot.startTime = startUtc;
-        slot.endTime = endUtc;
       }
-    }
-  } else {
-    //don't check for empty array if timingSlots is disabled only apply format conversion
-    const slots = timingSlots.dateTimeSlots || [];
-    for (const dateBlock of slots) {
-      if (!dateBlock.date) continue;
 
-      for (const slot of dateBlock.timeSlots) {
-        if (!slot.startTime || !slot.endTime) continue;
-
-        // Convert to UTC DateTime strings
-        const startUtc = convertTimezoneToUtc(
-          `${dateBlock.date} ${slot.startTime}`,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-        const endUtc = convertTimezoneToUtc(
-          `${dateBlock.date} ${slot.endTime}`,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-
-        // Replace in object
-        slot.startTime = startUtc;
-        slot.endTime = endUtc;
-      }
+      // Replace the date with UTC date (adjusted for timezone)
+      dateBlock.date = convertToUtcDateOnly(dateBlock.date, timezone);
+      console.log("dateBlock.date",dateBlock.date );
     }
   }
 
   let data = {
     userId,
-    // companyOrganizer:userId,
     reservationType,
     availableReservations,
     maxCapacityPerReservation,
@@ -169,6 +157,7 @@ const createReservation = async (req, res) => {
     organizationId,
     timingSlots: timingSlots || { enabled: false, dateTimeSlots: [] },
   };
+
   try {
     const Reservation = await reservationService.createReservation(data);
     if (!Reservation) {
@@ -195,7 +184,8 @@ const createReservation = async (req, res) => {
   }
 };
 
-const getReservations = async (req, res) => {
+
+const getavailableReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status = "active", date, range, organizationsId, companyOrganizer } = req.query;
   try {
@@ -212,7 +202,7 @@ const getReservations = async (req, res) => {
 
     const userId = companyOrganizer;
     const timezone = req.user.timezone;
-    const { reservations, meta } = await reservationService.getReservations({
+    const { reservations, meta } = await reservationService.getavailableReservations({
       timezone,
       page,
       limit,
@@ -488,7 +478,7 @@ const deleteReservation = async (req, res) => {
 const getUserReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status = "active", date, range, organizationsId, companyOrganizer, reservationStatus = "pending", reservationId } = req.query;
-  
+
   try {
     if (
       (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
@@ -731,6 +721,58 @@ const updateUserReservation = async (req, res) => {
 };
 
 
+const getReservations = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let { keyword, status = "active", date, range, organizationsId, companyOrganizer } = req.query;
+  try {
+    if (
+      (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
+      (!organizationsId || !Array.isArray(JSON.parse(organizationsId)) || JSON.parse(organizationsId).length === 0)
+    ) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "companyOrganizer_or_organizationsId_is_required",
+      });
+    }
+
+    const userId = companyOrganizer;
+    const timezone = req.user.timezone;
+    console.log("date",date );
+//  date = convertTimezoneToUtcDateOnly(
+//     date,
+//     timezone
+//   );
+    const { reservations, meta } = await reservationService.getavailableReservations({
+      timezone,
+      page,
+      limit,
+      keyword,
+      status,
+      userId,
+      organizationsId,
+      date,
+      range
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "reservations_fetched_successfully",
+      data: reservations,
+      meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
 
 module.exports = {
   createReservation,
@@ -741,4 +783,5 @@ module.exports = {
   getUserReservations,
   updateUserReservationStatus,
   updateUserReservation,
+  getavailableReservations
 };

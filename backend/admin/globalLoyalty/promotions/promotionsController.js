@@ -12,97 +12,112 @@ const create = async (req, res) => {
   let { timezone } = req.user;
   let recurringDetails = req.body?.recurringDetails || {};
 
-  var dateFields = {}
-  var rawData = ["image", "title", "promotionType", "startDate", "endDate", "companyOrganizer"]
-  var objectIdFields = ["companyOrganizer"]
+  let dateFields = {};
+  let rawData = ["image", "title", "promotionType", "startDate", "endDate"];
+  let objectIdFields = [];
 
+  // ---------------- PROMOTION TYPE RULES ----------------
+
+  // HAPPY HOUR
   if (req.body.promotionType === "happyHour") {
-    dateFields.startDate = "YYYY-MM-DD hh:mm A"
-    dateFields.endDate = "YYYY-MM-DD hh:mm A"
-    rawData.push("pointsMultiplier")
+    req.body.globalPromotionType = "globalHappyHour"; // discriminator
+    dateFields.startDate = "YYYY-MM-DD hh:mm A";
+    dateFields.endDate = "YYYY-MM-DD hh:mm A";
+    rawData.push("pointsMultiplier");
   }
+
+  // BUY MENU ITEM
   if (req.body.promotionType === "buyMenuItemPromotion") {
-    dateFields.startDate = "YYYY-MM-DD"
-    dateFields.endDate = "YYYY-MM-DD"
-    rawData.push("menuItem", "extraPoints")
-    objectIdFields.push("menuItem")
+    req.body.globalPromotionType = "buyMenuItemPromotion";
+    dateFields.startDate = "YYYY-MM-DD";
+    dateFields.endDate = "YYYY-MM-DD";
+    rawData.push("menuItem", "extraPoints");
+    objectIdFields.push("menuItem");
   }
+
+  // PRODUCT SALE
   if (req.body.promotionType === "productSale") {
-    dateFields.startDate = "YYYY-MM-DD"
-    dateFields.endDate = "YYYY-MM-DD"
-    rawData.push("menuItem", "discountedPrice")
-    objectIdFields.push("menuItem")
+    req.body.globalPromotionType = "productSale";
+    dateFields.startDate = "YYYY-MM-DD";
+    dateFields.endDate = "YYYY-MM-DD";
+    rawData.push("menuItem", "discountedPrice");
+    objectIdFields.push("menuItem");
   }
+
+  // CLAIM PROMOTION
   if (req.body.promotionType === "claimPromotion") {
-    dateFields.startDate = "YYYY-MM-DD"
-    dateFields.endDate = "YYYY-MM-DD"
-    rawData.push("reward", "claimPoints")
-    objectIdFields.push("reward")
+    req.body.promotionType = "claimPromotion";
+    req.body.globalPromotionType = "globalClaimPromotion"; // discriminator
+    dateFields.startDate = "YYYY-MM-DD";
+    dateFields.endDate = "YYYY-MM-DD";
+    rawData.push("reward", "claimPoints");
+    objectIdFields.push("reward");
   }
 
-  if (!validateParams(req, res, {
-    rawData,
-    dateFields,
-    objectIdFields
-  })) return;
+  // ---------------- VALIDATION ----------------
+  if (!validateParams(req, res, { rawData, dateFields, objectIdFields })) return;
 
-
-  let validateData = {
-    rawData: [],
-    dateFields: {},
-  };
+  let recurringValidate = { rawData: [], dateFields: {} };
 
   if (recurringDetails?.isEnabled) {
+    recurringValidate.rawData.push(
+      "recurringDetails",
+      "recurringDetails.frequency",
+      "recurringDetails.interval",
+      "recurringDetails.endType"
+    );
 
-    validateData.rawData.push("recurringDetails");
-    validateData.rawData.push("recurringDetails.frequency");
-    validateData.rawData.push("recurringDetails.interval");
-    validateData.rawData.push("recurringDetails.endType");
-
-    // Conditional validation based on endType
     if (recurringDetails.endType === "onDate") {
-      validateData.dateFields["recurringDetails.endDate"] = "YYYY-MM-DD";
+      recurringValidate.dateFields["recurringDetails.endDate"] = "YYYY-MM-DD";
     }
 
-    // Validate daysOfWeek if frequency is weekly or monthly
     if (["weekly", "monthly"].includes(recurringDetails.frequency)) {
-      validateData.rawData.push("recurringDetails.daysOfWeek");
+      recurringValidate.rawData.push("recurringDetails.daysOfWeek");
     }
   }
 
-  if (!validateParams(req, res, validateData)) return;
-
+  if (!validateParams(req, res, recurringValidate)) return;
 
   try {
+    // ---------------- DATE CONVERSION ----------------
 
-    if (req.body.promotionType === "happyHour") {
-      //convert to utc
-      if (req.body.startDate) {
-        req.body.startDate = convertTimezoneToUtc(req.body.startDate, req.user.timezone, "YYYY-MM-DD hh:mm A");
-      }
-      if (req.body.endDate) {
-        req.body.endDate = convertTimezoneToUtc(req.body.endDate, req.user.timezone, "YYYY-MM-DD hh:mm A");
-      }
-    } else {
-      //convert to utc
-      if (req.body.startDate) {
-        req.body.startDate = convertTimezoneToUtc(req.body.startDate, req.user.timezone, "YYYY-MM-DD");
-      }
-      if (req.body.endDate) {
-        req.body.endDate = convertTimezoneToUtc(req.body.endDate, req.user.timezone, "YYYY-MM-DD");
-      }
+    const fmt =
+      req.body.promotionType === "happyHour"
+        ? "YYYY-MM-DD hh:mm A"
+        : "YYYY-MM-DD";
+
+    if (req.body.startDate) {
+      req.body.startDate = convertTimezoneToUtc(
+        req.body.startDate,
+        timezone,
+        fmt
+      );
     }
 
+    if (req.body.endDate) {
+      req.body.endDate = convertTimezoneToUtc(
+        req.body.endDate,
+        timezone,
+        fmt
+      );
+    }
 
-    //end date cannot be before start date
-    if (req.body.startDate && req.body.endDate && new Date(req.body.endDate) < new Date(req.body.startDate)) {
+    // ---------------- DATE VALIDATION ----------------
+    if (
+      req.body.startDate &&
+      req.body.endDate &&
+      new Date(req.body.endDate) < new Date(req.body.startDate)
+    ) {
       return sendResponse({
         res,
         statusCode: 400,
         translationKey: "end_date_cannot_be_before_start_date",
       });
     }
+
+    // ---------------- CREATE PROMOTION ----------------
     const response = await service.create(req.body, timezone);
+
     return sendResponse({
       res,
       statusCode: 201,
@@ -120,19 +135,14 @@ const create = async (req, res) => {
   }
 };
 
+
+
 const get = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date, companyOrganizer } = req.query;
 
   try {
-    //companyOrganizer is required to filter for specific company
-    if (!companyOrganizer) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "company_organizer_is_required",
-      });
-    }
+
     
     const { responses, meta } = await service.get({
       companyOrganizer,

@@ -32,9 +32,8 @@ module.exports = {
     "@BundleModel": "backend/commonModules/bundles/Bundle.js",
     "@PromoCodeModel": "backend/commonModules/PromoCode/PromoCode.js",
     "@StreakRulesModel": "backend/commonModules/loyalty/streaks/StreakRules.js",
-    "@GlobalReferralModel": "backend/commonModules/globalReferral/GlobalReferral.js",
-    "@ReferralReferenceModel": "backend/commonModules/globalReferral/referralReference.js",
-    "@ReferralRecordModel": "backend/commonModules/globalReferral/ReferralRecord.js",
+    "@GlobalReferralModel": "backend/commonModules/globalReferral/GlobalReferralSettings.js",
+    "@ReferredRecordModel": "backend/commonModules/globalReferral/ReferredRecord.js",
     "@TicketingBookingsModel": "backend/commonModules/bookings/ticketings/TicketingBookings.js",
     "@TicketingOrdersModel": "backend/commonModules/bookings/ticketings/TicketingOrders.js",
     "@FriendRequestModel": "backend/commonModules/friendRequest/FriendRequest.js",
@@ -46,5 +45,7 @@ module.exports = {
     "@GlobalChallengeModel": "backend/commonModules/globalLoyalty/rewards/models/Challenge/models/Challenge/BaseChallenge.js",
     "@GlobalStreaksModel": "backend/commonModules/globalLoyalty/streaks/Streaks.js",
     "@GlobalUsersStreaksModel": "backend/commonModules/globalLoyalty/streaks/UsersStreaks.js",
+        "@ThirdPartyModel": "backend/commonModules/globalLoyalty/thirdParty/ThirdParty.js",
+             "@Marketing": "backend/commonModules/marketing/Marketing.js",
     "@UserCompanyLoyaltyWalletTransactionsModel": "backend/commonModules/wallet/UserCompanyLoyaltyWalletTransactions.js"
 };

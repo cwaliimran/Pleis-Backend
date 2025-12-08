@@ -144,25 +144,25 @@ promoCodeSchema.methods.applyDiscount = function (amount, userId) {
 // Method to increment the used count for the promo code and track user usage
 promoCodeSchema.methods.incrementUsage = async function (userId) {
   if (this.usedCount < this.maxUsage) {
-    // Increment the global usage count
     this.usedCount += 1;
 
-    // Track user-specific usage count, where userId is the key, and the value is an object with the `count`
-    const userUsage = this.usersUsed.get(userId); // Get the user's current usage info
+    const userUsage = this.usersUsed.get(userId);
 
     if (userUsage) {
-      // If the user has already used the promo code, increment their usage count
-      userUsage.count += 1;
+      // increment
+      const newCount = userUsage.count + 1;
+      this.usersUsed.set(userId, { count: newCount }); // ✔ overwrite the object
     } else {
-      // Otherwise, initialize their usage with the current count
-      this.usersUsed.set(userId, { count: 1 });
+      // first time usage
+      this.usersUsed.set(userId, { count: 1 }); // ✔ set first usage
     }
 
     await this.save();
-    return true;
+    return userUsage;
   }
-  return false;
+  return userUsage;
 };
+
 
 // Method to ensure a user can only create a unique promo code (no duplication across users)
 promoCodeSchema.statics.createPromoCodeForUser = async function (userId, data) {

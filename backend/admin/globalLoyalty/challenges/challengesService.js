@@ -15,7 +15,7 @@ const getChallenges = async ({ companyOrganizer, page, limit, keyword, status, d
 
   // Build query object
   const query = {
-    companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
+
   };
   if (status) query.status = status;
   else query.status = { $ne: "deleted" };

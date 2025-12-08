@@ -102,13 +102,10 @@
         "backend/commonModules/loyalty/streaks/StreakRules.js"
       ],
       "@GlobalReferralModel": [
-        "backend/commonModules/globalReferral/GlobalReferral.js"
+        "backend/commonModules/globalReferral/GlobalReferralSettings.js"
       ],
-      "@ReferralReferenceModel": [
-        "backend/commonModules/globalReferral/referralReference.js"
-      ],
-      "@ReferralRecordModel": [
-        "backend/commonModules/globalReferral/ReferralRecord.js"
+      "@ReferredRecordModel": [
+        "backend/commonModules/globalReferral/ReferredRecord.js"
       ],
       "@TicketingBookingsModel": [
         "backend/commonModules/bookings/ticketings/TicketingBookings.js"
@@ -143,6 +140,11 @@
       "@GlobalUsersStreaksModel": [
         "backend/commonModules/globalLoyalty/streaks/UsersStreaks.js"
       ],
+      "@ThirdPartyModel": [
+        "backend/commonModules/globalLoyalty/thirdParty/ThirdParty.js"
+      ],
+      "@Marketing": [
+        "backend/commonModules/marketing/Marketing.js"
       "@UserCompanyLoyaltyWalletTransactionsModel": [
         "backend/commonModules/wallet/UserCompanyLoyaltyWalletTransactions.js"
       ]

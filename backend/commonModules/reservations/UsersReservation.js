@@ -80,8 +80,8 @@ lastName: { type: String, default: "", },
     },
 
     optionalEventId: {
-      type: String,
-      default: "",
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "events",
     },
 
     notes: {

@@ -7,7 +7,7 @@ const GlobalClaimPromotion = GlobalBasePromotion.discriminator(
     {
       reward: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Rewards",
+        ref: "GlobalReward",
         required: true,
       },
       claimPoints: { type: Number, required: true },

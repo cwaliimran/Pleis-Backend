@@ -18,11 +18,7 @@ const baseGlobalChallengeeSchema = new mongoose.Schema(
       ref: "Tiers",
       default: null,
     },
-    companyOrganizer: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+
     status: {
       type: String,
       enum: ["active", "inactive", "completed", "deleted"],

@@ -57,7 +57,7 @@ const countChallenges = async (query = {}) => {
 
 // Find by ID with population
 const findChallengeById = async (id) => {
-  return Challenge.findById(id)
+  return GlobalChallenge.findById(id)
     .populate("taskMenuItem")
     .populate("reward.rewardMenuItem")
     .populate("tierLimit");
@@ -65,8 +65,8 @@ const findChallengeById = async (id) => {
 
 // Update and save
 const updateChallengeData = async (challenge, data) => {
-  Object.assign(challenge, data);
-  return await challenge.save();
+  Object.assign(GlobalChallenge, data);
+  return await GlobalChallenge.save();
 };
 
 // Delete

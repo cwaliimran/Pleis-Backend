@@ -7,6 +7,7 @@ const {
   getEventDetails,
   cloneEvent,
   getMinimalEventsInfo,
+  getEventTicketings,
 } = require("./eventController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -40,7 +41,7 @@ router.delete("/:id", deleteEvent);
 // Clone an existing event
 router.post("/:id/clone", roleMiddleware(["organizer", "admin", "manager"]), cloneEvent);
 
-
+router.get("/:id/ticketings", roleMiddleware(["organizer", "admin", "manager"]),apiRateLimiter, getEventTicketings);
 
 
 module.exports = router;

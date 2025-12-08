@@ -102,6 +102,8 @@ pipeline.push({
   pipeline.push({
     $project: {
       firstName: 1,
+      username: 1,
+       status: 1,
       lastName: 1,
       username: 1,
       phoneNumber: 1,
