@@ -61,8 +61,6 @@ const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganiz
     {},
     clubMemberRepo.getWallet(userId, companyOrganizer),
     getRewardsByCompanyOrganizerService({
-      page: 1,
-      limit: 10,
       companyOrganizer,
       timezone,
     }),
@@ -82,10 +80,7 @@ const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganiz
   return {
     profile,
     userCompanyWallet: formatUserWallet(userCompanyWallet),
-    rewards: {
-      items: rewards.rewards,
-      meta: rewards.meta
-    },
+    rewards: rewards?.rewards || [],
     challenges: {
       items: challenges.challenges,
       meta: challenges.meta

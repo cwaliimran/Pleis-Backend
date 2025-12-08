@@ -13,7 +13,7 @@ router.use(auth);
 const apiRateLimiter = createRateLimiter("Rewards");
 const apiRateLimiterDetails = createRateLimiter("Rewards/:id");
 
-router.get("/", apiRateLimiter, getRewards);
+router.get("/by-company/:companyOrganizer", apiRateLimiter, getRewards);
 router.get("/:id", apiRateLimiterDetails, getRewardDetails);
 
 module.exports = router;

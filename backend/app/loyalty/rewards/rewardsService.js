@@ -1,37 +1,46 @@
 const rewardRepo = require("./rewardsRepository");
-const { generateMeta, getCurrentDateInTimezone } = require("@utils/responseUtil");
 const formatReward = require("../../../commonModules/loyalty/rewards/utils/formatReward");
 
 const getRewardsByCompanyOrganizerService = async ({
-  page,
-  limit,
   companyOrganizer,
   status,
   timezone,
 }) => {
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
-
-  // const now = getCurrentDateInTimezone({ timezone });
-
-  // 1️⃣ Fetch data
+  // 1️⃣ Fetch all rewards
   const rewards = await rewardRepo.getRewardsByCompanyOrganizer({
-    skip,
-    limit,
-    companyOrganizer,
-    // now,
-    status,
-  });
-
-  // 2️⃣ Count total matching rows
-  const totalFiltered = await rewardRepo.countRewardsByCompanyOrganizer({
     companyOrganizer,
     status,
   });
-  const meta = generateMeta(page, limit, totalFiltered);
 
+  // 2️⃣ Format rewards
   const formatted = rewards.map((item) => formatReward(item, timezone));
 
-  return { rewards: formatted, meta };
+  // 3️⃣ Group by sortingType
+  const groupedRewards = groupRewardsBySortingType(formatted);
+
+  return {
+    rewards: groupedRewards,
+  };
+};
+
+
+const groupRewardsBySortingType = (rewards) => {
+  const groups = {};
+
+  for (const reward of rewards) {
+    const key = reward.sortingType || "";
+
+    if (!groups[key]) {
+      groups[key] = {
+        sortingType: key,
+        items: [],
+      };
+    }
+
+    groups[key].items.push(reward);
+  }
+
+  return Object.values(groups);
 };
 
 
