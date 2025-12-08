@@ -456,11 +456,38 @@ const getEventReservations = async (nanoid,timezone) => {
 console.log("Reservations",Reservations );
   return reservationsFormatterAdjustDates(Reservations, timezone)
 };
+
+const getEventsGroupedByTagsService = async ({
+  location,
+  radiusKm,
+  timezone,
+  userId,
+}) => {
+  const results = await eventRepo.getEventsGroupedByTagsRepo({
+    location,
+    radiusKm,
+    timezone,
+    limitPerTag: 10,
+  });
+
+  if (!Array.isArray(results)) return [];
+
+  return results.map(group => ({
+    key: "customCategory",
+    title: group.title,
+    data: group.data.map(event =>
+      formatEventResponse(event, { timezone, userId })
+    ),
+  }));
+};
+
+
 module.exports = {
   getEventIdByNanoid,
   getNearbyEvents,
   getNearbyEventsWithAdvanceFilters,
   getEventDetails,
   getForYouEvents,
-  getEventReservations
+  getEventReservations,
+  getEventsGroupedByTagsService,
 };

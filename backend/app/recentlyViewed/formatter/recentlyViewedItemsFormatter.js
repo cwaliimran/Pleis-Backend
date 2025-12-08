@@ -50,9 +50,6 @@ const formatRecentlyViewedEventResponse = (eventObject, options = {}) => {
   // Format schedule
   event.schedule = formatEventSchedule(event.schedule, timezone);
   delete event.basicInfo?.venueLocation;
-  event.ticketInfo = {
-    price: "€40"
-  }
 
   return event;
 };

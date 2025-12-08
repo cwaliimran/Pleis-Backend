@@ -65,9 +65,6 @@ referredRecordSchema.pre('save', function (next) {
   next();
 });
 
-// Ensure unique IP constraint (no duplicate IP addresses allowed)
-referredRecordSchema.index({ userIp: 1 }, { unique: true });
-
 // Create or update the model using the new schema
 const ReferredRecord = mongoose.model('ReferredRecord', referredRecordSchema);
 

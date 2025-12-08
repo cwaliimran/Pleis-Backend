@@ -1,7 +1,7 @@
 
 const mongoose = require("mongoose");
 const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
-const { findOrganizationById, findEventsByOrganization, countEventsByOrganization, getOrganizationMenuWithItems, getRecommendedOrganizations, getNearbyOrganizations, getSuggestedLoyaltyClubsForUser } = require("./organizationProfileRepository");
+const { findOrganizationById, findEventsByOrganization, countEventsByOrganization, getOrganizationMenuWithItems, getRecommendedOrganizations, getNearbyOrganizations, getSuggestedLoyaltyClubsForUser, getOrganizationsGroupedByVenueTypesRepo } = require("./organizationProfileRepository");
 const { getCurrentDateInTimezone, generateMeta, convertUtcToTimezone } = require("../../helperUtils/responseUtil");
 const { calculateDistance } = require("../../helperUtils/calculateDistance");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
@@ -182,10 +182,26 @@ const getSuggestedLoyaltyClubs = async ({ page = 1, limit = 10, userId }) => {
   return formatted || [];
 };
 
+const organizationsByVenueTypeService = async ({ location, radiusKm, timezone, page, limit, userId }) => {
+  let result = await getOrganizationsGroupedByVenueTypesRepo({ location, radiusKm, timezone, page, limit, userId });
+
+
+  if (!Array.isArray(result)) return [];
+
+  return result.map(group => ({
+    ...group,
+    data: Array.isArray(group.data)
+      ? group.data.map(org => formatNearByOrganization(org))
+      : [],
+  }));
+
+  return result
+}
 
 module.exports = {
   getOrganizationEvents,
   getOrganizationProfile,
   getNearbyOrganizationsService,
   getSuggestedLoyaltyClubs,
+  organizationsByVenueTypeService,
 };
