@@ -8,7 +8,8 @@ const {
   getUserSubscriptions,
   updateUserSubscriptionStatus,
   updateUserSubscription,
-  getavailableSubscriptions
+  getavailableSubscriptions,
+  updateUserSubscriptions
 } = require("./subscriptionsController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -27,11 +28,14 @@ router.post("/", auth,roleMiddleware(["admin"]), createSubscription);
 
 // Get all Subscriptions with pagination
 router.get("/", roleMiddleware(["admin"]),apiRateLimiter, getSubscriptions);
-// Get all Subscriptions with pagination
-router.get("/available", roleMiddleware(["admin"]),apiRateLimiter, getavailableSubscriptions);
+
+// // Get all Subscriptions with pagination
+// router.get("/available", roleMiddleware(["admin"]),apiRateLimiter, getavailableSubscriptions);
 
 // Get all Users Subscriptions with pagination
 router.get("/users",roleMiddleware(["admin"]), apiRateLimiter, getUserSubscriptions);
+// Get all Users Subscriptions with pagination
+router.put("/users/:id",roleMiddleware(["admin"]), apiRateLimiter, updateUserSubscriptions);
 
 
 // //get Subscription details
@@ -39,11 +43,11 @@ router.get("/users",roleMiddleware(["admin"]), apiRateLimiter, getUserSubscripti
 
 // Update an existing Subscription
 router.put("/:id", roleMiddleware(["admin"]), updateSubscription);
-// cancel user Subscription
-router.put("/updateStatus/:id/:value", roleMiddleware(["admin"]), updateUserSubscriptionStatus);
+// // cancel user Subscription
+// router.put("/updateStatus/:id/:value", roleMiddleware(["admin"]), updateUserSubscriptionStatus);
 
-// update user Subscription
-router.put("/:userId/:id", roleMiddleware(["admin"]), updateUserSubscription);
+// // update user Subscription
+// router.put("/:userId/:id", roleMiddleware(["admin"]), updateUserSubscription);
 
 
 // Delete a Subscription

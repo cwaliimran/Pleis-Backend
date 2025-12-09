@@ -210,161 +210,130 @@ console.log("Subscriptions",Subscriptions );
 }
 
 
-const getUserSubscriptions = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, SubscriptionStatus, SubscriptionId }) => {
+const getUserSubscriptions = async ({
+  timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  date,
+  range,
+  skip,
+  billing
+}) => {
   const now = getCurrentDateInTimezone({ timezone });
 
-  let organizationsIds = Array.isArray(organizationsId)
-    ? organizationsId
-    : JSON.parse(organizationsId || '[]');
-  organizationsIds = organizationsIds.map(id => new mongoose.Types.ObjectId(id));
-
   const pipeline = [
+    // ------------------------------------------------------
+    // 1) Fetch users who have a subscription object
+    // ------------------------------------------------------
     {
       $match: {
-        ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
-        ...(organizationsIds.length > 0 && { organizationId: { $in: organizationsIds } }),
-        ...(SubscriptionStatus && { SubscriptionStatus: SubscriptionStatus }),
-        ...(SubscriptionId && { SubscriptionId: new mongoose.Types.ObjectId(SubscriptionId) })
+        // subscription: { $exists: true }
       }
     },
-    {
-  $lookup: {
-    from: "userSubscriptions",
-    localField: "_id",          // Subscription _id
-    foreignField: "_id",        // Subscription _id
-    pipeline: [
-      {
-        $project: {
-          firstName: 1,
-          lastName: 1,
-          phoneNumber: 1
-        }
-      }
-    ],
-    as: "user"
-  }
-},
+
+
+
+    // ------------------------------------------------------
+    // 3) Flatten subscription data for filtering
+    // ------------------------------------------------------
     {
       $addFields: {
-        user: { $arrayElemAt: ["$user", 0] }
-      }
-    },
-    { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
-    {
-      $addFields: {
-        validEventId: {
+        subscriptionTypes: "$subscription.subscriptionTypes",
+        pricingPlan: "$subscription.pricingPlan",
+        numberOfOrganizations: "$subscription.numberOfOrganizations",
+        totalSubscriptionAmount: "$subscription.totalSubscriptionAmount",
+        startDate: "$subscription.startDate",
+        endDate: "$subscription.endDate",
+
+        // Auto-calc status (active/expired)
+        subscriptionStatus: {
           $cond: {
-            if: { $and: [{ $ne: ["$optionalEventId", ""] }, { $ne: ["$optionalEventId", null] }] },
-            then: { $toObjectId: "$optionalEventId" },
-            else: null
+            if: { $and: ["$subscription.endDate", { $lte: ["$subscription.endDate", now] }] },
+            then: "expired",
+            else: "active"
           }
         }
-      }
-    },
-    {
-      $lookup: {
-        from: "events",
-        localField: "validEventId",
-        foreignField: "_id",
-        as: "event"
-      }
-    },
-    { $unwind: { path: "$event", preserveNullAndEmptyArrays: true } },
-    {
-      $project: {
-        _id: 1,
-        userId: 1,
-        user: 1,
-        partySize: 1,
-        SubscriptionType: 1,
-        organizationId: 1,
-        SubscriptionStatus: 1,
-        companyOrganizer: 1,
-        SubscriptionId: 1,
-        timingSlots: 1,
-        status: 1,
-        optionalEventId: 1,
-        createdAt: 1,
-        updatedAt: 1,
-        notes: 1,
-        member: "Gold",
-        eventTitle: { $ifNull: ["$event.basicInfo.title", "No Event Title"] }
       }
     }
   ];
 
-
-  if (range == "monthly") {
+  // ------------------------------------------------------
+  // RANGE FILTERS BASED ON SUBSCRIPTION START DATE
+  // ------------------------------------------------------
+  if (range === "monthly") {
     const { start, end } = getStartAndEndOfMonth(now, timezone);
-
-    pipeline.push({
-      $match: {
-        "timingSlots.dateTimeSlots": {
-          $elemMatch: {
-            date: { $gte: start, $lt: end }
-          }
-        }
-      }
-    });
+    pipeline.push({ $match: { startDate: { $gte: start, $lt: end } } });
   }
-  if (range == "weekly") {
+
+  if (range === "weekly") {
     const { start, end } = getStartAndEndOfWeek(now, timezone);
-
-    pipeline.push({
-      $match: {
-        "timingSlots.dateTimeSlots": {
-          $elemMatch: {
-            date: { $gte: start, $lt: end }
-          }
-        }
-      }
-    });
+    pipeline.push({ $match: { startDate: { $gte: start, $lt: end } } });
   }
-  if (range == "today") {
+
+  if (range === "today") {
     const { start, end } = getStartAndEndOfDay(now, timezone);
-    pipeline.push({
-      $match: {
-        "timingSlots.dateTimeSlots": {
-          $elemMatch: {
-            date: { $gte: start, $lt: end }
-          }
-        }
-      }
-    });
-  }
-  // Apply filters
-  if (status) {
-    pipeline.push({ $match: { status } });
-  } else {
-    pipeline.push({ $match: { status: { $ne: "deleted" } } });
+    pipeline.push({ $match: { startDate: { $gte: start, $lt: end } } });
   }
 
+  // ------------------------------------------------------
+  // STATUS FILTER
+  // ------------------------------------------------------
+if (status) {
+  // Match subscription status as per user's input
+  pipeline.push({ $match: { "subscription.status": status } });
+} else {
+  // If no status provided, match active or expired subscriptions
+  pipeline.push({
+    $match: {
+      "subscription.status": { $ne: "deleted" }  // Do not include deleted subscriptions
+    }
+  });
+}
+
+
+  // ------------------------------------------------------
+  // DATE FILTER ON startDate
+  // ------------------------------------------------------
   if (date) {
     const start = new Date(date);
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
+    pipeline.push({ $match: { startDate: { $gte: start, $lt: end } } });
+  }
+
+  // ------------------------------------------------------
+  // KEYWORD SEARCH (user + subscription fields)
+  // ------------------------------------------------------
+  if (keyword) {
     pipeline.push({
       $match: {
-        createdAt: { $gte: start, $lt: end }
+        $or: [
+          { firstName: new RegExp(keyword, "i") },
+          { lastName: new RegExp(keyword, "i") },
+
+        ]
+      }
+    });
+  }
+    if (billing) {
+    pipeline.push({
+      $match: {
+        $or: [
+          { pricingPlan: new RegExp(billing, "i") }
+        ]
       }
     });
   }
 
-  if (keyword) {
-    const keywordMatch = buildKeywordQueryFromModels(
-      [
-        { schema: UserSubscriptions.schema }
-      ],
-      keyword
-    );
+  // ------------------------------------------------------
+  // SORT BY subscription date
+  // ------------------------------------------------------
+  pipeline.push({ $sort: { startDate: -1 } });
 
-    if (Object.keys(keywordMatch).length) {
-      pipeline.push({ $match: keywordMatch });
-    }
-  }
-
-  pipeline.push({ $sort: { createdAt: -1 } });
-
-  // Apply pagination + counts using $facet
+  // ------------------------------------------------------
+  // PAGINATION + TOTAL COUNT
+  // ------------------------------------------------------
   pipeline.push({
     $facet: {
       data: [
@@ -375,42 +344,77 @@ const getUserSubscriptions = async ({ timezone, page, limit, keyword, status, us
     }
   });
 
-  const result = await UserSubscriptions.aggregate(pipeline);
-console.log("pipeline",result );
-  let Subscriptions = result[0]?.data || [];
+  const result = await User.aggregate(pipeline);
+
+  let subscriptions = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-  // Additional counts for meta (active/inactive/total by userId as creator)
-  const [total, active, inactive] = await Promise.all([
-    UserSubscriptions.countDocuments({ ...(userId && { userId: userId }), SubscriptionStatus: { $ne: "cancelled" } }),
-    UserSubscriptions.countDocuments({ SubscriptionStatus: "active", ...(userId && { userId: userId }) }),
-    UserSubscriptions.countDocuments({ SubscriptionStatus: "inactive", ...(userId && { userId: userId }) })
+  // ------------------------------------------------------
+  // META COUNTS
+  // ------------------------------------------------------
+  const [total, active, expired] = await Promise.all([
+    User.countDocuments({ subscription: { $exists: true } }),
+    User.countDocuments({
+      "subscription.endDate": { $gt: now }
+    }),
+    User.countDocuments({
+      "subscription.endDate": { $lte: now }
+    })
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
-  meta.SubscriptionsCount = { total, active, inactive };
+  meta.subscriptionCount = { total, active, expired };
 
+  // ------------------------------------------------------
+  // FINAL FORMATTER (CLEAN OUTPUT)
+  // ------------------------------------------------------
 
-  Subscriptions = Subscriptions.map(item => {
-    const formatted = SubscriptionsFormatterAdjustDates(item);
-    if (formatted.conditionType == "noCondition" || formatted.conditionType == "ticketRequirement" || formatted.conditionType == "customText" || formatted.conditionType == "ticketRequirement") {
-      delete formatted.amount;
-      if (formatted.conditionType == "noCondition") {
-        delete formatted.ticketType;
-      }
-    }
-    else {
-      delete formatted.ticketType;
-    }
-    return formatted;
-  });
-  return { Subscriptions, meta }
-}
+subscriptions = subscriptions.map((user) => {
+  const amount = Number(user.totalSubscriptionAmount ?? 0);
+  let monthlyPrice = amount;
+
+  if (user.pricingPlan === "yearly") {
+    monthlyPrice = amount / 12;
+  }
+
+  // Format to 2 decimals
+  monthlyPrice = Number(monthlyPrice.toFixed(2));
+  const finalStatus = user.subscription?.status || "active";
+
+  // Check if subscription object exists before accessing its properties
+  const subscription = user.subscription || {}; // Use an empty object if subscription is undefined
+
+  return {
+    userId: user._id,
+    username: user.username,
+    firstName: user.firstName,
+    lastName: user.lastName,
+
+    subscription: {
+      subscriptionTypes: user.subscriptionTypes,
+      pricingPlan: user.pricingPlan,
+      numberOfOrganizations: user.numberOfOrganizations,
+      totalSubscriptionAmount: amount,
+      monthlyPrice,
+      startDate: user.startDate,
+      endDate: user.endDate,
+      status: finalStatus,
+      orderingCommission: subscription.orderingCommission || 0, // Default to 0 if undefined
+      ticketingCommission: subscription.ticketingCommission || 0, // Default to 0 if undefined
+      reservationCommission: subscription.reservationCommission || 0, // Default to 0 if undefined
+    },
+  };
+});
+
+  return { subscriptions, meta };
+};
 
 
 
 const findUserSubscriptionById = async (id) => {
-  return UserSubscriptions.findById(id);
+  // Retrieve only the subscription data for the user
+  const user = await User.findById(id).select('subscription');
+  return user  // Return subscription or null if not found
 };
 
 
@@ -563,14 +567,25 @@ const getavailableSubscriptions = async ({
   return { subscriptions, meta };
 };
 
-const findByIdAndDelete = async (id) => {
+const findByIdAndDelete = async (userId) => {
   try {
-    const deleted = await SubscriptionSettings.findByIdAndDelete(id);
-    return deleted;   // returns the deleted document OR null
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    if (user.subscription) {
+      user.subscription.status = "cancelled";
+      await user.save();
+      return user;  
+    } else {
+      throw new Error("User does not have a subscription");
+    }
+
   } catch (err) {
     throw err;
   }
 };
+
 
 
 module.exports = {

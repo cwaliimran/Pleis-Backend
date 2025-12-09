@@ -21,8 +21,6 @@ const PricingPlanType = {
   MONTHLY: "monthly",
   YEARLY: "yearly",
 };
-
-// Define subscription schema
 const subscriptionSchema = new mongoose.Schema({
   subscriptionTypes: {
     type: [String],
@@ -40,7 +38,19 @@ const subscriptionSchema = new mongoose.Schema({
     default: 1,
     min: 1,
   },
-
+  status: {
+    type: String,
+    enum: [
+      "pending",
+      "active",
+      "rejected",
+      "suspended",
+      "deleted",
+      "cancelled",
+      "inactive"
+    ],
+    default: "active",
+  },
   totalSubscriptionAmount: {
     type: Number,
     default: 0,
@@ -53,6 +63,9 @@ const subscriptionSchema = new mongoose.Schema({
   endDate: {
     type: Date,
   },
+    orderingCommission:   { type: Number, default: 0 },
+      ticketingCommission:    { type: Number, default: 0 },
+  reservationCommission:{ type: Number, default: 0 },
 
 });
 
@@ -177,12 +190,12 @@ const userSchema = new mongoose.Schema(
         default: "pending",
       },
     },
-  publicId: {
-    type: String,
-    unique: true,
-    index: true,
-    default: () => nanoid(),
-  },
+    publicId: {
+      type: String,
+      unique: true,
+      index: true,
+      default: () => nanoid(),
+    },
 
     password: {
       type: String,
@@ -199,8 +212,8 @@ const userSchema = new mongoose.Schema(
         enum: [
           "pending",
           "active",
-          "rejected",
-          "suspended",
+          "cancelled",
+          "expired",
           "deleted",
         ],
         default: "pending",
@@ -298,19 +311,18 @@ const userSchema = new mongoose.Schema(
       default: [],
     },
 
-subscriptions: {
-  type: [subscriptionSchema],
-  default: [
-    {
-      subscriptionTypes: [SubscriptionTypes.FREE],  // default = FREE subscription
-      pricingPlan: PricingPlanType.MONTHLY,         // default plan type
-      numberOfOrganizations: 1,                     // single organization
-      totalSubscriptionAmount: 0,                   // free has zero cost
-      startDate: Date.now(),
-      endDate: null                                 // free → no expiry
-    }
-  ]
-},
+    subscription: {
+      type: subscriptionSchema,
+      default: {
+        subscriptionTypes: [SubscriptionTypes.FREE],
+        pricingPlan: PricingPlanType.MONTHLY,
+        numberOfOrganizations: 1,
+        totalSubscriptionAmount: 0,
+        status: "active",
+        startDate: Date.now(),
+        endDate: null
+      }
+    },
 
 
 
@@ -336,10 +348,10 @@ subscriptions: {
       type: LocationSchema,
       default: {},
     },
-globalReferralLimit: {
-  type: Number,
-  default: 10,
-},
+    globalReferralLimit: {
+      type: Number,
+      default: 10,
+    },
 
     //company details
     companyDetails: {

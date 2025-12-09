@@ -512,7 +512,13 @@ const updateSubscription = async (req, res) => {
     // DO UPDATE
     // ---------------------------------------------------------
     const updated = await SubscriptionService.updateSubscription(id, updatePayload);
-
+if (updated.error){
+      return sendResponse({
+      res,
+       statusCode: 400,
+        translationKey:updated.error,
+      });
+    }
     if (!updated) {
       return sendResponse({
         res,
@@ -590,48 +596,26 @@ const deleteSubscription = async (req, res) => {
 
 const getUserSubscriptions = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range, organizationsId, companyOrganizer, SubscriptionStatus = "pending", SubscriptionId } = req.query;
-
+  let { keyword, status, date, range,billing } = req.query;
   try {
-    if (
-      (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
-      (!organizationsId || !Array.isArray(JSON.parse(organizationsId)) || JSON.parse(organizationsId).length === 0)
-    ) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "companyOrganizer_or_organizationsIds_is_required",
-      });
-    }
-    if (!SubscriptionId || SubscriptionId === "undefined" || SubscriptionId === "null") {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "SubscriptionId_is_required",
-      });
-    }
 
-    const userId = companyOrganizer;
     const timezone = req.user.timezone;
-    const { Subscriptions, meta } = await SubscriptionService.getUserSubscriptions({
+    const { subscriptions, meta } = await SubscriptionService.getUserSubscriptions({
       timezone,
       page,
       limit,
       keyword,
       status,
-      userId,
-      organizationsId,
       date,
       range,
-      SubscriptionStatus,
-      SubscriptionId,
+      billing
     });
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "Subscriptions_fetched_successfully",
-      data: Subscriptions,
+      data: subscriptions,
       meta,
     });
   } catch (error) {
@@ -644,8 +628,6 @@ const getUserSubscriptions = async (req, res) => {
     });
   }
 };
-
-
 
 
 
@@ -849,7 +831,14 @@ const getSubscriptions = async (req, res) => {
       date,
       range
     });
-
+    console.log("subscriptions",subscriptions );
+if (subscriptions.error){
+      return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: data.error,
+    });
+}
     return sendResponse({
       res,
       statusCode: 200,
@@ -867,6 +856,98 @@ const getSubscriptions = async (req, res) => {
     });
   }
 };
+const updateUserSubscriptions = async (req, res) => {
+  const { id } = req.params;
+
+  // Validate ID format
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })
+  ) {
+    return;
+  }
+
+  try {
+    const { subscription } = req.body;
+
+    // ---------------------------------------------------------
+    // BUILD UPDATE PAYLOAD (Now includes commissions)
+    // ---------------------------------------------------------
+    const updatePayload = {};
+
+    if (subscription) {
+      updatePayload.subscription = {};
+
+      // Add subscription fields to updatePayload if they are provided
+      if (subscription.startDate) {
+        updatePayload.subscription.startDate = subscription.startDate;
+      }
+
+      if (subscription.endDate) {
+        updatePayload.subscription.endDate = subscription.endDate;
+      }
+
+      if (subscription.orderingCommission !== undefined) {
+        updatePayload.subscription.orderingCommission = subscription.orderingCommission;
+      }
+
+      if (subscription.ticketingCommission !== undefined) {
+        updatePayload.subscription.ticketingCommission = subscription.ticketingCommission;
+      }
+
+      if (subscription.reservationCommission !== undefined) {
+        updatePayload.subscription.reservationCommission = subscription.reservationCommission;
+      }
+    }
+
+    if (Object.keys(updatePayload).length === 0) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "no_valid_fields_to_update",
+      });
+    }
+
+    // ---------------------------------------------------------
+    // DO UPDATE
+    // ---------------------------------------------------------
+    const updated = await SubscriptionService.updateUserSubscriptions(id, updatePayload);
+
+    if (updated.error) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: updated.error,
+      });
+    }
+
+    if (!updated) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "subscription_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "subscription_updated_successfully",
+      data: updated,
+    });
+
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode || 500,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 
 
 module.exports = {
@@ -878,5 +959,6 @@ module.exports = {
   getUserSubscriptions,
   updateUserSubscriptionStatus,
   updateUserSubscription,
-  getavailableSubscriptions
+  getavailableSubscriptions,
+  updateUserSubscriptions
 };
