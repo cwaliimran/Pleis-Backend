@@ -4,7 +4,7 @@ const {
   CustomReward,
   Reward,
 } = require("./models");
-const formatReward = require("./utils/formatReward");
+const {formatReward} = require("./utils/formatReward");
 
 // Decide which discriminator model to use
 const getModelByrewardType = (rewardType) => {

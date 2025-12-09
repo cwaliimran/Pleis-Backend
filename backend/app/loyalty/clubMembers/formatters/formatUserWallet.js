@@ -27,7 +27,7 @@ function formatUserWallet(item) {
       image: obj.level.image,
       bonusPointsPerEuro: obj.level.bonusPointsPerEuro,
       entryPoints: current?.entryPoints ?? null,
-      retainPoints: current?.retainPoints ?? null
+      retainPoints: current?.retainPoints ?? null,
     };
   }
   if (obj.tierKey && obj.nextTier) {

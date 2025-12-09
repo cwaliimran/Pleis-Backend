@@ -4,7 +4,7 @@ const {
   CustomReward,
   Reward,
 } = require("./models");
-const formatReward = require("./utils/formatReward");
+const { formatReward } = require("./utils/formatReward");
 
 // Decide which discriminator model to use
 const getModelByrewardType = (rewardType) => {
@@ -57,7 +57,7 @@ const count = async (query = {}) => {
 const findById = async (id) => {
   return Reward.findById(id)
     .populate("menuItem")
-    .populate({path:"tierLimit", select: "image title" })
+    .populate({ path: "tierLimit", select: "image title" })
     .exec();
 };
 

@@ -18,11 +18,11 @@ const calculatePointsRepo = async (userId, companyOrganizer, totalSpending) => {
   const tierBonus = userCompanyWallet?.level?.bonusPointsPerEuro || 0;
 
   // ORGANIZER POINTS
-  const organizerPointsPerEuro = 10 + tierBonus;
+  const organizerPointsPerEuro = 10 + tierBonus + globalBonus;
   const organizerEarnedPoints = totalSpending * organizerPointsPerEuro;
 
   // GLOBAL POINTS
-  const globalPointsPerEuro = 10 + globalBonus;
+  const globalPointsPerEuro = 10 + globalBonus + tierBonus;
   const globalEarnedPoints = totalSpending * globalPointsPerEuro;
 
   // Cashback

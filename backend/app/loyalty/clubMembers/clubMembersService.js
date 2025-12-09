@@ -4,7 +4,7 @@ const { getPromotionsByCompanyOrganizerService } = require("../promotions/promot
 const { getRewardsByCompanyOrganizerService } = require("../rewards/rewardsService");
 const clubMemberRepo = require("./clubMembersRepository");
 const { formatUserWallet, formatUserWallets } = require("./formatters/formatUserWallet");
-
+const { formatRewardsByTierKey } = require("../../../commonModules/loyalty/rewards/utils/formatReward");
 // Count members
 const countClubMembers = async (filters = {}) => {
   return clubMemberRepo.countClubMembers(filters);
@@ -59,7 +59,7 @@ const updateUserCompanyPoints = async (payload) => {
 const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganizer) => {
   const [profile, userCompanyWallet, rewards, challenges, promotions] = await Promise.all([
     {},
-    clubMemberRepo.getWallet(userId, companyOrganizer),
+    clubMemberRepo.isClubMemberWithWallet(userId, companyOrganizer),
     getRewardsByCompanyOrganizerService({
       companyOrganizer,
       timezone,
@@ -77,10 +77,17 @@ const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganiz
       companyOrganizer,
     }),
   ]);
+
+
+  const formattedRewards = formatRewardsByTierKey(
+    rewards?.rewards || [],
+    userCompanyWallet?.tierKey || "essential"
+  );
+
   return {
     profile,
     userCompanyWallet: formatUserWallet(userCompanyWallet),
-    rewards: rewards?.rewards || [],
+    rewards: formattedRewards,
     challenges: {
       items: challenges.challenges,
       meta: challenges.meta

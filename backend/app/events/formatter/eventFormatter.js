@@ -52,9 +52,6 @@ const formatMoreFromOrganizerEventResponse = (eventObject, options = {}) => {
   // Format schedule
   event.schedule = formatEventSchedule(event.schedule, timezone);
   delete event.basicInfo.venueLocation;
-  event.ticketInfo = {
-    price: "€40"
-  }
 
   return event;
 };
@@ -218,8 +215,6 @@ const attachVenueTypesToEvent = (event, venueTypeTitles = []) => {
   return plainEvent;
 };
 function reservationsFormatterAdjustDates(reservations, timezone) {
-  console.log("timezone:", timezone);  // Log the timezone
-
   if (!reservations) {
     console.log("No reservations found.");
     return [];

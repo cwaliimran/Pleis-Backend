@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
 const { Events } = require("../../../commonModules/events/Event");
 const { formatEventResponse } = require("../formatter/eventFormatter");
+const { getMinTicketPricesByEventIds } = require("../../ticketing/ticketingsRepository");
 
 // TODO future events only
 const getRecommendedEvents = async (eventId, options = {}) => {
@@ -116,6 +117,16 @@ const getRecommendedEvents = async (eventId, options = {}) => {
   const formatted = results.map((event) =>
     formatEventResponse(event, { timezone })
   );
+
+  // Fetch minimum ticket prices for all events in results
+  const eventIds = results.map((e) => e._id);
+  const ticketPriceMap = await getMinTicketPricesByEventIds(eventIds);
+
+  // Attach minimum ticket price to each event
+  formatted.forEach((event) => {
+    const minPrice = ticketPriceMap[event._id.toString()] || null;
+    event.ticketInfo = minPrice ? { price: `€${minPrice}` } : null;
+  });
 
   const meta = generateMeta(page, limit, formatted.length);
 

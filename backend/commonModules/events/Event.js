@@ -122,6 +122,28 @@ const eventSchema = new mongoose.Schema(
         default: "",
       },
     },
+
+    recurringMeta: {
+      isTemplate: {
+        type: Boolean,
+        default: false,
+        index: true,
+      },
+
+      parentEvent: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Event",
+        default: null,
+        index: true,
+      },
+
+      occurrenceIndex: {
+        type: Number,
+        default: 1,
+      }
+    }
+
+
   },
   {
     timestamps: true,
@@ -134,6 +156,15 @@ eventSchema.index({ "basicInfo.organization": 1, status: 1 });
 eventSchema.index({ "basicInfo.venue": 1 });
 eventSchema.index({ "basicInfo.tags": 1 });
 eventSchema.index({ "basicInfo.categories": 1 });
+
+eventSchema.index(
+  {
+    "recurringMeta.parentEvent": 1,
+    "schedule.startDateTime": 1
+  },
+  { unique: true, sparse: true }
+);
+
 
 
 const Events = mongoose.model("Event", eventSchema);

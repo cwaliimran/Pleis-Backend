@@ -1254,7 +1254,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "6911ba17dd162801ff9b35d9"
+													"value": "69342063a28cfdaf3d045dcd"
 												}
 											]
 										}
@@ -1311,7 +1311,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "6911ba17dd162801ff9b35d9"
+													"value": "69342063a28cfdaf3d045dcd"
 												}
 											]
 										},
@@ -2125,7 +2125,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}app/home",
+									"raw": "{{url}}app/home?radiusKm=500000",
 									"host": [
 										"{{url}}app"
 									],
@@ -2145,8 +2145,7 @@
 										},
 										{
 											"key": "radiusKm",
-											"value": "500000",
-											"disabled": true
+											"value": "500000"
 										}
 									]
 								}
@@ -3068,7 +3067,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}app/organizations/:id?filter=upcoming",
+									"raw": "{{url}}app/organizations/:id",
 									"host": [
 										"{{url}}app"
 									],
@@ -3080,13 +3079,14 @@
 										{
 											"key": "filter",
 											"value": "upcoming",
-											"description": "upcoming, past // for events"
+											"description": "upcoming, past // for events",
+											"disabled": true
 										}
 									],
 									"variable": [
 										{
 											"key": "id",
-											"value": "6911cc376aca10eb719d7322"
+											"value": "6911bc8b2280acc8015fe1e6"
 										}
 									]
 								}
@@ -3190,7 +3190,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"targetId\": \"690887e1a8adad86a7cfeec2\",\n  \"targetType\": \"event\" // event, organization\n}\n",
+									"raw": "{\n  \"targetId\": \"6915c3e448a5a4c172122332\",\n  \"targetType\": \"event\" // event, organization\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -3715,7 +3715,7 @@
 							]
 						},
 						{
-							"name": "Join/Leave Club",
+							"name": "Club",
 							"item": [
 								{
 									"name": "join",
@@ -3874,6 +3874,67 @@
 												"loyalty",
 												"club",
 												"wallet",
+												":companyOrganizer"
+											],
+											"variable": [
+												{
+													"key": "companyOrganizer",
+													"value": "6911c14b6fc7cbd864e745b6"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "company profile",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/loyalty/club/:companyOrganizer",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"loyalty",
+												"club",
 												":companyOrganizer"
 											],
 											"variable": [
@@ -4064,7 +4125,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"user\": \"6911ba17dd162801ff9b35d9\",\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"type\": \"earn\",\n    \"objectType\": \"challenge\",\n    \"objectId\": \"6911ba17dd162801ff9b35d8\", //optional\n    \"points\": { \"base\": 50, \"multiplier\": 2, \"total\": 100 },\n    \"closingBalance\":100,\n    \"description\": \"Points Checkin to cafe\"\n  }",
+											"raw": "{\n    \"user\": \"6911ba17dd162801ff9b35d9\",\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"type\": \"redeem\",\n    \"objectType\": \"challenge\",\n    \"objectId\": \"6911ba17dd162801ff9b35d8\", //optional\n    \"points\": { \"base\": 400, \"multiplier\": 1, \"total\": 400 },\n    \"description\": \"Points Redeemed\"\n  }",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -4127,19 +4188,130 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}app/loyalty/wallet-transactions",
+											"raw": "{{url}}app/loyalty/wallet-transactions?companyOrganizer=6911c14b6fc7cbd864e745b6",
 											"host": [
 												"{{url}}app"
 											],
 											"path": [
 												"loyalty",
 												"wallet-transactions"
+											],
+											"query": [
+												{
+													"key": "companyOrganizer",
+													"value": "6911c14b6fc7cbd864e745b6"
+												}
 											]
 										}
 									},
 									"response": []
 								}
 							]
+						},
+						{
+							"name": "dashboard",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/loyalty/dashboard",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"loyalty",
+										"dashboard"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "calculate points earning",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"companyOrganizer\" : \"6911c14b6fc7cbd864e745b6\",\n    \"totalSpending\":\"10\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/loyalty/calculate-points",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"loyalty",
+										"calculate-points"
+									]
+								}
+							},
+							"response": []
 						}
 					]
 				},
@@ -4306,7 +4478,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"items\": [\n    {\n      \"menuItem\": \"6911c3766aca10eb719d6f7e\",\n      \"quantity\": 2\n    }\n  ],\n  \"pickupType\":\"tableService\", //counter, tableService, togo\n  \"tableNumber\":\"5\", //required in tableService case\n  \"notes\": \"No spice please.\",\n  \"paymentMethod\": \"card\" //\"applePay\", \"card\", \"cash\", \"payLater\"\n}\n",
+											"raw": "{\n  \"items\": [\n    {\n      \"menuItem\": \"6911c3766aca10eb719d6f7e\",\n      \"quantity\": 1\n    }\n  ],\n  \"pickupType\":\"tableService\", //counter, tableService, togo\n  \"tableNumber\":\"5\", //required in tableService case\n  \"notes\": \"No spice please.\",\n  \"paymentMethod\": \"card\" //\"applePay\", \"card\", \"cash\", \"payLater\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -4481,7 +4653,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}app/menu/items/pickup-options/:organization",
+											"raw": "{{url}}app/menu/items/pickup-options/:companyOrganizer",
 											"host": [
 												"{{url}}app"
 											],
@@ -4489,12 +4661,12 @@
 												"menu",
 												"items",
 												"pickup-options",
-												":organization"
+												":companyOrganizer"
 											],
 											"variable": [
 												{
-													"key": "organization",
-													"value": "6911cc376aca10eb719d7322"
+													"key": "companyOrganizer",
+													"value": "6911c14b6fc7cbd864e745b6"
 												}
 											]
 										}
@@ -5292,7 +5464,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}app/transactions/?status=confirmed&page=1&limit=10",
+									"raw": "{{url}}app/transactions/?page=1&limit=10",
 									"host": [
 										"{{url}}app"
 									],
@@ -5304,7 +5476,8 @@
 										{
 											"key": "status",
 											"value": "confirmed",
-											"description": "\"pending\", \"confirmed\", \"cancelled\", \"completed\""
+											"description": "\"pending\", \"confirmed\", \"cancelled\", \"completed\"",
+											"disabled": true
 										},
 										{
 											"key": "page",
@@ -5672,7 +5845,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"user\": \"6911ba17dd162801ff9b35d9\",\n    \"type\": \"earn\",\n    \"objectType\": \"challenge\",\n    \"objectId\": \"6911ba17dd162801ff9b35d8\", //optional\n    \"points\": { \"base\": 50, \"multiplier\": 2, \"total\": 900 },\n    \"closingBalance\":900,\n    \"description\": \"Points Checkin to cafe\"\n  }",
+											"raw": "{\n    \"user\": \"6911ba17dd162801ff9b35d9\",\n    \"type\": \"earn\",\n    \"objectType\": \"challenge\",\n    \"objectId\": \"6911ba17dd162801ff9b35d8\", //optional\n    \"points\": { \"base\": 200, \"multiplier\": 2, \"total\": 400 },\n    \"closingBalance\":900,\n    \"description\": \"Points Checkin to cafe\"\n  }",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -14179,7 +14352,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"title\": \"Standard\",\n    //\"quantity\": 200, // skip when timingSlots enabled\n    \"price\": 10,\n    \"taxPercentage\": 5,\n    \"event\": \"69149fa4bef44f5456ed45d7\",\n    \"timingSlots\": {\n        \"enabled\": true,\n        \"dateTimeSlots\": [\n            {\n                \"date\": \"2025-12-16\",\n                \"timeSlots\": [\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:00 PM\",\n                        \"endTime\": \"12:30 PM\"\n                    },\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:30 PM\",\n                        \"endTime\": \"01:00 PM\"\n                    }\n                ]\n            },\n            {\n                \"date\": \"2025-12-17\",\n                \"timeSlots\": [\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:00 PM\",\n                        \"endTime\": \"12:30 PM\"\n                    },\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:30 PM\",\n                        \"endTime\": \"01:00 PM\"\n                    }\n                ]\n            }\n        ]\n    },\n    \"repeatable\": {\n        \"isRepeatable\": true,\n        \"visits\": 2\n    },\n    \"resaleProtection\": \"nameSurnamePid\",\n    \"transferFee\": 10,\n    \"timeSensitivePricing\": {\n        \"earlyBird\": {\n            \"endDate\": \"2025-12-20 12:30 PM\",\n            \"discountedPrice\": 25\n        },\n        \"lastMinute\": {\n            \"startDate\": \"2025-12-28 12:30 PM\",\n            \"discountedPrice\": 35\n        }\n    },\n    \"fastTrackEntry\": {\n        \"enabled\": true,\n        \"quantity\": 50,\n        \"extraPrice\": 15\n    },\n    \"requiresReservation\": {\n        \"enabled\": true,\n        \"type\": \"vip\"\n    },\n    \"status\": \"active\", //\"active\", \"scheduled\", \"inactive\",\n    \"scheduledPublishAt\":\"2025-12-28 10:30 AM\"\n}",
+									"raw": "{\n    \"title\": \"Standard\",\n    //\"quantity\": 200, // skip when timingSlots enabled\n    \"price\": 10,\n    \"taxPercentage\": 5,\n    \"event\": \"692d3d1a12f9e5429866db2d\",\n    \"timingSlots\": {\n        \"enabled\": true,\n        \"dateTimeSlots\": [\n            {\n                \"date\": \"2025-12-16\",\n                \"timeSlots\": [\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:00 PM\",\n                        \"endTime\": \"12:30 PM\"\n                    },\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:30 PM\",\n                        \"endTime\": \"01:00 PM\"\n                    }\n                ]\n            },\n            {\n                \"date\": \"2025-12-17\",\n                \"timeSlots\": [\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:00 PM\",\n                        \"endTime\": \"12:30 PM\"\n                    },\n                    {\n                        \"quantity\":\"10\",\n                        \"startTime\": \"12:30 PM\",\n                        \"endTime\": \"01:00 PM\"\n                    }\n                ]\n            }\n        ]\n    },\n    \"repeatable\": {\n        \"isRepeatable\": true,\n        \"visits\": 2\n    },\n    \"resaleProtection\": \"nameSurnamePid\",\n    \"transferFee\": 10,\n    \"timeSensitivePricing\": {\n        \"earlyBird\": {\n            \"endDate\": \"2025-12-20 12:30 PM\",\n            \"discountedPrice\": 25\n        },\n        \"lastMinute\": {\n            \"startDate\": \"2025-12-28 12:30 PM\",\n            \"discountedPrice\": 35\n        }\n    },\n    \"fastTrackEntry\": {\n        \"enabled\": true,\n        \"quantity\": 50,\n        \"extraPrice\": 15\n    },\n    \"requiresReservation\": {\n        \"enabled\": true,\n        \"type\": \"vip\"\n    },\n    \"status\": \"active\", //\"active\", \"scheduled\", \"inactive\",\n    \"scheduledPublishAt\":\"2025-12-28 10:30 AM\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -16602,7 +16775,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"media\": {\n    \"type\": \"video\", //\n    \"name\": \"highlight_video.mp4\"\n  },\n  \"title\": \"Event Highlight\",\n  \"type\": \"event\", ////event/organization\n  \"object\": \"68ff18ed8cd2d2f52b25be1a\",//event/organization\n  \"status\": \"active\"\n}\n",
+									"raw": "{\n  \"media\": {\n    \"type\": \"video\", //\n    \"name\": \"highlight_video.mp4\"\n  },\n  \"title\": \"Org Highlight\",\n  \"type\": \"organization\", ////event/organization\n  \"object\": \"6911b9cd1902fd1c55eb4842\",//event/organization\n  \"status\": \"active\"\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -17526,7 +17699,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{url}}admin/users?userType=organizer&page=1&limit=10",
+									"raw": "{{url}}admin/users?userType=user&page=1&limit=10",
 									"host": [
 										"{{url}}admin"
 									],
@@ -17547,7 +17720,7 @@
 										},
 										{
 											"key": "userType",
-											"value": "organizer",
+											"value": "user",
 											"description": "user, organizer, guest, manager, admin"
 										},
 										{
@@ -17580,7 +17753,7 @@
 									"variable": [
 										{
 											"key": "userId",
-											"value": "68bfc41ffdaea1e1b6b52c77"
+											"value": "6911c14b6fc7cbd864e745b6"
 										}
 									]
 								}
@@ -18021,7 +18194,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    // \"organizations\": [\n    //     \"68b11b3dda9c956a543970ab\",\n    //     \"68932a0dce6408026b883458\"\n    // ],\n    // \"modules\": [\n    //     \"inAppOrdering\",\n    //     \"reservationManagement\",\n    //     \"loyaltyScanning\",\n    //     \"ticketing\"\n    // ],\n    \"status\": \"active\"\n}",
+									"raw": "{\n    // \"organizations\": [\n    //     \"68b11b3dda9c956a543970ab\",\n    //     \"68932a0dce6408026b883458\"\n    // ],\n    // \"modules\": [\n    //     \"inAppOrdering\",\n    //     \"reservationManagement\",\n    //     \"loyaltyScanning\",\n    //     \"ticketing\"\n    // ],\n    \"status\": \"suspended\"\n    // \"companyDetails\": {\n    //     // \"loyaltySettings\": {\n    //     //     // \"model\":\"essential\",\n    //     //     \"pointValuePercentage\": \"2\"\n    //     // }\n    //     \"inAppOrderingSettings\": {\n    //         \"paymentMethods\": {\n    //             \"instantPayment\": true,\n    //             \"payLater\": {\n    //                 \"allow\": false,\n    //                 \"enableOrderAcceptance\": false,\n    //                 \"chargeOnAcceptance\": false,\n    //                 \"chargeOnDelivery\": false\n    //             },\n    //             \"cashPayment\": false\n    //         },\n    //         \"deliveryMethods\": {\n    //             \"counterPickup\": true,\n    //             \"tableDelivery\": true,\n    //             \"toGo\": false\n    //         }\n    //     }\n    // }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -18040,7 +18213,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68ff53eb64f683816a6013ac"
+											"value": "69342063a28cfdaf3d045dcd"
 										}
 									]
 								},
@@ -20180,7 +20353,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"rewardType\": \"customReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Custom Reward\",\n    \"description\": \"A custom reward for special achievements.\", //optional\n    \"sortingType\": \"food\",\n    \"minPointsRequiredToClaim\": 50, //optional\n    \"claimLimit\": 5, //optional\n    \"percentOff\": 0, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"status\": \"active\",\n    \"customReward\": {\n        \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Special Custom Title\",\n        \"description\": \"A custom description for the reward.\"\n    }\n}",
+											"raw": "{\n    \"rewardType\": \"customReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Custom Reward\",\n    \"description\": \"A custom reward for special achievements.\", //optional\n    \"sortingType\": \"food\",\n    \"endDate\": \"2025-11-15\",\n    \"minPointsRequiredToClaim\": 50, //optional\n    \"claimLimit\": 5, //optional\n    \"percentOff\": 0, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"status\": \"active\",\n    \"customReward\": {\n        \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Special Custom Title\",\n        \"description\": \"A custom description for the reward.\"\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -20299,7 +20472,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"rewardType\": \"ticketReward\",\n  \"image\": \"image_url\",\n  \"title\": \"Ticket Reward\",\n  \"description\": \"Get a free ticket for a special event.\", //optional\n  \"sortingType\": \"category\", //optional\n  \"minPointsRequiredToClaim\": 200,\n  \"claimLimit\": 1, //optional\n  \"percentOff\": 0, //optional\n   \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n  \"status\": \"active\",\n  \"event\": \"68de33b7bcddb74bfc2d9dd8\"\n}\n",
+											"raw": "{\n  \"rewardType\": \"ticketReward\",\n  \"image\": \"image_url\",\n  \"title\": \"Ticket Reward\",\n  \"description\": \"Get a free ticket for a special event.\", //optional\n  \"sortingType\": \"category\", //optional\n  \"endDate\": \"2025-11-15\",\n  \"minPointsRequiredToClaim\": 200,\n  \"claimLimit\": 1, //optional\n  \"percentOff\": 0, //optional\n   \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n  \"status\": \"active\",\n  \"event\": \"68de33b7bcddb74bfc2d9dd8\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -20418,7 +20591,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"rewardType\": \"buyMenuItemReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
+											"raw": "{\n    \"rewardType\": \"buyMenuItemReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"endDate\": \"2025-11-15\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -24093,7 +24266,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"retainPoints\": 1000\n}",
+											"raw": "{\n    \"image\": \"7c7daedc-207f-4843-8e39-5c761ec54b81.png\",\n    \"backgroundImage\":\"4170f6fa-9c41-4eee-86bd-15d43f4f088e.png\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -24113,7 +24286,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "69217906dd3107a7545c05dc"
+													"value": "692178d9dd3107a7545c05d0"
 												}
 											]
 										},
@@ -24190,12 +24363,52 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{url}}admin/dashboard",
+							"raw": "{{url}}admin/dashboard?dateFilter=all",
 							"host": [
 								"{{url}}admin"
 							],
 							"path": [
 								"dashboard"
+							],
+							"query": [
+								{
+									"key": "dateFilter",
+									"value": "all",
+									"description": "\"all\", \"today\", \"thisWeek\", \"thisMonth\""
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Dashboard Sub Filter",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}admin/dashboard/value?dateFilter=all&key=ticketsSold&subFilter=confirmed",
+							"host": [
+								"{{url}}admin"
+							],
+							"path": [
+								"dashboard",
+								"value"
+							],
+							"query": [
+								{
+									"key": "dateFilter",
+									"value": "all",
+									"description": "\"all\", \"today\", \"thisWeek\", \"thisMonth\""
+								},
+								{
+									"key": "key",
+									"value": "ticketsSold"
+								},
+								{
+									"key": "subFilter",
+									"value": "confirmed"
+								}
 							]
 						}
 					},
@@ -24691,7 +24904,13 @@
 								{
 									"key": "files",
 									"type": "file",
-									"src": "/Users/s/Desktop/Development/_FreeLancing/samples_mobile/Circle Images/Circle Images/avatars/Mask Group 6.png"
+									"src": [
+										"/Users/s/Downloads/New folder44/group.png",
+										"/Users/s/Downloads/New folder44/group1.png",
+										"/Users/s/Downloads/New folder44/group2.png",
+										"/Users/s/Downloads/New folder44/group3.png",
+										"/Users/s/Downloads/New folder44/group4.png"
+									]
 								}
 							]
 						},

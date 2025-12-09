@@ -201,7 +201,7 @@ const updatePoints = async ({
 };
 
 //
-// Get wallet (ClubMembers is wallet)
+// Get wallet (ClubMembers wallet)
 //
 const getWallet = async (userId, company) => {
   const { tierKey, pointValuePercentage } = await getCompanyLoyaltyInfo(company);
@@ -226,6 +226,15 @@ const getWallet = async (userId, company) => {
   }
 
   return wallet;
+};
+
+//get if user has joined club if joined return wallet info otherwise false
+const isClubMemberWithWallet = async (userId, company) => {
+  const member = await ClubMembers.findOne({ user: userId, companyOrganizer: company, status: "active" });
+  if (!member) {
+    return null;
+  }
+  return getWallet(userId, company);
 };
 
 //
@@ -321,6 +330,7 @@ module.exports = {
   updatePoints,
   getWallet,
   isClubMember,
+  isClubMemberWithWallet,
   countClubMembers,
   findClubMemberById,
   getUserJoinedClubs,
