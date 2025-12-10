@@ -46,11 +46,11 @@ const globalThirdPartySchema = new mongoose.Schema(
       default: "",
     },
 
-    statusLevel: {
-      type: String,
-      enum: [ "silver", "gold", "platinum"],
-      default: "silver",
-    },
+statusLevel: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'StatusLevels',
+        required: true,
+},
 
     status: {
       type: String,

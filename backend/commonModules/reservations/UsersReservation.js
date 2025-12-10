@@ -108,4 +108,4 @@ lastName: { type: String, default: "", },
 
 const UserReservations = mongoose.model("UserReservations", UserReservationsSchema);
 
-module.exports = UserReservations;
+module.exports = {UserReservations};

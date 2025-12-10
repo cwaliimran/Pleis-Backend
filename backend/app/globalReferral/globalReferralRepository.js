@@ -232,7 +232,6 @@ const createUserReferradrecord = async (data) => {
       userIp: userIp,
       referrerUserId: referrer._id,  // Set the referrer userId
       userId: userId,  // Set the userId when the user is signing up
-      status: false,  // Default status is false
     });
 
     return { userId: newRecord.userId, referrerUserName: newRecord.referrerUserName };

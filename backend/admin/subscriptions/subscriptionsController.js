@@ -759,7 +759,7 @@ const updateUserSubscription = async (req, res) => {
           timezone,
           "YYYY-MM-DD hh:mm A"
         );
-        console.log("start time ", slots.startTime);
+
 
       }
 
@@ -831,7 +831,7 @@ const getSubscriptions = async (req, res) => {
       date,
       range
     });
-    console.log("subscriptions",subscriptions );
+
 if (subscriptions.error){
       return sendResponse({
       res,
@@ -870,39 +870,59 @@ const updateUserSubscriptions = async (req, res) => {
   }
 
   try {
-    const { subscription } = req.body;
+    let { subscription } = req.body;
+
 
     // ---------------------------------------------------------
-    // BUILD UPDATE PAYLOAD (Now includes commissions)
+    // BUILD UPDATE PAYLOAD (Now includes all subscription fields)
     // ---------------------------------------------------------
-    const updatePayload = {};
+    const updatePayload = { subscription: {} };
 
-    if (subscription) {
-      updatePayload.subscription = {};
-
-      // Add subscription fields to updatePayload if they are provided
-      if (subscription.startDate) {
-        updatePayload.subscription.startDate = subscription.startDate;
-      }
-
-      if (subscription.endDate) {
-        updatePayload.subscription.endDate = subscription.endDate;
-      }
-
-      if (subscription.orderingCommission !== undefined) {
-        updatePayload.subscription.orderingCommission = subscription.orderingCommission;
-      }
-
-      if (subscription.ticketingCommission !== undefined) {
-        updatePayload.subscription.ticketingCommission = subscription.ticketingCommission;
-      }
-
-      if (subscription.reservationCommission !== undefined) {
-        updatePayload.subscription.reservationCommission = subscription.reservationCommission;
-      }
+    // Handle subscription fields and add to updatePayload if they are provided
+    if (subscription.subscriptionTypes !== undefined) {
+      updatePayload.subscription.subscriptionTypes = subscription.subscriptionTypes;
     }
 
-    if (Object.keys(updatePayload).length === 0) {
+    if (subscription.pricingPlan !== undefined) {
+      updatePayload.subscription.pricingPlan = subscription.pricingPlan;
+    }
+
+    if (subscription.numberOfOrganizations !== undefined) {
+      updatePayload.subscription.numberOfOrganizations = subscription.numberOfOrganizations;
+    }
+
+    if (subscription.totalSubscriptionAmount !== undefined) {
+      updatePayload.subscription.totalSubscriptionAmount = subscription.totalSubscriptionAmount;
+    }
+
+    if (subscription.startDate) {
+      updatePayload.subscription.startDate = convertToUtcDateOnly(subscription.startDate, "UTC");
+    }
+
+    if (subscription.endDate) {
+      updatePayload.subscription.endDate = convertToUtcDateOnly(subscription.endDate, "UTC");
+    }
+
+    if (subscription.status !== undefined) {
+      updatePayload.subscription.status = subscription.status;
+    }
+
+    if (subscription.orderingCommission !== undefined) {
+      updatePayload.subscription.orderingCommission = subscription.orderingCommission;
+    }
+
+    if (subscription.ticketingCommission !== undefined) {
+      updatePayload.subscription.ticketingCommission = subscription.ticketingCommission;
+    }
+
+    if (subscription.reservationCommission !== undefined) {
+      updatePayload.subscription.reservationCommission = subscription.reservationCommission;
+    }
+
+    // ---------------------------------------------------------
+    // If no valid fields to update, return an error response
+    // ---------------------------------------------------------
+    if (Object.keys(updatePayload.subscription).length === 0) {
       return sendResponse({
         res,
         statusCode: 400,
@@ -911,19 +931,19 @@ const updateUserSubscriptions = async (req, res) => {
     }
 
     // ---------------------------------------------------------
-    // DO UPDATE
+    // Perform the update
     // ---------------------------------------------------------
-    const updated = await SubscriptionService.updateUserSubscriptions(id, updatePayload);
+    const UserSubscription = await SubscriptionService.updateUserSubscriptions(id, updatePayload);
 
-    if (updated.error) {
+    if (UserSubscription.error) {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: updated.error,
+        translationKey: UserSubscription.error,
       });
     }
 
-    if (!updated) {
+    if (!UserSubscription) {
       return sendResponse({
         res,
         statusCode: 404,
@@ -931,11 +951,12 @@ const updateUserSubscriptions = async (req, res) => {
       });
     }
 
+    // Ensure the correct data structure is sent back
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "subscription_updated_successfully",
-      data: updated,
+      data: UserSubscription,
     });
 
   } catch (error) {
@@ -948,6 +969,7 @@ const updateUserSubscriptions = async (req, res) => {
     });
   }
 };
+
 
 
 module.exports = {

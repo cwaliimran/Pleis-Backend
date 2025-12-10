@@ -4,6 +4,7 @@ const Thirdpartys = require("@ThirdPartyModel");
 const { User } = require("../../models/UserModel");
 const Event = require("@EventsModel");
 const mongoose = require("mongoose");
+const ObjectId = mongoose.Types.ObjectId;
 // const { ThirdpartysFormatter, ThirdpartysFormatterAdjustDates } = require("../../app/Thirdpartys/formaters/ThirdpartyFormetter");
 const Organizations = require("@OrganizationModel")
 const {
@@ -102,7 +103,7 @@ const findByIdAndUpdate = async (id, data) => {
 
 const getThirdpartys = async ({ timezone, page, limit, keyword, status, createrId, date, skip }) => {
   const now = getCurrentDateInTimezone({ timezone });
-console.log("createrId",createrId );
+
   const pipeline = [
     {
       $match: {
@@ -130,16 +131,76 @@ console.log("createrId",createrId );
   }
 
   // Keyword search
-  if (keyword) {
-    const keywordMatch = buildKeywordQueryFromModels(
-      [{ schema: Thirdpartys.schema }],
-      keyword
-    );
+if (keyword) {
+  const filterQuery = {};
 
-    if (Object.keys(keywordMatch).length) {
-      pipeline.push({ $match: keywordMatch });
+  // Convert keyword to lowercase for case-insensitive matching (string fields)
+  const keywordLower = keyword.toLowerCase();
+
+  // Search across different fields using regex for strings
+  filterQuery.$or = [
+    { title: { $regex: keywordLower, $options: 'i' } },
+    { description: { $regex: keywordLower, $options: 'i' } },
+    { rewardSourceLink: { $regex: keywordLower, $options: 'i' } },
+    { publicKeyForPartner: { $regex: keywordLower, $options: 'i' } },
+    { statusLevel: { $regex: keywordLower, $options: 'i' } },
+    { status: { $regex: keywordLower, $options: 'i' } },
+    { createID: { $regex: keywordLower, $options: 'i' } }
+  ];
+
+  // Match pointCost if the keyword is a number (for exact numeric matching)
+  const numericKeyword = parseFloat(keyword);
+  if (!isNaN(numericKeyword)) {
+    filterQuery.$or.push(
+      { pointCost: numericKeyword },  // Match pointCost if keyword is a number
+      { claimLimit: numericKeyword }  // Match claimLimit if keyword is a number
+    );
+  }
+
+  // Optionally, match _id or other fields (for strict matches) if keyword is valid ObjectId
+  if (ObjectId.isValid(keyword)) {
+    filterQuery._id = new ObjectId(keyword);  // Match _id if keyword is a valid ObjectId
+  }
+
+  // If filters were added, push them into the pipeline
+  if (Object.keys(filterQuery).length) {
+    pipeline.push({ $match: filterQuery });
+  }
+}
+
+
+  // Lookup to join the StatusLevels collection and get the title field
+  pipeline.push({
+    $lookup: {
+      from: 'globalstatuslevels', // Collection to join
+      localField: 'statusLevel', // Field from the current collection
+      foreignField: '_id', // Field from the StatusLevels collection
+      as: 'statusLevelDetails' // Alias for the joined documents
+    }
+  });
+
+  // Project the required fields, including the title from StatusLevels
+pipeline.push({
+  $project: {
+    _id: 1,  // Include _id
+    title: 1,  // Include title
+    image: 1,  // Include image
+    description: 1,  // Include description
+    pointCost: 1,  // Include pointCost
+    claimLimit: 1,  // Include claimLimit
+    rewardSourceLink: 1,  // Include rewardSourceLink
+    publicKeyForPartner: 1,  // Include publicKeyForPartner
+    status: 1,  // Include status
+    createID: 1,  // Include createID
+    createdAt: 1,  // Include createdAt
+    updatedAt: 1,  // Include updatedAt
+    __v: 1,  // Include __v
+    statusLevelTitle: { 
+      $arrayElemAt: ["$statusLevelDetails.title", 0]  // Get the title from StatusLevels collection
     }
   }
+});
+
 
   // Sort by newest
   pipeline.push({ $sort: { createdAt: -1 } });
@@ -157,7 +218,7 @@ console.log("createrId",createrId );
 
   const result = await Thirdpartys.aggregate(pipeline);
 
-  // FIX: DO NOT name this "Thirdpartys"
+  // Handle the results
   let thirdpartyList = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 

@@ -47,7 +47,8 @@ const subscriptionSchema = new mongoose.Schema({
       "suspended",
       "deleted",
       "cancelled",
-      "inactive"
+      "inactive",
+      "expired",
     ],
     default: "active",
   },

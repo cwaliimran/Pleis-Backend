@@ -7,6 +7,7 @@ const {
   getReadableErrorMessage,
   convertTimezoneToUtc,
 } = require("../../helperUtils/responseUtil");
+const { statusLevelsFormatter, formatUpdate } = require("./formatters/statusLevelsFormatter");
 
 const ThirdpartyService = require("./thirdPartyService");
 
@@ -105,12 +106,12 @@ const getThirdpartys = async (req, res) => {
       createrId,
       date,
     });
-
+const formattedupdates = Thirdpartys.map(event => formatUpdate(event));
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "Thirdpartys_fetched_successfully",
-      data: Thirdpartys,
+      data: formattedupdates,
       meta,
     });
   } catch (error) {
