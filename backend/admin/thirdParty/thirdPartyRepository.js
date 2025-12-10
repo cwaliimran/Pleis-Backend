@@ -195,8 +195,11 @@ pipeline.push({
     createdAt: 1,  // Include createdAt
     updatedAt: 1,  // Include updatedAt
     __v: 1,  // Include __v
-    statusLevel: { 
-      $arrayElemAt: ["$statusLevelDetails.title", 0]  // Get the title from StatusLevels collection
+
+    // Create a statusLevel object with id and title
+    statusLevel: {
+      _id: { $arrayElemAt: ["$statusLevelDetails._id", 0] },  // Get the _id from StatusLevels
+      title: { $arrayElemAt: ["$statusLevelDetails.title", 0] }  // Get the title from StatusLevels
     }
   }
 });
