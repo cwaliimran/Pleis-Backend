@@ -1,22 +1,24 @@
 const { Events } = require("@EventsModel");
 const TicketingsModel = require("@TicketingsModel");
+
 /**
  * recurringEvents.core.js
  *
- * CORE LOGIC ONLY
- * - Uses existing Events & TicketingsModel
- * - Creates rolling recurring events
- * - Handles timingSlots correctly
- * - Safe to run daily via cron
+ * ✅ CORE LOGIC ONLY
+ * ✅ UTC SAFE
+ * ✅ Supports multi-day recurring events
+ * ✅ Supports:
+ *    - daily / weekly
+ *    - interval
+ *    - endType: never | onDate | afterOccurrences
+ * ✅ Rolling horizon generation
  */
-
 
 // ======================================================
 // CONFIG
 // ======================================================
-const HORIZON_DAYS = 7; // keep events bookable N days ahead
+const HORIZON_DAYS = 7; // create events N days ahead
 const DAY_MS = 24 * 60 * 60 * 1000;
-
 
 // ======================================================
 // DATE HELPERS (UTC SAFE)
@@ -52,13 +54,12 @@ const mergeDateAndTimeUTC = (day, time) =>
     0
   ));
 
-
 // ======================================================
 // MAIN CRON ENTRY
 // ======================================================
 const runRecurringEventsCron = async () => {
   const now = new Date();
-  const horizonDate = addDaysUTC(now, HORIZON_DAYS);
+  const horizonDate = addDaysUTC(startOfDayUTC(now), HORIZON_DAYS);
 
   const templates = await Events.find({
     "schedule.recurringDetails.isEnabled": true,
@@ -75,21 +76,24 @@ const runRecurringEventsCron = async () => {
   }
 };
 
-
 // ======================================================
 // PROCESS ONE TEMPLATE
 // ======================================================
 const processTemplate = async (template, horizonDate) => {
-  const dates = getUpcomingDates(template, horizonDate);
-
+  // Existing upcoming occurrences (avoid duplicates)
   const existing = await Events.find({
     "recurringMeta.parentEvent": template._id,
     "schedule.startDateTime": { $gte: new Date() },
-  }).select("schedule.startDateTime");
+  }).select("schedule.startDateTime recurringMeta.occurrenceIndex");
 
-  const existingKeys = new Set(
-    existing.map(e => startOfDayUTC(e.schedule.startDateTime).getTime())
+  const existingKeySet = new Set(
+    existing.map(e => e.schedule.startDateTime.getTime())
   );
+
+  // Count total already-created occurrences (for afterOccurrences)
+  const existingCount = await Events.countDocuments({
+    "recurringMeta.parentEvent": template._id,
+  });
 
   const lastOccurrence = await Events.findOne({
     "recurringMeta.parentEvent": template._id,
@@ -97,53 +101,97 @@ const processTemplate = async (template, horizonDate) => {
     .sort({ "recurringMeta.occurrenceIndex": -1 })
     .select("recurringMeta.occurrenceIndex");
 
-  let occurrenceIndex = lastOccurrence?.recurringMeta?.occurrenceIndex
-    ? lastOccurrence.recurringMeta.occurrenceIndex + 1
-    : 1;
+  let nextOccurrenceIndex =
+    lastOccurrence?.recurringMeta?.occurrenceIndex
+      ? lastOccurrence.recurringMeta.occurrenceIndex + 1
+      : 1;
+
+  const dates = getUpcomingDates(template, horizonDate, existingCount);
 
   for (const date of dates) {
-    const key = startOfDayUTC(date).getTime();
-    if (existingKeys.has(key)) continue;
+    const key = date.getTime();
+    if (existingKeySet.has(key)) continue;
 
-    await createOccurrence(template, date, occurrenceIndex);
-    occurrenceIndex++;
+    await createOccurrence(template, date, nextOccurrenceIndex);
+    nextOccurrenceIndex++;
   }
 };
 
-
-
 // ======================================================
-// GENERATE UPCOMING DATES (DAILY + WEEKLY)
+// GENERATE UPCOMING DATES
 // ======================================================
-const getUpcomingDates = (template, horizonDate) => {
+const getUpcomingDates = (template, horizonDate, existingCount) => {
   const rule = template.schedule.recurringDetails;
   const baseStart = new Date(template.schedule.startDateTime);
-  const list = [];
+  const baseDay = startOfDayUTC(baseStart);
 
   const today = startOfDayUTC(new Date());
-  let cursor = baseStart > today ? baseStart : today;
+  let cursor = baseDay > today ? baseDay : today;
+
+  const list = [];
+  let generatedCount = existingCount;
+
+  const recurrenceEndDate =
+    rule.endType === "onDate" && rule.endDate
+      ? startOfDayUTC(new Date(rule.endDate))
+      : null;
 
   while (cursor <= horizonDate) {
+
+    // ======================
+    // STOP CONDITIONS
+    // ======================
+    if (
+      rule.endType === "onDate" &&
+      recurrenceEndDate &&
+      cursor > recurrenceEndDate
+    ) {
+      break;
+    }
+
+    if (
+      rule.endType === "afterOccurrences" &&
+      generatedCount >= rule.occurrences
+    ) {
+      break;
+    }
+
+    // ======================
     // DAILY
+    // ======================
     if (rule.frequency === "daily") {
-      const diff = diffDaysUTC(baseStart, cursor);
+      const diff = diffDaysUTC(baseDay, cursor);
       if (diff >= 0 && diff % rule.interval === 0) {
         list.push(withSameTimeUTC(cursor, baseStart));
+        generatedCount++;
       }
       cursor = addDaysUTC(cursor, 1);
       continue;
     }
 
+    // ======================
     // WEEKLY
+    // ======================
     if (rule.frequency === "weekly") {
+      const diffWeeks = Math.floor(diffDaysUTC(baseDay, cursor) / 7);
+
       const weekday = cursor
         .toLocaleString("en-US", { weekday: "short", timeZone: "UTC" })
         .toLowerCase()
         .slice(0, 3);
 
-      if (!rule.daysOfWeek.length || rule.daysOfWeek.includes(weekday)) {
+      const weekdayAllowed =
+        !rule.daysOfWeek.length || rule.daysOfWeek.includes(weekday);
+
+      if (
+        diffWeeks >= 0 &&
+        diffWeeks % rule.interval === 0 &&
+        weekdayAllowed
+      ) {
         list.push(withSameTimeUTC(cursor, baseStart));
+        generatedCount++;
       }
+
       cursor = addDaysUTC(cursor, 1);
       continue;
     }
@@ -154,12 +202,11 @@ const getUpcomingDates = (template, horizonDate) => {
   return list;
 };
 
-
 // ======================================================
-// CREATE REAL EVENT (BOOKABLE)
+// CREATE REAL EVENT (OCCURRENCE)
 // ======================================================
 const createOccurrence = async (template, startDate, index) => {
-  const duration =
+  const durationMs =
     template.schedule.endDateTime -
     template.schedule.startDateTime;
 
@@ -168,7 +215,7 @@ const createOccurrence = async (template, startDate, index) => {
     schedule: {
       type: "oneTime",
       startDateTime: startDate,
-      endDateTime: new Date(startDate.getTime() + duration),
+      endDateTime: new Date(startDate.getTime() + durationMs),
       recurringDetails: null,
     },
     creator: template.creator,
@@ -182,7 +229,6 @@ const createOccurrence = async (template, startDate, index) => {
 
   await cloneTicketing(template._id, newEvent._id);
 };
-
 
 // ======================================================
 // CLONE TICKETING + TIMING SLOTS
@@ -203,7 +249,6 @@ const cloneTicketing = async (templateEventId, newEventId) => {
 
     clone.event = newEventId;
 
-    // ✅ TIMING SLOTS FIX
     if (clone.timingSlots?.enabled) {
       clone.timingSlots.dateTimeSlots = rebuildSlots(
         t.timingSlots.dateTimeSlots,
@@ -215,9 +260,8 @@ const cloneTicketing = async (templateEventId, newEventId) => {
   }
 };
 
-
 // ======================================================
-// REBUILD SLOTS FOR NEW EVENT DATE
+// REBUILD TIME SLOTS FOR OCCURRENCE
 // ======================================================
 const rebuildSlots = (blocks, newEventStart) => {
   if (!blocks?.length) return [];
@@ -227,17 +271,32 @@ const rebuildSlots = (blocks, newEventStart) => {
 
   return blocks.map(block => {
     const offset = diffDaysUTC(baseDay, startOfDayUTC(block.date));
-    const newBlockDay = addDaysUTC(newBaseDay, offset);
+    const blockDay = addDaysUTC(newBaseDay, offset);
 
     return {
-      date: newBlockDay,
+      date: blockDay,
       timeSlots: block.timeSlots.map(slot => ({
         quantity: slot.quantity,
-        startTime: mergeDateAndTimeUTC(newBlockDay, slot.startTime),
-        endTime: mergeDateAndTimeUTC(newBlockDay, slot.endTime),
+        startTime: mergeDateAndTimeUTC(blockDay, slot.startTime),
+        endTime: mergeDateAndTimeUTC(blockDay, slot.endTime),
       })),
     };
   });
+};
+
+
+const generateImmediatelyForTemplate = async (templateId) => {
+  const template = await Events.findOne({
+    _id: templateId,
+    "recurringMeta.isTemplate": true,
+    "schedule.recurringDetails.isEnabled": true,
+    status: "active",
+  });
+
+  if (!template) return;
+
+  const horizonDate = addDaysUTC(startOfDayUTC(new Date()), HORIZON_DAYS);
+  await processTemplate(template, horizonDate);
 };
 
 
@@ -246,4 +305,5 @@ const rebuildSlots = (blocks, newEventStart) => {
 // ======================================================
 module.exports = {
   runRecurringEventsCron,
+  generateImmediatelyForTemplate
 };

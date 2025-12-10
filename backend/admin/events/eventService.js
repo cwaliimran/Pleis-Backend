@@ -6,20 +6,41 @@ const eventRepo = require("./eventRepository");
 const _ = require("lodash");
 const { formatEventResponse } = require("./formatter/eventFormatter");
 const { getTicketingsByEventId } = require("../ticketing/ticketingsService");
+const { generateImmediatelyForTemplate } = require("../../commonModules/events/crons/recurringEvents.core");
 
 const createEvent = async ({ data, ticketingData }, timezone) => {
   let event = await eventRepo.createEvent(data, ticketingData);
   if (!event) return null;
+
+  if (event?.recurringMeta?.isTemplate) {
+  // Fire-and-forget or await (recommended)
+  await generateImmediatelyForTemplate(event._id);
+}
+
+
   return formatEventResponse(event, { timezone });
 };
 
 const getEvents = async ({ page, limit, keyword, status, creator, startDate, endDate, organization, timezone }) => {
   const query = {};
+    // ALWAYS exclude templates events
+    //templates event are only for internal use to generate occurrences
+  query.$and = [
+    {
+      $or: [
+        { "recurringMeta.isTemplate": false },
+        { "recurringMeta.isTemplate": { $exists: false } },
+      ],
+    },
+  ];
+
   if (creator) query.creator = creator;
   if (status) {
     query.status = status;
   } else {
     query.status = { $ne: "deleted" };
+    //remove template events from normal listing
+    query["recurringMeta.isTemplate"] = { $ne: true };
   }
 
   if (organization) {
