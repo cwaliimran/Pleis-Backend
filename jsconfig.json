@@ -145,8 +145,18 @@
       ],
       "@Marketing": [
         "backend/commonModules/marketing/Marketing.js"
+      ],
       "@UserCompanyLoyaltyWalletTransactionsModel": [
         "backend/commonModules/wallet/UserCompanyLoyaltyWalletTransactions.js"
+      ],
+      "@SubscriptionSettings": [
+        "backend/commonModules/subscriptions/SubscriptionSettings.js"
+      ],
+      "@UpdatesModel": [
+        "backend/commonModules/updates/Updates.js"
+      ],
+      "@NotificationsModel": [
+        "backend/models/Notifications.js"
       ]
     }
   },

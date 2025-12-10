@@ -61,8 +61,11 @@
     "@GlobalStreaksModel": "backend/commonModules/globalLoyalty/streaks/Streaks.js",
     "@GlobalUsersStreaksModel": "backend/commonModules/globalLoyalty/streaks/UsersStreaks.js",
     "@ThirdPartyModel": "backend/commonModules/globalLoyalty/thirdParty/ThirdParty.js",
-    "@Marketing": "backend/commonModules/marketing/Marketing.js"
-    "@UserCompanyLoyaltyWalletTransactionsModel": "backend/commonModules/wallet/UserCompanyLoyaltyWalletTransactions.js"
+    "@Marketing": "backend/commonModules/marketing/Marketing.js",
+    "@UserCompanyLoyaltyWalletTransactionsModel": "backend/commonModules/wallet/UserCompanyLoyaltyWalletTransactions.js",
+    "@SubscriptionSettings": "backend/commonModules/subscriptions/SubscriptionSettings.js",
+    "@UpdatesModel": "backend/commonModules/updates/Updates.js",
+    "@NotificationsModel": "backend/models/Notifications.js"
   },
   "keywords": [],
   "author": "",

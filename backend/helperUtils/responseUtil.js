@@ -765,7 +765,20 @@ const getReadableErrorMessage = (error) => {
 };
 const getCurrentUtcDateOnly = () => {
   const now = new Date();
+function getEndDate(pricingPlan, startDate = new Date()) {
+  if (!pricingPlan || pricingPlan === "free") return null;
 
+  const start = new Date(startDate);
+
+  if (pricingPlan === "monthly") {
+    return new Date(start.setMonth(start.getMonth() + 1));
+  }
+  if (pricingPlan === "yearly") {
+    return new Date(start.setFullYear(start.getFullYear() + 1));
+  }
+
+  return null;
+}
   return new Date(
     Date.UTC(
       now.getUTCFullYear(),
@@ -777,6 +790,21 @@ const getCurrentUtcDateOnly = () => {
       0
     )
   );
+};
+const getEndDate = (pricingPlan, startDate = new Date()) => {
+  if (!pricingPlan || pricingPlan === "free") return null;
+
+  const start = new Date(startDate);
+
+  if (pricingPlan === "monthly") {
+    return new Date(start.setMonth(start.getMonth() + 1));
+  }
+
+  if (pricingPlan === "yearly") {
+    return new Date(start.setFullYear(start.getFullYear() + 1));
+  }
+
+  return null;
 };
 
 
@@ -800,5 +828,6 @@ module.exports = {
   convertUtcToTimezoneAMPM,
   convertTimezoneToUtcDateOnly,
   getCurrentUtcDateOnly,
-  convertToUtcDateOnly
+  convertToUtcDateOnly,
+  getEndDate
 };

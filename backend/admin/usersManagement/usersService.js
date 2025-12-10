@@ -13,6 +13,7 @@ const { accountStatusEmailTemplate } = require("../../helperUtils/emailTemplates
 const { sendEmailViaMailgun } = require("../../helperUtils/emailUtil");
 const { createOrSkipDevice } = require("../../models/Devices");
 const { updateCompanyLoyaltySettings } = require("../../app/loyalty/clubMembers/clubMembersRepository");
+const { SubscriptionSettings }  = require("@SubscriptionSettings");
 
 const APP_NAME = "Pleis App";
 
@@ -109,6 +110,20 @@ const getStaff = async ({ page, limit, keyword, status, userType, currentUser })
 };
 
 
+function getEndDate(pricingPlan, startDate = new Date()) {
+  if (!pricingPlan || pricingPlan === "free") return null;
+
+  const start = new Date(startDate);
+
+  if (pricingPlan === "monthly") {
+    return new Date(start.setMonth(start.getMonth() + 1));
+  }
+  if (pricingPlan === "yearly") {
+    return new Date(start.setFullYear(start.getFullYear() + 1));
+  }
+
+  return null;
+}
 
 
 const updateUser = async (req, res, options = {}) => {
@@ -135,7 +150,8 @@ const updateUser = async (req, res, options = {}) => {
     profileCompleted,
     status,
     location,
-    notifications
+    notifications,
+    subscriptions
   } = req.body;
 
   const session = await mongoose.startSession();
@@ -309,7 +325,180 @@ const updateUser = async (req, res, options = {}) => {
       if (user.companyDetails.loyaltySettings.title === "") {
         user.companyDetails.loyaltySettings.title = companyDetails.name + " - Loyalty Club" || "Loyalty Club";
       }
+    }// -------------------------------------------------------------
+// SUBSCRIPTION HANDLING (Single Subscription Only)
+// -------------------------------------------------------------
+let incomingSub = null;
+
+// Case 1 → subscription object
+if (req.body.subscription && typeof req.body.subscription === "object") {
+  incomingSub = req.body.subscription;
+}
+// Case 2 → flat fields
+else if (
+  req.body.subscriptionTypes ||
+  req.body.pricingPlan ||
+  req.body.numberOfOrganizations ||
+  req.body.totalSubscriptionAmount !== undefined ||
+  req.body.subscriptionStatus
+) {
+  incomingSub = {
+    subscriptionTypes: req.body.subscriptionTypes,
+    pricingPlan: req.body.pricingPlan,
+    numberOfOrganizations: req.body.numberOfOrganizations,
+    totalSubscriptionAmount: req.body.totalSubscriptionAmount,
+    startDate: req.body.startDate,
+    endDate: req.body.endDate,
+    status: req.body.subscriptionStatus     // user manual status override
+  };
+}
+
+if (incomingSub) {
+  const now = new Date();
+  const hasExisting = !!user.subscription;
+
+  // Fetch commission values from SubscriptionSettings model
+const subscriptionSettings = await SubscriptionSettings.findOne({});
+
+
+  // Extract commissions from the settings document
+  const orderingCommission = subscriptionSettings?.commissions?.orderingCommission || 0;
+  const ticketingCommission = subscriptionSettings?.commissions?.ticketingCommission || 0;
+  const reservationCommission = subscriptionSettings?.commissions?.reservationCommission || 0;
+
+  // -------------------------------------------------------------
+  // CASE A — CREATE NEW SUBSCRIPTION
+  // -------------------------------------------------------------
+  if (!hasExisting) {
+    const startDate = incomingSub.startDate || Date.now();
+    const pricingPlan = incomingSub.pricingPlan || "monthly";
+    const systemEndDate = getEndDate(pricingPlan, startDate);
+
+    // If user sends manual status → take it
+    const manualStatus = incomingSub.status;
+
+    const finalStatus =
+      manualStatus ||
+      (systemEndDate && systemEndDate < now ? "expired" : "active");
+
+    user.subscription = {
+      subscriptionTypes: incomingSub.subscriptionTypes || ["free"],
+      pricingPlan,
+      numberOfOrganizations: incomingSub.numberOfOrganizations || 1,
+      totalSubscriptionAmount: incomingSub.totalSubscriptionAmount || 0,
+      startDate,
+      endDate: systemEndDate,
+      status: finalStatus,
+
+      // Only update commission if it's not already set (positive value)
+      orderingCommission: user.subscription?.orderingCommission > 0 ? user.subscription.orderingCommission : (function() {
+        if (orderingCommission === 0) {
+
+        }
+        return orderingCommission;
+      })(),
+      
+      ticketingCommission: user.subscription?.ticketingCommission > 0 ? user.subscription.ticketingCommission : (function() {
+        if (ticketingCommission === 0) {
+ 
+        }
+        return ticketingCommission;
+      })(),
+      
+      reservationCommission: user.subscription?.reservationCommission > 0 ? user.subscription.reservationCommission : (function() {
+        if (reservationCommission === 0) {
+    
+        }
+        return reservationCommission;
+      })()
+    };
+  }
+
+  // -------------------------------------------------------------
+  // CASE B — UPDATE EXISTING SUBSCRIPTION
+  // -------------------------------------------------------------
+  else {
+    const oldSub = user.subscription;
+
+    const typeChanged =
+      incomingSub.subscriptionTypes &&
+      JSON.stringify(incomingSub.subscriptionTypes.sort()) !==
+      JSON.stringify(oldSub.subscriptionTypes.sort());
+
+    const planChanged =
+      incomingSub.pricingPlan &&
+      incomingSub.pricingPlan !== oldSub.pricingPlan;
+
+    const orgChanged =
+      incomingSub.numberOfOrganizations &&
+      incomingSub.numberOfOrganizations !== oldSub.numberOfOrganizations;
+
+    const changed = typeChanged || planChanged || orgChanged;
+
+    if (changed) {
+      if (
+        incomingSub.totalSubscriptionAmount === undefined ||
+        incomingSub.totalSubscriptionAmount < 0
+      ) {
+        return {
+          errorCode: 400,
+          message: "totalSubscriptionAmount_required_when_subscription_changes"
+        };
+      }
     }
+
+    // Recalc endDate if pricingPlan changed
+    const newEndDate = incomingSub.pricingPlan
+      ? getEndDate(incomingSub.pricingPlan, oldSub.startDate)
+      : oldSub.endDate;
+
+    // 1) System status
+    const systemStatus =
+      newEndDate && newEndDate < now ? "expired" : "active";
+
+    // 2) User manual override (if provided)
+    const manualStatus = incomingSub.status;
+
+    // Final logic → manual status wins
+    const finalStatus = manualStatus || systemStatus;
+
+    user.subscription = {
+      subscriptionTypes:
+        incomingSub.subscriptionTypes || oldSub.subscriptionTypes,
+      pricingPlan: incomingSub.pricingPlan || oldSub.pricingPlan,
+      numberOfOrganizations:
+        incomingSub.numberOfOrganizations ?? oldSub.numberOfOrganizations,
+      totalSubscriptionAmount:
+        incomingSub.totalSubscriptionAmount ?? oldSub.totalSubscriptionAmount,
+      startDate: oldSub.startDate,
+      endDate: newEndDate,
+      status: finalStatus,
+
+      // Only update commission if it's not already set (positive value)
+      orderingCommission: oldSub.orderingCommission > 0 ? oldSub.orderingCommission : (function() {
+        if (orderingCommission === 0) {
+         
+        }
+        return orderingCommission;
+      })(),
+
+      ticketingCommission: oldSub.ticketingCommission > 0 ? oldSub.ticketingCommission : (function() {
+        if (ticketingCommission === 0) {
+       
+        }
+        return ticketingCommission;
+      })(),
+
+      reservationCommission: oldSub.reservationCommission > 0 ? oldSub.reservationCommission : (function() {
+        if (reservationCommission === 0) {
+       
+        }
+        return reservationCommission;
+      })()
+    };
+  }
+}
+
 
 
     //if isLoyaltySettingsUpdated then update all club members' tierKey and pointValuePercentage

@@ -8,7 +8,7 @@ const { getHomeService } = require("./homeService");
 const getHome = async (req, res) => {
 
   try {
-    const { latitude = 0, longitude = 0, radiusKm = 150, } = req.query;
+    const { latitude = 0, longitude = 0, radiusKm = 50000000, } = req.query;
     let { category, time } = req.body;
     if (category) {
       //check if valid mongo id

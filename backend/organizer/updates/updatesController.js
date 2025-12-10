@@ -1,4 +1,3 @@
-
 const {
   sendResponse,
   parsePaginationParams,
@@ -6,67 +5,60 @@ const {
   generateMeta,
   getReadableErrorMessage,
   convertTimezoneToUtc,
-} = require("../../../helperUtils/responseUtil");
-const formatLoyaltyListing = require("./formatter/formatLoyaltyListing");
-const globalReferralService = require("./globalReferralService");
+} = require("../../helperUtils/responseUtil");
 
-const createGlobalReferral = async (req, res) => {
-  let {
-    userPoints,
-    referrerPoints,
-    minimumPurchases,
-    purchaseThresholdAmount,
-    expiryDate,
-  } = req.body;
+const UpdatesService = require("./updatesService");
 
-  const userId = req.user._id;
-  const timezone = req.user.timezone;
 
-  // Required fields validation
-  if (
-    !validateParams(req, res, {
-      rawData: [
-        "userPoints",
-        "referrerPoints",
-        "minimumPurchases",
-        "purchaseThresholdAmount"
-      ],
-    })
-  ) return;
 
-  // Convert expiry date to UTC
-  expiryDate = convertTimezoneToUtc(expiryDate, timezone);
 
-  // Prepare data for creation
+
+const createUpdates = async (req, res) => {
+let {
+  title,
+  description,
+  event,
+  image,
+  status,
+
+} = req.body;
+
+const userId = req.user._id;
+const timezone = req.user.timezone;
+
+if (
+  !validateParams(req, res, {
+    rawData: [
+      "title", 
+      "description", 
+      "event",
+      "image", 
+    ],
+  })
+) return;
   let data = {
-    creator: userId,
-    userPoints,
-    referrerPoints,
-    type:"global",
-    minimumPurchases,
-    purchaseThresholdAmount,
-    expiryDate,
-    status:"active",
+    companyOrganizer:userId,
+  title,
+  description,
+  event,
+  image,
+  status,
   };
-
   try {
-    const GlobalReferral = await globalReferralService.createGlobalReferral(data);
-
-    if (!GlobalReferral) {
+    const Updates = await UpdatesService.createUpdates(data);
+    if (!Updates) {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "GlobalReferral_creation_failed",
+        translationKey: "Updates_creation_failed",
       });
     }
-
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "GlobalReferral_created_successfully",
-      data: GlobalReferral,
+      translationKey: "Updates_created_successfully",
+      data: Updates,
     });
-
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
     return sendResponse({
@@ -77,15 +69,15 @@ const createGlobalReferral = async (req, res) => {
     });
   }
 };
-
-
-const getGlobalReferrals = async (req, res) => {
+const getUpdatess = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range,type="global" } = req.query;
+  const { keyword, status = "active", date, range } = req.query;
   try {
+
+
     const userId = req.user._id;
     const timezone = req.user.timezone;
-    const { globalReferral, meta } = await globalReferralService.getGlobalReferrals({
+    const { updates, meta } = await UpdatesService.getUpdatess({
         timezone,
       page,
       limit,
@@ -93,15 +85,14 @@ const getGlobalReferrals = async (req, res) => {
       status,
       userId,
       date,
-      range,
-      type
+      range
     });
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "GlobalReferrals_fetched_successfully",
-      data: globalReferral,
+      translationKey: "Updatess_fetched_successfully",
+      data: updates,
       meta,
     });
   } catch (error) {
@@ -114,22 +105,17 @@ const getGlobalReferrals = async (req, res) => {
     });
   }
 };
-
-
-const updateGlobalReferral = async (req, res) => {
-  const { id, creater } = req.params;
+const updateUpdates = async (req, res) => {
+  const { id } = req.params;
 let {
-  userPoints,
-  minimumPurchases,
-  purchaseThresholdAmount,
-  referralLimit,
-  referrerPoints,
-  expiryDate,
+  title,
+  description,
+  event,
+  image,
   status,
 } = req.body;
 const userId = req.user._id;
 const timezone = req.user.timezone;
-
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
@@ -137,24 +123,18 @@ const timezone = req.user.timezone;
     })
   )
     return;
-
   let data = {
-    id,
-    userPoints,
-    referralLimit,
-    referrerPoints,
-    userId,
-  minimumPurchases,
-  purchaseThresholdAmount,
-  expiryDate,
+    companyOrganizer:userId,
+title,
+  description,
+  event,
+  image,
   status,
   };
-        expiryDate = convertTimezoneToUtc(
-          expiryDate,
-          timezone,
-        );
+
+ 
   try {
-    const updated = await globalReferralService.updateGlobalReferral(data);
+    const updated = await UpdatesService.updateUpdates(id, data);
     if (updated && updated.error) {
       return sendResponse({
         res,
@@ -167,14 +147,14 @@ const timezone = req.user.timezone;
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "updateGlobalReferral_not_found",
+        translationKey: "Reservation_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "updateGlobalReferral_updated_successfully",
+      translationKey: "Reservation_updated_successfully",
       data: updated,
     });
   } catch (error) {
@@ -188,7 +168,7 @@ const timezone = req.user.timezone;
   }
 };
 
-const deleteGlobalReferral = async (req, res) => {
+const deleteUpdates = async (req, res) => {
   const { id } = req.params;
 
   if (
@@ -200,19 +180,19 @@ const deleteGlobalReferral = async (req, res) => {
     return;
 
   try {
-    const deleted = await globalReferralService.deleteGlobalReferral(id);
+    const deleted = await UpdatesService.deleteUpdates(id);
     if (!deleted) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "GlobalReferral_not_found",
+        translationKey: "Updates_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "GlobalReferral_deleted_successfully",
+      translationKey: "Updates_deleted_successfully",
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -230,13 +210,16 @@ const deleteGlobalReferral = async (req, res) => {
 
 
 
-const getUserGlobalReferrals = async (req, res) => {
+
+const getevents = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range,type="global" } = req.query;
+  const { keyword, status = "active", date, range } = req.query;
   try {
+
+
     const userId = req.user._id;
     const timezone = req.user.timezone;
-    const { globalReferral, meta } = await globalReferralService.getUserGlobalReferrals({
+    const { events, meta } = await UpdatesService.getevents({
         timezone,
       page,
       limit,
@@ -244,16 +227,14 @@ const getUserGlobalReferrals = async (req, res) => {
       status,
       userId,
       date,
-      range,
-      type
+      range
     });
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "GlobalReferrals_fetched_successfully",
-      data: globalReferral.map(item => formatLoyaltyListing(item))
-      ,
+      translationKey: "events_fetched_successfully",
+      data: events,
       meta,
     });
   } catch (error) {
@@ -266,17 +247,10 @@ const getUserGlobalReferrals = async (req, res) => {
     });
   }
 };
-
-
 module.exports = {
-  createGlobalReferral,
-  getGlobalReferrals,
-  updateGlobalReferral,
-  // deleteReservation,
-  deleteGlobalReferral,
-  // getReservationDetails,
-  // getUserReservations,
-  // updateUserReservationStatus,
-  // updateUserReservation,
-  getUserGlobalReferrals
+  createUpdates,
+  getUpdatess,
+  updateUpdates,
+  deleteUpdates,
+getevents,
 };

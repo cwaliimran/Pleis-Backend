@@ -80,7 +80,6 @@ const getGlobalReferrals = async (req, res) => {
   try {
     const userId = req.user._id;
     const timezone = req.user.timezone;
-      console.log("Fetching global referrals");
     const { globalReferral, meta } = await globalReferralService.getGlobalReferrals({
         timezone,
       page,
