@@ -1,6 +1,7 @@
 const {
   Challenge,
 } = require("../../../commonModules/loyalty/challenges/models/Challenge");
+const { default: mongoose } = require("mongoose");
 
 
 // Get challenges with population
@@ -27,8 +28,34 @@ const findChallengeById = async (id) => {
     .populate("tierLimit");
 };
 
+const getChallengesByCompanyOrganizer = async ({
+  skip,
+  limit,
+  companyOrganizer,
+  now,
+}) => {
+  const match = {
+    status: "active",
+    companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
+    endDate: { $gte: now }
+  };
+
+  return Challenge.find(match)
+    .populate({
+      path: "companyOrganizer",
+      select: "companyDetails.name firstName profileIcon",
+    })
+    .populate("taskMenuItem")
+    .populate("reward.rewardMenuItem")
+    .populate("tierLimit")
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit).lean().exec();
+};
+
 module.exports = {
   getChallengesWithFilters,
   countChallenges,
   findChallengeById,
+  getChallengesByCompanyOrganizer
 };

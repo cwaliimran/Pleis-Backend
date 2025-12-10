@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const {
   Promotion,
 } = require("../../../commonModules/loyalty/promotions/models/Promotion");
@@ -24,8 +25,34 @@ const findById = async (id) => {
     .populate("tierLimit");
 };
 
+const getPromotionsByCompanyOrganizer = async ({
+  skip,
+  limit,
+  now,
+  companyOrganizer,
+}) => {
+  const match = {
+    status: "active",
+    companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
+    endDate: { $gte: now }, // Only future OR running promotions
+  };
+
+  return Promotion.find(match)
+    .populate({
+      path: "companyOrganizer",
+      select: "companyDetails.name firstName profileIcon",
+    })
+    .populate("menuItem")
+    .populate("tierLimit")
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit).lean().exec();
+};
+
+
 module.exports = {
   getWithFilters,
   count,
   findById,
+  getPromotionsByCompanyOrganizer
 };

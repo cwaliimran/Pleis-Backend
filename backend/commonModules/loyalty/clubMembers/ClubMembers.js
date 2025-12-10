@@ -15,6 +15,16 @@ const clubMembers = new mongoose.Schema(
             required: true,
             index: true,
         },
+        tierKey: { type: String, default: "essential" }, //tier model key: essential, preferred, premier of the company (companyOrganizer)
+        pointValuePercentage: { // percentage of point value for this company
+            type: Number,
+            default: 0,
+        },
+        points: { type: Number, default: 0 }, // Current available points
+        lifetimePoints: { type: Number, default: 0 }, // Total points ever earned
+        level: { type: mongoose.Schema.Types.ObjectId, ref: "Tiers", default: null },
+        lastEvaluated: { type: Date, default: Date.now },
+
         status: {
             type: String,
             enum: ["active", "inactive", "banned", "left"],

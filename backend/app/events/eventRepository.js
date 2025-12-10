@@ -3,7 +3,11 @@
 const { Events } = require("../../commonModules/events/Event");
 const { getWithFilters } = require('@dbUtils/queryUtil');
 const { Favorites } = require("../../commonModules/favorites/Favorite");
+const  Venues  = require("@VenuesModel");
+const  VenueTypes = require("@VenueTypesModel");
 
+const  Reservations = require("@ReservationsModel");
+const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 // Get all with filters
 const getEventsWithFilters = async (query, skip, limit) => {
   return Events.find(query)
@@ -105,6 +109,127 @@ const findEventByNanoid = async (nanoid) => {
   return Events.findOne({ publicId: nanoid }).select("_id");
 }
 
+const getVenueTypeTitles = async (venueId) => {
+  if (!venueId) return [];
+  const venue = await Venues.findById(venueId).select("venueType");
+
+  if (!venue || !Array.isArray(venue.venueType) || venue.venueType.length === 0) {
+    return [];
+  }
+  const venueTypes = await VenueTypes
+    .find({ _id: { $in: venue.venueType } })
+    .select("title");
+  return venueTypes.map(v => v.title);
+};
+
+
+
+
+
+
+
+
+const getEventReservations = async (eventId) => {
+  const pipeline = [
+    {
+      $match: {
+        optionalEventId: eventId,
+        status: { $ne: "deleted" }   // ignore deleted reservations
+      }
+    },
+    {
+      $project: {
+        timingSlots: 1,
+      }
+    }
+  ];
+
+  const reservations = await Reservations.aggregate(pipeline);
+  return reservations;
+};
+
+
+const getEventsGroupedByTagsRepo = async ({
+  location,
+  radiusKm,
+  timezone,
+  limitPerTag = 10,
+}) => {
+  const radiusInMeters = radiusKm * 1000;
+  const now = getCurrentDateInTimezone({ timezone });
+
+  const pipeline = [
+    // 1️⃣ Geo filter
+    {
+      $geoNear: {
+        near: { type: "Point", coordinates: location },
+        key: "basicInfo.venueLocation",
+        distanceField: "distance",
+        spherical: true,
+        maxDistance: radiusInMeters,
+        query: {
+          status: "active",
+          $or: [
+            { "schedule.endDateTime": { $gte: now } },
+            { "schedule.startDateTime": { $gte: now } },
+          ],
+        },
+      },
+    },
+    // 2️⃣ Unwind tags
+    { $unwind: "$basicInfo.tags" },
+    // 3️⃣ Lookup tag details
+    {
+      $lookup: {
+        from: "tags",
+        localField: "basicInfo.tags",
+        foreignField: "_id",
+        as: "tag",
+      },
+    },
+    { $unwind: "$tag" },
+    // 4️⃣ Lookup organization details (populate basicInfo.organization, select basicInfo)
+    {
+      $lookup: {
+        from: "organizations",
+        localField: "basicInfo.organization",
+        foreignField: "_id",
+        as: "organization",
+        pipeline: [
+          { $project: { basicInfo: 1, _id: 1 } }
+        ]
+      }
+    },
+    {
+      $addFields: {
+        "basicInfo.organization": { $arrayElemAt: ["$organization", 0] }
+      }
+    },
+    // 5️⃣ Sort nearest first
+    { $sort: { distance: 1 } },
+    // 6️⃣ Group by tag
+    {
+      $group: {
+        _id: "$tag._id",
+        title: { $first: "$tag.title" },
+        events: { $push: "$$ROOT" },
+      },
+    },
+    // 7️⃣ Limit events per tag
+    {
+      $project: {
+        key: { $literal: "customCategory" },
+        title: 1,
+        data: { $slice: ["$events", limitPerTag] },
+      },
+    },
+  ];
+
+  return Events.aggregate(pipeline).allowDiskUse(true);
+};
+
+
+
 module.exports = {
   getEventsWithFilters,
   countEvents,
@@ -113,4 +238,7 @@ module.exports = {
   updateMany,
   findEventByNanoid,
   getMoreFromOrganizerEvents,
+  getVenueTypeTitles,
+  getEventReservations,
+  getEventsGroupedByTagsRepo,
 };

@@ -9,6 +9,7 @@ const {
 } = require("@utils/responseUtil");
 
 const menuItemsService = require("./menuItemsService");
+const { getInAppOrderingSettings } = require("../../usersManagement/usersRepository");
 
 
 const getMenuItems = async (req, res) => {
@@ -119,15 +120,9 @@ const getPickupOptions = async (req, res) => {
     return;
 
   try {
-    // TODO get from organization settings when implemented
-    // const pickupOptions = await menuItemsService.getPickupOptions(id);
-    const pickupOptions = [
-      { type: "counter", timing: "07:00 - 02:45" },
-      //table service only for dine-in
-      { type: "tableService", timing: "07:00 - 02:45" },
-      //togo
-      { type: "togo", timing: "07:00 - 02:45" },
-    ]
+
+    const pickupOptions = await getInAppOrderingSettings(id)
+  
     if (!pickupOptions) {
       return sendResponse({
         res,

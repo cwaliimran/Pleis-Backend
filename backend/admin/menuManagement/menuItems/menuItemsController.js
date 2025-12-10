@@ -333,12 +333,58 @@ const getMenuItemsByMenuId = async (req, res) => {
   }
 };
 
+const getBundleMenuItems = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  const {
+    keyword,
+    status = "active",
+    menu,
+    type,
+    category,
+    startTime,
+    endTime,
+    date,
+    companyOrganizer
+  } = req.query;
+  try {
+    const { menuItems, meta } = await menuItemsService.getBundleMenuItems({
+      page,
+      limit,
+      keyword,
+      status,
+      menu,
+      type,
+      category,
+      startTime,
+      endTime,
+      timezone: req.user?.timezone,
+      date,
+      companyOrganizer,
+    });
 
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "menu_items_fetched_successfully",
+      data: menuItems,
+      meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 module.exports = {
   createMenuItem,
   getMenuItems,
   updateMenuItem,
   deleteMenuItem,
   getMenuItemDetails,
-  getMenuItemsByMenuId
+  getMenuItemsByMenuId,
+  getBundleMenuItems
 };

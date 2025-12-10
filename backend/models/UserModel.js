@@ -7,30 +7,67 @@ const { randomBytes } = require("crypto");
 const { CompanySchema } = require("./CompanyDetails");
 const { generateSecureToken } = require("../helperUtils/secureToken");
 const { LocationSchema } = require("../shared/locations/locationSchmea");
-const { createUserWallet } = require("../app/userWalletService/walletManagement/userWalletService");
-
+const { createUserWallet } = require("../app/userWalletService/global/walletManagement/userWalletService");
+const { nanoid } = require("nanoid");
 // Define subscription statuses
-const SubscriptionType = {
-  PLAN1: "plan1", //free
-  PLAN2: "plan2", //monthly
-  PLAN3: "plan3", // yearly
+const SubscriptionTypes = {
+  FREE: "free",
+  ORDERING: "ordering",
+  LOYALTY: "loyalty",
+  RESERVATIONS: "reservations",
+  ANALYTICS: "analytics",
 };
-
-// Define subscription schema
+const PricingPlanType = {
+  MONTHLY: "monthly",
+  YEARLY: "yearly",
+};
 const subscriptionSchema = new mongoose.Schema({
-  type: {
-    type: String,
-    enum: Object.values(SubscriptionType),
+  subscriptionTypes: {
+    type: [String],
+    enum: Object.values(SubscriptionTypes),
+    default: [SubscriptionTypes.FREE], // default free subscription
     required: true,
-    default: SubscriptionType.PLAN1, // Default subscription for all users
+  },
+  pricingPlan: {
+    type: String,
+    enum: Object.values(PricingPlanType),
+    default: PricingPlanType.MONTHLY,
+  },
+  numberOfOrganizations: {
+    type: Number,
+    default: 1,
+    min: 1,
+  },
+  status: {
+    type: String,
+    enum: [
+      "pending",
+      "active",
+      "rejected",
+      "suspended",
+      "deleted",
+      "cancelled",
+      "inactive",
+      "expired",
+    ],
+    default: "active",
+  },
+  totalSubscriptionAmount: {
+    type: Number,
+    default: 0,
   },
   startDate: {
     type: Date,
-    default: Date.now, // Start date defaults to now for other subscriptions
+    default: Date.now,
   },
+
   endDate: {
-    type: Date, // Can be null for lifetime subscriptions (like spark connection)
+    type: Date,
   },
+    orderingCommission:   { type: Number, default: 0 },
+      ticketingCommission:    { type: Number, default: 0 },
+  reservationCommission:{ type: Number, default: 0 },
+
 });
 
 const USER_TYPES = [
@@ -154,6 +191,12 @@ const userSchema = new mongoose.Schema(
         default: "pending",
       },
     },
+    publicId: {
+      type: String,
+      unique: true,
+      index: true,
+      default: () => nanoid(),
+    },
 
     password: {
       type: String,
@@ -170,8 +213,8 @@ const userSchema = new mongoose.Schema(
         enum: [
           "pending",
           "active",
-          "rejected",
-          "suspended",
+          "cancelled",
+          "expired",
           "deleted",
         ],
         default: "pending",
@@ -269,17 +312,20 @@ const userSchema = new mongoose.Schema(
       default: [],
     },
 
-    // Subscription Details
-    subscriptions: {
-      type: [subscriptionSchema],
-      default: [
-        {
-          status: SubscriptionType.PLAN1,
-          startDate: null,
-          endDate: null, // No expiry for the default subscription
-        },
-      ],
+    subscription: {
+      type: subscriptionSchema,
+      default: {
+        subscriptionTypes: [SubscriptionTypes.FREE],
+        pricingPlan: PricingPlanType.MONTHLY,
+        numberOfOrganizations: 1,
+        totalSubscriptionAmount: 0,
+        status: "active",
+        startDate: Date.now(),
+        endDate: null
+      }
     },
+
+
 
     provider: {
       // Social provider details
@@ -302,6 +348,10 @@ const userSchema = new mongoose.Schema(
     location: {
       type: LocationSchema,
       default: {},
+    },
+    globalReferralLimit: {
+      type: Number,
+      default: 10,
     },
 
     //company details
@@ -332,7 +382,12 @@ const userSchema = new mongoose.Schema(
         type: Boolean,
         default: true,
       },
-    }
+    },
+    //last signed in
+    lastSignedIn: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -604,7 +659,7 @@ const User = mongoose.model("User", userSchema);
 
 module.exports = {
   User,
-  SubscriptionType,
+  SubscriptionTypes,
   generateResetToken,
   createVerificationLink,
   USER_TYPES,

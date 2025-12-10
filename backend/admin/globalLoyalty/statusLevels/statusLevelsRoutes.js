@@ -5,6 +5,7 @@ const {
   updateStatusLevel,
   deleteStatusLevel,
   getStatusLevelDetails,
+  getTitleStatusLevels,
 } = require("./statusLevelsController");
 const createRateLimiter = require("@utils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
@@ -23,6 +24,7 @@ router.post("/", roleMiddleware(["admin"]), createStatusLevel);
 
 // Get all statusLevels with pagination
 router.get("/", apiRateLimiter, getStatusLevels);
+router.get("/title", apiRateLimiter, getTitleStatusLevels);
 
 //get statusLevel details
 router.get("/:id", apiRateLimiterDetails, getStatusLevelDetails);

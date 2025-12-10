@@ -272,7 +272,15 @@ const getTicketsByOrderIds = async (orderIds) => {
   return grouped;
 };
 
-
+const getEventsTicketingsWithFilters = async (query) => {
+  return getWithFilters({
+    model: TicketingsModel,
+    query,
+    options: {
+      //select: { title: 1, price: 1, status: 1, event: 1},
+    },
+  });
+};
 module.exports = {
   createTicketing,
   getTicketingsWithFilters,
@@ -286,5 +294,6 @@ module.exports = {
   getTicketingsByEventId,
   validateTicketsAndQuantity,
   getOrganizationIdFromTicketId,
-  getTicketsByOrderIds
+  getTicketsByOrderIds,
+  getEventsTicketingsWithFilters
 };

@@ -1,11 +1,21 @@
 const mongoose = require("mongoose");
-
+const { nanoid } = require("nanoid");
 const globalWalletTransactionSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    companyOrganizer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    organization: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organizations",
+      default: null,
     },
     // -----------------------------
     // TYPE OF TRANSACTION
@@ -15,6 +25,12 @@ const globalWalletTransactionSchema = new mongoose.Schema(
       enum: ["earn", "redeem", "adjustment"],
       required: true,
     },
+      publicId: {
+        type: String,
+        unique: true,
+        index: true,
+        default: () => nanoid(),
+      },
 
     // -----------------------------
     // SOURCE OF THE POINTS

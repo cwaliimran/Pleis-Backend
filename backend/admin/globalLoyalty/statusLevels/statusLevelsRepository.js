@@ -23,13 +23,19 @@ const getFirstStatusLevel = async () => {
 const getNextStatusLevel = async (points) => {
   return await StatusLevels.findOne({ entryPoints: { $gt: points } }).select("image entryPoints retainPoints title").sort({ entryPoints: 1 });
 };
+//get previous status level
+const getPreviousStatusLevel = async (points) => {
+  return await StatusLevels.findOne({ entryPoints: { $lt: points } }).select("image entryPoints retainPoints title").sort({ entryPoints: -1 });
+};
+
+
 // get all higher levels than current entry points
 const getAllHigherLevels = async (currentEntryPoints) => {
   return await StatusLevels.find({
     entryPoints: { $gt: currentEntryPoints }
   })
-  .sort({ entryPoints: 1 })   // ascending
-  .select("title image entryPoints retainPoints");
+    .sort({ entryPoints: 1 })   // ascending
+    .select("title image entryPoints retainPoints");
 };
 
 
@@ -88,5 +94,6 @@ module.exports = {
   getFirstStatusLevel,
   getNextStatusLevel,
   getAllHigherLevels,
-  getPreviousStatusLevelByRetainPoints
+  getPreviousStatusLevelByRetainPoints,
+  getPreviousStatusLevel
 };

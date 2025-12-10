@@ -591,6 +591,34 @@ const convertTimezoneToUtc = (
   const momentDate = moment.tz(date, inputFormat, timezone).utc();
   return momentDate.format(outputFormat); // return string
 };
+const convertToUtcDateOnly = (date, timezone, inputFormat = "YYYY-MM-DD") => {
+
+
+  // Parse the date in the specified timezone but do not change the time zone
+  const momentDate = moment.tz(date, inputFormat, timezone);
+
+  // Format the date in the given timezone without changing the time zone
+  return momentDate.format("YYYY-MM-DD[T]HH:mm:ss.SSS[+00:00]");  // Return the formatted date
+};
+
+const convertTimezoneToUtcDateOnly = (
+  date,
+  timezone,
+  inputFormat = "YYYY-MM-DD hh:mm A"
+) => {
+  const momentDate = moment.tz(date, inputFormat, timezone).utc();
+
+  // Manually set UTC time to midnight WITHOUT startOf()
+  const year = momentDate.year();
+  const month = momentDate.month();   // 0-based
+  const day = momentDate.date();
+
+  const utcMidnight = moment
+    .utc([year, month, day]) // creates YYYY-MM-DDT00:00:00.000Z
+    .format("YYYY-MM-DD[T]HH:mm:ss.SSS[+00:00]");
+
+  return utcMidnight;
+};
 
 
 // Get the current date in user's timezone
@@ -616,10 +644,23 @@ const getCurrentDateInTimezone = ({
 
 
 const getStartAndEndOfDay = (date, timezone) => {
-  const start = moment(date).tz(timezone).startOf("day").toDate();
-  const end = moment(date).tz(timezone).endOf("day").toDate();
+  const start = moment(date)
+    .tz(timezone)
+    .startOf("day")
+    .utc()
+    .startOf("day")
+    .toDate();
+
+  const end = moment(date)
+    .tz(timezone)
+    .endOf("day")
+    .utc()
+    .startOf("day")
+    .toDate();
+
   return { start, end };
 };
+
 
 const getStartAndEndOfWeek = (date, timezone) => {
   const start = moment(date).tz(timezone).startOf("week").toDate();
@@ -722,6 +763,51 @@ const getReadableErrorMessage = (error) => {
   // Default error
   return { code: error.code || null, statusCode, message: error.message };
 };
+const getCurrentUtcDateOnly = () => {
+  const now = new Date();
+function getEndDate(pricingPlan, startDate = new Date()) {
+  if (!pricingPlan || pricingPlan === "free") return null;
+
+  const start = new Date(startDate);
+
+  if (pricingPlan === "monthly") {
+    return new Date(start.setMonth(start.getMonth() + 1));
+  }
+  if (pricingPlan === "yearly") {
+    return new Date(start.setFullYear(start.getFullYear() + 1));
+  }
+
+  return null;
+}
+  return new Date(
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),  // set time to 00:00:00 UTC
+      0,
+      0,
+      0,
+      0
+    )
+  );
+};
+const getEndDate = (pricingPlan, startDate = new Date()) => {
+  if (!pricingPlan || pricingPlan === "free") return null;
+
+  const start = new Date(startDate);
+
+  if (pricingPlan === "monthly") {
+    return new Date(start.setMonth(start.getMonth() + 1));
+  }
+
+  if (pricingPlan === "yearly") {
+    return new Date(start.setFullYear(start.getFullYear() + 1));
+  }
+
+  return null;
+};
+
+
 
 module.exports = {
   sendResponse,
@@ -740,4 +826,8 @@ module.exports = {
   getStartAndEndOfWeek,
   getStartAndEndOfMonth,
   convertUtcToTimezoneAMPM,
+  convertTimezoneToUtcDateOnly,
+  getCurrentUtcDateOnly,
+  convertToUtcDateOnly,
+  getEndDate
 };

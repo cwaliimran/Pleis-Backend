@@ -46,18 +46,19 @@ router.use("/bundles", require("../bundles/bundleRoutes"));
 
 //Promo Codes
 router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));
-//Promo Codes
-router.use("/global-referral", require("../globalReferral/globalReferralRoutes"));
+
 // transactions
 router.use("/transactions", require("../transactions/transactionsRoutes"));
-// global reward categories
-router.use("/global-reward-categories", require("../globalLoyalty/GlobalRewardCategories/GlobalRewardCategoriesRoutes"));
-// global Loyalty reward
-router.use("/global-loyalty-reward", require("../globalLoyalty/rewards/rewardsRoutes"));
 
-// global Loyalty reward
-router.use("/global-challange", require("../globalLoyalty/challenges/challengesRoutes"));
+// thirdPParty
+router.use("/third-party", require("../thirdParty/thirdPartyRoutes"));
+// thirdPParty
+router.use("/referrals", require("../globalLoyalty/globalReferral/globalReferralRoutes"));
+// thirdPParty
+router.use("/marketing", require("../marketing/marketingRoutes"));
 
+// thirdPParty
+router.use("/subscriptions", require("../subscriptions/subscriptionsRoutes"));
 
 
 module.exports = router;

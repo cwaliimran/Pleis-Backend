@@ -147,6 +147,95 @@ const getStatusLevelDetails = async (id) => {
   if (!statusLevel) return null;
   return statusLevelsFormatter(statusLevel);
 };
+const getTitleStatusLevels = async ({ page, limit, keyword, status, userId, date }) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+
+  const pipeline = [
+    // Match user access (statusLevel creator)
+    {
+      $match: {
+        ...(userId && { creator: new mongoose.Types.ObjectId(userId) })
+      }
+    }
+  ];
+
+  // Apply filters
+  if (status) {
+    pipeline.push({ $match: { status } });
+  } else {
+    pipeline.push({ $match: { status: { $ne: "deleted" } } }); // Exclude 'deleted' status by default
+  }
+
+  if (date) {
+    const start = new Date(date);
+    const end = new Date(new Date(date).setDate(start.getDate() + 1));
+    pipeline.push({
+      $match: {
+        createdAt: { $gte: start, $lt: end }
+      }
+    });
+  }
+
+  const keywordMatch = buildKeywordQueryFromModels(
+    [
+      { schema: StatusLevels.schema }
+    ],
+    keyword
+  );
+
+  if (Object.keys(keywordMatch).length) {
+    pipeline.push({ $match: keywordMatch });
+  }
+
+  // Use $project to include only the id and title fields
+  pipeline.push({
+    $project: {
+      _id: 1,      // Include the _id field
+      title: 1     // Include the title field
+    }
+  });
+
+  pipeline.push({ $sort: { entryPoints: 1 } }); // Sort by entryPoints
+
+  // Apply pagination + counts using $facet
+  pipeline.push({
+    $facet: {
+      data: [
+        { $skip: skip },
+        ...(limit === 0 ? [] : [{ $limit: limit }]) // Apply pagination limit
+      ],
+      totalFiltered: [{ $count: "count" }] // Total count of status levels
+    }
+  });
+
+  const result = await StatusLevels.aggregate(pipeline);
+
+  let statusLevels = result[0]?.data || [];
+  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+
+  // Additional counts for meta (active/inactive/total by userId as creator)
+  const [total, active, inactive] = await Promise.all([
+    StatusLevels.countDocuments({ ...(userId && { creator: userId }), status: { $ne: "deleted" } }),
+    StatusLevels.countDocuments({ status: "active", ...(userId && { creator: userId }) }),
+    StatusLevels.countDocuments({ status: "inactive", ...(userId && { creator: userId }) })
+  ]);
+
+  const meta = generateMeta(page, limit, totalFiltered);
+  meta.statusLevelsCount = { total, active, inactive };
+
+  // Format statusLevels to include only id and title
+  statusLevels = statusLevels.map(item => {
+    return {
+      _id: item._id,
+      title: item.title
+    };
+  });
+
+  return {
+    statusLevels,
+    meta
+  };
+};
 
 module.exports = {
   createStatusLevel,
@@ -154,4 +243,5 @@ module.exports = {
   updateStatusLevel,
   getStatusLevelDetails,
   deleteStatusLevel,
+  getTitleStatusLevels
 };

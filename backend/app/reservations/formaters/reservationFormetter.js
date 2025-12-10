@@ -1,3 +1,4 @@
+const { getFullImageUrl } = require("@utils/imageHelper");
 const { convertUtcToTimezoneAMPM } = require("@utils/responseUtil");
 const moment = require('moment');
 const qrcode = require("qrcode");
@@ -98,8 +99,10 @@ if (cat.eventStartDate) {
   cat.eventTime = convertUtcToTimezoneAMPM(start.toISOString(), timezone);
    delete cat.eventStartDate;
 }
+    cat.profileIcon = getFullImageUrl(cat.profileIcon || "noimage.png");
+        cat.organizationCover = getFullImageUrl(cat.organizationCover || "noimage.png");
 
-
+            cat.organizationLogo = getFullImageUrl(cat.organizationLogo || "noimage.png");
   // ---------------------------
   // 2. HANDLE dateTimeSlots ARRAY
   // ---------------------------

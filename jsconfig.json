@@ -102,13 +102,10 @@
         "backend/commonModules/loyalty/streaks/StreakRules.js"
       ],
       "@GlobalReferralModel": [
-        "backend/commonModules/globalReferral/GlobalReferral.js"
+        "backend/commonModules/globalReferral/GlobalReferralSettings.js"
       ],
-      "@ReferralReferenceModel": [
-        "backend/commonModules/globalReferral/referralReference.js"
-      ],
-      "@ReferralRecordModel": [
-        "backend/commonModules/globalReferral/ReferralRecord.js"
+      "@ReferredRecordModel": [
+        "backend/commonModules/globalReferral/ReferredRecord.js"
       ],
       "@TicketingBookingsModel": [
         "backend/commonModules/bookings/ticketings/TicketingBookings.js"
@@ -136,6 +133,30 @@
       ],
       "@GlobalChallengeModel": [
         "backend/commonModules/globalLoyalty/rewards/models/Challenge/models/Challenge/BaseChallenge.js"
+      ],
+      "@GlobalStreaksModel": [
+        "backend/commonModules/globalLoyalty/streaks/Streaks.js"
+      ],
+      "@GlobalUsersStreaksModel": [
+        "backend/commonModules/globalLoyalty/streaks/UsersStreaks.js"
+      ],
+      "@ThirdPartyModel": [
+        "backend/commonModules/globalLoyalty/thirdParty/ThirdParty.js"
+      ],
+      "@Marketing": [
+        "backend/commonModules/marketing/Marketing.js"
+      ],
+      "@UserCompanyLoyaltyWalletTransactionsModel": [
+        "backend/commonModules/wallet/UserCompanyLoyaltyWalletTransactions.js"
+      ],
+      "@SubscriptionSettings": [
+        "backend/commonModules/subscriptions/SubscriptionSettings.js"
+      ],
+      "@UpdatesModel": [
+        "backend/commonModules/updates/Updates.js"
+      ],
+      "@NotificationsModel": [
+        "backend/models/Notifications.js"
       ]
     }
   },

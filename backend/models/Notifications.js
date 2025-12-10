@@ -5,6 +5,7 @@ const NotificationTypes = {
   NEW_MESSAGE: "newMessage",
   SYSTEM: "system",
   REMINDER: "reminder",
+   EVENT_UPDATE: "eventUpdate",
 };
 
 // Define the NotificationSchema
