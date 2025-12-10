@@ -195,7 +195,7 @@ pipeline.push({
     createdAt: 1,  // Include createdAt
     updatedAt: 1,  // Include updatedAt
     __v: 1,  // Include __v
-    statusLevelTitle: { 
+    statusLevel: { 
       $arrayElemAt: ["$statusLevelDetails.title", 0]  // Get the title from StatusLevels collection
     }
   }
