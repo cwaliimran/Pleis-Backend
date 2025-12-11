@@ -102,6 +102,7 @@ const sendResponse = ({
 
 // Helper: Convert key to readable default translation
 function keyToReadableText(key) {
+  if (!key || typeof key !== "string" || key.trim() === "") return "";
   const withSpaces = key.replace(/[_\.]+/g, " ");
   return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1);
 }

@@ -122,9 +122,6 @@
       "@UserGlobalWalletModel": [
         "backend/commonModules/wallet/UserGlobalWallet.js"
       ],
-      "@GlobalWalletTransactionsModel": [
-        "backend/commonModules/wallet/GlobalWalletTransactions.js"
-      ],
       "@GlobalRewardCategories": [
         "backend/commonModules/globalLoyalty/globalRewardCategories/GlobalRewardCategories.js"
       ],
@@ -146,11 +143,11 @@
       "@Marketing": [
         "backend/commonModules/marketing/Marketing.js"
       ],
-      "@UserCompanyLoyaltyWalletTransactionsModel": [
-        "backend/commonModules/wallet/UserCompanyLoyaltyWalletTransactions.js"
-      ],
       "@SubscriptionSettings": [
         "backend/commonModules/subscriptions/SubscriptionSettings.js"
+      ],
+      "@UnifiedWalletTransactionsModel": [
+        "backend/commonModules/transactions/UnifiedWalletTransactions.js"
       ]
     }
   },

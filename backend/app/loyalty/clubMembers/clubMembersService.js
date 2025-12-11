@@ -5,6 +5,7 @@ const { getRewardsByCompanyOrganizerService } = require("../rewards/rewardsServi
 const clubMemberRepo = require("./clubMembersRepository");
 const { formatUserWallet, formatUserWallets } = require("./formatters/formatUserWallet");
 const { formatRewardsByTierKey } = require("../../../commonModules/loyalty/rewards/utils/formatReward");
+const { getTransactions } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
 // Count members
 const countClubMembers = async (filters = {}) => {
   return clubMemberRepo.countClubMembers(filters);
@@ -57,7 +58,7 @@ const updateUserCompanyPoints = async (payload) => {
 };
 
 const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganizer) => {
-  const [profile, userCompanyWallet, rewards, challenges, promotions] = await Promise.all([
+  const [profile, userCompanyWallet, rewards, challenges, promotions, transactions] = await Promise.all([
     {},
     clubMemberRepo.isClubMemberWithWallet(userId, companyOrganizer),
     getRewardsByCompanyOrganizerService({
@@ -76,6 +77,7 @@ const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganiz
       timezone,
       companyOrganizer,
     }),
+    getTransactions({ user: userId, walletType: "companyLoyalty", companyOrganizer, page: 1, limit: 10, timezone })
   ]);
 
 
@@ -95,7 +97,8 @@ const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganiz
     promotions: {
       items: promotions.promotions,
       meta: promotions.meta
-    }
+    },
+    transactions
   };
 };
 

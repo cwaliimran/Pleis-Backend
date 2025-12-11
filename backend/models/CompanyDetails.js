@@ -2,9 +2,26 @@ const mongoose = require("mongoose");
 
 const CompanySchema = new mongoose.Schema(
   {
+    logo: {
+      type: String,
+      trim: true,
+    },
+    coverImage: {
+      type: String,
+      trim: true,
+    },
     name: {
       type: String,
       trim: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+    },
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Categories",
+      default: null,
     },
     oib: {
       type: String,

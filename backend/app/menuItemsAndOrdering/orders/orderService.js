@@ -5,7 +5,8 @@ const { menuItemOrderFormatter } = require("./formatter/menuItemOrderFormatter")
 const { generateMeta } = require("../../../helperUtils/responseUtil");
 const { calculatePointsRepo } = require("../../loyalty/calculatePointsEarning/pointsEarningsRepository");
 const { getOrgCompanyOrganizer } = require("../../organizationProfile/organizationProfileRepository");
-const { createCompanyTransaction } = require("../../userWalletService/organizationLevel/walletTransactions/companyLoyaltyTransactionService");
+const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
+
 
 // 1️⃣ Place an order
 
@@ -94,10 +95,10 @@ const placeOrder = async ({ userId, timezone, items, notes, paymentMethod,
       allowNegative: false,
       type: "earn",
       description: "",
-      objectId: order._id,
-      objectType: "order"
+      entityId: order._id,
+      domainType: "menuorders"
     }
-    let trx = createCompanyTransaction(data)
+    let trx = await createTransaction(data)
   }
 
   let formattedOrder = menuItemOrderFormatter(order, timezone);

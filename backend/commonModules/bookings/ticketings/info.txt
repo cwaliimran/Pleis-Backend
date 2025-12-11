@@ -1,7 +1,9 @@
-*TicketingOrders.js
-TicketingOrders stores information of payments and being referenced in ticketingBookings
+TicketingOrders.js
+Stores payment information
+Referenced in TicketingBookings
 
-*TicketingBookings.js
-Actual tickets list
+TicketingBookings.js
+Stores actual issued tickets
+Contains snapshot details for each ticket
 
-*Transactions are fetched from TicketingOrders
+Transactions fetched from TicketingOrders

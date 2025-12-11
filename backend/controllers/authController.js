@@ -134,6 +134,10 @@ const register = async (req, res) => {
 
 const companyDetails = async (req, res) => {
   const {
+    logo,
+    coverImage,
+    description,
+    category,
     name,
     oib,
     bankAccountNumber,
@@ -164,6 +168,10 @@ const companyDetails = async (req, res) => {
 
     // Update only provided company details, keep existing fields if not provided
     user.companyDetails = {
+      logo: logo !== undefined ? logo : user.companyDetails?.logo,
+      coverImage: coverImage !== undefined ? coverImage : user.companyDetails?.coverImage,
+      description: description !== undefined ? description : user.companyDetails?.description,
+      category: category !== undefined ? category : user.companyDetails?.category,
       name: name !== undefined ? name : user.companyDetails?.name,
       oib: oib !== undefined ? oib : user.companyDetails?.oib,
       bankAccountNumber:

@@ -39,14 +39,13 @@ module.exports = {
     "@FriendRequestModel": "backend/commonModules/friendRequest/FriendRequest.js",
     "@GlobalStatusLevelsModel": "backend/admin/globalLoyalty/statusLevels/GlobalStatusLevels.js",
     "@UserGlobalWalletModel": "backend/commonModules/wallet/UserGlobalWallet.js",
-    "@GlobalWalletTransactionsModel": "backend/commonModules/wallet/GlobalWalletTransactions.js",
     "@GlobalRewardCategories": "backend/commonModules/globalLoyalty/globalRewardCategories/GlobalRewardCategories.js",
     "@GlobalLoyaltyReward": "backend/commonModules/globalLoyalty/rewards/models/reward/BaseReward.js",
     "@GlobalChallengeModel": "backend/commonModules/globalLoyalty/rewards/models/Challenge/models/Challenge/BaseChallenge.js",
     "@GlobalStreaksModel": "backend/commonModules/globalLoyalty/streaks/Streaks.js",
     "@GlobalUsersStreaksModel": "backend/commonModules/globalLoyalty/streaks/UsersStreaks.js",
-        "@ThirdPartyModel": "backend/commonModules/globalLoyalty/thirdParty/ThirdParty.js",
-             "@Marketing": "backend/commonModules/marketing/Marketing.js",
-    "@UserCompanyLoyaltyWalletTransactionsModel": "backend/commonModules/wallet/UserCompanyLoyaltyWalletTransactions.js",
-    "@SubscriptionSettings": "backend/commonModules/subscriptions/SubscriptionSettings.js"
+    "@ThirdPartyModel": "backend/commonModules/globalLoyalty/thirdParty/ThirdParty.js",
+    "@Marketing": "backend/commonModules/marketing/Marketing.js",
+    "@SubscriptionSettings": "backend/commonModules/subscriptions/SubscriptionSettings.js",
+    "@UnifiedWalletTransactionsModel": "backend/commonModules/transactions/UnifiedWalletTransactions.js"
 };

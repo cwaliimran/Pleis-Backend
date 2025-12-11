@@ -32,10 +32,10 @@ router.use("/ticketing", require("../ticketing/ticketingsRoutes"));
 router.use("/highlights", require("../highlights/highlightRoutes"));
 
 //loyalty
-router.use("/loyalty", require("../loyalty/loyaltyRoutes")); 
+router.use("/loyalty", require("../loyalty/loyaltyRoutes"));
 
 //loyalty
-router.use("/global-loyalty", require("../globalLoyalty/loyaltyRoutes")); 
+router.use("/global-loyalty", require("../globalLoyalty/loyaltyRoutes"));
 // reservation
 router.use("/reservations", require("../reservation/reservationRoutes"));
 //status badges
@@ -48,7 +48,8 @@ router.use("/bundles", require("../bundles/bundleRoutes"));
 router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));
 
 // transactions
-router.use("/transactions", require("../transactions/transactionsRoutes"));
+router.use("/transactions-old", require("../transactions_old/transactionsRoutes"));
+router.use("/transactions", require("../transactions/routes/unifiedTransactionsRoutes"));
 
 // thirdPParty
 router.use("/third-party", require("../thirdParty/thirdPartyRoutes"));
