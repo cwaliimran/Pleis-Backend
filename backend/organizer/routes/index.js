@@ -14,6 +14,7 @@ router.use("/organizations", require("../organizations/organizationRoutes"));
 // router.use("/ticketing", require("../ticketing/ticketingsRoutes"));
 router.use("/users", require("../usersManagement/usersRoutes"));
 router.use("/updates", require("../updates/updatesRoutes"));
+router.use("/marketing", require("../marketing/marketingRoutes"));
 
 
 
