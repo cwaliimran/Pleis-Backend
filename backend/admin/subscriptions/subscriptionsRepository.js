@@ -79,7 +79,7 @@ const findByIdAndUpdate = async (id, data) => {
 
 const getSubscriptions = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, skip }) => {
   const now = getCurrentDateInTimezone({ timezone });
-console.log("date",date );
+
 
   let organizationsIds = Array.isArray(organizationsId)
     ? organizationsId
@@ -177,11 +177,11 @@ console.log("date",date );
     }
   });
   const result = await Subscriptions.aggregate(pipeline);
-  console.log("pipeline",pipeline );
+
 
   let Subscriptions = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
-console.log("Subscriptions",Subscriptions );
+
   // Additional counts for meta (active/inactive/total by userId as creator)
   const [total, active, inactive] = await Promise.all([
     Subscriptions.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "deleted" } }),
@@ -223,9 +223,11 @@ const getUserSubscriptions = async ({
 }) => {
   const now = getCurrentDateInTimezone({ timezone });
 
+
+
   const pipeline = [
     // ------------------------------------------------------
-    // 1) Fetch users who have a subscription object
+    // 1) Fetch all users who have a subscription object
     // ------------------------------------------------------
     {
       $match: {
@@ -233,10 +235,29 @@ const getUserSubscriptions = async ({
       }
     },
 
-
+    // ------------------------------------------------------
+    // 2) Lookup organizations to check if the user is the creator
+    // ------------------------------------------------------
+    {
+      $lookup: {
+        from: "organizations", // Join with the organizations collection
+        localField: "_id", // Match user ID with creator field in organizations
+        foreignField: "creator", // Match creator field in organizations
+        as: "userOrganizations"
+      }
+    },
 
     // ------------------------------------------------------
-    // 3) Flatten subscription data for filtering
+    // 3) Filter users who are creators in any organization
+    // ------------------------------------------------------
+    {
+      $match: {
+        "userOrganizations.creator": { $exists: true, $ne: null } // Only include users who are creators
+      }
+    },
+
+    // ------------------------------------------------------
+    // 4) Flatten subscription data for filtering
     // ------------------------------------------------------
     {
       $addFields: {
@@ -259,39 +280,42 @@ const getUserSubscriptions = async ({
     }
   ];
 
+
   // ------------------------------------------------------
   // RANGE FILTERS BASED ON SUBSCRIPTION START DATE
   // ------------------------------------------------------
   if (range === "monthly") {
     const { start, end } = getStartAndEndOfMonth(now, timezone);
+
     pipeline.push({ $match: { startDate: { $gte: start, $lt: end } } });
   }
 
   if (range === "weekly") {
     const { start, end } = getStartAndEndOfWeek(now, timezone);
+
     pipeline.push({ $match: { startDate: { $gte: start, $lt: end } } });
   }
 
   if (range === "today") {
     const { start, end } = getStartAndEndOfDay(now, timezone);
+
     pipeline.push({ $match: { startDate: { $gte: start, $lt: end } } });
   }
 
   // ------------------------------------------------------
   // STATUS FILTER
   // ------------------------------------------------------
-if (status) {
-  // Match subscription status as per user's input
-  pipeline.push({ $match: { "subscription.status": status } });
-} else {
-  // If no status provided, match active or expired subscriptions
-  pipeline.push({
-    $match: {
-      "subscription.status": { $ne: "deleted" }  // Do not include deleted subscriptions
-    }
-  });
-}
+  if (status) {
 
+    pipeline.push({ $match: { "subscription.status": status } });
+  } else {
+
+    pipeline.push({
+      $match: {
+        "subscription.status": { $ne: "deleted" }  // Do not include deleted subscriptions
+      }
+    });
+  }
 
   // ------------------------------------------------------
   // DATE FILTER ON startDate
@@ -299,6 +323,7 @@ if (status) {
   if (date) {
     const start = new Date(date);
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
+
     pipeline.push({ $match: { startDate: { $gte: start, $lt: end } } });
   }
 
@@ -306,17 +331,19 @@ if (status) {
   // KEYWORD SEARCH (user + subscription fields)
   // ------------------------------------------------------
   if (keyword) {
+
     pipeline.push({
       $match: {
         $or: [
           { firstName: new RegExp(keyword, "i") },
           { lastName: new RegExp(keyword, "i") },
-
         ]
       }
     });
   }
-    if (billing) {
+
+  if (billing) {
+
     pipeline.push({
       $match: {
         $or: [
@@ -329,11 +356,13 @@ if (status) {
   // ------------------------------------------------------
   // SORT BY subscription date
   // ------------------------------------------------------
+
   pipeline.push({ $sort: { startDate: -1 } });
 
   // ------------------------------------------------------
   // PAGINATION + TOTAL COUNT
   // ------------------------------------------------------
+
   pipeline.push({
     $facet: {
       data: [
@@ -344,7 +373,10 @@ if (status) {
     }
   });
 
+
   const result = await User.aggregate(pipeline);
+
+
 
   let subscriptions = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
@@ -352,7 +384,7 @@ if (status) {
   // ------------------------------------------------------
   // META COUNTS
   // ------------------------------------------------------
-  const [total, active, expired] = await Promise.all([
+  const [total, active, expired] = await Promise.all([ 
     User.countDocuments({ subscription: { $exists: true } }),
     User.countDocuments({
       "subscription.endDate": { $gt: now }
@@ -369,45 +401,48 @@ if (status) {
   // FINAL FORMATTER (CLEAN OUTPUT)
   // ------------------------------------------------------
 
-subscriptions = subscriptions.map((user) => {
-  const amount = Number(user.totalSubscriptionAmount ?? 0);
-  let monthlyPrice = amount;
+  subscriptions = subscriptions.map((user) => {
+    const amount = Number(user.totalSubscriptionAmount ?? 0);
+    let monthlyPrice = amount;
 
-  if (user.pricingPlan === "yearly") {
-    monthlyPrice = amount / 12;
-  }
+    if (user.pricingPlan === "yearly") {
+      monthlyPrice = amount / 12;
+    }
 
-  // Format to 2 decimals
-  monthlyPrice = Number(monthlyPrice.toFixed(2));
-  const finalStatus = user.subscription?.status || "active";
+    // Format to 2 decimals
+    monthlyPrice = Number(monthlyPrice.toFixed(2));
+    const finalStatus = user.subscription?.status || "active";
 
-  // Check if subscription object exists before accessing its properties
-  const subscription = user.subscription || {}; // Use an empty object if subscription is undefined
+    // Check if subscription object exists before accessing its properties
+    const subscription = user.subscription || {}; // Use an empty object if subscription is undefined
 
-  return {
-    userId: user._id,
-    username: user.username,
-    firstName: user.firstName,
-    lastName: user.lastName,
+    return {
+      userId: user._id,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
 
-    subscription: {
-      subscriptionTypes: user.subscriptionTypes,
-      pricingPlan: user.pricingPlan,
-      numberOfOrganizations: user.numberOfOrganizations,
-      totalSubscriptionAmount: amount,
-      monthlyPrice,
-      startDate: user.startDate,
-      endDate: user.endDate,
-      status: finalStatus,
-      orderingCommission: subscription.orderingCommission || 0, // Default to 0 if undefined
-      ticketingCommission: subscription.ticketingCommission || 0, // Default to 0 if undefined
-      reservationCommission: subscription.reservationCommission || 0, // Default to 0 if undefined
-    },
-  };
-});
+      subscription: {
+        subscriptionTypes: user.subscriptionTypes,
+        pricingPlan: user.pricingPlan,
+        numberOfOrganizations: user.numberOfOrganizations,
+        totalSubscriptionAmount: amount,
+        monthlyPrice,
+        startDate: user.startDate,
+        endDate: user.endDate,
+        status: finalStatus,
+        orderingCommission: subscription.orderingCommission || 0, // Default to 0 if undefined
+        ticketingCommission: subscription.ticketingCommission || 0, // Default to 0 if undefined
+        reservationCommission: subscription.reservationCommission || 0, // Default to 0 if undefined
+      },
+    };
+  });
+
+
 
   return { subscriptions, meta };
 };
+
 
 
 
@@ -437,7 +472,7 @@ const getavailableSubscriptions = async ({
   skip
 }) => {
   const now = getCurrentUtcDateOnly();
-  console.log("Entered getavailableSubscriptions");
+
 
   const pipeline = [];
 
@@ -458,7 +493,7 @@ const getavailableSubscriptions = async ({
 
   if (range === "weekly") {
     const { start, end } = getStartAndEndOfWeek(now, timezone);
-    console.log("Weekly range:", start, end);
+
     pipeline.push({
       $match: {
         "timingSlots.dateTimeSlots": {
@@ -486,7 +521,7 @@ const getavailableSubscriptions = async ({
   // ---------------------------------------------------------
   if (date) {
     const { start, end } = getStartAndEndOfDay(date, timezone);
-    console.log("DATE DEBUG:", { start, end });
+
 
     pipeline.push({
       $match: {
@@ -585,6 +620,9 @@ const findByIdAndDelete = async (userId) => {
     throw err;
   }
 };
+const findById = async (userId) => {
+    return  await User.findById(userId).select('subscription');
+};
 
 
 
@@ -601,5 +639,6 @@ module.exports = {
   findUserSubscriptionById,
   findUserById,
   getavailableSubscriptions,
-  findByIdAndDelete
+  findByIdAndDelete,
+  findById
 };

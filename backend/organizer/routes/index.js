@@ -13,8 +13,7 @@ router.use("/organizations", require("../organizations/organizationRoutes"));
 //ticketings
 // router.use("/ticketing", require("../ticketing/ticketingsRoutes"));
 router.use("/users", require("../usersManagement/usersRoutes"));
-// thirdPParty
-// router.use("/marketing", require("../marketing/marketingRoutes"));
+router.use("/updates", require("../updates/updatesRoutes"));
 
 
 

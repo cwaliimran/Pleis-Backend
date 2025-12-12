@@ -148,6 +148,11 @@
       ],
       "@UnifiedWalletTransactionsModel": [
         "backend/commonModules/transactions/UnifiedWalletTransactions.js"
+      "@UpdatesModel": [
+        "backend/commonModules/updates/Updates.js"
+      ],
+      "@NotificationsModel": [
+        "backend/models/Notifications.js"
       ]
     }
   },

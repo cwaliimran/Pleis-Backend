@@ -1,7 +1,5 @@
 const mongoose = require('mongoose');
 
-
-
 // Define the new schema
 const referredRecordSchema = new mongoose.Schema(
   {
@@ -17,7 +15,7 @@ const referredRecordSchema = new mongoose.Schema(
       default: null,
     },
 
-       referrerUserId: {
+    referrerUserId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Users",  // Reference to the Users model
       default: null,
@@ -53,15 +51,33 @@ const referredRecordSchema = new mongoose.Schema(
       type: Number,
       default: 0,  // Default to 0 if not provided
     },
+
+    // Add status field with enum for active or inactive
+    status: {
+      type: String,
+      enum: ['active', 'inactive'],
+      default: 'active',  // Default to 'active' status
+    },
   },
   { timestamps: true }  // Automatically add createdAt and updatedAt
 );
 
-// Pre-save hook to set purchased = true if purchases >= 3
+// Pre-save hook to handle business logic before saving
 referredRecordSchema.pre('save', function (next) {
+  // Set purchased to true if purchases >= 3
   if (this.purchases >= 3 && !this.purchased) {
     this.purchased = true;  // Set purchased to true if purchases >= 3
   }
+
+  // Check if the record is older than 15 days from the createdAt field and no purchases made
+  const fifteenDaysAgo = new Date();
+  fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+
+  // If the record was created more than 15 days ago and there have been no purchases, set status to inactive
+  if (this.purchases === 0 && this.createdAt < fifteenDaysAgo) {
+    this.status = 'inactive'; // Ensure status is a string ('inactive')
+  }
+
   next();
 });
 
