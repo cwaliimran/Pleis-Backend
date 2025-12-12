@@ -51,6 +51,10 @@ const createMarketing = async (req, res) => {
 
 
 const getMarketings = async (req, res) => {
+  console.log(" req.user.role",req.user);
+  if (req.user.accountState && req.user.accountState.userType === "organizer") {
+    return getUserMarketings(req, res);
+  }
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date } = req.query;
   try {

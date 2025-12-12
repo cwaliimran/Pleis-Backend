@@ -24,7 +24,6 @@ router.use("/loyalty/dashboard", require("../app/loyalty/dashboard/dashboardsRou
 router.use("/loyalty/challenges", require("../app/loyalty/challenges/challengesRoutes"));
 router.use("/loyalty/promotions", require("../app/loyalty/promotions/promotionsRoutes"));
 router.use("/loyalty/club", require("../app/loyalty/clubMembers/clubMembersRoutes"));
-router.use("/loyalty/wallet-transactions", require("../app/userWalletService/organizationLevel/walletTransactions/companyLoyaltyTransactionRoutes.js"));
 
 router.use("/users", require("../app/usersManagement/usersRoutes"));
 
@@ -46,14 +45,11 @@ router.use("/global-referral", require("../app/globalReferral/globalReferralRout
 //ticketing bookings
 router.use("/ticketing-bookings", require("../app/bookings/ticketings/ticketingBookingRoutes"));
 //transactions
-router.use("/transactions", require("../app/bookings/transactions/transactionsRoutes"));
+router.use("/transactions", require("../app/userWalletService/transactions/routes/unifiedTransactionsRoutes"));
 //transactions
 router.use("/friend-request", require("../app/friendRequest/friendRequestRoutes"));
 //friends-suggestions
 router.use("/friends-suggestions", require("../app/friendsSuggestion/friendsSuggestionRoutes"));
-
-//global loyalty wallet transactions
-router.use("/global-loyalty/wallet-transactions", require("../app/userWalletService/global/walletTransactions/globalTransactionsRoutes"));
 
 router.use("/global-loyalty/wallet", require("../app/userWalletService/global/walletManagement/userWalletRoutes"));
 

@@ -8,6 +8,7 @@ const  VenueTypes = require("@VenueTypesModel");
 
 const  Reservations = require("@ReservationsModel");
 const { getCurrentDateInTimezone } = require("@utils/responseUtil");
+const { getMinTicketPricesByEventIds } = require("../ticketing/ticketingsRepository");
 // Get all with filters
 const getEventsWithFilters = async (query, skip, limit) => {
   return Events.find(query)
@@ -55,6 +56,18 @@ const getMoreFromOrganizerEvents = async (userId, filter, page, limit) => {
     }));
   }
 
+    // Fetch minimum ticket prices for all events in results
+    const eventIds = events.map((e) => e._id);
+    const ticketPriceMap = await getMinTicketPricesByEventIds(eventIds);
+
+    // Attach minimum ticket price to each event
+    events = events.map((event) => {
+      const minPrice = ticketPriceMap[event._id.toString()] || null;
+      return {
+        ...event,
+        ticketInfo: minPrice ? { price: `€${minPrice}` } : null,
+      };
+    });
 
   return events;
 

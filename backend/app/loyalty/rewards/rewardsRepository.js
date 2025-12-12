@@ -19,7 +19,7 @@ const getRewardsByCompanyOrganizer = async ({ companyOrganizer, status }) => {
 
   return Reward.find(query)
     .populate("menuItem", "title")
-    .populate({ path: "tierLimit", select: "title image" })
+    .populate({ path: "tierLimit" })
     .sort({ createdAt: -1 }) // still useful for ordering inside groups
     .lean();
 };

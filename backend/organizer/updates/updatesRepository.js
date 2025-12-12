@@ -10,7 +10,7 @@ const {NotificationExp, NotificationTypes} = require("@NotificationsModel");
 const {sendUserNotifications} = require("../../controllers/communicationController");
 const getUserIdsForEvent = async (eventId) => {
   try {
-    console.log("eventId", eventId);
+
 
     // Aggregate users from both TicketingOrders and UserReservations collections
 
@@ -68,7 +68,7 @@ const getUserIdsForEvent = async (eventId) => {
     ];
     return uniqueUserIds; // Return the list of unique user IDs
   } catch (err) {
-    console.error('Error fetching user IDs:', err);
+
     return []; // Return an empty array in case of an error
   }
 };
@@ -96,15 +96,12 @@ const createUpdates = async (data) => {
 
 const getUpdatess = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
   const pipeline = [
-    // Step 1: Match updates where the companyOrganizer matches the provided userId
     {
       $match: {
         ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) })
       }
     }
-  ];
-
-  // Step 2: Apply range filters (monthly, weekly, today)
+  ]; 
   if (range === "monthly") {
     const { start, end } = getStartAndEndOfMonth(today, timezone);
     pipeline.push({

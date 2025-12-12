@@ -12,8 +12,33 @@ const getTicketingsWithFilters = async (query) => {
   });
 };
 
+const getMinTicketPricesByEventIds = async (eventIds = []) => {
+  if (!eventIds.length) return {};
+
+  const prices = await TicketingsModel.aggregate([
+    {
+      $match: {
+        event: { $in: eventIds },
+        status: "active",
+        price: { $gt: 0 },
+      },
+    },
+    {
+      $group: {
+        _id: "$event",
+        minPrice: { $min: "$price" },
+      },
+    },
+  ]);
+
+  // Convert to map { eventId: price }
+  return prices.reduce((acc, curr) => {
+    acc[curr._id.toString()] = curr.minPrice;
+    return acc;
+  }, {});
+};
 
 module.exports = {
   getTicketingsWithFilters,
-
+  getMinTicketPricesByEventIds,
 };

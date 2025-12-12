@@ -28,6 +28,11 @@ const ticketingBookingSchema = new mongoose.Schema(
             required: true,
             index: true,
         },
+        companyOrganizer: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            index: true,
+        },
         ticket: {
             ticketId: {
                 type: mongoose.Schema.Types.ObjectId,

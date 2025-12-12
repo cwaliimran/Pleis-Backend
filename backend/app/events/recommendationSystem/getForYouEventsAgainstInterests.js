@@ -9,6 +9,7 @@ const { default: mongoose } = require("mongoose");
  */
 const { getCurrentDateInTimezone, getStartAndEndOfDay, getStartAndEndOfWeek } = require("../../../helperUtils/responseUtil");
 const TicketingsModel = require("@TicketingsModel");
+const { getMinTicketPricesByEventIds } = require("../../ticketing/ticketingsRepository");
 
 const getForYouEventsAgainstInterests = async ({
   location,
@@ -183,33 +184,6 @@ const formatted = results.map((event) => {
   const meta = generateMeta(page, limit, formatted.length);
 
   return { data: formatted, meta };
-};
-
-
-const getMinTicketPricesByEventIds = async (eventIds = []) => {
-  if (!eventIds.length) return {};
-
-  const prices = await TicketingsModel.aggregate([
-    {
-      $match: {
-        event: { $in: eventIds },
-        status: "active",
-        price: { $gt: 0 },
-      },
-    },
-    {
-      $group: {
-        _id: "$event",
-        minPrice: { $min: "$price" },
-      },
-    },
-  ]);
-
-  // Convert to map { eventId: price }
-  return prices.reduce((acc, curr) => {
-    acc[curr._id.toString()] = curr.minPrice;
-    return acc;
-  }, {});
 };
 
 /**
