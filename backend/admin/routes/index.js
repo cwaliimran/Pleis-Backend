@@ -60,6 +60,8 @@ router.use("/marketing", require("../marketing/marketingRoutes"));
 
 // thirdPParty
 router.use("/subscriptions", require("../subscriptions/subscriptionsRoutes"));
+// updates
+router.use("/updates", require("../updates/updatesRoutes"));
 
 
 module.exports = router;

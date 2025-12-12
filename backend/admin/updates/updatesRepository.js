@@ -96,12 +96,15 @@ const createUpdates = async (data) => {
 
 const getUpdatess = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
   const pipeline = [
+    // Step 1: Match updates where the companyOrganizer matches the provided userId
     {
       $match: {
         ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) })
       }
     }
-  ]; 
+  ];
+
+  // Step 2: Apply range filters (monthly, weekly, today)
   if (range === "monthly") {
     const { start, end } = getStartAndEndOfMonth(today, timezone);
     pipeline.push({
