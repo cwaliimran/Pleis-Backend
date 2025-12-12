@@ -1,35 +1,29 @@
 const express = require("express");
 const {
   sendResponse,
-  parsePaginationParams,
   validateParams,
-  generateMeta,
-  getReadableErrorMessage,
-  convertTimezoneToUtc,
+
 
 } = require("../../helperUtils/responseUtil");
 const {GlobalReferral} = require("@GlobalReferralModel");
-const {User} = require("../../models/UserModel");
 const {
-  createGlobalReferral,
+
   getGlobalReferrals,
-  updateGlobalReferral,
-  deleteGlobalReferral,
-  getGlobalReferralDetails,
-  getUserGlobalReferrals,
+createUserReferradrecord,
     saveReferralData,
-  updateUserGlobalReferralStatus,
-  updateUserGlobalReferral,
+
+
   saveUserReferralData
 } = require("./globalReferralController");
-const createRateLimiter = require("../../helperUtils/rateLimiter");
+
 const auth = require("../../middlewares/authMiddleware");
-const roleMiddleware = require("../../middlewares/roleMiddleware");
+
 
 const router = express.Router();
 
 
 
+router.post("/", createUserReferradrecord);
 
 
 
@@ -84,10 +78,14 @@ router.get("/share/:id", async (req, res) => {
                 objectIdFields: ["id"],  // Validate that ID is a valid ObjectId
             })
         ) return;
-
 const result = await saveReferralData(id);
-
-
+    if (!result) {
+      return sendResponse({
+        res,
+        statusCode: 400, 
+        translationKey: "username_required_please_add_username", 
+      });
+    }
         // Generate the shareable link using the creator's publicCreatorId and document's publicId
         const shareUrl = generateShareLink(result);
 
@@ -114,10 +112,10 @@ const result = await saveReferralData(id);
 router.get("/share", async (req, res) => {
 
     try {
-        const { id } = req.query; // Getting type, id, and creator from the query 
-        console.log("Parameters received:", req.ip);
-const result = await saveUserReferralData(id, req.ip);
-console.log("Result from saveUserReferralData:", result);
+        const { id } = req.query; 
+        const username=id;
+
+const result = await saveUserReferralData(username, req.ip);
         const appLink = `com.pleis://${result}`;
         const iosFallback = "https://apps.apple.com/app/pleisapp/id1234567890"; // iOS fallback URL
         const androidFallback = "https://play.google.com/store/apps/details?id=com.pleis"; // Android fallback URL

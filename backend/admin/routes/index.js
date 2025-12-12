@@ -32,10 +32,10 @@ router.use("/ticketing", require("../ticketing/ticketingsRoutes"));
 router.use("/highlights", require("../highlights/highlightRoutes"));
 
 //loyalty
-router.use("/loyalty", require("../loyalty/loyaltyRoutes")); 
+router.use("/loyalty", require("../loyalty/loyaltyRoutes"));
 
 //loyalty
-router.use("/global-loyalty", require("../globalLoyalty/loyaltyRoutes")); 
+router.use("/global-loyalty", require("../globalLoyalty/loyaltyRoutes"));
 // reservation
 router.use("/reservations", require("../reservation/reservationRoutes"));
 //status badges
@@ -46,18 +46,22 @@ router.use("/bundles", require("../bundles/bundleRoutes"));
 
 //Promo Codes
 router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));
-//Promo Codes
-router.use("/global-referral", require("../globalReferral/globalReferralRoutes"));
+
 // transactions
-router.use("/transactions", require("../transactions/transactionsRoutes"));
-// global reward categories
-router.use("/global-reward-categories", require("../globalLoyalty/GlobalRewardCategories/GlobalRewardCategoriesRoutes"));
-// global Loyalty reward
-router.use("/global-loyalty-reward", require("../globalLoyalty/rewards/rewardsRoutes"));
+router.use("/transactions-old", require("../transactions_old/transactionsRoutes"));
+router.use("/transactions", require("../transactions/routes/unifiedTransactionsRoutes"));
 
-// global Loyalty reward
-router.use("/global-challange", require("../globalLoyalty/challenges/challengesRoutes"));
+// thirdPParty
+router.use("/third-party", require("../thirdParty/thirdPartyRoutes"));
+// thirdPParty
+router.use("/referrals", require("../globalLoyalty/globalReferral/globalReferralRoutes"));
+// thirdPParty
+router.use("/marketing", require("../marketing/marketingRoutes"));
 
+// thirdPParty
+router.use("/subscriptions", require("../subscriptions/subscriptionsRoutes"));
+// updates
+router.use("/updates", require("../updates/updatesRoutes"));
 
 
 module.exports = router;

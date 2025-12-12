@@ -23,7 +23,10 @@ const usersStreaksSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-usersStreaksSchema.index({ user: 1, companyOrganizer: 1 }, { unique: true });
+usersStreaksSchema.index(
+  { user: 1, companyOrganizer: 1, organization: 1 },
+  { unique: true }
+);
 
 const Streaks = mongoose.model("UsersStreaks", usersStreaksSchema);
 module.exports = Streaks;

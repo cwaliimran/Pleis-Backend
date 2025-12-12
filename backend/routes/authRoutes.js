@@ -18,6 +18,7 @@ const {
   checkEmailExistsAndVerified,
   changePassword,
   createAdmin,
+  checkUserNameExists
 } = require("../controllers/authController");
 const createRateLimiter = require("../helperUtils/rateLimiter");
 const roleMiddleware = require("../middlewares/roleMiddleware");
@@ -48,6 +49,7 @@ const changePasswordRateLimiter = createRateLimiter("changePassword", 15, 5);
 // Apply rate limiters to routes
 router.post("/internal/admin/create", signupRateLimiter, createAdmin);
 router.post("/check-email-exists", checkEmailExistsAndVerified);
+router.post("/check-userName-exists", checkUserNameExists);
 router.post("/register", signupRateLimiter, register);
 router.post("/login", loginRateLimiter, login);
 router.post("/forgot-password", generateOtpRateLimiter, (req, res, next) => {

@@ -228,11 +228,40 @@ const deleteStatusLevel = async (req, res) => {
     });
   }
 };
+const getTitleStatusLevels = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  const { keyword, status = "active", date } = req.query;
+  try {
+    const { statusLevels, meta } = await statusLevelsService.getTitleStatusLevels({
+      page,
+      limit,
+      keyword,
+      status,
+      date,
+    });
 
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "status_levels_fetched_successfully",
+      data: statusLevels,
+      meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 module.exports = {
   createStatusLevel,
   getStatusLevels,
   updateStatusLevel,
   deleteStatusLevel,
   getStatusLevelDetails,
+  getTitleStatusLevels
 };

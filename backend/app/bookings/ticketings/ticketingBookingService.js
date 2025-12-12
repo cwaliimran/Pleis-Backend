@@ -3,6 +3,8 @@ const ticketingBookingRepo = require("./ticketingBookingRepository");
 const { formatTicketingBooking } = require("./formatters/ticketingBookingFormatter");
 const { validateTicketsAndQuantity, getOrganizationIdFromTicketId } = require("../../../admin/ticketing/ticketingsRepository");
 const { TicketingOrders } = require("@TicketingOrdersModel");
+const { calculatePointsRepo } = require("../../loyalty/calculatePointsEarning/pointsEarningsRepository");
+const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
 
 
 const createTicketingBookingService = async (data, timezone) => {
@@ -20,7 +22,7 @@ const createTicketingBookingService = async (data, timezone) => {
 
   // 2️⃣ Create Order
   const firstTicketId = data.ticketings[0].ticketId;
-  const organizationId = await getOrganizationIdFromTicketId(firstTicketId);
+  const { organizationId, companyOrganizer } = await getOrganizationIdFromTicketId(firstTicketId);
   let eventId = null;
   if (validationResult.ticketSnapshots.length > 0) {
     eventId = validationResult.ticketSnapshots[0].snapshot.event;
@@ -54,12 +56,11 @@ const createTicketingBookingService = async (data, timezone) => {
   const orderDoc = {
     user: data.user,
     organization: organizationId,
+    companyOrganizer: companyOrganizer,
     event: eventId,
     status: "confirmed", // directly confirmed as payment is already processed
     purpose: "eventTicketPurchase",
     orderPricing,
-    pointsEarned: 120,
-    pointsRedeemed: 0,
     ticketsPurchased: data.ticketings.length,
     paymentDetails: data.paymentDetails || {}
   };
@@ -93,6 +94,7 @@ const createTicketingBookingService = async (data, timezone) => {
       order: order._id,
       user: data.user,
       organization: organizationId,
+      companyOrganizer: companyOrganizer,
       ticket: {
         ticketId: t.ticketId,
         snapshot: snapshotToSave,
@@ -106,6 +108,39 @@ const createTicketingBookingService = async (data, timezone) => {
   // 4️⃣ Bulk insert tickets
   const createdTickets = await ticketingBookingRepo.createManyTicketBookings(ticketDocs);
 
+  //TODO For other methods add points when admin/staff complete the booking
+  if (data.paymentDetails.paymentMethod === "applePay" || data.paymentDetails.paymentMethod === "card") {
+    //calculate points based on totalPrice
+  let pointsCalculation = await calculatePointsRepo(data.user, companyOrganizer, totalAmount);
+
+   let globalPoints = {
+      base: pointsCalculation.global.earnedPoints,
+      multiplier: 1,
+      total: pointsCalculation.global.earnedPoints,
+      pointsPerEuro: pointsCalculation.global.pointsPerEuro,
+    };
+    let companyPoints = {
+      base: pointsCalculation.organizer.earnedPoints,
+      multiplier: 1,
+      total: pointsCalculation.organizer.earnedPoints,
+      pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
+    };
+
+    //log the transaction for both loyalty/global wallet
+    let dataTrx = {
+      user: data.user,
+      companyOrganizer,
+      organization: organizationId,
+      companyPoints,
+      globalPoints,
+      allowNegative: false,
+      type: "earn",
+      description: "",
+      entityId: order._id,
+      domainType: "ticketingorders"
+    }
+    let trx = await createTransaction(dataTrx)
+  }
   return { order, tickets: createdTickets };
 };
 
@@ -150,10 +185,10 @@ const getTicketingBookingsService = async ({ page = 1, limit = 10, keyword, stat
 
   // Format ticketingBookings
   ticketingBookings = ticketingBookings.map((ticketingBooking) => formatTicketingBooking(ticketingBooking, { timezone }));
-  let { pending, confirmed, cancelled, completed, total, totalFiltered } = counts;
+  let { valid, cancelled, used, total, totalFiltered } = counts;
   // Meta info
   let meta = generateMeta(page, limit, totalFiltered);
-  meta.counts = { pending, confirmed, cancelled, completed, total };
+  meta.counts = { valid, cancelled, used, total };
 
   return { ticketingBookings, meta };
 };

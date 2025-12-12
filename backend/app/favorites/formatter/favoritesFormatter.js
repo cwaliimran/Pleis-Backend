@@ -51,9 +51,6 @@ const formatFavoritesEventResponse = (eventObject, options = {}) => {
   event.schedule = formatEventSchedule(event.schedule, timezone);
   delete event.basicInfo?.venueLocation;
   event.isFavorite = true;
-  event.ticketInfo = {
-    price: "€40"
-  }
 
   return event;
 };

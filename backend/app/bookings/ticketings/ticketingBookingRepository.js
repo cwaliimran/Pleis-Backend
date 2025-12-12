@@ -141,7 +141,7 @@ const findTagByIdAndUpdate = async (id, data) => {
 const getTicketingBookingsCount = async (query) => {
   return getModelCounts({
     model: TicketingBookings, filterQuery: query, statusMap: {
-      status: ["pending", "confirmed", "cancelled", "completed"]
+      status: ["valid", "cancelled", "used"]
     }
   });
 }

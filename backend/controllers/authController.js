@@ -134,6 +134,10 @@ const register = async (req, res) => {
 
 const companyDetails = async (req, res) => {
   const {
+    logo,
+    coverImage,
+    description,
+    category,
     name,
     oib,
     bankAccountNumber,
@@ -164,6 +168,10 @@ const companyDetails = async (req, res) => {
 
     // Update only provided company details, keep existing fields if not provided
     user.companyDetails = {
+      logo: logo !== undefined ? logo : user.companyDetails?.logo,
+      coverImage: coverImage !== undefined ? coverImage : user.companyDetails?.coverImage,
+      description: description !== undefined ? description : user.companyDetails?.description,
+      category: category !== undefined ? category : user.companyDetails?.category,
       name: name !== undefined ? name : user.companyDetails?.name,
       oib: oib !== undefined ? oib : user.companyDetails?.oib,
       bankAccountNumber:
@@ -1156,6 +1164,60 @@ const changePassword = async (req, res) => {
   }
 };
 
+
+
+
+
+
+
+
+
+
+const checkUserNameExists = async (req, res) => {
+  try {
+    const { userName } = req.body;
+
+    if (!userName) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "missing_userName",
+      });
+    }
+
+
+    const user = await User.findOne({ username: userName }).select("_id");
+
+    if (user) {
+      // Username is taken
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "username_already_taken",
+        data: { exists: true },
+      });
+    }
+
+    // Username is available
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "username_available",
+      data: { exists: false },
+    });
+
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server_error",
+      error,
+    });
+  }
+};
+
+
+
 module.exports = {
   createAdmin,
   register,
@@ -1173,5 +1235,6 @@ module.exports = {
   hardDeleteAccount,
   socialAuth,
   checkEmailExistsAndVerified,
-  changePassword
+  changePassword,
+  checkUserNameExists
 };

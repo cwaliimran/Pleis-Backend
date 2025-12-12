@@ -31,7 +31,15 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
     meta
   };
 };
+const getavailableReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range }) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  let { reservations, meta } = await ReservationRepo.getavailableReservations({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, skip });
 
+  return {
+    reservations,
+    meta
+  };
+};
 const updateReservation = async (id, data) => {
   const Reservation = await ReservationRepo.findReservationById(id);
   if (!Reservation) {
@@ -212,5 +220,6 @@ console.log("updateData",updateData );
     deleteReservation,
     getUserReservations,
     updateUserReservationStatus,
-    updateUserReservation
+    updateUserReservation,
+    getavailableReservations
   };

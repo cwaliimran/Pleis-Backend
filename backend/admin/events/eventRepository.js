@@ -9,11 +9,13 @@ const createEvent = async (data, ticketingData) => {
   try {
     let event = new Events(data);
     event = await event.save({ session });
+
     if (ticketingData) {
-      ticketingData.event = event._id;
+      ticketingData.event = event._id; // 🔑 binds ticketing to template or one-time event
       const ticketing = new TicketingsModel(ticketingData);
       await ticketing.save({ session });
     }
+
     await session.commitTransaction();
     session.endSession();
     return event;
@@ -23,6 +25,7 @@ const createEvent = async (data, ticketingData) => {
     throw err;
   }
 };
+
 
 // Get all with filters
 const getEventsWithFilters = async (query, skip, limit) => {

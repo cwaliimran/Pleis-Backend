@@ -5,7 +5,8 @@ const {
   updateMenuItem,
   deleteMenuItem,
   getMenuItemDetails,
-  getMenuItemsByMenuId
+  getMenuItemsByMenuId,
+  getBundleMenuItems
 } = require("./menuItemsController");
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
@@ -24,6 +25,7 @@ router.post("/", roleMiddleware(["admin", "organizer", "staff", "manager"]), cre
 
 // Get all menuItems with pagination
 router.get("/", apiRateLimiter, getMenuItems);
+router.get("/bundles", apiRateLimiter, getBundleMenuItems);
 
 //get menu items against menu id
 router.get("/menu/:menuId", apiRateLimiter, getMenuItemsByMenuId);

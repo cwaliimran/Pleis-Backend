@@ -5,6 +5,20 @@ const {
 } = require("../helperUtils/responseUtil");
 const moment = require("moment-timezone");
 const { NotificationExp } = require("../models/Notifications");
+const { fetchEventDetails } = require("./notificationHelper/EventDetails");
+const formatImage = require("./notificationHelper/formatImage");
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Get all notifications with pagination
 const getNotifications = async (req, res) => {
@@ -13,58 +27,77 @@ const getNotifications = async (req, res) => {
   try {
     const [notifications, totalNotifications] = await Promise.all([
       NotificationExp.find({ receiverId: req.user._id })
-        //  .populate('objectId') // Populate full subjectId object
-        .populate("subjectId", "_id name profileIcon") // Populate full subjectId object
+        .populate("subjectId", "_id firstName lastName username profileIcon") 
+        .populate("receiverId", "_id firstName lastName username profileIcon") // Populate full subjectId object
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
-        .limit(limit),
+        .limit(limit)
+        .lean(),
       NotificationExp.countDocuments({ receiverId: req.user._id }),
     ]);
 
     // Calculate pagination meta
     const meta = generateMeta(page, limit, totalNotifications);
 
-    const formattedNotifications = notifications.map((notification) => {
-      const {
-        _id,
-        type,
-        objectId,
-        title,
-        body,
-        data,
-        url,
-        isRead,
-        createdAt,
-        objectType,
-        subjectId,
-        receiverId,
-      } = notification;
-      const userTimezone = req.user.timezone || "UTC";
-      const timeSince = moment(createdAt).tz(userTimezone).fromNow();
+    // Use Promise.all to wait for all async calls inside map
+    const formattedNotifications = await Promise.all(
+      notifications.map(async (notification) => {
+        const {
+          _id,
+          type,
+          objectId,
+          title,
+          body,
+          data,
+          url,
+          isRead,
+          createdAt,
+          objectType,
+          subjectId,
+          receiverId,
+        } = notification;
+        const userTimezone = req.user.timezone || "UTC";
+        const timeSince = moment(createdAt).tz(userTimezone).fromNow();
 
-      return {
-        _id,
-        type,
-        objectId,
-        objectType,
-        subject: subjectId,
-        title,
-        body,
-        data,
-        isRead,
-        timeSince,
-      };
-    });
+        // If type is eventUpdate, fetch event details
+        let eventDetails = null;
+        if (type === "eventUpdate") {
+          eventDetails = await fetchEventDetails(objectId); // Fetch event details
+          console.log("eventDetails", eventDetails);  // Log event details for debugging
+        }
+
+        // Return the notification with event details
+        return {
+          _id,
+          type,
+          objectId,
+          objectType,
+          subject: subjectId,
+          receiver: receiverId,
+          title,
+          body,
+          data,
+          isRead,
+          timeSince,
+          ...eventDetails,  // Add event details if available
+        };
+      })
+    );
+
+    const formattedNotificationsWithImages = formattedNotifications.map(notification => 
+      formatImage(notification, req.user.timezone)
+    );
+
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "notifications_fetched_success", // Use translation key
-      data: formattedNotifications,
+      data: formattedNotificationsWithImages,
       meta: meta,
     });
   } catch (error) {
-    console.error(error);
+
     return sendResponse({
       res,
       statusCode: 500,
@@ -73,6 +106,7 @@ const getNotifications = async (req, res) => {
     });
   }
 };
+
 
 // Mark a notification as read by ID
 const readNotification = async (req, res) => {
@@ -96,7 +130,7 @@ const readNotification = async (req, res) => {
       data: notification,
     });
   } catch (error) {
-    console.error(error);
+
     return sendResponse({
       res,
       statusCode: 500,

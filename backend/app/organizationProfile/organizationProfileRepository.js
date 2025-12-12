@@ -18,9 +18,9 @@ const findOrganizationById = async (userId, organizationId) => {
       .populate("otherInfo.categories")
       .populate("otherInfo.tags"),
     Favorites.exists({ user: userId, targetType: "organization", targetId: organizationId }),
-    Venues.findOne({ 
-      organization: organizationId, 
-      isPrimary: true  
+    Venues.findOne({
+      organization: organizationId,
+      isPrimary: true
     }).select("title floorPlan venueType"),
   ]);
 
@@ -31,9 +31,9 @@ const findOrganizationById = async (userId, organizationId) => {
   let venueTypeTitles = [];
   if (orgVenue && orgVenue.venueType && orgVenue.venueType.length > 0) {
 
-    
-    const venueTypes = await VenueTypes.find({ 
-      _id: { $in: orgVenue.venueType } 
+
+    const venueTypes = await VenueTypes.find({
+      _id: { $in: orgVenue.venueType }
     }).select("title");
 
 
@@ -48,7 +48,7 @@ const findOrganizationById = async (userId, organizationId) => {
     return {
       org,
       isFavorite,
-      orgVenue: cleanOrgVenue,  
+      orgVenue: cleanOrgVenue,
     };
   } else {
     return {
@@ -347,7 +347,7 @@ const getNearbyOrganizations = async ({ location, radiusKm, timezone, page, limi
         _id: 1,
         creator: 1,
         "basicInfo.name": 1,
-        "basicInfo.media.logo": 1,
+        "basicInfo.media": 1,
         distance: 1,
       },
     },
@@ -405,6 +405,101 @@ const getSuggestedLoyaltyClubsForUser = async ({ page = 1, limit = 10, userId })
   return result;
 };
 
+//get organization creator
+const getOrgCompanyOrganizer = async (organizationId) => {
+  const org = await Organizations.findById(organizationId).select("creator").lean();
+  return org ? org.creator : null;
+}
+
+const getOrganizationsGroupedByVenueTypesRepo = async ({
+  location,
+  radiusKm,
+}) => {
+  const radiusMeters = radiusKm * 1000;
+
+  const pipeline = [
+    // ✅ MUST BE FIRST
+    {
+      $geoNear: {
+        near: { type: "Point", coordinates: location },
+        distanceField: "distance",
+        spherical: true,
+        maxDistance: radiusMeters,
+        query: { status: "active" },
+      },
+    },
+
+    // 2️⃣ Bring venues
+    {
+      $lookup: {
+        from: "venues",
+        localField: "_id",
+        foreignField: "organization",
+        as: "venues",
+      },
+    },
+    { $unwind: "$venues" },
+
+    // 3️⃣ Only active venues
+    {
+      $match: {
+        "venues.status": "active",
+      },
+    },
+
+    // 4️⃣ Venue Types
+    {
+      $lookup: {
+        from: "venuetypes",
+        localField: "venues.venueType",
+        foreignField: "_id",
+        as: "venueType",
+      },
+    },
+    { $unwind: "$venueType" },
+
+    // 5️⃣ Shape data
+    {
+      $project: {
+        venueTypeId: "$venueType._id",
+        venueTypeTitle: "$venueType.title",
+
+        organization: {
+          _id: "$_id",
+          "basicInfo.name": "$basicInfo.name",
+          "basicInfo.media": "$basicInfo.media",
+          creator: "$creator",
+          distance: "$distance",
+        },
+      },
+    },
+
+    // 6️⃣ Group by venueType
+    {
+      $group: {
+        _id: "$venueTypeId",
+        title: { $first: "$venueTypeTitle" },
+        data: { $addToSet: "$organization" },
+      },
+    },
+
+    // 7️⃣ Final UI shape
+    {
+      $project: {
+        _id: 0,
+        key: { $literal: "customCategory" },
+        title: 1,
+        data: 1,
+      },
+    },
+  ];
+
+  return Organizations.aggregate(pipeline);
+};
+
+
+
+
 module.exports = {
   getOrganizationMenuWithItems,
   findEventsByOrganization,
@@ -417,4 +512,6 @@ module.exports = {
   getNearbyOrganizations,
   findOrganizationWithSelectFilter,
   getSuggestedLoyaltyClubsForUser,
+  getOrgCompanyOrganizer,
+  getOrganizationsGroupedByVenueTypesRepo
 };

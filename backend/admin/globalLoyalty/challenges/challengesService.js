@@ -15,7 +15,7 @@ const getChallenges = async ({ companyOrganizer, page, limit, keyword, status, d
 
   // Build query object
   const query = {
-    companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
+
   };
   if (status) query.status = status;
   else query.status = { $ne: "deleted" };
@@ -33,10 +33,10 @@ const getChallenges = async ({ companyOrganizer, page, limit, keyword, status, d
 
   // Get counts
   const [total, active, inactive, totalFiltered] = await Promise.all([
-    Challenge.countDocuments({ ...(companyOrganizer && { companyOrganizer }), status: { $ne: "deleted" } }),
-    Challenge.countDocuments({ status: "active", ...(companyOrganizer && { companyOrganizer }) }),
-    Challenge.countDocuments({ status: "inactive", ...(companyOrganizer && { companyOrganizer }) }),
-    Challenge.countDocuments(query),
+    GlobalChallenge.countDocuments({ ...(companyOrganizer && { companyOrganizer }), status: { $ne: "deleted" } }),
+    GlobalChallenge.countDocuments({ status: "active", ...(companyOrganizer && { companyOrganizer }) }),
+    GlobalChallenge.countDocuments({ status: "inactive", ...(companyOrganizer && { companyOrganizer }) }),
+    GlobalChallenge.countDocuments(query),
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);

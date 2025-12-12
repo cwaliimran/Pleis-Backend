@@ -34,8 +34,6 @@ const RecurringEventSchema = new mongoose.Schema({
   },
 });
 
- mongoose.model("RecurringEvent", RecurringEventSchema);
-
 module.exports = {
   RecurringEventSchema,
 };

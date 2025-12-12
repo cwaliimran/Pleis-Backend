@@ -1,5 +1,5 @@
 const { GlobalReward, GlobalTicketReward, GlobalCustomReward } = require("../../../commonModules/globalLoyalty/rewards/models/reward");
-const formatReward = require("./utils/formatReward");
+const {formatReward} = require("./utils/formatReward");
 
 
 const getModelByRewardType = (rewardType) => {

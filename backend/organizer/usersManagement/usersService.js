@@ -258,6 +258,10 @@ const updateUser = async (req, res, options = {}) => {
     // Update company details for organizer
     if (userType === "organizer" && companyDetails) {
       user.companyDetails = {
+        logo: companyDetails.logo ?? user.companyDetails?.logo,
+        coverImage: companyDetails.coverImage ?? user.companyDetails?.coverImage,
+        description: companyDetails.description ?? user.companyDetails?.description,
+        category: companyDetails.category ?? user.companyDetails?.category,
         name: companyDetails.name ?? user.companyDetails?.name,
         oib: companyDetails.oib ?? user.companyDetails?.oib,
         bankAccountNumber: companyDetails.bankAccountNumber ?? user.companyDetails?.bankAccountNumber,
@@ -270,7 +274,26 @@ const updateUser = async (req, res, options = {}) => {
           title: companyDetails.loyaltySettings?.title ?? user.companyDetails?.loyaltySettings?.title ?? "",
           model: companyDetails.loyaltySettings?.model ?? user.companyDetails?.loyaltySettings?.model ?? "essential",
           pointValuePercentage: companyDetails.loyaltySettings?.pointValuePercentage ?? user.companyDetails?.loyaltySettings?.pointValuePercentage ?? 0
-        }
+        },
+
+        // update inAppOrderingSettings if provided
+        inAppOrderingSettings: {
+          paymentMethods: {
+            instantPayment: companyDetails.inAppOrderingSettings?.paymentMethods?.instantPayment ?? user.companyDetails?.inAppOrderingSettings?.paymentMethods?.instantPayment ?? false,
+            payLater: {
+              allow: companyDetails.inAppOrderingSettings?.paymentMethods?.payLater?.allow ?? user.companyDetails?.inAppOrderingSettings?.paymentMethods?.payLater?.allow ?? false,
+              enableOrderAcceptance: companyDetails.inAppOrderingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ?? user.companyDetails?.inAppOrderingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ?? false,
+              chargeOnAcceptance: companyDetails.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ?? user.companyDetails?.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ?? false,
+              chargeOnDelivery: companyDetails.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnDelivery ?? user.companyDetails?.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnDelivery ?? false,
+            },
+            cashPayment: companyDetails.inAppOrderingSettings?.paymentMethods?.cashPayment ?? user.companyDetails?.inAppOrderingSettings?.paymentMethods?.cashPayment ?? false,
+          },
+          deliveryMethods: {
+            counterPickup: companyDetails.inAppOrderingSettings?.deliveryMethods?.counterPickup ?? user.companyDetails?.inAppOrderingSettings?.deliveryMethods?.counterPickup ?? true,
+            tableDelivery: companyDetails.inAppOrderingSettings?.deliveryMethods?.tableDelivery ?? user.companyDetails?.inAppOrderingSettings?.deliveryMethods?.tableDelivery ?? false,
+            toGo: companyDetails.inAppOrderingSettings?.deliveryMethods?.toGo ?? user.companyDetails?.inAppOrderingSettings?.deliveryMethods?.toGo ?? false,
+          },
+        },
       };
 
       if (user.companyDetails.loyaltySettings.title === "") {

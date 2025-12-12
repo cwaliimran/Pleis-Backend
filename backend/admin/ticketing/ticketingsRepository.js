@@ -235,20 +235,22 @@ const getOrganizationIdFromTicketId = async (ticketId) => {
     .populate({
       path: "event",
       select: "basicInfo.organization",
+      populate: {
+        path: "basicInfo.organization",
+        select: "creator _id",
+      }
     })
-    .lean(); // optional, gives plain JS object
+    .lean();
 
-  if (!ticket) {
-    throw new Error("Ticket not found");
-  }
+  if (!ticket) throw new Error("Ticket not found");
+  if (!ticket.event) throw new Error("Event for this ticket not found");
 
-  // event may be null if not found
-  if (!ticket.event) {
-    throw new Error("Event for this ticket not found");
-  }
-  let organizationId = ticket.event.basicInfo.organization;
-  return organizationId;
+  const organizationId = ticket.event.basicInfo.organization._id;
+  const companyOrganizer = ticket.event.basicInfo.organization.creator;
+
+  return { organizationId, companyOrganizer };
 };
+
 
 
 const getTicketsByOrderIds = async (orderIds) => {
@@ -272,7 +274,15 @@ const getTicketsByOrderIds = async (orderIds) => {
   return grouped;
 };
 
-
+const getEventsTicketingsWithFilters = async (query) => {
+  return getWithFilters({
+    model: TicketingsModel,
+    query,
+    options: {
+      //select: { title: 1, price: 1, status: 1, event: 1},
+    },
+  });
+};
 module.exports = {
   createTicketing,
   getTicketingsWithFilters,
@@ -286,5 +296,6 @@ module.exports = {
   getTicketingsByEventId,
   validateTicketsAndQuantity,
   getOrganizationIdFromTicketId,
-  getTicketsByOrderIds
+  getTicketsByOrderIds,
+  getEventsTicketingsWithFilters
 };

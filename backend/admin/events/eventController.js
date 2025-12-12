@@ -10,6 +10,7 @@ const {
 const { getVenueDetails } = require("../venues/venuesService");
 
 const eventService = require("./eventService");
+const ticketingService = require("../ticketing/ticketingsService");
 
 const createEvent = async (req, res) => {
   let { timezone, _id: userId } = req.user;
@@ -18,7 +19,15 @@ const createEvent = async (req, res) => {
     basicInfo = {},
     schedule = {},
     ticketing = {},
+    // we will IGNORE any incoming recurringMeta from client for safety
   } = req.body;
+
+  // ==============================
+  // PRE-CALC: RECURRING FLAGS
+  // ==============================
+  const eventType = schedule.type || "oneTime";
+  const recurringDetails = schedule.recurringDetails || {};
+  const isRecurringEnabled = !!recurringDetails.isEnabled;
 
   // ==============================
   // STEP 1: PREPARE VALIDATION DATA
@@ -57,23 +66,60 @@ const createEvent = async (req, res) => {
   }
 
   // Event schedule validation dates
-  const eventType = schedule.type || "oneTime";
-  const recurringDetails = schedule.recurringDetails || {};
   if (eventType === "oneTime") {
     validateData.dateFields["schedule.startDateTime"] = "YYYY-MM-DD hh:mm A";
     validateData.dateFields["schedule.endDateTime"] = "YYYY-MM-DD hh:mm A";
   }
 
-  if (recurringDetails.isEnabled) {
-    validateData.dateFields["schedule.startDateTime"] = "YYYY-MM-DD hh:mm A";
-    if (recurringDetails.endType === "onDate")
-      validateData.dateFields["schedule.recurringDetails.endDate"] = "YYYY-MM-DD";
+// ==============================
+// STEP 2.5: RECURRING LOGIC VALIDATION
+// ==============================
+if (isRecurringEnabled) {
+  const { endType, endDate, occurrences } = recurringDetails;
+
+  switch (endType) {
+    case "never":
+      // ✅ nothing required
+      break;
+
+    case "onDate":
+      if (!endDate) {
+        return sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "recurring_end_date_required",
+        });
+      }
+      break;
+
+    case "afterOccurrences":
+      if (!occurrences || occurrences < 1) {
+        return sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "recurring_occurrences_required",
+        });
+      }
+      break;
+
+    default:
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_recurring_end_type",
+      });
   }
+}
 
   // ==============================
   // STEP 2: VALIDATE ALL FIELDS
   // ==============================
   if (!validateParams(req, res, validateData)) return;
+
+  // OPTIONAL: You can add some extra server-side recurrence rules here:
+  // - if endType === "afterOccurrences" then occurrences > 0
+  // - if endType === "onDate" then endDate >= startDateTime (date part)
+  // - when recurring + timingSlots.enabled, you may enforce single date block, etc.
 
   // ==============================
   // STEP 3: APPLY CONVERSIONS AFTER VALIDATION
@@ -95,9 +141,17 @@ const createEvent = async (req, res) => {
     if (ticketing.timingSlots?.enabled) {
       const slots = ticketing.timingSlots.dateTimeSlots || [];
       for (const dateBlock of slots) {
-        for (const slot of dateBlock.timeSlots || []) {
-          slot.startTime = convertTimezoneToUtc(`${dateBlock.date} ${slot.startTime}`, timezone, "YYYY-MM-DD hh:mm A");
-          slot.endTime = convertTimezoneToUtc(`${dateBlock.date} ${slot.endTime}`, timezone, "YYYY-MM-DD hh:mm A");
+        for (const slot of (dateBlock.timeSlots || [])) {
+          slot.startTime = convertTimezoneToUtc(
+            `${dateBlock.date} ${slot.startTime}`,
+            timezone,
+            "YYYY-MM-DD hh:mm A"
+          );
+          slot.endTime = convertTimezoneToUtc(
+            `${dateBlock.date} ${slot.endTime}`,
+            timezone,
+            "YYYY-MM-DD hh:mm A"
+          );
         }
       }
     }
@@ -121,11 +175,13 @@ const createEvent = async (req, res) => {
       transferFee: ticketing.transferFee || 0,
       timeSensitivePricing: ticketing.timeSensitivePricing || {},
       fastTrackEntry: {
-        enabled: ticketing.fastTrackEntry?.enabled || false
+        enabled: ticketing.fastTrackEntry?.enabled || false,
+        quantity: ticketing.fastTrackEntry?.quantity || 0,
+        extraPrice: ticketing.fastTrackEntry?.extraPrice || 0,
       },
       requiresReservation: {
         enabled: ticketing.requiresReservation?.enabled || false,
-        type: ticketing.requiresReservation?.type || "any"
+        type: ticketing.requiresReservation?.type || "any",
       },
     };
   }
@@ -145,9 +201,23 @@ const createEvent = async (req, res) => {
   // ==============================
   // CONSTRUCT EVENT PAYLOAD (after conversions)
   // ==============================
+  const scheduleStartUtc = convertTimezoneToUtc(
+    schedule.startDateTime,
+    timezone,
+    "YYYY-MM-DD hh:mm A"
+  );
+  const scheduleEndUtc = convertTimezoneToUtc(
+    schedule.endDateTime,
+    timezone,
+    "YYYY-MM-DD hh:mm A"
+  );
+
   const eventData = {
     basicInfo: {
-      media: { name: basicInfo.media?.name || "", type: basicInfo.media?.type || "image" },
+      media: {
+        name: basicInfo.media?.name || "",
+        type: basicInfo.media?.type || "image",
+      },
       title: basicInfo.title.trim(),
       description: basicInfo.description?.trim() || "",
       organization: basicInfo.organization,
@@ -159,15 +229,24 @@ const createEvent = async (req, res) => {
     },
     schedule: {
       type: schedule.type || "oneTime",
-      startDateTime: convertTimezoneToUtc(schedule.startDateTime, timezone, "YYYY-MM-DD hh:mm A"),
-      endDateTime: convertTimezoneToUtc(schedule.endDateTime, timezone, "YYYY-MM-DD hh:mm A"),
-      recurringDetails: schedule.recurringDetails || null,
+      startDateTime: scheduleStartUtc,
+      endDateTime: scheduleEndUtc,
+      recurringDetails: isRecurringEnabled ? recurringDetails : null,
     },
     creator: userId,
   };
 
+  // 🔑 IMPORTANT: mark this event as a TEMPLATE on the server
+  if (isRecurringEnabled) {
+    eventData.recurringMeta = {
+      isTemplate: true,
+      parentEvent: null,
+      occurrenceIndex: 1, // template itself can be treated as occurrence #1
+    };
+  }
+
   // ==============================
-  // CREATE EVENT
+  // CREATE EVENT (and ticketing in same transaction)
   // ==============================
   try {
     const event = await eventService.createEvent({ data: eventData, ticketingData }, timezone);
@@ -187,6 +266,7 @@ const createEvent = async (req, res) => {
     });
   }
 };
+
 
 
 
@@ -513,6 +593,37 @@ const getMinimalEventsInfo = async (req, res) => {
     });
   }
 };
+
+
+const getEventTicketings = async (req, res) => {
+  let { id } = req.params;
+  let { timezone } = req.user;
+
+  // ObjectId for event id
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })) return;
+
+
+  try {
+    const ticketings = await ticketingService.EventsgetTicketings({ timezone, eventId: id });
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "event_ticketings_fetched_successfully",
+      data: ticketings,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
 module.exports = {
   createEvent,
   getEvents,
@@ -522,4 +633,5 @@ module.exports = {
   deleteEvent,
   getEventDetails,
   getMinimalEventsInfo,
+  getEventTicketings
 };

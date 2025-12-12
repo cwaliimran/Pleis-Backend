@@ -12,16 +12,11 @@ const createTier = async (data) => {
 };
 
 // Populate venue data for tiers (updated for new schema)
-const getTiers = async ({ page, limit, keyword, status, userId, date }) => {
+// Sort tiers so the one with lowest bonusPointsPerEuro (e.g. Silver) is on top
+const getTiers = async ({ page, limit, keyword, status, date }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const pipeline = [
-    // Match user access (tier creator)
-    {
-      $match: {
-        ...(userId && { creator: new mongoose.Types.ObjectId(userId) })
-      }
-    }
   ];
 
   // Apply filters
@@ -52,7 +47,8 @@ const getTiers = async ({ page, limit, keyword, status, userId, date }) => {
     pipeline.push({ $match: keywordMatch });
   }
 
-  pipeline.push({ $sort: { createdAt: -1 } });
+  // Sort by bonusPointsPerEuro ascending (lowest first)
+  pipeline.push({ $sort: { "essential.entryPoints": 1 } });
 
   // Apply pagination + counts using $facet
   pipeline.push({
@@ -70,11 +66,12 @@ const getTiers = async ({ page, limit, keyword, status, userId, date }) => {
   let tiers = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
+  //TODO use modelCounts utility
   // Additional counts for meta (active/inactive/total by userId as creator)
   const [total, active, inactive] = await Promise.all([
-    Tiers.countDocuments({ ...(userId && { creator: userId }), status: { $ne: "deleted" } }),
-    Tiers.countDocuments({ status: "active", ...(userId && { creator: userId }) }),
-    Tiers.countDocuments({ status: "inactive", ...(userId && { creator: userId }) })
+    Tiers.countDocuments({ status: { $ne: "deleted" } }),
+    Tiers.countDocuments({ status: "active", }),
+    Tiers.countDocuments({ status: "inactive", })
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);

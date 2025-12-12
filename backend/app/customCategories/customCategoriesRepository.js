@@ -5,6 +5,7 @@ const { getCurrentDateInTimezone, getStartAndEndOfWeek, getStartAndEndOfDay } = 
 
 // Get all with filters, sorted by 'order' ascending and then 'createdAt' descending
 const mongoose = require("mongoose");
+const { getMinTicketPricesByEventIds } = require("../ticketing/ticketingsRepository");
 
 const getCustomCategoriesWithFilters = async (
   userId,
@@ -186,7 +187,41 @@ const getCustomCategoriesWithFilters = async (
   ];
 
   const result = await CustomCategories.aggregate(pipeline);
-  return result;
+
+  // --------------------------------------------------
+  // 🎟️ BATCH FETCH MIN TICKET PRICE PER EVENT
+  // --------------------------------------------------
+  const results = Array.isArray(result) ? result : [];
+
+  // extract only EVENT ids
+  const eventIds = results
+    .filter(cat => cat.type === "Event")
+    .flatMap(cat => Array.isArray(cat.objects) ? cat.objects : [])
+    .map(event => event._id)
+    .filter(Boolean);
+
+  // fetch prices once
+  const ticketPriceMap =
+    eventIds.length > 0
+      ? await getMinTicketPricesByEventIds(eventIds)
+      : {};
+
+  // append ticketInfo ONLY to event objects
+  results.forEach(category => {
+    if (category.type !== "Event") return;
+
+    if (!Array.isArray(category.objects)) return;
+
+    category.objects.forEach(event => {
+      const minPrice = ticketPriceMap[event._id.toString()] || null;
+
+      event.ticketInfo = minPrice
+        ? { price: `€${minPrice}` }
+        : null;
+    });
+  });
+
+  return results;
 };
 
 

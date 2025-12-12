@@ -8,6 +8,8 @@ const { default: mongoose } = require("mongoose");
  * Prioritizes active, future, and popular events.
  */
 const { getCurrentDateInTimezone, getStartAndEndOfDay, getStartAndEndOfWeek } = require("../../../helperUtils/responseUtil");
+const TicketingsModel = require("@TicketingsModel");
+const { getMinTicketPricesByEventIds } = require("../../ticketing/ticketingsRepository");
 
 const getForYouEventsAgainstInterests = async ({
   location,
@@ -145,19 +147,39 @@ const getForYouEventsAgainstInterests = async ({
     ];
   }
 
-  let results = [];
-  try {
-    results = await Events.aggregate(pipeline).allowDiskUse(true);
-  } catch (err) {
-    console.error("❌ [getForYouEventsAgainstInterests] Aggregation failed:", err);
-    throw new Error("Failed to fetch personalized events");
-  }
+ let results = [];
+try {
+  results = await Events.aggregate(pipeline).allowDiskUse(true);
+} catch (err) {
+  console.error("❌ [getForYouEventsAgainstInterests] Aggregation failed:", err);
+  throw new Error("Failed to fetch personalized events");
+}
 
+if (!Array.isArray(results)) results = [];
+
+// --------------------------------------------------
+// 🎟️ BATCH FETCH MIN TICKET PRICE PER EVENT
+// --------------------------------------------------
+const eventIds = results.map(ev => ev._id);
+const ticketPriceMap = await getMinTicketPricesByEventIds(eventIds);
   if (!Array.isArray(results)) results = [];
 
-  const formatted = results.map((event) =>
-    formatRecentlyViewedEventResponse(event, { userLocation: location, timezone })
-  );
+const formatted = results.map((event) => {
+  const formattedEvent = formatRecentlyViewedEventResponse(event, {
+    userLocation: location,
+    timezone,
+  });
+
+  //attach the minimum ticket price (start price) to each event
+  const minPrice = ticketPriceMap[event._id.toString()] || null;
+
+  formattedEvent.ticketInfo = minPrice
+    ? { price: `€${minPrice}` }
+    : null;
+
+  return formattedEvent;
+});
+
 
   const meta = generateMeta(page, limit, formatted.length);
 

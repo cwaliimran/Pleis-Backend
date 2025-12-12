@@ -2,12 +2,12 @@ const fs = require("fs");
 const path = require("path");
 
 // ============== CONFIG ==============
-const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/globalLoyalty/walletTransactions"; // Directory to process
+const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/loyalty/dashboard"; // Directory to process
 
-const oldSingular = "MenuItem";
-const oldPlural = "MenuItems";
-const newSingular = "GlobalTransaction";
-const newPlural = "GlobalTransactions";
+const oldSingular = "Promotion";
+const oldPlural = "Promotions";
+const newSingular = "Dashboard";
+const newPlural = "Dashboards";
 // =====================================
 
 // Helper to convert to different cases
