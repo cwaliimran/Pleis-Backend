@@ -47,10 +47,10 @@ module.exports = {
     "@ThirdPartyModel": "backend/commonModules/globalLoyalty/thirdParty/ThirdParty.js",
     "@Marketing": "backend/commonModules/marketing/Marketing.js",
     "@SubscriptionSettings": "backend/commonModules/subscriptions/SubscriptionSettings.js",
-    "@UnifiedWalletTransactionsModel": "backend/commonModules/transactions/UnifiedWalletTransactions.js"
-        "@ThirdPartyModel": "backend/commonModules/globalLoyalty/thirdParty/ThirdParty.js",
-             "@Marketing": "backend/commonModules/marketing/Marketing.js",
+    "@UnifiedWalletTransactionsModel": "backend/commonModules/transactions/UnifiedWalletTransactions.js",
+    "@ThirdPartyModel": "backend/commonModules/globalLoyalty/thirdParty/ThirdParty.js",
+    "@Marketing": "backend/commonModules/marketing/Marketing.js",
     "@UserCompanyLoyaltyWalletTransactionsModel": "backend/commonModules/wallet/UserCompanyLoyaltyWalletTransactions.js",
-        "@UpdatesModel": "backend/commonModules/updates/Updates.js",
-                "@NotificationsModel": "backend/models/Notifications.js",
+    "@UpdatesModel": "backend/commonModules/updates/Updates.js",
+    "@NotificationsModel": "backend/models/Notifications.js",
 };
