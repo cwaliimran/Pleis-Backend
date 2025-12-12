@@ -1,5 +1,5 @@
 const rewardRepo = require("./rewardsRepository");
-const formatReward = require("../../../commonModules/loyalty/rewards/utils/formatReward");
+const {formatReward} = require("../../../commonModules/loyalty/rewards/utils/formatReward");
 
 const getRewardsByCompanyOrganizerService = async ({
   companyOrganizer,

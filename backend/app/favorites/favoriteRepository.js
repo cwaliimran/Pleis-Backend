@@ -1,5 +1,6 @@
 const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { getWithFilters } = require('@dbUtils/queryUtil');
+const { getMinTicketPricesByEventIds } = require("../ticketing/ticketingsRepository");
 
 /**
  * Toggle favorite for a user and target
@@ -38,7 +39,7 @@ const getUserFavorites = async (userId, targetType, page, limit) => {
     let filter = { user: userId };
     if (targetType) {
         filter.targetType = targetType;
-        let filtered = getWithFilters({
+        let filtered = await getWithFilters({
             model: Favorites,
             query: filter,
             refPath: "targetType",
@@ -46,25 +47,54 @@ const getUserFavorites = async (userId, targetType, page, limit) => {
             refLookups,
             options: { page, limit },
         });
+
+        // Fetch minimum ticket prices for all events in results if targetType is 'event'
+        if (targetType === 'event') {
+            const eventIds = filtered.map((e) => e?.object?._id);
+            const ticketPriceMap = await getMinTicketPricesByEventIds(eventIds);
+
+            // Attach minimum ticket price to each event
+            filtered.forEach((event) => {
+            const eventId = event?.object?._id?.toString();
+            const minPrice = eventId ? ticketPriceMap[eventId] : null;
+            event.ticketInfo = minPrice ? { price: `€${minPrice}` } : null;
+            });
+        }
+
+
+
         return filtered;
     } else {
-        //return 10 
-        let events = getWithFilters({
+        // Return both events and organizations favorites in parallel
+        const [events, organizations] = await Promise.all([
+            getWithFilters({
             model: Favorites,
-            query: { targetType: 'event' },
+            query: { user: userId, targetType: 'event' },
             refPath: "targetType",
             localField: "targetId",
             refLookups,
             options: { page, limit: 10 },
-        });
-        let organizations = getWithFilters({
+            }),
+            getWithFilters({
             model: Favorites,
-            query: { targetType: 'organization' },
+            query: { user: userId, targetType: 'organization' },
             refPath: "targetType",
             localField: "targetId",
             refLookups,
             options: { page, limit: 10 },
-        });
+            }),
+        ]);
+
+          // Fetch minimum ticket prices for all events in results
+            const eventIds = events.map((e) => e._id);
+            const ticketPriceMap = await getMinTicketPricesByEventIds(eventIds);
+
+            // Attach minimum ticket price to each event
+            events.forEach((event) => {
+              const minPrice = ticketPriceMap[event._id.toString()] || null;
+              event.ticketInfo = minPrice ? { price: `€${minPrice}` } : null;
+            });
+
         return {
             events,
             organizations,

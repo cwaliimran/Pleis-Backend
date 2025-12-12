@@ -258,6 +258,10 @@ const updateUser = async (req, res, options = {}) => {
     // Update company details for organizer
     if (userType === "organizer" && companyDetails) {
       user.companyDetails = {
+        logo: companyDetails.logo ?? user.companyDetails?.logo,
+        coverImage: companyDetails.coverImage ?? user.companyDetails?.coverImage,
+        description: companyDetails.description ?? user.companyDetails?.description,
+        category: companyDetails.category ?? user.companyDetails?.category,
         name: companyDetails.name ?? user.companyDetails?.name,
         oib: companyDetails.oib ?? user.companyDetails?.oib,
         bankAccountNumber: companyDetails.bankAccountNumber ?? user.companyDetails?.bankAccountNumber,

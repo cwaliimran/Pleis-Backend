@@ -64,9 +64,9 @@ const subscriptionSchema = new mongoose.Schema({
   endDate: {
     type: Date,
   },
-    orderingCommission:   { type: Number, default: 0 },
-      ticketingCommission:    { type: Number, default: 0 },
-  reservationCommission:{ type: Number, default: 0 },
+  orderingCommission: { type: Number, default: 0 },
+  ticketingCommission: { type: Number, default: 0 },
+  reservationCommission: { type: Number, default: 0 },
 
 });
 
@@ -632,6 +632,25 @@ userSchema.methods.toJSON = function (userData) {
     userObject.profileIcon = baseUrl + userObject.profileIcon;
   } else if (!userObject.profileIcon) {
     userObject.profileIcon = baseUrl + "noimage.png";
+  }
+
+  //attach baseUrl with company logo and cover image
+  if (
+    userObject.companyDetails &&
+    userObject.companyDetails.logo &&
+    !userObject.companyDetails.logo.startsWith("http")
+  ) {
+    userObject.companyDetails.logo =
+      baseUrl + userObject.companyDetails.logo;
+  }
+
+  if (
+    userObject.companyDetails &&
+    userObject.companyDetails.coverImage &&
+    !userObject.companyDetails.coverImage.startsWith("http")
+  ) {
+    userObject.companyDetails.coverImage =
+      baseUrl + userObject.companyDetails.coverImage;
   }
 
   delete userObject.password;

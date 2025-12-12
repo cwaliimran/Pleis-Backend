@@ -192,6 +192,7 @@ const getTransactionsRepo = async ({
   });
 
   const result = await TicketingOrders.aggregate(pipeline);
+
   const transactions = result[0]?.data || [];
   const orderIds = transactions.map(t => t._id); // TicketingOrders _id
 

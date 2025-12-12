@@ -136,6 +136,7 @@ const ticketingsSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+ticketingsSchema.index({ event: 1, status: 1 });
 
 const TicketingsModel = mongoose.model("Ticketings", ticketingsSchema);
 

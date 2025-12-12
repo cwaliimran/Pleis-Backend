@@ -34,23 +34,22 @@ const createUsersStreak = async (data) => {
     };
   }
   // 2) Get or create user daily streak record
-  let userStreak = await UsersStreaks.findOne({
-    user: userId,
-    companyOrganizer,
-    organization
-  });
+  const userStreak = await UsersStreaks.findOneAndUpdate(
+    { user: userId, companyOrganizer, organization },
+    {
+      $setOnInsert: {
+        user: userId,
+        companyOrganizer,
+        organization,
+        visits: 0,
+        streak: 0,
+        longestStreak: 0,
+        points: 0,
+      }
+    },
+    { new: true, upsert: true }
+  );
 
-  if (!userStreak) {
-    userStreak = new UsersStreaks({
-      user: userId,
-      companyOrganizer,
-      organization,
-      visits: 0,
-      streak: 0,
-      longestStreak: 0,
-      points: 0
-    });
-  }
 
   // 3) DAILY RESET CHECK (5AM LOGIC)
   if (!userStreak.lastVisitAt || new Date(userStreak.lastVisitAt) < todayReset) {

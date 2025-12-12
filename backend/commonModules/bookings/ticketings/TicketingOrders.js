@@ -14,6 +14,12 @@ const ticketingOrderSchema = new mongoose.Schema(
             required: true,
             index: true,
         },
+        companyOrganizer: { // company organizer associated with the organization
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: false,
+            index: true,
+        },
 
         purpose: {
             type: String,
@@ -62,8 +68,6 @@ const ticketingOrderSchema = new mongoose.Schema(
         },
 
         ticketsPurchased: { type: Number, default: 0 },
-        pointsEarned: { type: Number, default: 0 },
-        pointsRedeemed: { type: Number, default: 0 },
 
         status: {
             type: String,
