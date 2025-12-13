@@ -3,7 +3,7 @@ const repository = require("./rewardsRepository");
 const mongoose = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
 const formatData = require("./utils/formatReward");
-const { Reward } = require("./models");
+const { Reward } = require("../../../commonModules/loyalty/rewards/models");
 
 const create = async (data) => {
   return await repository.create(data);
@@ -70,7 +70,13 @@ const getDetails = async (id) => {
   return item;
 };
 
+const redeemReward = async (bookingId, userId) => {
+  return repository.redeemReward(bookingId, userId);
+};
+
+
 module.exports = {
+  redeemReward,
   create,
   get,
   update,

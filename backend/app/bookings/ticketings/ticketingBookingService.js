@@ -8,141 +8,154 @@ const { createTransaction } = require("../../userWalletService/transactions/serv
 
 
 const createTicketingBookingService = async (data, timezone) => {
-  // 1️⃣ Validate tickets individually
-  const validationResult = await validateTicketsAndQuantity(data.ticketings);
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  if (!validationResult.valid) {
-    const errorMessages = validationResult.errors
-      .map(err => `TicketId: ${err.ticketId} - ${err.message}`)
-      .join("; ");
-    const error = new Error(`Ticket validation failed: ${errorMessages}`);
-    error.validationResult = validationResult;
+  try {
+    // 1️⃣ Validate tickets
+    const validationResult = await validateTicketsAndQuantity(data.ticketings);
+    if (!validationResult.valid) {
+      const errorMessages = validationResult.errors
+        .map(err => `TicketId: ${err.ticketId} - ${err.message}`)
+        .join("; ");
+      const error = new Error(`Ticket validation failed: ${errorMessages}`);
+      error.validationResult = validationResult;
+      throw error;
+    }
+
+    // 2️⃣ Get ticket organization info
+    const firstTicketId = data.ticketings[0].ticketId;
+    const { organizationId, companyOrganizer } =
+      await getOrganizationIdFromTicketId(firstTicketId);
+
+    let eventId = validationResult.ticketSnapshots[0]?.snapshot?.event || null;
+
+    // 3️⃣ Calculate pricing
+    let sumOfPrices = data.ticketings.reduce((sum, t) => {
+      const snapshot = validationResult.ticketSnapshots.find(
+        ts => ts.ticketId.toString() === t.ticketId.toString()
+      );
+      return sum + (snapshot?.snapshot.price || 0);
+    }, 0);
+
+    const taxRate = 0.0; // Placeholder for dynamic tax if needed
+    const taxAmount = taxRate > 0 ? +(sumOfPrices * taxRate).toFixed(2) : 0.0;
+    const totalAmount = +(sumOfPrices + taxAmount).toFixed(2);
+
+    const orderPricing = {
+      subtotal: +sumOfPrices.toFixed(2),
+      taxAmount,
+      total: totalAmount,
+      currency: "€",
+    };
+
+    // 4️⃣ Create order in session
+    const orderDoc = {
+      user: data.user,
+      organization: organizationId,
+      companyOrganizer,
+      event: eventId,
+      status: "confirmed",
+      purpose: "eventTicketPurchase",
+      orderPricing,
+      ticketsPurchased: data.ticketings.length,
+      paymentDetails: data.paymentDetails || {},
+    };
+
+    const [order] = await TicketingOrders.create([orderDoc], { session });
+
+    // 5️⃣ Prepare individual ticket docs
+    const ticketDocs = data.ticketings.map(t => {
+      const snapshotInfo = validationResult.ticketSnapshots.find(
+        ts => ts.ticketId.toString() === t.ticketId.toString()
+      );
+
+      let snapshotToSave = { ...snapshotInfo.snapshot };
+
+      // Select only the chosen time slot
+      if (snapshotToSave?.timingSlots?.enabled && t.timeSlot) {
+        const allTimeSlots = snapshotToSave.timingSlots.dateTimeSlots
+          .flatMap(d => d.timeSlots);
+        const selectedSlot = allTimeSlots.find(s => s._id.toString() === t.timeSlot);
+
+        snapshotToSave.timingSlots = {
+          enabled: true,
+          selectedSlot,
+        };
+      } else {
+        snapshotToSave.timingSlots = null;
+      }
+
+      return {
+        order: order._id,
+        user: data.user,
+        organization: organizationId,
+        companyOrganizer,
+        ticket: {
+          ticketId: t.ticketId,
+          snapshot: snapshotToSave,
+          timeSlot: t.timeSlot || null,
+          protectionUserDetails: t.protectionUserDetails || {},
+        },
+        status: "valid",
+      };
+    });
+
+    // 6️⃣ Insert tickets inside the session
+    const createdTickets = await createManyTicketBookings(ticketDocs, session);
+
+    // 7️⃣ Loyalty points (if paid online)
+    if (
+      data.paymentDetails.paymentMethod === "applePay" ||
+      data.paymentDetails.paymentMethod === "card"
+    ) {
+      const pointsCalculation =
+        await calculatePointsRepo(data.user, companyOrganizer, totalAmount);
+
+      const globalPoints = {
+        base: pointsCalculation.global.earnedPoints,
+        multiplier: 1,
+        total: pointsCalculation.global.earnedPoints,
+        pointsPerEuro: pointsCalculation.global.pointsPerEuro,
+      };
+
+      const companyPoints = {
+        base: pointsCalculation.organizer.earnedPoints,
+        multiplier: 1,
+        total: pointsCalculation.organizer.earnedPoints,
+        pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
+      };
+
+      const trxData = {
+        user: data.user,
+        companyOrganizer,
+        organization: organizationId,
+        companyPoints,
+        globalPoints,
+        allowNegative: false,
+        type: "earn",
+        description: "",
+        entityId: order._id,
+        domainType: "ticketingorders",
+      };
+
+      const trx = await createTransaction(trxData, session);
+      if (!trx.success) throw new Error(trx.message || "wallet_update_failed");
+    }
+
+    // 8️⃣ Commit all operations
+    await session.commitTransaction();
+    session.endSession();
+
+    return { order, tickets: createdTickets };
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     throw error;
   }
-
-  // 2️⃣ Create Order
-  const firstTicketId = data.ticketings[0].ticketId;
-  const { organizationId, companyOrganizer } = await getOrganizationIdFromTicketId(firstTicketId);
-  let eventId = null;
-  if (validationResult.ticketSnapshots.length > 0) {
-    eventId = validationResult.ticketSnapshots[0].snapshot.event;
-  }
-
-  let sumOfPrices = data.ticketings.reduce((sum, t) => {
-    // Find the matching snapshot for this ticket
-    const snapshot = validationResult.ticketSnapshots.find(
-      ts => ts.ticketId.toString() === t.ticketId.toString()
-    );
-    // Add its price (or 0 if missing)
-    return sum + (snapshot?.snapshot.price || 0);
-  }, 0);
-
-  // Set tax rate (0 if no tax)
-  let taxRate = 0.0; // 0.1 for 10%, etc.
-
-  // Calculate tax amount
-  let taxAmount = taxRate > 0 ? parseFloat((sumOfPrices * taxRate).toFixed(2)) : 0.0;
-
-  // Calculate total
-  let totalAmount = parseFloat((sumOfPrices + taxAmount).toFixed(2));
-
-  let orderPricing = {
-    subtotal: parseFloat(sumOfPrices.toFixed(2)),
-    taxAmount,
-    total: totalAmount,
-    currency: "€",
-  };
-
-  const orderDoc = {
-    user: data.user,
-    organization: organizationId,
-    companyOrganizer: companyOrganizer,
-    event: eventId,
-    status: "confirmed", // directly confirmed as payment is already processed
-    purpose: "eventTicketPurchase",
-    orderPricing,
-    ticketsPurchased: data.ticketings.length,
-    paymentDetails: data.paymentDetails || {}
-  };
-
-  const order = await TicketingOrders.create(orderDoc);
-
-  // 3️⃣ Prepare individual tickets with orderId
-  const ticketDocs = data.ticketings.map((t) => {
-    const snapshot = validationResult.ticketSnapshots.find(
-      ts => ts.ticketId.toString() === t.ticketId.toString()
-    );
-
-    // Only include the selected inner timeSlot in snapshot
-    let selectedTimeSlot = null;
-    if (snapshot.snapshot.timingSlots?.enabled && t.timeSlot) {
-      const allTimeSlots = snapshot.snapshot.timingSlots.dateTimeSlots.flatMap(d => d.timeSlots);
-      selectedTimeSlot = allTimeSlots.find(s => s._id.toString() === t.timeSlot);
-    }
-
-    const snapshotToSave = { ...snapshot.snapshot };
-    if (selectedTimeSlot) {
-      snapshotToSave.timingSlots = {
-        enabled: true,
-        selectedSlot: selectedTimeSlot
-      };
-    } else {
-      snapshotToSave.timingSlots = null; // or remove entirely
-    }
-
-    return {
-      order: order._id,
-      user: data.user,
-      organization: organizationId,
-      companyOrganizer: companyOrganizer,
-      ticket: {
-        ticketId: t.ticketId,
-        snapshot: snapshotToSave,
-        timeSlot: t.timeSlot || null,
-        protectionUserDetails: t.protectionUserDetails || {},
-      },
-      status: "valid"
-    };
-  });
-
-  // 4️⃣ Bulk insert tickets
-  const createdTickets = await ticketingBookingRepo.createManyTicketBookings(ticketDocs);
-
-  //TODO For other methods add points when admin/staff complete the booking
-  if (data.paymentDetails.paymentMethod === "applePay" || data.paymentDetails.paymentMethod === "card") {
-    //calculate points based on totalPrice
-  let pointsCalculation = await calculatePointsRepo(data.user, companyOrganizer, totalAmount);
-
-   let globalPoints = {
-      base: pointsCalculation.global.earnedPoints,
-      multiplier: 1,
-      total: pointsCalculation.global.earnedPoints,
-      pointsPerEuro: pointsCalculation.global.pointsPerEuro,
-    };
-    let companyPoints = {
-      base: pointsCalculation.organizer.earnedPoints,
-      multiplier: 1,
-      total: pointsCalculation.organizer.earnedPoints,
-      pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
-    };
-
-    //log the transaction for both loyalty/global wallet
-    let dataTrx = {
-      user: data.user,
-      companyOrganizer,
-      organization: organizationId,
-      companyPoints,
-      globalPoints,
-      allowNegative: false,
-      type: "earn",
-      description: "",
-      entityId: order._id,
-      domainType: "ticketingorders"
-    }
-    let trx = await createTransaction(dataTrx)
-  }
-  return { order, tickets: createdTickets };
 };
+
 
 
 

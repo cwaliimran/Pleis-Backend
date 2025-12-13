@@ -53,4 +53,6 @@ module.exports = {
     "@UserCompanyLoyaltyWalletTransactionsModel": "backend/commonModules/wallet/UserCompanyLoyaltyWalletTransactions.js",
     "@UpdatesModel": "backend/commonModules/updates/Updates.js",
     "@NotificationsModel": "backend/models/Notifications.js",
+    "@LoyaltyRewardsOrdersModel": "backend/commonModules/loyalty/rewards/orders/LoyaltyRewardsOrders.js",
+    "@LoyaltyChallengesOrdersModel": "backend/commonModules/loyalty/challenges/orders/LoyaltyChallengesOrders.js",
 };

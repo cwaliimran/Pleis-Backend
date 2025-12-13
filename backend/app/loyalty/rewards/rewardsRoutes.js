@@ -2,6 +2,7 @@ const express = require("express");
 const {
   getRewards,
   getRewardDetails,
+  claimReward,
 } = require("./rewardsController");
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
@@ -14,6 +15,7 @@ const apiRateLimiter = createRateLimiter("Rewards");
 const apiRateLimiterDetails = createRateLimiter("Rewards/:id");
 
 router.get("/by-company/:companyOrganizer", apiRateLimiter, getRewards);
-router.get("/:id", apiRateLimiterDetails, getRewardDetails);
+// router.get("/:id", apiRateLimiterDetails, getRewardDetails);
+router.post("/claim", apiRateLimiterDetails, claimReward);
 
 module.exports = router;

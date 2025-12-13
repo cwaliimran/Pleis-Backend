@@ -44,7 +44,23 @@ const createTransaction = async (req, res) => {
             description
         });
 
-        return sendResponse({ res, statusCode: 201, translationKey: "wallet_transaction_created", data: result });
+        // Failure
+        if (!result.success) {
+            return sendResponse({
+                res,
+                statusCode: 400,
+                translationKey: result.message,
+                data: null
+            });
+        }
+
+        // Success
+        return sendResponse({
+            res,
+            statusCode: 201,
+            translationKey: "wallet_transaction_created",
+            data: result.data       // important: use result.data here
+        });
     } catch (e) {
         const err = getReadableErrorMessage(e);
         console.log("e", e)

@@ -13,7 +13,8 @@ router.use(auth);
 const apiRateLimiter = createRateLimiter("Challenges");
 const apiRateLimiterDetails = createRateLimiter("Challenges/:id");
 
-router.get("/", apiRateLimiter, getChallenges);
+router.get("/by-company/:companyOrganizer", apiRateLimiter, getChallenges);
+router.get("/participate/:id", apiRateLimiterDetails, getChallengeDetails);
 router.get("/:id", apiRateLimiterDetails, getChallengeDetails);
 
 module.exports = router;
