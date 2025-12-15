@@ -3,8 +3,9 @@ const {
   TicketReward,
   CustomReward,
   Reward,
-} = require("./models");
+} = require("../../../commonModules/loyalty/rewards/models");
 const { formatReward } = require("./utils/formatReward");
+const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
 
 // Decide which discriminator model to use
 const getModelByrewardType = (rewardType) => {
@@ -79,7 +80,66 @@ const findByIdAndUpdate = async (id, data) => {
     .populate("tierLimit");
 };
 
+// repository.redeemReward
+const redeemReward = async (bookingId, userId) => {
+  const rewardOrder = await RewardsOrders.findOne({ bookingId }).lean();
+
+  if (!rewardOrder) {
+    return {
+      success: false,
+      translationKey: "reward_not_found",
+      statusCode: 404,
+    };
+  }
+
+  if (rewardOrder.status == "expired") {
+    return {
+      success: false,
+      translationKey: "reward_order_expired",
+      statusCode: 400,
+      data: {
+        status: rewardOrder.status,
+        redeemedAt: rewardOrder.redeemedAt,
+      },
+    };
+  }
+  if (rewardOrder.status == "completed") {
+    return {
+      success: false,
+      translationKey: "reward_already_redeemed",
+      statusCode: 400,
+      data: {
+        status: rewardOrder.status,
+        redeemedAt: rewardOrder.redeemedAt,
+      },
+    };
+  }
+
+  // Update doc
+  const updated = await RewardsOrders.findOneAndUpdate(
+    { bookingId },
+    {
+      status: "completed",
+      redeemedAt: new Date(),
+      redeemedBy: userId,
+    },
+    { new: true }
+  ).lean();
+
+  return {
+    success: true,
+    translationKey: "reward_redeemed_successfully",
+    data: {
+      status: updated.status,
+      redeemedAt: updated.redeemedAt,
+    },
+  };
+};
+
+
+
 module.exports = {
+  redeemReward,
   create,
   getWithFilters,
   count,

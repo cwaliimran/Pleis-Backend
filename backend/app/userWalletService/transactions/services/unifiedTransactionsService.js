@@ -7,7 +7,7 @@ const { formatTransactionItem } = require("../repositories/../formatter/formatTr
 /**
  * Create a unified transaction (repository updates appropriate wallet)
  */
-const createTransaction = async (data) => {
+const createTransaction = async (data, session) => {
     // Validate essential fields here (defensive)
     const {
         user,
@@ -28,9 +28,21 @@ const createTransaction = async (data) => {
         throw new Error("At least one of companyPoints or globalPoints must be provided");
     }
 
-    const result = await unifiedRepo.createTransaction(data);
-    // return formatted transaction (or full result including walletView)
-    return result;
+    const result = await unifiedRepo.createTransaction(data, session);
+
+    // Always return a clean status object
+    if (!result || result.success === false) {
+        return {
+            success: false,
+            message: result?.message || "transaction_failed"
+        };
+    }
+
+    return {
+        success: true,
+        data: result.transactions
+    };
+
 };
 
 /**

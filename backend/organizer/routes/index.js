@@ -3,6 +3,8 @@ const router = express.Router();
 
 //common routes
 router.use("/", require("../../routes/index"));
+//loyalty routes
+router.use("/loyalty", require("../loyalty/index"));
 router.use("/suppliers", require("../suppliers/suppliersRoutes"));
 router.use("/tags", require("../tags/tagsRoutes"));
 router.use("/categories", require("../categories/categoriesRoutes"));
@@ -15,6 +17,8 @@ router.use("/organizations", require("../organizations/organizationRoutes"));
 router.use("/users", require("../usersManagement/usersRoutes"));
 router.use("/updates", require("../updates/updatesRoutes"));
 router.use("/marketing", require("../marketing/marketingRoutes"));
+router.use("/giveaways", require("../giveaways/giveawayRoutes"));
+
 
 
 

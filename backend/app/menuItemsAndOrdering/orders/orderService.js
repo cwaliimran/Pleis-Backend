@@ -10,103 +10,127 @@ const { createTransaction } = require("../../userWalletService/transactions/serv
 
 // 1️⃣ Place an order
 
-const placeOrder = async ({ userId, timezone, items, notes, paymentMethod,
+const placeOrder = async ({
+  userId,
+  timezone,
+  items,
+  notes,
+  paymentMethod,
   pickupType,
-  tableNumber, }) => {
+  tableNumber,
+}) => {
   if (!items || !items.length) throw new Error("Cart is empty");
 
-  // 1️⃣ Fetch all menu items being ordered
-  const itemIds = items.map(i => new mongoose.Types.ObjectId(i.menuItem));
-  const menuItems = await menuItemRepo.getMenuItemsWithFilters({ _id: { $in: itemIds } });
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  if (!menuItems.length) throw new Error("Invalid items in cart");
+  try {
+    // 1️⃣ Fetch menu items
+    const itemIds = items.map(i => new mongoose.Types.ObjectId(i.menuItem));
+    const menuItems = await menuItemRepo
+      .getMenuItemsWithFilters({ _id: { $in: itemIds } });
 
-  //find organization from first menu item
-  const organizationId = await menuItemRepo.getOrganizationIdByMenuItemId(menuItems[0].menu);
-  let totalPrice = 0;
+    if (!menuItems.length) throw new Error("Invalid items in cart");
 
-  // 2️⃣ Prepare order items with snapshot inside the item object
-  const orderItems = items.map(i => {
-    const menuItem = menuItems.find(m => m._id.toString() === i.menuItem);
-    if (!menuItem) throw new Error(`Invalid menu item: ${i.menuItem}`);
+    // Determine organization
+    const organizationId =
+      await menuItemRepo.getOrganizationIdByMenuItemId(menuItems[0].menu);
 
-    const price = menuItem.discountPrice || menuItem.basePrice;
-    const finalPrice = price * i.quantity;
-    totalPrice += finalPrice;
+    let totalPrice = 0;
 
-    return {
-      menuItem: menuItem._id,
-      quantity: i.quantity,
-      finalPrice,
-      menuItemSnapShot: JSON.parse(JSON.stringify(menuItem)), // snapshot inside item
-    };
-  });
+    // 2️⃣ Prepare order items w/snapshot
+    const orderItems = items.map(i => {
+      const menuItem = menuItems.find(m => m._id.toString() === i.menuItem);
+      if (!menuItem) throw new Error(`Invalid menu item: ${i.menuItem}`);
 
+      const price = menuItem.discountPrice || menuItem.basePrice;
+      const finalPrice = price * i.quantity;
+      totalPrice += finalPrice;
 
-  // 3️⃣ Create order document
-  const orderData = {
-    user: userId,
-    organization: organizationId,
-    items: orderItems,
-    totalPrice,
-    notes,
-    paymentMethod,
-    status: "pending",
-    pickupType,
-    tableNumber,
-  };
+      return {
+        menuItem: menuItem._id,
+        quantity: i.quantity,
+        finalPrice,
+        menuItemSnapShot: JSON.parse(JSON.stringify(menuItem)),
+      };
+    });
 
-  // 4️⃣ Save to DB
-  let order = await orderRepo.createOrder(orderData);
-
-  //create transaction if payment method is applePay/card
-  if (paymentMethod === "applePay" || paymentMethod === "card") {
-    //TODO process payment here
-    //update payment status
-    order.paymentStatus = "paid";
-    // await order.save();
-
-    //add point to user wallet
-    //get company organizer from organization
-    const companyOrganizer = await getOrgCompanyOrganizer(organizationId);
-    //calculate points based on totalPrice
-    let pointsCalculation = await calculatePointsRepo(userId, companyOrganizer, totalPrice);
-
-    let globalPoints = {
-      base: pointsCalculation.global.earnedPoints,
-      multiplier: 1,
-      total: pointsCalculation.global.earnedPoints,
-      pointsPerEuro: pointsCalculation.global.pointsPerEuro,
-    };
-    let companyPoints = {
-      base: pointsCalculation.organizer.earnedPoints,
-      multiplier: 1,
-      total: pointsCalculation.organizer.earnedPoints,
-      pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
-    };
-
-    //log the transaction for both loyalty/global wallet
-    let data = {
+    // 3️⃣ Create order document inside session
+    const orderData = {
       user: userId,
-      companyOrganizer,
       organization: organizationId,
-      companyPoints,
-      globalPoints,
-      allowNegative: false,
-      type: "earn",
-      description: "",
-      entityId: order._id,
-      domainType: "menuorders"
+      items: orderItems,
+      totalPrice,
+      notes,
+      paymentMethod,
+      status: "pending",
+      pickupType,
+      tableNumber,
+    };
+
+    let order = await orderRepo.createOrder(orderData, session);
+
+    // 4️⃣ If payment method is online → award points
+    if (paymentMethod === "applePay" || paymentMethod === "card") {
+      // mark paid
+      order.paymentStatus = "paid";
+      await order.save({ session });
+
+      // Fetch organizer and calculate points
+      const companyOrganizer = await getOrgCompanyOrganizer(organizationId);
+      const pointsCalculation =
+        await calculatePointsRepo(userId, companyOrganizer, totalPrice);
+
+      const globalPoints = {
+        base: pointsCalculation.global.earnedPoints,
+        multiplier: 1,
+        total: pointsCalculation.global.earnedPoints,
+        pointsPerEuro: pointsCalculation.global.pointsPerEuro,
+      };
+
+      const companyPoints = {
+        base: pointsCalculation.organizer.earnedPoints,
+        multiplier: 1,
+        total: pointsCalculation.organizer.earnedPoints,
+        pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
+      };
+
+      // Create loyalty transactions inside same session
+      const trx = await createTransaction(
+        {
+          user: userId,
+          companyOrganizer,
+          organization: organizationId,
+          companyPoints,
+          globalPoints,
+          allowNegative: false,
+          type: "earn",
+          description: "",
+          entityId: order._id,
+          domainType: "menuorders",
+        },
+        session
+      );
+
+      if (!trx.success) {
+        throw new Error(trx.message || "failed_loyalty_update");
+      }
     }
-    let trx = await createTransaction(data)
+
+    // 5️⃣ Commit atomic transaction
+    await session.commitTransaction();
+    session.endSession();
+
+    const formattedOrder = menuItemOrderFormatter(order, timezone);
+    return { order: formattedOrder };
+
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    throw err;
   }
-
-  let formattedOrder = menuItemOrderFormatter(order, timezone);
-
-
-
-  return { order: formattedOrder };
 };
+
 
 const addMoreItemsToOrder = async ({ orderId, items }) => {
   if (!items || !items.length) throw new Error("No items to add");

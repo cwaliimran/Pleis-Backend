@@ -57,7 +57,7 @@ const create = async (req, res) => {
 
 const get = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date,companyOrganizer } = req.query;
+  const { keyword, status, date, companyOrganizer } = req.query;
 
   try {
     const { responses, meta } = await service.get({
@@ -134,7 +134,45 @@ const deleteItem = async (req, res) => {
   }
 };
 
+const redeemReward = async (req, res) => {
+  try {
+    const { bookingId } = req.body;
+    if (!validateParams(req, res, { rawData: ["bookingId"] })) return;
+
+    const userId = req.user._id;
+
+    const result = await service.redeemReward(bookingId, userId);
+
+    if (!result.success) {
+      return sendResponse({
+        res,
+        statusCode: result.statusCode || 400,
+        translationKey: result.translationKey || "reward_redeem_failed",
+        data: result.data || null,
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: result.translationKey,
+      data: result.data,
+    });
+
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
+
 module.exports = {
+  redeemReward,
   create,
   get,
   getDetails,

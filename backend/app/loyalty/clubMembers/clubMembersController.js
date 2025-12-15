@@ -10,7 +10,7 @@ const joinClub = async (req, res) => {
   const { companyOrganizer } = req.body;
   const userId = req.user._id;
 
-  if (!validateParams(req, res, { bodyParams: ["companyOrganizer"] })) return;
+  if (!validateParams(req, res, { rawData: ["companyOrganizer"] })) return;
 
   try {
     const data = await clubService.joinClub(userId, companyOrganizer);
