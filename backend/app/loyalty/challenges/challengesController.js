@@ -7,8 +7,6 @@ const {
 } = require("@utils/responseUtil");
 
 const challengeService = require("./challengesService");
-const { getUserCompanyWallet } = require("../clubMembers/clubMembersService");
-const { formatChallengesByTierKey } = require("./formatters/formatChallenge");
 
 const getChallenges = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
@@ -18,42 +16,20 @@ const getChallenges = async (req, res) => {
     const userId = req.user._id;
     const companyOrganizer = req.params.companyOrganizer;
 
-    // Fetch challenges + wallet
-    const [{ challenges, meta }, userCompanyWallet] = await Promise.all([
-      challengeService.getChallenges({
-        userId,
-        companyOrganizer,
-        page,
-        limit,
-        timezone: req.user?.timezone,
-        keyword
-      }),
-      getUserCompanyWallet(userId, companyOrganizer)
-    ]);
-
-    const tierKey = userCompanyWallet?.tierKey || "essential";
-    const userTierEntry = userCompanyWallet?.level?.entryPoints ?? 0;
-
-    // 1️⃣ Format tier-values
-    let formattedChallenges = formatChallengesByTierKey(challenges, tierKey);
-
-    // 2️⃣ Apply tier rule WITHOUT overriding existing canParticipate
-    formattedChallenges = formattedChallenges.map(item => {
-      const challengeTierEntry = item?.tierLimit?.entryPoints ?? 0;
-
-      const eligibleByTier = userTierEntry >= challengeTierEntry;
-
-      return {
-        ...item,
-        canParticipate: item.canParticipate && eligibleByTier
-      };
+    const { challenges, meta } = await challengeService.getChallenges({
+      userId,
+      companyOrganizer,
+      page,
+      limit,
+      timezone: req.user?.timezone,
+      keyword
     });
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "challenges_fetched_successfully",
-      data: formattedChallenges,
+      data: challenges,
       meta
     });
 
@@ -67,6 +43,7 @@ const getChallenges = async (req, res) => {
     });
   }
 };
+
 
 
 

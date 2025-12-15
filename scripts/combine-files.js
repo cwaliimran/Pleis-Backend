@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Target directory (or passed via CLI)
-const targetDir = process.argv[2] || "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/userWalletService/global/walletTransactions";
+const targetDir = process.argv[2] || "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/loyalty/challengesOrders";
 
 if (!fs.existsSync(targetDir)) {
   console.error("Directory does not exist:", targetDir);

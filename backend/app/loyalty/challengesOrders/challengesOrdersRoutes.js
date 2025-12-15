@@ -1,8 +1,7 @@
 const express = require("express");
 const {
-  updateChallengeProgress,
-  claimReward,
-  getUserOrders
+  updateChallengeByTaskType,
+  getUserOrders,
 } = require("./challengeOrdersController");
 
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
@@ -19,12 +18,19 @@ const apiRateLimiterDetails = createRateLimiter("ChallengeOrders/:id");
 /* -------------------------------------------------------
    Challenge Orders API
 -------------------------------------------------------- */
+/* 
+{
+    "companyOrganizer": "6911c14b6fc7cbd864e745b6",
+    "taskType": "earnPoints", //visit/buyMenuItem/referUsers/earnPoints
+    "value": 500
+}
+*/
+router.post(
+  "/by-task-type",
+  apiRateLimiter,
+  updateChallengeByTaskType
+);
 
-// Start/ Increment user progress
-router.post("/", apiRateLimiter, updateChallengeProgress);
-
-// Claim reward after completing challenge
-router.post("/reward/claim", apiRateLimiterDetails, claimReward);
 
 // Get all challenge orders for logged-in user
 router.get("/", apiRateLimiter, getUserOrders);

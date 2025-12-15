@@ -18,8 +18,7 @@ function formatChallenge(challenge, timezone) {
     // If tierLimit is an object with an 'image' property, format it; otherwise, leave as is (likely ObjectId)
     if (
         obj?.tierLimit &&
-        typeof obj.tierLimit === "object" &&
-        obj.tierLimit.image
+        typeof obj.tierLimit === "object"
     ) {
         obj.tierLimit = tiersFormatter(obj.tierLimit);
     }

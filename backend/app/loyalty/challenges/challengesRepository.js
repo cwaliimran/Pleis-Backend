@@ -122,10 +122,25 @@ const getChallengesByCompanyOrganizer = async ({
   };
 };
 
+const findBestActiveChallengeByTaskType = async ({
+  companyOrganizer,
+  taskType
+}) => {
+  return Challenge.findOne({
+    companyOrganizer,
+    taskType,
+    status: "active",
+    endDate: { $gte: new Date() }
+  })
+    .sort({ taskValue: 1 }) // 👈 MINIMUM effort first
+    .lean();
+};
+
 
 module.exports = {
   getChallengesWithFilters,
   countChallenges,
   findChallengeById,
-  getChallengesByCompanyOrganizer
+  getChallengesByCompanyOrganizer,
+  findBestActiveChallengeByTaskType
 };

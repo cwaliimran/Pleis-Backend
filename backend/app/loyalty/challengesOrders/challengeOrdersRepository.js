@@ -1,16 +1,18 @@
 const mongoose = require("mongoose");
 const { LoyaltyChallengesOrders } = require("@LoyaltyChallengesOrdersModel");
-const Challenge = require("@ChallengeModel");
 const { getModelCounts } = require("@dbUtils/queryUtil");
+const Challenge = require("@ChallengeModel");
 
 // Create or get an existing challenge progress record
 const startOrGetChallengeOrder = async ({ userId, challenge }) => {
-  let existing = await LoyaltyChallengesOrders.findOne({
+  const active = await LoyaltyChallengesOrders.findOne({
     user: userId,
-    challenge: challenge._id
-  });
+    challenge: challenge._id,
+    status: "in-progress",
+    $expr: { $lt: ["$progress.current", "$progress.target"] }
+  }).sort({ createdAt: -1 });
 
-  if (existing) return existing;
+  if (active) return active;
 
   return LoyaltyChallengesOrders.create({
     user: userId,
@@ -19,50 +21,48 @@ const startOrGetChallengeOrder = async ({ userId, challenge }) => {
     challengeSnapshot: challenge,
     progress: {
       current: 0,
-      target: challenge.taskValue ?? 1,
-    }
+      target: challenge.taskValue ?? 1
+    },
+    status: "in-progress"
   });
 };
 
+
+
+
 // Increment progress
-const incrementChallengeProgress = async ({ userId, challengeId }) => {
+const incrementChallengeProgress = async ({ userId, challengeId, value }) => {
   return LoyaltyChallengesOrders.findOneAndUpdate(
     {
       user: userId,
       challenge: challengeId,
-      status: "in-progress",
+      status: "in-progress"
     },
-    {
-      $inc: { "progress.current": 1 }
-    },
+    [
+      {
+        $set: {
+          "progress.current": {
+            $min: [
+              { $add: ["$progress.current", value] },
+              "$progress.target"
+            ]
+          }
+        }
+      }
+    ],
     { new: true }
   );
 };
+
+
 
 // Mark challenge completed
-const markChallengeCompleted = async (orderId) => {
+const markChallengeReadyToClaim = async (orderId) => {
   return LoyaltyChallengesOrders.findByIdAndUpdate(
     orderId,
-    { status: "completed" },
+    { status: "pending-claim" },
     { new: true }
   );
-};
-
-// Claim challenge reward
-const claimChallengeReward = async ({ orderId, userId }) => {
-  const order = await LoyaltyChallengesOrders.findById(orderId);
-
-  if (!order) return { success: false, message: "challenge_order_not_found" };
-  if (order.status !== "completed")
-    return { success: false, message: "challenge_not_completed" };
-
-  order.rewardClaimed = true;
-  order.rewardClaimedAt = new Date();
-  order.status = "reward-claimed";
-
-  await order.save();
-
-  return { success: true, order };
 };
 
 // Get challenge orders for a user
@@ -101,7 +101,7 @@ async function checkClaimLimitForLoyaltyChallenges(userId, challenges = []) {
       $match: {
         user: new mongoose.Types.ObjectId(userId),
         challenge: { $in: challengeIds },
-        status: { $in: ["completed", "reward-claimed", "expired"] }, // Only completed counts
+        status: { $in: ["completed"] }, // Only completed counts
       },
     },
     {
@@ -137,11 +137,65 @@ async function checkClaimLimitForLoyaltyChallenges(userId, challenges = []) {
   return results;
 }
 
+/**
+ * Find active challenge order by taskType
+ */
+const findActiveOrderByTaskType = async ({
+  userId,
+  companyOrganizer,
+  taskType
+}) => {
+  return LoyaltyChallengesOrders.findOne({
+    user: userId,
+    companyOrganizer,
+    status: "in-progress",
+    $expr: { $lt: ["$progress.current", "$progress.target"] },
+    "challengeSnapshot.taskType": taskType
+  }).sort({ createdAt: -1 });
+};
+
+
+/**
+ * Find eligible active challenges for organizer by taskType
+ * Sorted by minimum effort first (taskValue ASC)
+ */
+const findEligibleChallengesByTaskType = async ({
+  companyOrganizer,
+  taskType
+}) => {
+  return Challenge.find({
+    companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
+    status: "active",
+    taskType,
+    endDate: { $gte: new Date() }
+  })
+    .sort({ taskValue: 1, createdAt: 1 }) // ✅ easiest first
+    .lean();
+};
+
+/**
+ * Check if user can start a new cycle (claim limit)
+ */
+const canStartNewCycle = async (userId, challenge) => {
+  if (!challenge.claimLimit || challenge.claimLimit <= 0) return true;
+
+  const completedCount = await LoyaltyChallengesOrders.countDocuments({
+    user: userId,
+    challenge: challenge._id,
+    status: "completed"
+  });
+
+  return completedCount < challenge.claimLimit;
+};
+
+
 module.exports = {
+  findActiveOrderByTaskType,
+  findEligibleChallengesByTaskType,
+  canStartNewCycle,
   startOrGetChallengeOrder,
   incrementChallengeProgress,
-  markChallengeCompleted,
-  claimChallengeReward,
+  markChallengeReadyToClaim,
   getUserChallengeOrders,
   getChallengeOrdersCounts,
   checkClaimLimitForLoyaltyChallenges

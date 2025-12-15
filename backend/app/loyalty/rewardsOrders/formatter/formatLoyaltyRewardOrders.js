@@ -15,8 +15,16 @@ function formatLoyaltyRewardOrders(item) {
   if (!obj) return null;
 
   // Format image URL
-  if (obj.snapshot && obj.snapshot.image) {
+  if (obj.snapshot) {
     obj.snapshot.image = getFullImageUrl(obj.snapshot.image || "noimage.png");
+    if (
+      obj.snapshot.reward &&
+      obj.snapshot.reward.customReward
+    ) {
+      obj.snapshot.reward.customReward.media = getFullImageUrl(
+        obj.snapshot.reward.customReward.image || "noimage.png"
+      );
+    }
   }
 
   return obj;

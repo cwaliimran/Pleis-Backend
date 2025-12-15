@@ -22,7 +22,8 @@ const createRewardOrder = async ({ userId, rewardId }) => {
     const order = await RewardsOrders.create(
       [{
         user: userId,
-        reward: reward._id,
+        sourceId: reward._id,
+        sourceType: "rewards",
         snapshot: reward,
         pointsUsed: reward.minPointsRequiredToClaim || 0,
         companyOrganizer: reward.companyOrganizer,

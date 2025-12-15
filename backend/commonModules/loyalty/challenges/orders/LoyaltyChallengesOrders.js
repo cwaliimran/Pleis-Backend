@@ -41,7 +41,7 @@ const challengeOrderSchema = new mongoose.Schema(
     // Track progress (varies by challenge type)
     progress: {
       current: { type: Number, default: 0 },
-      target: { type: Number, default: 0 }, 
+      target: { type: Number, default: 0 },
       // e.g. visit 2 times → target=2
     },
 
@@ -52,7 +52,7 @@ const challengeOrderSchema = new mongoose.Schema(
     // State
     status: {
       type: String,
-      enum: ["in-progress", "completed", "reward-claimed", "expired"],
+      enum: ["in-progress", "completed", "expired"],
       default: "in-progress",
     }
   },
@@ -60,4 +60,5 @@ const challengeOrderSchema = new mongoose.Schema(
 );
 
 const LoyaltyChallengesOrders = mongoose.model("LoyaltyChallengesOrder", challengeOrderSchema);
+
 module.exports = { LoyaltyChallengesOrders };

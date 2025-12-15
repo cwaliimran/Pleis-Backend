@@ -1,11 +1,11 @@
 const { findUserByIdAndCheckExists } = require("../../usersManagement/usersRepository");
-const { getChallengesByCompanyOrganizerService } = require("../challenges/challengesService");
 const { getPromotionsByCompanyOrganizerService } = require("../promotions/promotionsService");
 const { getRewardsByCompanyOrganizerService } = require("../rewards/rewardsService");
 const clubMemberRepo = require("./clubMembersRepository");
 const { formatUserWallet, formatUserWallets } = require("./formatters/formatUserWallet");
 const { formatRewardsByTierKey } = require("../../../commonModules/loyalty/rewards/utils/formatReward");
 const { getTransactions } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
+const { getChallengesByCompanyOrganizerService } = require("../challenges/challengesService");
 // Count members
 const countClubMembers = async (filters = {}) => {
   return clubMemberRepo.countClubMembers(filters);
