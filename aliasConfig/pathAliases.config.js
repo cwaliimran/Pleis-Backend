@@ -55,4 +55,6 @@ module.exports = {
     "@NotificationsModel": "backend/models/Notifications.js",
     "@LoyaltyRewardsOrdersModel": "backend/commonModules/loyalty/rewards/orders/LoyaltyRewardsOrders.js",
     "@LoyaltyChallengesOrdersModel": "backend/commonModules/loyalty/challenges/orders/LoyaltyChallengesOrders.js",
+    "@GiveawayModel": "backend/commonModules/giveaways/Giveaways.js",
+    "@GiveawayParticipantModel": "backend/commonModules/giveaways/Participants.js",
 };

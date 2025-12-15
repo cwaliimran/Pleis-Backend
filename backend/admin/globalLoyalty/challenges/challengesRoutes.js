@@ -5,6 +5,7 @@ const {
   getChallengeDetails,
   updateChallenge,
   deleteChallenge,
+  getTicketings
 } = require("./challengesController");
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
@@ -14,6 +15,7 @@ router.use(auth);
 const apiRateLimiter = createRateLimiter("Challenges");
 const apiRateLimiterDetails = createRateLimiter("Challenges/:id");
 router.post("/", roleMiddleware(["admin", "organizer", "manager"]), createChallenge);
+router.post("/", roleMiddleware(["admin", "organizer", "manager"]), getTicketings);
 router.get("/", apiRateLimiter, getChallenges);
 router.get("/:id", apiRateLimiterDetails, getChallengeDetails);
 router.put("/:id", roleMiddleware(["admin", "organizer", "manager"]), updateChallenge);
