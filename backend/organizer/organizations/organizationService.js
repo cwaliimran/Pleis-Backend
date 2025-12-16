@@ -4,7 +4,7 @@ const Venues = require("@VenuesModel");
 const Organizations = require("@OrganizationModel");
 const organizationRepo = require("./organizationRepository");
 const { generateMeta } = require("../../helperUtils/responseUtil");
-
+const mongoose = require("mongoose");
 const { formatOrganization } = require("./formatter/formatOrganization");
 
 const createOrganization = async ({ data }) => {
@@ -267,6 +267,68 @@ const getOrganizationsAsStaff = async (id) => {
   return await organizationRepo.getOrganizationsAsStaff(id);
 };
 
+const getAllOrganizations = async ({ page, limit, keyword, status, creator, date }) => {
+  // Initialize the query object
+  const query = {};
+
+  // Match organizations where creator field matches the provided creator
+  if (creator) {
+    query.creator =new mongoose.Types.ObjectId(creator); // Convert creator to ObjectId
+  }
+
+  // Apply status filter, if provided
+  if (status) {
+    query.status = status;
+  } else {
+    query.status = { $ne: "deleted" };  // Exclude 'deleted' status by default
+  }
+
+  // Apply date filter if provided
+  if (date) {
+    const start = new Date(date);
+    const end = new Date(new Date(date).setDate(start.getDate() + 1));
+    query.createdAt = { $gte: start, $lt: end };
+  }
+
+  // Apply keyword search if provided
+  if (keyword && keyword.trim() !== "") {
+    Object.assign(
+      query,
+      buildKeywordQueryFromModel(Organizations, keyword)
+    );
+  }
+
+  // Calculate skip for pagination
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+
+  // Fetch organizations and count based on the query
+  let [organizations, counts] = await Promise.all([
+    organizationRepo.getOrganizationsWithFilters(
+      query,
+      skip,
+      limit === 0 ? 0 : limit
+    ),
+    organizationRepo.getOrganizationCounts(query),
+  ]);
+
+  const totalFiltered = counts?.totalFiltered || 0;
+  const total = counts?.total || 0;
+  const active = counts?.active || 0;
+  const inactive = counts?.inactive || 0;
+  let meta = generateMeta(page, limit, totalFiltered);
+  meta.tagsCount = { total, active, inactive };
+
+  // Map the organizations and return only the _id and title
+  organizations = organizations.map(org => ({
+    _id: org._id,
+    title: org.basicInfo.name, // Assuming `title` is within `basicInfo` object
+  }));
+
+  return {
+    organizations,
+    meta
+  };
+};
 
 
 
@@ -280,5 +342,6 @@ module.exports = {
   getPublicOrganizations,
   checkOrganizationExists,
   getOrganizationsAsStaff,
-  getOrganizationDetails
+  getOrganizationDetails,
+  getAllOrganizations
 };

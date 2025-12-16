@@ -6,6 +6,7 @@ const NotificationTypes = {
   SYSTEM: "system",
   REMINDER: "reminder",
    EVENT_UPDATE: "eventUpdate",
+      GIVEAWAY_UPDATE: "giveawayUpdate",
 };
 
 // Define the NotificationSchema

@@ -75,14 +75,6 @@ if(data.expiryDate=="Invalid date"){
 
   await Giveaway.save();
 
-    // await sendUserNotifications({
-    //         recipientIds: userIds, 
-    //         title: Giveaway.title,
-    //         body: `You received a new message: ${Giveaway.description}`,
-    //         data: { type: NotificationTypes.EVENT_UPDATE, objectType: "group" },
-    //         sender: Giveaway.companyOrganizer,
-    //         objectId: Giveaway.event,
-    //       });
 
   return Giveaway;
 };
@@ -136,7 +128,16 @@ const gettickets = async ({ timezone, page, limit, keyword, status, userId,  dat
   };
 };
 
+const getWinners = async ({ timezone, page, limit, keyword, status, userId,  date, range, giveawayId }) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
+  let { winners, meta } = await GiveawayRepo.getWinners({ timezone, page, limit, keyword, status, userId,  date, range, today, skip, giveawayId });
 
+  return {
+    winners,
+    meta
+  };
+};
 
 module.exports = {
   createGiveaway,
@@ -144,6 +145,7 @@ module.exports = {
   updateGiveaway,
   deleteGiveaway,
   getevents,
-  gettickets
+  gettickets,
+  getWinners
 
 };
