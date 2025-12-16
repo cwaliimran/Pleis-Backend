@@ -6,7 +6,6 @@ const {
   deleteGiveaway,
   getevents,
   gettickets,
-  getWinners,
 } = require("./GiveawayController"); // Assuming you have a separate controller for promo codes
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -22,14 +21,8 @@ router.use(auth);
 const GiveawayRateLimiter = createRateLimiter("Giveaway");
 
 
-// Get all Promo Codes with pagination
-router.get("/events", roleMiddleware(["admin"]), GiveawayRateLimiter, getevents);
-router.get("/tickets", roleMiddleware(["admin"]), GiveawayRateLimiter, gettickets);
-router.post("/", roleMiddleware(["admin"]), GiveawayRateLimiter, createGiveaway);
-router.get("/", roleMiddleware(["admin"]), GiveawayRateLimiter, getGiveaway);
-router.get("/winners", roleMiddleware(["admin"]), GiveawayRateLimiter, getWinners);
-router.delete("/:id", roleMiddleware(["admin"]), deleteGiveaway);
-router.put("/:id", roleMiddleware(["admin"]), updateGiveaway);
+router.post("/", roleMiddleware(["user"]), GiveawayRateLimiter, createGiveaway);
+router.get("/", roleMiddleware(["user"]), GiveawayRateLimiter, getGiveaway);
 
 
 

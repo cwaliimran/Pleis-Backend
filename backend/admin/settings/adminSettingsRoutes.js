@@ -5,6 +5,7 @@ const {
   getPrivacyPolicy,
   updateAdminSettings,
   createAdminSettings,
+  getCustomerTermsAndConditions,
   getFaqs
 } = require("./controllers/adminSettingsController");
 const auth = require("../../middlewares/authMiddleware");
@@ -18,6 +19,7 @@ const apiRateLimiter = createRateLimiter("AdminSettings");
 
 // Route to fetch terms and conditions with rate limiting
 router.get("/terms-conditions", apiRateLimiter, getTermsAndConditions);
+router.get("/customer-terms-conditions", apiRateLimiter, getCustomerTermsAndConditions);
 
 // Route to fetch about us with rate limiting
 router.get("/about-us", apiRateLimiter, getAboutUs);

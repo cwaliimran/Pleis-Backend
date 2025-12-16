@@ -340,11 +340,61 @@ const gettickets = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
+const getWinners = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let { keyword, status , date, range ,giveawayId} = req.query;
+  try {
+if(!giveawayId){
+  return sendResponse({
+    res,
+    statusCode: 400,
+    translationKey: "giveaway_id_is_required",
+  });
+}
+
+    giveawayId = new  mongoose.Types.ObjectId(giveawayId); 
+    const timezone = req.user.timezone;
+    const { winners, meta } = await Giveawayervice.getWinners({
+      timezone,
+      page,
+      limit,
+      keyword,
+      status,
+      userId:req.user._id,
+      date,
+      range,
+      giveawayId
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "Giveaway_winners_fetched_successfully",
+      data: winners,
+      meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 module.exports = {
   createGiveaway,
   getGiveaway,
   updateGiveaway,
   deleteGiveaway,
   getevents,
-  gettickets
+  gettickets,
+  getWinners
 };
