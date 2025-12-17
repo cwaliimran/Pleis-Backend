@@ -1,13 +1,14 @@
 const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const { generateMeta } = require("@utils/responseUtil");
 const mongoose = require("mongoose");
-const {Events}= require("@EventsModel");
 const Updates = require("@UpdatesModel");
 const { TicketingOrders } = require("@TicketingOrdersModel");
 const { UserReservations } = require("@UserReservationsModel");
 const { formatUpdate } = require("./formatters/updateFormatter");
 const {NotificationExp, NotificationTypes} = require("@NotificationsModel");
 const {sendUserNotifications} = require("../../controllers/communicationController");
+const Organizations = require("@OrganizationModel");
+const {Events} = require("@EventsModel");
 const getUserIdsForEvent = async (eventId) => {
   try {
 
@@ -92,16 +93,72 @@ const createUpdates = async (data) => {
     throw new Error("Error saving update: " + err.message); 
   }
 };
+const getEventIdsForOrganizations = async (organizationIds) => {
+  // Log organizationIds to debug
+  console.log("organizationIds:", organizationIds);
+
+  // Use aggregation to get events where the organization matches the provided organization IDs under the basicInfo field
+  const events = await Events.aggregate([
+    {
+      $match: {
+        // Match events where the organization is in the provided organizationIds
+        "basicInfo.organization": { $in: organizationIds }
+      }
+    },
+    {
+      $project: {
+        _id: 1,  // Only select the _id field for the event
+      }
+    }
+  ]);
+console.log("events",events );
+  // Return the event IDs
+  return events.map(event => event._id);
+};
 
 
-const getUpdatess = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
+const getUpdatess = async ({ organizations, timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
+
+  if (!organizations || organizations.length === 0) {
+
+    organizations = [userId];  // Use userId as the "organization" in this case
+  } else {
+    // Ensure organizations is an array if it's a string
+    if (typeof organizations === 'string') {
+      try {
+        // URL-decode and split the string into an array
+        organizations = decodeURIComponent(organizations).split(','); // Split by comma
+      } catch (error) {
+     
+        return { updates: [], meta: { totalFiltered: 0, updatesCount: { total: 0, active: 0, inactive: 0 } } }; // Return empty if error
+      }
+    }
+
+    // Check if organizations is now an array
+    if (!Array.isArray(organizations)) {
+ 
+      return { updates: [], meta: { totalFiltered: 0, updatesCount: { total: 0, active: 0, inactive: 0 } } }; // Return empty if not an array
+    }
+  }
+
+  // Convert organizations to ObjectId (if not already)
+  const orgIds = organizations.map(id => new mongoose.Types.ObjectId(id));
+console.log("orgIds",orgIds );
+  // Fetch creatorIds for the organizations (if organizations are provided)
+  const eventId = organizations.length > 0 ? await getEventIdsForOrganizations(orgIds) : [];
+console.log("eventId",eventId );
+
+
+  // Step 1: Create the aggregation pipeline
   const pipeline = [
     {
       $match: {
-        ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) })
+        ...(creatorIds.length > 0 && { companyOrganizer: { $in: creatorIds } }), // Match by creatorIds if creatorIds are available
+        ...(organizations.length === 0 && userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }) // Fallback to userId if no organizations
       }
     }
-  ]; 
+  ];
+
   if (range === "monthly") {
     const { start, end } = getStartAndEndOfMonth(today, timezone);
     pipeline.push({
@@ -243,14 +300,47 @@ const getevents = async ({
   status,
   userId,
   date,
-  skip
+  skip,
+  organizations
 }) => {
-  const pipeline = [
-    // Step 1: Match events where creator matches the provided userId
-    {
-      $match: {
-        ...(userId && { creator: new mongoose.Types.ObjectId(userId) }) // Filter events where creator == userId
+  if (!organizations || organizations.length === 0) {
+
+    organizations = [userId];  // Use userId as the "organization" in this case
+  } else {
+    // Ensure organizations is an array if it's a string
+    if (typeof organizations === 'string') {
+      try {
+        // URL-decode and split the string into an array
+        organizations = decodeURIComponent(organizations).split(','); // Split by comma
+      } catch (error) {
+
+        return { updates: [], meta: { totalFiltered: 0, updatesCount: { total: 0, active: 0, inactive: 0 } } }; // Return empty if error
       }
+    }
+
+    // Check if organizations is now an array
+    if (!Array.isArray(organizations)) {
+
+      return { updates: [], meta: { totalFiltered: 0, updatesCount: { total: 0, active: 0, inactive: 0 } } }; // Return empty if not an array
+    }
+  }
+
+  // Convert organizations to ObjectId (if not already)
+  const orgIds = organizations.map(id => new mongoose.Types.ObjectId(id));
+
+  // Fetch creatorIds for the organizations (if organizations are provided)
+  const creatorIds = organizations.length > 0 ? await getCreatorIdsForOrganizations(orgIds) : [];
+
+
+  // Step 1: Create the aggregation pipeline
+  const pipeline = [
+    {
+$match: {
+      // If organizations are provided, use creatorIds or orgIds; otherwise, use userId
+      ...(organizations && organizations.length > 0
+        ? { creator: { $in: creatorIds.length > 0 ? creatorIds : orgIds } }  // Match by creator IDs or orgIds
+        : { creator: new mongoose.Types.ObjectId(userId) })  // Fallback to matching by userId if no organizations
+    }
     }
   ];
 

@@ -12,12 +12,14 @@ const getModelByTaskType = (taskType) => {
   switch (taskType) {
     case "organization":
       return GlobalOrganization;
-    case "earnPoints":
+    case "loyalty":
       return Globalloyalty;
-    case "buyMenuItem":
+    case "checkInOrder":
       return GlobalcheckInOrder;
-    case "referUsers":
-      return GlobalReferUsersQr;
+    case "event":
+      return Globaleventn;
+          case "checkInTableID":
+      return GlobalcheckInTableID;
     default:
       return GlobalBase; // fallback
   }
@@ -26,32 +28,20 @@ const getModelByTaskType = (taskType) => {
 // Create Qr
 const createQr = async (data) => {
   try {
-    console.log("Incoming data:", data);  // Log incoming data for debugging
-    console.log("data ",data );
-    // Get the model based on taskType
-    const Model = getModelByTaskType(data.globalQrType);
-    console.log("Model selected:", Model.name);  // Log the selected model
-    console.log("data ",data );
-    // Create QR object based on the selected model
-    const Qr = new Model(data);
-console.log("data ",data );
-    // Debugging: Log the Qr document before saving
-    console.log("Document to save:", Qr);
 
-    // Save the QR document to the database
+    const Model = getModelByTaskType(data.globalQrType);
+    const Qr = new Model(data);
     await Qr.save();
     console.log("QR saved:", Qr);
-
     return Qr;
   } catch (err) {
-    console.error("Error creating QR:", err);  // Log error if any
+    console.error("Error creating QR:", err); 
     throw err;
   }
 };
 
-// Get Qrs with population
 const getQrsWithFilters = async (query = {}, skip = 0, limit = 10) => {
-  return GlobalQr.find(query)
+  return GlobalBase.find(query)
     .populate("taskMenuItem")
     .populate("reward.rewardMenuItem")
     .populate({
@@ -67,12 +57,12 @@ const getQrsWithFilters = async (query = {}, skip = 0, limit = 10) => {
 
 // Count
 const countQrs = async (query = {}) => {
-  return GlobalQr.countDocuments(query);
+  return GlobalBase.countDocuments(query);
 };
 
 // Find by ID with population
 const findQrById = async (id) => {
-  return GlobalQr.findById(id)
+  return GlobalBase.findById(id)
     .populate("taskMenuItem")
     .populate("reward.rewardMenuItem")
     .populate("tierLimit");
@@ -80,18 +70,18 @@ const findQrById = async (id) => {
 
 // Update and save
 const updateQrData = async (Qr, data) => {
-  Object.assign(GlobalQr, data);
-  return await GlobalQr.save();
+  Object.assign(GlobalBase, data);
+  return await GlobalBase.save();
 };
 
 // Delete
 const deleteQrById = async (Qr) => {
-  return await GlobalQr.deleteOne();
+  return await GlobalBase.deleteOne();
 };
 
 // findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
-  return GlobalQr.findByIdAndUpdate(id, data, { new: true })
+  return GlobalBase.findByIdAndUpdate(id, data, { new: true })
     .populate("taskMenuItem")
     .populate("reward.rewardMenuItem")
     .populate("tierLimit");

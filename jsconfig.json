@@ -169,6 +169,9 @@
       ],
       "@GiveawayParticipantModel": [
         "backend/commonModules/giveaways/Participants.js"
+      ],
+      "@GlobalQrModel": [
+        "backend/commonModules/qrCode/models/QR/baseQr.js"
       ]
     }
   },

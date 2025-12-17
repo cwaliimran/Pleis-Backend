@@ -58,7 +58,9 @@ const allowedOrigins = [
   "https://individual-travesti-hockey-cancel.trycloudflare.com",
   "https://literature-specialties-achieving-furnishings.trycloudflare.com",
   "http://192.168.13.220:4003",
-  "http://192.168.13.221:4003"
+  "http://192.168.13.221:4003",
+  "http://192.168.100.65:4003",
+  "http://192.168.13.84:4003"
 ];
 securityMiddleware(app, {
   allowedOrigins,
