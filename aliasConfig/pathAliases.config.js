@@ -57,4 +57,5 @@ module.exports = {
     "@LoyaltyChallengesOrdersModel": "backend/commonModules/loyalty/challenges/orders/LoyaltyChallengesOrders.js",
     "@GiveawayModel": "backend/commonModules/giveaways/Giveaways.js",
     "@GiveawayParticipantModel": "backend/commonModules/giveaways/Participants.js",
+    "@GlobalQrModel": "backend/commonModules/qrCode/models/QR/baseQr.js",
 };

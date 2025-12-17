@@ -111,12 +111,11 @@ const createQr = async (req, res) => {
 
 const getQrs = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, companyOrganizer } = req.query;
+  const { keyword, status, date } = req.query;
   try {
 
 
     const { Qrs, meta } = await QrService.getQrs({
-      companyOrganizer,
       page,
       limit,
       keyword,
@@ -137,43 +136,8 @@ const getQrs = async (req, res) => {
   }
 };
 
-const getQrDetails = async (req, res) => {
-  if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
-  try {
-    const Qr = await QrService.getQrDetails(req.params.id);
-    if (!Qr) {
-      return sendResponse({ res, statusCode: 404, translationKey: "Qr_not_found" });
-    }
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "Qr_details_fetched_successfully",
-      data: Qr,
-    });
-  } catch (error) {
-    const readableError = getReadableErrorMessage(error);
-    return sendResponse({ res, statusCode: 500, translationKey: readableError.message, error });
-  }
-};
 
-const updateQr = async (req, res) => {
-  if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
-  try {
-    const updated = await QrService.updateQr(req.params.id, req.body);
-    if (!updated) {
-      return sendResponse({ res, statusCode: 404, translationKey: "Qr_not_found" });
-    }
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "Qr_updated_successfully",
-      data: updated,
-    });
-  } catch (error) {
-    const readableError = getReadableErrorMessage(error);
-    return sendResponse({ res, statusCode: 500, translationKey: readableError.message, error });
-  }
-};
+
 
 const deleteQr = async (req, res) => {
   if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
@@ -197,44 +161,10 @@ const deleteQr = async (req, res) => {
 
 
 
-const getTicketings = async (req, res) => {
-  const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, eventId } = req.query;
-  const { timezone } = req.user;
 
-  try {
-    const { ticketings, meta } = await QrService.getTicketings({
-      timezone,
-      page,
-      limit,
-      keyword,
-      status,
-      date,
-      eventId,
-    });
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "ticketings_fetched_successfully",
-      data: ticketings,
-      meta,
-    });
-  } catch (error) {
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error,
-    });
-  }
-};
 
 module.exports = {
   createQr,
   getQrs,
-  getQrDetails,
-  updateQr,
-  getTicketings,
   deleteQr,
 };
