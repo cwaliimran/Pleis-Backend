@@ -14,16 +14,12 @@ const createChallenge = async (req, res) => {
   const taskType = req.body.taskType;
 
   var dateFields = {}
-  var rawData = ["title", "taskType", "reward", "endDate", "companyOrganizer", "reward", "reward.rewardType"]
+  var rawData = ["title", "taskType", "reward", "endDate", "companyOrganizer", "reward", "taskValue", "reward.rewardType"]
   var objectIdFields = ["companyOrganizer"]
 
   if (req.body.promotionType === "buyMenuItem") {
     rawData.push("menuItem")
     objectIdFields.push("menuItem")
-  }
-
-  if (taskType === "visit" || taskType === "earnPoints" || taskType === "referUsers") {
-    rawData.push("taskValue")
   }
 
 

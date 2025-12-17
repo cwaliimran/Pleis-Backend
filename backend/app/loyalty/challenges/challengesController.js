@@ -10,19 +10,17 @@ const challengeService = require("./challengesService");
 
 const getChallenges = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const keyword = req.query.keyword || "";
 
   try {
     const userId = req.user._id;
     const companyOrganizer = req.params.companyOrganizer;
 
-    const { challenges, meta } = await challengeService.getChallenges({
+    const challenges = await challengeService.getEligibleChallengesForLoyaltyPage({
       userId,
       companyOrganizer,
       page,
       limit,
       timezone: req.user?.timezone,
-      keyword
     });
 
     return sendResponse({
@@ -30,7 +28,6 @@ const getChallenges = async (req, res) => {
       statusCode: 200,
       translationKey: "challenges_fetched_successfully",
       data: challenges,
-      meta
     });
 
   } catch (error) {

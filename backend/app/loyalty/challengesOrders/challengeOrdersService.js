@@ -1,11 +1,13 @@
 const repo = require("./challengeOrdersRepository");
-const Challenge = require("@ChallengeModel");
 const { generateMeta } = require("@utils/responseUtil");
 const { formatChallenge } = require("./formatters/formatChallenge");
 const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
 const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
 const { LoyaltyChallengesOrders } = require("@LoyaltyChallengesOrdersModel");
 const { findBestActiveChallengeByTaskType } = require("../challenges/challengesRepository");
+const { Challenge } = require("../../../commonModules/loyalty/challenges/models/Challenge");
+
+
 
 /**
  * Unified challenge progress service.
@@ -95,72 +97,207 @@ const getUserChallengeOrdersService = async ({
 };
 
 
+
 /**
  * Resolve challenge dynamically by taskType
  * - Reuse active order
  * - Otherwise find easiest eligible challenge
  * - Enforce claim limits
  */
+
+//TODO only "referUsers" type implementation in remaining when
+
 const resolveChallengeByTaskTypeService = async ({
+  userId,
+  companyOrganizer,
+  taskType,
+  value = 1,
+  items = []
+}) => {
+  // BUY MENU ITEM → specialized logic (already working)
+  if (taskType === "buyMenuItem") {
+    return resolveBuyMenuItemChallengeService({
+      userId,
+      companyOrganizer,
+      items
+    });
+  }
+
+  // ALL OTHER TYPES → simple generic resolver
+  return resolveGenericTaskTypeService({
+    userId,
+    companyOrganizer,
+    taskType,
+    value
+  });
+};
+
+
+
+const resolveBuyMenuItemChallengeService = async ({
+  userId,
+  companyOrganizer,
+  items = []
+}) => {
+
+  const qtyMap = new Map();
+  for (const item of items) {
+    if (!item.menuItem || !item.quantity) continue;
+    qtyMap.set(
+      String(item.menuItem),
+      (qtyMap.get(String(item.menuItem)) || 0) + Number(item.quantity)
+    );
+  }
+
+  if (!qtyMap.size) {
+    return { success: false, message: "menu_item_not_applicable" };
+  }
+
+  let appliedAnything = false;
+
+  for (const [menuItemId, incomingQty] of qtyMap.entries()) {
+    let remaining = incomingQty;
+
+    console.log("🍔 menuItem:", menuItemId, "incoming:", remaining);
+
+    const challenges = await Challenge.find({
+      companyOrganizer,
+      taskType: "buyMenuItem",
+      taskMenuItem: menuItemId,
+      status: "active"
+    }).sort({ taskValue: 1, createdAt: 1 });
+
+    for (const challenge of challenges) {
+      if (remaining <= 0) break;
+
+      // Resolve target safely
+      let target = challenge.taskValue;
+      if (!target) {
+        const match = challenge.title.match(/\d+/);
+        target = match ? Number(match[0]) : 1;
+      }
+
+      // Count completed cycles
+      let completedCycles = await LoyaltyChallengesOrders.countDocuments({
+        user: userId,
+        challenge: challenge._id,
+        status: "completed"
+      });
+
+      const maxCycles = challenge.claimLimit || Infinity;
+
+      while (remaining > 0 && completedCycles < maxCycles) {
+        // Reuse or create in-progress cycle
+        let order = await LoyaltyChallengesOrders.findOne({
+          user: userId,
+          challenge: challenge._id,
+          status: "in-progress"
+        });
+
+        if (!order) {
+          order = await LoyaltyChallengesOrders.create({
+            user: userId,
+            challenge: challenge._id,
+            companyOrganizer,
+            challengeSnapshot: challenge.toObject(),
+            progress: { current: 0, target },
+            status: "in-progress"
+          });
+        }
+
+        const capacity = target - order.progress.current;
+        if (capacity <= 0) {
+          order.status = "completed";
+          order.rewardClaimed = true;
+          order.rewardClaimedAt = new Date();
+          await order.save();
+          completedCycles++;
+          continue;
+        }
+
+        const applied = Math.min(remaining, capacity);
+        order.progress.current += applied;
+        remaining -= applied;
+
+        console.log(
+          `➡️ ${challenge.title} | applied=${applied} | remaining=${remaining}`
+        );
+
+        appliedAnything = true;
+
+        if (order.progress.current >= target) {
+          order.status = "completed";
+          order.rewardClaimed = true;
+          order.rewardClaimedAt = new Date();
+          completedCycles++;
+          console.log(`✅ COMPLETED: ${challenge.title}`);
+        }
+
+        await order.save();
+      }
+    }
+  }
+
+  if (!appliedAnything) {
+    return { success: false, message: "menu_item_not_applicable" };
+  }
+
+  return { success: true, message: "challenge_progress_updated" };
+};
+
+
+/**
+ * Simple resolver for visit / referUsers / earnPoints
+ * ✔ Uses existing active order if present
+ * ✔ Otherwise starts next eligible challenge
+ * ✔ No carry-forward
+ * ✔ No overflow logic
+ */
+const resolveGenericTaskTypeService = async ({
   userId,
   companyOrganizer,
   taskType,
   value = 1
 }) => {
-  // --------------------------------------------------
-  // 1️⃣ Reuse active cycle if exists
-  // --------------------------------------------------
-  let activeOrder = await repo.findActiveOrderByTaskType({
+  // 1️⃣ Find active in-progress order
+  let order = await repo.findActiveOrderByTaskType({
     userId,
     companyOrganizer,
     taskType
   });
 
-  if (activeOrder) {
-    return incrementExistingOrder(activeOrder, value);
-  }
+  let challenge;
 
-  // --------------------------------------------------
-  // 2️⃣ Find eligible challenges (easiest first)
-  // --------------------------------------------------
-  const challenges = await repo.findEligibleChallengesByTaskType({
-    companyOrganizer,
-    taskType
-  });
-
-  if (!challenges.length) {
-    return { success: false, message: "no_active_challenge_found" };
-  }
-
-  // --------------------------------------------------
-  // 3️⃣ Pick first challenge user can still claim
-  // --------------------------------------------------
-  for (const challenge of challenges) {
-    const canStart = await repo.canStartNewCycle(userId, challenge);
-    if (!canStart) continue;
-
-    const order = await repo.startOrGetChallengeOrder({
-      userId,
-      challenge
+  // 2️⃣ If no active order, find next eligible challenge
+  if (!order) {
+    const challenges = await repo.findEligibleChallengesByTaskType({
+      companyOrganizer,
+      taskType
     });
 
-    return incrementExistingOrder(order, value);
+    for (const ch of challenges) {
+      const canStart = await repo.canStartNewCycle(userId, ch);
+      if (!canStart) continue;
+
+      order = await repo.startOrGetChallengeOrder({
+        userId,
+        challenge: ch
+      });
+
+      challenge = ch;
+      break;
+    }
+
+    if (!order) {
+      return { success: false, message: "no_active_challenge_found" };
+    }
+  } else {
+    challenge = order.challengeSnapshot;
   }
 
-  return { success: false, message: "challenge_claim_limit_reached" };
-};
-
-/**
- * Increment progress and finalize if completed
- */
-const incrementExistingOrder = async (order, value) => {
-  // 🔒 Hard guard
-  if (order.progress.current >= order.progress.target) {
-    return { success: false, message: "no_active_challenge_found" };
-  }
-
+  // 3️⃣ Increment progress (simple add, capped in repo)
   const updated = await repo.incrementChallengeProgress({
-    userId: order.user,
+    userId,
     challengeId: order.challenge,
     value
   });
@@ -169,11 +306,12 @@ const incrementExistingOrder = async (order, value) => {
     return { success: false, message: "challenge_progress_not_found" };
   }
 
-  if (updated.progress.current < updated.progress.target) {
-    return { success: true, order: updated };
+  // 4️⃣ Complete if target reached
+  if (updated.progress.current >= updated.progress.target) {
+    await finalizeChallengeCompletion(updated);
   }
 
-  return finalizeChallengeCompletion(updated);
+  return { success: true, order: updated };
 };
 
 

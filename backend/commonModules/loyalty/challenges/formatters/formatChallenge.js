@@ -8,6 +8,9 @@ function formatChallenge(challenge, timezone) {
     if (obj?.companyOrganizer?.profileIcon) {
         obj.companyOrganizer.profileIcon = getFullImageUrl(obj.companyOrganizer.profileIcon);
     }
+    if (obj?.companyOrganizer?.companyDetails?.logo) {
+        obj.companyOrganizer.companyDetails.logo = getFullImageUrl(obj.companyOrganizer.companyDetails.logo);
+    }
     if(obj?.image){
         obj.image = getFullImageUrl(obj.image);
     }else{
@@ -54,7 +57,7 @@ function formatChallenge(challenge, timezone) {
             delete obj.taskMenuItem;
             break;
         case "buyMenuItem":
-            delete obj.taskValue;
+            // delete obj.taskValue;
             break;
         case "referUsers":
             delete obj.taskMenuItem;

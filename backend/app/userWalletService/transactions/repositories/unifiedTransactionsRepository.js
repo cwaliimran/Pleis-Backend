@@ -5,6 +5,7 @@ const { UserGlobalWallet } = require("@UserGlobalWalletModel");
 const { updateGlobalPoints, createUserWallet, getUserWallet } = require("../../global/walletManagement/userWalletRepository");
 
 const { nanoid } = require("nanoid");
+const { resolveChallengeByTaskTypeService } = require("../../../loyalty/challengesOrders/challengeOrdersService");
 let batchId = null;
 
 const createTransaction = async (data, session) => {
@@ -87,6 +88,15 @@ const createTransaction = async (data, session) => {
     );
 
     createdTransactions.push(trx[0]);
+  }
+
+  if (companyPoints && companyPoints.total !== 0) {
+    resolveChallengeByTaskTypeService({
+      userId,
+      companyOrganizer,
+      taskType: "earnPoints",
+      value: companyPoints.total
+    });
   }
 
   return { success: true, transactions: createdTransactions };

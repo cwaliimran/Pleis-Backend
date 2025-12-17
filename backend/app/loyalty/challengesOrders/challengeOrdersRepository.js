@@ -54,6 +54,30 @@ const incrementChallengeProgress = async ({ userId, challengeId, value }) => {
   );
 };
 
+const incrementChallengeProgressWithOverflow = async ({
+  orderId,
+  value
+}) => {
+  const order = await LoyaltyChallengesOrders.findById(orderId);
+
+  if (!order || order.status !== "in-progress") return null;
+
+  const remainingCapacity =
+    order.progress.target - order.progress.current;
+
+  const applied = Math.min(value, remainingCapacity);
+
+  order.progress.current += applied;
+  await order.save();
+
+  return {
+    order,
+    applied,
+    remaining: value - applied
+  };
+};
+
+
 
 
 // Mark challenge completed
@@ -188,6 +212,31 @@ const canStartNewCycle = async (userId, challenge) => {
   return completedCount < challenge.claimLimit;
 };
 
+const getActiveChallengeOrdersForDashboard = async ({
+  userId,
+  clubIds
+}) => {
+  return LoyaltyChallengesOrders.aggregate([
+    {
+      $match: {
+        user: userId,
+        companyOrganizer: { $in: clubIds },
+        status: "in-progress"
+      }
+    },
+    {
+      $addFields: {
+        progressPercentage: {
+          $multiply: [
+            { $divide: ["$progress.current", "$progress.target"] },
+            100
+          ]
+        }
+      }
+    }
+  ]);
+};
+
 
 module.exports = {
   findActiveOrderByTaskType,
@@ -195,8 +244,10 @@ module.exports = {
   canStartNewCycle,
   startOrGetChallengeOrder,
   incrementChallengeProgress,
+  incrementChallengeProgressWithOverflow,
   markChallengeReadyToClaim,
   getUserChallengeOrders,
   getChallengeOrdersCounts,
-  checkClaimLimitForLoyaltyChallenges
+  checkClaimLimitForLoyaltyChallenges,
+  getActiveChallengeOrdersForDashboard
 };

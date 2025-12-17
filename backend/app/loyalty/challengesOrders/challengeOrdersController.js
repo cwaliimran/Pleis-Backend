@@ -10,7 +10,7 @@ const service = require("./challengeOrdersService");
 
 const updateChallengeByTaskType = async (req, res) => {
   try {
-    const { taskType, value = 1 } = req.body;
+    const { taskType, value = 1, items = [] } = req.body;
     const userId = req.user._id;
     const { companyOrganizer } = req.body;
 
@@ -22,12 +22,12 @@ const updateChallengeByTaskType = async (req, res) => {
         translationKey: "task_type_and_company_required"
       });
     }
-
     const result = await service.resolveChallengeByTaskTypeService({
       userId,
       companyOrganizer,
       taskType,
-      value
+      value,
+      items
     });
 
 

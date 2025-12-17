@@ -22,7 +22,7 @@ const getRewardsByCompanyOrganizer = async ({ companyOrganizer }) => {
   };
 
   return Reward.find(query)
-    .populate("menuItem", "title")
+    .populate("menuItem", "title image")
     .populate({ path: "tierLimit" })
     .sort({ createdAt: -1 })
     .lean();
@@ -46,8 +46,52 @@ const claimReward = async (userId, rewardId) => {
   return result;
 };
 
+
+/**
+ * Fetch active rewards for dashboard (DB-level pagination)
+ */
+const getRewardsForDashboardPaged = async ({
+  clubIds,
+  now,
+  skip,
+  limit
+}) => {
+  return Reward.find({
+    companyOrganizer: { $in: clubIds },
+    status: "active",
+    $or: [
+      { endDate: null },
+      { endDate: { $gt: now } }
+    ]
+  })
+    .populate("tierLimit")
+    .populate("menuItem", "title image")
+    .populate(
+      "companyOrganizer",
+      "companyDetails.loyaltySettings.title companyDetails.logo"
+    )
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+};
+
+const countDashboardRewards = async ({ clubIds, now }) => {
+  return Reward.countDocuments({
+    companyOrganizer: { $in: clubIds },
+    status: "active",
+    $or: [
+      { endDate: null },
+      { endDate: { $gt: now } }
+    ]
+  });
+};
+
+
 module.exports = {
   getRewardsByCompanyOrganizer,
   countRewardsByCompanyOrganizer,
   claimReward,
+  getRewardsForDashboardPaged,
+  countDashboardRewards
 };

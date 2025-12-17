@@ -48,7 +48,6 @@ router.use("/bundles", require("../bundles/bundleRoutes"));
 router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));
 
 // transactions
-router.use("/transactions-old", require("../transactions_old/transactionsRoutes"));
 router.use("/transactions", require("../transactions/routes/unifiedTransactionsRoutes"));
 
 // thirdPParty

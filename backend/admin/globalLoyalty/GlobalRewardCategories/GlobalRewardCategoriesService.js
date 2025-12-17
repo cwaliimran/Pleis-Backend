@@ -1,11 +1,11 @@
 // services/categoryService.js
 const { generateMeta } = require("@utils/responseUtil");
 const categoryRepo = require("./GlobalRewardCategoriesRepository");
-const { formatMenuItem } = require("./formatter/formatItemCategories");
+const { formatGlobalRewardCategory } = require("./formatter/formatItemCategories");
 const mongoose = require("mongoose");
 const createCategory = async ({ image, title, status,createID }) => {
   let category = await categoryRepo.createCategory({ image, title, status, createID });
-  return formatMenuItem(category);
+  return formatGlobalRewardCategory(category);
 };
 
 const getCategories = async ({ page, limit, keyword, status, date, createID }) => {
@@ -38,21 +38,17 @@ const getCategories = async ({ page, limit, keyword, status, date, createID }) =
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [categories, totalFiltered, total, active, inactive] =
+  const [categories, counts] =
     await Promise.all([
       categoryRepo.getCategoriesWithFilters(query, skip, limit === 0 ? 0 : limit),
-      categoryRepo.countCategories(query),
-      categoryRepo.countCategories({ status: { $ne: "deleted" } }),
-      categoryRepo.countCategories({ status: "active" }),
-      categoryRepo.countCategories({ status: "inactive" }),
+      categoryRepo.getCounts(query),
     ]);
 
   // Generate pagination metadata
-  let meta = generateMeta(page, limit, totalFiltered);
-  meta.categoriesCount = { total, active, inactive };
-
+  let meta = generateMeta(page, limit, counts.totalFiltered);
+  meta.categoriesCount = { total: counts.total, active: counts.active, inactive: counts.inactive };
   // Format categories
-  let formattedCategories = categories?.map((cat) => formatMenuItem(cat));
+  let formattedCategories = categories?.map((cat) => formatGlobalRewardCategory(cat));
 
   return {
     categories: formattedCategories,
@@ -77,7 +73,7 @@ const updateCategory = async (id, data) => {
   let updated = await categoryRepo.findByIdAndUpdate(id, updateData);
   if (!updated) return null;
   let updatedCategory = await categoryRepo.findCategoryById(id);
-  updated = formatMenuItem(updatedCategory);
+  updated = formatGlobalRewardCategory(updatedCategory);
   return updated;
 };
 

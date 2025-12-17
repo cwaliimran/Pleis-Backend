@@ -47,7 +47,7 @@ const createRewardOrder = async ({ userId, rewardId }) => {
       description: `Claimed reward ${reward.title}`,
     }, session);
 
-    
+
     if (!trx.success) {
       return { success: false, message: trx.message || "transaction_failed" };
     }
@@ -131,6 +131,7 @@ const getUserOrders = async (filter, page = 1, limit = 10, sort = { createdAt: -
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   return RewardsOrders.find(filter)
+    .populate("companyOrganizer", "companyDetails.loyaltySettings.title companyDetails.logo")
     .sort(sort)
     .skip(skip)
     .limit(limit)

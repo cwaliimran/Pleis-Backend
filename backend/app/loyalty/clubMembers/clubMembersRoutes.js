@@ -3,6 +3,7 @@ const {
   joinClub,
   leaveClub,
   getUserJoinedClubsWithPoints,
+  getSuggestedClubs,
   getUserCompanyWallet,
   getCompanyProfileWithLoyaltyInfo,
 } = require("./clubMembersController");
@@ -17,6 +18,7 @@ const apiRateLimiter = createRateLimiter("ClubMembers");
 
 //get all joined clubs
 router.get("/joined-clubs", apiRateLimiter, getUserJoinedClubsWithPoints);
+router.get("/suggested-clubs", apiRateLimiter, getSuggestedClubs);
 router.get("/wallet/:id", apiRateLimiter, getUserCompanyWallet);
 router.get("/:id", apiRateLimiter, getCompanyProfileWithLoyaltyInfo);
 router.post("/join", apiRateLimiter, joinClub);
