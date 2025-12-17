@@ -117,11 +117,22 @@ console.log("events",events );
 };
 
 
-const getUpdatess = async ({ organizations, timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
-
+const getUpdatess = async ({
+  organizations,
+  timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  userId,
+  date,
+  range,
+  today,
+  skip
+}) => {
+  // Step 1: Check if organizations are provided
   if (!organizations || organizations.length === 0) {
-
-    organizations = [userId];  // Use userId as the "organization" in this case
+    console.log('No organizations provided, using userId only');
   } else {
     // Ensure organizations is an array if it's a string
     if (typeof organizations === 'string') {
@@ -129,36 +140,44 @@ const getUpdatess = async ({ organizations, timezone, page, limit, keyword, stat
         // URL-decode and split the string into an array
         organizations = decodeURIComponent(organizations).split(','); // Split by comma
       } catch (error) {
-     
-        return { updates: [], meta: { totalFiltered: 0, updatesCount: { total: 0, active: 0, inactive: 0 } } }; // Return empty if error
+        console.error('Error parsing organizations:', error);
+        return { updates: [], meta: { totalFiltered: 0, updatesCount: { total: 0, active: 0, inactive: 0 } } }; // Return empty array if error
       }
     }
 
     // Check if organizations is now an array
     if (!Array.isArray(organizations)) {
- 
-      return { updates: [], meta: { totalFiltered: 0, updatesCount: { total: 0, active: 0, inactive: 0 } } }; // Return empty if not an array
+      console.error('Organizations is not an array:', organizations);
+      return { updates: [], meta: { totalFiltered: 0, updatesCount: { total: 0, active: 0, inactive: 0 } } }; // Return empty array if not an array
     }
   }
 
-  // Convert organizations to ObjectId (if not already)
-  const orgIds = organizations.map(id => new mongoose.Types.ObjectId(id));
-console.log("orgIds",orgIds );
-  // Fetch creatorIds for the organizations (if organizations are provided)
-  const eventId = organizations.length > 0 ? await getEventIdsForOrganizations(orgIds) : [];
-console.log("eventId",eventId );
+  let eventIds = [];
+  if (organizations && organizations.length > 0) {
+    const orgIds = organizations.map(id => new mongoose.Types.ObjectId(id));
 
+    // Step 2: If organizations are provided, fetch event IDs for the organizations
+    eventIds = await getEventIdsForOrganizations(orgIds); // Get event IDs based on organizations
+    console.log("eventIds:", eventIds); // Log eventIds to ensure they are correct
+  }
 
-  // Step 1: Create the aggregation pipeline
+  // Step 3: If no eventIds are found, return an empty array with meta counts
+  if (eventIds.length === 0 && organizations.length > 0) {
+    console.log('No events found for the provided organizations');
+    return { updates: [], meta: { totalFiltered: 0, updatesCount: { total: 0, active: 0, inactive: 0 } } };
+  }
+
+  // Step 4: Create the aggregation pipeline
   const pipeline = [
     {
       $match: {
-        ...(creatorIds.length > 0 && { companyOrganizer: { $in: creatorIds } }), // Match by creatorIds if creatorIds are available
-        ...(organizations.length === 0 && userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }) // Fallback to userId if no organizations
+        ...(eventIds.length > 0 && { event: { $in: eventIds } }), // Use eventIds to filter events
+        ...(!organizations.length && { companyOrganizer: new mongoose.Types.ObjectId(userId) })  // Fallback to userId if no eventIds found
       }
     }
   ];
 
+  // Apply filters based on range
   if (range === "monthly") {
     const { start, end } = getStartAndEndOfMonth(today, timezone);
     pipeline.push({
@@ -187,11 +206,11 @@ console.log("eventId",eventId );
     });
   }
 
-  // Step 3: Apply other filters (status, date, etc.)
+  // Apply filters based on status, date, and keyword
   if (status) {
     pipeline.push({ $match: { status } });
   } else {
-    pipeline.push({ $match: { status: { $ne: "deleted" } } }); // Default to excluding "deleted" status
+    pipeline.push({ $match: { status: { $ne: "deleted" } } });
   }
 
   if (date) {
@@ -204,9 +223,7 @@ console.log("eventId",eventId );
     });
   }
 
-  // Step 4: Keyword search for event title
   if (keyword) {
-    // Search only in the 'title' field of the update
     pipeline.push({
       $match: {
         title: { $regex: keyword, $options: "i" } // Case-insensitive search
@@ -214,69 +231,66 @@ console.log("eventId",eventId );
     });
   }
 
-  // Step 5: Lookup the event's title from the Events collection
+  // Lookup the event's title from the Events collection
   pipeline.push({
     $lookup: {
-      from: "events", // Events collection
-      localField: "event", // Match the event field in Updates
-      foreignField: "_id", // Match the _id of the event in Events collection
-      as: "eventDetails" // Output the event details in an array called eventDetails
+      from: "events",
+      localField: "event",
+      foreignField: "_id",
+      as: "eventDetails"
     }
   });
 
-  // Step 6: Project the necessary fields (_id, title of the update, event title)
+  // Project the necessary fields
   pipeline.push({
     $project: {
-      _id: 1, // Include the _id field
-      image: 1, // Include the image field
-      description: 1, // Include the description field
-      status: 1, // Include the status field
-      createdAt: 1, // Include the createdAt field
-      title: 1, // Include the title field of the update
-
+      _id: 1,
+      image: 1,
+      description: 1,
+      status: 1,
+      createdAt: 1,
+      title: 1,
       eventTitle: { $arrayElemAt: ["$eventDetails.basicInfo.title", 0] },
-      eventId: { $arrayElemAt: ["$eventDetails._id", 0] } // Extract the event title from the eventDetails array
+      eventId: { $arrayElemAt: ["$eventDetails._id", 0] }
     }
   });
 
-  // Step 7: Sort by createdAt (descending)
+  // Sort by createdAt
   pipeline.push({ $sort: { createdAt: -1 } });
 
-  // Step 8: Apply pagination and count using $facet
+  // Apply pagination and count
   pipeline.push({
     $facet: {
       data: [
-        { $skip: skip }, // Pagination skip
-        ...(limit === 0 ? [] : [{ $limit: limit }]) // Apply limit if provided
+        { $skip: skip },
+        ...(limit === 0 ? [] : [{ $limit: limit }])
       ],
-      totalFiltered: [{ $count: "count" }] // Total count of filtered results
+      totalFiltered: [{ $count: "count" }]
     }
   });
 
-  // Execute the aggregation pipeline
+  // Execute the aggregation
   const result = await Updates.aggregate(pipeline);
 
-  // Step 9: Check if the result is valid and contains data
   if (!result || !result[0] || !result[0].data) {
     return { updates: [], meta: { totalFiltered: 0, updatesCount: { total: 0, active: 0, inactive: 0 } } };
   }
 
-  // Step 10: Handle the aggregation results
   let updates = result[0].data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-  // Step 11: Meta counts (active/inactive/total updates for the given userId)
   const [total, active, inactive] = await Promise.all([
-    Updates.countDocuments({ creator: userId, status: { $ne: "deleted" } }), // Total updates for the user
-    Updates.countDocuments({ creator: userId, status: "active" }), // Active updates for the user
-    Updates.countDocuments({ creator: userId, status: "inactive" }) // Inactive updates for the user
+    Updates.countDocuments({ creator: userId, status: { $ne: "deleted" } }),
+    Updates.countDocuments({ creator: userId, status: "active" }),
+    Updates.countDocuments({ creator: userId, status: "inactive" })
   ]);
 
-  // Step 12: Generate meta information for pagination
   const meta = generateMeta(page, limit, totalFiltered);
   meta.updatesCount = { total, active, inactive };
- const formattedupdates = updates.map(event => formatUpdate(event));
-  return { updates:formattedupdates, meta };
+
+  const formattedUpdates = updates.map(event => formatUpdate(event));
+
+  return { updates: formattedUpdates, meta };
 };
 
 
