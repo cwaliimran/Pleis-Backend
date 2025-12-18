@@ -36,7 +36,7 @@ const createTransaction = async (data) => {
 /**
  * List transactions with filters and pagination
  */
-const getTransactions = async ({ page = 1, limit = 10, walletType, domainType, type, organization, companyOrganizer, entityId, date }) => {
+const getTransactions = async ({ page = 1, limit = 10, walletType, domainType, type, organization, companyOrganizer, entityId, startDate, endDate }) => {
     const skip = limit === 0 ? 0 : (page - 1) * limit;
     const query = {};
     if (walletType) query.walletType = walletType;
@@ -45,10 +45,21 @@ const getTransactions = async ({ page = 1, limit = 10, walletType, domainType, t
     if (organization) query.organization = new mongoose.Types.ObjectId(organization);
     if (companyOrganizer) query.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
     if (entityId) query.entityId = entityId;
-    if (date) {
-        const start = new Date(date);
-        const end = new Date(new Date(date).setDate(start.getDate() + 1));
-        query.createdAt = { $gte: start, $lt: end };
+    if (startDate || endDate) {
+        query.createdAt = {};
+        if (startDate) {
+            query.createdAt.$gte = new Date(startDate);
+        }
+        if (endDate) {
+            // Set endDate to end of the day for inclusivity
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            query.createdAt.$lte = end;
+        }
+        // Remove createdAt if empty
+        if (Object.keys(query.createdAt).length === 0) {
+            delete query.createdAt;
+        }
     }
 
     const [items, total] = await Promise.all([

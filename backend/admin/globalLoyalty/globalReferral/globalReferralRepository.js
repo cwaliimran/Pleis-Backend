@@ -287,7 +287,6 @@ globalReferral = await Promise.all(
   })
 );
 
-
   const meta = generateMeta(page, limit, totalFiltered);
   meta.globalReferralCount = { total, active, inactive };
 

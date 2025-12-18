@@ -5,96 +5,104 @@ const { UserGlobalWallet } = require("@UserGlobalWalletModel");
 const { updateGlobalPoints, createUserWallet, getUserWallet } = require("../../global/walletManagement/userWalletRepository");
 
 const { nanoid } = require("nanoid");
+const { resolveChallengeByTaskTypeService } = require("../../../loyalty/challengesOrders/challengeOrdersService");
 let batchId = null;
 
-const createTransaction = async ({
-  user,
-  companyOrganizer = null,
-  organization = null,
-
-  // unified inputs
-  companyPoints = null,
-  globalPoints = null,
-
-  type = "earn",
-  domainType,
-  entityId = null,
-
-  allowNegative = false,
-  description = ""
-}) => {
-  const batchId = nanoid();
-  if (!user) throw new Error("User is required");
+const createTransaction = async (data, session) => {
+  const {
+    user,
+    companyOrganizer,
+    organization,
+    companyPoints,
+    globalPoints,
+    type,
+    domainType,
+    entityId,
+    allowNegative,
+    description
+  } = data;
 
   const userId = typeof user === "string" ? user : (user._id || user.id);
+
+  const batchId = nanoid();
   const createdTransactions = [];
 
-  /* =====================================================
-     1) COMPANY LOYALTY TRANSACTION
-     ===================================================== */
+  // 1) COMPANY POINTS
   if (companyPoints && companyPoints.total !== 0) {
-
-    const wallet = await updatePoints({
+    const walletUpdate = await updatePoints({
       userId,
       companyOrganizer,
-      points: companyPoints,       // CONSISTENT NOW
-      allowNegative
-    });
-
-    const closingBalance =
-      wallet?.company?.points ??
-      wallet?.closingBalance ??
-      wallet?.points ??
-      0;
-
-    const trx = await UnifiedWalletTransactions.create({
-      user: userId,
-      companyOrganizer,
-      organization,
-      walletType: "companyLoyalty",
-      batchId,
-      type,
-      domainType,
-      entityId,
       points: companyPoints,
-      closingBalance,
-      description
+      allowNegative,
+      session
     });
 
-    createdTransactions.push(trx);
+    if (!walletUpdate.success) return walletUpdate;
+
+    const trx = await UnifiedWalletTransactions.create(
+      [{
+        user: userId,
+        companyOrganizer,
+        organization,
+        walletType: "companyLoyalty",
+        batchId,
+        type,
+        domainType,
+        entityId,
+        points: companyPoints,
+        closingBalance: walletUpdate.newBalance,
+        description
+      }],
+      { session }
+    );
+
+    createdTransactions.push(trx[0]);
   }
 
-  /* =====================================================
-     2) GLOBAL WALLET TRANSACTION
-     ===================================================== */
+  // 2) GLOBAL POINTS
   if (globalPoints && globalPoints.total !== 0) {
-
-    // update wallet first
     const walletUpdate = await updateGlobalPoints({
       user: userId,
       points: globalPoints,
-      allowNegative
+      allowNegative,
+      session
     });
 
-    const trx = await UnifiedWalletTransactions.create({
-      user: userId,
-      companyOrganizer,
-      organization,
-      walletType: "globalWallet",
-      batchId,
-      type,
-      domainType,
-      entityId,
-      points: globalPoints,
-      closingBalance: walletUpdate.newBalance,
-      description
-    });
+    if (!walletUpdate.success) return walletUpdate;
 
-    createdTransactions.push(trx);
+    const trx = await UnifiedWalletTransactions.create(
+      [{
+        user: userId,
+        companyOrganizer,
+        organization,
+        walletType: "globalWallet",
+        batchId,
+        type,
+        domainType,
+        entityId,
+        points: globalPoints,
+        closingBalance: walletUpdate.newBalance,
+        description
+      }],
+      { session }
+    );
+
+    createdTransactions.push(trx[0]);
   }
 
-  return createdTransactions;
+  if (companyPoints && companyPoints.total !== 0) {
+    resolveChallengeByTaskTypeService({
+      userId,
+      companyOrganizer,
+      taskType: "earnPoints",
+      value: companyPoints.total
+    });
+  }
+
+  return { success: true, transactions: createdTransactions };
 };
+
+
 
 
 
@@ -102,14 +110,14 @@ const createTransaction = async ({
  * Find transactions with filters + pagination
  */
 const getTransactionsWithFilters = async (query = {}, skip = 0, limit = 10) => {
-    return UnifiedWalletTransactions.find(query)
-        .populate({
-            path: "organization",
-            select: "basicInfo.name basicInfo.media.logo"
-        })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit).lean();
+  return UnifiedWalletTransactions.find(query)
+    .populate({
+      path: "organization",
+      select: "basicInfo.name basicInfo.media.logo"
+    })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit).lean();
 };
 
 

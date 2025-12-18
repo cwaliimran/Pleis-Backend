@@ -19,7 +19,6 @@ const createMenuItem = async (data, timezone) => {
 
 // Populate menu data for menuItems
 const getMenuItems = async ({ page, limit, keyword, status, date, menu, timezone, companyOrganizer }) => {
-  console.log("here")
   let menuIds = [];
 
   // 1️⃣ Get menus created by companyOrganizer
@@ -249,7 +248,6 @@ const getMenuItemsByMenuId = async (menuId, timezone) => {
 };
 
 const getBundleMenuItems = async ({ page, limit, keyword, status, date, menu, timezone, companyOrganizer }) => {
-  console.log("here")
   let menuIds = [];
 
   // 1️⃣ Get menus created by companyOrganizer

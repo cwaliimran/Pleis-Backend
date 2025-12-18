@@ -24,6 +24,9 @@ router.use("/loyalty/dashboard", require("../app/loyalty/dashboard/dashboardsRou
 router.use("/loyalty/challenges", require("../app/loyalty/challenges/challengesRoutes"));
 router.use("/loyalty/promotions", require("../app/loyalty/promotions/promotionsRoutes"));
 router.use("/loyalty/club", require("../app/loyalty/clubMembers/clubMembersRoutes"));
+router.use("/loyalty/rewards", require("../app/loyalty/rewards/rewardsRoutes"));
+router.use("/loyalty/rewards-orders", require("../app/loyalty/rewardsOrders/rewardsOrdersRoutes"));
+router.use("/loyalty/challenges-orders", require("../app/loyalty/challengesOrders/challengesOrdersRoutes"));
 
 router.use("/users", require("../app/usersManagement/usersRoutes"));
 
@@ -51,7 +54,8 @@ router.use("/friend-request", require("../app/friendRequest/friendRequestRoutes"
 //friends-suggestions
 router.use("/friends-suggestions", require("../app/friendsSuggestion/friendsSuggestionRoutes"));
 
-router.use("/global-loyalty/wallet", require("../app/userWalletService/global/walletManagement/userWalletRoutes"));
+router.use("/global-loyalty", require("../app/globalLoyalty/routes/index"));
+router.use("/giveaways", require("../app/giveaways/giveawayRoutes"));
 
 
 

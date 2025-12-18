@@ -16,7 +16,7 @@ const getTicketingBookings = async (query = {}, options = {}) => {
         let: { eventId: "$ticket.snapshot.event" },
         pipeline: [
           { $match: { $expr: { $eq: ["$_id", "$$eventId"] } } },
-          { $project: { _id: 1, "basicInfo.title": 1,"basicInfo.media": 1, "basicInfo.venueLocation": 1, schedule: 1 } }
+          { $project: { _id: 1, "basicInfo.title": 1, "basicInfo.media": 1, "basicInfo.venueLocation": 1, schedule: 1 } }
         ],
         as: "ticketEvent"
       }
@@ -146,9 +146,10 @@ const getTicketingBookingsCount = async (query) => {
   });
 }
 
-const createManyTicketBookings = async (ticketingBookings) => {
-  return TicketingBookings.insertMany(ticketingBookings);
-}
+const createManyTicketBookings = async (ticketingBookings, session = null) => {
+  return TicketingBookings.insertMany(ticketingBookings, { session });
+};
+
 
 module.exports = {
   createTicketingBooking,

@@ -344,6 +344,21 @@ const reservationsFormatterAdjustDates_ = (reservations, timezone) => {
     return cat;
   });
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 module.exports = {
   formatEventSchedule,
   formatMoreFromOrganizerEventResponse,

@@ -71,7 +71,7 @@ if (
 };
 const getUpdatess = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range } = req.query;
+  const { keyword, status = "active", date, range, organizations } = req.query;
   try {
 
 
@@ -85,7 +85,8 @@ const getUpdatess = async (req, res) => {
       status,
       userId,
       date,
-      range
+      range,
+      organizations
     });
 
     return sendResponse({
@@ -213,7 +214,7 @@ const deleteUpdates = async (req, res) => {
 
 const getevents = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range } = req.query;
+  const { keyword, status = "active", date, range,organizations } = req.query;
   try {
 
 
@@ -227,7 +228,8 @@ const getevents = async (req, res) => {
       status,
       userId,
       date,
-      range
+      range,
+      organizations
     });
 
     return sendResponse({

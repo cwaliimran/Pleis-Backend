@@ -9,7 +9,11 @@ const globalrewardSchema = new mongoose.Schema(
       default: "points",
     },
     rewardValue: { type: Number, default: 0 },
-
+    specialTicket: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Ticketings",
+      default: null,
+    },
     // menu item reward
     rewardMenuItem: {
       type: mongoose.Schema.Types.ObjectId,

@@ -1,11 +1,11 @@
 const { findUserByIdAndCheckExists } = require("../../usersManagement/usersRepository");
-const { getChallengesByCompanyOrganizerService } = require("../challenges/challengesService");
 const { getPromotionsByCompanyOrganizerService } = require("../promotions/promotionsService");
 const { getRewardsByCompanyOrganizerService } = require("../rewards/rewardsService");
 const clubMemberRepo = require("./clubMembersRepository");
-const { formatUserWallet, formatUserWallets } = require("./formatters/formatUserWallet");
+const { formatUserWallet, formatUserWallets, formatLoyaltyProfile } = require("./formatters/formatUserWallet");
 const { formatRewardsByTierKey } = require("../../../commonModules/loyalty/rewards/utils/formatReward");
 const { getTransactions } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
+const { getEligibleChallengesForLoyaltyPage } = require("../challenges/challengesService");
 // Count members
 const countClubMembers = async (filters = {}) => {
   return clubMemberRepo.countClubMembers(filters);
@@ -59,17 +59,18 @@ const updateUserCompanyPoints = async (payload) => {
 
 const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganizer) => {
   const [profile, userCompanyWallet, rewards, challenges, promotions, transactions] = await Promise.all([
-    {},
+    clubMemberRepo.getCompanyLoyaltyProfile(companyOrganizer),
     clubMemberRepo.isClubMemberWithWallet(userId, companyOrganizer),
     getRewardsByCompanyOrganizerService({
       companyOrganizer,
-      timezone,
+      userId,
     }),
-    getChallengesByCompanyOrganizerService({
+    getEligibleChallengesForLoyaltyPage({
       page: 1,
       limit: 10,
       timezone,
       companyOrganizer,
+      userId,
     }),
     getPromotionsByCompanyOrganizerService({
       page: 1,
@@ -86,14 +87,13 @@ const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganiz
     userCompanyWallet?.tierKey || "essential"
   );
 
+  let formattedLoyaltyProfile = formatLoyaltyProfile(profile.companyDetails);
+
   return {
-    profile,
+    profile: formattedLoyaltyProfile,
     userCompanyWallet: formatUserWallet(userCompanyWallet),
     rewards: formattedRewards,
-    challenges: {
-      items: challenges.challenges,
-      meta: challenges.meta
-    },
+    challenges,
     promotions: {
       items: promotions.promotions,
       meta: promotions.meta
@@ -101,6 +101,7 @@ const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganiz
     transactions
   };
 };
+
 
 module.exports = {
   countClubMembers,

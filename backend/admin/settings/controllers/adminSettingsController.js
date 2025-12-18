@@ -172,6 +172,8 @@ const updateAdminSettings = async (req, res) => {
 
   if (req.body.terms_and_conditions)
     updateData.terms_and_conditions = req.body.terms_and_conditions;
+    if (req.body.customer_terms_and_conditions)
+    updateData.customer_terms_and_conditions = req.body.customer_terms_and_conditions;
   if (req.body.about_us) updateData.about_us = req.body.about_us;
   if (req.body.privacy_policy)
     updateData.privacy_policy = req.body.privacy_policy;
@@ -214,6 +216,31 @@ const updateAdminSettings = async (req, res) => {
     });
   }
 };
+const getCustomerTermsAndConditions = async (req, res) => {
+  try {
+    const settings = await AdminSettings.findOne({}, "customer_terms_and_conditions");
+    if (!settings) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "terms_and",
+      });
+    }
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "terms_and_1",
+      data: settings,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: error.message,
+      error,
+    });
+  }
+};
 
 module.exports = {
   getTermsAndConditions,
@@ -222,4 +249,5 @@ module.exports = {
   updateAdminSettings,
   createAdminSettings,
   getFaqs,
+  getCustomerTermsAndConditions
 };

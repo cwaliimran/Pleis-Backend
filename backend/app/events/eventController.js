@@ -10,7 +10,8 @@ const { getTicketings } = require("../ticketing/ticketingsService");
 const {reservationsFormatterAdjustDates_} = require("./formatter/eventFormatter")
 const eventService = require("./eventService");
 const { default: mongoose } = require("mongoose");
-
+const {getGiveaway}= require("../giveaways/GiveawayService");
+// const { getGiveaway } = require("../giveaways/giveawayRepository");
 
 const getNearbyEvents = async (req, res) => {
   const { latitude, longitude, radiusKm = 50 } = req.query;
@@ -161,6 +162,7 @@ const getNearbyEventsWithAdvanceFilters = async (req, res) => {
 
 const getEventDetails = async (req, res) => {
   let { id } = req.params;
+  const {limit, skip} = req.query;
   let { timezone, _id: userId, location: userLocation } = req.user;
   // Accept both nanoid and ObjectId for event id
   if (
@@ -174,15 +176,17 @@ const getEventDetails = async (req, res) => {
     // If nanoid, resolve to ObjectId
     id = await eventService.getEventIdByNanoid(id);
   }
+  
 
+const eventId = new mongoose.Types.ObjectId(id);
 
   try {
-    let [data, Reservations,isFavoriteEvent = false] = await Promise.all([
+    let [data, Reservations,isFavoriteEvent = false,giveaway] = await Promise.all([
       eventService.getEventDetails(userLocation, userId, id, timezone),
       eventService.getEventReservations(id,timezone),
       isFavorited(userId, id, 'event'),
+      getGiveaway({eventId, userId, timezone, skip: 0, limit: 10})
     ]);
-
     if (!data?.event) {
       return sendResponse({
         res,
@@ -192,6 +196,7 @@ const getEventDetails = async (req, res) => {
     }
     data.event.isFavorite = isFavoriteEvent;
     data.Reservations = Reservations;
+    data.announcements.giveaways = giveaway.Giveaways;
 
     return sendResponse({
       res,

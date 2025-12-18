@@ -97,7 +97,7 @@ const getHomeService = async ({ queryData }) => {
         page: 1,
         limit: 10,
       }),
-      getChallenges({ page: 1, limit: 10, timezone }),
+      [],//getChallenges({ page: 1, limit: 10, timezone }),
       getPromotions({ page: 1, limit: 10, timezone, category }),
       getSuggestedLoyaltyClubs({ page: 1, limit: 10 }),
       // getRemainingEventsGroupedByVenueTypesRepo({ userId, timezone }),

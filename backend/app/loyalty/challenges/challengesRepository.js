@@ -28,34 +28,46 @@ const findChallengeById = async (id) => {
     .populate("tierLimit");
 };
 
-const getChallengesByCompanyOrganizer = async ({
-  skip,
-  limit,
+const findBestActiveChallengeByTaskType = async ({
   companyOrganizer,
-  now,
+  taskType
 }) => {
-  const match = {
+  return Challenge.findOne({
+    companyOrganizer,
+    taskType,
     status: "active",
-    companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
-    endDate: { $gte: now }
-  };
+    endDate: { $gte: new Date() }
+  })
+    .sort({ taskValue: 1 }) // 👈 MINIMUM effort first
+    .lean();
+};
 
-  return Challenge.find(match)
+const getEligibleChallengesForDashboard = async ({
+  clubIds,
+  now
+}) => {
+  const organizerObjectIds = clubIds.map(id =>
+    new mongoose.Types.ObjectId(id)
+  );
+
+  let challenges = await Challenge.find({
+    companyOrganizer: { $in: organizerObjectIds },
+    status: "active",
+    endDate: { $gte: now }
+  })
+    .populate("tierLimit")
     .populate({
       path: "companyOrganizer",
-      select: "companyDetails.name firstName profileIcon",
+      select: "companyDetails.loyaltySettings.title companyDetails.logo"
     })
-    .populate("taskMenuItem")
-    .populate("reward.rewardMenuItem")
-    .populate("tierLimit")
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit).lean().exec();
+    .lean();
+  return challenges;
 };
 
 module.exports = {
   getChallengesWithFilters,
   countChallenges,
   findChallengeById,
-  getChallengesByCompanyOrganizer
+  findBestActiveChallengeByTaskType,
+  getEligibleChallengesForDashboard
 };

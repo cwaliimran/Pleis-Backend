@@ -75,5 +75,4 @@ function formatSingleRewardByTierKey(item, tierKey) {
 
 
 
-
-module.exports = { formatReward, formatRewardsByTierKey };
+module.exports = { formatReward, formatRewardsByTierKey, formatSingleRewardByTierKey };

@@ -8,6 +8,7 @@ const { getTodayResetTime, MAX_ORGANIZATIONS_PER_DAY,
   MAX_CHECKINS_PER_DAY,
   CHECKIN_COOLDOWN_MINUTES, } = require("./configs/streakSettings");
 const { default: mongoose } = require("mongoose");
+const { resolveChallengeByTaskTypeService } = require("../loyalty/challengesOrders/challengeOrdersService");
 
 const createUsersStreak = async (data) => {
   const { user: userId, companyOrganizer, organization, timezone = "UTC" } = data;
@@ -102,6 +103,14 @@ const createUsersStreak = async (data) => {
   userStreak.lastVisitAt = new Date();
 
   await userStreak.save();
+
+  resolveChallengeByTaskTypeService({
+    userId,
+    companyOrganizer,
+    taskType: "visit",
+    value: 1
+  });
+
 
   return {
     organization,

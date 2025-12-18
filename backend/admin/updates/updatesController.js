@@ -73,9 +73,9 @@ if (
 };
 const getUpdatess = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range ,companyorganizer} = req.query;
+  const { keyword, status = "active", date, range ,companyOrganizer} = req.query;
   try {
-if (!companyorganizer) {
+if (!companyOrganizer) {
   return sendResponse({
     res,
     statusCode: 400,
@@ -83,7 +83,7 @@ if (!companyorganizer) {
   });
 }
 
-    const userId = new mongoose.Types.ObjectId(companyorganizer);
+    const userId = new mongoose.Types.ObjectId(companyOrganizer);
     const timezone = req.user.timezone;
     const { updates, meta } = await UpdatesService.getUpdatess({
         timezone,

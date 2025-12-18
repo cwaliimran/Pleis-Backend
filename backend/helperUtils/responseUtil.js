@@ -137,11 +137,8 @@ const generateMeta = (page, limit, total) => {
     totalPages: Math.ceil(total / limit),
     totalRecords: total,
     limit: limit,
-  };
+  };  
 };
-
-// Helper function to validate an array of MongoDB ObjectIds with detailed error messages
-// Helper function to validate an array of MongoDB ObjectIds with detailed error messages
 const validateObjectIdsArr = (res, ids, fieldNames) => {
   const invalidParams = [];
   for (let i = 0; i < ids.length; i++) {

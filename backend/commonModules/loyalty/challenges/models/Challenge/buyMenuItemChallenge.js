@@ -5,6 +5,10 @@ const BuyMenuItemChallenge = Challenge.discriminator(
   "buyMenuItem",
   new mongoose.Schema(
     {
+      taskValue: {
+        type: Number,
+        default: 1
+      },
       taskMenuItem: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "MenuItems",

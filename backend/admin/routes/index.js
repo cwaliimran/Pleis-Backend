@@ -48,7 +48,6 @@ router.use("/bundles", require("../bundles/bundleRoutes"));
 router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));
 
 // transactions
-router.use("/transactions-old", require("../transactions_old/transactionsRoutes"));
 router.use("/transactions", require("../transactions/routes/unifiedTransactionsRoutes"));
 
 // thirdPParty
@@ -62,6 +61,8 @@ router.use("/marketing", require("../marketing/marketingRoutes"));
 router.use("/subscriptions", require("../subscriptions/subscriptionsRoutes"));
 // updates
 router.use("/updates", require("../updates/updatesRoutes"));
+router.use("/giveaways", require("../giveaways/giveawayRoutes"));
+router.use("/qr-code", require("../qr/qrRoutes"));
 
 
 module.exports = router;
