@@ -99,7 +99,7 @@ const getHomeService = async ({ queryData }) => {
       }),
       [],//getChallenges({ page: 1, limit: 10, timezone }),
       getPromotions({ page: 1, limit: 10, timezone, category }),
-      getSuggestedLoyaltyClubs({ page: 1, limit: 10 }),
+      getSuggestedLoyaltyClubs({ page: 1, limit: 10, userId }),
       // getRemainingEventsGroupedByVenueTypesRepo({ userId, timezone }),
     ]);
 
@@ -305,7 +305,7 @@ const getHomeService = async ({ queryData }) => {
     push({
       key: "suggestedLoyaltyClubs",
       title: "Suggested Loyalty Clubs",
-      data: suggestedLoyaltyClubs || [],
+      data: suggestedLoyaltyClubs.formatted || [],
     });
 
     // Challenges

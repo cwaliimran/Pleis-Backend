@@ -144,14 +144,16 @@ const getSuggestedClubs = async (req, res) => {
   const userId = req.user._id;
   try {
     const { page, limit } = parsePaginationParams(req);
+    const { keyword } = req.query;
 
-    const data = await getSuggestedLoyaltyClubs({ page, limit, userId });
+    const data = await getSuggestedLoyaltyClubs({ page, limit, userId, keyword });
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "suggested_clubs_fetched_successfully",
-      data,
+      data: data.formatted,
+      meta: data.meta
     });
 
   } catch (err) {

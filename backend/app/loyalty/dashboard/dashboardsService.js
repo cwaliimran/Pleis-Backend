@@ -47,7 +47,7 @@ const getDashboard = async ({ timezone, userId }) => {
     dashboard: {
       userGlobalWallet: userGlobalWallet?.global ?? userGlobalWallet ?? null,
       joinedClubs: joinedClubs || [],
-      suggestedClubs: suggestedClubs || [],
+      suggestedClubs: suggestedClubs.formatted || [],
       loyaltyRewards: loyaltyRewards || { items: [], meta: { total: 0, page: 1, limit: 10 } },
       loyaltyChallenges: loyaltyChallenges || { items: [], meta: { total: 0, page: 1, limit: 10 } },
       loyaltyPromotions: loyaltyPromotions || { items: [], meta: { total: 0, page: 1, limit: 10 } }

@@ -176,10 +176,13 @@ const getNearbyOrganizationsService = async ({ location, radiusKm, timezone, pag
   return result
 };
 
-const getSuggestedLoyaltyClubs = async ({ page = 1, limit = 10, userId }) => {
-  let result = await getSuggestedLoyaltyClubsForUser({ page, limit, userId });
+const getSuggestedLoyaltyClubs = async ({ page = 1, limit = 10, userId, keyword }) => {
+  let { result, meta } = await getSuggestedLoyaltyClubsForUser({ page, limit, userId, keyword });
   const formatted = result.map(club => formatSuggestedClub(club));
-  return formatted || [];
+  return {
+    formatted: formatted || [],
+    meta
+  };
 };
 
 const organizationsByVenueTypeService = async ({ location, radiusKm, timezone, page, limit, userId }) => {
@@ -195,7 +198,6 @@ const organizationsByVenueTypeService = async ({ location, radiusKm, timezone, p
       : [],
   }));
 
-  return result
 }
 
 module.exports = {

@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const TierRepo = require("../../../admin/tiers/tiersRepository");
 const Tiers = require("../../../admin/tiers/Tiers");
 const { User } = require("@UserModel");
-
+const { getModelCounts } = require("../../../helperUtils/dbUtils/queryUtil");
 // ==========================================================
 // GET COMPANY LOYALTY SETTINGS (tier model + pointValuePercentage)
 // ==========================================================
@@ -305,6 +305,9 @@ const getUserJoinedClubsWithPoints = async (userId) => {
     .lean();
 };
 
+
+
+
 const updateCompanyLoyaltySettings = async (companyOrganizer, tierKey, pointValuePercentage) => {
   await ClubMembers.updateMany(
     { companyOrganizer },
@@ -335,5 +338,5 @@ module.exports = {
   getCompanyLoyaltyInfo,
   getCompanyLoyaltyProfile,
   updateCompanyLoyaltySettings,
-  getFollowedClubIds
+  getFollowedClubIds,
 };
