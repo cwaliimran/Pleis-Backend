@@ -87,7 +87,7 @@ const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganiz
     userCompanyWallet?.tierKey || "essential"
   );
 
-  let formattedLoyaltyProfile = formatLoyaltyProfile(profile.companyDetails);
+  let formattedLoyaltyProfile = formatLoyaltyProfile(profile?.companyDetails);
 
   return {
     profile: formattedLoyaltyProfile,

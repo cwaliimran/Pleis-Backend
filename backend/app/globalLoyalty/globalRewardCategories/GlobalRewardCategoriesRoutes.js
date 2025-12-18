@@ -1,7 +1,7 @@
 const express = require("express");
 const {
   getCategories,
-} = require("./GlobalRewardCategoriesController");
+} = require("./globalRewardCategoriesController");
 const auth = require("../../../middlewares/authMiddleware");
 
 const router = express.Router();

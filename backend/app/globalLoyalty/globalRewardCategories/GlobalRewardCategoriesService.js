@@ -1,6 +1,6 @@
 // services/categoryService.js
 const { generateMeta } = require("@utils/responseUtil");
-const categoryRepo = require("./GlobalRewardCategoriesRepository");
+const categoryRepo = require("./globalRewardCategoriesRepository");
 const { formatGlobalCategory } = require("./formatter/formatItemCategories");
 
 const getCategories = async ({ page, limit }) => {

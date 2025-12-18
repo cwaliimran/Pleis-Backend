@@ -7,7 +7,9 @@ const Venues = require("../../commonModules/venues/Venues");
 const VenueTypes = require("@VenueTypesModel");
 const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
 const Orders = require("@OrdersModel");
-const { getUserJoinedClubs } = require("../loyalty/clubMembers/clubMembersRepository");
+const { getUserJoinedClubs, getClubMembersCounts } = require("../loyalty/clubMembers/clubMembersRepository");
+const { User } = require("@UserModel");
+const { generateMeta } = require("../../helperUtils/responseUtil");
 /**
  * Fetch one organization by ID (populated)
  */
@@ -392,17 +394,29 @@ const findOrganizationWithSelectFilter = async (organizationId, selectFields) =>
 };
 
 //get suggested loyalty clubs
-const getSuggestedLoyaltyClubsForUser = async ({ page = 1, limit = 10, userId }) => {
+const getSuggestedLoyaltyClubsForUser = async ({ page = 1, limit = 10, userId, keyword }) => {
   const joinedClubs = await getUserJoinedClubs(userId);
   const joinedClubIds = joinedClubs.map(club => club.companyOrganizer.toString());
   const filter = {
     _id: { $nin: joinedClubIds },
-    status: "active",
+    "accountState.status": "active",
+    "accountState.userType": "organizer"
   };
-  let result = Organizations.find(filter).select("basicInfo.name basicInfo.media.logo").lean()
-    .skip((page - 1) * limit)
-    .limit(limit);
-  return result;
+
+  if (keyword) {
+    filter["companyDetails.loyaltySettings.title"] = { $regex: keyword, $options: "i" };
+  }
+
+  let [result, count] = await Promise.all([
+    User.find(filter).select("companyDetails.logo companyDetails.loyaltySettings.title").lean()
+      .skip((page - 1) * limit)
+      .limit(limit).lean(),
+    User.countDocuments(filter)
+  ]);
+
+  let meta = generateMeta(page, limit, count || 0);
+
+  return {result, meta};
 };
 
 //get organization creator

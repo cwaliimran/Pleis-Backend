@@ -1,6 +1,7 @@
 const {
   sendResponse,
-  getReadableErrorMessage
+  getReadableErrorMessage,
+  parsePaginationParams
 } = require("@utils/responseUtil");
 
 const service = require("./challengesService");
@@ -8,14 +9,17 @@ const service = require("./challengesService");
 const getGlobalChallenges = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { page = 1, limit = 10 } = req.query;
+    const { page, limit, skip } = parsePaginationParams(req);
     const timezone = req.user.timezone;
+    const { keyword } = req.query;
 
     const result = await service.getGlobalLoyaltyChallenges({
       userId,
       timezone,
-      page: Number(page),
-      limit: Number(limit)
+      keyword,
+      page,
+      limit,
+      skip
     });
 
     return sendResponse({

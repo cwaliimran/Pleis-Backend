@@ -20,7 +20,7 @@ const createChallenge = async (req, res) => {
     "endDate",
     "reward.rewardType",
   ];
-  var objectIdFields = []; // companyOrganizer removed
+  var objectIdFields = []; 
 
   // Buy Menu Item
   if (req.body.promotionType === "buyMenuItem") {
@@ -99,12 +99,11 @@ const createChallenge = async (req, res) => {
 
 const getChallenges = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, companyOrganizer } = req.query;
+  const { keyword, status, date } = req.query;
   try {
 
 
     const { challenges, meta } = await challengeService.getChallenges({
-      companyOrganizer,
       page,
       limit,
       keyword,

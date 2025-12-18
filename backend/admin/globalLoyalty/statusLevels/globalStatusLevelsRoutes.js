@@ -6,7 +6,7 @@ const {
   deleteStatusLevel,
   getStatusLevelDetails,
   getTitleStatusLevels,
-} = require("./statusLevelsController");
+} = require("./globalStatusLevelsController");
 const createRateLimiter = require("@utils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
 const roleMiddleware = require("../../../middlewares/roleMiddleware");

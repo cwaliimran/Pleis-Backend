@@ -3,10 +3,10 @@ const {
   getFirstStatusLevel,
   getNextStatusLevel,
   getPreviousStatusLevel
-} = require("../../../../admin/globalLoyalty/statusLevels/statusLevelsRepository");
+} = require("../../../../admin/globalLoyalty/statusLevels/globalStatusLevelsRepository");
 
 const { UnifiedWalletTransactions } = require("@UnifiedWalletTransactionsModel");
-const StatusLevels = require("../../../../admin/globalLoyalty/statusLevels/StatusLevels");
+const StatusLevels = require("../../../../admin/globalLoyalty/statusLevels/GlobalStatusLevels");
 const mongoose = require("mongoose");
 
 // ======================================================================
