@@ -16,6 +16,7 @@ const globalQrSchema = new mongoose.Schema(
       enum: ["active", "inactive", "completed", "deleted"],
       default: "active",
     },
+    creator: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   },
   {
     timestamps: true,
