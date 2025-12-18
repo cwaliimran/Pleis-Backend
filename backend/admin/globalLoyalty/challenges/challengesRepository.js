@@ -27,6 +27,7 @@ const createChallenge = async (data) => {
   try {
     const Model = getModelByTaskType(data.taskType);
     const challenge = new Model(data);
+    
     await challenge.save();
     return challenge;
   } catch (err) {

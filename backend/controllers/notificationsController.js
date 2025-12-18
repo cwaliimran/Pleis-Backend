@@ -20,20 +20,32 @@ const formatImage = require("./notificationHelper/formatImage");
 
 
 
-// Get all notifications with pagination
 const getNotifications = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-
+  const keyword= req.query.keyword || null;
+console.log("keyword",keyword );
   try {
+    // Build the query to filter notifications
+    const query = {
+      receiverId: req.user._id,
+    };
+
+    if (keyword) {
+      // Use a regex search to find the keyword in title, body, or type fields (case-insensitive)
+      query.$or = [
+        { type: { $regex: keyword, $options: "i" } },   // Search within type
+      ];
+    }
+
     const [notifications, totalNotifications] = await Promise.all([
-      NotificationExp.find({ receiverId: req.user._id })
-        .populate("subjectId", "_id firstName lastName username profileIcon") 
+      NotificationExp.find(query)
+        .populate("subjectId", "_id firstName lastName username profileIcon")
         .populate("receiverId", "_id firstName lastName username profileIcon") // Populate full subjectId object
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      NotificationExp.countDocuments({ receiverId: req.user._id }),
+      NotificationExp.countDocuments(query),
     ]);
 
     // Calculate pagination meta
@@ -84,10 +96,9 @@ const getNotifications = async (req, res) => {
       })
     );
 
-    const formattedNotificationsWithImages = formattedNotifications.map(notification => 
+    const formattedNotificationsWithImages = formattedNotifications.map(notification =>
       formatImage(notification, req.user.timezone)
     );
-
 
     return sendResponse({
       res,
@@ -97,7 +108,6 @@ const getNotifications = async (req, res) => {
       meta: meta,
     });
   } catch (error) {
-
     return sendResponse({
       res,
       statusCode: 500,
@@ -106,6 +116,7 @@ const getNotifications = async (req, res) => {
     });
   }
 };
+
 
 
 // Mark a notification as read by ID

@@ -61,6 +61,8 @@ router.use("/marketing", require("../marketing/marketingRoutes"));
 router.use("/subscriptions", require("../subscriptions/subscriptionsRoutes"));
 // updates
 router.use("/updates", require("../updates/updatesRoutes"));
+router.use("/giveaways", require("../giveaways/giveawayRoutes"));
+router.use("/qr-code", require("../qr/qrRoutes"));
 
 
 module.exports = router;

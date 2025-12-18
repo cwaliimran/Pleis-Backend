@@ -1,5 +1,5 @@
 const { GlobalReward, GlobalTicketReward, GlobalCustomReward } = require("../../../commonModules/globalLoyalty/rewards/models/reward");
-const {formatReward} = require("./utils/formatReward");
+const formatReward = require("./utils/formatReward");
 
 
 const getModelByRewardType = (rewardType) => {
@@ -8,12 +8,11 @@ const getModelByRewardType = (rewardType) => {
 
   switch (rewardType) {
     case "globalticketreward":
-      console.log("enter", rewardType);
-      return GlobalTicketReward;
+
+      return GlobalTicketReward;  
     case "globalcustomreward":
       return GlobalCustomReward;
     default:
-      console.warn(`Unexpected rewardType: ${rewardType}. Falling back to GlobalTicketReward.`);
       return GlobalTicketReward; // fallback model
   }
 };
@@ -31,16 +30,16 @@ const create = async (data) => {
 
     // Get the correct model based on the normalized rewardType
     const Model = getModelByRewardType(data.rewardType);
-    console.log("Using model:", Model); // To debug the model used
+
 
     const item = new Model(data);
-    console.log("item", item); // To debug the item before saving
+
 
     await item.save();
     const formattedItem = formatReward(item.toObject(), null); // Clean object before returning
     return formattedItem;
   } catch (err) {
-    console.error("Error creating reward:", err);
+
     throw err;
   }
 };

@@ -26,13 +26,14 @@ const getStreaks = async ({ page, limit, keyword, status, date, orderSort = "asc
 
   //Keyword search
   if (keyword) {
-    query.$or = [{ title: { $regex: keyword, $options: "i" } }];
+    // Using $regex for case-insensitive search
+    query.$or = [{ username: { $regex: keyword, $options: "i" } }];
   }
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const sort = { order: orderSort === "desc" ? -1 : 1 };
-
+console.log("query", query);
   let [streaks, getStreaksCounts] = await Promise.all([
     streakRepo.getStreaksWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
     streakRepo.getStreaksCounts(query),
@@ -43,7 +44,7 @@ const getStreaks = async ({ page, limit, keyword, status, date, orderSort = "asc
   meta.streaksCount = { total, active, inactive };
 
   // streaks = formatStreaks(streaks);
-
+console.log("streaks",streaks );
   return { streaks, meta };
 };
 

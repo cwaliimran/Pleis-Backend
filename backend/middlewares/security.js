@@ -34,6 +34,8 @@ const securityMiddleware = (app, options = {}) => {
           "https://pleis.vercel.app",
           "https://shipping-profession-merge-double.trycloudflare.com",
           "http://192.168.15.141:4003",
+          "http://192.168.100.65:4003",
+          "http://192.168.13.84:4003"
         ],
         },
       },
