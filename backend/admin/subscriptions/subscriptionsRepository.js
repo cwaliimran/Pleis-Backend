@@ -219,8 +219,11 @@ const getUserSubscriptions = async ({
   date,
   range,
   skip,
-  billing
+  billing,
+  selectedRange,
+  subscriptionTypes
 }) => {
+  console.log("selectedRange",selectedRange );
   const now = getCurrentDateInTimezone({ timezone });
 
 
@@ -352,6 +355,63 @@ const getUserSubscriptions = async ({
       }
     });
   }
+if (subscriptionTypes) {
+  // Ensure subscriptionTypes is an array
+  const subscriptionTypesArray = Array.isArray(subscriptionTypes) ? subscriptionTypes : [subscriptionTypes];
+  
+  pipeline.push({
+    $match: {
+      $and: [
+        { "subscription.subscriptionTypes": { $in: subscriptionTypesArray } }
+      ]
+    }
+  });
+}
+if (selectedRange) {
+  let minOrganizations, maxOrganizations;
+  // Log the selected range for debugging
+
+
+  // Handle the "All" case
+  if (selectedRange === "All"|| selectedRange === "all") {
+  } else if (selectedRange.includes("+")) {
+    // Handle the "50+" case
+    const min = parseInt(selectedRange.replace("+", "").trim(), 10);
+    minOrganizations = min;
+    maxOrganizations = undefined; // No upper limit for "+" case
+
+    console.log("Parsed Range - Min:", minOrganizations, "Max: No upper limit");
+  } else {
+    // Split the range by "-" if it's in "min - max" format
+    const [min, max] = selectedRange.split("-").map(str => str.trim()).map(Number);
+    minOrganizations = min;
+    maxOrganizations = max;
+
+    // Log the parsed values
+    console.log("Parsed Range - Min:", minOrganizations, "Max:", maxOrganizations);
+  }
+
+  // Apply the range filter if the range is valid
+  if (minOrganizations !== undefined && maxOrganizations !== undefined) {
+    console.log("Applying filter with range:", minOrganizations, "to", maxOrganizations);
+    pipeline.push({
+      $match: {
+        "subscription.numberOfOrganizations": { $gte: minOrganizations, $lte: maxOrganizations }
+      }
+    });
+  } else if (minOrganizations !== undefined) {
+    // Apply filter for values >= minOrganizations if there's no upper limit
+    console.log("Applying filter with min range:", minOrganizations);
+    pipeline.push({
+      $match: {
+        "subscription.numberOfOrganizations": { $gte: minOrganizations }
+      }
+    });
+  } else {
+    console.log("Invalid range, filter not applied.");
+  }
+}
+
 
   // ------------------------------------------------------
   // SORT BY subscription date

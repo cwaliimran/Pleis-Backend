@@ -2,8 +2,8 @@
 const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
 const { generateMeta } = require("@utils/responseUtil");
 const { statusLevelsFormatter } = require("./formatters/statusLevelsFormatter");
-const StatusLevels = require("./StatusLevels");
-const statusLevelRepo = require("./statusLevelsRepository");
+const StatusLevels = require("./GlobalStatusLevels");
+const statusLevelRepo = require("./globalStatusLevelsRepository");
 const mongoose = require("mongoose");
 
 const createStatusLevel = async (data) => {

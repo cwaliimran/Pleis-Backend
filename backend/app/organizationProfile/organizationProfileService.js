@@ -9,7 +9,7 @@ const { formatMenuItem } = require("../../commonModules/menuManagement/menuItems
 const { formatEventResponse } = require("../events/formatter/eventFormatter");
 const { formatOrganization, formatNearByOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
 const { isClubMember } = require("../loyalty/clubMembers/clubMembersRepository");
-const { formatSuggestedClubOrganization } = require("../../commonModules/organizations/formatter/formatSuggestedClubs");
+const { formatSuggestedClub } = require("../loyalty/clubMembers/formatters/formatSuggestedClubs");
 // const { addOrUpdateRecentlyViewedItem } = require("backend/app/recentlyViewed/recentlyViewedItemService");
 
 
@@ -176,10 +176,13 @@ const getNearbyOrganizationsService = async ({ location, radiusKm, timezone, pag
   return result
 };
 
-const getSuggestedLoyaltyClubs = async ({ page = 1, limit = 10, userId }) => {
-  let result = await getSuggestedLoyaltyClubsForUser({ page, limit, userId });
-  const formatted = result.map(org => formatSuggestedClubOrganization(org));
-  return formatted || [];
+const getSuggestedLoyaltyClubs = async ({ page = 1, limit = 10, userId, keyword }) => {
+  let { result, meta } = await getSuggestedLoyaltyClubsForUser({ page, limit, userId, keyword });
+  const formatted = result.map(club => formatSuggestedClub(club));
+  return {
+    formatted: formatted || [],
+    meta
+  };
 };
 
 const organizationsByVenueTypeService = async ({ location, radiusKm, timezone, page, limit, userId }) => {
@@ -195,7 +198,6 @@ const organizationsByVenueTypeService = async ({ location, radiusKm, timezone, p
       : [],
   }));
 
-  return result
 }
 
 module.exports = {

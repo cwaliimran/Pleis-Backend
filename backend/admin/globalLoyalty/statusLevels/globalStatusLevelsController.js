@@ -6,7 +6,7 @@ const {
   getReadableErrorMessage,
 } = require("@utils/responseUtil");
 
-const statusLevelsService = require("./statusLevelsService");
+const statusLevelsService = require("./globalStatusLevelsService");
 
 const createStatusLevel = async (req, res) => {
   const {

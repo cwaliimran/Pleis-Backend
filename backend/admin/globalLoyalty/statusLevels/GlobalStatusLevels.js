@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const statusLevelsSchema = new mongoose.Schema(
+const globalStatusLevelsSchema = new mongoose.Schema(
   {
 
     image: {
@@ -53,6 +53,6 @@ const statusLevelsSchema = new mongoose.Schema(
 );
 
 
-const StatusLevels = mongoose.model("GlobalStatusLevels", statusLevelsSchema);
+const GlobalStatusLevels = mongoose.model("GlobalStatusLevels", globalStatusLevelsSchema);
 
-module.exports = StatusLevels;
+module.exports = GlobalStatusLevels;

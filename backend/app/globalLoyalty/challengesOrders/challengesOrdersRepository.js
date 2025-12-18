@@ -31,9 +31,38 @@ const updateProgressAndStatus = async (orderId, progress, status) => {
   );
 };
 
+const countCompletedGlobalOrders = async ({ userId, challengeId }) => {
+  return GlobalChallengesOrders.countDocuments({
+    user: userId,
+    challenge: challengeId,
+    status: "completed"
+  });
+};
+
+const findActiveGlobalOrder = async ({ userId, challengeId }) => {
+  return GlobalChallengesOrders.findOne({
+    user: userId,
+    challenge: challengeId,
+    status: "in-progress",
+    $expr: { $lt: ["$progress.current", "$progress.target"] }
+  }).sort({ createdAt: -1 });
+};
+
+const markGlobalOrderCompleted = async (orderId) => {
+  return GlobalChallengesOrders.findByIdAndUpdate(orderId, {
+    status: "completed",
+    rewardClaimed: true,
+    rewardClaimedAt: new Date()
+  });
+};
+
+
 
 module.exports = {
   getActiveGlobalOrdersForDashboard,
   createGlobalChallengeOrder,
-  updateProgressAndStatus
+  updateProgressAndStatus,
+  countCompletedGlobalOrders,
+  findActiveGlobalOrder,
+  markGlobalOrderCompleted
 };

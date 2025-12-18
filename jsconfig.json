@@ -5,6 +5,9 @@
       "@utils/*": [
         "backend/helperUtils/*"
       ],
+      "@UsersModel": [
+        "backend/models/UserModel.js"
+      ],
       "@dbUtils/*": [
         "backend/helperUtils/dbUtils/*"
       ],
@@ -166,7 +169,7 @@
       ],
       "@GlobalChallengesOrdersModel": [
         "backend/commonModules/globalLoyalty/challengeOrders/GlobalChallengesOrders.js"
-        ],
+      ],
       "@GiveawayModel": [
         "backend/commonModules/giveaways/Giveaways.js"
       ],
@@ -175,6 +178,9 @@
       ],
       "@GlobalQrModel": [
         "backend/commonModules/qrCode/models/QR/baseQr.js"
+      ],
+      "@GlobalNotificationsModel": [
+        "backend/commonModules/notifications/notifications.js"
       ]
     }
   },

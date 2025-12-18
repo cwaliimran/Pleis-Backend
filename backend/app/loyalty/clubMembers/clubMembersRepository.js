@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const TierRepo = require("../../../admin/tiers/tiersRepository");
 const Tiers = require("../../../admin/tiers/Tiers");
 const { User } = require("@UserModel");
-
+const { getModelCounts } = require("../../../helperUtils/dbUtils/queryUtil");
 // ==========================================================
 // GET COMPANY LOYALTY SETTINGS (tier model + pointValuePercentage)
 // ==========================================================
@@ -34,6 +34,7 @@ const getCompanyLoyaltyProfile = async (companyOrganizer) => {
   ]);
 
 
+  if (!companyDoc) return null;
   companyDoc.companyDetails.totalMembers = totalMembers;
   return {
     companyDetails: companyDoc.companyDetails,
@@ -298,11 +299,14 @@ const getUserJoinedClubs = async (userId) => {
 const getUserJoinedClubsWithPoints = async (userId) => {
   return ClubMembers.find({ user: userId, status: { $ne: "left" } })
     .populate([
-      { path: "companyOrganizer", select: "profileIcon companyDetails.loyaltySettings.title" },
+      { path: "companyOrganizer", select: "companyDetails.logo companyDetails.loyaltySettings.title" },
       { path: "level" }
     ])
     .lean();
 };
+
+
+
 
 const updateCompanyLoyaltySettings = async (companyOrganizer, tierKey, pointValuePercentage) => {
   await ClubMembers.updateMany(
@@ -334,5 +338,5 @@ module.exports = {
   getCompanyLoyaltyInfo,
   getCompanyLoyaltyProfile,
   updateCompanyLoyaltySettings,
-  getFollowedClubIds
+  getFollowedClubIds,
 };

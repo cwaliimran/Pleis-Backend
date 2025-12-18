@@ -5,7 +5,7 @@ const {
   getReadableErrorMessage,
 } = require("@utils/responseUtil");
 
-const categoriesService = require("./GlobalRewardCategoriesService");
+const categoriesService = require("./globalRewardCategoriesService");
 
 
 const getCategories = async (req, res) => {

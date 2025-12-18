@@ -126,8 +126,9 @@ const parsePaginationParams = (req) => {
   if (limit > 50) {
     limit = 50;
   }
+  const skip = (page - 1) * limit;
 
-  return { page, limit };
+  return { page, limit, skip };
 };
 
 // Helper function to generate meta information
@@ -137,7 +138,7 @@ const generateMeta = (page, limit, total) => {
     totalPages: Math.ceil(total / limit),
     totalRecords: total,
     limit: limit,
-  };  
+  };
 };
 const validateObjectIdsArr = (res, ids, fieldNames) => {
   const invalidParams = [];
@@ -763,20 +764,20 @@ const getReadableErrorMessage = (error) => {
 };
 const getCurrentUtcDateOnly = () => {
   const now = new Date();
-function getEndDate(pricingPlan, startDate = new Date()) {
-  if (!pricingPlan || pricingPlan === "free") return null;
+  function getEndDate(pricingPlan, startDate = new Date()) {
+    if (!pricingPlan || pricingPlan === "free") return null;
 
-  const start = new Date(startDate);
+    const start = new Date(startDate);
 
-  if (pricingPlan === "monthly") {
-    return new Date(start.setMonth(start.getMonth() + 1));
+    if (pricingPlan === "monthly") {
+      return new Date(start.setMonth(start.getMonth() + 1));
+    }
+    if (pricingPlan === "yearly") {
+      return new Date(start.setFullYear(start.getFullYear() + 1));
+    }
+
+    return null;
   }
-  if (pricingPlan === "yearly") {
-    return new Date(start.setFullYear(start.getFullYear() + 1));
-  }
-
-  return null;
-}
   return new Date(
     Date.UTC(
       now.getUTCFullYear(),

@@ -9,8 +9,7 @@ const mongoose = require("mongoose");
 const QrService = require("./qrService");
 
 const createQr = async (req, res) => {
-  console.log("req.body", req.body);
-
+req.body.creator = req.user?._id;
   // Initialize variables
   var dateFields = {};
   var rawData = ["label", "globalQrType"];
@@ -71,16 +70,16 @@ const createQr = async (req, res) => {
 
   }
         if (req.body.globalQrType === "checkInTableID") {
-    if (!req.body.organizationId||!req.body.tableNo) {
+    if (!req.body.venueId||!req.body.tableNo) {
     return sendResponse({
       res,
       statusCode: 400,
-      translationKey: "organizationId_is_required",
+      translationKey: "venueId_is_required",
     });
   }
-    rawData.push("organizationId");
-    objectIdFields.push("organizationId");
-    req.body.organizationId = new mongoose.Types.ObjectId(req.body.organizationId);
+    rawData.push("venueId");
+    objectIdFields.push("venueId");
+    req.body.venueId = new mongoose.Types.ObjectId(req.body.venueId);
     req.body.tableNo = req.body.tableNo;
 
   }
@@ -122,6 +121,7 @@ const getQrs = async (req, res) => {
       status,
       date,
       timezone: req.user?.timezone,
+      userId: req.user?._id,
     });
     return sendResponse({
       res,
