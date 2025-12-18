@@ -8,6 +8,7 @@ const VenueTypes = require("@VenueTypesModel");
 const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
 const Orders = require("@OrdersModel");
 const { getUserJoinedClubs } = require("../loyalty/clubMembers/clubMembersRepository");
+const { User } = require("@UserModel");
 /**
  * Fetch one organization by ID (populated)
  */
@@ -397,11 +398,13 @@ const getSuggestedLoyaltyClubsForUser = async ({ page = 1, limit = 10, userId })
   const joinedClubIds = joinedClubs.map(club => club.companyOrganizer.toString());
   const filter = {
     _id: { $nin: joinedClubIds },
-    status: "active",
+    "accountState.status": "active",
+    "accountState.userType": "organizer"
   };
-  let result = Organizations.find(filter).select("basicInfo.name basicInfo.media.logo").lean()
+  let result = await User.find(filter).select("companyDetails.logo companyDetails.loyaltySettings.title").lean()
     .skip((page - 1) * limit)
-    .limit(limit);
+    .limit(limit).lean();
+
   return result;
 };
 

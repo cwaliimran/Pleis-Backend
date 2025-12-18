@@ -13,87 +13,94 @@ const resolveGlobalChallengeByTaskType = async ({
   value = 1
 }) => {
   const now = new Date();
-  console.log(`[challengesOrdersService] Resolving global challenge for userId=${userId}, taskType=${taskType}, value=${value}`);
-
-  const challenges =
-    await challengesRepo.getActiveGlobalChallenges({ now });
-  console.log(`[challengesOrdersService] Found ${challenges.length} active global challenges`);
-
   let remaining = value;
   const updates = [];
 
-  for (const ch of challenges) {
-    if (ch.taskType !== taskType) continue;
-    if (remaining <= 0) break;
+  // 1️⃣ Fetch eligible global challenges (ordered: easiest first)
+  const challenges = await challengesRepo.getActiveGlobalChallenges({ now });
 
-    const target = ch.taskValue ?? 1;
-    console.log(`[challengesOrdersService] Processing challenge ${ch._id} (target=${target})`);
-
-    // Find active order
-    let order =
-      await ordersRepo.getActiveGlobalOrdersForDashboard({ userId })
-        .then(list =>
-          list.find(o =>
-            String(o.challengeSnapshot?._id || o.challenge) ===
-            String(ch._id)
-          )
-        );
-
-    if (!order) {
-      console.log(`[challengesOrdersService] No active order found for challenge ${ch._id}, creating new order`);
-      order = await ordersRepo.createGlobalChallengeOrder({
-        user: userId,
-        challenge: ch._id,
-        challengeSnapshot: ch,
-        progress: { current: 0, target },
-        status: "in-progress"
-      });
-    } else {
-      console.log(`[challengesOrdersService] Found active order ${order._id} for challenge ${ch._id}`);
-    }
-
-    const canApply = Math.min(
-      remaining,
-      target - order.progress.current
-    );
-    console.log(`[challengesOrdersService] Can apply ${canApply} to challenge ${ch._id}`);
-
-    if (canApply <= 0) continue;
-
-    order.progress.current += canApply;
-    remaining -= canApply;
-
-    if (order.progress.current >= target) {
-      order.status = "completed";
-      console.log(`[challengesOrdersService] Challenge ${ch._id} completed for user ${userId}`);
-    }
-
-    let newStatus = order.status;
-
-    if (order.progress.current >= target) {
-      newStatus = "completed";
-      console.log(
-        `[challengesOrdersService] Challenge ${ch._id} completed for user ${userId}`
-      );
-    }
-
-    await ordersRepo.updateProgressAndStatus(
-      order._id,
-      order.progress,
-      newStatus
+  const eligible = challenges
+    .filter(ch => ch.taskType === taskType)
+    .sort((a, b) =>
+      (a.taskValue ?? 1) - (b.taskValue ?? 1) ||
+      new Date(a.createdAt) - new Date(b.createdAt)
     );
 
-    order.status = newStatus; // keep in-memory state consistent
-
-
-    updates.push({
-      challengeId: ch._id,
-      applied: canApply,
-      completed: newStatus
-    });
+  if (!eligible.length) {
+    return { success: false, message: "no_active_global_challenge" };
   }
 
-  console.log(`[challengesOrdersService] resolveGlobalChallengeByTaskType result:`, { success: updates.length > 0, updates, remaining });
+  // 2️⃣ Iterate challenges
+  for (const challenge of eligible) {
+    if (remaining <= 0) break;
+
+    const target = challenge.taskValue ?? 1;
+    const maxCycles = challenge.claimLimit || Infinity;
+
+    // Count completed cycles
+    let completedCycles = await ordersRepo.countCompletedGlobalOrders({
+      userId,
+      challengeId: challenge._id
+    });
+
+    // 3️⃣ Apply value across cycles
+    while (remaining > 0 && completedCycles < maxCycles) {
+      // Get or create active order
+      let order =
+        await ordersRepo.findActiveGlobalOrder({
+          userId,
+          challengeId: challenge._id
+        });
+
+      if (!order) {
+        order = await ordersRepo.createGlobalChallengeOrder({
+          user: userId,
+          challenge: challenge._id,
+          challengeSnapshot: challenge,
+          progress: { current: 0, target },
+          status: "in-progress"
+        });
+      }
+
+      const capacity = target - order.progress.current;
+
+      if (capacity <= 0) {
+        // edge safety
+        order.status = "completed";
+        await ordersRepo.markGlobalOrderCompleted(order._id);
+        completedCycles++;
+        continue;
+      }
+
+      const applied = Math.min(remaining, capacity);
+
+      order.progress.current += applied;
+      remaining -= applied;
+
+      let newStatus = "in-progress";
+
+      if (order.progress.current >= target) {
+        newStatus = "completed";
+        completedCycles++;
+      }
+
+      await ordersRepo.updateProgressAndStatus(
+        order._id,
+        order.progress,
+        newStatus
+      );
+
+      updates.push({
+        challengeId: challenge._id,
+        applied,
+        status: newStatus
+      });
+
+      // If completed, loop may start next cycle or move to next challenge
+      if (newStatus === "completed") continue;
+      else break;
+    }
+  }
 
   return {
     success: updates.length > 0,
@@ -101,6 +108,7 @@ const resolveGlobalChallengeByTaskType = async ({
     remaining
   };
 };
+
 
 module.exports = {
   resolveGlobalChallengeByTaskType

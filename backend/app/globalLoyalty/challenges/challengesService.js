@@ -16,11 +16,12 @@ const { getUserWallet } = require("../../userWalletService/global/walletManageme
 const getGlobalLoyaltyChallenges = async ({
   userId,
   timezone,
-  page = 1,
-  limit = 10
+  keyword,
+  page,
+  limit,
+  skip
 }) => {
   const now = new Date();
-  const skip = (page - 1) * limit;
 
   // 1️⃣ Global wallet
   const wallet = await getUserWallet(userId);
@@ -32,7 +33,7 @@ const getGlobalLoyaltyChallenges = async ({
   const userTierEntry = wallet.global.level.entryPoints ?? 0;
 
   // 2️⃣ Active global challenges
-  let challenges = await challengesRepo.getActiveGlobalChallenges({ now });
+  let challenges = await challengesRepo.getActiveGlobalChallenges({ now, keyword });
 
   // 3️⃣ Active orders (progress)
   const activeOrders =

@@ -10,13 +10,11 @@ const createChallenge = async (data) => {
   return formatChallenge(challenge.toObject());
 };
 
-const getChallenges = async ({ companyOrganizer, page, limit, keyword, status, date, timezone }) => {
+const getChallenges = async ({ page, limit, keyword, status, date, timezone }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   // Build query object
-  const query = {
-
-  };
+  const query = {};
   if (status) query.status = status;
   else query.status = { $ne: "deleted" };
   if (date) {
@@ -25,7 +23,7 @@ const getChallenges = async ({ companyOrganizer, page, limit, keyword, status, d
     query.createdAt = { $gte: start, $lt: end };
   }
   if (keyword) {
-    Object.assign(query, buildKeywordQueryFromModels([{ schema: Challenge.schema }], keyword));
+    Object.assign(query, buildKeywordQueryFromModels([{ schema: GlobalChallenge.schema }], keyword));
   }
 
   // Get challenges with population
@@ -33,9 +31,9 @@ const getChallenges = async ({ companyOrganizer, page, limit, keyword, status, d
 
   // Get counts
   const [total, active, inactive, totalFiltered] = await Promise.all([
-    GlobalChallenge.countDocuments({ ...(companyOrganizer && { companyOrganizer }), status: { $ne: "deleted" } }),
-    GlobalChallenge.countDocuments({ status: "active", ...(companyOrganizer && { companyOrganizer }) }),
-    GlobalChallenge.countDocuments({ status: "inactive", ...(companyOrganizer && { companyOrganizer }) }),
+    GlobalChallenge.countDocuments({ status: { $ne: "deleted" } }),
+    GlobalChallenge.countDocuments({ status: "active" }),
+    GlobalChallenge.countDocuments({ status: "inactive" }),
     GlobalChallenge.countDocuments(query),
   ]);
 

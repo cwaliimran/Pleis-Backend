@@ -9,7 +9,7 @@ const { formatMenuItem } = require("../../commonModules/menuManagement/menuItems
 const { formatEventResponse } = require("../events/formatter/eventFormatter");
 const { formatOrganization, formatNearByOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
 const { isClubMember } = require("../loyalty/clubMembers/clubMembersRepository");
-const { formatSuggestedClubOrganization } = require("../../commonModules/organizations/formatter/formatSuggestedClubs");
+const { formatSuggestedClub } = require("../loyalty/clubMembers/formatters/formatSuggestedClubs");
 // const { addOrUpdateRecentlyViewedItem } = require("backend/app/recentlyViewed/recentlyViewedItemService");
 
 
@@ -178,7 +178,7 @@ const getNearbyOrganizationsService = async ({ location, radiusKm, timezone, pag
 
 const getSuggestedLoyaltyClubs = async ({ page = 1, limit = 10, userId }) => {
   let result = await getSuggestedLoyaltyClubsForUser({ page, limit, userId });
-  const formatted = result.map(org => formatSuggestedClubOrganization(org));
+  const formatted = result.map(club => formatSuggestedClub(club));
   return formatted || [];
 };
 

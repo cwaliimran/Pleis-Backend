@@ -34,6 +34,7 @@ const getCompanyLoyaltyProfile = async (companyOrganizer) => {
   ]);
 
 
+  if (!companyDoc) return null;
   companyDoc.companyDetails.totalMembers = totalMembers;
   return {
     companyDetails: companyDoc.companyDetails,
@@ -298,7 +299,7 @@ const getUserJoinedClubs = async (userId) => {
 const getUserJoinedClubsWithPoints = async (userId) => {
   return ClubMembers.find({ user: userId, status: { $ne: "left" } })
     .populate([
-      { path: "companyOrganizer", select: "profileIcon companyDetails.loyaltySettings.title" },
+      { path: "companyOrganizer", select: "companyDetails.logo companyDetails.loyaltySettings.title" },
       { path: "level" }
     ])
     .lean();

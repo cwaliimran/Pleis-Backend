@@ -15,7 +15,7 @@ const baseGlobalChallengeeSchema = new mongoose.Schema(
     endDate: { type: Date, default: null },
     tierLimit: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Tiers",
+      ref: "GlobalStatusLevels",
       default: null,
     },
 

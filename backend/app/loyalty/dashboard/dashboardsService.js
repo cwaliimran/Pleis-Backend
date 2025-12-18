@@ -14,12 +14,14 @@ const { formatSingleRewardByTierKey } = require("../../../commonModules/loyalty/
 const { formatReward } = require("../rewards/formatters/formatReward");
 const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
 const { getPromotionsForDashboard } = require("../promotions/promotionsRepository");
+const { getUserWallet } = require("../../userWalletService/global/walletManagement/userWalletService");
 
 
 
 const getDashboard = async ({ timezone, userId }) => {
 
-  let [joinedClubs, suggestedClubs, loyaltyRewards, loyaltyChallenges, loyaltyPromotions] = await Promise.all([
+  let [userGlobalWallet, joinedClubs, suggestedClubs, loyaltyRewards, loyaltyChallenges, loyaltyPromotions] = await Promise.all([
+    getUserWallet(userId),
     getUserJoinedClubsWithPoints(userId),
     getSuggestedLoyaltyClubs({ userId }),
     getSuggestedRewardsForDashboard({
@@ -43,6 +45,7 @@ const getDashboard = async ({ timezone, userId }) => {
 
   return {
     dashboard: {
+      userGlobalWallet: userGlobalWallet?.global ?? userGlobalWallet ?? null,
       joinedClubs: joinedClubs || [],
       suggestedClubs: suggestedClubs || [],
       loyaltyRewards: loyaltyRewards || { items: [], meta: { total: 0, page: 1, limit: 10 } },
