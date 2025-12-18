@@ -150,10 +150,10 @@ const getSubscriptionDetails = async (id) => {
 
 
 
-const getUserSubscriptions = async ({ timezone, page, limit, keyword, status,  date, range,billing }) => {
+const getUserSubscriptions = async ({selectedRange, timezone, page, limit, keyword, status,  date, range,billing,subscriptionTypes }) => {
       const skip = limit === 0 ? 0 : (page - 1) * limit;
       const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-      let { subscriptions, meta } = await SubscriptionRepo.getUserSubscriptions({ timezone, page, limit, keyword, status,  date, range, today, skip, billing });
+      let { subscriptions, meta } = await SubscriptionRepo.getUserSubscriptions({selectedRange, timezone, page, limit, keyword, status,  date, range, today, skip, billing, subscriptionTypes });
 
       return {
         subscriptions,

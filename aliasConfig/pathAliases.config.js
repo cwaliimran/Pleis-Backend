@@ -1,5 +1,6 @@
 module.exports = {
     "@utils": "backend/helperUtils",
+    "@UsersModel": "backend/models/UserModel.js",
     "@dbUtils": "backend/helperUtils/dbUtils",
     "@recentlyViewed": "backend/commonModules/recentlyViewed",
     "@OrganizationModel": "backend/commonModules/organizations/Organization.js",
@@ -59,4 +60,5 @@ module.exports = {
     "@GiveawayModel": "backend/commonModules/giveaways/Giveaways.js",
     "@GiveawayParticipantModel": "backend/commonModules/giveaways/Participants.js",
     "@GlobalQrModel": "backend/commonModules/qrCode/models/QR/baseQr.js",
+        "@GlobalNotificationsModel": "backend/commonModules/notifications/notifications.js",
 };

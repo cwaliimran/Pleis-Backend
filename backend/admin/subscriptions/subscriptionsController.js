@@ -596,7 +596,7 @@ const deleteSubscription = async (req, res) => {
 
 const getUserSubscriptions = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, range,billing } = req.query;
+  let { keyword, status, date, range,billing,subscriptionTypes,selectedRange } = req.query;
   try {
 
     const timezone = req.user.timezone;
@@ -608,7 +608,9 @@ const getUserSubscriptions = async (req, res) => {
       status,
       date,
       range,
-      billing
+      billing,
+      selectedRange,
+      subscriptionTypes
     });
 
     return sendResponse({
