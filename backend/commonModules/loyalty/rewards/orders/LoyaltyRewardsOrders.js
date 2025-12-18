@@ -23,12 +23,17 @@ const rewardsOrderSchema = new mongoose.Schema(
             index: true,
         },
 
-        // reward being claimed
-        reward: {
+        // reward or challenge being claimed
+        //rewards - directly coming from rewards
+        //challenges - which user has completed they turned to rewards
+        sourceType: {
+            type: String,
+            enum: ["rewards", "loyaltychallengesorders"],
+            default: "rewards",
+        },
+        sourceId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Reward",
             required: true,
-            index: true,
         },
 
         // snapshot used to lock reward values at time of claim
@@ -38,7 +43,7 @@ const rewardsOrderSchema = new mongoose.Schema(
         },
 
         // points handling for redemption
-        pointsUsed: { type: Number, required: true, default: 0 },
+        pointsUsed: { type: Number, default: 0 },
 
         status: {
             type: String,

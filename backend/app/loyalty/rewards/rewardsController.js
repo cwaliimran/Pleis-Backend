@@ -28,6 +28,7 @@ const getRewards = async (req, res) => {
       getUserCompanyWallet(userId, companyOrganizer)
     ]);
 
+
     // Step 1: Format tier-specific limits
     let formattedRewards = formatRewardsByTierKey(
       rewardsResponse?.rewards || [],

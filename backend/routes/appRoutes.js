@@ -54,7 +54,7 @@ router.use("/friend-request", require("../app/friendRequest/friendRequestRoutes"
 //friends-suggestions
 router.use("/friends-suggestions", require("../app/friendsSuggestion/friendsSuggestionRoutes"));
 
-router.use("/global-loyalty/wallet", require("../app/userWalletService/global/walletManagement/userWalletRoutes"));
+router.use("/global-loyalty", require("../app/globalLoyalty/routes/index"));
 router.use("/giveaways", require("../app/giveaways/giveawayRoutes"));
 
 

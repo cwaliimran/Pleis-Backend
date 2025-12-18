@@ -8,6 +8,9 @@ function formatChallenge(challenge, timezone) {
     if (obj?.companyOrganizer?.profileIcon) {
         obj.companyOrganizer.profileIcon = getFullImageUrl(obj.companyOrganizer.profileIcon);
     }
+    if (obj?.companyOrganizer?.companyDetails?.logo) {
+        obj.companyOrganizer.companyDetails.logo = getFullImageUrl(obj.companyOrganizer.companyDetails.logo);
+    }
     if(obj?.image){
         obj.image = getFullImageUrl(obj.image);
     }else{
@@ -18,8 +21,7 @@ function formatChallenge(challenge, timezone) {
     // If tierLimit is an object with an 'image' property, format it; otherwise, leave as is (likely ObjectId)
     if (
         obj?.tierLimit &&
-        typeof obj.tierLimit === "object" &&
-        obj.tierLimit.image
+        typeof obj.tierLimit === "object"
     ) {
         obj.tierLimit = tiersFormatter(obj.tierLimit);
     }
@@ -55,7 +57,7 @@ function formatChallenge(challenge, timezone) {
             delete obj.taskMenuItem;
             break;
         case "buyMenuItem":
-            delete obj.taskValue;
+            // delete obj.taskValue;
             break;
         case "referUsers":
             delete obj.taskMenuItem;

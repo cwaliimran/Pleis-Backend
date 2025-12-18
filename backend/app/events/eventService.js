@@ -398,7 +398,7 @@ const getEventDetails = async (userLocation, userId, id, timezone) => {
 
     const formattedEvent = formatEventResponse(event, { timezone });
     const titles =await eventRepo.getVenueTypeTitles(event.basicInfo.venue);
-    const updatedEvent =attachVenueTypesToEvent(event, titles);
+    const updatedEvent =attachVenueTypesToEvent(formattedEvent, titles);
   let data = {
     event: updatedEvent,
 

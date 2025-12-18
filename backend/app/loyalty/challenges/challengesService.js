@@ -1,112 +1,115 @@
 const challengeRepo = require("./challengesRepository");
 const { generateMeta, getCurrentDateInTimezone } = require("@utils/responseUtil");
-const { Challenge } = require("../../../commonModules/loyalty/challenges/models/Challenge");
-const { buildKeywordQueryFromModels } = require("../../../helperUtils/dbUtils/queryUtil");
 const formatChallenge = require("../../../commonModules/loyalty/challenges/formatters/formatChallenge");
 const { checkClaimLimitForLoyaltyChallenges } = require("../challengesOrders/challengeOrdersRepository");
-const { getUserCompanyWallet } = require("../clubMembers/clubMembersService");
+const { formatChallengesByTierKey } = require("./formatters/formatChallenge");
+const clubMemberRepo = require("../clubMembers/clubMembersRepository");
+const { formatUserWallet } = require("../clubMembers/formatters/formatUserWallet");
 
-const getChallenges = async ({
-  userId,
-  companyOrganizer,
-  page,
-  limit,
-  timezone,
-  keyword
-}) => {
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
-
-  const [{ challenges, totalFiltered }, userCompanyWallet] =
-    await Promise.all([
-      challengeRepo.getChallengesByCompanyOrganizer({
-        skip,
-        limit,
-        companyOrganizer,
-        keyword
-      }),
-      getUserCompanyWallet(userId, companyOrganizer)
-    ]);
-
-  const formatted = challenges.map(ch => formatChallenge(ch, timezone));
-
-  // 1️⃣ Claim-limit eligibility
-  const limitResults = await checkClaimLimitForLoyaltyChallenges(userId, challenges);
-
-  console.log("limitResults",limitResults)
-
-  const limitMap = new Map();
-  limitResults.forEach(r => limitMap.set(String(r.challengeId), r.available));
-
-  // 2️⃣ User tier info
-  const userTierEntry = userCompanyWallet?.level?.entryPoints ?? 0;
-
-  // 3️⃣ Final mapping with tier eligibility
-  const finalChallenges = formatted.map(ch => {
-    const challengeId = String(ch._id);
-
-    // claim-limit eligibility
-    const eligibleByLimit = limitMap.get(challengeId) ?? true;
-
-    // If limit already blocks participation → final result is false
-    if (!eligibleByLimit) {
-      return { ...ch, canParticipate: false };
-    }
-
-    // Tier eligibility
-    const challengeTierEntry = ch?.tierLimit?.entryPoints ?? 0;
-    const eligibleByTier = userTierEntry >= challengeTierEntry;
-
-    return {
-      ...ch,
-      canParticipate: eligibleByTier
-    };
-  });
-
-  const meta = generateMeta(page, limit, totalFiltered);
-
-  return { challenges: finalChallenges, meta };
-};
-
+const { LoyaltyChallengesOrders } = require("@LoyaltyChallengesOrdersModel")
+const Challenge = require("@ChallengeModel");
 
 
 const getChallengeDetails = async (id) => {
   return await challengeRepo.findChallengeById(id);
 };
 
-const getChallengesByCompanyOrganizerService = async ({
-  page,
-  limit,
-  timezone,
+const getEligibleChallengesForLoyaltyPage = async ({
+  userId,
   companyOrganizer,
+  timezone
 }) => {
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
-  const now = getCurrentDateInTimezone({ timezone });
+  const now = new Date();
 
-  // 1️⃣ & 2️⃣ Fetch challenges and count in parallel
-  const [challenges, totalFiltered] = await Promise.all([
-    challengeRepo.getChallengesByCompanyOrganizer({
-      skip,
-      limit,
-      companyOrganizer,
-    }),
-    challengeRepo.countChallenges({
-      status: "active",
-      companyOrganizer,
-      endDate: { $gte: now },
-    }),
-  ]);
+  // 1️⃣ Wallet (tier)
+  let userCompanyWallet = await clubMemberRepo.getWallet(userId, companyOrganizer);
+  userCompanyWallet = formatUserWallet(userCompanyWallet);
 
-  // 3️⃣ meta
-  const meta = generateMeta(page, limit, totalFiltered);
+  const tierKey = userCompanyWallet?.tierKey || "essential";
+  const userTierEntry = userCompanyWallet?.level?.entryPoints ?? 0;
 
-  // 4️⃣ formatted output
-  const formattedChallenges = challenges.challenges.map(ch => formatChallenge(ch, timezone));
+  // 2️⃣ Active orders (IMPORTANT: use snapshot)
+  const activeOrders = await LoyaltyChallengesOrders.find({
+    user: userId,
+    companyOrganizer,
+    status: "in-progress"
+  }).lean();
 
-  return { items: formattedChallenges, meta };
+  const activeOrderMap = new Map(
+    activeOrders.map(o => [
+      String(o.challengeSnapshot?._id || o.challenge),
+      o
+    ])
+  );
+
+  // 3️⃣ Active challenges
+  let activeChallenges = await Challenge.find({
+    companyOrganizer,
+    status: "active",
+    endDate: { $gte: now }
+  })
+    .populate("tierLimit")
+    .lean();
+
+  // 4️⃣ Apply tier formatting (CRITICAL)
+  activeChallenges = formatChallengesByTierKey(activeChallenges, tierKey);
+
+  // 5️⃣ Claim limit eligibility
+  const claimResults =
+    await checkClaimLimitForLoyaltyChallenges(userId, activeChallenges);
+  const claimMap = new Map(
+    claimResults.map(r => [String(r.challengeId), r.available])
+  );
+
+  // 6️⃣ Build final list
+  const eligible = [];
+
+  for (const ch of activeChallenges) {
+    const challengeId = String(ch._id);
+
+    const requiredEntry = ch?.tierLimit?.entryPoints ?? 0;
+    const eligibleByTier = userTierEntry >= requiredEntry;
+    const eligibleByLimit = claimMap.get(challengeId) !== false;
+
+    if (!eligibleByTier || !eligibleByLimit) continue;
+
+    const activeOrder = activeOrderMap.get(challengeId);
+
+    eligible.push({
+      ...formatChallenge(ch, timezone),
+      canParticipate: true,
+      isActive: Boolean(activeOrder),
+      progress: activeOrder
+        ? {
+          current: activeOrder.progress.current,
+          target: activeOrder.progress.target,
+          percentage: Math.round(
+            (activeOrder.progress.current / activeOrder.progress.target) * 100
+          )
+        }
+        : null
+    });
+  }
+
+  // 7️⃣ Sort: active → progress → effort
+  eligible.sort((a, b) => {
+    if (a.isActive && !b.isActive) return -1;
+    if (!a.isActive && b.isActive) return 1;
+
+    const pA = a.progress?.percentage ?? 0;
+    const pB = b.progress?.percentage ?? 0;
+    if (pA !== pB) return pB - pA;
+
+    return (a.taskValue ?? 1) - (b.taskValue ?? 1);
+  });
+
+  let challenges = eligible || [];
+  return challenges;
 };
 
+
+
 module.exports = {
-  getChallengesByCompanyOrganizerService,
-  getChallenges,
+  getEligibleChallengesForLoyaltyPage,
   getChallengeDetails,
 };

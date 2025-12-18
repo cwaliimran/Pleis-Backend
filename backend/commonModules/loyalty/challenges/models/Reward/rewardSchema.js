@@ -5,7 +5,7 @@ const rewardSchema = new mongoose.Schema(
   {
     rewardType: {
       type: String,
-      enum: ["points", "menuItem", "specialTicket", "customReward"],
+      enum: ["points", "specialTicket", "menuItem", "customReward"],
       default: "points",
     },
     rewardValue: { type: Number, default: 0 },

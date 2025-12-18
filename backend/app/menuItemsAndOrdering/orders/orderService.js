@@ -6,6 +6,7 @@ const { generateMeta } = require("../../../helperUtils/responseUtil");
 const { calculatePointsRepo } = require("../../loyalty/calculatePointsEarning/pointsEarningsRepository");
 const { getOrgCompanyOrganizer } = require("../../organizationProfile/organizationProfileRepository");
 const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
+const { resolveChallengeByTaskTypeService } = require("../../loyalty/challengesOrders/challengeOrdersService");
 
 
 // 1️⃣ Place an order
@@ -115,6 +116,15 @@ const placeOrder = async ({
       if (!trx.success) {
         throw new Error(trx.message || "failed_loyalty_update");
       }
+
+      //TODO use this function also on admin side as well when they will complete the order for payLater method
+      //resolveChallengeByTaskTypeService
+      resolveChallengeByTaskTypeService({
+        userId,
+        companyOrganizer,
+        taskType: "buyMenuItem",
+        items
+      });
     }
 
     // 5️⃣ Commit atomic transaction

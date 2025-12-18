@@ -1,5 +1,4 @@
 const { getFullImageUrl } = require("@utils/imageHelper");
-const { convertUtcToTimezone } = require("@utils/responseUtil");
 
 /**
  * Formats the `object` field inside BannerControls dynamically
@@ -15,8 +14,25 @@ function formatLoyaltyRewardOrders(item) {
   if (!obj) return null;
 
   // Format image URL
-  if (obj.snapshot && obj.snapshot.image) {
+  if (obj.snapshot) {
     obj.snapshot.image = getFullImageUrl(obj.snapshot.image || "noimage.png");
+    if (
+      obj.snapshot.reward &&
+      obj.snapshot.reward.customReward
+    ) {
+      obj.snapshot.reward.customReward.media = getFullImageUrl(
+        obj.snapshot.reward.customReward.image || "noimage.png"
+      );
+    }
+  }
+
+  // Attach company logo URL if available
+  if (
+    obj.companyOrganizer &&
+    obj.companyOrganizer.companyDetails &&
+    obj.companyOrganizer.companyDetails.logo
+  ) {
+    obj.companyOrganizer.companyDetails.logo = getFullImageUrl(obj.companyOrganizer.companyDetails.logo || "noimage.png");
   }
 
   return obj;

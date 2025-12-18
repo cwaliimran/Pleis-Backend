@@ -67,14 +67,14 @@ baseChallengeSchema.methods.toJSON = function () {
   // Clean task fields
   switch (obj.taskType) {
     case "visit":
-      delete obj.taskValue;
+      // delete obj.taskValue;
       delete obj.taskMenuItem;
       break;
     case "earnPoints":
       delete obj.taskMenuItem;
       break;
     case "buyMenuItem":
-      delete obj.taskValue;
+     // delete obj.taskValue;
       break;
     case "referUsers":
       delete obj.taskMenuItem;

@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const GlobalChallenge = require("./BaseChallenge");
 
 const GlobalBuyMenuItemChallenge = GlobalChallenge.discriminator(
-  "globalbuyMenuItem", // Name of the discriminator
+  "globalBuyMenuItem", // Name of the discriminator
   new mongoose.Schema(
     {
       taskMenuItem: {

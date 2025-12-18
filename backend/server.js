@@ -56,7 +56,7 @@ const allowedOrigins = [
   "http://192.168.12.121:4003",
   "https://ebook-what-premiere-totals.trycloudflare.com",
   "https://individual-travesti-hockey-cancel.trycloudflare.com",
-  "https://literature-specialties-achieving-furnishings.trycloudflare.com",
+  "https://handy-floral-implementation-pumps.trycloudflare.com",
   "http://192.168.13.220:4003",
   "http://192.168.13.221:4003",
   "http://192.168.100.65:4003",

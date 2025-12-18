@@ -1,10 +1,12 @@
 const {
   sendResponse,
   validateParams,
+  parsePaginationParams,
   getReadableErrorMessage,
 } = require("@utils/responseUtil");
 
 const clubService = require("./clubMembersService");
+const { getSuggestedLoyaltyClubs } = require("../../organizationProfile/organizationProfileService");
 
 const joinClub = async (req, res) => {
   const { companyOrganizer } = req.body;
@@ -110,31 +112,6 @@ const getUserCompanyWallet = async (req, res) => {
     });
   }
 };
-const updateUserCompanyPoints = async (req, res) => {
-  const { userId, companyOrganizer, pointsDelta, organization } = req.body;
-
-  if (!validateParams(req, res, { bodyParams: ["userId", "companyOrganizer", "pointsDelta", "organization"] })) return;
-
-  try {
-    const data = await clubService.updateUserCompanyPoints({ userId, companyOrganizer, pointsDelta, organization });
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "user_company_points_updated_successfully",
-      data,
-    });
-
-  } catch (err) {
-    const readable = getReadableErrorMessage(err);
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: readable.message,
-      error: readable,
-    });
-  }
-};
 
 const getCompanyProfileWithLoyaltyInfo = async (req, res) => {
   const { id: companyOrganizer } = req.params;
@@ -163,10 +140,36 @@ const getCompanyProfileWithLoyaltyInfo = async (req, res) => {
   }
 };
 
+const getSuggestedClubs = async (req, res) => {
+  const userId = req.user._id;
+  try {
+    const { page, limit } = parsePaginationParams(req);
+
+    const data = await getSuggestedLoyaltyClubs({ page, limit, userId });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "suggested_clubs_fetched_successfully",
+      data,
+    });
+
+  } catch (err) {
+    const readable = getReadableErrorMessage(err);
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: readable.message,
+      error: readable,
+    });
+  }
+}
+
 module.exports = {
   joinClub,
   leaveClub,
   getUserJoinedClubsWithPoints,
+  getSuggestedClubs,
   getUserCompanyWallet,
   getCompanyProfileWithLoyaltyInfo
 };

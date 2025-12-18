@@ -9,7 +9,7 @@ const baseGlobalChallengeeSchema = new mongoose.Schema(
     taskType: {
       type: String,
       required: true,
-      enum: ["visit", "earnPoints", "buyMenuItem", "referUsers"], // All tasks in the same table
+      enum: ["globalVisit", "globalEarnPoints", "globalBuyMenuItem", "globalReferUsers"], // All tasks in the same table
     },
     claimLimit: { type: Number, default: null },
     endDate: { type: Date, default: null },
@@ -26,7 +26,7 @@ const baseGlobalChallengeeSchema = new mongoose.Schema(
     },
     reward: globalRewardSchema, // Nested reward (same for all task types)
   },
-  { timestamps: true, discriminatorKey: "globaltaskType" } // Discriminator key for task type differentiation
+  { timestamps: true, discriminatorKey: "taskType" } // Discriminator key for task type differentiation
 );
 
 // Centralized transformation logic for cleaning task and reward fields

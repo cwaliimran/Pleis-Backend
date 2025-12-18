@@ -164,6 +164,9 @@
       "@LoyaltyChallengesOrdersModel": [
         "backend/commonModules/loyalty/challenges/orders/LoyaltyChallengesOrders.js"
       ],
+      "@GlobalChallengesOrdersModel": [
+        "backend/commonModules/globalLoyalty/challengeOrders/GlobalChallengesOrders.js"
+        ],
       "@GiveawayModel": [
         "backend/commonModules/giveaways/Giveaways.js"
       ],

@@ -18,6 +18,29 @@ const getCompanyLoyaltyInfo = async (companyId) => {
   };
 };
 
+
+const getCompanyLoyaltyProfile = async (companyOrganizer) => {
+  const [companyDoc, totalMembers] = await Promise.all([
+    User.findById(companyOrganizer)
+      .select(
+        "companyDetails.loyaltySettings.title companyDetails.logo companyDetails.coverImage companyDetails.category companyDetails.description"
+      )
+      .populate({
+        path: "companyDetails.category",
+        select: "title image"
+      })
+      .lean(),
+    ClubMembers.countDocuments({ companyOrganizer, status: "active" })
+  ]);
+
+
+  companyDoc.companyDetails.totalMembers = totalMembers;
+  return {
+    companyDetails: companyDoc.companyDetails,
+  };
+};
+
+
 // ==========================================================
 // ENSURE CLUB MEMBER WALLET EXISTS
 // ==========================================================
@@ -288,6 +311,15 @@ const updateCompanyLoyaltySettings = async (companyOrganizer, tierKey, pointValu
   );
 };
 
+// clubMembersRepository.js
+const getFollowedClubIds = async (userId) => {
+  return ClubMembers.distinct("companyOrganizer", {
+    user: userId,
+    status: "active"
+  });
+};
+
+
 module.exports = {
   joinClub,
   leaveClub,
@@ -300,5 +332,7 @@ module.exports = {
   getUserJoinedClubs,
   getUserJoinedClubsWithPoints,
   getCompanyLoyaltyInfo,
-  updateCompanyLoyaltySettings
+  getCompanyLoyaltyProfile,
+  updateCompanyLoyaltySettings,
+  getFollowedClubIds
 };
