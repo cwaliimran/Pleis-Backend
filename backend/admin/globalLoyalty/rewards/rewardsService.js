@@ -32,11 +32,11 @@ const get = async ({ page, limit, keyword, status, date, timezone }) => {
     Object.assign(query, keywordMatch);
   }
 
-  // Fetch rewards
-  const records = await repository.getWithFilters(query, skip, limit);
-
-  // Filtered count
-  const totalFiltered = await BaseReward.countDocuments(query);
+  // Fetch rewards and filtered count in parallel
+  const [records, totalFiltered] = await Promise.all([
+    repository.getWithFilters(query, skip, limit),
+    BaseReward.countDocuments(query),
+  ]);
 
   // Summary counts (companyOrganizer removed)
   const [total, active, inactive] = await Promise.all([

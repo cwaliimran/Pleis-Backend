@@ -5,7 +5,7 @@ const adminSettingsSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
-    customer_terms_and_conditions: {
+  customer_terms_and_conditions: {
     type: String,
     trim: true,
   },

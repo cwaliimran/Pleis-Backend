@@ -2,7 +2,7 @@ const GlobalBasePromotion = require("./basePromotion");
 const mongoose = require("mongoose");
 
 const GlobalHappyHourPromotion = GlobalBasePromotion.discriminator(
-  "globalHappyHour",
+  "globalHappyHourPromotion",
   new mongoose.Schema(
     {
       pointsMultiplier: { type: Number, default: 1 }, // for happy hour

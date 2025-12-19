@@ -1,33 +1,6 @@
 const {
   GlobalBasePromotion,
-  GlobalHappyHourPromotion,
-  GlobalClaimPromotion,
 } = require("../../../commonModules/globalLoyalty/promotions/models/Promotion");
-
-
-// Decide which discriminator model to use
-const getModelByTaskType = (taskType) => {
-  switch (taskType) {
-    case "globalHappyHourPromotion":
-      return GlobalHappyHourPromotion;
-    case "globalClaimPromotion":
-      return GlobalClaimPromotion;
-    default:
-      return GlobalBasePromotion; // fallback
-  }
-};
-
-// Create promotion
-const create = async (data) => {
-  try {
-    const Model = getModelByTaskType(data.taskType);
-    const item = new Model(data);
-    const saved = await item.save();
-    return saved.toObject(); // Removes Mongoose internals
-  } catch (err) {
-    throw err;
-  }
-};
 
 
 const getWithFilters = async (query, skip = 0, limit = 20) => {
@@ -98,30 +71,9 @@ const findById = async (id) => {
     .populate({ path: "tierLimit", select: "image title" }).exec();
 };
 
-// Update and save
-const updateData = async (item, data) => {
-  Object.assign(item, data);
-  return await item.save();
-};
-
-// Delete
-const deleteItem = async (item) => {
-  return await item.deleteOne();
-};
-
-// findByIdAndUpdate
-const findByIdAndUpdate = async (id, data) => {
-  return GlobalBasePromotion.findByIdAndUpdate(id, data, { new: true })
-    .populate("menuItem")
-    .populate("tierLimit");
-};
 
 module.exports = {
-  create,
   getWithFilters,
   count,
   findById,
-  updateData,
-  deleteItem,
-  findByIdAndUpdate,
 };

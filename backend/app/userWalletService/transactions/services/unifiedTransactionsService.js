@@ -76,6 +76,31 @@ const getTransactions = async ({ page = 1, limit = 10, user, walletType, domainT
     return { items: formattedItems, meta };
 };
 
+const getRecentTransactionsForDashboard = async ({
+  user,
+  walletType,
+  domainType,
+  companyOrganizer,
+  limit = 4
+}) => {
+  const query = {};
+
+  if (user) query.user = new mongoose.Types.ObjectId(user);
+  if (walletType) query.walletType = walletType;
+  if (domainType) query.domainType = domainType;
+  if (companyOrganizer)
+    query.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
+
+  const items = await unifiedRepo.getTransactionsWithFilters(
+    query,
+    0,
+    limit
+  );
+
+  return items.map(i => formatTransactionItem(i));
+};
+
+
 const getTransactionDetails = async (id) => {
     const trx = await unifiedRepo.findTransactionById(id);
     if (!trx) return null;
@@ -108,6 +133,7 @@ const deleteTransaction = async (id) => {
 module.exports = {
     createTransaction,
     getTransactions,
+    getRecentTransactionsForDashboard,
     getTransactionDetails,
     updateTransaction,
     deleteTransaction

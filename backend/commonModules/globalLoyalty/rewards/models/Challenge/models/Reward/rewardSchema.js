@@ -1,26 +1,36 @@
-
 const mongoose = require("mongoose");
 
 const globalrewardSchema = new mongoose.Schema(
   {
     rewardType: {
       type: String,
-      enum: ["points", "menuItem", "specialTicket", "customReward"],
+      enum: ["points", "specialTicket", "customReward"],
       default: "points",
     },
     rewardValue: { type: Number, default: 0 },
     specialTicket: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Ticketings",
-      default: null,
-    },
-    // menu item reward
-    rewardMenuItem: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "MenuItems",
-      default: null,
-    },
+      companyOrganizer: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+      },
+      organization: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Organizations",
+        default: null,
+      },
+      event: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Event",
+        default: null,
+      },
 
+      ticket: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Ticketings",
+        default: null,
+      },
+    },
     // custom reward
     customReward: {
       image: { type: String, default: "" },
@@ -30,5 +40,6 @@ const globalrewardSchema = new mongoose.Schema(
   },
   { _id: false }
 );
+
 
 module.exports = globalrewardSchema;

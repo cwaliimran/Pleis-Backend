@@ -9,23 +9,25 @@ const globalRewardSchema = new mongoose.Schema(
     },
     title: { type: String, trim: true, required: true },
     description: { type: String, default: "" },
-    globalRewardType: {
+    rewardType: {
       type: String,
-     enum: ["GlobalCustomReward", "GlobalTicketReward"],
+     enum: ["globalCustomReward", "globalTicketReward"],
       required: true,
     },
-    sortingType: {
-      type: String,
-      default: "",
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "GlobalRewardCategories",
+      required: true,
     },
     minPointsRequiredToClaim: { type: Number, default: null },
     claimLimit: { type: Number, default: null },
     percentOff: { type: Number, default: null },
     tierLimit: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Tiers",
+      ref: "GlobalStatusLevels",
       default: null,
     },
+    endDate: { type: Date, default: null },
 
     status: {
       type: String,
@@ -33,7 +35,7 @@ const globalRewardSchema = new mongoose.Schema(
       default: "active",
     },
   },
-  { timestamps: true, discriminatorKey: "globalRewardType" }
+  { timestamps: true, discriminatorKey: "rewardType" }
 );
 
 // Export the base model as GlobalReward

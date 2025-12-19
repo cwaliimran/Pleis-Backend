@@ -1,241 +1,262 @@
-/**
- * generate-global-loyalty-challenge-orders.js
- *
- * Run:
- * node generate-global-loyalty-challenge-orders.js
- */
-
 const fs = require("fs");
 const path = require("path");
 
-const BASE_PATH =
-  "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/globalLoyalty/challengesOrders";
+/* ============================
+   BASE PATHS
+============================ */
+const BASE =
+  "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/globalLoyalty";
 
-function ensureDir(dir) {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
-
-function writeFile(filePath, content) {
-  fs.writeFileSync(filePath, content.trim() + "\n");
-  console.log("✅ created:", filePath);
-}
+const rewardsPath = path.join(BASE, "rewards");
+const ordersPath = path.join(BASE, "rewardsOrders");
+const modelsPath = path.join(ordersPath, "models");
 
 /* ============================
-   Ensure folder
+   HELPERS
 ============================ */
-ensureDir(BASE_PATH);
+const ensureDir = dir => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+};
+
+const write = (file, content) => {
+  fs.writeFileSync(file, content.trim() + "\n", "utf8");
+  console.log("✔", file);
+};
 
 /* ============================
-   challengesOrdersRepository.js
+   DIRECTORIES
 ============================ */
-writeFile(
-  path.join(BASE_PATH, "challengesOrdersRepository.js"),
-  `
-const GlobalChallengeOrder = require("../models/GlobalChallengeOrder");
+[rewardsPath, ordersPath, modelsPath].forEach(ensureDir);
 
-/**
- * Active challenge orders for dashboard
- */
-const getActiveGlobalOrdersForDashboard = async ({ userId }) => {
-  return GlobalChallengeOrder.find({
+/* ============================================================
+   rewardsOrders/models/GlobalRewardsOrders.js
+============================================================ */
+write(
+  path.join(modelsPath, "GlobalRewardsOrders.js"),
+`
+const mongoose = require("mongoose");
+
+const schema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
+  sourceType: { type: String, default: "globalRewards" },
+  sourceId: { type: mongoose.Schema.Types.ObjectId, ref: "GlobalReward", index: true },
+  rewardSnapshot: { type: Object, required: true },
+  status: { type: String, enum: ["claimed","redeemed","expired"], default: "claimed" }
+}, { timestamps: true });
+
+module.exports =
+  mongoose.models.GlobalRewardsOrders ||
+  mongoose.model("GlobalRewardsOrders", schema);
+`
+);
+
+/* ============================================================
+   rewardsOrders/rewardsOrdersRepository.js
+============================================================ */
+write(
+  path.join(ordersPath, "rewardsOrdersRepository.js"),
+`
+const mongoose = require("mongoose");
+const GlobalRewardsOrders = require("./models/GlobalRewardsOrders");
+
+const getClaimCounts = async (userId, rewardIds) => {
+  const rows = await GlobalRewardsOrders.aggregate([
+    { $match: { user: new mongoose.Types.ObjectId(userId), sourceId: { $in: rewardIds } } },
+    { $group: { _id: "$sourceId", total: { $sum: 1 } } }
+  ]);
+  return new Map(rows.map(r => [String(r._id), r.total]));
+};
+
+const createOrder = async ({ userId, reward }) =>
+  GlobalRewardsOrders.create({
     user: userId,
-    status: "in-progress"
-  }).lean();
-};
+    sourceId: reward._id,
+    rewardSnapshot: reward
+  });
 
-/**
- * Create new challenge order
- */
-const createGlobalChallengeOrder = async (payload) => {
-  return GlobalChallengeOrder.create(payload);
-};
+const getOrders = async ({ userId, skip, limit }) =>
+  GlobalRewardsOrders.find({ user: userId })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
 
-/**
- * Update progress
- */
-const updateProgress = async (orderId, progress) => {
-  return GlobalChallengeOrder.findByIdAndUpdate(
-    orderId,
-    { progress },
-    { new: true }
-  );
-};
+const countOrders = async userId =>
+  GlobalRewardsOrders.countDocuments({ user: userId });
 
-module.exports = {
-  getActiveGlobalOrdersForDashboard,
-  createGlobalChallengeOrder,
-  updateProgress
-};
+module.exports = { getClaimCounts, createOrder, getOrders, countOrders };
 `
 );
 
-/* ============================
-   challengesOrdersService.js
-============================ */
-writeFile(
-  path.join(BASE_PATH, "challengesOrdersService.js"),
-  `
-const challengesRepo =
-  require("../challenges/challengesRepository");
-const ordersRepo =
-  require("./challengesOrdersRepository");
+/* ============================================================
+   rewardsOrders/rewardsOrdersService.js
+============================================================ */
+write(
+  path.join(ordersPath, "rewardsOrdersService.js"),
+`
+const GlobalReward = require("@GlobalLoyaltyReward");
+const repo = require("./rewardsOrdersRepository");
 
-/**
- * Resolve global challenge progress
- * (entry point from events / actions)
- */
-const resolveGlobalChallengeByTaskType = async ({
-  userId,
-  taskType,
-  value = 1
-}) => {
-  const now = new Date();
+const claim = async ({ userId, rewardId }) => {
+  const reward = await GlobalReward.findById(rewardId).lean();
+  if (!reward || reward.status !== "active") throw new Error("reward_not_available");
 
-  const challenges =
-    await challengesRepo.getActiveGlobalChallenges({ now });
+  const counts = await repo.getClaimCounts(userId, [reward._id]);
+  const claimed = counts.get(String(reward._id)) || 0;
 
-  let remaining = value;
-  const updates = [];
+  if (reward.claimLimit && claimed >= reward.claimLimit)
+    throw new Error("claim_limit_reached");
 
-  for (const ch of challenges) {
-    if (ch.taskType !== taskType) continue;
-    if (remaining <= 0) break;
-
-    const target = ch.taskValue ?? 1;
-
-    // Find active order
-    let order =
-      await ordersRepo.getActiveGlobalOrdersForDashboard({ userId })
-        .then(list =>
-          list.find(o =>
-            String(o.challengeSnapshot?._id || o.challenge) ===
-            String(ch._id)
-          )
-        );
-
-    if (!order) {
-      order = await ordersRepo.createGlobalChallengeOrder({
-        user: userId,
-        challenge: ch._id,
-        challengeSnapshot: ch,
-        progress: { current: 0, target },
-        status: "in-progress"
-      });
-    }
-
-    const canApply = Math.min(
-      remaining,
-      target - order.progress.current
-    );
-
-    if (canApply <= 0) continue;
-
-    order.progress.current += canApply;
-    remaining -= canApply;
-
-    if (order.progress.current >= target) {
-      order.status = "completed";
-    }
-
-    await ordersRepo.updateProgress(order._id, order.progress);
-
-    updates.push({
-      challengeId: ch._id,
-      applied: canApply,
-      completed: order.status === "completed"
-    });
-  }
-
-  return {
-    success: updates.length > 0,
-    updates,
-    remaining
-  };
+  return repo.createOrder({ userId, reward });
 };
 
-module.exports = {
-  resolveGlobalChallengeByTaskType
+const listOrders = async ({ userId, page, limit }) => {
+  const skip = (page - 1) * limit;
+  const [data, total] = await Promise.all([
+    repo.getOrders({ userId, skip, limit }),
+    repo.countOrders(userId)
+  ]);
+  return { data, total };
 };
+
+module.exports = { claim, listOrders };
 `
 );
 
-/* ============================
-   challengesOrdersController.js
-============================ */
-writeFile(
-  path.join(BASE_PATH, "challengesOrdersController.js"),
-  `
-const {
-  sendResponse,
-  getReadableErrorMessage
-} = require("../../helperUtils/responseUtil");
+/* ============================================================
+   rewardsOrders/rewardsOrdersController.js
+============================================================ */
+write(
+  path.join(ordersPath, "rewardsOrdersController.js"),
+`
+const { sendResponse, parsePaginationParams, getReadableErrorMessage } =
+  require("@utils/responseUtil");
+const service = require("./rewardsOrdersService");
 
-const service = require("./challengesOrdersService");
-
-/**
- * Internal endpoint
- * (called from events, actions, cron, etc.)
- */
-const resolveGlobalChallenge = async (req, res) => {
+exports.claim = async (req, res) => {
   try {
-    const userId = req.user._id;
-    const { taskType, value } = req.body;
-
-    const result =
-      await service.resolveGlobalChallengeByTaskType({
-        userId,
-        taskType,
-        value
-      });
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "global_challenge_progress_updated",
-      data: result
-    });
-  } catch (error) {
-    const err = getReadableErrorMessage(error);
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: err.message,
-      error
-    });
+    const data = await service.claim({ userId: req.user._id, rewardId: req.body.id });
+    sendResponse({ res, statusCode: 201, data });
+  } catch (e) {
+    const r = getReadableErrorMessage(e);
+    sendResponse({ res, statusCode: 400, translationKey: r.message });
   }
 };
 
-module.exports = {
-  resolveGlobalChallenge
+exports.getOrders = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  const { data, total } = await service.listOrders({
+    userId: req.user._id, page, limit
+  });
+  sendResponse({ res, statusCode: 200, data, meta: { total } });
 };
 `
 );
 
-/* ============================
-   challengesOrdersRoutes.js
-============================ */
-writeFile(
-  path.join(BASE_PATH, "challengesOrdersRoutes.js"),
-  `
-const express = require("express");
-const auth = require("../../middlewares/authMiddleware");
-const {
-  resolveGlobalChallenge
-} = require("./challengesOrdersController");
-
-const router = express.Router();
+/* ============================================================
+   rewardsOrders/rewardsOrdersRoutes.js
+============================================================ */
+write(
+  path.join(ordersPath, "rewardsOrdersRoutes.js"),
+`
+const router = require("express").Router();
+const auth = require("../../../middlewares/authMiddleware");
+const c = require("./rewardsOrdersController");
 
 router.use(auth);
-
-/**
- * POST /global-loyalty/challenges-orders/resolve
- */
-router.post("/resolve", resolveGlobalChallenge);
+router.post("/claim", c.claim);
+router.get("/", c.getOrders);
 
 module.exports = router;
 `
 );
 
-console.log("\\n🚀 Global Loyalty Challenge Orders module generated successfully.");
+write(path.join(ordersPath, "index.js"), `module.exports = require("./rewardsOrdersRoutes");`);
+
+/* ============================================================
+   rewards/rewardsRepository.js
+============================================================ */
+write(
+  path.join(rewardsPath, "rewardsRepository.js"),
+`
+const GlobalReward = require("@GlobalLoyaltyReward");
+
+exports.get = (q, s, l) =>
+  GlobalReward.find(q).sort({ createdAt: -1 }).skip(s).limit(l).lean();
+
+exports.count = q => GlobalReward.countDocuments(q);
+`
+);
+
+/* ============================================================
+   rewards/rewardsService.js
+============================================================ */
+write(
+  path.join(rewardsPath, "rewardsService.js"),
+`
+const repo = require("./rewardsRepository");
+const { getClaimCounts } = require("../rewardsOrders/rewardsOrdersRepository");
+
+exports.get = async ({ userId, page, limit }) => {
+  const skip = (page - 1) * limit;
+  const rewards = await repo.get({ status: "active" }, skip, limit);
+  const total = await repo.count({ status: "active" });
+
+  const counts = await getClaimCounts(
+    userId,
+    rewards.map(r => r._id)
+  );
+
+  const data = rewards.map(r => {
+    const claimed = counts.get(String(r._id)) || 0;
+    return {
+      ...r,
+      claimed,
+      canClaim: !r.claimLimit || claimed < r.claimLimit
+    };
+  });
+
+  return { data, total };
+};
+`
+);
+
+/* ============================================================
+   rewards/rewardsController.js
+============================================================ */
+write(
+  path.join(rewardsPath, "rewardsController.js"),
+`
+const { sendResponse, parsePaginationParams } = require("@utils/responseUtil");
+const service = require("./rewardsService");
+
+exports.get = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  const { data, total } = await service.get({
+    userId: req.user._id, page, limit
+  });
+  sendResponse({ res, statusCode: 200, data, meta: { total } });
+};
+`
+);
+
+/* ============================================================
+   rewards/rewardsRoutes.js
+============================================================ */
+write(
+  path.join(rewardsPath, "rewardsRoutes.js"),
+`
+const router = require("express").Router();
+const auth = require("../../../middlewares/authMiddleware");
+const c = require("./rewardsController");
+
+router.use(auth);
+router.get("/", c.get);
+
+module.exports = router;
+`
+);
+
+write(path.join(rewardsPath, "index.js"), `module.exports = require("./rewardsRoutes");`);
+
+console.log("\\n✅ Global Rewards & Orders fully created.");

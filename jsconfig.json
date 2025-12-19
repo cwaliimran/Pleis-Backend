@@ -166,7 +166,7 @@
       ],
       "@GlobalChallengesOrdersModel": [
         "backend/commonModules/globalLoyalty/challengeOrders/GlobalChallengesOrders.js"
-        ],
+      ],
       "@GiveawayModel": [
         "backend/commonModules/giveaways/Giveaways.js"
       ],
@@ -175,6 +175,9 @@
       ],
       "@GlobalQrModel": [
         "backend/commonModules/qrCode/models/QR/baseQr.js"
+      ],
+      "@GlobalRewardsOrdersModel": [
+        "backend/commonModules/globalLoyalty/rewards/rewardsOrders/GlobalRewardsOrders.js"
       ]
     }
   },

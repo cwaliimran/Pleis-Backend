@@ -2245,7 +2245,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n   \"companyOrganizer\":\"6911b8946c940af405a4a603\",\n   \"organization\":\"6911b9cd1902fd1c55eb4842\"\n}",
+									"raw": "{\n   \"companyOrganizer\":\"6911c14b6fc7cbd864e745b6\",\n   \"organization\":\"6911c1b36fc7cbd864e74659\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -3087,7 +3087,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "6911bc8b2280acc8015fe1e6"
+											"value": "6911b9cd1902fd1c55eb4842"
 										}
 									]
 								}
@@ -3670,7 +3670,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}app/loyalty/challenges/by-company/:companyOrganizer",
+											"raw": "{{url}}app/loyalty/challenges/by-company/:companyOrganizer?page=1&limit=10",
 											"host": [
 												"{{url}}app"
 											],
@@ -3685,6 +3685,14 @@
 													"key": "keyword",
 													"value": "cafe",
 													"disabled": true
+												},
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
 												}
 											],
 											"variable": [
@@ -3739,7 +3747,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}app/loyalty/challenges-orders?page=1&limit=10&status=in-progress",
+											"raw": "{{url}}app/loyalty/challenges-orders?page=1&limit=10&status=completed",
 											"host": [
 												"{{url}}app"
 											],
@@ -3758,7 +3766,7 @@
 												},
 												{
 													"key": "status",
-													"value": "in-progress"
+													"value": "completed"
 												}
 											]
 										}
@@ -3766,7 +3774,7 @@
 									"response": []
 								},
 								{
-									"name": "start/update progress",
+									"name": "start/update progress by-task-type",
 									"event": [
 										{
 											"listen": "test",
@@ -3796,7 +3804,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"challengeId\":\"693d50778e6e0ea04b9d627e\"\n}",
+											"raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"taskType\": \"visit\", //visit/buyMenuItem/referUsers/earnPoints\n    \"value\": 3 //not required in buyMenuItem case\n    //only in buyMenuItem case\n    // ,\n    // \"items\": [\n    //     {\n    //         \"menuItem\": \"6911c3516aca10eb719d6f72\",\n    //         \"quantity\": \"5\"\n    //     }\n    // ]\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -3804,13 +3812,14 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}app/loyalty/challenges-orders",
+											"raw": "{{url}}app/loyalty/challenges-orders/by-task-type",
 											"host": [
 												"{{url}}app"
 											],
 											"path": [
 												"loyalty",
-												"challenges-orders"
+												"challenges-orders",
+												"by-task-type"
 											]
 										}
 									},
@@ -3876,7 +3885,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"companyOrganizer\": \"691c6a7d042410d312e17ff2\"\n}",
+											"raw": "{\n    \"companyOrganizer\": \"6911cb3d6aca10eb719d7280\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -3939,7 +3948,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}app/loyalty/club/joined-clubs",
+											"raw": "{{url}}app/loyalty/club/joined-clubs?page=1&limit=10&keyword=Tech",
 											"host": [
 												"{{url}}app"
 											],
@@ -3947,6 +3956,89 @@
 												"loyalty",
 												"club",
 												"joined-clubs"
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "keyword",
+													"value": "Tech"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "suggested clubs",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/loyalty/club/suggested-clubs?page=1&limit=10&keyword=ahmed",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"loyalty",
+												"club",
+												"suggested-clubs"
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "keyword",
+													"value": "ahmed"
+												}
 											]
 										}
 									},
@@ -4068,7 +4160,7 @@
 											"variable": [
 												{
 													"key": "companyOrganizer",
-													"value": "6911c14b6fc7cbd864e745b6"
+													"value": "691c683da512c38d3350d13e"
 												}
 											]
 										}
@@ -4312,7 +4404,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}app/loyalty/rewards-orders?page=1&limit=10&status=completed",
+											"raw": "{{url}}app/loyalty/rewards-orders?page=1&limit=10",
 											"host": [
 												"{{url}}app"
 											],
@@ -4331,7 +4423,8 @@
 												},
 												{
 													"key": "status",
-													"value": "completed"
+													"value": "completed",
+													"disabled": true
 												}
 											]
 										}
@@ -4538,6 +4631,548 @@
 					]
 				},
 				{
+					"name": "GlobalLoyalty",
+					"item": [
+						{
+							"name": "Challenges",
+							"item": [
+								{
+									"name": "challenges",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/global-loyalty/challenges/?page=1&limit=10",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"global-loyalty",
+												"challenges",
+												""
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "keyword",
+													"value": "points",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "start/update progress by-task-type",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"taskType\": \"globalReferUsers\", //visit/buyMenuItem/referUsers/earnPoints\n    \"value\": 55 //not required in buyMenuItem case\n    //only in buyMenuItem case\n    // ,\n    // \"items\": [\n    //     {\n    //         \"menuItem\": \"6911c3516aca10eb719d6f72\",\n    //         \"quantity\": \"5\"\n    //     }\n    // ]\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/global-loyalty/challenges-orders/resolve",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"global-loyalty",
+												"challenges-orders",
+												"resolve"
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											""
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											""
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "Rewards",
+							"item": [
+								{
+									"name": "rewards",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/global-loyalty/rewards?category=69441437b81f77aa91150ec1&keyword=hello",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"global-loyalty",
+												"rewards"
+											],
+											"query": [
+												{
+													"key": "category",
+													"value": "69441437b81f77aa91150ec1"
+												},
+												{
+													"key": "keyword",
+													"value": "hello"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "claim reward",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"id\": \"6945287bfd79de765e72183d\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/global-loyalty/rewards/claim",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"global-loyalty",
+												"rewards",
+												"claim"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "orders",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/global-loyalty/rewards-orders?page=1&limit=10",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"global-loyalty",
+												"rewards-orders"
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "status",
+													"value": "completed",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											""
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											""
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "wallet",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/global-loyalty/wallet",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"global-loyalty",
+										"wallet"
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "reward categories",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/global-loyalty/reward-categories?page=1&limit=10",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"global-loyalty",
+										"reward-categories"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "dashboard",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/global-loyalty/dashboard",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"global-loyalty",
+										"dashboard"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
 					"name": "Menu and Ordering",
 					"item": [
 						{
@@ -4700,7 +5335,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"items\": [\n    {\n      \"menuItem\": \"6911c3766aca10eb719d6f7e\",\n      \"quantity\": 1\n    }\n  ],\n  \"pickupType\":\"tableService\", //counter, tableService, togo\n  \"tableNumber\":\"5\", //required in tableService case\n  \"notes\": \"No spice please.\",\n  \"paymentMethod\": \"card\" //\"applePay\", \"card\", \"cash\", \"payLater\"\n}\n",
+											"raw": "{\n  \"items\": [\n    {\n      \"menuItem\": \"6911c3516aca10eb719d6f72\",\n      \"quantity\": 1\n    }\n  ],\n  \"pickupType\":\"tableService\", //counter, tableService, togo\n  \"tableNumber\":\"5\", //required in tableService case\n  \"notes\": \"No spice please.\",\n  \"paymentMethod\": \"card\" //\"applePay\", \"card\", \"cash\", \"payLater\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -5841,65 +6476,6 @@
 					]
 				},
 				{
-					"name": "GlobalLoyalty",
-					"item": [
-						{
-							"name": "Wallet",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {},
-										"requests": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {},
-										"requests": {}
-									}
-								}
-							],
-							"protocolProfileBehavior": {
-								"disableBodyPruning": true
-							},
-							"request": {
-								"method": "GET",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}app/global-loyalty/wallet",
-									"host": [
-										"{{url}}app"
-									],
-									"path": [
-										"global-loyalty",
-										"wallet"
-									]
-								}
-							},
-							"response": []
-						}
-					]
-				},
-				{
 					"name": "Transactions",
 					"item": [
 						{
@@ -5995,7 +6571,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}app/transactions?page=1&limit=10&companyOrganizer=6911c14b6fc7cbd864e745b6&organization=&walletType=companyLoyalty",
+									"raw": "{{url}}app/transactions?page=1&limit=10&walletType=globalWallet",
 									"host": [
 										"{{url}}app"
 									],
@@ -6013,15 +6589,17 @@
 										},
 										{
 											"key": "companyOrganizer",
-											"value": "6911c14b6fc7cbd864e745b6"
+											"value": "6911c14b6fc7cbd864e745b6",
+											"disabled": true
 										},
 										{
 											"key": "organization",
-											"value": ""
+											"value": "",
+											"disabled": true
 										},
 										{
 											"key": "walletType",
-											"value": "companyLoyalty",
+											"value": "globalWallet",
 											"description": "globalWallet, companyLoyalty"
 										},
 										{
@@ -9494,7 +10072,7 @@
 									"variable": [
 										{
 											"key": "userId",
-											"value": "68b2df13ae600472ef17ed09"
+											"value": "6911c14b6fc7cbd864e745b6"
 										}
 									]
 								}
@@ -9661,7 +10239,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -9696,7 +10275,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
@@ -9730,7 +10310,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "68b2df0cae600472ef17ed01"
+											"value": "6911c14b6fc7cbd864e745b6"
 										}
 									]
 								},
@@ -11429,7 +12009,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"rewardType\": \"buyMenuItemReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"endDate\": \"2025-11-15\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
+											"raw": "{\n    \"rewardType\": \"buyMenuItemReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"endDate\": \"2025-11-15\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"menuItem\": \"6911c3516aca10eb719d6f72\",\n    \"status\": \"active\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -20579,7 +21159,7 @@
 									"variable": [
 										{
 											"key": "userId",
-											"value": "6911c14b6fc7cbd864e745b6"
+											"value": "691c683da512c38d3350d13e"
 										}
 									]
 								}
@@ -20670,7 +21250,8 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								},
 								{
@@ -20705,13 +21286,20 @@
 											""
 										],
 										"type": "text/javascript",
-										"packages": {}
+										"packages": {},
+										"requests": {}
 									}
 								}
 							],
 							"request": {
 								"method": "POST",
-								"header": [],
+								"header": [
+									{
+										"key": "x-admin-access-token",
+										"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYWRtaW4tY3JlYXRpb24iLCJpYXQiOjE3NTMxODc2MDEsImV4cCI6MTc1MzE5MTIwMX0.-Dg--Tut4bY1a4Lr49WP7si7SDZ8QxEaG6bZX1vktY4",
+										"type": "text"
+									}
+								],
 								"body": {
 									"mode": "raw",
 									"raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"{{$randomUserName}}\",\n    \"email\": \"guest4@pleis.com\",\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122104\"\n    },\n    \"password\": \"123456\",\n    \"userType\": \"guest\" \n}",
@@ -21020,7 +21608,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    // \"organizations\": [\n    //     \"68b11b3dda9c956a543970ab\",\n    //     \"68932a0dce6408026b883458\"\n    // ],\n    // \"modules\": [\n    //     \"inAppOrdering\",\n    //     \"reservationManagement\",\n    //     \"loyaltyScanning\",\n    //     \"ticketing\"\n    // ],\n    // \"status\": \"active\"\n    \"companyDetails\": {\n          \"logo\":\"logo.png\",\n        \"coverImage\":\"cover.png\",\n        \"description\":\"Destinacija u kojoj se isprepliću glazba, umjetnosti, edukativni sadržaji i gastronomija.\",\n        \"category\":\"6911bd65d49fc086aabd254e\",\n        // \"loyaltySettings\": {\n        //     // \"model\":\"essential\",\n        //     \"pointValuePercentage\": \"2\"\n        // }\n        \"inAppOrderingSettings\": {\n            \"paymentMethods\": {\n                \"instantPayment\": true,\n                \"payLater\": {\n                    \"allow\": false,\n                    \"enableOrderAcceptance\": false,\n                    \"chargeOnAcceptance\": false,\n                    \"chargeOnDelivery\": false\n                },\n                \"cashPayment\": false\n            },\n            \"deliveryMethods\": {\n                \"counterPickup\": true,\n                \"tableDelivery\": true,\n                \"toGo\": false\n            }\n        }\n    }\n}",
+									"raw": "{\n    // \"organizations\": [\n    //     \"68b11b3dda9c956a543970ab\",\n    //     \"68932a0dce6408026b883458\"\n    // ],\n    // \"modules\": [\n    //     \"inAppOrdering\",\n    //     \"reservationManagement\",\n    //     \"loyaltyScanning\",\n    //     \"ticketing\"\n    // ],\n    // \"status\": \"active\"\n    \"companyDetails\": {\n        \"logo\": \"logo.png\",\n        \"coverImage\": \"cover.png\",\n        \"description\": \"Destinacija u kojoj se isprepliću glazba, umjetnosti, edukativni sadržaji i gastronomija.\",\n        \"category\": \"6911bd65d49fc086aabd254e\",\n        \"loyaltySettings\": {\n            \"title\":\"Usama's Loyalty Club\",\n            \"model\": \"premier\",\n            \"pointValuePercentage\": \"2\"\n        },\n        \"inAppOrderingSettings\": {\n            \"paymentMethods\": {\n                \"instantPayment\": true,\n                \"payLater\": {\n                    \"allow\": false,\n                    \"enableOrderAcceptance\": false,\n                    \"chargeOnAcceptance\": false,\n                    \"chargeOnDelivery\": false\n                },\n                \"cashPayment\": false\n            },\n            \"deliveryMethods\": {\n                \"counterPickup\": true,\n                \"tableDelivery\": true,\n                \"toGo\": false\n            }\n        }\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -21039,7 +21627,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "6911c14b6fc7cbd864e745b6"
+											"value": "691c6a7d042410d312e17ff2"
 										}
 									]
 								},
@@ -21828,7 +22416,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/loyalty/challenges?companyOrganizer=6911b8946c940af405a4a603",
+											"raw": "{{url}}admin/loyalty/challenges?companyOrganizer=6911c14b6fc7cbd864e745b6",
 											"host": [
 												"{{url}}admin"
 											],
@@ -21839,7 +22427,7 @@
 											"query": [
 												{
 													"key": "companyOrganizer",
-													"value": "6911b8946c940af405a4a603"
+													"value": "6911c14b6fc7cbd864e745b6"
 												}
 											]
 										}
@@ -21933,7 +22521,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"companyOrganizer\":\"6911c14b6fc7cbd864e745b6\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe 2 times to claim this challenge\",\n    \"taskType\": \"visit\",\n    \"taskValue\": 2,\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 100\n    }\n}",
+											"raw": "{\n    \"companyOrganizer\":\"6911c14b6fc7cbd864e745b6\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe 2 times to claim this challenge\",\n    \"taskType\": \"visit\",\n    \"taskValue\": 3,\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 100\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -22052,7 +22640,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Walk 10,000 steps\",\n    \"description\": \"Earn points by being active\",\n    \"taskType\": \"earnPoints\",\n    \"taskValue\": 500,\n    \"claimLimit\": 5,\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\": \"68d7ee19c9469f7d754b5c99\"\n    }\n}",
+											"raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Walk 10,000 steps\",\n    \"description\": \"Earn points by being active\",\n    \"taskType\": \"earnPoints\",\n    \"taskValue\": 500,\n    \"claimLimit\": 5,\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\": \"6911c3516aca10eb719d6f72\"\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -22170,7 +22758,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
+											"raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Buy 5 Burgers\",\n    \"description\": \"Order 5 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskValue\": 5,\n    \"taskMenuItem\": \"6911c3516aca10eb719d6f72\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -22288,7 +22876,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Invite your friends\",\n    \"description\": \"Refer 3 friends to unlock rewards\",\n    \"taskType\": \"referUsers\",\n    \"taskValue\": 3,\n    \"claimLimit\": 10,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"customReward\",\n        \"customReward\": {\n            \"image\": \"68d7ee19c9469f7d754b5c99.png\",\n            \"title\": \"VIP Badge\",\n            \"description\": \"Special recognition for referring friends\"\n        }\n    }\n}",
+											"raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Invite your friends\",\n    \"description\": \"Refer 3 friends to unlock rewards\",\n    \"taskType\": \"referUsers\",\n    \"taskValue\": 3,\n    \"claimLimit\": 10,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"customReward\",\n        \"customReward\": {\n            \"image\": \"68d7ee19c9469f7d754b5c99.png\",\n            \"title\": \"VIP Badge\",\n            \"description\": \"Special recognition for referring friends\"\n        }\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -27382,7 +27970,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"image\": \"black.png\",\n  \"title\": \"Black\",\n  \"type\": \"black\",\n  \"bonusPointsPerEuro\": 5,\n  \"entryPoints\": 1500,\n  \"retainPoints\": 1200\n}\n",
+											"raw": "{\n  \"image\": \"780328f4-9d72-4e93-a485-409f65fa8f79.jpg\",\n  \"title\": \"Tickets\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -27435,7 +28023,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"image\": \"7c7daedc-207f-4843-8e39-5c761ec54b81.png\",\n    \"backgroundImage\":\"4170f6fa-9c41-4eee-86bd-15d43f4f088e.png\"\n}",
+											"raw": "{\n    \"title\": \"Food\",\n    \"image\": \"7c7daedc-207f-4843-8e39-5c761ec54b81.png\",\n    \"backgroundImage\": \"4170f6fa-9c41-4eee-86bd-15d43f4f088e.png\",\n    \"status\":\"active\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -27455,7 +28043,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "692178d9dd3107a7545c05d0"
+													"value": "693a5c893a77e08823c6187e"
 												}
 											]
 										},
@@ -27523,91 +28111,2374 @@
 									"response": []
 								}
 							]
+						},
+						{
+							"name": "Rewards",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/reward/",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"reward",
+												""
+											],
+											"query": [
+												{
+													"key": "keyword",
+													"value": "Gold",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "get details",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/reward/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"reward",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "69452652ef3062db8a47597c"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add - Custom Reward",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"rewardType\": \"globalCustomReward\", \n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Custom Reward\",\n    \"description\": \"A custom reward for special achievements.\", //optional\n    \"category\": \"69441437b81f77aa91150ec1\",\n    \"minPointsRequiredToClaim\": 50, //optional\n    \"claimLimit\": 5, //optional\n    \"percentOff\": 0, //optional\n    \"tierLimit\": \"692178a42fdc7ad36320d905\",\n    \"endDate\": \"2025-12-31\",\n    \"status\": \"active\",\n    \"customReward\": {\n        \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Special Custom Title\",\n        \"description\": \"A custom description for the reward.\"\n    }\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/reward",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"reward"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": [
+										{
+											"name": "add - Custom Reward",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"rewardType\": \"customReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Custom Reward\",\n    \"description\": \"A custom reward for special achievements.\", //optional\n    \"sortingType\": \"food\",\n    \"minPointsRequiredToClaim\": 50, //optional\n    \"claimLimit\": 5, //optional\n    \"percentOff\": 0, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"status\": \"active\",\n    \"customReward\": {\n        \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Special Custom Title\",\n        \"description\": \"A custom description for the reward.\"\n    }\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}loyalty/rewards/",
+													"host": [
+														"{{url}}loyalty"
+													],
+													"path": [
+														"rewards",
+														""
+													]
+												}
+											},
+											"status": "Created",
+											"code": 201,
+											"_postman_previewlanguage": "Text",
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "868"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"364-fFPDvVonJuWNo+FfpMVpWY0IUOE\""
+												},
+												{
+													"key": "Date",
+													"value": "Thu, 02 Oct 2025 08:21:59 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"title\": \"Custom Reward\",\n        \"description\": \"A custom reward for special achievements.\",\n        \"rewardType\": \"customReward\",\n        \"sortingType\": \"food\",\n        \"minPointsRequiredToClaim\": 50,\n        \"claimLimit\": 5,\n        \"percentOff\": 0,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n        \"status\": \"active\",\n        \"_id\": \"68de3627a3e78f8d2560e898\",\n        \"customReward\": {\n            \"title\": \"Special Custom Title\",\n            \"description\": \"A custom description for the reward.\",\n            \"mediaInfo\": {\n                \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n                \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/78d8f3b5d9a10a4e5d408a5c.png\"\n            }\n        },\n        \"createdAt\": \"2025-10-02T08:21:59.691Z\",\n        \"updatedAt\": \"2025-10-02T08:21:59.691Z\",\n        \"__v\": 0,\n        \"mediaInfo\": {\n            \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/68d8f3b5d9a10a4e5d408a5c.png\"\n        }\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "add - Ticket Reward",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"rewardType\": \"globalTicketReward\",\n  \"image\": \"image_url\",\n  \"title\": \"Ticket Reward\",\n  \"description\": \"Get a free ticket for a special event.\", //optional\n  \"sortingType\": \"category\", //optional\n  \"minPointsRequiredToClaim\": 200,\n  \"claimLimit\": 1, //optional\n  \"percentOff\": 0, //optional\n   \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n  \"status\": \"active\",\n  \"event\": \"68de33b7bcddb74bfc2d9dd8\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/reward",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"reward"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": [
+										{
+											"name": "add - Ticket Reward",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n  \"rewardType\": \"ticketReward\",\n  \"image\": \"image_url\",\n  \"title\": \"Ticket Reward\",\n  \"description\": \"Get a free ticket for a special event.\", //optional\n  \"sortingType\": \"category\", //optional\n  \"minPointsRequiredToClaim\": 200, //optional\n  \"claimLimit\": 1, //optional\n  \"percentOff\": 0, //optional\n   \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n  \"status\": \"active\",\n  \"event\": \"68de33b7bcddb74bfc2d9dd8\"\n}\n",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}loyalty/rewards/",
+													"host": [
+														"{{url}}loyalty"
+													],
+													"path": [
+														"rewards",
+														""
+													]
+												}
+											},
+											"status": "Created",
+											"code": 201,
+											"_postman_previewlanguage": "Text",
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "612"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"264-58Pq29QaPJWLXQL4AFzPNX8NMCg\""
+												},
+												{
+													"key": "Date",
+													"value": "Thu, 02 Oct 2025 08:22:25 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Reward created successfully\",\n    \"data\": {\n        \"title\": \"Ticket Reward\",\n        \"description\": \"Get a free ticket for a special event.\",\n        \"rewardType\": \"ticketReward\",\n        \"sortingType\": \"category\",\n        \"minPointsRequiredToClaim\": 200,\n        \"claimLimit\": 1,\n        \"percentOff\": 0,\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n        \"status\": \"active\",\n        \"_id\": \"68de3641a3e78f8d2560e89b\",\n        \"event\": \"68de33b7bcddb74bfc2d9dd8\",\n        \"createdAt\": \"2025-10-02T08:22:25.516Z\",\n        \"updatedAt\": \"2025-10-02T08:22:25.516Z\",\n        \"__v\": 0,\n        \"mediaInfo\": {\n            \"image\": \"image_url\",\n            \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/image_url\"\n        }\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "update",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    // \"rewardType\": \"customReward\"\n    // \"image\": \"68d8f3b5d9a10a4e5d408a58.jpg\",\n    // \"title\": \"Custom Reward\",\n    // \"description\": \"A custom reward for special achievement.\", //optional\n    // \"sortingType\": \"food\",\n    // \"minPointsRequiredToClaim\": 50, //optional\n    // \"claimLimit\": 5, //optional\n    // \"percentOff\": 0, //optional\n    \"tierLimit\": \"692178a42fdc7ad36320d905\"\n    // , //global status level\n    // \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    // \"status\": \"active\",\n    // \"customReward\": {\n    //     \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n    //     \"title\": \"Special Custom Title\",\n    //     \"description\": \"A custom description for the reward.\"\n    // }\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/reward/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"reward",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "6944f33b6e968dea71f502c9"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/reward/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"reward",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "692938f9ad076b22afa38015"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Challenges",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/challanges/",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"challanges",
+												""
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "get",
+											"originalRequest": {
+												"method": "GET",
+												"header": [],
+												"url": {
+													"raw": "{{url}}challenges/",
+													"host": [
+														"{{url}}challenges"
+													],
+													"path": [
+														""
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "Text",
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "1963"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"7ab-SmSz6qb3Zvd01v7txF3zIpRaul8\""
+												},
+												{
+													"key": "Date",
+													"value": "Mon, 29 Sep 2025 03:20:59 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Challenges fetched successfully\",\n    \"data\": [\n        {\n            \"_id\": \"68d91ab89e7c7d6dcd8439aa\",\n            \"title\": \"Invite your friends\",\n            \"description\": \"Refer 3 friends to unlock rewards\",\n            \"taskType\": \"referUsers\",\n            \"claimLimit\": 10,\n            \"endDate\": \"2025-12-31\",\n            \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n            \"status\": \"active\",\n            \"reward\": {\n                \"rewardType\": \"customReward\",\n                \"customReward\": {\n                    \"title\": \"VIP Badge\",\n                    \"description\": \"Special recognition for referring friends\",\n                    \"mediaInfo\": {\n                        \"image\": \"68d7ee19c9469f7d754b5c99.png\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/68d7ee19c9469f7d754b5c99.png\"\n                    }\n                }\n            },\n            \"taskValue\": 3,\n            \"createdAt\": \"2025-09-28T11:23:36.025Z\",\n            \"updatedAt\": \"2025-09-28T11:23:36.025Z\",\n            \"__v\": 0\n        },\n        {\n            \"_id\": \"68d91a899e7c7d6dcd8439a7\",\n            \"title\": \"Buy 2 Burgers\",\n            \"description\": \"Order 2 burgers to earn rewards\",\n            \"taskType\": \"buyMenuItem\",\n            \"claimLimit\": 2,\n            \"endDate\": \"2025-12-31\",\n            \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n            \"status\": \"active\",\n            \"reward\": {\n                \"rewardType\": \"specialTicket\",\n                \"rewardValue\": 1\n            },\n            \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n            \"createdAt\": \"2025-09-28T11:22:49.632Z\",\n            \"updatedAt\": \"2025-09-28T11:22:49.632Z\",\n            \"__v\": 0\n        },\n        {\n            \"_id\": \"68d91a459e7c7d6dcd84399f\",\n            \"title\": \"Walk 10,000 steps\",\n            \"description\": \"Earn points by being active\",\n            \"taskType\": \"earnPoints\",\n            \"claimLimit\": 5,\n            \"endDate\": \"2025-12-25\",\n            \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n            \"status\": \"active\",\n            \"reward\": {\n                \"rewardType\": \"menuItem\",\n                \"rewardMenuItem\": \"68d7ee19c9469f7d754b5c99\"\n            },\n            \"taskValue\": 500,\n            \"createdAt\": \"2025-09-28T11:21:41.762Z\",\n            \"updatedAt\": \"2025-09-28T11:21:41.762Z\",\n            \"__v\": 0\n        },\n        {\n            \"_id\": \"68d9193d9e7c7d6dcd84398b\",\n            \"title\": \"Check in at Cafe\",\n            \"description\": \"Visit our cafe to claim this challenge\",\n            \"taskType\": \"visit\",\n            \"claimLimit\": 1,\n            \"endDate\": \"2025-12-31\",\n            \"tierLimit\": null,\n            \"status\": \"active\",\n            \"reward\": {\n                \"rewardType\": \"points\",\n                \"rewardValue\": 100\n            },\n            \"createdAt\": \"2025-09-28T11:17:17.735Z\",\n            \"updatedAt\": \"2025-09-28T11:17:17.735Z\",\n            \"__v\": 0\n        }\n    ],\n    \"meta\": {\n        \"currentPage\": 1,\n        \"totalPages\": 1,\n        \"totalRecords\": 4,\n        \"limit\": 10,\n        \"challengesCount\": {\n            \"total\": 4,\n            \"active\": 4,\n            \"inactive\": 0\n        }\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "add - visit",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"image\":\"img.png\",\n    \"title\": \"Check in at 5 cafe's\",\n    \"description\": \"Visit 5 cafes to claim this challenge\",\n    \"taskType\": \"visit\",\n    \"taskValue\": 5,\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"69217906dd3107a7545c05dc\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 50\n    }\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/challanges",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"challanges"
+											]
+										},
+										"description": "We have 4 combinations\n\nTask Type  \n\\[\"visit\", \"earnPoints\", \"buyMenuItem\", \"referUsers\"\\]  \n  \nReward Type  \n\\[\"points\", \"menuItem\", \"specialTicket\", \"customReward\"\\]  \n  \n1\\. Each task type has its own fields  \n2\\. Each Reward type has its own fields  \n  \nYou can match any task type with any reward type make sure to pass the correct params required for each type."
+									},
+									"response": [
+										{
+											"name": "add - visit",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"companyOrganizer\":\"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe to claim this challenge\",\n    \"taskType\": \"visit\", //\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 5\n    }\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}loyalty/challenges/",
+													"host": [
+														"{{url}}loyalty"
+													],
+													"path": [
+														"challenges",
+														""
+													]
+												}
+											},
+											"status": "Created",
+											"code": 201,
+											"_postman_previewlanguage": "Text",
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "505"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"1f9-3vIAy3rpDZ4AwaaTCeFJQeizDc0\""
+												},
+												{
+													"key": "Date",
+													"value": "Tue, 30 Sep 2025 10:13:16 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Challenge created successfully\",\n    \"data\": {\n        \"title\": \"Check in at Cafe\",\n        \"description\": \"Visit our cafe to claim this challenge\",\n        \"taskType\": \"visit\",\n        \"claimLimit\": 1,\n        \"endDate\": \"2025-12-30T19:00:00.000Z\",\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n        \"status\": \"active\",\n        \"reward\": {\n            \"rewardType\": \"points\",\n            \"rewardValue\": 5\n        },\n        \"_id\": \"68dbad3cb24d98832f06267c\",\n        \"createdAt\": \"2025-09-30T10:13:16.729Z\",\n        \"updatedAt\": \"2025-09-30T10:13:16.729Z\",\n        \"__v\": 0,\n        \"id\": \"68dbad3cb24d98832f06267c\"\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "add - earn points",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"image\": \"\",\n    \"title\": \"Earn 500 global points\",\n    \"description\": \"Earn points by purchasing\",\n    \"taskType\": \"globalEarnPoints\",\n    \"taskValue\": 500,\n    \"claimLimit\": 5,\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"69217906dd3107a7545c05dc\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 50\n    }\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/challanges",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"challanges"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": [
+										{
+											"name": "add - earn points",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Walk 10,000 steps\",\n    \"description\": \"Earn points by being active\",\n    \"taskType\": \"earnPoints\",\n    \"taskValue\": 500,\n    \"claimLimit\": 5,\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\": \"68d7ee19c9469f7d754b5c99\"\n    }\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}challenges/",
+													"host": [
+														"{{url}}challenges"
+													],
+													"path": [
+														""
+													]
+												}
+											},
+											"status": "Created",
+											"code": 201,
+											"_postman_previewlanguage": "Text",
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "504"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"1f8-SqEm6qjaQPd3ANb0h8/avlUBW38\""
+												},
+												{
+													"key": "Date",
+													"value": "Sun, 28 Sep 2025 11:21:41 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Challenge created successfully\",\n    \"data\": {\n        \"title\": \"Walk 10,000 steps\",\n        \"description\": \"Earn points by being active\",\n        \"taskType\": \"earnPoints\",\n        \"claimLimit\": 5,\n        \"endDate\": \"2025-12-24T19:00:00.000Z\",\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"status\": \"active\",\n        \"reward\": {\n            \"rewardType\": \"menuItem\",\n            \"rewardMenuItem\": \"68d7ee19c9469f7d754b5c99\"\n        },\n        \"_id\": \"68d91a459e7c7d6dcd84399f\",\n        \"taskValue\": 500,\n        \"createdAt\": \"2025-09-28T11:21:41.762Z\",\n        \"updatedAt\": \"2025-09-28T11:21:41.762Z\",\n        \"__v\": 0,\n        \"id\": \"68d91a459e7c7d6dcd84399f\"\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "add - buy menu item",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"image\": \"\",\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"globalBuyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"69217906dd3107a7545c05dc\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/challanges",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"challanges"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": [
+										{
+											"name": "add - buy menu item",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}challenges/",
+													"host": [
+														"{{url}}challenges"
+													],
+													"path": [
+														""
+													]
+												}
+											},
+											"status": "Created",
+											"code": 201,
+											"_postman_previewlanguage": "Text",
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "508"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"1fc-ou00dxBe6WV1//c1DgrOc4f33uM\""
+												},
+												{
+													"key": "Date",
+													"value": "Sun, 28 Sep 2025 11:22:49 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Challenge created successfully\",\n    \"data\": {\n        \"title\": \"Buy 2 Burgers\",\n        \"description\": \"Order 2 burgers to earn rewards\",\n        \"taskType\": \"buyMenuItem\",\n        \"claimLimit\": 2,\n        \"endDate\": \"2025-12-30T19:00:00.000Z\",\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"status\": \"active\",\n        \"reward\": {\n            \"rewardType\": \"specialTicket\",\n            \"rewardValue\": 1\n        },\n        \"_id\": \"68d91a899e7c7d6dcd8439a7\",\n        \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n        \"createdAt\": \"2025-09-28T11:22:49.632Z\",\n        \"updatedAt\": \"2025-09-28T11:22:49.632Z\",\n        \"__v\": 0,\n        \"id\": \"68d91a899e7c7d6dcd8439a7\"\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "add - refer users",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"image\": \"reward.png\",\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Invite your friends\",\n    \"description\": \"Refer 3 friends to unlock rewards\",\n    \"taskType\": \"globalReferUsers\",\n    \"taskValue\": 3,\n    \"claimLimit\": 10,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"69217906dd3107a7545c05dc\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"customReward\",\n        \"customReward\": {\n            \"image\": \"68d7ee19c9469f7d754b5c99.png\",\n            \"title\": \"VIP Badge\",\n            \"description\": \"Special recognition for referring friends\"\n        }\n    }\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/challanges",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"challanges"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": [
+										{
+											"name": "add - buy menu item Copy",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Invite your friends\",\n    \"description\": \"Refer 3 friends to unlock rewards\",\n    \"taskType\": \"referUsers\",\n    \"taskValue\": 3,\n    \"claimLimit\": 10,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"customReward\",\n        \"customReward\": {\n            \"image\": \"68d7ee19c9469f7d754b5c99.png\",\n            \"title\": \"VIP Badge\",\n            \"description\": \"Special recognition for referring friends\"\n        }\n    }\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}challenges/",
+													"host": [
+														"{{url}}challenges"
+													],
+													"path": [
+														""
+													]
+												}
+											},
+											"status": "Created",
+											"code": 201,
+											"_postman_previewlanguage": "Text",
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "605"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"25d-OtCp0bJY3QuEZ/S3Y2KbZlVqcWU\""
+												},
+												{
+													"key": "Date",
+													"value": "Sun, 28 Sep 2025 11:23:36 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Challenge created successfully\",\n    \"data\": {\n        \"title\": \"Invite your friends\",\n        \"description\": \"Refer 3 friends to unlock rewards\",\n        \"taskType\": \"referUsers\",\n        \"claimLimit\": 10,\n        \"endDate\": \"2025-12-30T19:00:00.000Z\",\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"status\": \"active\",\n        \"reward\": {\n            \"rewardType\": \"customReward\",\n            \"customReward\": {\n                \"image\": \"68d7ee19c9469f7d754b5c99.png\",\n                \"title\": \"VIP Badge\",\n                \"description\": \"Special recognition for referring friends\"\n            }\n        },\n        \"_id\": \"68d91ab89e7c7d6dcd8439aa\",\n        \"taskValue\": 3,\n        \"createdAt\": \"2025-09-28T11:23:36.025Z\",\n        \"updatedAt\": \"2025-09-28T11:23:36.025Z\",\n        \"__v\": 0,\n        \"id\": \"68d91ab89e7c7d6dcd8439aa\"\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "update",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n//   \"title\": \"Sample title\",\n//   \"description\": \"description of item\",\n  \"tierLimit\":\"69217906dd3107a7545c05dc\"\n// \"image\": \"globalChlng.png\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/challanges/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"challanges",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "6943ec11f9abb2ab10e763c9"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}loyalty/challenges/:id",
+											"host": [
+												"{{url}}loyalty"
+											],
+											"path": [
+												"challenges",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "68d905e97dce16007ce9b008"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "get tickets",
+									"request": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": ""
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Promotions",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/promotions",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"promotions"
+											],
+											"query": [
+												{
+													"key": "companyOrganizer",
+													"value": "68da7aa1e6f099d42e32da71",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "get details",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/promotions/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"promotions",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "69292e10f4191ab09674367f"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add - happyHour",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"happyHour\", //[\"happyHour\", \"buyMenuItem\", \"productSale\"]\n    \"title\": \"Sample title\",\n    \"description\": \"description of item\",\n    \"startDate\":\"2025-11-05 05:00 AM\",\n    \"endDate\": \"2025-11-05 11:00 AM\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"pointsMultiplier\":\"1.5\",\n    \"status\": \"active\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/promotions",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"promotions"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "add - buy Menu Item",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"buyMenuItemPromotion\",\n    \"title\": \"Buy Coffee\",\n    \"description\": \"Best coffee to make your day\",\n    \"startDate\":\"2025-11-05\",\n    \"endDate\": \"2025-11-15\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"extraPoints\": 5,\n    \"status\": \"active\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/promotions",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"promotions"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "add - claim Promotion",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"claimPromotion\",\n    \"title\": \"Buy Coffee\",\n    \"description\": \"Best coffee to make your day\",\n    \"startDate\":\"2025-11-05\",\n    \"endDate\": \"2025-11-15\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"extraPoints\": 5,\n    \"status\": \"active\",\n    \"claimPoints\":12,\n    \"reward\":\"692fd9413c3a3a0086d70af6\"\n\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/promotions",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"promotions"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "add - productSale",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"productSale\",\n    \"title\": \"Buy Coffee\",\n    \"description\": \"Best coffee to make your day\",\n    \"startDate\":\"2025-11-05\",\n    \"endDate\": \"2025-11-15\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"discountedPrice\":\"40\",\n    \"extraPoints\": 5,\n    \"status\": \"active\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/promotions",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"promotions"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "update",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5d.png\",\n    \"promotionType\": \"productSale\",\n    \"title\": \"Buy Coffee please\",\n    \"description\": \"Best coffee to make your day\",\n    \"startDate\":\"2025-11-05\",\n    \"endDate\": \"2025-11-20\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"discountedPrice\":\"40\",\n    \"extraPoints\": 5,\n    \"status\": \"active\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/promotions/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"promotions",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "69292dcff4191ab09674367a"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/promotions/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"promotions",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "69292e10f4191ab09674367f"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Streaks",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/streaks/?page=1",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"streaks",
+												""
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "1",
+													"disabled": true
+												},
+												{
+													"key": "status",
+													"value": "deleted",
+													"disabled": true
+												},
+												{
+													"key": "companyOrganizer",
+													"value": "6911b8946c940af405a4a603",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"visits\": 50,\n  \"points\": 100,\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/streaks",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"streaks"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "update",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"visits\": 11\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/streaks/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"streaks",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "6929354901f99ec7da27d23a"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/streaks/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"streaks",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "6929354901f99ec7da27d23a"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Users Streaks",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/users-streaks",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"users-streaks"
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1",
+													"disabled": true
+												},
+												{
+													"key": "limit",
+													"value": "1",
+													"disabled": true
+												},
+												{
+													"key": "companyOrganizer",
+													"value": "6911c14b6fc7cbd864e745b6",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Listings",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/listings?page=1&limit=10",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"listings"
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "keyword",
+													"value": "Glowingsoft",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Club members",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/loyalty/club-members?page=1&limit=10",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"loyalty",
+												"club-members"
+											],
+											"query": [
+												{
+													"key": "companyOrganizer",
+													"value": "6911cc376aca10eb719d7322",
+													"disabled": true
+												},
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "keyword",
+													"value": "Ali",
+													"disabled": true
+												},
+												{
+													"key": "status",
+													"value": "active",
+													"description": "active/inactive",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "gift points",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"companyOrganizer\": \"6911cc376aca10eb719d7322\",\n  \"user\": \"691b2145caf7c91d708e8576\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/club-members/gift-points",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"club-members",
+												"gift-points"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "transsections",
+							"item": [
+								{
+									"name": "get",
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"email\": \"{{emailOrganizer}}\",\n    \"password\": \"{{passwordOrganizer}}\",\n    \"userType\": \"organizer\", //user, organizer, admin, manager\n    \"deviceType\": \"android\", //andoird/ios\n    \"deviceId\": \"1234\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}"
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/transactions",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"transactions"
+											],
+											"query": [
+												{
+													"key": "keyword",
+													"value": "challenge",
+													"disabled": true
+												},
+												{
+													"key": "date",
+													"value": "2025-12-01",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": [
+										{
+											"name": "New Request",
+											"originalRequest": {
+												"method": "GET",
+												"header": [],
+												"url": {
+													"raw": "{{url}}admin/global-loyalty/transactions",
+													"host": [
+														"{{url}}admin"
+													],
+													"path": [
+														"global-loyalty",
+														"transactions"
+													],
+													"query": [
+														{
+															"key": "keyword",
+															"value": "challenge",
+															"disabled": true
+														},
+														{
+															"key": "date",
+															"value": "2025-12-01",
+															"disabled": true
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "Text",
+											"header": [
+												{
+													"key": "Content-Security-Policy",
+													"value": "default-src 'self';script-src 'self' 'unsafe-inline';style-src 'self' 'unsafe-inline';img-src 'self' data:;connect-src 'self' https://pleis.com https://www.pleis.com https://dev.pleis.com https://www.dev.pleis.com http://localhost:4003 https://pleis.vercel.app https://shipping-profession-merge-double.trycloudflare.com http://192.168.15.141:4003;base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';object-src 'none';script-src-attr 'none';upgrade-insecure-requests"
+												},
+												{
+													"key": "Cross-Origin-Embedder-Policy",
+													"value": "require-corp"
+												},
+												{
+													"key": "Cross-Origin-Opener-Policy",
+													"value": "same-origin"
+												},
+												{
+													"key": "Cross-Origin-Resource-Policy",
+													"value": "same-origin"
+												},
+												{
+													"key": "Origin-Agent-Cluster",
+													"value": "?1"
+												},
+												{
+													"key": "Referrer-Policy",
+													"value": "no-referrer"
+												},
+												{
+													"key": "Strict-Transport-Security",
+													"value": "max-age=31536000; includeSubDomains"
+												},
+												{
+													"key": "X-Content-Type-Options",
+													"value": "nosniff"
+												},
+												{
+													"key": "X-DNS-Prefetch-Control",
+													"value": "off"
+												},
+												{
+													"key": "X-Download-Options",
+													"value": "noopen"
+												},
+												{
+													"key": "X-Frame-Options",
+													"value": "SAMEORIGIN"
+												},
+												{
+													"key": "X-Permitted-Cross-Domain-Policies",
+													"value": "none"
+												},
+												{
+													"key": "X-XSS-Protection",
+													"value": "0"
+												},
+												{
+													"key": "X-RateLimit-Limit",
+													"value": "200"
+												},
+												{
+													"key": "X-RateLimit-Remaining",
+													"value": "199"
+												},
+												{
+													"key": "Date",
+													"value": "Tue, 02 Dec 2025 09:45:02 GMT"
+												},
+												{
+													"key": "X-RateLimit-Reset",
+													"value": "1764669603"
+												},
+												{
+													"key": "Vary",
+													"value": "Origin, Accept-Encoding"
+												},
+												{
+													"key": "Access-Control-Allow-Credentials",
+													"value": "true"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "367"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"16f-/qj9JDoV21Alep5RSSo1aya72dE\""
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Transactions fetched successfully\",\n    \"data\": [\n        {\n            \"_id\": \"692eaf9827bade460da37212\",\n            \"user\": {\n                \"_id\": \"6911ba17dd162801ff9b35d9\",\n                \"firstName\": \"Ali\",\n                \"lastName\": \"Imran\"\n            },\n            \"type\": \"earn\",\n            \"objectType\": \"challenge\",\n            \"points\": 900,\n            \"description\": \"\",\n            \"publicId\": \"fkFcW_6Vu3py4PmMLBVW1\",\n            \"createdAt\": \"2025-12-01T09:21:28.768Z\"\n        }\n    ],\n    \"meta\": {\n        \"currentPage\": 1,\n        \"totalPages\": null,\n        \"limit\": 10\n    }\n}"
+										}
+									]
+								}
+							]
 						}
 					]
 				},
 				{
 					"name": "Transactions",
 					"item": [
-						{
-							"name": "get Copy",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {},
-										"requests": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {},
-										"requests": {}
-									}
-								}
-							],
-							"protocolProfileBehavior": {
-								"disableBodyPruning": true
-							},
-							"request": {
-								"method": "GET",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}admin/transactions-old/?page=1&limit=10&companyOrganizer=6911c14b6fc7cbd864e745b6",
-									"host": [
-										"{{url}}admin"
-									],
-									"path": [
-										"transactions-old",
-										""
-									],
-									"query": [
-										{
-											"key": "status",
-											"value": "confirmed",
-											"description": "\"pending\", \"confirmed\", \"cancelled\", \"completed\"",
-											"disabled": true
-										},
-										{
-											"key": "page",
-											"value": "1"
-										},
-										{
-											"key": "limit",
-											"value": "10"
-										},
-										{
-											"key": "organizations",
-											"value": "[\"6911c1b36fc7cbd864e74659\"]",
-											"disabled": true
-										},
-										{
-											"key": "companyOrganizer",
-											"value": "6911c14b6fc7cbd864e745b6"
-										}
-									]
-								}
-							},
-							"response": []
-						},
 						{
 							"name": "get",
 							"event": [
@@ -27650,7 +30521,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}admin/transactions/?page=1&limit=10",
+									"raw": "{{url}}admin/transactions/?page=1&limit=10&walletType&domainType&type&companyOrganizer&startDate=2025-12-15&endDate=2025-12-15",
 									"host": [
 										"{{url}}admin"
 									],
@@ -27672,6 +30543,41 @@
 										{
 											"key": "limit",
 											"value": "10"
+										},
+										{
+											"key": "walletType",
+											"value": null,
+											"description": "\"companyLoyalty\", \"globalWallet\""
+										},
+										{
+											"key": "domainType",
+											"value": null,
+											"description": "\"menuorders\",\n\"ticketingorders\",\n\"loyaltyrewardsorders\",\n\"loyaltychallengesorders\","
+										},
+										{
+											"key": "type",
+											"value": null,
+											"description": "\"earn\", \"redeem\", \"adjustment\""
+										},
+										{
+											"key": "organization",
+											"value": null,
+											"disabled": true
+										},
+										{
+											"key": "companyOrganizer",
+											"value": null,
+											"description": "6911c14b6fc7cbd864e745b6"
+										},
+										{
+											"key": "startDate",
+											"value": "2025-12-15",
+											"description": "YYYY-MM-DD"
+										},
+										{
+											"key": "endDate",
+											"value": "2025-12-15",
+											"description": "YYYY-MM-DD"
 										}
 									]
 								}
@@ -28227,13 +31133,7 @@
 								{
 									"key": "files",
 									"type": "file",
-									"src": [
-										"/Users/s/Downloads/New folder44/group.png",
-										"/Users/s/Downloads/New folder44/group1.png",
-										"/Users/s/Downloads/New folder44/group2.png",
-										"/Users/s/Downloads/New folder44/group3.png",
-										"/Users/s/Downloads/New folder44/group4.png"
-									]
+									"src": "/Users/s/Desktop/Development/Projects/Pleis/test-images/istockphoto-1500283713-612x612.jpg"
 								}
 							]
 						},
