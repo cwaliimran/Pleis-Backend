@@ -59,48 +59,32 @@ const createSubscription = async (req, res) => {
       }
     }
 
-// ---------------------------------------------------------
-// VALIDATION: commissions (ONLY ticketingCommission allowed)
-// ---------------------------------------------------------
-let finalCommissions = { ticketingCommission: 0 };
+    // ---------------------------------------------------------
+    // VALIDATION: commissions (ALLOW all commissions)
+    // ---------------------------------------------------------
+    let finalCommissions = {};
 
-if (commissions && typeof commissions === "object") {
+    if (commissions && typeof commissions === "object") {
+      // Loop over all commission fields in the commissions object
+      const commissionFields = [
+        "orderingCommission",
+        "reservationCommission",
+        "ticketingCommission"
+      ];
 
-  // ❌ orderingCommission is NOT allowed
-  if (commissions.orderingCommission !== undefined) {
-    return sendResponse({
-      res,
-      statusCode: 400,
-      translationKey: "orderingCommission_not_allowed",
-    });
-  }
-
-  // ❌ reservationCommission is NOT allowed
-  if (commissions.reservationCommission !== undefined) {
-    return sendResponse({
-      res,
-      statusCode: 400,
-      translationKey: "reservationCommission_not_allowed",
-    });
-  }
-
-  // ✔ Only ticketingCommission is allowed
-  if (commissions.ticketingCommission !== undefined) {
-    if (
-      typeof commissions.ticketingCommission !== "number" ||
-      commissions.ticketingCommission < 0
-    ) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "ticketingCommission_must_be_non_negative_number",
-      });
+      for (const field of commissionFields) {
+        if (commissions[field] !== undefined) {
+          if (typeof commissions[field] !== "number" || commissions[field] < 0) {
+            return sendResponse({
+              res,
+              statusCode: 400,
+              translationKey: `${field}_must_be_non_negative_number`,
+            });
+          }
+          finalCommissions[field] = commissions[field];
+        }
+      }
     }
-
-    finalCommissions.ticketingCommission =
-      commissions.ticketingCommission;
-  }
-}
 
     // ---------------------------------------------------------
     // VALIDATION: bundleDiscounts (optional)
