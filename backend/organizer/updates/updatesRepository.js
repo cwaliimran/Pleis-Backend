@@ -130,9 +130,10 @@ const getUpdatess = async ({
   today,
   skip
 }) => {
-  // Step 1: Check if organizations are provided
+  // Ensure organizations is always an array
   if (!organizations || organizations.length === 0) {
     console.log('No organizations provided, using userId only');
+    organizations = []; // Default to an empty array if no organizations are provided
   } else {
     // Ensure organizations is an array if it's a string
     if (typeof organizations === 'string') {
@@ -153,7 +154,7 @@ const getUpdatess = async ({
   }
 
   let eventIds = [];
-  if (organizations && organizations.length > 0) {
+  if (organizations.length > 0) {
     const orgIds = organizations.map(id => new mongoose.Types.ObjectId(id));
 
     // Step 2: If organizations are provided, fetch event IDs for the organizations
@@ -163,7 +164,6 @@ const getUpdatess = async ({
 
   // Step 3: If no eventIds are found, return an empty array with meta counts
   if (eventIds.length === 0 && organizations.length > 0) {
-    console.log('No events found for the provided organizations');
     return { updates: [], meta: { totalFiltered: 0, updatesCount: { total: 0, active: 0, inactive: 0 } } };
   }
 
@@ -279,7 +279,7 @@ const getUpdatess = async ({
   let updates = result[0].data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-  const [total, active, inactive] = await Promise.all([
+  const [total, active, inactive] = await Promise.all([ 
     Updates.countDocuments({ creator: userId, status: { $ne: "deleted" } }),
     Updates.countDocuments({ creator: userId, status: "active" }),
     Updates.countDocuments({ creator: userId, status: "inactive" })
@@ -306,132 +306,102 @@ const findByIdAndUpdate = async (id, data) => {
 
 
 
-const getevents = async ({
-  timezone,
-  page,
-  limit,
-  keyword,
-  status,
-  userId,
-  date,
-  skip,
-  organizations
-}) => {
-  if (!organizations || organizations.length === 0) {
 
-    organizations = [userId];  // Use userId as the "organization" in this case
-  } else {
-    // Ensure organizations is an array if it's a string
+
+
+
+const getevents = async ({ organizations }) => {
+  try {
+    console.log("organizations:", organizations); // Log the organizations parameter
+
+    // If organizations are passed as a comma-separated string, split them into an array
     if (typeof organizations === 'string') {
-      try {
-        // URL-decode and split the string into an array
-        organizations = decodeURIComponent(organizations).split(','); // Split by comma
-      } catch (error) {
-
-        return { updates: [], meta: { totalFiltered: 0, updatesCount: { total: 0, active: 0, inactive: 0 } } }; // Return empty if error
-      }
+      organizations = organizations.split(','); // Split by comma
     }
 
-    // Check if organizations is now an array
-    if (!Array.isArray(organizations)) {
-
-      return { updates: [], meta: { totalFiltered: 0, updatesCount: { total: 0, active: 0, inactive: 0 } } }; // Return empty if not an array
+    // If organizations are not passed or are empty, return an empty response
+    if (!Array.isArray(organizations) || organizations.length === 0) {
+      console.log("No organizations provided");
+      return { events: [], meta: { totalFiltered: 0 } };
     }
-  }
 
-  // Convert organizations to ObjectId (if not already)
-  const orgIds = organizations.map(id => new mongoose.Types.ObjectId(id));
+    // Convert organizations to ObjectId (if not already)
+    const orgIds = organizations.map(id => new mongoose.Types.ObjectId(id));
+    console.log("orgIds (ObjectIds):", orgIds); // Log the ObjectIds to ensure correct conversion
 
-  // Fetch creatorIds for the organizations (if organizations are provided)
-  const creatorIds = organizations.length > 0 ? await getCreatorIdsForOrganizations(orgIds) : [];
-
-
-  // Step 1: Create the aggregation pipeline
-  const pipeline = [
-    {
-$match: {
-      // If organizations are provided, use creatorIds or orgIds; otherwise, use userId
-      ...(organizations && organizations.length > 0
-        ? { creator: { $in: creatorIds.length > 0 ? creatorIds : orgIds } }  // Match by creator IDs or orgIds
-        : { creator: new mongoose.Types.ObjectId(userId) })  // Fallback to matching by userId if no organizations
+    // Create the aggregation pipeline
+const pipeline = [
+  // Match events where the organization field is in the provided list of organizations
+  {
+    $match: {
+      "basicInfo.organization": { $in: orgIds } // Match events where the organization is in the provided orgIds (nested in basicInfo)
     }
+  },
+  // Lookup event details from the Events collection
+  {
+    $lookup: {
+      from: "events",                // The collection to join (events collection)
+      localField: "basicInfo.organization", // Field in the current collection (organization inside basicInfo)
+      foreignField: "_id",            // Field in the events collection (_id)
+      as: "eventDetails"              // Alias for the matched events
     }
-  ];
-
-  // Step 2: Apply filters for status, date, etc.
-  if (status) {
-    pipeline.push({ $match: { status } });
-  } else {
-    pipeline.push({ $match: { status: { $ne: "deleted" } } }); // Default filter to exclude 'deleted' status
-  }
-
-  if (date) {
-    const start = new Date(date);
-    const end = new Date(new Date(date).setDate(start.getDate() + 1));
-    pipeline.push({
-      $match: {
-        createdAt: { $gte: start, $lt: end } // Filter events based on the provided date
-      }
-    });
-  }
-
-  // Step 3: Apply keyword search
-  if (keyword) {
-    // Search only in the 'title' field inside 'basicInfo'
-    pipeline.push({
-      $match: {
-        "basicInfo.title": { $regex: keyword, $options: "i" } // Case-insensitive search for keyword in the title
-      }
-    });
-  }
-
-  // Step 4: Project only the fields we need (_id and title)
-  pipeline.push({
+  },
+  // Check the eventDetails before unwinding
+  {
+    $addFields: {
+      eventDetailsCheck: "$eventDetails" // Add a field to check the eventDetails before unwind
+    }
+  },
+  // Project the _id and eventDetailsCheck
+  {
     $project: {
-      _id: 1, // Include _id
-     title: "$basicInfo.title" // Include title from basicInfo
+      _id:1,
+      title: "$basicInfo.title",
     }
-  });
-
-  // Step 5: Sort by createdAt (descending order)
-  pipeline.push({ $sort: { createdAt: -1 } });
-
-  // Step 6: Apply pagination + total count using $facet
-  pipeline.push({
+  },
+  // Sort by createdAt (descending order)
+  {
+    $sort: { createdAt: -1 }
+  },
+  // Pagination and counting total filtered events
+  {
     $facet: {
       data: [
-        { $skip: skip }, // Pagination skip
-        ...(limit === 0 ? [] : [{ $limit: limit }]) // Apply limit if provided
+        { $skip: 0 }, // Pagination skip
+        { $limit: 20 } // Limit results to 20
       ],
-      totalFiltered: [{ $count: "count" }] // Total count of events
+      totalFiltered: [
+        { $count: "count" } // Count the total number of filtered events
+      ]
     }
-  });
-
-  // Execute aggregation
-  const result = await Events.aggregate(pipeline);
-
-  // Step 7: Check if result is valid and contains data
-  if (!result || !result[0] || !result[0].data) {
-    return { events: [], meta: { totalFiltered: 0, eventsCount: { total: 0, active: 0, inactive: 0 } } };
   }
+];
 
-  // Step 8: Handle aggregation results
-  let events = result[0].data || [];
-  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+console.log("pipeline",pipeline );
+    // Execute aggregation
+    const result = await Events.aggregate(pipeline);
+    console.log("Aggregation result:", result); // Log the result of the aggregation
 
-  // Step 9: Meta counts (active/inactive/total events for the given userId)
-  const [total, active, inactive] = await Promise.all([
-    Events.countDocuments({ creator: userId, status: { $ne: "deleted" } }), // Total events for the user
-    Events.countDocuments({ creator: userId, status: "active" }), // Active events for the user
-    Events.countDocuments({ creator: userId, status: "inactive" }) // Inactive events for the user
-  ]);
+    // Handle result
+    if (!result || !result[0] || !result[0].data) {
+      console.log("No events found matching the organizations.");
+      return { events: [], meta: { totalFiltered: 0 } };
+    }
 
-  // Step 10: Generate meta information for pagination
-  const meta = generateMeta(page, limit, totalFiltered);
-  meta.eventsCount = { total, active, inactive };
+    const events = result[0].data || [];
+    const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-  return { events, meta };
+    return { events, meta: { totalFiltered } };
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    return { events: [], meta: { totalFiltered: 0 } };
+  }
 };
+
+
+
+
+
 module.exports = {
   createUpdates,
   getUpdatess,

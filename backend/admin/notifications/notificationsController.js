@@ -34,6 +34,7 @@ const createNotifications = async (req, res) => {
     const userId = req.user._id;
     const timezone = req.user.timezone;
 
+
     // Check if organizationId is required for "organization" destination type
     if (destinationType === "organization" && !organizationId) {
       return sendResponse({
@@ -60,15 +61,44 @@ const createNotifications = async (req, res) => {
     ) return;
 
     // Location validation (if location is provided, both city and area must be present)
-    if (location) {
-      if ((location.city && !location.area) || (location.area && !location.city)) {
-        return sendResponse({
-          res,
-          statusCode: 400,
-          translationKey: "Location_city_and_area_required_together",
-        });
-      }
+if (location) {
+  // Check if city and area are provided together
+  if ((location.city && !location.area) || (location.area && !location.city)) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "Location_city_and_area_required_together",
+    });
+  }
+
+  // Check if latitude and longitude are provided, and if they are within valid ranges
+  if (location.lat && location.long) {
+    // Check if latitude is between -90 and 90
+    if (location.lat < -90 || location.lat > 90) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "Location_invalid_latitude",
+      });
     }
+
+    // Check if longitude is between -180 and 180
+    if (location.long < -180 || location.long > 180) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "Location_invalid_longitude",
+      });
+    }
+  } else {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "Location_lat_long_required",
+    });
+  }
+}
+
     // Validate age range if provided
     if (ageRange && (!Array.isArray(ageRange) || ageRange.length !== 2 || ageRange[0] > ageRange[1])) {
       return sendResponse({
@@ -105,6 +135,7 @@ const createNotifications = async (req, res) => {
       sendTiming,
       scheduledDateTime,
       status: "active",
+
     };
 
     // Only add organizationId or eventId if they are provided

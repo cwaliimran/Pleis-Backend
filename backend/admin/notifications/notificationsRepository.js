@@ -9,6 +9,9 @@ const {
 } = require("../../commonModules/notifications");
 const Organizations = require("@OrganizationModel");
 const { Events } = require("@EventsModel");
+const {calculateAge} = require("../notifications/helper/calculateAge");
+const {User} = require("@UserModel");
+const { calculateDistance } = require("@utils/calculateDistance");
 // Decide which discriminator model to use
 const getModelByTaskType = (taskType) => {
   switch (taskType) {
@@ -24,21 +27,305 @@ const getModelByTaskType = (taskType) => {
 };
 
 
+const getUserLocationById = async (userId) => {
+  try {
+
+    // Convert the userId to ObjectId if it's not already
+    const objectId =new mongoose.Types.ObjectId(userId); 
+
+    // Query the Users collection to find the user by their ID and get their location coordinates
+    const user = await User.findById(objectId).select('location.coordinates');
+
+    // If user is found and the coordinates are available
+    if (user && user.location && user.location.coordinates) {
+      const userLat = user.location.coordinates[1]; // Latitude (second value in coordinates)
+      const userLon = user.location.coordinates[0]; // Longitude (first value in coordinates)
+
+      return { lat: userLat, lon: userLon }; // Return the latitude and longitude
+    }
+
+    // If no location found, return null
+    return { lat: null, lon: null };
+  } catch (error) {
+
+    return { lat: null, lon: null }; // Return null in case of error
+  }
+};
 
 
+const getFilteredUserIds = async (filters, referenceLocationLat, referenceLocationLon, radius) => {
+  const { location, ageRange, gender, interests } = filters;
 
+  try {
+    const pipeline = [];
+    let locationFilteredUserIds = new Set();
+    let ageFilteredUserIds = new Set();
+    let genderFilteredUserIds = new Set();
+    let interestsFilteredUserIds = new Set();
 
+    if (location && location.city) {
+      console.log("Location filter applied: city =", location.city);
 
+      // Match users by city in the location
+      pipeline.push({
+        $match: {
+          "location.city": location.city, // Match city name
+        }
+      });
 
+      // Fetch all users in the city
+      const locationFilteredUsers = await User.find({ "location.city": location.city, "location.coordinates": { $exists: true } });
+
+      // Loop through users and calculate the distance from the reference location
+      locationFilteredUsers.forEach(user => {
+        const userLat = user.location.coordinates[1]; // Latitude (second value in coordinates)
+        const userLon = user.location.coordinates[0]; // Longitude (first value in coordinates)
+
+        // Calculate distance between user and reference location
+        const { distance } = calculateDistance(userLat, userLon, referenceLocationLat, referenceLocationLon, "kilometer");
+
+        // Log the distance for each user
+        console.log(`User ${user._id} is ${distance} km away from the reference location.`);
+
+        // If the user is within the radius, add them to the locationFilteredUserIds set
+        if (distance <= radius) {
+          locationFilteredUserIds.add(user._id.toString());
+        }
+      });
+
+      console.log("Location Filtered User IDs: ", [...locationFilteredUserIds]);
+
+      // If no users match the location filter, return empty
+      if (locationFilteredUserIds.size === 0) {
+        return { userIds: [], meta: { totalFiltered: 0 } };
+      }
+    }
+
+    // Age Range Filter
+    if (ageRange && ageRange.length === 2) {
+      console.log("Age range filter applied: ", ageRange);
+
+      // Match users with a valid dob first
+      pipeline.push({
+        $match: {
+          dob: { $ne: "" } // Ensure dob is not an empty string
+        }
+      });
+
+      pipeline.push({
+        $addFields: {
+          age: {
+            $let: {
+              vars: {
+                birthDate: { $toDate: "$dob" },  // Convert dob to Date
+                referenceDate: new Date()        // Current date for comparison
+              },
+              in: {
+                // Calculate age in years (divide by the number of milliseconds in a year)
+                $divide: [
+                  { $subtract: ["$$referenceDate", "$$birthDate"] },
+                  31557600000 // Number of milliseconds in a year (365.25 days)
+                ]
+              }
+            }
+          }
+        }
+      });
+
+      // Match users within the age range
+      pipeline.push({
+        $match: {
+          age: { 
+            $gte: ageRange[0], // Lower bound of age range
+            $lte: ageRange[1], // Upper bound of age range
+          }
+        }
+      });
+
+      // Run the aggregation for age range filter
+      const ageRangeFilteredUsers = await User.aggregate(pipeline);
+      ageFilteredUserIds = new Set(ageRangeFilteredUsers.map(user => user._id.toString()));
+      console.log("Age Range Filtered User IDs: ", [...ageFilteredUserIds]);
+
+      // If age filter returns no users, return empty result
+      if (ageFilteredUserIds.size === 0) {
+        return { userIds: [], meta: { totalFiltered: 0 } };
+      }
+    }
+
+    // Gender Filter
+    if (gender && gender !== "all") {
+      console.log("Gender filter applied: ", gender);
+      pipeline.push({
+        $match: {
+          gender: { $regex: `^${gender}$`, $options: 'i' }  // Case-insensitive match
+        }
+      });
+
+      // Run the aggregation for gender filter
+      const genderFilteredUsers = await User.aggregate(pipeline);
+      genderFilteredUserIds = new Set(genderFilteredUsers.map(user => user._id.toString()));
+      console.log("Gender Filtered User IDs: ", [...genderFilteredUserIds]);
+
+      // If gender filter returns no users, return empty result
+      if (genderFilteredUserIds.size === 0) {
+        return { userIds: [], meta: { totalFiltered: 0 } };
+      }
+    }
+
+    // Interests Filter
+    if (interests && interests.length > 0) {
+      console.log("Interests filter applied: ", interests);
+
+      // First, lookup categories based on the titles provided in the interests array
+      pipeline.push(
+        {
+          $lookup: {
+            from: "categories",  // Categories collection
+            let: { interestTitles: interests },  // Pass the interests array as a variable
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $in: ["$title", "$$interestTitles"],  // Match category title against the interests
+                  },
+                },
+              },
+              {
+                $project: {
+                  _id: 1,  // Return the category ID
+                },
+              },
+            ],
+            as: "matchedCategories",  // Alias for the matched categories
+          }
+        },
+        {
+          $unwind: {
+            path: "$matchedCategories", // Unwind the matched categories array
+            preserveNullAndEmptyArrays: true,  // Allow documents without matching categories
+          }
+        },
+        {
+          $lookup: {
+            from: "userinterests",  // UserInterests collection
+            localField: "matchedCategories._id",  // Match category ID
+            foreignField: "categories",  // Match against the "categories" field in userInterests
+            as: "userInterests",  // Alias for the matched user interests
+          }
+        },
+        {
+          $unwind: {
+            path: "$userInterests",  // Unwind the userInterests array
+            preserveNullAndEmptyArrays: true,  // Keep documents even if no matching userInterests are found
+          }
+        },
+        {
+          $project: {
+            userId: "$userInterests.user",  // Include the user ID from the userInterests collection
+          }
+        }
+      );
+
+      // Run the aggregation for interests filter
+      const interestsFilteredUsers = await User.aggregate(pipeline);
+      interestsFilteredUserIds = new Set(interestsFilteredUsers.map(user => user._id.toString()));
+      console.log("Interests Filtered User IDs: ", [...interestsFilteredUserIds]);
+
+      // If interests filter returns no users, return empty result
+      if (interestsFilteredUserIds.size === 0) {
+        return { userIds: [], meta: { totalFiltered: 0 } };
+      }
+    }
+
+    // Step 5: Combine all filtered user IDs by taking the intersection of all results
+    let finalUserIds = [...locationFilteredUserIds];
+
+    // If there are multiple sets, perform intersection logic
+    if (ageFilteredUserIds.size > 0) {
+      finalUserIds = finalUserIds.filter(id => ageFilteredUserIds.has(id));
+    }
+    if (genderFilteredUserIds.size > 0) {
+      finalUserIds = finalUserIds.filter(id => genderFilteredUserIds.has(id));
+    }
+    if (interestsFilteredUserIds.size > 0) {
+      finalUserIds = finalUserIds.filter(id => interestsFilteredUserIds.has(id));
+    }
+
+    // Make the final list unique by using a Set (removes duplicates)
+    finalUserIds = [...new Set(finalUserIds)];
+
+    console.log("Final Filtered User IDs (intersection of all filters): ", finalUserIds);
+
+    return { userIds: finalUserIds, meta: { totalFiltered: finalUserIds.length } };
+  } catch (error) {
+    console.error("Error fetching filtered user IDs:", error);
+    return { userIds: [], meta: { totalFiltered: 0 } }; // Return empty result on error
+  }
+};
 
 
 
 const createNotifications = async (data) => {
   try {
     const Model = getModelByTaskType(data.destinationType);
-    console.log("Model", Model); console.log("data", data.destinationType);
     const globalNotification = new Model(data);
     await globalNotification.save();
+    const filters = {
+  location:data.location,
+  ageRange:data.ageRange,
+  gender: data.gender,
+  interests: data.interests,
+  referenceLocationLat: data.location.lat,
+  referenceLocationLon: data.location.long,
+  radius: data.location.radius
+
+};
+const userLocation = await getUserLocationById(data.creator);
+
+const result = await getFilteredUserIds(filters, data.referenceLocationLat, data.referenceLocationLon, data.radius);
+
+console.log("result",result );
+return
+    if(data.sendTiming==="immediately"){
+      const filters = {
+  location: data.location, 
+  ageRange: data.ageRange, 
+  gender: data.gender, 
+  interests: data.interests,
+};
+
+
+
+      data.isDelivered=true;
+      data.estimated=userIds.length;
+      data.delivered=userIds.length;
+      if(data.destinationType=="organization"){
+
+          await sendUserNotifications({
+            recipientIds: userIds, // Send notification to each participant
+            title: data.title,
+            body: `You received a new message: ${data.description}`,
+            data: { type: NotificationTypes.EVENT_UPDATE, objectType: "group" },
+            sender: data.companyOrganizer,
+            objectId: data.event,
+          });
+        }
+              if(data.destinationType=="event"){
+
+          await sendUserNotifications({
+            recipientIds: userIds, // Send notification to each participant
+            title: data.title,
+            body: `You received a new message: ${data.description}`,
+            data: { type: NotificationTypes.EVENT_UPDATE, objectType: "group" },
+            sender: data.companyOrganizer,
+            objectId: data.event,
+          });
+
+        }
+
+
+    }
     return globalNotification;
   } catch (err) {
     throw err;
@@ -46,7 +333,7 @@ const createNotifications = async (data) => {
 };
 
 const getNotificationss = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
-  console.log("user", userId);
+
 
   const pipeline = [
     {
@@ -235,7 +522,7 @@ pipeline.push({
 
 
   const result = await GlobalNotification.aggregate(pipeline);
-  console.log("result", result);
+
 
   let Notificationss = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
@@ -323,7 +610,7 @@ const getOrganizations = async ({ skip, limit }) => {
 
     return { organizations, meta };
   } catch (error) {
-    console.error(error);
+
     return {
       statusCode: 500,
       message: "Error fetching organizations",
@@ -335,7 +622,7 @@ const getOrganizations = async ({ skip, limit }) => {
 
 const getEvents = async ({ skip, limit }) => {
   try {
-    console.log("skip", skip, "limit", limit);
+
     const pipeline = [
       {
         $project: {
@@ -360,7 +647,7 @@ const getEvents = async ({ skip, limit }) => {
 
     return { events, meta };
   } catch (error) {
-    console.error(error);
+
     return {
       statusCode: 500,
       message: "Error fetching events",
