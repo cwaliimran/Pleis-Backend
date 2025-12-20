@@ -2,7 +2,7 @@
 const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
 const { generateMeta } = require("@utils/responseUtil");
 const { statusLevelsFormatter } = require("./formatters/statusLevelsFormatter");
-const StatusLevels = require("./GlobalStatusLevels");
+const GlobalStatusLevels = require("@GlobalStatusLevelsModel");
 const statusLevelRepo = require("./globalStatusLevelsRepository");
 const mongoose = require("mongoose");
 
@@ -57,7 +57,7 @@ const getStatusLevels = async ({ page, limit, keyword, status, userId, date }) =
 
   const keywordMatch = buildKeywordQueryFromModels(
     [
-      { schema: StatusLevels.schema }
+      { schema: GlobalStatusLevels.schema }
     ],
     keyword
   );
@@ -79,16 +79,16 @@ const getStatusLevels = async ({ page, limit, keyword, status, userId, date }) =
     }
   });
 
-  const result = await StatusLevels.aggregate(pipeline);
+  const result = await GlobalStatusLevels.aggregate(pipeline);
 
   let statusLevels = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   // Additional counts for meta (active/inactive/total by userId as creator)
   const [total, active, inactive] = await Promise.all([
-    StatusLevels.countDocuments({ ...(userId && { creator: userId }), status: { $ne: "deleted" } }),
-    StatusLevels.countDocuments({ status: "active", ...(userId && { creator: userId }) }),
-    StatusLevels.countDocuments({ status: "inactive", ...(userId && { creator: userId }) })
+    GlobalStatusLevels.countDocuments({ ...(userId && { creator: userId }), status: { $ne: "deleted" } }),
+    GlobalStatusLevels.countDocuments({ status: "active", ...(userId && { creator: userId }) }),
+    GlobalStatusLevels.countDocuments({ status: "inactive", ...(userId && { creator: userId }) })
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
@@ -178,7 +178,7 @@ const getTitleStatusLevels = async ({ page, limit, keyword, status, userId, date
 
   const keywordMatch = buildKeywordQueryFromModels(
     [
-      { schema: StatusLevels.schema }
+      { schema: GlobalStatusLevels.schema }
     ],
     keyword
   );
@@ -208,16 +208,16 @@ const getTitleStatusLevels = async ({ page, limit, keyword, status, userId, date
     }
   });
 
-  const result = await StatusLevels.aggregate(pipeline);
+  const result = await GlobalStatusLevels.aggregate(pipeline);
 
   let statusLevels = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   // Additional counts for meta (active/inactive/total by userId as creator)
   const [total, active, inactive] = await Promise.all([
-    StatusLevels.countDocuments({ ...(userId && { creator: userId }), status: { $ne: "deleted" } }),
-    StatusLevels.countDocuments({ status: "active", ...(userId && { creator: userId }) }),
-    StatusLevels.countDocuments({ status: "inactive", ...(userId && { creator: userId }) })
+    GlobalStatusLevels.countDocuments({ ...(userId && { creator: userId }), status: { $ne: "deleted" } }),
+    GlobalStatusLevels.countDocuments({ status: "active", ...(userId && { creator: userId }) }),
+    GlobalStatusLevels.countDocuments({ status: "inactive", ...(userId && { creator: userId }) })
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);

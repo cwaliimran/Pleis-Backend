@@ -6,7 +6,7 @@ const {
 } = require("../../../../admin/globalLoyalty/statusLevels/globalStatusLevelsRepository");
 
 const { UnifiedWalletTransactions } = require("@UnifiedWalletTransactionsModel");
-const StatusLevels = require("../../../../admin/globalLoyalty/statusLevels/GlobalStatusLevels");
+const GlobalStatusLevels = require("@GlobalStatusLevelsModel");
 const mongoose = require("mongoose");
 
 // ======================================================================
@@ -134,7 +134,7 @@ const checkPromotion = async (userId) => {
   const currentLevel = wallet.global.level;
 
   // all higher levels
-  const higherLevels = await StatusLevels.find({
+  const higherLevels = await GlobalStatusLevels.find({
     entryPoints: { $gt: currentLevel.entryPoints }
   })
     .sort({ entryPoints: 1 })

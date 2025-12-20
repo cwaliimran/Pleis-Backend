@@ -4,12 +4,13 @@ const {
   validateParams,
 } = require("../../helperUtils/responseUtil");
 const { getHomeService } = require("./homeService");
+const { getPopularEventsService } = require("../popularEvents/popularEventsService");
 
 const getHome = async (req, res) => {
 
   try {
     const { latitude = 0, longitude = 0, radiusKm = 50000000, } = req.query;
-    let { category, time } = req.body;
+    let { category } = req.body;
     if (category) {
       //check if valid mongo id
       if (!mongoose.Types.ObjectId.isValid(category)) {
@@ -21,16 +22,6 @@ const getHome = async (req, res) => {
       }
     }
 
-    if (time) {
-      const validTimes = ["all", "live", "today", "tomorrow", "thisWeek"];
-      if (!validTimes.includes(time)) {
-        return sendResponse({
-          res,
-          statusCode: 400,
-          translationKey: "invalid_time_filter",
-        });
-      }
-    }
 
     let { location: userLocation, timezone, _id: userId } = req.user;
 
@@ -48,7 +39,6 @@ const getHome = async (req, res) => {
       timezone: timezone || "Asia/Karachi",
       radiusKm: parseFloat(radiusKm),
       category,
-      time,
     };
 
     const { status, data } = await getHomeService({ queryData });

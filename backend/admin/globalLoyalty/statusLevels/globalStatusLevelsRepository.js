@@ -1,5 +1,5 @@
 // repositories/statusLevelRepository.js
-const GlobalStatusLevels = require("./GlobalStatusLevels");
+const GlobalStatusLevels = require("@GlobalStatusLevelsModel");
 
 // Create statusLevel in a transaction and update organization
 const createStatusLevel = async (data) => {
@@ -51,7 +51,7 @@ const getPreviousStatusLevelByRetainPoints = async (earned12Months) => {
 // Get all statusLevels with their assigned organization populated, sorted by createdAt descending
 const getStatusLevelsWithFilters = async (query = {}, skip = 0, limit = 10) => {
   return GlobalStatusLevels.find(query)
-    .sort({ createdAt: -1 })
+    .sort({ entryPoints: 1 }) // ascending: Blue → Black
     .skip(skip)
     .limit(limit);
 };

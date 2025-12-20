@@ -37,7 +37,7 @@ module.exports = {
     "@TicketingBookingsModel": "backend/commonModules/bookings/ticketings/TicketingBookings.js",
     "@TicketingOrdersModel": "backend/commonModules/bookings/ticketings/TicketingOrders.js",
     "@FriendRequestModel": "backend/commonModules/friendRequest/FriendRequest.js",
-    "@GlobalStatusLevelsModel": "backend/admin/globalLoyalty/statusLevels/GlobalStatusLevels.js",
+    "@GlobalStatusLevelsModel": "backend/commonModules/globalLoyalty/statusLevels/GlobalStatusLevels.js",
     "@UserGlobalWalletModel": "backend/commonModules/wallet/UserGlobalWallet.js",
     "@GlobalRewardCategories": "backend/commonModules/globalLoyalty/globalRewardCategories/GlobalRewardCategories.js",
     "@GlobalLoyaltyReward": "backend/commonModules/globalLoyalty/rewards/models/reward/BaseReward.js",
@@ -60,4 +60,5 @@ module.exports = {
     "@GiveawayParticipantModel": "backend/commonModules/giveaways/Participants.js",
     "@GlobalQrModel": "backend/commonModules/qrCode/models/QR/baseQr.js",
     "@GlobalRewardsOrdersModel": "backend/commonModules/globalLoyalty/rewards/rewardsOrders/GlobalRewardsOrders.js",
+    "@BannerControlsModel": "backend/admin/bannerControl/BannerControls.js",
 };

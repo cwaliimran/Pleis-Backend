@@ -1,262 +1,224 @@
+/**
+ * Home Explore sections generator
+ * Absolute path – safe overwrite
+ */
+
 const fs = require("fs");
 const path = require("path");
 
-/* ============================
-   BASE PATHS
-============================ */
-const BASE =
-  "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/globalLoyalty";
+const BASE_DIR =
+  "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/home/sections";
 
-const rewardsPath = path.join(BASE, "rewards");
-const ordersPath = path.join(BASE, "rewardsOrders");
-const modelsPath = path.join(ordersPath, "models");
-
-/* ============================
-   HELPERS
-============================ */
-const ensureDir = dir => {
+const ensureDir = (dir) => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 };
 
 const write = (file, content) => {
-  fs.writeFileSync(file, content.trim() + "\n", "utf8");
-  console.log("✔", file);
+  fs.writeFileSync(file, content.trimStart(), "utf8");
+  console.log("✅ Created:", file);
 };
+
+ensureDir(BASE_DIR);
 
 /* ============================
-   DIRECTORIES
+   forYouOrganizers.js
+   0.7 relevance + 0.3 popularity
 ============================ */
-[rewardsPath, ordersPath, modelsPath].forEach(ensureDir);
-
-/* ============================================================
-   rewardsOrders/models/GlobalRewardsOrders.js
-============================================================ */
 write(
-  path.join(modelsPath, "GlobalRewardsOrders.js"),
-`
-const mongoose = require("mongoose");
+  path.join(BASE_DIR, "forYouOrganizers.js"),
+  `
+const { relevanceScore } = require("../scoring/relevance");
+const { popularityScore } = require("../scoring/popularity");
 
-const schema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
-  sourceType: { type: String, default: "globalRewards" },
-  sourceId: { type: mongoose.Schema.Types.ObjectId, ref: "GlobalReward", index: true },
-  rewardSnapshot: { type: Object, required: true },
-  status: { type: String, enum: ["claimed","redeemed","expired"], default: "claimed" }
-}, { timestamps: true });
-
-module.exports =
-  mongoose.models.GlobalRewardsOrders ||
-  mongoose.model("GlobalRewardsOrders", schema);
-`
-);
-
-/* ============================================================
-   rewardsOrders/rewardsOrdersRepository.js
-============================================================ */
-write(
-  path.join(ordersPath, "rewardsOrdersRepository.js"),
-`
-const mongoose = require("mongoose");
-const GlobalRewardsOrders = require("./models/GlobalRewardsOrders");
-
-const getClaimCounts = async (userId, rewardIds) => {
-  const rows = await GlobalRewardsOrders.aggregate([
-    { $match: { user: new mongoose.Types.ObjectId(userId), sourceId: { $in: rewardIds } } },
-    { $group: { _id: "$sourceId", total: { $sum: 1 } } }
-  ]);
-  return new Map(rows.map(r => [String(r._id), r.total]));
-};
-
-const createOrder = async ({ userId, reward }) =>
-  GlobalRewardsOrders.create({
-    user: userId,
-    sourceId: reward._id,
-    rewardSnapshot: reward
-  });
-
-const getOrders = async ({ userId, skip, limit }) =>
-  GlobalRewardsOrders.find({ user: userId })
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit)
-    .lean();
-
-const countOrders = async userId =>
-  GlobalRewardsOrders.countDocuments({ user: userId });
-
-module.exports = { getClaimCounts, createOrder, getOrders, countOrders };
-`
-);
-
-/* ============================================================
-   rewardsOrders/rewardsOrdersService.js
-============================================================ */
-write(
-  path.join(ordersPath, "rewardsOrdersService.js"),
-`
-const GlobalReward = require("@GlobalLoyaltyReward");
-const repo = require("./rewardsOrdersRepository");
-
-const claim = async ({ userId, rewardId }) => {
-  const reward = await GlobalReward.findById(rewardId).lean();
-  if (!reward || reward.status !== "active") throw new Error("reward_not_available");
-
-  const counts = await repo.getClaimCounts(userId, [reward._id]);
-  const claimed = counts.get(String(reward._id)) || 0;
-
-  if (reward.claimLimit && claimed >= reward.claimLimit)
-    throw new Error("claim_limit_reached");
-
-  return repo.createOrder({ userId, reward });
-};
-
-const listOrders = async ({ userId, page, limit }) => {
-  const skip = (page - 1) * limit;
-  const [data, total] = await Promise.all([
-    repo.getOrders({ userId, skip, limit }),
-    repo.countOrders(userId)
-  ]);
-  return { data, total };
-};
-
-module.exports = { claim, listOrders };
-`
-);
-
-/* ============================================================
-   rewardsOrders/rewardsOrdersController.js
-============================================================ */
-write(
-  path.join(ordersPath, "rewardsOrdersController.js"),
-`
-const { sendResponse, parsePaginationParams, getReadableErrorMessage } =
-  require("@utils/responseUtil");
-const service = require("./rewardsOrdersService");
-
-exports.claim = async (req, res) => {
-  try {
-    const data = await service.claim({ userId: req.user._id, rewardId: req.body.id });
-    sendResponse({ res, statusCode: 201, data });
-  } catch (e) {
-    const r = getReadableErrorMessage(e);
-    sendResponse({ res, statusCode: 400, translationKey: r.message });
-  }
-};
-
-exports.getOrders = async (req, res) => {
-  const { page, limit } = parsePaginationParams(req);
-  const { data, total } = await service.listOrders({
-    userId: req.user._id, page, limit
-  });
-  sendResponse({ res, statusCode: 200, data, meta: { total } });
+module.exports = function forYouOrganizers(items, userPrefs) {
+  return items
+    .map(item => ({
+      ...item,
+      score:
+        0.7 * relevanceScore({
+          itemTags: item.tags || [],
+          itemCategories: item.categories || [],
+          userPreferences: userPrefs || []
+        }) +
+        0.3 * popularityScore(item.stats || {})
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
 };
 `
 );
 
-/* ============================================================
-   rewardsOrders/rewardsOrdersRoutes.js
-============================================================ */
+/* ============================
+   nearYouOrganizers.js
+   0.7 distance + 0.3 popularity
+============================ */
 write(
-  path.join(ordersPath, "rewardsOrdersRoutes.js"),
-`
-const router = require("express").Router();
-const auth = require("../../../middlewares/authMiddleware");
-const c = require("./rewardsOrdersController");
+  path.join(BASE_DIR, "nearYouOrganizers.js"),
+  `
+const { distanceScore } = require("../scoring/distance");
+const { popularityScore } = require("../scoring/popularity");
 
-router.use(auth);
-router.post("/claim", c.claim);
-router.get("/", c.getOrders);
-
-module.exports = router;
-`
-);
-
-write(path.join(ordersPath, "index.js"), `module.exports = require("./rewardsOrdersRoutes");`);
-
-/* ============================================================
-   rewards/rewardsRepository.js
-============================================================ */
-write(
-  path.join(rewardsPath, "rewardsRepository.js"),
-`
-const GlobalReward = require("@GlobalLoyaltyReward");
-
-exports.get = (q, s, l) =>
-  GlobalReward.find(q).sort({ createdAt: -1 }).skip(s).limit(l).lean();
-
-exports.count = q => GlobalReward.countDocuments(q);
-`
-);
-
-/* ============================================================
-   rewards/rewardsService.js
-============================================================ */
-write(
-  path.join(rewardsPath, "rewardsService.js"),
-`
-const repo = require("./rewardsRepository");
-const { getClaimCounts } = require("../rewardsOrders/rewardsOrdersRepository");
-
-exports.get = async ({ userId, page, limit }) => {
-  const skip = (page - 1) * limit;
-  const rewards = await repo.get({ status: "active" }, skip, limit);
-  const total = await repo.count({ status: "active" });
-
-  const counts = await getClaimCounts(
-    userId,
-    rewards.map(r => r._id)
-  );
-
-  const data = rewards.map(r => {
-    const claimed = counts.get(String(r._id)) || 0;
-    return {
-      ...r,
-      claimed,
-      canClaim: !r.claimLimit || claimed < r.claimLimit
-    };
-  });
-
-  return { data, total };
+module.exports = function nearYouOrganizers(items) {
+  return items
+    .map(item => ({
+      ...item,
+      score:
+        0.7 * distanceScore(item.distanceKm ?? 999) +
+        0.3 * popularityScore(item.stats || {})
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
 };
 `
 );
 
-/* ============================================================
-   rewards/rewardsController.js
-============================================================ */
+/* ============================
+   trendingOrganizers.js
+   0.7 views(48h) + 0.3 views(7d)
+============================ */
 write(
-  path.join(rewardsPath, "rewardsController.js"),
-`
-const { sendResponse, parsePaginationParams } = require("@utils/responseUtil");
-const service = require("./rewardsService");
+  path.join(BASE_DIR, "trendingOrganizers.js"),
+  `
+const { logNormalize } = require("../scoring/normalize");
 
-exports.get = async (req, res) => {
-  const { page, limit } = parsePaginationParams(req);
-  const { data, total } = await service.get({
-    userId: req.user._id, page, limit
-  });
-  sendResponse({ res, statusCode: 200, data, meta: { total } });
+module.exports = function trendingOrganizers(items) {
+  return items
+    .map(item => {
+      const views48h = logNormalize(item.views48h || 0, 5000);
+      const views7d = logNormalize(item.views7d || 0, 20000);
+
+      return {
+        ...item,
+        score: 0.7 * views48h + 0.3 * views7d
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
 };
 `
 );
 
-/* ============================================================
-   rewards/rewardsRoutes.js
-============================================================ */
+/* ============================
+   reservationOrganizers.js
+   0.4 relevance + 0.3 popularity + 0.3 reviews
+============================ */
 write(
-  path.join(rewardsPath, "rewardsRoutes.js"),
-`
-const router = require("express").Router();
-const auth = require("../../../middlewares/authMiddleware");
-const c = require("./rewardsController");
+  path.join(BASE_DIR, "reservationOrganizers.js"),
+  `
+const { relevanceScore } = require("../scoring/relevance");
+const { popularityScore } = require("../scoring/popularity");
+const { clamp01 } = require("../scoring/normalize");
 
-router.use(auth);
-router.get("/", c.get);
+module.exports = function reservationOrganizers(items, userPrefs) {
+  return items
+    .filter(i => i.reservationsEnabled)
+    .map(item => {
+      const reviewScore = clamp01((item.avgRating - 1) / 4);
 
-module.exports = router;
+      return {
+        ...item,
+        score:
+          0.4 * relevanceScore({
+            itemTags: item.tags || [],
+            itemCategories: item.categories || [],
+            userPreferences: userPrefs || []
+          }) +
+          0.3 * popularityScore(item.stats || {}) +
+          0.3 * reviewScore
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+};
 `
 );
 
-write(path.join(rewardsPath, "index.js"), `module.exports = require("./rewardsRoutes");`);
+/* ============================
+   newOrganizers.js
+   0.8 recency + 0.2 popularity
+============================ */
+write(
+  path.join(BASE_DIR, "newOrganizers.js"),
+  `
+const { popularityScore } = require("../scoring/popularity");
 
-console.log("\\n✅ Global Rewards & Orders fully created.");
+module.exports = function newOrganizers(items) {
+  const now = Date.now();
+
+  return items
+    .map(item => {
+      const ageDays =
+        (now - new Date(item.createdAt).getTime()) / 86400000;
+
+      const recency = Math.max(0, 1 - ageDays / 30);
+
+      return {
+        ...item,
+        score: 0.8 * recency + 0.2 * popularityScore(item.stats || {})
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+};
+`
+);
+
+/* ============================
+   popularEvents.js
+   0.5 views + 0.3 likes + 0.2 reviews
+============================ */
+write(
+  path.join(BASE_DIR, "popularEvents.js"),
+  `
+const { logNormalize, clamp01 } = require("../scoring/normalize");
+
+module.exports = function popularEvents(events) {
+  return events
+    .map(evt => {
+      const views = logNormalize(evt.views || 0, 50000);
+      const likes = logNormalize(evt.likes || 0, 10000);
+      const reviews = clamp01((evt.avgRating - 1) / 4);
+
+      return {
+        ...evt,
+        score: 0.5 * views + 0.3 * likes + 0.2 * reviews
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+};
+`
+);
+
+/* ============================
+   loyaltyClubs.js
+   0.5 relevance + 0.3 members + 0.2 popularity
+============================ */
+write(
+  path.join(BASE_DIR, "loyaltyClubs.js"),
+  `
+const { relevanceScore } = require("../scoring/relevance");
+const { popularityScore } = require("../scoring/popularity");
+const { logNormalize } = require("../scoring/normalize");
+
+module.exports = function loyaltyClubs(items, userPrefs) {
+  return items
+    .filter(i => !i.isMember)
+    .map(item => ({
+      ...item,
+      score:
+        0.5 * relevanceScore({
+          itemTags: item.tags || [],
+          itemCategories: item.categories || [],
+          userPreferences: userPrefs || []
+        }) +
+        0.3 * logNormalize(item.membersCount || 0, 100000) +
+        0.2 * popularityScore(item.stats || {})
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+};
+`
+);
+
+console.log("\n🎉 Home section files created successfully");

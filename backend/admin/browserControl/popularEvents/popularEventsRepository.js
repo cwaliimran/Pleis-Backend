@@ -1,33 +1,33 @@
-// repositories/topPromoRepository.js
-const TopPromos = require("./TopPromos");
+// repositories/popularEventRepository.js
+const PopularEvents = require("./PopularEvents");
 
 // Create top promo and automatically assign next order
-const createTopPromo = async (data) => {
+const createPopularEvent = async (data) => {
 
   //skip if event already exists
-  const existing = await TopPromos.findOne({ event: data.event, status: { $ne: "deleted" } });
+  const existing = await PopularEvents.findOne({ event: data.event, status: { $ne: "deleted" } });
 
   if (existing) {
-    throw new Error("top_promo_event_already_exists");
+    throw new Error("popular_event_event_already_exists");
   }
   // Find the highest current order (excluding deleted)
-  const last = await TopPromos.findOne({ status: { $ne: "deleted" } })
+  const last = await PopularEvents.findOne({ status: { $ne: "deleted" } })
     .sort({ order: -1 })
     .select("order");
 
   const nextOrder = last ? last.order + 1 : 1;
 
-  const topPromo = new TopPromos({
+  const popularEvent = new PopularEvents({
     ...data,
     order: nextOrder,
   });
 
-  return await topPromo.save();
+  return await popularEvent.save();
 };
 
 // Get all with filters
-const getTopPromosWithFilters = async (query, skip, limit, sort = { order: 1 }) => {
-  return TopPromos.find(query)
+const getPopularEventsWithFilters = async (query, skip, limit, sort = { order: 1 }) => {
+  return PopularEvents.find(query)
     // .populate('event') // Populate the event reference
     .sort(sort)
     .skip(skip)
@@ -35,18 +35,18 @@ const getTopPromosWithFilters = async (query, skip, limit, sort = { order: 1 }) 
 };
 
 // Count by condition
-const countTopPromos = async (query = {}) => {
-  return TopPromos.countDocuments(query);
+const countPopularEvents = async (query = {}) => {
+  return PopularEvents.countDocuments(query);
 };
 
 // Single efficient helper
-const getTopPromosCounts = async (filterQuery = {}) => {
+const getPopularEventsCounts = async (filterQuery = {}) => {
   const [filteredCount, globalCounts] = await Promise.all([
     // count only filtered set (dynamic filters)
-    TopPromos.countDocuments(filterQuery),
+    PopularEvents.countDocuments(filterQuery),
 
     // facet for global status-based counts
-    TopPromos.aggregate([
+    PopularEvents.aggregate([
       {
         $facet: {
           total: [
@@ -86,53 +86,53 @@ const getTopPromosCounts = async (filterQuery = {}) => {
 
 
 // Find by ID
-const findTopPromoById = async (id) => {
-  return TopPromos.findById(id).populate('event'); // Populate the event reference
+const findPopularEventById = async (id) => {
+  return PopularEvents.findById(id).populate('event'); // Populate the event reference
 };
 
 // Update and save
-const updateTopPromoData = async (topPromo, data) => {
-  Object.assign(topPromo, data);
-  return await topPromo.save();
+const updatePopularEventData = async (popularEvent, data) => {
+  Object.assign(popularEvent, data);
+  return await popularEvent.save();
 };
 
 // Delete
-const deleteTopPromoById = async (topPromo) => {
-  return await topPromo.deleteOne();
+const deletePopularEventById = async (popularEvent) => {
+  return await popularEvent.deleteOne();
 };
 
-//findTopPromoByIdAndUpdate
-const findTopPromoByIdAndUpdate = async (id, data) => {
-  return TopPromos.findByIdAndUpdate(id, data, { new: true }).populate('event'); // Populate the event reference
+//findPopularEventByIdAndUpdate
+const findPopularEventByIdAndUpdate = async (id, data) => {
+  return PopularEvents.findByIdAndUpdate(id, data, { new: true }).populate('event'); // Populate the event reference
 };
 
 // Reorder helper — bulk update many
 const updateMany = async (filter, data) => {
-  return TopPromos.updateMany(filter, data);
+  return PopularEvents.updateMany(filter, data);
 };
 
 // Optional: Normalize all order fields sequentially (1..n)
 const normalizeOrders = async () => {
-  const docs = await TopPromos.find({ status: { $ne: "deleted" } }).sort("order");
+  const docs = await PopularEvents.find({ status: { $ne: "deleted" } }).sort("order");
   const ops = docs.map((doc, i) => ({
     updateOne: {
       filter: { _id: doc._id },
       update: { $set: { order: i + 1 } },
     },
   }));
-  if (ops.length) await TopPromos.bulkWrite(ops);
+  if (ops.length) await PopularEvents.bulkWrite(ops);
   return true;
 };
 
 module.exports = {
-  createTopPromo,
-  getTopPromosWithFilters,
-  countTopPromos,
-  findTopPromoById,
-  updateTopPromoData,
-  deleteTopPromoById,
-  findTopPromoByIdAndUpdate,
+  createPopularEvent,
+  getPopularEventsWithFilters,
+  countPopularEvents,
+  findPopularEventById,
+  updatePopularEventData,
+  deletePopularEventById,
+  findPopularEventByIdAndUpdate,
   updateMany,
   normalizeOrders,
-  getTopPromosCounts,
+  getPopularEventsCounts,
 };

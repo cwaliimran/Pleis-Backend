@@ -674,6 +674,19 @@ const generateResetToken = () => {
   return randomBytes(32).toString("hex"); // 64-character token
 };
 
+
+userSchema.index(
+  {
+    email: 1,
+    "accountState.userType": 1
+  },
+  {
+    name: "email_userType_login_idx"
+  }
+);
+
+
+
 const User = mongoose.model("User", userSchema);
 
 module.exports = {
