@@ -131,7 +131,10 @@ const userSchema = new mongoose.Schema(
         message: "email_invalid", // Generic error message key
       },
     },
-
+remainingReferrals: {
+  type: Number,
+  default: 10
+},
     emailVerification: {
       tokenHash: String,
       expiresAt: Number,
