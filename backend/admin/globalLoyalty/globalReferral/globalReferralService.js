@@ -122,12 +122,17 @@ const getUserGlobalReferrals = async ({ timezone, page, limit, keyword, status, 
     meta
   };
 };
-
+const       resetUserReferralLimits
+ = async (limit) => {
+  let GlobalReferral = await GlobalReferralRepo.resetUserReferralLimits(limit);
+  return GlobalReferral;
+};
 
   module.exports = {
     createGlobalReferral,
     getGlobalReferrals,
     updateGlobalReferral,
 getUserGlobalReferrals,
-    deleteGlobalReferral
+    deleteGlobalReferral,
+      resetUserReferralLimits
   };
