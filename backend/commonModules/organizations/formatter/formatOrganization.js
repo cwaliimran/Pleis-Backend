@@ -84,48 +84,51 @@ function formatOrganization(item, excludeFields = []) {
   }
 
   //attach distance if exists
+    // distance formatting (meters → km)
   if (item.distance !== undefined && item.distance !== null) {
-    const dist = Number(item.distance);
-    if (Number.isFinite(dist)) {
+    const meters = Number(item.distance);
+    if (Number.isFinite(meters)) {
+      const km = meters / 1000;
+
       org.distance = {
-        distance: Math.round(dist * 100) / 100,
-        unit: "km"
-      }
+        distance: Number(km.toFixed(2)),
+        unit: "km",
+      };
     }
   }
   return org;
 }
 function formatNearByOrganization(item, excludeFields = []) {
-
   let org = typeof item.toObject === "function" ? item.toObject() : item;
-
   if (!org) return null;
-  // Handle media transformation for aggregation structure
+
+  // Media transformation
   if (org.basicInfo?.media?.logo) {
-    const logoName = org.basicInfo.media.logo;
-    org.basicInfo.media.logo = getFullImageUrl(logoName);
+    org.basicInfo.media.logo = getFullImageUrl(org.basicInfo.media.logo);
   }
 
   if (org.basicInfo?.media?.cover) {
-    const coverName = org.basicInfo.media.cover;
-    org.basicInfo.media.cover = getFullImageUrl(coverName)
+    org.basicInfo.media.cover = getFullImageUrl(org.basicInfo.media.cover);
   }
 
   org.companyOrganizer = org.creator;
   delete org.creator;
 
-  //attach distance if exists
+  // distance formatting (meters → km)
   if (item.distance !== undefined && item.distance !== null) {
-    const dist = Number(item.distance);
-    if (Number.isFinite(dist)) {
+    const meters = Number(item.distance);
+    if (Number.isFinite(meters)) {
+      const km = meters / 1000;
+
       org.distance = {
-        distance: Math.round(dist * 100) / 100,
-        unit: "km"
-      }
+        distance: Number(km.toFixed(2)),
+        unit: "km",
+      };
     }
   }
 
   return org;
 }
+
 
 module.exports = { formatOrganization, formatNearByOrganization };

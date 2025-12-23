@@ -10,7 +10,6 @@ const challengeService = require("./challengesService");
 
 const createChallenge = async (req, res) => {
   //"visit", "earnPoints", "buyMenuItem", "referUsers"
-  const taskType = req.body.taskType;
 
   var dateFields = {};
   var rawData = [
@@ -20,18 +19,11 @@ const createChallenge = async (req, res) => {
     "endDate",
     "reward.rewardType",
   ];
-  var objectIdFields = []; 
+  var enumFields = {
+    taskType: ["globalVisit", "globalEarnPoints", "globalReferUsers"],
+  };
+  var objectIdFields = [];
 
-  // Buy Menu Item
-  if (req.body.promotionType === "buyMenuItem") {
-    rawData.push("menuItem");
-    objectIdFields.push("menuItem");
-  }
-
-  // visit / earnPoints / referUsers
-  if (["visit", "earnPoints", "referUsers"].includes(taskType)) {
-    rawData.push("taskValue");
-  }
 
   // Reward Types
   const rewardType = req.body.reward?.rewardType || "";
@@ -39,12 +31,11 @@ const createChallenge = async (req, res) => {
   if (rewardType === "points") {
     rawData.push("reward.rewardValue");
 
-  } else if (rewardType === "menuItem") {
-    rawData.push("reward.rewardMenuItem");
-    objectIdFields.push("reward.rewardMenuItem");
-
   } else if (rewardType === "specialTicket") {
-    rawData.push("reward.rewardValue");
+    rawData.push("reward.specialTicket.companyOrganizer");
+    rawData.push("reward.specialTicket.organization");
+    rawData.push("reward.specialTicket.event");
+    rawData.push("reward.specialTicket.ticket");
 
   } else if (rewardType === "customReward") {
     rawData.push("reward.customReward");
@@ -62,6 +53,7 @@ const createChallenge = async (req, res) => {
       dateFields: {
         endDate: "YYYY-MM-DD",
       },
+      enumFields,
     })
   )
     return;

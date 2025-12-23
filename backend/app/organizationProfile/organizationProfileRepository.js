@@ -321,29 +321,45 @@ function getSimilarityWeights(options = {}) {
  * @param {Object} params - { location, radiusKm, timezone, page, limit, userId }
  * @returns {Promise<{ organizations: Array }>}
  */
-const getNearbyOrganizations = async ({ location, radiusKm, timezone, page, limit, userId }) => {
+const getNearbyOrganizations = async ({
+  category,
+  userLocation,
+  radiusKm,
+  timezone,
+  page,
+  limit,
+  userId
+}) => {
   const skip = (page - 1) * limit;
-  const radiusMeters = radiusKm * 1000;
-  // MongoDB geospatial query
+
+  let categoryObjectId = null;
+  if (category) {
+    categoryObjectId = new mongoose.Types.ObjectId(category);
+  }
+
+  const geoQuery = {
+    status: "active",
+  };
+
+  // ✅ Category filter goes HERE
+  if (categoryObjectId) {
+    geoQuery["otherInfo.categories"] = { $in: [categoryObjectId] };
+  }
+
   const pipeline = [
     {
       $geoNear: {
-        near: { type: "Point", coordinates: location },
+        near: userLocation,
+        key: "location",
         distanceField: "distance",
         spherical: true,
-        maxDistance: radiusMeters,
-        query: { status: "active" },
+        maxDistance: radiusKm * 1000,
+        query: geoQuery,
       },
     },
-    {
-      $sort: { distance: 1 },
-    },
-    {
-      $skip: skip,
-    },
-    {
-      $limit: limit,
-    },
+    { $sort: { distance: 1 } },
+    { $skip: skip },
+    { $limit: limit },
     {
       $project: {
         _id: 1,
@@ -357,34 +373,30 @@ const getNearbyOrganizations = async ({ location, radiusKm, timezone, page, limi
 
   let organizations = await Organizations.aggregate(pipeline);
 
-  // If userId is provided, fetch active order for each organization
+  // Attach orderNumber (unchanged)
   if (userId) {
     const orgIds = organizations.map(org => org._id);
-    // Find active orders for this user and these organizations
+
     const orders = await Orders.find({
       user: userId,
       organization: { $in: orgIds },
       status: { $in: ["pending", "confirmed"] },
     }).select("organization orderNumber").lean();
 
-    // Map orgId to orderNumber
     const orgOrderMap = {};
     orders.forEach(order => {
       orgOrderMap[order.organization.toString()] = order.orderNumber;
     });
 
-
-    // Attach orderNumber to each organization if exists
     organizations = organizations.map(org => ({
       ...org,
       orderNumber: orgOrderMap[org._id.toString()] || null,
     }));
   }
 
-  return {
-    organizations,
-  };
+  return { organizations };
 };
+
 
 //get organization with custom .select filters
 const findOrganizationWithSelectFilter = async (organizationId, selectFields) => {
@@ -416,7 +428,7 @@ const getSuggestedLoyaltyClubsForUser = async ({ page = 1, limit = 10, userId, k
 
   let meta = generateMeta(page, limit, count || 0);
 
-  return {result, meta};
+  return { result, meta };
 };
 
 //get organization creator
@@ -513,6 +525,62 @@ const getOrganizationsGroupedByVenueTypesRepo = async ({
 
 
 
+const getForYouOrganizationsForHomeRepo = async ({
+  category,
+  userLocation,
+  radiusKm,
+  timezone,
+  page,
+  limit,
+  skip,
+  userId
+}) => {
+
+
+  let categoryObjectId = null;
+  if (category) {
+    categoryObjectId = new mongoose.Types.ObjectId(category);
+  }
+
+  const geoQuery = {
+    status: "active",
+  };
+
+  // ✅ Category filter goes HERE
+  if (categoryObjectId) {
+    geoQuery["otherInfo.categories"] = { $in: [categoryObjectId] };
+  }
+
+  const pipeline = [
+    {
+      $geoNear: {
+        near: userLocation,
+        key: "location",
+        distanceField: "distance",
+        spherical: true,
+        maxDistance: radiusKm * 1000,
+        query: geoQuery,
+      },
+    },
+    { $sort: { distance: 1 } },
+    { $skip: skip },
+    { $limit: limit },
+    {
+      $project: {
+        _id: 1,
+        creator: 1,
+        "basicInfo.name": 1,
+        "basicInfo.media": 1,
+        distance: 1,
+      },
+    },
+  ];
+
+  let organizations = await Organizations.aggregate(pipeline);
+
+
+  return organizations;
+}
 
 module.exports = {
   getOrganizationMenuWithItems,
@@ -527,5 +595,6 @@ module.exports = {
   findOrganizationWithSelectFilter,
   getSuggestedLoyaltyClubsForUser,
   getOrgCompanyOrganizer,
-  getOrganizationsGroupedByVenueTypesRepo
+  getOrganizationsGroupedByVenueTypesRepo,
+  getForYouOrganizationsForHomeRepo
 };

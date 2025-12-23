@@ -1,14 +1,13 @@
-// services/topPromoService.js
-const { convertUtcToTimezone } = require("@utils/responseUtil");
-const TopPromos = require("./TopPromos");
-const topPromoRepo = require("./topPromosRepository");
+// services/popularEventService.js
+const PopularEvents = require("./PopularEvents");
+const popularEventRepo = require("./popularEventsRepository");
 const mongoose = require("mongoose");
 
-const createTopPromo = async ({ event, isTop10, status }) => {
-  return await topPromoRepo.createTopPromo({ event, isTop10, status });
+const createPopularEvent = async ({ event, isTop10, status }) => {
+  return await popularEventRepo.createPopularEvent({ event, isTop10, status });
 };
 
-const getTopPromos = async ({ page, limit, keyword, status, date, orderSort = "asc", }) => {
+const getPopularEvents = async ({ page, limit, keyword, status, date, orderSort = "asc", }) => {
   const filters = [];
 
   if (date) {
@@ -33,68 +32,68 @@ const getTopPromos = async ({ page, limit, keyword, status, date, orderSort = "a
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const sort = { order: orderSort === "desc" ? -1 : 1 };
 
-  let [topPromos, getTopPromosCounts] = await Promise.all([
-    topPromoRepo.getTopPromosWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
-    topPromoRepo.getTopPromosCounts(query),
+  let [popularEvents, getPopularEventsCounts] = await Promise.all([
+    popularEventRepo.getPopularEventsWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
+    popularEventRepo.getPopularEventsCounts(query),
   ]);
 
-  const { totalFiltered, total, active, inactive } = getTopPromosCounts;
+  const { totalFiltered, total, active, inactive } = getPopularEventsCounts;
   return {
-    topPromos,
+    popularEvents,
     meta: {
       page,
       limit,
       total: totalFiltered,
-      topPromosCount: { total, active, inactive },
+      popularEventsCount: { total, active, inactive },
     },
   };
 
 };
 
-const updateTopPromo = async (id, data) => {
+const updatePopularEvent = async (id, data) => {
   const updateData = {
     ...(data.status !== undefined && { status: data.status }),
     ...(data.isTop10 !== undefined && { isTop10: data.isTop10 }),
   };
 
   if (Object.keys(updateData).length === 0) {
-    const topPromo = await topPromoRepo.findTopPromoById(id);
-    return topPromo;
+    const popularEvent = await popularEventRepo.findPopularEventById(id);
+    return popularEvent;
   }
 
-  const updated = await topPromoRepo.findTopPromoByIdAndUpdate(id, updateData);
+  const updated = await popularEventRepo.findPopularEventByIdAndUpdate(id, updateData);
   return updated;
 };
 
-const deleteTopPromo = async (id) => {
-  const updated = await topPromoRepo.findTopPromoByIdAndUpdate(id, { status: "deleted" });
+const deletePopularEvent = async (id) => {
+  const updated = await popularEventRepo.findPopularEventByIdAndUpdate(id, { status: "deleted" });
   if (!updated) return null;
-  await topPromoRepo.normalizeOrders();
+  await popularEventRepo.normalizeOrders();
   return true;
 };
 
 
 
-const reorderTopPromo = async (movedId, previousOrder,
+const reorderPopularEvent = async (movedId, previousOrder,
   newOrder) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
     if (previousOrder > newOrder) {
-      await TopPromos.updateMany(
+      await PopularEvents.updateMany(
         { order: { $gte: newOrder, $lt: previousOrder } },
         { $inc: { order: 1 } },
         { session }
       );
     } else {
-      await TopPromos.updateMany(
+      await PopularEvents.updateMany(
         { order: { $gt: previousOrder, $lte: newOrder } },
         { $inc: { order: -1 } },
         { session }
       );
     }
 
-    await TopPromos.findByIdAndUpdate(movedId, { order: newOrder }, { session });
+    await PopularEvents.findByIdAndUpdate(movedId, { order: newOrder }, { session });
     await session.commitTransaction();
     session.endSession();
     return true;
@@ -106,9 +105,9 @@ const reorderTopPromo = async (movedId, previousOrder,
 };
 
 module.exports = {
-  createTopPromo,
-  getTopPromos,
-  updateTopPromo,
-  deleteTopPromo,
-  reorderTopPromo,
+  createPopularEvent,
+  getPopularEvents,
+  updatePopularEvent,
+  deletePopularEvent,
+  reorderPopularEvent,
 };

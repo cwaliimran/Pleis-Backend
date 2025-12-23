@@ -3,14 +3,10 @@ const formatReward = require("./utils/formatReward");
 
 
 const getModelByRewardType = (rewardType) => {
-  // Normalize the rewardType to lowercase for comparison
-  rewardType = rewardType.toLowerCase();
-
   switch (rewardType) {
-    case "globalticketreward":
-
+    case "globalTicketReward":
       return GlobalTicketReward;  
-    case "globalcustomreward":
+    case "globalCustomReward":
       return GlobalCustomReward;
     default:
       return GlobalTicketReward; // fallback model
@@ -21,17 +17,8 @@ const getModelByRewardType = (rewardType) => {
 
 const create = async (data) => {
   try {
-    // Normalize the rewardType to match the enum exactly
-    let rewardType = data.rewardType;
-
-    // Capitalize the first letter and make the rest lowercase for consistency
-    rewardType = rewardType.charAt(0).toUpperCase() + rewardType.slice(1).toLowerCase();  
-    data.rewardType = rewardType;  // Assign the normalized rewardType back to data
-
     // Get the correct model based on the normalized rewardType
     const Model = getModelByRewardType(data.rewardType);
-
-
     const item = new Model(data);
 
 
@@ -50,7 +37,8 @@ const create = async (data) => {
 const getWithFilters = async (query = {}, skip = 0, limit = 10) => {
   return GlobalReward.find(query)
     .populate("menuItem", "title")
-    .populate({ path: "tierLimit", select: "title" })
+    .populate("category", "title image")
+    .populate({ path: "tierLimit", select: "title image" })
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)

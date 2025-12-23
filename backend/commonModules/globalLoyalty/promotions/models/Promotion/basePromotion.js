@@ -7,10 +7,10 @@ const globalBasePromotionSchema = new mongoose.Schema(
     title: { type: String, trim: true, required: true },
     description: { type: String, default: "" },
 
-    globalPromotionType : {
+    promotionType : {
       type: String,
       required: true,
-      enum: ["globalHappyHour", "globalClaimPromotion", "buyMenuItemPromotion", "productSale"],
+      enum: ["globalHappyHourPromotion", "globalClaimPromotion"],
     },
 
     startDate: { type: Date, default: null },
@@ -23,7 +23,7 @@ const globalBasePromotionSchema = new mongoose.Schema(
 
     tierLimit: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Tiers",
+      ref: "GlobalStatusLevels",
       default: null,
     },
 
@@ -35,7 +35,7 @@ const globalBasePromotionSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    discriminatorKey: "globalPromotionType",
+    discriminatorKey: "promotionType",
   }
 );
 

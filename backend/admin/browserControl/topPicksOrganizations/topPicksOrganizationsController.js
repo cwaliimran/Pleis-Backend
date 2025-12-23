@@ -6,16 +6,16 @@ const {
   getReadableErrorMessage,
 } = require("../../../helperUtils/responseUtil");
 
-const topPromosService = require("./topPromosService");
+const topPicksOrganizationsService = require("./topPicksOrganizationsService");
 
-const createTopPromo = async (req, res) => {
-  const { event, status = "active", isTop10 } = req.body;
+const createTopPicksOrganization = async (req, res) => {
+  const { organization, status = "active", isTop10 } = req.body;
 
-  if (!validateParams(req, res, { rawData: ["event"], objectIdFields: ["event"] })) return;
+  if (!validateParams(req, res, { rawData: ["organization"], objectIdFields: ["organization"] })) return;
 
   try {
-    const topPromo = await topPromosService.createTopPromo({
-      event,
+    const topPicksOrganization = await topPicksOrganizationsService.createTopPicksOrganization({
+      organization,
       isTop10,
       status,
     });
@@ -23,8 +23,8 @@ const createTopPromo = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "top_promo_created_successfully",
-      data: topPromo,
+      translationKey: "top_picks_organization_created_successfully",
+      data: topPicksOrganization,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -37,7 +37,7 @@ const createTopPromo = async (req, res) => {
   }
 };
 
-const getTopPromos = async (req, res) => {
+const getTopPicksOrganizations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date, orderSort } = req.query;
 
@@ -48,7 +48,7 @@ const getTopPromos = async (req, res) => {
       },
     })) return;
 
-    const { topPromos, meta } = await topPromosService.getTopPromos({
+    const { topPicksOrganizations, meta } = await topPicksOrganizationsService.getTopPicksOrganizations({
       page,
       limit,
       keyword,
@@ -57,18 +57,15 @@ const getTopPromos = async (req, res) => {
       orderSort
     });
 
-    const populatedTopPromos = await Promise.all(topPromos.map(async (promo) => {
-      return await promo.populate('event');
-    }));
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "top_promos_fetched_successfully",
-      data: populatedTopPromos,
+      translationKey: "top_picks_organizations_fetched_successfully",
+      data: topPicksOrganizations,
       meta: {
         ...generateMeta(page, limit, meta.total),
-        topPromosCount: meta.topPromosCount,
+        topPicksOrganizationsCount: meta.topPicksOrganizationsCount,
       },
     });
   } catch (error) {
@@ -83,9 +80,9 @@ const getTopPromos = async (req, res) => {
 };
 
 
-const updateTopPromo = async (req, res) => {
+const updateTopPicksOrganization = async (req, res) => {
   const { id } = req.params;
-  const { event, isTop10, status, order } = req.body;
+  const { organization, isTop10, status, order } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -96,8 +93,8 @@ const updateTopPromo = async (req, res) => {
     return;
 
   try {
-    const updated = await topPromosService.updateTopPromo(id, {
-      event,
+    const updated = await topPicksOrganizationsService.updateTopPicksOrganization(id, {
+      organization,
       isTop10,
       status,
       order,
@@ -107,14 +104,14 @@ const updateTopPromo = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "top_promo_not_found",
+        translationKey: "top_picks_organization_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "top_promo_updated_successfully",
+      translationKey: "top_picks_organization_updated_successfully",
       data: updated,
     });
   } catch (error) {
@@ -128,7 +125,7 @@ const updateTopPromo = async (req, res) => {
   }
 };
 
-const deleteTopPromo = async (req, res) => {
+const deleteTopPicksOrganization = async (req, res) => {
   const { id } = req.params;
 
   if (
@@ -140,19 +137,19 @@ const deleteTopPromo = async (req, res) => {
     return;
 
   try {
-    const deleted = await topPromosService.deleteTopPromo(id);
+    const deleted = await topPicksOrganizationsService.deleteTopPicksOrganization(id);
     if (!deleted) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "top_promo_not_found",
+        translationKey: "top_picks_organization_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "top_promo_deleted_successfully",
+      translationKey: "top_picks_organization_deleted_successfully",
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -165,7 +162,7 @@ const deleteTopPromo = async (req, res) => {
   }
 };
 
-const reorderTopPromo = async (req, res) => {
+const reorderTopPicksOrganization = async (req, res) => {
   const { movedId, previousOrder, newOrder } = req.body;
   if (
     !validateParams(req, res, {
@@ -176,7 +173,7 @@ const reorderTopPromo = async (req, res) => {
     return;
 
   try {
-    const reordered = await topPromosService.reorderTopPromo(
+    const reordered = await topPicksOrganizationsService.reorderTopPicksOrganization(
       movedId,
       previousOrder,
       newOrder
@@ -186,14 +183,14 @@ const reorderTopPromo = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "top_promo_not_found",
+        translationKey: "top_picks_organization_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "top_promo_reordered_successfully",
+      translationKey: "top_picks_organization_reordered_successfully",
     });
   } catch (error) {
     return sendResponse({
@@ -206,9 +203,9 @@ const reorderTopPromo = async (req, res) => {
 };
 
 module.exports = {
-  createTopPromo,
-  getTopPromos,
-  updateTopPromo,
-  deleteTopPromo,
-  reorderTopPromo,
+  createTopPicksOrganization,
+  getTopPicksOrganizations,
+  updateTopPicksOrganization,
+  deleteTopPicksOrganization,
+  reorderTopPicksOrganization,
 };

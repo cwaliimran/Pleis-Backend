@@ -9,7 +9,7 @@ const baseGlobalChallengeeSchema = new mongoose.Schema(
     taskType: {
       type: String,
       required: true,
-      enum: ["globalVisit", "globalEarnPoints", "globalBuyMenuItem", "globalReferUsers"], // All tasks in the same table
+      enum: ["globalVisit", "globalEarnPoints", "globalReferUsers"], // All tasks in the same table
     },
     claimLimit: { type: Number, default: null },
     endDate: { type: Date, default: null },
@@ -41,10 +41,6 @@ baseGlobalChallengeeSchema.methods.toJSON = function () {
         delete obj.reward.rewardMenuItem;
         delete obj.reward.customReward;
         break;
-      case "menuItem":
-        delete obj.reward.rewardValue;
-        delete obj.reward.customReward;
-        break;
       case "customReward":
         delete obj.reward.rewardValue;
         delete obj.reward.rewardMenuItem;
@@ -60,9 +56,6 @@ baseGlobalChallengeeSchema.methods.toJSON = function () {
       break;
     case "earnPoints":
       delete obj.taskMenuItem;
-      break;
-    case "buyMenuItem":
-      delete obj.taskValue;
       break;
     case "referUsers":
       delete obj.taskMenuItem;

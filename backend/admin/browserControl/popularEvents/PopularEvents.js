@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const topPromosSchema = new mongoose.Schema(
+const popularEventsSchema = new mongoose.Schema(
   {
     event: {
       type: mongoose.Schema.Types.ObjectId,
@@ -27,8 +27,8 @@ const topPromosSchema = new mongoose.Schema(
 );
 
 //add index on status
-topPromosSchema.index({ status: 1 });
+popularEventsSchema.index({ status: 1 });
 
-const TopPromos = mongoose.model("TopPromos", topPromosSchema);
+const PopularEvents = mongoose.model("PopularEvents", popularEventsSchema);
 
-module.exports = TopPromos;
+module.exports = PopularEvents;
