@@ -2,6 +2,7 @@ module.exports = {
     "@utils": "backend/helperUtils",
     "@UsersModel": "backend/models/UserModel.js",
     "@dbUtils": "backend/helperUtils/dbUtils",
+    "@appEngagement": "backend/commonModules/appEngagement",
     "@recentlyViewed": "backend/commonModules/recentlyViewed",
     "@OrganizationModel": "backend/commonModules/organizations/Organization.js",
     "@VenuesModel": "backend/commonModules/venues/Venues.js",
@@ -63,5 +64,6 @@ module.exports = {
     "@GlobalRewardsOrdersModel": "backend/commonModules/globalLoyalty/rewards/rewardsOrders/GlobalRewardsOrders.js",
     "@BannerControlsModel": "backend/admin/bannerControl/BannerControls.js",
     "@TopPicksOrganizationsModel": "backend/commonModules/browserControl/topPicksOrganizations/TopPicksOrganizations.js",
-        "@GlobalNotificationsModel": "backend/commonModules/notifications/notifications.js",
+    "@GlobalNotificationsModel": "backend/commonModules/notifications/notifications.js",
+    "@EngagementEventsModel": "backend/commonModules/appEngagement/EngagementEvents.js",
 };

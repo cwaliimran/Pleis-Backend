@@ -125,9 +125,22 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
         pipeline: [
           {
             $project: {
-              _id: 1,
               title: 1,
-              image: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "tags",
+        localField: "otherInfo.tags",
+        foreignField: "_id",
+        as: "tags",
+        pipeline: [
+          {
+            $project: {
+              title: 1,
             },
           },
         ],
@@ -146,6 +159,7 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
         "basicInfo.media.cover": 1,
         "otherInfo.description": 1,
         categories: 1,
+        tags: 1,
         distance: 1,
       },
     }

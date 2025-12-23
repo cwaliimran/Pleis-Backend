@@ -1,7 +1,7 @@
 
 const mongoose = require("mongoose");
 const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
-const { findOrganizationById, findEventsByOrganization, countEventsByOrganization, getOrganizationMenuWithItems, getRecommendedOrganizations, getNearbyOrganizations, getSuggestedLoyaltyClubsForUser, getOrganizationsGroupedByVenueTypesRepo, getForYouOrganizationsForHomeRepo } = require("./organizationProfileRepository");
+const { findOrganizationById, findEventsByOrganization, countEventsByOrganization, getOrganizationMenuWithItems, getRecommendedOrganizations, getNearbyOrganizations, getSuggestedLoyaltyClubsForUser, getOrganizationsGroupedByVenueTypesRepo, getForYouOrganizationsForHomeRepo, getTrendingOrganizationsForHomeRepo } = require("./organizationProfileRepository");
 const { getCurrentDateInTimezone, generateMeta, convertUtcToTimezone } = require("../../helperUtils/responseUtil");
 const { calculateDistance } = require("../../helperUtils/calculateDistance");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
@@ -10,6 +10,7 @@ const { formatEventResponse } = require("../events/formatter/eventFormatter");
 const { formatOrganization, formatNearByOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
 const { isClubMember } = require("../loyalty/clubMembers/clubMembersRepository");
 const { formatSuggestedClub } = require("../loyalty/clubMembers/formatters/formatSuggestedClubs");
+const { logEngagementService } = require("@appEngagement/engagementEventsService");
 // const { addOrUpdateRecentlyViewedItem } = require("backend/app/recentlyViewed/recentlyViewedItemService");
 
 
@@ -20,6 +21,14 @@ const { formatSuggestedClub } = require("../loyalty/clubMembers/formatters/forma
 const getOrganizationProfile = async (queryData) => {
   try {
     const { organizationId, filter = "upcoming", timezone, userId } = queryData || {};
+
+    void logEngagementService({
+      entityType: "organizations",
+      entityId: organizationId,
+      action: "view",
+      userId
+    }).catch(console.error);
+
 
     const [orgProfile, orgEvents, reservations, menu, loyaltyPrograms, reviews, similarOrganizations] = await Promise.all([
       findOrganizationById(userId, organizationId),
@@ -229,11 +238,35 @@ const getForYouOrganizationsForHomeService = async ({
 
 
   let formattedOrganizations = organizations.map(org => formatNearByOrganization(org));
-
   return {
     organizations: formattedOrganizations,
   };
 
+};
+
+const getTrendingOrganizationsForHomeService = async ({
+  category,
+  userLocation,
+  radiusKm = 50,
+  timezone,
+  page = 1,
+  limit = 10,
+  userId
+}) => {
+  const organizations = await getTrendingOrganizationsForHomeRepo({
+    category,
+    userLocation,
+    radiusKm,
+    timezone,
+    page,
+    limit,
+    userId
+  });
+
+  let formattedOrganizations = organizations.map(org => formatNearByOrganization(org));
+  return {
+    organizations: formattedOrganizations,
+  };
 };
 
 module.exports = {
@@ -242,5 +275,6 @@ module.exports = {
   getNearbyOrganizationsService,
   getSuggestedLoyaltyClubs,
   organizationsByVenueTypeService,
-  getForYouOrganizationsForHomeService
+  getForYouOrganizationsForHomeService,
+  getTrendingOrganizationsForHomeService
 };

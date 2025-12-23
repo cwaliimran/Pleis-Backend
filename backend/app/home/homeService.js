@@ -3,7 +3,7 @@ const { getPublicHighlights } = require("../highlights/highlightService");
 const { getUserRecentlyViewedItems } = require("../recentlyViewed/recentlyViewedItemService");
 const { sendResponse } = require("../../helperUtils/responseUtil");
 const { getCustomCategories, transformCustomCategoryObjects } = require("../customCategories/customCategoriesService");
-const { getNearbyEvents, getForYouEvents, getEventsGroupedByTagsService } = require("../events/eventService");
+const { getNearbyEvents, getForYouEventsService, thisWeekEvents, getEventsGroupedByTagsService } = require("../events/eventService");
 const { getChallenges } = require("../loyalty/challenges/challengesService");
 const { getPromotions } = require("../loyalty/promotions/promotionsService");
 const { getPublicCategories } = require("../publicCategories/categoriesService");
@@ -13,6 +13,7 @@ const {
   getNearbyOrganizationsService,
   organizationsByVenueTypeService,
   getForYouOrganizationsForHomeService,
+  getTrendingOrganizationsForHomeService,
 } = require("../organizationProfile/organizationProfileService");
 const {
   getRemainingEventsAndUsersRepo,
@@ -33,8 +34,11 @@ const getHomeService = async ({ queryData }) => {
       categoriesRes,
       bannersRes,
       popularEventsRes,
+      forYouEvents,
+      thisWeekEventsRes,
       topPicksOrgs,
       getForYouOrganizationsService,
+      trendingOrganizationsService,
       // nearYouEvents,
       nearYouOrganizations,
       // venueTypesRaw,
@@ -44,14 +48,32 @@ const getHomeService = async ({ queryData }) => {
       // recentlyViewed,
       // challenges,
       // promotions,
-      // suggestedLoyaltyClubs,
+      suggestedLoyaltyClubs,
       // remainingEventsByVenueTypes,
     ] = await Promise.all([
       getPublicCategories({}),
       getBannerControlsService({ page: 1, limit: 10, }),
       getPopularEventsForHomeService({ limit: 10, skip: 0, timezone, category, userLocation, radiusKm }),
+      getForYouEventsService({
+        category,
+        userLocation,
+        radiusKm,
+        timezone,
+        page: 1,
+        limit: 10,
+        userId,
+      }),
+      thisWeekEvents({ timezone, category, userLocation, radiusKm, page: 1, limit: 10, userId }),
       getTopPicksOrganizationsForHomeService({ category, limit: 10, skip: 0, userLocation, radiusKm, }),
-      // getPopularEventsService({ userLocation, userId, timezone, category, time }),
+      getTrendingOrganizationsForHomeService({
+        category,
+        userLocation,
+        radiusKm,
+        timezone,
+        page: 1,
+        limit: 10,
+        userId,
+      }),
       getForYouOrganizationsForHomeService({
         category,
         userLocation,
@@ -107,7 +129,7 @@ const getHomeService = async ({ queryData }) => {
       // }),
       // [],//getChallenges({ page: 1, limit: 10, timezone }),
       // getPromotions({ page: 1, limit: 10, timezone, category }),
-      // getSuggestedLoyaltyClubs({ page: 1, limit: 10, userId }),
+      getSuggestedLoyaltyClubs({ page: 1, limit: 10, userId }),
       // getRemainingEventsGroupedByVenueTypesRepo({ userId, timezone }),
     ]);
 
@@ -160,6 +182,25 @@ const getHomeService = async ({ queryData }) => {
       data: popularEvents || [],
     });
 
+    //forYouEvents
+    push({
+      key: "forYouEvents",
+      title: "For You Events",
+      data: forYouEvents?.data || [],
+    });
+    //this week events
+    push({
+      key: "thisWeekEvents",
+      title: "This Week",
+      data: thisWeekEventsRes?.data || [],
+    });
+    // suggestedLoyaltyClubs
+    push({
+      key: "suggestedLoyaltyClubs",
+      title: "Suggested Loyalty Clubs",
+      data: suggestedLoyaltyClubs || [],
+    });
+
     //for your organizations
     push({
       key: "forYouOrganizations",
@@ -201,6 +242,12 @@ const getHomeService = async ({ queryData }) => {
       key: "topPicks",
       title: "Top Picks",
       data: topPicksOrgs.topPicksOrganizations || [],
+    });
+    // Trending Organizations
+    push({
+      key: "trendingOrganizations",
+      title: "Trending",
+      data: trendingOrganizationsService.organizations || [],
     });
 
     // Highlights

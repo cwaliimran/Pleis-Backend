@@ -11,6 +11,9 @@
       "@dbUtils/*": [
         "backend/helperUtils/dbUtils/*"
       ],
+      "@appEngagement/*": [
+        "backend/commonModules/appEngagement/*"
+      ],
       "@recentlyViewed/*": [
         "backend/commonModules/recentlyViewed/*"
       ],
@@ -190,6 +193,9 @@
       ],
       "@GlobalNotificationsModel": [
         "backend/commonModules/notifications/notifications.js"
+      ],
+      "@EngagementEventsModel": [
+        "backend/commonModules/appEngagement/EngagementEvents.js"
       ]
     }
   },
