@@ -12,6 +12,7 @@ const {
   getSuggestedLoyaltyClubs,
   getNearbyOrganizationsService,
   organizationsByVenueTypeService,
+  getForYouOrganizationsForHomeService,
 } = require("../organizationProfile/organizationProfileService");
 const {
   getRemainingEventsAndUsersRepo,
@@ -19,9 +20,10 @@ const {
   getRemainingOrganizersRepo,
 } = require("./homeRepository");
 const { getBannerControlsService } = require("./bannerControl/bannerControlsService");
+const { getTopPicksOrganizationsForHomeService } = require("../topPicksOrganizations/topPicksOrganizationsService");
 
 const getHomeService = async ({ queryData }) => {
-  const { userId, userLocation, radiusKm, timezone, category, time } = queryData;
+  const { userId, userLocation, radiusKm = 50, timezone, category, time } = queryData;
 
   try {
     // ----------------------------------------------------
@@ -31,8 +33,8 @@ const getHomeService = async ({ queryData }) => {
       categoriesRes,
       bannersRes,
       popularEventsRes,
-      // top10,
-      // forYou,
+      topPicksOrgs,
+      getForYouOrganizationsService,
       // nearYouEvents,
       nearYouOrganizations,
       // venueTypesRaw,
@@ -46,19 +48,22 @@ const getHomeService = async ({ queryData }) => {
       // remainingEventsByVenueTypes,
     ] = await Promise.all([
       getPublicCategories({}),
-      getBannerControlsService({ page: 1, limit: 10,}),
-      getPopularEventsForHomeService({ limit: 10, skip: 0, timezone, category }),
+      getBannerControlsService({ page: 1, limit: 10, }),
+      getPopularEventsForHomeService({ limit: 10, skip: 0, timezone, category, userLocation, radiusKm }),
+      getTopPicksOrganizationsForHomeService({ category, limit: 10, skip: 0, userLocation, radiusKm, }),
       // getPopularEventsService({ userLocation, userId, timezone, category, time }),
-      // getForYouOrganizationsService(userId, userLocation, timezone, category, time),
-      // getNearbyEvents(queryData),
-      getNearbyOrganizationsService({
-        location: userLocation.coordinates,
+      getForYouOrganizationsForHomeService({
+        category,
+        userLocation,
         radiusKm,
         timezone,
         page: 1,
         limit: 10,
+        skip: 0,
         userId,
       }),
+      // getNearbyEvents(queryData),
+
       // organizationsByVenueTypeService({
       //   location: userLocation.coordinates,
       //   radiusKm,
@@ -116,8 +121,6 @@ const getHomeService = async ({ queryData }) => {
     // const customCategories = customCategoriesRes?.customCategories || [];
     const topPicks = []; // TODO: plug in real "Top Picks" source when available
 
-
-
     const feed = [];
 
     const push = (section) => {
@@ -137,7 +140,7 @@ const getHomeService = async ({ queryData }) => {
       data: categories,
     });
 
-     //push all banners
+    //push all banners
     push({
       key: "banners",
       title: "Banners",
@@ -157,7 +160,13 @@ const getHomeService = async ({ queryData }) => {
       data: popularEvents || [],
     });
 
-   
+    //for your organizations
+    push({
+      key: "forYouOrganizations",
+      title: "For You Organizations",
+      data: getForYouOrganizationsService.organizations || [],
+    });
+
     // // For You – events
     // push({
     //   key: "forYou",
@@ -188,14 +197,11 @@ const getHomeService = async ({ queryData }) => {
     }
 
     // // Top Picks (currently empty → will be skipped by push)
-    // push({
-    //   key: "topPicks",
-    //   title: "Top Picks",
-    //   data: topPicks,
-    // });
-
-
-  
+    push({
+      key: "topPicks",
+      title: "Top Picks",
+      data: topPicksOrgs.topPicksOrganizations || [],
+    });
 
     // Highlights
     push({

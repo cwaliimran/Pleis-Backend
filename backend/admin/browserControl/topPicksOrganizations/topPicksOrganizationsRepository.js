@@ -1,5 +1,5 @@
 // repositories/topPicksOrganizationRepository.js
-const TopPicksOrganizations = require("./TopPicksOrganizations");
+const TopPicksOrganizations = require("@TopPicksOrganizationsModel");
 
 // Create top promo and automatically assign next order
 const createTopPicksOrganization = async (data) => {

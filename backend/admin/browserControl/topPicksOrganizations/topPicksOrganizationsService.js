@@ -1,6 +1,6 @@
 // services/topPicksOrganizationService.js
 const { formatTopPicks } = require("./formatters/topPicksFormatter");
-const TopPicksOrganizations = require("./TopPicksOrganizations");
+const TopPicksOrganizations = require("@TopPicksOrganizationsModel");
 const topPicksOrganizationRepo = require("./topPicksOrganizationsRepository");
 const mongoose = require("mongoose");
 

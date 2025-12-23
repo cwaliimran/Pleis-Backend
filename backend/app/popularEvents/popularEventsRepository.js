@@ -2,13 +2,20 @@ const { default: mongoose } = require("mongoose");
 const PopularEvents = require("../../admin/browserControl/popularEvents/PopularEvents");
 const { getCurrentDateInTimezone, generateMeta } = require("../../helperUtils/responseUtil");
 
-const getPopularEvents = async (page, limit, skip, userId, timezone, category) => {
+const getPopularEvents = async (
+  page,
+  limit,
+  skip,
+  userId,
+  timezone,
+  category,
+  userLocation,
+  radiusKm = 50
+) => {
   // 🕐 Base time reference
   const now = getCurrentDateInTimezone({ timezone });
 
-  let dateFilter = {};
-  // show only active and upcoming
-  dateFilter = {
+  const dateFilter = {
     $or: [
       { "schedule.endDateTime": { $gte: now } },
       { "schedule.startDateTime": { $gte: now } },
@@ -18,10 +25,24 @@ const getPopularEvents = async (page, limit, skip, userId, timezone, category) =
   // 🎯 Category filter
   const catObjId = category ? new mongoose.Types.ObjectId(category) : null;
   const categoryFilter = category
-    ? {
-      "basicInfo.categories": { $in: [catObjId] },
-    }
+    ? { "basicInfo.categories": { $in: [catObjId] } }
     : {};
+
+  // 🌍 Geo filter (SAFE inside lookup)
+  let geoFilter = {};
+    const earthRadiusKm = 6378.1;
+    const radiusInRadians = radiusKm / earthRadiusKm;
+
+    geoFilter = {
+      "basicInfo.venueLocation": {
+        $geoWithin: {
+          $centerSphere: [
+            userLocation.coordinates, // [lng, lat]
+            radiusInRadians,
+          ],
+        },
+      },
+    };
 
   // 🧩 Aggregation pipeline
   const popularEvents = await PopularEvents.aggregate([
@@ -35,9 +56,10 @@ const getPopularEvents = async (page, limit, skip, userId, timezone, category) =
         pipeline: [
           {
             $match: {
-              status: { $eq: "active" },
+              status: "active",
               ...dateFilter,
               ...categoryFilter,
+              ...geoFilter,
             },
           },
           {
@@ -51,7 +73,9 @@ const getPopularEvents = async (page, limit, skip, userId, timezone, category) =
           },
           {
             $addFields: {
-              "basicInfo.organization": { $arrayElemAt: ["$organizationInfo", 0] },
+              "basicInfo.organization": {
+                $arrayElemAt: ["$organizationInfo", 0],
+              },
             },
           },
           {
@@ -64,7 +88,12 @@ const getPopularEvents = async (page, limit, skip, userId, timezone, category) =
                     $expr: {
                       $and: [
                         { $eq: ["$targetId", "$$eventId"] },
-                        { $eq: ["$user", new mongoose.Types.ObjectId(userId)] },
+                        {
+                          $eq: [
+                            "$user",
+                            new mongoose.Types.ObjectId(userId),
+                          ],
+                        },
                         { $eq: ["$targetType", "event"] },
                       ],
                     },
@@ -96,6 +125,7 @@ const getPopularEvents = async (page, limit, skip, userId, timezone, category) =
     .skip(skip)
     .limit(limit);
 
+  // 🔢 Count pipeline (MUST mirror filters)
   const countPipeline = [
     { $match: { status: "active", isTop10: true } },
     {
@@ -107,28 +137,40 @@ const getPopularEvents = async (page, limit, skip, userId, timezone, category) =
         pipeline: [
           {
             $match: {
-              status: { $eq: "active" },
+              status: "active",
               ...dateFilter,
-              ...categoryFilter
-            }
-          }
-        ]
-      }
+              ...categoryFilter,
+              ...geoFilter,
+            },
+          },
+        ],
+      },
     },
     { $unwind: "$event" },
-    { $count: "total" }
+    { $count: "total" },
   ];
 
   const countResult = await PopularEvents.aggregate(countPipeline);
   const totalTopPromos = countResult[0]?.total || 0;
 
-  let meta = generateMeta(page, limit, totalTopPromos);
+  const meta = generateMeta(page, limit, totalTopPromos);
 
   return { data: popularEvents, meta };
 };
 
-const getPopularEventsForHome = async (limit, skip, timezone, category) => {
+
+const getPopularEventsForHome = async (
+  limit,
+  skip,
+  timezone,
+  category,
+  userLocation,
+  radiusKm = 50
+) => {
   const now = getCurrentDateInTimezone({ timezone });
+
+  const earthRadiusKm = 6378.1;
+  const radiusInRadians = radiusKm / earthRadiusKm;
 
   const dateFilter = {
     $or: [
@@ -151,7 +193,7 @@ const getPopularEventsForHome = async (limit, skip, timezone, category) => {
       },
     },
 
-    // 2️⃣ Join Event
+    // 2️⃣ Lookup Events (geo filter SAFE)
     {
       $lookup: {
         from: "events",
@@ -164,10 +206,18 @@ const getPopularEventsForHome = async (limit, skip, timezone, category) => {
               status: "active",
               ...dateFilter,
               ...categoryFilter,
+              "basicInfo.venueLocation": {
+                $geoWithin: {
+                  $centerSphere: [
+                    userLocation.coordinates, // [lng, lat]
+                    radiusInRadians,
+                  ],
+                },
+              },
             },
           },
 
-          // 3️⃣ Join organization (STRICT)
+          // 3️⃣ Join organization
           {
             $lookup: {
               from: "organizations",
@@ -194,7 +244,7 @@ const getPopularEventsForHome = async (limit, skip, timezone, category) => {
             },
           },
 
-          // 4️⃣ HARD projection — ONLY what you asked
+          // 4️⃣ Minimal response
           {
             $project: {
               basicInfo: {
@@ -209,7 +259,7 @@ const getPopularEventsForHome = async (limit, skip, timezone, category) => {
       },
     },
 
-    // 5️⃣ Remove empty joins
+    // 5️⃣ Remove empty
     { $unwind: "$event" },
 
     // 6️⃣ Flatten
@@ -222,6 +272,7 @@ const getPopularEventsForHome = async (limit, skip, timezone, category) => {
 
   return { data };
 };
+
 
 
 

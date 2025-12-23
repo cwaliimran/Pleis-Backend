@@ -63,13 +63,14 @@ const getNearbyOrganizationsByLocation = async (req, res) => {
       });
     }
 
-
     let { page, limit } = parsePaginationParams(req);
+    let {category} = req.body;
 
     let { radiusKm } = req.query;
 
     const { organizations } = await getNearbyOrganizationsService({
-      location: location.coordinates,
+      category,
+      userLocation: { type: "Point", coordinates: location.coordinates },
       radiusKm: radiusKm || 1,
       timezone,
       page,

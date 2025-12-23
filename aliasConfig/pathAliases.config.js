@@ -61,4 +61,5 @@ module.exports = {
     "@GlobalQrModel": "backend/commonModules/qrCode/models/QR/baseQr.js",
     "@GlobalRewardsOrdersModel": "backend/commonModules/globalLoyalty/rewards/rewardsOrders/GlobalRewardsOrders.js",
     "@BannerControlsModel": "backend/admin/bannerControl/BannerControls.js",
+    "@TopPicksOrganizationsModel": "backend/commonModules/browserControl/topPicksOrganizations/TopPicksOrganizations.js",
 };

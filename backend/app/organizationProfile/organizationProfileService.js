@@ -1,7 +1,7 @@
 
 const mongoose = require("mongoose");
 const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
-const { findOrganizationById, findEventsByOrganization, countEventsByOrganization, getOrganizationMenuWithItems, getRecommendedOrganizations, getNearbyOrganizations, getSuggestedLoyaltyClubsForUser, getOrganizationsGroupedByVenueTypesRepo } = require("./organizationProfileRepository");
+const { findOrganizationById, findEventsByOrganization, countEventsByOrganization, getOrganizationMenuWithItems, getRecommendedOrganizations, getNearbyOrganizations, getSuggestedLoyaltyClubsForUser, getOrganizationsGroupedByVenueTypesRepo, getForYouOrganizationsForHomeRepo } = require("./organizationProfileRepository");
 const { getCurrentDateInTimezone, generateMeta, convertUtcToTimezone } = require("../../helperUtils/responseUtil");
 const { calculateDistance } = require("../../helperUtils/calculateDistance");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
@@ -169,8 +169,8 @@ const getSimilarOrganizations = async (organizationId) => {
   return result || [];
 };
 
-const getNearbyOrganizationsService = async ({ location, radiusKm, timezone, page, limit, userId }) => {
-  let result = await getNearbyOrganizations({ location, radiusKm, timezone, page, limit, userId });
+const getNearbyOrganizationsService = async ({ category, userLocation, radiusKm, timezone, page, limit, userId }) => {
+  let result = await getNearbyOrganizations({ category, userLocation, radiusKm, timezone, page, limit, userId });
   result.organizations = result.organizations.map(org => formatNearByOrganization(org));
 
   return result
@@ -200,10 +200,47 @@ const organizationsByVenueTypeService = async ({ location, radiusKm, timezone, p
 
 }
 
+const getForYouOrganizationsForHomeService = async ({
+  category,
+  userLocation,
+  radiusKm,
+  timezone,
+  page,
+  limit,
+  skip,
+  userId,
+}) => {
+  const filters = [];
+
+  // Base status filter
+  filters.push({ status: { $ne: "deleted" } });
+
+  const organizations = await getForYouOrganizationsForHomeRepo({
+    category,
+    page,
+    limit,
+    skip,
+    userLocation,
+    radiusKm,
+    timezone,
+    userId
+  }
+  );
+
+
+  let formattedOrganizations = organizations.map(org => formatNearByOrganization(org));
+
+  return {
+    organizations: formattedOrganizations,
+  };
+
+};
+
 module.exports = {
   getOrganizationEvents,
   getOrganizationProfile,
   getNearbyOrganizationsService,
   getSuggestedLoyaltyClubs,
   organizationsByVenueTypeService,
+  getForYouOrganizationsForHomeService
 };

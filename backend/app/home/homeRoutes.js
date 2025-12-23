@@ -10,9 +10,6 @@ router.use(auth);
 // Get all homes with pagination
 router.post('/', getHome);
 
-//popular events routes
-router.use("/popular-events", require("../popularEvents/popularEventsRoutes"));
-
 
 
 

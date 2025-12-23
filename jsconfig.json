@@ -181,6 +181,9 @@
       ],
       "@BannerControlsModel": [
         "backend/admin/bannerControl/BannerControls.js"
+      ],
+      "@TopPicksOrganizationsModel": [
+        "backend/commonModules/browserControl/topPicksOrganizations/TopPicksOrganizations.js"
       ]
     }
   },

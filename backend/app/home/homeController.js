@@ -9,7 +9,7 @@ const { getPopularEventsService } = require("../popularEvents/popularEventsServi
 const getHome = async (req, res) => {
 
   try {
-    const { latitude = 0, longitude = 0, radiusKm = 50000000, } = req.query;
+    const { latitude = 0, longitude = 0, radiusKm = 50, } = req.query;
     let { category } = req.body;
     if (category) {
       //check if valid mongo id

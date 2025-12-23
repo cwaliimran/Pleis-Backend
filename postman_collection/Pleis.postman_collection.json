@@ -510,7 +510,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}locations/cities/nearby?latitude=31.5023621&longitude=74.426454",
+											"raw": "{{url}}locations/cities/nearby?latitude=45.815&longitude=15.9815",
 											"host": [
 												"{{url}}locations"
 											],
@@ -521,11 +521,11 @@
 											"query": [
 												{
 													"key": "latitude",
-													"value": "31.5023621"
+													"value": "45.815"
 												},
 												{
 													"key": "longitude",
-													"value": "74.426454"
+													"value": "15.9815"
 												}
 											]
 										}
@@ -1292,7 +1292,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    // \"profileIcon\": \"noImage1.png\",\n    // \"firstName\": \"{{$randomUserName}}\",\n    // \"lastName\": \"M\",\n    // \"phoneNumber\": {\n    //     \"code\": \"+92\",\n    //     \"number\": \"3001122104\"\n    // },\n    \"location\": {\n        \"coordinates\": [\n            43.5081,\n            16.4402\n        ],\n        \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n        \"country\": \"USA\",\n        \"city\": \"New York\",\n        \"state\": \"NYKaff\",\n        \"postalCode\": \"10012\"\n    }\n    // ,\n    // \"dob\": \"2005-10-16\",\n    // \"gender\": \"Male\",\n    // \"notifications\":{\n    //     \"email\":true,\n    //     \"push\":false\n    // },\n    // \"deviceType\": \"web\", //andoird/ios/web\n    // \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    // \"timezone\": \"Asia/Karachi\"\n}",
+											"raw": "{\n    // \"profileIcon\": \"noImage1.png\",\n    // \"firstName\": \"{{$randomUserName}}\",\n    // \"lastName\": \"M\",\n    // \"phoneNumber\": {\n    //     \"code\": \"+92\",\n    //     \"number\": \"3001122104\"\n    // },\n    \"location\": {\n        \"coordinates\": [\n            0,\n            0\n        ],\n        \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n        \"country\": \"USA\",\n        \"city\": \"New York\",\n        \"state\": \"NYKaff\",\n        \"postalCode\": \"10012\"\n    }\n    // ,\n    // \"dob\": \"2005-10-16\",\n    // \"gender\": \"Male\",\n    // \"notifications\":{\n    //     \"email\":true,\n    //     \"push\":false\n    // },\n    // \"deviceType\": \"web\", //andoird/ios/web\n    // \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    // \"timezone\": \"Asia/Karachi\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -1311,7 +1311,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "69382c0823ae0d853411cae5"
+													"value": "6911b9931902fd1c55eb480c"
 												}
 											]
 										},
@@ -2086,6 +2086,85 @@
 				{
 					"name": "Home",
 					"item": [
+						{
+							"name": "PopularEvents",
+							"item": [
+								{
+									"name": "popular events",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  // \"category\":\"6911bd65d49fc086aabd254e\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/home/popular-events?latitude=31.5023621&longitude=74.426454&page=1&limit=10",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"home",
+												"popular-events"
+											],
+											"query": [
+												{
+													"key": "latitude",
+													"value": "31.5023621"
+												},
+												{
+													"key": "longitude",
+													"value": "74.426454"
+												},
+												{
+													"key": "radiusKm",
+													"value": "500000",
+													"disabled": true
+												},
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
 						{
 							"name": "get",
 							"event": [
@@ -3948,7 +4027,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}app/loyalty/club/joined-clubs?page=1&limit=10&keyword=Tech",
+											"raw": "{{url}}app/loyalty/club/joined-clubs?page=1&limit=10",
 											"host": [
 												"{{url}}app"
 											],
@@ -3968,7 +4047,8 @@
 												},
 												{
 													"key": "keyword",
-													"value": "Tech"
+													"value": "Tech",
+													"disabled": true
 												}
 											]
 										}
@@ -4160,7 +4240,7 @@
 											"variable": [
 												{
 													"key": "companyOrganizer",
-													"value": "691c683da512c38d3350d13e"
+													"value": "691c694615c5e4a506226db8"
 												}
 											]
 										}
@@ -4785,6 +4865,247 @@
 							]
 						},
 						{
+							"name": "Status Levels",
+							"item": [
+								{
+									"name": "challenges",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/global-loyalty/status-levels",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"global-loyalty",
+												"status-levels"
+											],
+											"query": [
+												{
+													"key": "keyword",
+													"value": "points",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											""
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											""
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "Promotions",
+							"item": [
+								{
+									"name": "promotions",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/global-loyalty/promotions/?page=1&limit=10",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"global-loyalty",
+												"promotions",
+												""
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												},
+												{
+													"key": "keyword",
+													"value": "points",
+													"disabled": true
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "start/update progress by-task-type",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"taskType\": \"globalReferUsers\", //visit/buyMenuItem/referUsers/earnPoints\n    \"value\": 55 //not required in buyMenuItem case\n    //only in buyMenuItem case\n    // ,\n    // \"items\": [\n    //     {\n    //         \"menuItem\": \"6911c3516aca10eb719d6f72\",\n    //         \"quantity\": \"5\"\n    //     }\n    // ]\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/global-loyalty/promotions/claim",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"global-loyalty",
+												"promotions",
+												"claim"
+											]
+										}
+									},
+									"response": []
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											""
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {},
+										"exec": [
+											""
+										]
+									}
+								}
+							]
+						},
+						{
 							"name": "Rewards",
 							"item": [
 								{
@@ -4829,7 +5150,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}app/global-loyalty/rewards?category=69441437b81f77aa91150ec1&keyword=hello",
+											"raw": "{{url}}app/global-loyalty/rewards",
 											"host": [
 												"{{url}}app"
 											],
@@ -4840,11 +5161,13 @@
 											"query": [
 												{
 													"key": "category",
-													"value": "69441437b81f77aa91150ec1"
+													"value": "69441437b81f77aa91150ec1",
+													"disabled": true
 												},
 												{
 													"key": "keyword",
-													"value": "hello"
+													"value": "hello",
+													"disabled": true
 												}
 											]
 										}
@@ -16513,7 +16836,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            // \"logo\": \"org-logo_pic1.png\",\n            \"cover\": \"org-cover.jpg\"\n        }\n        // ,\n        // \"name\": \"Lex Events\",\n        // \"phoneNumber\": {\n        //     \"code\": \"+385\",\n        //     \"number\": \"998798769\"\n        // },\n        // \"website\": \"http:lex.com\",\n        // \"socialLinks\": {\n        //     \"youtube\": \"https://youtube.com/lexevents\",\n        //     \"facebook\": \"https://facebook.com/lexevents\",\n        //     \"instagram\": \"https://instagram.com/lexevents\",\n        //     \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        // }\n    }\n    // ,\n    // \"otherInfo\": {\n    //     \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n    //     \"minAge\": 18,\n    //     \"tags\": [\n    //         \"68822a624ebf07788604301b\",\n    //         \"68b294c4a09f4da7cdf23d47\"\n    //     ],\n    //     \"categories\": [\n    //         \"64f7206e442c7dfc4aa00002\"\n    //     ],\n    //     \"galleryMedia\": [\n    //         \"gallery1.jpg\",\n    //         \"gallery2.jpg\"\n    //     ]\n    // },\n    // \"operatingHours\": {\n    //     \"monday\": {\n    //         \"from\": \"10:00\",\n    //         \"to\": \"18:00\",\n    //         \"break\": {\n    //             \"from\": \"13:00\",\n    //             \"to\": \"14:00\"\n    //         },\n    //         \"isOpen\": false\n    //     },\n    //     \"tuesday\": {\n    //         \"from\": \"09:00\",\n    //         \"to\": \"18:00\",\n    //         \"break\": {\n    //             \"from\": \"13:00\",\n    //             \"to\": \"14:00\"\n    //         },\n    //         \"isOpen\": false\n    //     },\n    //     \"wednesday\": {\n    //         \"from\": \"09:00\",\n    //         \"to\": \"18:00\",\n    //         \"break\": {\n    //             \"from\": \"13:00\",\n    //             \"to\": \"14:00\"\n    //         },\n    //         \"isOpen\": false\n    //     },\n    //     \"thursday\": {\n    //         \"from\": \"09:00\",\n    //         \"to\": \"18:00\",\n    //         \"break\": {\n    //             \"from\": \"13:00\",\n    //             \"to\": \"14:00\"\n    //         },\n    //         \"isOpen\": false\n    //     },\n    //     \"friday\": {\n    //         \"from\": \"09:00\",\n    //         \"to\": \"20:00\",\n    //         \"break\": {\n    //             \"from\": \"14:00\",\n    //             \"to\": \"15:00\"\n    //         },\n    //         \"isOpen\": false\n    //     },\n    //     \"saturday\": {\n    //         \"from\": \"12:00\",\n    //         \"to\": \"22:00\",\n    //         \"break\": {\n    //             \"from\": \"16:00\",\n    //             \"to\": \"17:00\"\n    //         },\n    //         \"isOpen\": false\n    //     },\n    //     \"sunday\": {\n    //         \"from\": \"\",\n    //         \"to\": \"\",\n    //         \"break\": {\n    //             \"from\": \"\",\n    //             \"to\": \"\"\n    //         },\n    //         \"isOpen\": true\n    //     }\n    // },\n    // \"status\": \"active\",\n    // \"venue\": \"68b680ef739209915c262222\",\n    // \"location\": {\n    //     \"address\": \"100 Tech Avenue\",\n    //     \"fullAddress\": \"100 Tech Avenue, Split, 2100\",\n    //     \"city\": \"Split\",\n    //     \"postalCode\": \"21000\",\n    //     \"country\": \"Croatia\",\n    //     \"coordinates\": [\n    //         43.5081,\n    //         16.4402\n    //     ]\n    // }\n}",
+									"raw": "{\n    \"basicInfo\": {\n        // \"media\": {\n        //     // \"logo\": \"org-logo_pic1.png\",\n        //     // \"cover\": \"org-cover.jpg\"\n        // }\n        // ,\n        // \"name\": \"Lex Events\",\n        // \"phoneNumber\": {\n        //     \"code\": \"+385\",\n        //     \"number\": \"998798769\"\n        // },\n        // \"website\": \"http:lex.com\",\n        // \"socialLinks\": {\n        //     \"youtube\": \"https://youtube.com/lexevents\",\n        //     \"facebook\": \"https://facebook.com/lexevents\",\n        //     \"instagram\": \"https://instagram.com/lexevents\",\n        //     \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        // }\n    },\n    // \"otherInfo\": {\n    //     \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n    //     \"minAge\": 18,\n    //     \"tags\": [\n    //         \"68822a624ebf07788604301b\",\n    //         \"68b294c4a09f4da7cdf23d47\"\n    //     ],\n    //     \"categories\": [\n    //         \"64f7206e442c7dfc4aa00002\"\n    //     ],\n    //     \"galleryMedia\": [\n    //         \"gallery1.jpg\",\n    //         \"gallery2.jpg\"\n    //     ]\n    // },\n    // \"operatingHours\": {\n    //     \"monday\": {\n    //         \"from\": \"10:00\",\n    //         \"to\": \"18:00\",\n    //         \"break\": {\n    //             \"from\": \"13:00\",\n    //             \"to\": \"14:00\"\n    //         },\n    //         \"isOpen\": false\n    //     },\n    //     \"tuesday\": {\n    //         \"from\": \"09:00\",\n    //         \"to\": \"18:00\",\n    //         \"break\": {\n    //             \"from\": \"13:00\",\n    //             \"to\": \"14:00\"\n    //         },\n    //         \"isOpen\": false\n    //     },\n    //     \"wednesday\": {\n    //         \"from\": \"09:00\",\n    //         \"to\": \"18:00\",\n    //         \"break\": {\n    //             \"from\": \"13:00\",\n    //             \"to\": \"14:00\"\n    //         },\n    //         \"isOpen\": false\n    //     },\n    //     \"thursday\": {\n    //         \"from\": \"09:00\",\n    //         \"to\": \"18:00\",\n    //         \"break\": {\n    //             \"from\": \"13:00\",\n    //             \"to\": \"14:00\"\n    //         },\n    //         \"isOpen\": false\n    //     },\n    //     \"friday\": {\n    //         \"from\": \"09:00\",\n    //         \"to\": \"20:00\",\n    //         \"break\": {\n    //             \"from\": \"14:00\",\n    //             \"to\": \"15:00\"\n    //         },\n    //         \"isOpen\": false\n    //     },\n    //     \"saturday\": {\n    //         \"from\": \"12:00\",\n    //         \"to\": \"22:00\",\n    //         \"break\": {\n    //             \"from\": \"16:00\",\n    //             \"to\": \"17:00\"\n    //         },\n    //         \"isOpen\": false\n    //     },\n    //     \"sunday\": {\n    //         \"from\": \"\",\n    //         \"to\": \"\",\n    //         \"break\": {\n    //             \"from\": \"\",\n    //             \"to\": \"\"\n    //         },\n    //         \"isOpen\": true\n    //     }\n    // },\n    // \"status\": \"active\",\n    // \"venue\": \"68b680ef739209915c262222\",\n    \"location\": {\n        \"fullAddress\": \"Zagreb, Croatia\",\n        \"city\": \"Zagreb\",\n        \"state\": \"Zagreb\",\n        \"country\": \"Croatia\",\n        \"postalCode\": \"10000\",\n        \"coordinates\": [\n            15.9819,\n            45.8150\n        ]\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -16532,7 +16855,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "6911bc8b2280acc8015fe1e6"
+											"value": "6911ccb36aca10eb719d7358"
 										}
 									]
 								},
@@ -25035,7 +25358,7 @@
 					"name": "Browser Control",
 					"item": [
 						{
-							"name": "Top 10 / Promo Section",
+							"name": "Popular Events",
 							"item": [
 								{
 									"name": "get",
@@ -25079,12 +25402,12 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/top-promos?page=1&limit=10",
+											"raw": "{{url}}admin/popular-events?page=1&limit=10",
 											"host": [
 												"{{url}}admin"
 											],
 											"path": [
-												"top-promos"
+												"popular-events"
 											],
 											"query": [
 												{
@@ -25137,7 +25460,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n \"event\": \"68ff18ed8cd2d2f52b25be1a\",\n \"isTop10\": true\n}\n",
+											"raw": "{\n \"event\": \"6911c1b36fc7cbd864e74659\",\n \"isTop10\": true\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -25145,12 +25468,12 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/top-promos",
+											"raw": "{{url}}admin/popular-events",
 											"host": [
 												"{{url}}admin"
 											],
 											"path": [
-												"top-promos"
+												"popular-events"
 											]
 										},
 										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
@@ -25196,18 +25519,18 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/top-promos/:id",
+											"raw": "{{url}}admin/popular-events/:id",
 											"host": [
 												"{{url}}admin"
 											],
 											"path": [
-												"top-promos",
+												"popular-events",
 												":id"
 											],
 											"variable": [
 												{
 													"key": "id",
-													"value": "68f0fe3455b07139a883835e"
+													"value": "694668175f73f45070daf8e8"
 												}
 											]
 										},
@@ -25254,12 +25577,12 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/top-promos/:id",
+											"raw": "{{url}}admin/popular-events/:id",
 											"host": [
 												"{{url}}admin"
 											],
 											"path": [
-												"top-promos",
+												"popular-events",
 												":id"
 											],
 											"variable": [
@@ -25312,12 +25635,305 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/top-promos/reorder",
+											"raw": "{{url}}admin/popular-events/reorder",
 											"host": [
 												"{{url}}admin"
 											],
 											"path": [
-												"top-promos",
+												"popular-events",
+												"reorder"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Top Picks - Organizations",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/top-picks?page=1&limit=10",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"top-picks"
+											],
+											"query": [
+												{
+													"key": "orderSort",
+													"value": "desc",
+													"description": "asc, desc",
+													"disabled": true
+												},
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n \"organization\": \"6911cc376aca10eb719d7322\",\n \"isTop10\": true\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/top-picks",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"top-picks"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "update",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"isTop10\": true\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/top-picks/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"top-picks",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "68f0fe3455b07139a883835e"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/top-picks/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"top-picks",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "68f7637adbdc2187ec458beb"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "reorder",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"movedId\":\"68f0fe3455b07139a883835e\",\n    \"previousOrder\":\"1\",\n    \"newOrder\":\"1\"\n  }",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/top-picks/reorder",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"top-picks",
 												"reorder"
 											]
 										},
@@ -28739,7 +29355,125 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"image\":\"img.png\",\n    \"title\": \"Check in at 5 cafe's\",\n    \"description\": \"Visit 5 cafes to claim this challenge\",\n    \"taskType\": \"visit\",\n    \"taskValue\": 5,\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"69217906dd3107a7545c05dc\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 50\n    }\n}",
+											"raw": "{\n    \"image\":\"img.png\",\n    \"title\": \"Check in at 5 cafe's\",\n    \"description\": \"Visit 5 cafes to claim this challenge\",\n    \"taskType\": \"globalVisit\",\n    \"taskValue\": 5,\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"69217906dd3107a7545c05dc\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 50\n    }\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/global-loyalty/challanges",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"global-loyalty",
+												"challanges"
+											]
+										},
+										"description": "We have 4 combinations\n\nTask Type  \n\\[\"visit\", \"earnPoints\", \"buyMenuItem\", \"referUsers\"\\]  \n  \nReward Type  \n\\[\"points\", \"menuItem\", \"specialTicket\", \"customReward\"\\]  \n  \n1\\. Each task type has its own fields  \n2\\. Each Reward type has its own fields  \n  \nYou can match any task type with any reward type make sure to pass the correct params required for each type."
+									},
+									"response": [
+										{
+											"name": "add - visit",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"companyOrganizer\":\"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe to claim this challenge\",\n    \"taskType\": \"visit\", //\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 5\n    }\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{url}}loyalty/challenges/",
+													"host": [
+														"{{url}}loyalty"
+													],
+													"path": [
+														"challenges",
+														""
+													]
+												}
+											},
+											"status": "Created",
+											"code": 201,
+											"_postman_previewlanguage": "Text",
+											"header": [
+												{
+													"key": "X-Powered-By",
+													"value": "Express"
+												},
+												{
+													"key": "Access-Control-Allow-Origin",
+													"value": "*"
+												},
+												{
+													"key": "Content-Type",
+													"value": "application/json; charset=utf-8"
+												},
+												{
+													"key": "Content-Length",
+													"value": "505"
+												},
+												{
+													"key": "ETag",
+													"value": "W/\"1f9-3vIAy3rpDZ4AwaaTCeFJQeizDc0\""
+												},
+												{
+													"key": "Date",
+													"value": "Tue, 30 Sep 2025 10:13:16 GMT"
+												},
+												{
+													"key": "Connection",
+													"value": "keep-alive"
+												},
+												{
+													"key": "Keep-Alive",
+													"value": "timeout=5"
+												}
+											],
+											"cookie": [],
+											"body": "{\n    \"message\": \"Challenge created successfully\",\n    \"data\": {\n        \"title\": \"Check in at Cafe\",\n        \"description\": \"Visit our cafe to claim this challenge\",\n        \"taskType\": \"visit\",\n        \"claimLimit\": 1,\n        \"endDate\": \"2025-12-30T19:00:00.000Z\",\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n        \"status\": \"active\",\n        \"reward\": {\n            \"rewardType\": \"points\",\n            \"rewardValue\": 5\n        },\n        \"_id\": \"68dbad3cb24d98832f06267c\",\n        \"createdAt\": \"2025-09-30T10:13:16.729Z\",\n        \"updatedAt\": \"2025-09-30T10:13:16.729Z\",\n        \"__v\": 0,\n        \"id\": \"68dbad3cb24d98832f06267c\"\n    }\n}"
+										}
+									]
+								},
+								{
+									"name": "add - visit - ticket reward",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"image\": \"img.png\",\n    \"title\": \"Check in at 5 cafe's\",\n    \"description\": \"Visit 5 cafes to claim this challenge\",\n    \"taskType\": \"globalVisit\",\n    \"taskValue\": 5,\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"69217906dd3107a7545c05dc\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"specialTicket\": {\n            \"companyOrganizer\": \"\",\n            \"organization\": \"\",\n            \"event\": \"\",\n            \"ticket\": \"\"\n        }\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -28940,123 +29674,6 @@
 											],
 											"cookie": [],
 											"body": "{\n    \"message\": \"Challenge created successfully\",\n    \"data\": {\n        \"title\": \"Walk 10,000 steps\",\n        \"description\": \"Earn points by being active\",\n        \"taskType\": \"earnPoints\",\n        \"claimLimit\": 5,\n        \"endDate\": \"2025-12-24T19:00:00.000Z\",\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"status\": \"active\",\n        \"reward\": {\n            \"rewardType\": \"menuItem\",\n            \"rewardMenuItem\": \"68d7ee19c9469f7d754b5c99\"\n        },\n        \"_id\": \"68d91a459e7c7d6dcd84399f\",\n        \"taskValue\": 500,\n        \"createdAt\": \"2025-09-28T11:21:41.762Z\",\n        \"updatedAt\": \"2025-09-28T11:21:41.762Z\",\n        \"__v\": 0,\n        \"id\": \"68d91a459e7c7d6dcd84399f\"\n    }\n}"
-										}
-									]
-								},
-								{
-									"name": "add - buy menu item",
-									"event": [
-										{
-											"listen": "test",
-											"script": {
-												"exec": [
-													""
-												],
-												"type": "text/javascript",
-												"packages": {},
-												"requests": {}
-											}
-										},
-										{
-											"listen": "prerequest",
-											"script": {
-												"exec": [
-													""
-												],
-												"type": "text/javascript",
-												"packages": {},
-												"requests": {}
-											}
-										}
-									],
-									"request": {
-										"method": "POST",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "{\n    \"image\": \"\",\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"globalBuyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"69217906dd3107a7545c05dc\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "{{url}}admin/global-loyalty/challanges",
-											"host": [
-												"{{url}}admin"
-											],
-											"path": [
-												"global-loyalty",
-												"challanges"
-											]
-										},
-										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
-									},
-									"response": [
-										{
-											"name": "add - buy menu item",
-											"originalRequest": {
-												"method": "POST",
-												"header": [],
-												"body": {
-													"mode": "raw",
-													"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
-													"options": {
-														"raw": {
-															"language": "json"
-														}
-													}
-												},
-												"url": {
-													"raw": "{{url}}challenges/",
-													"host": [
-														"{{url}}challenges"
-													],
-													"path": [
-														""
-													]
-												}
-											},
-											"status": "Created",
-											"code": 201,
-											"_postman_previewlanguage": "Text",
-											"header": [
-												{
-													"key": "X-Powered-By",
-													"value": "Express"
-												},
-												{
-													"key": "Access-Control-Allow-Origin",
-													"value": "*"
-												},
-												{
-													"key": "Content-Type",
-													"value": "application/json; charset=utf-8"
-												},
-												{
-													"key": "Content-Length",
-													"value": "508"
-												},
-												{
-													"key": "ETag",
-													"value": "W/\"1fc-ou00dxBe6WV1//c1DgrOc4f33uM\""
-												},
-												{
-													"key": "Date",
-													"value": "Sun, 28 Sep 2025 11:22:49 GMT"
-												},
-												{
-													"key": "Connection",
-													"value": "keep-alive"
-												},
-												{
-													"key": "Keep-Alive",
-													"value": "timeout=5"
-												}
-											],
-											"cookie": [],
-											"body": "{\n    \"message\": \"Challenge created successfully\",\n    \"data\": {\n        \"title\": \"Buy 2 Burgers\",\n        \"description\": \"Order 2 burgers to earn rewards\",\n        \"taskType\": \"buyMenuItem\",\n        \"claimLimit\": 2,\n        \"endDate\": \"2025-12-30T19:00:00.000Z\",\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"status\": \"active\",\n        \"reward\": {\n            \"rewardType\": \"specialTicket\",\n            \"rewardValue\": 1\n        },\n        \"_id\": \"68d91a899e7c7d6dcd8439a7\",\n        \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n        \"createdAt\": \"2025-09-28T11:22:49.632Z\",\n        \"updatedAt\": \"2025-09-28T11:22:49.632Z\",\n        \"__v\": 0,\n        \"id\": \"68d91a899e7c7d6dcd8439a7\"\n    }\n}"
 										}
 									]
 								},
@@ -29359,13 +29976,6 @@
 											"path": [
 												"global-loyalty",
 												"promotions"
-											],
-											"query": [
-												{
-													"key": "companyOrganizer",
-													"value": "68da7aa1e6f099d42e32da71",
-													"disabled": true
-												}
 											]
 										}
 									},
@@ -29463,59 +30073,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"happyHour\", //[\"happyHour\", \"buyMenuItem\", \"productSale\"]\n    \"title\": \"Sample title\",\n    \"description\": \"description of item\",\n    \"startDate\":\"2025-11-05 05:00 AM\",\n    \"endDate\": \"2025-11-05 11:00 AM\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"pointsMultiplier\":\"1.5\",\n    \"status\": \"active\"\n}",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "{{url}}admin/global-loyalty/promotions",
-											"host": [
-												"{{url}}admin"
-											],
-											"path": [
-												"global-loyalty",
-												"promotions"
-											]
-										},
-										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
-									},
-									"response": []
-								},
-								{
-									"name": "add - buy Menu Item",
-									"event": [
-										{
-											"listen": "test",
-											"script": {
-												"exec": [
-													""
-												],
-												"type": "text/javascript",
-												"packages": {},
-												"requests": {}
-											}
-										},
-										{
-											"listen": "prerequest",
-											"script": {
-												"exec": [
-													""
-												],
-												"type": "text/javascript",
-												"packages": {},
-												"requests": {}
-											}
-										}
-									],
-									"request": {
-										"method": "POST",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"buyMenuItemPromotion\",\n    \"title\": \"Buy Coffee\",\n    \"description\": \"Best coffee to make your day\",\n    \"startDate\":\"2025-11-05\",\n    \"endDate\": \"2025-11-15\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"extraPoints\": 5,\n    \"status\": \"active\"\n}",
+											"raw": "{\n    \"image\":\"d9bbb45a-a489-47b0-866c-b2c693de4cc5.png\",\n    \"promotionType\": \"globalHappyHourPromotion\", //[\"globalHappyHourPromotion\", \"globalClaimPromotion\"]\n    \"title\": \"Sample title\",\n    \"description\": \"description of item\",\n    \"startDate\":\"2025-11-05 05:00 AM\",\n    \"endDate\": \"2025-11-05 11:00 AM\",\n    \"tierLimit\": \"692178a42fdc7ad36320d905\",\n    \"pointsMultiplier\":\"1.5\",\n    \"status\": \"active\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -29567,59 +30125,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"claimPromotion\",\n    \"title\": \"Buy Coffee\",\n    \"description\": \"Best coffee to make your day\",\n    \"startDate\":\"2025-11-05\",\n    \"endDate\": \"2025-11-15\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"extraPoints\": 5,\n    \"status\": \"active\",\n    \"claimPoints\":12,\n    \"reward\":\"692fd9413c3a3a0086d70af6\"\n\n}",
-											"options": {
-												"raw": {
-													"language": "json"
-												}
-											}
-										},
-										"url": {
-											"raw": "{{url}}admin/global-loyalty/promotions",
-											"host": [
-												"{{url}}admin"
-											],
-											"path": [
-												"global-loyalty",
-												"promotions"
-											]
-										},
-										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
-									},
-									"response": []
-								},
-								{
-									"name": "add - productSale",
-									"event": [
-										{
-											"listen": "test",
-											"script": {
-												"exec": [
-													""
-												],
-												"type": "text/javascript",
-												"packages": {},
-												"requests": {}
-											}
-										},
-										{
-											"listen": "prerequest",
-											"script": {
-												"exec": [
-													""
-												],
-												"type": "text/javascript",
-												"packages": {},
-												"requests": {}
-											}
-										}
-									],
-									"request": {
-										"method": "POST",
-										"header": [],
-										"body": {
-											"mode": "raw",
-											"raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"productSale\",\n    \"title\": \"Buy Coffee\",\n    \"description\": \"Best coffee to make your day\",\n    \"startDate\":\"2025-11-05\",\n    \"endDate\": \"2025-11-15\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"discountedPrice\":\"40\",\n    \"extraPoints\": 5,\n    \"status\": \"active\"\n}",
+											"raw": "{\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"globalClaimPromotion\",//[\"globalHappyHourPromotion\", \"globalClaimPromotion\"]\n    \"title\": \"Buy Coffee\",\n    \"description\": \"Best coffee to make your day\",\n    \"startDate\":\"2025-12-05\",\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"692178a42fdc7ad36320d905\",\n    \"claimPoints\":12,\n    \"reward\":\"69453d1d943d9d6101a83773\"\n\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -31133,7 +31639,7 @@
 								{
 									"key": "files",
 									"type": "file",
-									"src": "/Users/s/Desktop/Development/Projects/Pleis/test-images/istockphoto-1500283713-612x612.jpg"
+									"src": "/Users/s/Desktop/Development/Projects/Pleis/test-images/images.png"
 								}
 							]
 						},

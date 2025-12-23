@@ -9,10 +9,10 @@ const popularEventsService = require("./popularEventsService");
 
 const popularEvents = async (req, res) => {
   try {
-      const { page, limit, skip } = parsePaginationParams(req);
-    
+    const { page, limit, skip } = parsePaginationParams(req);
+
     let { location: userLocation, timezone, _id: userId } = req.user;
-    const { latitude = 0, longitude = 0 } = req.query;
+    const { latitude = 0, longitude = 0, radiusKm = 50 } = req.query;
     let { category } = req.body;
 
     if (latitude && longitude) {
@@ -23,7 +23,7 @@ const popularEvents = async (req, res) => {
     }
 
     // Call service to get popular events
-    const {data, meta} = await popularEventsService.getPopularEventsService({ page, limit, skip, userLocation, userId, timezone, category });
+    const { data, meta } = await popularEventsService.getPopularEventsService({ page, limit, skip, userLocation, userId, timezone, category, radiusKm });
 
     return sendResponse({
       res,
