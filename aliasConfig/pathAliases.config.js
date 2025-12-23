@@ -1,5 +1,6 @@
 module.exports = {
     "@utils": "backend/helperUtils",
+    "@UsersModel": "backend/models/UserModel.js",
     "@dbUtils": "backend/helperUtils/dbUtils",
     "@recentlyViewed": "backend/commonModules/recentlyViewed",
     "@OrganizationModel": "backend/commonModules/organizations/Organization.js",
@@ -62,4 +63,5 @@ module.exports = {
     "@GlobalRewardsOrdersModel": "backend/commonModules/globalLoyalty/rewards/rewardsOrders/GlobalRewardsOrders.js",
     "@BannerControlsModel": "backend/admin/bannerControl/BannerControls.js",
     "@TopPicksOrganizationsModel": "backend/commonModules/browserControl/topPicksOrganizations/TopPicksOrganizations.js",
+        "@GlobalNotificationsModel": "backend/commonModules/notifications/notifications.js",
 };

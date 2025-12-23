@@ -4,11 +4,11 @@ const mongoose = require("mongoose");
 // Define the schema for GlobalOrganization
 const GlobalOrganizationSchema = new mongoose.Schema(
   {
-    organizationId: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "Organizations",  // Reference to the Organizations collection
-      required: true 
-    },
+      venueId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Venues",
+        required: true,
+      },
     tableNo: { 
       type: Number, 
       required: true 

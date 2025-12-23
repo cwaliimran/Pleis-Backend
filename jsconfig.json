@@ -5,6 +5,9 @@
       "@utils/*": [
         "backend/helperUtils/*"
       ],
+      "@UsersModel": [
+        "backend/models/UserModel.js"
+      ],
       "@dbUtils/*": [
         "backend/helperUtils/dbUtils/*"
       ],
@@ -184,6 +187,9 @@
       ],
       "@TopPicksOrganizationsModel": [
         "backend/commonModules/browserControl/topPicksOrganizations/TopPicksOrganizations.js"
+      ],
+      "@GlobalNotificationsModel": [
+        "backend/commonModules/notifications/notifications.js"
       ]
     }
   },

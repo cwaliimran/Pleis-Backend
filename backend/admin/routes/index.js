@@ -22,6 +22,7 @@ router.use("/events", require("../events/eventRoutes"));
 
 //menu management
 router.use("/menu", require("../menuManagement/menuManagementRoutes"));
+router.use("/notifications/", require("../notifications/notificationsRoutes"));
 
 //organizations
 router.use("/organizations", require("../organizations/organizationRoutes.js"));

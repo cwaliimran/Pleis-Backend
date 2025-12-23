@@ -15,6 +15,7 @@
   },
   "_moduleAliases": {
     "@utils": "backend/helperUtils",
+    "@UsersModel": "backend/models/UserModel.js",
     "@dbUtils": "backend/helperUtils/dbUtils",
     "@recentlyViewed": "backend/commonModules/recentlyViewed",
     "@OrganizationModel": "backend/commonModules/organizations/Organization.js",
@@ -74,7 +75,8 @@
     "@GlobalQrModel": "backend/commonModules/qrCode/models/QR/baseQr.js",
     "@GlobalRewardsOrdersModel": "backend/commonModules/globalLoyalty/rewards/rewardsOrders/GlobalRewardsOrders.js",
     "@BannerControlsModel": "backend/admin/bannerControl/BannerControls.js",
-    "@TopPicksOrganizationsModel": "backend/commonModules/browserControl/topPicksOrganizations/TopPicksOrganizations.js"
+    "@TopPicksOrganizationsModel": "backend/commonModules/browserControl/topPicksOrganizations/TopPicksOrganizations.js",
+    "@GlobalNotificationsModel": "backend/commonModules/notifications/notifications.js"
   },
   "keywords": [],
   "author": "",
