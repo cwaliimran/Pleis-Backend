@@ -5,7 +5,7 @@ const { generateMeta, getCurrentDateInTimezone } = require("@utils/responseUtil"
 const formatPromotion = require("../../../commonModules/loyalty/promotions/utils/formatPromotion");
 
 
-const getPromotions = async ({ page, limit, keyword, timezone, category }) => {
+const getPromotions = async ({ page, limit, keyword, timezone }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const now = getCurrentDateInTimezone({ timezone });
 
@@ -79,6 +79,72 @@ const getPromotions = async ({ page, limit, keyword, timezone, category }) => {
   return { promotions: formatted, meta };
 };
 
+const getPromotionsForHome = async ({ page = 1, limit = 10, timezone }) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const now = getCurrentDateInTimezone({ timezone });
+
+  const pipeline = [
+    /* ===============================
+       BASE FILTER
+       =============================== */
+    {
+      $match: {
+        status: "active",
+        endDate: { $gte: now }
+      }
+    },
+
+    /* ===============================
+       POPULATE companyOrganizer
+       =============================== */
+    {
+      $lookup: {
+        from: "users",
+        localField: "companyOrganizer",
+        foreignField: "_id",
+        as: "companyOrganizer",
+        pipeline: [
+          {
+            $project: {
+              "companyDetails.name": 1,
+              firstName: 1,
+              profileIcon: 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      $unwind: {
+        path: "$companyOrganizer",
+        preserveNullAndEmptyArrays: true
+      }
+    },
+
+    /* ===============================
+       SORT (newest first)
+       =============================== */
+    { $sort: { createdAt: -1 } },
+
+    /* ===============================
+       PAGINATION
+       =============================== */
+    { $skip: skip },
+    ...(limit === 0 ? [] : [{ $limit: limit }])
+  ];
+
+  const records = await Promotion.aggregate(pipeline);
+
+  const formatted = records.map(item =>
+    formatPromotion(item, timezone)
+  );
+
+  return {
+    promotions: formatted
+  };
+};
+
+
 
 
 const getDetails = async (id) => {
@@ -124,4 +190,5 @@ module.exports = {
   getPromotions,
   getDetails,
   getPromotionsByCompanyOrganizerService,
+  getPromotionsForHome
 };

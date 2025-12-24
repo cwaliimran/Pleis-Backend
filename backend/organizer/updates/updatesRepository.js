@@ -304,15 +304,8 @@ const findByIdAndUpdate = async (id, data) => {
 
 
 
-
-
-
-
-
-
 const getevents = async ({ organizations }) => {
   try {
-    console.log("organizations:", organizations); // Log the organizations parameter
 
     // If organizations are passed as a comma-separated string, split them into an array
     if (typeof organizations === 'string') {

@@ -17,9 +17,6 @@ router.use("/organizations", require("../app/organizationProfile/organizationPro
 //favorites
 router.use("/favorites", require("../app/favorites/favoriteRoutes"));
 
-//recently viewed items
-router.use("/recently-viewed", require("../app/recentlyViewed/recentlyViewedItemRoutes"));
-
 //events
 router.use("/events", require("../app/events/eventRoutes"));
 

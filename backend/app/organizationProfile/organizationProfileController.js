@@ -3,7 +3,7 @@ const {
   validateParams,
   parsePaginationParams,
 } = require("../../helperUtils/responseUtil");
-const { getOrganizationProfile, getNearbyOrganizationsService, joinOrgLoyaltyClub } = require("./organizationProfileService");
+const { getOrganizationProfile, getNearbyOrganizationsService, joinOrgLoyaltyClub, getForYouOrganizationsForHomeService, getTrendingOrganizationsForHomeService } = require("./organizationProfileService");
 
 
 const getOrganizationProfileData = async (req, res) => {
@@ -64,7 +64,7 @@ const getNearbyOrganizationsByLocation = async (req, res) => {
     }
 
     let { page, limit } = parsePaginationParams(req);
-    let {category} = req.body;
+    let { category } = req.body;
 
     let { radiusKm } = req.query;
 
@@ -95,8 +95,96 @@ const getNearbyOrganizationsByLocation = async (req, res) => {
   }
 };
 
+const getForYouOrganizations = async (req, res) => {
+  try {
+    const { latitude = 0, longitude = 0, radiusKm = 50, } = req.query;
+
+    let { location: userLocation, timezone, _id: userId } = req.user;
+
+    if (latitude && longitude) {
+      userLocation = {
+        type: "Point",
+        coordinates: [parseFloat(longitude), parseFloat(latitude)],
+      };
+    }
+
+    let { page, limit } = parsePaginationParams(req);
+    let { category } = req.body;
+
+
+    const { organizations } = await getForYouOrganizationsForHomeService({
+      category,
+      userLocation,
+      radiusKm: radiusKm || 1,
+      timezone,
+      page,
+      limit,
+      userId
+    });
+
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "for_you_organizations_fetched_successfully",
+      data: organizations,
+      // meta,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server_error",
+      error,
+    });
+  }
+};
+
+
+const getTrendingOrganizationsForHome = async (req, res) => {
+  try {
+    const { latitude = 0, longitude = 0, radiusKm = 50, } = req.query;
+
+    let { location: userLocation, timezone, _id: userId } = req.user;
+
+    if (latitude && longitude) {
+      userLocation = {
+        type: "Point",
+        coordinates: [parseFloat(longitude), parseFloat(latitude)],
+      };
+    }
+
+    let { page, limit } = parsePaginationParams(req);
+    let { category } = req.body;
+    const { organizations } = await getTrendingOrganizationsForHomeService({
+      category,
+      userLocation,
+      radiusKm,
+      timezone,
+      page,
+      limit,
+      userId
+    });
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "trending_organizations_fetched_successfully",
+      data: organizations,
+      // meta,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server_error",
+      error,
+    });
+  }
+}
 
 module.exports = {
   getOrganizationProfileData,
   getNearbyOrganizationsByLocation,
+  getForYouOrganizations,
+  getTrendingOrganizationsForHome
 };

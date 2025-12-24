@@ -5,14 +5,14 @@ const eventRepo = require("./eventRepository");
 const _ = require("lodash");
 const { getRecommendedEvents } = require("./recommendationSystem/eventsRecommender");
 const { formatEventResponse } = require("../events/formatter/eventFormatter");
-const { formatMoreFromOrganizerEventResponse,reservationsFormatterAdjustDates } = require("./formatter/eventFormatter");
-const { attachVenueTypesToEvent  } = require("./formatter/eventFormatter");
+const { formatMoreFromOrganizerEventResponse, reservationsFormatterAdjustDates } = require("./formatter/eventFormatter");
+const { attachVenueTypesToEvent } = require("./formatter/eventFormatter");
 const { getUserInterestsIdsForRecommendation } = require("../usersManagement/usersRepository");
 const { getForYouEventsAgainstInterests } = require("./recommendationSystem/getForYouEventsAgainstInterests");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { getTicketings } = require("../ticketing/ticketingsService");
-const { addOrUpdateRecentlyViewedItem } = require("../recentlyViewed/recentlyViewedItemRepository");
 const { default: mongoose } = require("mongoose");
+const { logEngagementService } = require("@appEngagement/engagementEventsService");
 
 
 const getNearbyEvents = async (queryData) => {
@@ -165,6 +165,102 @@ const getNearbyEvents = async (queryData) => {
 
     const meta = generateMeta(page, limit, totalFiltered);
     return { events: formattedEvents, meta };
+  } catch (error) {
+    throw new Error(`Failed to fetch nearby events: ${error.message}`);
+  }
+};
+
+const thisWeekEvents = async ({ timezone, category, userLocation, radiusKm, page = 1, limit = 10, userId }) => {
+
+  const catObjId = category ? new mongoose.Types.ObjectId(category) : null;
+  const categoryFilter = category
+    ? { "basicInfo.categories": { $in: [catObjId] } }
+    : {};
+
+  // If radiusKm is not provided, use an approximate "whole world" radius
+  const rawRadiusKm =
+    !radiusKm || radiusKm === "" ? 20037.5 : parseFloat(radiusKm);
+
+  radiusKm = parseFloat(rawRadiusKm);
+
+  const radiusInMeters = radiusKm * 1000;
+  const now = getCurrentDateInTimezone({ timezone });
+  const skip = Math.max(0, (page - 1) * limit);
+
+  // --- Time filter ---
+  let dateFilter = {};
+  ({ start, end } = getStartAndEndOfWeek(now, timezone));
+  dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+
+  try {
+    const pipeline = [
+      {
+        $geoNear: {
+          near: userLocation,
+          key: "basicInfo.venueLocation",
+          distanceField: "distance",
+          spherical: true,
+          maxDistance: radiusInMeters,
+          query: { status: "active", ...categoryFilter, ...dateFilter },
+        },
+      },
+      { $project: { schedule: 1, basicInfo: 1, distance: 1 } },
+
+      {
+        $lookup: {
+          from: "venues",
+          localField: "basicInfo.venue",
+          foreignField: "_id",
+          pipeline: [{ $project: { title: 1, location: 1 } }],
+          as: "basicInfo.venue",
+        },
+      },
+      { $unwind: "$basicInfo.venue" },
+
+      {
+        $lookup: {
+          from: "organizations",
+          let: { orgId: "$basicInfo.organization" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$orgId"] } } },
+            { $project: { basicInfo: 1 } },
+          ],
+          as: "basicInfo.organization",
+        },
+      },
+      { $unwind: { path: "$basicInfo.organization", preserveNullAndEmptyArrays: true } },
+
+      { $sort: { distance: 1 } },
+      { $skip: skip },
+      { $limit: parseInt(limit) },
+    ];
+
+    const events = await eventRepo.aggregateEvents(pipeline);
+
+    // Count total without skip/limit
+    const totalCountPipeline = [
+      {
+        $geoNear: {
+          near: userLocation,
+          key: "basicInfo.venueLocation",
+          distanceField: "distance",
+          spherical: true,
+          maxDistance: radiusInMeters,
+          query: { status: "active", ...categoryFilter, ...dateFilter },
+        },
+      },
+      { $count: "total" },
+    ];
+
+    const totalResult = await eventRepo.aggregateEvents(totalCountPipeline);
+    const totalFiltered = totalResult[0]?.total || 0;
+
+    const formattedEvents = events.map((event) =>
+      formatEventResponse(event, { timezone })
+    );
+
+    const meta = generateMeta(page, limit, totalFiltered);
+    return { data: formattedEvents, meta };
   } catch (error) {
     throw new Error(`Failed to fetch nearby events: ${error.message}`);
   }
@@ -347,15 +443,18 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
   }
 };
 
-
-
-
-
-
 const getEventDetails = async (userLocation, userId, id, timezone) => {
   const event = await eventRepo.findEventById(id);
   //return if event not found
   if (!event) return null;
+
+  void logEngagementService({
+    entityType: "events",
+    entityId: id,
+    action: "view",
+    userId
+  }).catch(console.error);
+
   const now = getCurrentDateInTimezone({ timezone });
 
   // TODO announcements - fetch from DB when implemented
@@ -394,11 +493,9 @@ const getEventDetails = async (userLocation, userId, id, timezone) => {
 
   moreFromOrganizer = moreFromOrganizer.map(e => formatMoreFromOrganizerEventResponse(e, { userLocation, timezone }));
 
-  addOrUpdateRecentlyViewedItem(userId, id, 'event'); // Run in background, don't await
-
-    const formattedEvent = formatEventResponse(event, { timezone });
-    const titles =await eventRepo.getVenueTypeTitles(event.basicInfo.venue);
-    const updatedEvent =attachVenueTypesToEvent(formattedEvent, titles);
+  const formattedEvent = formatEventResponse(event, { timezone });
+  const titles = await eventRepo.getVenueTypeTitles(event.basicInfo.venue);
+  const updatedEvent = attachVenueTypesToEvent(formattedEvent, titles);
   let data = {
     event: updatedEvent,
 
@@ -419,17 +516,19 @@ const getEventIdByNanoid = async (nanoid) => {
 
 // TODO when user has skipped the interests selection we will show events based on his recent activity
 //get for you events for logged in user
-const getForYouEvents = async (userId, location, timezone, category, time) => {
+const getForYouEventsService = async ({ userId, userLocation, timezone, category, radiusKm, page = 1, limit = 20 }) => {
   // Fetch user preferences, interests, etc.
   const userPreferences = await getUserInterestsIdsForRecommendation(userId);
 
   // Get recommended events based on user preferences
   let recommendedEvents = await getForYouEventsAgainstInterests({
-    location,
+    userLocation,
     timezone,
     category,
-    time,
+    radiusKm,
     preferences: userPreferences,
+    page,
+    limit,
   });
 
 
@@ -451,9 +550,8 @@ const getForYouEvents = async (userId, location, timezone, category, time) => {
 
   return recommendedEvents;
 };
-const getEventReservations = async (nanoid,timezone) => {
+const getEventReservations = async (nanoid, timezone) => {
   const Reservations = await eventRepo.getEventReservations(nanoid);
-console.log("Reservations",Reservations );
   return reservationsFormatterAdjustDates(Reservations, timezone)
 };
 
@@ -487,7 +585,8 @@ module.exports = {
   getNearbyEvents,
   getNearbyEventsWithAdvanceFilters,
   getEventDetails,
-  getForYouEvents,
+  getForYouEventsService,
   getEventReservations,
   getEventsGroupedByTagsService,
+  thisWeekEvents,
 };
