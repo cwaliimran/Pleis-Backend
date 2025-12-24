@@ -1,7 +1,7 @@
 
 const mongoose = require("mongoose");
 const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
-const { findOrganizationById, findEventsByOrganization, countEventsByOrganization, getOrganizationMenuWithItems, getRecommendedOrganizations, getNearbyOrganizations, getSuggestedLoyaltyClubsForUser, getOrganizationsGroupedByVenueTypesRepo, getForYouOrganizationsForHomeRepo, getTrendingOrganizationsForHomeRepo } = require("./organizationProfileRepository");
+const { findOrganizationById, findEventsByOrganization, countEventsByOrganization, getOrganizationMenuWithItems, getRecommendedOrganizations, getNearbyOrganizations, getSuggestedLoyaltyClubsForUser, getOrganizationsGroupedByVenueTypesRepo, getForYouOrganizationsForHomeRepo, getTrendingOrganizationsForHomeRepo, getSuggestedLoyaltyClubsForHome, getNewlyListedOrganizationsRepo } = require("./organizationProfileRepository");
 const { getCurrentDateInTimezone, generateMeta, convertUtcToTimezone } = require("../../helperUtils/responseUtil");
 const { calculateDistance } = require("../../helperUtils/calculateDistance");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
@@ -188,10 +188,22 @@ const getNearbyOrganizationsService = async ({ category, userLocation, radiusKm,
 const getSuggestedLoyaltyClubs = async ({ page = 1, limit = 10, userId, keyword }) => {
   let { result, meta } = await getSuggestedLoyaltyClubsForUser({ page, limit, userId, keyword });
   const formatted = result.map(club => formatSuggestedClub(club));
+
   return {
     formatted: formatted || [],
     meta
   };
+};
+
+const getSuggestedLoyaltyClubsForHomeService = async ({ page = 1, limit = 10, userId, userLocation,
+  radiusKm = 50 }) => {
+  let result = await getSuggestedLoyaltyClubsForHome({
+    page, limit, userId, userLocation,
+    radiusKm
+  });
+  const formatted = result.map(club => formatSuggestedClub(club));
+
+  return formatted || [];
 };
 
 const organizationsByVenueTypeService = async ({ location, radiusKm, timezone, page, limit, userId }) => {
@@ -269,6 +281,34 @@ const getTrendingOrganizationsForHomeService = async ({
   };
 };
 
+const getNewlyListedOrganizationsService = async ({
+  category,
+  userLocation,
+  radiusKm = 50,
+  page = 1,
+  limit = 10,
+  skip = 0,
+}) => {
+
+  const organizations = await getNewlyListedOrganizationsRepo({
+    category,
+    userLocation,
+    radiusKm,
+    page,
+    limit,
+    skip
+  });
+
+  const formattedOrganizations = organizations.map(org =>
+    formatNearByOrganization(org)
+  );
+
+  return {
+    organizations: formattedOrganizations
+  };
+};
+
+
 module.exports = {
   getOrganizationEvents,
   getOrganizationProfile,
@@ -276,5 +316,7 @@ module.exports = {
   getSuggestedLoyaltyClubs,
   organizationsByVenueTypeService,
   getForYouOrganizationsForHomeService,
-  getTrendingOrganizationsForHomeService
+  getTrendingOrganizationsForHomeService,
+  getSuggestedLoyaltyClubsForHomeService,
+  getNewlyListedOrganizationsService
 };

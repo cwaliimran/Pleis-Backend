@@ -434,6 +434,204 @@ const getSuggestedLoyaltyClubsForUser = async ({ page = 1, limit = 10, userId, k
 
   return { result, meta };
 };
+//get suggested loyalty clubs for home api
+const getSuggestedLoyaltyClubsForHome = async ({
+  page = 1,
+  limit = 10,
+  userId,
+  userLocation,
+  radiusKm = 50
+}) => {
+  const joinedClubs = await getUserJoinedClubs(userId);
+  const joinedClubIds = joinedClubs.map(c => c.companyOrganizer);
+
+  /* 🔥 STEP 1: GEO FILTER */
+  const nearbyCompanyIds = await getCompanyOrganizersWithinRadius({
+    userLocation,
+    radiusKm
+  });
+
+  if (!nearbyCompanyIds.length) return [];
+
+  const skip = (page - 1) * limit;
+
+  return User.aggregate([
+    /* ===============================
+       BASE FILTER (radius-aware)
+       =============================== */
+    {
+      $match: {
+        _id: {
+          $in: nearbyCompanyIds,
+          $nin: joinedClubIds
+        },
+        "accountState.status": "active",
+        "accountState.userType": "organizer",
+        "companyDetails.loyaltySettings.title": { $exists: true, $ne: "" }
+      }
+    },
+
+    /* ===============================
+       MEMBERS
+       =============================== */
+    {
+      $lookup: {
+        from: "clubmembers",
+        localField: "_id",
+        foreignField: "companyOrganizer",
+        pipeline: [
+          { $match: { status: { $ne: "left" } } },
+          { $count: "count" }
+        ],
+        as: "members"
+      }
+    },
+    {
+      $addFields: {
+        membersCount: { $ifNull: [{ $first: "$members.count" }, 0] }
+      }
+    },
+
+    /* ===============================
+       ORGANIZATIONS (relevance)
+       =============================== */
+    {
+      $lookup: {
+        from: "organizations",
+        localField: "_id",
+        foreignField: "creator",
+        pipeline: [{ $match: { status: "active" } }],
+        as: "orgs"
+      }
+    },
+    {
+      $addFields: {
+        organizationsCount: { $size: "$orgs" }
+      }
+    },
+    {
+      $match: {
+        organizationsCount: { $gt: 0 }
+      }
+    },
+
+    /* ===============================
+       POPULARITY (company views)
+       =============================== */
+    {
+      $lookup: {
+        from: "engagementevents",
+        let: { companyId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$entityType", "users"] },
+                  { $eq: ["$entityId", "$$companyId"] },
+                  { $eq: ["$action", "view"] }
+                ]
+              }
+            }
+          },
+          { $count: "views" }
+        ],
+        as: "popularity"
+      }
+    },
+    {
+      $addFields: {
+        viewsCount: { $ifNull: [{ $first: "$popularity.views" }, 0] }
+      }
+    },
+
+    /* ===============================
+       SCORING
+       =============================== */
+    {
+      $addFields: {
+        membersScore: { $round: [{ $log10: { $add: ["$membersCount", 1] } }, 2] },
+        popularityScore: { $round: [{ $log10: { $add: ["$viewsCount", 1] } }, 2] },
+        relevanceScore: { $round: [{ $log10: { $add: ["$organizationsCount", 1] } }, 2] }
+      }
+    },
+    {
+      $addFields: {
+        finalScore: {
+          $round: [
+            {
+              $add: [
+                { $multiply: ["$membersScore", 0.3] },
+                { $multiply: ["$popularityScore", 0.2] },
+                { $multiply: ["$relevanceScore", 0.5] }
+              ]
+            },
+            2
+          ]
+        }
+      }
+    },
+
+    { $sort: { finalScore: -1 } },
+    { $skip: skip },
+    { $limit: limit },
+
+    /* ===============================
+       FINAL RESPONSE
+       =============================== */
+    {
+      $project: {
+        _id: 1,
+        companyDetails: {
+          logo: 1,
+          loyaltySettings: { title: 1 }
+        },
+        explain: {
+          membersCount: 1,
+          organizationsCount: 1,
+          viewsCount: 1,
+          finalScore: 1
+        }
+      }
+    }
+  ]);
+};
+
+
+
+const getCompanyOrganizersWithinRadius = async ({
+  userLocation,
+  radiusKm = 50
+}) => {
+  if (!userLocation?.coordinates?.length) return [];
+
+  const result = await Organizations.aggregate([
+    {
+      $geoNear: {
+        near: userLocation,
+        key: "location",
+        distanceField: "distance",
+        spherical: true,
+        maxDistance: radiusKm * 1000,
+        query: {
+          status: "active",
+          "location.coordinates": { $exists: true }
+        }
+      }
+    },
+
+    /* Only need company organizer */
+    {
+      $group: {
+        _id: "$creator" // companyOrganizer
+      }
+    }
+  ]);
+
+  return result.map(r => r._id);
+};
+
+
 
 //get organization creator
 const getOrgCompanyOrganizer = async (organizationId) => {
@@ -738,7 +936,7 @@ const getTrendingOrganizationsForHomeRepo = async ({
 
   const now = Date.now();
   const last48h = new Date(now - 48 * 60 * 60 * 1000);
-  const last7d  = new Date(now - 7 * 24 * 60 * 60 * 1000);
+  const last7d = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
   const categoryObjectId = category
     ? new mongoose.Types.ObjectId(category)
@@ -846,6 +1044,187 @@ const getTrendingOrganizationsForHomeRepo = async ({
 };
 
 
+const getNewlyListedOrganizationsRepo = async ({
+  category,
+  userLocation,
+  radiusKm = 50,
+  page = 1,
+  limit = 10,
+  skip = 0
+}) => {
+
+  const geoQuery = { status: "active" };
+
+  if (category) {
+    geoQuery["otherInfo.categories"] = {
+      $in: [new mongoose.Types.ObjectId(category)]
+    };
+  }
+
+  const pipeline = [
+    /* ===============================
+       1️⃣ GEO FILTER (MUST be first)
+       =============================== */
+    {
+      $geoNear: {
+        near: userLocation,
+        key: "location",
+        distanceField: "distance",
+        spherical: true,
+        maxDistance: radiusKm * 1000,
+        query: geoQuery
+      }
+    },
+
+    /* ===============================
+       2️⃣ AGE (days since created)
+       =============================== */
+    {
+      $addFields: {
+        ageDays: {
+          $divide: [
+            { $subtract: [new Date(), "$createdAt"] },
+            1000 * 60 * 60 * 24
+          ]
+        }
+      }
+    },
+
+    /* ===============================
+       3️⃣ POPULARITY (any engagement)
+       =============================== */
+    {
+      $lookup: {
+        from: "engagementevents",
+        let: { orgId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$entityType", "organizations"] },
+                  { $eq: ["$entityId", "$$orgId"] }
+                ]
+              }
+            }
+          },
+          { $count: "count" }
+        ],
+        as: "popularity"
+      }
+    },
+    {
+      $addFields: {
+        popularityCount: {
+          $ifNull: [{ $first: "$popularity.count" }, 0]
+        }
+      }
+    },
+
+    /* ===============================
+       4️⃣ NORMALIZED SCORES
+       =============================== */
+    {
+      $addFields: {
+        recencyScore: {
+          $round: [
+            {
+              $ln: {
+                $add: [1, { $subtract: [365, "$ageDays"] }]
+              }
+            },
+            2
+          ]
+        },
+        popularityScore: {
+          $round: [
+            { $ln: { $add: [1, "$popularityCount"] } },
+            2
+          ]
+        }
+      }
+    },
+
+    /* ===============================
+       5️⃣ FINAL WEIGHTED SCORE
+       =============================== */
+    {
+      $addFields: {
+        finalScore: {
+          $round: [
+            {
+              $add: [
+                { $multiply: ["$recencyScore", 0.8] },
+                { $multiply: ["$popularityScore", 0.2] }
+              ]
+            },
+            2
+          ]
+        }
+      }
+    },
+
+    /* ===============================
+       6️⃣ SORT + PAGINATION
+       =============================== */
+    { $sort: { finalScore: -1 } },
+    { $skip: skip },
+    { $limit: limit },
+
+    /* ===============================
+       7️⃣ Populate categories
+       =============================== */
+    {
+      $lookup: {
+        from: "categories",
+        localField: "otherInfo.categories",
+        foreignField: "_id",
+        as: "categories",
+        pipeline: [{ $project: { title: 1 } }]
+      }
+    },
+
+    /* ===============================
+       8️⃣ Populate tags
+       =============================== */
+    {
+      $lookup: {
+        from: "tags",
+        localField: "otherInfo.tags",
+        foreignField: "_id",
+        as: "tags",
+        pipeline: [{ $project: { title: 1 } }]
+      }
+    },
+
+    /* ===============================
+       9️⃣ FINAL PROJECTION
+       =============================== */
+    {
+      $project: {
+        _id: 1,
+        createdAt: 1,
+        distance: 1,
+        "basicInfo.name": 1,
+        "basicInfo.media": 1,
+        "otherInfo.description": 1,
+        categories: 1,
+        tags: 1,
+
+        /* explain / debug */
+        explain: {
+          ageDays: { $round: ["$ageDays", 1] },
+          popularityCount: "$popularityCount",
+          recencyScore: "$recencyScore",
+          popularityScore: "$popularityScore",
+          finalScore: "$finalScore"
+        }
+      }
+    }
+  ];
+
+  return Organizations.aggregate(pipeline);
+};
 
 
 module.exports = {
@@ -863,6 +1242,8 @@ module.exports = {
   getOrgCompanyOrganizer,
   getOrganizationsGroupedByVenueTypesRepo,
   getForYouOrganizationsForHomeRepo,
-  getTrendingOrganizationsForHomeRepo
+  getTrendingOrganizationsForHomeRepo,
+  getSuggestedLoyaltyClubsForHome,
+  getNewlyListedOrganizationsRepo,
 
 };
