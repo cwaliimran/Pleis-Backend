@@ -11,7 +11,6 @@ const { getUserInterestsIdsForRecommendation } = require("../usersManagement/use
 const { getForYouEventsAgainstInterests } = require("./recommendationSystem/getForYouEventsAgainstInterests");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { getTicketings } = require("../ticketing/ticketingsService");
-const { addOrUpdateRecentlyViewedItem } = require("../recentlyViewed/recentlyViewedItemRepository");
 const { default: mongoose } = require("mongoose");
 const { logEngagementService } = require("@appEngagement/engagementEventsService");
 
@@ -494,8 +493,6 @@ const getEventDetails = async (userLocation, userId, id, timezone) => {
 
   moreFromOrganizer = moreFromOrganizer.map(e => formatMoreFromOrganizerEventResponse(e, { userLocation, timezone }));
 
-  addOrUpdateRecentlyViewedItem(userId, id, 'event'); // Run in background, don't await
-
   const formattedEvent = formatEventResponse(event, { timezone });
   const titles = await eventRepo.getVenueTypeTitles(event.basicInfo.venue);
   const updatedEvent = attachVenueTypesToEvent(formattedEvent, titles);
@@ -555,7 +552,6 @@ const getForYouEventsService = async ({ userId, userLocation, timezone, category
 };
 const getEventReservations = async (nanoid, timezone) => {
   const Reservations = await eventRepo.getEventReservations(nanoid);
-  console.log("Reservations", Reservations);
   return reservationsFormatterAdjustDates(Reservations, timezone)
 };
 

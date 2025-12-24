@@ -70,7 +70,9 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
   categoryObjectId = null
 ) => {
   const pipeline = [
-    // 1️⃣ GEO FIRST
+    /* ===============================
+       1️⃣ GEO FIRST (MANDATORY)
+       =============================== */
     {
       $geoNear: {
         near: userLocation,
@@ -82,7 +84,9 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
       },
     },
 
-    // 2️⃣ Join top picks
+    /* ===============================
+       2️⃣ TOP PICKS JOIN
+       =============================== */
     {
       $lookup: {
         from: "toppicksorganizations",
@@ -93,7 +97,9 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
     },
     { $unwind: "$topPick" },
 
-    // 3️⃣ Base filters
+    /* ===============================
+       3️⃣ BASE FILTERS
+       =============================== */
     {
       $match: {
         ...query,
@@ -102,7 +108,10 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
     },
   ];
 
-  // ✅ CATEGORY FILTER (correct $in usage)
+  /* ===============================
+     OPTIONAL CATEGORY FILTER
+     (filter only, no population)
+     =============================== */
   if (categoryObjectId) {
     pipeline.push({
       $match: {
@@ -112,25 +121,40 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
   }
 
   pipeline.push(
-    // 4️⃣ Sort
+    /* ===============================
+       4️⃣ SORT (ADMIN ORDER)
+       =============================== */
     { $sort: { "topPick.order": 1 } },
 
-    // 5️⃣ Join categories (populate)
+    /* ===============================
+       5️⃣ PRIMARY VENUE (TITLE ONLY)
+       =============================== */
     {
       $lookup: {
-        from: "categories",
-        localField: "otherInfo.categories",
-        foreignField: "_id",
-        as: "categories",
+        from: "venues",
+        let: { orgId: "$_id" },
         pipeline: [
           {
+            $match: {
+              $expr: { $eq: ["$organization", "$$orgId"] },
+              isPrimary: true,
+              status: "active",
+            },
+          },
+          {
             $project: {
+              _id: 0,
               title: 1,
             },
           },
         ],
+        as: "primaryVenue",
       },
     },
+
+    /* ===============================
+       6️⃣ TAGS (TITLE ONLY)
+       =============================== */
     {
       $lookup: {
         from: "tags",
@@ -140,6 +164,7 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
         pipeline: [
           {
             $project: {
+              _id: 1,
               title: 1,
             },
           },
@@ -147,26 +172,35 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
       },
     },
 
-    // 6️⃣ Pagination
+    /* ===============================
+       7️⃣ PAGINATION
+       =============================== */
     { $skip: skip },
     { $limit: limit },
 
-    // 7️⃣ Final projection
+    /* ===============================
+       8️⃣ FINAL PROJECTION
+       =============================== */
     {
       $project: {
         _id: 1,
+        distance: 1,
         "basicInfo.name": 1,
         "basicInfo.media.cover": 1,
         "otherInfo.description": 1,
-        categories: 1,
+
         tags: 1,
-        distance: 1,
+
+        venue: {
+          title: { $ifNull: [{ $first: "$primaryVenue.title" }, null] },
+        },
       },
     }
   );
 
   return Organizations.aggregate(pipeline);
 };
+
 
 
 // Count by condition

@@ -17,7 +17,6 @@ const getCustomCategories = async ({
   date,
   orderSort = "asc",
   category,
-  time
 }) => {
   const query = {};
 
@@ -50,7 +49,6 @@ const getCustomCategories = async ({
       limit === 0 ? 0 : limit,
       sort,
       category,
-      time
     ),
   ]);
 

@@ -7,7 +7,7 @@ const { default: mongoose } = require("mongoose");
  * @desc Fetch personalized "For You" events for a user based on interests
  * Prioritizes active, future, and popular events.
  */
-const { getCurrentDateInTimezone, getStartAndEndOfDay, getStartAndEndOfWeek } = require("../../../helperUtils/responseUtil");
+const { getCurrentDateInTimezone} = require("../../../helperUtils/responseUtil");
 const TicketingsModel = require("@TicketingsModel");
 const { getMinTicketPricesByEventIds } = require("../../ticketing/ticketingsRepository");
 

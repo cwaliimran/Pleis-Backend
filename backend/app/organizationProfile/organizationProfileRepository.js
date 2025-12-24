@@ -11,7 +11,6 @@ const { getUserJoinedClubs, getClubMembersCounts } = require("../loyalty/clubMem
 const { User } = require("@UserModel");
 const { generateMeta } = require("../../helperUtils/responseUtil");
 const { getUserInterestsIdsForRecommendation } = require("../usersManagement/usersRepository");
-const EngagementEvents = require("@EngagementEventsModel");
 
 
 /**
@@ -768,7 +767,9 @@ const getForYouOrganizationsForHomeRepo = async ({
   }
 
   const pipeline = [
-    // 1️⃣ GEO FILTER (MUST be first)
+    /* ===============================
+       1️⃣ GEO FILTER (MANDATORY)
+       =============================== */
     {
       $geoNear: {
         near: userLocation,
@@ -780,23 +781,23 @@ const getForYouOrganizationsForHomeRepo = async ({
       }
     },
 
-    // 2️⃣ Match categories + tags
+    /* ===============================
+       2️⃣ MATCH USER INTERESTS
+       =============================== */
     {
       $addFields: {
         matchedCategories: {
-          $size: {
-            $setIntersection: ["$otherInfo.categories", userCategories]
-          }
+          $size: { $setIntersection: ["$otherInfo.categories", userCategories] }
         },
         matchedTags: {
-          $size: {
-            $setIntersection: ["$otherInfo.tags", userTags]
-          }
+          $size: { $setIntersection: ["$otherInfo.tags", userTags] }
         }
       }
     },
 
-    // 3️⃣ Relevance score (raw)
+    /* ===============================
+       3️⃣ RELEVANCE SCORE
+       =============================== */
     {
       $addFields: {
         relevanceScore: {
@@ -830,7 +831,9 @@ const getForYouOrganizationsForHomeRepo = async ({
       }
     },
 
-    // 4️⃣ Popularity score from meta (raw)
+    /* ===============================
+       4️⃣ POPULARITY SCORE
+       =============================== */
     {
       $addFields: {
         popularityScore: {
@@ -852,7 +855,9 @@ const getForYouOrganizationsForHomeRepo = async ({
       }
     },
 
-    // 5️⃣ Round relevance & popularity
+    /* ===============================
+       5️⃣ ROUND SCORES
+       =============================== */
     {
       $addFields: {
         relevanceScore: { $round: ["$relevanceScore", 2] },
@@ -860,7 +865,9 @@ const getForYouOrganizationsForHomeRepo = async ({
       }
     },
 
-    // 6️⃣ Final score (rounded)
+    /* ===============================
+       6️⃣ FINAL SCORE
+       =============================== */
     {
       $addFields: {
         finalScore: {
@@ -877,45 +884,69 @@ const getForYouOrganizationsForHomeRepo = async ({
       }
     },
 
-    // 7️⃣ Sort by best match
+    /* ===============================
+       7️⃣ SORT + PAGINATION
+       =============================== */
     { $sort: { finalScore: -1 } },
-
-    // 8️⃣ Pagination
     { $skip: skip },
     { $limit: limit },
 
-    // 9️⃣ Populate categories
+    /* ===============================
+       8️⃣ PRIMARY VENUE (TITLE ONLY)
+       =============================== */
     {
       $lookup: {
-        from: "categories",
-        localField: "otherInfo.categories",
-        foreignField: "_id",
-        as: "categories",
-        pipeline: [{ $project: { title: 1 } }]
+        from: "venues",
+        let: { orgId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$organization", "$$orgId"] },
+              isPrimary: true,
+              status: "active"
+            }
+          },
+          {
+            $project: {
+              _id: 0,
+              title: 1
+            }
+          }
+        ],
+        as: "primaryVenue"
       }
     },
 
-    // 🔟 Populate tags
+    /* ===============================
+       9️⃣ TAGS (TITLE ONLY)
+       =============================== */
     {
       $lookup: {
         from: "tags",
         localField: "otherInfo.tags",
         foreignField: "_id",
         as: "tags",
-        pipeline: [{ $project: { title: 1 } }]
+        pipeline: [{ $project: { _id: 1, title: 1 } }]
       }
     },
 
-    // 1️⃣1️⃣ Final projection
+    /* ===============================
+       🔟 FINAL PROJECTION
+       =============================== */
     {
       $project: {
         _id: 1,
+        distance: 1,
         "basicInfo.name": 1,
         "basicInfo.media": 1,
         "otherInfo.description": 1,
-        categories: 1,
+
         tags: 1,
-        distance: 1,
+
+        venue: {
+          title: { $ifNull: [{ $first: "$primaryVenue.title" }, null] }
+        },
+
         relevanceScore: 1,
         popularityScore: 1,
         finalScore: 1
@@ -925,6 +956,7 @@ const getForYouOrganizationsForHomeRepo = async ({
 
   return Organizations.aggregate(pipeline);
 };
+
 
 
 const getTrendingOrganizationsForHomeRepo = async ({
@@ -943,7 +975,9 @@ const getTrendingOrganizationsForHomeRepo = async ({
     : null;
 
   const pipeline = [
-    // 1️⃣ GEO FIRST — REQUIRED BY MONGODB
+    /* ===============================
+       1️⃣ GEO FILTER (MUST BE FIRST)
+       =============================== */
     {
       $geoNear: {
         near: userLocation,
@@ -960,7 +994,9 @@ const getTrendingOrganizationsForHomeRepo = async ({
       }
     },
 
-    // 2️⃣ Lookup engagement events (last 7d only)
+    /* ===============================
+       2️⃣ ENGAGEMENT (LAST 7 DAYS)
+       =============================== */
     {
       $lookup: {
         from: "engagementevents",
@@ -990,19 +1026,19 @@ const getTrendingOrganizationsForHomeRepo = async ({
       }
     },
 
-    // 3️⃣ Flatten engagement stats
+    /* ===============================
+       3️⃣ FLATTEN STATS
+       =============================== */
     {
       $addFields: {
-        views7d: {
-          $ifNull: [{ $arrayElemAt: ["$engagementStats.views7d", 0] }, 0]
-        },
-        views48h: {
-          $ifNull: [{ $arrayElemAt: ["$engagementStats.views48h", 0] }, 0]
-        }
+        views7d: { $ifNull: [{ $first: "$engagementStats.views7d" }, 0] },
+        views48h: { $ifNull: [{ $first: "$engagementStats.views48h" }, 0] }
       }
     },
 
-    // 4️⃣ Trending score
+    /* ===============================
+       4️⃣ TRENDING SCORE
+       =============================== */
     {
       $addFields: {
         trendingScore: {
@@ -1019,20 +1055,65 @@ const getTrendingOrganizationsForHomeRepo = async ({
       }
     },
 
-    // 5️⃣ Sort by trending
-    { $sort: { trendingScore: -1 } },
+    /* ===============================
+       5️⃣ PRIMARY VENUE
+       =============================== */
+    {
+      $lookup: {
+        from: "venues",
+        let: { orgId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$organization", "$$orgId"] },
+              isPrimary: true,
+              status: "active"
+            }
+          },
+          {
+            $project: {
+              _id: 0,
+              title: 1
+            }
+          }
+        ],
+        as: "primaryVenue"
+      }
+    },
 
-    // 6️⃣ Limit
+    /* ===============================
+       6️⃣ POPULATE TAGS (TITLE ONLY)
+       =============================== */
+    {
+      $lookup: {
+        from: "tags",
+        localField: "otherInfo.tags",
+        foreignField: "_id",
+        as: "tags",
+        pipeline: [{ $project: { _id: 1, title: 1 } }]
+      }
+    },
+
+    /* ===============================
+       7️⃣ SORT & LIMIT
+       =============================== */
+    { $sort: { trendingScore: -1 } },
     { $limit: limit },
 
-    // 7️⃣ Final projection
+    /* ===============================
+       8️⃣ FINAL SHAPE
+       =============================== */
     {
       $project: {
         _id: 1,
+        distance: 1,
         "basicInfo.name": 1,
         "basicInfo.media": 1,
         "otherInfo.description": 1,
-        distance: 1,
+        tags: 1,
+
+        venue: { $first: "$primaryVenue" },
+
         views48h: 1,
         views7d: 1,
         trendingScore: 1
@@ -1042,6 +1123,7 @@ const getTrendingOrganizationsForHomeRepo = async ({
 
   return Organizations.aggregate(pipeline);
 };
+
 
 
 const getNewlyListedOrganizationsRepo = async ({
@@ -1055,6 +1137,7 @@ const getNewlyListedOrganizationsRepo = async ({
 
   const geoQuery = { status: "active" };
 
+  // Category used ONLY for filtering
   if (category) {
     geoQuery["otherInfo.categories"] = {
       $in: [new mongoose.Types.ObjectId(category)]
@@ -1063,7 +1146,7 @@ const getNewlyListedOrganizationsRepo = async ({
 
   const pipeline = [
     /* ===============================
-       1️⃣ GEO FILTER (MUST be first)
+       1️⃣ GEO FILTER (MANDATORY)
        =============================== */
     {
       $geoNear: {
@@ -1077,7 +1160,7 @@ const getNewlyListedOrganizationsRepo = async ({
     },
 
     /* ===============================
-       2️⃣ AGE (days since created)
+       2️⃣ AGE (DAYS SINCE CREATED)
        =============================== */
     {
       $addFields: {
@@ -1091,7 +1174,7 @@ const getNewlyListedOrganizationsRepo = async ({
     },
 
     /* ===============================
-       3️⃣ POPULARITY (any engagement)
+       3️⃣ POPULARITY (ENGAGEMENT)
        =============================== */
     {
       $lookup: {
@@ -1137,10 +1220,7 @@ const getNewlyListedOrganizationsRepo = async ({
           ]
         },
         popularityScore: {
-          $round: [
-            { $ln: { $add: [1, "$popularityCount"] } },
-            2
-          ]
+          $round: [{ $ln: { $add: [1, "$popularityCount"] } }, 2]
         }
       }
     },
@@ -1172,20 +1252,33 @@ const getNewlyListedOrganizationsRepo = async ({
     { $limit: limit },
 
     /* ===============================
-       7️⃣ Populate categories
+       7️⃣ PRIMARY VENUE (TITLE ONLY)
        =============================== */
     {
       $lookup: {
-        from: "categories",
-        localField: "otherInfo.categories",
-        foreignField: "_id",
-        as: "categories",
-        pipeline: [{ $project: { title: 1 } }]
+        from: "venues",
+        let: { orgId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$organization", "$$orgId"] },
+              isPrimary: true,
+              status: "active"
+            }
+          },
+          {
+            $project: {
+              _id: 0,
+              title: 1
+            }
+          }
+        ],
+        as: "primaryVenue"
       }
     },
 
     /* ===============================
-       8️⃣ Populate tags
+       8️⃣ TAGS (TITLE ONLY)
        =============================== */
     {
       $lookup: {
@@ -1193,7 +1286,7 @@ const getNewlyListedOrganizationsRepo = async ({
         localField: "otherInfo.tags",
         foreignField: "_id",
         as: "tags",
-        pipeline: [{ $project: { title: 1 } }]
+        pipeline: [{ $project: { _id: 1, title: 1 } }]
       }
     },
 
@@ -1208,8 +1301,12 @@ const getNewlyListedOrganizationsRepo = async ({
         "basicInfo.name": 1,
         "basicInfo.media": 1,
         "otherInfo.description": 1,
-        categories: 1,
+
         tags: 1,
+
+        venue: {
+          title: { $ifNull: [{ $first: "$primaryVenue.title" }, null] }
+        },
 
         /* explain / debug */
         explain: {
@@ -1225,6 +1322,159 @@ const getNewlyListedOrganizationsRepo = async ({
 
   return Organizations.aggregate(pipeline);
 };
+
+
+const getOrganizationsGroupedByTagsRepo = async ({
+  userLocation,
+  radiusKm,
+  limitPerTag = 10,
+  category
+}) => {
+  const radiusMeters = radiusKm * 1000;
+  const categoryObjectId = category
+    ? new mongoose.Types.ObjectId(category)
+    : null;
+
+  const geoQuery = {
+    status: "active",
+    ...(categoryObjectId && {
+      "otherInfo.categories": { $in: [categoryObjectId] }
+    })
+  };
+
+  const pipeline = [
+    /* ===============================
+       1️⃣ GEO FILTER
+       =============================== */
+    {
+      $geoNear: {
+        near: userLocation,
+        key: "location",
+        distanceField: "distance",
+        spherical: true,
+        maxDistance: radiusMeters,
+        query: geoQuery
+      }
+    },
+
+    /* ===============================
+       2️⃣ PICK ONE TAG ONLY (FIRST)
+       =============================== */
+    {
+      $addFields: {
+        primaryTag: { $arrayElemAt: ["$otherInfo.tags", 0] }
+      }
+    },
+
+    /* ===============================
+       3️⃣ DISCARD ORGS WITHOUT TAG
+       =============================== */
+    {
+      $match: {
+        primaryTag: { $ne: null }
+      }
+    },
+
+    /* ===============================
+       4️⃣ PROJECT MINIMAL FIELDS
+       =============================== */
+    {
+      $project: {
+        _id: 1,
+        distance: 1,
+        "basicInfo.name": 1,
+        "basicInfo.media": 1,
+        primaryTag: 1
+      }
+    },
+
+    /* ===============================
+       5️⃣ PRIMARY VENUE
+       =============================== */
+    {
+      $lookup: {
+        from: "venues",
+        let: { orgId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$organization", "$$orgId"] },
+              isPrimary: true,
+              status: "active"
+            }
+          },
+          {
+            $project: { _id: 0, title: 1 }
+          }
+        ],
+        as: "primaryVenue"
+      }
+    },
+
+    /* ===============================
+       6️⃣ TAG LOOKUP
+       =============================== */
+    {
+      $lookup: {
+        from: "tags",
+        localField: "primaryTag",
+        foreignField: "_id",
+        as: "tag"
+      }
+    },
+    { $unwind: "$tag" },
+
+    /* ===============================
+       7️⃣ SORT BY DISTANCE
+       =============================== */
+    { $sort: { distance: 1 } },
+
+    /* ===============================
+       8️⃣ GROUP BY TAG (NO DUPES)
+       =============================== */
+    {
+      $group: {
+        _id: "$tag._id",
+        title: { $first: "$tag.title" },
+        objects: {
+          $push: {
+            _id: "$_id",
+            basicInfo: "$basicInfo",
+            venue: {
+              title: { $ifNull: [{ $first: "$primaryVenue.title" }, null] }
+            },
+            tags: [
+              {
+                _id: "$tag._id",
+                title: "$tag.title"
+              }
+            ],
+            type: { $literal: "Organizations" }
+          }
+        }
+      }
+    },
+
+    /* ===============================
+       9️⃣ LIMIT PER TAG
+       =============================== */
+    {
+      $project: {
+        _id: 0,
+        title: 1,
+        objects: { $slice: ["$objects", limitPerTag] }
+      }
+    }
+  ];
+
+  return Organizations.aggregate(pipeline).allowDiskUse(true);
+};
+
+
+
+
+
+
 
 
 module.exports = {
@@ -1245,5 +1495,6 @@ module.exports = {
   getTrendingOrganizationsForHomeRepo,
   getSuggestedLoyaltyClubsForHome,
   getNewlyListedOrganizationsRepo,
+  getOrganizationsGroupedByTagsRepo
 
 };

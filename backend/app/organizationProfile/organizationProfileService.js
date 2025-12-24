@@ -1,7 +1,7 @@
 
 const mongoose = require("mongoose");
 const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
-const { findOrganizationById, findEventsByOrganization, countEventsByOrganization, getOrganizationMenuWithItems, getRecommendedOrganizations, getNearbyOrganizations, getSuggestedLoyaltyClubsForUser, getOrganizationsGroupedByVenueTypesRepo, getForYouOrganizationsForHomeRepo, getTrendingOrganizationsForHomeRepo, getSuggestedLoyaltyClubsForHome, getNewlyListedOrganizationsRepo } = require("./organizationProfileRepository");
+const { findOrganizationById, findEventsByOrganization, countEventsByOrganization, getOrganizationMenuWithItems, getRecommendedOrganizations, getNearbyOrganizations, getSuggestedLoyaltyClubsForUser, getOrganizationsGroupedByVenueTypesRepo, getForYouOrganizationsForHomeRepo, getTrendingOrganizationsForHomeRepo, getSuggestedLoyaltyClubsForHome, getNewlyListedOrganizationsRepo, getOrganizationsGroupedByTagsRepo } = require("./organizationProfileRepository");
 const { getCurrentDateInTimezone, generateMeta, convertUtcToTimezone } = require("../../helperUtils/responseUtil");
 const { calculateDistance } = require("../../helperUtils/calculateDistance");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
@@ -11,7 +11,6 @@ const { formatOrganization, formatNearByOrganization } = require("../../commonMo
 const { isClubMember } = require("../loyalty/clubMembers/clubMembersRepository");
 const { formatSuggestedClub } = require("../loyalty/clubMembers/formatters/formatSuggestedClubs");
 const { logEngagementService } = require("@appEngagement/engagementEventsService");
-// const { addOrUpdateRecentlyViewedItem } = require("backend/app/recentlyViewed/recentlyViewedItemService");
 
 
 
@@ -61,9 +60,6 @@ const getOrganizationProfile = async (queryData) => {
         timezone
       );
     }
-
-    //TODO enable
-    // addOrUpdateRecentlyViewedItem(userId, organizationId, 'organization'); // Run in background, don't await
 
     return { status: true, result: { data: { orgProfileInfo, orgEvents: orgEvents.result, reservations, menu, loyaltyPrograms, reviews, similarOrganizations } } };
   } catch (error) {
@@ -206,21 +202,6 @@ const getSuggestedLoyaltyClubsForHomeService = async ({ page = 1, limit = 10, us
   return formatted || [];
 };
 
-const organizationsByVenueTypeService = async ({ location, radiusKm, timezone, page, limit, userId }) => {
-  let result = await getOrganizationsGroupedByVenueTypesRepo({ location, radiusKm, timezone, page, limit, userId });
-
-
-  if (!Array.isArray(result)) return [];
-
-  return result.map(group => ({
-    ...group,
-    data: Array.isArray(group.data)
-      ? group.data.map(org => formatNearByOrganization(org))
-      : [],
-  }));
-
-}
-
 const getForYouOrganizationsForHomeService = async ({
   category,
   userLocation,
@@ -308,15 +289,45 @@ const getNewlyListedOrganizationsService = async ({
   };
 };
 
+const getOrganizationsGroupedByTagsService = async ({
+  userLocation,
+  radiusKm,
+  timezone,
+  userId,
+  category
+}) => {
+  const results = await getOrganizationsGroupedByTagsRepo({
+    userLocation,
+    radiusKm,
+    limitPerTag: 10,
+    category
+  });
+
+  if (!Array.isArray(results)) return [];
+
+  return results.map(group => ({
+    key: "customCategory",
+    title: group.title,
+    data: (group.objects || []).map(org => {
+      const formattedOrg = formatOrganization(org, { timezone, userId });
+      return {
+        ...formattedOrg,
+        type: "Organizations"
+      };
+    })
+  }));
+};
+
+
 
 module.exports = {
   getOrganizationEvents,
   getOrganizationProfile,
   getNearbyOrganizationsService,
   getSuggestedLoyaltyClubs,
-  organizationsByVenueTypeService,
   getForYouOrganizationsForHomeService,
   getTrendingOrganizationsForHomeService,
   getSuggestedLoyaltyClubsForHomeService,
-  getNewlyListedOrganizationsService
+  getNewlyListedOrganizationsService,
+  getOrganizationsGroupedByTagsService
 };
