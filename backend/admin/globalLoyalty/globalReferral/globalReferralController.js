@@ -268,6 +268,43 @@ const getUserGlobalReferrals = async (req, res) => {
 };
 
 
+
+
+
+
+const resetUserReferralLimits = async (req, res) => {
+const limit = 0;
+
+
+  try {
+    const GlobalReferral = await globalReferralService.resetUserReferralLimits(limit);
+
+    if (!GlobalReferral) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "GlobalReferral_reset_failed",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 201,
+      translationKey: "GlobalReferral_reset_successfully",
+      data: GlobalReferral,
+    });
+
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
 module.exports = {
   createGlobalReferral,
   getGlobalReferrals,
@@ -278,5 +315,6 @@ module.exports = {
   // getUserReservations,
   // updateUserReservationStatus,
   // updateUserReservation,
-  getUserGlobalReferrals
+  getUserGlobalReferrals,
+  resetUserReferralLimits
 };

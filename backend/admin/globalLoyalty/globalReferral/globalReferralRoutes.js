@@ -8,6 +8,7 @@ const {
   getUserGlobalReferrals,
   updateUserGlobalReferralStatus,
   updateUserGlobalReferral,
+  resetUserReferralLimits
 } = require("./globalReferralController");
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
@@ -47,5 +48,7 @@ router.put("/:id", roleMiddleware(["admin"]), updateGlobalReferral);
 
 // Delete a GlobalReferral
 router.delete("/:id", roleMiddleware(["admin"]), deleteGlobalReferral);
+// Delete a GlobalReferral
+router.get("/reset", roleMiddleware(["admin"]), resetUserReferralLimits);
 
 module.exports = router;

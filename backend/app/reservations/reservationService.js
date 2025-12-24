@@ -1,22 +1,9 @@
 // services/reservationservice.js
-const { buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
-const { generateMeta, getCurrentDateInTimezone } = require("../../helperUtils/responseUtil");
-const { reservationsFormatter,userReservationsFormatter, logQRCode } = require("./formaters/reservationFormetter");
-const Reservations = require("@ReservationsModel");
-const UserReservations = require("@UserReservationsModel");
+const { reservationsFormatter, userReservationsFormatter, logQRCode } = require("./formaters/reservationFormetter");
 const ReservationRepo = require("./reservationRepository");
-const mongoose = require("mongoose");
-const { generate2FASecret, generateQRCode, verify2FAToken } = require("../usersManagement/twoFactorAuth");
-const {
-  sendResponse,
-  parsePaginationParams,
-  validateParams,
-  getReadableErrorMessage,
-  convertTimezoneToUtc,
-  getStartAndEndOfMonth,
-  getStartAndEndOfWeek,
-} = require("@utils/responseUtil");
-const qrcode = require("qrcode");
+const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
+const moment = require("moment-timezone");
+
 const createReservation = async (data) => {
   let Reservation = await ReservationRepo.createReservation(data);
   return reservationsFormatter(Reservation);
@@ -45,7 +32,7 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
 
 const updateReservation = async (id, data) => {
   const UserReservation = await ReservationRepo.findUserReservationById(id);
-  
+
   if (!UserReservation) {
     return { error: "reservation_not_found" };  // Clear error message
   }
@@ -91,7 +78,7 @@ const updateReservation = async (id, data) => {
   try {
     // Update the reservation with the new data
     Object.assign(UserReservation, updateData);
-    
+
     // Save the updated reservation
     await UserReservation.save();
 
@@ -114,9 +101,9 @@ const deleteReservation = async (id) => {
 };
 
 const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, date }) => {
-  try{
+  try {
 
-    let { reservations, meta } = await ReservationRepo.getUserReservations({timezone, page, limit, keyword, status, userId, date });
+    let { reservations, meta } = await ReservationRepo.getUserReservations({ timezone, page, limit, keyword, status, userId, date });
     if (!reservations || reservations.length === 0) {
       return { reservations: [], meta };
     }
@@ -139,7 +126,7 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
 
 
 
-const getReservationDetails = async (id,timezone) => {
+const getReservationDetails = async (id, timezone) => {
 
 
   try {
@@ -174,9 +161,102 @@ const getReservationDetails = async (id,timezone) => {
 
 
 
+/**
+ * HOME — Organizations with Reservations
+ */
+const getOrganizationsWithReservationsForHomeService = async ({
+  userId,
+  userLocation,
+  radiusKm = 50,
+  timezone,
+  category
+}) => {
+  const organizations =
+    await ReservationRepo.getOrganizationsWithReservationsForHome({
+      userId,
+      userLocation,
+      radiusKm,
+      timezone,
+      limit: 10,
+      category
+    });
+
+  return organizations.map(org => ({
+    ...formatOrganization(org, { timezone, userId }),
+
+    // 🔔 Reservation flags (from repo)
+    reservationsAvailable: org.reservationsAvailable ?? false,
+    reservationCount: org.reservationCount ?? 0,
+
+    // 🕒 Business hours
+    openNow: isOrganizationOpenNow({
+      operatingHours: org.operatingHours,
+      timezone
+    }),
+
+    //remove operatingHours from response
+    operatingHours: undefined,
+
+    // 🧠 Explain block (kept for debug / ranking visibility)
+    explain: org.explain
+  }));
+};
+
+
+
+
+const isOrganizationOpenNow = ({ operatingHours, timezone }) => {
+  if (!operatingHours || !timezone) {
+    return false;
+  }
+
+  const now = moment().tz(timezone);
+  const day = now.format("dddd").toLowerCase();
+  const minutesNow = now.hours() * 60 + now.minutes();
+
+  const today = operatingHours[day];
+
+  if (!today) {
+    return false;
+  }
+
+  if (!today.isOpen) {
+    return false;
+  }
+
+  const { from, to, break: breakTime } = today;
+
+  const isOvernight = to < from;
+
+  let isWithinHours;
+  if (isOvernight) {
+    isWithinHours =
+      minutesNow >= from || minutesNow <= to;
+  } else {
+    isWithinHours =
+      minutesNow >= from && minutesNow <= to;
+  }
+
+  if (!isWithinHours) {
+    return false;
+  }
+
+  if (
+    breakTime?.from != null &&
+    breakTime?.to != null &&
+    minutesNow >= breakTime.from &&
+    minutesNow <= breakTime.to
+  ) {
+    return false;
+  }
+
+  return true;
+};
+
 
 
 module.exports = {
+  getOrganizationsWithReservationsForHomeService,
   createReservation,
   getReservations,
   updateReservation,

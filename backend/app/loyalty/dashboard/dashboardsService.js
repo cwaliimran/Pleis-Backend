@@ -22,7 +22,7 @@ const getDashboard = async ({ timezone, userId }) => {
 
   let [userGlobalWallet, joinedClubs, suggestedClubs, loyaltyRewards, loyaltyChallenges, loyaltyPromotions] = await Promise.all([
     getUserWallet(userId),
-    getUserJoinedClubsWithPoints(userId),
+    getUserJoinedClubsWithPoints({userId, page: 1, limit: 10, skip: 0}),
     getSuggestedLoyaltyClubs({ userId }),
     getSuggestedRewardsForDashboard({
       userId,
@@ -46,7 +46,7 @@ const getDashboard = async ({ timezone, userId }) => {
   return {
     dashboard: {
       userGlobalWallet: userGlobalWallet?.global ?? userGlobalWallet ?? null,
-      joinedClubs: joinedClubs || [],
+      joinedClubs: joinedClubs.data || [],
       suggestedClubs: suggestedClubs.formatted || [],
       loyaltyRewards: loyaltyRewards || { items: [], meta: { total: 0, page: 1, limit: 10 } },
       loyaltyChallenges: loyaltyChallenges || { items: [], meta: { total: 0, page: 1, limit: 10 } },

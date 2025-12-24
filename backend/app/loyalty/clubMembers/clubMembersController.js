@@ -64,15 +64,18 @@ const leaveClub = async (req, res) => {
 
 const getUserJoinedClubsWithPoints = async (req, res) => {
   const userId = req.user._id;
+  const { page, limit, skip } = parsePaginationParams(req);
+  const { keyword } = req.query;
 
   try {
-    const data = await clubService.getUserJoinedClubsWithPoints(userId);
+    const {data, meta} = await clubService.getUserJoinedClubsWithPoints({ page, limit, skip, userId, keyword });
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "user_joined_clubs_fetched_successfully",
       data,
+      meta
     });
 
   } catch (err) {

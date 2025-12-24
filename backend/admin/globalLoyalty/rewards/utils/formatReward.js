@@ -8,19 +8,6 @@ function formatReward(reward, timezone) {
   let obj = { ...reward };
 
   // -----------------------------
-  // 1) Map globalRewardType -> rewardType
-  // -----------------------------
-  const rewardTypeMap = {
-    GlobalTicketReward: "ticketReward",
-    GlobalCustomReward: "customReward",
-  };
-
-  obj.rewardType = rewardTypeMap[obj.globalRewardType] || obj.globalRewardType;
-
-  // Remove the internal field from API response
-  delete obj.globalRewardType;
-
-  // -----------------------------
   // 2) Attach full image URLs
   // -----------------------------
   if (obj?.image) {
@@ -31,25 +18,26 @@ function formatReward(reward, timezone) {
     obj.tierLimit.image = getFullImageUrl(obj.tierLimit.image);
   }
 
+  if (obj?.category?.image) {
+    obj.category.image = getFullImageUrl(obj.category.image);
+  }
+
+
   // -----------------------------
   // 3) Format based on rewardType
   // -----------------------------
   switch (obj.rewardType) {
-    case "customReward":
+    case "globalCustomReward":
       // Remove irrelevant fields
       delete obj.menuItem;
       delete obj.event;
 
       // Convert image inside customReward
       if (obj.customReward?.image) {
-        obj.customReward.media = getFullImageUrl(obj.customReward.image);
+        obj.customReward.image = getFullImageUrl(obj.customReward.image);
       }
       break;
 
-    case "ticketReward":
-      delete obj.menuItem;
-      delete obj.customReward;
-      break;
   }
 
   return obj;

@@ -60,7 +60,7 @@ const GlobalNotificationSchema = new mongoose.Schema(
     },
     interests: {
       type: [String], // Array to store multiple interests (e.g., Music, Sports, etc.)
-      enum: ["Music", "Sports", "Art", "Food & Drink", "Comedy", "Theater", "Festivals", "Nightlife", "Family", "Education", "Business", "Technology"],
+      enum: ["Music", "Sports", "Art", "Food & Drink", "Comedy", "Theater", "Festivals", "Nightlife", "Family", "Education", "Business", "Technology","Weddings","Sports","Social Gatherings"],
     },
     sendTiming: {
       type: String,

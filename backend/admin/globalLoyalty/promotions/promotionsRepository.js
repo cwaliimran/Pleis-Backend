@@ -1,8 +1,6 @@
 const {
   GlobalBasePromotion,
-  GlobalBuyMenuItemPromotion,
   GlobalHappyHourPromotion,
-  GlobalProductSalePromotion,
   GlobalClaimPromotion,
 } = require("../../../commonModules/globalLoyalty/promotions/models/Promotion");
 
@@ -10,14 +8,9 @@ const {
 // Decide which discriminator model to use
 const getModelByTaskType = (taskType) => {
   switch (taskType) {
-
-    case "buyMenuItemPromotion":
-      return GlobalBuyMenuItemPromotion;
-    case "happyHour":
+    case "globalHappyHourPromotion":
       return GlobalHappyHourPromotion;
-    case "productSale":
-      return GlobalProductSalePromotion;
-    case "claimPromotion":
+    case "globalClaimPromotion":
       return GlobalClaimPromotion;
     default:
       return GlobalBasePromotion; // fallback
@@ -69,7 +62,7 @@ const getWithFilters = async (query, skip = 0, limit = 20) => {
   // Tier limit
   pipeline.push({
     $lookup: {
-      from: "tiers",
+      from: "globalstatuslevels",
       localField: "tierLimit",
       foreignField: "_id",
       as: "tierLimit"

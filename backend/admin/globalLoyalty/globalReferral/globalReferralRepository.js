@@ -15,6 +15,7 @@ const {
   getStartAndEndOfMonth,
   getStartAndEndOfWeek,
 } = require("../../../helperUtils/responseUtil");
+const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const createGlobalReferral = async (data) => {
   try {
     const { type, status } = data;
@@ -178,6 +179,7 @@ const getUserGlobalReferrals = async ({
   skip,
   type
 }) => {
+console.log("keyword",keyword);
   const pipeline = [
     {
       $match: {
@@ -198,16 +200,7 @@ const getUserGlobalReferrals = async ({
     });
   }
 
-  if (keyword) {
-    const keywordMatch = buildKeywordQueryFromModels(
-      [{ schema: ReferredRecord.schema }],
-      keyword
-    );
 
-    if (Object.keys(keywordMatch).length) {
-      pipeline.push({ $match: keywordMatch });
-    }
-  }
 
   // Sorting by createdAt in descending order
   pipeline.push({ $sort: { createdAt: -1 } });
@@ -227,6 +220,7 @@ const getUserGlobalReferrals = async ({
   const result = await ReferredRecord.aggregate(pipeline);
 
   let globalReferral = result[0]?.data || [];
+
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   // Additional counts for meta (active/inactive/total by userId as creator)
@@ -236,57 +230,75 @@ const getUserGlobalReferrals = async ({
     ReferredRecord.countDocuments({ status: "inactive", ...(userId && { userId: userId }) })
   ]);
 
-  // Fetching the user names from the Users table
-  const userNames = await User.find({ _id: { $in: globalReferral.map(record => record.userId) } })
-    .select("firstName lastName _id");
+ // Fetching the user names from the Users table
+const userNames = await User.find({
+  _id: { $in: [...new Set(globalReferral.map(record => record.userId.toString()))] }
+})
+.select("firstName lastName _id");
 
-  // Fetching the referrer user names from the Users table
-  const referrerNames = await User.find({ _id: { $in: globalReferral.map(record => record.referrerUserId) } })
-    .select("firstName lastName _id");
+// Fetching the referrer user names from the Users table
+const referrerNames = await User.find({
+  _id: { $in: [...new Set(globalReferral.map(record => record.referrerUserId.toString()))] }
+})
+.select("firstName lastName _id remainingReferrals");
 
-  // Fetch global referral data for the given userId
-  const globalReferrals = await GlobalReferral.find({ creator: userId, type: "global" }).lean();
+// Fetch global referral data for the given userId
+const globalReferrals = await GlobalReferral.find({
+  creator: userId,
+  type: "global"
+}).lean();
 
+// Create a map to count how many times each referrerUserId appears
+const referrerCountMap = globalReferral.reduce((acc, record) => {
+  const key = record.referrerUserId.toString();
+  acc[key] = (acc[key] || 0) + 1;
+  return acc;
+}, {});
 
-  // Create a map to count how many times each referrerUserId appears
-  const referrerCountMap = globalReferral.reduce((acc, record) => {
-    acc[record.referrerUserId] = (acc[record.referrerUserId] || 0) + 1;
-    return acc;
-  }, {});
-
+// Use it
 globalReferral = await Promise.all(
   globalReferral.map(record => {
-    const userName = userNames.find(user => user._id.toString() === record.userId.toString());
-    const referrerName = referrerNames.find(user => user._id.toString() === record.referrerUserId.toString());
+    const userName = userNames.find(
+      user => user._id.toString() === record.userId.toString()
+    );
 
-    const referrerUserName = referrerName
-      ? `${referrerName.firstName} ${referrerName.lastName}`
+    const referrerUser = referrerNames.find(
+      user => user._id.toString() === record.referrerUserId.toString()
+    );
+
+    const referrerUserName = referrerUser
+      ? `${referrerUser.firstName} ${referrerUser.lastName}`
       : "";
 
-    const userFullName = userName
-      ? `${userName.firstName} ${userName.lastName}`
-      : "";
+    const referralLimit = globalReferrals?.[0]?.referralLimit ?? 0;
 
-    const referralLimit = globalReferrals[0].referralLimit;
+    const remainingReferrals = referrerUser?.remainingReferrals ?? 0;
 
-    const remainingReferrals =
-      referralLimit - referrerCountMap[record.referrerUserId];
-
-    return getUserImage(record.userId).then(profileIcon => {
-      return {
-        ...record,
-        firstName: userName?.firstName,
-        lastName: userName?.lastName,
-        profileIcon,   // ← REAL image
-        referrerUserName,
-        remainingReferrals,
-        referralLimit,
-        referrerCount: referrerCountMap[record.referrerUserId],
-      };
-    });
+    return getUserImage(record.userId).then(profileIcon => ({
+      ...record,
+      firstName: userName?.firstName,
+      lastName: userName?.lastName,
+      profileIcon,
+      referrerUserName,
+      remainingReferrals,
+      referralLimit,
+      referrerCount:
+        referrerCountMap[record.referrerUserId.toString()] || 0,
+    }));
   })
 );
 
+  console.log("globalReferral", );
+  if (keyword) {
+  const regex = new RegExp(keyword, "i");
+
+  globalReferral = globalReferral.filter(item =>
+    regex.test(item.firstName || "") ||
+    regex.test(item.lastName || "") ||
+    regex.test(item.referrerUserName || "")
+  );
+}
+console.log("globalReferral",globalReferral );
   const meta = generateMeta(page, limit, totalFiltered);
   meta.globalReferralCount = { total, active, inactive };
 
@@ -300,11 +312,44 @@ const findGlobalReferrals = async (filter = {}) => {
     throw err;
   }
 };
+const resetUserReferralLimits = async (limit) => {
+  try {
+    console.log("limit",limit );
+    // Force numeric conversion
+    limit = Number(limit);
+
+    if (!Number.isInteger(limit) || limit < 0) {
+      const err = new Error("INVALID_REFERRAL_LIMIT");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    await User.updateMany(
+      {},
+      {
+        $set: {
+          referralsCount: limit
+        }
+      }
+    );
+
+    return {
+      success: true,
+      message: `All users referral limits reset to ${limit}`
+    };
+
+  } catch (err) {
+    console.error("Error resetting referral limits:", err);
+    throw err;
+  }
+};
+
 
 module.exports = {
   createGlobalReferral,
   findGlobalReferralsById,
   getGlobalReferrals,
   findByIdAndUpdate,
-  getUserGlobalReferrals
+  getUserGlobalReferrals,
+  resetUserReferralLimits
 };

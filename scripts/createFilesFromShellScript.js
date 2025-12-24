@@ -1,241 +1,224 @@
 /**
- * generate-global-loyalty-challenge-orders.js
- *
- * Run:
- * node generate-global-loyalty-challenge-orders.js
+ * Home Explore sections generator
+ * Absolute path – safe overwrite
  */
 
 const fs = require("fs");
 const path = require("path");
 
-const BASE_PATH =
-  "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/globalLoyalty/challengesOrders";
+const BASE_DIR =
+  "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/app/home/sections";
 
-function ensureDir(dir) {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
+const ensureDir = (dir) => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+};
 
-function writeFile(filePath, content) {
-  fs.writeFileSync(filePath, content.trim() + "\n");
-  console.log("✅ created:", filePath);
-}
+const write = (file, content) => {
+  fs.writeFileSync(file, content.trimStart(), "utf8");
+  console.log("✅ Created:", file);
+};
 
-/* ============================
-   Ensure folder
-============================ */
-ensureDir(BASE_PATH);
+ensureDir(BASE_DIR);
 
 /* ============================
-   challengesOrdersRepository.js
+   forYouOrganizers.js
+   0.7 relevance + 0.3 popularity
 ============================ */
-writeFile(
-  path.join(BASE_PATH, "challengesOrdersRepository.js"),
+write(
+  path.join(BASE_DIR, "forYouOrganizers.js"),
   `
-const GlobalChallengeOrder = require("../models/GlobalChallengeOrder");
+const { relevanceScore } = require("../scoring/relevance");
+const { popularityScore } = require("../scoring/popularity");
 
-/**
- * Active challenge orders for dashboard
- */
-const getActiveGlobalOrdersForDashboard = async ({ userId }) => {
-  return GlobalChallengeOrder.find({
-    user: userId,
-    status: "in-progress"
-  }).lean();
-};
-
-/**
- * Create new challenge order
- */
-const createGlobalChallengeOrder = async (payload) => {
-  return GlobalChallengeOrder.create(payload);
-};
-
-/**
- * Update progress
- */
-const updateProgress = async (orderId, progress) => {
-  return GlobalChallengeOrder.findByIdAndUpdate(
-    orderId,
-    { progress },
-    { new: true }
-  );
-};
-
-module.exports = {
-  getActiveGlobalOrdersForDashboard,
-  createGlobalChallengeOrder,
-  updateProgress
+module.exports = function forYouOrganizers(items, userPrefs) {
+  return items
+    .map(item => ({
+      ...item,
+      score:
+        0.7 * relevanceScore({
+          itemTags: item.tags || [],
+          itemCategories: item.categories || [],
+          userPreferences: userPrefs || []
+        }) +
+        0.3 * popularityScore(item.stats || {})
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
 };
 `
 );
 
 /* ============================
-   challengesOrdersService.js
+   nearYouOrganizers.js
+   0.7 distance + 0.3 popularity
 ============================ */
-writeFile(
-  path.join(BASE_PATH, "challengesOrdersService.js"),
+write(
+  path.join(BASE_DIR, "nearYouOrganizers.js"),
   `
-const challengesRepo =
-  require("../challenges/challengesRepository");
-const ordersRepo =
-  require("./challengesOrdersRepository");
+const { distanceScore } = require("../scoring/distance");
+const { popularityScore } = require("../scoring/popularity");
 
-/**
- * Resolve global challenge progress
- * (entry point from events / actions)
- */
-const resolveGlobalChallengeByTaskType = async ({
-  userId,
-  taskType,
-  value = 1
-}) => {
-  const now = new Date();
-
-  const challenges =
-    await challengesRepo.getActiveGlobalChallenges({ now });
-
-  let remaining = value;
-  const updates = [];
-
-  for (const ch of challenges) {
-    if (ch.taskType !== taskType) continue;
-    if (remaining <= 0) break;
-
-    const target = ch.taskValue ?? 1;
-
-    // Find active order
-    let order =
-      await ordersRepo.getActiveGlobalOrdersForDashboard({ userId })
-        .then(list =>
-          list.find(o =>
-            String(o.challengeSnapshot?._id || o.challenge) ===
-            String(ch._id)
-          )
-        );
-
-    if (!order) {
-      order = await ordersRepo.createGlobalChallengeOrder({
-        user: userId,
-        challenge: ch._id,
-        challengeSnapshot: ch,
-        progress: { current: 0, target },
-        status: "in-progress"
-      });
-    }
-
-    const canApply = Math.min(
-      remaining,
-      target - order.progress.current
-    );
-
-    if (canApply <= 0) continue;
-
-    order.progress.current += canApply;
-    remaining -= canApply;
-
-    if (order.progress.current >= target) {
-      order.status = "completed";
-    }
-
-    await ordersRepo.updateProgress(order._id, order.progress);
-
-    updates.push({
-      challengeId: ch._id,
-      applied: canApply,
-      completed: order.status === "completed"
-    });
-  }
-
-  return {
-    success: updates.length > 0,
-    updates,
-    remaining
-  };
-};
-
-module.exports = {
-  resolveGlobalChallengeByTaskType
+module.exports = function nearYouOrganizers(items) {
+  return items
+    .map(item => ({
+      ...item,
+      score:
+        0.7 * distanceScore(item.distanceKm ?? 999) +
+        0.3 * popularityScore(item.stats || {})
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
 };
 `
 );
 
 /* ============================
-   challengesOrdersController.js
+   trendingOrganizers.js
+   0.7 views(48h) + 0.3 views(7d)
 ============================ */
-writeFile(
-  path.join(BASE_PATH, "challengesOrdersController.js"),
+write(
+  path.join(BASE_DIR, "trendingOrganizers.js"),
   `
-const {
-  sendResponse,
-  getReadableErrorMessage
-} = require("../../helperUtils/responseUtil");
+const { logNormalize } = require("../scoring/normalize");
 
-const service = require("./challengesOrdersService");
+module.exports = function trendingOrganizers(items) {
+  return items
+    .map(item => {
+      const views48h = logNormalize(item.views48h || 0, 5000);
+      const views7d = logNormalize(item.views7d || 0, 20000);
 
-/**
- * Internal endpoint
- * (called from events, actions, cron, etc.)
- */
-const resolveGlobalChallenge = async (req, res) => {
-  try {
-    const userId = req.user._id;
-    const { taskType, value } = req.body;
-
-    const result =
-      await service.resolveGlobalChallengeByTaskType({
-        userId,
-        taskType,
-        value
-      });
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "global_challenge_progress_updated",
-      data: result
-    });
-  } catch (error) {
-    const err = getReadableErrorMessage(error);
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: err.message,
-      error
-    });
-  }
-};
-
-module.exports = {
-  resolveGlobalChallenge
+      return {
+        ...item,
+        score: 0.7 * views48h + 0.3 * views7d
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
 };
 `
 );
 
 /* ============================
-   challengesOrdersRoutes.js
+   reservationOrganizers.js
+   0.4 relevance + 0.3 popularity + 0.3 reviews
 ============================ */
-writeFile(
-  path.join(BASE_PATH, "challengesOrdersRoutes.js"),
+write(
+  path.join(BASE_DIR, "reservationOrganizers.js"),
   `
-const express = require("express");
-const auth = require("../../middlewares/authMiddleware");
-const {
-  resolveGlobalChallenge
-} = require("./challengesOrdersController");
+const { relevanceScore } = require("../scoring/relevance");
+const { popularityScore } = require("../scoring/popularity");
+const { clamp01 } = require("../scoring/normalize");
 
-const router = express.Router();
+module.exports = function reservationOrganizers(items, userPrefs) {
+  return items
+    .filter(i => i.reservationsEnabled)
+    .map(item => {
+      const reviewScore = clamp01((item.avgRating - 1) / 4);
 
-router.use(auth);
-
-/**
- * POST /global-loyalty/challenges-orders/resolve
- */
-router.post("/resolve", resolveGlobalChallenge);
-
-module.exports = router;
+      return {
+        ...item,
+        score:
+          0.4 * relevanceScore({
+            itemTags: item.tags || [],
+            itemCategories: item.categories || [],
+            userPreferences: userPrefs || []
+          }) +
+          0.3 * popularityScore(item.stats || {}) +
+          0.3 * reviewScore
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+};
 `
 );
 
-console.log("\\n🚀 Global Loyalty Challenge Orders module generated successfully.");
+/* ============================
+   newOrganizers.js
+   0.8 recency + 0.2 popularity
+============================ */
+write(
+  path.join(BASE_DIR, "newOrganizers.js"),
+  `
+const { popularityScore } = require("../scoring/popularity");
+
+module.exports = function newOrganizers(items) {
+  const now = Date.now();
+
+  return items
+    .map(item => {
+      const ageDays =
+        (now - new Date(item.createdAt).getTime()) / 86400000;
+
+      const recency = Math.max(0, 1 - ageDays / 30);
+
+      return {
+        ...item,
+        score: 0.8 * recency + 0.2 * popularityScore(item.stats || {})
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+};
+`
+);
+
+/* ============================
+   popularEvents.js
+   0.5 views + 0.3 likes + 0.2 reviews
+============================ */
+write(
+  path.join(BASE_DIR, "popularEvents.js"),
+  `
+const { logNormalize, clamp01 } = require("../scoring/normalize");
+
+module.exports = function popularEvents(events) {
+  return events
+    .map(evt => {
+      const views = logNormalize(evt.views || 0, 50000);
+      const likes = logNormalize(evt.likes || 0, 10000);
+      const reviews = clamp01((evt.avgRating - 1) / 4);
+
+      return {
+        ...evt,
+        score: 0.5 * views + 0.3 * likes + 0.2 * reviews
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+};
+`
+);
+
+/* ============================
+   loyaltyClubs.js
+   0.5 relevance + 0.3 members + 0.2 popularity
+============================ */
+write(
+  path.join(BASE_DIR, "loyaltyClubs.js"),
+  `
+const { relevanceScore } = require("../scoring/relevance");
+const { popularityScore } = require("../scoring/popularity");
+const { logNormalize } = require("../scoring/normalize");
+
+module.exports = function loyaltyClubs(items, userPrefs) {
+  return items
+    .filter(i => !i.isMember)
+    .map(item => ({
+      ...item,
+      score:
+        0.5 * relevanceScore({
+          itemTags: item.tags || [],
+          itemCategories: item.categories || [],
+          userPreferences: userPrefs || []
+        }) +
+        0.3 * logNormalize(item.membersCount || 0, 100000) +
+        0.2 * popularityScore(item.stats || {})
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+};
+`
+);
+
+console.log("\n🎉 Home section files created successfully");

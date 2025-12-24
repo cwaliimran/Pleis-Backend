@@ -5,15 +5,17 @@ const router = express.Router();
 router.use("/", require("./index"));
 //home
 router.use("/home", require("../app/home/homeRoutes"));
+
+//popular events routes
+router.use("/popular-events", require("../app/popularEvents/popularEventsRoutes"));
+router.use("/top-picks-organizations", require("../app/topPicksOrganizations/topPicksOrganizationsRoutes"));
+
 //maps
 router.use("/maps", require("../app/maps/mapsRoutes"));
 //organizations
 router.use("/organizations", require("../app/organizationProfile/organizationProfileRoutes"));
 //favorites
 router.use("/favorites", require("../app/favorites/favoriteRoutes"));
-
-//recently viewed items
-router.use("/recently-viewed", require("../app/recentlyViewed/recentlyViewedItemRoutes"));
 
 //events
 router.use("/events", require("../app/events/eventRoutes"));

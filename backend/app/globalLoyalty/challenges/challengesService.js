@@ -6,7 +6,6 @@ const formatGlobalChallenge =
   require("./formatters/formatGlobalChallenge");
 const { generateMeta } =
   require("@utils/responseUtil");
-const { formatUserWallet } = require("../../userWalletService/global/walletManagement/formatters/usersWalletFormatter");
 const { getUserWallet } = require("../../userWalletService/global/walletManagement/userWalletService");
 
 /**

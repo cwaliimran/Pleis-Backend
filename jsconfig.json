@@ -11,6 +11,9 @@
       "@dbUtils/*": [
         "backend/helperUtils/dbUtils/*"
       ],
+      "@appEngagement/*": [
+        "backend/commonModules/appEngagement/*"
+      ],
       "@recentlyViewed/*": [
         "backend/commonModules/recentlyViewed/*"
       ],
@@ -120,7 +123,7 @@
         "backend/commonModules/friendRequest/FriendRequest.js"
       ],
       "@GlobalStatusLevelsModel": [
-        "backend/admin/globalLoyalty/statusLevels/GlobalStatusLevels.js"
+        "backend/commonModules/globalLoyalty/statusLevels/GlobalStatusLevels.js"
       ],
       "@UserGlobalWalletModel": [
         "backend/commonModules/wallet/UserGlobalWallet.js"
@@ -179,8 +182,20 @@
       "@GlobalQrModel": [
         "backend/commonModules/qrCode/models/QR/baseQr.js"
       ],
+      "@GlobalRewardsOrdersModel": [
+        "backend/commonModules/globalLoyalty/rewards/rewardsOrders/GlobalRewardsOrders.js"
+      ],
+      "@BannerControlsModel": [
+        "backend/admin/bannerControl/BannerControls.js"
+      ],
+      "@TopPicksOrganizationsModel": [
+        "backend/commonModules/browserControl/topPicksOrganizations/TopPicksOrganizations.js"
+      ],
       "@GlobalNotificationsModel": [
         "backend/commonModules/notifications/notifications.js"
+      ],
+      "@EngagementEventsModel": [
+        "backend/commonModules/appEngagement/EngagementEvents.js"
       ]
     }
   },

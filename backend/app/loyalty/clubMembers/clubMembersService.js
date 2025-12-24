@@ -4,8 +4,11 @@ const { getRewardsByCompanyOrganizerService } = require("../rewards/rewardsServi
 const clubMemberRepo = require("./clubMembersRepository");
 const { formatUserWallet, formatUserWallets, formatLoyaltyProfile } = require("./formatters/formatUserWallet");
 const { formatRewardsByTierKey } = require("../../../commonModules/loyalty/rewards/utils/formatReward");
-const { getTransactions } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
+const { getRecentTransactionsForDashboard } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
 const { getEligibleChallengesForLoyaltyPage } = require("../challenges/challengesService");
+const { generateMeta } = require("../../../helperUtils/responseUtil");
+const { logEngagementService } = require("@appEngagement/engagementEventsService");
+
 // Count members
 const countClubMembers = async (filters = {}) => {
   return clubMemberRepo.countClubMembers(filters);
@@ -40,9 +43,12 @@ const getUserJoinedClubs = async (userId) => {
   return clubMemberRepo.getUserJoinedClubs(userId);
 };
 
-const getUserJoinedClubsWithPoints = async (userId) => {
-  let clubs = await clubMemberRepo.getUserJoinedClubsWithPoints(userId);
-  return formatUserWallets(clubs);
+const getUserJoinedClubsWithPoints = async ({ page, limit, skip, userId, keyword }) => {
+  let clubs = await clubMemberRepo.getUserJoinedClubsWithPoints({ page, limit, skip, userId, keyword });
+  let count = await clubMemberRepo.countUserJoinedClubsWithPoints({ userId, keyword });
+  let meta = generateMeta(page, limit, count);
+  let data = formatUserWallets(clubs);
+  return { data, meta };
 };
 
 // 🔥 NEW: Get Wallet (points, current tier, next tier)
@@ -78,7 +84,8 @@ const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganiz
       timezone,
       companyOrganizer,
     }),
-    getTransactions({ user: userId, walletType: "companyLoyalty", companyOrganizer, page: 1, limit: 10, timezone })
+    getRecentTransactionsForDashboard({ limit: 5, user: userId, walletType: "companyLoyalty", companyOrganizer }),
+
   ]);
 
 
@@ -88,6 +95,14 @@ const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganiz
   );
 
   let formattedLoyaltyProfile = formatLoyaltyProfile(profile?.companyDetails);
+
+  
+  void logEngagementService({
+    entityType: "users",
+    entityId: companyOrganizer,
+    action: "view",
+    userId
+  }).catch(console.error);
 
   return {
     profile: formattedLoyaltyProfile,

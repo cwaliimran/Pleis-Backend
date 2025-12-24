@@ -38,18 +38,40 @@ const createChallenge = async (data) => {
 // Get challenges with population
 const getChallengesWithFilters = async (query = {}, skip = 0, limit = 10) => {
   return GlobalChallenge.find(query)
+    // Task-related
     .populate("taskMenuItem")
-    .populate("reward.rewardMenuItem")
+
+    // Tier
     .populate({
       path: "tierLimit",
       select: "image title"
     })
+
+    // 🎟️ Special Ticket Reward – nested population
+    .populate({
+      path: "reward.specialTicket.companyOrganizer",
+      select: "companyDetails.name"
+    })
+    .populate({
+      path: "reward.specialTicket.organization",
+      select: "basicInfo.name"
+    })
+    .populate({
+      path: "reward.specialTicket.ticket",
+      select: "title"
+    })
+    .populate({
+      path: "reward.specialTicket.event",
+      select: "basicInfo.title"
+    })
+
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
     .lean()
     .exec();
 };
+
 
 // Count
 const countChallenges = async (query = {}) => {

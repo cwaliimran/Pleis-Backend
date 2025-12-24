@@ -5,6 +5,7 @@ const generateOrderId = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 6
 const OrderItemSchema = new mongoose.Schema({
     menuItem: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItems" },
     quantity: { type: Number, required: true },
+    isdelivered: { type: Boolean, default: false },
     finalPrice: { type: Number, required: true }, // total for that item (with quantity)
     menuItemSnapShot: { type: Object, required: true }, // Full JSON snapshot of the menuItem
 });
@@ -23,7 +24,7 @@ const OrdersSchema = new mongoose.Schema(
         totalPrice: { type: Number, required: true },
         status: {
             type: String,
-            enum: ["pending", "confirmed", "sent", "completed", "cancelled"],
+            enum: ["pending", "confirmed", "sent", "completed", "cancelled", "preorder"],
             default: "pending",
         },
         notes: { type: String, default: "" },
@@ -39,6 +40,16 @@ const OrdersSchema = new mongoose.Schema(
             enum: ["pending", "paid", "failed"],
             default: "pending",
         },
+        paidAt: {
+            type: Date,
+            default: null,
+        },
+        transactionId: {
+            type: String,
+            default: null,
+            index: true,
+        },
+
 
         pickupType: { type: String, enum: ["counter", "tableService", "togo"], default: "counter" },
         tableNumber: {

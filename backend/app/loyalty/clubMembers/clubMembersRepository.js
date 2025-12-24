@@ -296,13 +296,115 @@ const getUserJoinedClubs = async (userId) => {
     .select("companyOrganizer");
 };
 
-const getUserJoinedClubsWithPoints = async (userId) => {
-  return ClubMembers.find({ user: userId, status: { $ne: "left" } })
-    .populate([
-      { path: "companyOrganizer", select: "companyDetails.logo companyDetails.loyaltySettings.title" },
-      { path: "level" }
-    ])
-    .lean();
+const getUserJoinedClubsWithPoints = async ({ page = 1, limit = 10, skip, userId, keyword }) => {
+
+  const pipeline = [
+    // 1️⃣ Base match (ONLY real fields)
+    {
+      $match: {
+        user: userId,
+        status: { $ne: "left" }
+      }
+    },
+
+    // 2️⃣ Populate companyOrganizer
+    {
+      $lookup: {
+        from: "users",
+        localField: "companyOrganizer",
+        foreignField: "_id",
+        as: "companyOrganizer",
+        pipeline: [
+          {
+            $project: {
+              "companyDetails.loyaltySettings.title": 1,
+              "companyDetails.logo": 1
+            }
+          }
+        ]
+      }
+    },
+
+    // 3️⃣ Unwind organizer
+    { $unwind: "$companyOrganizer" },
+
+    // 4️⃣ Populate level
+    {
+      $lookup: {
+        from: "tiers",
+        localField: "level",
+        foreignField: "_id",
+        as: "level"
+      }
+    },
+    { $unwind: { path: "$level", preserveNullAndEmptyArrays: true } }
+  ];
+
+  // 5️⃣ Keyword filter (NOW it exists)
+  if (keyword) {
+    pipeline.push({
+      $match: {
+        "companyOrganizer.companyDetails.loyaltySettings.title": {
+          $regex: keyword,
+          $options: "i"
+        }
+      }
+    });
+  }
+
+  // 6️⃣ Pagination
+  pipeline.push(
+    { $sort: { _id: -1 } },
+    { $skip: skip ?? (page - 1) * limit },
+    { $limit: limit }
+  );
+
+  return ClubMembers.aggregate(pipeline);
+};
+
+
+const countUserJoinedClubsWithPoints = async ({ userId, keyword }) => {
+
+  const pipeline = [
+    // 1️⃣ Base match (ONLY native fields)
+    {
+      $match: {
+        user: userId,
+        status: { $ne: "left" }
+      }
+    },
+
+    // 2️⃣ Populate companyOrganizer
+    {
+      $lookup: {
+        from: "users",
+        localField: "companyOrganizer",
+        foreignField: "_id",
+        as: "companyOrganizer"
+      }
+    },
+
+    // 3️⃣ Unwind populated organizer
+    { $unwind: "$companyOrganizer" }
+  ];
+
+  // 4️⃣ Keyword filter (NOW valid)
+  if (keyword) {
+    pipeline.push({
+      $match: {
+        "companyOrganizer.companyDetails.loyaltySettings.title": {
+          $regex: keyword,
+          $options: "i"
+        }
+      }
+    });
+  }
+
+  // 5️⃣ Count
+  pipeline.push({ $count: "total" });
+
+  const result = await ClubMembers.aggregate(pipeline);
+  return result.length ? result[0].total : 0;
 };
 
 
@@ -339,4 +441,5 @@ module.exports = {
   getCompanyLoyaltyProfile,
   updateCompanyLoyaltySettings,
   getFollowedClubIds,
+  countUserJoinedClubsWithPoints,
 };

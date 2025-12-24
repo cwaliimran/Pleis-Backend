@@ -65,6 +65,7 @@ const unifiedTransactionSchema = new mongoose.Schema(
                 "ticketingorders",
                 "loyaltyrewardsorders",
                 "loyaltychallengesorders",
+                "globalrewardsorders",
                 "reservation",
                 "event",
                 "menuItem",

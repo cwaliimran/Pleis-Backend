@@ -137,7 +137,8 @@ const updateMenu = async (id, data) => {
     "title",
     "description",
     "organization",
-    "status"
+    "status",
+    'isOrderingEnabled'
   ];
   const updateData = {};
   for (const key of allowedFields) {

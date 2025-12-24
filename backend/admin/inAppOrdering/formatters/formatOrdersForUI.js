@@ -1,0 +1,179 @@
+/* ================= HELPERS ================= */
+
+const normalizePickupType = (value = "") =>
+  value.toLowerCase().replace(/\s+/g, "");
+
+const matchPickupType = (order, pickupFilter) => {
+  if (!pickupFilter) return true;
+
+  return (
+    normalizePickupType(order.pickupType) ===
+    normalizePickupType(pickupFilter)
+  );
+};
+
+const hasUndeliveredItem = (order) =>
+  Array.isArray(order.items) &&
+  order.items.some(item => item.isdelivered === false);
+
+const allItemsDelivered = (order) =>
+  Array.isArray(order.items) &&
+  order.items.length > 0 &&
+  order.items.every(item => item.isdelivered === true);
+
+const isPaid = (order) => order.paymentStatus === "paid";
+
+/* ================= CLASSIFIERS ================= */
+
+const isPastOrder = (order) => {
+  if (order.status === "cancelled") return true;
+
+  return (
+    order.status === "completed" &&
+    allItemsDelivered(order) &&
+    isPaid(order)
+  );
+};
+
+const isActiveOrder = (order) => {
+  if (["pending", "confirmed", "sent"].includes(order.status)) {
+    return true;
+  }
+
+  return (
+    order.status === "completed" &&
+    (!allItemsDelivered(order) || !isPaid(order))
+  );
+};
+
+const isPreorderOrder = (order) =>
+  order.status === "preorder";
+
+/* ================= COUNTS ================= */
+
+const countOrders = (orders) => {
+  let activeOrdersCount = 0;
+  let preordersCount = 0;
+  let pastOrdersCount = 0;
+
+  let activeDetails = {
+    new: 0,
+    inProgress: 0,
+    completed: 0,
+  };
+
+  orders.forEach(order => {
+    if (isPreorderOrder(order)) {
+      preordersCount++;
+      return;
+    }
+
+    if (isPastOrder(order)) {
+      pastOrdersCount++;
+      return;
+    }
+
+    if (isActiveOrder(order)) {
+      activeOrdersCount++;
+
+      if (order.status === "pending") activeDetails.new++;
+      if (["confirmed", "sent"].includes(order.status)) {
+        activeDetails.inProgress++;
+      }
+      if (order.status === "completed") {
+        activeDetails.completed++;
+      }
+    }
+  });
+
+  return {
+    activeOrdersCount,
+    preordersCount,
+    pastOrdersCount,
+    activeDetails,
+  };
+};
+
+/* ================= FILTER ================= */
+
+const filterOrders = ({
+  orders,
+  orderStatus = "",
+  activeorderStatus = "",
+  pickupFilter = "",
+}) => {
+  const status = orderStatus.toLowerCase().trim();
+  const activeSub = activeorderStatus.toLowerCase().trim();
+  const pickup = pickupFilter.trim();
+
+  return orders.filter(order => {
+
+    // 🚫 Cancelled orders ONLY appear in past
+    if (order.status === "cancelled") {
+      return ["postorder", "postorders", "past"].includes(status);
+    }
+
+    /* ========= ACTIVE ========= */
+    if (!status || status === "active") {
+      if (!activeSub) return isActiveOrder(order);
+
+      // 🆕 ACTIVE → NEW + PICKUP FILTER
+      if (activeSub === "new") {
+        return (
+          order.status === "pending" &&
+          matchPickupType(order, pickup)
+        );
+      }
+
+      if (activeSub === "inprogress") {
+        return ["confirmed", "sent"].includes(order.status);
+      }
+
+      if (activeSub === "completed") {
+        return (
+          order.status === "completed" &&
+          (!allItemsDelivered(order) || !isPaid(order))
+        );
+      }
+
+      return isActiveOrder(order);
+    }
+
+    /* ========= PREORDERS ========= */
+    if (["preorder", "preorders"].includes(status)) {
+      return isPreorderOrder(order);
+    }
+
+    /* ========= PAST ========= */
+    if (["postorder", "postorders", "past"].includes(status)) {
+      return isPastOrder(order);
+    }
+
+    return false;
+  });
+};
+
+/* ================= EXPORT ================= */
+
+const formatOrdersForUI = (
+  orders = [],
+  orderStatus = "",
+  activeorderStatus = "",
+  pickupFilter = ""
+) => {
+  const counts = countOrders(orders);
+
+  return {
+    orders: filterOrders({
+      orders,
+      orderStatus,
+      activeorderStatus,
+      pickupFilter,
+    }),
+    ...counts,
+  };
+};
+
+module.exports = {
+  formatOrdersForUI,
+};
