@@ -232,7 +232,7 @@ const updateOrganization = async (req, res) => {
     })
   )
     return;
-
+const userId = req.user._id;
   let data = ({
     basicInfo,
     otherInfo,
@@ -245,7 +245,12 @@ const updateOrganization = async (req, res) => {
     tags,
     description,
     title,
+    subscriptionTypes,
+    pricingPlan,
+    numberOfOrganizations,
+    totalSubscriptionAmount,
   } = req.body);
+  data.userId = userId;
 
   //Convert times to UTC minutes before saving
   if (operatingHours) {

@@ -15,6 +15,7 @@ const {
   getStartAndEndOfMonth,
   getStartAndEndOfWeek,
 } = require("../../../helperUtils/responseUtil");
+const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const createGlobalReferral = async (data) => {
   try {
     const { type, status } = data;
@@ -178,6 +179,7 @@ const getUserGlobalReferrals = async ({
   skip,
   type
 }) => {
+console.log("keyword",keyword);
   const pipeline = [
     {
       $match: {
@@ -198,16 +200,7 @@ const getUserGlobalReferrals = async ({
     });
   }
 
-  if (keyword) {
-    const keywordMatch = buildKeywordQueryFromModels(
-      [{ schema: ReferredRecord.schema }],
-      keyword
-    );
 
-    if (Object.keys(keywordMatch).length) {
-      pipeline.push({ $match: keywordMatch });
-    }
-  }
 
   // Sorting by createdAt in descending order
   pipeline.push({ $sort: { createdAt: -1 } });
@@ -227,6 +220,7 @@ const getUserGlobalReferrals = async ({
   const result = await ReferredRecord.aggregate(pipeline);
 
   let globalReferral = result[0]?.data || [];
+
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   // Additional counts for meta (active/inactive/total by userId as creator)
@@ -294,7 +288,17 @@ globalReferral = await Promise.all(
   })
 );
 
+  console.log("globalReferral", );
+  if (keyword) {
+  const regex = new RegExp(keyword, "i");
 
+  globalReferral = globalReferral.filter(item =>
+    regex.test(item.firstName || "") ||
+    regex.test(item.lastName || "") ||
+    regex.test(item.referrerUserName || "")
+  );
+}
+console.log("globalReferral",globalReferral );
   const meta = generateMeta(page, limit, totalFiltered);
   meta.globalReferralCount = { total, active, inactive };
 
@@ -314,7 +318,7 @@ const resetUserReferralLimits = async (limit) => {
     // Force numeric conversion
     limit = Number(limit);
 
-    if (!Number.isInteger(limit) || limit <= 0) {
+    if (!Number.isInteger(limit) || limit < 0) {
       const err = new Error("INVALID_REFERRAL_LIMIT");
       err.statusCode = 400;
       throw err;
@@ -324,7 +328,7 @@ const resetUserReferralLimits = async (limit) => {
       {},
       {
         $set: {
-          remainingReferrals: limit
+          referralsCount: limit
         }
       }
     );

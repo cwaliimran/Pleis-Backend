@@ -131,9 +131,9 @@ const userSchema = new mongoose.Schema(
         message: "email_invalid", // Generic error message key
       },
     },
-remainingReferrals: {
+referralsCount: {
   type: Number,
-  default: 10
+  default: 0
 },
     emailVerification: {
       tokenHash: String,
@@ -315,7 +315,7 @@ remainingReferrals: {
       default: [],
     },
 
-    subscription: {
+    activeSubscription: {
       type: subscriptionSchema,
       default: {
         subscriptionTypes: [SubscriptionTypes.FREE],
@@ -327,8 +327,22 @@ remainingReferrals: {
         endDate: null
       }
     },
-
-
+        inActiveSubscription: {
+      type: subscriptionSchema,
+      default: {
+        subscriptionTypes: [SubscriptionTypes.FREE],
+        pricingPlan: PricingPlanType.MONTHLY,
+        numberOfOrganizations: 1,
+        totalSubscriptionAmount: 0,
+        status: "active",
+        startDate: Date.now(),
+        endDate: null
+      }
+    },
+isSubscriptionCancelled: {
+      type: Boolean,
+      default: false,
+    },
 
     provider: {
       // Social provider details

@@ -1,137 +1,179 @@
+/* ================= HELPERS ================= */
+
+const normalizePickupType = (value = "") =>
+  value.toLowerCase().replace(/\s+/g, "");
+
+const matchPickupType = (order, pickupFilter) => {
+  if (!pickupFilter) return true;
+
+  return (
+    normalizePickupType(order.pickupType) ===
+    normalizePickupType(pickupFilter)
+  );
+};
+
+const hasUndeliveredItem = (order) =>
+  Array.isArray(order.items) &&
+  order.items.some(item => item.isdelivered === false);
+
+const allItemsDelivered = (order) =>
+  Array.isArray(order.items) &&
+  order.items.length > 0 &&
+  order.items.every(item => item.isdelivered === true);
+
+const isPaid = (order) => order.paymentStatus === "paid";
+
+/* ================= CLASSIFIERS ================= */
+
+const isPastOrder = (order) => {
+  if (order.status === "cancelled") return true;
+
+  return (
+    order.status === "completed" &&
+    allItemsDelivered(order) &&
+    isPaid(order)
+  );
+};
+
+const isActiveOrder = (order) => {
+  if (["pending", "confirmed", "sent"].includes(order.status)) {
+    return true;
+  }
+
+  return (
+    order.status === "completed" &&
+    (!allItemsDelivered(order) || !isPaid(order))
+  );
+};
+
+const isPreorderOrder = (order) =>
+  order.status === "preorder";
+
+/* ================= COUNTS ================= */
+
+const countOrders = (orders) => {
+  let activeOrdersCount = 0;
+  let preordersCount = 0;
+  let pastOrdersCount = 0;
+
+  let activeDetails = {
+    new: 0,
+    inProgress: 0,
+    completed: 0,
+  };
+
+  orders.forEach(order => {
+    if (isPreorderOrder(order)) {
+      preordersCount++;
+      return;
+    }
+
+    if (isPastOrder(order)) {
+      pastOrdersCount++;
+      return;
+    }
+
+    if (isActiveOrder(order)) {
+      activeOrdersCount++;
+
+      if (order.status === "pending") activeDetails.new++;
+      if (["confirmed", "sent"].includes(order.status)) {
+        activeDetails.inProgress++;
+      }
+      if (order.status === "completed") {
+        activeDetails.completed++;
+      }
+    }
+  });
+
+  return {
+    activeOrdersCount,
+    preordersCount,
+    pastOrdersCount,
+    activeDetails,
+  };
+};
+
+/* ================= FILTER ================= */
+
+const filterOrders = ({
+  orders,
+  orderStatus = "",
+  activeorderStatus = "",
+  pickupFilter = "",
+}) => {
+  const status = orderStatus.toLowerCase().trim();
+  const activeSub = activeorderStatus.toLowerCase().trim();
+  const pickup = pickupFilter.trim();
+
+  return orders.filter(order => {
+
+    // 🚫 Cancelled orders ONLY appear in past
+    if (order.status === "cancelled") {
+      return ["postorder", "postorders", "past"].includes(status);
+    }
+
+    /* ========= ACTIVE ========= */
+    if (!status || status === "active") {
+      if (!activeSub) return isActiveOrder(order);
+
+      // 🆕 ACTIVE → NEW + PICKUP FILTER
+      if (activeSub === "new") {
+        return (
+          order.status === "pending" &&
+          matchPickupType(order, pickup)
+        );
+      }
+
+      if (activeSub === "inprogress") {
+        return ["confirmed", "sent"].includes(order.status);
+      }
+
+      if (activeSub === "completed") {
+        return (
+          order.status === "completed" &&
+          (!allItemsDelivered(order) || !isPaid(order))
+        );
+      }
+
+      return isActiveOrder(order);
+    }
+
+    /* ========= PREORDERS ========= */
+    if (["preorder", "preorders"].includes(status)) {
+      return isPreorderOrder(order);
+    }
+
+    /* ========= PAST ========= */
+    if (["postorder", "postorders", "past"].includes(status)) {
+      return isPastOrder(order);
+    }
+
+    return false;
+  });
+};
+
+/* ================= EXPORT ================= */
+
 const formatOrdersForUI = (
   orders = [],
   orderStatus = "",
   activeorderStatus = "",
-  pickupFilter = "" // 👈 NEW OPTIONAL FILTER
+  pickupFilter = ""
 ) => {
-  let ordersCount = 0;
-  let preordersCount = 0;
-  let pastOrdersCount = 0;
-
-  let activeNewCount = 0;
-  let activeInProgressCount = 0;
-  let activeCompletedCount = 0;
-
-  const normalizedKeyword = orderStatus?.toLowerCase().trim();
-  const normalizedActiveKeyword = activeorderStatus?.toLowerCase().trim();
-  const normalizedPickupFilter = pickupFilter?.toLowerCase().trim();
-
-  // 1️⃣ COUNT EVERYTHING (UNCHANGED)
-  orders.forEach(order => {
-    const hasUndeliveredItem =
-      Array.isArray(order.items) &&
-      order.items.some(item => item.isdelivered === false);
-
-    const isPreorder = order.status === "preorder";
-    const isNewActive = order.status === "pending";
-    const isInProgress = ["confirmed", "sent"].includes(order.status);
-    const isCompletedNotDelivered =
-      order.status === "completed" && hasUndeliveredItem;
-
-    const isActive =
-      isNewActive || isInProgress || isCompletedNotDelivered;
-
-    const isPast =
-      order.status === "cancelled" ||
-      (order.status === "completed" && !hasUndeliveredItem);
-
-    if (isPreorder) preordersCount += 1;
-    if (isPast) pastOrdersCount += 1;
-
-    if (isActive) {
-      ordersCount += 1;
-      if (isNewActive) activeNewCount += 1;
-      if (isInProgress) activeInProgressCount += 1;
-      if (isCompletedNotDelivered) activeCompletedCount += 1;
-    }
-  });
-
-  // 2️⃣ FILTER ORDERS
-  const filteredOrders = orders.filter(order => {
-    const hasUndeliveredItem =
-      Array.isArray(order.items) &&
-      order.items.some(item => item.isdelivered === false);
-
-    const isPreorder = order.status === "preorder";
-    const isNewActive = order.status === "pending";
-    const isInProgress = ["confirmed", "sent"].includes(order.status);
-    const isCompletedNotDelivered =
-      order.status === "completed" && hasUndeliveredItem;
-
-    const isActive =
-      isNewActive || isInProgress || isCompletedNotDelivered;
-
-    const isPast =
-      order.status === "cancelled" ||
-      (order.status === "completed" && !hasUndeliveredItem);
-
-    /* ===============================
-       🔹 ACTIVE TAB WITH SUB FILTERS
-    =============================== */
-    if (!normalizedKeyword || normalizedKeyword === "active") {
-      if (!normalizedActiveKeyword) {
-        return isActive;
-      }
-
-      if (normalizedActiveKeyword === "new") {
-        // ✅ APPLY PICKUP FILTER ONLY HERE
-        if (normalizedPickupFilter) {
-          return (
-            isNewActive &&
-            order.pickupType === normalizedPickupFilter
-          );
-        }
-        return isNewActive;
-      }
-
-      if (normalizedActiveKeyword === "inprogress") {
-        return isInProgress;
-      }
-
-      if (normalizedActiveKeyword === "completed") {
-        return isCompletedNotDelivered;
-      }
-
-      return isActive;
-    }
-
-    /* ===============================
-       🔹 PREORDERS
-    =============================== */
-    if (["preorder", "preorders"].includes(normalizedKeyword)) {
-      return isPreorder;
-    }
-
-    /* ===============================
-       🔹 PAST / POST ORDERS
-    =============================== */
-    if (["postorder", "postorders", "past"].includes(normalizedKeyword)) {
-      return isPast;
-    }
-
-    return isActive;
-  });
+  const counts = countOrders(orders);
 
   return {
-    orders: filteredOrders,
-
-    // ❗ DO NOT CHANGE THESE KEYS
-    activeOrdersCount: ordersCount,
-    preordersCount,
-    pastOrdersCount,
-
-    // ACTIVE DETAILS
-    activeDetails:
-      normalizedKeyword === "active" || !normalizedKeyword
-        ? {
-            new: activeNewCount,
-            inProgress: activeInProgressCount,
-            completed: activeCompletedCount
-          }
-        : undefined
+    orders: filterOrders({
+      orders,
+      orderStatus,
+      activeorderStatus,
+      pickupFilter,
+    }),
+    ...counts,
   };
 };
 
 module.exports = {
-  formatOrdersForUI
+  formatOrdersForUI,
 };

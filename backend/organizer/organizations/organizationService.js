@@ -150,9 +150,48 @@ const getPublicOrganizations = async ({ page, limit, keyword, date }) => {
     },
   };
 };
+const updateUserSubscription = async ({
+  user,
+  subscriptionTypes,
+  pricingPlan,
+  numberOfOrganizations,
+  totalSubscriptionAmount,
+}) => {
+  if (!user.subscription) {
+    user.subscription = {};
+  }
+
+  // subscriptionTypes (array)
+  if (Array.isArray(subscriptionTypes) && subscriptionTypes.length > 0) {
+    user.subscription.subscriptionTypes = subscriptionTypes;
+  }
+
+  if (pricingPlan) {
+    user.subscription.pricingPlan = pricingPlan;
+  }
+
+  if (numberOfOrganizations !== undefined) {
+    user.subscription.numberOfOrganizations = numberOfOrganizations;
+  }
+
+  if (totalSubscriptionAmount !== undefined) {
+    user.subscription.totalSubscriptionAmount = totalSubscriptionAmount;
+  }
+
+  // Auto-activate if not free
+  if (
+    subscriptionTypes &&
+    !subscriptionTypes.includes("free")
+  ) {
+    user.subscription.status = "active";
+  }
+
+  await user.save();
+};
 
 const updateOrganization = async ({ id, data }) => {
   const organization = await organizationRepo.findOrganizationById(id);
+  console.log("id",organization );
   if (!organization) return null;
 
   const {
@@ -167,35 +206,43 @@ const updateOrganization = async ({ id, data }) => {
     tags,
     description,
     title,
+
+    // 👇 subscription fields (USER-LEVEL)
+    subscriptionTypes,
+    pricingPlan,
+    numberOfOrganizations,
+    totalSubscriptionAmount,
+    userId, // 👈 MUST be passed to update subscription
   } = data;
 
-  // Safe assignment logic
+  /* ================= ORGANIZATION UPDATE ================= */
+
   if (basicInfo) {
     organization.basicInfo = {
       ...organization.basicInfo,
       ...basicInfo,
       media: {
-        ...organization.basicInfo.media,
-        ...(basicInfo.media || {})
+        ...organization.basicInfo?.media,
+        ...(basicInfo.media || {}),
       },
       socialLinks: {
-        ...organization.basicInfo.socialLinks,
-        ...(basicInfo.socialLinks || {})
-      }
+        ...organization.basicInfo?.socialLinks,
+        ...(basicInfo.socialLinks || {}),
+      },
     };
   }
 
   if (otherInfo) {
     organization.otherInfo = {
       ...organization.otherInfo,
-      ...otherInfo
+      ...otherInfo,
     };
   }
 
   if (operatingHours) {
     organization.operatingHours = {
       ...organization.operatingHours,
-      ...operatingHours
+      ...operatingHours,
     };
   }
 
@@ -204,30 +251,28 @@ const updateOrganization = async ({ id, data }) => {
   if (pinned !== undefined) organization.pinned = pinned;
   if (image !== undefined) organization.image = image;
   if (tags !== undefined) organization.tags = tags;
+
   if (description !== undefined) {
-    if (!organization.otherInfo) organization.otherInfo = {};
+    organization.otherInfo = organization.otherInfo || {};
     organization.otherInfo.description = description;
   }
+
   if (title !== undefined) {
-    if (!organization.basicInfo) organization.basicInfo = {};
+    organization.basicInfo = organization.basicInfo || {};
     organization.basicInfo.name = title;
   }
 
+  /* ================= PRIMARY VENUE ================= */
+
   if (venue !== undefined) {
-    // 1. Set all previous venues' isPrimary to false for this organization
     await Venues.updateMany(
       { organization: organization._id, isPrimary: true },
       { isPrimary: false }
     );
 
-    // 2. Make current venue isPrimary true and assign organization if not assigned
-    const existingVenue = await Venues.findOne({ _id: venue });
-
+    const existingVenue = await Venues.findById(venue);
     if (existingVenue) {
-      // Assign organization if not already assigned
-      if (!existingVenue.organization || String(existingVenue.organization) !== String(organization._id)) {
-        existingVenue.organization = organization._id;
-      }
+      existingVenue.organization = organization._id;
       existingVenue.isPrimary = true;
       await existingVenue.save();
     }
@@ -235,9 +280,30 @@ const updateOrganization = async ({ id, data }) => {
 
   await organization.save();
 
-  //format organization before return
+  /* ================= SUBSCRIPTION UPDATE ================= */
+
+  if (
+    userId &&
+    (subscriptionTypes ||
+      pricingPlan ||
+      numberOfOrganizations !== undefined ||
+      totalSubscriptionAmount !== undefined)
+  ) {
+    const user = await User.findById(userId);
+    if (user) {
+      await updateUserSubscription({
+        user,
+        subscriptionTypes,
+        pricingPlan,
+        numberOfOrganizations,
+        totalSubscriptionAmount,
+      });
+    }
+  }
+
   return formatOrganization(organization);
 };
+
 
 
 const deleteOrganization = async (id) => {

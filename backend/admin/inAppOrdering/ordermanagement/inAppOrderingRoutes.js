@@ -23,8 +23,6 @@ const OrdersRateLimiter = createRateLimiter("Orders");
 
 // router.post("/", roleMiddleware(["admin"]), OrdersRateLimiter, createOrders);
 router.get("/", roleMiddleware(["admin"]), OrdersRateLimiter, getOrders);
-router.get("/winners", roleMiddleware(["admin"]), OrdersRateLimiter, getWinners);
-router.delete("/:id", roleMiddleware(["admin"]), deleteOrders);
 router.put("/:id", roleMiddleware(["admin"]), updateOrders);
 
 
