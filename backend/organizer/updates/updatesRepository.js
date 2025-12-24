@@ -94,8 +94,7 @@ const createUpdates = async (data) => {
   }
 };
 const getEventIdsForOrganizations = async (organizationIds) => {
-  // Log organizationIds to debug
-  console.log("organizationIds:", organizationIds);
+
 
   // Use aggregation to get events where the organization matches the provided organization IDs under the basicInfo field
   const events = await Events.aggregate([
@@ -111,7 +110,7 @@ const getEventIdsForOrganizations = async (organizationIds) => {
       }
     }
   ]);
-console.log("events",events );
+
   // Return the event IDs
   return events.map(event => event._id);
 };
@@ -132,7 +131,7 @@ const getUpdatess = async ({
 }) => {
   // Ensure organizations is always an array
   if (!organizations || organizations.length === 0) {
-    console.log('No organizations provided, using userId only');
+
     organizations = []; // Default to an empty array if no organizations are provided
   } else {
     // Ensure organizations is an array if it's a string
@@ -141,14 +140,14 @@ const getUpdatess = async ({
         // URL-decode and split the string into an array
         organizations = decodeURIComponent(organizations).split(','); // Split by comma
       } catch (error) {
-        console.error('Error parsing organizations:', error);
+
         return { updates: [], meta: { totalFiltered: 0, updatesCount: { total: 0, active: 0, inactive: 0 } } }; // Return empty array if error
       }
     }
 
     // Check if organizations is now an array
     if (!Array.isArray(organizations)) {
-      console.error('Organizations is not an array:', organizations);
+
       return { updates: [], meta: { totalFiltered: 0, updatesCount: { total: 0, active: 0, inactive: 0 } } }; // Return empty array if not an array
     }
   }
@@ -159,7 +158,7 @@ const getUpdatess = async ({
 
     // Step 2: If organizations are provided, fetch event IDs for the organizations
     eventIds = await getEventIdsForOrganizations(orgIds); // Get event IDs based on organizations
-    console.log("eventIds:", eventIds); // Log eventIds to ensure they are correct
+
   }
 
   // Step 3: If no eventIds are found, return an empty array with meta counts
@@ -167,93 +166,111 @@ const getUpdatess = async ({
     return { updates: [], meta: { totalFiltered: 0, updatesCount: { total: 0, active: 0, inactive: 0 } } };
   }
 
-  // Step 4: Create the aggregation pipeline
-  const pipeline = [
-    {
-      $match: {
-        ...(eventIds.length > 0 && { event: { $in: eventIds } }), // Use eventIds to filter events
-        ...(!organizations.length && { companyOrganizer: new mongoose.Types.ObjectId(userId) })  // Fallback to userId if no eventIds found
-      }
+const pipeline = [
+  {
+    $match: {
+      ...(eventIds.length > 0 && { event: { $in: eventIds } }),
+      ...(!organizations.length && {
+        companyOrganizer: new mongoose.Types.ObjectId(userId)
+      })
     }
-  ];
-
-  // Apply filters based on range
-  if (range === "monthly") {
-    const { start, end } = getStartAndEndOfMonth(today, timezone);
-    pipeline.push({
-      $match: {
-        createdAt: { $gte: start, $lt: end }
-      }
-    });
   }
+];
 
-  if (range === "weekly") {
-    const { start, end } = getStartAndEndOfWeek(today, timezone);
-    pipeline.push({
-      $match: {
-        createdAt: { $gte: start, $lt: end }
-      }
-    });
-  }
-
-  if (range === "today") {
-    const start = new Date(today);
-    const end = new Date(new Date(today).setDate(start.getDate() + 1));
-    pipeline.push({
-      $match: {
-        createdAt: { $gte: start, $lt: end }
-      }
-    });
-  }
-
-  // Apply filters based on status, date, and keyword
-  if (status) {
-    pipeline.push({ $match: { status } });
-  } else {
-    pipeline.push({ $match: { status: { $ne: "deleted" } } });
-  }
-
-  if (date) {
-    const start = new Date(date);
-    const end = new Date(new Date(date).setDate(start.getDate() + 1));
-    pipeline.push({
-      $match: {
-        createdAt: { $gte: start, $lt: end }
-      }
-    });
-  }
-
-  if (keyword) {
-    pipeline.push({
-      $match: {
-        title: { $regex: keyword, $options: "i" } // Case-insensitive search
-      }
-    });
-  }
-
-  // Lookup the event's title from the Events collection
+// 🔹 Range filters
+if (range === "monthly") {
+  const { start, end } = getStartAndEndOfMonth(today, timezone);
   pipeline.push({
-    $lookup: {
-      from: "events",
-      localField: "event",
-      foreignField: "_id",
-      as: "eventDetails"
+    $match: { createdAt: { $gte: start, $lt: end } }
+  });
+}
+
+if (range === "weekly") {
+  const { start, end } = getStartAndEndOfWeek(today, timezone);
+  pipeline.push({
+    $match: { createdAt: { $gte: start, $lt: end } }
+  });
+}
+
+if (range === "today") {
+  const start = new Date(today);
+  const end = new Date(new Date(today).setDate(start.getDate() + 1));
+  pipeline.push({
+    $match: { createdAt: { $gte: start, $lt: end } }
+  });
+}
+
+// 🔹 Status filter
+if (status) {
+  pipeline.push({ $match: { status } });
+} else {
+  pipeline.push({ $match: { status: { $ne: "deleted" } } });
+}
+
+// 🔹 Date filter
+if (date) {
+  const start = new Date(date);
+  const end = new Date(new Date(date).setDate(start.getDate() + 1));
+  pipeline.push({
+    $match: { createdAt: { $gte: start, $lt: end } }
+  });
+}
+
+// 🔹 Keyword filter
+if (keyword) {
+  pipeline.push({
+    $match: {
+      title: { $regex: keyword, $options: "i" }
     }
   });
+}
 
-  // Project the necessary fields
-  pipeline.push({
-    $project: {
-      _id: 1,
-      image: 1,
-      description: 1,
-      status: 1,
-      createdAt: 1,
-      title: 1,
-      eventTitle: { $arrayElemAt: ["$eventDetails.basicInfo.title", 0] },
-      eventId: { $arrayElemAt: ["$eventDetails._id", 0] }
+// 🔹 Lookup Event
+pipeline.push({
+  $lookup: {
+    from: "events",
+    localField: "event",
+    foreignField: "_id",
+    as: "eventDetails"
+  }
+});
+
+// 🔹 Extract organizationId from event
+pipeline.push({
+  $addFields: {
+    organizationId: "$eventDetails.basicInfo.organization"
+  }
+});
+
+// Lookup Organization
+pipeline.push({
+  $lookup: {
+    from: "organizations",
+    localField: "organizationId",
+    foreignField: "_id",
+    as: "organizationDetails"
+  }
+});
+
+
+pipeline.push({
+  $project: {
+    _id: 1,
+    image: 1,
+    description: 1,
+    status: 1,
+    createdAt: 1,
+    title: 1,
+
+    eventId: { $arrayElemAt: ["$eventDetails._id", 0] },
+    eventTitle: { $arrayElemAt: ["$eventDetails.basicInfo.title", 0] },
+
+    organizationName: {
+      $arrayElemAt: ["$organizationDetails.basicInfo.name", 0]
     }
-  });
+  }
+});
+
 
   // Sort by createdAt
   pipeline.push({ $sort: { createdAt: -1 } });
@@ -307,6 +324,7 @@ const findByIdAndUpdate = async (id, data) => {
 const getevents = async ({ organizations }) => {
   try {
 
+
     // If organizations are passed as a comma-separated string, split them into an array
     if (typeof organizations === 'string') {
       organizations = organizations.split(','); // Split by comma
@@ -314,13 +332,13 @@ const getevents = async ({ organizations }) => {
 
     // If organizations are not passed or are empty, return an empty response
     if (!Array.isArray(organizations) || organizations.length === 0) {
-      console.log("No organizations provided");
+
       return { events: [], meta: { totalFiltered: 0 } };
     }
 
     // Convert organizations to ObjectId (if not already)
     const orgIds = organizations.map(id => new mongoose.Types.ObjectId(id));
-    console.log("orgIds (ObjectIds):", orgIds); // Log the ObjectIds to ensure correct conversion
+     // Log the ObjectIds to ensure correct conversion
 
     // Create the aggregation pipeline
 const pipeline = [
@@ -370,14 +388,14 @@ const pipeline = [
   }
 ];
 
-console.log("pipeline",pipeline );
+
     // Execute aggregation
     const result = await Events.aggregate(pipeline);
-    console.log("Aggregation result:", result); // Log the result of the aggregation
+
 
     // Handle result
     if (!result || !result[0] || !result[0].data) {
-      console.log("No events found matching the organizations.");
+
       return { events: [], meta: { totalFiltered: 0 } };
     }
 
@@ -386,7 +404,7 @@ console.log("pipeline",pipeline );
 
     return { events, meta: { totalFiltered } };
   } catch (error) {
-    console.error('Error fetching events:', error);
+
     return { events: [], meta: { totalFiltered: 0 } };
   }
 };

@@ -16,3 +16,4 @@ const GlobalNotificationOrganization = GlobalNotification.discriminator(
 );
 
 module.exports = GlobalNotificationOrganization;
+  

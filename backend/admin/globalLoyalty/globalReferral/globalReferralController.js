@@ -273,7 +273,8 @@ const getUserGlobalReferrals = async (req, res) => {
 
 
 const resetUserReferralLimits = async (req, res) => {
-const {limit} = req.body;
+const limit = 0;
+
 
   try {
     const GlobalReferral = await globalReferralService.resetUserReferralLimits(limit);

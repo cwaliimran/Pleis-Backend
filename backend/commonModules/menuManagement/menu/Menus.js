@@ -21,11 +21,14 @@ const menusSchema = new mongoose.Schema(
       required: true,
     },
     creator: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId, 
       ref: "User",
       required: true,
     },
-
+isOrderingEnabled: {
+      type: Boolean,
+      default: true,
+    },
     status: {
       type: String,
       enum: ["active", "inactive", "deleted"],

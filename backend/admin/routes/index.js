@@ -65,6 +65,7 @@ router.use("/subscriptions", require("../subscriptions/subscriptionsRoutes"));
 router.use("/updates", require("../updates/updatesRoutes"));
 router.use("/giveaways", require("../giveaways/giveawayRoutes"));
 router.use("/qr-code", require("../qr/qrRoutes"));
+router.use("/in-app-ordering", require("../inAppOrdering/inAppOrderingRoutes"));
 
 
 module.exports = router;

@@ -49,6 +49,6 @@ router.put("/:id", roleMiddleware(["admin"]), updateGlobalReferral);
 // Delete a GlobalReferral
 router.delete("/:id", roleMiddleware(["admin"]), deleteGlobalReferral);
 // Delete a GlobalReferral
-router.post("/reset", roleMiddleware(["admin"]), resetUserReferralLimits);
+router.get("/reset", roleMiddleware(["admin"]), resetUserReferralLimits);
 
 module.exports = router;

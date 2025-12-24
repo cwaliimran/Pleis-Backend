@@ -18,6 +18,7 @@ router.use("/users", require("../usersManagement/usersRoutes"));
 router.use("/updates", require("../updates/updatesRoutes"));
 router.use("/marketing", require("../marketing/marketingRoutes"));
 router.use("/giveaways", require("../giveaways/giveawayRoutes"));
+router.use("/subscriptions", require("../subscriptions/subscriptionsRoutes"));
 
 
 
