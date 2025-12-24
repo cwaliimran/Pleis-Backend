@@ -10,7 +10,6 @@ const challengeService = require("./challengesService");
 
 const createChallenge = async (req, res) => {
   //"visit", "earnPoints", "buyMenuItem", "referUsers"
-  const taskType = req.body.taskType;
 
   var dateFields = {};
   var rawData = [
@@ -20,18 +19,11 @@ const createChallenge = async (req, res) => {
     "endDate",
     "reward.rewardType",
   ];
-  var objectIdFields = []; // companyOrganizer removed
+  var enumFields = {
+    taskType: ["globalVisit", "globalEarnPoints", "globalReferUsers"],
+  };
+  var objectIdFields = [];
 
-  // Buy Menu Item
-  if (req.body.promotionType === "buyMenuItem") {
-    rawData.push("menuItem");
-    objectIdFields.push("menuItem");
-  }
-
-  // visit / earnPoints / referUsers
-  if (["visit", "earnPoints", "referUsers"].includes(taskType)) {
-    rawData.push("taskValue");
-  }
 
   // Reward Types
   const rewardType = req.body.reward?.rewardType || "";
@@ -39,12 +31,11 @@ const createChallenge = async (req, res) => {
   if (rewardType === "points") {
     rawData.push("reward.rewardValue");
 
-  } else if (rewardType === "menuItem") {
-    rawData.push("reward.rewardMenuItem");
-    objectIdFields.push("reward.rewardMenuItem");
-
   } else if (rewardType === "specialTicket") {
-    rawData.push("reward.rewardValue");
+    rawData.push("reward.specialTicket.companyOrganizer");
+    rawData.push("reward.specialTicket.organization");
+    rawData.push("reward.specialTicket.event");
+    rawData.push("reward.specialTicket.ticket");
 
   } else if (rewardType === "customReward") {
     rawData.push("reward.customReward");
@@ -62,6 +53,7 @@ const createChallenge = async (req, res) => {
       dateFields: {
         endDate: "YYYY-MM-DD",
       },
+      enumFields,
     })
   )
     return;
@@ -99,12 +91,11 @@ const createChallenge = async (req, res) => {
 
 const getChallenges = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, companyOrganizer } = req.query;
+  const { keyword, status, date } = req.query;
   try {
 
 
     const { challenges, meta } = await challengeService.getChallenges({
-      companyOrganizer,
       page,
       limit,
       keyword,
@@ -177,10 +168,52 @@ const deleteChallenge = async (req, res) => {
   }
 };
 
+
+
+
+
+
+
+
+
+const getTicketings = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  const { keyword, status, date, eventId } = req.query;
+  const { timezone } = req.user;
+
+  try {
+    const { ticketings, meta } = await challengeService.getTicketings({
+      timezone,
+      page,
+      limit,
+      keyword,
+      status,
+      date,
+      eventId,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "ticketings_fetched_successfully",
+      data: ticketings,
+      meta,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+
 module.exports = {
   createChallenge,
   getChallenges,
   getChallengeDetails,
   updateChallenge,
+  getTicketings,
   deleteChallenge,
 };

@@ -3,38 +3,47 @@ const {
   getFirstStatusLevel,
   getNextStatusLevel,
   getPreviousStatusLevel
-} = require("../../../../admin/globalLoyalty/statusLevels/statusLevelsRepository");
+} = require("../../../../admin/globalLoyalty/statusLevels/globalStatusLevelsRepository");
 
 const { UnifiedWalletTransactions } = require("@UnifiedWalletTransactionsModel");
-const StatusLevels = require("../../../../admin/globalLoyalty/statusLevels/StatusLevels");
+const GlobalStatusLevels = require("@GlobalStatusLevelsModel");
 const mongoose = require("mongoose");
 
 // ======================================================================
 // CREATE WALLET IF NOT EXISTS
 // ======================================================================
-const createUserWallet = async (user) => {
+const createUserWallet = async (user, session) => {
   if (!user) throw new Error("User is required");
 
   const userId = typeof user === "string" ? user : (user._id || user.id);
   if (!userId) throw new Error("Invalid user provided");
 
-  let wallet = await UserGlobalWallet.findOne({ user: userId });
+  // 1️⃣ Find wallet within the session
+  let wallet = await UserGlobalWallet.findOne({ user: userId }).session(session);
   if (wallet) return wallet;
 
+  // 2️⃣ Fetch default status level
   let defaultStatus = await getFirstStatusLevel().catch(() => null);
 
-  wallet = await UserGlobalWallet.create({
-    user: userId,
-    global: {
-      points: 0,
-      lifetimePoints: 0,
-      level: defaultStatus?._id || null,
-      lastEvaluated: Date.now()
-    }
-  });
+  // 3️⃣ Create wallet inside the session
+  const [createdWallet] = await UserGlobalWallet.create(
+    [
+      {
+        user: userId,
+        global: {
+          points: 0,
+          lifetimePoints: 0,
+          level: defaultStatus?._id || null,
+          lastEvaluated: Date.now(),
+        },
+      }
+    ],
+    { session }
+  );
 
-  return wallet;
+  return createdWallet;
 };
+
 
 // ======================================================================
 // GET USER WALLET + NEXT LEVEL
@@ -71,39 +80,29 @@ const getUserWallet = async (user) => {
 const updateGlobalPoints = async ({
   user,
   points,
-  allowNegative = false
+  allowNegative = false,
+  session
 }) => {
-  if (!user) throw new Error("User is required");
-
   const userId = typeof user === "string" ? user : (user._id || user.id);
 
-  let walletDoc = await UserGlobalWallet.findOne({ user: userId });
-  if (!walletDoc) walletDoc = await createUserWallet(userId);
+  let walletDoc = await UserGlobalWallet.findOne({ user: userId }).session(session);
+  if (!walletDoc) walletDoc = await createUserWallet(userId, session);
 
   const delta = points.total;
   const newBalance = walletDoc.global.points + delta;
 
   if (!allowNegative && newBalance < 0) {
-    throw new Error("Insufficient global points");
+    return { success: false, message: "Insufficient global points" };
   }
 
   walletDoc.global.points = newBalance;
-  if (delta > 0) {
-    walletDoc.global.lifetimePoints += delta;
-  }
 
-  await walletDoc.save();
+  await walletDoc.save({ session });
 
-  await checkPromotion(userId);
-  // demotion job runs separately (like your current design)
-
-  return {
-    success: true,
-    delta,
-    newBalance,
-    wallet: await getUserWallet(userId)
-  };
+  return { success: true, newBalance };
 };
+
+
 
 
 // ======================================================================
@@ -135,7 +134,7 @@ const checkPromotion = async (userId) => {
   const currentLevel = wallet.global.level;
 
   // all higher levels
-  const higherLevels = await StatusLevels.find({
+  const higherLevels = await GlobalStatusLevels.find({
     entryPoints: { $gt: currentLevel.entryPoints }
   })
     .sort({ entryPoints: 1 })

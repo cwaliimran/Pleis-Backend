@@ -15,50 +15,24 @@ const create = async (req, res) => {
     "image",
     "title",
     "rewardType",
-    "sortingType",
+    "category",
     "minPointsRequiredToClaim",
   ];
 
   // No companyOrganizer anymore
   var objectIdFields = [];
 
-  // Check for specific reward types and adjust fields accordingly
-// -------------------------
-// STEP 1: Validate USER INPUT
-// -------------------------
-if (
-  !validateParams(req, res, {
-    rawData: ["rewardType"],
-    enumFields: {
-      rewardType: ["ticketReward", "customReward"],
-    },
-  })
-) {
-  return;
-}
-
-// -------------------------
-// STEP 2: Map the values
-// -------------------------
-if (req.body.rewardType === "ticketReward") {
-  req.body.rewardType = "GlobalTicketReward";
-}
-
-if (req.body.rewardType === "customReward") {
-  req.body.rewardType = "GlobalCustomReward";
-}
 
 let rewardType = req.body.rewardType;
-
 // -------------------------
 // STEP 3: Add required fields based on rewardType
 // -------------------------
-if (rewardType === "GlobalTicketReward") {
+if (rewardType === "globalTicketReward") {
   rawData.push("event");
   objectIdFields.push("event");
 }
 
-if (rewardType === "GlobalCustomReward") {
+if (rewardType === "globalCustomReward") {
   // ✔ Require the customReward object and its inner fields
   rawData.push(
     "customReward",
@@ -77,7 +51,7 @@ if (
     dateFields,
     objectIdFields,
     enumFields: {
-      rewardType: ["GlobalTicketReward", "GlobalCustomReward"],
+      rewardType: ["globalTicketReward", "globalCustomReward"],
     },
   })
 ) {

@@ -1,5 +1,4 @@
 const { getUserWallet } = require("../../userWalletService/global/walletManagement/userWalletService");
-const { getCompanyLoyaltyInfo } = require("../clubMembers/clubMembersRepository");
 const { getUserCompanyWallet } = require("../clubMembers/clubMembersService");
 
 // calculatePointsRepo

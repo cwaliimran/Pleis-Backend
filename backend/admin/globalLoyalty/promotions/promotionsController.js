@@ -19,35 +19,14 @@ const create = async (req, res) => {
   // ---------------- PROMOTION TYPE RULES ----------------
 
   // HAPPY HOUR
-  if (req.body.promotionType === "happyHour") {
-    req.body.globalPromotionType = "globalHappyHour"; // discriminator
+  if (req.body.promotionType === "globalHappyHourPromotion") {
     dateFields.startDate = "YYYY-MM-DD hh:mm A";
     dateFields.endDate = "YYYY-MM-DD hh:mm A";
     rawData.push("pointsMultiplier");
   }
 
-  // BUY MENU ITEM
-  if (req.body.promotionType === "buyMenuItemPromotion") {
-    req.body.globalPromotionType = "buyMenuItemPromotion";
-    dateFields.startDate = "YYYY-MM-DD";
-    dateFields.endDate = "YYYY-MM-DD";
-    rawData.push("menuItem", "extraPoints");
-    objectIdFields.push("menuItem");
-  }
-
-  // PRODUCT SALE
-  if (req.body.promotionType === "productSale") {
-    req.body.globalPromotionType = "productSale";
-    dateFields.startDate = "YYYY-MM-DD";
-    dateFields.endDate = "YYYY-MM-DD";
-    rawData.push("menuItem", "discountedPrice");
-    objectIdFields.push("menuItem");
-  }
-
   // CLAIM PROMOTION
-  if (req.body.promotionType === "claimPromotion") {
-    req.body.promotionType = "claimPromotion";
-    req.body.globalPromotionType = "globalClaimPromotion"; // discriminator
+  if (req.body.promotionType === "globalClaimPromotion") {
     dateFields.startDate = "YYYY-MM-DD";
     dateFields.endDate = "YYYY-MM-DD";
     rawData.push("reward", "claimPoints");
@@ -82,7 +61,7 @@ const create = async (req, res) => {
     // ---------------- DATE CONVERSION ----------------
 
     const fmt =
-      req.body.promotionType === "happyHour"
+      req.body.promotionType === "globalHappyHourPromotion"
         ? "YYYY-MM-DD hh:mm A"
         : "YYYY-MM-DD";
 
@@ -139,13 +118,10 @@ const create = async (req, res) => {
 
 const get = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, companyOrganizer } = req.query;
+  const { keyword, status, date } = req.query;
 
   try {
-
-    
     const { responses, meta } = await service.get({
-      companyOrganizer,
       page,
       limit,
       keyword,

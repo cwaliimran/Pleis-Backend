@@ -1,16 +1,18 @@
 const {
   sendResponse,
   validateParams,
+  parsePaginationParams,
   getReadableErrorMessage,
 } = require("@utils/responseUtil");
 
 const clubService = require("./clubMembersService");
+const { getSuggestedLoyaltyClubs } = require("../../organizationProfile/organizationProfileService");
 
 const joinClub = async (req, res) => {
   const { companyOrganizer } = req.body;
   const userId = req.user._id;
 
-  if (!validateParams(req, res, { bodyParams: ["companyOrganizer"] })) return;
+  if (!validateParams(req, res, { rawData: ["companyOrganizer"] })) return;
 
   try {
     const data = await clubService.joinClub(userId, companyOrganizer);
@@ -62,15 +64,18 @@ const leaveClub = async (req, res) => {
 
 const getUserJoinedClubsWithPoints = async (req, res) => {
   const userId = req.user._id;
+  const { page, limit, skip } = parsePaginationParams(req);
+  const { keyword } = req.query;
 
   try {
-    const data = await clubService.getUserJoinedClubsWithPoints(userId);
+    const {data, meta} = await clubService.getUserJoinedClubsWithPoints({ page, limit, skip, userId, keyword });
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "user_joined_clubs_fetched_successfully",
       data,
+      meta
     });
 
   } catch (err) {
@@ -97,31 +102,6 @@ const getUserCompanyWallet = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "user_company_wallet_fetched_successfully",
-      data,
-    });
-
-  } catch (err) {
-    const readable = getReadableErrorMessage(err);
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: readable.message,
-      error: readable,
-    });
-  }
-};
-const updateUserCompanyPoints = async (req, res) => {
-  const { userId, companyOrganizer, pointsDelta, organization } = req.body;
-
-  if (!validateParams(req, res, { bodyParams: ["userId", "companyOrganizer", "pointsDelta", "organization"] })) return;
-
-  try {
-    const data = await clubService.updateUserCompanyPoints({ userId, companyOrganizer, pointsDelta, organization });
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "user_company_points_updated_successfully",
       data,
     });
 
@@ -163,10 +143,38 @@ const getCompanyProfileWithLoyaltyInfo = async (req, res) => {
   }
 };
 
+const getSuggestedClubs = async (req, res) => {
+  const userId = req.user._id;
+  try {
+    const { page, limit } = parsePaginationParams(req);
+    const { keyword } = req.query;
+
+    const data = await getSuggestedLoyaltyClubs({ page, limit, userId, keyword });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "suggested_clubs_fetched_successfully",
+      data: data.formatted,
+      meta: data.meta
+    });
+
+  } catch (err) {
+    const readable = getReadableErrorMessage(err);
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: readable.message,
+      error: readable,
+    });
+  }
+}
+
 module.exports = {
   joinClub,
   leaveClub,
   getUserJoinedClubsWithPoints,
+  getSuggestedClubs,
   getUserCompanyWallet,
   getCompanyProfileWithLoyaltyInfo
 };

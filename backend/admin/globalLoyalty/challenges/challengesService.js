@@ -10,13 +10,11 @@ const createChallenge = async (data) => {
   return formatChallenge(challenge.toObject());
 };
 
-const getChallenges = async ({ companyOrganizer, page, limit, keyword, status, date, timezone }) => {
+const getChallenges = async ({ page, limit, keyword, status, date, timezone }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   // Build query object
-  const query = {
-
-  };
+  const query = {};
   if (status) query.status = status;
   else query.status = { $ne: "deleted" };
   if (date) {
@@ -25,7 +23,7 @@ const getChallenges = async ({ companyOrganizer, page, limit, keyword, status, d
     query.createdAt = { $gte: start, $lt: end };
   }
   if (keyword) {
-    Object.assign(query, buildKeywordQueryFromModels([{ schema: Challenge.schema }], keyword));
+    Object.assign(query, buildKeywordQueryFromModels([{ schema: GlobalChallenge.schema }], keyword));
   }
 
   // Get challenges with population
@@ -33,9 +31,9 @@ const getChallenges = async ({ companyOrganizer, page, limit, keyword, status, d
 
   // Get counts
   const [total, active, inactive, totalFiltered] = await Promise.all([
-    GlobalChallenge.countDocuments({ ...(companyOrganizer && { companyOrganizer }), status: { $ne: "deleted" } }),
-    GlobalChallenge.countDocuments({ status: "active", ...(companyOrganizer && { companyOrganizer }) }),
-    GlobalChallenge.countDocuments({ status: "inactive", ...(companyOrganizer && { companyOrganizer }) }),
+    GlobalChallenge.countDocuments({ status: { $ne: "deleted" } }),
+    GlobalChallenge.countDocuments({ status: "active" }),
+    GlobalChallenge.countDocuments({ status: "inactive" }),
     GlobalChallenge.countDocuments(query),
   ]);
 
@@ -63,11 +61,56 @@ const deleteChallenge = async (id) => {
 const getChallengeDetails = async (id) => {
   return await challengeRepo.findChallengeById(id);
 };
+const getTicketings = async ({ timezone, page, limit, keyword, status, date, eventId }) => {
+  const andConditions = [];
 
+  if (eventId) {
+    andConditions.push({ event: eventId });
+  }
+
+  if (date) {
+    andConditions.push({
+      createdAt: {
+        $gte: new Date(date),
+        $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
+      },
+    });
+  }
+
+  if (status) {
+    andConditions.push({ status });
+  } else {
+    andConditions.push({ status: { $ne: "deleted" } });
+  }
+
+  if (keyword) {
+    andConditions.push({
+      $or: [{ title: { $regex: keyword, $options: "i" } }],
+    });
+  }
+
+  const query = andConditions.length ? { $and: andConditions } : {};
+
+  const [ticketings, counts] = await Promise.all([
+    ticketingRepo.getTicketingsWithFilters(query, page, limit),
+    ticketingRepo.getCounts(query),
+  ]);
+
+  const formattedTicketings = ticketings.map((item) => formatTicketing(timezone, item));
+  const { totalFiltered, total, active, inactive } = counts;
+
+  const meta = {
+    ...generateMeta(page, limit, totalFiltered),
+    ticketingsCount: { total, active, inactive },
+  };
+
+  return { ticketings: formattedTicketings, meta };
+};
 module.exports = {
   createChallenge,
   getChallenges,
   updateChallenge,
   getChallengeDetails,
   deleteChallenge,
+  getTicketings,
 };

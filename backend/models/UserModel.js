@@ -131,7 +131,10 @@ const userSchema = new mongoose.Schema(
         message: "email_invalid", // Generic error message key
       },
     },
-
+referralsCount: {
+  type: Number,
+  default: 0
+},
     emailVerification: {
       tokenHash: String,
       expiresAt: Number,
@@ -312,7 +315,7 @@ const userSchema = new mongoose.Schema(
       default: [],
     },
 
-    subscription: {
+    activeSubscription: {
       type: subscriptionSchema,
       default: {
         subscriptionTypes: [SubscriptionTypes.FREE],
@@ -324,8 +327,22 @@ const userSchema = new mongoose.Schema(
         endDate: null
       }
     },
-
-
+        inActiveSubscription: {
+      type: subscriptionSchema,
+      default: {
+        subscriptionTypes: [SubscriptionTypes.FREE],
+        pricingPlan: PricingPlanType.MONTHLY,
+        numberOfOrganizations: 1,
+        totalSubscriptionAmount: 0,
+        status: "active",
+        startDate: Date.now(),
+        endDate: null
+      }
+    },
+isSubscriptionCancelled: {
+      type: Boolean,
+      default: false,
+    },
 
     provider: {
       // Social provider details
@@ -673,6 +690,19 @@ userSchema.methods.addBaseUrlToProfileIcon = function (user) {
 const generateResetToken = () => {
   return randomBytes(32).toString("hex"); // 64-character token
 };
+
+
+userSchema.index(
+  {
+    email: 1,
+    "accountState.userType": 1
+  },
+  {
+    name: "email_userType_login_idx"
+  }
+);
+
+
 
 const User = mongoose.model("User", userSchema);
 

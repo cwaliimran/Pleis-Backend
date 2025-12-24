@@ -1,5 +1,6 @@
 // repositories/categoryRepository.js
 const GlobalRewardCategories = require("@GlobalRewardCategories");
+const { getModelCounts } = require("@utils/dbUtils/queryUtil");
 
 // Create
 const createCategory = async (data) => {
@@ -18,6 +19,17 @@ const getCategoriesWithFilters = async (query, skip, limit) => {
 // Count by condition
 const countCategories = async (query = {}) => {
   return GlobalRewardCategories.countDocuments(query);
+};
+
+
+const getCounts = async () => {
+  let counts = getModelCounts({
+    model: GlobalRewardCategories,
+    statusMap: {
+      status: ["active", "inactive"]
+    }
+  });
+  return counts;
 };
 
 // Find by ID
@@ -49,4 +61,5 @@ module.exports = {
   updateCategoryData,
   deleteCategoryById,
   findByIdAndUpdate,
+  getCounts,
 };

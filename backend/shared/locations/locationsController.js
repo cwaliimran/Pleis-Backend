@@ -2,6 +2,9 @@ const fs = require("fs");
 const path = require("path");
 const { sendResponse } = require("../../helperUtils/responseUtil");
 
+const Organizations = require("@OrganizationModel");
+const { calculateDistance } = require("../../helperUtils/calculateDistance");
+
 // Path to the JSON file
 const countriesFilePath = path.join(__dirname, "../../assets/countries.json");
 
@@ -128,98 +131,150 @@ const getCitiesByCountryId = (req, res) => {
   }
 };
 
-const getNearbyCities = (req, res) => {
+
+/* 
+All organizations whose coordinates fall within the same GRID_KM × GRID_KM square are treated as one city cluster.
+*/
+const GRID_KM = 20; // cluster size in km
+
+// ---- Helpers ----
+const kmToLatDegrees = (km) => km / 111;
+
+const kmToLngDegrees = (km, latitude) =>
+  km / (111 * Math.cos((latitude * Math.PI) / 180));
+
+const buildGridKey = ([lng, lat]) => {
+  const latDeg = kmToLatDegrees(GRID_KM);
+  const lngDeg = kmToLngDegrees(GRID_KM, lat);
+
+  const latKey = Math.floor(lat / latDeg);
+  const lngKey = Math.floor(lng / lngDeg);
+
+  return `${latKey}:${lngKey}`;
+};
+
+// ---- Controller ----
+const getNearbyCities = async (req, res) => {
   let { latitude, longitude } = req.query;
 
-  if (!latitude || !longitude) {
-    return sendResponse({
-      res,
-      statusCode: 400,
-      translationKey: "latitude_and_longitude_required",
-    });
+  const hasCoords =
+    latitude !== undefined &&
+    longitude !== undefined &&
+    !isNaN(latitude) &&
+    !isNaN(longitude);
+
+  if (hasCoords) {
+    latitude = parseFloat(latitude);
+    longitude = parseFloat(longitude);
   }
 
-  latitude = parseFloat(latitude);
-  longitude = parseFloat(longitude);
+  // 1️⃣ Fetch all active organizations with valid coordinates
+  const organizations = await Organizations.find({
+    status: "active",
+    "location.coordinates.0": { $exists: true },
+    "location.coordinates.1": { $exists: true },
+  })
+    .select("location.coordinates location.city location.country")
+    .lean();
 
-  // Helper to calculate distance (Haversine) in kilometers, rounded to 2 decimals
-  const getDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const straightLine = R * c;
-
-    // Apply road-distance multiplier (approx)
-    const drivingApprox = straightLine * 1.2;
-
-    return Math.round(drivingApprox * 100) / 100; // km, 2 decimals
-  };
-
-
-
-  // Flatten all cities
-  const allCities = countriesData.flatMap((country) =>
-    (country.states || []).flatMap((state) =>
-      (state.cities || []).map((city) => ({
-        id: city.id,
-        name: city.name,
-        latitude: parseFloat(city.latitude),
-        longitude: parseFloat(city.longitude),
-        country: country.name,
-        countryId: country.id,
-        state: state.name,
-      }))
-    )
-  );
-
-  // Step 1: Find nearest city overall — to identify which country we're in
-  const nearestCity = allCities
-    .map((city) => ({
-      ...city,
-      distance: getDistance(latitude, longitude, city.latitude, city.longitude),
-    }))
-    .sort((a, b) => a.distance - b.distance)[0];
-
-  if (!nearestCity) {
+  if (!organizations.length) {
     return sendResponse({
       res,
       statusCode: 404,
-      translationKey: "no_nearby_cities_found",
+      translationKey: "no_active_locations_found",
     });
   }
 
-  // Step 2: Filter all cities from the same country
-  const sameCountryCities = allCities.filter(
-    (city) => city.countryId === nearestCity.countryId
-  );
+  // 2️⃣ Cluster organizations into geo-cells (≈ cities)
+  const clusters = new Map();
 
-  // Step 3: Sort by distance and return top 10 (excluding the nearest city itself)
-  const nearbyCities = sameCountryCities
-    .map((city) => ({
-      ...city,
-      distance: getDistance(latitude, longitude, city.latitude, city.longitude),
-    }))
-    .filter((city) => city.distance > 0.1) // exclude the given location itself
-    .sort((a, b) => a.distance - b.distance)
-    .slice(0, 10);
+  for (const org of organizations) {
+    const coords = org.location.coordinates; // [lng, lat]
+    if (!Array.isArray(coords) || coords.length !== 2) continue;
 
-  //split first 5 as nearby and rest as suggested
-  const nearbyCitiesFinal = nearbyCities.slice(0, 5);
-  const suggestedCities = nearbyCities.slice(5);
+    const key = buildGridKey(coords);
+
+    if (!clusters.has(key)) {
+      clusters.set(key, {
+        coordinates: coords, // still [lng, lat]
+        city: org.location.city || null,
+        country: org.location.country || null,
+        count: 0,
+      });
+    }
+
+    clusters.get(key).count += 1;
+  }
+
+  let cities = Array.from(clusters.values());
+
+  // 3️⃣ If user location exists → rank by distance + density
+  if (hasCoords) {
+    cities = cities
+      .map((c) => {
+        const [lng, lat] = c.coordinates;
+
+        const { distanceKm } = calculateDistance(
+          latitude,
+          longitude,
+          lat,
+          lng
+        );
+
+        const safeDistance = distanceKm ?? Number.MAX_SAFE_INTEGER;
+        const rawScore = c.count / Math.max(safeDistance, 1);
+
+        return {
+          city: c.city,
+          country: c.country,
+          latitude: lat,
+          longitude: lng,
+          organizers: c.count,
+          distanceKm: distanceKm !== null ? Number(distanceKm.toFixed(2)) : null,
+          score: Number(rawScore.toFixed(2)),
+        };
+      })
+      .sort((a, b) => {
+        // Primary: score
+        if (b.score !== a.score) return b.score - a.score;
+        // Secondary: closer distance
+        return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
+      });
+  }
+  // 4️⃣ No user location → return most crowded places
+  else {
+    cities = cities
+      .map((c) => {
+        const [lng, lat] = c.coordinates;
+
+        return {
+          city: c.city,
+          country: c.country,
+          latitude: lat,
+          longitude: lng,
+          organizers: c.count,
+          distanceKm: null,
+          score: Number(c.count.toFixed(2)),
+        };
+      })
+      .sort((a, b) => b.organizers - a.organizers);
+  }
+
+  // 5️⃣ Split response
+  const nearbyCities = cities.slice(0, 5);
+  const suggestedCities = cities.slice(5, 10);
 
   return sendResponse({
     res,
     statusCode: 200,
     translationKey: "nearby_cities_fetched_successfully",
-    data: { nearbyCities: nearbyCitiesFinal, suggestedCities },
+    data: {
+      nearbyCities,
+      suggestedCities,
+    },
   });
 };
+
 
 module.exports = {
   getCountries,

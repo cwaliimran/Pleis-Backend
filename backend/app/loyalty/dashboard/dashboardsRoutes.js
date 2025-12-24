@@ -9,7 +9,7 @@ const router = express.Router();
 
 router.use(auth);
 
-const apiRateLimiter = createRateLimiter("Dashboards");
+const apiRateLimiter = createRateLimiter("LoyaltyDashboard");
 
 router.get("/", apiRateLimiter, get);
 

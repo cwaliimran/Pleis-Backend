@@ -9,9 +9,9 @@ const createUsersStreak = async ({ user, companyOrganizer, visits = 0, points = 
 };
 
 const getUsersStreaks = async ({ companyOrganizer, page, limit, keyword, status, date, orderSort = "asc" }) => {
-  const query = {
+  const query = {};
 
-  };
+  // Date filter (optional)
   if (date) {
     query.createdAt = {
       $gte: new Date(date),
@@ -19,29 +19,60 @@ const getUsersStreaks = async ({ companyOrganizer, page, limit, keyword, status,
     };
   }
 
-  //Keyword search
-  if (keyword) {
-    query.$or = [{ title: { $regex: keyword, $options: "i" } }];
+  // Filter by companyOrganizer if provided
+  if (companyOrganizer) {
+    query.companyOrganizer = companyOrganizer;
   }
 
+  // Filter by status (active, inactive, etc.)
+  query.status = status ? status : { $ne: "deleted" };
+
+  // Pagination setup
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
+  // Sorting order
   const sort = { order: orderSort === "desc" ? -1 : 1 };
 
+  // Fetch data using getUsersStreaksWithFilters function
   let [UsersStreaks, getUsersStreaksCounts] = await Promise.all([
     usersStreakRepo.getUsersStreaksWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
     usersStreakRepo.getUsersStreaksCounts(query),
   ]);
+
+  // Apply keyword search on the fetched results
+  if (keyword) {
+    const sanitizedKeyword = String(keyword).trim();  // Sanitize keyword
+
+    UsersStreaks = UsersStreaks.filter((streak) => {
+      // Convert numeric fields to string before applying `.toLowerCase()` for keyword search
+      return (
+        (streak.user.firstName && streak.user.firstName.toLowerCase().includes(sanitizedKeyword.toLowerCase())) ||
+        (streak.user.lastName && streak.user.lastName.toLowerCase().includes(sanitizedKeyword.toLowerCase())) ||
+        (streak.user.username && streak.user.username.toLowerCase().includes(sanitizedKeyword.toLowerCase())) ||
+        (streak.user.email && streak.user.email.toLowerCase().includes(sanitizedKeyword.toLowerCase())) ||
+        // Add keyword check for numeric fields as well (visits, streaks, points, longestStreak)
+        (String(streak.visits).includes(sanitizedKeyword)) || 
+        (String(streak.streak).includes(sanitizedKeyword)) ||
+        (String(streak.points).includes(sanitizedKeyword)) ||
+        (String(streak.longestStreak).includes(sanitizedKeyword))
+      );
+    });
+  }
+
+  // Attach organization details if needed
   UsersStreaks = await usersStreakRepo.attachOrganizationDetailsToStreaks(UsersStreaks);
-console.log("UsersStreaks",UsersStreaks );
+
   const { totalFiltered, total, active, inactive } = getUsersStreaksCounts;
   const meta = generateMeta(page, limit, totalFiltered);
   meta.UsersStreaksCount = { total, active, inactive };
 
+  // Format data before returning
   UsersStreaks = formatUsersStreaks(UsersStreaks);
 
   return { UsersStreaks, meta };
 };
+
+
 
 const getPublicUsersStreaks = async ({ page = 1, limit = 10, keyword, date, orderSort }) => {
   const baseFilters = [{ status: "active" }];

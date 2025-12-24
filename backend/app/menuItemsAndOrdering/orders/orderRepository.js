@@ -1,10 +1,10 @@
 const Orders = require("@OrdersModel");
 const { getModelCounts } = require("../../../helperUtils/dbUtils/queryUtil");
 
-const createOrder = async (orderData) => {
-  const order = new Orders(orderData);
-  return order.save();
+const createOrder = async (orderData, session = null) => {
+  return Orders.create([orderData], { session }).then(res => res[0]);
 };
+
 
 const getOrderById = async (id) => {
   return Orders.findById(id).populate("organization", "basicInfo.name basicInfo.media.logo location");

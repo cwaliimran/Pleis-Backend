@@ -10,26 +10,39 @@ const challengeService = require("./challengesService");
 
 const getChallenges = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const keyword = req.query.keyword || "";
+
   try {
-    const { challenges, meta } = await challengeService.getChallenges({
+    const userId = req.user._id;
+    const companyOrganizer = req.params.companyOrganizer;
+
+    const challenges = await challengeService.getEligibleChallengesForLoyaltyPage({
+      userId,
+      companyOrganizer,
       page,
       limit,
       timezone: req.user?.timezone,
-      keyword,
     });
+
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "challenges_fetched_successfully",
       data: challenges,
-      meta,
     });
+
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
-    return sendResponse({ res, statusCode: 500, translationKey: readableError.message, error });
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: readableError.message,
+      error
+    });
   }
 };
+
+
+
 
 const getChallengeDetails = async (req, res) => {
   if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;

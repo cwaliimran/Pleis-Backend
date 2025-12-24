@@ -9,13 +9,13 @@ const baseGlobalChallengeeSchema = new mongoose.Schema(
     taskType: {
       type: String,
       required: true,
-      enum: ["visit", "earnPoints", "buyMenuItem", "referUsers"], // All tasks in the same table
+      enum: ["globalVisit", "globalEarnPoints", "globalReferUsers"], // All tasks in the same table
     },
     claimLimit: { type: Number, default: null },
     endDate: { type: Date, default: null },
     tierLimit: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Tiers",
+      ref: "GlobalStatusLevels",
       default: null,
     },
 
@@ -26,7 +26,7 @@ const baseGlobalChallengeeSchema = new mongoose.Schema(
     },
     reward: globalRewardSchema, // Nested reward (same for all task types)
   },
-  { timestamps: true, discriminatorKey: "globaltaskType" } // Discriminator key for task type differentiation
+  { timestamps: true, discriminatorKey: "taskType" } // Discriminator key for task type differentiation
 );
 
 // Centralized transformation logic for cleaning task and reward fields
@@ -39,10 +39,6 @@ baseGlobalChallengeeSchema.methods.toJSON = function () {
       case "points":
       case "specialTicket":
         delete obj.reward.rewardMenuItem;
-        delete obj.reward.customReward;
-        break;
-      case "menuItem":
-        delete obj.reward.rewardValue;
         delete obj.reward.customReward;
         break;
       case "customReward":
@@ -60,9 +56,6 @@ baseGlobalChallengeeSchema.methods.toJSON = function () {
       break;
     case "earnPoints":
       delete obj.taskMenuItem;
-      break;
-    case "buyMenuItem":
-      delete obj.taskValue;
       break;
     case "referUsers":
       delete obj.taskMenuItem;

@@ -12,7 +12,8 @@ router.use("/venues", require("../venues/venuesRoutes"));
 router.use("/venue-types", require("../venueTypes/venueTypesRoutes"));
 router.use("/features", require("../features/featureRoutes"));
 router.use("/tiers", require("../tiers/tiersRoutes"));
-router.use("/top-promos", require("../browserControl/top10PromoSection/topPromosRoutes"));
+router.use("/popular-events", require("../browserControl/popularEvents/popularEventsRoutes"));
+router.use("/top-picks", require("../browserControl/topPicksOrganizations/topPicksOrganizationsRoutes"));
 router.use("/custom-categories", require("../customCategories/customCategoriesRoutes"));
 router.use("/pinned-content", require("../pinnedContent/pinnedContentRoutes"));
 router.use("/banners", require("../bannerControl/bannerControlsRoutes"));
@@ -21,6 +22,7 @@ router.use("/events", require("../events/eventRoutes"));
 
 //menu management
 router.use("/menu", require("../menuManagement/menuManagementRoutes"));
+router.use("/notifications/", require("../notifications/notificationsRoutes"));
 
 //organizations
 router.use("/organizations", require("../organizations/organizationRoutes.js"));
@@ -48,7 +50,6 @@ router.use("/bundles", require("../bundles/bundleRoutes"));
 router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));
 
 // transactions
-router.use("/transactions-old", require("../transactions_old/transactionsRoutes"));
 router.use("/transactions", require("../transactions/routes/unifiedTransactionsRoutes"));
 
 // thirdPParty
@@ -62,6 +63,9 @@ router.use("/marketing", require("../marketing/marketingRoutes"));
 router.use("/subscriptions", require("../subscriptions/subscriptionsRoutes"));
 // updates
 router.use("/updates", require("../updates/updatesRoutes"));
+router.use("/giveaways", require("../giveaways/giveawayRoutes"));
+router.use("/qr-code", require("../qr/qrRoutes"));
+router.use("/in-app-ordering", require("../inAppOrdering/inAppOrderingRoutes"));
 
 
 module.exports = router;

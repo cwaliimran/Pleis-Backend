@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const TierRepo = require("../../../admin/tiers/tiersRepository");
 const Tiers = require("../../../admin/tiers/Tiers");
 const { User } = require("@UserModel");
-
+const { getModelCounts } = require("../../../helperUtils/dbUtils/queryUtil");
 // ==========================================================
 // GET COMPANY LOYALTY SETTINGS (tier model + pointValuePercentage)
 // ==========================================================
@@ -18,31 +18,68 @@ const getCompanyLoyaltyInfo = async (companyId) => {
   };
 };
 
+
+const getCompanyLoyaltyProfile = async (companyOrganizer) => {
+  const [companyDoc, totalMembers] = await Promise.all([
+    User.findById(companyOrganizer)
+      .select(
+        "companyDetails.loyaltySettings.title companyDetails.logo companyDetails.coverImage companyDetails.category companyDetails.description"
+      )
+      .populate({
+        path: "companyDetails.category",
+        select: "title image"
+      })
+      .lean(),
+    ClubMembers.countDocuments({ companyOrganizer, status: "active" })
+  ]);
+
+
+  if (!companyDoc) return null;
+  companyDoc.companyDetails.totalMembers = totalMembers;
+  return {
+    companyDetails: companyDoc.companyDetails,
+  };
+};
+
+
 // ==========================================================
 // ENSURE CLUB MEMBER WALLET EXISTS
 // ==========================================================
-const ensureClubMemberWallet = async (userId, companyOrganizer) => {
-  let member = await ClubMembers.findOne({ user: userId, companyOrganizer });
+const ensureClubMemberWallet = async (userId, companyOrganizer, session) => {
+  // 1️⃣ Find member using session
+  let member = await ClubMembers.findOne({
+    user: userId,
+    companyOrganizer
+  }).session(session);
 
+  // Fetch loyalty system info
   const { tierKey, pointValuePercentage } = await getCompanyLoyaltyInfo(companyOrganizer);
 
+  // 2️⃣ If member does not exist → create inside session
   if (!member) {
     const defaultTier = await TierRepo.getFirstTier(tierKey);
-    member = await ClubMembers.create({
-      user: userId,
-      companyOrganizer,
-      tierKey,
-      pointValuePercentage,
-      points: 0,
-      lifetimePoints: 0,
-      level: defaultTier?._id || null,
-      status: "active",
-      lastEvaluated: Date.now(),
-    });
+
+    const [created] = await ClubMembers.create(
+      [{
+        user: userId,
+        companyOrganizer,
+        tierKey,
+        pointValuePercentage,
+        points: 0,
+        lifetimePoints: 0,
+        level: defaultTier?._id || null,
+        status: "active",
+        lastEvaluated: Date.now(),
+      }],
+      { session }
+    );
+
+    member = created;
   }
 
   return member;
 };
+
 
 // ==========================================================
 // HELPER: Calculate 12-Month Earned Points from Unified Transactions
@@ -149,28 +186,33 @@ const updatePoints = async ({
   companyOrganizer,
   points,
   allowNegative = false,
+  session
 }) => {
-  const { tierKey } = await getCompanyLoyaltyInfo(companyOrganizer);
+  try {
+    // const { tierKey } = await getCompanyLoyaltyInfo(companyOrganizer);
 
-  let member = await ensureClubMemberWallet(userId, companyOrganizer);
+    let member = await ensureClubMemberWallet(userId, companyOrganizer, session);
 
-  const delta = points.total;
-  const newBalance = member.points + delta;
+    const delta = points.total;
+    const newBalance = member.points + delta;
 
-  if (!allowNegative && newBalance < 0) {
-    throw new Error("Insufficient company loyalty points.");
+    if (!allowNegative && newBalance < 0) {
+      return { success: false, message: "Insufficient company loyalty points." };
+    }
+
+    member.points = newBalance;
+    if (delta > 0) member.lifetimePoints += delta;
+
+    await member.save({ session });
+
+    const wallet = await getWallet(userId, companyOrganizer, session);
+
+    return { success: true, newBalance, wallet };
+  } catch (err) {
+    return { success: false, message: err.message };
   }
-
-  member.points = newBalance;
-  if (delta > 0) member.lifetimePoints += delta;
-
-  await member.save();
-
-  await checkPromotion(userId, companyOrganizer, tierKey);
-  await checkDemotion(userId, companyOrganizer, tierKey);
-
-  return getWallet(userId, companyOrganizer);
 };
+
 
 
 // ==========================================================
@@ -254,14 +296,119 @@ const getUserJoinedClubs = async (userId) => {
     .select("companyOrganizer");
 };
 
-const getUserJoinedClubsWithPoints = async (userId) => {
-  return ClubMembers.find({ user: userId, status: { $ne: "left" } })
-    .populate([
-      { path: "companyOrganizer", select: "profileIcon companyDetails.loyaltySettings.title" },
-      { path: "level" }
-    ])
-    .lean();
+const getUserJoinedClubsWithPoints = async ({ page = 1, limit = 10, skip, userId, keyword }) => {
+
+  const pipeline = [
+    // 1️⃣ Base match (ONLY real fields)
+    {
+      $match: {
+        user: userId,
+        status: { $ne: "left" }
+      }
+    },
+
+    // 2️⃣ Populate companyOrganizer
+    {
+      $lookup: {
+        from: "users",
+        localField: "companyOrganizer",
+        foreignField: "_id",
+        as: "companyOrganizer",
+        pipeline: [
+          {
+            $project: {
+              "companyDetails.loyaltySettings.title": 1,
+              "companyDetails.logo": 1
+            }
+          }
+        ]
+      }
+    },
+
+    // 3️⃣ Unwind organizer
+    { $unwind: "$companyOrganizer" },
+
+    // 4️⃣ Populate level
+    {
+      $lookup: {
+        from: "tiers",
+        localField: "level",
+        foreignField: "_id",
+        as: "level"
+      }
+    },
+    { $unwind: { path: "$level", preserveNullAndEmptyArrays: true } }
+  ];
+
+  // 5️⃣ Keyword filter (NOW it exists)
+  if (keyword) {
+    pipeline.push({
+      $match: {
+        "companyOrganizer.companyDetails.loyaltySettings.title": {
+          $regex: keyword,
+          $options: "i"
+        }
+      }
+    });
+  }
+
+  // 6️⃣ Pagination
+  pipeline.push(
+    { $sort: { _id: -1 } },
+    { $skip: skip ?? (page - 1) * limit },
+    { $limit: limit }
+  );
+
+  return ClubMembers.aggregate(pipeline);
 };
+
+
+const countUserJoinedClubsWithPoints = async ({ userId, keyword }) => {
+
+  const pipeline = [
+    // 1️⃣ Base match (ONLY native fields)
+    {
+      $match: {
+        user: userId,
+        status: { $ne: "left" }
+      }
+    },
+
+    // 2️⃣ Populate companyOrganizer
+    {
+      $lookup: {
+        from: "users",
+        localField: "companyOrganizer",
+        foreignField: "_id",
+        as: "companyOrganizer"
+      }
+    },
+
+    // 3️⃣ Unwind populated organizer
+    { $unwind: "$companyOrganizer" }
+  ];
+
+  // 4️⃣ Keyword filter (NOW valid)
+  if (keyword) {
+    pipeline.push({
+      $match: {
+        "companyOrganizer.companyDetails.loyaltySettings.title": {
+          $regex: keyword,
+          $options: "i"
+        }
+      }
+    });
+  }
+
+  // 5️⃣ Count
+  pipeline.push({ $count: "total" });
+
+  const result = await ClubMembers.aggregate(pipeline);
+  return result.length ? result[0].total : 0;
+};
+
+
+
 
 const updateCompanyLoyaltySettings = async (companyOrganizer, tierKey, pointValuePercentage) => {
   await ClubMembers.updateMany(
@@ -269,6 +416,15 @@ const updateCompanyLoyaltySettings = async (companyOrganizer, tierKey, pointValu
     { $set: { tierKey, pointValuePercentage } }
   );
 };
+
+// clubMembersRepository.js
+const getFollowedClubIds = async (userId) => {
+  return ClubMembers.distinct("companyOrganizer", {
+    user: userId,
+    status: "active"
+  });
+};
+
 
 module.exports = {
   joinClub,
@@ -282,5 +438,8 @@ module.exports = {
   getUserJoinedClubs,
   getUserJoinedClubsWithPoints,
   getCompanyLoyaltyInfo,
-  updateCompanyLoyaltySettings
+  getCompanyLoyaltyProfile,
+  updateCompanyLoyaltySettings,
+  getFollowedClubIds,
+  countUserJoinedClubsWithPoints,
 };

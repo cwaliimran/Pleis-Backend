@@ -10,4 +10,7 @@ router.use(auth);
 // Get all homes with pagination
 router.post('/', getHome);
 
+
+
+
 module.exports = router;

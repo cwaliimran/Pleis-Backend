@@ -157,15 +157,17 @@ const formatEventResponse = (eventObject, options = {}) => {
   }
 
   // Attach rounded distance
-  if (event.distance !== undefined && event.distance !== null) {
-    const dist = Number(event.distance);
-    if (Number.isFinite(dist)) {
-      event.distance = {
-        distance: Math.round(dist * 100) / 100,
-        unit: "km"
-      };
-    }
+  // FORMAT Mongo $geoNear distance (meters → km)
+  if (typeof event.distance === "number") {
+    const km = event.distance / 1000;
+
+    event.distance = {
+      distance: Math.round(km * 100) / 100, // 2 decimals
+      unit: "km"
+    };
   }
+
+
 
   // Field filtering
   let result = event;
@@ -344,6 +346,21 @@ const reservationsFormatterAdjustDates_ = (reservations, timezone) => {
     return cat;
   });
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 module.exports = {
   formatEventSchedule,
   formatMoreFromOrganizerEventResponse,

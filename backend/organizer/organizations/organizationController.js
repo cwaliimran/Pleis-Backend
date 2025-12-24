@@ -232,7 +232,7 @@ const updateOrganization = async (req, res) => {
     })
   )
     return;
-
+const userId = req.user._id;
   let data = ({
     basicInfo,
     otherInfo,
@@ -245,7 +245,12 @@ const updateOrganization = async (req, res) => {
     tags,
     description,
     title,
+    subscriptionTypes,
+    pricingPlan,
+    numberOfOrganizations,
+    totalSubscriptionAmount,
   } = req.body);
+  data.userId = userId;
 
   //Convert times to UTC minutes before saving
   if (operatingHours) {
@@ -382,7 +387,57 @@ const getOrganizationsAsStaff = async (req, res) => {
     });
   }
 }
+const getAllOrganizations = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  const { keyword, date, status = "active" } = req.query;
 
+  let { _id, timezone } = req.user;
+
+  try {
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+    let { organizations, meta } = await organizationService.getAllOrganizations({
+      page,
+      limit,
+      keyword,
+      status,
+      creator: _id,
+      date,
+    });
+
+    // Transform to local time safely
+    organizations = organizations.map((org) => {
+      const orgObj = org.toObject ? org.toObject() : org;
+
+      if (orgObj.operatingHours) {
+        orgObj.operatingHours = transformOperatingHoursToLocal(
+          orgObj.operatingHours,
+          timezone
+        );
+      }
+
+      return orgObj;
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "organizations_fetched_successfully",
+      data: organizations,
+      meta
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
 module.exports = {
   createOrganization,
   getOrganizations,
@@ -391,5 +446,6 @@ module.exports = {
   updateOrganization,
   deleteOrganization,
   getOrganizationsAdmin,
-  getOrganizationsAsStaff
+  getOrganizationsAsStaff,
+  getAllOrganizations
 };

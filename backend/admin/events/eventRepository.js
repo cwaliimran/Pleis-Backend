@@ -41,6 +41,7 @@ const getEventsWithFilters = async (query, skip, limit) => {
 };
 // Get all with filters
 const getMinimalEventsWithFilters = async (query) => {
+  console.log("query",query );
   return Events.find(query).select("basicInfo.title schedule")
     .sort({ createdAt: -1 })
 };

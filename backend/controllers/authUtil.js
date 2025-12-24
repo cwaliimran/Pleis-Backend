@@ -43,7 +43,6 @@ const registerUserUtility = async (req, res, options = {}) => {
   let verificationStatus = "active";
   const session = await mongoose.startSession();
   session.startTransaction();
-
   try {
     let rawData = ["firstName", "lastName", "email", "password", "userType"];
     let objectIdFields = [];

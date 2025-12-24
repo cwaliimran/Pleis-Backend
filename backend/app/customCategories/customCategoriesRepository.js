@@ -14,56 +14,28 @@ const getCustomCategoriesWithFilters = async (
   skip,
   limit,
   sort = { order: 1 },
-  category,
-  time
+  category
 ) => {
   const now = getCurrentDateInTimezone({ timezone });
   const userObjectId = new mongoose.Types.ObjectId(userId);
   const catObjId = category ? new mongoose.Types.ObjectId(category) : null;
 
-  const categoryFilter = category
+  const eventCategoryFilter = category
     ? { "basicInfo.categories": { $in: [catObjId] } }
     : {};
 
-  // --- Time filter ---
-  let dateFilter = {};
-  if (time && time !== "all") {
-    let start, end;
-    switch (time) {
-      case "live":
-        dateFilter = { "schedule.startDateTime": { $lte: now }, "schedule.endDateTime": { $gte: now } };
-        break;
+  const organizationCategoryFilter = category
+    ? { "otherInfo.categories": { $in: [catObjId] } }
+    : {};
 
-      case "today":
-        ({ start, end } = getStartAndEndOfDay(now, timezone));
-        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
-        break;
-
-      case "tomorrow":
-        const tomorrow = new Date(now);
-        tomorrow.setDate(now.getDate() + 1);
-        ({ start, end } = getStartAndEndOfDay(tomorrow, timezone));
-        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
-        break;
-
-      case "thisWeek":
-        ({ start, end } = getStartAndEndOfWeek(now, timezone));
-        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
-        break;
-
-      default:
-        dateFilter = { "schedule.endDateTime": { $gte: now } };
-    }
-  } else {
-    dateFilter = { "schedule.endDateTime": { $gte: now } };
-  }
+  const dateFilter = {
+    "schedule.endDateTime": { $gte: now }
+  };
 
   const pipeline = [
     { $match: filter },
     { $sort: sort },
     ...(limit > 0 ? [{ $skip: skip }, { $limit: limit }] : []),
-
-    // --- Lookup Users ---
     {
       $lookup: {
         from: "users",
@@ -76,14 +48,12 @@ const getCustomCategoriesWithFilters = async (
               profileIcon: 1,
               firstName: 1,
               lastName: 1,
-              "companyDetails.loyaltySettings.title": 1,
-            },
-          },
-        ],
-      },
+              "companyDetails.loyaltySettings.title": 1
+            }
+          }
+        ]
+      }
     },
-
-    // --- Lookup Events (with organization populated + favorites + time filter) ---
     {
       $lookup: {
         from: "events",
@@ -94,9 +64,9 @@ const getCustomCategoriesWithFilters = async (
           {
             $match: {
               status: "active",
-              ...categoryFilter,
-              ...dateFilter, // <-- added time filter here
-            },
+              ...eventCategoryFilter,
+              ...dateFilter
+            }
           },
           {
             $lookup: {
@@ -104,13 +74,15 @@ const getCustomCategoriesWithFilters = async (
               localField: "basicInfo.organization",
               foreignField: "_id",
               as: "organizationInfo",
-              pipeline: [{ $project: { _id: 1, basicInfo: 1 } }],
-            },
+              pipeline: [{ $project: { _id: 1, basicInfo: 1 } }]
+            }
           },
           {
             $addFields: {
-              "basicInfo.organization": { $arrayElemAt: ["$organizationInfo", 0] },
-            },
+              "basicInfo.organization": {
+                $arrayElemAt: ["$organizationInfo", 0]
+              }
+            }
           },
           {
             $lookup: {
@@ -123,27 +95,32 @@ const getCustomCategoriesWithFilters = async (
                       $and: [
                         { $eq: ["$targetId", "$$eventId"] },
                         { $eq: ["$user", userObjectId] },
-                        { $eq: ["$targetType", "event"] },
-                      ],
-                    },
-                  },
+                        { $eq: ["$targetType", "event"] }
+                      ]
+                    }
+                  }
                 },
-                { $limit: 1 },
+                { $limit: 1 }
               ],
-              as: "favoriteInfo",
-            },
+              as: "favoriteInfo"
+            }
           },
           {
-            $addFields: { isFavorite: { $gt: [{ $size: "$favoriteInfo" }, 0] } },
+            $addFields: {
+              isFavorite: { $gt: [{ $size: "$favoriteInfo" }, 0] }
+            }
           },
           {
-            $project: { _id: 1, basicInfo: 1, schedule: 1, isFavorite: 1 },
-          },
-        ],
-      },
+            $project: {
+              _id: 1,
+              basicInfo: 1,
+              schedule: 1,
+              isFavorite: 1
+            }
+          }
+        ]
+      }
     },
-
-    // --- Lookup Organizations ---
     {
       $lookup: {
         from: "organizations",
@@ -152,17 +129,21 @@ const getCustomCategoriesWithFilters = async (
         as: "organizationObjects",
         pipeline: [
           {
+            $match: {
+              status: "active",
+              ...organizationCategoryFilter
+            }
+          },
+          {
             $project: {
               _id: 1,
               "basicInfo.name": 1,
-              "basicInfo.media": 1,
-            },
-          },
-        ],
-      },
+              "basicInfo.media": 1
+            }
+          }
+        ]
+      }
     },
-
-    // --- Conditional merge of objects ---
     {
       $project: {
         _id: 1,
@@ -177,52 +158,41 @@ const getCustomCategoriesWithFilters = async (
             branches: [
               { case: { $eq: ["$type", "User"] }, then: "$userObjects" },
               { case: { $eq: ["$type", "Event"] }, then: "$eventObjects" },
-              { case: { $eq: ["$type", "Organizations"] }, then: "$organizationObjects" },
+              { case: { $eq: ["$type", "Organizations"] }, then: "$organizationObjects" }
             ],
-            default: [],
-          },
-        },
-      },
-    },
+            default: []
+          }
+        }
+      }
+    }
   ];
 
   const result = await CustomCategories.aggregate(pipeline);
 
-  // --------------------------------------------------
-  // 🎟️ BATCH FETCH MIN TICKET PRICE PER EVENT
-  // --------------------------------------------------
-  const results = Array.isArray(result) ? result : [];
-
-  // extract only EVENT ids
-  const eventIds = results
+  const eventIds = result
     .filter(cat => cat.type === "Event")
     .flatMap(cat => Array.isArray(cat.objects) ? cat.objects : [])
-    .map(event => event._id)
+    .map(evt => evt?._id)
     .filter(Boolean);
 
-  // fetch prices once
   const ticketPriceMap =
     eventIds.length > 0
       ? await getMinTicketPricesByEventIds(eventIds)
       : {};
 
-  // append ticketInfo ONLY to event objects
-  results.forEach(category => {
+  result.forEach(category => {
     if (category.type !== "Event") return;
-
     if (!Array.isArray(category.objects)) return;
 
     category.objects.forEach(event => {
       const minPrice = ticketPriceMap[event._id.toString()] || null;
-
-      event.ticketInfo = minPrice
-        ? { price: `€${minPrice}` }
-        : null;
+      event.ticketInfo = minPrice ? { price: `€${minPrice}` } : null;
     });
   });
 
-  return results;
+  return result;
 };
+
 
 
 

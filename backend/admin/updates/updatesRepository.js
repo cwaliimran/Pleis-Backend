@@ -179,8 +179,10 @@ const getUpdatess = async ({ timezone, page, limit, keyword, status, userId, dat
       status: 1, // Include the status field
       createdAt: 1, // Include the createdAt field
       title: 1, // Include the title field of the update
-
-      eventTitle: { $arrayElemAt: ["$eventDetails.basicInfo.title", 0] } // Extract the event title from the eventDetails array
+creater:{ $arrayElemAt: ["$eventDetails.creator", 0] },
+      eventTitle: { $arrayElemAt: ["$eventDetails.basicInfo.title", 0] },
+      eventId: { $arrayElemAt: ["$eventDetails._id", 0] } // Extract the event title from the
+      //  eventDetails array
     }
   });
 

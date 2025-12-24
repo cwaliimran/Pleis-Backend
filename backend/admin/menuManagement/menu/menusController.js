@@ -153,6 +153,7 @@ const updateMenu = async (req, res) => {
     description,
     organization,
     status = "active",
+    isOrderingEnabled
   } = req.body;
 
   if (
@@ -168,6 +169,7 @@ const updateMenu = async (req, res) => {
     description,
     organization,
     status,
+    isOrderingEnabled
   };
 
   try {

@@ -23,10 +23,13 @@ const getUsersStreaksWithFilters = async (
     select: 'username firstName lastName email profileIcon',
   }).sort(sort).lean();
 
-  if (selectFields) query.select(selectFields); // apply select dynamically
-  
+  // Apply select fields dynamically if provided
+  if (selectFields) query.select(selectFields);
+
+  // Apply pagination (skip and limit)
   if (limit > 0) query.skip(skip).limit(limit);
 
+  // Execute the query
   return query.exec();
 };
 

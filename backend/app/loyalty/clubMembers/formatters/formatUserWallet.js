@@ -5,8 +5,8 @@ function formatUserWallet(item) {
 
   const obj = typeof item.toObject === "function" ? item.toObject() : item;
 
-  if (obj?.companyOrganizer) {
-    obj.companyOrganizer.profileIcon = getFullImageUrl(obj.companyOrganizer.profileIcon || "noimage.png");
+  if (obj?.companyOrganizer && obj.companyOrganizer.companyDetails?.logo) {
+    obj.companyOrganizer.companyDetails.logo = getFullImageUrl(obj.companyOrganizer.companyDetails.logo || "noimage.png");
   }
 
   // Normalize image URLs
@@ -43,7 +43,6 @@ function formatUserWallet(item) {
   return obj;
 }
 
-
 /**
  * Safe formatter for arrays of items
  */
@@ -51,4 +50,19 @@ function formatUserWallets(items = []) {
   return items.map(formatUserWallet);
 }
 
-module.exports = { formatUserWallet, formatUserWallets };
+function formatLoyaltyProfile(profile) {
+  if (!profile) return null;
+
+  const obj = typeof profile.toObject === "function" ? profile.toObject() : profile;
+
+  // Normalize image URLs
+  obj.logo = getFullImageUrl(obj.logo || "noimage.png");
+  obj.coverImage = getFullImageUrl(obj.coverImage || "noimage.png");
+  if (obj.category) {
+    obj.category.image = getFullImageUrl(obj.category.image || "noimage.png");
+  }
+
+  return obj;
+}
+
+module.exports = { formatUserWallet, formatUserWallets, formatLoyaltyProfile };

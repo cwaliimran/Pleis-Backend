@@ -5,15 +5,17 @@ const router = express.Router();
 router.use("/", require("./index"));
 //home
 router.use("/home", require("../app/home/homeRoutes"));
+
+//popular events routes
+router.use("/popular-events", require("../app/popularEvents/popularEventsRoutes"));
+router.use("/top-picks-organizations", require("../app/topPicksOrganizations/topPicksOrganizationsRoutes"));
+
 //maps
 router.use("/maps", require("../app/maps/mapsRoutes"));
 //organizations
 router.use("/organizations", require("../app/organizationProfile/organizationProfileRoutes"));
 //favorites
 router.use("/favorites", require("../app/favorites/favoriteRoutes"));
-
-//recently viewed items
-router.use("/recently-viewed", require("../app/recentlyViewed/recentlyViewedItemRoutes"));
 
 //events
 router.use("/events", require("../app/events/eventRoutes"));
@@ -24,6 +26,9 @@ router.use("/loyalty/dashboard", require("../app/loyalty/dashboard/dashboardsRou
 router.use("/loyalty/challenges", require("../app/loyalty/challenges/challengesRoutes"));
 router.use("/loyalty/promotions", require("../app/loyalty/promotions/promotionsRoutes"));
 router.use("/loyalty/club", require("../app/loyalty/clubMembers/clubMembersRoutes"));
+router.use("/loyalty/rewards", require("../app/loyalty/rewards/rewardsRoutes"));
+router.use("/loyalty/rewards-orders", require("../app/loyalty/rewardsOrders/rewardsOrdersRoutes"));
+router.use("/loyalty/challenges-orders", require("../app/loyalty/challengesOrders/challengesOrdersRoutes"));
 
 router.use("/users", require("../app/usersManagement/usersRoutes"));
 
@@ -51,7 +56,9 @@ router.use("/friend-request", require("../app/friendRequest/friendRequestRoutes"
 //friends-suggestions
 router.use("/friends-suggestions", require("../app/friendsSuggestion/friendsSuggestionRoutes"));
 
-router.use("/global-loyalty/wallet", require("../app/userWalletService/global/walletManagement/userWalletRoutes"));
+router.use("/global-loyalty", require("../app/globalLoyalty/routes/index"));
+router.use("/giveaways", require("../app/giveaways/giveawayRoutes"));
+router.use("/qr-code", require("../app/qrCode/qrCodeRoutes"));
 
 
 

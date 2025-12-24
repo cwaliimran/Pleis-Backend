@@ -197,49 +197,86 @@ if (keyword) {
 
 const createUserReferradrecord = async (data) => {
   try {
-    const { username, userIp, userId } = data;  
-    const existing = await ReferredRecord.findOne({ userIp: userIp });
+    const { username, userIp, userId } = data;
+
+    // 1️⃣ Check if this IP already has a referral
+    const existing = await ReferredRecord.findOne({ userIp });
 
     if (existing) {
+      // IP exists but user not yet linked (signup flow)
       if (!existing.userId) {
-        const user = await User.findOne({ username }).lean();
-        if (!user) {
-          throw new Error("User not found.");
-        }
-        existing.userId = userId;  // Set the userId
-        existing.referrerUserName = username;  // Update the referrerUserName
-        existing.referrerUserId = user._id;  // Set the referrer userId
+        const referrer = await User.findOne({ username });
+        if (!referrer) throw new Error("User not found.");
 
-        // Save the updated referral record
+        // 2️⃣ Check referral balance
+        if (referrer.remainingReferrals <= 0) {
+          throw new Error("Referral limit reached.");
+        }
+
+        // 3️⃣ Atomically decrement remaining referrals
+        const updatedReferrer = await User.findOneAndUpdate(
+          { _id: referrer._id, remainingReferrals: { $gt: 0 } },
+          { $inc: { remainingReferrals: -1 } },
+          { new: true }
+        );
+
+        if (!updatedReferrer) {
+          throw new Error("Referral limit reached.");
+        }
+
+        // 4️⃣ Update referral record
+        existing.userId = userId;
+        existing.referrerUserId = referrer._id;
+        existing.referrerUserName = username;
         await existing.save();
 
-        return { userId: existing.userId, referrerUserName: existing.referrerUserName };
+        return {
+          userId: existing.userId,
+          referrerUserName: existing.referrerUserName
+        };
       }
 
       throw new Error("You already have a referrer assigned.");
     }
 
+    // 5️⃣ New referral flow
+    const referrer = await User.findOne({ username });
+    if (!referrer) throw new Error("User not found.");
 
-    const referrer = await User.findOne({ username }).lean();  
-
-    if (!referrer) {
-      throw new Error("User not found.");
+    if (referrer.remainingReferrals <= 0) {
+      throw new Error("Referral limit reached.");
     }
 
+    // 6️⃣ Decrement remaining referrals safely
+    const updatedReferrer = await User.findOneAndUpdate(
+      { _id: referrer._id, remainingReferrals: { $gt: 0 } },
+      { $inc: { remainingReferrals: -1 } },
+      { new: true }
+    );
 
+    if (!updatedReferrer) {
+      throw new Error("Referral limit reached.");
+    }
+
+    // 7️⃣ Create referral record
     const newRecord = await ReferredRecord.create({
       referrerUserName: username,
-      userIp: userIp,
-      referrerUserId: referrer._id,  // Set the referrer userId
-      userId: userId,  // Set the userId when the user is signing up
+      userIp,
+      referrerUserId: referrer._id,
+      userId
     });
 
-    return { userId: newRecord.userId, referrerUserName: newRecord.referrerUserName };
+    return {
+      userId: newRecord.userId,
+      referrerUserName: newRecord.referrerUserName
+    };
+
   } catch (err) {
     console.error("Error saving referral data:", err);
-    throw err;  // Rethrow the error for handling in the calling function
+    throw err;
   }
 };
+
 
 
 

@@ -1,201 +1,216 @@
-// homeRepository.js
 const mongoose = require("mongoose");
-const CustomCategories = require("@CustomCategoriesModel");
+
+const Organizations = require("@OrganizationModel");
 const { Events } = require("@EventsModel");
 const { User } = require("@UserModel");
-const { getCurrentDateInTimezone } = require("@utils/responseUtil");
+const Promotion = require("@PromotionModel");
+const {Highlights} = require("@HighlightsModel");
 
-const getRemainingEventsGroupedByVenueTypesRepo = async ({ userId, timezone, limit = 20 }) => {
-    try {
-        const now = getCurrentDateInTimezone({ timezone });
-        const userObjectId = new mongoose.Types.ObjectId(userId);
+const MAX_DISTANCE_KM = 50;
+const MAX_LIMIT = 100;
 
-        // ----------------------------------------------
-        // 1️⃣ Fetch IDs used in any custom category
-        // ----------------------------------------------
-        const categories = await CustomCategories.find(
-            { status: { $ne: "deleted" } },
-            { objects: 1 }
-        ).lean();
+// ----------------------------------------------------
+// Helpers
+// ----------------------------------------------------
+const buildGeoQuery = (coordinates, radiusKm = MAX_DISTANCE_KM) => {
+    if (!coordinates || coordinates.length !== 2) return {};
 
-        const usedIds = new Set();
-        categories.forEach(c => {
-            if (Array.isArray(c.objects)) c.objects.forEach(id => usedIds.add(String(id)));
-        });
-
-        const excludeIds = [...usedIds].map(id => new mongoose.Types.ObjectId(id));
-
-        // ----------------------------------------------
-        // 2️⃣ MAIN PIPELINE: Remaining Events → Populate venue → venueType
-        // ----------------------------------------------
-        const events = await Events.aggregate([
-            {
-                $match: {
-                    _id: { $nin: excludeIds },
-                    status: "active",
-                    "schedule.endDateTime": { $gte: now }
-                }
-            },
-
-            // Populate venue (so we can get venueType)
-            {
-                $lookup: {
-                    from: "venues",
-                    localField: "basicInfo.venue",
-                    foreignField: "_id",
-                    as: "venueInfo",
-                    pipeline: [
-                        {
-                            $project: {
-                                title: 1,
-                                venueType: 1,
-                                organization: 1
-                            }
-                        }
-                    ]
-                }
-            },
-            {
-                $addFields: {
-                    venueInfo: { $arrayElemAt: ["$venueInfo", 0] }
-                }
-            },
-
-            // Populate venueType data
-            {
-                $lookup: {
-                    from: "venuetypes",
-                    localField: "venueInfo.venueType",
-                    foreignField: "_id",
-                    as: "venueTypeInfo",
-                    pipeline: [
-                        { $project: { title: 1, image: 1 } }
-                    ]
-                }
-            },
-            {
-                $addFields: {
-                    venueTypeInfo: { $arrayElemAt: ["$venueTypeInfo", 0] }
-                }
-            },
-
-            // Populate organization
-            {
-                $lookup: {
-                    from: "organizations",
-                    localField: "basicInfo.organization",
-                    foreignField: "_id",
-                    as: "organizationInfo",
-                    pipeline: [{ $project: { basicInfo: 1 } }]
-                }
-            },
-            {
-                $addFields: {
-                    "basicInfo.organization": { $arrayElemAt: ["$organizationInfo", 0] }
-                }
-            },
-
-            // favorite check
-            {
-                $lookup: {
-                    from: "favorites",
-                    let: { eventId: "$_id" },
-                    pipeline: [
-                        {
-                            $match: {
-                                $expr: {
-                                    $and: [
-                                        { $eq: ["$targetId", "$$eventId"] },
-                                        { $eq: ["$user", userObjectId] },
-                                        { $eq: ["$targetType", "event"] }
-                                    ]
-                                }
-                            }
-                        },
-                        { $limit: 1 }
-                    ],
-                    as: "favoriteInfo"
-                }
-            },
-            {
-                $addFields: {
-                    isFavorite: { $gt: [{ $size: "$favoriteInfo" }, 0] }
-                }
-            },
-
-            {
-                $project: {
-                    _id: 1,
-                    basicInfo: 1,
-                    schedule: 1,
-                    isFavorite: 1,
-                    venueType: "$venueTypeInfo"
-                }
-            },
-
-            { $sort: { createdAt: -1 } },
-            { $limit: limit }
-        ]);
-
-        // ----------------------------------------------
-        // 3️⃣ Group by venueType.title
-        // ----------------------------------------------
-        const groups = {};
-
-        events.forEach(evt => {
-            const venueTypeTitle = evt.venueType?.title || "Other Venues";
-
-            if (!groups[venueTypeTitle]) groups[venueTypeTitle] = [];
-            groups[venueTypeTitle].push(evt);
-        });
-
-        // Convert into array with {key, title, data}
-        const formatted = Object.keys(groups).map(title => ({
-            key: `venue_type_${title.replace(/\s+/g, "_").toLowerCase()}`,
-            title,
-            data: groups[title]
-        }));
-
-        return formatted;
-
-    } catch (err) {
-        console.error("Error in getRemainingEventsGroupedByVenueTypesRepo", err);
-        return [];
-    }
+    return {
+        location: {
+            $nearSphere: {
+                $geometry: {
+                    type: "Point",
+                    coordinates
+                },
+                $maxDistance: radiusKm * 1000 // meters
+            }
+        }
+    };
 };
 
-const getRemainingOrganizersRepo = async ({ userId, limit = 10 }) => {
+const applyCategoryFilter = (field, category) => {
+    if (!category) return {};
+    return {
+        [field]: category
+    };
+};
+
+// ----------------------------------------------------
+// ORGANIZERS
+// ----------------------------------------------------
+const fetchOrganizers = async ({
+    location,
+    radiusKm,
+    category
+}) => {
+    const query = {
+        status: "active",
+        ...buildGeoQuery(location, radiusKm),
+        ...applyCategoryFilter("otherInfo.categories", category)
+    };
+
+    return Organizations.find(query)
+        .select({
+            publicId: 1,
+            basicInfo: 1,
+            location: 1,
+            meta: 1,
+            operatingHours: 1,
+            createdAt: 1,
+            otherInfo: 1
+        })
+        .limit(MAX_LIMIT)
+        .lean();
+};
+
+// ----------------------------------------------------
+// EVENTS
+// ----------------------------------------------------
+const fetchEvents = async ({
+    location,
+    radiusKm,
+    category,
+    timezone
+}) => {
     const now = new Date();
 
-    const categories = await CustomCategories.find(
-        { status: { $ne: "deleted" } },
-        { objects: 1 }
-    ).lean();
+    const query = {
+        status: "active",
+        startDate: { $gte: now },
+        ...buildGeoQuery(location, radiusKm),
+        ...(category && { categories: category })
+    };
 
-    const usedIds = new Set();
-    categories.forEach(cat => {
-        if (Array.isArray(cat.objects)) {
-            cat.objects.forEach(id => usedIds.add(String(id)));
-        }
-    });
-
-    const excludeIds = [...usedIds].map(id => new mongoose.Types.ObjectId(id));
-
-    const users = await User.find({
-        _id: { $nin: excludeIds },
-        "accountState.status": "active",
-        "accountState.userType": "organizer"
-    })
-        .select("firstName lastName profileIcon companyDetails.loyaltySettings")
-        .sort({ createdAt: -1 })
-        .limit(limit)
+    return Events.find()
+        .select({
+            title: 1,
+            location: 1,
+            startDate: 1,
+            endDate: 1,
+            stats: 1,
+            organizer: 1,
+            categories: 1
+        })
+        .populate("organizer", "basicInfo.name location")
+        .limit(MAX_LIMIT)
         .lean();
+};
 
-    return users;
+// ----------------------------------------------------
+// LOYALTY CLUBS
+// ----------------------------------------------------
+const fetchLoyaltyClubs = async ({
+    userId,
+    category
+}) => {
+    const query = {
+        status: "active",
+        ...(category && { categories: category }),
+        ...(userId && { members: { $ne: userId } }) // exclude joined clubs
+    };
+
+    return User.find(query)
+        .select({
+            title: 1,
+            stats: 1,
+            organization: 1,
+            createdAt: 1
+        })
+        .populate("organization", "basicInfo location meta")
+        .limit(MAX_LIMIT)
+        .lean();
+};
+
+// ----------------------------------------------------
+// PROMOTIONS
+// ----------------------------------------------------
+const fetchPromotions = async ({
+    userId,
+    category
+}) => {
+    const now = new Date();
+
+    const query = {
+        status: "active",
+        $or: [{ endDate: null }, { endDate: { $gte: now } }],
+        ...(category && { categories: category })
+    };
+
+    return Promotion.find(query)
+        .select({
+            title: 1,
+            reward: 1,
+            tierLimit: 1,
+            createdAt: 1
+        })
+        .populate("reward")
+        .populate("tierLimit", "type entryPoints")
+        .limit(MAX_LIMIT)
+        .lean();
+};
+
+// ----------------------------------------------------
+// HIGHLIGHTS
+// ----------------------------------------------------
+const fetchHighlights = async ({
+    category
+}) => {
+    const query = {
+        status: "active",
+        ...(category && { categories: category })
+    };
+
+    return Highlights.find(query)
+        .select({
+            title: 1,
+            media: 1,
+            organization: 1,
+            categories: 1
+        })
+        .populate("organization", "basicInfo location")
+        .limit(MAX_LIMIT)
+        .lean();
 };
 
 
+const getBannerControlsForHome = async ({ page, limit, keyword, status, date, orderSort = "asc",category }) => {
+  const query = {};
+  // Filter by status
+  query.status = status ? status : { $ne: "deleted" };
+
+  // Date filter (format: yyyy-mm-dd)
+  if (date) {
+    query.createdAt = {
+      $gte: new Date(date),
+      $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
+    };
+  }
+
+
+  const sort = { order: orderSort === "desc" ? -1 : 1 };
+
+  let [bannerControls, getBannerControlsCounts] = await Promise.all([
+    bannerControlsRepo.getBannerControlsWithFilters(query, page, limit === 0 ? 0 : limit, sort),
+    bannerControlsRepo.getBannerControlsCounts(query),
+  ]);
+
+  //format bannerControls
+  bannerControls = bannerControls.map(item => {
+    return formatBannerObject(item);
+  });
+
+  const { totalFiltered, total, active, inactive } = getBannerControlsCounts;
+  const meta = generateMeta(page, limit, totalFiltered);
+  meta.bannerControlsCount = { total, active, inactive };
+
+  return { bannerControls, meta };
+};
+
+// ----------------------------------------------------
 module.exports = {
-    getRemainingEventsGroupedByVenueTypesRepo,
-    getRemainingOrganizersRepo
+    fetchOrganizers,
+    fetchEvents,
+    fetchLoyaltyClubs,
+    fetchPromotions,
+    fetchHighlights,
 };

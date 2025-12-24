@@ -8,7 +8,7 @@ const {
   isValidNanoid,
 } = require("../../helperUtils/responseUtil");
 const { getVenueDetails } = require("../venues/venuesService");
-
+const mongoose = require('mongoose');
 const eventService = require("./eventService");
 const ticketingService = require("../ticketing/ticketingsService");
 
@@ -562,11 +562,14 @@ const cloneEvent = async (req, res) => {
 };
 
 const getMinimalEventsInfo = async (req, res) => {
-  const { organization } = req.query;
+  let { organization } =req.params;
+    if (!organization) {
+    return res.status(400).json({ error: "Organization ID is required" });
+  }
   let { timezone } = req.user;
   try {
-
-
+organizationId =new mongoose.Types.ObjectId(organization);
+console.log("organization",organization );
     if (organization) {
       if (!validateParams(req, res, {
         objectIdFields: ["organization"],

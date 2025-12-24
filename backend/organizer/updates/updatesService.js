@@ -8,10 +8,10 @@ const createUpdates = async (data) => {
   let Updates = await UpdatesRepo.createUpdates(data);
   return Updates;
 };
-const getUpdatess = async ({ timezone, page, limit, keyword, status, userId,  date, range }) => {
+const getUpdatess = async ({organizations, timezone, page, limit, keyword, status, userId,  date, range }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { updates, meta } = await UpdatesRepo.getUpdatess({ timezone, page, limit, keyword, status, userId,  date, range, today, skip });
+  let { updates, meta } = await UpdatesRepo.getUpdatess({ organizations, timezone, page, limit, keyword, status, userId,  date, range, today, skip });
 
   return {
     updates,
@@ -108,10 +108,10 @@ const userIds = await UpdatesRepo.getUserIdsForEvent(Updates.event);
 
 
 
-const getevents = async ({ timezone, page, limit, keyword, status, userId,  date, range }) => {
+const getevents = async ({ organizations,timezone, page, limit, keyword, status, userId,  date, range }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { events, meta } = await UpdatesRepo.getevents({ timezone, page, limit, keyword, status, userId,  date, range, today, skip });
+  let { events, meta } = await UpdatesRepo.getevents({ organizations,timezone, page, limit, keyword, status, userId,  date, range, today, skip });
 
   return {
     events,

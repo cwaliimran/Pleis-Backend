@@ -10,7 +10,7 @@ const create = async (data,timezone) => {
   return formatPromotion(promotion, timezone);
 };
 
-const get = async ({ companyOrganizer, page, limit, keyword, status, date, timezone }) => {
+const get = async ({ page, limit, keyword, status, date, timezone }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const query = {
@@ -37,11 +37,13 @@ const get = async ({ companyOrganizer, page, limit, keyword, status, date, timez
   // Use repository function to get promotions with population
   const records = await repository.getWithFilters(query, skip, limit);
 
+  console.log("records",records)
+
   // Get total counts
   const [total, active, inactive, totalFiltered] = await Promise.all([
-    Promotion.countDocuments({ ...(companyOrganizer && { companyOrganizer }), status: { $ne: "deleted" } }),
-    Promotion.countDocuments({ status: "active", ...(companyOrganizer && { companyOrganizer }) }),
-    Promotion.countDocuments({ status: "inactive", ...(companyOrganizer && { companyOrganizer }) }),
+    Promotion.countDocuments({ status: { $ne: "deleted" } }),
+    Promotion.countDocuments({ status: "active" }),
+    Promotion.countDocuments({ status: "inactive" }),
     Promotion.countDocuments(query),
   ]);
 
