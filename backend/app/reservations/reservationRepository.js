@@ -1,17 +1,18 @@
 // repositories/ReservationRepository.js
 const Reservations = require("@ReservationsModel");
 const UserReservations = require("@UserReservationsModel");
-const {User} = require("@UserModel");
+const { User } = require("@UserModel");
 const mongoose = require("mongoose");
 const { reservationsFormatter } = require("./formaters/reservationFormetter");
+const Organizations = require("@OrganizationModel");
+const { getUserInterestsIdsForRecommendation } =
+  require("../usersManagement/usersRepository");
+const moment = require("moment-timezone");
+
+
+
 const {
-  sendResponse,
-  parsePaginationParams,
-  validateParams,
   generateMeta,
-  getReadableErrorMessage,
-  getStartAndEndOfMonth,
-  getStartAndEndOfWeek,
   convertToUtcDateOnly,
 } = require("../../helperUtils/responseUtil");
 const createReservation = async (data) => {
@@ -80,11 +81,11 @@ const countReservations = async (query = {}) => {
 // Find by ID
 const findReservationById = async (id) => {
 
-   return UserReservations.find({ userId: id }); 
+  return UserReservations.find({ userId: id });
 };
 const findUserReservationById = async (id) => {
 
-    return UserReservations.findById(id);
+  return UserReservations.findById(id);
 };
 
 // Update and save
@@ -132,32 +133,32 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
   }
 
   // DATE FILTER
-  console.log("date",date );
-if (date) {
-  // Convert: "2025-12-16T19:00:00.000+00:00" -> "2025-12-16"
-  const dayOnly = date.split("T")[0];
+  console.log("date", date);
+  if (date) {
+    // Convert: "2025-12-16T19:00:00.000+00:00" -> "2025-12-16"
+    const dayOnly = date.split("T")[0];
 
-  // Build date range
-  const start = new Date(`${dayOnly}T00:00:00.000Z`);
-  const end   = new Date(`${dayOnly}T23:59:59.999Z`);
+    // Build date range
+    const start = new Date(`${dayOnly}T00:00:00.000Z`);
+    const end = new Date(`${dayOnly}T23:59:59.999Z`);
 
-  console.log("DATE RANGE:", start, end);
+    console.log("DATE RANGE:", start, end);
 
-  pipeline.push(
-    {
-      $unwind: {
-        path: "$timingSlots.dateTimeSlots",
-        preserveNullAndEmptyArrays: false
+    pipeline.push(
+      {
+        $unwind: {
+          path: "$timingSlots.dateTimeSlots",
+          preserveNullAndEmptyArrays: false
+        }
+      },
+      {
+        $match: {
+          "timingSlots.enabled": true,
+          "timingSlots.dateTimeSlots.date": { $gte: start, $lte: end }
+        }
       }
-    },
-    {
-      $match: {
-        "timingSlots.enabled": true,
-        "timingSlots.dateTimeSlots.date": { $gte: start, $lte: end }
-      }
-    }
-  );
-}
+    );
+  }
 
 
 
@@ -185,10 +186,10 @@ if (date) {
       totalFiltered: [{ $count: "count" }]
     }
   });
-console.log("pipeline", pipeline);
+  console.log("pipeline", pipeline);
   const result = await Reservations.aggregate(pipeline);
   const reservations = result[0]?.data || [];
-  console.log("reservations",reservations );
+  console.log("reservations", reservations);
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   // META COUNT
@@ -230,14 +231,14 @@ console.log("pipeline", pipeline);
 
 const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-  if (date){
-    date=convertToUtcDateOnly(date,"UTC");
+  if (date) {
+    date = convertToUtcDateOnly(date, "UTC");
   }
-console.log("date",date );
+  console.log("date", date);
   // Querying UserReservations collection directly
   const query = {
     ...(userId && { userId }),  // Match userId if provided
- ...(date && {
+    ...(date && {
       // Convert the passed date string to a Date object and ensure the comparison uses Date objects
       "timingSlots.dateTimeSlots.date": {
         $gte: new Date(date), // Start of the day (using the date provided)
@@ -311,7 +312,7 @@ console.log("date",date );
         companyOrganizer: 1,
         optionalEventId: 1,
         reservationStatus: 1,
-        userName: { 
+        userName: {
           $concat: ["$user.firstName", " ", "$user.lastName"]  // Concatenate firstName and lastName
         },
         profileIcon: "$user.profileIcon",  // Fetch profileIcon
@@ -367,115 +368,115 @@ const getReservationDetails = async (id) => {
   }
 
   try {
-const pipeline = [
-  {
-    $match: { _id: new mongoose.Types.ObjectId(id) }
-  },
+    const pipeline = [
+      {
+        $match: { _id: new mongoose.Types.ObjectId(id) }
+      },
 
-  {
-    $addFields: {
-      optionalEventId: { $toObjectId: "$optionalEventId" }
-    }
-  },
+      {
+        $addFields: {
+          optionalEventId: { $toObjectId: "$optionalEventId" }
+        }
+      },
 
-  // Lookup Event
-  {
-    $lookup: {
-      from: "events",
-      localField: "optionalEventId",
-      foreignField: "_id",
-      as: "event"
-    }
-  },
-  {
-    $unwind: {
-      path: "$event",
-      preserveNullAndEmptyArrays: true
-    }
-  },
+      // Lookup Event
+      {
+        $lookup: {
+          from: "events",
+          localField: "optionalEventId",
+          foreignField: "_id",
+          as: "event"
+        }
+      },
+      {
+        $unwind: {
+          path: "$event",
+          preserveNullAndEmptyArrays: true
+        }
+      },
 
-  // Lookup Organization
-  {
-    $lookup: {
-      from: "organizations",
-      localField: "organizationId",
-      foreignField: "_id",
-      as: "organization"
-    }
-  },
-  {
-    $unwind: {
-      path: "$organization",
-      preserveNullAndEmptyArrays: true
-    }
-  },
+      // Lookup Organization
+      {
+        $lookup: {
+          from: "organizations",
+          localField: "organizationId",
+          foreignField: "_id",
+          as: "organization"
+        }
+      },
+      {
+        $unwind: {
+          path: "$organization",
+          preserveNullAndEmptyArrays: true
+        }
+      },
 
-  // Lookup User
-  {
-    $lookup: {
-      from: "users",
-      localField: "userId",
-      foreignField: "_id",
-      as: "user"
-    }
-  },
-  {
-    $unwind: {
-      path: "$user",
-      preserveNullAndEmptyArrays: true
-    }
-  },
+      // Lookup User
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user"
+        }
+      },
+      {
+        $unwind: {
+          path: "$user",
+          preserveNullAndEmptyArrays: true
+        }
+      },
 
-  // ⭐ NEW: Lookup Venue using venueID
-  {
-    $lookup: {
-      from: "venues",                         // <── your venues table name
-      localField: "event.basicInfo.venue",    // <── the venueID
-      foreignField: "_id",
-      as: "venue"
-    }
-  },
-  {
-    $unwind: {
-      path: "$venue",
-      preserveNullAndEmptyArrays: true
-    }
-  },
+      // ⭐ NEW: Lookup Venue using venueID
+      {
+        $lookup: {
+          from: "venues",                         // <── your venues table name
+          localField: "event.basicInfo.venue",    // <── the venueID
+          foreignField: "_id",
+          as: "venue"
+        }
+      },
+      {
+        $unwind: {
+          path: "$venue",
+          preserveNullAndEmptyArrays: true
+        }
+      },
 
-  // Project Final fields
-  {
-    $project: {
-      organizationName: "$organization.basicInfo.name",
-      eventName: "$event.basicInfo.title",
-      eventStartDate: "$event.schedule.startDateTime",
-      userName: { $concat: ["$user.firstName", " ", "$user.lastName"] },
-      venueFullAddress: "$venue.location.fullAddress",
-
-
-      _id: 1,
-      userId: 1,
-      reservationType: 1,
-      amount: 1,
-      timingSlots: 1,
-      needsConfirmation: 1,
-      companyOrganizer: 1,
-      optionalEventId: 1,
-      createdAt: 1,
-      updatedAt: 1
-    }
-  },
-
-  { $sort: { createdAt: -1 } }
-];
+      // Project Final fields
+      {
+        $project: {
+          organizationName: "$organization.basicInfo.name",
+          eventName: "$event.basicInfo.title",
+          eventStartDate: "$event.schedule.startDateTime",
+          userName: { $concat: ["$user.firstName", " ", "$user.lastName"] },
+          venueFullAddress: "$venue.location.fullAddress",
 
 
+          _id: 1,
+          userId: 1,
+          reservationType: 1,
+          amount: 1,
+          timingSlots: 1,
+          needsConfirmation: 1,
+          companyOrganizer: 1,
+          optionalEventId: 1,
+          createdAt: 1,
+          updatedAt: 1
+        }
+      },
 
-  // Run the aggregation pipeline
-  const reservation = await UserReservations.aggregate(pipeline);
+      { $sort: { createdAt: -1 } }
+    ];
+
+
+
+    // Run the aggregation pipeline
+    const reservation = await UserReservations.aggregate(pipeline);
 
     // Check if no reservation found
     if (!reservation || reservation.length === 0) {
-     
+
       return null;  // Return null if no reservation found
     }
 
@@ -485,6 +486,251 @@ const pipeline = [
 
     throw error;  // Propagate the error for further handling
   }
+};
+
+
+const getOrganizationsWithReservationsForHome = async ({
+  userId,
+  userLocation,
+  radiusKm = 50,
+  timezone,
+  limit = 10,
+  category
+}) => {
+  limit = Math.min(limit, 10);
+  const radiusMeters = radiusKm * 1000;
+
+  const categoryObjectId = category
+    ? new mongoose.Types.ObjectId(category)
+    : null;
+
+  /* ===============================
+     USER INTERESTS (RELEVANCE ONLY)
+     =============================== */
+  const prefs = await getUserInterestsIdsForRecommendation(userId);
+  const userCategories = prefs?.categories || [];
+  const userTags = prefs?.tags || [];
+
+  /* ===============================
+     GEO QUERY (CATEGORY AWARE)
+     =============================== */
+  const geoQuery = {
+    status: "active",
+    ...(categoryObjectId && {
+      "otherInfo.categories": { $in: [categoryObjectId] }
+    })
+  };
+
+
+  const pipeline = [
+    /* ===============================
+       1️⃣ GEO FILTER (MANDATORY)
+       =============================== */
+    {
+      $geoNear: {
+        near: userLocation,
+        key: "location",
+        distanceField: "distance",
+        spherical: true,
+        maxDistance: radiusMeters,
+        query: geoQuery
+      }
+    },
+
+    /* ===============================
+       2️⃣ ACTIVE + BOOKABLE RESERVATIONS
+       =============================== */
+    {
+      $lookup: {
+        from: "reservations",
+        let: {
+          orgId: "$_id",
+          now: new Date()
+        },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$organizationId", "$$orgId"] },
+                  { $eq: ["$status", "active"] },
+                  { $gt: ["$availableReservations", 0] },
+                  { $eq: ["$timingSlots.enabled", true] }
+                ]
+              }
+            }
+          },
+
+          { $unwind: "$timingSlots.dateTimeSlots" },
+          { $unwind: "$timingSlots.dateTimeSlots.timeSlots" },
+
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  {
+                    $gt: [
+                      "$timingSlots.dateTimeSlots.timeSlots.endTime",
+                      "$timingSlots.dateTimeSlots.timeSlots.startTime"
+                    ]
+                  },
+                  {
+                    $gt: [
+                      "$timingSlots.dateTimeSlots.timeSlots.endTime",
+                      "$$now"
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+
+          { $count: "count" }
+        ],
+        as: "reservations"
+      }
+    },
+
+    {
+      $addFields: {
+        reservationCount: {
+          $ifNull: [{ $first: "$reservations.count" }, 0]
+        },
+        reservationsAvailable: {
+          $gt: [{ $ifNull: [{ $first: "$reservations.count" }, 0] }, 0]
+        }
+      }
+    },
+
+    { $match: { reservationsAvailable: true } },
+
+    /* ===============================
+       3️⃣ RELEVANCE (USER PREFS)
+       =============================== */
+    {
+      $addFields: {
+        matchedCategories: {
+          $size: {
+            $setIntersection: ["$otherInfo.categories", userCategories]
+          }
+        },
+        matchedTags: {
+          $size: {
+            $setIntersection: ["$otherInfo.tags", userTags]
+          }
+        }
+      }
+    },
+    {
+      $addFields: {
+        relevanceScore: {
+          $round: [
+            {
+              $add: [
+                {
+                  $multiply: [
+                    0.6,
+                    userCategories.length
+                      ? { $divide: ["$matchedCategories", userCategories.length] }
+                      : 0
+                  ]
+                },
+                {
+                  $multiply: [
+                    0.4,
+                    userTags.length
+                      ? { $divide: ["$matchedTags", userTags.length] }
+                      : 0
+                  ]
+                }
+              ]
+            },
+            2
+          ]
+        }
+      }
+    },
+
+    /* ===============================
+       4️⃣ ENGAGEMENT
+       =============================== */
+    {
+      $lookup: {
+        from: "engagementevents",
+        let: { orgId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$entityType", "organizations"] },
+                  { $eq: ["$entityId", "$$orgId"] }
+                ]
+              }
+            }
+          },
+          { $count: "count" }
+        ],
+        as: "engagement"
+      }
+    },
+    {
+      $addFields: {
+        reviewsCount: {
+          $ifNull: [{ $first: "$engagement.count" }, 0]
+        }
+      }
+    },
+
+    /* ===============================
+       5️⃣ FINAL SCORE
+       =============================== */
+    {
+      $addFields: {
+        finalScore: {
+          $round: [
+            {
+              $add: [
+                { $multiply: [{ $ln: { $add: [1, "$reservationCount"] } }, 0.3] },
+                { $multiply: [{ $ln: { $add: [1, "$reviewsCount"] } }, 0.3] },
+                { $multiply: ["$relevanceScore", 0.4] }
+              ]
+            },
+            2
+          ]
+        }
+      }
+    },
+
+    { $sort: { finalScore: -1 } },
+    { $limit: limit },
+
+    /* ===============================
+       6️⃣ FINAL SHAPE
+       =============================== */
+    {
+      $project: {
+        _id: 1,
+        distance: 1,
+        operatingHours: 1,
+        "basicInfo.name": 1,
+        "basicInfo.media": 1,
+        reservationsAvailable: 1,
+        reservationCount: 1,
+        explain: {
+          relevanceScore: 1,
+          reviewsCount: 1,
+          finalScore: 1
+        }
+      }
+    }
+  ];
+
+  const results = await Organizations
+    .aggregate(pipeline)
+    .allowDiskUse(true);
+
+  return results;
 };
 
 
@@ -504,4 +750,5 @@ module.exports = {
   getUserReservations,
   findUserReservationById,
   getReservationDetails,
+  getOrganizationsWithReservationsForHome
 };

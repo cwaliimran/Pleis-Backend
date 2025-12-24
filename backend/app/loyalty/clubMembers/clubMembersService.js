@@ -7,6 +7,8 @@ const { formatRewardsByTierKey } = require("../../../commonModules/loyalty/rewar
 const { getRecentTransactionsForDashboard } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
 const { getEligibleChallengesForLoyaltyPage } = require("../challenges/challengesService");
 const { generateMeta } = require("../../../helperUtils/responseUtil");
+const { logEngagementService } = require("@appEngagement/engagementEventsService");
+
 // Count members
 const countClubMembers = async (filters = {}) => {
   return clubMemberRepo.countClubMembers(filters);
@@ -93,6 +95,14 @@ const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganiz
   );
 
   let formattedLoyaltyProfile = formatLoyaltyProfile(profile?.companyDetails);
+
+  
+  void logEngagementService({
+    entityType: "users",
+    entityId: companyOrganizer,
+    action: "view",
+    userId
+  }).catch(console.error);
 
   return {
     profile: formattedLoyaltyProfile,

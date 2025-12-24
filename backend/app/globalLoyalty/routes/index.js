@@ -9,6 +9,7 @@ router.use("/rewards", require("../../../app/globalLoyalty/rewards/rewardsRoutes
 router.use("/rewards-orders", require("../../../app/globalLoyalty/rewardsOrders/rewardsOrdersRoutes"));
 router.use("/challenges-orders", require("../../../app/globalLoyalty/challengesOrders/challengesOrdersRoutes.js"));
 router.use("/promotions", require("../../../app/globalLoyalty/promotions/promotionsRoutes"));
+router.use("/status-levels", require("../../../app/globalLoyalty/statusLevels/globalStatusLevelsRoutes.js"));
 
 
 

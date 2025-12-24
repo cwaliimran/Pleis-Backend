@@ -2,7 +2,8 @@ const express = require('express');
 const {
   getOrganizationProfileData,
   getNearbyOrganizationsByLocation,
-  joinLoyaltyClub
+  getForYouOrganizations,
+  getTrendingOrganizationsForHome,
 } = require('./organizationProfileController');
 const auth = require('../../middlewares/authMiddleware');
 const createRateLimiter = require('../../helperUtils/rateLimiter');
@@ -13,6 +14,9 @@ const apiRateLimiter = createRateLimiter("OrganizationProfile");
 
 // Get all homes with pagination
 router.get('/nearby', getNearbyOrganizationsByLocation);
+router.post('/for-you', getForYouOrganizations);
+router.post('/trending', getTrendingOrganizationsForHome);
+
 router.get('/:organizationId', getOrganizationProfileData);
 
 module.exports = router;
