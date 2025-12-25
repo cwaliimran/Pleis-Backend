@@ -512,41 +512,43 @@ const getOrganizationsWithReservationsForHome = async ({
   const userTags = prefs?.tags || [];
 
   /* ===============================
-     GEO QUERY (CATEGORY AWARE)
+     BASE MATCH (WHEN GLOBAL)
      =============================== */
-  const geoQuery = {
+  const baseMatch = {
     status: "active",
     ...(categoryObjectId && {
       "otherInfo.categories": { $in: [categoryObjectId] }
     })
   };
 
+  const pipeline = [];
 
-  const pipeline = [
-    /* ===============================
-       1️⃣ GEO FILTER (MANDATORY)
-       =============================== */
-    {
+  /* ===============================
+     1️⃣ CONDITIONAL GEO
+     =============================== */
+  if (userLocation) {
+    pipeline.push({
       $geoNear: {
         near: userLocation,
         key: "location",
         distanceField: "distance",
         spherical: true,
         maxDistance: radiusMeters,
-        query: geoQuery
+        query: baseMatch
       }
-    },
+    });
+  } else {
+    pipeline.push({ $match: baseMatch });
+  }
 
-    /* ===============================
-       2️⃣ ACTIVE + BOOKABLE RESERVATIONS
-       =============================== */
+  /* ===============================
+     2️⃣ ACTIVE + BOOKABLE RESERVATIONS
+     =============================== */
+  pipeline.push(
     {
       $lookup: {
         from: "reservations",
-        let: {
-          orgId: "$_id",
-          now: new Date()
-        },
+        let: { orgId: "$_id", now: new Date() },
         pipeline: [
           {
             $match: {
@@ -602,11 +604,13 @@ const getOrganizationsWithReservationsForHome = async ({
       }
     },
 
-    { $match: { reservationsAvailable: true } },
+    { $match: { reservationsAvailable: true } }
+  );
 
-    /* ===============================
-       3️⃣ RELEVANCE (USER PREFS)
-       =============================== */
+  /* ===============================
+     3️⃣ RELEVANCE (USER PREFS)
+     =============================== */
+  pipeline.push(
     {
       $addFields: {
         matchedCategories: {
@@ -649,11 +653,13 @@ const getOrganizationsWithReservationsForHome = async ({
           ]
         }
       }
-    },
+    }
+  );
 
-    /* ===============================
-       4️⃣ ENGAGEMENT
-       =============================== */
+  /* ===============================
+     4️⃣ ENGAGEMENT
+     =============================== */
+  pipeline.push(
     {
       $lookup: {
         from: "engagementevents",
@@ -680,11 +686,13 @@ const getOrganizationsWithReservationsForHome = async ({
           $ifNull: [{ $first: "$engagement.count" }, 0]
         }
       }
-    },
+    }
+  );
 
-    /* ===============================
-       5️⃣ FINAL SCORE
-       =============================== */
+  /* ===============================
+     5️⃣ FINAL SCORE
+     =============================== */
+  pipeline.push(
     {
       $addFields: {
         finalScore: {
@@ -711,7 +719,7 @@ const getOrganizationsWithReservationsForHome = async ({
     {
       $project: {
         _id: 1,
-        distance: 1,
+        distance: userLocation ? 1 : null,
         operatingHours: 1,
         "basicInfo.name": 1,
         "basicInfo.media": 1,
@@ -724,7 +732,7 @@ const getOrganizationsWithReservationsForHome = async ({
         }
       }
     }
-  ];
+  );
 
   const results = await Organizations
     .aggregate(pipeline)
@@ -732,6 +740,7 @@ const getOrganizationsWithReservationsForHome = async ({
 
   return results;
 };
+
 
 
 

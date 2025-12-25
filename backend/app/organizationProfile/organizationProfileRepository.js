@@ -342,63 +342,59 @@ const getNearbyOrganizations = async ({
 
   const geoQuery = {
     status: "active",
+    ...(categoryObjectId && {
+      "otherInfo.categories": { $in: [categoryObjectId] }
+    })
   };
 
-  // ✅ Category filter goes HERE
-  if (categoryObjectId) {
-    geoQuery["otherInfo.categories"] = { $in: [categoryObjectId] };
-  }
+  const pipeline = [];
 
-  const pipeline = [
-    {
+  /* ===============================
+     1️⃣ CONDITIONAL GEO
+     =============================== */
+  if (userLocation) {
+    pipeline.push({
       $geoNear: {
         near: userLocation,
         key: "location",
         distanceField: "distance",
         spherical: true,
         maxDistance: radiusKm * 1000,
-        query: geoQuery,
-      },
-    },
-    { $sort: { distance: 1 } },
+        query: geoQuery
+      }
+    });
+
+    // Geo sort
+    pipeline.push({ $sort: { distance: 1 } });
+  } else {
+    // Global fallback — NO GEO
+    pipeline.push(
+      { $match: geoQuery },
+      { $sort: { createdAt: -1 } } // fallback ordering
+    );
+  }
+
+  pipeline.push(
     { $skip: skip },
     { $limit: limit },
+
     {
       $project: {
         _id: 1,
         creator: 1,
         "basicInfo.name": 1,
         "basicInfo.media": 1,
-        distance: 1,
-      },
-    },
-  ];
+        operatingHours: 1,
+        distance: userLocation ? 1 : null
+      }
+    }
+  );
 
-  let organizations = await Organizations.aggregate(pipeline);
-
-  // Attach orderNumber (unchanged)
-  if (userId) {
-    const orgIds = organizations.map(org => org._id);
-
-    const orders = await Orders.find({
-      user: userId,
-      organization: { $in: orgIds },
-      status: { $in: ["pending", "confirmed"] },
-    }).select("organization orderNumber").lean();
-
-    const orgOrderMap = {};
-    orders.forEach(order => {
-      orgOrderMap[order.organization.toString()] = order.orderNumber;
-    });
-
-    organizations = organizations.map(org => ({
-      ...org,
-      orderNumber: orgOrderMap[org._id.toString()] || null,
-    }));
-  }
+  const organizations = await Organizations.aggregate(pipeline);
 
   return { organizations };
 };
+
 
 
 //get organization with custom .select filters
@@ -441,22 +437,28 @@ const getSuggestedLoyaltyClubsForHome = async ({
   userLocation,
   radiusKm = 50
 }) => {
+
   const joinedClubs = await getUserJoinedClubs(userId);
   const joinedClubIds = joinedClubs.map(c => c.companyOrganizer);
 
-  /* 🔥 STEP 1: GEO FILTER */
+  /**
+   * 🔥 STEP 1: resolve company organizers
+   * - geo filtered when userLocation is Point
+   * - global when userLocation === null
+   */
   const nearbyCompanyIds = await getCompanyOrganizersWithinRadius({
     userLocation,
     radiusKm
   });
 
+  // If global + nothing exists — still bail out early
   if (!nearbyCompanyIds.length) return [];
 
   const skip = (page - 1) * limit;
 
   return User.aggregate([
     /* ===============================
-       BASE FILTER (radius-aware)
+       BASE FILTER (geo-aware results)
        =============================== */
     {
       $match: {
@@ -515,7 +517,7 @@ const getSuggestedLoyaltyClubsForHome = async ({
     },
 
     /* ===============================
-       POPULARITY (company views)
+       POPULARITY
        =============================== */
     {
       $lookup: {
@@ -597,34 +599,39 @@ const getSuggestedLoyaltyClubsForHome = async ({
 };
 
 
-
 const getCompanyOrganizersWithinRadius = async ({
   userLocation,
   radiusKm = 50
 }) => {
-  if (!userLocation?.coordinates?.length) return [];
 
+  // 🌍 GLOBAL MODE — no geo filter
+  if (!userLocation) {
+    const result = await Organizations.aggregate([
+      {
+        $match: {
+          status: "active",
+          creator: { $exists: true, $ne: null }
+        }
+      },
+      { $group: { _id: "$creator" } }
+    ]);
+
+    return result.map(r => r._id);
+  }
+
+  // 📍 GEO MODE — only when valid coordinates
   const result = await Organizations.aggregate([
     {
       $geoNear: {
-        near: userLocation,
+        near: userLocation,             // GeoJSON: { type:"Point", coordinates:[lng,lat] }
         key: "location",
         distanceField: "distance",
         spherical: true,
         maxDistance: radiusKm * 1000,
-        query: {
-          status: "active",
-          "location.coordinates": { $exists: true }
-        }
+        query: { status: "active" }
       }
     },
-
-    /* Only need company organizer */
-    {
-      $group: {
-        _id: "$creator" // companyOrganizer
-      }
-    }
+    { $group: { _id: "$creator" } }
   ]);
 
   return result.map(r => r._id);
@@ -750,7 +757,8 @@ const getForYouOrganizationsForHomeRepo = async ({
   page = 1,
   limit = 10,
   skip = 0,
-  userId
+  userId,
+  timezone
 }) => {
 
   const userPreferences = await getUserInterestsIdsForRecommendation(userId);
@@ -758,19 +766,23 @@ const getForYouOrganizationsForHomeRepo = async ({
   const userCategories = userPreferences?.categories || [];
   const userTags = userPreferences?.tags || [];
 
-  const geoQuery = { status: "active" };
+  // Base filter — works for BOTH global + geo mode
+  const geoQuery = {
+    status: "active",
+    ...(category && {
+      "otherInfo.categories": {
+        $in: [new mongoose.Types.ObjectId(category)]
+      }
+    })
+  };
 
-  if (category) {
-    geoQuery["otherInfo.categories"] = {
-      $in: [new mongoose.Types.ObjectId(category)]
-    };
-  }
+  const pipeline = [];
 
-  const pipeline = [
-    /* ===============================
-       1️⃣ GEO FILTER (MANDATORY)
-       =============================== */
-    {
+  /* ===============================
+     1️⃣ CONDITIONAL GEO
+     =============================== */
+  if (userLocation) {
+    pipeline.push({
       $geoNear: {
         near: userLocation,
         key: "location",
@@ -779,11 +791,15 @@ const getForYouOrganizationsForHomeRepo = async ({
         maxDistance: radiusKm * 1000,
         query: geoQuery
       }
-    },
+    });
+  } else {
+    pipeline.push({ $match: geoQuery });
+  }
 
-    /* ===============================
-       2️⃣ MATCH USER INTERESTS
-       =============================== */
+  /* ===============================
+     2️⃣ MATCH USER INTERESTS
+     =============================== */
+  pipeline.push(
     {
       $addFields: {
         matchedCategories: {
@@ -889,11 +905,13 @@ const getForYouOrganizationsForHomeRepo = async ({
        =============================== */
     { $sort: { finalScore: -1 } },
     { $skip: skip },
-    { $limit: limit },
+    { $limit: limit }
+  );
 
-    /* ===============================
-       8️⃣ PRIMARY VENUE (TITLE ONLY)
-       =============================== */
+  /* ===============================
+     8️⃣ PRIMARY VENUE + TAGS
+     =============================== */
+  pipeline.push(
     {
       $lookup: {
         from: "venues",
@@ -906,20 +924,12 @@ const getForYouOrganizationsForHomeRepo = async ({
               status: "active"
             }
           },
-          {
-            $project: {
-              _id: 0,
-              title: 1
-            }
-          }
+          { $project: { _id: 0, title: 1 } }
         ],
         as: "primaryVenue"
       }
     },
 
-    /* ===============================
-       9️⃣ TAGS (TITLE ONLY)
-       =============================== */
     {
       $lookup: {
         from: "tags",
@@ -931,16 +941,16 @@ const getForYouOrganizationsForHomeRepo = async ({
     },
 
     /* ===============================
-       🔟 FINAL PROJECTION
+       9️⃣ FINAL SHAPE
        =============================== */
     {
       $project: {
         _id: 1,
-        distance: 1,
+        distance: userLocation ? 1 : null,
         "basicInfo.name": 1,
         "basicInfo.media": 1,
         "otherInfo.description": 1,
-
+        "operatingHours": 1,
         tags: 1,
 
         venue: {
@@ -952,10 +962,11 @@ const getForYouOrganizationsForHomeRepo = async ({
         finalScore: 1
       }
     }
-  ];
+  );
 
   return Organizations.aggregate(pipeline);
 };
+
 
 
 
@@ -968,17 +979,19 @@ const getTrendingOrganizationsForHomeRepo = async ({
 
   const now = Date.now();
   const last48h = new Date(now - 48 * 60 * 60 * 1000);
-  const last7d = new Date(now - 7 * 24 * 60 * 60 * 1000);
+  const last7d  = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
   const categoryObjectId = category
     ? new mongoose.Types.ObjectId(category)
     : null;
 
-  const pipeline = [
-    /* ===============================
-       1️⃣ GEO FILTER (MUST BE FIRST)
-       =============================== */
-    {
+  const pipeline = [];
+
+  /* ===============================
+     1️⃣ CONDITIONAL GEO
+     =============================== */
+  if (userLocation) {
+    pipeline.push({
       $geoNear: {
         near: userLocation,
         key: "location",
@@ -992,11 +1005,23 @@ const getTrendingOrganizationsForHomeRepo = async ({
           })
         }
       }
-    },
+    });
+  } else {
+    // GLOBAL MODE
+    pipeline.push({
+      $match: {
+        status: "active",
+        ...(categoryObjectId && {
+          "otherInfo.categories": { $in: [categoryObjectId] }
+        })
+      }
+    });
+  }
 
-    /* ===============================
-       2️⃣ ENGAGEMENT (LAST 7 DAYS)
-       =============================== */
+  /* ===============================
+     2️⃣ ENGAGEMENT (LAST 7 DAYS)
+     =============================== */
+  pipeline.push(
     {
       $lookup: {
         from: "engagementevents",
@@ -1031,7 +1056,7 @@ const getTrendingOrganizationsForHomeRepo = async ({
        =============================== */
     {
       $addFields: {
-        views7d: { $ifNull: [{ $first: "$engagementStats.views7d" }, 0] },
+        views7d:  { $ifNull: [{ $first: "$engagementStats.views7d" }, 0] },
         views48h: { $ifNull: [{ $first: "$engagementStats.views48h" }, 0] }
       }
     },
@@ -1070,19 +1095,14 @@ const getTrendingOrganizationsForHomeRepo = async ({
               status: "active"
             }
           },
-          {
-            $project: {
-              _id: 0,
-              title: 1
-            }
-          }
+          { $project: { _id: 0, title: 1 } }
         ],
         as: "primaryVenue"
       }
     },
 
     /* ===============================
-       6️⃣ POPULATE TAGS (TITLE ONLY)
+       6️⃣ TAGS (TITLE ONLY)
        =============================== */
     {
       $lookup: {
@@ -1106,10 +1126,11 @@ const getTrendingOrganizationsForHomeRepo = async ({
     {
       $project: {
         _id: 1,
-        distance: 1,
+        distance: userLocation ? 1 : null,
         "basicInfo.name": 1,
         "basicInfo.media": 1,
         "otherInfo.description": 1,
+        "operatingHours": 1,
         tags: 1,
 
         venue: { $first: "$primaryVenue" },
@@ -1119,10 +1140,11 @@ const getTrendingOrganizationsForHomeRepo = async ({
         trendingScore: 1
       }
     }
-  ];
+  );
 
   return Organizations.aggregate(pipeline);
 };
+
 
 
 
@@ -1137,18 +1159,19 @@ const getNewlyListedOrganizationsRepo = async ({
 
   const geoQuery = { status: "active" };
 
-  // Category used ONLY for filtering
   if (category) {
     geoQuery["otherInfo.categories"] = {
       $in: [new mongoose.Types.ObjectId(category)]
     };
   }
 
-  const pipeline = [
-    /* ===============================
-       1️⃣ GEO FILTER (MANDATORY)
-       =============================== */
-    {
+  const pipeline = [];
+
+  /* ===============================
+     1️⃣ CONDITIONAL GEO
+     =============================== */
+  if (userLocation) {
+    pipeline.push({
       $geoNear: {
         near: userLocation,
         key: "location",
@@ -1157,25 +1180,35 @@ const getNewlyListedOrganizationsRepo = async ({
         maxDistance: radiusKm * 1000,
         query: geoQuery
       }
-    },
+    });
 
-    /* ===============================
-       2️⃣ AGE (DAYS SINCE CREATED)
-       =============================== */
-    {
-      $addFields: {
-        ageDays: {
-          $divide: [
-            { $subtract: [new Date(), "$createdAt"] },
-            1000 * 60 * 60 * 24
-          ]
-        }
+    // distance-based ordering is not desired for “new”
+    // we’ll compute NEW score later — but geo must remain first
+  } else {
+    // Global fallback (no geo)
+    pipeline.push(
+      { $match: geoQuery }
+    );
+  }
+
+  /* ===============================
+     2️⃣ AGE (DAYS SINCE CREATED)
+     =============================== */
+  pipeline.push({
+    $addFields: {
+      ageDays: {
+        $divide: [
+          { $subtract: [new Date(), "$createdAt"] },
+          1000 * 60 * 60 * 24
+        ]
       }
-    },
+    }
+  });
 
-    /* ===============================
-       3️⃣ POPULARITY (ENGAGEMENT)
-       =============================== */
+  /* ===============================
+     3️⃣ POPULARITY LOOKUP
+     =============================== */
+  pipeline.push(
     {
       $lookup: {
         from: "engagementevents",
@@ -1202,11 +1235,13 @@ const getNewlyListedOrganizationsRepo = async ({
           $ifNull: [{ $first: "$popularity.count" }, 0]
         }
       }
-    },
+    }
+  );
 
-    /* ===============================
-       4️⃣ NORMALIZED SCORES
-       =============================== */
+  /* ===============================
+     4️⃣ NORMALIZED SCORES
+     =============================== */
+  pipeline.push(
     {
       $addFields: {
         recencyScore: {
@@ -1225,9 +1260,6 @@ const getNewlyListedOrganizationsRepo = async ({
       }
     },
 
-    /* ===============================
-       5️⃣ FINAL WEIGHTED SCORE
-       =============================== */
     {
       $addFields: {
         finalScore: {
@@ -1244,16 +1276,15 @@ const getNewlyListedOrganizationsRepo = async ({
       }
     },
 
-    /* ===============================
-       6️⃣ SORT + PAGINATION
-       =============================== */
     { $sort: { finalScore: -1 } },
     { $skip: skip },
-    { $limit: limit },
+    { $limit: limit }
+  );
 
-    /* ===============================
-       7️⃣ PRIMARY VENUE (TITLE ONLY)
-       =============================== */
+  /* ===============================
+     5️⃣ VENUE + TAGS
+     =============================== */
+  pipeline.push(
     {
       $lookup: {
         from: "venues",
@@ -1266,20 +1297,12 @@ const getNewlyListedOrganizationsRepo = async ({
               status: "active"
             }
           },
-          {
-            $project: {
-              _id: 0,
-              title: 1
-            }
-          }
+          { $project: { _id: 0, title: 1 } }
         ],
         as: "primaryVenue"
       }
     },
 
-    /* ===============================
-       8️⃣ TAGS (TITLE ONLY)
-       =============================== */
     {
       $lookup: {
         from: "tags",
@@ -1290,25 +1313,21 @@ const getNewlyListedOrganizationsRepo = async ({
       }
     },
 
-    /* ===============================
-       9️⃣ FINAL PROJECTION
-       =============================== */
     {
       $project: {
         _id: 1,
         createdAt: 1,
-        distance: 1,
+        distance: userLocation ? 1 : null,
         "basicInfo.name": 1,
         "basicInfo.media": 1,
         "otherInfo.description": 1,
-
+        "operatingHours": 1,
         tags: 1,
 
         venue: {
           title: { $ifNull: [{ $first: "$primaryVenue.title" }, null] }
         },
 
-        /* explain / debug */
         explain: {
           ageDays: { $round: ["$ageDays", 1] },
           popularityCount: "$popularityCount",
@@ -1318,10 +1337,11 @@ const getNewlyListedOrganizationsRepo = async ({
         }
       }
     }
-  ];
+  );
 
   return Organizations.aggregate(pipeline);
 };
+
 
 
 const getOrganizationsGroupedByTagsRepo = async ({
@@ -1331,53 +1351,69 @@ const getOrganizationsGroupedByTagsRepo = async ({
   category
 }) => {
   const radiusMeters = radiusKm * 1000;
+
   const categoryObjectId = category
     ? new mongoose.Types.ObjectId(category)
     : null;
 
-  const geoQuery = {
+  const baseMatch = {
     status: "active",
     ...(categoryObjectId && {
       "otherInfo.categories": { $in: [categoryObjectId] }
     })
   };
 
-  const pipeline = [
-    /* ===============================
-       1️⃣ GEO FILTER
-       =============================== */
-    {
+  const pipeline = [];
+
+  /**
+   * -------------------------------------
+   * 1️⃣ GEO (optional)
+   * -------------------------------------
+   */
+  if (userLocation) {
+    pipeline.push({
       $geoNear: {
         near: userLocation,
         key: "location",
         distanceField: "distance",
         spherical: true,
         maxDistance: radiusMeters,
-        query: geoQuery
+        query: baseMatch
       }
-    },
+    });
+  } else {
+    pipeline.push({
+      $match: baseMatch
+    });
 
-    /* ===============================
-       2️⃣ PICK ONE TAG ONLY (FIRST)
-       =============================== */
+    // In global mode we still want distance in response (null)
+    pipeline.push({
+      $addFields: {
+        distance: null
+      }
+    });
+  }
+
+  /**
+   * -------------------------------------
+   * 2️⃣ PRIMARY TAG
+   * -------------------------------------
+   */
+  pipeline.push(
     {
       $addFields: {
         primaryTag: { $arrayElemAt: ["$otherInfo.tags", 0] }
       }
     },
-
-    /* ===============================
-       3️⃣ DISCARD ORGS WITHOUT TAG
-       =============================== */
     {
-      $match: {
-        primaryTag: { $ne: null }
-      }
+      $match: { primaryTag: { $ne: null } }
     },
 
-    /* ===============================
-       4️⃣ PROJECT MINIMAL FIELDS
-       =============================== */
+    /**
+     * -------------------------------------
+     * 3️⃣ BASE PROJECTION
+     * -------------------------------------
+     */
     {
       $project: {
         _id: 1,
@@ -1388,9 +1424,11 @@ const getOrganizationsGroupedByTagsRepo = async ({
       }
     },
 
-    /* ===============================
-       5️⃣ PRIMARY VENUE
-       =============================== */
+    /**
+     * -------------------------------------
+     * 4️⃣ PRIMARY VENUE
+     * -------------------------------------
+     */
     {
       $lookup: {
         from: "venues",
@@ -1403,17 +1441,17 @@ const getOrganizationsGroupedByTagsRepo = async ({
               status: "active"
             }
           },
-          {
-            $project: { _id: 0, title: 1 }
-          }
+          { $project: { _id: 0, title: 1 } }
         ],
         as: "primaryVenue"
       }
     },
 
-    /* ===============================
-       6️⃣ TAG LOOKUP
-       =============================== */
+    /**
+     * -------------------------------------
+     * 5️⃣ TAG LOOKUP
+     * -------------------------------------
+     */
     {
       $lookup: {
         from: "tags",
@@ -1424,14 +1462,18 @@ const getOrganizationsGroupedByTagsRepo = async ({
     },
     { $unwind: "$tag" },
 
-    /* ===============================
-       7️⃣ SORT BY DISTANCE
-       =============================== */
+    /**
+     * -------------------------------------
+     * 6️⃣ SORT NEAR FIRST (if distance)
+     * -------------------------------------
+     */
     { $sort: { distance: 1 } },
 
-    /* ===============================
-       8️⃣ GROUP BY TAG (NO DUPES)
-       =============================== */
+    /**
+     * -------------------------------------
+     * 7️⃣ GROUP BY TAG
+     * -------------------------------------
+     */
     {
       $group: {
         _id: "$tag._id",
@@ -1455,9 +1497,11 @@ const getOrganizationsGroupedByTagsRepo = async ({
       }
     },
 
-    /* ===============================
-       9️⃣ LIMIT PER TAG
-       =============================== */
+    /**
+     * -------------------------------------
+     * 8️⃣ LIMIT PER TAG
+     * -------------------------------------
+     */
     {
       $project: {
         _id: 0,
@@ -1465,16 +1509,10 @@ const getOrganizationsGroupedByTagsRepo = async ({
         objects: { $slice: ["$objects", limitPerTag] }
       }
     }
-  ];
+  );
 
   return Organizations.aggregate(pipeline).allowDiskUse(true);
 };
-
-
-
-
-
-
 
 
 module.exports = {

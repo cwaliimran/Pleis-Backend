@@ -8,6 +8,8 @@ const getPublicHighlightsWithFilters = async (
   userId,
   query,
   keyword,
+  userLocation,
+  radiusKm,
   skip,
   limit,
   category,
@@ -19,9 +21,17 @@ const getPublicHighlightsWithFilters = async (
   const now = getCurrentDateInTimezone({ timezone });
   const catObjId = category ? new mongoose.Types.ObjectId(category) : null;
 
-  // ----------------------------
-  // CATEGORY FILTERS
-  // ----------------------------
+  const radiusInMeters = Math.max(radiusKm || 0, 0.1) * 1000;
+
+  // 🌍 GEO MODE (only if valid point)
+  const geoMode =
+    userLocation &&
+    Array.isArray(userLocation.coordinates) &&
+    userLocation.coordinates.length === 2;
+
+  /* ----------------------------
+     CATEGORY FILTERS
+  ---------------------------- */
   const categoryFilter = category
     ? { "basicInfo.categories": { $in: [catObjId] } }
     : {};
@@ -30,9 +40,9 @@ const getPublicHighlightsWithFilters = async (
     ? { "otherInfo.categories": { $in: [catObjId] } }
     : {};
 
-  // ----------------------------
-  // TIME FILTER – apply ONLY when user selects a filter
-  // ----------------------------
+  /* ----------------------------
+     TIME FILTER (EVENTS ONLY)
+  ---------------------------- */
   let eventTimeFilter = {};
 
   if (time && time !== "all") {
@@ -71,163 +81,185 @@ const getPublicHighlightsWithFilters = async (
           "schedule.endDateTime": { $gte: start }
         };
         break;
-
-      default:
-        eventTimeFilter = {};
     }
   }
-  // IMPORTANT FIX:
-  // If no time filter selected → DO NOT filter events by time
-  else {
-    eventTimeFilter = {}; 
-  }
 
-  // ----------------------------
-  // AGGREGATION PIPELINE
-  // ----------------------------
+  /* ----------------------------
+     BASE PIPELINE
+  ---------------------------- */
   const pipeline = [
     { $match: query },
     { $sort: { createdAt: -1 } },
     { $skip: skip },
     { $limit: limit },
 
-    // ----------------------------
-    // EVENT LOOKUP (SAFE FIXED)
-    // ----------------------------
+    /* ----------------------------
+       EVENT LOOKUP
+    ---------------------------- */
     {
-  $lookup: {
-    from: "events",
-    let: { eventId: "$object" },
-    pipeline: [
-      { $match: { $expr: { $eq: ["$_id", "$$eventId"] } } },
-      { $match: { status: "active", ...categoryFilter, ...eventTimeFilter } },
+      $lookup: {
+        from: "events",
+        let: { eventId: "$object" },
+        pipeline: [
+          { $match: { $expr: { $eq: ["$_id", "$$eventId"] } } },
+          { $match: { status: "active", ...categoryFilter, ...eventTimeFilter } },
 
-      {
-        $lookup: {
-          from: "organizations",
-          localField: "basicInfo.organization",
-          foreignField: "_id",
-          as: "organizationInfo",
-          pipeline: [
-            { $project: { _id: 1, basicInfo: 1, location: 1 } }
-          ]
-        }
-      },
-
-      {
-        $addFields: {
-          "basicInfo.organization": {
-            $arrayElemAt: ["$organizationInfo", 0]
-          }
-        }
-      },
-
-      {
-        $lookup: {
-          from: "favorites",
-          let: { eventId: "$_id" },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ["$targetId", "$$eventId"] },
-                    { $eq: ["$user", userObjectId] },
-                    { $eq: ["$targetType", "event"] }
-                  ]
+          // 🌍 Conditional GEO filter
+          ...(geoMode
+            ? [
+                {
+                  $match: {
+                    "basicInfo.venueLocation": {
+                      $geoWithin: {
+                        $centerSphere: [
+                          userLocation.coordinates,
+                          radiusInMeters / 6378137
+                        ]
+                      }
+                    }
+                  }
                 }
-              }
-            },
-            { $limit: 1 }
-          ],
-          as: "favoriteInfo"
-        }
-      },
+              ]
+            : []),
 
-      { $addFields: { isFavorite: { $gt: [{ $size: "$favoriteInfo" }, 0] } } },
-
-      // ⭐ MINIMAL EVENT PROJECTION
-      {
-        $project: {
-          _id: 1,
-          basicInfo: {
-            media: "$basicInfo.media",
-            title: "$basicInfo.title",
-            description: "$basicInfo.description",
-            organization: {
-              _id: "$basicInfo.organization._id",
-              basicInfo: {
-                media: "$basicInfo.organization.basicInfo.media",
-                name: "$basicInfo.organization.basicInfo.name"
-              },
-              location: "$basicInfo.organization.location"
-            },
-            venueLocation: "$basicInfo.venueLocation"
+          {
+            $lookup: {
+              from: "organizations",
+              localField: "basicInfo.organization",
+              foreignField: "_id",
+              as: "organizationInfo",
+              pipeline: [
+                { $project: { _id: 1, basicInfo: 1, location: 1 } }
+              ]
+            }
           },
-          schedule: 1,
-          isFavorite: 1
-        }
+
+          {
+            $addFields: {
+              "basicInfo.organization": {
+                $arrayElemAt: ["$organizationInfo", 0]
+              }
+            }
+          },
+
+          {
+            $lookup: {
+              from: "favorites",
+              let: { eventId: "$_id" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $and: [
+                        { $eq: ["$targetId", "$$eventId"] },
+                        { $eq: ["$user", userObjectId] },
+                        { $eq: ["$targetType", "event"] }
+                      ]
+                    }
+                  }
+                },
+                { $limit: 1 }
+              ],
+              as: "favoriteInfo"
+            }
+          },
+
+          { $addFields: { isFavorite: { $gt: [{ $size: "$favoriteInfo" }, 0] } } },
+
+          {
+            $project: {
+              _id: 1,
+              basicInfo: {
+                media: "$basicInfo.media",
+                title: "$basicInfo.title",
+                description: "$basicInfo.description",
+                organization: {
+                  _id: "$basicInfo.organization._id",
+                  basicInfo: {
+                    media: "$basicInfo.organization.basicInfo.media",
+                    name: "$basicInfo.organization.basicInfo.name"
+                  },
+                  location: "$basicInfo.organization.location"
+                },
+                venueLocation: "$basicInfo.venueLocation"
+              },
+              schedule: 1,
+              isFavorite: 1
+            }
+          }
+        ],
+        as: "eventObjects"
       }
-    ],
-    as: "eventObjects"
-  }
     },
 
-    // ----------------------------
-    // ORGANIZATION LOOKUP
-    // ----------------------------
+    /* ----------------------------
+       ORGANIZATION LOOKUP
+    ---------------------------- */
     {
-  $lookup: {
-    from: "organizations",
-    localField: "object",
-    foreignField: "_id",
-    as: "orgObject",
-    pipeline: [
-      { $match: { status: "active", ...categoryFilterOrganization } },
+      $lookup: {
+        from: "organizations",
+        localField: "object",
+        foreignField: "_id",
+        as: "orgObject",
+        pipeline: [
+          { $match: { status: "active", ...categoryFilterOrganization } },
 
-      {
-        $lookup: {
-          from: "favorites",
-          let: { orgId: "$_id" },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ["$targetId", "$$orgId"] },
-                    { $eq: ["$user", userObjectId] },
-                    { $eq: ["$targetType", "organization"] }
-                  ]
+          ...(geoMode
+            ? [
+                {
+                  $match: {
+                    location: {
+                      $geoWithin: {
+                        $centerSphere: [
+                          userLocation.coordinates,
+                          radiusInMeters / 6378137
+                        ]
+                      }
+                    }
+                  }
                 }
-              }
-            },
-            { $limit: 1 }
-          ],
-          as: "favoriteInfo"
-        }
-      },
+              ]
+            : []),
 
-      { $addFields: { isFavorite: { $gt: [{ $size: "$favoriteInfo" }, 0] } } },
-
-      // ⭐ MINIMAL ORG PROJECTION
-      {
-        $project: {
-          _id: 1,
-          basicInfo: {
-            media: "$basicInfo.media",
-            name: "$basicInfo.name"
+          {
+            $lookup: {
+              from: "favorites",
+              let: { orgId: "$_id" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $and: [
+                        { $eq: ["$targetId", "$$orgId"] },
+                        { $eq: ["$user", userObjectId] },
+                        { $eq: ["$targetType", "organization"] }
+                      ]
+                    }
+                  }
+                },
+                { $limit: 1 }
+              ],
+              as: "favoriteInfo"
+            }
           },
-          location: 1,
-          isFavorite: 1
-        }
-      }
-    ]
-  }
-},
 
-    // ----------------------------
-    // MERGE event/org object
-    // ----------------------------
+          { $addFields: { isFavorite: { $gt: [{ $size: "$favoriteInfo" }, 0] } } },
+
+          {
+            $project: {
+              _id: 1,
+              basicInfo: {
+                media: "$basicInfo.media",
+                name: "$basicInfo.name"
+              },
+              location: 1,
+              isFavorite: 1
+            }
+          }
+        ]
+      }
+    },
+
     {
       $addFields: {
         object: {
@@ -240,9 +272,6 @@ const getPublicHighlightsWithFilters = async (
       }
     },
 
-    // ----------------------------
-    // SAFE PROJECTION
-    // ----------------------------
     {
       $project: {
         type: 1,
@@ -256,11 +285,9 @@ const getPublicHighlightsWithFilters = async (
     }
   ];
 
-  // ----------------------------
-  // KEYWORD SEARCH
-  // ----------------------------
   if (keyword) {
     const regex = { $regex: keyword, $options: "i" };
+
     pipeline.push({
       $match: {
         $or: [
@@ -273,7 +300,7 @@ const getPublicHighlightsWithFilters = async (
           { "object.basicInfo.socialLinks.facebook": regex },
           { "object.basicInfo.socialLinks.instagram": regex },
           { "object.basicInfo.socialLinks.linkedin": regex },
-          { "object.basicInfo.socialLinks.youtube": regex },
+          { "object.basicInfo.socialLinks.youtube": regex }
         ]
       }
     });
@@ -281,6 +308,8 @@ const getPublicHighlightsWithFilters = async (
 
   return Highlights.aggregate(pipeline);
 };
+
+
 
 module.exports = {
   getPublicHighlightsWithFilters

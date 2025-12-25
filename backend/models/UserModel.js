@@ -4,11 +4,11 @@ const jwt = require("jsonwebtoken");
 const moment = require("moment-timezone");
 const validator = require("validator");
 const { randomBytes } = require("crypto");
+const crypto = require("crypto");
 const { CompanySchema } = require("./CompanyDetails");
 const { generateSecureToken } = require("../helperUtils/secureToken");
 const { LocationSchema } = require("../shared/locations/locationSchmea");
 const { createUserWallet } = require("../app/userWalletService/global/walletManagement/userWalletService");
-const { nanoid } = require("nanoid");
 // Define subscription statuses
 const SubscriptionTypes = {
   FREE: "free",
@@ -191,11 +191,13 @@ const userSchema = new mongoose.Schema(
         default: "pending",
       },
     },
+    // Unique public identifier for refer users for shareable links and wallet 
     publicId: {
       type: String,
       unique: true,
       index: true,
-      default: () => nanoid(),
+      immutable: true,
+      default: "",
     },
 
     password: {
@@ -388,6 +390,7 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+
   },
   {
     timestamps: true,
@@ -399,18 +402,41 @@ const userSchema = new mongoose.Schema(
 userSchema.pre("save", async function (next) {
   const user = this;
 
+  // password hashing (existing)
   if (user.isModified("password")) {
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(user.password, salt);
   }
-  // Convert the email to lowercase before saving
+
+  // normalize email (existing)
   if (user.isModified("email")) {
     user.email = user.email.toLowerCase().trim();
   }
-  createUserWallet(user._id); // Call in background, don't await
+
+  // -------- PUBLIC ID GENERATION --------
+  if (user.isNew && !user.publicId) {
+    let code;
+    let exists = true;
+    let attempts = 0;
+
+    while (exists && attempts < 10) {
+      code = generatePublicId();
+      exists = await mongoose.model("User").exists({ publicId: code });
+      attempts++;
+    }
+
+    if (exists) {
+      return next(new Error("Failed to generate unique publicId"));
+    }
+
+    user.publicId = code;
+  }
+
+  createUserWallet(user._id);
 
   next();
 });
+
 
 // Generate JWT token
 userSchema.methods.generateAuthToken = function () {
@@ -674,6 +700,17 @@ const generateResetToken = () => {
   return randomBytes(32).toString("hex"); // 64-character token
 };
 
+function generatePublicId() {
+  const alphabet = "0123456789"; // no O/0/I/1
+  let id = "";
+  while (id.length < 8) {
+    const byte = crypto.randomBytes(1)[0];
+    if (byte < alphabet.length) {
+      id += alphabet[byte];
+    }
+  }
+  return id;
+}
 
 userSchema.index(
   {
@@ -682,6 +719,17 @@ userSchema.index(
   },
   {
     name: "email_userType_login_idx"
+  }
+);
+
+//publicId index for unique identification
+userSchema.index(
+  {
+    publicId: 1,
+  },
+  {
+    unique: true,
+    name: "publicId_idx",
   }
 );
 
