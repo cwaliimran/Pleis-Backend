@@ -1,12 +1,15 @@
 // repositories/ReservationRepository.js
 const GlobalReferral = require("@GlobalReferralModel");
 const {ReferredRecord} = require("@ReferredRecordModel");
+const mongoose = require("mongoose");
 const { User } = require("../../models/UserModel");
 const {
   generateMeta,
   getStartAndEndOfMonth,
   getStartAndEndOfWeek,
 } = require("../../helperUtils/responseUtil");
+const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
+const { formatCategories } = require("./formatters/categoryFormatter");
 const createGlobalReferral = async (data) => {
   try {
     console.log("Creating global referral with data:", data);
@@ -282,7 +285,170 @@ const createUserReferradrecord = async (data) => {
 
 
 
+const getUserReferradrecord = async ({
+  timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  userId,
+  date,
+  skip,
+  type
+}) => {
 
+  const pipeline = [];
+
+  /* ================= MATCH REFERRER ================= */
+
+  pipeline.push({
+    $match: {
+      ...(type && { type }),
+      ...(userId && { referrerUserId: new mongoose.Types.ObjectId(userId) }),
+      userId: { $exists: true, $ne: null }
+    }
+  });
+
+  /* ================= STATUS ================= */
+
+  if (status) {
+    pipeline.push({ $match: { status } });
+  } else {
+    pipeline.push({ $match: { status: { $ne: "deleted" } } });
+  }
+
+  /* ================= DATE ================= */
+
+  if (date) {
+    const start = new Date(date);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 1);
+
+    pipeline.push({
+      $match: {
+        createdAt: { $gte: start, $lt: end }
+      }
+    });
+  }
+
+  /* ================= USER LOOKUP ================= */
+
+  pipeline.push(
+    {
+      $addFields: {
+        userObjectId: {
+          $cond: [
+            { $eq: [{ $type: "$userId" }, "objectId"] },
+            "$userId",
+            { $toObjectId: "$userId" }
+          ]
+        }
+      }
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "userObjectId",
+        foreignField: "_id",
+        as: "userInfo"
+      }
+    },
+    {
+      $unwind: {
+        path: "$userInfo",
+        preserveNullAndEmptyArrays: false
+      }
+    }
+  );
+
+  /* ================= BUILD USER ================= */
+
+  pipeline.push({
+    $addFields: {
+      user: {
+        _id: "$userInfo._id",
+        userName: "$userInfo.username",
+        email: "$userInfo.email",
+        firstName: "$userInfo.firstName",
+        lastName: "$userInfo.lastName",
+        profileIcon: "$userInfo.profileIcon"
+      }
+    }
+  });
+
+  /* ================= KEYWORD SEARCH ================= */
+
+  if (keyword) {
+    pipeline.push({
+      $match: {
+        $or: [
+          { "user.name": { $regex: keyword, $options: "i" } },
+          { "user.email": { $regex: keyword, $options: "i" } }
+        ]
+      }
+    });
+  }
+
+  /* ================= CLEANUP ================= */
+
+pipeline.push({
+  $project: {
+    _id: "$user._id",
+    firstName: "$user.firstName",
+    lastName: "$user.lastName",
+    userName: "$user.userName",
+    email: "$user.email",
+    profileIcon: "$user.profileIcon"
+  }
+});
+
+
+  pipeline.push({ $sort: { createdAt: -1 } });
+
+  /* ================= PAGINATION ================= */
+
+  pipeline.push({
+    $facet: {
+      data: [
+        { $skip: skip },
+        ...(limit === 0 ? [] : [{ $limit: limit }])
+      ],
+      totalFiltered: [{ $count: "count" }]
+    }
+  });
+
+  /* ================= RUN ================= */
+
+  const result = await ReferredRecord.aggregate(pipeline);
+
+  const globalReferral = result?.[0]?.data || [];
+  const totalFiltered = result?.[0]?.totalFiltered?.[0]?.count || 0;
+
+  /* ================= COUNTS ================= */
+
+  const [total, active, inactive] = await Promise.all([
+    ReferredRecord.countDocuments({
+      referrerUserId: userId,
+      userId: { $exists: true, $ne: null },
+      status: { $ne: "deleted" }
+    }),
+    ReferredRecord.countDocuments({
+      referrerUserId: userId,
+      userId: { $exists: true, $ne: null },
+      status: "active"
+    }),
+    ReferredRecord.countDocuments({
+      referrerUserId: userId,
+      userId: { $exists: true, $ne: null },
+      status: "inactive"
+    })
+  ]);
+
+  const meta = generateMeta(page, limit, totalFiltered);
+  meta.globalReferralCount = { total, active, inactive };
+const formattedGlobalReferral = formatCategories(globalReferral);
+  return { globalReferral: formattedGlobalReferral, meta };
+};
 
 
 module.exports = {
@@ -291,4 +457,5 @@ module.exports = {
   saveReferralData,
   saveUserReferralData,
   createUserReferradrecord,
+  getUserReferradrecord
 };

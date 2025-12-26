@@ -1,10 +1,10 @@
 // services/reservationservice.js
 const { buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
 const { generateMeta, getCurrentDateInTimezone } = require("../../helperUtils/responseUtil");
-const { reservationsFormatter } = require("../../app/reservations/formaters/reservationFormetter");
+const { reservationsFormatter } = require("../reservations/formaters/reservationFormetter");
 const Reservations = require("@ReservationsModel");
 const UserReservations = require("@UserReservationsModel");
-const GlobalReferralRepo = require("./globalReferralRepository");
+const GlobalReferralRepo = require("./loyaltyReferralRepository");
 const mongoose = require("mongoose");
 const {
   sendResponse,
@@ -67,14 +67,19 @@ const createUserReferradrecord = async (data) => {
   return GlobalReferral;
 };
 
+const getUserOrganizationPublicIds = async (userId, organization) => {
 
+  let result = await GlobalReferralRepo.getUserOrganizationPublicIds(userId, organization);
+  return result;
+};
   module.exports = {
-    createGlobalReferral,
-    getGlobalReferrals,
-    saveReferralData,
-    saveUserReferralData,
-    createUserReferradrecord,
-    getUserReferradrecord
+    getUserOrganizationPublicIds,
+    // createGlobalReferral,
+    // getGlobalReferrals,
+    // saveReferralData,
+    // saveUserReferralData,
+    // createUserReferradrecord,
+    // getUserReferradrecord
     
 
   };

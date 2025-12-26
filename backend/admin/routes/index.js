@@ -66,6 +66,8 @@ router.use("/updates", require("../updates/updatesRoutes"));
 router.use("/giveaways", require("../giveaways/giveawayRoutes"));
 router.use("/qr-code", require("../qr/qrRoutes"));
 router.use("/in-app-ordering", require("../inAppOrdering/inAppOrderingRoutes"));
+router.use("/faqs", require("../faqs/faqsRoutes"));
+router.use("/badge-categories", require("../badgeCategories/badgeCategoriesRoutes"));
 
 
 module.exports = router;

@@ -9,11 +9,22 @@ const FAQSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+
     answer: {
       type: String,
       required: true,
       trim: true,
       default: "",
+    },
+    type: {
+      type: String,
+      enum: [
+        "saved_events",
+        "saved_organizers",
+        "purchases",
+      ],
+      default: "general",
+      index: true
     },
   },
   {
@@ -22,5 +33,4 @@ const FAQSchema = new mongoose.Schema(
 );
 
 const Faq = mongoose.model("Faq", FAQSchema);
-
 module.exports = Faq;
