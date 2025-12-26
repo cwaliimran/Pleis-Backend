@@ -74,7 +74,6 @@ const getMoreFromOrganizerEvents = async (userId, filter, page, limit) => {
 };
 
 
-
 // Count by condition
 const countEvents = async (query = {}) => {
   return Events.countDocuments(query);

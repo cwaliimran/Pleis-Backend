@@ -2128,12 +2128,11 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}app/home/popular-events?latitude=31.5023621&longitude=74.426454&page=1&limit=10",
+											"raw": "{{url}}app/popular-events?latitude=31.5023621&longitude=74.426454&radiusKm=50&page=1&limit=10",
 											"host": [
 												"{{url}}app"
 											],
 											"path": [
-												"home",
 												"popular-events"
 											],
 											"query": [
@@ -2147,7 +2146,84 @@
 												},
 												{
 													"key": "radiusKm",
-													"value": "500000",
+													"value": "50"
+												},
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "TopPicks",
+							"item": [
+								{
+									"name": "top picks organizations",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"category\":\"6911bd65d49fc086aabd254e\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/top-picks-organizations?latitude=31.5023621&longitude=74.426454&page=1&limit=10",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"top-picks-organizations"
+											],
+											"query": [
+												{
+													"key": "latitude",
+													"value": "31.5023621"
+												},
+												{
+													"key": "longitude",
+													"value": "74.426454"
+												},
+												{
+													"key": "radiusKm",
+													"value": "6",
 													"disabled": true
 												},
 												{
@@ -2166,7 +2242,241 @@
 							]
 						},
 						{
-							"name": "get",
+							"name": "For You Orgs",
+							"item": [
+								{
+									"name": "for you organizations",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n//   \"category\":\"6911bd65d49fc086aabd254e\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/organizations/for-you?latitude=31.5023621&longitude=74.426454&radiusKm=0.5&page=1&limit=10",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"organizations",
+												"for-you"
+											],
+											"query": [
+												{
+													"key": "latitude",
+													"value": "31.5023621"
+												},
+												{
+													"key": "longitude",
+													"value": "74.426454"
+												},
+												{
+													"key": "radiusKm",
+													"value": "0.5"
+												},
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Trending Orgs",
+							"item": [
+								{
+									"name": "trending organizations",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n//   \"category\":\"6911bd65d49fc086aabd254e\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/organizations/trending?latitude=31.5023621&longitude=74.426454&radiusKm=.3&page=1&limit=10",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"organizations",
+												"trending"
+											],
+											"query": [
+												{
+													"key": "latitude",
+													"value": "31.5023621"
+												},
+												{
+													"key": "longitude",
+													"value": "74.426454"
+												},
+												{
+													"key": "radiusKm",
+													"value": ".3"
+												},
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "For you Events",
+							"item": [
+								{
+									"name": "for you events",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n//   \"category\":\"6911bd65d49fc086aabd254e\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/events/for-you?latitude=31.5023621&longitude=74.426454&radiusKm=5&page=1&limit=10",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"events",
+												"for-you"
+											],
+											"query": [
+												{
+													"key": "latitude",
+													"value": "31.5023621"
+												},
+												{
+													"key": "longitude",
+													"value": "74.426454"
+												},
+												{
+													"key": "radiusKm",
+													"value": "5"
+												},
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "home",
 							"event": [
 								{
 									"listen": "test",
@@ -2196,7 +2506,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n   // \"category\":\"68f0d6b0a92f125fd26a5831\"\n    // \"time\": \"live\" // all,live, today, tomorrow, thisWeek\n    // \"\"\n}",
+									"raw": "{\n//    \"category\":\"6911bd65d49fc086aabd254e\"\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -2204,7 +2514,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}app/home",
+									"raw": "{{url}}app/home?latitude=31.48252&longitude=74.4557234&radiusKm=50",
 									"host": [
 										"{{url}}app"
 									],
@@ -2214,18 +2524,15 @@
 									"query": [
 										{
 											"key": "latitude",
-											"value": "31.5023621",
-											"disabled": true
+											"value": "31.48252"
 										},
 										{
 											"key": "longitude",
-											"value": "74.426454",
-											"disabled": true
+											"value": "74.4557234"
 										},
 										{
 											"key": "radiusKm",
-											"value": "500000",
-											"disabled": true
+											"value": "50"
 										}
 									]
 								}
@@ -4240,7 +4547,7 @@
 											"variable": [
 												{
 													"key": "companyOrganizer",
-													"value": "691c694615c5e4a506226db8"
+													"value": "6911cb3d6aca10eb719d7280"
 												}
 											]
 										}

@@ -103,7 +103,77 @@ const getDetails = async (id, timezone) => {
   return item;
 };
 
+const getGlobalPromotionsForHomeService = async ({
+  userId,
+  limit = 10,
+  skip = 0,
+  timezone
+}) => {
+  const now = new Date();
+
+  /* ===============================
+     1️⃣ Base query (home-safe)
+     =============================== */
+  const query = {
+    status: "active",
+    $or: [
+      { endDate: null },
+      { endDate: { $gte: now } }
+    ]
+  };
+
+  /* ===============================
+     2️⃣ Fetch wallet + promotions
+     =============================== */
+  const [wallet, records] = await Promise.all([
+    getUserWallet(userId),
+    repository.getWithFilters(query, skip, limit)
+  ]);
+
+  /* ===============================
+     3️⃣ Wallet values
+     =============================== */
+  const userTierEntry =
+    wallet?.global?.level?.entryPoints ?? 0;
+
+  const userGlobalPoints =
+    wallet?.global?.points ?? 0;
+
+  /* ===============================
+     4️⃣ Eligibility evaluation
+     =============================== */
+  const responses = records.map(promo => {
+    const requiredTierEntry =
+      promo?.tierLimit?.entryPoints ?? 0;
+
+    let eligible = userTierEntry >= requiredTierEntry;
+
+    // Balance check ONLY for claim promotions
+    if (
+      eligible &&
+      promo.promotionType === "globalClaimPromotion"
+    ) {
+      const requiredPoints = promo.claimPoints ?? 0;
+      eligible = userGlobalPoints >= requiredPoints;
+    }
+
+    return {
+      ...formatPromotion(promo, timezone),
+      eligible
+    };
+  });
+
+  /* ===============================
+     5️⃣ Home response (no meta)
+     =============================== */
+  return {
+    responses
+  };
+};
+
+
 module.exports = {
   getGlobalPromotionsService,
   getDetails,
+  getGlobalPromotionsForHomeService
 };

@@ -1,58 +1,95 @@
-const { getBannerControls } = require("../../admin/bannerControl/bannerControlsService");
 const { getPublicHighlights } = require("../highlights/highlightService");
-const { getUserRecentlyViewedItems } = require("../recentlyViewed/recentlyViewedItemService");
 const { sendResponse } = require("../../helperUtils/responseUtil");
-const { getCustomCategories, transformCustomCategoryObjects } = require("../customCategories/customCategoriesService");
-const { getNearbyEvents, getForYouEvents, getEventsGroupedByTagsService } = require("../events/eventService");
-const { getChallenges } = require("../loyalty/challenges/challengesService");
-const { getPromotions } = require("../loyalty/promotions/promotionsService");
+const { getCustomCategories } = require("../customCategories/customCategoriesService");
+const { getForYouEventsService, thisWeekEvents } = require("../events/eventService");
 const { getPublicCategories } = require("../publicCategories/categoriesService");
-const { getPopularEventsService, getPopularEventsForHomeService } = require("../popularEvents/popularEventsService");
+const { getPopularEventsForHomeService } = require("../popularEvents/popularEventsService");
 const {
-  getSuggestedLoyaltyClubs,
+  getSuggestedLoyaltyClubsForHomeService,
   getNearbyOrganizationsService,
-  organizationsByVenueTypeService,
+  getNewlyListedOrganizationsService,
   getForYouOrganizationsForHomeService,
+  getTrendingOrganizationsForHomeService,
+  getOrganizationsGroupedByTagsService,
 } = require("../organizationProfile/organizationProfileService");
-const {
-  getRemainingEventsAndUsersRepo,
-  getRemainingEventsGroupedByVenueTypesRepo,
-  getRemainingOrganizersRepo,
-} = require("./homeRepository");
+
 const { getBannerControlsService } = require("./bannerControl/bannerControlsService");
 const { getTopPicksOrganizationsForHomeService } = require("../topPicksOrganizations/topPicksOrganizationsService");
+const { getLoyaltyAndGlobalLoyaltyPromotions } = require("./promotions/promotionsHomeService");
+const { getOrganizationsWithReservationsForHomeService } = require("../reservations/reservationService");
 
 const getHomeService = async ({ queryData }) => {
-  const { userId, userLocation, radiusKm = 50, timezone, category, time } = queryData;
+  const { userId, userLocation, radiusKm = 50, timezone, category } = queryData;
 
   try {
-    // ----------------------------------------------------
-    // 1️⃣ FETCH EVERYTHING IN PARALLEL
-    // ----------------------------------------------------
-    const [
-      categoriesRes,
-      bannersRes,
-      popularEventsRes,
-      topPicksOrgs,
-      getForYouOrganizationsService,
-      // nearYouEvents,
-      nearYouOrganizations,
-      // venueTypesRaw,
-      // tagGroupsRaw,
-      // customCategoriesRes,
-      highlightsRes,
-      // recentlyViewed,
-      // challenges,
-      // promotions,
-      // suggestedLoyaltyClubs,
-      // remainingEventsByVenueTypes,
-    ] = await Promise.all([
-      getPublicCategories({}),
-      getBannerControlsService({ page: 1, limit: 10, }),
-      getPopularEventsForHomeService({ limit: 10, skip: 0, timezone, category, userLocation, radiusKm }),
-      getTopPicksOrganizationsForHomeService({ category, limit: 10, skip: 0, userLocation, radiusKm, }),
-      // getPopularEventsService({ userLocation, userId, timezone, category, time }),
-      getForYouOrganizationsForHomeService({
+    /* ===============================
+       CONSTANTS
+       =============================== */
+    const MIN_ITEMS = 2;
+
+    /* ===============================
+       1️⃣ DEFINE PROMISES
+       =============================== */
+    const promises = {
+      categoriesRes: getPublicCategories({}),
+      bannersRes: getBannerControlsService({ page: 1, limit: 10 }),
+
+      popularEventsRes: getPopularEventsForHomeService({
+        limit: 10,
+        skip: 0,
+        timezone,
+        category,
+        userLocation,
+        radiusKm,
+      }),
+
+      forYouEvents: getForYouEventsService({
+        category,
+        userLocation,
+        radiusKm,
+        timezone,
+        page: 1,
+        limit: 10,
+        userId,
+      }),
+
+      thisWeekEventsRes: thisWeekEvents({
+        timezone,
+        category,
+        userLocation,
+        radiusKm,
+        page: 1,
+        limit: 10,
+        userId,
+      }),
+
+      topPicksOrgs: getTopPicksOrganizationsForHomeService({
+        category,
+        limit: 10,
+        skip: 0,
+        userLocation,
+        radiusKm,
+      }),
+
+      trendingOrganizationsService: getTrendingOrganizationsForHomeService({
+        category,
+        userLocation,
+        radiusKm,
+        timezone,
+        page: 1,
+        limit: 10,
+        userId,
+      }),
+
+      getOrganizationsWithReservationsRes: getOrganizationsWithReservationsForHomeService({
+        userId,
+        userLocation,
+        radiusKm,
+        timezone,
+        category,
+      }),
+
+      getForYouOrganizationsService: getForYouOrganizationsForHomeService({
         category,
         userLocation,
         radiusKm,
@@ -62,157 +99,255 @@ const getHomeService = async ({ queryData }) => {
         skip: 0,
         userId,
       }),
-      // getNearbyEvents(queryData),
 
-      // organizationsByVenueTypeService({
-      //   location: userLocation.coordinates,
-      //   radiusKm,
-      //   timezone,
-      //   page: 1,
-      //   limit: 10,
-      //   userId,
-      // }),
-      // getEventsGroupedByTagsService({
-      //   location: userLocation.coordinates,
-      //   radiusKm,
-      //   timezone,
-      //   userId,
-      // }),
-      // getCustomCategories({
-      //   userLocation,
-      //   userId,
-      //   timezone,
-      //   page: 1,
-      //   limit: 10,
-      //   status: "active",
-      //   category,
-      //   time,
-      // }),
-      getPublicHighlights({
+      nearYouOrganizationsRes: getNearbyOrganizationsService({
+        category,
+        userLocation,
+        radiusKm,
+        timezone,
+        page: 1,
+        limit: 10,
+        userId,
+      }),
+
+      newlyListedOrganizationsService: getNewlyListedOrganizationsService({
+        category,
+        userLocation,
+        radiusKm,
+        page: 1,
+        limit: 10,
+      }),
+
+      customCategoriesRes: getCustomCategories({
+        userLocation,
+        userId,
+        timezone,
+        page: 1,
+        limit: 10,
+        status: "active",
+        category,
+      }),
+
+      highlightsRes: getPublicHighlights({
         userId,
         page: 1,
         limit: 10,
         userLocation,
         category,
-        time,
         timezone,
       }),
-      // getUserRecentlyViewedItems({
-      //   userId,
-      //   location: userLocation,
-      //   timezone,
-      //   targetType: "event",
-      //   page: 1,
-      //   limit: 10,
-      // }),
-      // [],//getChallenges({ page: 1, limit: 10, timezone }),
-      // getPromotions({ page: 1, limit: 10, timezone, category }),
-      // getSuggestedLoyaltyClubs({ page: 1, limit: 10, userId }),
-      // getRemainingEventsGroupedByVenueTypesRepo({ userId, timezone }),
-    ]);
 
-    // ----------------------------------------------------
-    // 2️⃣ NORMALIZE STATIC SOURCES
-    // ----------------------------------------------------
-    const categories = categoriesRes?.categories || [];
-    const banners = bannersRes?.bannerControls || [];
-    const popularEvents = popularEventsRes.data || [];
-    const highlights = highlightsRes?.highlights || [];
-    // const customCategories = customCategoriesRes?.customCategories || [];
-    const topPicks = []; // TODO: plug in real "Top Picks" source when available
+      suggestedLoyaltyClubsRes: getSuggestedLoyaltyClubsForHomeService({
+        page: 1,
+        limit: 10,
+        userId,
+        userLocation,
+        radiusKm,
+      }),
+
+      loyaltyAndGlobalLoyaltyPromotions: getLoyaltyAndGlobalLoyaltyPromotions({
+        page: 1,
+        limit: 5,
+        userId,
+        timezone,
+      }),
+
+      getOrganizationsGroupedByTagsRes: getOrganizationsGroupedByTagsService({
+        userLocation,
+        radiusKm,
+        timezone,
+        userId,
+        category,
+      }),
+    };
+
+    /* ===============================
+       2️⃣ EXECUTE PROMISES
+       =============================== */
+    const resultsArray = await Promise.all(Object.values(promises));
+    const results = Object.fromEntries(
+      Object.keys(promises).map((k, i) => [k, resultsArray[i]])
+    );
+
+    /* ===============================
+       3️⃣ NORMALIZE RESULTS
+       =============================== */
+    const categories = results.categoriesRes?.categories || [];
+    const banners = results.bannersRes?.bannerControls || [];
+    const popularEvents = results.popularEventsRes?.data || [];
+    const highlights = results.highlightsRes?.highlights || [];
+    const customCategories = results.customCategoriesRes?.customCategories || [];
+    const tagGroups = results.getOrganizationsGroupedByTagsRes || [];
 
     const feed = [];
 
-    const push = (section) => {
+    /* ===============================
+       4️⃣ SAFE PUSH (MIN ITEMS RULE)
+       =============================== */
+    const pushIfValid = (section) => {
       if (!section) return;
-      // Skip empty array sections
-      if (Array.isArray(section.data) && section.data.length === 0) return;
+
+      if (Array.isArray(section.data) && section.data.length < MIN_ITEMS) return;
+      if (Array.isArray(section.objects) && section.objects.length < MIN_ITEMS) return;
+
       feed.push(section);
     };
 
-    // ----------------------------------------------------
-    // 3️⃣ STATIC HEADER (ORDERED)
-    // ----------------------------------------------------
-    // Categories
-    push({
-      key: "categories",
-      title: "Categories",
-      data: categories,
-    });
+    /* ===============================
+       5️⃣ FIXED HEADER
+       =============================== */
+    pushIfValid({ key: "categories", title: "Categories", data: categories });
+    pushIfValid({ key: "banners", title: "Banners", data: banners });
 
-    //push all banners
-    push({
-      key: "banners",
-      title: "Banners",
-      data: banners,
-    })
-
-
-    // Top 10 promos (if any)
-    // push({
-    //   key: "top10",
-    //   title: "Top 10",
-    //   data: top10 || [],
-    // });
-    push({
-      key: "popularEvents",
-      title: "Popular Events",
-      data: popularEvents || [],
-    });
-
-    //for your organizations
-    push({
+    /* ===============================
+       6️⃣ ORGANIZATIONS
+       =============================== */
+    pushIfValid({
       key: "forYouOrganizations",
-      title: "For You Organizations",
-      data: getForYouOrganizationsService.organizations || [],
+      title: "For You",
+      data: results.getForYouOrganizationsService?.organizations || [],
     });
 
-    // // For You – events
-    // push({
-    //   key: "forYou",
-    //   title: "For You",
-    //   data: forYou?.data || [],
-    // });
+    pushIfValid({
+      key: "nearYouOrganizations",
+      title: "Near You",
+      data: results.nearYouOrganizationsRes?.organizations || [],
+    });
 
-    // // Near You – events (optional)
-    // if (Array.isArray(nearYouEvents?.events) && nearYouEvents.events.length) {
-    //   push({
-    //     key: "nearYouEvents",
-    //     title: "Near You Events",
-    //     data: nearYouEvents.events,
-    //   });
-    // }
+    pushIfValid({
+      key: "topPicks",
+      title: "Top Picks",
+      data: results.topPicksOrgs?.topPicksOrganizations || [],
+    });
 
-    // // Near You – organizers (from closest)
-    if (
-      nearYouOrganizations &&
-      Array.isArray(nearYouOrganizations.organizations) &&
-      nearYouOrganizations.organizations.length
-    ) {
-      push({
-        key: "nearYouOrganizations",
-        title: "Near You Organizations",
-        data: nearYouOrganizations, // keep shape { organizations: [...] }
+    pushIfValid({
+      key: "trendingOrganizations",
+      title: "Trending",
+      data: results.trendingOrganizationsService?.organizations || [],
+    });
+
+    pushIfValid({
+      key: "reservations",
+      title: "Make a Reservation",
+      data: results.getOrganizationsWithReservationsRes || [],
+    });
+
+    /* ===============================
+       7️⃣ EVENTS
+       =============================== */
+    pushIfValid({ key: "popularEvents", title: "Popular Events", data: popularEvents });
+    pushIfValid({ key: "forYouEvents", title: "For You Events", data: results.forYouEvents?.data || [] });
+    pushIfValid({ key: "thisWeekEvents", title: "This Week", data: results.thisWeekEventsRes?.data || [] });
+
+    /* ===============================
+       8️⃣ NEW / LOYALTY / PROMO
+       =============================== */
+    pushIfValid({
+      key: "newlyListedOrganizations",
+      title: "New",
+      data: results.newlyListedOrganizationsService?.organizations || [],
+    });
+
+    pushIfValid({
+      key: "loyaltyClubs",
+      title: "Loyalty Clubs",
+      data: results.suggestedLoyaltyClubsRes || [],
+    });
+
+    pushIfValid({
+      key: "promotions",
+      title: "Promotions",
+      data: results.loyaltyAndGlobalLoyaltyPromotions || [],
+    });
+
+    /* ===============================
+       9️⃣ QUEUES (NO MUTATION)
+       =============================== */
+    const customQueue = [...customCategories];
+    const tagQueue = [...tagGroups];
+
+    /* ===============================
+       🔟 FIRST CUSTOM CATEGORY
+       =============================== */
+    if (customQueue.length) {
+      const c = customQueue.shift();
+      pushIfValid({
+        key: "customCategory",
+        title: c?.title,
+        objects: c?.objects,
       });
     }
 
-    // // Top Picks (currently empty → will be skipped by push)
-    push({
-      key: "topPicks",
-      title: "Top Picks",
-      data: topPicksOrgs.topPicksOrganizations || [],
-    });
+    /* ===============================
+       1️⃣1️⃣ FIRST 3 MIXED (CUSTOM + TAG)
+       =============================== */
+    let mixedCount = 0;
 
-    // Highlights
-    push({
+    while (mixedCount < 3 && (customQueue.length || tagQueue.length)) {
+      let pushed = false;
+
+      if (customQueue.length) {
+        const c = customQueue.shift();
+        if (c?.objects?.length >= MIN_ITEMS) {
+          feed.push({
+            key: "customCategory",
+            title: c.title,
+            objects: c.objects,
+          });
+          mixedCount++;
+          pushed = true;
+        }
+      }
+
+      if (!pushed && tagQueue.length) {
+        const t = tagQueue.shift();
+        if (t?.data?.length >= MIN_ITEMS) {
+          feed.push({
+            key: "customCategoryByTags",
+            title: t.title,
+            objects: t.data,
+          });
+          mixedCount++;
+        }
+      }
+    }
+
+    /* ===============================
+       1️⃣2️⃣ HIGHLIGHTS
+       =============================== */
+    pushIfValid({
       key: "highlights",
       title: "Highlights",
       data: highlights,
     });
 
-    // ----------------------------------------------------
-    // ✅ DONE
-    // ----------------------------------------------------
+    /* ===============================
+       1️⃣3️⃣ REST OF CUSTOM CATEGORIES
+       =============================== */
+    while (customQueue.length) {
+      const c = customQueue.shift();
+      pushIfValid({
+        key: "customCategory",
+        title: c?.title,
+        objects: c?.objects,
+      });
+    }
+
+    /* ===============================
+       1️⃣4️⃣ REST OF TAG GROUPS
+       =============================== */
+    while (tagQueue.length) {
+      const t = tagQueue.shift();
+      pushIfValid({
+        key: "customCategoryByTags",
+        title: t?.title,
+        objects: t?.data,
+      });
+    }
+
+    /* ===============================
+       ✅ DONE
+       =============================== */
     return { status: true, data: feed };
   } catch (error) {
     return sendResponse({
@@ -222,6 +357,7 @@ const getHomeService = async ({ queryData }) => {
     });
   }
 };
+
 
 module.exports = {
   getHomeService,

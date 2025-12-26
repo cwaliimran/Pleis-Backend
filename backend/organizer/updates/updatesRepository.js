@@ -321,12 +321,6 @@ const findByIdAndUpdate = async (id, data) => {
 
 
 
-
-
-
-
-
-
 const getevents = async ({ organizations }) => {
   try {
 
