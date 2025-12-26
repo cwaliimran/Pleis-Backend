@@ -7,33 +7,45 @@ function reservationsFormatter(item, timezone) {
 
   const cat = item.toObject ? item.toObject() : { ...item };
 
-  if (cat.timingSlots && cat.timingSlots.dateTimeSlots) {
+  if (cat.timingSlots?.dateTimeSlots) {
     const dateTimeSlots = Array.isArray(cat.timingSlots.dateTimeSlots)
       ? cat.timingSlots.dateTimeSlots
-      : [cat.timingSlots.dateTimeSlots];
+      : [cat.timingSlots.dateTimeSlots]; // normalize to array
 
     dateTimeSlots.forEach(slot => {
-      if (slot.timeSlots && Array.isArray(slot.timeSlots)) {
-        slot.timeSlots.forEach(timeSlot => {
-          let startTime = timeSlot.startTime;
-          let endTime = timeSlot.endTime;
+      if (!slot.timeSlots) return;
 
-          if (moment(startTime, "hh:mm A", true).isValid()) {
-            startTime = moment(startTime, "hh:mm A").toISOString();
-          }
-          if (moment(endTime, "hh:mm A", true).isValid()) {
-            endTime = moment(endTime, "hh:mm A").toISOString();
-          }
+      // normalize timeSlots into array too
+      const timeSlots = Array.isArray(slot.timeSlots)
+        ? slot.timeSlots
+        : [slot.timeSlots];
 
-          timeSlot.startTime = convertUtcToTimezoneAMPM(startTime, timezone);
-          timeSlot.endTime = convertUtcToTimezoneAMPM(endTime, timezone);
-        });
-      }
+      timeSlots.forEach(timeSlot => {
+        let startTime = timeSlot.startTime;
+        let endTime = timeSlot.endTime;
+
+        // if they come as "hh:mm A" convert to ISO
+        if (moment(startTime, "hh:mm A", true).isValid()) {
+          startTime = moment(startTime, "hh:mm A").toISOString();
+        }
+        if (moment(endTime, "hh:mm A", true).isValid()) {
+          endTime = moment(endTime, "hh:mm A").toISOString();
+        }
+
+        timeSlot.startTime = convertUtcToTimezoneAMPM(startTime, timezone);
+        timeSlot.endTime = convertUtcToTimezoneAMPM(endTime, timezone);
+      });
+
+      // write normalized back
+      slot.timeSlots = timeSlots;
     });
+
+    cat.timingSlots.dateTimeSlots = dateTimeSlots;
   }
 
-  return { ...cat };
+  return cat;
 }
+
 function reservationsFormatterAdjustDates(item, timezone) {
   if (!item) return null;
 

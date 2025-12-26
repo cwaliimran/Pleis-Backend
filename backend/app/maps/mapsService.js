@@ -4,125 +4,230 @@ const mapsRepo = require("./mapsRepository");
 const moment = require("moment-timezone");
 const mongoose = require("mongoose");
 const { Events } = require("../../commonModules/events/Event");
-const { transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
-const { formatEventResponse } = require("../events/formatter/eventFormatter");
+const { transformOperatingHoursToLocal, isOrganizationOpenNow } = require("../../shared/commonSchemas/operatingHours");
 const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
+const { formatEventResponse } = require("../events/formatter/eventFormatter");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { getCurrentDateInTimezone, getStartAndEndOfDay, getStartAndEndOfWeek, generateMeta } = require("../../helperUtils/responseUtil");
+const Tags = require("@TagsModel");
 
 
-/* const getEvents = async (queryData) => {
+const getEvents = async (queryData) => {
   let {
-    category,
-    filter = {}, // e.g. { type: "events", key: "live" } //  key = live, today, thisWeek
-    longitude = 0,
-    latitude = 0,
+    keyword = "",
     page = 1,
     limit = 10,
     timezone = "Asia/Karachi",
-    radiusKm = 0,
+    advanceFilters = {},
     userId,
+    sort = "asc",
+    bounds = null,
   } = queryData || {};
 
-  const rawRadiusKm =
-    radiusKm === 0 || radiusKm === undefined || radiusKm === null || radiusKm === ''
-      ? 20037.5
-      : radiusKm;
 
-  radiusKm = parseFloat(rawRadiusKm);
-  longitude = parseFloat(longitude);
-  latitude = parseFloat(latitude);
+  const {
+    time,
+    dateFrom,
+    dateTo,
+    categories = [],
+    venueTypes = [],
+    genre = [],
+    tags = [],
+  } = advanceFilters;
 
-  if (typeof longitude !== "number" || typeof latitude !== "number") {
-    throw new Error("Valid user longitude and latitude are required");
-  }
-  if (radiusKm <= 0) throw new Error("Radius must be greater than 0");
-
-  const radiusInMeters = radiusKm * 1000;
-  const now = getCurrentDateInTimezone({ timezone });
   const skip = Math.max(0, (page - 1) * limit);
+  const now = getCurrentDateInTimezone({ timezone });
 
-  // 🔹 1. Define dynamic date filter based on filter.key
+  // ---------------------------------
+  // TIME RANGE FILTER
+  // ---------------------------------
   let dateFilter = {};
-  const startOfToday = moment.tz(timezone).startOf("day").toDate();
-  const endOfToday = moment.tz(timezone).endOf("day").toDate();
-  const endOfWeek = moment.tz(timezone).endOf("week").toDate();
 
-  switch (filter?.key) {
-    case "live":
-      // currently running events
-      dateFilter = {
-        "schedule.startDateTime": { $lte: now },
-        "schedule.endDateTime": { $gte: now },
-      };
-      break;
+  if (dateFrom || dateTo) {
+    const start = dateFrom ? new Date(dateFrom) : new Date("1970-01-01");
+    const end = dateTo ? new Date(dateTo) : new Date("2999-12-31");
 
-    case "today":
-      // events happening today
-      dateFilter = {
-        "schedule.startDateTime": { $gte: startOfToday, $lte: endOfToday },
-      };
-      break;
+    dateFilter = {
+      "schedule.startDateTime": { $lte: end },
+      "schedule.endDateTime": { $gte: start },
+    };
 
-    case "thisWeek":
-      // events happening this week
-      dateFilter = {
-        "schedule.startDateTime": { $gte: startOfToday, $lte: endOfWeek },
-      };
-      break;
+  } else if (time && time !== "all") {
+    let start, end;
 
-    default:
-      // default: events whoose endDateTime is in the future
-      dateFilter = { "schedule.endDateTime": { $gte: now } };
-      break;
+    switch (time) {
+      case "live":
+        dateFilter = {
+          "schedule.startDateTime": { $lte: now },
+          "schedule.endDateTime": { $gte: now },
+        };
+        break;
+
+      case "today":
+        ({ start, end } = getStartAndEndOfDay(now, timezone));
+        dateFilter = {
+          "schedule.startDateTime": { $lte: end },
+          "schedule.endDateTime": { $gte: start },
+        };
+        break;
+
+      case "tomorrow":
+        const t = new Date(now);
+        t.setDate(now.getDate() + 1);
+        ({ start, end } = getStartAndEndOfDay(t, timezone));
+        dateFilter = {
+          "schedule.startDateTime": { $lte: end },
+          "schedule.endDateTime": { $gte: start },
+        };
+        break;
+
+      case "thisWeek":
+        ({ start, end } = getStartAndEndOfWeek(now, timezone));
+        dateFilter = {
+          "schedule.startDateTime": { $lte: end },
+          "schedule.endDateTime": { $gte: start },
+        };
+        break;
+
+      default:
+        dateFilter = { "schedule.endDateTime": { $gte: now } };
+    }
+  } else {
+    dateFilter = { "schedule.endDateTime": { $gte: now } };
   }
 
-
-  try {
-    const categoryObjId = new mongoose.Types.ObjectId(category);
-
-    let geoNearOptions = {
-      near: {
-        type: "Point",
-        coordinates: [longitude, latitude],
+  // ---------------------------------
+  // CATEGORY FILTER
+  // ---------------------------------
+  const categoryFilter = categories.length
+    ? {
+      "basicInfo.categories": {
+        $in: categories.map((id) => new mongoose.Types.ObjectId(id)),
       },
-      key: "basicInfo.venueLocation",
-      distanceField: "distance",
-      spherical: true,
-      maxDistance: radiusInMeters,
-      query: {
-        status: "active",
-        ...dateFilter,
-        ...(category ? { "basicInfo.categories": { $in: [categoryObjId] } } : {}),
+    }
+    : {};
+
+  // ---------------------------------
+  // TAG + GENRE (AND logic)
+  // ---------------------------------
+  const toObjectIds = (arr) =>
+    arr
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+
+  const tagObjectIds = toObjectIds(tags);
+  let genreTagIds = [];
+
+  if (genre.length) {
+    const genreTags = await Tags.find({
+      status: "active",
+      type: { $in: genre },
+    }).select("_id");
+
+    genreTagIds = genreTags.map((t) => t._id);
+  }
+
+  let tagFilter = {};
+
+  if (genre.length && genreTagIds.length === 0) {
+    tagFilter = { "basicInfo.tags": { $in: [] } };
+  } else if (tagObjectIds.length || genreTagIds.length) {
+    tagFilter = {
+      "basicInfo.tags": {
+        $all: [...tagObjectIds, ...genreTagIds],
       },
     };
-    const pipeline = [
-      {
-        $geoNear: geoNearOptions,
+  }
 
+  // ---------------------------------
+  // KEYWORD FILTER
+  // ---------------------------------
+  const keywordFilter =
+    keyword?.trim()
+      ? {
+        $or: [
+          { "basicInfo.title": { $regex: keyword, $options: "i" } },
+          { "basicInfo.description": { $regex: keyword, $options: "i" } },
+        ],
+      }
+      : {};
+
+  // ---------------------------------
+  // BOUNDS FILTER
+  // ---------------------------------
+  let boundsFilter = {};
+
+  if (bounds?.northEast && bounds?.southWest) {
+    const { northEast, southWest } = bounds;
+
+    boundsFilter = {
+      "basicInfo.venueLocation": {
+        $geoWithin: {
+          $box: [
+            [southWest.longitude, southWest.latitude],
+            [northEast.longitude, northEast.latitude],
+          ],
+        },
       },
-      { $project: { schedule: 1, basicInfo: 1, distance: 1 } },
+    };
+  }
 
+  // ---------------------------------
+  // FINAL MATCH (BEFORE VENUE LOOKUP)
+  // ---------------------------------
+  const combinedFilter = {
+    status: "active",
+    ...dateFilter,
+    ...categoryFilter,
+    ...tagFilter,
+    ...keywordFilter,
+    ...boundsFilter,
+  };
+
+  //
+  // VENUE TYPE FILTER OBJECT IDs
+  //
+  const venueTypeObjIds = venueTypes
+    .filter(mongoose.Types.ObjectId.isValid)
+    .map(id => new mongoose.Types.ObjectId(id));
+
+  try {
+    const pipeline = [
+      { $match: combinedFilter },
+
+      //
+      // LOOKUP VENUE (NO FILTER HERE ANYMORE)
+      //
       {
         $lookup: {
           from: "venues",
           localField: "basicInfo.venue",
           foreignField: "_id",
-          pipeline: [{ $project: { title: 1, location: 1 } }],
-          as: "basicInfo.venue",
+          as: "venue",
+          pipeline: [
+            { $project: { title: 1, venueType: 1, location: 1 } },
+          ],
         },
       },
-      { $unwind: "$basicInfo.venue" },
-      //lookup tags
-      {
-        $lookup: {
-          from: "tags",
-          localField: "basicInfo.tags",
-          foreignField: "_id",
-          pipeline: [{ $project: { title: 1 } }],
-          as: "basicInfo.tags",
-        },
-      },
+
+      { $unwind: "$venue" },
+
+      //
+      // APPLY VENUE TYPE FILTER HERE
+      //
+      ...(venueTypeObjIds.length
+        ? [
+          {
+            $match: {
+              "venue.venueType": { $in: venueTypeObjIds },
+            },
+          },
+        ]
+        : []),
+
+      //
+      // ORGANIZATION
+      //
       {
         $lookup: {
           from: "organizations",
@@ -134,240 +239,46 @@ const { getCurrentDateInTimezone, getStartAndEndOfDay, getStartAndEndOfWeek, gen
           as: "basicInfo.organization",
         },
       },
-      { $unwind: { path: "$basicInfo.organization", preserveNullAndEmptyArrays: true } },
 
-      { $sort: { distance: 1 } },
-      { $skip: skip },
-      { $limit: parseInt(limit) },
-    ];
-
-    let events = await mapsRepo.aggregateEvents(pipeline);
-
-
-    // Add "favorite" flag if user is logged in
-    if (userId && events.length > 0) {
-      const eventIds = events.map((e) => e._id);
-      const userFavorites = await Favorites.find({
-        user: userId,
-        targetType: "event",
-        targetId: { $in: eventIds },
-      }).select("targetId");
-
-      const favoriteSet = new Set(userFavorites.map((f) => f.targetId.toString()));
-
-      events = events.map((event) => ({
-        ...event,
-        isFavorite: favoriteSet.has(event._id.toString()),
-      }));
-    }
-
-
-
-
-    // Count total (same filter)
-    const totalCountPipeline = [
       {
-        $geoNear: geoNearOptions,
-      },
-      { $count: "total" },
-    ];
-
-    const totalResult = await mapsRepo.aggregateEvents(totalCountPipeline);
-    const totalFiltered = totalResult[0]?.total || 0;
-
-    // Format output
-    const formattedEvents = events.map((event) => {
-
-      const formattedEvent = formatEventResponse(event, { timezone });
-      delete formattedEvent.basicInfo.venueLocation;
-      delete formattedEvent.basicInfo.partnerOrganizer;
-
-      if (formattedEvent.basicInfo?.organization) {
-        const orgData = formattedEvent.basicInfo.organization;
-        delete orgData.basicInfo.socialLinks;
-        formattedEvent.basicInfo.organization = formatOrganization(orgData);
-      }
-
-      return formattedEvent;
-    });
-
-    let meta = generateMeta(page, limit, totalFiltered);
-    // meta.radiusKm = radiusKm;
-    // meta.userLocation = { lng: longitude, lat: latitude };
-    return {
-      status: true,
-      result: {
-        data: formattedEvents,
-        meta: meta,
-      },
-    };
-  } catch (error) {
-    throw new Error(`Failed to fetch nearby events: ${error.message}`);
-  }
-};
- */
-
-
-const getEvents = async (queryData) => {
-  let {
-    longitude = 0,
-    latitude = 0,
-    keyword = "",
-    page = 1,
-    limit = 10,
-    timezone = "Asia/Karachi",
-    advanceFilters = {},
-    userId,
-    sort = "asc", // asc = oldest first, desc = latest first
-  } = queryData || {};
-
-  const {
-    time,
-    distanceFrom = 0,
-    distanceTo = 50,
-    dateFrom,
-    dateTo,
-    categories = [],
-    venueTypes = [],
-    genre = [],
-    tags = [],
-  } = advanceFilters;
-
-  longitude = parseFloat(longitude);
-  latitude = parseFloat(latitude);
-  const distanceToMeters = distanceTo * 1000;
-  const distanceFromMeters = distanceFrom * 1000;
-  const skip = Math.max(0, (page - 1) * limit);
-  const now = getCurrentDateInTimezone({ timezone });
-
-  if (typeof longitude !== "number" || typeof latitude !== "number") {
-    throw new Error("Valid user longitude and latitude are required");
-  }
-
-  // --- Time / Date Range Filter ---
-  let dateFilter = {};
-  if (dateFrom || dateTo) {
-    const start = dateFrom ? new Date(dateFrom) : new Date("1970-01-01");
-    const end = dateTo ? new Date(dateTo) : new Date("2999-12-31");
-    dateFilter = {
-      "schedule.startDateTime": { $lte: end },
-      "schedule.endDateTime": { $gte: start },
-    };
-  } else if (time && time !== "all") {
-    let start, end;
-    switch (time) {
-      case "live":
-        dateFilter = { "schedule.startDateTime": { $lte: now }, "schedule.endDateTime": { $gte: now } };
-        break;
-      case "today":
-        ({ start, end } = getStartAndEndOfDay(now, timezone));
-        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
-        break;
-      case "tomorrow":
-        const tomorrow = new Date(now);
-        tomorrow.setDate(now.getDate() + 1);
-        ({ start, end } = getStartAndEndOfDay(tomorrow, timezone));
-        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
-        break;
-      case "thisWeek":
-        ({ start, end } = getStartAndEndOfWeek(now, timezone));
-        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
-        break;
-      default:
-        dateFilter = { "schedule.endDateTime": { $gte: now } };
-    }
-  } else {
-    dateFilter = { "schedule.endDateTime": { $gte: now } };
-  }
-
-  // --- Categories / Genre / Tags Filter ---
-  const categoryFilter = categories.length
-    ? { "basicInfo.categories": { $in: categories.map((id) => new mongoose.Types.ObjectId(id)) } }
-    : {};
-  const genreFilter = genre.length ? { "basicInfo.genre": { $in: genre } } : {};
-  const tagsFilter = tags.length
-    ? { "basicInfo.tags": { $in: tags.map((id) => new mongoose.Types.ObjectId(id)) } }
-    : {};
-
-  //keyword filter
-  const keywordFilter = keyword && keyword.trim() !== ""
-    ? {
-      $or: [
-        { "basicInfo.title": { $regex: keyword, $options: "i" } },
-        { "basicInfo.description": { $regex: keyword, $options: "i" } },
-      ],
-    }
-    : {};
-
-  const combinedFilter = {
-    status: "active",
-    ...dateFilter,
-    ...categoryFilter,
-    ...genreFilter,
-    ...tagsFilter,
-    ...keywordFilter,
-  };
-
-  try {
-    const pipeline = [
-      {
-        $geoNear: {
-          near: { type: "Point", coordinates: [longitude, latitude] },
-          key: "basicInfo.venueLocation",
-          distanceField: "distance",
-          spherical: true,
-          maxDistance: distanceToMeters,
-          query: combinedFilter,
+        $unwind: {
+          path: "$basicInfo.organization",
+          preserveNullAndEmptyArrays: true,
         },
       },
-      ...(distanceFrom > 0 ? [{ $match: { distance: { $gte: distanceFromMeters } } }] : []),
-      {
-        $lookup: {
-          from: "venues",
-          localField: "basicInfo.venue",
-          foreignField: "_id",
-          as: "venue",
-          pipeline: [
-            { $project: { title: 1, venueType: 1, location: 1 } },
-            ...(venueTypes.length
-              ? [{ $match: { venueType: { $in: venueTypes.map((id) => new mongoose.Types.ObjectId(id)) } } }]
-              : []),
-          ],
-        },
-      },
-      { $unwind: "$venue" },
-      {
-        $lookup: {
-          from: "organizations",
-          let: { orgId: "$basicInfo.organization" },
-          pipeline: [{ $match: { $expr: { $eq: ["$_id", "$$orgId"] } } }, { $project: { basicInfo: 1 } }],
-          as: "basicInfo.organization",
-        },
-      },
-      { $unwind: { path: "$basicInfo.organization", preserveNullAndEmptyArrays: true } },
-      // --- Sort by event start date ---
+
       { $sort: { "schedule.startDateTime": sort === "desc" ? -1 : 1 } },
+
+      //
+      // CORRECT FACET — COUNTS AFTER ALL FILTERS
+      //
       {
         $facet: {
-          events: [{ $skip: skip }, { $limit: parseInt(limit) }],
-          totalCount: [{ $count: "total" }],
+          events: [
+            { $skip: skip },
+            { $limit: parseInt(limit) },
+          ],
+          totalCount: [
+            { $count: "total" },
+          ],
         },
       },
     ];
 
     const result = await mapsRepo.aggregateEvents(pipeline);
-    const events = result[0]?.events || [];
-    const totalFiltered = result[0]?.totalCount[0]?.total || 0;
 
-    // Get favorite events
+    const events = result?.[0]?.events || [];
     let favoriteSet = new Set();
+
     if (userId && events.length > 0) {
       const eventIds = events.map((e) => e._id);
+
       const userFavorites = await Favorites.find({
         user: userId,
         targetType: "event",
         targetId: { $in: eventIds },
       }).select("targetId");
+
       favoriteSet = new Set(userFavorites.map((f) => f.targetId.toString()));
     }
 
@@ -378,212 +289,364 @@ const getEvents = async (queryData) => {
       )
     );
 
-    const meta = generateMeta(page, limit, totalFiltered);
+    const meta = generateMeta(
+      page,
+      limit,
+      result?.[0]?.totalCount?.[0]?.total || 0
+    );
+
     return {
       status: true,
-      result: {
-        data: formattedEvents,
-        meta,
-      },
-    }
+      result: { data: formattedEvents, meta },
+    };
+
   } catch (error) {
-    throw new Error(`Failed to fetch nearby events: ${error.message}`);
+    throw new Error(`Failed to fetch events: ${error.message}`);
   }
 };
 
-const getPlaces = async (queryData) => {
-  let {
-    category,
-    filter = {}, // e.g. { type: "places", key: "openNow" }
-    longitude = 0,
-    latitude = 0,
-    page = 1,
-    limit = 10,
-    timezone = "Asia/Karachi",
-    radiusKm = 0,
-    userId,
-  } = queryData || {};
-
-  const rawRadiusKm =
-    radiusKm === 0 || radiusKm === undefined || radiusKm === null || radiusKm === ""
-      ? 20037.5
-      : radiusKm;
-
-  radiusKm = parseFloat(rawRadiusKm);
-  longitude = parseFloat(longitude);
-  latitude = parseFloat(latitude);
-
-  if (typeof longitude !== "number" || typeof latitude !== "number") {
-    throw new Error("Valid user longitude and latitude are required");
-  }
-  if (radiusKm <= 0) throw new Error("Radius must be greater than 0");
-
-  const radiusInMeters = radiusKm * 1000;
-  const skip = Math.max(0, (page - 1) * limit);
-
-  const nowUtc = moment.utc();
-  const currentMinutes = nowUtc.hours() * 60 + nowUtc.minutes();
-  const currentDay = nowUtc.format("dddd").toLowerCase();
-  // Dynamic filter for “places”
-  let dynamicFilter = {};
-  switch (filter?.key) {
-    case "openNow":
-      // Checks if the place is open right now
-      dynamicFilter = {
-        [`operatingHours.${currentDay}.isOpen`]: true,
-        [`operatingHours.${currentDay}.from`]: { $lte: currentMinutes },
-        [`operatingHours.${currentDay}.to`]: { $gte: currentMinutes },
-      };
-      break;
 
 
-    // TODO: Implement these filters in future releases
-    /* 
-        case "topRated":
-          // Placeholder — requires rating field in schema
-          dynamicFilter = { "meta.rating": { $gte: 4 } };
-          break;
-    
-        case "trending":
-          // Placeholder — requires views or check-ins field
-          dynamicFilter = { "meta.views": { $gte: 50 } };
-          break;
-     */
-    default:
-      dynamicFilter = {}; // No special filter
-      break;
-  }
-
+const getPlaces = async (queryData = {}) => {
   try {
-    const categoryObjId = category ? new mongoose.Types.ObjectId(category) : null;
+    const {
+      page = 1,
+      limit = 10,
+      keyword = "",
+      sort = "asc",
+      timezone = "Asia/Karachi",
+      userId = null,
+      bounds = null,
+      advanceFilters = {}
+    } = queryData;
+
+    const {
+      categories = [],
+      venueTypes = [],
+      tags = [],
+      genre = [],
+      distanceFrom = 0,
+      distanceTo = 0,
+    } = advanceFilters;
+
+    const skip = (page - 1) * limit;
+
+    //
+    // BASE MATCH
+    //
+    const matchFilter = { status: "active" };
+
+    //
+    // KEYWORD
+    //
+    if (keyword) {
+      matchFilter["basicInfo.name"] = { $regex: keyword, $options: "i" };
+    }
+
+    //
+    // CATEGORY FILTER
+    //
+    const categoryObjIds = categories
+      .filter(mongoose.Types.ObjectId.isValid)
+      .map(id => new mongoose.Types.ObjectId(id));
+
+    if (categoryObjIds.length) {
+      matchFilter["otherInfo.categories"] = { $in: categoryObjIds };
+    }
+
+    //
+    // TAG FILTER
+    //
+    const tagObjIds = tags
+      .filter(mongoose.Types.ObjectId.isValid)
+      .map(id => new mongoose.Types.ObjectId(id));
+
+    if (tagObjIds.length) {
+      matchFilter["otherInfo.tags.id"] = { $in: tagObjIds };
+    }
+
+    //
+    // GENRE FILTER
+    //
+    if (genre.length) {
+      const genreTags = await Tags.find({
+        status: "active",
+        type: { $in: genre }
+      }).select("_id");
+
+      const genreTagIds = genreTags.map(t => t._id);
+
+      matchFilter["otherInfo.tags.id"] = {
+        $in: genreTagIds.length ? genreTagIds : []
+      };
+    }
+
+    //
+    // BOUNDS FILTER
+    //
+    let boundsFilter = {};
+
+    if (
+      bounds?.northEast &&
+      bounds?.southWest
+    ) {
+      boundsFilter = {
+        location: {
+          $geoWithin: {
+            $box: [
+              [bounds.southWest.longitude, bounds.southWest.latitude],
+              [bounds.northEast.longitude, bounds.northEast.latitude],
+            ]
+          }
+        }
+      };
+    }
+
+    const finalMatch = {
+      ...matchFilter,
+      ...boundsFilter
+    };
+
+    //
+    // CONVERT venueTypes → ObjectIds
+    //
+    const venueTypeObjIds = venueTypes
+      .filter(mongoose.Types.ObjectId.isValid)
+      .map(id => new mongoose.Types.ObjectId(id));
+
+    //
+    // PIPELINE
+    //
     const pipeline = [
+      { $match: finalMatch },
+
+      //
+      // JOIN VENUES
+      //
       {
-        $geoNear: {
-          near: { type: "Point", coordinates: [longitude, latitude] },
-          key: "location",
-          distanceField: "distance",
-          spherical: true,
-          maxDistance: radiusInMeters,
-          query: {
-            status: "active",
-            ...(categoryObjId
-              ? { "otherInfo.categories": { $in: [categoryObjId] } }
-              : {}),
-            ...dynamicFilter,
-          },
-        },
+        $lookup: {
+          from: "venues",
+          localField: "_id",
+          foreignField: "organization",
+          pipeline: [
+            { $project: { _id: 1, venueType: 1 } }
+          ],
+          as: "linkedVenues"
+        }
       },
+
+      //
+      // APPLY VENUE TYPE FILTER (NOW CORRECT)
+      //
+      ...(
+        venueTypeObjIds.length
+          ? [{
+            $match: {
+              $expr: {
+                $gt: [
+                  {
+                    $size: {
+                      $filter: {
+                        input: "$linkedVenues",
+                        as: "v",
+                        cond: {
+                          $or: [
+                            { $eq: ["$$v.venueType", { $arrayElemAt: [venueTypeObjIds, 0] }] },
+                            { $in: ["$$v.venueType", venueTypeObjIds] }
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  0
+                ]
+              }
+            }
+          }]
+          : []
+      ),
+
+      //
+      // POPULATE CATEGORIES
+      //
       {
         $lookup: {
           from: "categories",
           localField: "otherInfo.categories",
           foreignField: "_id",
-          as: "otherInfo.categories",
-        },
+          pipeline: [
+            { $project: { _id: 1, title: 1, image: 1 } }
+          ],
+          as: "populatedCategories"
+        }
       },
+
+      //
+      // POPULATE TAGS
+      //
       {
-        $project: {
-          basicInfo: 1,
-          otherInfo: 1,
-          operatingHours: 1,
-          location: 1,
-          distance: 1,
-        },
+        $lookup: {
+          from: "tags",
+          localField: "otherInfo.tags.id",
+          foreignField: "_id",
+          pipeline: [
+            { $project: { _id: 1, title: 1, type: 1 } }
+          ],
+          as: "populatedTags"
+        }
       },
-      { $sort: { distance: 1 } },
+
+      {
+        $addFields: {
+          "otherInfo.categories": "$populatedCategories",
+          "otherInfo.tags": "$populatedTags"
+        }
+      },
+
+      { $project: { populatedCategories: 0, populatedTags: 0 } },
+
+      { $sort: { createdAt: sort === "asc" ? 1 : -1 } },
       { $skip: skip },
-      { $limit: parseInt(limit) },
+      { $limit: limit }
     ];
 
+    const items = await Organizations.aggregate(pipeline);
 
-    const organizations = await Organizations.aggregate(pipeline);
+    //
+    // COUNT
+    //
+    const countPipeline = [
+      { $match: finalMatch },
 
-    // Count total (same filter)
-    const totalCountPipeline = [
       {
-        $geoNear: {
-          near: { type: "Point", coordinates: [longitude, latitude] },
-          key: "location",
-          distanceField: "distance",
-          spherical: true,
-          maxDistance: radiusInMeters,
-          query: {
-            status: "active",
-            ...(categoryObjId
-              ? { "otherInfo.categories": { $in: [categoryObjId] } }
-              : {}),
-            ...dynamicFilter,
-          },
-        },
+        $lookup: {
+          from: "venues",
+          localField: "_id",
+          foreignField: "organization",
+          pipeline: [
+            { $project: { _id: 1, venueType: 1 } }
+          ],
+          as: "linkedVenues"
+        }
       },
-      { $count: "total" },
+
+      ...(
+        venueTypeObjIds.length
+          ? [{
+            $match: {
+              $expr: {
+                $gt: [
+                  {
+                    $size: {
+                      $filter: {
+                        input: "$linkedVenues",
+                        as: "v",
+                        cond: {
+                          $or: [
+                            { $eq: ["$$v.venueType", { $arrayElemAt: [venueTypeObjIds, 0] }] },
+                            { $in: ["$$v.venueType", venueTypeObjIds] }
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  0
+                ]
+              }
+            }
+          }]
+          : []
+      ),
+
+      { $count: "total" }
     ];
 
-    const totalResult = await Organizations.aggregate(totalCountPipeline);
-    const totalFiltered = totalResult[0]?.total || 0;
+    const totalAgg = await Organizations.aggregate(countPipeline);
+    const total = totalAgg?.[0]?.total || 0;
 
-    // Format and finalize output
-    let formattedPlaces = organizations.map((org) => {
-      let formatted = formatOrganization(org);
-      if (formatted.operatingHours) {
-        formatted.operatingHours = transformOperatingHoursToLocal(
-          formatted.operatingHours,
-          timezone
-        );
-      }
+    //
+    // FAVORITES
+    //
+    let enriched = items;
 
-      return formatted;
-    });
-
-    let meta = generateMeta(page, limit, totalFiltered);
-    // meta.radiusKm = radiusKm;
-    // meta.userLocation = { lng: longitude, lat: latitude };
-
-    //find favorites
-    if (userId && formattedPlaces.length > 0) {
-      const placeIds = formattedPlaces.map((p) => p._id);
-      const userFavorites = await Favorites.find({
+    if (userId && items.length) {
+      const favs = await Favorites.find({
         user: userId,
         targetType: "organization",
-        targetId: { $in: placeIds },
-      }).select("targetId");
+        targetId: { $in: items.map(i => i._id) }
+      });
 
-      const favoriteSet = new Set(userFavorites.map((f) => f.targetId.toString()));
+      const favSet = new Set(favs.map(f => f.targetId.toString()));
+      enriched = items.map(i => {
+        // Format organization using shared formatter
+        const formattedOrg = formatOrganization(i);
 
-      formattedPlaces = formattedPlaces.map((place) => ({
-        ...place,
-        isFavorite: favoriteSet.has(place._id.toString()),
-      }));
+        //add openNow check
+        formattedOrg.isOpenNow = isOrganizationOpenNow(
+          formattedOrg.operatingHours,
+          timezone
+        );
+
+        //format hours
+        if (formattedOrg?.operatingHours) {
+          formattedOrg.operatingHours = transformOperatingHoursToLocal(
+            formattedOrg.operatingHours,
+            timezone
+          );
+
+        }
+        //isOpenNow
+        return {
+          ...formattedOrg,
+          isFavorite: favSet.has(i._id.toString())
+        };
+      });
     }
 
+    return {
+      status: true,
+      result: {
+        data: enriched,
+        meta: generateMeta(page, limit, total)
+      }
+    };
 
-    return { status: true, result: { data: formattedPlaces, meta } };
-  } catch (error) {
-    throw new Error(`Failed to fetch nearby places: ${error.message}`);
+  } catch (err) {
+    throw new Error(`Failed to fetch organizations: ${err.message}`);
   }
 };
 
 
-//get both events and places
+
+
 const getAllData = async (queryData) => {
   try {
-    const [eventsResult, placesResult] = await Promise.all([
+    const [eventsRes, placesRes] = await Promise.all([
       getEvents(queryData),
-      getPlaces(queryData),
+      getPlaces(queryData)
     ]);
 
-    //don't combine data and meta separately, just combine data arrays and use events meta
-    let combinedData = {};
-    combinedData.events = eventsResult.result;
-    combinedData.places = placesResult.result;
+    return {
+      status: true,
+      result: {
+        data: {
+          events: {
+            items: eventsRes?.result?.data || [],
+            meta: eventsRes?.result?.meta || null
+          },
+          places: {
+            items: placesRes?.result?.data || [],
+            meta: placesRes?.result?.meta || null
+          }
+        }
+      }
+    };
 
-
-
-    return { status: true, result: { data: combinedData } };
   } catch (error) {
     throw new Error(`Failed to fetch combined data: ${error.message}`);
   }
-}
+};
+
 
 
 module.exports = {

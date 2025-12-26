@@ -204,6 +204,23 @@ const getOrganizationsWithReservationsForHomeService = async ({
 };
 
 
+const getOrganizationReservationsService = async ({
+  organizationId, timezone }) => {
+  try {
+    let reservations = await ReservationRepo.getOrganizationReservations({
+      organizationId,
+      timezone
+    });
+    if (!reservations || reservations.length === 0) {
+      return { reservations: [] };
+    }
+    reservations = reservations.map(reservation => reservationsFormatter(reservation, timezone));
+    return reservations;
+  } catch (error) {
+    return [];  // Return empty array on error
+  }
+}
+
 module.exports = {
   getOrganizationsWithReservationsForHomeService,
   createReservation,
@@ -211,5 +228,6 @@ module.exports = {
   updateReservation,
   getUserReservations,
   deleteReservation,
-  getReservationDetails
+  getReservationDetails,
+  getOrganizationReservationsService
 };
