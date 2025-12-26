@@ -135,6 +135,18 @@ const getOrders = async ({
   }
 
   const menuItemIds = menuItems.map(i => i._id);
+const keywordMatch =
+  keyword && keyword.trim()
+    ? {
+        $match: {
+          $or: [
+            { "user.firstName": { $regex: keyword, $options: "i" } },
+            { "user.userlastName": { $regex: keyword, $options: "i" } },
+            { "user.email": { $regex: keyword, $options: "i" } }
+          ]
+        }
+      }
+    : null;
 
 const pipeline = [
   {
@@ -186,6 +198,9 @@ const pipeline = [
     }
   },
 
+  // ✅ 🔍 KEYWORD SEARCH GOES HERE
+  ...(keywordMatch ? [keywordMatch] : []),
+
   // 🔹 Cleanup
   {
     $project: {
@@ -206,6 +221,7 @@ const pipeline = [
     }
   }
 ];
+
 
 
 

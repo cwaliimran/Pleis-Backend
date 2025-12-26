@@ -11,6 +11,19 @@ function formatSuggestedClub(item) {
     obj.companyDetails.logo = getFullImageUrl(obj.companyDetails.logo || "noimage.png");
   }
 
+   // distance formatting (meters → km)
+  if (item.distance !== undefined && item.distance !== null) {
+    const meters = Number(item.distance);
+    if (Number.isFinite(meters)) {
+      const km = meters / 1000;
+
+      obj.distance = {
+        distance: Number(km.toFixed(2)),
+        unit: "km",
+      };
+    }
+  }
+
 
   return obj;
 }

@@ -1,6 +1,7 @@
 const { getFullImageUrl } = require("@utils/imageHelper");
 const { convertUtcToTimezone } = require("@utils/responseUtil");
 const { formatCategories } = require("../../../admin/categories/formatters/categoryFormatter");
+const { isOrganizationOpenNow, transformOperatingHoursToLocal } = require("../../../shared/commonSchemas/operatingHours");
 
 /**
  * Formats the `object` field inside BannerControls dynamically
@@ -84,7 +85,7 @@ function formatOrganization(item, excludeFields = []) {
   }
 
   //attach distance if exists
-    // distance formatting (meters → km)
+  // distance formatting (meters → km)
   if (item.distance !== undefined && item.distance !== null) {
     const meters = Number(item.distance);
     if (Number.isFinite(meters)) {
@@ -98,7 +99,7 @@ function formatOrganization(item, excludeFields = []) {
   }
   return org;
 }
-function formatNearByOrganization(item, excludeFields = []) {
+function formatNearByOrganization(item, timezone = "Asia/Karachi", excludeFields = []) {
   let org = typeof item.toObject === "function" ? item.toObject() : item;
   if (!org) return null;
 
@@ -126,6 +127,22 @@ function formatNearByOrganization(item, excludeFields = []) {
       };
     }
   }
+  if (org.operatingHours) {
+    //add openNow check
+    org.isOpenNow = isOrganizationOpenNow(
+      org.operatingHours,
+      timezone
+    );
+
+    // transform operating hours to local time
+    org.operatingHours = transformOperatingHoursToLocal(
+      org.operatingHours,
+      timezone,
+    );
+  }
+  delete org.operatingHours
+
+
 
   return org;
 }

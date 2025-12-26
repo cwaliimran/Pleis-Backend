@@ -49,7 +49,16 @@ const OrdersSchema = new mongoose.Schema(
             default: null,
             index: true,
         },
+        orderType: {
+            type: String,
+            enum: [
+                "online",
+                "preorder",    // Scheduled for later
+                "walkIn",      // In-store / counter
 
+            ],
+            default: "walkIn",
+        },
 
         pickupType: { type: String, enum: ["counter", "tableService", "togo"], default: "counter" },
         tableNumber: {

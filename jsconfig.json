@@ -196,6 +196,15 @@
       ],
       "@EngagementEventsModel": [
         "backend/commonModules/appEngagement/EngagementEvents.js"
+      ],
+      "@SupportRequestModel": [
+        "backend/models/SupportRequest.js"
+      ],
+      "@FaqModel": [
+        "backend/admin/settings/models/Faq.js"
+      ],
+      "@BadgeCategoriesModel": [
+        "backend/commonModules/badgeCategories/BadgeCategories.js"
       ]
     }
   },

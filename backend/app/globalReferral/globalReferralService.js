@@ -33,17 +33,27 @@ const saveUserReferralData = async (username, ipAddress) => {
   let GlobalReferral = await GlobalReferralRepo.saveUserReferralData(username, ipAddress);
   return GlobalReferral;
 };
-const getGlobalReferrals = async ({ timezone, page, limit, keyword, status, userId, date, range,type }) => {
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
-  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { globalReferral, meta } = await GlobalReferralRepo.getGlobalReferrals({ timezone, page, limit, keyword, status, userId, date, range, today, skip,type });
+  const getGlobalReferrals = async ({ timezone, page, limit, keyword, status, userId, date, range,type }) => {
+    const skip = limit === 0 ? 0 : (page - 1) * limit;
+    const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
+    let { globalReferral, meta } = await GlobalReferralRepo.getGlobalReferrals({ timezone, page, limit, keyword, status, userId, date, range, today, skip,type });
 
-  return {
-    globalReferral,
-    meta
+    return {
+      globalReferral,
+      meta
+    };
   };
-};
 
+  const getUserReferradrecord = async ({ timezone, page, limit, keyword, status, userId, date, range }) => {
+    const skip = limit === 0 ? 0 : (page - 1) * limit;
+    const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
+    let { globalReferral, meta } = await GlobalReferralRepo.getUserReferradrecord({ timezone, page, limit, keyword, status, userId, date, range, today, skip });
+
+    return {
+      globalReferral,
+      meta
+    };
+  };
 
 
 
@@ -64,6 +74,7 @@ const createUserReferradrecord = async (data) => {
     saveReferralData,
     saveUserReferralData,
     createUserReferradrecord,
+    getUserReferradrecord
     
 
   };

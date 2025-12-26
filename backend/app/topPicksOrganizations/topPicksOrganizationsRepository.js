@@ -11,69 +11,94 @@ const getTopPicksOrganizationsWithFilters = async (
   userLocation,
   radiusKm = 50
 ) => {
-  const pipeline = [
-    // 1️⃣ Geo first (distance in meters)
-    {
+  const pipeline = [];
+
+  /* ===============================
+     1️⃣ GEO OR GLOBAL
+     =============================== */
+  if (userLocation) {
+    pipeline.push({
       $geoNear: {
         near: userLocation,
         key: "location",
         distanceField: "distance",
         spherical: true,
         maxDistance: radiusKm * 1000,
-        query: { status: "active" },
-      },
-    },
+        query: { status: "active" }
+      }
+    });
+  } else {
+    // Global mode — no distance filtering
+    pipeline.push({
+      $match: { status: "active" }
+    });
+  }
 
-    // 2️⃣ Join top picks metadata
+  /* ===============================
+     2️⃣ JOIN TOP PICKS
+     =============================== */
+  pipeline.push(
     {
       $lookup: {
         from: "toppicksorganizations",
         localField: "_id",
         foreignField: "organization",
-        as: "topPick",
-      },
+        as: "topPick"
+      }
     },
     { $unwind: "$topPick" },
 
-    // 3️⃣ Apply top-pick filters
+    /* ===============================
+       3️⃣ APPLY FILTERS
+       =============================== */
     {
       $match: {
         ...query,
-        "topPick.status": "active",
-      },
+        "topPick.status": "active"
+      }
     },
 
-    // 4️⃣ Sort using topPick.order
+    /* ===============================
+       4️⃣ SORT BY ORDER
+       =============================== */
     { $sort: { "topPick.order": 1 } },
 
-    // 5️⃣ Pagination
+    /* ===============================
+       5️⃣ PAGINATION
+       =============================== */
     { $skip: skip },
     { $limit: limit },
 
-    // 6️⃣ FINAL SHAPE — remove topPick completely
+    /* ===============================
+       6️⃣ FINAL RESPONSE
+       =============================== */
     {
       $project: {
-        topPick: 0,     // ❌ remove it
-        __v: 0,
-      },
-    },
-  ];
+        topPick: 0,
+        __v: 0
+      }
+    }
+  );
 
   return Organizations.aggregate(pipeline);
 };
+
 const getTopPicksOrganizationsWithFiltersHomeRepo = async (
   query,
   skip,
   limit,
-  userLocation,
+  userLocation,          // may be null
   radiusKm = 50,
   categoryObjectId = null
 ) => {
-  const pipeline = [
-    /* ===============================
-       1️⃣ GEO FIRST (MANDATORY)
-       =============================== */
-    {
+
+  const pipeline = [];
+
+  /* ===============================
+     1️⃣ CONDITIONAL GEO
+     =============================== */
+  if (userLocation) {
+    pipeline.push({
       $geoNear: {
         near: userLocation,
         key: "location",
@@ -82,11 +107,18 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
         maxDistance: radiusKm * 1000,
         query: { status: "active" },
       },
-    },
+    });
+  } else {
+    // GLOBAL MODE
+    pipeline.push({
+      $match: { status: "active" },
+    });
+  }
 
-    /* ===============================
-       2️⃣ TOP PICKS JOIN
-       =============================== */
+  /* ===============================
+     2️⃣ TOP PICKS JOIN
+     =============================== */
+  pipeline.push(
     {
       $lookup: {
         from: "toppicksorganizations",
@@ -101,16 +133,20 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
        3️⃣ BASE FILTERS
        =============================== */
     {
-      $match: {
-        ...query,
-        "topPick.status": "active",
+      $addFields: {
+        topPickStatus: "$topPick.status",
       },
     },
-  ];
+    {
+      $match: {
+        ...query,
+        topPickStatus: "active",
+      },
+    }
+  );
 
   /* ===============================
      OPTIONAL CATEGORY FILTER
-     (filter only, no population)
      =============================== */
   if (categoryObjectId) {
     pipeline.push({
@@ -141,12 +177,7 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
               status: "active",
             },
           },
-          {
-            $project: {
-              _id: 0,
-              title: 1,
-            },
-          },
+          { $project: { _id: 0, title: 1 } },
         ],
         as: "primaryVenue",
       },
@@ -161,14 +192,7 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
         localField: "otherInfo.tags",
         foreignField: "_id",
         as: "tags",
-        pipeline: [
-          {
-            $project: {
-              _id: 1,
-              title: 1,
-            },
-          },
-        ],
+        pipeline: [{ $project: { _id: 1, title: 1 } }],
       },
     },
 
@@ -184,13 +208,11 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
     {
       $project: {
         _id: 1,
-        distance: 1,
+        distance: userLocation ? 1 : null,   // only meaningful in geo mode
         "basicInfo.name": 1,
         "basicInfo.media.cover": 1,
         "otherInfo.description": 1,
-
         tags: 1,
-
         venue: {
           title: { $ifNull: [{ $first: "$primaryVenue.title" }, null] },
         },
@@ -200,6 +222,7 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
 
   return Organizations.aggregate(pipeline);
 };
+
 
 
 

@@ -122,28 +122,74 @@ const getCustomCategoriesWithFilters = async (
       }
     },
     {
-      $lookup: {
-        from: "organizations",
-        localField: "objects",
-        foreignField: "_id",
-        as: "organizationObjects",
-        pipeline: [
-          {
-            $match: {
-              status: "active",
-              ...organizationCategoryFilter
-            }
+  $lookup: {
+    from: "organizations",
+    localField: "objects",
+    foreignField: "_id",
+    as: "organizationObjects",
+    pipeline: [
+      {
+        $match: {
+          status: "active",
+          ...organizationCategoryFilter
+        }
+      },
+
+      /* ===============================
+         VENUE (PRIMARY ONLY)
+         =============================== */
+      {
+        $lookup: {
+          from: "venues",
+          let: { orgId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$organization", "$$orgId"] },
+                isPrimary: true,
+                status: "active"
+              }
+            },
+            { $project: { _id: 0, title: 1 } }
+          ],
+          as: "primaryVenue"
+        }
+      },
+
+      /* ===============================
+         TAGS (TITLE ONLY)
+         =============================== */
+      {
+        $lookup: {
+          from: "tags",
+          localField: "otherInfo.tags",
+          foreignField: "_id",
+          as: "tags",
+          pipeline: [{ $project: { _id: 1, title: 1 } }]
+        }
+      },
+
+      /* ===============================
+         PROJECT FINAL ORG SHAPE
+         =============================== */
+      {
+        $project: {
+          _id: 1,
+          "basicInfo.name": 1,
+          "basicInfo.media": 1,
+          operatingHours: 1,
+
+          venue: {
+            title: { $ifNull: [{ $first: "$primaryVenue.title" }, null] }
           },
-          {
-            $project: {
-              _id: 1,
-              "basicInfo.name": 1,
-              "basicInfo.media": 1
-            }
-          }
-        ]
+
+          tags: 1
+        }
       }
-    },
+    ]
+  }
+}
+,
     {
       $project: {
         _id: 1,

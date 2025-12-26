@@ -12,7 +12,7 @@ const {
 createUserReferradrecord,
     saveReferralData,
 
-
+getUserReferradrecord,
   saveUserReferralData
 } = require("./globalReferralController");
 
@@ -24,9 +24,10 @@ const router = express.Router();
 
 
 router.post("/", createUserReferradrecord);
+router.get("/history", auth,getUserReferradrecord);
 
 
-
+  
 
 
 

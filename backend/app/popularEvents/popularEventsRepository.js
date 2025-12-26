@@ -9,10 +9,10 @@ const getPopularEvents = async (
   userId,
   timezone,
   category,
-  userLocation,
+  userLocation,          // <- either Point OR null
   radiusKm = 50
 ) => {
-  // 🕐 Base time reference
+
   const now = getCurrentDateInTimezone({ timezone });
 
   const dateFilter = {
@@ -22,14 +22,18 @@ const getPopularEvents = async (
     ],
   };
 
-  // 🎯 Category filter
   const catObjId = category ? new mongoose.Types.ObjectId(category) : null;
+
   const categoryFilter = category
     ? { "basicInfo.categories": { $in: [catObjId] } }
     : {};
 
-  // 🌍 Geo filter (SAFE inside lookup)
+  // ---------------------------
+  // GEO FILTER — ONLY WHEN NOT NULL
+  // ---------------------------
   let geoFilter = {};
+
+  if (userLocation) {
     const earthRadiusKm = 6378.1;
     const radiusInRadians = radiusKm / earthRadiusKm;
 
@@ -37,16 +41,20 @@ const getPopularEvents = async (
       "basicInfo.venueLocation": {
         $geoWithin: {
           $centerSphere: [
-            userLocation.coordinates, // [lng, lat]
+            userLocation.coordinates,
             radiusInRadians,
           ],
         },
       },
     };
+  }
 
-  // 🧩 Aggregation pipeline
+  // ===========================
+  // MAIN QUERY
+  // ===========================
   const popularEvents = await PopularEvents.aggregate([
     { $match: { status: "active", isTop10: true } },
+
     {
       $lookup: {
         from: "events",
@@ -59,9 +67,10 @@ const getPopularEvents = async (
               status: "active",
               ...dateFilter,
               ...categoryFilter,
-              ...geoFilter,
+              ...geoFilter,   // <- applied only when not null
             },
           },
+
           {
             $lookup: {
               from: "organizations",
@@ -71,6 +80,7 @@ const getPopularEvents = async (
               pipeline: [{ $project: { _id: 1, basicInfo: 1 } }],
             },
           },
+
           {
             $addFields: {
               "basicInfo.organization": {
@@ -78,6 +88,7 @@ const getPopularEvents = async (
               },
             },
           },
+
           {
             $lookup: {
               from: "favorites",
@@ -88,12 +99,7 @@ const getPopularEvents = async (
                     $expr: {
                       $and: [
                         { $eq: ["$targetId", "$$eventId"] },
-                        {
-                          $eq: [
-                            "$user",
-                            new mongoose.Types.ObjectId(userId),
-                          ],
-                        },
+                        { $eq: ["$user", new mongoose.Types.ObjectId(userId)] },
                         { $eq: ["$targetType", "event"] },
                       ],
                     },
@@ -104,11 +110,13 @@ const getPopularEvents = async (
               as: "favoriteInfo",
             },
           },
+
           {
             $addFields: {
               isFavorite: { $gt: [{ $size: "$favoriteInfo" }, 0] },
             },
           },
+
           {
             $project: {
               _id: 1,
@@ -120,12 +128,15 @@ const getPopularEvents = async (
         ],
       },
     },
+
     { $unwind: "$event" },
   ])
     .skip(skip)
     .limit(limit);
 
-  // 🔢 Count pipeline (MUST mirror filters)
+  // ===========================
+  // COUNT (must mirror filters)
+  // ===========================
   const countPipeline = [
     { $match: { status: "active", isTop10: true } },
     {
@@ -159,12 +170,13 @@ const getPopularEvents = async (
 };
 
 
+
 const getPopularEventsForHome = async (
   limit,
   skip,
   timezone,
   category,
-  userLocation,
+  userLocation, 
   radiusKm = 50
 ) => {
   const now = getCurrentDateInTimezone({ timezone });
@@ -180,12 +192,28 @@ const getPopularEventsForHome = async (
   };
 
   const catObjId = category ? new mongoose.Types.ObjectId(category) : null;
+
   const categoryFilter = category
     ? { "basicInfo.categories": { $in: [catObjId] } }
     : {};
 
+  // base match for ALL events
+  const eventMatch = {
+    status: "active",
+    ...dateFilter,
+    ...categoryFilter,
+  };
+
+  // 👉 only add geo filter when NOT null
+  if (userLocation) {
+    eventMatch["basicInfo.venueLocation"] = {
+      $geoWithin: {
+        $centerSphere: [userLocation.coordinates, radiusInRadians],
+      },
+    };
+  }
+
   const data = await PopularEvents.aggregate([
-    // 1️⃣ Only active Top Picks
     {
       $match: {
         status: "active",
@@ -193,7 +221,6 @@ const getPopularEventsForHome = async (
       },
     },
 
-    // 2️⃣ Lookup Events (geo filter SAFE)
     {
       $lookup: {
         from: "events",
@@ -201,23 +228,8 @@ const getPopularEventsForHome = async (
         foreignField: "_id",
         as: "event",
         pipeline: [
-          {
-            $match: {
-              status: "active",
-              ...dateFilter,
-              ...categoryFilter,
-              "basicInfo.venueLocation": {
-                $geoWithin: {
-                  $centerSphere: [
-                    userLocation.coordinates, // [lng, lat]
-                    radiusInRadians,
-                  ],
-                },
-              },
-            },
-          },
+          { $match: eventMatch },
 
-          // 3️⃣ Join organization
           {
             $lookup: {
               from: "organizations",
@@ -244,7 +256,6 @@ const getPopularEventsForHome = async (
             },
           },
 
-          // 4️⃣ Minimal response
           {
             $project: {
               basicInfo: {
@@ -253,25 +264,22 @@ const getPopularEventsForHome = async (
                 description: "$basicInfo.description",
                 organization: "$basicInfo.organization",
               },
+              schedule: 1,
             },
           },
         ],
       },
     },
 
-    // 5️⃣ Remove empty
     { $unwind: "$event" },
-
-    // 6️⃣ Flatten
     { $replaceRoot: { newRoot: "$event" } },
-
-    // 7️⃣ Pagination
     { $skip: skip },
     { $limit: limit },
   ]);
 
   return { data };
 };
+
 
 
 
