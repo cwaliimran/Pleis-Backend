@@ -4,6 +4,7 @@ const { getCustomCategories } = require("../customCategories/customCategoriesSer
 const { getForYouEventsService, thisWeekEvents } = require("../events/eventService");
 const { getPublicCategories } = require("../publicCategories/categoriesService");
 const { getPopularEventsForHomeService } = require("../popularEvents/popularEventsService");
+
 const {
   getSuggestedLoyaltyClubsForHomeService,
   getNearbyOrganizationsService,
@@ -18,18 +19,23 @@ const { getTopPicksOrganizationsForHomeService } = require("../topPicksOrganizat
 const { getLoyaltyAndGlobalLoyaltyPromotions } = require("./promotions/promotionsHomeService");
 const { getOrganizationsWithReservationsForHomeService } = require("../reservations/reservationService");
 
+const { pushIfValid } = require("./utils/feedPushRules");
+
 const getHomeService = async ({ queryData }) => {
   const { userId, userLocation, radiusKm = 50, timezone, category } = queryData;
 
   try {
-    /* ===============================
-       CONSTANTS
-       =============================== */
-    const MIN_ITEMS = 2;
+    /**
+     * GLOBAL frequency limits
+     */
+    const frequencyMap = {
+      orgs: new Map(),
+      events: new Map(),
+    };
 
-    /* ===============================
-       1️⃣ DEFINE PROMISES
-       =============================== */
+    /**
+     * PROMISES
+     */
     const promises = {
       categoriesRes: getPublicCategories({}),
       bannersRes: getBannerControlsService({ page: 1, limit: 10 }),
@@ -114,6 +120,7 @@ const getHomeService = async ({ queryData }) => {
         category,
         userLocation,
         radiusKm,
+        timezone,
         page: 1,
         limit: 10,
       }),
@@ -133,6 +140,7 @@ const getHomeService = async ({ queryData }) => {
         page: 1,
         limit: 10,
         userLocation,
+        radiusKm,
         category,
         timezone,
       }),
@@ -161,17 +169,14 @@ const getHomeService = async ({ queryData }) => {
       }),
     };
 
-    /* ===============================
-       2️⃣ EXECUTE PROMISES
-       =============================== */
     const resultsArray = await Promise.all(Object.values(promises));
     const results = Object.fromEntries(
       Object.keys(promises).map((k, i) => [k, resultsArray[i]])
     );
 
-    /* ===============================
-       3️⃣ NORMALIZE RESULTS
-       =============================== */
+    /**
+     * NORMALIZATION
+     */
     const categories = results.categoriesRes?.categories || [];
     const banners = results.bannersRes?.bannerControls || [];
     const popularEvents = results.popularEventsRes?.data || [];
@@ -181,106 +186,102 @@ const getHomeService = async ({ queryData }) => {
 
     const feed = [];
 
-    /* ===============================
-       4️⃣ SAFE PUSH (MIN ITEMS RULE)
-       =============================== */
-    const pushIfValid = (section) => {
-      if (!section) return;
+    /**
+     * FIXED SECTIONS
+     */
+    pushIfValid(feed, { key: "categories", title: "Categories", data: categories }, frequencyMap);
+    pushIfValid(feed, { key: "banners", title: "Banners", data: banners }, frequencyMap);
 
-      if (Array.isArray(section.data) && section.data.length < MIN_ITEMS) return;
-      if (Array.isArray(section.objects) && section.objects.length < MIN_ITEMS) return;
-
-      feed.push(section);
-    };
-
-    /* ===============================
-       5️⃣ FIXED HEADER
-       =============================== */
-    pushIfValid({ key: "categories", title: "Categories", data: categories });
-    pushIfValid({ key: "banners", title: "Banners", data: banners });
-
-    /* ===============================
-       6️⃣ ORGANIZATIONS
-       =============================== */
-    pushIfValid({
+    /**
+     * ORGS
+     */
+    pushIfValid(feed, {
       key: "forYouOrganizations",
       title: "For You",
       data: results.getForYouOrganizationsService?.organizations || [],
-    });
+    }, frequencyMap);
 
-    pushIfValid({
+    pushIfValid(feed, {
       key: "nearYouOrganizations",
       title: "Near You",
       data: results.nearYouOrganizationsRes?.organizations || [],
-    });
+    }, frequencyMap);
 
-    pushIfValid({
+    pushIfValid(feed, {
       key: "topPicks",
       title: "Top Picks",
       data: results.topPicksOrgs?.topPicksOrganizations || [],
-    });
+    }, frequencyMap);
 
-    pushIfValid({
+    pushIfValid(feed, {
       key: "trendingOrganizations",
       title: "Trending",
       data: results.trendingOrganizationsService?.organizations || [],
-    });
+    }, frequencyMap);
 
-    pushIfValid({
+    pushIfValid(feed, {
       key: "reservations",
       title: "Make a Reservation",
       data: results.getOrganizationsWithReservationsRes || [],
-    });
+    }, frequencyMap);
 
-    /* ===============================
-       7️⃣ EVENTS
-       =============================== */
-    pushIfValid({ key: "popularEvents", title: "Popular Events", data: popularEvents });
-    pushIfValid({ key: "forYouEvents", title: "For You Events", data: results.forYouEvents?.data || [] });
-    pushIfValid({ key: "thisWeekEvents", title: "This Week", data: results.thisWeekEventsRes?.data || [] });
+    /**
+     * EVENTS
+     */
+    pushIfValid(feed, {
+      key: "popularEvents",
+      title: "Popular Events",
+      data: popularEvents,
+    }, frequencyMap);
 
-    /* ===============================
-       8️⃣ NEW / LOYALTY / PROMO
-       =============================== */
-    pushIfValid({
+    pushIfValid(feed, {
+      key: "forYouEvents",
+      title: "For You Events",
+      data: results.forYouEvents?.data || [],
+    }, frequencyMap);
+
+    pushIfValid(feed, {
+      key: "thisWeekEvents",
+      title: "This Week",
+      data: results.thisWeekEventsRes?.data || [],
+    }, frequencyMap);
+
+    /**
+     * NEW / CLUBS / PROMOTIONS
+     */
+    pushIfValid(feed, {
       key: "newlyListedOrganizations",
       title: "New",
       data: results.newlyListedOrganizationsService?.organizations || [],
-    });
+    }, frequencyMap);
 
-    pushIfValid({
+    pushIfValid(feed, {
       key: "loyaltyClubs",
       title: "Loyalty Clubs",
       data: results.suggestedLoyaltyClubsRes || [],
-    });
+    }, frequencyMap);
 
-    pushIfValid({
+    pushIfValid(feed, {
       key: "promotions",
       title: "Promotions",
       data: results.loyaltyAndGlobalLoyaltyPromotions || [],
-    });
+    }, frequencyMap);
 
-    /* ===============================
-       9️⃣ QUEUES (NO MUTATION)
-       =============================== */
+    /**
+     * HANDLE CUSTOM + TAG MIX
+     */
     const customQueue = [...customCategories];
     const tagQueue = [...tagGroups];
 
-    /* ===============================
-       🔟 FIRST CUSTOM CATEGORY
-       =============================== */
     if (customQueue.length) {
       const c = customQueue.shift();
-      pushIfValid({
+      pushIfValid(feed, {
         key: "customCategory",
         title: c?.title,
         objects: c?.objects,
-      });
+      }, frequencyMap);
     }
 
-    /* ===============================
-       1️⃣1️⃣ FIRST 3 MIXED (CUSTOM + TAG)
-       =============================== */
     let mixedCount = 0;
 
     while (mixedCount < 3 && (customQueue.length || tagQueue.length)) {
@@ -288,12 +289,15 @@ const getHomeService = async ({ queryData }) => {
 
       if (customQueue.length) {
         const c = customQueue.shift();
-        if (c?.objects?.length >= MIN_ITEMS) {
-          feed.push({
-            key: "customCategory",
-            title: c.title,
-            objects: c.objects,
-          });
+        const before = feed.length;
+
+        pushIfValid(feed, {
+          key: "customCategory",
+          title: c?.title,
+          objects: c?.objects,
+        }, frequencyMap);
+
+        if (feed.length > before) {
           mixedCount++;
           pushed = true;
         }
@@ -301,53 +305,50 @@ const getHomeService = async ({ queryData }) => {
 
       if (!pushed && tagQueue.length) {
         const t = tagQueue.shift();
-        if (t?.data?.length >= MIN_ITEMS) {
-          feed.push({
-            key: "customCategoryByTags",
-            title: t.title,
-            objects: t.data,
-          });
+        const before = feed.length;
+
+        pushIfValid(feed, {
+          key: "customCategoryByTags",
+          title: t?.title,
+          objects: t?.data,
+        }, frequencyMap);
+
+        if (feed.length > before) {
           mixedCount++;
         }
       }
     }
 
-    /* ===============================
-       1️⃣2️⃣ HIGHLIGHTS
-       =============================== */
-    pushIfValid({
+    /**
+     * HIGHLIGHTS
+     */
+    pushIfValid(feed, {
       key: "highlights",
       title: "Highlights",
       data: highlights,
-    });
+    }, frequencyMap);
 
-    /* ===============================
-       1️⃣3️⃣ REST OF CUSTOM CATEGORIES
-       =============================== */
+    /**
+     * REST OF CUSTOM + TAGS
+     */
     while (customQueue.length) {
       const c = customQueue.shift();
-      pushIfValid({
+      pushIfValid(feed, {
         key: "customCategory",
         title: c?.title,
         objects: c?.objects,
-      });
+      }, frequencyMap);
     }
 
-    /* ===============================
-       1️⃣4️⃣ REST OF TAG GROUPS
-       =============================== */
     while (tagQueue.length) {
       const t = tagQueue.shift();
-      pushIfValid({
+      pushIfValid(feed, {
         key: "customCategoryByTags",
         title: t?.title,
         objects: t?.data,
-      });
+      }, frequencyMap);
     }
 
-    /* ===============================
-       ✅ DONE
-       =============================== */
     return { status: true, data: feed };
   } catch (error) {
     return sendResponse({
@@ -357,6 +358,8 @@ const getHomeService = async ({ queryData }) => {
     });
   }
 };
+
+
 
 
 module.exports = {

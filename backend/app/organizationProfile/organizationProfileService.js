@@ -176,7 +176,7 @@ const getSimilarOrganizations = async (organizationId) => {
 
 const getNearbyOrganizationsService = async ({ category, userLocation, radiusKm, timezone, page, limit, userId }) => {
   let result = await getNearbyOrganizations({ category, userLocation, radiusKm, timezone, page, limit, userId });
-  result.organizations = result.organizations.map(org => formatNearByOrganization(org));
+  result.organizations = result.organizations.map(org => formatNearByOrganization(org, timezone));
 
   return result
 };
@@ -230,7 +230,7 @@ const getForYouOrganizationsForHomeService = async ({
   );
 
 
-  let formattedOrganizations = organizations.map(org => formatNearByOrganization(org));
+  let formattedOrganizations = organizations.map(org => formatNearByOrganization(org, timezone));
   return {
     organizations: formattedOrganizations,
   };
@@ -256,7 +256,7 @@ const getTrendingOrganizationsForHomeService = async ({
     userId
   });
 
-  let formattedOrganizations = organizations.map(org => formatNearByOrganization(org));
+  let formattedOrganizations = organizations.map(org => formatNearByOrganization(org, timezone));
   return {
     organizations: formattedOrganizations,
   };
@@ -269,6 +269,7 @@ const getNewlyListedOrganizationsService = async ({
   page = 1,
   limit = 10,
   skip = 0,
+  timezone,
 }) => {
 
   const organizations = await getNewlyListedOrganizationsRepo({
@@ -281,7 +282,7 @@ const getNewlyListedOrganizationsService = async ({
   });
 
   const formattedOrganizations = organizations.map(org =>
-    formatNearByOrganization(org)
+    formatNearByOrganization(org, timezone)
   );
 
   return {

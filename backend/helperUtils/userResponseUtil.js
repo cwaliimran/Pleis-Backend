@@ -21,6 +21,7 @@ const formatUserResponse = (
     phoneNumber: userObject.phoneNumber || "",
     language: userObject.language,
     country: userObject.country,
+    publicId: userObject.publicId,
   };
 
   // Main response object

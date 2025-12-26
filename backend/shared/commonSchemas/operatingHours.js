@@ -5,7 +5,7 @@ const moment = require("moment-timezone");
 Use numeric UTC minutes (simpler + faster queries)
 This is ideal if we’ll be doing lots of $gte / $lte comparisons.
 */
-const timingSchema = {
+const timingSchema = ({
   from: { type: Number, default: null }, // e.g. 480 = 08:00 UTC
   to: { type: Number, default: null }, // e.g. 1080 = 18:00 UTC
   break: {
@@ -13,7 +13,9 @@ const timingSchema = {
     to: { type: Number, default: null },
   },
   isOpen: { type: Boolean, default: false },
-};
+
+},
+  { _id: false });
 const OperatingHoursSchema = new mongoose.Schema({
   monday: timingSchema,
   tuesday: timingSchema,
@@ -22,7 +24,8 @@ const OperatingHoursSchema = new mongoose.Schema({
   friday: timingSchema,
   saturday: timingSchema,
   sunday: timingSchema,
-});
+},
+  { _id: false });
 
 
 
@@ -93,8 +96,54 @@ function transformOperatingHoursToLocal(operatingHours, timezone = "Asia/Karachi
   return converted;
 }
 
+function getUtcMinutesAndLocalWeekdayKey(timezone = "Asia/Karachi") {
+  const now = moment().tz(timezone);
+  const utc = now.clone().utc();
+  const utcMinutes = utc.hours() * 60 + utc.minutes();
+  const localWeekdayKey = now.format("dddd").toLowerCase();
+  return { utcMinutes, localWeekdayKey };
+}
+
+function isOrganizationOpenNow(operatingHours, timezone = "Asia/Karachi") {
+  if (!operatingHours) return false;
+
+  const { utcMinutes, localWeekdayKey } = getUtcMinutesAndLocalWeekdayKey(timezone);
+  const today = operatingHours[localWeekdayKey];
+
+  if (!today || !today.isOpen) return false;
+
+  const nowUtcMinutes = utcMinutes;
+
+  let { from, to, break: brk } = today;
+
+  if (from == null || to == null) return false;
+
+  // Case: normal day
+  let isOpen = nowUtcMinutes >= from && nowUtcMinutes <= to;
+
+  // Case: overnight shift (e.g. 20:00 — 03:00)
+  if (from > to) {
+    isOpen = nowUtcMinutes >= from || nowUtcMinutes <= to;
+  }
+
+  // Break window
+  if (
+    brk?.from != null &&
+    brk?.to != null &&
+    nowUtcMinutes >= brk.from &&
+    nowUtcMinutes <= brk.to
+  ) {
+    isOpen = false;
+  }
+
+  return isOpen;
+}
+
+
+
 module.exports = {
   OperatingHoursSchema,
   transformOperatingHoursToUtc,
   transformOperatingHoursToLocal,
+  isOrganizationOpenNow,
 };
