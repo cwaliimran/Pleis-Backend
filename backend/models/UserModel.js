@@ -131,10 +131,10 @@ const userSchema = new mongoose.Schema(
         message: "email_invalid", // Generic error message key
       },
     },
-referralsCount: {
-  type: Number,
-  default: 0
-},
+    referralsCount: {
+      type: Number,
+      default: 0
+    },
     emailVerification: {
       tokenHash: String,
       expiresAt: Number,
@@ -327,7 +327,7 @@ referralsCount: {
         endDate: null
       }
     },
-        inActiveSubscription: {
+    inActiveSubscription: {
       type: subscriptionSchema,
       default: {
         subscriptionTypes: [SubscriptionTypes.FREE],
@@ -339,7 +339,7 @@ referralsCount: {
         endDate: null
       }
     },
-isSubscriptionCancelled: {
+    isSubscriptionCancelled: {
       type: Boolean,
       default: false,
     },
