@@ -11,6 +11,8 @@ const { formatOrganization, formatNearByOrganization } = require("../../commonMo
 const { isClubMember } = require("../loyalty/clubMembers/clubMembersRepository");
 const { formatSuggestedClub } = require("../loyalty/clubMembers/formatters/formatSuggestedClubs");
 const { logEngagementService } = require("@appEngagement/engagementEventsService");
+const Reservations = require("@ReservationsModel");
+const { getOrganizationReservationsService } = require("../reservations/reservationService");
 
 
 
@@ -32,7 +34,7 @@ const getOrganizationProfile = async (queryData) => {
     const [orgProfile, orgEvents, reservations, menu, loyaltyPrograms, reviews, similarOrganizations] = await Promise.all([
       findOrganizationById(userId, organizationId),
       getOrganizationEvents({ organizationId, filter, timezone, userLocation: queryData.userLocation, userId }), //filter: "upcoming" or "past"
-      getOrganizationReservations(organizationId),
+      getOrganizationReservationsService({ organizationId, timezone }),
       getOrganizationMenu(organizationId, timezone),
       getOrganizationLoyaltyPrograms(organizationId),
       getOrganizationReviews(organizationId),
@@ -141,11 +143,6 @@ const getOrganizationEvents = async (queryData) => {
   }
 };
 
-
-const getOrganizationReservations = async (organizationId) => {
-  // Placeholder for future implementation
-  return [];
-};
 
 const getOrganizationMenu = async (organizationId, timezone) => {
   let result = await getOrganizationMenuWithItems(organizationId);

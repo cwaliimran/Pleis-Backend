@@ -364,28 +364,106 @@ const getNearbyOrganizations = async ({
       }
     });
 
-    // Geo sort
     pipeline.push({ $sort: { distance: 1 } });
   } else {
-    // Global fallback — NO GEO
     pipeline.push(
       { $match: geoQuery },
-      { $sort: { createdAt: -1 } } // fallback ordering
+      { $sort: { createdAt: -1 } }
     );
   }
 
+  /* ===============================
+     2️⃣ PAGINATION
+     =============================== */
   pipeline.push(
     { $skip: skip },
-    { $limit: limit },
+    { $limit: limit }
+  );
 
+  /* ===============================
+     3️⃣ PRIMARY VENUE + VENUE TYPE
+     =============================== */
+  pipeline.push(
+    {
+      $lookup: {
+        from: "venues",
+        let: { orgId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$organization", "$$orgId"] },
+              isPrimary: true,
+              status: "active"
+            }
+          },
+          {
+            $project: {
+              _id: 1,
+              title: 1,
+              venueType: 1
+            }
+          }
+        ],
+        as: "primaryVenue"
+      }
+    },
+
+    // lookup venue type details
+    {
+      $lookup: {
+        from: "venuetypes",
+        localField: "primaryVenue.venueType",
+        foreignField: "_id",
+        as: "venueTypes",
+        pipeline: [
+          { $project: { _id: 1, title: 1 } }
+        ]
+      }
+    }
+  );
+
+  /* ===============================
+     4️⃣ TAGS
+     =============================== */
+  pipeline.push(
+    {
+      $lookup: {
+        from: "tags",
+        localField: "otherInfo.tags",
+        foreignField: "_id",
+        as: "tags",
+        pipeline: [
+          { $project: { _id: 1, title: 1 } }
+        ]
+      }
+    }
+  );
+
+  /* ===============================
+     5️⃣ FINAL SHAPE
+     =============================== */
+  pipeline.push(
     {
       $project: {
         _id: 1,
-        creator: 1,
+
         "basicInfo.name": 1,
         "basicInfo.media": 1,
+
         operatingHours: 1,
-        distance: userLocation ? 1 : null
+        distance: userLocation ? 1 : null,
+
+        tags: 1,
+
+        venue: {
+          title: { $ifNull: [{ $first: "$primaryVenue.title" }, null] },
+          type: {
+            $ifNull: [
+              { $first: "$venueTypes.title" },
+              null
+            ]
+          }
+        }
       }
     }
   );
@@ -394,6 +472,7 @@ const getNearbyOrganizations = async ({
 
   return { organizations };
 };
+
 
 
 
@@ -1513,6 +1592,7 @@ const getOrganizationsGroupedByTagsRepo = async ({
 
   return Organizations.aggregate(pipeline).allowDiskUse(true);
 };
+
 
 
 module.exports = {

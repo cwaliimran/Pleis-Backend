@@ -4,6 +4,7 @@ const { sendResponse } = require("../../helperUtils/responseUtil");
 
 const Organizations = require("@OrganizationModel");
 const { calculateDistance } = require("../../helperUtils/calculateDistance");
+const { nanoid } = require("nanoid");
 
 // Path to the JSON file
 const countriesFilePath = path.join(__dirname, "../../assets/countries.json");
@@ -225,6 +226,8 @@ const getNearbyCities = async (req, res) => {
         const rawScore = c.count / Math.max(safeDistance, 1);
 
         return {
+          //_id random uuid
+          id: nanoid(),
           city: c.city,
           country: c.country,
           latitude: lat,
@@ -248,6 +251,8 @@ const getNearbyCities = async (req, res) => {
         const [lng, lat] = c.coordinates;
 
         return {
+          //_id random uuid
+          id: nanoid(),
           city: c.city,
           country: c.country,
           latitude: lat,

@@ -14,6 +14,8 @@ const moment = require("moment-timezone");
 const {
   generateMeta,
   convertToUtcDateOnly,
+  convertTimezoneToUtc,
+  getCurrentDateInTimezone,
 } = require("../../helperUtils/responseUtil");
 const createReservation = async (data) => {
   try {
@@ -103,9 +105,6 @@ const deleteReservationById = async (Reservation) => {
 const findByIdAndUpdate = async (id, data) => {
   return UserReservations.findByIdAndUpdate(id, data, { new: true });
 };
-
-
-
 
 const getReservations = async ({ timezone, page, limit, keyword, status, userId, eventId, organizationId, date }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
@@ -220,13 +219,6 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
 
   return { reservations: finalReservations, meta };
 };
-
-
-
-
-
-
-
 
 
 const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
@@ -358,8 +350,6 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
 
   return { reservations, meta };
 };
-
-
 
 const getReservationDetails = async (id) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -497,6 +487,7 @@ const getOrganizationsWithReservationsForHome = async ({
   limit = 10,
   category
 }) => {
+
   limit = Math.min(limit, 10);
   const radiusMeters = radiusKm * 1000;
 
@@ -504,16 +495,11 @@ const getOrganizationsWithReservationsForHome = async ({
     ? new mongoose.Types.ObjectId(category)
     : null;
 
-  /* ===============================
-     USER INTERESTS (RELEVANCE ONLY)
-     =============================== */
+  // user interests
   const prefs = await getUserInterestsIdsForRecommendation(userId);
   const userCategories = prefs?.categories || [];
   const userTags = prefs?.tags || [];
 
-  /* ===============================
-     BASE MATCH (WHEN GLOBAL)
-     =============================== */
   const baseMatch = {
     status: "active",
     ...(categoryObjectId && {
@@ -523,9 +509,7 @@ const getOrganizationsWithReservationsForHome = async ({
 
   const pipeline = [];
 
-  /* ===============================
-     1️⃣ CONDITIONAL GEO
-     =============================== */
+  // GEO
   if (userLocation) {
     pipeline.push({
       $geoNear: {
@@ -541,9 +525,7 @@ const getOrganizationsWithReservationsForHome = async ({
     pipeline.push({ $match: baseMatch });
   }
 
-  /* ===============================
-     2️⃣ ACTIVE + BOOKABLE RESERVATIONS
-     =============================== */
+  // RESERVATIONS FILTER
   pipeline.push(
     {
       $lookup: {
@@ -562,10 +544,8 @@ const getOrganizationsWithReservationsForHome = async ({
               }
             }
           },
-
           { $unwind: "$timingSlots.dateTimeSlots" },
           { $unwind: "$timingSlots.dateTimeSlots.timeSlots" },
-
           {
             $match: {
               $expr: {
@@ -586,13 +566,11 @@ const getOrganizationsWithReservationsForHome = async ({
               }
             }
           },
-
           { $count: "count" }
         ],
         as: "reservations"
       }
     },
-
     {
       $addFields: {
         reservationCount: {
@@ -603,13 +581,10 @@ const getOrganizationsWithReservationsForHome = async ({
         }
       }
     },
-
     { $match: { reservationsAvailable: true } }
   );
 
-  /* ===============================
-     3️⃣ RELEVANCE (USER PREFS)
-     =============================== */
+  // RELEVANCE
   pipeline.push(
     {
       $addFields: {
@@ -656,9 +631,7 @@ const getOrganizationsWithReservationsForHome = async ({
     }
   );
 
-  /* ===============================
-     4️⃣ ENGAGEMENT
-     =============================== */
+  // ENGAGEMENT SCORE
   pipeline.push(
     {
       $lookup: {
@@ -689,9 +662,7 @@ const getOrganizationsWithReservationsForHome = async ({
     }
   );
 
-  /* ===============================
-     5️⃣ FINAL SCORE
-     =============================== */
+  // FINAL SCORE
   pipeline.push(
     {
       $addFields: {
@@ -709,22 +680,64 @@ const getOrganizationsWithReservationsForHome = async ({
         }
       }
     },
-
     { $sort: { finalScore: -1 } },
-    { $limit: limit },
+    { $limit: limit }
+  );
 
-    /* ===============================
-       6️⃣ FINAL SHAPE
-       =============================== */
+  /* ----------------------------------
+     ➕ TAGS + PRIMARY VENUE (ADDED)
+     ---------------------------------- */
+  pipeline.push(
+    // PRIMARY VENUE
+    {
+      $lookup: {
+        from: "venues",
+        let: { orgId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$organization", "$$orgId"] },
+              isPrimary: true,
+              status: "active"
+            }
+          },
+          { $project: { _id: 0, title: 1 } }
+        ],
+        as: "primaryVenue"
+      }
+    },
+
+    // TAGS
+    {
+      $lookup: {
+        from: "tags",
+        localField: "otherInfo.tags",
+        foreignField: "_id",
+        as: "tags",
+        pipeline: [{ $project: { _id: 1, title: 1 } }]
+      }
+    },
+
+    // FINAL SHAPE
     {
       $project: {
         _id: 1,
         distance: userLocation ? 1 : null,
-        operatingHours: 1,
+
         "basicInfo.name": 1,
         "basicInfo.media": 1,
+
+        operatingHours: 1,
+
+        tags: 1,
+
+        venue: {
+          title: { $ifNull: [{ $first: "$primaryVenue.title" }, null] }
+        },
+
         reservationsAvailable: 1,
         reservationCount: 1,
+
         explain: {
           relevanceScore: 1,
           reviewsCount: 1,
@@ -734,18 +747,63 @@ const getOrganizationsWithReservationsForHome = async ({
     }
   );
 
-  const results = await Organizations
-    .aggregate(pipeline)
-    .allowDiskUse(true);
+  const results = await Organizations.aggregate(pipeline).allowDiskUse(true);
 
   return results;
 };
 
 
+const getOrganizationReservations = async ({ organizationId, timezone }) => {
+  try {
+    if (!organizationId) return [];
 
+    const orgId = new mongoose.Types.ObjectId(organizationId);
 
+    const now = getCurrentDateInTimezone({ timezone });
 
+    const results = await Reservations.aggregate([
+      // ORG
+      {
+        $match: {
+          organizationId: orgId,
+          status: "active",
+          "timingSlots.enabled": true
+        }
+      },
 
+      // BREAK DOWN SLOTS
+      { $unwind: "$timingSlots.dateTimeSlots" },
+      { $unwind: "$timingSlots.dateTimeSlots.timeSlots" },
+
+      // FUTURE ONLY (same logic you used)
+      {
+        $match: {
+          $expr: {
+            $and: [
+              {
+                $gt: [
+                  "$timingSlots.dateTimeSlots.timeSlots.endTime",
+                  "$timingSlots.dateTimeSlots.timeSlots.startTime"
+                ]
+              },
+              {
+                $gt: [
+                  "$timingSlots.dateTimeSlots.timeSlots.endTime",
+                  now
+                ]
+              }
+            ]
+          }
+        }
+      }
+    ]);
+
+    return results;
+  } catch (error) {
+    console.error("getOrganizationReservations error:", error);
+    return [];
+  }
+};
 
 module.exports = {
   createReservation,
@@ -759,5 +817,6 @@ module.exports = {
   getUserReservations,
   findUserReservationById,
   getReservationDetails,
-  getOrganizationsWithReservationsForHome
+  getOrganizationsWithReservationsForHome,
+  getOrganizationReservations
 };
