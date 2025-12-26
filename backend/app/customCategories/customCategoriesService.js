@@ -3,6 +3,7 @@ const { getFullImageUrl } = require("../../helperUtils/imageHelper");
 const { User } = require("../../models/UserModel");
 const customCategoryRepo = require("./customCategoriesRepository");
 const { formatCustomCategoryEventResponse } = require("./formatter/eventFormatter");
+const { isOrganizationOpenNow, transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
 
 
 // Service layer
@@ -88,7 +89,7 @@ const transformCustomCategoryObjects = (obj, type, userLocation, timezone) => {
     return formatCustomCategoryEventResponse(obj, { userLocation, timezone });
 
   } else if (type === "Organizations") {
-    return transformOrganization(obj);
+    return transformOrganization(obj, timezone);
   }
 
   return obj;
@@ -98,8 +99,8 @@ const transformCustomCategoryObjects = (obj, type, userLocation, timezone) => {
 /**
  * Transform organization object - attach icon/logo/cover URLs
  */
-const transformOrganization = (organization) => {
-  const transformed = { ...organization };
+const transformOrganization = (organization, timezone) => {
+  let transformed = { ...organization };
 
   if (!transformed.basicInfo) return transformed;
 
@@ -122,6 +123,21 @@ const transformOrganization = (organization) => {
       ? transformed.basicInfo.media.cover
       : getFullImageUrl(transformed.basicInfo.media.cover);
   }
+
+  if (transformed.operatingHours) {
+    //add openNow check
+    transformed.isOpenNow = isOrganizationOpenNow(
+      transformed.operatingHours,
+      timezone
+    );
+
+    // transform operating hours to local time
+    transformed.operatingHours = transformOperatingHoursToLocal(
+      transformed.operatingHours,
+      timezone,
+    );
+  }
+  delete transformed.operatingHours
 
   return transformed;
 };

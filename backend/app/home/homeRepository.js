@@ -1,5 +1,3 @@
-const mongoose = require("mongoose");
-
 const Organizations = require("@OrganizationModel");
 const { Events } = require("@EventsModel");
 const { User } = require("@UserModel");
@@ -172,39 +170,6 @@ const fetchHighlights = async ({
         .lean();
 };
 
-
-const getBannerControlsForHome = async ({ page, limit, keyword, status, date, orderSort = "asc",category }) => {
-  const query = {};
-  // Filter by status
-  query.status = status ? status : { $ne: "deleted" };
-
-  // Date filter (format: yyyy-mm-dd)
-  if (date) {
-    query.createdAt = {
-      $gte: new Date(date),
-      $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
-    };
-  }
-
-
-  const sort = { order: orderSort === "desc" ? -1 : 1 };
-
-  let [bannerControls, getBannerControlsCounts] = await Promise.all([
-    bannerControlsRepo.getBannerControlsWithFilters(query, page, limit === 0 ? 0 : limit, sort),
-    bannerControlsRepo.getBannerControlsCounts(query),
-  ]);
-
-  //format bannerControls
-  bannerControls = bannerControls.map(item => {
-    return formatBannerObject(item);
-  });
-
-  const { totalFiltered, total, active, inactive } = getBannerControlsCounts;
-  const meta = generateMeta(page, limit, totalFiltered);
-  meta.bannerControlsCount = { total, active, inactive };
-
-  return { bannerControls, meta };
-};
 
 // ----------------------------------------------------
 module.exports = {

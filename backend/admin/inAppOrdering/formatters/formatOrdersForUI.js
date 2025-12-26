@@ -6,11 +6,17 @@ const normalizePickupType = (value = "") =>
 const matchPickupType = (order, pickupFilter) => {
   if (!pickupFilter) return true;
 
+  // ✅ preorder acts as a virtual pickup filter
+  if (pickupFilter.toLowerCase() === "preorder") {
+    return isPreorderOrderppickup(order);
+  }
+
   return (
     normalizePickupType(order.pickupType) ===
     normalizePickupType(pickupFilter)
   );
 };
+
 
 const hasUndeliveredItem = (order) =>
   Array.isArray(order.items) &&
@@ -47,8 +53,12 @@ const isActiveOrder = (order) => {
 };
 
 const isPreorderOrder = (order) =>
+  order.orderType === "preorder" &&
   order.status === "preorder";
-
+const isPreorderOrderppickup = (order) =>
+  order.orderType === "preorder" &&
+  order.status === "pending";
+isPreorderOrderppickup
 /* ================= COUNTS ================= */
 
 const countOrders = (orders) => {
@@ -63,6 +73,8 @@ const countOrders = (orders) => {
   };
 
   orders.forEach(order => {
+
+    // ✅ PREORDERS (only active pending preorders)
     if (isPreorderOrder(order)) {
       preordersCount++;
       return;
@@ -80,11 +92,15 @@ const countOrders = (orders) => {
       if (["confirmed", "sent"].includes(order.status)) {
         activeDetails.inProgress++;
       }
-      if (order.status === "completed") {
+      if (
+        order.status === "completed" &&
+        (!allItemsDelivered(order) || !isPaid(order))
+      ) {
         activeDetails.completed++;
       }
     }
   });
+
 
   return {
     activeOrdersCount,
@@ -124,7 +140,6 @@ const filterOrders = ({
           matchPickupType(order, pickup)
         );
       }
-
       if (activeSub === "inprogress") {
         return ["confirmed", "sent"].includes(order.status);
       }
@@ -143,6 +158,7 @@ const filterOrders = ({
     if (["preorder", "preorders"].includes(status)) {
       return isPreorderOrder(order);
     }
+
 
     /* ========= PAST ========= */
     if (["postorder", "postorders", "past"].includes(status)) {

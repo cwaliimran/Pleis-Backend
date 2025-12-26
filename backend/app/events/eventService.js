@@ -13,7 +13,7 @@ const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { getTicketings } = require("../ticketing/ticketingsService");
 const { default: mongoose } = require("mongoose");
 const { logEngagementService } = require("@appEngagement/engagementEventsService");
-
+const Tags = require("@TagsModel");
 
 const getNearbyEvents = async (queryData) => {
   let {
@@ -97,6 +97,7 @@ const getNearbyEvents = async (queryData) => {
   }
 
   try {
+    
     const pipeline = [
       {
         $geoNear: {
@@ -170,101 +171,130 @@ const getNearbyEvents = async (queryData) => {
   }
 };
 
-const thisWeekEvents = async ({ timezone, category, userLocation, radiusKm, page = 1, limit = 10, userId }) => {
+const thisWeekEvents = async ({
+  timezone,
+  category,
+  userLocation,       // may be null
+  radiusKm,
+  page = 1,
+  limit = 10,
+  userId
+}) => {
 
   const catObjId = category ? new mongoose.Types.ObjectId(category) : null;
+
   const categoryFilter = category
     ? { "basicInfo.categories": { $in: [catObjId] } }
     : {};
 
-  // If radiusKm is not provided, use an approximate "whole world" radius
-  const rawRadiusKm =
-    !radiusKm || radiusKm === "" ? 20037.5 : parseFloat(radiusKm);
-
-  radiusKm = parseFloat(rawRadiusKm);
-
-  const radiusInMeters = radiusKm * 1000;
   const now = getCurrentDateInTimezone({ timezone });
   const skip = Math.max(0, (page - 1) * limit);
 
-  // --- Time filter ---
-  let dateFilter = {};
-  ({ start, end } = getStartAndEndOfWeek(now, timezone));
-  dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+  let { start, end } = getStartAndEndOfWeek(now, timezone);
 
-  try {
-    const pipeline = [
-      {
-        $geoNear: {
-          near: userLocation,
-          key: "basicInfo.venueLocation",
-          distanceField: "distance",
-          spherical: true,
-          maxDistance: radiusInMeters,
-          query: { status: "active", ...categoryFilter, ...dateFilter },
-        },
+  const dateFilter = {
+    "schedule.startDateTime": { $lte: end },
+    "schedule.endDateTime": { $gte: start },
+  };
+
+  // ------------------------------------------------
+  // Build pipeline (conditionally add geoNear)
+  // ------------------------------------------------
+  const pipeline = [];
+
+  if (userLocation) {
+    // GEO mode
+    const earthRadiusKm = 6378.1;
+    const radiusInRadians = (parseFloat(radiusKm) || 50) / earthRadiusKm;
+
+    pipeline.push({
+      $geoNear: {
+        near: userLocation,
+        key: "basicInfo.venueLocation",
+        distanceField: "distance",
+        spherical: true,
+        maxDistance: radiusInRadians * earthRadiusKm * 1000,
+        query: { status: "active", ...categoryFilter, ...dateFilter },
       },
-      { $project: { schedule: 1, basicInfo: 1, distance: 1 } },
-
-      {
-        $lookup: {
-          from: "venues",
-          localField: "basicInfo.venue",
-          foreignField: "_id",
-          pipeline: [{ $project: { title: 1, location: 1 } }],
-          as: "basicInfo.venue",
-        },
-      },
-      { $unwind: "$basicInfo.venue" },
-
-      {
-        $lookup: {
-          from: "organizations",
-          let: { orgId: "$basicInfo.organization" },
-          pipeline: [
-            { $match: { $expr: { $eq: ["$_id", "$$orgId"] } } },
-            { $project: { basicInfo: 1 } },
-          ],
-          as: "basicInfo.organization",
-        },
-      },
-      { $unwind: { path: "$basicInfo.organization", preserveNullAndEmptyArrays: true } },
-
-      { $sort: { distance: 1 } },
-      { $skip: skip },
-      { $limit: parseInt(limit) },
-    ];
-
-    const events = await eventRepo.aggregateEvents(pipeline);
-
-    // Count total without skip/limit
-    const totalCountPipeline = [
-      {
-        $geoNear: {
-          near: userLocation,
-          key: "basicInfo.venueLocation",
-          distanceField: "distance",
-          spherical: true,
-          maxDistance: radiusInMeters,
-          query: { status: "active", ...categoryFilter, ...dateFilter },
-        },
-      },
-      { $count: "total" },
-    ];
-
-    const totalResult = await eventRepo.aggregateEvents(totalCountPipeline);
-    const totalFiltered = totalResult[0]?.total || 0;
-
-    const formattedEvents = events.map((event) =>
-      formatEventResponse(event, { timezone })
-    );
-
-    const meta = generateMeta(page, limit, totalFiltered);
-    return { data: formattedEvents, meta };
-  } catch (error) {
-    throw new Error(`Failed to fetch nearby events: ${error.message}`);
+    });
+  } else {
+    // GLOBAL mode (no geo)
+    pipeline.push({
+      $match: { status: "active", ...categoryFilter, ...dateFilter },
+    });
   }
+
+  pipeline.push(
+    { $project: { schedule: 1, basicInfo: 1, distance: 1 } },
+
+    {
+      $lookup: {
+        from: "venues",
+        localField: "basicInfo.venue",
+        foreignField: "_id",
+        pipeline: [{ $project: { title: 1, location: 1 } }],
+        as: "basicInfo.venue",
+      },
+    },
+    { $unwind: "$basicInfo.venue" },
+
+    {
+      $lookup: {
+        from: "organizations",
+        let: { orgId: "$basicInfo.organization" },
+        pipeline: [
+          { $match: { $expr: { $eq: ["$_id", "$$orgId"] } } },
+          { $project: { basicInfo: 1 } },
+        ],
+        as: "basicInfo.organization",
+      },
+    },
+    { $unwind: { path: "$basicInfo.organization", preserveNullAndEmptyArrays: true } },
+
+    { $sort: userLocation ? { distance: 1 } : { "schedule.startDateTime": 1 } },
+
+    { $skip: skip },
+    { $limit: parseInt(limit) }
+  );
+
+  // =============================
+  // RUN QUERY
+  // =============================
+  const events = await eventRepo.aggregateEvents(pipeline);
+
+  // =============================
+  // COUNT QUERY
+  // =============================
+  const countPipeline = userLocation
+    ? [
+        {
+          $geoNear: {
+            near: userLocation,
+            key: "basicInfo.venueLocation",
+            distanceField: "distance",
+            spherical: true,
+            query: { status: "active", ...categoryFilter, ...dateFilter },
+          },
+        },
+        { $count: "total" },
+      ]
+    : [
+        { $match: { status: "active", ...categoryFilter, ...dateFilter } },
+        { $count: "total" },
+      ];
+
+  const totalResult = await eventRepo.aggregateEvents(countPipeline);
+  const totalFiltered = totalResult[0]?.total || 0;
+
+  const formattedEvents = events.map((event) =>
+    formatEventResponse(event, { timezone })
+  );
+
+  const meta = generateMeta(page, limit, totalFiltered);
+
+  return { data: formattedEvents, meta };
 };
+
 
 const getNearbyEventsWithAdvanceFilters = async (queryData) => {
   let {
@@ -276,13 +306,13 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
     timezone = "Asia/Karachi",
     advanceFilters = {},
     userId,
-    sort = "asc", // asc = oldest first, desc = latest first
+    sort = "asc",
   } = queryData || {};
 
   const {
     time,
     distanceFrom = 0,
-    distanceTo = 50,
+    distanceTo = 0,           // 0 = NO LIMIT
     dateFrom,
     dateTo,
     categories = [],
@@ -293,7 +323,10 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
 
   longitude = parseFloat(longitude);
   latitude = parseFloat(latitude);
-  const distanceToMeters = distanceTo * 1000;
+
+  const distanceToMeters =
+    distanceTo && Number(distanceTo) > 0 ? distanceTo * 1000 : undefined;
+
   const distanceFromMeters = distanceFrom * 1000;
   const skip = Math.max(0, (page - 1) * limit);
   const now = getCurrentDateInTimezone({ timezone });
@@ -302,35 +335,56 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
     throw new Error("Valid user longitude and latitude are required");
   }
 
-  // --- Time / Date Range Filter ---
+  // ------------------------------------
+  // DATE FILTER
+  // ------------------------------------
   let dateFilter = {};
+
   if (dateFrom || dateTo) {
     const start = dateFrom ? new Date(dateFrom) : new Date("1970-01-01");
     const end = dateTo ? new Date(dateTo) : new Date("2999-12-31");
+
     dateFilter = {
       "schedule.startDateTime": { $lte: end },
       "schedule.endDateTime": { $gte: start },
     };
   } else if (time && time !== "all") {
     let start, end;
+
     switch (time) {
       case "live":
-        dateFilter = { "schedule.startDateTime": { $lte: now }, "schedule.endDateTime": { $gte: now } };
+        dateFilter = {
+          "schedule.startDateTime": { $lte: now },
+          "schedule.endDateTime": { $gte: now },
+        };
         break;
+
       case "today":
         ({ start, end } = getStartAndEndOfDay(now, timezone));
-        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+        dateFilter = {
+          "schedule.startDateTime": { $lte: end },
+          "schedule.endDateTime": { $gte: start },
+        };
         break;
+
       case "tomorrow":
-        const tomorrow = new Date(now);
-        tomorrow.setDate(now.getDate() + 1);
-        ({ start, end } = getStartAndEndOfDay(tomorrow, timezone));
-        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+        const t = new Date(now);
+        t.setDate(now.getDate() + 1);
+        ({ start, end } = getStartAndEndOfDay(t, timezone));
+        dateFilter = {
+          "schedule.startDateTime": { $lte: end },
+          "schedule.endDateTime": { $gte: start },
+        };
         break;
+
       case "thisWeek":
         ({ start, end } = getStartAndEndOfWeek(now, timezone));
-        dateFilter = { "schedule.startDateTime": { $lte: end }, "schedule.endDateTime": { $gte: start } };
+        dateFilter = {
+          "schedule.startDateTime": { $lte: end },
+          "schedule.endDateTime": { $gte: start },
+        };
         break;
+
       default:
         dateFilter = { "schedule.endDateTime": { $gte: now } };
     }
@@ -338,31 +392,71 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
     dateFilter = { "schedule.endDateTime": { $gte: now } };
   }
 
-  // --- Categories / Genre / Tags Filter ---
+  // ------------------------------------
+  // CATEGORY FILTER
+  // ------------------------------------
   const categoryFilter = categories.length
-    ? { "basicInfo.categories": { $in: categories.map((id) => new mongoose.Types.ObjectId(id)) } }
-    : {};
-  const genreFilter = genre.length ? { "basicInfo.genre": { $in: genre } } : {};
-  const tagsFilter = tags.length
-    ? { "basicInfo.tags": { $in: tags.map((id) => new mongoose.Types.ObjectId(id)) } }
-    : {};
-
-  //keyword filter
-  const keywordFilter = keyword && keyword.trim() !== ""
     ? {
-      $or: [
-        { "basicInfo.title": { $regex: keyword, $options: "i" } },
-        { "basicInfo.description": { $regex: keyword, $options: "i" } },
-      ],
-    }
+        "basicInfo.categories": {
+          $in: categories.map((id) => new mongoose.Types.ObjectId(id)),
+        },
+      }
     : {};
 
+  // ------------------------------------
+  // TAGS + GENRE (AND logic)
+  // ------------------------------------
+  const toObjectIds = (arr) =>
+    arr
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+
+  const tagObjectIds = toObjectIds(tags);
+
+  let genreTagIds = [];
+
+  if (genre.length) {
+    const genreTags = await Tags.find({
+      status: "active",
+      type: { $in: genre },
+    }).select("_id");
+
+    genreTagIds = genreTags.map((t) => t._id);
+  }
+
+  // 👉 REQUIRE BOTH — strict filter
+  let tagFilter = {};
+
+  // If genre provided but no matching tag -> return NOTHING
+  if (genre.length && genreTagIds.length === 0) {
+    tagFilter = { "basicInfo.tags": { $in: [] } };
+  } else if (tagObjectIds.length || genreTagIds.length) {
+    tagFilter = {
+      "basicInfo.tags": { $all: [...tagObjectIds, ...genreTagIds] },
+    };
+  }
+
+  // ------------------------------------
+  // KEYWORD
+  // ------------------------------------
+  const keywordFilter =
+    keyword?.trim()
+      ? {
+          $or: [
+            { "basicInfo.title": { $regex: keyword, $options: "i" } },
+            { "basicInfo.description": { $regex: keyword, $options: "i" } },
+          ],
+        }
+      : {};
+
+  // ------------------------------------
+  // FINAL COMBINED FILTER
+  // ------------------------------------
   const combinedFilter = {
     status: "active",
     ...dateFilter,
     ...categoryFilter,
-    ...genreFilter,
-    ...tagsFilter,
+    ...tagFilter,
     ...keywordFilter,
   };
 
@@ -374,11 +468,15 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
           key: "basicInfo.venueLocation",
           distanceField: "distance",
           spherical: true,
-          maxDistance: distanceToMeters,
+          ...(distanceToMeters ? { maxDistance: distanceToMeters } : {}),
           query: combinedFilter,
         },
       },
-      ...(distanceFrom > 0 ? [{ $match: { distance: { $gte: distanceFromMeters } } }] : []),
+
+      ...(distanceFrom > 0
+        ? [{ $match: { distance: { $gte: distanceFromMeters } } }]
+        : []),
+
       {
         $lookup: {
           from: "venues",
@@ -388,23 +486,40 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
           pipeline: [
             { $project: { title: 1, venueType: 1, location: 1 } },
             ...(venueTypes.length
-              ? [{ $match: { venueType: { $in: venueTypes.map((id) => new mongoose.Types.ObjectId(id)) } } }]
+              ? [
+                  {
+                    $match: {
+                      venueType: {
+                        $in: venueTypes.map(
+                          (id) => new mongoose.Types.ObjectId(id)
+                        ),
+                      },
+                    },
+                  },
+                ]
               : []),
           ],
         },
       },
+
       { $unwind: "$venue" },
+
       {
         $lookup: {
           from: "organizations",
           let: { orgId: "$basicInfo.organization" },
-          pipeline: [{ $match: { $expr: { $eq: ["$_id", "$$orgId"] } } }, { $project: { basicInfo: 1 } }],
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$orgId"] } } },
+            { $project: { basicInfo: 1 } },
+          ],
           as: "basicInfo.organization",
         },
       },
+
       { $unwind: { path: "$basicInfo.organization", preserveNullAndEmptyArrays: true } },
-      // --- Sort by event start date ---
+
       { $sort: { "schedule.startDateTime": sort === "desc" ? -1 : 1 } },
+
       {
         $facet: {
           events: [{ $skip: skip }, { $limit: parseInt(limit) }],
@@ -414,18 +529,21 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
     ];
 
     const result = await eventRepo.aggregateEvents(pipeline);
+
     const events = result[0]?.events || [];
     const totalFiltered = result[0]?.totalCount[0]?.total || 0;
 
-    // Get favorite events
     let favoriteSet = new Set();
+
     if (userId && events.length > 0) {
       const eventIds = events.map((e) => e._id);
+
       const userFavorites = await Favorites.find({
         user: userId,
         targetType: "event",
         targetId: { $in: eventIds },
       }).select("targetId");
+
       favoriteSet = new Set(userFavorites.map((f) => f.targetId.toString()));
     }
 
@@ -437,11 +555,15 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
     );
 
     const meta = generateMeta(page, limit, totalFiltered);
+
     return { events: formattedEvents, meta };
   } catch (error) {
     throw new Error(`Failed to fetch nearby events: ${error.message}`);
   }
 };
+
+
+
 
 const getEventDetails = async (userLocation, userId, id, timezone) => {
   const event = await eventRepo.findEventById(id);

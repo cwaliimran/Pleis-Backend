@@ -71,7 +71,18 @@ function calculateDistance(
   };
 }
 
+const isNullLocationCoordinates = (coords = []) => {
+  if (!Array.isArray(coords) || coords.length !== 2) return true;
 
-module.exports = { calculateDistance };
+  const [lng, lat] = coords.map(Number);
+
+  return (
+    Number.isNaN(lng) ||
+    Number.isNaN(lat) ||
+    (lng === 0 && lat === 0)
+  );
+};
+
+module.exports = { calculateDistance, isNullLocationCoordinates };
 
   

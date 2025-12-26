@@ -2,37 +2,56 @@ const { default: mongoose } = require("mongoose");
 const {
   sendResponse,
   validateParams,
+  parsePaginationParams
 } = require("../../helperUtils/responseUtil");
 const { getHomeService } = require("./homeService");
-const { getPopularEventsService } = require("../popularEvents/popularEventsService");
+const { globalSearchService } = require("./globalSearch/globalSearchService");
 
 const getHome = async (req, res) => {
 
   try {
-    const { latitude = 0, longitude = 0, radiusKm = 50, } = req.query;
     let { category } = req.body;
-    if (category) {
-      //check if valid mongo id
-      if (!mongoose.Types.ObjectId.isValid(category)) {
-        return sendResponse({
-          res,
-          statusCode: 400,
-          translationKey: "invalid_category_id",
-        });
+    // Validate category once
+    if (category && !mongoose.Types.ObjectId.isValid(category)) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_category_id",
+      });
+    }
+    const { latitude, longitude, radiusKm = 50 } = req.query;
+    const { location: savedLocation, timezone, _id: userId } = req.user;
+
+    let userLocation = null;
+
+    // 1️⃣ If query params exist → ALWAYS use them
+    if (latitude !== undefined && longitude !== undefined) {
+      const lng = parseFloat(longitude);
+      const lat = parseFloat(latitude);
+
+      // 0,0 means GLOBAL
+      if (lng === 0 && lat === 0) {
+        userLocation = null;
+      } else {
+        userLocation = {
+          type: "Point",
+          coordinates: [lng, lat],
+        };
       }
     }
+    // 2️⃣ Otherwise fallback to saved user location
+    else if (savedLocation?.coordinates?.length === 2) {
+      const [lng, lat] = savedLocation.coordinates;
 
-
-    let { location: userLocation, timezone, _id: userId } = req.user;
-
-
-    if (latitude && longitude) {
-      userLocation = {
-        type: "Point",
-        coordinates: [parseFloat(longitude), parseFloat(latitude)],
-      };
+      if (lng === 0 && lat === 0) {
+        userLocation = null;        // Global again
+      } else {
+        userLocation = {
+          type: "Point",
+          coordinates: savedLocation.coordinates,
+        };
+      }
     }
-
     let queryData = {
       userLocation,
       userId,
@@ -68,6 +87,46 @@ const getHome = async (req, res) => {
   }
 };
 
+const globalSearch = async (req, res) => {
+  const { latitude, longitude, keyword, type } = req.query;
+  const { page, limit } = parsePaginationParams(req);
+  let { timezone, _id: userId } = req.user || {};
+  let { sort = "desc" } = req.body || {};
+  const ctx = {
+    keyword,
+    latitude: parseFloat(latitude),
+    longitude: parseFloat(longitude),
+    page,
+    limit,
+    timezone,
+    userId,
+    type: type || "all",
+    sort,
+    advanceFilters: req.body?.advanceFilters || {},
+  };
+
+  try {
+    const sections = await globalSearchService(ctx);
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "search_results_fetched",
+      data: sections,
+    });
+  } catch (err) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: err,
+    });
+  }
+};
+
+
+
 module.exports = {
   getHome,
+  globalSearch
 };

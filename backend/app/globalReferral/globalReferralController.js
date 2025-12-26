@@ -189,13 +189,48 @@ userId
   }
 };
 
+const getUserReferradrecord = async (req, res) => {
 
+  const { page, limit } = parsePaginationParams(req);
+  const { keyword, status = "active", date, range } = req.query;
+  try {
+    const userId = req.user._id;
+    console.log("userID",userId );
+    const timezone = req.user.timezone;
+    const { globalReferral, meta } = await globalReferralService.getUserReferradrecord({
+        timezone,
+      page,
+      limit,
+      keyword,
+      status,
+      userId,
+      date,
+      range,
+    });
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "GlobalReferrals_fetched_successfully",
+      data: globalReferral,
+      meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 module.exports = {
   createGlobalReferral,
   getGlobalReferrals,
   saveReferralData,
   saveUserReferralData,
   createUserReferradrecord,
+  getUserReferradrecord
   
 
 };

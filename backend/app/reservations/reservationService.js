@@ -3,6 +3,7 @@ const { reservationsFormatter, userReservationsFormatter, logQRCode } = require(
 const ReservationRepo = require("./reservationRepository");
 const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
 const moment = require("moment-timezone");
+const { isOrganizationOpenNow } = require("../../shared/commonSchemas/operatingHours");
 
 const createReservation = async (data) => {
   let Reservation = await ReservationRepo.createReservation(data);
@@ -203,57 +204,22 @@ const getOrganizationsWithReservationsForHomeService = async ({
 };
 
 
-
-
-const isOrganizationOpenNow = ({ operatingHours, timezone }) => {
-  if (!operatingHours || !timezone) {
-    return false;
+const getOrganizationReservationsService = async ({
+  organizationId, timezone }) => {
+  try {
+    let reservations = await ReservationRepo.getOrganizationReservations({
+      organizationId,
+      timezone
+    });
+    if (!reservations || reservations.length === 0) {
+      return { reservations: [] };
+    }
+    reservations = reservations.map(reservation => reservationsFormatter(reservation, timezone));
+    return reservations;
+  } catch (error) {
+    return [];  // Return empty array on error
   }
-
-  const now = moment().tz(timezone);
-  const day = now.format("dddd").toLowerCase();
-  const minutesNow = now.hours() * 60 + now.minutes();
-
-  const today = operatingHours[day];
-
-  if (!today) {
-    return false;
-  }
-
-  if (!today.isOpen) {
-    return false;
-  }
-
-  const { from, to, break: breakTime } = today;
-
-  const isOvernight = to < from;
-
-  let isWithinHours;
-  if (isOvernight) {
-    isWithinHours =
-      minutesNow >= from || minutesNow <= to;
-  } else {
-    isWithinHours =
-      minutesNow >= from && minutesNow <= to;
-  }
-
-  if (!isWithinHours) {
-    return false;
-  }
-
-  if (
-    breakTime?.from != null &&
-    breakTime?.to != null &&
-    minutesNow >= breakTime.from &&
-    minutesNow <= breakTime.to
-  ) {
-    return false;
-  }
-
-  return true;
-};
-
-
+}
 
 module.exports = {
   getOrganizationsWithReservationsForHomeService,
@@ -262,5 +228,6 @@ module.exports = {
   updateReservation,
   getUserReservations,
   deleteReservation,
-  getReservationDetails
+  getReservationDetails,
+  getOrganizationReservationsService
 };

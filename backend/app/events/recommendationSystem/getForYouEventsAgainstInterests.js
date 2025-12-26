@@ -27,10 +27,8 @@ const getForYouEventsAgainstInterests = async ({
 
   const catObjId = category ? new mongoose.Types.ObjectId(category) : null;
 
-  // Radius handling (same logic as nearby)
   const radiusInMeters = Math.max(radiusKm || 0, 0.1) * 1000;
 
-  // Date filter (upcoming events)
   const dateFilter = {
     $or: [
       { "schedule.endDateTime": { $gte: now } },
@@ -41,29 +39,50 @@ const getForYouEventsAgainstInterests = async ({
   const hasInterests =
     (categories?.length || tags?.length || venueTypes?.length) > 0;
 
-  let pipeline = [
-    // 1️⃣ GEO FIRST (MANDATORY)
-    {
+  /* ---------------------------------
+     BASE QUERY (shared)
+  --------------------------------- */
+  const baseQuery = {
+    status: "active",
+    ...dateFilter,
+    ...(catObjId && {
+      "basicInfo.categories": { $in: [catObjId] }
+    })
+  };
+
+  let pipeline = [];
+
+  /* ---------------------------------
+     🌍 GLOBAL MODE (no location)
+  --------------------------------- */
+  if (!userLocation) {
+    pipeline.push(
+      { $match: baseQuery },
+      { $sort: { createdAt: -1 } } // fallback ordering
+    );
+  }
+
+  /* ---------------------------------
+     📍 GEO MODE
+  --------------------------------- */
+  else {
+    pipeline.push({
       $geoNear: {
         near: userLocation,
         key: "basicInfo.venueLocation",
         distanceField: "distance",
         spherical: true,
         maxDistance: radiusInMeters,
-        query: {
-          status: "active",
-          ...(catObjId && {
-            "basicInfo.categories": { $in: [catObjId] },
-          }),
-          ...dateFilter,
-        },
-      },
-    },
-  ];
+        query: baseQuery
+      }
+    });
+  }
 
+  /* ---------------------------------
+     INTEREST SCORING
+  --------------------------------- */
   if (hasInterests) {
     pipeline.push(
-      // 2️⃣ Match user interests
       {
         $addFields: {
           matchedTags: {
@@ -89,7 +108,6 @@ const getForYouEventsAgainstInterests = async ({
           },
         },
       },
-      // 3️⃣ Match score
       {
         $addFields: {
           matchScore: {
@@ -108,7 +126,6 @@ const getForYouEventsAgainstInterests = async ({
     );
   } else {
     pipeline.push(
-      // 2️⃣ Trending fallback
       {
         $addFields: {
           trendingScore: {
@@ -124,22 +141,22 @@ const getForYouEventsAgainstInterests = async ({
     );
   }
 
+  /* ---------------------------------
+     PAGINATION + LOOKUPS
+  --------------------------------- */
   pipeline.push(
-    // 3️⃣ Pagination
     { $skip: skip },
     { $limit: limit },
-
-    // 4️⃣ Lookups
     ...getEventLookups()
   );
 
-  let results = await Events.aggregate(pipeline).allowDiskUse(true);
+  const results = await Events.aggregate(pipeline).allowDiskUse(true);
 
-  // 🎟️ Ticket prices
+  // 🎟 Ticket prices
   const eventIds = results.map(ev => ev._id);
   const ticketPriceMap = await getMinTicketPricesByEventIds(eventIds);
 
-  const formatted = results.map((event) => {
+  const formatted = results.map(event => {
     const formattedEvent = formatRecentlyViewedEventResponse(event, {
       userLocation,
       timezone,
@@ -157,6 +174,7 @@ const getForYouEventsAgainstInterests = async ({
 
   return { data: formatted, meta };
 };
+
 
 
 /**
