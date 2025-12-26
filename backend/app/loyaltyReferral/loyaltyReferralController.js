@@ -8,7 +8,7 @@ const {
   convertTimezoneToUtc,
 } = require("../../helperUtils/responseUtil");
 
-const globalReferralService = require("./globalReferralService");
+const globalReferralService = require("./loyaltyReferralService");
 
 const createGlobalReferral = async (req, res) => {
 let {
@@ -224,13 +224,30 @@ const getUserReferradrecord = async (req, res) => {
     });
   }
 };
+const getUserOrganizationPublicIds = async (userId,organization) => {
+
+  try {
+console.log("userId,organization", userId, organization);
+    const result = await globalReferralService.getUserOrganizationPublicIds(userId,organization);
+    if (!result) {
+      return result
+    }
+   return result
+  } catch (error) {
+    return null
+  }
+};
+
+
+
 module.exports = {
-  createGlobalReferral,
-  getGlobalReferrals,
-  saveReferralData,
-  saveUserReferralData,
-  createUserReferradrecord,
-  getUserReferradrecord
+  // createGlobalReferral,
+  // getGlobalReferrals,
+  // saveReferralData,
+  // saveUserReferralData,
+  // createUserReferradrecord,
+  // getUserReferradrecord,
+  getUserOrganizationPublicIds,
   
 
 };

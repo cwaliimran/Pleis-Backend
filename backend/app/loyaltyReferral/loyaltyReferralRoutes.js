@@ -10,21 +10,20 @@ const {
 
   getGlobalReferrals,
 createUserReferradrecord,
-    saveReferralData,
-
 getUserReferradrecord,
   saveUserReferralData
-} = require("./globalReferralController");
-
+} = require("./loyaltyReferralController");
+const mongoose = require("mongoose");
 const auth = require("../../middlewares/authMiddleware");
+const { getUserOrganizationPublicIds } = require("./loyaltyReferralController");
 
 
 const router = express.Router();
 
 
 
-router.post("/", createUserReferradrecord);
-router.get("/history", auth,getUserReferradrecord);
+// router.post("/", createUserReferradrecord);
+// router.get("/history", auth,getUserReferradrecord);
 
 
   
@@ -59,36 +58,33 @@ function getModelByType(type) {
  * Helper to generate one universal share URL
  * Example: https://pleisapp.com/open?type=event&id=XYZabc123
  */
-function generateShareLink(result) {
-    return `${BASE_WEB_URL}app/global-referral/share?id=${result}`;
+function generateShareLink(organizationPublicId, userPublicId) {
+    return `${BASE_WEB_URL}app/loyalty-referral/share?organization=${organizationPublicId}&user=${userPublicId}`;
 }
 /**
  * ✅ Generate shareable link
  * Example: GET /api/share/event/68ff18ed8cd2d2f52b25be1a
  * Uses Mongo _id (uuid) → returns link with publicId
  */
-router.get("/share/:id", async (req, res) => {
+router.get("/share/:organization",auth, async (req, res) => {
     try {
  
-        const { id } = req.params;
+        const { organization } = req.params;
 
         // Validate the parameters
         if (
             !validateParams(req, res, {
-                pathParams: ["id"],  // Ensure ID is present
-                objectIdFields: ["id"],  // Validate that ID is a valid ObjectId
+                pathParams: ["organization"],  // Ensure ID is present
+                objectIdFields: ["organization"],  // Validate that ID is a valid ObjectId
             })
         ) return;
-const result = await saveReferralData(id);
-    if (!result) {
-      return sendResponse({
-        res,
-        statusCode: 400, 
-        translationKey: "username_required_please_add_username", 
-      });
-    }
-        // Generate the shareable link using the creator's publicCreatorId and document's publicId
-        const shareUrl = generateShareLink(result);
+
+        userId=req.user._id;
+const result = await getUserOrganizationPublicIds(
+  new mongoose.Types.ObjectId(userId),
+  new mongoose.Types.ObjectId(organization)
+);
+        const shareUrl = generateShareLink(result.organizationPublicIds, result.userPublicId);
 
         return sendResponse({
             res,
@@ -191,7 +187,7 @@ router.use(auth);
 // router.post("/", auth,roleMiddleware(["admin"]), createGlobalReferral);
 
 // Get all GlobalReferrals with pagination
-router.get("/",  getGlobalReferrals);
+// router.get("/",  getGlobalReferrals);
 
 // // Get all Users GlobalReferrals with pagination
 // router.get("/users",roleMiddleware(["admin"]), apiRateLimiter, getUserGlobalReferrals);

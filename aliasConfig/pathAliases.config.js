@@ -66,4 +66,8 @@ module.exports = {
     "@TopPicksOrganizationsModel": "backend/commonModules/browserControl/topPicksOrganizations/TopPicksOrganizations.js",
     "@GlobalNotificationsModel": "backend/commonModules/notifications/notifications.js",
     "@EngagementEventsModel": "backend/commonModules/appEngagement/EngagementEvents.js",
+    "@SupportRequestModel": "backend/models/SupportRequest.js",
+    "@FaqModel": "backend/admin/settings/models/Faq.js",
+    "@FaqModel": "backend/admin/settings/models/Faq.js",
+    "@BadgeCategoriesModel": "backend/commonModules/badgeCategories/BadgeCategories.js",
 };

@@ -59,6 +59,9 @@ router.use("/friends-suggestions", require("../app/friendsSuggestion/friendsSugg
 router.use("/global-loyalty", require("../app/globalLoyalty/routes/index"));
 router.use("/giveaways", require("../app/giveaways/giveawayRoutes"));
 router.use("/qr-code", require("../app/qrCode/qrCodeRoutes"));
+router.use("/support", require("../app/support/supportRoutes"));
+router.use("/faqs", require("../app/faqs/faqsRoutes"));
+router.use("/loyalty-referral", require("../app/loyaltyReferral/loyaltyReferralRoutes"));
 
 
 
