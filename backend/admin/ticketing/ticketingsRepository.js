@@ -85,7 +85,6 @@ const validateTicketsAndQuantity = async (ticketings) => {
   const errors = [];
   const ticketSnapshots = [];
 
-  // Count occurrences of each ticketId in payload
   const ticketCounts = ticketings.reduce((acc, t) => {
     const key = t.ticketId.toString();
     acc[key] = (acc[key] || 0) + 1;
@@ -101,22 +100,18 @@ const validateTicketsAndQuantity = async (ticketings) => {
       continue;
     }
 
-    // Fetch total booked for global capacity
     const totalBooked = await TicketingBookings.countDocuments({
       "ticket.ticketId": ticketId,
+      status: { $in: ["valid", "used"] }
     });
 
     const remainingGlobalQty = ticket.quantity - totalBooked;
 
-    // ------------------------------------------
-    // CASE 1: Ticket has time slots enabled
-    // ------------------------------------------
     if (ticket.timingSlots?.enabled) {
       const requestsForTicket = ticketings.filter(
         (t) => t.ticketId.toString() === ticketId
       );
 
-      // Flatten slots for easier matching
       const allSlots = ticket.timingSlots.dateTimeSlots.flatMap(d =>
         d.timeSlots.map(s => ({
           ...s.toObject(),
@@ -128,37 +123,27 @@ const validateTicketsAndQuantity = async (ticketings) => {
       for (const req of requestsForTicket) {
         const reqSlot = req.timeSlot;
 
-        // ------------------------------------------
-        // CASE A: Slot is provided → validate slot only
-        // ------------------------------------------
         if (reqSlot) {
           const slot = allSlots.find(s => s.slotId === reqSlot);
 
           if (!slot) {
-            errors.push({
-              ticketId,
-              message: `Time slot not found: ${reqSlot}`,
-            });
+            errors.push({ ticketId, message: `Time slot not found: ${reqSlot}` });
             continue;
           }
 
-          // Count slot bookings
           const slotBooked = await TicketingBookings.countDocuments({
             "ticket.ticketId": ticketId,
             "ticket.timeSlot": reqSlot,
+            status: { $in: ["valid", "used"] }
           });
 
           const remainingSlotQty = slot.quantity - slotBooked;
 
           if (remainingSlotQty <= 0) {
-            errors.push({
-              ticketId,
-              message: `No tickets available for this slot`,
-            });
+            errors.push({ ticketId, message: `No tickets available for this slot` });
             continue;
           }
 
-          // Slot OK → push snapshot
           ticketSnapshots.push({
             ticketId,
             snapshot: ticket.toObject(),
@@ -166,9 +151,6 @@ const validateTicketsAndQuantity = async (ticketings) => {
           });
 
         } else {
-          // ------------------------------------------
-          // CASE B: Slot NOT provided → fallback to global quantity
-          // ------------------------------------------
           if (remainingGlobalQty < countInPayload) {
             errors.push({
               ticketId,
@@ -185,12 +167,8 @@ const validateTicketsAndQuantity = async (ticketings) => {
         }
       }
 
-      continue; // Skip non-slot logic
+      continue;
     }
-
-    // ------------------------------------------
-    // CASE 2: Ticket has NO time slots → global only
-    // ------------------------------------------
 
     if (remainingGlobalQty <= 0) {
       errors.push({
@@ -210,7 +188,6 @@ const validateTicketsAndQuantity = async (ticketings) => {
       continue;
     }
 
-    // Push snapshot for normal (non-slot) tickets
     for (let i = 0; i < countInPayload; i++) {
       ticketSnapshots.push({
         ticketId,
@@ -220,13 +197,11 @@ const validateTicketsAndQuantity = async (ticketings) => {
     }
   }
 
-  // Final output
-  if (errors.length > 0) {
-    return { valid: false, errors };
-  }
+  if (errors.length > 0) return { valid: false, errors };
 
   return { valid: true, ticketSnapshots };
 };
+
 
 
 
