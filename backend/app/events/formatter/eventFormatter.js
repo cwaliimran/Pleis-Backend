@@ -227,7 +227,6 @@ function reservationsFormatterAdjustDates(reservations, timezone) {
     : Object.values(reservations); // Convert object to array
 
   const currentDate = moment().tz(timezone).startOf('day');  // Get today's date in the provided timezone
-  console.log("Current Date in Timezone:", currentDate.format("YYYY-MM-DD"));  // Log today's date
 
   // Filter out records that only have _id field and no other data
   const filteredReservations = list.filter((item) => {
@@ -250,7 +249,6 @@ function reservationsFormatterAdjustDates(reservations, timezone) {
     return true;  // Keep the record if it has valid data
   });
 
-  console.log("Filtered Reservations (after excluding empty _id only records and empty dateTimeSlots):", filteredReservations);
 
   return filteredReservations.map((item) => {
     if (!item) return null;
@@ -263,19 +261,15 @@ function reservationsFormatterAdjustDates(reservations, timezone) {
         ? cat.timingSlots.dateTimeSlots
         : [cat.timingSlots.dateTimeSlots];
 
-      console.log("Processing dateTimeSlots:", dateTimeSlots);  // Log the dateTimeSlots
-
       // Filter out past dates and empty dateTimeSlots
       const filteredSlots = dateTimeSlots.filter((slot) => {
         if (slot.date) {
           const slotDate = moment(slot.date).tz(timezone).startOf('day');  // Convert the slot date to start of day in the provided timezone
-          console.log("Checking slot date:", slot.date, "Converted to:", slotDate.format("YYYY-MM-DD"));
           return slotDate.isSameOrAfter(currentDate) && slot.timeSlots?.length > 0;  // Keep only today and future dates, and non-empty time slots
         }
         return false;  // If there's no date, filter out
       });
 
-      console.log("Filtered Slots (after filtering past dates and empty time slots):", filteredSlots);
 
       // Update the dateTimeSlots with filtered results
       cat.timingSlots.dateTimeSlots = filteredSlots;
@@ -285,7 +279,6 @@ function reservationsFormatterAdjustDates(reservations, timezone) {
         if (slot.date) {
           // Convert date to the specified timezone
           slot.date = convertUtcToTimezone(slot.date, timezone, "YYYY-MM-DD");
-          console.log("Converted Slot Date:", slot.date);  // Log the converted date
         }
 
         // Convert times
@@ -293,11 +286,9 @@ function reservationsFormatterAdjustDates(reservations, timezone) {
           slot.timeSlots.forEach((timeSlot) => {
             if (timeSlot.startTime) {
               timeSlot.startTime = convertUtcToTimezoneAMPM(timeSlot.startTime, timezone);
-              console.log("Converted Start Time:", timeSlot.startTime);  // Log the converted start time
             }
             if (timeSlot.endTime) {
               timeSlot.endTime = convertUtcToTimezoneAMPM(timeSlot.endTime, timezone);
-              console.log("Converted End Time:", timeSlot.endTime);  // Log the converted end time
             }
           });
         }
@@ -306,7 +297,6 @@ function reservationsFormatterAdjustDates(reservations, timezone) {
 
     // If no valid dateTimeSlots remain, remove the timingSlots field altogether
     if (cat.timingSlots?.dateTimeSlots.length === 0) {
-      console.log("No valid dateTimeSlots remain, removing timingSlots.");
       delete cat.timingSlots;
     }
 

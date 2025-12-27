@@ -5,7 +5,7 @@ const { validateTicketsAndQuantity, getOrganizationIdFromTicketId } = require(".
 const { TicketingOrders } = require("@TicketingOrdersModel");
 const { calculatePointsRepo } = require("../../loyalty/calculatePointsEarning/pointsEarningsRepository");
 const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
-
+const mongoose = require("mongoose");
 
 const createTicketingBookingService = async (data, timezone) => {
   const session = await mongoose.startSession();
@@ -102,7 +102,7 @@ const createTicketingBookingService = async (data, timezone) => {
     });
 
     // 6️⃣ Insert tickets inside the session
-    const createdTickets = await createManyTicketBookings(ticketDocs, session);
+    const createdTickets = await ticketingBookingRepo.createManyTicketBookings(ticketDocs, session);
 
     // 7️⃣ Loyalty points (if paid online)
     if (
@@ -155,9 +155,6 @@ const createTicketingBookingService = async (data, timezone) => {
     throw error;
   }
 };
-
-
-
 
 const getTicketingBookingsService = async ({ page = 1, limit = 10, keyword, status = "valid", date, orderSort = "asc", timezone = "UTC", userId }) => {
   const query = {};
