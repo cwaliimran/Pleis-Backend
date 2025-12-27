@@ -1,58 +1,80 @@
 const { convertUtcToTimezone } = require("@utils/responseUtil");
-const { getFullImageUrl } = require("../../../helperUtils/imageHelper");
 
 function formatTicketing(timezone, item) {
-    if (!item) return null;
+  if (!item) return null;
 
-    const obj = typeof item.toObject === "function" ? item.toObject() : item;
+  const obj =
+    typeof item.toObject === "function" ? item.toObject() : item;
 
-    // Format timingSlots (dateTimeSlots)
-    if (obj.timingSlots && obj.timingSlots.dateTimeSlots && Array.isArray(obj.timingSlots.dateTimeSlots)) {
-        obj.timingSlots.dateTimeSlots = obj.timingSlots.dateTimeSlots.map((dateBlock) => {
-            const formattedDate = dateBlock.date
-                ? convertUtcToTimezone(dateBlock.date, timezone, "YYYY-MM-DD")
-                : "";
+  //
+  // ----- TICKET LEVEL -----
+  //
+  const original = obj.quantity ?? 0;
+  const remaining =
+    typeof obj.remainingQuantity === "number"
+      ? obj.remainingQuantity
+      : original;
 
-            const formattedTimeSlots = (dateBlock.timeSlots || []).map((slot) => ({
-                ...slot,
-                startTime: slot.startTime
-                    ? convertUtcToTimezone(slot.startTime, timezone, "hh:mm A")
-                    : "",
-                endTime: slot.endTime
-                    ? convertUtcToTimezone(slot.endTime, timezone, "hh:mm A")
-                    : "",
-            }));
+  obj.originalQuantity = original;
+  obj.quantity = remaining;
+  obj.soldOut = remaining === 0;
 
-            return {
-                ...dateBlock,
-                date: formattedDate,
-                timeSlots: formattedTimeSlots,
-            };
+  //
+  // ----- SLOT LEVEL -----
+  //
+  if (obj.timingSlots?.dateTimeSlots?.length) {
+    obj.timingSlots.dateTimeSlots = obj.timingSlots.dateTimeSlots.map(
+      (dateBlock) => {
+        const formattedDate = dateBlock.date
+          ? convertUtcToTimezone(dateBlock.date, timezone, "YYYY-MM-DD")
+          : "";
+
+        const timeSlots = (dateBlock.timeSlots || []).map((slot) => {
+          const slotOriginal = slot.quantity ?? 0;
+
+          // treat slot.remainingQuantity ONLY internally
+          const slotRemaining =
+            typeof slot.remainingQuantity === "number"
+              ? slot.remainingQuantity
+              : slotOriginal;
+
+          return {
+            ...slot,
+            originalQuantity: slotOriginal,
+            quantity: slotRemaining,     // <-- remaining now lives here
+            soldOut: slotRemaining === 0,
+
+            startTime: slot.startTime
+              ? convertUtcToTimezone(slot.startTime, timezone, "hh:mm A")
+              : "",
+            endTime: slot.endTime
+              ? convertUtcToTimezone(slot.endTime, timezone, "hh:mm A")
+              : ""
+          };
         });
-    }
 
-    // Format timeSensitivePricing dates
-    if (obj.timeSensitivePricing) {
-        const { earlyBird, lastMinute } = obj.timeSensitivePricing;
+        return {
+          ...dateBlock,
+          date: formattedDate,
+          timeSlots
+        };
+      }
+    );
+  }
 
-        if (earlyBird?.endDate) {
-            earlyBird.endDate = convertUtcToTimezone(
-                earlyBird.endDate,
-                timezone,
-                "YYYY-MM-DD"
-            );
-        }
-        if (lastMinute?.startDate) {
-            lastMinute.startDate = convertUtcToTimezone(
-                lastMinute.startDate,
-                timezone,
-                "YYYY-MM-DD"
-            );
-        }
+  //
+  // REMOVE backend-only meta fields
+  //
+  delete obj.remainingQuantity;
+  if (obj.timingSlots?.dateTimeSlots) {
+    obj.timingSlots.dateTimeSlots.forEach((d) =>
+      d.timeSlots?.forEach((s) => {
+        delete s.remainingQuantity;
+      })
+    );
+  }
 
-        obj.timeSensitivePricing = { earlyBird, lastMinute };
-    }
-    return obj;
+  return obj;
 }
 
 module.exports = { formatTicketing };

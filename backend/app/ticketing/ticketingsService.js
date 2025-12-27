@@ -10,6 +10,11 @@ const getTicketings = async ({ timezone, eventId }) => {
     ticketingRepo.getTicketingsWithFilters(query),
   ]);
 
+  // Attach availability first
+  ticketings = await Promise.all(
+    ticketings.map(t => ticketingRepo.attachAvailabilityToTicket(t))
+  );
+
   ticketings = ticketings.map((item) => formatTicketing(timezone, item));
 
 
