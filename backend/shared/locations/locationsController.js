@@ -265,9 +265,19 @@ const getNearbyCities = async (req, res) => {
       .sort((a, b) => b.organizers - a.organizers);
   }
 
-  // 5️⃣ Split response
-  const nearbyCities = cities.slice(0, 5);
-  const suggestedCities = cities.slice(5, 10);
+  // 5️⃣ Group by distance threshold
+  let nearbyCities = [];
+  let suggestedCities = [];
+
+  cities.forEach(c => {
+    // Only treat as nearby if distance is known AND <= 50km
+    if (c.distanceKm !== null && c.distanceKm <= 50) {
+      nearbyCities.push(c);
+    } else {
+      suggestedCities.push(c);
+    }
+  });
+
 
   return sendResponse({
     res,
