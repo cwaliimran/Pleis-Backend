@@ -5,8 +5,8 @@
  *  - global repetition limit (max 3 per org/event)
  */
 
-const MIN_ITEMS = 2;
-const MAX_REPEAT = 3;
+const MIN_ITEMS = 1;
+const MAX_REPEAT = 10;
 
 /**
  * Normalize ObjectId → string
