@@ -174,7 +174,7 @@ const getNearbyEvents = async (queryData) => {
 const thisWeekEvents = async ({
   timezone,
   category,
-  userLocation,       // may be null
+  userLocation,
   radiusKm,
   page = 1,
   limit = 10,
@@ -197,13 +197,10 @@ const thisWeekEvents = async ({
     "schedule.endDateTime": { $gte: start },
   };
 
-  // ------------------------------------------------
-  // Build pipeline (conditionally add geoNear)
-  // ------------------------------------------------
   const pipeline = [];
 
+  // GEO mode
   if (userLocation) {
-    // GEO mode
     const earthRadiusKm = 6378.1;
     const radiusInRadians = (parseFloat(radiusKm) || 50) / earthRadiusKm;
 
@@ -217,8 +214,9 @@ const thisWeekEvents = async ({
         query: { status: "active", ...categoryFilter, ...dateFilter },
       },
     });
-  } else {
-    // GLOBAL mode (no geo)
+  }
+  // GLOBAL mode
+  else {
     pipeline.push({
       $match: { status: "active", ...categoryFilter, ...dateFilter },
     });
@@ -250,21 +248,50 @@ const thisWeekEvents = async ({
       },
     },
     { $unwind: { path: "$basicInfo.organization", preserveNullAndEmptyArrays: true } },
+  );
 
+  // ---------- isFavorite lookup (only if logged in) ----------
+  if (userId) {
+    pipeline.push(
+      {
+        $lookup: {
+          from: "favorites",
+          let: { eventId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$targetId", "$$eventId"] },
+                    { $eq: ["$targetType", "event"] },
+                    { $eq: ["$user", new mongoose.Types.ObjectId(userId)] },
+                  ],
+                },
+              },
+            },
+            { $limit: 1 },
+          ],
+          as: "favoriteInfo",
+        },
+      },
+      {
+        $addFields: {
+          isFavorite: { $gt: [{ $size: "$favoriteInfo" }, 0] },
+        },
+      },
+      { $project: { favoriteInfo: 0 } }
+    );
+  }
+
+  pipeline.push(
     { $sort: userLocation ? { distance: 1 } : { "schedule.startDateTime": 1 } },
-
     { $skip: skip },
     { $limit: parseInt(limit) }
   );
 
-  // =============================
-  // RUN QUERY
-  // =============================
   const events = await eventRepo.aggregateEvents(pipeline);
 
-  // =============================
   // COUNT QUERY
-  // =============================
   const countPipeline = userLocation
     ? [
         {
@@ -651,24 +678,8 @@ const getForYouEventsService = async ({ userId, userLocation, timezone, category
     preferences: userPreferences,
     page,
     limit,
+    userId
   });
-
-
-  if (userId && recommendedEvents.data.length > 0) {
-    const eventIds = recommendedEvents.data.map((e) => e._id);
-    const userFavorites = await Favorites.find({
-      user: userId,
-      targetType: "event",
-      targetId: { $in: eventIds },
-    }).select("targetId");
-
-    const favoriteSet = new Set(userFavorites.map((f) => f.targetId.toString()));
-
-    recommendedEvents.data = recommendedEvents.data.map((event) => ({
-      ...event,
-      isFavorite: favoriteSet.has(event._id.toString()),
-    }));
-  }
 
   return recommendedEvents;
 };
