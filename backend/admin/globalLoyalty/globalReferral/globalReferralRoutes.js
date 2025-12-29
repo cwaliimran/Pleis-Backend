@@ -25,10 +25,16 @@ const apiRateLimiterDetails = createRateLimiter("GlobalReferrals/:id");
 // Create a new GlobalReferral
 router.post("/", auth,roleMiddleware(["admin"]), createGlobalReferral);
 
-// Get all GlobalReferrals with pagination
-router.get("/", roleMiddleware(["admin"]),apiRateLimiter, getGlobalReferrals);
+// Delete a GlobalReferral
+router.get("/reset", roleMiddleware(["admin"]), resetUserReferralLimits);
+
 // Get all GlobalReferrals with pagination
 router.get("/user", roleMiddleware(["admin"]),apiRateLimiter, getUserGlobalReferrals);
+
+// Get all GlobalReferrals with pagination
+router.get("/", roleMiddleware(["admin"]),apiRateLimiter, getGlobalReferrals);
+
+
 
 // // Get all Users GlobalReferrals with pagination
 // router.get("/users",roleMiddleware(["admin"]), apiRateLimiter, getUserGlobalReferrals);
@@ -48,7 +54,5 @@ router.put("/:id", roleMiddleware(["admin"]), updateGlobalReferral);
 
 // Delete a GlobalReferral
 router.delete("/:id", roleMiddleware(["admin"]), deleteGlobalReferral);
-// Delete a GlobalReferral
-router.get("/reset", roleMiddleware(["admin"]), resetUserReferralLimits);
 
 module.exports = router;
