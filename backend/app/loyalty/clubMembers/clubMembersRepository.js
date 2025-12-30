@@ -255,8 +255,8 @@ const isClubMemberWithWallet = async (userId, companyOrganizer) => {
   return getWallet(userId, companyOrganizer);
 };
 
-const joinClub = async (userId, companyOrganizer) => {
-  const existingMember = await ClubMembers.findOne({ user: userId, companyOrganizer });
+const joinClub = async (userId, companyOrganizer,referrerId) => {
+  let existingMember = await ClubMembers.findOne({ user: userId, companyOrganizer });
 
   if (existingMember) {
     if (existingMember.status === "banned") throw new Error("You are banned from this club.");
@@ -268,6 +268,10 @@ const joinClub = async (userId, companyOrganizer) => {
     return existingMember;
   }
 
+      //insert data in referral collection if referrerId is present
+      if (referrerId) {
+        await createUserReferradrecord(referrerId, userId, companyOrganizer);
+      }
   return ensureClubMemberWallet(userId, companyOrganizer);
 };
 
@@ -424,6 +428,104 @@ const getFollowedClubIds = async (userId) => {
     status: "active"
   });
 };
+
+
+
+
+
+
+
+
+
+
+const createUserReferradrecord = async (data) => {
+  try {
+    const { username, userIp, userId } = data;
+
+    // 1️⃣ Get active referral settings
+    const referralSettings = await GlobalReferral.findOne({ status: "active" });
+    if (!referralSettings) {
+      throw new Error("Referral settings not configured.");
+    }
+
+    const { referralLimit } = referralSettings;
+
+    // 2️⃣ Check existing referral record by IP
+    const existing = await ReferredRecord.findOne({ userIp });
+
+    // 3️⃣ Find referrer
+    const referrer = await User.findOne({ username });
+    if (!referrer) throw new Error("User not found.");
+
+    // 4️⃣ Check referral limit
+    if (referrer.referralsCount >= referralLimit) {
+      throw new Error("Referral limit reached.");
+    }
+
+    // 5️⃣ Assign referrer if record exists but user not linked yet
+    if (existing) {
+      if (existing.userId) {
+        throw new Error("You already have a referrer assigned.");
+      }
+
+      // Atomically increment referralsCount
+      const updatedReferrer = await User.findOneAndUpdate(
+        {
+          _id: referrer._id,
+          referralsCount: { $lt: referralLimit },
+        },
+        { $inc: { referralsCount: 1 } },
+        { new: true }
+      );
+
+      if (!updatedReferrer) {
+        throw new Error("Referral limit reached.");
+      }
+
+      existing.userId = userId;
+      existing.referrerUserId = referrer._id;
+      existing.referrerUserName = username;
+      await existing.save();
+
+      return {
+        userId: existing.userId,
+        referrerUserName: existing.referrerUserName,
+      };
+    }
+
+    // 6️⃣ New referral record flow
+    const updatedReferrer = await User.findOneAndUpdate(
+      {
+        _id: referrer._id,
+        referralsCount: { $lt: referralLimit },
+      },
+      { $inc: { referralsCount: 1 } },
+      { new: true }
+    );
+
+    if (!updatedReferrer) {
+      throw new Error("Referral limit reached.");
+    }
+
+    // 7️⃣ Create referral record
+    const newRecord = await ReferredRecord.create({
+      referrerUserName: username,
+      userIp,
+      referrerUserId: referrer._id,
+      userId,
+    });
+
+    return {
+      userId: newRecord.userId,
+      referrerUserName: newRecord.referrerUserName,
+    };
+
+  } catch (err) {
+    console.error("Error saving referral data:", err);
+    throw err;
+  }
+};
+
 
 
 module.exports = {

@@ -205,6 +205,9 @@
       ],
       "@BadgeCategoriesModel": [
         "backend/commonModules/badgeCategories/BadgeCategories.js"
+      ],
+      "@LoyaltyReferralSettingsModel": [
+        "backend/commonModules/loyalty/referrals/referralsSetting.js"
       ]
     }
   },

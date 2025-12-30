@@ -13,6 +13,7 @@ router.use("/streaks", require("../loyalty/streaks/streaksRoutes"));
 //users streaks
 router.use("/users-streaks", require("../loyalty/usersStreaks/usersStreaksRoutes"));
 router.use("/club-members", require("../loyalty/clubMembers/clubMembersRoutes"));
+router.use("/referral", require("../loyalty/referral/loyaltyReferralRoutes"));
 // router.use("/", require("../commonModules/loyalty/"));  // default route
 
 

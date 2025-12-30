@@ -223,7 +223,6 @@ const getUserSubscriptions = async ({
   selectedRange,
   subscriptionTypes
 }) => {
-  console.log("selectedRange",selectedRange );
   const now = getCurrentDateInTimezone({ timezone });
 
 
@@ -264,17 +263,17 @@ const getUserSubscriptions = async ({
     // ------------------------------------------------------
     {
       $addFields: {
-        subscriptionTypes: "$subscription.subscriptionTypes",
-        pricingPlan: "$subscription.pricingPlan",
-        numberOfOrganizations: "$subscription.numberOfOrganizations",
-        totalSubscriptionAmount: "$subscription.totalSubscriptionAmount",
-        startDate: "$subscription.startDate",
-        endDate: "$subscription.endDate",
+        subscriptionTypes: "$activeSubscription.subscriptionTypes",
+        pricingPlan: "$activeSubscription.pricingPlan",
+        numberOfOrganizations: "$activeSubscription.numberOfOrganizations",
+        totalSubscriptionAmount: "$activeSubscription.totalSubscriptionAmount",
+        startDate: "$activeSubscription.startDate",
+        endDate: "$activeSubscription.endDate",
 
         // Auto-calc status (active/expired)
         subscriptionStatus: {
           $cond: {
-            if: { $and: ["$subscription.endDate", { $lte: ["$subscription.endDate", now] }] },
+            if: { $and: ["$activeSubscription.endDate", { $lte: ["$activeSubscription.endDate", now] }] },
             then: "expired",
             else: "active"
           }
@@ -380,7 +379,7 @@ if (selectedRange) {
     minOrganizations = min;
     maxOrganizations = undefined; // No upper limit for "+" case
 
-    console.log("Parsed Range - Min:", minOrganizations, "Max: No upper limit");
+
   } else {
     // Split the range by "-" if it's in "min - max" format
     const [min, max] = selectedRange.split("-").map(str => str.trim()).map(Number);
@@ -388,27 +387,26 @@ if (selectedRange) {
     maxOrganizations = max;
 
     // Log the parsed values
-    console.log("Parsed Range - Min:", minOrganizations, "Max:", maxOrganizations);
+
   }
 
   // Apply the range filter if the range is valid
   if (minOrganizations !== undefined && maxOrganizations !== undefined) {
-    console.log("Applying filter with range:", minOrganizations, "to", maxOrganizations);
+  
     pipeline.push({
       $match: {
         "subscription.numberOfOrganizations": { $gte: minOrganizations, $lte: maxOrganizations }
       }
     });
   } else if (minOrganizations !== undefined) {
-    // Apply filter for values >= minOrganizations if there's no upper limit
-    console.log("Applying filter with min range:", minOrganizations);
+
     pipeline.push({
       $match: {
         "subscription.numberOfOrganizations": { $gte: minOrganizations }
       }
     });
   } else {
-    console.log("Invalid range, filter not applied.");
+
   }
 }
 
@@ -508,7 +506,7 @@ if (selectedRange) {
 
 const findUserSubscriptionById = async (id) => {
   // Retrieve only the subscription data for the user
-  const user = await User.findById(id).select('subscription');
+  const user = await User.findById(id).select('activeSubscription');
   return user  // Return subscription or null if not found
 };
 
@@ -681,7 +679,7 @@ const findByIdAndDelete = async (userId) => {
   }
 };
 const findById = async (userId) => {
-    return  await User.findById(userId).select('subscription');
+    return  await User.findById(userId);
 };
 
 

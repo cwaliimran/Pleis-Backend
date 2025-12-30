@@ -80,7 +80,7 @@ const createGiveaway = async (data) => {
   try {
     const userIds = await getUserIdsForEvent(data.event);
     data.creator = await getCreatorOrganizationId(data.creator)
-    console.log("userIds",userIds );
+
     const update = new Giveaway(data);
     await update.save();
         await sendUserNotifications({
@@ -101,14 +101,14 @@ const createGiveaway = async (data) => {
 
 const getGiveaway = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
   let totalParticipants = 0;
-  userId = await getCreatorOrganizationId(userId);  // Assuming getCreatorOrganizationId returns a valid userId
+  // userId = await getCreatorOrganizationId(userId);  // Assuming getCreatorOrganizationId returns a valid userId
 
-  console.log("Keyword:", keyword); // Debugging the keyword
+
 
   const pipeline = [
     {
       $match: {
-        ...(userId && { creator: userId })  // Match creator if userId is provided
+        ...(userId && { organization: userId })  // Match creator if userId is provided
       }
     },
 
@@ -190,6 +190,8 @@ const getGiveaway = async ({ timezone, page, limit, keyword, status, userId, dat
       $project: {
         eventTitle: "$event.basicInfo.title",  // Only return event title
         ticketTitle: "$ticket.title",  // Only return ticket title
+                eventId: "$event._id",  // Only return event title
+        ticketId: "$ticket._id",  // Only return ticket title
         title: 1, 
         numberOfWinners: 1,
         ticketsPerWinner: 1,
@@ -219,7 +221,7 @@ const getGiveaway = async ({ timezone, page, limit, keyword, status, userId, dat
 
   // Execute the aggregation pipeline
   const result = await Giveaway.aggregate(pipeline);
-  console.log("Result:", result);  // Debugging the result
+
 
   // Step 11: Check if the result is valid and contains data
   if (!result || !result[0] || !result[0].data) {

@@ -920,7 +920,7 @@ const updateUserSubscriptions = async (req, res) => {
     // Perform the update
     // ---------------------------------------------------------
     const UserSubscription = await SubscriptionService.updateUserSubscriptions(id, updatePayload);
-
+console.log("UserSubscription",UserSubscription );
     if (UserSubscription.error) {
       return sendResponse({
         res,
