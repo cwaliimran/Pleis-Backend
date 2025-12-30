@@ -23,7 +23,7 @@ function formatReward(reward, timezone) {
         case "customReward":
             delete obj.menuItem;
             delete obj.event;
-            obj.customReward.media = getFullImageUrl(obj.customReward?.image);
+            obj.customReward.image = getFullImageUrl(obj.customReward?.image);
             break;
 
         case "buyMenuItemReward":

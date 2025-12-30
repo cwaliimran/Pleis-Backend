@@ -8,11 +8,12 @@ const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { formatMenuItem } = require("../../commonModules/menuManagement/menuItems/formatter/formatMenuItems");
 const { formatEventResponse } = require("../events/formatter/eventFormatter");
 const { formatOrganization, formatNearByOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
-const { isClubMember } = require("../loyalty/clubMembers/clubMembersRepository");
+const { isClubMember, isClubMemberWithWallet } = require("../loyalty/clubMembers/clubMembersRepository");
 const { formatSuggestedClub } = require("../loyalty/clubMembers/formatters/formatSuggestedClubs");
 const { logEngagementService } = require("@appEngagement/engagementEventsService");
 const Reservations = require("@ReservationsModel");
 const { getOrganizationReservationsService } = require("../reservations/reservationService");
+const { formatUserWallet } = require("../loyalty/clubMembers/formatters/formatUserWallet");
 
 
 
@@ -31,12 +32,11 @@ const getOrganizationProfile = async (queryData) => {
     }).catch(console.error);
 
 
-    const [orgProfile, orgEvents, reservations, menu, loyaltyPrograms, reviews, similarOrganizations] = await Promise.all([
+    const [orgProfile, orgEvents, reservations, menu, reviews, similarOrganizations] = await Promise.all([
       findOrganizationById(userId, organizationId),
       getOrganizationEvents({ organizationId, filter, timezone, userLocation: queryData.userLocation, userId }), //filter: "upcoming" or "past"
       getOrganizationReservationsService({ organizationId, timezone }),
       getOrganizationMenu(organizationId, timezone),
-      getOrganizationLoyaltyPrograms(organizationId),
       getOrganizationReviews(organizationId),
       getSimilarOrganizations(organizationId),
     ])
@@ -47,9 +47,10 @@ const getOrganizationProfile = async (queryData) => {
 
     // Use schema helper for formatting
     let orgProfileInfo = formatOrganization(orgProfile.org);
-    let member = await isClubMember(userId, orgProfileInfo.creator);
-    orgProfileInfo.isClubMember = member ? true : false;
-
+    let userCompanyWallet = await isClubMemberWithWallet(userId, orgProfile.org.creator);
+    if (userCompanyWallet) {
+      userCompanyWallet = formatUserWallet(userCompanyWallet)
+    }
     orgProfileInfo.isFavorite = orgProfile.isFavorite;
     orgProfileInfo.venue = orgProfile.orgVenue;
 
@@ -63,7 +64,7 @@ const getOrganizationProfile = async (queryData) => {
       );
     }
 
-    return { status: true, result: { data: { orgProfileInfo, orgEvents: orgEvents.result, reservations, menu, loyaltyPrograms, reviews, similarOrganizations } } };
+    return { status: true, result: { data: { orgProfileInfo, orgEvents: orgEvents.result, reservations, menu, userCompanyWallet, reviews, similarOrganizations } } };
   } catch (error) {
     throw new Error(`Failed to fetch organization profile: ${error.message}`);
   }
@@ -154,7 +155,7 @@ const getOrganizationMenu = async (organizationId, timezone) => {
 };
 
 //loyalty
-const getOrganizationLoyaltyPrograms = async (organizationId) => {
+const getOrganizationLoyaltyProgram = async (organizationId) => {
   // Placeholder for future implementation
   return [];
 };

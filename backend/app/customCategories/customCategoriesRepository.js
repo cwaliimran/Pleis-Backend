@@ -36,6 +36,8 @@ const getCustomCategoriesWithFilters = async (
     { $match: filter },
     { $sort: sort },
     ...(limit > 0 ? [{ $skip: skip }, { $limit: limit }] : []),
+
+    // USERS
     {
       $lookup: {
         from: "users",
@@ -54,6 +56,8 @@ const getCustomCategoriesWithFilters = async (
         ]
       }
     },
+
+    // EVENTS
     {
       $lookup: {
         from: "events",
@@ -121,75 +125,89 @@ const getCustomCategoriesWithFilters = async (
         ]
       }
     },
+
+    // ORGANIZATIONS
     {
-  $lookup: {
-    from: "organizations",
-    localField: "objects",
-    foreignField: "_id",
-    as: "organizationObjects",
-    pipeline: [
-      {
-        $match: {
-          status: "active",
-          ...organizationCategoryFilter
-        }
-      },
-
-      /* ===============================
-         VENUE (PRIMARY ONLY)
-         =============================== */
-      {
-        $lookup: {
-          from: "venues",
-          let: { orgId: "$_id" },
-          pipeline: [
-            {
-              $match: {
-                $expr: { $eq: ["$organization", "$$orgId"] },
-                isPrimary: true,
-                status: "active"
-              }
-            },
-            { $project: { _id: 0, title: 1 } }
-          ],
-          as: "primaryVenue"
-        }
-      },
-
-      /* ===============================
-         TAGS (TITLE ONLY)
-         =============================== */
-      {
-        $lookup: {
-          from: "tags",
-          localField: "otherInfo.tags",
-          foreignField: "_id",
-          as: "tags",
-          pipeline: [{ $project: { _id: 1, title: 1 } }]
-        }
-      },
-
-      /* ===============================
-         PROJECT FINAL ORG SHAPE
-         =============================== */
-      {
-        $project: {
-          _id: 1,
-          "basicInfo.name": 1,
-          "basicInfo.media": 1,
-          operatingHours: 1,
-
-          venue: {
-            title: { $ifNull: [{ $first: "$primaryVenue.title" }, null] }
+      $lookup: {
+        from: "organizations",
+        localField: "objects",
+        foreignField: "_id",
+        as: "organizationObjects",
+        pipeline: [
+          {
+            $match: {
+              status: "active",
+              ...organizationCategoryFilter
+            }
           },
 
-          tags: 1
-        }
+          // PRIMARY VENUE → VENUE TYPE
+          {
+            $lookup: {
+              from: "venues",
+              let: { orgId: "$_id" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: { $eq: ["$organization", "$$orgId"] },
+                    isPrimary: true,
+                    status: "active"
+                  }
+                },
+                {
+                  $project: {
+                    _id: 0,
+                    venueType: 1
+                  }
+                }
+              ],
+              as: "primaryVenue"
+            }
+          },
+
+          // populate VenueTypes
+          {
+            $lookup: {
+              from: "venuetypes",
+              localField: "primaryVenue.venueType",
+              foreignField: "_id",
+              as: "venueTypes",
+              pipeline: [
+                { $project: { _id: 1, title: 1 } }
+              ]
+            }
+          },
+
+          // TAGS
+          {
+            $lookup: {
+              from: "tags",
+              localField: "otherInfo.tags",
+              foreignField: "_id",
+              as: "tags",
+              pipeline: [{ $project: { _id: 1, title: 1 } }]
+            }
+          },
+
+          // FINAL SHAPE FOR ORGANIZATION OBJECT
+          {
+            $project: {
+              _id: 1,
+              "basicInfo.name": 1,
+              "basicInfo.media": 1,
+              operatingHours: 1,
+              tags: 1,
+
+              venue: {
+                venueType: "$venueTypes"
+              }
+            }
+          }
+        ]
       }
-    ]
-  }
-}
-,
+    },
+
+    // FINAL CATEGORY SHAPE
     {
       $project: {
         _id: 1,
@@ -215,6 +233,7 @@ const getCustomCategoriesWithFilters = async (
 
   const result = await CustomCategories.aggregate(pipeline);
 
+  // ticket prices for events
   const eventIds = result
     .filter(cat => cat.type === "Event")
     .flatMap(cat => Array.isArray(cat.objects) ? cat.objects : [])
