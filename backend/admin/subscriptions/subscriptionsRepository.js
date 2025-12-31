@@ -509,6 +509,11 @@ const findUserSubscriptionById = async (id) => {
   const user = await User.findById(id).select('activeSubscription');
   return user  // Return subscription or null if not found
 };
+const findUserinactiveSubscriptionById = async (id) => {
+  // Retrieve only the subscription data for the user
+  const user = await User.findById(id).select('inactiveSubscription');
+  return user  // Return subscription or null if not found
+};
 
 
 const findUserById = async (id) => {
@@ -698,5 +703,6 @@ module.exports = {
   findUserById,
   getavailableSubscriptions,
   findByIdAndDelete,
-  findById
+  findById,
+  findUserinactiveSubscriptionById
 };

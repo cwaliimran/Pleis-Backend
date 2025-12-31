@@ -98,10 +98,10 @@ const updateLoyaltyReferral = async (data) => {
 
 
 
-const getUserLoyaltyReferrals = async ({ timezone, page, limit, keyword, status, userId, date, range,type }) => {
+const getUserLoyaltyReferrals = async ({ timezone, page, limit, keyword, status, companyOrganizer, date, range,type }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { LoyaltyReferral, meta } = await LoyaltyReferralRepo.getUserLoyaltyReferrals({ timezone, page, limit, keyword, status, userId, date, range, today, skip,type });
+  let { LoyaltyReferral, meta } = await LoyaltyReferralRepo.getUserLoyaltyReferrals({ timezone, page, limit, keyword, status, companyOrganizer, date, range, today, skip,type });
   return {
     LoyaltyReferral,
     meta

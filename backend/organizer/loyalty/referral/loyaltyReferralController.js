@@ -236,9 +236,9 @@ const deleteLoyaltyReferral = async (req, res) => {
 
 const getUserLoyaltyReferrals = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range,type="Loyalty" } = req.query;
+  const { keyword, status = "active", date, range,type="loyalty" } = req.query;
   try {
-    const userId = req.user._id;
+    const companyOrganizer = req.user._id;
     const timezone = req.user.timezone;
     const { LoyaltyReferral, meta } = await LoyaltyReferralService.getUserLoyaltyReferrals({
         timezone,
@@ -246,7 +246,7 @@ const getUserLoyaltyReferrals = async (req, res) => {
       limit,
       keyword,
       status,
-      userId,
+      companyOrganizer,
       date,
       range,
       type

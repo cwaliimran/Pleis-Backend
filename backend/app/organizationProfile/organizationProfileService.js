@@ -13,6 +13,8 @@ const { formatSuggestedClub } = require("../loyalty/clubMembers/formatters/forma
 const { logEngagementService } = require("@appEngagement/engagementEventsService");
 const Reservations = require("@ReservationsModel");
 const { getOrganizationReservationsService } = require("../reservations/reservationService");
+const Reviews = require("@ReviewsModel");
+const formatLoyaltyListing = require("./formater/formateImage");
 
 
 
@@ -23,6 +25,7 @@ const getOrganizationProfile = async (queryData) => {
   try {
     const { organizationId, filter = "upcoming", timezone, userId } = queryData || {};
 
+    // Log engagement
     void logEngagementService({
       entityType: "organizations",
       entityId: organizationId,
@@ -30,30 +33,42 @@ const getOrganizationProfile = async (queryData) => {
       userId
     }).catch(console.error);
 
-
-    const [orgProfile, orgEvents, reservations, menu, loyaltyPrograms, reviews, similarOrganizations] = await Promise.all([
+    // Fetch data using Promise.all for concurrency
+    const [
+      orgProfile,
+      orgEvents,
+      reservations,
+      menu,
+      loyaltyPrograms,
+      reviews,
+      similarOrganizations
+    ] = await Promise.all([
       findOrganizationById(userId, organizationId),
-      getOrganizationEvents({ organizationId, filter, timezone, userLocation: queryData.userLocation, userId }), //filter: "upcoming" or "past"
+      getOrganizationEvents({ organizationId, filter, timezone, userLocation: queryData.userLocation, userId }), // Filter for "upcoming" or "past"
       getOrganizationReservationsService({ organizationId, timezone }),
       getOrganizationMenu(organizationId, timezone),
       getOrganizationLoyaltyPrograms(organizationId),
-      getOrganizationReviews(organizationId),
-      getSimilarOrganizations(organizationId),
-    ])
+      getOrganizationReviews(organizationId), // Get reviews with reviewer names
+      getSimilarOrganizations(organizationId)
+    ]);
 
     if (!orgProfile.org) {
       throw new Error("Organization not found");
     }
 
-    // Use schema helper for formatting
+    // Format organization profile info
     let orgProfileInfo = formatOrganization(orgProfile.org);
+
+    // Check if the user is a club member
     let member = await isClubMember(userId, orgProfileInfo.creator);
     orgProfileInfo.isClubMember = member ? true : false;
 
+    // Set favorite status and venue information
     orgProfileInfo.isFavorite = orgProfile.isFavorite;
     orgProfileInfo.venue = orgProfile.orgVenue;
 
-    delete orgProfileInfo?.venue?.floorPlan
+    // Remove floor plan from venue info if present
+    delete orgProfileInfo?.venue?.floorPlan;
 
     // Localize operating hours
     if (orgProfileInfo.operatingHours) {
@@ -63,7 +78,21 @@ const getOrganizationProfile = async (queryData) => {
       );
     }
 
-    return { status: true, result: { data: { orgProfileInfo, orgEvents: orgEvents.result, reservations, menu, loyaltyPrograms, reviews, similarOrganizations } } };
+    // Return the final result with all the data
+    return {
+      status: true,
+      result: {
+        data: {
+          orgProfileInfo,
+          orgEvents: orgEvents.result,
+          reservations,
+          menu,
+          loyaltyPrograms,
+          reviews,  // Include reviews with reviewer names
+          similarOrganizations
+        }
+      }
+    };
   } catch (error) {
     throw new Error(`Failed to fetch organization profile: ${error.message}`);
   }
@@ -159,11 +188,38 @@ const getOrganizationLoyaltyPrograms = async (organizationId) => {
   return [];
 };
 
-//reviews
+const { getFullImageUrl } = require("../../helperUtils/imageHelper"); // Import getFullImageUrl
+
 const getOrganizationReviews = async (organizationId) => {
-  // Placeholder for future implementation
-  return [];
+  try {
+    // Fetch active reviews and populate the user field with firstName, lastName, and profileIcon
+    const reviews = await Reviews.find({ organization: organizationId, status: "active" })
+      .populate('user', 'firstName lastName profileIcon location')  // Populate the user with name and profile icon
+      .exec();
+
+    // Calculate the average rating
+    const totalRatings = reviews.reduce((sum, review) => sum + review.rating, 0);
+    const averageRating = reviews.length > 0 ? totalRatings / reviews.length : 0;
+
+    // Modify the profileIcon directly in the review object and return reviews
+    const reviewsWithReviewerInfo = reviews.map(review => {
+      // Directly modify the profileIcon field of the user object
+      review.user.profileIcon = getFullImageUrl(review.user.profileIcon || "noimage.png"); // Format profileIcon directly
+
+      return {
+        ...review.toObject(),  // Convert Mongoose document to plain JavaScript object
+      };
+    });
+
+    return { averageRating, reviews: reviewsWithReviewerInfo };  // Return both average rating and reviews
+  } catch (error) {
+    console.error("Error fetching reviews:", error);
+    throw new Error("Error fetching reviews");
+  }
 };
+
+
+
 
 //you might also like
 const getSimilarOrganizations = async (organizationId) => {

@@ -219,101 +219,54 @@ const updateUserSubscriptionStatus = async (id, value) => {
 
 const updateUserSubscriptions = async (id, data) => {
   try {
-    // Fetch the existing user subscription
     let UserSubscription = await SubscriptionRepo.findUserSubscriptionById(id);
 
-    // If subscription is not found, return error
     if (!UserSubscription) {
       return { error: "subscription_not_found" };
     }
-
-    // Extract subscription data from the input
     const subscriptionData = data.subscription;
-    console.log("subscriptionData====>", UserSubscription);
+if(data.subscription.subscriptionTypes||data.subscription.pricingPlan||data.subscription.numberOfOrganizations){
+    const hasSubscriptionChanged =
+      (subscriptionData.subscriptionTypes && subscriptionData.subscriptionTypes.length !== UserSubscription.activeSubscription.subscriptionTypes.length) ||
+      (subscriptionData.pricingPlan !== UserSubscription.activeSubscription.pricingPlan) ||
+      (subscriptionData.numberOfOrganizations !== UserSubscription.activeSubscription.numberOfOrganizations);
 
-    // Start updating fields only if they are provided in subscriptionData
-
-    // Check for and update subscriptionTypes only if provided
-    if (subscriptionData.subscriptionTypes !== undefined) {
-      console.log("Updating subscriptionTypes to:", subscriptionData.subscriptionTypes);
-      UserSubscription.subscriptionTypes = subscriptionData.subscriptionTypes;
+    if (hasSubscriptionChanged && subscriptionData.totalSubscriptionAmount === undefined) {
+      return { error: "totalSubscriptionAmount_is_required_when_subscription_changes" };
     }
-
-    if (subscriptionData.pricingPlan !== undefined) {
-      UserSubscription.pricingPlan = subscriptionData.pricingPlan;
-    }
-
-    if (subscriptionData.numberOfOrganizations !== undefined) {
-      UserSubscription.numberOfOrganizations = subscriptionData.numberOfOrganizations;
-    }
-
-    if (subscriptionData.totalSubscriptionAmount !== undefined) {
-      UserSubscription.totalSubscriptionAmount = subscriptionData.totalSubscriptionAmount;
-    }
-
-    if (subscriptionData.status !== undefined) {
-      UserSubscription.status = subscriptionData.status;
-    }
-
-    if (subscriptionData.orderingCommission !== undefined) {
-      UserSubscription.orderingCommission = subscriptionData.orderingCommission;
-    }
-
-    if (subscriptionData.ticketingCommission !== undefined) {
-      UserSubscription.ticketingCommission = subscriptionData.ticketingCommission;
-    }
-
-    if (subscriptionData.reservationCommission !== undefined) {
-      UserSubscription.reservationCommission = subscriptionData.reservationCommission;
-    }
-
-    if (subscriptionData.startDate !== undefined) {
-      UserSubscription.startDate = subscriptionData.startDate;
-    }
+  }
 
     if (subscriptionData.endDate !== undefined) {
-      UserSubscription.endDate = subscriptionData.endDate;
+      const currentEndDate = new Date(UserSubscription.activeSubscription.endDate);
+      const newEndDate = new Date(subscriptionData.endDate);
+      if (newEndDate.getTime() <= currentEndDate.getTime()) {
+        return { error: "expiry_date_must_be_later_than_current" };
+      }
+      UserSubscription.endDate = newEndDate;
     }
 
-    // // Now fetch the user to update the subscription in the user model
-    // const user = await SubscriptionRepo.findById(id);
-    // if (!user) {
-    //   return { error: "user_not_found" };
-    // }
+    Object.keys(subscriptionData).forEach((key) => {
+      if (subscriptionData[key] !== undefined && key !== "endDate") {
+        UserSubscription[key] = subscriptionData[key];
+      }
+    });
 
-    // Update the user's activeSubscription with the new subscription data
     UserSubscription.activeSubscription = {
-      ...UserSubscription.activeSubscription, // Retain any existing values
-      // subscriptionTypes: UserSubscription.subscriptionTypes,
-      pricingPlan: UserSubscription.pricingPlan,
-      numberOfOrganizations: UserSubscription.numberOfOrganizations,
-      totalSubscriptionAmount: UserSubscription.totalSubscriptionAmount,
-      orderingCommission: UserSubscription.orderingCommission,
-      ticketingCommission: UserSubscription.ticketingCommission,
-      reservationCommission: UserSubscription.reservationCommission,
-      status: UserSubscription.status,
-      startDate: UserSubscription.startDate,
-      endDate: UserSubscription.endDate,
+      ...UserSubscription.activeSubscription,
+      ...subscriptionData,
     };
 
-    console.log("Updated user activeSubscription", UserSubscription.activeSubscription);
-    
-    // Save the user object with the updated activeSubscription
-   UserSubscription = await UserSubscription.save({new: true});
+    UserSubscription = await UserSubscription.save({ new: true });
 
-    // Optionally, save the updated UserSubscription object (if required by your logic)
-    // await UserSubscription.save();
-
-    console.log("Updated UserSubscription", UserSubscription);
-
-    // Return the updated subscription
     return UserSubscription;
 
   } catch (err) {
-    console.error("Error updating subscription:", err);
-    throw err; // Throw the error to be handled by higher-level middleware or logging
+
+    throw err;
   }
 };
+
+
 
 
 

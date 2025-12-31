@@ -3,7 +3,6 @@ const LoyaltyReferralSettings = require("@LoyaltyReferralSettingsModel");
 const UserReservations = require("@UserReservationsModel");
 const { User } = require("../../../models/UserModel");
 const Event = require("@EventsModel");
-const {ReferredRecord} = require("@ReferredRecordModel");
 const mongoose = require("mongoose");
 // const { reservationsFormatter, reservationsFormatterAdjustDates } = require("../../app/reservations/formaters/reservationFormetter");
 const {
@@ -12,6 +11,7 @@ const {
   getStartAndEndOfWeek,
 } = require("../../../helperUtils/responseUtil");
 const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
+const { LoyaltyReferredRecords } = require("@LoyaltyReferredRecordModel");
 const createLoyaltyReferral = async (data) => {
   try {
     const { type, status, companyOrganizer } = data; // creator represents companyOrganizer
@@ -164,6 +164,8 @@ function getUserImage(userId) {
 
 
 
+
+
 const getUserLoyaltyReferrals = async ({
   timezone,
   page,
@@ -172,19 +174,20 @@ const getUserLoyaltyReferrals = async ({
   status,
   userId,
   date,
-  range,
+  companyOrganizer,
   today,
   skip,
   type
 }) => {
-console.log("keyword",keyword);
+ 
+
   const pipeline = [
     {
       $match: {
-        ...(type && { type: type }), // Match by type if provided (e.g., "Loyalty", "company", etc.)
-        ...(userId && { userId: { $ne: null } }) // Only include records with a valid userId
-      }
-    }
+        ...(type && { type: type }), // Match by type if provided
+        ...(status && { status }), // Match status if provided
+      },
+    },
   ];
 
   // Handle date filtering
@@ -193,11 +196,34 @@ console.log("keyword",keyword);
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
     pipeline.push({
       $match: {
-        createdAt: { $gte: start, $lt: end }
-      }
+        createdAt: { $gte: start, $lt: end },
+      },
     });
+   
   }
 
+  // Convert companyOrganizer to ObjectId
+  const companyOrganizerId = new mongoose.Types.ObjectId(companyOrganizer); 
+
+  // Fetch referral settings based on companyOrganizer
+  const referralSettings = await LoyaltyReferralSettings.findOne({
+    companyOrganizer: companyOrganizerId,
+    status: 'active',
+  });
+
+  if (!referralSettings) {
+
+    throw new Error('Referral settings not found for the given company.');
+  }
+
+  const { referralLimit } = referralSettings;
+
+  // Match records based on companyOrganizer
+  pipeline.push({
+    $match: {
+      companyOrganizer: companyOrganizerId,  // Ensure companyOrganizer is matched as ObjectId
+    },
+  });
 
 
   // Sorting by createdAt in descending order
@@ -211,97 +237,98 @@ console.log("keyword",keyword);
         ...(limit === 0 ? [] : [{ $limit: limit }])
       ],
       totalFiltered: [{ $count: "count" }]
-    }
+    },
   });
 
 
-  const result = await ReferredRecord.aggregate(pipeline);
+  const result = await LoyaltyReferredRecords.aggregate(pipeline);
 
   let LoyaltyReferral = result[0]?.data || [];
-
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   // Additional counts for meta (active/inactive/total by userId as creator)
   const [total, active, inactive] = await Promise.all([
-    ReferredRecord.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "deleted" } }),
-    ReferredRecord.countDocuments({ status: "active", ...(userId && { userId: userId }) }),
-    ReferredRecord.countDocuments({ status: "inactive", ...(userId && { userId: userId }) })
+    LoyaltyReferredRecords.countDocuments({
+      ...(userId && { user: userId }),  // Match `user` field, not `userId`
+      status: { $ne: "deleted" },
+    }),
+    LoyaltyReferredRecords.countDocuments({
+      status: "active",
+      ...(userId && { user: userId }),
+    }),
+    LoyaltyReferredRecords.countDocuments({
+      status: "inactive",
+      ...(userId && { user: userId }),
+    }),
   ]);
 
- // Fetching the user names from the Users table
-const userNames = await User.find({
-  _id: { $in: [...new Set(LoyaltyReferral.map(record => record.userId.toString()))] }
-})
-.select("firstName lastName _id");
 
-// Fetching the referrer user names from the Users table
-const referrerNames = await User.find({
-  _id: { $in: [...new Set(LoyaltyReferral.map(record => record.referrerUserId.toString()))] }
-})
-.select("firstName lastName _id remainingReferrals");
+  // Fetching the user names from the Users table
+  const userNames = await User.find({
+    _id: { $in: LoyaltyReferral.map(record => record.user) }
+  }).select("firstName lastName _id");
 
-// Fetch Loyalty referral data for the given userId
-const LoyaltyReferrals = await LoyaltyReferral.find({
-  creator: userId,
-  type: "Loyalty"
-}).lean();
+  // Fetching the referrer user names from the Users table
+  const referrerNames = await User.find({
+    _id: { $in: LoyaltyReferral.map(record => record.referrer) }
+  }).select("firstName lastName _id loyaltyReferralsCount");
 
-// Create a map to count how many times each referrerUserId appears
-const referrerCountMap = LoyaltyReferral.reduce((acc, record) => {
-  const key = record.referrerUserId.toString();
-  acc[key] = (acc[key] || 0) + 1;
-  return acc;
-}, {});
+  // Create a map to count how many times each referrerUserId appears
+  const referrerCountMap = LoyaltyReferral.reduce((acc, record) => {
+    const key = record.referrer.toString();  // Compare using ObjectId
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
 
-// Use it
-LoyaltyReferral = await Promise.all(
-  LoyaltyReferral.map(record => {
-    const userName = userNames.find(
-      user => user._id.toString() === record.userId.toString()
-    );
+  // Map through the referral records and gather additional data
+  LoyaltyReferral = await Promise.all(
+    LoyaltyReferral.map((record) => {
+      const userName = userNames.find(
+        (user) => user._id.toString() === record.user.toString()
+      );
+      const referrerUser = referrerNames.find(
+        (user) => user._id.toString() === record.referrer.toString()
+      );
 
-    const referrerUser = referrerNames.find(
-      user => user._id.toString() === record.referrerUserId.toString()
-    );
+      const referrerUserName = referrerUser
+        ? `${referrerUser.firstName} ${referrerUser.lastName}`
+        : "";
 
-    const referrerUserName = referrerUser
-      ? `${referrerUser.firstName} ${referrerUser.lastName}`
-      : "";
+      const remainingReferrals = referrerUser?.remainingReferrals ?? 0;
 
-    const referralLimit = LoyaltyReferrals?.[0]?.referralLimit ?? 0;
-
-    const remainingReferrals = referrerUser?.remainingReferrals ?? 0;
-
-    return getUserImage(record.userId).then(profileIcon => ({
-      ...record,
-      firstName: userName?.firstName,
-      lastName: userName?.lastName,
-      profileIcon,
-      referrerUserName,
-      remainingReferrals,
-      referralLimit,
-      referrerCount:
-        referrerCountMap[record.referrerUserId.toString()] || 0,
-    }));
-  })
-);
-
-  console.log("LoyaltyReferral", );
-  if (keyword) {
-  const regex = new RegExp(keyword, "i");
-
-  LoyaltyReferral = LoyaltyReferral.filter(item =>
-    regex.test(item.firstName || "") ||
-    regex.test(item.lastName || "") ||
-    regex.test(item.referrerUserName || "")
+      return getUserImage(record.user).then((profileIcon) => ({
+        ...record,
+        firstName: userName?.firstName,
+        lastName: userName?.lastName,
+        profileIcon,
+        referrerFirstName: referrerUser?.firstName,
+        referrerLastName: referrerUser?.lastName,
+        remainingReferrals,
+        loyaltyReferralsCount: referrerUser?.loyaltyReferralsCount 
+      }));
+    })
   );
-}
-console.log("LoyaltyReferral",LoyaltyReferral );
+
+
+  // Handle keyword filtering
+  if (keyword) {
+    const regex = new RegExp(keyword, "i");
+    LoyaltyReferral = LoyaltyReferral.filter(
+      (item) =>
+        regex.test(item.firstName || "") ||
+        regex.test(item.lastName || "") ||
+        regex.test(item.referrerFirstName || "") ||
+        regex.test(item.referrerLastName || "")
+    );
+
+  }
+
   const meta = generateMeta(page, limit, totalFiltered);
   meta.LoyaltyReferralCount = { total, active, inactive };
 
   return { LoyaltyReferral, meta };
 };
+
 
 const findLoyaltyReferrals = async (filter = {}) => {
   try {
@@ -312,7 +339,7 @@ const findLoyaltyReferrals = async (filter = {}) => {
 };
 const resetUserReferralLimits = async (limit) => {
   try {
-    console.log("limit",limit );
+   
     // Force numeric conversion
     limit = Number(limit);
 
@@ -326,7 +353,7 @@ const resetUserReferralLimits = async (limit) => {
       {},
       {
         $set: {
-          referralsCount: limit
+          loyaltyReferralsCount: limit
         }
       }
     );
@@ -337,7 +364,7 @@ const resetUserReferralLimits = async (limit) => {
     };
 
   } catch (err) {
-    console.error("Error resetting referral limits:", err);
+   
     throw err;
   }
 };

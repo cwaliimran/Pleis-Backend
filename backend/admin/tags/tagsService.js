@@ -1,5 +1,6 @@
 // services/tagService.js
 const { generateMeta } = require("../../helperUtils/responseUtil");
+const TagTypesModel = require("../tagTypes/TagTypesModel");
 const tagRepo = require("./tagsRepository");
 
 const createTag = async ({ title, status, type }) => {
@@ -9,7 +10,6 @@ const createTag = async ({ title, status, type }) => {
 const getTags = async ({ page, limit, keyword, type, status, date }) => {
   const filters = [];
 
-  // if date is available then match createdAt with date current date format is yyyy-mm-dd
   if (date) {
     filters.push({
       createdAt: {
@@ -17,10 +17,6 @@ const getTags = async ({ page, limit, keyword, type, status, date }) => {
         $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
       },
     });
-  }
-
-  if (type) {
-    filters.push({ type });
   }
 
   if (status) {
@@ -35,19 +31,20 @@ const getTags = async ({ page, limit, keyword, type, status, date }) => {
     });
   }
 
-
   const query = filters.length ? { $and: filters } : {};
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [tags, totalFiltered, total, active, inactive] =
-    await Promise.all([
-      tagRepo.getTagsWithFilters(query, skip, limit === 0 ? 0 : limit),
-      tagRepo.countTags(query),
-      tagRepo.countTags({ status: { $ne: "deleted" } }),
-      tagRepo.countTags({ status: "active" }),
-      tagRepo.countTags({ status: "inactive" }),
-    ]);
+  // Fetch tags and related counts
+  const [tags, totalFiltered, total, active, inactive] = await Promise.all([
+    tagRepo.getTagsWithFilters(query, skip, limit === 0 ? 0 : limit),
+    tagRepo.countTags(query),
+    tagRepo.countTags({ status: { $ne: "deleted" } }),
+    tagRepo.countTags({ status: "active" }),
+    tagRepo.countTags({ status: "inactive" }),
+  ]);
+
+  
 
   return {
     tags,
@@ -59,6 +56,7 @@ const getTags = async ({ page, limit, keyword, type, status, date }) => {
     },
   };
 };
+
 
 
 

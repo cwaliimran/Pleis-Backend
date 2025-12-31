@@ -10,6 +10,7 @@ const createTag = async (data) => {
 // Get all with filters
 const getTagsWithFilters = async (query, skip, limit) => {
   return Tags.find(query)
+    .populate("type", "title")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);

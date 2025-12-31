@@ -738,7 +738,6 @@ const getReservations = async (req, res) => {
 
     const userId = companyOrganizer;
     const timezone = req.user.timezone;
-    console.log("date",date );
 //  date = convertTimezoneToUtcDateOnly(
 //     date,
 //     timezone

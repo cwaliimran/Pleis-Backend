@@ -1,6 +1,6 @@
 // repositories/ReservationRepository.js
 const Reservations = require("@ReservationsModel");
-const UserReservations = require("@UserReservationsModel");
+const {UserReservations} = require("@UserReservationsModel");
 const { User } = require("@UserModel");
 const mongoose = require("mongoose");
 const { reservationsFormatter } = require("./formaters/reservationFormetter");
@@ -14,7 +14,6 @@ const moment = require("moment-timezone");
 const {
   generateMeta,
   convertToUtcDateOnly,
-  convertTimezoneToUtc,
   getCurrentDateInTimezone,
 } = require("../../helperUtils/responseUtil");
 const createReservation = async (data) => {
