@@ -1,6 +1,6 @@
 // repositories/ReservationRepository.js
 const Reservations = require("@ReservationsModel");
-const UserReservations = require("@UserReservationsModel");
+const { UserReservations } = require("@UserReservationsModel");
 const { User } = require("@UserModel");
 const mongoose = require("mongoose");
 const { reservationsFormatter } = require("./formaters/reservationFormetter");
@@ -805,6 +805,12 @@ const getOrganizationReservations = async ({ organizationId, timezone }) => {
   }
 };
 
+const getReservationForTransfer = async (id) => {
+  return UserReservations.findById(id)
+    .select("_id userId transferHistory");
+};
+
+
 module.exports = {
   createReservation,
   getReservationsWithFilters,
@@ -818,5 +824,6 @@ module.exports = {
   findUserReservationById,
   getReservationDetails,
   getOrganizationsWithReservationsForHome,
-  getOrganizationReservations
+  getOrganizationReservations,
+  getReservationForTransfer
 };

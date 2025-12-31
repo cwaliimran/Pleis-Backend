@@ -59,8 +59,6 @@ const getTicketingBookings = async (query = {}, options = {}) => {
 };
 
 
-
-
 const getTicketingBookingById = async (id) => {
 
   const result = await TicketingBookings.aggregate([
@@ -141,6 +139,11 @@ const getTicketingBookingById = async (id) => {
 };
 
 
+const getTicketingBookingForTransfer = async (id) => {
+  return TicketingBookings.findById(id)
+    .select("_id user transferHistory")
+};
+
 
 
 
@@ -184,5 +187,6 @@ module.exports = {
   deleteTicketingBooking,
   findTagByIdAndUpdate,
   getTicketingBookingsCount,
-  createManyTicketBookings
+  createManyTicketBookings,
+  getTicketingBookingForTransfer
 };

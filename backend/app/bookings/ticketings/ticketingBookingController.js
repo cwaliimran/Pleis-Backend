@@ -3,6 +3,7 @@ const { createTicketingBookingService,
   getTicketingBookingsService,
   getTicketingBookingByIdService,
   updateTicketingBookingService,
+  transferTicketingBookingService,
   deleteTicketingBookingService, } = require("./ticketingBookingService");
 
 const createTicketingBooking = async (req, res) => {
@@ -101,4 +102,48 @@ const deleteTicketingBooking = async (req, res) => {
   }
 };
 
-module.exports = { createTicketingBooking, getTicketingBookings, getTicketingBookingById, updateTicketingBooking, deleteTicketingBooking };
+const transferTicketingBooking = async (req, res) => {
+  try {
+    const { timezone, _id: userId } = req.user;
+    const { ticketingBookingId, newUserId } = req.body;
+
+    // ==============================
+    // STEP 1: PREPARE VALIDATION DATA
+    // ==============================
+    const validateData = {
+      objectIdFields: ["ticketingBookingId", "newUserId"],
+    };
+
+    // ==============================
+    // STEP 2: VALIDATE ALL FIELDS
+    // ==============================
+    if (!validateParams(req, res, validateData)) return;
+
+    // ==============================
+    // STEP 3: TRANSFER TICKETING BOOKING
+    // ==============================
+    const { success, message } = await transferTicketingBookingService(ticketingBookingId, newUserId, timezone, userId);
+    if (!success) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: message,
+      });
+    }
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: message,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
+module.exports = { createTicketingBooking, transferTicketingBooking, getTicketingBookings, getTicketingBookingById, updateTicketingBooking, deleteTicketingBooking };

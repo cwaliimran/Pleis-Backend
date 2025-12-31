@@ -110,15 +110,67 @@ const createTransaction = async (data, session) => {
  * Find transactions with filters + pagination
  */
 const getTransactionsWithFilters = async (query = {}, skip = 0, limit = 10) => {
-  return UnifiedWalletTransactions.find(query)
-    .populate({
-      path: "organization",
-      select: "basicInfo.name basicInfo.media.logo"
-    })
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit).lean();
+  return UnifiedWalletTransactions.aggregate([
+    { $match: query },
+
+    // --- ORGANIZATION LOOKUP (with projection) ---
+    {
+      $lookup: {
+        from: "organizations",
+        let: { orgId: "$organization" },
+        pipeline: [
+          { $match: { $expr: { $eq: ["$_id", "$$orgId"] } } },
+          {
+            $project: {
+              _id: 1,
+              "basicInfo.name": 1,
+              "basicInfo.media.logo": 1,
+              "basicInfo.media.cover": 1
+            }
+          }
+        ],
+        as: "organization"
+      }
+    },
+    { $unwind: { path: "$organization", preserveNullAndEmptyArrays: true } },
+
+    // --- COMPANY ORGANIZER (only when organization is null/missing) ---
+    {
+      $lookup: {
+        from: "users",
+        let: {
+          organizerId: "$companyOrganizer",
+          org: "$organization"
+        },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$_id", "$$organizerId"] },
+                  { $eq: [{ $ifNull: ["$$org", null] }, null] }
+                ]
+              }
+            }
+          },
+          {
+            $project: {
+              "companyDetails.logo": 1,
+              "companyDetails.loyaltySettings.title": 1
+            }
+          }
+        ],
+        as: "companyOrganizer"
+      }
+    },
+    { $unwind: { path: "$companyOrganizer", preserveNullAndEmptyArrays: true } },
+
+    { $sort: { createdAt: -1 } },
+    { $skip: skip },
+    { $limit: limit }
+  ]);
 };
+
 
 
 const countTransactions = (query = {}) => {

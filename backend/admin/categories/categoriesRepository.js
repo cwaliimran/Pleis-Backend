@@ -1,10 +1,13 @@
 // repositories/categoryRepository.js
 const Categories = require("./Categories");
+const { cache, invalidate } = require("@redisCache");
 
-// Create
-// Create category and automatically assign next order
+/**
+ * ============================
+ * CREATE
+ * ============================
+ */
 const createCategory = async (data) => {
-  // Find the highest current order (excluding deleted)
   const last = await Categories.findOne({ status: { $ne: "deleted" } })
     .sort({ order: -1 })
     .select("order");
@@ -16,10 +19,19 @@ const createCategory = async (data) => {
     order: nextOrder,
   });
 
-  return await category.save();
+  const saved = await category.save();
+
+  // invalidate only public categories cache
+  await invalidate("categories:public");
+
+  return saved;
 };
 
-// Get all with filters, sorted by 'order' ascending and then 'createdAt' descending
+/**
+ * ============================
+ * ADMIN — ALWAYS DB
+ * ============================
+ */
 const getCategoriesWithFilters = async (
   filter,
   skip,
@@ -29,54 +41,122 @@ const getCategoriesWithFilters = async (
 ) => {
   const query = Categories.find(filter).sort(sort);
 
-  if (selectFields) query.select(selectFields); // apply select dynamically
+  if (selectFields) query.select(selectFields);
   if (limit > 0) query.skip(skip).limit(limit);
 
   return query.exec();
 };
 
+/**
+ * ============================
+ * PUBLIC (CACHED)
+ * Only Active Categories
+ * ============================
+ */
+const getPublicActiveCategories = async () => {
+  return cache({
+    namespace: "categories:public",
+    ttl: null, // never expires — only invalidated on admin changes
+    fetchFn: async () => {
+      return Categories.find({ status: "active" })
+        .sort({ order: 1 })
+        .select("title image order")
+        .lean();
+    },
+  });
+};
 
-// Count by condition
+/**
+ * ============================
+ * COUNT
+ * ============================
+ */
 const countCategories = async (query = {}) => {
   return Categories.countDocuments(query);
 };
 
-// Find by ID
+/**
+ * ============================
+ * FIND BY ID
+ * ============================
+ */
 const findCategoryById = async (id) => {
   return Categories.findById(id);
 };
 
-// Update and save
+/**
+ * ============================
+ * UPDATE
+ * ============================
+ */
 const updateCategoryData = async (category, data) => {
   Object.assign(category, data);
-  return await category.save();
+
+  const updated = await category.save();
+
+  await invalidate("categories:public");
+
+  return updated;
 };
 
-// Delete
+/**
+ * ============================
+ * DELETE
+ * ============================
+ */
 const deleteCategoryById = async (category) => {
-  return await category.deleteOne();
+  const result = await category.deleteOne();
+
+  await invalidate("categories:public");
+
+  return result;
 };
 
-//findByIdAndUpdate
+/**
+ * ============================
+ * FIND + UPDATE
+ * ============================
+ */
 const findByIdAndUpdate = async (id, data) => {
-  return Categories.findByIdAndUpdate(id, data, { new: true });
+  const updated = await Categories.findByIdAndUpdate(id, data, { new: true });
+
+  await invalidate("categories:public");
+
+  return updated;
 };
 
-// Reorder helper — bulk update many
+/**
+ * ============================
+ * BULK UPDATE
+ * ============================
+ */
 const updateMany = async (filter, data) => {
-  return Categories.updateMany(filter, data);
+  const result = await Categories.updateMany(filter, data);
+
+  await invalidate("categories:public");
+
+  return result;
 };
 
-// Optional: Normalize all order fields sequentially (1..n)
+/**
+ * ============================
+ * NORMALIZE ORDER
+ * ============================
+ */
 const normalizeOrders = async () => {
   const docs = await Categories.find({ status: { $ne: "deleted" } }).sort("order");
+
   const ops = docs.map((doc, i) => ({
     updateOne: {
       filter: { _id: doc._id },
       update: { $set: { order: i + 1 } },
     },
   }));
+
   if (ops.length) await Categories.bulkWrite(ops);
+
+  await invalidate("categories:public");
+
   return true;
 };
 
@@ -90,4 +170,5 @@ module.exports = {
   findByIdAndUpdate,
   updateMany,
   normalizeOrders,
+  getPublicActiveCategories,
 };

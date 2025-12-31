@@ -1,5 +1,6 @@
 module.exports = {
     "@utils": "backend/helperUtils",
+    "@redisCache": "backend/config/redis/redisCache.js",
     "@UsersModel": "backend/models/UserModel.js",
     "@dbUtils": "backend/helperUtils/dbUtils",
     "@appEngagement": "backend/commonModules/appEngagement",

@@ -23,6 +23,7 @@ const getRewardsByCompanyOrganizer = async ({ companyOrganizer }) => {
 
   return Reward.find(query)
     .populate("menuItem", "title image")
+    .populate("companyOrganizer", "companyDetails.logo companyDetails.loyaltySettings.title")
     .populate({ path: "tierLimit" })
     .sort({ createdAt: -1 })
     .lean();
