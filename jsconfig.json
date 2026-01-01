@@ -220,6 +220,9 @@
       ],
       "@ApplyPointsByStaffModel": [
         "backend/commonModules/applyPointsByStaff/ApplyPointsByStaff.js"
+        ],
+      "@OrganizationsModel": [
+        "backend/commonModules/organizations/Organization.js"
       ]
     }
   },

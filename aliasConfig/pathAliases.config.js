@@ -75,5 +75,5 @@ module.exports = {
     "@LoyaltyReferredRecordModel": "backend/commonModules/loyalty/referrals/ReferredRecord.js",
     "@ReviewsModel": "backend/commonModules/reviews/Reviews.js",
     "@ApplyPointsByStaffModel": "backend/commonModules/applyPointsByStaff/ApplyPointsByStaff.js",
-
+    "@OrganizationsModel": "backend/commonModules/organizations/Organization.js"
 };
