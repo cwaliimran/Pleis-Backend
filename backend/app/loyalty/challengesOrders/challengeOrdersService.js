@@ -1,7 +1,6 @@
 const repo = require("./challengeOrdersRepository");
 const { generateMeta } = require("@utils/responseUtil");
 const { formatChallenge } = require("./formatters/formatChallenge");
-const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
 const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
 const { LoyaltyChallengesOrders } = require("@LoyaltyChallengesOrdersModel");
 const { findBestActiveChallengeByTaskType } = require("../challenges/challengesRepository");
@@ -317,6 +316,8 @@ const resolveGenericTaskTypeService = async ({
 
 const finalizeChallengeCompletion = async (order) => {
   const challenge = order.challengeSnapshot;
+
+const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
 
   // 1️⃣ Issue reward
   if (challenge.reward.rewardType === "points" && challenge.rewardValue > 0) {
