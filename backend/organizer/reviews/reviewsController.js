@@ -17,21 +17,23 @@ const getReviews = async (req, res) => {
   let {
     organization,keyword
   } = req.query;
+ if (!organization) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "Missing_organization_param",
+    });
+  }
 
   const user = req.user._id;
   const timezone = req.user.timezone;
-  // Validate required fields
-  if (
-    !validateParams(req, res, {
-      rawData: ["organization"],
-    })
-  )
-    return;
 
+
+  const organizationArray = organization.split(',');  // Convert the comma-separated string into an array
 
   // Prepare the review data
   let data = {
-    organization,
+    organization: organizationArray,
     keyword
   };
 
