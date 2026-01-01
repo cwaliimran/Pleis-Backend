@@ -220,10 +220,11 @@
       ],
 
       "@UserContacts": [
-        "backend/commonModules/friendRequest/userContacts.js"
+        "backend/commonModules/friendRequest/userContacts.js"],
+        
       "@ApplyPointsByStaffModel": [
         "backend/commonModules/applyPointsByStaff/ApplyPointsByStaff.js"
-        ],
+        ]
 
     }
   },
