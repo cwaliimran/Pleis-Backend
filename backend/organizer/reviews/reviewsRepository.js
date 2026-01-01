@@ -113,6 +113,20 @@ const getReviews = async (data) => {
         }
       ] : []),
 
+      ...(data.keyword ? [
+        {
+          $match: {
+            $or: [
+              { comment: { $regex: data.keyword, $options: 'i' } },  // Match keyword in the comment
+              { 'userDetails.firstName': { $regex: data.keyword, $options: 'i' } },  // Match keyword in user's first name
+              { 'userDetails.lastName': { $regex: data.keyword, $options: 'i' } },   // Match keyword in user's last name
+              { 'userDetails.location.fullAddress': { $regex: data.keyword, $options: 'i' } },  // Match keyword in user's full address
+              { 'organizationDetails.basicInfo.name': { $regex: data.keyword, $options: 'i' } },  // Match keyword in organization's name
+            ],
+          },
+        }
+      ] : []),
+
 
       {
         $facet: {
