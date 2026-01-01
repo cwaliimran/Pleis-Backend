@@ -172,7 +172,7 @@ const getReviews = async (data) => {
 
 
     return {
-      data: formattedReviews || [], // All reviews with filtered user/organization data
+      reviews: formattedReviews || [], 
       meta: result[0]?.meta || { totalCount: 0, avgRating: 0, ratingCounts: {} }, // Metadata with total count, avg rating, and rating counts
     };
   } catch (err) {
@@ -180,6 +180,19 @@ const getReviews = async (data) => {
   }
 };
 
+
+
+
+
+
+const findReviewById = async (id) => {
+  return Reviews.findById(id);
+};
+const findByIdAndUpdate = async (id, data) => {
+  return Reviews.findByIdAndUpdate(id, data, { new: true });
+};
 module.exports = {
   getReviews,
+  findReviewById,
+  findByIdAndUpdate
 };

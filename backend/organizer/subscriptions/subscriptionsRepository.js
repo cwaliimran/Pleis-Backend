@@ -230,7 +230,7 @@ const getUserSubscriptions = async ({
     {
       $match: {
         _id: new mongoose.Types.ObjectId(userId),
-        subscription: { $exists: true },
+        activeSubscription: { $exists: true },
       },
     },
 
@@ -239,22 +239,23 @@ const getUserSubscriptions = async ({
     ================================= */
     {
       $addFields: {
-        subscriptionTypes: "$subscription.subscriptionTypes",
-        pricingPlan: "$subscription.pricingPlan",
-        numberOfOrganizations: "$subscription.numberOfOrganizations",
-        totalSubscriptionAmount: "$subscription.totalSubscriptionAmount",
-        startDate: "$subscription.startDate",
-        endDate: "$subscription.endDate",
+        subscriptionTypes: "$activeSubscription.subscriptionTypes",
+        pricingPlan: "$activeSubscription.pricingPlan",
+        numberOfOrganizations: "$activeSubscription.numberOfOrganizations",
+        totalSubscriptionAmount: "$activeSubscription.totalSubscriptionAmount",
+        startDate: "$activeSubscription.startDate",
+        
+        endDate: "$activeSubscription.endDate",
         subscriptionStatus: {
           $cond: [
             {
               $and: [
-                { $ne: ["$subscription.endDate", null] },
-                { $lte: ["$subscription.endDate", now] },
+                { $ne: ["$activeSubscription.endDate", null] },
+                { $lte: ["$activeSubscription.endDate", now] },
               ],
             },
             "expired",
-            "$subscription.status",
+            "$activeSubscription.status",
           ],
         },
       },
@@ -367,10 +368,10 @@ const getUserSubscriptions = async ({
         monthlyPrice,
         startDate: user.startDate,
         endDate: user.endDate,
-        status: user.subscriptionStatus,
-        orderingCommission: user.subscription?.orderingCommission || 0,
-        ticketingCommission: user.subscription?.ticketingCommission || 0,
-        reservationCommission: user.subscription?.reservationCommission || 0,
+        status: user.activeSubscriptionStatus,
+        orderingCommission: user.activeSubscription?.orderingCommission || 0,
+        ticketingCommission: user.activeSubscription?.ticketingCommission || 0,
+        reservationCommission: user.activeSubscription?.reservationCommission || 0,
       },
     };
   });

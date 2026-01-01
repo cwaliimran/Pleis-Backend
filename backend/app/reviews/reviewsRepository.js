@@ -63,10 +63,12 @@ const getReviews = async ({ organizationId, timezone, page, limit, keyword, stat
         organization: 1,
         event: 1,
         createdAt: 1,
+        user:{
         firstName: "$userDetails.firstName",
         lastName: "$userDetails.lastName", 
         location: "$userDetails.location",
-        reviewerProfileIcon: { $ifNull: ["$userDetails.profileIcon", "noimage.png"] },  // Default to "noimage.png" if profileIcon is not available
+        profileIcon:"$userDetails.profileIcon",  
+        }
       },
     },
 
