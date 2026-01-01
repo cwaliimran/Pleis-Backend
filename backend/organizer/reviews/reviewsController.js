@@ -1,10 +1,6 @@
 const {
   sendResponse,
-  parsePaginationParams,
-  validateParams,
-  generateMeta,
   getReadableErrorMessage,
-  convertTimezoneToUtc,
 } = require("../../helperUtils/responseUtil");
 
 const promoCodeService = require("./reviewsService");
@@ -17,29 +13,28 @@ const getReviews = async (req, res) => {
   let {
     organization,keyword
   } = req.query;
- if (!organization) {
-    return sendResponse({
-      res,
-      statusCode: 400,
-      translationKey: "Missing_organization_param",
-    });
+
+  const organizer = req.user._id;
+  let organizationArray=[]
+
+if(organization){
+   organizationArray = organization.split(','); 
+}
+  else{
+    organizationArray = [];
   }
-
-  const user = req.user._id;
-  const timezone = req.user.timezone;
-
-
-  const organizationArray = organization.split(',');  // Convert the comma-separated string into an array
+ 
 
   // Prepare the review data
   let data = {
     organization: organizationArray,
-    keyword
+    keyword,
+    organizer,
   };
 
   try {
     const reviews = await promoCodeService.getReviews(data);
-    console.log("Reviews", reviews);
+ 
 
     if (reviews.error) {
       return sendResponse({
