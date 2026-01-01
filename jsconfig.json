@@ -214,6 +214,9 @@
       ],
       "@ReviewsModel": [
         "backend/commonModules/reviews/Reviews.js"
+      ],
+      "@OrganizationsModel": [
+        "backend/commonModules/organizations/Organization.js"
       ]
     }
   },
