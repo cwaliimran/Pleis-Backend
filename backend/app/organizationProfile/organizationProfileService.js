@@ -255,8 +255,6 @@ const getOrganizationReviews = async (organizationId, page = 1, limit = 10) => {
 };
 
 
-
-
 //you might also like
 const getSimilarOrganizations = async (organizationId) => {
   let result = await getRecommendedOrganizations(organizationId);

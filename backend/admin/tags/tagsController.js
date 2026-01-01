@@ -83,7 +83,7 @@ const getPublicTags = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword } = req.query;
   try {
-    const { tags, meta } = await tagsService.getPublicTags({
+    const { tags } = await tagsService.getPublicTags({
       page,
       limit,
       keyword,
@@ -94,7 +94,6 @@ const getPublicTags = async (req, res) => {
       statusCode: 200,
       translationKey: "tags_fetched_successfully",
       data: tags,
-      meta
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -188,32 +187,10 @@ const deleteTag = async (req, res) => {
   }
 };
 
-const getTagsGroupedByType = async (req, res) => {
-  try {
-    const tags = await tagsService.getTagsGroupedByType();
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "tags_types_fetched_successfully",
-      data: tags,
-    });
-  } catch (error) {
-    const readableError = getReadableErrorMessage(error);
-    return sendResponse({
-      res,
-      statusCode: readableError.statusCode,
-      translationKey: readableError.message,
-      error,
-    });
-  }
-}
-
 module.exports = {
   createTag,
   getTags,
   getPublicTags,
   updateTag,
   deleteTag,
-  getTagsGroupedByType
 };

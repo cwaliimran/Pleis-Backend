@@ -2,7 +2,6 @@ const {
   sendResponse,
   parsePaginationParams,
   validateParams,
-  generateMeta,
   getReadableErrorMessage,
 } = require("../../helperUtils/responseUtil");
 
@@ -86,19 +85,13 @@ const getPublicTagsTypes = async (req, res) => {
     })) return;
 
 
-    const { TagsTypes, meta } = await TagstypesService.getPublicTagsTypes({
-      page,
-      limit,
-      keyword,
-      date
-    });
+    const { tagTypes } = await TagstypesService.getPublicTagsTypes();
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "Tags_types_fetched_successfully",
-      data: TagsTypes,
-      meta
+      data: tagTypes,
     });
   } catch (error) {
     return sendResponse({

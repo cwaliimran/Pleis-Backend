@@ -1,13 +1,26 @@
 // repositories/tagRepository.js
-const Tags = require("./Tags");
+const { Events } = require("@EventsModel");
+const Tags = require("@TagsModel");
+const Organizations = require("@OrganizationModel");
+const { cache, invalidate } = require("@redisCache");
 
-// Create
+const ACTIVE_TAGS_CACHE_KEY = "tags:active";
+
+/**
+ * CREATE
+ */
 const createTag = async (data) => {
   const tag = new Tags(data);
-  return await tag.save();
+  const saved = await tag.save();
+
+  await invalidate(ACTIVE_TAGS_CACHE_KEY);
+
+  return saved;
 };
 
-// Get all with filters
+/**
+ * ADMIN LISTING (no cache)
+ */
 const getTagsWithFilters = async (query, skip, limit) => {
   return Tags.find(query)
     .populate("type", "title")
@@ -16,35 +29,164 @@ const getTagsWithFilters = async (query, skip, limit) => {
     .limit(limit);
 };
 
-// Get all unique tag types
-const getTagsGroupedByType = async (query = {}) => {
-  return Tags.distinct("type", query);
+/**
+ * PUBLIC — ACTIVE TAGS (CACHED)
+ * Sorted by most used across:
+ *  - upcoming events
+ *  - active organizations
+ */
+const getActiveTags = async (limit = 15) => {
+  return cache({
+    namespace: ACTIVE_TAGS_CACHE_KEY,
+    ttl: 86400, // 1 day
+
+    fetchFn: async () => {
+      const now = new Date();
+
+      //
+      // STEP 1 — TAG USAGE FROM UPCOMING EVENTS
+      //
+      const eventTagsPipeline = [
+        {
+          $match: {
+            status: "active",
+            $or: [
+              { "schedule.endDateTime": { $gte: now } },
+              { "schedule.startDateTime": { $gte: now } }
+            ]
+          }
+        },
+        { $unwind: "$basicInfo.tags" },
+        {
+          $group: {
+            _id: "$basicInfo.tags",
+            usage: { $sum: 1 }
+          }
+        }
+      ];
+
+      //
+      // STEP 2 — TAG USAGE FROM ORGANIZATIONS
+      //
+      const orgTagsPipeline = [
+        {
+          $match: {
+            status: "active",
+            "otherInfo.tags": { $exists: true, $ne: [] }
+          }
+        },
+        { $unwind: "$otherInfo.tags" },
+        {
+          $group: {
+            _id: "$otherInfo.tags",
+            usage: { $sum: 1 }
+          }
+        }
+      ];
+
+      //
+      // STEP 3 — MERGE + LOOKUP TAG DOCUMENTS
+      //
+      const pipeline = [
+        {
+          $unionWith: {
+            coll: Organizations.collection.name,
+            pipeline: orgTagsPipeline
+          }
+        },
+
+        // combine usage counts
+        {
+          $group: {
+            _id: "$_id",
+            totalUsage: { $sum: "$usage" }
+          }
+        },
+
+        // lookup tag fields
+        {
+          $lookup: {
+            from: "tags",
+            localField: "_id",
+            foreignField: "_id",
+            as: "tag"
+          }
+        },
+
+        { $unwind: "$tag" },
+
+        {
+          $project: {
+            _id: "$tag._id",
+            title: "$tag.title",
+            // totalUsage: 1
+          }
+        },
+
+        { $sort: { totalUsage: -1 } },
+
+        ...(limit ? [{ $limit: limit }] : [])
+      ];
+
+      const result = await Events.aggregate(eventTagsPipeline.concat(pipeline));
+
+      // ❗ DO NOT CACHE EMPTY LISTS
+      if (!result || result.length === 0) {
+        return [];
+      }
+
+      return result;
+    }
+  });
 };
 
-// Count by condition
+/**
+ * COUNT
+ */
 const countTags = async (query = {}) => {
   return Tags.countDocuments(query);
 };
 
-// Find by ID
+/**
+ * FIND BY ID
+ */
 const findTagById = async (id) => {
   return Tags.findById(id);
 };
 
-// Update and save
+/**
+ * UPDATE
+ */
 const updateTagData = async (tag, data) => {
   Object.assign(tag, data);
-  return await tag.save();
+
+  const updated = await tag.save();
+
+  await invalidate(ACTIVE_TAGS_CACHE_KEY);
+
+  return updated;
 };
 
-// Delete
+/**
+ * DELETE
+ */
 const deleteTagById = async (tag) => {
-  return await tag.deleteOne();
+  const result = await tag.deleteOne();
+
+  await invalidate(ACTIVE_TAGS_CACHE_KEY);
+
+  return result;
 };
 
-//findTagByIdAndUpdate
+/**
+ * FIND + UPDATE
+ */
 const findTagByIdAndUpdate = async (id, data) => {
-  return Tags.findByIdAndUpdate(id, data, { new: true });
+  const updated = await Tags.findByIdAndUpdate(id, data, { new: true });
+
+  await invalidate(ACTIVE_TAGS_CACHE_KEY);
+
+  return updated;
 };
 
 module.exports = {
@@ -55,5 +197,5 @@ module.exports = {
   updateTagData,
   deleteTagById,
   findTagByIdAndUpdate,
-  getTagsGroupedByType,
+  getActiveTags
 };

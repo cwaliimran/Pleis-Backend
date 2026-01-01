@@ -4,7 +4,7 @@ const Tags = require("@TagsModel");
 const { generateMeta } = require("@utils/responseUtil");
 const { getNearbyEventsWithAdvanceFilters } = require("../../events/eventService");
 const mongoose = require("mongoose");
-const {User} = require("@UserModel")
+const { User } = require("@UserModel")
 
 //
 // EVENTS
@@ -77,9 +77,12 @@ async function searchOrganizations(ctx) {
   // GENRE FILTER
   //
   if (genre.length) {
+    //make genre to new ObjectIds array
+    const genreObjectIds = genre.filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
     const genreTags = await Tags.find({
       status: "active",
-      type: { $in: genre }
+      _id: { $in: genreObjectIds }
     }).select("_id");
 
     const genreTagIds = genreTags.map(t => t._id);
@@ -100,20 +103,20 @@ async function searchOrganizations(ctx) {
   const geoStage =
     latitude && longitude
       ? [
-          {
-            $geoNear: {
-              near: { type: "Point", coordinates: [longitude, latitude] },
-              key: "location",
-              distanceField: "distance",
-              spherical: true,
-              query: filter,
-              ...(distanceTo > 0 ? { maxDistance: distanceToMeters } : {}),
-            }
-          },
-          ...(distanceFrom > 0
-            ? [{ $match: { distance: { $gte: distanceFromMeters } } }]
-            : [])
-        ]
+        {
+          $geoNear: {
+            near: { type: "Point", coordinates: [longitude, latitude] },
+            key: "location",
+            distanceField: "distance",
+            spherical: true,
+            query: filter,
+            ...(distanceTo > 0 ? { maxDistance: distanceToMeters } : {}),
+          }
+        },
+        ...(distanceFrom > 0
+          ? [{ $match: { distance: { $gte: distanceFromMeters } } }]
+          : [])
+      ]
       : [{ $match: filter }];
 
   //
@@ -237,11 +240,11 @@ async function searchLoyaltyClubs(ctx) {
 
     ...(keyword
       ? {
-          "companyDetails.loyaltySettings.title": {
-            $regex: keyword,
-            $options: "i"
-          }
+        "companyDetails.loyaltySettings.title": {
+          $regex: keyword,
+          $options: "i"
         }
+      }
       : {})
   };
 
@@ -270,11 +273,11 @@ async function searchLoyaltyClubs(ctx) {
                 : {}),
               ...(keyword
                 ? {
-                    "basicInfo.name": {
-                      $regex: keyword,
-                      $options: "i"
-                    }
+                  "basicInfo.name": {
+                    $regex: keyword,
+                    $options: "i"
                   }
+                }
                 : {})
             }
           }
@@ -391,15 +394,15 @@ async function searchLoyaltyClubs(ctx) {
 
       ...(distanceTo > 0
         ? [
-            {
-              $match: {
-                $or: [
-                  { distance: null },
-                  { distance: { $lte: distanceTo * 1000 } }
-                ]
-              }
+          {
+            $match: {
+              $or: [
+                { distance: null },
+                { distance: { $lte: distanceTo * 1000 } }
+              ]
             }
-          ]
+          }
+        ]
         : []),
 
       ...(distanceFrom > 0
