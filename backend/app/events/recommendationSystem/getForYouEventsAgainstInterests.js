@@ -19,12 +19,12 @@ const getForYouEventsAgainstInterests = async ({
   preferences = {},
   page = 1,
   limit = 20,
+  userId
 }) => {
   const now = getCurrentDateInTimezone({ timezone });
   const skip = Math.max((page - 1) * limit, 0);
 
   const { categories = [], tags = [], venueTypes = [] } = preferences || {};
-
   const catObjId = category ? new mongoose.Types.ObjectId(category) : null;
 
   const radiusInMeters = Math.max(radiusKm || 0, 0.1) * 1000;
@@ -39,9 +39,6 @@ const getForYouEventsAgainstInterests = async ({
   const hasInterests =
     (categories?.length || tags?.length || venueTypes?.length) > 0;
 
-  /* ---------------------------------
-     BASE QUERY (shared)
-  --------------------------------- */
   const baseQuery = {
     status: "active",
     ...dateFilter,
@@ -52,20 +49,12 @@ const getForYouEventsAgainstInterests = async ({
 
   let pipeline = [];
 
-  /* ---------------------------------
-     🌍 GLOBAL MODE (no location)
-  --------------------------------- */
   if (!userLocation) {
     pipeline.push(
       { $match: baseQuery },
-      { $sort: { createdAt: -1 } } // fallback ordering
+      { $sort: { createdAt: -1 } }
     );
-  }
-
-  /* ---------------------------------
-     📍 GEO MODE
-  --------------------------------- */
-  else {
+  } else {
     pipeline.push({
       $geoNear: {
         near: userLocation,
@@ -78,9 +67,6 @@ const getForYouEventsAgainstInterests = async ({
     });
   }
 
-  /* ---------------------------------
-     INTEREST SCORING
-  --------------------------------- */
   if (hasInterests) {
     pipeline.push(
       {
@@ -141,9 +127,39 @@ const getForYouEventsAgainstInterests = async ({
     );
   }
 
-  /* ---------------------------------
-     PAGINATION + LOOKUPS
-  --------------------------------- */
+  // ----- add isFavorite inside pipeline -----
+  if (userId) {
+    pipeline.push(
+      {
+        $lookup: {
+          from: "favorites",
+          let: { eventId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$targetId", "$$eventId"] },
+                    { $eq: ["$targetType", "event"] },
+                    { $eq: ["$user", new mongoose.Types.ObjectId(userId)] }
+                  ]
+                }
+              }
+            },
+            { $limit: 1 }
+          ],
+          as: "favoriteInfo"
+        }
+      },
+      {
+        $addFields: {
+          isFavorite: { $gt: [{ $size: "$favoriteInfo" }, 0] }
+        }
+      },
+      { $project: { favoriteInfo: 0 } }
+    );
+  }
+
   pipeline.push(
     { $skip: skip },
     { $limit: limit },
@@ -152,7 +168,6 @@ const getForYouEventsAgainstInterests = async ({
 
   const results = await Events.aggregate(pipeline).allowDiskUse(true);
 
-  // 🎟 Ticket prices
   const eventIds = results.map(ev => ev._id);
   const ticketPriceMap = await getMinTicketPricesByEventIds(eventIds);
 
@@ -174,6 +189,7 @@ const getForYouEventsAgainstInterests = async ({
 
   return { data: formatted, meta };
 };
+
 
 
 

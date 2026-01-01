@@ -72,12 +72,12 @@ const getTransactions = async (req, res) => {
     const { page, limit } = parsePaginationParams(req);
     let user = req.user._id
     const {
-        walletType, domainType, type, organization, companyOrganizer, entityId, date
+        walletType, domainType, type, organization, companyOrganizer, entityId, date, keyword
     } = req.query;
 
     try {
         const { items, meta } = await unifiedService.getTransactions({
-            page, limit, user, walletType, domainType, type, organization, companyOrganizer, entityId, date
+            page, limit, user, walletType, domainType, type, organization, companyOrganizer, entityId, date, keyword
         });
         return sendResponse({ res, statusCode: 200, translationKey: "wallet_transactions_fetched", data: items, meta });
     } catch (error) {

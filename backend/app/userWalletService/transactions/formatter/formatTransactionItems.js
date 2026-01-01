@@ -11,6 +11,10 @@ function formatTransactionItem(item) {
       obj.organization.basicInfo.media.logo = getFullImageUrl(obj.organization.basicInfo.media.logo);
     }
 
+    if (obj?.companyOrganizer?.companyDetails?.logo) {
+        obj.companyOrganizer.companyDetails.logo = getFullImageUrl(obj.companyOrganizer.companyDetails.logo);
+    }
+
     return obj;
 }
 

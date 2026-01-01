@@ -14,8 +14,8 @@ const tagsSchema = new mongoose.Schema(
       default: "active",
     },
     type: {
-      type: String,
-      default: "",
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TagTypes",
     },
   },
   {

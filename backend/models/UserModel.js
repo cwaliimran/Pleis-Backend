@@ -135,6 +135,10 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+        loyaltyReferralsCount: {
+      type: Number,
+      default: 0
+    },
     emailVerification: {
       tokenHash: String,
       expiresAt: Number,

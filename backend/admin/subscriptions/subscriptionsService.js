@@ -218,143 +218,57 @@ const updateUserSubscriptionStatus = async (id, value) => {
 // };
 
 const updateUserSubscriptions = async (id, data) => {
-  // Fetch the existing user subscription
-  let UserSubscription = await SubscriptionRepo.findUserSubscriptionById(id);
+  try {
+    let UserSubscription = await SubscriptionRepo.findUserSubscriptionById(id);
 
-  data = data.subscription;
-  UserSubscription = UserSubscription.subscription;
-
-  if (!UserSubscription) {
-    return { error: "subscription_not_found" };
-  }
-
-  if (data.startDate !== undefined) {
-    UserSubscription.startDate = data.startDate;
-  }
-
-  if (data.endDate !== undefined) {
-    UserSubscription.endDate = data.endDate;
-  }
-
-  if (data.orderingCommission !== undefined) {
-    UserSubscription.orderingCommission = data.orderingCommission;
-  }
-
-  if (data.ticketingCommission !== undefined) {
-    UserSubscription.ticketingCommission = data.ticketingCommission;
-  }
-
-  if (data.reservationCommission !== undefined) {
-    UserSubscription.reservationCommission = data.reservationCommission;
-  }
-   if (data.status !== undefined) {
-    UserSubscription.status = data.status;
-  }
-
-
-  // -------------------------------------------------
-  // Fields that require totalSubscriptionAmount if they are actually changed
-  // -------------------------------------------------
-  let isSubscriptionChanged = false;
-  // Check if subscription types, pricing plan, or number of organizations have changed
-  if (
-    data.subscriptionTypes !== undefined &&
-    JSON.stringify(data.subscriptionTypes) !== JSON.stringify(UserSubscription.subscriptionTypes)
-  ) {
-    isSubscriptionChanged = true;
-
-    UserSubscription.subscriptionTypes = data.subscriptionTypes;
-  }
-
-  if (
-    data.pricingPlan !== undefined &&
-    data.pricingPlan !== UserSubscription.pricingPlan
-  ) {
-    isSubscriptionChanged = true;
-    UserSubscription.pricingPlan = data.pricingPlan;
-  }
-
-  if (
-    data.numberOfOrganizations !== undefined &&
-    data.numberOfOrganizations !== UserSubscription.numberOfOrganizations
-  ) {
-    isSubscriptionChanged = true;
-    UserSubscription.numberOfOrganizations = data.numberOfOrganizations;
-  }
-
-  // If there are any changes in the above fields, the user must provide totalSubscriptionAmount
-  if (isSubscriptionChanged) {
-    if (data.totalSubscriptionAmount === undefined) {
-      return { error: "totalSubscriptionAmount_required" }; // Error if totalSubscriptionAmount is missing
+    if (!UserSubscription) {
+      return { error: "subscription_not_found" };
     }
+    const subscriptionData = data.subscription;
+if(data.subscription.subscriptionTypes||data.subscription.pricingPlan||data.subscription.numberOfOrganizations){
+    const hasSubscriptionChanged =
+      (subscriptionData.subscriptionTypes && subscriptionData.subscriptionTypes.length !== UserSubscription.activeSubscription.subscriptionTypes.length) ||
+      (subscriptionData.pricingPlan !== UserSubscription.activeSubscription.pricingPlan) ||
+      (subscriptionData.numberOfOrganizations !== UserSubscription.activeSubscription.numberOfOrganizations);
 
-    // Only update totalSubscriptionAmount if the new value is different
-    if (data.totalSubscriptionAmount !== UserSubscription.totalSubscriptionAmount) {
-      UserSubscription.totalSubscriptionAmount = data.totalSubscriptionAmount;
+    if (hasSubscriptionChanged && subscriptionData.totalSubscriptionAmount === undefined) {
+      return { error: "totalSubscriptionAmount_is_required_when_subscription_changes" };
     }
   }
 
-  // -------------------------------------------------
-  // Smart merge for modulePricing
-  // -------------------------------------------------
-  if (data.modulePricing !== undefined) {
-    const incoming = data.modulePricing;
-    const existing = UserSubscription.modulePricing || [];
-    const merged = [...existing];
-
-    for (const newItem of incoming) {
-      const index = merged.findIndex(m => m.module === newItem.module);
-      if (index !== -1) {
-        merged[index] = { ...merged[index], ...newItem };
-      } else {
-        merged.push(newItem);
+    if (subscriptionData.endDate !== undefined) {
+      const currentEndDate = new Date(UserSubscription.activeSubscription.endDate);
+      const newEndDate = new Date(subscriptionData.endDate);
+      if (newEndDate.getTime() <= currentEndDate.getTime()) {
+        return { error: "expiry_date_must_be_later_than_current" };
       }
+      UserSubscription.endDate = newEndDate;
     }
 
-    UserSubscription.modulePricing = merged;
-  }
-
-  // -------------------------------------------------
-  // Validate commissions based on modules
-  // -------------------------------------------------
-  if (data.commissions !== undefined) {
-    const c = data.commissions;
-    const finalModules = (UserSubscription.modulePricing || []).map(m => m.module);
-
-    // Commission validation for ordering and reservations modules
-    if (c.orderingCommission !== undefined) {
-      if (!finalModules.includes("ordering")) {
-        return { error: "ordering_module_required_for_orderingCommission" };
+    Object.keys(subscriptionData).forEach((key) => {
+      if (subscriptionData[key] !== undefined && key !== "endDate") {
+        UserSubscription[key] = subscriptionData[key];
       }
-    }
+    });
 
-    if (c.reservationCommission !== undefined) {
-      if (!finalModules.includes("reservations")) {
-        return { error: "reservations_module_required_for_reservationCommission" };
-      }
-    }
+    UserSubscription.activeSubscription = {
+      ...UserSubscription.activeSubscription,
+      ...subscriptionData,
+    };
 
-    // No restrictions for ticketingCommission
-    UserSubscription.commissions = c;
+    UserSubscription = await UserSubscription.save({ new: true });
+
+    return UserSubscription;
+
+  } catch (err) {
+
+    throw err;
   }
-
-  // -------------------------------------------------
-  // Save updated subscription in the user model
-  // -------------------------------------------------
-  const user = await SubscriptionRepo.findById(id);
-  if (!user) {
-    return { error: "user_not_found" };
-  }
-  // Ensure the user subscription is properly updated with the new subscription data
-  user.subscription = UserSubscription;  // Assign updated subscription to the user model
-
-  // Save the user object with the updated subscription
-  await user.save();
-
-  // Save the updated UserSubscription object itself
-  await UserSubscription.save();
-  return UserSubscription;
 };
+
+
+
+
 
 
 

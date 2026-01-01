@@ -1,12 +1,32 @@
 
+const { UserContacts } = require('@UserContacts');
 const {User} = require('@UserModel');
 const { generateMeta } = require('@utils/responseUtil');
-const getFriends = async ({
+const { splitPhoneNumbers } = require('./formater/splitnumberToCountryCode');
+
+const getPhoneNumbers = async (userId) => {
+  try {
+    // Fetch the user contacts by userId
+    const userContacts = await UserContacts.findOne({ userId });
+
+    // If user contacts are found, return the phoneNumbers array
+    if (userContacts) {
+      return userContacts.phoneNumbers;
+    } else {
+      // If no contacts found, return an empty array
+      return [];
+    }
+  } catch (err) {
+    throw err;
+  }
+};
+
+const getFriendSuggestions = async ({
   page,
   limit,
-  phoneNumbers,
   userId,
 }) => {
+ const phoneNumbers= await splitPhoneNumbers(await getPhoneNumbers(userId));
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const pipeline = [];
@@ -61,6 +81,44 @@ const getFriends = async ({
 
   return { users, meta };
 };
+const addContacts = async ({ phoneNumbers, userId }) => {
+  try {
+    // Remove duplicates from the provided phoneNumbers array
+    const uniquePhoneNumbers = [...new Set(phoneNumbers)];
+
+    // Fetch existing user contacts
+    const existingUserContacts = await UserContacts.findOne({ userId });
+
+    // If user contacts exist, only add new unique phone numbers that are not already saved
+    if (existingUserContacts) {
+      // Filter out phone numbers that are already in the user's contact list
+      const newPhoneNumbers = uniquePhoneNumbers.filter(
+        phoneNumber => !existingUserContacts.phoneNumbers.includes(phoneNumber)
+      );
+
+      // If there are new unique phone numbers, add them to the array
+      if (newPhoneNumbers.length > 0) {
+        existingUserContacts.phoneNumbers.push(...newPhoneNumbers);
+        await existingUserContacts.save();
+      }
+
+      // Return the updated user contacts
+      return existingUserContacts;
+    } else {
+      // If no existing user contacts, create a new entry with the unique phone numbers
+      const data = { phoneNumbers: uniquePhoneNumbers, userId };
+      const userContacts = new UserContacts(data);
+      await userContacts.save();
+      return userContacts;
+    }
+  } catch (err) {
+    throw err;
+  }
+};
+
+
+
 module.exports = {
-  getFriends,
+  addContacts,
+  getFriendSuggestions
 };

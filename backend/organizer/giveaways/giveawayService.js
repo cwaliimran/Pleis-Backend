@@ -8,10 +8,10 @@ const createGiveaway = async (data) => {
   let Giveaway = await GiveawayRepo.createGiveaway(data);
   return Giveaway;
 };
-const getGiveaway = async ({ timezone, page, limit, keyword, status, userId,  date, range }) => {
+const getGiveaway = async ({ organizationId,timezone, page, limit, keyword, status, userId,  date, range }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { Giveaways, meta } = await GiveawayRepo.getGiveaway({ timezone, page, limit, keyword, status, userId,  date, range, today, skip });
+  let { Giveaways, meta } = await GiveawayRepo.getGiveaway({ organizationId,timezone, page, limit, keyword, status, userId,  date, range, today, skip });
 
   return {
     Giveaways,
@@ -108,7 +108,16 @@ if(data.expiryDate=="Invalid date"){
 
 
 
+const getWinners = async ({ timezone, page, limit, keyword, status, userId,  date, range, giveawayId }) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
+  let { winners, meta } = await GiveawayRepo.getWinners({ timezone, page, limit, keyword, status, userId,  date, range, today, skip, giveawayId });
 
+  return {
+    winners,
+    meta
+  };
+};
 
 
 
@@ -143,6 +152,7 @@ module.exports = {
   updateGiveaway,
   deleteGiveaway,
   getevents,
-  gettickets
+  gettickets,
+  getWinners
 
 };

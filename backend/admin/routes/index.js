@@ -6,6 +6,7 @@ router.use("/", require("../../routes/index"));
 router.use(auth, roleMiddleware(["admin"]));
 router.use("/settings", require("../settings/adminSettingsRoutes"));
 router.use("/suppliers", require("../suppliers/suppliersRoutes"));
+router.use("/tags-types", require("../tagTypes/tagTypesRoutes"));
 router.use("/tags", require("../tags/tagsRoutes"));
 router.use("/categories", require("../categories/categoriesRoutes"));
 router.use("/venues", require("../venues/venuesRoutes"));
@@ -68,6 +69,8 @@ router.use("/qr-code", require("../qr/qrRoutes"));
 router.use("/in-app-ordering", require("../inAppOrdering/inAppOrderingRoutes"));
 router.use("/faqs", require("../faqs/faqsRoutes"));
 router.use("/badge-categories", require("../badgeCategories/badgeCategoriesRoutes"));
+router.use("/reviews", require("../reviews/reviewsRoutes"));
+
 
 
 module.exports = router;

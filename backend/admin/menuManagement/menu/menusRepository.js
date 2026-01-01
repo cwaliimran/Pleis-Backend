@@ -1,6 +1,7 @@
 // repositories/menuRepository.js
 const Menus = require("@MenusModel");
 const { getOrganizationIdsByCompanyOrganizer } = require("../../organizations/organizationRepository");
+const { default: mongoose } = require("mongoose");
 
 // Create menu in a transaction and update organization
 

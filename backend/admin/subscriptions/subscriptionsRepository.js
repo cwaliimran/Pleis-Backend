@@ -223,9 +223,8 @@ const getUserSubscriptions = async ({
   selectedRange,
   subscriptionTypes
 }) => {
-  console.log("selectedRange",selectedRange );
   const now = getCurrentDateInTimezone({ timezone });
-
+  let minOrganizations, maxOrganizations;
 
 
   const pipeline = [
@@ -234,8 +233,8 @@ const getUserSubscriptions = async ({
     // ------------------------------------------------------
     {
       $match: {
-        // subscription: { $exists: true }
-      }
+      "activeSubscription": { $exists: true }  // Ensure activeSubscription exists
+    }
     },
 
     // ------------------------------------------------------
@@ -264,21 +263,15 @@ const getUserSubscriptions = async ({
     // ------------------------------------------------------
     {
       $addFields: {
-        subscriptionTypes: "$subscription.subscriptionTypes",
-        pricingPlan: "$subscription.pricingPlan",
-        numberOfOrganizations: "$subscription.numberOfOrganizations",
-        totalSubscriptionAmount: "$subscription.totalSubscriptionAmount",
-        startDate: "$subscription.startDate",
-        endDate: "$subscription.endDate",
+        subscriptionTypes: "$activeSubscription.subscriptionTypes",
+        pricingPlan: "$activeSubscription.pricingPlan",
+        numberOfOrganizations: "$activeSubscription.numberOfOrganizations",
+        totalSubscriptionAmount: "$activeSubscription.totalSubscriptionAmount",
+        startDate: "$activeSubscription.startDate",
+        endDate: "$activeSubscription.endDate",
 
         // Auto-calc status (active/expired)
-        subscriptionStatus: {
-          $cond: {
-            if: { $and: ["$subscription.endDate", { $lte: ["$subscription.endDate", now] }] },
-            then: "expired",
-            else: "active"
-          }
-        }
+         subscriptionStatus: "$activeSubscription.status" 
       }
     }
   ];
@@ -308,17 +301,25 @@ const getUserSubscriptions = async ({
   // ------------------------------------------------------
   // STATUS FILTER
   // ------------------------------------------------------
-  if (status) {
+// STATUS FILTER
+if (status) {
 
-    pipeline.push({ $match: { "subscription.status": status } });
-  } else {
+  pipeline.push({
+    $match: {
+      "activeSubscription.status": status  
+    }
+  });
 
-    pipeline.push({
-      $match: {
-        "subscription.status": { $ne: "deleted" }  // Do not include deleted subscriptions
-      }
-    });
-  }
+} else {
+
+  // If no status is provided, exclude "deleted" subscriptions
+  pipeline.push({
+    $match: {
+      "activeSubscription.status": { $ne: "deleted" }  // Exclude deleted subscriptions if no status is provided
+    }
+  });
+}
+
 
   // ------------------------------------------------------
   // DATE FILTER ON startDate
@@ -357,59 +358,61 @@ const getUserSubscriptions = async ({
   }
 if (subscriptionTypes) {
   // Ensure subscriptionTypes is an array
-  const subscriptionTypesArray = Array.isArray(subscriptionTypes) ? subscriptionTypes : [subscriptionTypes];
-  
-  pipeline.push({
-    $match: {
-      $and: [
-        { "subscription.subscriptionTypes": { $in: subscriptionTypesArray } }
-      ]
-    }
-  });
+  const subscriptionTypesArray = Array.isArray(subscriptionTypes) ? subscriptionTypes : [subscriptionTypes];qr
+  // If 'free' is in the array, include only 'free' subscription types
+  if (subscriptionTypesArray.includes("free")) {
+    pipeline.push({
+      $match: {
+        "activeSubscription.subscriptionTypes": { 
+          $in: ["free"]  // Include only users with the "free" subscription type
+        }
+      }
+    });
+  } else {
+    // Exclude users with "free" subscription type and return all other types
+    pipeline.push({
+      $match: {
+        "activeSubscription.subscriptionTypes": { 
+          $nin: ["free"]  // Exclude users with the "free" subscription type
+        }
+      }
+    });
+
+  }
 }
+
+
+// Handle the selectedRange filter (e.g., "1-2", "50+", "All")
 if (selectedRange) {
-  let minOrganizations, maxOrganizations;
-  // Log the selected range for debugging
+ 
 
-
-  // Handle the "All" case
-  if (selectedRange === "All"|| selectedRange === "all") {
+  if (selectedRange === "All" || selectedRange === "all") {
+    // If "All", no range filter is applied
+    minOrganizations = undefined;
+    maxOrganizations = undefined;
   } else if (selectedRange.includes("+")) {
-    // Handle the "50+" case
+    // Handle the "50+" case: set minimum organizations with no upper limit
     const min = parseInt(selectedRange.replace("+", "").trim(), 10);
     minOrganizations = min;
     maxOrganizations = undefined; // No upper limit for "+" case
-
-    console.log("Parsed Range - Min:", minOrganizations, "Max: No upper limit");
-  } else {
-    // Split the range by "-" if it's in "min - max" format
+  } else if (selectedRange.includes("-")) {
+    // Handle the "min-max" case: split the range by "-" and apply it
     const [min, max] = selectedRange.split("-").map(str => str.trim()).map(Number);
     minOrganizations = min;
     maxOrganizations = max;
-
-    // Log the parsed values
-    console.log("Parsed Range - Min:", minOrganizations, "Max:", maxOrganizations);
   }
+}
 
-  // Apply the range filter if the range is valid
-  if (minOrganizations !== undefined && maxOrganizations !== undefined) {
-    console.log("Applying filter with range:", minOrganizations, "to", maxOrganizations);
-    pipeline.push({
-      $match: {
-        "subscription.numberOfOrganizations": { $gte: minOrganizations, $lte: maxOrganizations }
-      }
-    });
-  } else if (minOrganizations !== undefined) {
-    // Apply filter for values >= minOrganizations if there's no upper limit
-    console.log("Applying filter with min range:", minOrganizations);
-    pipeline.push({
-      $match: {
-        "subscription.numberOfOrganizations": { $gte: minOrganizations }
-      }
-    });
-  } else {
-    console.log("Invalid range, filter not applied.");
-  }
+// Apply the selectedRange filter for number of organizations
+if (minOrganizations !== undefined) {
+  pipeline.push({
+    $match: {
+      "activeSubscription.numberOfOrganizations": {
+        $gte: minOrganizations,
+        ...(maxOrganizations !== undefined ? { $lte: maxOrganizations } : {}),
+      },
+    },
+  });
 }
 
 
@@ -434,10 +437,8 @@ if (selectedRange) {
   });
 
 
+
   const result = await User.aggregate(pipeline);
-
-
-
   let subscriptions = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
@@ -471,10 +472,10 @@ if (selectedRange) {
 
     // Format to 2 decimals
     monthlyPrice = Number(monthlyPrice.toFixed(2));
-    const finalStatus = user.subscription?.status || "active";
+    const finalStatus = user.activeSubscription?.status || "active";
 
     // Check if subscription object exists before accessing its properties
-    const subscription = user.subscription || {}; // Use an empty object if subscription is undefined
+    const subscription = user.activeSubscription || {}; // Use an empty object if subscription is undefined
 
     return {
       userId: user._id,
@@ -491,9 +492,9 @@ if (selectedRange) {
         startDate: user.startDate,
         endDate: user.endDate,
         status: finalStatus,
-        orderingCommission: subscription.orderingCommission || 0, // Default to 0 if undefined
-        ticketingCommission: subscription.ticketingCommission || 0, // Default to 0 if undefined
-        reservationCommission: subscription.reservationCommission || 0, // Default to 0 if undefined
+        orderingCommission: user.activeSubscription.orderingCommission || 0, // Default to 0 if undefined
+        ticketingCommission: user.activeSubscription.ticketingCommission || 0, // Default to 0 if undefined
+        reservationCommission: user.activeSubscription.reservationCommission || 0, // Default to 0 if undefined
       },
     };
   });
@@ -508,7 +509,12 @@ if (selectedRange) {
 
 const findUserSubscriptionById = async (id) => {
   // Retrieve only the subscription data for the user
-  const user = await User.findById(id).select('subscription');
+  const user = await User.findById(id).select('activeSubscription');
+  return user  // Return subscription or null if not found
+};
+const findUserinactiveSubscriptionById = async (id) => {
+  // Retrieve only the subscription data for the user
+  const user = await User.findById(id).select('inactiveSubscription');
   return user  // Return subscription or null if not found
 };
 
@@ -681,7 +687,7 @@ const findByIdAndDelete = async (userId) => {
   }
 };
 const findById = async (userId) => {
-    return  await User.findById(userId).select('subscription');
+    return  await User.findById(userId);
 };
 
 
@@ -700,5 +706,6 @@ module.exports = {
   findUserById,
   getavailableSubscriptions,
   findByIdAndDelete,
-  findById
+  findById,
+  findUserinactiveSubscriptionById
 };
