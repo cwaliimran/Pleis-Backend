@@ -35,25 +35,11 @@ const getOrganizationProfile = async (queryData) => {
     }).catch(console.error);
 
 
-    const [orgProfile, orgEvents, reservations, menu, reviews, similarOrganizations] = await Promise.all([
-    // Fetch data using Promise.all for concurrency
-    const [
-      orgProfile,
-      orgEvents,
-      reservations,
-      menu,
-      loyaltyPrograms,
-      reviews,
-      similarOrganizations
-    ] = await Promise.all([
+    const [orgProfile, orgEvents, reservations, menu, reviews, similarOrganizations]= await Promise.all([
       findOrganizationById(userId, organizationId),
       getOrganizationEvents({ organizationId, filter, timezone, userLocation: queryData.userLocation, userId }), // Filter for "upcoming" or "past"
       getOrganizationReservationsService({ organizationId, timezone }),
       getOrganizationMenu(organizationId, timezone),
-      getOrganizationReviews(organizationId),
-      getSimilarOrganizations(organizationId),
-    ])
-      getOrganizationLoyaltyPrograms(organizationId),
       getOrganizationReviews(organizationId), // Get reviews with reviewer names
       getSimilarOrganizations(organizationId)
     ]);
@@ -87,19 +73,17 @@ const getOrganizationProfile = async (queryData) => {
         timezone
       );
     }
-
-    return { status: true, result: { data: { orgProfileInfo, orgEvents: orgEvents.result, reservations, menu, userCompanyWallet, reviews, similarOrganizations } } };
     // Return the final result with all the data
     return {
       status: true,
       result: {
         data: {
           orgProfileInfo,
+          userCompanyWallet,
           orgEvents: orgEvents.result,
           reservations,
           menu,
-          loyaltyPrograms,
-          reviews,  // Include reviews with reviewer names
+          reviews,
           similarOrganizations
         }
       }
@@ -193,40 +177,81 @@ const getOrganizationMenu = async (organizationId, timezone) => {
   return formatted || [];
 };
 
-//loyalty
-const getOrganizationLoyaltyProgram = async (organizationId) => {
-  // Placeholder for future implementation
-  return [];
-};
-
 const { getFullImageUrl } = require("../../helperUtils/imageHelper"); // Import getFullImageUrl
 
-const getOrganizationReviews = async (organizationId) => {
-  try {
-    // Fetch active reviews and populate the user field with firstName, lastName, and profileIcon
-    const reviews = await Reviews.find({ organization: organizationId, status: "active" })
-      .populate('user', 'firstName lastName profileIcon location')  // Populate the user with name and profile icon
-      .exec();
+const getOrganizationReviews = async (organizationId, page = 1, limit = 10) => {
+  const skip = (page - 1) * limit;
 
-    // Calculate the average rating
-    const totalRatings = reviews.reduce((sum, review) => sum + review.rating, 0);
-    const averageRating = reviews.length > 0 ? totalRatings / reviews.length : 0;
+  const result = await Reviews.aggregate([
+    {
+      $match: {
+        organization: new mongoose.Types.ObjectId(organizationId),
+        status: "active",
+      },
+    },
 
-    // Modify the profileIcon directly in the review object and return reviews
-    const reviewsWithReviewerInfo = reviews.map(review => {
-      // Directly modify the profileIcon field of the user object
-      review.user.profileIcon = getFullImageUrl(review.user.profileIcon || "noimage.png"); // Format profileIcon directly
+    {
+      $facet: {
+        meta: [
+          {
+            $group: {
+              _id: null,
+              totalReviews: { $sum: 1 },
+              averageRating: { $avg: "$rating" },
+            },
+          },
+        ],
 
-      return {
-        ...review.toObject(),  // Convert Mongoose document to plain JavaScript object
-      };
-    });
+        reviews: [
+          { $sort: { createdAt: -1 } },
+          { $skip: skip },
+          { $limit: limit },
 
-    return { averageRating, reviews: reviewsWithReviewerInfo };  // Return both average rating and reviews
-  } catch (error) {
-    console.error("Error fetching reviews:", error);
-    throw new Error("Error fetching reviews");
-  }
+          // populate user
+          {
+            $lookup: {
+              from: "users",
+              localField: "user",
+              foreignField: "_id",
+              as: "user",
+            },
+          },
+          { $unwind: "$user" },
+
+          // only required user fields
+          {
+            $project: {
+              rating: 1,
+              comment: 1,
+              createdAt: 1,
+              "user.firstName": 1,
+              "user.lastName": 1,
+              "user.profileIcon": 1,
+              "user.location": 1,
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  const meta = result[0].meta[0] || {
+    totalReviews: 0,
+    averageRating: 0,
+  };
+
+  const reviews = result[0].reviews.map(r => {
+    r.user.profileIcon = getFullImageUrl(
+      r.user.profileIcon || "noimage.png"
+    );
+    return r;
+  });
+
+  return {
+    averageRating: Number(meta.averageRating?.toFixed(2)) || 0,
+    totalReviews: meta.totalReviews,
+    reviews,
+  };
 };
 
 
