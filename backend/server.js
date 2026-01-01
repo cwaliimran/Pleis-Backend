@@ -58,7 +58,7 @@ const allowedOrigins = [
   "https://ebook-what-premiere-totals.trycloudflare.com",
   "https://individual-travesti-hockey-cancel.trycloudflare.com",
   "https://handy-floral-implementation-pumps.trycloudflare.com",
-  "https://evaluating-stands-guards-identifies.trycloudflare.com",
+  "https://fruits-decorating-cet-extended.trycloudflare.com",
   "http://192.168.13.220:4003",
   "http://192.168.13.221:4003",
   "http://192.168.100.65:4003",
@@ -91,7 +91,7 @@ app.use("/api/v1/admin", adminRoutes);
 // Organizer routes
 app.use("/api/v1/organizer", organizerRoutes);
 // Organizer staff
-app.use("/api/v1/staff", staffRoutes);
+app.use("/api/v1/app/staff", staffRoutes);
 
 app.use("/api/v1", routes);
 

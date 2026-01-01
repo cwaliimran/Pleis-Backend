@@ -15,54 +15,128 @@ const {
   convertToUtcDateOnly,
   getCurrentDateInTimezone,
 } = require("../../helperUtils/responseUtil");
+const { placePreOrderMenuItemsWithReservation } = require("../menuItemsAndOrdering/orders/orderService");
+const { resolveChallengeByTaskTypeService } = require("../loyalty/challengesOrders/challengeOrdersService");
+const { calculatePointsRepo } = require("../loyalty/calculatePointsEarning/pointsEarningsRepository");
+const { createTransaction } = require("../userWalletService/transactions/services/unifiedTransactionsService");
 const createReservation = async (data) => {
-  try {
-    const { userId, reservationId, partySize } = data;
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
+  try {
+    const { userId, reservationId, partySize, preOrderMenuItems, timezone } = data;
+
+    // Fetch user profile
     const userData = await User.aggregate([
       { $match: { _id: new mongoose.Types.ObjectId(userId) } },
-      {
-        $project: {
-          firstName: 1,
-          lastName: 1,
-          phoneCode: "$phoneNumber.code",
-          phoneNumber: "$phoneNumber.number"
-        }
-      }
+      { $project: { firstName: 1, lastName: 1, phoneNumber: 1 } }
     ]);
 
-    if (!userData || userData.length === 0) {
-      throw new Error("User not found");
-    }
+    if (!userData?.length) throw new Error("User not found");
 
     data.firstName = userData[0].firstName || "";
     data.lastName = userData[0].lastName || "";
-    data.phoneNumber = {
-      code: userData[0].phoneCode || "",
-      number: userData[0].phoneNumber || ""
-    };
+    data.phoneNumber = userData[0].phoneNumber || "";
 
+    // Get reservation base price
     const reservation = await Reservations.aggregate([
       { $match: { _id: new mongoose.Types.ObjectId(reservationId) } },
-      {
-        $project: {
-          amount: { $toDouble: { $ifNull: ["$amount", 0] } }
-        }
-      }
+      { $project: { amount: { $toDouble: { $ifNull: ["$amount", 0] } } } }
     ]);
 
     const amountPerPerson = reservation.length > 0 ? reservation[0].amount : 0;
+    const totalReservationAmount = amountPerPerson * partySize;
+    data.amount = totalReservationAmount;
 
-    data.amount = amountPerPerson * partySize;
-
+    // SAVE reservation inside session
     const userReservation = new UserReservations(data);
-    await userReservation.save();
+    await userReservation.save({ session });
+
+    // If pre-order exists -> create order
+    if (preOrderMenuItems?.items?.length) {
+      const order = await placePreOrderMenuItemsWithReservation({
+        userId,
+        timezone,
+        items: preOrderMenuItems.items,
+        notes: preOrderMenuItems.notes,
+        reservation: userReservation._id,
+        paymentMethod: data.paymentMethod,
+        session,
+      });
+
+      userReservation.preOrderMenuItemsOrder = order._id;
+
+
+      if (data.paymentMethod === "applePay" || data.paymentMethod === "card") {
+        order.paymentStatus = "paid";
+        await order.save({ session });
+
+        //totalPrice including menu items + reservation amount
+        const totalPrice = order.totalPrice + totalReservationAmount;
+
+
+        const pointsCalculation =
+          await calculatePointsRepo(userId, data.companyOrganizer, totalPrice);
+
+        const trx = await createTransaction(
+          {
+            user: userId,
+            companyOrganizer: data.companyOrganizer,
+            organization: data.organizationId,
+            companyPoints: {
+              base: pointsCalculation.organizer.earnedPoints,
+              multiplier: 1,
+              total: pointsCalculation.organizer.earnedPoints,
+              pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
+            },
+            globalPoints: {
+              base: pointsCalculation.global.earnedPoints,
+              multiplier: 1,
+              total: pointsCalculation.global.earnedPoints,
+              pointsPerEuro: pointsCalculation.global.pointsPerEuro,
+            },
+            allowNegative: false,
+            type: "earn",
+            description: "",
+            entityId: userReservation._id,
+            domainType: "userreservations",
+          },
+          session
+        );
+
+        if (!trx.success) {
+          throw new Error(trx.message || "failed_loyalty_update");
+        }
+
+        try {
+          await resolveChallengeByTaskTypeService({
+            userId,
+            companyOrganizer: data.companyOrganizer,
+            taskType: "buyMenuItem",
+            items: data.preOrderMenuItems.items
+          });
+        } catch (err) {
+          console.error("Challenge resolve failed", err);
+        }
+
+      }
+
+      await userReservation.save({ session });
+
+    }
+
+    await session.commitTransaction();
+    session.endSession();
 
     return userReservation;
+
   } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
     throw err;
   }
 };
+
 
 
 

@@ -19,6 +19,7 @@ const createEvent = async (req, res) => {
     basicInfo = {},
     schedule = {},
     ticketing = {},
+    preOrdersEnabled = false,
     // we will IGNORE any incoming recurringMeta from client for safety
   } = req.body;
 
@@ -71,45 +72,45 @@ const createEvent = async (req, res) => {
     validateData.dateFields["schedule.endDateTime"] = "YYYY-MM-DD hh:mm A";
   }
 
-// ==============================
-// STEP 2.5: RECURRING LOGIC VALIDATION
-// ==============================
-if (isRecurringEnabled) {
-  const { endType, endDate, occurrences } = recurringDetails;
+  // ==============================
+  // STEP 2.5: RECURRING LOGIC VALIDATION
+  // ==============================
+  if (isRecurringEnabled) {
+    const { endType, endDate, occurrences } = recurringDetails;
 
-  switch (endType) {
-    case "never":
-      // ✅ nothing required
-      break;
+    switch (endType) {
+      case "never":
+        // ✅ nothing required
+        break;
 
-    case "onDate":
-      if (!endDate) {
+      case "onDate":
+        if (!endDate) {
+          return sendResponse({
+            res,
+            statusCode: 400,
+            translationKey: "recurring_end_date_required",
+          });
+        }
+        break;
+
+      case "afterOccurrences":
+        if (!occurrences || occurrences < 1) {
+          return sendResponse({
+            res,
+            statusCode: 400,
+            translationKey: "recurring_occurrences_required",
+          });
+        }
+        break;
+
+      default:
         return sendResponse({
           res,
           statusCode: 400,
-          translationKey: "recurring_end_date_required",
+          translationKey: "invalid_recurring_end_type",
         });
-      }
-      break;
-
-    case "afterOccurrences":
-      if (!occurrences || occurrences < 1) {
-        return sendResponse({
-          res,
-          statusCode: 400,
-          translationKey: "recurring_occurrences_required",
-        });
-      }
-      break;
-
-    default:
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "invalid_recurring_end_type",
-      });
+    }
   }
-}
 
   // ==============================
   // STEP 2: VALIDATE ALL FIELDS
@@ -233,6 +234,7 @@ if (isRecurringEnabled) {
       endDateTime: scheduleEndUtc,
       recurringDetails: isRecurringEnabled ? recurringDetails : null,
     },
+    preOrdersEnabled,
     creator: userId,
   };
 
@@ -377,6 +379,7 @@ const updateEvent = async (req, res) => {
     description,
     title,
     schedule,
+    preOrdersEnabled,
   } = req.body);
 
   try {
@@ -413,6 +416,23 @@ const updateEvent = async (req, res) => {
         };
 
         if (!validateParams(req, res, validateData)) return;
+
+
+        // ==============================
+        // CONSTRUCT EVENT PAYLOAD (after conversions)
+        // ==============================
+        const scheduleStartUtc = convertTimezoneToUtc(
+          schedule.startDateTime,
+          timezone,
+          "YYYY-MM-DD hh:mm A"
+        );
+        schedule.startDateTime = scheduleStartUtc;
+        const scheduleEndUtc = convertTimezoneToUtc(
+          schedule.endDateTime,
+          timezone,
+          "YYYY-MM-DD hh:mm A"
+        );
+        schedule.endDateTime = scheduleEndUtc;
       }
     }
 
@@ -562,14 +582,14 @@ const cloneEvent = async (req, res) => {
 };
 
 const getMinimalEventsInfo = async (req, res) => {
-  let { organization } =req.params;
-    if (!organization) {
+  let { organization } = req.params;
+  if (!organization) {
     return res.status(400).json({ error: "Organization ID is required" });
   }
   let { timezone } = req.user;
   try {
-organizationId =new mongoose.Types.ObjectId(organization);
-console.log("organization",organization );
+    organizationId = new mongoose.Types.ObjectId(organization);
+    console.log("organization", organization);
     if (organization) {
       if (!validateParams(req, res, {
         objectIdFields: ["organization"],

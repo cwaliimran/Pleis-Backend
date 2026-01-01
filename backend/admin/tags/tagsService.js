@@ -61,44 +61,12 @@ const getTags = async ({ page, limit, keyword, type, status, date }) => {
 
 
 
-const getPublicTags = async ({ page, limit, keyword }) => {
-  const baseFilters = [{ status: "active" }];
-
-  if (keyword) {
-    baseFilters.push({
-      $or: [
-        { title: { $regex: keyword, $options: "i" } },
-        // Add more fields here if needed
-      ]
-    });
-  }
-
-  // Final base query (e.g., status + keyword)
-  const baseQuery = baseFilters.length ? { $and: baseFilters } : {};
-
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
-
-  const [tags, totalFiltered] = await Promise.all([
-    tagRepo.getTagsWithFilters(baseQuery, skip, limit === 0 ? 0 : limit),
-    tagRepo.countTags(baseQuery),
-  ]);
-
-
-  let meta = generateMeta(page, limit, totalFiltered);
+const getPublicTags = async () => {
+  let tags = await tagRepo.getActiveTags(15);
   return {
     tags,
-    meta,
   };
 };
-
-
-const getTagsGroupedByType = async () => {
-  // Final base query (e.g., status + keyword)
-  return tags = await tagRepo.getTagsGroupedByType({ status: "active" })
-
-};
-
-
 
 
 const updateTag = async (id, data) => {
@@ -131,5 +99,4 @@ module.exports = {
   updateTag,
   deleteTag,
   getPublicTags,
-  getTagsGroupedByType,
 };

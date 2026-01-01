@@ -2,7 +2,6 @@
 const { reservationsFormatter, userReservationsFormatter, logQRCode } = require("./formaters/reservationFormetter");
 const ReservationRepo = require("./reservationRepository");
 const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
-const moment = require("moment-timezone");
 const { isOrganizationOpenNow } = require("../../shared/commonSchemas/operatingHours");
 
 const createReservation = async (data) => {
