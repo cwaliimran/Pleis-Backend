@@ -5,6 +5,9 @@
       "@utils/*": [
         "backend/helperUtils/*"
       ],
+      "@redisCache": [
+        "backend/config/redis/redisCache.js"
+      ],
       "@UsersModel": [
         "backend/models/UserModel.js"
       ],

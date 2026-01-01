@@ -6,6 +6,7 @@ const {
   deleteReservation,
   getReservationDetails,
   getUserReservations,
+  transferReservation
 } = require("./reservationController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -20,6 +21,7 @@ const apiRateLimiter = createRateLimiter("Reservations");
 const apiRateLimiterDetails = createRateLimiter("Reservations/:id");
 
 // Create a new Reservation
+router.post("/transfer", auth, transferReservation);
 router.post("/", auth, createReservation);
 
 // Get all Reservations with pagination

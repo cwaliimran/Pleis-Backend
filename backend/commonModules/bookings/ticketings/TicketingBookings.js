@@ -22,6 +22,25 @@ const ticketingBookingSchema = new mongoose.Schema(
             ref: "User",
             required: true,
         },
+        transferHistory: {
+            type: [
+                {
+                    fromUser: {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: "User",
+                    },
+                    toUser: {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: "User",
+                    },
+                    transferDate: {
+                        type: Date,
+                        default: Date.now,
+                    },
+                },
+            ],
+            default: [],
+        },
         organization: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Organizations",

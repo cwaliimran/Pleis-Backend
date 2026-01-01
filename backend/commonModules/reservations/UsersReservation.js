@@ -7,7 +7,25 @@ const UserReservationsSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-
+    transferHistory: {
+      type: [
+        {
+          fromUser: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+          },
+          toUser: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+          },
+          transferDate: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
+      default: [],
+    },
     partySize: {
       type: Number,
       default: 0,
@@ -63,8 +81,8 @@ const UserReservationsSchema = new mongoose.Schema(
         default: [],
       },
     },
-firstName: { type: String, default: "", }, 
-lastName: { type: String, default: "", },
+    firstName: { type: String, default: "", },
+    lastName: { type: String, default: "", },
     phoneNumber: {
       code: {
         // Country code for phone number
@@ -108,4 +126,4 @@ lastName: { type: String, default: "", },
 
 const UserReservations = mongoose.model("UserReservations", UserReservationsSchema);
 
-module.exports = {UserReservations};
+module.exports = { UserReservations };

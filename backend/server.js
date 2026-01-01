@@ -33,6 +33,7 @@ const { securityMiddleware } = require("./middlewares/security.js");
 
 const swaggerUi = require('swagger-ui-express');
 const swaggerFile = require('../swagger/swagger_output.json');
+const { getRedisClient } = require("./config/redis/redisConfig");
 
 
 // Express app
@@ -57,7 +58,7 @@ const allowedOrigins = [
   "https://ebook-what-premiere-totals.trycloudflare.com",
   "https://individual-travesti-hockey-cancel.trycloudflare.com",
   "https://handy-floral-implementation-pumps.trycloudflare.com",
-  "https://remedy-defined-terms-consensus.trycloudflare.com",
+  "https://evaluating-stands-guards-identifies.trycloudflare.com",
   "http://192.168.13.220:4003",
   "http://192.168.13.221:4003",
   "http://192.168.100.65:4003",
@@ -83,9 +84,6 @@ app.use(express.json());
 
 
 // Routes
-
-
-
 //app routes
 app.use("/api/v1/app", appRoutes);
 // Admin routes
@@ -108,6 +106,7 @@ app.use((req, res) => {
 
 // Connect to DB and start server
 connectToDB(app);
+getRedisClient()
 
 // Start MongoDB backup timer (24 hours)
 const backupTime = 24 * 60 * 60 * 1000;

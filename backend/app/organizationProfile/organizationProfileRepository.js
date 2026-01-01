@@ -356,18 +356,19 @@ const getNearbyOrganizations = async ({
      1️⃣ CONDITIONAL GEO
      =============================== */
   if (userLocation) {
-    pipeline.push({
-      $geoNear: {
-        near: userLocation,
-        key: "location",
-        distanceField: "distance",
-        spherical: true,
-        maxDistance: radiusKm * 1000,
-        query: geoQuery
-      }
-    });
-
-    pipeline.push({ $sort: { distance: 1 } });
+    pipeline.push(
+      {
+        $geoNear: {
+          near: userLocation,
+          key: "location",
+          distanceField: "distance",
+          spherical: true,
+          maxDistance: radiusKm * 1000,
+          query: geoQuery
+        }
+      },
+      { $sort: { distance: 1 } }
+    );
   } else {
     pipeline.push(
       { $match: geoQuery },
@@ -384,7 +385,7 @@ const getNearbyOrganizations = async ({
   );
 
   /* ===============================
-     3️⃣ PRIMARY VENUE + VENUE TYPE
+     3️⃣ PRIMARY VENUE → POPULATE venueType
      =============================== */
   pipeline.push(
     {
@@ -401,8 +402,7 @@ const getNearbyOrganizations = async ({
           },
           {
             $project: {
-              _id: 1,
-              title: 1,
+              _id: 0,
               venueType: 1
             }
           }
@@ -411,7 +411,7 @@ const getNearbyOrganizations = async ({
       }
     },
 
-    // lookup venue type details
+    // Populate venueType documents
     {
       $lookup: {
         from: "venuetypes",
@@ -428,19 +428,15 @@ const getNearbyOrganizations = async ({
   /* ===============================
      4️⃣ TAGS
      =============================== */
-  pipeline.push(
-    {
-      $lookup: {
-        from: "tags",
-        localField: "otherInfo.tags",
-        foreignField: "_id",
-        as: "tags",
-        pipeline: [
-          { $project: { _id: 1, title: 1 } }
-        ]
-      }
+  pipeline.push({
+    $lookup: {
+      from: "tags",
+      localField: "otherInfo.tags",
+      foreignField: "_id",
+      as: "tags",
+      pipeline: [{ $project: { _id: 1, title: 1 } }]
     }
-  );
+  });
 
   /* ===============================
      5️⃣ FINAL SHAPE
@@ -459,13 +455,7 @@ const getNearbyOrganizations = async ({
         tags: 1,
 
         venue: {
-          title: { $ifNull: [{ $first: "$primaryVenue.title" }, null] },
-          type: {
-            $ifNull: [
-              { $first: "$venueTypes.title" },
-              null
-            ]
-          }
+          venueType: "$venueTypes"
         }
       }
     }
@@ -475,6 +465,8 @@ const getNearbyOrganizations = async ({
 
   return { organizations };
 };
+
+
 
 
 
@@ -848,7 +840,6 @@ const getForYouOrganizationsForHomeRepo = async ({
   const userCategories = userPreferences?.categories || [];
   const userTags = userPreferences?.tags || [];
 
-  // Base filter — works for BOTH global + geo mode
   const geoQuery = {
     status: "active",
     ...(category && {
@@ -991,9 +982,10 @@ const getForYouOrganizationsForHomeRepo = async ({
   );
 
   /* ===============================
-     8️⃣ PRIMARY VENUE + TAGS
+     8️⃣ PRIMARY VENUE → VENUE TYPE + TAGS
      =============================== */
   pipeline.push(
+    // primary venue
     {
       $lookup: {
         from: "venues",
@@ -1006,12 +998,31 @@ const getForYouOrganizationsForHomeRepo = async ({
               status: "active"
             }
           },
-          { $project: { _id: 0, title: 1 } }
+          {
+            $project: {
+              _id: 0,
+              venueType: 1
+            }
+          }
         ],
         as: "primaryVenue"
       }
     },
 
+    // populate venueType docs
+    {
+      $lookup: {
+        from: "venuetypes",
+        localField: "primaryVenue.venueType",
+        foreignField: "_id",
+        as: "venueTypes",
+        pipeline: [
+          { $project: { _id: 1, title: 1 } }
+        ]
+      }
+    },
+
+    // tags
     {
       $lookup: {
         from: "tags",
@@ -1020,36 +1031,34 @@ const getForYouOrganizationsForHomeRepo = async ({
         as: "tags",
         pipeline: [{ $project: { _id: 1, title: 1 } }]
       }
-    },
-
-    /* ===============================
-       9️⃣ FINAL SHAPE
-       =============================== */
-    {
-      $project: {
-        _id: 1,
-        distance: userLocation ? 1 : null,
-        "basicInfo.name": 1,
-        "basicInfo.media": 1,
-        "otherInfo.description": 1,
-        "operatingHours": 1,
-        tags: 1,
-
-        venue: {
-          title: { $ifNull: [{ $first: "$primaryVenue.title" }, null] }
-        },
-
-        relevanceScore: 1,
-        popularityScore: 1,
-        finalScore: 1
-      }
     }
   );
 
+  /* ===============================
+     9️⃣ FINAL SHAPE
+     =============================== */
+  pipeline.push({
+    $project: {
+      _id: 1,
+      distance: userLocation ? 1 : null,
+      "basicInfo.name": 1,
+      "basicInfo.media": 1,
+      "otherInfo.description": 1,
+      operatingHours: 1,
+      tags: 1,
+
+      venue: {
+        venueType: "$venueTypes"
+      },
+
+      relevanceScore: 1,
+      popularityScore: 1,
+      finalScore: 1
+    }
+  });
+
   return Organizations.aggregate(pipeline);
 };
-
-
 
 
 const getTrendingOrganizationsForHomeRepo = async ({
@@ -1089,7 +1098,6 @@ const getTrendingOrganizationsForHomeRepo = async ({
       }
     });
   } else {
-    // GLOBAL MODE
     pipeline.push({
       $match: {
         status: "active",
@@ -1160,11 +1168,13 @@ const getTrendingOrganizationsForHomeRepo = async ({
           ]
         }
       }
-    },
+    }
+  );
 
-    /* ===============================
-       5️⃣ PRIMARY VENUE
-       =============================== */
+  /* ===============================
+     5️⃣ PRIMARY VENUE → VENUE TYPE
+     =============================== */
+  pipeline.push(
     {
       $lookup: {
         from: "venues",
@@ -1177,57 +1187,77 @@ const getTrendingOrganizationsForHomeRepo = async ({
               status: "active"
             }
           },
-          { $project: { _id: 0, title: 1 } }
+          {
+            $project: {
+              _id: 0,
+              venueType: 1
+            }
+          }
         ],
         as: "primaryVenue"
       }
     },
 
-    /* ===============================
-       6️⃣ TAGS (TITLE ONLY)
-       =============================== */
+    // populate venueType documents
     {
       $lookup: {
-        from: "tags",
-        localField: "otherInfo.tags",
+        from: "venuetypes",
+        localField: "primaryVenue.venueType",
         foreignField: "_id",
-        as: "tags",
-        pipeline: [{ $project: { _id: 1, title: 1 } }]
-      }
-    },
-
-    /* ===============================
-       7️⃣ SORT & LIMIT
-       =============================== */
-    { $sort: { trendingScore: -1 } },
-    { $limit: limit },
-
-    /* ===============================
-       8️⃣ FINAL SHAPE
-       =============================== */
-    {
-      $project: {
-        _id: 1,
-        distance: userLocation ? 1 : null,
-        "basicInfo.name": 1,
-        "basicInfo.media": 1,
-        "otherInfo.description": 1,
-        "operatingHours": 1,
-        tags: 1,
-
-        venue: { $first: "$primaryVenue" },
-
-        views48h: 1,
-        views7d: 1,
-        trendingScore: 1
+        as: "venueTypes",
+        pipeline: [
+          { $project: { _id: 1, title: 1 } }
+        ]
       }
     }
   );
 
+  /* ===============================
+     6️⃣ TAGS
+     =============================== */
+  pipeline.push({
+    $lookup: {
+      from: "tags",
+      localField: "otherInfo.tags",
+      foreignField: "_id",
+      as: "tags",
+      pipeline: [{ $project: { _id: 1, title: 1 } }]
+    }
+  });
+
+  /* ===============================
+     7️⃣ SORT & LIMIT
+     =============================== */
+  pipeline.push(
+    { $sort: { trendingScore: -1 } },
+    { $limit: limit }
+  );
+
+  /* ===============================
+     8️⃣ FINAL SHAPE
+     =============================== */
+  pipeline.push({
+    $project: {
+      _id: 1,
+      distance: userLocation ? 1 : null,
+      "basicInfo.name": 1,
+      "basicInfo.media": 1,
+      "otherInfo.description": 1,
+      operatingHours: 1,
+      tags: 1,
+
+      venue: {
+        venueType: "$venueTypes"
+      },
+
+      views48h: 1,
+      views7d: 1,
+      trendingScore: 1
+    }
+  });
+
   return Organizations.aggregate(pipeline);
 };
-
-
 
 
 const getNewlyListedOrganizationsRepo = async ({
@@ -1263,18 +1293,12 @@ const getNewlyListedOrganizationsRepo = async ({
         query: geoQuery
       }
     });
-
-    // distance-based ordering is not desired for “new”
-    // we’ll compute NEW score later — but geo must remain first
   } else {
-    // Global fallback (no geo)
-    pipeline.push(
-      { $match: geoQuery }
-    );
+    pipeline.push({ $match: geoQuery });
   }
 
   /* ===============================
-     2️⃣ AGE (DAYS SINCE CREATED)
+     2️⃣ AGE (DAYS)
      =============================== */
   pipeline.push({
     $addFields: {
@@ -1288,7 +1312,7 @@ const getNewlyListedOrganizationsRepo = async ({
   });
 
   /* ===============================
-     3️⃣ POPULARITY LOOKUP
+     3️⃣ POPULARITY
      =============================== */
   pipeline.push(
     {
@@ -1321,7 +1345,7 @@ const getNewlyListedOrganizationsRepo = async ({
   );
 
   /* ===============================
-     4️⃣ NORMALIZED SCORES
+     4️⃣ SCORES + ORDERING
      =============================== */
   pipeline.push(
     {
@@ -1341,7 +1365,6 @@ const getNewlyListedOrganizationsRepo = async ({
         }
       }
     },
-
     {
       $addFields: {
         finalScore: {
@@ -1357,16 +1380,16 @@ const getNewlyListedOrganizationsRepo = async ({
         }
       }
     },
-
     { $sort: { finalScore: -1 } },
     { $skip: skip },
     { $limit: limit }
   );
 
   /* ===============================
-     5️⃣ VENUE + TAGS
+     5️⃣ VENUE + VENUE TYPE + TAGS
      =============================== */
   pipeline.push(
+    // primary venue
     {
       $lookup: {
         from: "venues",
@@ -1379,12 +1402,31 @@ const getNewlyListedOrganizationsRepo = async ({
               status: "active"
             }
           },
-          { $project: { _id: 0, title: 1 } }
+          {
+            $project: {
+              _id: 0,
+              venueType: 1
+            }
+          }
         ],
         as: "primaryVenue"
       }
     },
 
+    // populate venueType docs
+    {
+      $lookup: {
+        from: "venuetypes",
+        localField: "primaryVenue.venueType",
+        foreignField: "_id",
+        as: "venueTypes",
+        pipeline: [
+          { $project: { _id: 1, title: 1 } }
+        ]
+      }
+    },
+
+    // tags
     {
       $lookup: {
         from: "tags",
@@ -1395,6 +1437,7 @@ const getNewlyListedOrganizationsRepo = async ({
       }
     },
 
+    // final projection
     {
       $project: {
         _id: 1,
@@ -1403,11 +1446,11 @@ const getNewlyListedOrganizationsRepo = async ({
         "basicInfo.name": 1,
         "basicInfo.media": 1,
         "otherInfo.description": 1,
-        "operatingHours": 1,
+        operatingHours: 1,
         tags: 1,
 
         venue: {
-          title: { $ifNull: [{ $first: "$primaryVenue.title" }, null] }
+          venueType: "$venueTypes"
         },
 
         explain: {
@@ -1426,13 +1469,14 @@ const getNewlyListedOrganizationsRepo = async ({
 
 
 
+
 const getOrganizationsGroupedByTagsRepo = async ({
   userLocation,
   radiusKm,
   limitPerTag = 10,
   category
 }) => {
-  const radiusMeters = radiusKm * 1000;
+  const radiusMeters = (radiusKm || 0) * 1000;
 
   const categoryObjectId = category
     ? new mongoose.Types.ObjectId(category)
@@ -1464,15 +1508,10 @@ const getOrganizationsGroupedByTagsRepo = async ({
       }
     });
   } else {
-    pipeline.push({
-      $match: baseMatch
-    });
+    pipeline.push({ $match: baseMatch });
 
-    // In global mode we still want distance in response (null)
     pipeline.push({
-      $addFields: {
-        distance: null
-      }
+      $addFields: { distance: null }
     });
   }
 
@@ -1487,9 +1526,7 @@ const getOrganizationsGroupedByTagsRepo = async ({
         primaryTag: { $arrayElemAt: ["$otherInfo.tags", 0] }
       }
     },
-    {
-      $match: { primaryTag: { $ne: null } }
-    },
+    { $match: { primaryTag: { $ne: null } } },
 
     /**
      * -------------------------------------
@@ -1500,17 +1537,18 @@ const getOrganizationsGroupedByTagsRepo = async ({
       $project: {
         _id: 1,
         distance: 1,
-        "basicInfo.name": 1,
-        "basicInfo.media": 1,
+        basicInfo: 1,
         primaryTag: 1
       }
-    },
+    }
+  );
 
-    /**
-     * -------------------------------------
-     * 4️⃣ PRIMARY VENUE
-     * -------------------------------------
-     */
+  /**
+   * -------------------------------------
+   * 4️⃣ PRIMARY VENUE + VENUE TYPE
+   * -------------------------------------
+   */
+  pipeline.push(
     {
       $lookup: {
         from: "venues",
@@ -1523,17 +1561,43 @@ const getOrganizationsGroupedByTagsRepo = async ({
               status: "active"
             }
           },
-          { $project: { _id: 0, title: 1 } }
+
+          // Populate venueType (array)
+          {
+            $lookup: {
+              from: "venuetypes",
+              localField: "venueType",
+              foreignField: "_id",
+              as: "venueType"
+            }
+          },
+
+          {
+            $project: {
+              venueType: {
+                _id: 1,
+                title: 1
+              }
+            }
+          }
         ],
         as: "primaryVenue"
       }
     },
+    {
+      $unwind: {
+        path: "$primaryVenue",
+        preserveNullAndEmptyArrays: true
+      }
+    }
+  );
 
-    /**
-     * -------------------------------------
-     * 5️⃣ TAG LOOKUP
-     * -------------------------------------
-     */
+  /**
+   * -------------------------------------
+   * 5️⃣ TAG LOOKUP
+   * -------------------------------------
+   */
+  pipeline.push(
     {
       $lookup: {
         from: "tags",
@@ -1542,59 +1606,64 @@ const getOrganizationsGroupedByTagsRepo = async ({
         as: "tag"
       }
     },
-    { $unwind: "$tag" },
+    { $unwind: "$tag" }
+  );
 
-    /**
-     * -------------------------------------
-     * 6️⃣ SORT NEAR FIRST (if distance)
-     * -------------------------------------
-     */
-    { $sort: { distance: 1 } },
+  /**
+   * -------------------------------------
+   * 6️⃣ SORT (closest first)
+   * -------------------------------------
+   */
+  pipeline.push({ $sort: { distance: 1 } });
 
-    /**
-     * -------------------------------------
-     * 7️⃣ GROUP BY TAG
-     * -------------------------------------
-     */
-    {
-      $group: {
-        _id: "$tag._id",
-        title: { $first: "$tag.title" },
-        objects: {
-          $push: {
-            _id: "$_id",
-            basicInfo: "$basicInfo",
-            venue: {
-              title: { $ifNull: [{ $first: "$primaryVenue.title" }, null] }
-            },
-            tags: [
-              {
-                _id: "$tag._id",
-                title: "$tag.title"
-              }
-            ],
-            type: { $literal: "Organizations" }
-          }
+  /**
+   * -------------------------------------
+   * 7️⃣ GROUP BY TAG
+   * -------------------------------------
+   */
+  pipeline.push({
+    $group: {
+      _id: "$tag._id",
+      title: { $first: "$tag.title" },
+
+      objects: {
+        $push: {
+          _id: "$_id",
+          basicInfo: "$basicInfo",
+
+          venue: {
+            venueType: { $ifNull: ["$primaryVenue.venueType", []] }
+          },
+
+          tags: [
+            {
+              _id: "$tag._id",
+              title: "$tag.title"
+            }
+          ],
+
+          type: { $literal: "Organizations" }
         }
       }
-    },
-
-    /**
-     * -------------------------------------
-     * 8️⃣ LIMIT PER TAG
-     * -------------------------------------
-     */
-    {
-      $project: {
-        _id: 0,
-        title: 1,
-        objects: { $slice: ["$objects", limitPerTag] }
-      }
     }
-  );
+  });
+
+  /**
+   * -------------------------------------
+   * 8️⃣ LIMIT PER TAG
+   * -------------------------------------
+   */
+  pipeline.push({
+    $project: {
+      _id: 0,
+      title: 1,
+      objects: { $slice: ["$objects", limitPerTag] }
+    }
+  });
 
   return Organizations.aggregate(pipeline).allowDiskUse(true);
 };
+
 
 
 
