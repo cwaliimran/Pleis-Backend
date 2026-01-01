@@ -5,7 +5,6 @@ const {
   getPublicTags,
   updateTag,
   deleteTag,
-  getTagsGroupedByType,
 } = require("./tagsController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -32,8 +31,5 @@ router.put("/:id", roleMiddleware(["admin"]), updateTag);
 
 // Delete a tag
 router.delete("/:id", roleMiddleware(["admin"]), deleteTag);
-
-// Get tags grouped by type
-router.get("/types/grouped", apiRateLimiter, getTagsGroupedByType);
 
 module.exports = router;

@@ -20,12 +20,12 @@ const getClubMemberDetails = async (id) => {
 };
 
 // Join club
-const joinClub = async (userId, companyOrganizer) => {
+const joinClub = async (userId, companyOrganizer,referrerId) => {
   const isValidCompanyOrganizer = await findUserByIdAndCheckExists(companyOrganizer);
   if (!isValidCompanyOrganizer) {
     throw new Error("Invalid company organizer.");
   }
-  return clubMemberRepo.joinClub(userId, companyOrganizer);
+  return clubMemberRepo.joinClub(userId, companyOrganizer,referrerId);
 };
 
 // Leave club

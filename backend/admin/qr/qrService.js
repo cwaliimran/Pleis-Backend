@@ -40,7 +40,7 @@ const getQrs = async ({ userId, page, limit, keyword, status, date, timezone }) 
   // Loop through Qrs and populate fields based on presence of IDs
   const populatedQrs = await Promise.all(
     Qrs.map(async (qr) => {
-      console.log("qr",qr );
+    
 if (qr.globalQrType==="organization"&&qr.organizationId) {
   const organization = await Organization.findById(qr.organizationId);
   if (organization) {

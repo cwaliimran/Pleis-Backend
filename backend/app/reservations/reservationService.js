@@ -2,7 +2,6 @@
 const { reservationsFormatter, userReservationsFormatter, logQRCode } = require("./formaters/reservationFormetter");
 const ReservationRepo = require("./reservationRepository");
 const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
-const moment = require("moment-timezone");
 const { isOrganizationOpenNow } = require("../../shared/commonSchemas/operatingHours");
 
 const createReservation = async (data) => {
@@ -220,6 +219,38 @@ const getOrganizationReservationsService = async ({
     return [];  // Return empty array on error
   }
 }
+const transferReservation = async (reservationId, newUserId, userId) => {
+  const reservation = await ReservationRepo.getReservationForTransfer(reservationId);
+
+  if (!reservation) {
+    return { success: false, message: "reservation_not_found" };
+  }
+
+  // must belong to user AND must not be same user
+  if (
+    reservation.userId.toString() !== userId.toString() ||
+    reservation.userId.toString() === newUserId.toString()
+  ) {
+    return { success: false, message: "unauthorized_transfer_attempt" };
+  }
+
+  // transfer
+  reservation.userId = newUserId;
+
+  // ensure array exists
+  reservation.transferHistory = reservation.transferHistory || [];
+
+  reservation.transferHistory.push({
+    fromUser: userId,
+    toUser: newUserId,
+    transferDate: new Date(),
+  });
+
+  await reservation.save();
+
+  return { success: true, message: "reservation_transferred_successfully" };
+};
+
 
 module.exports = {
   getOrganizationsWithReservationsForHomeService,
@@ -229,5 +260,6 @@ module.exports = {
   getUserReservations,
   deleteReservation,
   getReservationDetails,
-  getOrganizationReservationsService
+  getOrganizationReservationsService,
+  transferReservation
 };

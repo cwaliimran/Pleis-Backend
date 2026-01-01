@@ -8,11 +8,14 @@ const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { formatMenuItem } = require("../../commonModules/menuManagement/menuItems/formatter/formatMenuItems");
 const { formatEventResponse } = require("../events/formatter/eventFormatter");
 const { formatOrganization, formatNearByOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
-const { isClubMember } = require("../loyalty/clubMembers/clubMembersRepository");
+const { isClubMember, isClubMemberWithWallet } = require("../loyalty/clubMembers/clubMembersRepository");
 const { formatSuggestedClub } = require("../loyalty/clubMembers/formatters/formatSuggestedClubs");
 const { logEngagementService } = require("@appEngagement/engagementEventsService");
 const Reservations = require("@ReservationsModel");
 const { getOrganizationReservationsService } = require("../reservations/reservationService");
+const { formatUserWallet } = require("../loyalty/clubMembers/formatters/formatUserWallet");
+const Reviews = require("@ReviewsModel");
+const formatLoyaltyListing = require("./formater/formateImage");
 
 
 
@@ -23,6 +26,7 @@ const getOrganizationProfile = async (queryData) => {
   try {
     const { organizationId, filter = "upcoming", timezone, userId } = queryData || {};
 
+    // Log engagement
     void logEngagementService({
       entityType: "organizations",
       entityId: organizationId,
@@ -31,29 +35,36 @@ const getOrganizationProfile = async (queryData) => {
     }).catch(console.error);
 
 
-    const [orgProfile, orgEvents, reservations, menu, loyaltyPrograms, reviews, similarOrganizations] = await Promise.all([
+    const [orgProfile, orgEvents, reservations, menu, reviews, similarOrganizations]= await Promise.all([
       findOrganizationById(userId, organizationId),
-      getOrganizationEvents({ organizationId, filter, timezone, userLocation: queryData.userLocation, userId }), //filter: "upcoming" or "past"
+      getOrganizationEvents({ organizationId, filter, timezone, userLocation: queryData.userLocation, userId }), // Filter for "upcoming" or "past"
       getOrganizationReservationsService({ organizationId, timezone }),
       getOrganizationMenu(organizationId, timezone),
-      getOrganizationLoyaltyPrograms(organizationId),
-      getOrganizationReviews(organizationId),
-      getSimilarOrganizations(organizationId),
-    ])
+      getOrganizationReviews(organizationId), // Get reviews with reviewer names
+      getSimilarOrganizations(organizationId)
+    ]);
 
     if (!orgProfile.org) {
       throw new Error("Organization not found");
     }
 
-    // Use schema helper for formatting
+    // Format organization profile info
     let orgProfileInfo = formatOrganization(orgProfile.org);
+    let userCompanyWallet = await isClubMemberWithWallet(userId, orgProfile.org.creator);
+    if (userCompanyWallet) {
+      userCompanyWallet = formatUserWallet(userCompanyWallet)
+    }
+
+    // Check if the user is a club member
     let member = await isClubMember(userId, orgProfileInfo.creator);
     orgProfileInfo.isClubMember = member ? true : false;
 
+    // Set favorite status and venue information
     orgProfileInfo.isFavorite = orgProfile.isFavorite;
     orgProfileInfo.venue = orgProfile.orgVenue;
 
-    delete orgProfileInfo?.venue?.floorPlan
+    // Remove floor plan from venue info if present
+    delete orgProfileInfo?.venue?.floorPlan;
 
     // Localize operating hours
     if (orgProfileInfo.operatingHours) {
@@ -62,8 +73,21 @@ const getOrganizationProfile = async (queryData) => {
         timezone
       );
     }
-
-    return { status: true, result: { data: { orgProfileInfo, orgEvents: orgEvents.result, reservations, menu, loyaltyPrograms, reviews, similarOrganizations } } };
+    // Return the final result with all the data
+    return {
+      status: true,
+      result: {
+        data: {
+          orgProfileInfo,
+          userCompanyWallet,
+          orgEvents: orgEvents.result,
+          reservations,
+          menu,
+          reviews,
+          similarOrganizations
+        }
+      }
+    };
   } catch (error) {
     throw new Error(`Failed to fetch organization profile: ${error.message}`);
   }
@@ -153,17 +177,83 @@ const getOrganizationMenu = async (organizationId, timezone) => {
   return formatted || [];
 };
 
-//loyalty
-const getOrganizationLoyaltyPrograms = async (organizationId) => {
-  // Placeholder for future implementation
-  return [];
+const { getFullImageUrl } = require("../../helperUtils/imageHelper"); // Import getFullImageUrl
+
+const getOrganizationReviews = async (organizationId, page = 1, limit = 10) => {
+  const skip = (page - 1) * limit;
+
+  const result = await Reviews.aggregate([
+    {
+      $match: {
+        organization: new mongoose.Types.ObjectId(organizationId),
+        status: "active",
+      },
+    },
+
+    {
+      $facet: {
+        meta: [
+          {
+            $group: {
+              _id: null,
+              totalReviews: { $sum: 1 },
+              averageRating: { $avg: "$rating" },
+            },
+          },
+        ],
+
+        reviews: [
+          { $sort: { createdAt: -1 } },
+          { $skip: skip },
+          { $limit: limit },
+
+          // populate user
+          {
+            $lookup: {
+              from: "users",
+              localField: "user",
+              foreignField: "_id",
+              as: "user",
+            },
+          },
+          { $unwind: "$user" },
+
+          // only required user fields
+          {
+            $project: {
+              rating: 1,
+              comment: 1,
+              createdAt: 1,
+              "user.firstName": 1,
+              "user.lastName": 1,
+              "user.profileIcon": 1,
+              "user.location": 1,
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  const meta = result[0].meta[0] || {
+    totalReviews: 0,
+    averageRating: 0,
+  };
+
+  const reviews = result[0].reviews.map(r => {
+    r.user.profileIcon = getFullImageUrl(
+      r.user.profileIcon || "noimage.png"
+    );
+    return r;
+  });
+
+  return {
+    averageRating: Number(meta.averageRating?.toFixed(2)) || 0,
+    totalReviews: meta.totalReviews,
+    reviews,
+  };
 };
 
-//reviews
-const getOrganizationReviews = async (organizationId) => {
-  // Placeholder for future implementation
-  return [];
-};
 
 //you might also like
 const getSimilarOrganizations = async (organizationId) => {

@@ -1,5 +1,6 @@
 module.exports = {
     "@utils": "backend/helperUtils",
+    "@redisCache": "backend/config/redis/redisCache.js",
     "@UsersModel": "backend/models/UserModel.js",
     "@dbUtils": "backend/helperUtils/dbUtils",
     "@appEngagement": "backend/commonModules/appEngagement",
@@ -70,4 +71,9 @@ module.exports = {
     "@FaqModel": "backend/admin/settings/models/Faq.js",
     "@FaqModel": "backend/admin/settings/models/Faq.js",
     "@BadgeCategoriesModel": "backend/commonModules/badgeCategories/BadgeCategories.js",
+    "@LoyaltyReferralSettingsModel": "backend/commonModules/loyalty/referrals/referralsSetting.js",
+    "@LoyaltyReferredRecordModel": "backend/commonModules/loyalty/referrals/ReferredRecord.js",
+    "@ReviewsModel": "backend/commonModules/reviews/Reviews.js",
+    "@UserContacts": "backend/commonModules/friendRequest/userContacts.js",
+    "@ApplyPointsByStaffModel": "backend/commonModules/applyPointsByStaff/ApplyPointsByStaff.js",
 };

@@ -64,6 +64,7 @@ const formatTicketingBooking = (item, options = {}) => {
     delete obj.ticket.protectionUserDetails;
   }
 
+
   return obj;
 };
 

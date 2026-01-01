@@ -218,10 +218,37 @@ const deleteTicketingBookingService = async (id) => {
   return ticketingBookingRepo.findTagByIdAndUpdate(id, { status: "deleted" });
 };
 
+const transferTicketingBookingService = async (bookingId, newUserId, timezone, userId) => {
+  let ticketingBooking = await ticketingBookingRepo.getTicketingBookingForTransfer(bookingId);
+  if (!ticketingBooking) {
+    return { success: false, message: "ticketing_booking_not_found" };
+  }
+  //if not belongs to user and both users can't be same
+  if (ticketingBooking.user.toString() !== userId.toString() || ticketingBooking.user.toString() === newUserId.toString()) {
+    return { success: false, message: "unauthorized_transfer_attempt" };
+  }
+  //transfer ownership
+  ticketingBooking.user = newUserId;
+  //transferHistory
+  // ensure array exists
+  ticketingBooking.transferHistory =
+    ticketingBooking.transferHistory || [];
+
+  ticketingBooking.transferHistory.push({
+    fromUser: userId,
+    toUser: newUserId,
+    transferDate: new Date(),
+  });
+
+  await ticketingBooking.save();
+  return { success: true, message: "ticketing_booking_transferred_successfully" };
+};
+
 module.exports = {
   createTicketingBookingService,
   getTicketingBookingsService,
   getTicketingBookingByIdService,
   updateTicketingBookingService,
   deleteTicketingBookingService,
+  transferTicketingBookingService,
 };

@@ -9,13 +9,14 @@ const clubService = require("./clubMembersService");
 const { getSuggestedLoyaltyClubs } = require("../../organizationProfile/organizationProfileService");
 
 const joinClub = async (req, res) => {
-  const { companyOrganizer } = req.body;
+  const { companyOrganizer, referrerId } = req.body;
   const userId = req.user._id;
 
   if (!validateParams(req, res, { rawData: ["companyOrganizer"] })) return;
 
   try {
-    const data = await clubService.joinClub(userId, companyOrganizer);
+    const data = await clubService.joinClub(userId, companyOrganizer,referrerId);
+
 
     return sendResponse({
       res,

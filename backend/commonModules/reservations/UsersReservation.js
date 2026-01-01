@@ -7,7 +7,25 @@ const UserReservationsSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-
+    transferHistory: {
+      type: [
+        {
+          fromUser: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+          },
+          toUser: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+          },
+          transferDate: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
+      default: [],
+    },
     partySize: {
       type: Number,
       default: 0,
@@ -63,8 +81,8 @@ const UserReservationsSchema = new mongoose.Schema(
         default: [],
       },
     },
-firstName: { type: String, default: "", }, 
-lastName: { type: String, default: "", },
+    firstName: { type: String, default: "", },
+    lastName: { type: String, default: "", },
     phoneNumber: {
       code: {
         // Country code for phone number
@@ -99,6 +117,34 @@ lastName: { type: String, default: "", },
       enum: ["active", "inactive", "deleted"],
       default: "active",
     },
+
+    paymentMethod: {
+      type: String, required: true,
+      enum: ["applePay", "card", "cash", "payLater"], default: "card"
+    },
+    //with payLater user can add more items to cart
+    // for applePay/card order can't be cancelled
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "paid", "failed"],
+      default: "pending",
+    },
+    paidAt: {
+      type: Date,
+      default: null,
+    },
+    transactionId: {
+      type: String,
+      default: null,
+      index: true,
+    },
+
+    //menu item orders associated with this reservation when preOrdering is enabled against event
+    preOrderMenuItemsOrder: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MenuOrders",
+      default: null,
+    }
   },
 
   {
@@ -108,4 +154,4 @@ lastName: { type: String, default: "", },
 
 const UserReservations = mongoose.model("UserReservations", UserReservationsSchema);
 
-module.exports = {UserReservations};
+module.exports = { UserReservations };

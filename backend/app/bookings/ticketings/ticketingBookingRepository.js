@@ -26,14 +26,37 @@ const getTicketingBookings = async (query = {}, options = {}) => {
         "ticket.snapshot.event": { $arrayElemAt: ["$ticketEvent", 0] }
       }
     },
-    { $project: { ticketEvent: 0 } },
+    // --- companyOrganizer lookup ---
+    {
+      $lookup: {
+        from: "organizations",
+        let: { organizationId: "$organization" },
+        pipeline: [
+          { $match: { $expr: { $eq: ["$_id", "$$organizationId"] } } },
+          {
+            $project: {
+              _id: 1,
+              "basicInfo.name": 1,
+              "basicInfo.media.logo": 1,
+            }
+          }
+        ],
+        as: "organizationPopulated"
+      }
+    },
+
+    {
+      $addFields: {
+        organization: { $arrayElemAt: ["$organizationPopulated", 0] }
+      }
+    },
+
+    { $project: { ticketEvent: 0, organizationPopulated: 0 } },
     { $sort: options.sort || { createdAt: -1 } },
     { $skip: options.skip || 0 },
     { $limit: options.limit || 10 }
   ]);
 };
-
-
 
 
 const getTicketingBookingById = async (id) => {
@@ -116,6 +139,11 @@ const getTicketingBookingById = async (id) => {
 };
 
 
+const getTicketingBookingForTransfer = async (id) => {
+  return TicketingBookings.findById(id)
+    .select("_id user transferHistory")
+};
+
 
 
 
@@ -159,5 +187,6 @@ module.exports = {
   deleteTicketingBooking,
   findTagByIdAndUpdate,
   getTicketingBookingsCount,
-  createManyTicketBookings
+  createManyTicketBookings,
+  getTicketingBookingForTransfer
 };

@@ -5,6 +5,8 @@ const TierRepo = require("../../../admin/tiers/tiersRepository");
 const Tiers = require("../../../admin/tiers/Tiers");
 const { User } = require("@UserModel");
 const { getModelCounts } = require("../../../helperUtils/dbUtils/queryUtil");
+const LoyaltyReferralSettings = require("@LoyaltyReferralSettingsModel");
+const { LoyaltyReferredRecord, LoyaltyReferredRecords } = require("@LoyaltyReferredRecordModel");
 // ==========================================================
 // GET COMPANY LOYALTY SETTINGS (tier model + pointValuePercentage)
 // ==========================================================
@@ -255,8 +257,8 @@ const isClubMemberWithWallet = async (userId, companyOrganizer) => {
   return getWallet(userId, companyOrganizer);
 };
 
-const joinClub = async (userId, companyOrganizer) => {
-  const existingMember = await ClubMembers.findOne({ user: userId, companyOrganizer });
+const joinClub = async (userId, companyOrganizer,referrerId) => {
+  let existingMember = await ClubMembers.findOne({ user: userId, companyOrganizer });
 
   if (existingMember) {
     if (existingMember.status === "banned") throw new Error("You are banned from this club.");
@@ -268,6 +270,10 @@ const joinClub = async (userId, companyOrganizer) => {
     return existingMember;
   }
 
+      //insert data in referral collection if referrerId is present
+      if (referrerId) {
+        await createUserReferradrecord(referrerId, userId,companyOrganizer);
+      }
   return ensureClubMemberWallet(userId, companyOrganizer);
 };
 
@@ -424,6 +430,75 @@ const getFollowedClubIds = async (userId) => {
     status: "active"
   });
 };
+
+
+
+
+
+
+
+
+
+
+
+const createUserReferradrecord = async (referrerId, userId, companyOrganizer) => {
+  try {
+    // Find the loyalty referral settings for the given company
+    const loyaltyReferralSettings = await LoyaltyReferralSettings.findOne({
+      companyOrganizer: companyOrganizer,
+      status: "active",
+    });
+
+    if (!loyaltyReferralSettings) {
+      throw new Error("Loyalty referral settings not found or inactive.");
+    }
+
+    // Destructure referralLimit from the settings
+    const { referralLimit } = loyaltyReferralSettings;
+
+    // Find the referrer user
+    const referrer = await User.findOne({ _id: referrerId });
+    if (!referrer) {
+      throw new Error("Referrer user not found.");
+    }
+
+    // Check if the referrer has reached the referral limit
+    const referrerLoyaltyCount = referrer.loyaltyReferralsCount;
+    if (referrerLoyaltyCount >= referralLimit) {
+      throw new Error("Referral limit reached for this referrer.");
+    }
+
+    // Check if the user has already been referred
+    const existingReferral = await LoyaltyReferredRecords.findOne({ user: userId });
+    if (existingReferral) {
+      throw new Error("User has already been referred.");
+    }
+
+    // Create a new referral record and save it with correct references
+    const newReferralRecord = await LoyaltyReferredRecords.create({
+      user: userId,                    // Save the user ID directly
+      referrer: referrerId,             // Save the referrer ID directly
+      companyOrganizer: companyOrganizer, // Save the companyOrganizer ID directly
+    });
+
+    // Update the referrer's loyaltyReferralsCount by incrementing it by 1
+    await User.findByIdAndUpdate(referrerId, {
+      $inc: { loyaltyReferralsCount: 1 }, // Increment referrer's referral count
+    });
+
+    // Return a success response with relevant data
+    return {
+      userId: newReferralRecord.user,    // Return the user ID from the created record
+      referrerUserName: `${referrer.firstName} ${referrer.lastName}`,  // Assuming you have a first and last name on the referrer model
+      message: "Referral created successfully.",
+    };
+
+  } catch (err) {
+    console.error("Error creating referral record:", err);
+    throw err;
+  }
+};
+
 
 
 module.exports = {

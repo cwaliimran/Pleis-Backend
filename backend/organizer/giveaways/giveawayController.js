@@ -2,14 +2,55 @@ const {
   sendResponse,
   parsePaginationParams,
   validateParams,
-  generateMeta,
   getReadableErrorMessage,
   convertTimezoneToUtc,
 } = require("../../helperUtils/responseUtil");
+const mongoose = require('mongoose'); 
+const Giveawayervice = require("./giveawayService");
 
-const Giveawayervice = require("./GiveawayService");
+const getWinners = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let { keyword, status , date, range ,giveawayId} = req.query;
+  try {
+if(!giveawayId){
+  return sendResponse({
+    res,
+    statusCode: 400,
+    translationKey: "giveaway_id_is_required",
+  });
+}
 
+    giveawayId = new  mongoose.Types.ObjectId(giveawayId); 
+    const timezone = req.user.timezone;
+    const { winners, meta } = await Giveawayervice.getWinners({
+      timezone,
+      page,
+      limit,
+      keyword,
+      status,
+      userId:req.user._id,
+      date,
+      range,
+      giveawayId
+    });
 
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "Giveaway_winners_fetched_successfully",
+      data: winners,
+      meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 
 
 
@@ -21,7 +62,6 @@ const createGiveaway = async (req, res) => {
     numberOfWinners,
     status="active",
     ticketsPerWinner,
-    organization,
     endDateTime,
     giveawayStatus="live",
 
@@ -41,7 +81,6 @@ const createGiveaway = async (req, res) => {
         "title",
         "ticket",
         "ticketsPerWinner",
-        "organization",
         "endDateTime",
         "numberOfWinners",
         "event",
@@ -55,7 +94,6 @@ const createGiveaway = async (req, res) => {
     event,
     numberOfWinners,
     ticketsPerWinner,
-    organization,
     endDateTime,
     giveawayStatus,
     status,
@@ -87,7 +125,7 @@ const createGiveaway = async (req, res) => {
 };
 const getGiveaway = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status , date, range } = req.query;
+  const { keyword, status , date, range ,organizationId} = req.query;
   try {
 
 
@@ -101,7 +139,8 @@ const getGiveaway = async (req, res) => {
       status,
       userId,
       date,
-      range
+      range,
+      organizationId
     });
 
     return sendResponse({
@@ -331,5 +370,6 @@ module.exports = {
   updateGiveaway,
   deleteGiveaway,
   getevents,
-  gettickets
+  gettickets,
+  getWinners
 };

@@ -20,6 +20,9 @@ const createReservation = async (req, res) => {
     reservationId,
     timingSlots,
     notes,
+    paymentMethod,
+    preOrderMenuItems,
+    
   } = req.body;
 
   const userId = req.user._id;
@@ -35,6 +38,24 @@ const createReservation = async (req, res) => {
         "organizationId",
         "companyOrganizer",
         "reservationId",
+        "paymentMethod",
+      ],
+      enumFields: {
+        reservationType: [
+          "regular",
+          "vip",
+          "outdoor",
+          "private",
+          "bar",
+          "window",
+        ],
+        paymentMethod: ["applePay", "card", "cash", "payLater"],
+      },
+      objectIdFields: [
+        "organizationId",
+        "companyOrganizer",
+        "reservationId",
+        "optionalEventId",
       ],
     })
   )
@@ -136,7 +157,10 @@ const createReservation = async (req, res) => {
     companyOrganizer,
     reservationId,
     notes,
+    paymentMethod,
     timingSlots: timingSlots || { enabled: false, dateTimeSlots: [] },
+    preOrderMenuItems,
+
   };
 
   try {
@@ -492,6 +516,61 @@ const getUserReservations = async (req, res) => {
     });
   }
 };
+
+const transferReservation = async (req, res) => {
+  try {
+    const { timezone, _id: userId } = req.user;
+    const { reservationId, newUserId } = req.body;
+
+    // ==============================
+    // STEP 1: PREPARE VALIDATION DATA
+    // ==============================
+    const validateData = {
+      objectIdFields: ["reservationId", "newUserId"],
+    };
+
+    // ==============================
+    // STEP 2: VALIDATE ALL FIELDS
+    // ==============================
+    if (!validateParams(req, res, validateData)) return;
+
+    // ==============================
+    // STEP 3: TRANSFER RESERVATION
+    // ==============================
+    const { success, message } =
+      await reservationService.transferReservation(
+        reservationId,
+        newUserId,
+        userId
+      );
+
+    if (!success) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: message,
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: message,
+    });
+
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
+
 module.exports = {
   createReservation,
   getReservations,
@@ -499,4 +578,5 @@ module.exports = {
   deleteReservation,
   getUserReservations,
   getReservationDetails,
+  transferReservation,
 };
