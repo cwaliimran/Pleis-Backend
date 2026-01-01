@@ -13,6 +13,7 @@ const { generateMeta } = require("../../helperUtils/responseUtil");
 const { getUserInterestsIdsForRecommendation } = require("../usersManagement/usersRepository");
 
 
+
 /**
  * Fetch one organization by ID (populated)
  */
@@ -21,12 +22,14 @@ const findOrganizationById = async (userId, organizationId) => {
     Organizations.findById(organizationId)
       .where({ status: "active" })
       .populate("otherInfo.categories")
+
       .populate("otherInfo.tags"),
     Favorites.exists({ user: userId, targetType: "organization", targetId: organizationId }),
     Venues.findOne({
       organization: organizationId,
       isPrimary: true
     }).select("title floorPlan venueType"),
+
   ]);
 
   // Check if the organization is a favorite
@@ -35,12 +38,9 @@ const findOrganizationById = async (userId, organizationId) => {
   // If venueType exists, fetch the titles of the related VenueTypes
   let venueTypeTitles = [];
   if (orgVenue && orgVenue.venueType && orgVenue.venueType.length > 0) {
-
-
     const venueTypes = await VenueTypes.find({
       _id: { $in: orgVenue.venueType }
     }).select("title");
-
 
     // Extract titles from the venueTypes documents
     venueTypeTitles = venueTypes.map(venueType => venueType.title);
@@ -49,17 +49,20 @@ const findOrganizationById = async (userId, organizationId) => {
   // If orgVenue is found, access the clean data using _doc and add venueTypeTitles
   if (orgVenue) {
     const cleanOrgVenue = orgVenue._doc;  // Access the actual data without internal Mongoose properties
-    cleanOrgVenue.venueTypeTitles = venueTypeTitles;  // Add venueTypeTitles to the clean 
+    cleanOrgVenue.venueTypeTitles = venueTypeTitles;  // Add venueTypeTitles to the clean data
+
     return {
       org,
       isFavorite,
       orgVenue: cleanOrgVenue,
+    
     };
   } else {
     return {
       org,
       isFavorite,
       orgVenue: null,
+     
     };
   }
 };

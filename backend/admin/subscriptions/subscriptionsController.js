@@ -857,6 +857,13 @@ const updateUserSubscriptions = async (req, res) => {
 
   try {
     let { subscription } = req.body;
+    if (!subscription || typeof subscription !== "object"|| Object.keys(subscription).length === 0) {
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "subscription_updated_successfully",
+      });
+    }
 
 
     // ---------------------------------------------------------
@@ -920,7 +927,6 @@ const updateUserSubscriptions = async (req, res) => {
     // Perform the update
     // ---------------------------------------------------------
     const UserSubscription = await SubscriptionService.updateUserSubscriptions(id, updatePayload);
-
     if (UserSubscription.error) {
       return sendResponse({
         res,
@@ -936,13 +942,12 @@ const updateUserSubscriptions = async (req, res) => {
         translationKey: "subscription_not_found",
       });
     }
-
     // Ensure the correct data structure is sent back
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "subscription_updated_successfully",
-      data: UserSubscription,
+      data: UserSubscription.activeSubscription,
     });
 
   } catch (error) {
