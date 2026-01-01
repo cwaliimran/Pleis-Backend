@@ -32,10 +32,10 @@ const createQr = async (data) => {
     const Model = getModelByTaskType(data.globalQrType);
     const Qr = new Model(data);
     await Qr.save();
-    console.log("QR saved:", Qr);
+   
     return Qr;
   } catch (err) {
-    console.error("Error creating QR:", err); 
+
     throw err;
   }
 };

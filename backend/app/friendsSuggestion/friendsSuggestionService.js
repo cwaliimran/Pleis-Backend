@@ -1,23 +1,19 @@
 const friendsSuggestion = require("./friendsSuggestionRepository");
 const { userReservationsFormatter } = require("../reservations/formaters/reservationFormetter");
+const { formatCategory } = require("./formater/categoryFormatter");
 
-
-
-
-const getFriends = async ({
+const getFriendSuggestions = async ({
   timezone,
   page,
-  limit,
-  phoneNumbers,  
+  limit, 
   userId,
 }) => {
   try {
     // Pass everything to repo exactly as-is
-    let { users, meta } = await friendsSuggestion.getFriends({
+    let { users, meta } = await friendsSuggestion.getFriendSuggestions({
       timezone,
       page,
       limit,
-      phoneNumbers,   
       userId,
     });
 
@@ -27,7 +23,7 @@ const getFriends = async ({
     }
 
     // Format users
-    users = users.map((user) => userReservationsFormatter(user, timezone));
+    users = users.map((user) => formatCategory(user, timezone));
 
     return {
       users,
@@ -35,7 +31,7 @@ const getFriends = async ({
     };
 
   } catch (error) {
-    console.error("getFriends service error:", error);
+    console.error("addContacts service error:", error);
 
     return {
       users: [],
@@ -48,6 +44,30 @@ const getFriends = async ({
     };
   }
 };
+
+
+const addContacts = async ({
+  phoneNumbers,  
+  userId,
+}) => {
+  try {
+    let userContacts = await friendsSuggestion.addContacts({
+      phoneNumbers,   
+      userId,
+    });
+
+
+    return userContacts
+
+  } catch (error) {
+
+    return {
+
+      error: "Failed to add contacts.",
+    };
+  }
+};
 module.exports = {
-  getFriends,
+  addContacts,
+  getFriendSuggestions
 };

@@ -290,9 +290,6 @@ const getUserLoyaltyReferrals = async ({
         (user) => user._id.toString() === record.referrer.toString()
       );
 
-      const referrerUserName = referrerUser
-        ? `${referrerUser.firstName} ${referrerUser.lastName}`
-        : "";
 
       const remainingReferrals = referrerUser?.remainingReferrals ?? 0;
 
@@ -301,10 +298,10 @@ const getUserLoyaltyReferrals = async ({
         firstName: userName?.firstName,
         lastName: userName?.lastName,
         profileIcon,
-        referrerFirstName: referrerUser?.firstName,
-        referrerLastName: referrerUser?.lastName,
+        referrerUserName: referrerUser?.firstName + " " + referrerUser?.lastName, 
         remainingReferrals,
-        loyaltyReferralsCount: referrerUser?.loyaltyReferralsCount 
+        loyaltyReferralsCount: referrerUser?.loyaltyReferralsCount ,
+        referralLimit,
       }));
     })
   );
@@ -317,8 +314,7 @@ const getUserLoyaltyReferrals = async ({
       (item) =>
         regex.test(item.firstName || "") ||
         regex.test(item.lastName || "") ||
-        regex.test(item.referrerFirstName || "") ||
-        regex.test(item.referrerLastName || "")
+        regex.test(item.referrerUserName || "")
     );
 
   }

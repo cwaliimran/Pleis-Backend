@@ -69,6 +69,7 @@ router.use("/qr-code", require("../qr/qrRoutes"));
 router.use("/in-app-ordering", require("../inAppOrdering/inAppOrderingRoutes"));
 router.use("/faqs", require("../faqs/faqsRoutes"));
 router.use("/badge-categories", require("../badgeCategories/badgeCategoriesRoutes"));
+router.use("/reviews", require("../reviews/reviewsRoutes"));
 
 
 

@@ -11,7 +11,7 @@ const CATEGORY_CONDITION_MAP = {
   streak: ["streakDays"],
 };
 
-const BadgeSchema = new mongoose.Schema(
+const BadgeCategoriesSchema = new mongoose.Schema(
   {
     title: {
       type: String,
@@ -70,7 +70,7 @@ const BadgeSchema = new mongoose.Schema(
 
 /* ================= STRICT CATEGORY → CONDITION VALIDATION ================= */
 
-BadgeSchema.pre("validate", function (next) {
+BadgeCategoriesSchema.pre("validate", function (next) {
   const allowedConditions = CATEGORY_CONDITION_MAP[this.category];
 
   if (!allowedConditions) {
@@ -88,4 +88,4 @@ BadgeSchema.pre("validate", function (next) {
   next();
 });
 
-module.exports = mongoose.model("BadgeCategories", BadgeSchema);
+module.exports = mongoose.model("BadgeCategories", BadgeCategoriesSchema);

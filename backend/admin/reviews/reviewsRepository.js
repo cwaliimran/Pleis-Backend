@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Reviews = require('@ReviewsModel'); // Adjust path to your Reviews model
 const { formatReviewData } = require('./formatters/updateFormatter');
-const Organizations = require('@OrganizationModel');
+const Organizations = require('@OrganizationsModel');
 
 const getOrganizationIdsByOrganizerId = async (organizerId) => {
   try {
@@ -12,7 +12,7 @@ const getOrganizationIdsByOrganizerId = async (organizerId) => {
     const organizations = await Organizations.aggregate([
       {
         $match: {
-          creator: new mongoose.Types.ObjectId(organizerId), 
+          creator: new mongoose.Types.ObjectId(organizerId),
         },
       },
       {
@@ -22,7 +22,7 @@ const getOrganizationIdsByOrganizerId = async (organizerId) => {
       },
     ]);
     if (!organizations || organizations.length === 0) {
-   
+
       return [];
 
     }
@@ -42,9 +42,9 @@ const getOrganizationIdsByOrganizerId = async (organizerId) => {
 
 const getReviews = async (data) => {
   try {
-if (!data.organization || !Array.isArray(data.organization) || data.organization.length === 0) {
- data.organization = await getOrganizationIdsByOrganizerId(data.organizer);
-}
+    if (!data.organization || !Array.isArray(data.organization) || data.organization.length === 0) {
+      data.organization = await getOrganizationIdsByOrganizerId(data.organizer);
+    }
 
 
     // Convert organization IDs from string to ObjectId
@@ -99,20 +99,6 @@ if (!data.organization || !Array.isArray(data.organization) || data.organization
       },
 
       // Only apply keyword matching if a keyword is provided
-      ...(data.keyword ? [
-        {
-          $match: {
-            $or: [
-              { comment: { $regex: data.keyword, $options: 'i' } },  // Match keyword in the comment
-              { 'userDetails.firstName': { $regex: data.keyword, $options: 'i' } },  // Match keyword in user's first name
-              { 'userDetails.lastName': { $regex: data.keyword, $options: 'i' } },   // Match keyword in user's last name
-              { 'userDetails.location.fullAddress': { $regex: data.keyword, $options: 'i' } },  // Match keyword in user's full address
-              { 'organizationDetails.basicInfo.name': { $regex: data.keyword, $options: 'i' } },  // Match keyword in organization's name
-            ],
-          },
-        }
-      ] : []),
-
       ...(data.keyword ? [
         {
           $match: {
@@ -186,7 +172,7 @@ if (!data.organization || !Array.isArray(data.organization) || data.organization
 
 
     return {
-      data: formattedReviews || [], // All reviews with filtered user/organization data
+      reviews: formattedReviews || [], 
       meta: result[0]?.meta || { totalCount: 0, avgRating: 0, ratingCounts: {} }, // Metadata with total count, avg rating, and rating counts
     };
   } catch (err) {
@@ -194,6 +180,19 @@ if (!data.organization || !Array.isArray(data.organization) || data.organization
   }
 };
 
+
+
+
+
+
+const findReviewById = async (id) => {
+  return Reviews.findById(id);
+};
+const findByIdAndUpdate = async (id, data) => {
+  return Reviews.findByIdAndUpdate(id, data, { new: true });
+};
 module.exports = {
   getReviews,
+  findReviewById,
+  findByIdAndUpdate
 };
