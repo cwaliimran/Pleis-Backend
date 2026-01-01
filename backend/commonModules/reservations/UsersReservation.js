@@ -117,6 +117,34 @@ const UserReservationsSchema = new mongoose.Schema(
       enum: ["active", "inactive", "deleted"],
       default: "active",
     },
+
+    paymentMethod: {
+      type: String, required: true,
+      enum: ["applePay", "card", "cash", "payLater"], default: "card"
+    },
+    //with payLater user can add more items to cart
+    // for applePay/card order can't be cancelled
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "paid", "failed"],
+      default: "pending",
+    },
+    paidAt: {
+      type: Date,
+      default: null,
+    },
+    transactionId: {
+      type: String,
+      default: null,
+      index: true,
+    },
+
+    //menu item orders associated with this reservation when preOrdering is enabled against event
+    preOrderMenuItemsOrder: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MenuOrders",
+      default: null,
+    }
   },
 
   {

@@ -169,6 +169,7 @@ const updateEvent = async (id, data) => {
     title,
     schedule,
     promotion,
+    preOrdersEnabled,
   } = data;
 
   // --- BASIC INFO ---
@@ -245,6 +246,7 @@ const updateEvent = async (id, data) => {
   if (venues !== undefined) event.venues = venues;
   if (image !== undefined) event.image = image;
   if (tags !== undefined) event.basicInfo.tags = tags;
+  if (preOrdersEnabled !== undefined) event.preOrdersEnabled = preOrdersEnabled;
 
   // --- DESCRIPTION (legacy support) ---
   if (description !== undefined) {

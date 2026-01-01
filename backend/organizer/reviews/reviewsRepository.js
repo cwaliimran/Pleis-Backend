@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Reviews = require('@ReviewsModel'); // Adjust path to your Reviews model
 const { formatReviewData } = require('./formatters/updateFormatter');
-const Organizations = require('@OrganizationsModel');
+const Organizations = require('@OrganizationModel');
 
 const getOrganizationIdsByOrganizerId = async (organizerId) => {
   try {
@@ -12,7 +12,7 @@ const getOrganizationIdsByOrganizerId = async (organizerId) => {
     const organizations = await Organizations.aggregate([
       {
         $match: {
-          creator: new mongoose.Types.ObjectId(organizerId),
+          creator: new mongoose.Types.ObjectId(organizerId), 
         },
       },
       {
@@ -22,7 +22,7 @@ const getOrganizationIdsByOrganizerId = async (organizerId) => {
       },
     ]);
     if (!organizations || organizations.length === 0) {
-
+   
       return [];
 
     }
@@ -42,9 +42,9 @@ const getOrganizationIdsByOrganizerId = async (organizerId) => {
 
 const getReviews = async (data) => {
   try {
-    if (!data.organization || !Array.isArray(data.organization) || data.organization.length === 0) {
-      data.organization = await getOrganizationIdsByOrganizerId(data.organizer);
-    }
+if (!data.organization || !Array.isArray(data.organization) || data.organization.length === 0) {
+ data.organization = await getOrganizationIdsByOrganizerId(data.organizer);
+}
 
 
     // Convert organization IDs from string to ObjectId

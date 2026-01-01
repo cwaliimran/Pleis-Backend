@@ -6,7 +6,7 @@ router.use("/", require("../../routes/index"));
 router.use(auth, roleMiddleware(["admin"]));
 router.use("/settings", require("../settings/adminSettingsRoutes"));
 router.use("/suppliers", require("../suppliers/suppliersRoutes"));
-router.use("/tag-types", require("../tagTypes/tagTypesRoutes"));
+router.use("/tags-types", require("../tagTypes/tagTypesRoutes"));
 router.use("/tags", require("../tags/tagsRoutes"));
 router.use("/categories", require("../categories/categoriesRoutes"));
 router.use("/venues", require("../venues/venuesRoutes"));

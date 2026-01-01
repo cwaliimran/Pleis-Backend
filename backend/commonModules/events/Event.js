@@ -141,8 +141,12 @@ const eventSchema = new mongoose.Schema(
         type: Number,
         default: 1,
       }
-    }
-
+    },
+    
+    preOrdersEnabled: {
+      type: Boolean,
+      default: false,
+    },
 
   },
   {

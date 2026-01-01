@@ -97,7 +97,7 @@ const getNearbyEvents = async (queryData) => {
   }
 
   try {
-    
+
     const pipeline = [
       {
         $geoNear: {
@@ -294,21 +294,21 @@ const thisWeekEvents = async ({
   // COUNT QUERY
   const countPipeline = userLocation
     ? [
-        {
-          $geoNear: {
-            near: userLocation,
-            key: "basicInfo.venueLocation",
-            distanceField: "distance",
-            spherical: true,
-            query: { status: "active", ...categoryFilter, ...dateFilter },
-          },
+      {
+        $geoNear: {
+          near: userLocation,
+          key: "basicInfo.venueLocation",
+          distanceField: "distance",
+          spherical: true,
+          query: { status: "active", ...categoryFilter, ...dateFilter },
         },
-        { $count: "total" },
-      ]
+      },
+      { $count: "total" },
+    ]
     : [
-        { $match: { status: "active", ...categoryFilter, ...dateFilter } },
-        { $count: "total" },
-      ];
+      { $match: { status: "active", ...categoryFilter, ...dateFilter } },
+      { $count: "total" },
+    ];
 
   const totalResult = await eventRepo.aggregateEvents(countPipeline);
   const totalFiltered = totalResult[0]?.total || 0;
@@ -424,10 +424,10 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
   // ------------------------------------
   const categoryFilter = categories.length
     ? {
-        "basicInfo.categories": {
-          $in: categories.map((id) => new mongoose.Types.ObjectId(id)),
-        },
-      }
+      "basicInfo.categories": {
+        $in: categories.map((id) => new mongoose.Types.ObjectId(id)),
+      },
+    }
     : {};
 
   // ------------------------------------
@@ -443,9 +443,13 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
   let genreTagIds = [];
 
   if (genre.length) {
+    //convert to new object ids
+    const genreObjectIds = genre
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
     const genreTags = await Tags.find({
       status: "active",
-      type: { $in: genre },
+      _id: { $in: genreObjectIds },
     }).select("_id");
 
     genreTagIds = genreTags.map((t) => t._id);
@@ -469,11 +473,11 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
   const keywordFilter =
     keyword?.trim()
       ? {
-          $or: [
-            { "basicInfo.title": { $regex: keyword, $options: "i" } },
-            { "basicInfo.description": { $regex: keyword, $options: "i" } },
-          ],
-        }
+        $or: [
+          { "basicInfo.title": { $regex: keyword, $options: "i" } },
+          { "basicInfo.description": { $regex: keyword, $options: "i" } },
+        ],
+      }
       : {};
 
   // ------------------------------------
@@ -514,16 +518,16 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
             { $project: { title: 1, venueType: 1, location: 1 } },
             ...(venueTypes.length
               ? [
-                  {
-                    $match: {
-                      venueType: {
-                        $in: venueTypes.map(
-                          (id) => new mongoose.Types.ObjectId(id)
-                        ),
-                      },
+                {
+                  $match: {
+                    venueType: {
+                      $in: venueTypes.map(
+                        (id) => new mongoose.Types.ObjectId(id)
+                      ),
                     },
                   },
-                ]
+                },
+              ]
               : []),
           ],
         },

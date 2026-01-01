@@ -93,7 +93,7 @@ const createReviews = async (req, res) => {
 
 const getReviews = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, range,organizationId } = req.query;
+  let { keyword, status, date, range, organizationId } = req.query;
   try {
     if (!organizationId) {
       return sendResponse({

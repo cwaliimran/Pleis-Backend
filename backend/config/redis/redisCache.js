@@ -100,6 +100,16 @@ async function cache({ namespace, params = {}, ttl = 60, fetchFn }) {
   try {
     const fresh = await fetchFn();
 
+    // 🚫 DO NOT CACHE empty results
+    if (
+      fresh === null ||
+      fresh === undefined ||
+      (Array.isArray(fresh) && fresh.length === 0)
+    ) {
+      console.log(`⚠️ SKIP STORE (empty) -> ${key}`);
+      return fresh;
+    }
+
     try {
       await setJson(key, fresh, ttl === null ? null : ttl);
       console.log(`🧩 STORED -> ${key}`);
@@ -110,6 +120,7 @@ async function cache({ namespace, params = {}, ttl = 60, fetchFn }) {
     await releaseLock(key, lock);
   }
 }
+
 
 /**
  * INVALIDATE

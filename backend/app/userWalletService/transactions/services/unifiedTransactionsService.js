@@ -48,7 +48,7 @@ const createTransaction = async (data, session) => {
 /**
  * List transactions with filters and pagination
  */
-const getTransactions = async ({ page = 1, limit = 10, user, walletType, domainType, type, organization, companyOrganizer, entityId, date }) => {
+const getTransactions = async ({ page = 1, limit = 10, user, walletType, domainType, type, organization, companyOrganizer, entityId, date, keyword }) => {
     const skip = limit === 0 ? 0 : (page - 1) * limit;
     const query = {};
     if (user) query.user = new mongoose.Types.ObjectId(user);
@@ -62,6 +62,9 @@ const getTransactions = async ({ page = 1, limit = 10, user, walletType, domainT
         const start = new Date(date);
         const end = new Date(new Date(date).setDate(start.getDate() + 1));
         query.createdAt = { $gte: start, $lt: end };
+    }
+    if (keyword) {
+        query.description = { $regex: keyword, $options: "i" };
     }
 
     const [items, total] = await Promise.all([

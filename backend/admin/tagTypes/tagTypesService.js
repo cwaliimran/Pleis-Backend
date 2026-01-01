@@ -1,6 +1,5 @@
 // services/TagstypeService.js
 const { generateMeta } = require("../../helperUtils/responseUtil");
-// const { formatTagsType } = require("./fomatter/formatTagsType");
 const TagstypeRepo = require("./tagTypesRepository");
 
 const createTagsType = async ({ title, status }) => {
@@ -54,47 +53,10 @@ const getTagsTypes = async ({ page, limit, keyword, status, date }) => {
   };
 };
 
-const getPublicTagsTypes = async ({ page, limit, keyword, date }) => {
-  const baseFilters = [{ status: "active" }];
-  //if date is available then match createdAt with date current date format is yyyy-mm-dd
-  if (date) {
-    baseFilters.push({
-      createdAt: {
-        $gte: new Date(date),
-        $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
-      },
-    });
-  }
-
-  if (keyword) {
-    baseFilters.push({
-      $or: [
-        { title: { $regex: keyword, $options: "i" } },
-        // Add more fields here if needed
-      ],
-    });
-  }
-
-  const baseQuery = baseFilters.length ? { $and: baseFilters } : {};
-
-
-  const [TagsTypes, totalFiltered] =
-    await Promise.all([
-      page === 1
-        ? TagstypeRepo.getTagsTypesWithFilters(baseQuery, page,
-          limit)
-        : [],
-
-      TagstypeRepo.countTagsTypes(baseQuery),
-    ]);
-
-    const formattedTagsTypes = TagsTypes.map(item => formatTagsType(item));
-
-  let meta = generateMeta(page, limit, totalFiltered);
-
+const getPublicTagsTypes = async () => {
+ const tagTypes = await TagstypeRepo.getActiveTagTypes(15); 
   return {
-    TagsTypes: formattedTagsTypes,
-    meta,
+    tagTypes
   };
 };
 
