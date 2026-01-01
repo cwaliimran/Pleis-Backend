@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Reviews = require('@ReviewsModel'); // Adjust path to your Reviews model
 const { formatReviewData } = require('./formatters/updateFormatter');
-const Organizations = require('@OrganizationsModel');
+const Organizations = require('@OrganizationModel');
 
 const getOrganizationIdsByOrganizerId = async (organizerId) => {
   try {
