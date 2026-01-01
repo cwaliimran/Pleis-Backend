@@ -20,6 +20,9 @@ const createReservation = async (req, res) => {
     reservationId,
     timingSlots,
     notes,
+    paymentMethod,
+    preOrderMenuItems,
+    
   } = req.body;
 
   const userId = req.user._id;
@@ -35,6 +38,24 @@ const createReservation = async (req, res) => {
         "organizationId",
         "companyOrganizer",
         "reservationId",
+        "paymentMethod",
+      ],
+      enumFields: {
+        reservationType: [
+          "regular",
+          "vip",
+          "outdoor",
+          "private",
+          "bar",
+          "window",
+        ],
+        paymentMethod: ["applePay", "card", "cash", "payLater"],
+      },
+      objectIdFields: [
+        "organizationId",
+        "companyOrganizer",
+        "reservationId",
+        "optionalEventId",
       ],
     })
   )
@@ -136,7 +157,10 @@ const createReservation = async (req, res) => {
     companyOrganizer,
     reservationId,
     notes,
+    paymentMethod,
     timingSlots: timingSlots || { enabled: false, dateTimeSlots: [] },
+    preOrderMenuItems,
+
   };
 
   try {

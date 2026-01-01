@@ -55,9 +55,13 @@ const OrdersSchema = new mongoose.Schema(
                 "online",
                 "preorder",    // Scheduled for later
                 "walkIn",      // In-store / counter
-
             ],
             default: "walkIn",
+        },
+        reservation: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "UserReservations",
+            default: undefined,
         },
 
         pickupType: { type: String, enum: ["counter", "tableService", "togo"], default: "counter" },

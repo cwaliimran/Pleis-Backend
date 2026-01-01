@@ -91,7 +91,7 @@ app.use("/api/v1/admin", adminRoutes);
 // Organizer routes
 app.use("/api/v1/organizer", organizerRoutes);
 // Organizer staff
-app.use("/api/v1/staff", staffRoutes);
+app.use("/api/v1/app/staff", staffRoutes);
 
 app.use("/api/v1", routes);
 

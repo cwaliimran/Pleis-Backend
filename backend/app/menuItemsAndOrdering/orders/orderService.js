@@ -141,6 +141,66 @@ const placeOrder = async ({
   }
 };
 
+const placePreOrderMenuItemsWithReservation = async ({
+  userId,
+  timezone,
+  items,
+  notes,
+  reservation,
+  paymentMethod,
+  session
+}) => {
+
+  if (!items || !items.length) throw new Error("Cart is empty");
+
+  // 1️⃣ Fetch menu items
+  const itemIds = items.map(i => new mongoose.Types.ObjectId(i.menuItem));
+
+  const menuItems = await menuItemRepo.getMenuItemsWithFilters(
+    { _id: { $in: itemIds } }
+  );
+
+  if (!menuItems.length) throw new Error("Invalid items in cart");
+
+  const organizationId =
+    await menuItemRepo.getOrganizationIdByMenuItemId(menuItems[0].menu);
+
+  let totalPrice = 0;
+
+  const orderItems = items.map(i => {
+    const menuItem = menuItems.find(m => m._id.toString() === i.menuItem);
+    if (!menuItem) throw new Error(`Invalid menu item: ${i.menuItem}`);
+
+    const price = menuItem.discountPrice || menuItem.basePrice;
+    const finalPrice = price * i.quantity;
+    totalPrice += finalPrice;
+
+    return {
+      menuItem: menuItem._id,
+      quantity: i.quantity,
+      finalPrice,
+      menuItemSnapShot: JSON.parse(JSON.stringify(menuItem)),
+    };
+  });
+
+  const orderData = {
+    user: userId,
+    organization: organizationId,
+    items: orderItems,
+    totalPrice,
+    notes,
+    paymentMethod,
+    status: "pending",
+    orderType: "preorder",
+    reservation,
+  };
+
+  let order = await orderRepo.createOrder(orderData, session);
+
+  return order;
+};
+
+
 
 const addMoreItemsToOrder = async ({ orderId, items }) => {
   if (!items || !items.length) throw new Error("No items to add");
@@ -228,5 +288,6 @@ module.exports = {
   getUserOrders,
   updateOrderStatus,
   cancelOrder,
-  addMoreItemsToOrder
+  addMoreItemsToOrder,
+  placePreOrderMenuItemsWithReservation
 };
