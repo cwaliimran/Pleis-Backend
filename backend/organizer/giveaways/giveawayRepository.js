@@ -5,7 +5,7 @@ const {Events}= require("@EventsModel");
 const Giveaway = require("@GiveawayModel");
 const { TicketingOrders } = require("@TicketingOrdersModel");
 const  TicketingsModel  = require("@TicketingsModel");
-
+const Organizations = require("@OrganizationModel");
 const { UserReservations } = require("@UserReservationsModel");
 const { formatUpdate } = require("./formatters/updateFormatter");
 const {NotificationExp, NotificationTypes} = require("@NotificationsModel");
@@ -78,21 +78,120 @@ const getUserIdsForEvent = async (eventId) => {
 
 const createGiveaway = async (data) => {
   try {
-    const update = new Giveaway(data); 
-    await update.save();
-    return update; 
+    const organization = await Organizations.findOne({ creator: data.creator });
+
+    if (!organization) {
+      throw new Error("No organization found for the provided user ID.");
+    }
+
+    // Step 2: Include the organization ID in the giveaway data
+    data.organization = organization._id;
+    const giveaway = new Giveaway(data);
+    await giveaway.save();
+
+    return giveaway;
   } catch (err) {
-    throw new Error("Error saving update: " + err.message); 
+    throw new Error("Error saving giveaway: " + err.message);
   }
 };
+const getWinners = async ({ giveawayId, timezone, page, limit, skip }) => {
+  try {
+    const pipeline = [
+      // Step 1: Match the given giveawayId
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(giveawayId),  // Match the giveaway
+        },
+      },
 
+      // Step 2: Lookup giveaway participants and filter only winners
+      {
+        $lookup: {
+          from: "giveawayparticipants",  // Collection name for GiveawayParticipants
+          localField: "_id",  // Field in Giveaway
+          foreignField: "giveaway",  // Field in GiveawayParticipants
+          as: "participants",  // Alias for the joined data
+        },
+      },
+      {
+        $unwind: { path: "$participants", preserveNullAndEmptyArrays: true },  // Flatten the 'participants' array
+      },
 
-const getGiveaway = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
+      // Step 3: Filter only winners (where isWinner is true)
+      {
+        $match: {
+          "participants.isWinner": true,  // Only include winners
+        },
+      },
+
+      // Step 4: Lookup for user details (first name, last name, email, username)
+      {
+        $lookup: {
+          from: "users",  // Collection name for Users
+          localField: "participants.user",  // Field in GiveawayParticipants (user field)
+          foreignField: "_id",  // Field in Users collection
+          as: "user",  // Alias for the joined data
+        },
+      },
+      {
+        $unwind: { path: "$user", preserveNullAndEmptyArrays: true },  // Flatten the 'user' array
+      },
+
+      // Step 5: Project only necessary fields (event title, ticket title, and winner details)
+      {
+        $project: {
+          eventTitle: 1,  // Event title from Giveaway
+          ticketTitle: 1,  // Ticket title from Giveaway
+          firstName: "$user.firstName",  // First name of the winner
+          lastName: "$user.lastName",  // Last name of the winner
+          email: "$user.email",  // Email of the winner
+          username: "$user.username",  // Username of the winner
+        },
+      },
+
+      // Step 6: Apply pagination and count using $facet
+      {
+        $facet: {
+          data: [
+            { $skip: skip },  // Pagination skip
+            ...(limit === 0 ? [] : [{ $limit: limit }])  // Apply limit if provided
+          ],
+          totalFiltered: [{ $count: "count" }],  // Total count of filtered results
+        },
+      },
+    ];
+
+    // Execute the aggregation pipeline
+    const result = await Giveaway.aggregate(pipeline);
+
+    // Check if the result is valid and contains data
+    if (!result || !result[0] || !result[0].data) {
+      return { winners: [], meta: { totalFiltered: 0 } };
+    }
+
+    // Handle the aggregation results
+    const winners = result[0].data || [];
+    const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+
+    // Meta information for pagination
+    const meta = { totalFiltered };
+
+    return { winners, meta };
+  } catch (err) {
+    throw new Error("Error retrieving winners: " + err.message);
+  }
+};
+const getGiveaway = async ({organizationId, timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
+    const organizationIds = organizationId
+    ? organizationId.split(',').map(id => new mongoose.Types.ObjectId(id))
+    : [];
   let totalParticipants=10
   const pipeline = [
     {
       $match: {
-        ...(userId && { creator: new mongoose.Types.ObjectId(userId) })  // Match creator if userId is provided
+        ...(organizationIds.length > 0
+          ? { organization: { $in: organizationIds } }
+          : { creator: new mongoose.Types.ObjectId(userId) }),
       }
     },
 
@@ -150,11 +249,13 @@ const getGiveaway = async ({ timezone, page, limit, keyword, status, userId, dat
     {
       $project: {
         eventTitle: "$event.basicInfo.title", // Only return event title
-        ticketType: "$ticket.title", // Only return ticket title
+        ticketTitle: "$ticket.title", // Only return ticket title
+                eventId: "$event._id", // Only return event title
+        ticketId: "$ticket._id", // Only return ticket title
         title: 1, 
         numberOfWinners: 1,
         ticketsPerWinner: 1,
-        // startDateTime: 1,
+        startDateTime: 1,
         endDateTime: 1,
         status: 1,
         giveawayStatus: 1,
@@ -421,6 +522,7 @@ module.exports = {
   findByIdAndUpdate,
   getevents,
   getUserIdsForEvent,
-  gettickets
+  gettickets,
+  getWinners
 
 };

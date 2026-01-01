@@ -50,13 +50,13 @@ const getCreatorFromOrganization = async (organizationId) => {
       return null;  // Return null if no matching organization is found
     }
   } catch (err) {
-    console.error("Error in aggregation:", err);
+
     throw err;
   }
 };
 const createReservation = async (data) => {
   try {
-    console.log("Creating reservation with data:", await getCreatorFromOrganization(data.organizationId));
+
     data.companyOrganizer = await getCreatorFromOrganization(data.organizationId);
     const Reservation = new Reservations(data);
     await Reservation.save();
@@ -105,7 +105,7 @@ const findByIdAndUpdate = async (id, data) => {
 
 const getReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, skip }) => {
   const now = getCurrentDateInTimezone({ timezone });
-console.log("date",date );
+
 
   let organizationsIds = Array.isArray(organizationsId)
     ? organizationsId
@@ -203,11 +203,11 @@ console.log("date",date );
     }
   });
   const result = await Reservations.aggregate(pipeline);
-  console.log("pipeline",pipeline );
+
 
   let reservations = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
-console.log("reservations",reservations );
+
   // Additional counts for meta (active/inactive/total by userId as creator)
   const [total, active, inactive] = await Promise.all([
     Reservations.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "deleted" } }),
@@ -402,7 +402,7 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
   });
 
   const result = await UserReservations.aggregate(pipeline);
-console.log("pipeline",result );
+
   let reservations = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
@@ -456,7 +456,7 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
   // );
   
       const now = getCurrentUtcDateOnly();
-console.log("date",date );
+
 
   let organizationsIds = Array.isArray(organizationsId)
     ? organizationsId
@@ -470,48 +470,70 @@ console.log("date",date );
       }
     }
   ];
-  if (range == "monthly") {
-    const { start, end } = getStartAndEndOfMonth(now, timezone);
-    console.log("date range is ",start,end );
-    pipeline.push({
-      $match: {
-        "timingSlots.dateTimeSlots": {
-          $elemMatch: {
-            date: { $gte: start, $lt: end }
-          }
+if (range == "monthly") {
+
+
+  // Update the pipeline to match events within the specified date range
+  pipeline.push({
+    $match: {
+      "timingSlots.dateTimeSlots": {
+        $elemMatch: {
+          date: { $gte: start, $lt: adjustedEnd }
         }
       }
-    });
-  }
-  if (range == "weekly") {
-    const { start, end } = getStartAndEndOfWeek(now, timezone);
-    console.log("date range is ",start,end );
-    pipeline.push({
-      $match: {
-        "timingSlots.dateTimeSlots": {
-          $elemMatch: {
-            date: { $gte: start, $lt: end }
-          }
+    }
+  });
+
+
+}
+
+if (range == "weekly") {
+  // Get the start and end of the current week based on the timezone
+  const { start, end } = getStartAndEndOfWeek(now, timezone);
+
+  // Add 1 minute to the end date to capture events at the very end of the week
+  const adjustedEnd = new Date(end.getTime() + 60000); // Add 1 minute to the end time
+
+
+
+  // Update the pipeline to match events within the specified date range
+  pipeline.push({
+    $match: {
+      "timingSlots.dateTimeSlots": {
+        $elemMatch: {
+          date: { $gte: start, $lt: adjustedEnd }
         }
       }
-    });
-  }
-  if (range == "today") {
+    }
+  });
+
+
+}
+
+if (range == "today") {
+  // Get the start and end of today based on the timezone
+  const { start, end } = getStartAndEndOfDay(now, timezone);
+
+
+  // Add 1 minute to the end date to capture events at the very end of the day
+  const adjustedEnd = new Date(end.getTime() + 60000); // Add 1 minute to the end time
 
 
 
-    const { start, end } = getStartAndEndOfDay(now, timezone);
-
-    pipeline.push({
-      $match: {
-        "timingSlots.dateTimeSlots": {
-          $elemMatch: {
-            date: { $gte: start, $lt: end }
-          }
+  // Update the pipeline to match events within the specified date range
+  pipeline.push({
+    $match: {
+      "timingSlots.dateTimeSlots": {
+        $elemMatch: {
+          date: { $gte: start, $lt: adjustedEnd }
         }
       }
-    });
-  }
+    }
+  });
+
+}
+
+
   // Apply filters
   if (status) {
     pipeline.push({ $match: { status } });
@@ -519,10 +541,16 @@ console.log("date",date );
     pipeline.push({ $match: { status: { $ne: "deleted" } } });
   }
 
-  if (date) {
-    let { start, end } = getStartAndEndOfDay(date, timezone);
+if (date) {
+  let { start, end } = getStartAndEndOfDay(date, timezone);
 
-  console.log("DATE DEBUG:", { start, end });
+  // Log the start and end dates for debugging
+
+
+  // Add 1 minute to the end date to capture events that are scheduled at the very last minute
+  end = new Date(end.getTime() + 60000); // 60,000 ms = 1 minute
+
+
 
   pipeline.push({
     $match: {
@@ -531,12 +559,12 @@ console.log("date",date );
           {
             $size: {
               $filter: {
-                input: "$timingSlots.dateTimeSlots",
+                input: "$timingSlots.dateTimeSlots", // Array of dateTimeSlots
                 as: "slot",
                 cond: {
                   $and: [
-                    { $gte: ["$$slot.date", start] },
-                    { $lt: ["$$slot.date", end] }
+                    { $gte: ["$$slot.date", start] }, // Match slot date >= start date
+                    { $lt: ["$$slot.date", end] } // Match slot date < end date
                   ]
                 }
               }
@@ -547,7 +575,11 @@ console.log("date",date );
       }
     }
   });
+
+  // Log the pipeline for debugging
+
 }
+
   if (keyword) {
     const keywordMatch = buildKeywordQueryFromModels(
       [
@@ -574,11 +606,11 @@ console.log("date",date );
     }
   });
   const result = await Reservations.aggregate(pipeline);
-  console.log("pipeline",pipeline );
+
 
   let reservations = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
-console.log("reservations",reservations );
+
   // Additional counts for meta (active/inactive/total by userId as creator)
   const [total, active, inactive] = await Promise.all([
     Reservations.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "deleted" } }),

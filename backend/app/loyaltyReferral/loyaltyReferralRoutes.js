@@ -2,15 +2,8 @@ const express = require("express");
 const {
   sendResponse,
   validateParams,
-
-
 } = require("../../helperUtils/responseUtil");
-const {GlobalReferral} = require("@GlobalReferralModel");
 const {
-
-  getGlobalReferrals,
-createUserReferradrecord,
-getUserReferradrecord,
   saveUserReferralData
 } = require("./loyaltyReferralController");
 const mongoose = require("mongoose");
@@ -39,50 +32,37 @@ const BASE_WEB_URL = process.env.API_BASE_URL;
 /**
  * Helper to get model dynamically by type
  */
-function getModelByType(type) {
-    switch (type) {
-        case "global":
-            return GlobalReferral;
-        case "company":
-            return GlobalReferral;
-        case "organizer":
-            return GlobalReferral;
-                    case "user":
-            return GlobalReferral;
-        default:
-            return null;
-    }
-}
+
 
 /**
  * Helper to generate one universal share URL
  * Example: https://pleisapp.com/open?type=event&id=XYZabc123
  */
 function generateShareLink(organizationPublicId, userPublicId) {
-    return `${BASE_WEB_URL}app/loyalty-referral/share?organization=${organizationPublicId}&user=${userPublicId}`;
+    return `${BASE_WEB_URL}app/loyalty-referral/share?organizer=${organizationPublicId}&user=${userPublicId}`;
 }
 /**
  * ✅ Generate shareable link
  * Example: GET /api/share/event/68ff18ed8cd2d2f52b25be1a
  * Uses Mongo _id (uuid) → returns link with publicId
  */
-router.get("/share/:organization",auth, async (req, res) => {
+router.get("/share/:organizer",auth, async (req, res) => {
     try {
  
-        const { organization } = req.params;
+        const { organizer } = req.params;
 
         // Validate the parameters
         if (
             !validateParams(req, res, {
-                pathParams: ["organization"],  // Ensure ID is present
-                objectIdFields: ["organization"],  // Validate that ID is a valid ObjectId
+                pathParams: ["organizer"],  // Ensure ID is present
+                objectIdFields: ["organizer"],  // Validate that ID is a valid ObjectId
             })
         ) return;
 
         userId=req.user._id;
 const result = await getUserOrganizationPublicIds(
   new mongoose.Types.ObjectId(userId),
-  new mongoose.Types.ObjectId(organization)
+  new mongoose.Types.ObjectId(organizer)
 );
         const shareUrl = generateShareLink(result.organizationPublicIds, result.userPublicId);
 
@@ -109,14 +89,14 @@ const result = await getUserOrganizationPublicIds(
 router.get("/share", async (req, res) => {
 
     try {
-        const { id } = req.query; 
-        const username=id;
-
-const result = await saveUserReferralData(username, req.ip);
-        const appLink = `com.pleis://${result}`;
+        const { organizer, user } = req.query;
+        const referrer=user
+const result = await saveUserReferralData(organizer,referrer);
+console.log(result );
+        const appLink = `com.pleis://organizer=${result.organizerId}/referrer=${result.referrerId}`; // Deep link to open the app
         const iosFallback = "https://apps.apple.com/app/pleisapp/id1234567890"; // iOS fallback URL
         const androidFallback = "https://play.google.com/store/apps/details?id=com.pleis"; // Android fallback URL
-
+console.log("appLink",appLink );
         // Smart redirect HTML with the link to the app or store
         return res.send(`
       <!DOCTYPE html>

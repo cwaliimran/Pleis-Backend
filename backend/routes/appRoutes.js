@@ -62,6 +62,7 @@ router.use("/qr-code", require("../app/qrCode/qrCodeRoutes"));
 router.use("/support", require("../app/support/supportRoutes"));
 router.use("/faqs", require("../app/faqs/faqsRoutes"));
 router.use("/loyalty-referral", require("../app/loyaltyReferral/loyaltyReferralRoutes"));
+router.use("/reviews", require("../app/reviews/reviewsRoutes"));
 
 
 
