@@ -5,17 +5,19 @@ const moment = require("moment-timezone");
 Use numeric UTC minutes (simpler + faster queries)
 This is ideal if we’ll be doing lots of $gte / $lte comparisons.
 */
-const timingSchema = ({
-  from: { type: Number, default: null }, // e.g. 480 = 08:00 UTC
-  to: { type: Number, default: null }, // e.g. 1080 = 18:00 UTC
-  break: {
+const timingSchema = new mongoose.Schema(
+  {
     from: { type: Number, default: null },
     to: { type: Number, default: null },
+    break: {
+      from: { type: Number, default: null },
+      to: { type: Number, default: null },
+    },
+    isOpen: { type: Boolean, default: false },
   },
-  isOpen: { type: Boolean, default: false },
+  { _id: false }
+);
 
-},
-  { _id: false });
 const OperatingHoursSchema = new mongoose.Schema({
   monday: timingSchema,
   tuesday: timingSchema,

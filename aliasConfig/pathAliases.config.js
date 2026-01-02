@@ -76,4 +76,7 @@ module.exports = {
     "@ReviewsModel": "backend/commonModules/reviews/Reviews.js",
     "@UserContacts": "backend/commonModules/friendRequest/userContacts.js",
     "@ApplyPointsByStaffModel": "backend/commonModules/applyPointsByStaff/ApplyPointsByStaff.js",
+    "@UserBadgesModel": "backend/commonModules/badgeCategories/UserBadages.js",
+    "@UserInterests": "backend/models/UserInterests.js"
+    
 };

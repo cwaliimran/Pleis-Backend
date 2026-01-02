@@ -6,7 +6,7 @@ const {
   generateMeta,
   getReadableErrorMessage,
 } = require("../../helperUtils/responseUtil");
-const { transformOperatingHoursToUtc, transformOperatingHoursToLocal } = require("../../shared/commonSchemas/operatingHours");
+const { transformOperatingHoursToUtc } = require("../../shared/commonSchemas/operatingHours");
 
 const organizationService = require("./organizationService");
 
@@ -47,6 +47,7 @@ const createOrganization = async (req, res) => {
     const organization = await organizationService.createOrganization({
       data,
       creator,
+      timezone
     });
 
     return sendResponse({
@@ -87,20 +88,7 @@ const getOrganizations = async (req, res) => {
       status,
       creator: _id,
       date,
-    });
-
-    // Transform to local time safely
-    organizations = organizations.map((org) => {
-      const orgObj = org.toObject ? org.toObject() : org;
-
-      if (orgObj.operatingHours) {
-        orgObj.operatingHours = transformOperatingHoursToLocal(
-          orgObj.operatingHours,
-          timezone
-        );
-      }
-
-      return orgObj;
+      timezone
     });
 
     return sendResponse({
@@ -139,21 +127,6 @@ const getOrganizationsAdmin = async (req, res) => {
       date,
       timezone
     });
-
-    // Transform to local time safely
-    organizations = organizations.map((org) => {
-      const orgObj = org.toObject ? org.toObject() : org;
-
-      if (orgObj.operatingHours) {
-        orgObj.operatingHours = transformOperatingHoursToLocal(
-          orgObj.operatingHours,
-          timezone
-        );
-      }
-
-      return orgObj;
-    });
-
     return sendResponse({
       res,
       statusCode: 200,
@@ -175,6 +148,7 @@ const getPublicOrganizations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, date } = req.query;
 
+  let { timezone } = req.user;
   try {
     if (date && !validateParams(req, res, {
       dateFields: {
@@ -188,21 +162,8 @@ const getPublicOrganizations = async (req, res) => {
         limit,
         keyword,
         date,
+        timezone
       });
-
-    // Transform to local time safely
-    organizations = organizations.map((org) => {
-      const orgObj = org.toObject ? org.toObject() : org;
-
-      if (orgObj.operatingHours) {
-        orgObj.operatingHours = transformOperatingHoursToLocal(
-          orgObj.operatingHours,
-          timezone
-        );
-      }
-
-      return orgObj;
-    });
 
     return sendResponse({
       res,
@@ -254,7 +215,7 @@ const updateOrganization = async (req, res) => {
   }
 
   try {
-    const updated = await organizationService.updateOrganization({ id, data });
+    const updated = await organizationService.updateOrganization({ id, data, timezone});
 
     if (!updated) {
       return sendResponse({
@@ -326,18 +287,13 @@ const getOrganizationDetails = async (req, res) => {
     })
   )
     return;
-  const organization = await organizationService.getOrganizationDetails(id);
+  const organization = await organizationService.getOrganizationDetails(id, timezone);
   if (!organization) {
     return sendResponse({
       res,
       statusCode: 404,
       translationKey: "organization_not_found",
     });
-  }
-
-
-  if (organization.operatingHours) {
-    organization.operatingHours = transformOperatingHoursToLocal(organization.operatingHours, timezone);
   }
 
   return sendResponse({

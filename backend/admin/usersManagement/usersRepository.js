@@ -140,6 +140,10 @@ const findUserById = async (id, projection = null) => {
   ]);
 };
 
+const getUserDetailsForQRRepo = async (id) => {
+  return User.findById(id).select("profileIcon firstName lastName email phoneNumber");
+}
+
 // Update and save
 const updateUserData = async (user, data) => {
   Object.assign(user, data);
@@ -207,5 +211,6 @@ module.exports = {
   updateTwoFA,
   updateUserInterests,
   getUserInterestsByUserId,
-  getUserInterestsIdsForRecommendation
+  getUserInterestsIdsForRecommendation,
+  getUserDetailsForQRRepo
 };

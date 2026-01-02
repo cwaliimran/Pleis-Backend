@@ -266,7 +266,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"provider\": \"google\", //\"google\", \"facebook\", \"apple\",\n    \"socialId\": \"123456789012345678424\",\n    \"profileIcon\": \"noimage.png\",\n    \"firstName\": \"Ali\",\n    \"lastName\": \"Imran\",\n    \"email\": \"cwaliimran@gmail.com\",\n    \"deviceType\": \"android\", //andoird/ios/web\n    \"userType\": \"user\", //organizer, user, admin\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
+											"raw": "{\n    \"provider\": \"google\", //\"google\", \"facebook\", \"apple\",\n    \"socialId\": \"mWQZ2pYQnZbC2Zfcp5sdZ4otq0f2\",\n    // \"profileIcon\": \"noimage.png\",\n    \"firstName\": \"Ali\",\n    \"lastName\": \"Imran\",\n    \"email\": \"cwaliimrandev@gmail.com\",\n    \"deviceType\": \"ios\", //andoird/ios/web\n    \"userType\": \"user\", //organizer, user, admin\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -330,7 +330,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"email\": \"{{emailUser}}\",\n    \"password\": \"{{passwordUser}}\",\n    \"userType\": \"user\", //user, organizer, admin, manager, guest\n    \"deviceType\": \"android\", //andoird/ios\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
+											"raw": "{\n    \"email\": \"{{emailUser}}\", //ujamil503@gmail.com\n    \"password\": \"{{passwordUser}}\",\n    \"userType\": \"user\", //user, organizer, admin, manager, guest\n    \"deviceType\": \"android\", //andoird/ios\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -510,7 +510,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}locations/cities/nearby?latitude=45.815&longitude=15.9815",
+											"raw": "{{url}}locations/cities/nearby?latitude=31.502223&longitude=74.4269194",
 											"host": [
 												"{{url}}locations"
 											],
@@ -521,11 +521,11 @@
 											"query": [
 												{
 													"key": "latitude",
-													"value": "45.815"
+													"value": "31.502223"
 												},
 												{
 													"key": "longitude",
-													"value": "15.9815"
+													"value": "74.4269194"
 												}
 											]
 										}
@@ -1292,7 +1292,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    // \"profileIcon\": \"noImage1.png\",\n    // \"firstName\": \"{{$randomUserName}}\",\n    // \"lastName\": \"M\",\n    // \"phoneNumber\": {\n    //     \"code\": \"+92\",\n    //     \"number\": \"3001122104\"\n    // },\n    \"location\": {\n        \"coordinates\": [\n            0,\n            0\n        ],\n        \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n        \"country\": \"USA\",\n        \"city\": \"New York\",\n        \"state\": \"NYKaff\",\n        \"postalCode\": \"10012\"\n    }\n    // ,\n    // \"dob\": \"2005-10-16\",\n    // \"gender\": \"Male\",\n    // \"notifications\":{\n    //     \"email\":true,\n    //     \"push\":false\n    // },\n    // \"deviceType\": \"web\", //andoird/ios/web\n    // \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    // \"timezone\": \"Asia/Karachi\"\n}",
+											"raw": "{\n    \"profileIcon\": \"noImage1.png\",\n    // \"firstName\": \"{{$randomUserName}}\",\n    // \"lastName\": \"M\",\n    // \"phoneNumber\": {\n    //     \"code\": \"+92\",\n    //     \"number\": \"3001122104\"\n    // },\n    \"location\": {\n        \"coordinates\": [\n            0,\n            0\n        ],\n        \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n        \"country\": \"USA\",\n        \"city\": \"New York\",\n        \"state\": \"NYKaff\",\n        \"postalCode\": \"10012\"\n    }\n    // ,\n    // \"dob\": \"2005-10-16\",\n    // \"gender\": \"Male\",\n    // \"notifications\":{\n    //     \"email\":true,\n    //     \"push\":false\n    // },\n    // \"deviceType\": \"web\", //andoird/ios/web\n    // \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    // \"timezone\": \"Asia/Karachi\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -1311,7 +1311,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "6911b9931902fd1c55eb480c"
+													"value": "6926f5f9d9366d79ebf73f72"
 												}
 											]
 										},
@@ -1777,7 +1777,8 @@
 													""
 												],
 												"type": "text/javascript",
-												"packages": {}
+												"packages": {},
+												"requests": {}
 											}
 										},
 										{
@@ -1787,7 +1788,8 @@
 													""
 												],
 												"type": "text/javascript",
-												"packages": {}
+												"packages": {},
+												"requests": {}
 											}
 										}
 									],
@@ -1905,7 +1907,7 @@
 									]
 								},
 								{
-									"name": "tags - genre",
+									"name": "tags types - genre",
 									"event": [
 										{
 											"listen": "test",
@@ -1946,20 +1948,12 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}tags/types/grouped",
+											"raw": "{{url}}tags-types/global",
 											"host": [
-												"{{url}}tags"
+												"{{url}}tags-types"
 											],
 											"path": [
-												"types",
-												"grouped"
-											],
-											"query": [
-												{
-													"key": "keyword",
-													"value": "night",
-													"disabled": true
-												}
+												"global"
 											]
 										}
 									},
@@ -2514,7 +2508,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}app/home?latitude=31.48252&longitude=74.4557234&radiusKm=50",
+									"raw": "{{url}}app/home?latitude=0&longitude=0",
 									"host": [
 										"{{url}}app"
 									],
@@ -2525,26 +2519,27 @@
 										{
 											"key": "latitude",
 											"value": "0",
-											"description": "31.48252",
-											"disabled": true
+											"description": "31.48252"
 										},
 										{
 											"key": "longitude",
 											"value": "0",
-											"description": "74.4557234",
-											"disabled": true
+											"description": "74.4557234"
 										},
 										{
 											"key": "latitude",
-											"value": "31.48252"
+											"value": "31.48252",
+											"disabled": true
 										},
 										{
 											"key": "longitude",
-											"value": "74.4557234"
+											"value": "74.4557234",
+											"disabled": true
 										},
 										{
 											"key": "radiusKm",
-											"value": "50"
+											"value": "50",
+											"disabled": true
 										}
 									]
 								}
@@ -2841,7 +2836,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "// {\n//     // \"sort\": \"asc\", //asc/desc\n//     \"advanceFilters\": {\n//         \"distanceFrom\": 0,\n//         \"distanceTo\": 5,\n//         // \"time\": \"live\", //live, today, thisWeek\n//         // \"dateFrom\": \"2025-11-13\", //YYYY-MM-DD\n//         // \"dateTo\": \"2025-11-16\",\n//         \"categories\": [\n//             \"6911bd65d49fc086aabd254e\",\n//             \"6911bd6bd49fc086aabd2561\",\n//             \"6911bd7cd49fc086aabd257c\"\n//         ],\n//         \"venueTypes\": [\n//             \"6911bd00d49fc086aabd24b3\"\n//         ],\n//         \"tags\": [\n//             \"6911bde7d49fc086aabd25f1\"\n//         ] // vibes are tags\n//         ,\n//         \"genre\": [\n//             \"OutdoorEvent\"\n//         ] //are subtypes of tags\n//     }\n// }",
+									"raw": "{\n    // \"sort\": \"asc\", //asc/desc\n    \"advanceFilters\": {\n        // \"distanceFrom\": 0,\n        // \"distanceTo\": 50,\n        // \"time\": \"thisWeek\", //live, today, thisWeek\n        // \"dateFrom\": \"2025-11-13\", //YYYY-MM-DD\n        // \"dateTo\": \"2025-11-16\",\n        \"categories\": [\n            // \"6911bd65d49fc086aabd254e\",\n            // \"6911bd6bd49fc086aabd2561\",\n            // \"6911bd7cd49fc086aabd257c\"\n        ],\n        \"venueTypes\": [\n          //  \"6911bd00d49fc086aabd24b3\"\n        ],\n        \"tags\": [\n           // \"6911bde7d49fc086aabd25f1\"\n        ] // vibes are tags\n        ,\n        \"genre\": [\n           \"6953c6029c8a1a1042ef899c\"\n        ] //are subtypes of tags\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -2849,7 +2844,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}app/home/global/search?page=1&limit=10&latitude=31.5023621&longitude=74.426454&keyword=Urban",
+									"raw": "{{url}}app/home/global/search?page=1&limit=10&latitude=31.48252&longitude=74.4557234",
 									"host": [
 										"{{url}}app"
 									],
@@ -2869,15 +2864,22 @@
 										},
 										{
 											"key": "latitude",
-											"value": "31.5023621"
+											"value": "31.48252"
 										},
 										{
 											"key": "longitude",
-											"value": "74.426454"
+											"value": "74.4557234"
 										},
 										{
 											"key": "keyword",
-											"value": "Urban"
+											"value": "Suheer",
+											"disabled": true
+										},
+										{
+											"key": "type",
+											"value": "organizations",
+											"description": "events/organizations/loyaltyClubs",
+											"disabled": true
 										}
 									]
 								}
@@ -2943,7 +2945,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "69206e7a4e1713f7a48b1361"
+											"value": "6915c3e448a5a4c172122332"
 										}
 									]
 								}
@@ -3009,7 +3011,7 @@
 									"variable": [
 										{
 											"key": "eventId",
-											"value": "691ec6b48b3b9e47b35fb335"
+											"value": "6915c3e448a5a4c172122332"
 										}
 									]
 								}
@@ -3192,7 +3194,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    // \"category\": \"68f0d6b0a92f125fd26a5831\", //optional\n    \"filter\": {\n        \"type\": \"all\" //events, places, all\n        // ,\"key\": \"live\" // live, today, thisWeek\n    },\n    \"latitude\": 31.5023621,\n    \"longitude\": 74.426454,\n\n    \"sort\": \"desc\", //asc/desc\n    \"advanceFilters\": { \n        \"distanceFrom\": 20,\n        \"distanceTo\": 45555555\n        // ,\n        // \"time\": \"live\", //live, today, thisWeek\n        // \"dateFrom\": \"2025-11-13\", //YYYY-MM-DD\n        // \"dateTo\": \"2025-11-16\",\n        // \"categories\": [\n        //     \"6911bd65d49fc086aabd254e\"\n        // ],\n        // \"venueTypes\": [\n        //     \"6911bb4922299f710c7a9441\"\n        // ],\n        // \"tags\": [\"6911bdc2d49fc086aabd25e2\"], // vies are tags\n        // \"genre\": [] //are subtypes of tags\n    }\n}",
+									"raw": "{\n    \"filter\": {\n        \"type\": \"events\" // events | places | all\n        // ,\"key\": \"live\"           // OPTIONAL: live | today | thisWeek (legacy quick filters)\n    },\n    \"bounds\": {\n        \"northEast\": {\n            \"latitude\": 31.730,\n            \"longitude\": 74.550\n        },\n        \"southWest\": {\n            \"latitude\": 31.300,\n            \"longitude\": 74.200\n        }\n    },\n    \"sort\": \"asc\", // asc | desc (default asc)\n    // -----------------------------\n    // ADVANCED FILTERS\n    // -----------------------------\n    //   \"time\": \"thisWeek\",          // live | today | tomorrow | thisWeek | all\n    // \"dateFrom\": \"2025-12-02\", // YYYY-MM-DD (optional)\n    // \"dateTo\": \"2025-12-31\", // YYYY-MM-DD (optional)\n    \"categories\": [\n        // \"6911bd65d49fc086aabd254e\"\n        // \"6911bd7cd49fc086aabd257c\"\n    ],\n    \"venueTypes\": [\n        // \"6911bb4922299f710c7a9441\"\n    ],\n    // VIBES (tags)\n    \"tags\": [\n        // \"6911bddbd49fc086aabd25ee\",\n        // \"6911bde7d49fc086aabd25f1\"\n    ],\n    // GENRE (maps to tag subtypes and enforces AND logic)\n    \"genre\": [\n        \"6953c6029c8a1a1042ef899c\"\n    ] //are subtypes of tags\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -3407,7 +3409,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    // \"category\": \"68ee3310924370d02dbacc41\", //optional\n    \"filter\": {\n        \"type\": \"places\" //events, places, all\n        // ,\"key\": \"openNow\" //\"\",openNow, topRated, trending\n    },\n    \"latitude\": 31.5023621,\n    \"longitude\": 74.426454\n}",
+									"raw": "{\n    \"filter\": {\n        \"type\": \"places\" // events | places | all\n        // ,\"key\": \"live\"           // OPTIONAL: live | today | thisWeek (legacy quick filters)\n    },\n    \"bounds\": {\n        \"northEast\": {\n            \"latitude\": 31.730,\n            \"longitude\": 74.550\n        },\n        \"southWest\": {\n            \"latitude\": 31.300,\n            \"longitude\": 74.200\n        }\n    },\n    \"sort\": \"asc\", // asc | desc (default asc)\n    // -----------------------------\n    // ADVANCED FILTERS\n    // -----------------------------\n    //   \"time\": \"thisWeek\",          // live | today | tomorrow | thisWeek | all\n    // \"dateFrom\": \"2025-12-02\", // YYYY-MM-DD (optional)\n    // \"dateTo\": \"2025-12-31\", // YYYY-MM-DD (optional)\n    \"categories\": [\n        // \"6911bd65d49fc086aabd254e\"\n        // \"6911bd7cd49fc086aabd257c\"\n    ],\n    \"venueTypes\": [\n        // \"6911bb4922299f710c7a9441\"\n    ],\n    // VIBES (tags)\n    \"tags\": [\n        // \"6911bddbd49fc086aabd25ee\",\n        // \"6911bde7d49fc086aabd25f1\"\n    ],\n    // GENRE (maps to tag subtypes and enforces AND logic)\n    \"genre\": [\n        \"6953c6029c8a1a1042ef899c\"\n    ] //are subtypes of tags\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -3473,7 +3475,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    // \"category\": \"68f0d6b0a92f125fd26a5831\", //optional\n    \"filter\": {\n        \"type\": \"all\" //events, places, all\n       // \"key\": \"live\" // live, today, thisWeek\n    },\n    \"latitude\": 31.5023621,\n    \"longitude\": 74.426454\n}",
+									"raw": "{\n    \"filter\": {\n        \"type\": \"events\" // events | places | all\n        // ,\"key\": \"live\"           // OPTIONAL: live | today | thisWeek (legacy quick filters)\n    },\n    \"bounds\": {\n        \"northEast\": {\n            \"latitude\": 31.730,\n            \"longitude\": 74.550\n        },\n        \"southWest\": {\n            \"latitude\": 31.300,\n            \"longitude\": 74.200\n        }\n    },\n    \"keyword\": \"\",\n    \"advanceFilters\": {\n        \"sort\": \"asc\", // asc | desc (default asc)\n        // -----------------------------\n        // ADVANCED FILTERS\n        // -----------------------------\n        //   \"time\": \"thisWeek\",          // live | today | tomorrow | thisWeek | all\n        // \"dateFrom\": \"2025-12-02\", // YYYY-MM-DD (optional)\n        // \"dateTo\": \"2025-12-31\", // YYYY-MM-DD (optional)\n        \"categories\": [\n            // \"6911bd65d49fc086aabd254e\"\n            // \"6911bd7cd49fc086aabd257c\"\n        ],\n        \"venueTypes\": [\n            // \"6911bb4922299f710c7a9441\"\n        ],\n        // VIBES (tags)\n        \"tags\": [\n            // \"6911bddbd49fc086aabd25ee\",\n            // \"6911bde7d49fc086aabd25f1\"\n        ],\n        // GENRE (maps to tag subtypes and enforces AND logic)\n        \"genre\": [\n            \"6953c6029c8a1a1042ef899c\"\n        ] //are subtypes of tags\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -3481,13 +3483,12 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}app/maps/?page=1&limit=10",
+									"raw": "{{url}}app/maps?page=1&limit=10",
 									"host": [
 										"{{url}}app"
 									],
 									"path": [
-										"maps",
-										""
+										"maps"
 									],
 									"query": [
 										{
@@ -3500,7 +3501,7 @@
 										},
 										{
 											"key": "keywrod",
-											"value": "",
+											"value": "suheeraaa",
 											"disabled": true
 										}
 									]
@@ -3574,7 +3575,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "6911b9cd1902fd1c55eb4842"
+											"value": "6911cc376aca10eb719d7322"
 										}
 									]
 								}
@@ -4372,7 +4373,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\"\n}",
+											"raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\"\n    // ,\n    // \"refferer\" : \"userId\"//optional param\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -4648,7 +4649,7 @@
 											"variable": [
 												{
 													"key": "companyOrganizer",
-													"value": "6911cb3d6aca10eb719d7280"
+													"value": "691c694615c5e4a506226db8"
 												}
 											]
 										}
@@ -6028,7 +6029,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "692066c7706763caa2596b70"
+													"value": "695660aab51fa4b739fd83c9"
 												}
 											]
 										}
@@ -6610,7 +6611,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"ticketings\": [\n        {\n            \"ticketId\": \"691f175e5a83c7de34bad930\",\n            \"timeSlot\": \"69205c1c20da418e35d1420f\",\n            \"protectionUserDetails\": {\n                \"firstName\": \"Wajid\",\n                \"surName\": \"Ali\",\n                \"dob\": \"2000-01-01\",\n                \"pid\": \"3234234234\"\n            }\n        },\n        {\n            \"ticketId\": \"691f06598d9b5d3fe5e37ac0\"\n        },\n        {\n            \"ticketId\": \"691f06598d9b5d3fe5e37ac0\"\n        },\n        {\n            \"ticketId\": \"691f06598d9b5d3fe5e37ac0\"\n        },\n        {\n            \"ticketId\": \"691f06598d9b5d3fe5e37ac0\"\n        },\n        {\n            \"ticketId\": \"691f06598d9b5d3fe5e37ac0\"\n        }\n    ],\n    \"paymentDetails\": {\n        \"paymentMethod\": \"applePay\"\n    }\n}",
+											"raw": "{\n    \"ticketings\": [\n        {\n            \"ticketId\": \"692d3cba12f9e5429866daaa\",\n            \"timeSlot\": \"692d3cba12f9e5429866daab\",\n            \"protectionUserDetails\": {\n                \"firstName\": \"Wajid\",\n                \"surName\": \"Ali\",\n                \"dob\": \"2000-01-01\",\n                \"pid\": \"3234234234\"\n            }\n        }\n        // ,\n        // {\n        //     \"ticketId\": \"691f06598d9b5d3fe5e37ac0\"\n        // },\n        // {\n        //     \"ticketId\": \"691f06598d9b5d3fe5e37ac0\"\n        // },\n        // {\n        //     \"ticketId\": \"691f06598d9b5d3fe5e37ac0\"\n        // },\n        // {\n        //     \"ticketId\": \"691f06598d9b5d3fe5e37ac0\"\n        // },\n        // {\n        //     \"ticketId\": \"691f06598d9b5d3fe5e37ac0\"\n        // }\n    ],\n    \"paymentDetails\": {\n        \"paymentMethod\": \"applePay\"\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -7002,6 +7003,58 @@
 											"body": "{\n    \"message\": \"Ticketing booking created successfully\",\n    \"data\": {\n        \"organization\": \"6911c1b36fc7cbd864e74659\",\n        \"user\": \"6911ba17dd162801ff9b35d9\",\n        \"ticketings\": [\n            {\n                \"ticketId\": \"6915c3e448a5a4c172122335\",\n                \"snapshot\": {\n                    \"timingSlots\": {\n                        \"enabled\": true,\n                        \"dateTimeSlots\": [\n                            {\n                                \"date\": \"2025-11-13T00:00:00.000Z\",\n                                \"timeSlots\": [\n                                    {\n                                        \"quantity\": 10,\n                                        \"startTime\": \"2025-11-13T04:00:00.000Z\",\n                                        \"endTime\": \"2025-11-13T05:00:00.000Z\",\n                                        \"_id\": \"6915c3e448a5a4c172122337\"\n                                    }\n                                ],\n                                \"_id\": \"6915c3e448a5a4c172122336\"\n                            }\n                        ]\n                    },\n                    \"repeatable\": {\n                        \"isRepeatable\": false,\n                        \"visits\": 1\n                    },\n                    \"timeSensitivePricing\": {\n                        \"earlyBird\": {\n                            \"endDate\": \"2025-11-12T19:00:00.000Z\",\n                            \"discountedPrice\": 10\n                        },\n                        \"lastMinute\": {\n                            \"startDate\": \"2025-11-27T19:00:00.000Z\",\n                            \"discountedPrice\": 10\n                        }\n                    },\n                    \"fastTrackEntry\": {\n                        \"enabled\": true,\n                        \"quantity\": 0,\n                        \"extraPrice\": 0\n                    },\n                    \"requiresReservation\": {\n                        \"enabled\": true,\n                        \"type\": \"vip\"\n                    },\n                    \"_id\": \"6915c3e448a5a4c172122335\",\n                    \"title\": \"Car Show Ticket\",\n                    \"quantity\": 0,\n                    \"price\": 120,\n                    \"taxPercentage\": 5,\n                    \"event\": \"6915c3e448a5a4c172122332\",\n                    \"resaleProtection\": \"nameSurname\",\n                    \"transferFee\": 49.95,\n                    \"status\": \"active\",\n                    \"scheduledPublishAt\": null,\n                    \"createdAt\": \"2025-11-13T11:41:24.984Z\",\n                    \"updatedAt\": \"2025-11-13T11:41:24.984Z\",\n                    \"__v\": 0\n                },\n                \"timeSlot\": \"6915c3e448a5a4c172122336\",\n                \"quantity\": 2,\n                \"protectionUserDetails\": {\n                    \"firstName\": \"Ali\",\n                    \"surName\": \"Imran\",\n                    \"dob\": \"2005-11-23\",\n                    \"pid\": \"4848858585\"\n                }\n            },\n            {\n                \"ticketId\": \"691abb59fc26ab786b01973d\",\n                \"snapshot\": {\n                    \"timingSlots\": {\n                        \"enabled\": true,\n                        \"dateTimeSlots\": [\n                            {\n                                \"date\": \"2025-11-20T00:00:00.000Z\",\n                                \"timeSlots\": [\n                                    {\n                                        \"quantity\": 100,\n                                        \"startTime\": \"2025-11-20T04:00:00.000Z\",\n                                        \"endTime\": \"2025-11-20T05:00:00.000Z\",\n                                        \"_id\": \"691ac86955de45eedc58b902\"\n                                    }\n                                ],\n                                \"_id\": \"691ac86955de45eedc58b901\"\n                            }\n                        ]\n                    },\n                    \"repeatable\": {\n                        \"isRepeatable\": false,\n                        \"visits\": 1\n                    },\n                    \"timeSensitivePricing\": {\n                        \"earlyBird\": {\n                            \"endDate\": \"2025-11-19T11:01:00.000Z\",\n                            \"discountedPrice\": 10\n                        },\n                        \"lastMinute\": {\n                            \"startDate\": null,\n                            \"discountedPrice\": 0\n                        }\n                    },\n                    \"fastTrackEntry\": {\n                        \"enabled\": false,\n                        \"quantity\": 0,\n                        \"extraPrice\": 0\n                    },\n                    \"requiresReservation\": {\n                        \"enabled\": false,\n                        \"type\": \"\"\n                    },\n                    \"_id\": \"691abb59fc26ab786b01973d\",\n                    \"title\": \"Testing Ticket\",\n                    \"quantity\": 0,\n                    \"price\": 120,\n                    \"taxPercentage\": 13,\n                    \"event\": \"6915c3e448a5a4c172122332\",\n                    \"resaleProtection\": \"none\",\n                    \"transferFee\": 0,\n                    \"status\": \"active\",\n                    \"scheduledPublishAt\": null,\n                    \"createdAt\": \"2025-11-17T06:06:17.522Z\",\n                    \"updatedAt\": \"2025-11-17T07:02:01.505Z\",\n                    \"__v\": 3\n                },\n                \"timeSlot\": \"691ac86955de45eedc58b901\",\n                \"quantity\": 1,\n                \"protectionUserDetails\": {\n                    \"firstName\": \"Ali\",\n                    \"surName\": \"Imran\",\n                    \"dob\": \"2005-11-23\",\n                    \"pid\": \"4848858585\"\n                }\n            }\n        ],\n        \"status\": \"pending\",\n        \"orderPricing\": {\n            \"subtotal\": 0,\n            \"taxAmount\": 0,\n            \"total\": 0,\n            \"currency\": \"€\"\n        },\n        \"paymentDetails\": {\n            \"cardId\": \"card1\",\n            \"paymentMethod\": \"card\",\n            \"paymentId\": null,\n            \"paymentStatus\": \"pending\"\n        },\n        \"_id\": \"691dcd1e0cfa855c9b389e09\",\n        \"createdAt\": \"2025-11-19T13:58:54.629Z\",\n        \"updatedAt\": \"2025-11-19T13:58:54.629Z\",\n        \"__v\": 0\n    }\n}"
 										}
 									]
+								},
+								{
+									"name": "transfer",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"ticketingBookingId\":\"6954fa43b7c0a7ebf2f9d708\",\n    \"newUserId\":\"6926f5f9d9366d79ebf73f72\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/ticketing-bookings/transfer",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"ticketing-bookings",
+												"transfer"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
 								}
 							]
 						}
@@ -7049,7 +7102,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"optionalEventId\": \"69020862e762df10a0accaf1\", // Optional field\r\n    \"companyOrganizer\": \"68a80301c740faa65aefdae4\", // required\r\n    \"organizationId\": \"6901b980e762df10a0acc13f\", // Required\r\n    \"reservationId\": \"6916ddf71b65ac0ec760a7c7\", //required\r\n    \"partySize\": 2, // Required\r\n    \"reservationType\": \"vip\", // Required \r\n    \"notes\":\"Keep everything ready.\", //custom text\r\n    \"timingSlots\": { // Required\r\n        \"dateTimeSlots\": [\r\n            {\r\n                \"date\": \"2025-12-17\", // Required\r\n                \"timeSlots\": [\r\n                    {\r\n                        \"startTime\": \"12:00 PM\", // Required\r\n                        \"endTime\": \"12:30 PM\" // Required\r\n                    }\r\n                ]\r\n            }\r\n        ]\r\n    }\r\n}",
+									"raw": "{\r\n    \"optionalEventId\": \"69020862e762df10a0accaf1\", // Optional field\r\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\", // required\r\n    \"organizationId\": \"6911cc376aca10eb719d7322\", // Required\r\n    \"reservationId\": \"6916ddf71b65ac0ec760a7c7\", //required\r\n    \"partySize\": 2, // Required\r\n    \"reservationType\": \"vip\", // Required \r\n    \"notes\": \"Keep everything ready.\", //custom text\r\n    \"timingSlots\": { // Required\r\n        \"dateTimeSlots\": [\r\n            {\r\n                \"date\": \"2025-12-17\", // Required\r\n                \"timeSlots\": [\r\n                    {\r\n                        \"startTime\": \"12:00 PM\", // Required\r\n                        \"endTime\": \"12:30 PM\" // Required\r\n                    }\r\n                ]\r\n            }\r\n        ]\r\n    },\r\n    \"paymentMethod\": \"applePay\",\r\n    \"preOrderMenuItems\": {\r\n        \"items\": [\r\n            {\r\n                \"menuItem\": \"6911c3516aca10eb719d6f72\",\r\n                \"quantity\": 1\r\n            }\r\n        ],\r\n        \"notes\": \"No spice please.\"\r\n    }\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -7075,6 +7128,33 @@
 											"value": "2025-12-17",
 											"disabled": true
 										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "transfer",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\r\n    \"reservationId\":\"6920147304938ed2e065478d\",\r\n    \"newUserId\":\"6926f5f9d9366d79ebf73f72\"\r\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/reservations/transfer",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"reservations",
+										"transfer"
 									]
 								}
 							},
@@ -7302,7 +7382,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}app/transactions?page=1&limit=10&walletType=globalWallet",
+									"raw": "{{url}}app/transactions?page=1&limit=10&walletType=companyLoyalty",
 									"host": [
 										"{{url}}app"
 									],
@@ -7331,17 +7411,22 @@
 										{
 											"key": "walletType",
 											"value": "globalWallet",
-											"description": "globalWallet, companyLoyalty"
-										},
-										{
-											"key": "walletType",
-											"value": "globalWallet",
 											"description": "globalWallet, companyLoyalty",
 											"disabled": true
 										},
 										{
+											"key": "walletType",
+											"value": "companyLoyalty",
+											"description": "globalWallet, companyLoyalty"
+										},
+										{
 											"key": "domainType",
 											"value": "",
+											"disabled": true
+										},
+										{
+											"key": "keyword",
+											"value": null,
 											"disabled": true
 										}
 									]
@@ -14155,6 +14240,593 @@
 			"name": "Staff",
 			"item": [
 				{
+					"name": "Menu and Ordering",
+					"item": [
+						{
+							"name": "Orders",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/menu/orders/?page=1&limit=10",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"menu",
+												"orders",
+												""
+											],
+											"query": [
+												{
+													"key": "page",
+													"value": "1"
+												},
+												{
+													"key": "limit",
+													"value": "10"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "get details",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/menu/orders/:id",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"menu",
+												"orders",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "695660aab51fa4b739fd83c9"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"items\": [\n    {\n      \"menuItem\": \"6911c3516aca10eb719d6f72\",\n      \"quantity\": 1\n    }\n  ],\n  \"pickupType\":\"tableService\", //counter, tableService, togo\n  \"tableNumber\":\"5\", //required in tableService case\n  \"notes\": \"No spice please.\",\n  \"paymentMethod\": \"card\" //\"applePay\", \"card\", \"cash\", \"payLater\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/menu/orders",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"menu",
+												"orders"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "add more items",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"items\": [\n    {\n      \"menuItem\": \"6911c3516aca10eb719d6f72\",\n      \"quantity\": 1\n    }\n  ],\n  \"orderId\": \"6914928ed4ab4bca5895f9f2\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/menu/orders/add-more",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"menu",
+												"orders",
+												"add-more"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/menu/orders/:id",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"menu",
+												"orders",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": ""
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "pickup options",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/menu/items/pickup-options/:companyOrganizer",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"menu",
+												"items",
+												"pickup-options",
+												":companyOrganizer"
+											],
+											"variable": [
+												{
+													"key": "companyOrganizer",
+													"value": "6911c14b6fc7cbd864e745b6"
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Menu Items",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/staff/menu-items?organization=6911c1b36fc7cbd864e74659",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"staff",
+												"menu-items"
+											],
+											"query": [
+												{
+													"key": "organization",
+													"value": "6911c1b36fc7cbd864e74659"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "calculate points",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"user\": \"6926f5f9d9366d79ebf73f72\",\n    \"companyOrganizer\": \"691c683da512c38d3350d13e\",\n    \"totalSpending\":\"100\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/staff/points/calculate",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"staff",
+												"points",
+												"calculate"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "apply points",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"user\": \"6926f5f9d9366d79ebf73f72\",\n    \"organization\": \"6911c1b36fc7cbd864e74659\",\n    \"companyOrganizer\": \"691c683da512c38d3350d13e\",\n    \"items\": [\n        {\n            \"menuItem\": \"6911c3f26aca10eb719d6faa\",\n            \"quantity\": 1\n        }\n    ]\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/staff/points/apply",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"staff",
+												"points",
+												"apply"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Scan QR",
+							"item": [
+								{
+									"name": "scan qr",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"qrData\": {\n        \"type\": \"loyaltyCard\", //loyaltyCard, eventTicket\n        \"user\": \"6926f5f9d9366d79ebf73f72\",\n        \"companyOrganizer\": \"691c683da512c38d3350d13e\"\n    }\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/staff/scan-qr",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"staff",
+												"scan-qr"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						}
+					]
+				},
+				{
 					"name": "login",
 					"event": [
 						{
@@ -14198,7 +14870,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\": \"johnathon42@example.net\",\n    \"password\": \"{{passwordStaff}}\",\n    \"userType\": \"staff\",\n    \"deviceType\": \"android\", //andoird/ios\n    \"deviceId\": \"1234\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
+							"raw": "{\n    \"email\": \"titus_feest@example.com\",\n    \"password\": \"{{passwordStaff}}\",\n    \"userType\": \"staff\",\n    \"deviceType\": \"android\", //andoird/ios\n    \"deviceId\": \"1234\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -14324,11 +14996,12 @@
 							}
 						},
 						"url": {
-							"raw": "{{url}}staff/organizations/",
+							"raw": "{{url}}app/staff/organizations/",
 							"host": [
-								"{{url}}staff"
+								"{{url}}app"
 							],
 							"path": [
+								"staff",
 								"organizations",
 								""
 							]
@@ -16569,7 +17242,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}admin/categories?page=1&limit=10&status=active",
+									"raw": "{{url}}admin/categories?page=1&limit=10",
 									"host": [
 										"{{url}}admin"
 									],
@@ -16599,8 +17272,9 @@
 										},
 										{
 											"key": "status",
-											"value": "active",
-											"description": "active/inactive"
+											"value": "inactive",
+											"description": "active/inactive",
+											"disabled": true
 										},
 										{
 											"key": "date",
@@ -17655,7 +18329,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "69206e7a4e1713f7a48b1361"
+											"value": "695641a6fd16fb84eed0f785"
 										}
 									]
 								}
@@ -17693,7 +18367,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"type\": \"image\", //image or video\n            \"name\": \"event-banner.jpg\"\n        },\n        \"title\": \"Monday Fun day\",\n        \"description\": \"A fun-filled day of live music and food.\",\n        \"organization\": \"6939402a717d373b2d85443a\",\n        \"venue\": \"6911bb6822299f710c7a947e\",\n        \"categories\": [\n            \"68f0d6b0a92f125fd26a5831\",\n            \"68c028637c376b15157d9ecc\"\n        ],\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"6883208feec25d5f951a8c74\"\n        ],\n        \"partnerOrganization\": \"\"\n    },\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-12-11 10:00 AM\",\n        \"endDateTime\": \"2025-12-15 05:00 PM\"\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n        /*Ending on specific date*/\n        ,\n        \"recurringDetails\": {\n            \"isEnabled\": true,\n            \"frequency\": \"daily\", // \"daily\", \"weekly\", \"monthly\"\n            \"interval\": 1,\n            \"daysOfWeek\": [\n                \"mon\",\n                \"tue\",\n                \"wed\",\n                \"thu\",\n                \"fri\",\n                \"sat\",\n                \"sun\"\n            ],\n            \"endType\": \"onDate\",\n            \"endDate\": \"2025-12-15\"\n        }\n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    },\n    \"recurringMeta\": {\n        \"isTemplate\": true\n    },\n    \"ticketing\": {\n        \"title\": \"Standard\",\n        //\"quantity\": 200, // skip when timingSlots enabled\n        \"price\": 10,\n        \"taxPercentage\": 5,\n        \"event\": \"690c9f974cf55e352d18b74e\",\n        \"timingSlots\": {\n            \"enabled\": true,\n            \"dateTimeSlots\": [\n                {\n                    \"date\": \"2025-12-12\",\n                    \"timeSlots\": [\n                        {\n                            \"quantity\": \"10\",\n                            \"startTime\": \"02:00 PM\",\n                            \"endTime\": \"02:30 PM\"\n                        },\n                        {\n                            \"quantity\": \"5\",\n                            \"startTime\": \"12:30 PM\",\n                            \"endTime\": \"01:00 PM\"\n                        }\n                    ]\n                }\n            ]\n        },\n        \"repeatable\": {\n            \"isRepeatable\": true,\n            \"visits\": 2\n        },\n        \"resaleProtection\": \"nameSurnamePid\",\n        \"transferFee\": 10,\n        \"timeSensitivePricing\": {\n            \"earlyBird\": {\n                \"endDate\": \"2025-12-13 10:00 AM\",\n                \"discountedPrice\": 25\n            },\n            \"lastMinute\": {\n                \"startDate\": \"2025-12-14 10:00 AM\",\n                \"discountedPrice\": 35\n            }\n        },\n        \"fastTrackEntry\": {\n            \"enabled\": true,\n            \"quantity\": 50,\n            \"extraPrice\": 15\n        },\n        \"requiresReservation\": {\n            \"enabled\": true,\n            \"type\": \"vip\"\n        },\n        \"status\": \"active\" //\"active\", \"scheduled\", \"inactive\",\n        // ,\"scheduledPublishAt\": \"2025-12-28 10:30 AM\"\n    }\n}",
+									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"type\": \"image\", //image or video\n            \"name\": \"event-banner.jpg\"\n        },\n        \"title\": \"New Year Fun day\",\n        \"description\": \"A fun-filled day of live music and food.\",\n        \"organization\": \"6939402a717d373b2d85443a\",\n        \"venue\": \"6911bb6822299f710c7a947e\",\n        \"categories\": [\n            \"68f0d6b0a92f125fd26a5831\",\n            \"68c028637c376b15157d9ecc\"\n        ],\n        \"tags\": [\n            \"68822a624ebf07788604301b\",\n            \"6883208feec25d5f951a8c74\"\n        ],\n        \"partnerOrganization\": \"\"\n    },\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2026-01-01 05:00 PM\",\n        \"endDateTime\": \"2026-01-03 09:00 PM\"\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n        /*Ending on specific date*/\n        ,\n        \"recurringDetails\": {\n            \"isEnabled\": false,\n            \"frequency\": \"daily\", // \"daily\", \"weekly\", \"monthly\"\n            \"interval\": 1,\n            \"daysOfWeek\": [\n                \"mon\",\n                \"tue\",\n                \"wed\",\n                \"thu\",\n                \"fri\",\n                \"sat\",\n                \"sun\"\n            ],\n            \"endType\": \"onDate\",\n            \"endDate\": \"2025-12-15\"\n        }\n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    },\n    \"preOrdersEnabled\":false,\n    \"recurringMeta\": {\n        \"isTemplate\": true\n    }\n    // ,\n    // \"ticketing\": {\n    //     \"title\": \"Standard\",\n    //     //\"quantity\": 200, // skip when timingSlots enabled\n    //     \"price\": 10,\n    //     \"taxPercentage\": 5,\n    //     \"event\": \"690c9f974cf55e352d18b74e\",\n    //     \"timingSlots\": {\n    //         \"enabled\": true,\n    //         \"dateTimeSlots\": [\n    //             {\n    //                 \"date\": \"2025-12-12\",\n    //                 \"timeSlots\": [\n    //                     {\n    //                         \"quantity\": \"10\",\n    //                         \"startTime\": \"02:00 PM\",\n    //                         \"endTime\": \"02:30 PM\"\n    //                     },\n    //                     {\n    //                         \"quantity\": \"5\",\n    //                         \"startTime\": \"12:30 PM\",\n    //                         \"endTime\": \"01:00 PM\"\n    //                     }\n    //                 ]\n    //             }\n    //         ]\n    //     },\n    //     \"repeatable\": {\n    //         \"isRepeatable\": true,\n    //         \"visits\": 2\n    //     },\n    //     \"resaleProtection\": \"nameSurnamePid\",\n    //     \"transferFee\": 10,\n    //     \"timeSensitivePricing\": {\n    //         \"earlyBird\": {\n    //             \"endDate\": \"2025-12-13 10:00 AM\",\n    //             \"discountedPrice\": 25\n    //         },\n    //         \"lastMinute\": {\n    //             \"startDate\": \"2025-12-14 10:00 AM\",\n    //             \"discountedPrice\": 35\n    //         }\n    //     },\n    //     \"fastTrackEntry\": {\n    //         \"enabled\": true,\n    //         \"quantity\": 50,\n    //         \"extraPrice\": 15\n    //     },\n    //     \"requiresReservation\": {\n    //         \"enabled\": true,\n    //         \"type\": \"vip\"\n    //     },\n    //     \"status\": \"active\" //\"active\", \"scheduled\", \"inactive\",\n    //     // ,\"scheduledPublishAt\": \"2025-12-28 10:30 AM\"\n    // }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -17797,7 +18471,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    //    \"schedule\": {\n    //     \"type\": \"oneTime\",\n    //     \"startDateTime\": \"2025-10-25 10:00 PM\",\n    //     \"endDateTime\": \"2025-10-26 11:00 PM\"\n    //     }\n    // \"basicInfo\": {\n    //     \"organization\": \"68d91de3e9ed2f5900dca083\",\n    //     \"venue\": \"68ee4c95a0e89aae25bd1eca\",\n    //     \"categories\": [\n    //         \"68f0d6b0a92f125fd26a5831\"\n    //     ]\n    // }\n\n     \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2025-10-28 10:00 AM\",\n        \"endDateTime\": \"2025-10-29 05:00 PM\"\n\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n\n        /*Ending on specific date*/\n        // ,\n        // \"recurringDetails\": {\n        //   \"isEnabled\": true,\n        //   \"frequency\": \"weekly\",\n        //   \"interval\": 2,\n        //   \"daysOfWeek\": [\"fri\",\"mon\"],\n        //   \"endType\": \"onDate\",\n        //   \"endDate\": \"2025-12-30\"\n        // }\n        \n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    }\n}",
+									"raw": "{\n    //    \"schedule\": {\n    //     \"type\": \"oneTime\",\n    //     \"startDateTime\": \"2025-10-25 10:00 PM\",\n    //     \"endDateTime\": \"2025-10-26 11:00 PM\"\n    //     }\n    // \"basicInfo\": {\n    //     \"organization\": \"68d91de3e9ed2f5900dca083\",\n    //     \"venue\": \"68ee4c95a0e89aae25bd1eca\",\n    //     \"categories\": [\n    //         \"68f0d6b0a92f125fd26a5831\"\n    //     ]\n    // }\n    \"schedule\": {\n        \"type\": \"oneTime\",\n        \"startDateTime\": \"2026-01-01 06:00 PM\",\n        \"endDateTime\": \"2026-01-03 10:00 PM\"\n        /*Never ending*/\n        // ,\n        // \"recurringDetails\": {\n        //     \"isEnabled\": true,\n        //     \"frequency\": \"daily\",\n        //     \"interval\": 1,\n        //     \"daysOfWeek\": [],\n        //     \"endType\": \"never\"\n        // }\n        /*Ending on specific date*/\n        // ,\n        // \"recurringDetails\": {\n        //   \"isEnabled\": true,\n        //   \"frequency\": \"weekly\",\n        //   \"interval\": 2,\n        //   \"daysOfWeek\": [\"fri\",\"mon\"],\n        //   \"endType\": \"onDate\",\n        //   \"endDate\": \"2025-12-30\"\n        // }\n        /*Ending after occurances*/\n        //     ,\n        //     \"recurringDetails\": {\n        //       \"isEnabled\": true,\n        //       \"frequency\": \"weekly\",\n        //       \"interval\": 1,\n        //       \"daysOfWeek\": [\"mon\", \"fri\"],\n        //       \"endType\": \"afterOccurrences\",\n        //       \"occurrences\": 8\n        //   }\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -17816,7 +18490,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "690caa9599dc5b9de4608d5a"
+											"value": "695641a6fd16fb84eed0f785"
 										}
 									]
 								},
@@ -20398,293 +21072,6 @@
 					]
 				},
 				{
-					"name": "Tiers",
-					"item": [
-						{
-							"name": "get",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {},
-										"requests": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {},
-										"requests": {}
-									}
-								}
-							],
-							"protocolProfileBehavior": {
-								"disableBodyPruning": true
-							},
-							"request": {
-								"method": "GET",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}admin/tiers/",
-									"host": [
-										"{{url}}admin"
-									],
-									"path": [
-										"tiers",
-										""
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "get details",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {},
-										"requests": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {},
-										"requests": {}
-									}
-								}
-							],
-							"protocolProfileBehavior": {
-								"disableBodyPruning": true
-							},
-							"request": {
-								"method": "GET",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}admin/tiers/:id",
-									"host": [
-										"{{url}}admin"
-									],
-									"path": [
-										"tiers",
-										":id"
-									],
-									"variable": [
-										{
-											"key": "id",
-											"value": "690b3bbccce30d936155fab2"
-										}
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "add",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {},
-										"requests": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {},
-										"requests": {}
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"image\": \"a4dda067-f862-4aeb-9244-4833922bf54d.png\",\n    \"title\": \"Silver Tier\",\n    \"bonusPointsPerEuro\": 1.2,\n    \"essential\": {\n        \"entryPoints\": 500,\n        \"retainPoints\": 400\n    },\n    \"preferred\": {\n        \"entryPoints\": 2500,\n        \"retainPoints\": 2000\n    },\n    \"premier\": {\n        \"entryPoints\": 7000,\n        \"retainPoints\": 6000\n    },\n    \"status\": \"active\"\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}admin/tiers/",
-									"host": [
-										"{{url}}admin"
-									],
-									"path": [
-										"tiers",
-										""
-									]
-								},
-								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
-							},
-							"response": []
-						},
-						{
-							"name": "update",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {},
-										"requests": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {},
-										"requests": {}
-									}
-								}
-							],
-							"request": {
-								"method": "PUT",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"image\": \"a4dda067-f862-4aeb-9244-4833922bf54d.png\"\n//   ,\n//   \"title\": \"Gold Tier\",\n//   \"bonusPointsPerEuro\": 1.5,\n//   \"essential\": {\n//     \"entryPoints\": 1000,\n//     \"retainPoints\": 800\n//   },\n//   \"preferred\": {\n//     \"entryPoints\": 5000,\n//     \"retainPoints\": 4000\n//   },\n//   \"premier\": {\n//     \"entryPoints\": 10000,\n//     \"retainPoints\": 8000\n//   },\n//   \"status\": \"active\"\n}\n",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}admin/tiers/:id",
-									"host": [
-										"{{url}}admin"
-									],
-									"path": [
-										"tiers",
-										":id"
-									],
-									"variable": [
-										{
-											"key": "id",
-											"value": "6911c41f6aca10eb719d6fc7"
-										}
-									]
-								},
-								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
-							},
-							"response": []
-						},
-						{
-							"name": "delete",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {},
-										"requests": {}
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											""
-										],
-										"type": "text/javascript",
-										"packages": {},
-										"requests": {}
-									}
-								}
-							],
-							"request": {
-								"method": "DELETE",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "{{url}}admin/tiers/:id",
-									"host": [
-										"{{url}}admin"
-									],
-									"path": [
-										"tiers",
-										":id"
-									],
-									"variable": [
-										{
-											"key": "id",
-											"value": ""
-										}
-									]
-								},
-								"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
-							},
-							"response": []
-						}
-					]
-				},
-				{
 					"name": "Highlights",
 					"item": [
 						{
@@ -22109,7 +22496,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"{{$randomUserName}}\",\n    \"email\": \"{{$randomExampleEmail}}\",\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122104\"\n    },\n    \"password\": \"123456\",\n    \"userType\": \"staff\",\n    \"organizations\":[\"6911ccb36aca10eb719d7358\"],\n    \"modules\":[\"inAppOrdering\",\"reservationManagement\",\"loyaltyScanning\",\"ticketing\"]\n}",
+									"raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"{{$randomUserName}}\",\n    \"email\": \"{{$randomExampleEmail}}\",\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122104\"\n    },\n    \"password\": \"123456\",\n    \"userType\": \"staff\",\n    \"organizations\":[\"6954ea3e9c8a1a1042efc569\"],\n    \"modules\":[\"inAppOrdering\",\"reservationManagement\",\"loyaltyScanning\",\"ticketing\"]\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -22339,7 +22726,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    // \"organizations\": [\n    //     \"68b11b3dda9c956a543970ab\",\n    //     \"68932a0dce6408026b883458\"\n    // ],\n    // \"modules\": [\n    //     \"inAppOrdering\",\n    //     \"reservationManagement\",\n    //     \"loyaltyScanning\",\n    //     \"ticketing\"\n    // ],\n    // \"status\": \"active\"\n    \"companyDetails\": {\n        \"logo\": \"logo.png\",\n        \"coverImage\": \"cover.png\",\n        \"description\": \"Destinacija u kojoj se isprepliću glazba, umjetnosti, edukativni sadržaji i gastronomija.\",\n        \"category\": \"6911bd65d49fc086aabd254e\",\n        \"loyaltySettings\": {\n            \"title\":\"Usama's Loyalty Club\",\n            \"model\": \"premier\",\n            \"pointValuePercentage\": \"2\"\n        },\n        \"inAppOrderingSettings\": {\n            \"paymentMethods\": {\n                \"instantPayment\": true,\n                \"payLater\": {\n                    \"allow\": false,\n                    \"enableOrderAcceptance\": false,\n                    \"chargeOnAcceptance\": false,\n                    \"chargeOnDelivery\": false\n                },\n                \"cashPayment\": false\n            },\n            \"deliveryMethods\": {\n                \"counterPickup\": true,\n                \"tableDelivery\": true,\n                \"toGo\": false\n            }\n        }\n    }\n}",
+									"raw": "{\n    // \"organizations\": [\n    //     \"68b11b3dda9c956a543970ab\",\n    //     \"68932a0dce6408026b883458\"\n    // ],\n    // \"modules\": [\n    //     \"inAppOrdering\",\n    //     \"reservationManagement\",\n    //     \"loyaltyScanning\",\n    //     \"ticketing\"\n    // ],\n    // \"status\": \"active\"\n    \"companyDetails\": {\n        \"logo\": \"45acc093-1619-47bb-bb54-902b797bad5d.webp\",\n        \"coverImage\": \"a2c9e32b-c4d2-419f-8b88-080d0264ef39.jpeg\"\n        // ,\n        // \"description\": \"Destinacija u kojoj se isprepliću glazba, umjetnosti, edukativni sadržaji i gastronomija.\",\n        // \"category\": \"6911bd65d49fc086aabd254e\",\n        // \"loyaltySettings\": {\n        //     \"title\":\"Usama's Loyalty Club\",\n        //     \"model\": \"premier\",\n        //     \"pointValuePercentage\": \"2\"\n        // },\n        // \"inAppOrderingSettings\": {\n        //     \"paymentMethods\": {\n        //         \"instantPayment\": true,\n        //         \"payLater\": {\n        //             \"allow\": false,\n        //             \"enableOrderAcceptance\": false,\n        //             \"chargeOnAcceptance\": false,\n        //             \"chargeOnDelivery\": false\n        //         },\n        //         \"cashPayment\": false\n        //     },\n        //     \"deliveryMethods\": {\n        //         \"counterPickup\": true,\n        //         \"tableDelivery\": true,\n        //         \"toGo\": false\n        //     }\n        // }\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -22358,7 +22745,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "691c6a7d042410d312e17ff2"
+											"value": "691c694615c5e4a506226db8"
 										}
 									]
 								},
@@ -23858,7 +24245,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/loyalty/listings?page=1&limit=10&keyword=Glowingsoft",
+											"raw": "{{url}}admin/loyalty/listings?page=1&limit=10",
 											"host": [
 												"{{url}}admin"
 											],
@@ -23877,7 +24264,8 @@
 												},
 												{
 													"key": "keyword",
-													"value": "Glowingsoft"
+													"value": "Glowingsoft",
+													"disabled": true
 												}
 											]
 										}
@@ -24387,7 +24775,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/loyalty/rewards?companyOrganizer=6911c14b6fc7cbd864e745b6",
+											"raw": "{{url}}admin/loyalty/rewards?companyOrganizer=691c683da512c38d3350d13e",
 											"host": [
 												"{{url}}admin"
 											],
@@ -24398,7 +24786,7 @@
 											"query": [
 												{
 													"key": "companyOrganizer",
-													"value": "6911c14b6fc7cbd864e745b6"
+													"value": "691c683da512c38d3350d13e"
 												}
 											]
 										}
@@ -24497,7 +24885,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"rewardType\": \"customReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Custom Reward\",\n    \"description\": \"A custom reward for special achievements.\", //optional\n    \"sortingType\": \"food\",\n    \"endDate\": \"2025-11-15\",\n    \"minPointsRequiredToClaim\": 50, //optional\n    \"claimLimit\": 5, //optional\n    \"percentOff\": 0, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"status\": \"active\",\n    \"customReward\": {\n        \"image\": \"78d8f3b5d9a10a4e5d408a5c.png\",\n        \"title\": \"Special Custom Title\",\n        \"description\": \"A custom description for the reward.\"\n    }\n}",
+											"raw": "{\n    \"rewardType\": \"customReward\",\n    \"image\": \"950e5322-51f4-4e6d-82c9-2c489c9de00b.jpeg\",\n    \"title\": \"Custom Burger Reward\",\n    \"description\": \"Burger reward for only 50 points.\", //optional\n    \"sortingType\": \"food\",\n    \"endDate\": \"2026-01-15\",\n    \"minPointsRequiredToClaim\": 50, //optional\n    \"claimLimit\": 5, //optional\n    \"percentOff\": 0, //optional\n    \"tierLimit\": \"6915e2063d6228520ce27929\",\n    \"companyOrganizer\": \"691c694615c5e4a506226db8\",\n    \"status\": \"active\",\n    \"customReward\": {\n        \"image\": \"c5b6c82c-960d-4a7e-a5d3-ca03524f1674.webp\",\n        \"title\": \"Special Burger.\",\n        \"description\": \"Special burger with fries and loaded cheese.\"\n    }\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -24919,7 +25307,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n//   \"title\": \"Sample title\",\n//   \"description\": \"description of item\"\n  \"tierLimit\":\"690b3cea8d15be3d21bdd31d\"\n\n}\n",
+											"raw": "{\n//   \"title\": \"Sample title\",\n//   \"description\": \"description of item\"\n//   \"tierLimit\":\"690b3cea8d15be3d21bdd31d\"\n\"endDate\": \"2026-01-15\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -24939,7 +25327,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "690884a8ded4098135749e46"
+													"value": "6953d6b6fb16d5b2d953911b"
 												}
 											]
 										},
@@ -25667,7 +26055,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}admin/loyalty/club-members?companyOrganizer=6911cc376aca10eb719d7322&page=1&limit=10",
+											"raw": "{{url}}admin/loyalty/club-members?companyOrganizer=691c683da512c38d3350d13e&page=1&limit=10",
 											"host": [
 												"{{url}}admin"
 											],
@@ -25678,7 +26066,7 @@
 											"query": [
 												{
 													"key": "companyOrganizer",
-													"value": "6911cc376aca10eb719d7322"
+													"value": "691c683da512c38d3350d13e"
 												},
 												{
 													"key": "page",
@@ -25751,6 +26139,293 @@
 												"loyalty",
 												"club-members",
 												"gift-points"
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						},
+						{
+							"name": "Tiers",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/tiers/",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"tiers",
+												""
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "get details",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/tiers/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"tiers",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "690b3bbccce30d936155fab2"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"image\": \"a4dda067-f862-4aeb-9244-4833922bf54d.png\",\n    \"title\": \"Silver Tier\",\n    \"bonusPointsPerEuro\": 1.2,\n    \"essential\": {\n        \"entryPoints\": 500,\n        \"retainPoints\": 400\n    },\n    \"preferred\": {\n        \"entryPoints\": 2500,\n        \"retainPoints\": 2000\n    },\n    \"premier\": {\n        \"entryPoints\": 7000,\n        \"retainPoints\": 6000\n    },\n    \"status\": \"active\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/tiers/",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"tiers",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "update",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"image\": \"a4dda067-f862-4aeb-9244-4833922bf54d.png\"\n//   ,\n//   \"title\": \"Gold Tier\",\n//   \"bonusPointsPerEuro\": 1.5,\n//   \"essential\": {\n//     \"entryPoints\": 1000,\n//     \"retainPoints\": 800\n//   },\n//   \"preferred\": {\n//     \"entryPoints\": 5000,\n//     \"retainPoints\": 4000\n//   },\n//   \"premier\": {\n//     \"entryPoints\": 10000,\n//     \"retainPoints\": 8000\n//   },\n//   \"status\": \"active\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/tiers/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"tiers",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": "6911c41f6aca10eb719d6fc7"
+												}
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								},
+								{
+									"name": "delete",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/tiers/:id",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"tiers",
+												":id"
+											],
+											"variable": [
+												{
+													"key": "id",
+													"value": ""
+												}
 											]
 										},
 										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
@@ -27176,7 +27851,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n  \"title\": \"Sample updated\"\n}\n",
+											"raw": "{\n  \"title\": \"Coca Cola X Mint - 20% popusta\"\n}\n",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -27195,7 +27870,7 @@
 											"variable": [
 												{
 													"key": "id",
-													"value": "68f7860bcc10f7ab3f1038a6"
+													"value": "6921f282d9366d79ebf6b429"
 												}
 											]
 										},
@@ -31434,7 +32109,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}admin/transactions/?page=1&limit=10&walletType&domainType&type&companyOrganizer&startDate=2025-12-15&endDate=2025-12-15",
+									"raw": "{{url}}admin/transactions/?page=1&limit=10&walletType&domainType=ticketingorders&type&companyOrganizer",
 									"host": [
 										"{{url}}admin"
 									],
@@ -31464,7 +32139,7 @@
 										},
 										{
 											"key": "domainType",
-											"value": null,
+											"value": "ticketingorders",
 											"description": "\"menuorders\",\n\"ticketingorders\",\n\"loyaltyrewardsorders\",\n\"loyaltychallengesorders\","
 										},
 										{
@@ -31474,7 +32149,7 @@
 										},
 										{
 											"key": "organization",
-											"value": null,
+											"value": "",
 											"disabled": true
 										},
 										{
@@ -31485,12 +32160,14 @@
 										{
 											"key": "startDate",
 											"value": "2025-12-15",
-											"description": "YYYY-MM-DD"
+											"description": "YYYY-MM-DD",
+											"disabled": true
 										},
 										{
 											"key": "endDate",
 											"value": "2025-12-15",
-											"description": "YYYY-MM-DD"
+											"description": "YYYY-MM-DD",
+											"disabled": true
 										}
 									]
 								}
@@ -32046,7 +32723,7 @@
 								{
 									"key": "files",
 									"type": "file",
-									"src": "/Users/s/Desktop/Development/Projects/Pleis/test-images/images.png"
+									"src": "/Users/s/Desktop/Development/Projects/Pleis/test-images/il_570xN.2133390707_ddgd.webp"
 								}
 							]
 						},

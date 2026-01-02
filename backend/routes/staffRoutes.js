@@ -9,6 +9,7 @@ router.use("/organizations", require("../staff/organizations/organizationRoutes"
 //menue items 
 router.use("/menu-items", require("../staff/menuItemsAndOrdering/menuItems/menuItemsRoutes"));
 router.use("/points", require("../staff/transactions/transactionsRoutes"));
+router.use("/scan-qr", require("../staff/scanQrCode/scanQrRoutes"));
 // router.use("/orders", require("../staff/menuItemsAndOrdering/orders/orderRoutes"));
 
 
