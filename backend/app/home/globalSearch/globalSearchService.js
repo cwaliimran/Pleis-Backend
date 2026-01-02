@@ -1,10 +1,15 @@
 
+const { getActiveTagsService } = require("../../../admin/tags/tagsService");
+const { getActiveTagsTypes } = require("../../../admin/tagTypes/tagTypesService");
+const { getPublicVenueTypes } = require("../../../admin/venueTypes/venueTypesService");
 const { formatNearByOrganization } = require("../../../commonModules/organizations/formatter/formatOrganization");
 const { formatSuggestedClub } = require("../../loyalty/clubMembers/formatters/formatSuggestedClubs");
+const { getPublicCategories } = require("../../publicCategories/categoriesService");
+const { recordSearchService, getTrendingSearchesService } = require("../../searchSuggestions/searchSuggestionService");
 const {
   searchEvents,
   searchOrganizations,
-  searchLoyaltyClubs
+  searchLoyaltyClubs,
 } = require("./globalSearchRepo");
 
 
@@ -50,6 +55,34 @@ const globalSearchService = async (ctx) => {
 
   const results = await Promise.all(promises);
 
+  // log search only if events/organizations returned something
+  const shouldLogSearch =
+    results.some(r =>
+      r &&
+      ["events", "organizations"].includes(r.key) &&
+      r.data &&
+      r.data.length > 0
+    );
+
+  if (shouldLogSearch) {
+    recordSearchService({
+      userId: ctx.userId,
+      keyword: ctx.keyword,
+      filters: {
+        categories: ctx.advanceFilters?.categories || [],
+        venueTypes: ctx.advanceFilters?.venueTypes || [],
+        tags: ctx.advanceFilters?.tags || [],
+        genre: ctx.advanceFilters?.genre || [],
+      },
+      location: ctx.longitude && ctx.latitude
+        ? { coordinates: [ctx.longitude, ctx.latitude] }
+        : null,
+      radiusKm: ctx.radiusKm || 50,
+    });
+
+  }
+
+
   // remove null entries
   return results.filter(Boolean);
 };
@@ -78,6 +111,63 @@ function formatResultItem(key, item, timezone) {
 }
 
 
+async function getGlobalFiltersService(userId, timezone, center, radiusKm) {
+  let [popularSearches, categories, venueTypes, tags, genres] = await Promise.all([
+    getTrendingSearchesService({ center, radiusKm }),
+    getPublicCategories(),
+    getPublicVenueTypes({}),
+    getActiveTagsService(),
+    getActiveTagsTypes()
+  ]);
+
+  const formatted = {
+    total: popularSearches.total,
+    keywords: popularSearches.keywords || [],
+
+    categories: mapIdsToTitles(
+      popularSearches.categories,
+      categories.categories
+    ),
+
+    venueTypes: mapIdsToTitles(
+      popularSearches.venueTypes,
+      venueTypes.venueTypes
+    ),
+
+    tags: mapIdsToTitles(
+      popularSearches.tags,
+      tags.tags
+    ),
+
+    genre: mapIdsToTitles(
+      popularSearches.genre,
+      genres.tagTypes
+    )
+  };
+
+  return {
+    popularSearches: formatted,
+    categories: categories.categories || [],
+    venueTypes: venueTypes.venueTypes || [],
+    tags: tags.tags || [],
+    genres: genres.tagTypes || []
+  };
+}
+
+function mapIdsToTitles(ids = [], lookupList = []) {
+  const map = new Map(lookupList.map(x => [String(x._id), x]));
+
+  return ids
+    .map(id => map.get(String(id)))
+    .filter(Boolean)                          // remove missing ones
+    .map(item => ({
+      _id: item._id,
+      title: item.title || item?.loyaltySettings?.title || ""
+    }));
+}
+
+
 module.exports = {
-  globalSearchService
+  globalSearchService,
+  getGlobalFiltersService
 };

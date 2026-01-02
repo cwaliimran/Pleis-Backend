@@ -1,7 +1,8 @@
 const express = require('express');
 const {
   getHome,
-  globalSearch
+  globalSearch,
+  globalFilters
 } = require('./homeController');
 const auth = require('../../middlewares/authMiddleware');
 
@@ -11,6 +12,7 @@ router.use(auth);
 // Get all homes with pagination
 router.post('/', getHome);
 router.post('/global/search', globalSearch);
+router.get('/global/filters', globalFilters);
 
 
 

@@ -55,7 +55,7 @@ const getVenueTypes = async ({ page, limit, keyword, status, date }) => {
   };
 };
 
-const getPublicVenueTypes = async ({ page, limit, keyword, date }) => {
+const getPublicVenueTypes = async ({ page=1, limit, keyword, date }) => {
   const baseFilters = [{ status: "active" }];
   //if date is available then match createdAt with date current date format is yyyy-mm-dd
   if (date) {

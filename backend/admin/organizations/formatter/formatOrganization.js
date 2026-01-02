@@ -1,6 +1,7 @@
 const { getFullImageUrl } = require("@utils/imageHelper");
 const { convertUtcToTimezone } = require("@utils/responseUtil");
 const { formatCategories } = require("../../../admin/categories/formatters/categoryFormatter");
+const { transformOperatingHoursToLocal } = require("../../../shared/commonSchemas/operatingHours");
 
 /**
  * Formats the `object` field inside BannerControls dynamically
@@ -10,7 +11,7 @@ const { formatCategories } = require("../../../admin/categories/formatters/categ
  * @param {String} type - The type field ("Event", "Organizer", "LoyaltyProgram", etc.)
  * @returns {Object|null}
  */
-function formatOrganization(item, excludeFields = []) {
+function formatOrganization(item, excludeFields = [], timezone = "UTC") {
 
   let org = typeof item.toObject === "function" ? item.toObject() : item;
 
@@ -87,6 +88,13 @@ function formatOrganization(item, excludeFields = []) {
         unit: "km"
       }
     }
+  }
+
+  if (org.operatingHours) {
+    org.operatingHours = transformOperatingHoursToLocal(
+      org.operatingHours,
+      timezone
+    );
   }
 
   return org;
