@@ -6,6 +6,7 @@ const { getWithFilters, getModelCounts } = require('@dbUtils/queryUtil');
 const { cache, invalidate } = require("@redisCache");
 
 const TagTypesModel = require("./TagTypesModel");
+const { createDuplicatedMenu } = require("../menuManagement/menu/menusRepository");
 
 // Create
 const createTagsType = async (data) => {
@@ -22,7 +23,9 @@ const getTagsTypesWithFilters = async (query, page, limit) => {
     options: {
       page, limit, select: {
         title: 1,
-        _id: 1
+        _id: 1,
+        createdAt: 1,
+        status: 1
       }
     },
   });
