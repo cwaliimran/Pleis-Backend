@@ -120,6 +120,16 @@ const getEvents = async ({ timezone, page, limit, keyword, status, userId, date,
 };
 
 
+const gettags = async ({ timezone, page, limit, keyword, status, userId, date, range }) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
+  let { events, meta } = await NotificationsRepo.gettags({ timezone, page, limit, keyword, status, userId, date, range, today, skip });
+
+  return {
+    events,
+    meta
+  };
+};
 
 
 module.exports = {
@@ -128,5 +138,6 @@ module.exports = {
   updateNotifications,
   deleteNotifications,
   getOrganizations,
-  getEvents
+  getEvents,
+  gettags
 };

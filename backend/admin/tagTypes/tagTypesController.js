@@ -85,13 +85,14 @@ const getPublicTagsTypes = async (req, res) => {
     })) return;
 
 
-    const { tagTypes } = await TagstypesService.getPublicTagsTypes();
+    const { tagsTypes, meta } = await TagstypesService.getPublicTagsTypes({ page, limit, keyword });
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "Tags_types_fetched_successfully",
-      data: tagTypes,
+      data: tagsTypes,
+      meta,
     });
   } catch (error) {
     return sendResponse({

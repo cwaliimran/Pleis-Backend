@@ -69,7 +69,7 @@ const getStaff = async ({ page, limit, keyword, status, userType, currentUser })
     "accountState.status": status || { $ne: "deleted" },
   };
 
- if (keyword && keyword.trim() !== "") {
+  if (keyword && keyword.trim() !== "") {
     const keywordMatch = buildKeywordQueryFromModels(
       [
         { schema: User.schema },
@@ -569,6 +569,13 @@ const getUserDetails = async (id) => {
   return await userRepo.findUserById(id);
 };
 
+const getUserDetailsForQRService = async (id) => {
+  let data = await userRepo.getUserDetailsForQRRepo(id);
+  // let formattedData = data?.toObject?.() ?? data;
+  // formattedData = ;
+  return formatUserResponse(data, null, [], ["accountState", "preferences", "metadata"]);
+};
+
 
 /**
  * Setup 2FA (Generate QR and Secret, but do not enable yet)
@@ -669,5 +676,6 @@ module.exports = {
   confirmTwoFA,
   disableTwoFA,
   updateUserInterests,
-  getUserInterestsByUserId
+  getUserInterestsByUserId,
+  getUserDetailsForQRService
 };

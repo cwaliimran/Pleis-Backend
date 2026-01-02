@@ -1,6 +1,8 @@
 // helperUtils/userResponseUtil.js
 
 const { createVerificationLink } = require("../models/UserModel");
+const { getFullImageUrl } = require("@utils/imageHelper");
+
 
 const formatUserResponse = (
   userObject,
@@ -8,7 +10,7 @@ const formatUserResponse = (
   includeFields = [],
   excludeFields = []
 ) => {
-  const pIcon = userObject.profileIcon || null;
+  const pIcon = getFullImageUrl(userObject.profileIcon) || null;
   const userType = userObject.accountState?.userType;
 
   // Construct basicInfo cleanly using conditionals

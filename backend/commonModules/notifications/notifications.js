@@ -58,10 +58,14 @@ const GlobalNotificationSchema = new mongoose.Schema(
       type: String, // Can be 'All', 'Male', 'Female', etc.
       enum: ["all", "male", "female", "other"],
     },
-    interests: {
-      type: [String], // Array to store multiple interests (e.g., Music, Sports, etc.)
-      enum: ["Music", "Sports", "Art", "Food & Drink", "Comedy", "Theater", "Festivals", "Nightlife", "Family", "Education", "Business", "Technology","Weddings","Sports","Social Gatherings"],
+    interests: [
+      {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Tags", // Reference to the "Tags" model
+
+
     },
+    ],
     sendTiming: {
       type: String,
       enum: ["immediately", "schedule"], // Option to send immediately or schedule
