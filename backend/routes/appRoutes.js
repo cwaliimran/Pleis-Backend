@@ -5,6 +5,7 @@ const router = express.Router();
 router.use("/", require("./index"));
 //home
 router.use("/home", require("../app/home/homeRoutes"));
+router.use("/search-suggestions", require("../app/searchSuggestions/searchSuggestionRoutes"));
 
 //popular events routes
 router.use("/popular-events", require("../app/popularEvents/popularEventsRoutes"));

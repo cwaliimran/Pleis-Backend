@@ -8,12 +8,12 @@ const { generateMeta } = require("../../helperUtils/responseUtil");
 const { formatOrganization } = require("./formatter/formatOrganization");
 const { default: mongoose } = require("mongoose");
 
-const createOrganization = async ({ data }) => {
+const createOrganization = async ({ data, timezone }) => {
   let org = await organizationRepo.createOrganization(data);
-  return formatOrganization(org);
+  return formatOrganization(org, [], timezone);
 };
 
-const getOrganizations = async ({ page, limit, keyword, status, creator, date }) => {
+const getOrganizations = async ({ page, limit, keyword, status, creator, date, timezone }) => {
   const query = {};
   query.$or = [
     { creator: creator },
@@ -57,7 +57,7 @@ const getOrganizations = async ({ page, limit, keyword, status, creator, date })
   let meta = generateMeta(page, limit, totalFiltered);
   meta.tagsCount = { total, active, inactive };
 
-  organizations = organizations.map(org => formatOrganization(org));
+  organizations = organizations.map(org => formatOrganization(org, [], timezone));
 
   return {
     organizations,
@@ -106,7 +106,7 @@ const getOrganizationsByAdmin = async ({ companyOrganizer, page, limit, keyword,
   let meta = generateMeta(page, limit, totalFiltered);
   meta.tagsCount = { total, active, inactive };
 
-  organizations = organizations.map(org => formatOrganization(org, []));
+  organizations = organizations.map(org => formatOrganization(org, [], timezone));
 
   return {
     organizations,
@@ -114,7 +114,7 @@ const getOrganizationsByAdmin = async ({ companyOrganizer, page, limit, keyword,
   };
 };
 
-const getPublicOrganizations = async ({ page, limit, keyword, date }) => {
+const getPublicOrganizations = async ({ page, limit, keyword, date, timezone }) => {
   const query = { status: "active" };
   if (keyword) {
     query.$or = [
@@ -140,7 +140,7 @@ const getPublicOrganizations = async ({ page, limit, keyword, date }) => {
     organizationRepo.countOrganizations(query),
   ]);
 
-  organizations = organizations.map(org => formatOrganization(org));
+  organizations = organizations.map(org => formatOrganization(org, [], timezone));
 
   return {
     organizations,
@@ -152,7 +152,7 @@ const getPublicOrganizations = async ({ page, limit, keyword, date }) => {
   };
 };
 
-const updateOrganization = async ({ id, data }) => {
+const updateOrganization = async ({ id, data, timezone }) => {
   const {
     basicInfo,
     otherInfo,
@@ -166,7 +166,6 @@ const updateOrganization = async ({ id, data }) => {
     description,
     title,
   } = data;
-
 
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -211,7 +210,8 @@ const updateOrganization = async ({ id, data }) => {
     }
 
     if (cleanOperatingHours) {
-      organization.operatingHours = deepMergeSafe(organization.operatingHours, cleanOperatingHours);
+      if (!organization.operatingHours) organization.operatingHours = {};
+      organization.set("operatingHours", cleanOperatingHours);
     }
 
     if (status !== undefined) organization.status = status;
@@ -246,7 +246,7 @@ const updateOrganization = async ({ id, data }) => {
     await session.commitTransaction();
 
     // Return formatted organization
-    return formatOrganization(organization);
+    return formatOrganization(organization, [], timezone);
 
   } catch (error) {
     await session.abortTransaction();
@@ -277,9 +277,9 @@ const findOrganizationById = async (id) => {
   return formatOrganization(org);
 };
 
-const getOrganizationDetails = async (id) => {
+const getOrganizationDetails = async (id, timezone) => {
   let org = await organizationRepo.getOrganizationDetails(id);
-  return formatOrganization(org);
+  return formatOrganization(org, [], timezone);
 };
 
 const getOrganizationsAsStaff = async (id) => {

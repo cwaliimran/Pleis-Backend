@@ -5,7 +5,7 @@ const {
   parsePaginationParams
 } = require("../../helperUtils/responseUtil");
 const { getHomeService } = require("./homeService");
-const { globalSearchService } = require("./globalSearch/globalSearchService");
+const { globalSearchService, getGlobalFiltersService } = require("./globalSearch/globalSearchService");
 
 const getHome = async (req, res) => {
 
@@ -125,8 +125,34 @@ const globalSearch = async (req, res) => {
 };
 
 
+const globalFilters = async (req, res) => {
+  try {
+    const { _id: userId, timezone } = req.user || {};
+    let { latitude = 0, longitude = 0, radiusKm = 50 } = req.query;
+    const center = {
+      type: "Point",
+      coordinates: [Number(longitude), Number(latitude)]
+    };
+    const filters = await getGlobalFiltersService(userId, timezone, center, radiusKm);
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "global_filters_fetched_successfully",
+      data: filters,
+    });
+  }
+  catch (err) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: err,
+    });
+  }
+};
 
 module.exports = {
   getHome,
-  globalSearch
+  globalSearch,
+  globalFilters
 };

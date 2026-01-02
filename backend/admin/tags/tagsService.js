@@ -57,11 +57,40 @@ const getTags = async ({ page, limit, keyword, type, status, date }) => {
   };
 };
 
+const getPublicTags = async ({ page, limit, keyword }) => {
+  const filters = [];
+
+    filters.push({ status: { $ne: "deleted" } });
+
+  if (keyword) {
+    filters.push({
+      $or: [{ title: { $regex: keyword, $options: "i" } }],
+    });
+  }
+
+  const query = filters.length ? { $and: filters } : {};
+
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+
+  // Fetch tags and related counts
+  const [tags, totalFiltered] = await Promise.all([
+    tagRepo.getTagsWithFilters(query, skip, limit === 0 ? 0 : limit),
+    tagRepo.countTags(query),
+  ]);
+
+  return {
+    tags,
+    meta: generateMeta(page, limit, totalFiltered),
+  };
+};
 
 
 
 
-const getPublicTags = async () => {
+/* 
+get the tags which are currently being used in events or organizations
+*/
+const getActiveTagsService = async () => {
   let tags = await tagRepo.getActiveTags(15);
   return {
     tags,
@@ -99,4 +128,5 @@ module.exports = {
   updateTag,
   deleteTag,
   getPublicTags,
+  getActiveTagsService,
 };

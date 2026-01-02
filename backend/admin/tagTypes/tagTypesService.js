@@ -52,9 +52,38 @@ const getTagsTypes = async ({ page, limit, keyword, status, date }) => {
     meta,
   };
 };
+const getPublicTagsTypes = async ({ page, limit, keyword }) => {
+  const andConditions = [];
+  // if date is available then match createdAt with date current date format is yyyy-mm-dd
 
-const getPublicTagsTypes = async () => {
- const tagTypes = await TagstypeRepo.getActiveTagTypes(15); 
+  andConditions.push({ status: { $ne: "deleted" } });
+
+  if (keyword) {
+    andConditions.push({
+      $or: [{ title: { $regex: keyword, $options: "i" } }],
+    });
+  }
+  const query = andConditions.length > 0 ? { $and: andConditions } : {};
+  const [tagsTypes, counts] =
+    await Promise.all([
+      TagstypeRepo.getTagsTypesWithFilters(
+        query,
+        page,
+        limit
+      ),
+      TagstypeRepo.getCounts(query),
+    ]);
+
+  const { totalFiltered } = counts;
+  let meta = generateMeta(page, limit, totalFiltered);
+  return {
+    tagsTypes,
+    meta,
+  };
+};
+
+const getActiveTagsTypes = async () => {
+  const tagTypes = await TagstypeRepo.getActiveTagTypes(15);
   return {
     tagTypes
   };
@@ -90,4 +119,5 @@ module.exports = {
   updateTagsType,
   deleteTagsType,
   getPublicTagsTypes,
+  getActiveTagsTypes
 };
