@@ -37,7 +37,7 @@ function getRedisClient() {
 
   redisClient.on("error", (err) => {
     redisAvailable = false;
-    console.error("❌ Redis error:", err);
+    // console.error("❌ Redis error:", err.message);
   });
 
   return redisClient;
