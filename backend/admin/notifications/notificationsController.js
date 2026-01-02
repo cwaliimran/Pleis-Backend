@@ -60,44 +60,43 @@ const createNotifications = async (req, res) => {
       })
     ) return;
 
-    // Location validation (if location is provided, both city and area must be present)
-if (location) {
-  // Check if city and area are provided together
-  if ((location.city && !location.area) || (location.area && !location.city)) {
-    return sendResponse({
-      res,
-      statusCode: 400,
-      translationKey: "Location_city_and_area_required_together",
-    });
-  }
+    if (location) {
+      // Check if city and radius are provided together
+      if (!location.city || !location.radious ) {
+        return sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "Location_city_and_radius_required_together",
+        });
+      }
 
-  // Check if latitude and longitude are provided, and if they are within valid ranges
-  if (location.lat && location.long) {
-    // Check if latitude is between -90 and 90
-    if (location.lat < -90 || location.lat > 90) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "Location_invalid_latitude",
-      });
-    }
+      // Check if latitude and longitude are provided, and if they are within valid ranges
+      if (location.lat && location.long) {
+        // Check if latitude is between -90 and 90
+        if (location.lat < -90 || location.lat > 90) {
+          return sendResponse({
+            res,
+            statusCode: 400,
+            translationKey: "Location_invalid_latitude",
+          });
+        }
 
-    // Check if longitude is between -180 and 180
-    if (location.long < -180 || location.long > 180) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "Location_invalid_longitude",
-      });
+        // Check if longitude is between -180 and 180
+        if (location.long < -180 || location.long > 180) {
+          return sendResponse({
+            res,
+            statusCode: 400,
+            translationKey: "Location_invalid_longitude",
+          });
+        }
+      } else {
+        return sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "Location_lat_long_required",
+        });
+      }
     }
-  } else {
-    return sendResponse({
-      res,
-      statusCode: 400,
-      translationKey: "Location_lat_long_required",
-    });
-  }
-}
 
     // Validate age range if provided
     if (ageRange && (!Array.isArray(ageRange) || ageRange.length !== 2 || ageRange[0] > ageRange[1])) {
@@ -121,14 +120,24 @@ if (location) {
     if (sendTiming === "schedule") {
       scheduledDateTime = convertTimezoneToUtc(scheduledDateTime, timezone);
     }
-
+    let center;
+    let radius = 0;
+    if (location) {
+     center = {
+      type: "Point",
+      coordinates: [Number(location.long), Number(location.lat)]
+    };
+    radius = Number(location.radius)||0;
+  }
+  console.log("center",center );
     // Prepare the data object to be saved (only include provided fields)
     const data = {
       creator: userId,
       title,
       message,
       image: image || "", // Default image to empty string if not provided
-      location,
+      center: center || null,
+      radius: radius || 0,
       ageRange,
       gender,
       interests,
@@ -140,15 +149,15 @@ if (location) {
 
     // Only add organizationId or eventId if they are provided
     if (destinationType === "organization" && organizationId) {
-      data.destinationType="organizationNotification";
+      data.destinationType = "organizationNotification";
       data.organizationId = organizationId;
     }
     if (destinationType === "event" && eventId) {
       data.eventId = eventId;
-      data.destinationType="eventNotification";
+      data.destinationType = "eventNotification";
     }
-        if (destinationType === "home") {
-      data.destinationType="homeNotification";
+    if (destinationType === "home") {
+      data.destinationType = "homeNotification";
     }
 
     // Create the notification in the database
@@ -194,7 +203,7 @@ const getNotificationss = async (req, res) => {
     console.log("userID", userId);
     const timezone = req.user.timezone;
     const { Notificationss, meta } = await NotificationsService.getNotificationss({
-        timezone,
+      timezone,
       page,
       limit,
       keyword,
@@ -223,25 +232,25 @@ const getNotificationss = async (req, res) => {
 };
 const updateNotifications = async (req, res) => {
   const { id } = req.params;
-let {
-   title,
-  description,
-  discountType,
-  discountValue,
-  Notifications,
-  maxDiscountCap,
-  maxCountPerUser,
-  status,
-  expiryDate,
-  maxUsage,
-} = req.body;
-console.log("expiryDate",expiryDate );
-const userId = req.user._id;
-const timezone = req.user.timezone;
-         expiryDate = convertTimezoneToUtc(
-          expiryDate,
-          timezone,
-        );
+  let {
+    title,
+    description,
+    discountType,
+    discountValue,
+    Notifications,
+    maxDiscountCap,
+    maxCountPerUser,
+    status,
+    expiryDate,
+    maxUsage,
+  } = req.body;
+  console.log("expiryDate", expiryDate);
+  const userId = req.user._id;
+  const timezone = req.user.timezone;
+  expiryDate = convertTimezoneToUtc(
+    expiryDate,
+    timezone,
+  );
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
@@ -249,22 +258,22 @@ const timezone = req.user.timezone;
     })
   )
     return;
-console.log("expiryDate",expiryDate );
+  console.log("expiryDate", expiryDate);
   let data = {
-    companyOrganizer:userId,
-title,
-  description,
-  Notifications,
-  discountType,
-  discountValue,
-  status,
-  maxDiscountCap,
-  expiryDate,
-  maxUsage,
-  maxCountPerUser,
+    companyOrganizer: userId,
+    title,
+    description,
+    Notifications,
+    discountType,
+    discountValue,
+    status,
+    maxDiscountCap,
+    expiryDate,
+    maxUsage,
+    maxCountPerUser,
   };
 
- 
+
   try {
     const updated = await NotificationsService.updateNotifications(id, data);
     if (updated && updated.error) {
@@ -354,7 +363,7 @@ const getOrganizations = async (req, res) => {
     const userId = req.user._id;
     const timezone = req.user.timezone;
     const { organizations, meta } = await NotificationsService.getOrganizations({
-        timezone,
+      timezone,
       page,
       limit,
       keyword,
@@ -392,7 +401,47 @@ const getEvents = async (req, res) => {
     const userId = req.user._id;
     const timezone = req.user.timezone;
     const { events, meta } = await NotificationsService.getEvents({
-        timezone,
+      timezone,
+      page,
+      limit,
+      keyword,
+      status,
+      userId,
+      date,
+      range
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "Events_fetched_successfully",
+      data: events,
+      meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
+
+
+
+const gettags = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  const { keyword, status = "active", date, range } = req.query;
+  try {
+
+
+    const userId = req.user._id;
+    const timezone = req.user.timezone;
+    const { events, meta } = await NotificationsService.gettags({
+      timezone,
       page,
       limit,
       keyword,
@@ -425,6 +474,7 @@ module.exports = {
   updateNotifications,
   deleteNotifications,
   getOrganizations,
-  getEvents
+  getEvents,
+  gettags
 
 };

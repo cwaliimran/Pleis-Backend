@@ -5,7 +5,8 @@ const {
   updateNotifications,
   deleteNotifications,
   getOrganizations,
-  getEvents
+  getEvents,
+  gettags
 } = require("./notificationsController"); // Assuming you have a separate controller for promo codes
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -21,5 +22,6 @@ router.get("/organizations", roleMiddleware(["admin"]), NotificationsRateLimiter
 router.get("/events", roleMiddleware(["admin"]), NotificationsRateLimiter, getEvents);
 router.put("/:id", roleMiddleware(["admin"]), updateNotifications);
 router.delete("/:id", roleMiddleware(["admin"]), deleteNotifications);
+router.get("/tags", roleMiddleware(["admin"]), NotificationsRateLimiter, gettags);
 
 module.exports = router;

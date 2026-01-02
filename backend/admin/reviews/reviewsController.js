@@ -41,7 +41,6 @@ if(organization){
 
   try {
     const {reviews, meta} = await reviewService.getReviews(data);
- console.log("reviews",reviews );
 
     if (reviews.error) {
       return sendResponse({

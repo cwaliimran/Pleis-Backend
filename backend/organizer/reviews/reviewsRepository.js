@@ -40,7 +40,7 @@ const getOrganizationIdsByOrganizerId = async (organizerId) => {
 
 
 
-const getReviews = async (data) => {
+const   getReviews = async (data) => {
   try {
 if (!data.organization || !Array.isArray(data.organization) || data.organization.length === 0) {
  data.organization = await getOrganizationIdsByOrganizerId(data.organizer);
@@ -148,24 +148,63 @@ if (!data.organization || !Array.isArray(data.organization) || data.organization
               },
             },
             {
-              $project: {
-                _id: 0,
-                totalCount: 1,
-                avgRating: 1,
-                ratingCounts: {
-                  $arrayToObject: {
-                    $map: {
-                      input: { $range: [1, 6] }, // Ratings from 1 to 5
-                      as: "rating",
-                      in: [
-                        { $toString: "$$rating" },  // Convert rating to string
-                        { $size: { $filter: { input: "$ratingCounts", as: "item", cond: { $eq: ["$$item.rating", "$$rating"] } } } },
-                      ]
-                    }
-                  }
-                }
-              },
-            },
+  $project: {
+    _id: 0,
+    totalCount: 1,
+    avgRating: { $round: ["$avgRating", 1] },
+
+    distribution: {
+      $map: {
+        input: { $reverseArray: { $range: [1, 6] } }, // 👈 5 → 1
+        as: "star",
+        in: {
+          stars: "$$star",
+
+          count: {
+            $size: {
+              $filter: {
+                input: "$ratingCounts",
+                as: "item",
+                cond: { $eq: ["$$item.rating", "$$star"] }
+              }
+            }
+          },
+
+          percentage: {
+            $cond: [
+              { $eq: ["$totalCount", 0] },
+              0,
+              {
+                $round: [
+                  {
+                    $multiply: [
+                      {
+                        $divide: [
+                          {
+                            $size: {
+                              $filter: {
+                                input: "$ratingCounts",
+                                as: "item",
+                                cond: { $eq: ["$$item.rating", "$$star"] }
+                              }
+                            }
+                          },
+                          "$totalCount"
+                        ]
+                      },
+                      100
+                    ]
+                  },
+                  0
+                ]
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+},
           ],
         },
       },
@@ -186,7 +225,7 @@ if (!data.organization || !Array.isArray(data.organization) || data.organization
 
 
     return {
-      data: formattedReviews || [], // All reviews with filtered user/organization data
+      data1: formattedReviews || [], // All reviews with filtered user/organization data
       meta: result[0]?.meta || { totalCount: 0, avgRating: 0, ratingCounts: {} }, // Metadata with total count, avg rating, and rating counts
     };
   } catch (err) {

@@ -33,22 +33,23 @@ if(organization){
   };
 
   try {
-    const reviews = await promoCodeService.getReviews(data);
+    const {data1,meta} = await promoCodeService.getReviews(data);
  
 
-    if (reviews.error) {
+    if (data1.error) {
       return sendResponse({
         res,
         statusCode: 400,
         translationKey: "PromoCode_used_failed",
-        data: { error: reviews.error },
+        data: { error: data1.error },
       });
     } else {
       return sendResponse({
         res,
         statusCode: 201,
         translationKey: "Reviews_getd_successfully",
-        data: reviews,
+        data: data1,
+        meta: meta,
       });
     }
   } catch (error) {
