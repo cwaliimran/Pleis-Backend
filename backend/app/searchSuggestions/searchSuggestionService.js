@@ -21,15 +21,25 @@ async function recordSearchService({
   const filterHash = buildFilterHash(filters);
   const day = new Date().toISOString().slice(0, 10);
 
-  // bucket location
-  const bucketed = location?.coordinates
-    ? [
-        Number(location.coordinates[0].toFixed(3)),
-        Number(location.coordinates[1].toFixed(3))
-      ]
-    : null;
+  // bucket location - validate coordinates
+  const bucketed = location?.coordinates && Array.isArray(location.coordinates) && 
+    location.coordinates.length === 2 &&
+    !isNaN(location.coordinates[0]) &&
+    !isNaN(location.coordinates[1])
+      ? [
+          Number(location.coordinates[0].toFixed(3)),
+          Number(location.coordinates[1].toFixed(3))
+        ]
+      : null;
+
+  if (!bucketed) {
+    console.error("Invalid location coordinates:", location);
+    // Optionally, handle this case (e.g., set location to null or a default value)
+    return;  // Exit the function without proceeding further
+  }
 
   try {
+    // Attempt to record the search globally
     await createOrIncrementGlobal({
       keyword: normalizedKeyword,
       filterHash,
@@ -40,6 +50,7 @@ async function recordSearchService({
     });
 
     if (userId) {
+      // If userId is provided, record user's search
       await upsertUserSearch({
         userId,
         keyword: normalizedKeyword,
@@ -49,12 +60,26 @@ async function recordSearchService({
         radiusKm
       });
 
+      // Clean up user history to avoid too many records
       await cleanupUserHistory(userId, MAX_USER_RECENTS);
     }
   } catch (err) {
-    throw err;
+    // Specific error handling for MongoDB duplicate key error
+    if (err.code === 11000) {
+      console.error("Duplicate key error while recording search:", err.message);
+    } else {
+      // Handle other unexpected errors gracefully
+      console.error("An error occurred while recording the search:", err.message);
+    }
+
+    // Gracefully handle error and do not crash the app
+    // Optionally log the error to an external service or monitoring tool
+    // e.g., sendErrorToMonitoringService(err);
+
+    // Do not throw error to avoid app crash, log it and continue
   }
 }
+
 
 async function getUserSearches(userId) {
   return fetchUserSearches(userId);

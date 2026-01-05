@@ -247,6 +247,19 @@ const getEvents = async (queryData) => {
         },
       },
 
+      //lookup tags
+      {
+        $lookup: {
+          from: "tags",
+          localField: "basicInfo.tags",
+          foreignField: "_id",
+          as: "basicInfo.tags",
+          pipeline: [
+            { $project: { title: 1 } },
+          ],
+        },
+      },
+
       { $sort: { "schedule.startDateTime": sort === "desc" ? -1 : 1 } },
 
       //

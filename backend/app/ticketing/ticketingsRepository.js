@@ -1,6 +1,8 @@
 const { getWithFilters } = require("@dbUtils/queryUtil");
 const TicketingsModel = require("@TicketingsModel");
 const { TicketingBookings } = require("@TicketingBookingsModel");
+const { getCurrentDateInTimezone } = require("../../helperUtils/responseUtil");
+const { default: mongoose } = require("mongoose");
 
 // Get all with filters (e.g. filter by eventId)
 const getTicketingsWithFilters = async (query) => {
@@ -12,6 +14,89 @@ const getTicketingsWithFilters = async (query) => {
     },
   });
 };
+
+
+const getAvailableTicketings = async (eventId, timezone) => {
+  // Ensure a real JS Date
+  const now = getCurrentDateInTimezone({ timezone });
+
+  // Ensure ObjectId
+  const eventObjectId =
+    typeof eventId === "string"
+      ? new mongoose.Types.ObjectId(eventId)
+      : eventId;
+
+  return TicketingsModel.aggregate([
+    {
+      $match: {
+        event: eventObjectId,
+        status: "active",
+      },
+    },
+
+    // Keep only future/ongoing time slots when timing slots are enabled
+    {
+      $addFields: {
+        "timingSlots.dateTimeSlots": {
+          $map: {
+            input: "$timingSlots.dateTimeSlots",
+            as: "d",
+            in: {
+              date: "$$d.date",
+              timeSlots: {
+                $filter: {
+                  input: "$$d.timeSlots",
+                  as: "t",
+                  cond: {
+                    $or: [
+                      { $eq: ["$$t.endTime", null] },
+                      { $gte: ["$$t.endTime", now] },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    // Return only tickets that actually have at least one valid time slot
+    {
+      $match: {
+        $or: [
+          // normal tickets (no timing slots)
+          { "timingSlots.enabled": false },
+
+          // timing-slot-based tickets with at least one valid slot
+          {
+            $and: [
+              { "timingSlots.enabled": true },
+              {
+                $expr: {
+                  $gt: [
+                    {
+                      $size: {
+                        $filter: {
+                          input: "$timingSlots.dateTimeSlots",
+                          as: "d",
+                          cond: { $gt: [{ $size: "$$d.timeSlots" }, 0] },
+                        },
+                      },
+                    },
+                    0,
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ]);
+};
+
+
 
 const getMinTicketPricesByEventIds = async (eventIds = []) => {
   if (!eventIds.length) return {};
@@ -80,4 +165,5 @@ module.exports = {
   getTicketingsWithFilters,
   getMinTicketPricesByEventIds,
   attachAvailabilityToTicket,
+  getAvailableTicketings
 };

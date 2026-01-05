@@ -6,10 +6,10 @@ const createNotifications = async (data) => {
   let globalNotification = await NotificationsRepo.createNotifications(data);
   return globalNotification;
 };
-const getNotificationss = async ({ timezone, page, limit, keyword, status, userId, date, range }) => {
+const getNotificationss = async ({ isDelivered,sendTiming,timezone, page, limit, keyword, status, userId, date, range }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { Notificationss, meta } = await NotificationsRepo.getNotificationss({ timezone, page, limit, keyword, status, userId, date, range, today, skip });
+  let { Notificationss, meta } = await NotificationsRepo.getNotificationss({ isDelivered,sendTiming,timezone, page, limit, keyword, status, userId, date, range, today, skip });
 
   return {
     Notificationss,
@@ -63,7 +63,7 @@ const updateNotifications = async (id, data) => {
       updateData[key] = data[key];
     }
   }
-  console.log("updateData", updateData);
+
   if (Object.keys(updateData).length === 0) {
     return Notifications;
   }

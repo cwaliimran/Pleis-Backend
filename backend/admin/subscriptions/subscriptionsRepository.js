@@ -1,5 +1,5 @@
 // repositories/SubscriptionRepository.js
-const { SubscriptionSettings }  = require("@SubscriptionSettings");
+const { SubscriptionSettings } = require("@SubscriptionSettings");
 
 const { User } = require("../../models/UserModel");
 const Event = require("@EventsModel");
@@ -233,8 +233,8 @@ const getUserSubscriptions = async ({
     // ------------------------------------------------------
     {
       $match: {
-      "activeSubscription": { $exists: true }  // Ensure activeSubscription exists
-    }
+        "activeSubscription": { $exists: true }  // Ensure activeSubscription exists
+      }
     },
 
     // ------------------------------------------------------
@@ -271,7 +271,7 @@ const getUserSubscriptions = async ({
         endDate: "$activeSubscription.endDate",
 
         // Auto-calc status (active/expired)
-         subscriptionStatus: "$activeSubscription.status" 
+        subscriptionStatus: "$activeSubscription.status"
       }
     }
   ];
@@ -301,24 +301,24 @@ const getUserSubscriptions = async ({
   // ------------------------------------------------------
   // STATUS FILTER
   // ------------------------------------------------------
-// STATUS FILTER
-if (status) {
+  // STATUS FILTER
+  if (status) {
 
-  pipeline.push({
-    $match: {
-      "activeSubscription.status": status  
-    }
-  });
+    pipeline.push({
+      $match: {
+        "activeSubscription.status": status
+      }
+    });
 
-} else {
+  } else {
 
-  // If no status is provided, exclude "deleted" subscriptions
-  pipeline.push({
-    $match: {
-      "activeSubscription.status": { $ne: "deleted" }  // Exclude deleted subscriptions if no status is provided
-    }
-  });
-}
+    // If no status is provided, exclude "deleted" subscriptions
+    pipeline.push({
+      $match: {
+        "activeSubscription.status": { $ne: "deleted" }  // Exclude deleted subscriptions if no status is provided
+      }
+    });
+  }
 
 
   // ------------------------------------------------------
@@ -356,64 +356,64 @@ if (status) {
       }
     });
   }
-if (subscriptionTypes) {
-  // Ensure subscriptionTypes is an array
-  const subscriptionTypesArray = Array.isArray(subscriptionTypes) ? subscriptionTypes : [subscriptionTypes];qr
-  // If 'free' is in the array, include only 'free' subscription types
-  if (subscriptionTypesArray.includes("free")) {
+  if (subscriptionTypes) {
+    // Ensure subscriptionTypes is an array
+    const subscriptionTypesArray = Array.isArray(subscriptionTypes) ? subscriptionTypes : [subscriptionTypes]; qr
+    // If 'free' is in the array, include only 'free' subscription types
+    if (subscriptionTypesArray.includes("free")) {
+      pipeline.push({
+        $match: {
+          "activeSubscription.subscriptionTypes": {
+            $in: ["free"]  // Include only users with the "free" subscription type
+          }
+        }
+      });
+    } else {
+      // Exclude users with "free" subscription type and return all other types
+      pipeline.push({
+        $match: {
+          "activeSubscription.subscriptionTypes": {
+            $nin: ["free"]  // Exclude users with the "free" subscription type
+          }
+        }
+      });
+
+    }
+  }
+
+
+  // Handle the selectedRange filter (e.g., "1-2", "50+", "All")
+  if (selectedRange) {
+
+
+    if (selectedRange === "All" || selectedRange === "all") {
+      // If "All", no range filter is applied
+      minOrganizations = undefined;
+      maxOrganizations = undefined;
+    } else if (selectedRange.includes("+")) {
+      // Handle the "50+" case: set minimum organizations with no upper limit
+      const min = parseInt(selectedRange.replace("+", "").trim(), 10);
+      minOrganizations = min;
+      maxOrganizations = undefined; // No upper limit for "+" case
+    } else if (selectedRange.includes("-")) {
+      // Handle the "min-max" case: split the range by "-" and apply it
+      const [min, max] = selectedRange.split("-").map(str => str.trim()).map(Number);
+      minOrganizations = min;
+      maxOrganizations = max;
+    }
+  }
+
+  // Apply the selectedRange filter for number of organizations
+  if (minOrganizations !== undefined) {
     pipeline.push({
       $match: {
-        "activeSubscription.subscriptionTypes": { 
-          $in: ["free"]  // Include only users with the "free" subscription type
-        }
-      }
-    });
-  } else {
-    // Exclude users with "free" subscription type and return all other types
-    pipeline.push({
-      $match: {
-        "activeSubscription.subscriptionTypes": { 
-          $nin: ["free"]  // Exclude users with the "free" subscription type
-        }
-      }
-    });
-
-  }
-}
-
-
-// Handle the selectedRange filter (e.g., "1-2", "50+", "All")
-if (selectedRange) {
- 
-
-  if (selectedRange === "All" || selectedRange === "all") {
-    // If "All", no range filter is applied
-    minOrganizations = undefined;
-    maxOrganizations = undefined;
-  } else if (selectedRange.includes("+")) {
-    // Handle the "50+" case: set minimum organizations with no upper limit
-    const min = parseInt(selectedRange.replace("+", "").trim(), 10);
-    minOrganizations = min;
-    maxOrganizations = undefined; // No upper limit for "+" case
-  } else if (selectedRange.includes("-")) {
-    // Handle the "min-max" case: split the range by "-" and apply it
-    const [min, max] = selectedRange.split("-").map(str => str.trim()).map(Number);
-    minOrganizations = min;
-    maxOrganizations = max;
-  }
-}
-
-// Apply the selectedRange filter for number of organizations
-if (minOrganizations !== undefined) {
-  pipeline.push({
-    $match: {
-      "activeSubscription.numberOfOrganizations": {
-        $gte: minOrganizations,
-        ...(maxOrganizations !== undefined ? { $lte: maxOrganizations } : {}),
+        "activeSubscription.numberOfOrganizations": {
+          $gte: minOrganizations,
+          ...(maxOrganizations !== undefined ? { $lte: maxOrganizations } : {}),
+        },
       },
-    },
-  });
-}
+    });
+  }
 
 
   // ------------------------------------------------------
@@ -445,7 +445,7 @@ if (minOrganizations !== undefined) {
   // ------------------------------------------------------
   // META COUNTS
   // ------------------------------------------------------
-  const [total, active, expired] = await Promise.all([ 
+  const [total, active, expired] = await Promise.all([
     User.countDocuments({ subscription: { $exists: true } }),
     User.countDocuments({
       "subscription.endDate": { $gt: now }
@@ -500,6 +500,25 @@ if (minOrganizations !== undefined) {
   });
 
 
+  subscriptions = await Promise.all(
+    subscriptions.map(async (sub) => {
+      const userId = sub.userId;
+
+      const inactiveSubscrtiptio = await findUserInactiveSubscriptionById(userId);
+      const cleanInactiveSubscription =
+        inactiveSubscrtiptio &&
+          typeof inactiveSubscrtiptio === "object" &&
+          !Array.isArray(inactiveSubscrtiptio) &&
+          inactiveSubscrtiptio.constructor === Object
+          ? inactiveSubscrtiptio
+          : null;
+
+      return {
+        ...sub,
+        inactiveSubscription: cleanInactiveSubscription
+      };
+    })
+  );
 
   return { subscriptions, meta };
 };
@@ -512,10 +531,14 @@ const findUserSubscriptionById = async (id) => {
   const user = await User.findById(id).select('activeSubscription');
   return user  // Return subscription or null if not found
 };
-const findUserinactiveSubscriptionById = async (id) => {
-  // Retrieve only the subscription data for the user
-  const user = await User.findById(id).select('inactiveSubscription');
-  return user  // Return subscription or null if not found
+const findUserInactiveSubscriptionById = async (id) => {
+  const user = await User.findById(id).select("inActiveSubscription").lean();
+  return user?.inActiveSubscription || null;
+};
+
+const findUserInactiveSubscriptionByIdcomplete = async (id) => {
+  const user = await User.findById(id);
+  return user
 };
 
 
@@ -523,7 +546,7 @@ const findUserById = async (id) => {
   return User.findById(id);
 };
 
-
+  
 
 
 
@@ -677,7 +700,7 @@ const findByIdAndDelete = async (userId) => {
     if (user.subscription) {
       user.subscription.status = "cancelled";
       await user.save();
-      return user;  
+      return user;
     } else {
       throw new Error("User does not have a subscription");
     }
@@ -687,7 +710,7 @@ const findByIdAndDelete = async (userId) => {
   }
 };
 const findById = async (userId) => {
-    return  await User.findById(userId);
+  return await User.findById(userId);
 };
 
 
@@ -707,5 +730,6 @@ module.exports = {
   getavailableSubscriptions,
   findByIdAndDelete,
   findById,
-  findUserinactiveSubscriptionById
+  findUserInactiveSubscriptionById,
+  findUserInactiveSubscriptionByIdcomplete
 };

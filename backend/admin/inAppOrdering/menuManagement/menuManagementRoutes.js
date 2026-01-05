@@ -1,7 +1,9 @@
 const express = require("express");
 const {
   createMenu,
-  getMenu,
+  getMenuItems,
+  getMenuItemCategories,
+  getEvents,
   updateMenu,
   deleteMenu,
   getevents,
@@ -22,8 +24,9 @@ router.use(auth);
 const MenuRateLimiter = createRateLimiter("Menu");
 
 // router.post("/", roleMiddleware(["admin"]), MenuRateLimiter, createMenu);
-router.get("/", roleMiddleware(["admin"]), getMenu);
-router.put("/:id", roleMiddleware(["admin"]), updateMenu);
+router.get("/menu-items", roleMiddleware(["admin"]), getMenuItems);
+router.get("/events", roleMiddleware(["admin"]), getEvents);
+router.get("/menu-item-categories", roleMiddleware(["admin"]), getMenuItemCategories);
 
 
 

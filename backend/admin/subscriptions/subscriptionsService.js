@@ -42,6 +42,7 @@ const getavailableSubscriptions = async ({ timezone, page, limit, keyword, statu
 };
 const updateSubscription = async (id, data) => {
   const subscription = await SubscriptionRepo.findSubscriptionById(id);
+
   if (!subscription) {
     return { error: "subscription_not_found" };
   }
@@ -130,10 +131,10 @@ const deleteSubscription = async (id) => {
     const deleted = await SubscriptionRepo.findByIdAndDelete(id);
 
     if (!deleted) {
-      return null;  
+      return null;
     }
 
-    return true; 
+    return true;
   } catch (err) {
     throw err;
   }
@@ -141,33 +142,33 @@ const deleteSubscription = async (id) => {
 
 
 const getSubscriptionDetails = async (id) => {
-      const Subscription = await SubscriptionRepo.findSubscriptionById(id);
-      if (!Subscription) return null;
-      return Subscription;
-    };
+  const Subscription = await SubscriptionRepo.findSubscriptionById(id);
+  if (!Subscription) return null;
+  return Subscription;
+};
 
 
 
 
 
-const getUserSubscriptions = async ({selectedRange, timezone, page, limit, keyword, status,  date, range,billing,subscriptionTypes }) => {
-      const skip = limit === 0 ? 0 : (page - 1) * limit;
-      const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-      let { subscriptions, meta } = await SubscriptionRepo.getUserSubscriptions({selectedRange, timezone, page, limit, keyword, status,  date, range, today, skip, billing, subscriptionTypes });
+const getUserSubscriptions = async ({ selectedRange, timezone, page, limit, keyword, status, date, range, billing, subscriptionTypes }) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
+  let { subscriptions, meta } = await SubscriptionRepo.getUserSubscriptions({ selectedRange, timezone, page, limit, keyword, status, date, range, today, skip, billing, subscriptionTypes });
 
-      return {
-        subscriptions,
-        meta
-      };
-    };
+  return {
+    subscriptions,
+    meta
+  };
+};
 
 const updateUserSubscriptionStatus = async (id, value) => {
-      const updated = await UserSubscriptions.findByIdAndUpdate(id, {
-        SubscriptionStatus: value,
-      });
-      if (!updated) return null;
-      return true;
-    };
+  const updated = await UserSubscriptions.findByIdAndUpdate(id, {
+    SubscriptionStatus: value,
+  });
+  if (!updated) return null;
+  return true;
+};
 
 
 
@@ -220,48 +221,111 @@ const updateUserSubscriptionStatus = async (id, value) => {
 const updateUserSubscriptions = async (id, data) => {
   try {
     let UserSubscription = await SubscriptionRepo.findUserSubscriptionById(id);
-
-    if (!UserSubscription) {
-      return { error: "subscription_not_found" };
+    let UserInactiveSubscription = await SubscriptionRepo.findUserInactiveSubscriptionByIdcomplete(id);
+    if (!data?.subscription) {
+      return { error: "subscription_data_required" };
     }
+
     const subscriptionData = data.subscription;
-if(data.subscription.subscriptionTypes||data.subscription.pricingPlan||data.subscription.numberOfOrganizations){
-    const hasSubscriptionChanged =
-      (subscriptionData.subscriptionTypes && subscriptionData.subscriptionTypes.length !== UserSubscription.activeSubscription.subscriptionTypes.length) ||
-      (subscriptionData.pricingPlan !== UserSubscription.activeSubscription.pricingPlan) ||
-      (subscriptionData.numberOfOrganizations !== UserSubscription.activeSubscription.numberOfOrganizations);
 
-    if (hasSubscriptionChanged && subscriptionData.totalSubscriptionAmount === undefined) {
-      return { error: "totalSubscriptionAmount_is_required_when_subscription_changes" };
-    }
-  }
+    /* ===========================
+       CASE 1: STATUS PRESENT
+       → Update UserSubscription
+    ============================ */
+    if (subscriptionData.status !== undefined) {
+      const allowedKeys = ["status"];
+      const extraKeys = Object.keys(subscriptionData).filter(
+        key => !allowedKeys.includes(key)
+      );
 
-    if (subscriptionData.endDate !== undefined) {
-      const currentEndDate = new Date(UserSubscription.activeSubscription.endDate);
-      const newEndDate = new Date(subscriptionData.endDate);
-      if (newEndDate.getTime() <= currentEndDate.getTime()) {
-        return { error: "expiry_date_must_be_later_than_current" };
+      if (extraKeys.length > 0) {
+        return {
+          error: "status_update_must_be_isolated",
+          fieldsNotAllowedWithStatus: extraKeys
+        };
       }
-      UserSubscription.endDate = newEndDate;
     }
 
-    Object.keys(subscriptionData).forEach((key) => {
-      if (subscriptionData[key] !== undefined && key !== "endDate") {
-        UserSubscription[key] = subscriptionData[key];
+    if (subscriptionData.status !== undefined) {
+      UserSubscription.activeSubscription = {
+        ...UserSubscription.activeSubscription,
+        ...subscriptionData, // status + commissions together
+      };
+
+      UserSubscription = await UserSubscription.save({ new: true });
+      return UserSubscription;
+    }
+
+
+    /* ===========================
+       CASE 2: OTHER FIELDS
+       → Update UserInactiveSubscription
+    ============================ */
+    else {
+      if (!UserInactiveSubscription) {
+        return { error: "subscription_not_found" };
       }
-    });
 
-    UserSubscription.activeSubscription = {
-      ...UserSubscription.activeSubscription,
-      ...subscriptionData,
-    };
+      /* ===============================
+         VALIDATE CHANGE → REQUIRE AMOUNT
+      =============================== */
+      if (
+        subscriptionData.subscriptionTypes ||
+        subscriptionData.pricingPlan ||
+        subscriptionData.numberOfOrganizations !== undefined
+      ) {
+        const hasSubscriptionChanged =
+          (subscriptionData.subscriptionTypes &&
+            JSON.stringify(subscriptionData.subscriptionTypes) !==
+            JSON.stringify(UserInactiveSubscription.inActiveSubscription.subscriptionTypes)) ||
+          (subscriptionData.pricingPlan &&
+            subscriptionData.pricingPlan !==
+            UserInactiveSubscription.inActiveSubscription.pricingPlan) ||
+          (subscriptionData.numberOfOrganizations !== undefined &&
+            subscriptionData.numberOfOrganizations !==
+            UserInactiveSubscription.inActiveSubscription.numberOfOrganizations);
 
-    UserSubscription = await UserSubscription.save({ new: true });
+        if (hasSubscriptionChanged && subscriptionData.totalSubscriptionAmount === undefined) {
+          return {
+            error: "totalSubscriptionAmount_is_required_when_subscription_changes",
+          };
+        }
+      }
 
-    return UserSubscription;
+      /* ===============================
+         END DATE VALIDATION
+      =============================== */
+      if (subscriptionData.endDate !== undefined) {
+        const currentEndDate =
+          UserInactiveSubscription.inActiveSubscription.endDate;
 
+        const newEndDate = new Date(subscriptionData.endDate);
+
+        if (currentEndDate && newEndDate <= currentEndDate) {
+          return { error: "expiry_date_must_be_later_than_current" };
+        }
+
+        UserInactiveSubscription.inActiveSubscription.endDate = newEndDate;
+      }
+
+      /* ===============================
+         APPLY UPDATES (CORRECT KEY)
+      =============================== */
+      Object.keys(subscriptionData).forEach((key) => {
+        if (subscriptionData[key] !== undefined && key !== "endDate") {
+          UserInactiveSubscription.inActiveSubscription[key] =
+            subscriptionData[key];
+        }
+      });
+
+      /* ===============================
+         SAVE
+      =============================== */
+      await UserInactiveSubscription.save({ new: true });
+
+      return UserInactiveSubscription;
+    }
   } catch (err) {
-
     throw err;
   }
 };
@@ -273,14 +337,14 @@ if(data.subscription.subscriptionTypes||data.subscription.pricingPlan||data.subs
 
 
 
-  module.exports = {
-    createSubscription,
-    getSubscriptions,
-    updateSubscription,
-    getSubscriptionDetails,
-    deleteSubscription,
-    getUserSubscriptions,
-    updateUserSubscriptionStatus,
-    getavailableSubscriptions,
-    updateUserSubscriptions
-  };
+module.exports = {
+  createSubscription,
+  getSubscriptions,
+  updateSubscription,
+  getSubscriptionDetails,
+  deleteSubscription,
+  getUserSubscriptions,
+  updateUserSubscriptionStatus,
+  getavailableSubscriptions,
+  updateUserSubscriptions
+};

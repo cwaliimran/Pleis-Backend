@@ -46,10 +46,17 @@ const GlobalNotificationSchema = new mongoose.Schema(
         type: String, // Store the city name
         trim: true,
       },
-      area: {
+      lat: {
+        type: Number, // Store latitude
+      },
+      long: {
+        type: Number, // Store longitude
+      },
+      radius: {
         type: Number, // Store the area in kilometers (numeric value)
 
       },
+
     },
     ageRange: {
       type: [Number], // Array to store min and max age (e.g., [18, 65])

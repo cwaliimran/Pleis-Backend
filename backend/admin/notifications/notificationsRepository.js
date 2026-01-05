@@ -10,10 +10,10 @@ const {
 const Tags = require("@TagsModel");
 const Organizations = require("@OrganizationModel");
 const { Events } = require("@EventsModel");
-const { calculateAge } = require("../notifications/helper/calculateAge");
 const { User } = require("@UserModel");
-const { calculateDistance } = require("@utils/calculateDistance");
-const { UserInterests } = require("@UserInterests");
+const { sendUserNotifications } = require("../../controllers/communicationController");
+const { NotificationTypes } = require("@NotificationsModel");
+const { notificationFormatter } = require("./helper/notificationFormatter");
 // Decide which discriminator model to use
 const getModelByTaskType = (taskType) => {
   switch (taskType) {
@@ -27,124 +27,6 @@ const getModelByTaskType = (taskType) => {
       return GlobalNotification; // fallback
   }
 };
-
-const getUserLocationById = async (userId) => {
-  try {
-
-    // Convert the userId to ObjectId if it's not already
-    const objectId = new mongoose.Types.ObjectId(userId);
-
-    // Query the Users collection to find the user by their ID and get their location coordinates
-    const user = await User.findById(objectId).select('location.coordinates');
-
-    // If user is found and the coordinates are available
-    if (user && user.location && user.location.coordinates) {
-      const userLat = user.location.coordinates[1]; // Latitude (second value in coordinates)
-      const userLon = user.location.coordinates[0]; // Longitude (first value in coordinates)
-
-      return { lat: userLat, lon: userLon }; // Return the latitude and longitude
-    }
-
-    // If no location found, return null
-    return { lat: null, lon: null };
-  } catch (error) {
-
-    return { lat: null, lon: null }; // Return null in case of error
-  }
-};
-
-
-
-
-const ageRangeFilter = async (ageRange) => {
-  if (!Array.isArray(ageRange) || ageRange.length !== 2) {
-    return new Set();
-  }
-  const pipeline = [
-    {
-      $match: {
-        dob: { $exists: true, $ne: "" }
-      }
-    },
-    {
-      $addFields: {
-        age: {
-          $floor: {
-            $divide: [
-              {
-                $subtract: [
-                  new Date(),
-                  { $toDate: "$dob" }
-                ]
-              },
-              31557600000
-            ]
-          }
-        }
-      }
-    },
-    {
-      $match: {
-        age: {
-          $gte: ageRange[0],
-          $lte: ageRange[1]
-        }
-      }
-    },
-    {
-      $project: {
-        _id: 1
-      }
-    }
-  ];
-  const users = await User.aggregate(pipeline);
-  const userIds = new Set(users.map(u => u._id.toString()));
-  return userIds;
-};
-
-const genderFilter = async (gender) => {
-  if (!gender || gender.toLowerCase() === "all") {
-    const users = await User.find({}, { _id: 1 }).lean();
-    return new Set(users.map(u => u._id.toString()));
-  }
-  const users = await User.find(
-    {
-      gender: { $regex: `^${gender}$`, $options: "i" }
-    },
-    { _id: 1 }
-  ).lean();
-
-  const userIds = new Set(users.map(u => u._id.toString()));
-  return userIds;
-};
-const locationFilter = async ({
-  center,
-  radius,
-  limit = 500
-}) => {
-  const users = await User.aggregate([
-    {
-      $match: {
-        "location.coordinates": {
-          $geoWithin: {
-            $centerSphere: [
-              center.coordinates,
-              radius / 6378.1
-            ]
-          }
-        }
-      }
-    },
-    { $limit: limit },
-    {
-      $project: {
-        _id: 1
-      }
-    }
-  ]);
-  return users.map(u => u._id.toString());
-};
-
 
 const getFilteredUserIdsCombined = async ({
   ageRange,
@@ -255,117 +137,144 @@ const getFilteredUserIdsCombined = async ({
   };
 };
 
-
-
-
-const getFilteredUserIds = async (filters, center, radius) => {
-  let { ageRange, gender, interests } = filters;
-  let locationFilteredUserIds = new Set();
-  let ageFilteredUserIds = new Set();
-  let genderFilteredUserIds = new Set();
-  let interestsFilteredUserIds = new Set();
-  [
-    locationFilteredUserIds,
-    ageFilteredUserIds,
-    interestsFilteredUserIds,
-    genderFilteredUserIds
-  ] = await Promise.all([
-    center ? locationFilter({ center, radius }).then(ids => new Set(ids)) : Promise.resolve(new Set()),
-    ageRange && ageRange.length === 2 ? ageRangeFilter(ageRange) : Promise.resolve(new Set()),
-    interests && interests.length > 0 ? interestFilter(interests) : Promise.resolve(new Set()),
-    gender ? genderFilter(gender) : Promise.resolve(new Set())
-  ]);
-
-  console.log("Location Filtered User IDs:", [...locationFilteredUserIds]);
-  console.log("Age Range Filtered User IDs:", [...ageFilteredUserIds]);
-  console.log("Interests Filtered User IDs:", [...interestsFilteredUserIds]);
-  console.log("Gender Filtered User IDs:", [...genderFilteredUserIds]);
-  const finalUserIds = [
-    ...locationFilteredUserIds,
-    ...ageFilteredUserIds,
-    ...genderFilteredUserIds,
-    ...interestsFilteredUserIds
-  ];
-
-  // Remove duplicates
-  const uniqueUserIds = [...new Set(finalUserIds)];
-
-  console.log(
-    "Final Filtered User IDs (unique from all filters):",
-    uniqueUserIds
-  );
-
-  return {
-    userIds: uniqueUserIds,
-    meta: { totalFiltered: uniqueUserIds.length }
-  };
-}
-
-
+const getAllUserIds = async () => {
+  try {
+    const users = await User.find({}, { _id: 1 }).lean();
+    return users.map(user => user._id.toString());
+  } catch (err) {
+    throw err;
+  }
+};
 
 const createNotifications = async (data) => {
   try {
-    const Model = getModelByTaskType(data.destinationType);
-    const globalNotification = new Model(data);
-    await globalNotification.save();
-    const filters = {
+   
+    const result = await getFilteredUserIdsCombined({
       ageRange: data.ageRange || null,
       gender: data.gender || null,
       interests: data.interests || [],
-    };
-    const result = await getFilteredUserIds(filters, data.center, data.radius);
-
-    console.log("result", result);
-    return
-    if (data.sendTiming === "immediately") {
-      const filters = {
-        center: data.center || null,
-        ageRange: data.ageRange || null,
-        gender: data.gender || null,
-        interests: data.interests || [],
-        radius: data.radius ?? 0
-      };
-
-
-
-      data.isDelivered = true;
-      data.estimated = userIds.length;
-      data.delivered = userIds.length;
-      if (data.destinationType == "organization") {
-
-        await sendUserNotifications({
-          recipientIds: userIds, // Send notification to each participant
-          title: data.title,
-          body: `You received a new message: ${data.description}`,
-          data: { type: NotificationTypes.EVENT_UPDATE, objectType: "group" },
-          sender: data.companyOrganizer,
-          objectId: data.event,
-        });
-      }
-      if (data.destinationType == "event") {
-
-        await sendUserNotifications({
-          recipientIds: userIds, // Send notification to each participant
-          title: data.title,
-          body: `You received a new message: ${data.description}`,
-          data: { type: NotificationTypes.EVENT_UPDATE, objectType: "group" },
-          sender: data.companyOrganizer,
-          objectId: data.event,
-        });
-
-      }
-
-
+      center: data.center || null,
+      radius: data.radius ?? 0,
+    });
+    if (!data.ageRange && !data.gender && !data.interests && !data.center && !data.radius) {
+      const allUserIds = await getAllUserIds();
+      result.userIds = allUserIds;
     }
+
+    const notificationSystemType =
+      data.organizationId
+        ? NotificationTypes.ORGANIZATION_DETAILS
+        : data.eventId
+          ? NotificationTypes.EVENT_DETAILS
+          : NotificationTypes.HOME;
+
+
+    let globalNotification = null;
+
+    /* ===============================
+       HOME NOTIFICATION
+    =============================== */
+    if (data.destinationType === "homeNotification") {
+      if (data.sendTiming === "immediately") {
+        await sendUserNotifications({
+          recipientIds: result.userIds,
+          title: data.title,
+          body: `You received a new message: ${data.description}`,
+          data: {
+            type: notificationSystemType,
+            objectType: "group",
+          },
+          sender: data.creator,
+          objectId: data.eventId || data.organizationId || data.creator,
+        });
+
+        data.isDelivered = true;
+        data.estimated = result.userIds.length;
+        data.delivered = result.userIds.length;
+
+        const Model = getModelByTaskType(data.destinationType);
+        globalNotification = new Model(data);
+        await globalNotification.save();
+      }
+            if (data.sendTiming === "schedule") {
+        data.estimated = result.userIds.length;
+        const Model = getModelByTaskType(data.destinationType);
+        globalNotification = new Model(data);
+        await globalNotification.save();
+      }
+    }
+
+    /* ===============================
+       ORGANIZATION NOTIFICATION
+    =============================== */
+    else if (data.destinationType === "organizationNotification") {
+      if (data.sendTiming === "immediately") {
+        await sendUserNotifications({
+          recipientIds: result.userIds,
+          title: data.title,
+          body: `You received a new message: ${data.description}`,
+          data: {
+            type: notificationSystemType,
+            objectType: "group",
+          },
+          sender: data.creator,
+          objectId: data.organizationId,
+        });
+        data.isDelivered = true;
+        data.estimated = result.userIds.length;
+        data.delivered = result.userIds.length;
+        const Model = getModelByTaskType(data.destinationType);
+        globalNotification = new Model(data);
+        await globalNotification.save();
+      }
+            if (data.sendTiming === "schedule") {
+        data.estimated = result.userIds.length;
+        const Model = getModelByTaskType(data.destinationType);
+        globalNotification = new Model(data);
+        await globalNotification.save();
+      }
+    }
+
+    /* ===============================
+       EVENT NOTIFICATION
+    =============================== */
+    else if (data.destinationType === "eventNotification") {
+      if (data.sendTiming === "immediately") {
+        await sendUserNotifications({
+          recipientIds: result.userIds,
+          title: data.title,
+          body: `You received a new message: ${data.description}`,
+          data: {
+            type: notificationSystemType,
+            objectType: "group",
+          },
+          sender: data.creator,
+          objectId: data.eventId,
+        });
+        data.isDelivered = true;
+        data.estimated = result.userIds.length;
+        data.delivered = result.userIds.length;
+        const Model = getModelByTaskType(data.destinationType);
+        globalNotification = new Model(data);
+        await globalNotification.save();
+      }
+      if (data.sendTiming === "schedule") {
+        data.estimated = result.userIds.length;
+        const Model = getModelByTaskType(data.destinationType);
+        globalNotification = new Model(data);
+        await globalNotification.save();
+      }
+    }
+
     return globalNotification;
   } catch (err) {
     throw err;
   }
 };
 
-const getNotificationss = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
 
-
+const getNotificationss = async ({isDelivered, sendTiming,timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
+console.log("isDelivered", isDelivered);
   const pipeline = [
     {
       $match: {
@@ -405,13 +314,24 @@ const getNotificationss = async ({ timezone, page, limit, keyword, status, userI
     });
   }
 
-  // Apply filters
+
   if (status) {
-    pipeline.push({ $match: { status } });
-  } else {
+      pipeline.push({ $match: { status } });
+    } else {
     pipeline.push({ $match: { status: { $ne: "deleted" } } });
   }
-
+if (sendTiming) {
+  pipeline.push({ $match: { sendTiming } });
+}
+if(isDelivered){
+  if (isDelivered === "true") isDelivered = true;
+if (isDelivered === "false") isDelivered = false;
+if (typeof isDelivered === "boolean") {
+  pipeline.push({
+    $match: { isDelivered }
+  });
+}
+}
   if (date) {
     const start = new Date(date);
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
@@ -437,25 +357,42 @@ const getNotificationss = async ({ timezone, page, limit, keyword, status, userI
   pipeline.push(
     {
       $lookup: {
-        from: "organizations", // Name of the organizations collection
+        from: "organizations",
         localField: "organizationId",
         foreignField: "_id",
-        as: "organizationDetails",
-      },
+        as: "organization",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              "basicInfo.name": 1
+            }
+          }
+        ]
+      }
     },
     {
       $lookup: {
-        from: "events", // Name of the events collection
+        from: "events",
         localField: "eventId",
         foreignField: "_id",
-        as: "eventDetails",
-      },
+        as: "event",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              "basicInfo.title": 1
+            }
+          }
+        ]
+      }
     },
     {
+      // ✅ Convert arrays → single object
       $addFields: {
-        organizationTitle: { $arrayElemAt: ["$organizationDetails.basicInfo.name", 0] },
-        eventTitle: { $arrayElemAt: ["$eventDetails.basicInfo.title", 0] },
-      },
+        organization: { $arrayElemAt: ["$organization", 0] },
+        event: { $arrayElemAt: ["$event", 0] }
+      }
     },
     {
       $project: {
@@ -474,13 +411,15 @@ const getNotificationss = async ({ timezone, page, limit, keyword, status, userI
         interests: 1,
         sendTiming: 1,
         scheduledDateTime: 1,
-        eventId: 1,
-        organizationId: 1,
-        eventTitle: 1, // Including event title
-        organizationTitle: 1, // Including organization title
-      },
+        isDelivered: 1,
+        organization: 1,
+        event: 1,
+        createdAt: 1,
+        updatedAt: 1,
+      }
     }
   );
+
 
   pipeline.push({ $sort: { createdAt: -1 } });
 
@@ -491,6 +430,15 @@ const getNotificationss = async ({ timezone, page, limit, keyword, status, userI
         { $skip: skip },
         ...(limit === 0 ? [] : [{ $limit: limit }]),
       ],
+      totalReached: [
+        {
+          $group: {
+            _id: null,
+            count: { $sum: { $ifNull: ["$estimated", 0] } }
+          }
+        }
+      ],
+
       totalFiltered: [{ $count: "count" }],
       totalScheduled: [
         { $match: { sendTiming: "schedule" } },
@@ -562,6 +510,7 @@ const getNotificationss = async ({ timezone, page, limit, keyword, status, userI
   const totalLocationFiltered = result[0]?.totalLocationFiltered[0]?.count || 0;
   const totalAgeFiltered = result[0]?.totalAgeFiltered[0]?.count || 0;
   const totalInterestsFiltered = result[0]?.totalInterestsFiltered[0]?.count || 0;
+  const totalReached = result[0]?.totalReached[0]?.count || 0;
 
   const totalGenderFiltered = result[0]?.totalGenderFiltered[0]?.count || 0;
   const grandTotalFiltered = totalInterestsFiltered + totalLocationFiltered + totalAgeFiltered + totalGenderFiltered;
@@ -584,14 +533,16 @@ const getNotificationss = async ({ timezone, page, limit, keyword, status, userI
 
   const meta = generateMeta(page, limit, totalFiltered);
   meta.NotificationssCount = { total, active, inactive };
-  meta.totalScheduled = totalScheduled;
-  meta.totalDelivered = totalDelivered;
-  meta.totalLocationFiltered = totalLocationFiltered;
-  meta.totalAgeFiltered = totalAgeFiltered;
-  meta.totalInterestsFiltered = totalInterestsFiltered;
-
-  meta.totalGenderFiltered = totalGenderFiltered;
-  meta.grandTotalFiltered = grandTotalFiltered; // Grand total of all filters combined
+  meta.scheduled = totalScheduled;
+  meta.sent = totalDelivered;
+  // meta.totalLocationFiltered = totalLocationFiltered;
+  // meta.totalAgeFiltered = totalAgeFiltered;
+  // meta.totalInterestsFiltered = totalInterestsFiltered;
+  // meta.activeFilters = totalGenderFiltered;
+  meta.activeFilters = grandTotalFiltered; // Grand total of all filters combined
+  meta.totalReached = totalReached;
+  const filteredNotifications = (result[0]?.data || []).map(notificationFormatter);
+  Notificationss = filteredNotifications;
 
   return { Notificationss, meta };
 };
