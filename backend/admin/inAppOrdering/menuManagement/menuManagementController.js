@@ -87,40 +87,37 @@ const createMenu = async (req, res) => {
     });
   }
 };
-const getMenu = async (req, res) => {
+const getMenuItems = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status , date, range ,organizationId,activeKeyword,Menutatus,activeMenutatus,pickupFilter} = req.query;
+  let { keyword, status , date, range ,organizer} = req.query;
   try {
-if(!organizationId){
+    console.log("req.query", req.query);
+if(!organizer){
   return sendResponse({
     res,
     statusCode: 400,
-    translationKey: "organization_id_is_required",
+    translationKey: "organizer_id_is_required",
   });
 }
 
-    organizationId = new  mongoose.Types.ObjectId(organizationId); 
+    organizer = new  mongoose.Types.ObjectId(organizer); 
     const timezone = req.user.timezone;
-    const { Menus, meta } = await Menuervice.getMenu({
+    const { MenuItems, meta } = await Menuervice.getMenuItems({
       timezone,
       page,
       limit,
       keyword,
       status,
-      organizationId,
+      organizer,
       date,
       range,
-      activeKeyword,
-      Menutatus,
-      activeMenutatus,
-      pickupFilter
     });
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "Menu_fetched_successfully",
-      data: Menus,
+      data: MenuItems,
       meta,
     });
   } catch (error) {
@@ -204,10 +201,43 @@ let data = {
 
 
 
+const getMenuItemCategories = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let { keyword, status , date, range } = req.query;
+  try {
+    const timezone = req.user.timezone;
+    const { MenuItems, meta } = await Menuervice.getMenuItemCategories({
+      timezone,
+      page,
+      limit,
+      keyword,
+      status,
+      
+      date,
+      range,
+    });
 
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "Menu_fetched_successfully",
+      data: MenuItems,
+      meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 
 
 module.exports = {
-  getMenu,
+  getMenuItems,
   updateMenu,
+  getMenuItemCategories
 };

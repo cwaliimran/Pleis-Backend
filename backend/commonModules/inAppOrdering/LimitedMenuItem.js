@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 
 const menuItemsSchema = new mongoose.Schema(
   {
-
     image: {
       type: String,
       default: "",
@@ -17,41 +16,28 @@ const menuItemsSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    type: {
-      type: String,
-      default: "",
-    },
-
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "MenuIitetemCategories",
       required: true,
     },
 
-    basePrice: {
+    price: {
       type: Number,
       default: 0,
     },
-    discountPrice: {
-      type: Number,
-      default: 0,
-    },
-    taxPercent: {
-      type: Number,
-      default: 0,
-    },
-    
+
     menu: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Menus",
       required: true,
     },
 
-    startTime: {
+    startDateTime: {
       type: Date,
       default: null,
     },
-    endTime: {
+    endDateTime: {
       type: Date,
       default: null,
     },
@@ -61,8 +47,12 @@ const menuItemsSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    upSellItem: {
+      type: Boolean,
+        default: false,
+    },
 
-    status: { 
+    status: {
       type: String,
       enum: ["active", "inactive", "deleted"],
       default: "active",

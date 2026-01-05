@@ -62,7 +62,7 @@ const createNotifications = async (req, res) => {
 
     if (location) {
       // Check if city and radius are provided together
-      if (!location.city || !location.radious ) {
+      if (!location.city || !location.radius) {
         return sendResponse({
           res,
           statusCode: 400,
@@ -123,13 +123,13 @@ const createNotifications = async (req, res) => {
     let center;
     let radius = 0;
     if (location) {
-     center = {
-      type: "Point",
-      coordinates: [Number(location.long), Number(location.lat)]
-    };
-    radius = Number(location.radius)||0;
-  }
-  console.log("center",center );
+      center = {
+        type: "Point",
+        coordinates: [Number(location.long), Number(location.lat)]
+      };
+      radius = Number(location.radius) || 0;
+    }
+    console.log("center", center);
     // Prepare the data object to be saved (only include provided fields)
     const data = {
       creator: userId,
@@ -144,6 +144,7 @@ const createNotifications = async (req, res) => {
       sendTiming,
       scheduledDateTime,
       status: "active",
+      location
 
     };
 
@@ -195,12 +196,11 @@ const createNotifications = async (req, res) => {
 
 const getNotificationss = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range } = req.query;
+  const { keyword, status = "active", date, range ,sendTiming,isDelivered} = req.query;
   try {
 
 
     const userId = req.user._id;
-    console.log("userID", userId);
     const timezone = req.user.timezone;
     const { Notificationss, meta } = await NotificationsService.getNotificationss({
       timezone,
@@ -210,7 +210,9 @@ const getNotificationss = async (req, res) => {
       status,
       userId,
       date,
-      range
+      range,
+      sendTiming,
+      isDelivered
     });
 
     return sendResponse({
