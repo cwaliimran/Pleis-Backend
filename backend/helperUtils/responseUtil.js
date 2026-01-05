@@ -126,7 +126,7 @@ const parsePaginationParams = (req) => {
   if (limit > 100) {
     limit = 100;
   }
-  const skip = (page - 1) * limit;
+  let skip = (page - 1) * limit;
 
   return { page, limit, skip };
 };

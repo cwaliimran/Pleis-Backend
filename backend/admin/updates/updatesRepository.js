@@ -1,13 +1,13 @@
 const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const { generateMeta } = require("@utils/responseUtil");
 const mongoose = require("mongoose");
-const {Events}= require("@EventsModel");
+const { Events } = require("@EventsModel");
 const Updates = require("@UpdatesModel");
 const { TicketingOrders } = require("@TicketingOrdersModel");
 const { UserReservations } = require("@UserReservationsModel");
 const { formatUpdate } = require("./formatters/updateFormatter");
-const {NotificationExp, NotificationTypes} = require("@NotificationsModel");
-const {sendUserNotifications} = require("../../controllers/communicationController");
+const { NotificationExp, NotificationTypes } = require("@NotificationsModel");
+const { sendUserNotifications } = require("../../controllers/communicationController");
 const getUserIdsForEvent = async (eventId) => {
   try {
 
@@ -76,20 +76,20 @@ const getUserIdsForEvent = async (eventId) => {
 
 const createUpdates = async (data) => {
   try {
-    const update = new Updates(data); 
-     const userIds = await getUserIdsForEvent(data.event);
+    const update = new Updates(data);
+    const userIds = await getUserIdsForEvent(data.event);
     await update.save();
-  await sendUserNotifications({
-            recipientIds: userIds, // Send notification to each participant
-            title: data.title,
-            body: `You received a new message: ${data.description}`,
-            data: { type: NotificationTypes.EVENT_UPDATE, objectType: "group" },
-            sender: data.companyOrganizer,
-            objectId: data.event,
-          });
-    return update; 
+    await sendUserNotifications({
+      recipientIds: userIds, // Send notification to each participant
+      title: data.title,
+      body: `You received a new message: ${data.description}`,
+      data: { type: NotificationTypes.EVENT_UPDATE, objectType: "group" },
+      sender: data.companyOrganizer,
+      objectId: data.event,
+    });
+    return update;
   } catch (err) {
-    throw new Error("Error saving update: " + err.message); 
+    throw new Error("Error saving update: " + err.message);
   }
 };
 
@@ -179,7 +179,7 @@ const getUpdatess = async ({ timezone, page, limit, keyword, status, userId, dat
       status: 1, // Include the status field
       createdAt: 1, // Include the createdAt field
       title: 1, // Include the title field of the update
-creater:{ $arrayElemAt: ["$eventDetails.creator", 0] },
+      creater: { $arrayElemAt: ["$eventDetails.creator", 0] },
       eventTitle: { $arrayElemAt: ["$eventDetails.basicInfo.title", 0] },
       eventId: { $arrayElemAt: ["$eventDetails._id", 0] } // Extract the event title from the
       //  eventDetails array
@@ -222,8 +222,8 @@ creater:{ $arrayElemAt: ["$eventDetails.creator", 0] },
   // Step 12: Generate meta information for pagination
   const meta = generateMeta(page, limit, totalFiltered);
   meta.updatesCount = { total, active, inactive };
- const formattedupdates = updates.map(event => formatUpdate(event));
-  return { updates:formattedupdates, meta };
+  const formattedupdates = updates.map(event => formatUpdate(event));
+  return { updates: formattedupdates, meta };
 };
 
 
@@ -289,7 +289,7 @@ const getevents = async ({
   pipeline.push({
     $project: {
       _id: 1, // Include _id
-     title: "$basicInfo.title" // Include title from basicInfo
+      title: "$basicInfo.title" // Include title from basicInfo
     }
   });
 
@@ -332,12 +332,21 @@ const getevents = async ({
 
   return { events, meta };
 };
+
+
+//get updates against event id
+const getUpdatesByEventId = async (eventId) => {
+  return Updates.find({ event: eventId, status: "active" }).select("title description image").sort({ createdAt: -1 });
+};
+
+
 module.exports = {
   createUpdates,
   getUpdatess,
   findUpdatesById,
   findByIdAndUpdate,
   getevents,
-  getUserIdsForEvent
+  getUserIdsForEvent,
+  getUpdatesByEventId
 
 };

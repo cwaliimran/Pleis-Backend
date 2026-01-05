@@ -14,6 +14,8 @@ const { getTicketings } = require("../ticketing/ticketingsService");
 const { default: mongoose } = require("mongoose");
 const { logEngagementService } = require("@appEngagement/engagementEventsService");
 const Tags = require("@TagsModel");
+const { getUpdatesByEventIdService } = require("../../admin/updates/updatesService");
+const { getGiveawaysByEventIdService } = require("../giveaways/GiveawayService");
 
 const getNearbyEvents = async (queryData) => {
   let {
@@ -594,13 +596,11 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
 };
 
 
-
-
 const getEventDetails = async (userLocation, userId, id, timezone) => {
   const event = await eventRepo.findEventById(id);
-  //return if event not found
   if (!event) return null;
 
+  // fire-and-forget engagement log
   void logEngagementService({
     entityType: "events",
     entityId: id,
@@ -610,56 +610,59 @@ const getEventDetails = async (userLocation, userId, id, timezone) => {
 
   const now = getCurrentDateInTimezone({ timezone });
 
-  // TODO announcements - fetch from DB when implemented
-  const announcements = {
-    updates: [
+  // ---------- PARALLEL CALLS ----------
+  const [
+    eventUpdates,
+    eventGiveAways,
+    ticketings,
+    similarEvents,
+    moreFromOrganizerRaw
+  ] = await Promise.all([
+    getUpdatesByEventIdService(id),
+    getGiveawaysByEventIdService(id, timezone),
+    getTicketings({ timezone, eventId: id }),
+    getRecommendedEvents(id, { page: 1, limit: 10 }),
+    eventRepo.getMoreFromOrganizerEvents(
+      userId,
       {
-        "title": "Early Bird Tickets",
-        "description": "This is a sample update for the event.",
-        "date": "2024-10-01 10:00 AM"
+        _id: { $ne: event._id },
+        "basicInfo.organization": event.basicInfo?.organization,
+        status: "active",
+        "schedule.endDateTime": { $gte: now },
       },
-      {
-        "title": "Entertainment",
-        "description": "Live performances by top artists.",
-        "date": "2024-10-05 02:00 PM"
-      }
-    ],
-    giveaways: [],
+      1,
+      10
+    )
+  ]);
+
+  const announcements = {
+    updates: eventUpdates || [],
+    giveaways: eventGiveAways || [],
   };
 
-  const ticketings = await getTicketings({ timezone, eventId: id });
-  // TODO 
-  const loyaltyPrograms = []
-
-  const similarEvents = await getRecommendedEvents(id, {
-    page: 1,
-    limit: 10,
-  });
-
-
-  let moreFromOrganizer = await eventRepo.getMoreFromOrganizerEvents(userId, {
-    _id: { $ne: event._id },
-    "basicInfo.organization": event.basicInfo?.organization,
-    status: "active",
-    "schedule.endDateTime": { $gte: now },
-  }, 1, 10);
-
-  moreFromOrganizer = moreFromOrganizer.map(e => formatMoreFromOrganizerEventResponse(e, { userLocation, timezone }));
+  // ---------- FORMAT IN PLACE ----------
+  const moreFromOrganizer = (moreFromOrganizerRaw || []).map(e =>
+    formatMoreFromOrganizerEventResponse(e, { userLocation, timezone })
+  );
 
   const formattedEvent = formatEventResponse(event, { timezone });
-  const titles = await eventRepo.getVenueTypeTitles(event.basicInfo.venue);
-  const updatedEvent = attachVenueTypesToEvent(formattedEvent, titles);
-  let data = {
-    event: updatedEvent,
 
-    announcements: announcements || [],
+  // Venue lookup depends on formatted event → keep sequential
+  const titles = await eventRepo.getVenueTypeTitles(
+    event.basicInfo?.venue
+  );
+
+  const updatedEvent = attachVenueTypesToEvent(formattedEvent, titles);
+
+  return {
+    event: updatedEvent,
+    announcements,
     ticketings: ticketings || [],
-    loyaltyPrograms: loyaltyPrograms || [],
-    similarEvents: similarEvents.data || [],
-    moreFromOrganizer: moreFromOrganizer || [],
+    similarEvents: similarEvents?.data || [],
+    moreFromOrganizer,
   };
-  return data
 };
+
 
 
 const getEventIdByNanoid = async (nanoid) => {

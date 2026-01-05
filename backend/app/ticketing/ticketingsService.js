@@ -4,11 +4,7 @@ const ticketingRepo = require("./ticketingsRepository");
 
 const getTicketings = async ({ timezone, eventId }) => {
 
-  const query = { event: eventId, status: { $eq: "active" } };
-
-  let [ticketings] = await Promise.all([
-    ticketingRepo.getTicketingsWithFilters(query),
-  ]);
+  let ticketings = await ticketingRepo.getAvailableTicketings(eventId, timezone);
 
   // Attach availability first
   ticketings = await Promise.all(

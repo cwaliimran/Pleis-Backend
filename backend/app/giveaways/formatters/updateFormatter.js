@@ -3,23 +3,22 @@ const { getFullImageUrl } = require("../../../helperUtils/imageHelper");
 /**
  * Pure formatter for Update objects (safe for doc or plain object)
  */
-function formatUpdate(Update) {
-  if (!Update) return null;
+function formatGiveaway(item) {
+  if (!item) return null;
 
   // Handle both Mongoose doc and plain object
-  const cat = Update.toObject ? Update.toObject() : { ...Update };
-
+  const obj = item.toObject ? item.toObject() : { ...item };
   return {
-    ...cat,
-    image: getFullImageUrl(cat.image || "noimage.png"),
+    ...obj,
+    image: getFullImageUrl(obj.image || "noimage.png"),
   };
 }
 
 /**
- * Safe formatter for arrays of categories
+ * Safe formatter for arrays of giveaways
  */
-function formatCategories(categories = []) {
-  return categories.map(formatUpdate);
+function formatGiveaways(giveaways = []) {
+  return giveaways.map(formatGiveaway);
 }
 
-module.exports = { formatUpdate, formatCategories };
+module.exports = { formatGiveaway, formatGiveaways };
