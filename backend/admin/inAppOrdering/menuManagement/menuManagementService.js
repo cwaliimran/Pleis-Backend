@@ -9,13 +9,31 @@ const createMenu = async (data) => {
   let Menu = await MenuRepo.createMenu(data);
   return Menu;
 };
-const getMenu = async ({ activeMenutatus, pickupFilter, Menutatus, activeKeyword, timezone, page, limit, keyword, status, organizationId, date, range }) => {
+const getMenuItems = async ({ timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  organizer,
+  date,
+  range, }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { Menus, meta } = await MenuRepo.getMenu({ activeMenutatus, pickupFilter, Menutatus, activeKeyword, timezone, page, limit, keyword, status, organizationId, date, range, today, skip });
+  let { MenuItems, meta } = await MenuRepo.getMenuItems({
+    timezone,
+    page,
+    limit,
+    keyword,
+    status,
+    organizer,
+    date,
+    range,
+    today,
+    skip,
+  });
 
   return {
-    Menus,
+    MenuItems,
     meta
   };
 };
@@ -86,7 +104,34 @@ const updateMenu = async (id, data) => {
 
 
 
+const getEvents = async ({ timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  organizer,
+  date,
+  range, }) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
+  let { MenuItems, meta } = await MenuRepo.getEvents({
+    timezone,
+    page,
+    limit,
+    keyword,
+    status,
+    organizer,
+    date,
+    range,
+    today,
+    skip,
+  });
 
+  return {
+    MenuItems,
+    meta
+  };
+};
 
 const deleteMenu = async (id) => {
   const updated = await MenuRepo.findByIdAndUpdate(id, {
@@ -144,13 +189,54 @@ const getWinners = async ({ timezone, page, limit, keyword, status, userId, date
   };
 };
 
+
+
+
+
+
+
+
+
+const getMenuItemCategories = async ({ timezone,
+  page,
+  limit,
+  keyword,
+  status,
+
+  date,
+  range, }) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
+  let { MenuItems, meta } = await MenuRepo.getMenuItemCategories({
+    timezone,
+    page,
+    limit,
+    keyword,
+    status,
+    
+    date,
+    range,
+    today,
+    skip,
+  });
+
+  return {
+    MenuItems,
+    meta
+  };
+};
+
+
+
 module.exports = {
   createMenu,
-  getMenu,
+  getMenuItems,
   updateMenu,
   deleteMenu,
   getevents,
   gettickets,
-  getWinners
+  getWinners,
+  getMenuItemCategories,
+  getEvents
 
 };

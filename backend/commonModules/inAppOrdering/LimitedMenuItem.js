@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 
 const menuItemsSchema = new mongoose.Schema(
   {
-
     image: {
       type: String,
       default: "",
@@ -17,26 +16,13 @@ const menuItemsSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    type: {
-      type: String,
-      default: "",
-    },
-
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "MenuIitetemCategories",
       required: true,
     },
 
-    basePrice: {
-      type: Number,
-      default: 0,
-    },
-    discountPrice: {
-      type: Number,
-      default: 0,
-    },
-    taxPercent: {
+    price: {
       type: Number,
       default: 0,
     },
@@ -47,14 +33,11 @@ const menuItemsSchema = new mongoose.Schema(
       required: true,
     },
 
-
-    startTime: {
+    startDateTime: {
       type: Date,
       default: null,
     },
-
-
-    endTime: {
+    endDateTime: {
       type: Date,
       default: null,
     },
@@ -64,43 +47,16 @@ const menuItemsSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    upSellItem: {
+      type: Boolean,
+        default: false,
+    },
 
     status: {
       type: String,
       enum: ["active", "inactive", "deleted"],
       default: "active",
     },
-
-
-    //in case of limited time offer
-    isLimitedTimeOffer: {
-      type: Boolean,
-      default: false,
-    },
-    startDate: {
-      type: Date,
-      default: null,
-    },
-    endDate: {
-      type: Date,
-      default: null,
-    },
-    event: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Events",
-      required: true,
-    },
-    availabilityType: {
-      type: String,
-      enum: ['preOrdersOnly', 'preOrdersEvent', 'preOrderExclusive'],
-      default: null
-    }
-    ,
-    upSellItem: {
-      type: Boolean,
-      default: false,
-    },
-
   },
   {
     timestamps: true,
