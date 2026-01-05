@@ -3,8 +3,9 @@
 const eventRepo = require("./eventRepository");
 const _ = require("lodash");
 const { formatEventResponse } = require("./formatter/eventFormatter");
+const { formatEventAttendeesResponse } = require("./formatter/eventAttendeesFormatter");
 
-const getEvents = async ({ page, limit, keyword, status, startDate, endDate, organization, timezone, filter }) => {
+const getEvents = async ({ page, limit, keyword, startDate, endDate, organization, timezone, filter }) => {
   const query = {};
   // ALWAYS exclude templates events
   //templates event are only for internal use to generate occurrences
@@ -17,17 +18,9 @@ const getEvents = async ({ page, limit, keyword, status, startDate, endDate, org
     },
   ];
 
-  if (status) {
-    query.status = status;
-    //if status is active then also check dates are not past
-    if (status === "active" && filter !== "") {
-      query["schedule.endDateTime"] = { $gte: new Date() };
-    }
-  } else {
-    query.status = { $ne: "deleted" };
-    //remove template events from normal listing
-    query["recurringMeta.isTemplate"] = { $ne: true };
-  }
+  query.status = { $ne: "deleted" };
+  //remove template events from normal listing
+  query["recurringMeta.isTemplate"] = { $ne: true };
 
   if (organization) {
     query["basicInfo.organization"] = organization;
@@ -75,13 +68,33 @@ const getEvents = async ({ page, limit, keyword, status, startDate, endDate, org
 };
 
 const getEventDetails = async (id, timezone) => {
-  const [event] = await Promise.all([eventRepo.findEventById(id),
+  const [event, audienceAnalytics, ticketAttendanceAnalytics] = await Promise.all([eventRepo.findEventById(id),
+  eventRepo.getEventAudienceAnalytics(id),
+  eventRepo.getEventTicketAttendanceAnalytics(id)
   ])
-  let data = formatEventResponse(event, { timezone });
-  return data
+  // let data = formatEventResponse(event, { timezone });
+  // data.audienceAnalytics = audienceAnalytics;
+  // data.ticketAttendanceAnalytics = ticketAttendanceAnalytics;
+  return ticketAttendanceAnalytics
 };
+
+const getEventAttendeesService = async (eventId, keyword, page, limit, skip) => {
+  let data = await eventRepo.getEventAttendees({ eventId, keyword, page, limit, skip });
+  let attendees = data.data.map(attendee => formatEventAttendeesResponse(attendee));
+  return { attendees, meta: data.meta };
+}
+
+// SERVICE
+const checkInEventAttendeeService = async (eventId, ticketBookingId, scannedBy) => {
+  return eventRepo.checkInEventAttendee(eventId, ticketBookingId, scannedBy);
+};
+
+
+
 
 module.exports = {
   getEvents,
   getEventDetails,
+  getEventAttendeesService,
+  checkInEventAttendeeService
 };
