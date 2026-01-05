@@ -3,11 +3,12 @@ const { nanoid } = require("nanoid");
 
 const giveawaySchema = new mongoose.Schema(
   {
-        title: {
+    title: {
       type: String,
       required: true,
       trim: true,
-      default: "",},
+      default: "",
+    },
     // Public identifier
     publicId: {
       type: String,
@@ -57,10 +58,10 @@ const giveawaySchema = new mongoose.Schema(
     },
 
     // Giveaway duration
-startDateTime: {
-  type: Date,
-  default: Date.now, 
-},
+    startDateTime: {
+      type: Date,
+      default: Date.now,
+    },
 
     endDateTime: {
       type: Date,
@@ -74,7 +75,7 @@ startDateTime: {
       enum: ["active", "inactive", "deleted"],
       default: "active",
     },
-        giveawayStatus: {
+    giveawayStatus: {
       type: String,
       enum: ["live", "completed", "ended", "upcoming"],
       default: "live",

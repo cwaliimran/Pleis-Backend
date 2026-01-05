@@ -509,6 +509,7 @@ const getReservationDetails = async (id) => {
       {
         $project: {
           organizationName: "$organization.basicInfo.name",
+          organizationLogo: "$organization.basicInfo.media.logo",
           eventName: "$event.basicInfo.title",
           eventStartDate: "$event.schedule.startDateTime",
           userName: { $concat: ["$user.firstName", " ", "$user.lastName"] },

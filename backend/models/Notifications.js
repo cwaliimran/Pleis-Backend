@@ -5,8 +5,11 @@ const NotificationTypes = {
   NEW_MESSAGE: "newMessage",
   SYSTEM: "system",
   REMINDER: "reminder",
-   EVENT_UPDATE: "eventUpdate",
-      GIVEAWAY_UPDATE: "giveawayUpdate",
+  EVENT_UPDATE: "eventUpdate",
+  EVENT_DETAILS: "eventDetails",
+  ORGANIZATION_DETAILS: "organizationDetails",
+  HOME: "home",
+  GIVEAWAY_UPDATE: "giveawayUpdate",
 };
 
 // Define the NotificationSchema

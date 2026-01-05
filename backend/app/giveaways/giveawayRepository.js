@@ -1,16 +1,16 @@
 const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
-const { generateMeta } = require("@utils/responseUtil");
+const { generateMeta, getCurrentDateInTimezone } = require("@utils/responseUtil");
 const mongoose = require("mongoose");
-const {Events}= require("@EventsModel");
+const { Events } = require("@EventsModel");
 const Giveaway = require("@GiveawayModel");
 const GiveawayParticipant = require("@GiveawayParticipantModel");
 const { TicketingOrders } = require("@TicketingOrdersModel");
-const  TicketingsModel  = require("@TicketingsModel");
+const TicketingsModel = require("@TicketingsModel");
 const Organizations = require("@OrganizationModel");
 const { UserReservations } = require("@UserReservationsModel");
 const { formatUpdate } = require("./formatters/updateFormatter");
-const {NotificationExp, NotificationTypes} = require("@NotificationsModel");
-const {sendUserNotifications} = require("../../controllers/communicationController");
+const { NotificationExp, NotificationTypes } = require("@NotificationsModel");
+const { sendUserNotifications } = require("../../controllers/communicationController");
 const getUserIdsForEvent = async (eventId) => {
   try {
 
@@ -79,7 +79,7 @@ const getGiveawayDetails = async (giveawayId) => {
   try {
     // Fetch the giveaway details by its ID
     const giveaway = await Giveaway.findById(giveawayId)
-      .populate("organization"); 
+      .populate("organization");
     if (!giveaway) {
       throw new Error("Giveaway not found");
     }
@@ -106,7 +106,7 @@ const createGiveaway = async (data) => {
     }
     const existingParticipation = await GiveawayParticipant.findOne({
       giveaway: data.giveaway,
-      user: data.user,  
+      user: data.user,
     });
     if (existingParticipation) {
       throw new Error("You have already participated in this giveaway.");
@@ -276,6 +276,13 @@ const getCreatorOrganizationId = async (organizationId) => {
   }
 };
 
+//get giveaways by event id
+const getGiveawaysByEventId = async (eventId, timezone) => {
+  let now = getCurrentDateInTimezone({ timezone });
+  let giveaways = await Giveaway.find({ event: eventId, status: { $eq: "active" }, endDateTime: { $gte: now } }).sort({ createdAt: -1 });
+  return giveaways;
+};
+
 
 module.exports = {
   createGiveaway,
@@ -283,5 +290,7 @@ module.exports = {
   findGiveawayById,
   findByIdAndUpdate,
   getUserIdsForEvent,
+  getGiveawaysByEventId,
+  getGiveawaysByEventId
 
 };

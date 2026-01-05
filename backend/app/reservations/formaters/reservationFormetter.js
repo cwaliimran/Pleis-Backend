@@ -98,23 +98,22 @@ const userReservationsFormatter = (item, timezone) => {
 
   const cat = item.toObject ? item.toObject() : { ...item };
 
-// ---------------------------
-// 1. HANDLE eventStartDate  → eventDate + eventTime
-// ---------------------------
-if (cat.eventStartDate) {
-  const start = moment(cat.eventStartDate);   // original UTC datetime
+  // ---------------------------
+  // 1. HANDLE eventStartDate  → eventDate + eventTime
+  // ---------------------------
+  if (cat.eventStartDate) {
+    const start = moment(cat.eventStartDate);   // original UTC datetime
 
-  // Extract date
-  cat.eventDate = start.format("YYYY-MM-DD");
+    // Extract date
+    cat.eventDate = start.format("YYYY-MM-DD");
 
-  // Extract time in AM/PM converted to user's timezone
-  cat.eventTime = convertUtcToTimezoneAMPM(start.toISOString(), timezone);
-   delete cat.eventStartDate;
-}
-    cat.profileIcon = getFullImageUrl(cat.profileIcon || "noimage.png");
-        cat.organizationCover = getFullImageUrl(cat.organizationCover || "noimage.png");
-
-            cat.organizationLogo = getFullImageUrl(cat.organizationLogo || "noimage.png");
+    // Extract time in AM/PM converted to user's timezone
+    cat.eventTime = convertUtcToTimezoneAMPM(start.toISOString(), timezone);
+    delete cat.eventStartDate;
+  }
+  cat.profileIcon = getFullImageUrl(cat.profileIcon || "noimage.png");
+  cat.organizationCover = getFullImageUrl(cat.organizationCover || "noimage.png");
+  cat.organizationLogo = getFullImageUrl(cat.organizationLogo || "noimage.png");
   // ---------------------------
   // 2. HANDLE dateTimeSlots ARRAY
   // ---------------------------
@@ -172,4 +171,4 @@ const logQRCode = async (reservation) => {
   }
 };
 
-module.exports = {logQRCode, reservationsFormatter,reservationsFormatterAdjustDates,userReservationsFormatter };
+module.exports = { logQRCode, reservationsFormatter, reservationsFormatterAdjustDates, userReservationsFormatter };

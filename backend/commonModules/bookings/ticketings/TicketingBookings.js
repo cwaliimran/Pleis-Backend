@@ -82,6 +82,21 @@ const ticketingBookingSchema = new mongoose.Schema(
             enum: ["valid", "cancelled", "used"],
             default: "valid",
         },
+        
+        checkInHistory: {
+            type: [
+                {
+                    checkedInAt: { type: Date, default: Date.now },
+                    scannedBy: {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: "User",
+                        default: null
+                    }
+                }
+            ],
+            default: []
+        }
+
     },
     { timestamps: true }
 );

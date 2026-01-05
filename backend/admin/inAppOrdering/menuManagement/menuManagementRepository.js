@@ -1,19 +1,12 @@
-const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
+
 const { generateMeta } = require("@utils/responseUtil");
 const mongoose = require("mongoose");
-const {Events}= require("@EventsModel");
-const Menu = require("@MenuModel");
-const { TicketingMenu } = require("@TicketingMenuModel");
-const  TicketingsModel  = require("@TicketingsModel");
 const Organizations = require("@OrganizationModel");
 const { UserReservations } = require("@UserReservationsModel");
-const { formatUpdate } = require("../formatters/updateFormatter");
-const {NotificationExp, NotificationTypes} = require("@NotificationsModel");
-const Menus = require("@MenusModel");
 const MenuItems = require("@MenuItemsModel");
-const MenuMenu = require("@MenuModel");
-const {sendUserNotifications} = require("../../../controllers/communicationController");
-const { formatMenuForUI } = require("../formatters/formatMenuForUI");
+const {Events} = require("@EventsModel");
+const MenuItemCategories = require("@MenuItemCategoriesModel");
+const { sendUserNotifications } = require("../../../controllers/communicationController");
 const getUserIdsForEvent = async (eventId) => {
   try {
 
@@ -87,163 +80,51 @@ const createMenu = async (data) => {
 
     const update = new Menu(data);
     await update.save();
-        await sendUserNotifications({
-            recipientIds: userIds, 
-            title: update.title,
-            body: `A new Menu is live join now : ${update._id}`,
-            data: { type: NotificationTypes.Menu_UPDATE, objectType: "group",MenuId: update._id },
-            sender: update.creator,
-            objectId: update.event,
-          });
+    await sendUserNotifications({
+      recipientIds: userIds,
+      title: update.title,
+      body: `A new Menu is live join now : ${update._id}`,
+      data: { type: NotificationTypes.Menu_UPDATE, objectType: "group", MenuId: update._id },
+      sender: update.creator,
+      objectId: update.event,
+    });
 
-    return update; 
+    return update;
   } catch (err) {
-    throw new Error("Error saving update: " + err.message); 
+    throw new Error("Error saving update: " + err.message);
   }
 };
 
 
-const getMenu = async ({
-  timezone,
+const getMenuItems = async ({
   page,
   limit,
-  keyword,
-  status,
-  organizationId,
-  date,
   skip,
-  pickupFilter,
-  Menutatus,
-  activeMenutatus
+  organizer, // Creator (organizer)
 }) => {
-  const menus = await Menus.find({
-    organization: organizationId,
-    status: "active"
-  }).select("_id").lean();
-
-  if (!menus.length) {
-    return { Menus: [], meta: generateMeta(page, limit, 0) };
-  }
-  const menuIds = menus.map(m => m._id);
+  // Step 1: Find MenuItems by organizer (creator)
   const menuItems = await MenuItems.find({
-    menu: { $in: menuIds },
-    status: "active"
-  }).select("_id menu").lean();
+    creator: organizer, // Filter by creator (organizer)
+    status: "active" // Only active items
+  })
+    .select("_id title") // Select only _id and title fields
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
   if (!menuItems.length) {
-
-    return { Menus: [], meta: generateMeta(page, limit, 0) };
+    return { MenuItems: [], meta: generateMeta(page, limit, 0) };
   }
 
-  const menuItemIds = menuItems.map(i => i._id);
-const keywordMatch =
-  keyword && keyword.trim()
-    ? {
-        $match: {
-          $or: [
-            { "user.firstName": { $regex: keyword, $options: "i" } },
-            { "user.userlastName": { $regex: keyword, $options: "i" } },
-            { "user.email": { $regex: keyword, $options: "i" } }
-          ]
-        }
-      }
-    : null;
+  const totalFiltered = await MenuItems.countDocuments({
+    creator: organizer,
+    status: "active",
+  });
 
-const pipeline = [
-  {
-    $match: {
-      ...(status && { status }),
-      ...(date && {
-        createdAt: {
-          $gte: new Date(date),
-          $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1))
-        }
-      }),
-      "items.menuItem": { $in: menuItemIds }
-    }
-  },
-
-  // 🔹 Ensure ObjectId
-  {
-    $addFields: {
-      userObjectId: {
-        $cond: [
-          { $eq: [{ $type: "$user" }, "objectId"] },
-          "$user",
-          { $toObjectId: "$user" }
-        ]
-      }
-    }
-  },
-
-  // 🔹 Lookup user
-  {
-    $lookup: {
-      from: "users",
-      localField: "userObjectId",
-      foreignField: "_id",
-      as: "userInfo"
-    }
-  },
-
-  // 🔹 Build user {}
-  {
-    $addFields: {
-      user: {
-        _id: "$userObjectId",
-        username: { $arrayElemAt: ["$userInfo.username", 0] },
-        firstName: { $arrayElemAt: ["$userInfo.firstName", 0] },
-        userlastName: { $arrayElemAt: ["$userInfo.lastName", 0] },
-        email: { $arrayElemAt: ["$userInfo.email", 0] }
-      }
-    }
-  },
-
-  // ✅ 🔍 KEYWORD SEARCH GOES HERE
-  ...(keywordMatch ? [keywordMatch] : []),
-
-  // 🔹 Cleanup
-  {
-    $project: {
-      userInfo: 0,
-      userObjectId: 0
-    }
-  },
-
-  { $sort: { createdAt: -1 } },
-
-  {
-    $facet: {
-      data: [
-        { $skip: skip },
-        ...(limit === 0 ? [] : [{ $limit: limit }])
-      ],
-      totalFiltered: [{ $count: "count" }]
-    }
-  }
-];
-
-
-
-
-
-
-  // 4️⃣ Run aggregation
-  const result = await MenuMenu.aggregate(pipeline);
-
-
-  if (!result?.[0]) {
-
-    return { Menus: [], meta: generateMeta(page, limit, 0) };
-  }
-
-  const Menus = result[0].data || [];
-  const totalFiltered = result[0]?.totalFiltered?.[0]?.count || 0;
-
-
-const formated =formatMenuForUI(Menus, Menutatus,activeMenutatus,pickupFilter);
+  // Step 2: Return the simplified response with meta
   const meta = generateMeta(page, limit, totalFiltered);
 
-  return { Menus: formated, meta };
+  return { MenuItems: menuItems, meta };
 };
 
 
@@ -281,12 +162,73 @@ const getCreatorOrganizationId = async (organizationId) => {
 
 
 
+const getMenuItemCategories = async ({
+  page,
+  limit,
+  skip,
+}) => {
+  // Step 1: Find MenuItems by organizer (creator)
+  const menuItems = await MenuItemCategories.find({
+    status: "active" // Only active items
+  })
+    .select("_id title") // Select only _id and title fields
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
+  if (!menuItems.length) {
+    return { MenuItems: [], meta: generateMeta(page, limit, 0) };
+  }
+
+  const totalFiltered = await MenuItemCategories.countDocuments({
+    status: "active",
+  });
+
+  // Step 2: Return the simplified response with meta
+  const meta = generateMeta(page, limit, totalFiltered);
+
+  return { MenuItems: menuItems, meta };
+};
+
+
+
+
+const getEvents = async ({
+  page,
+  limit,
+  skip,
+  organizer, // Creator (organizer)
+}) => {
+  // Step 1: Find MenuItems by organizer (creator)
+  const menuItems = await Events.find({
+    creator: organizer, // Filter by creator (organizer)
+    status: "active" // Only active items
+  })
+    .select("_id basicInfo.title") // Select only _id and title fields
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
+  if (!menuItems.length) {
+    return { MenuItems: [], meta: generateMeta(page, limit, 0) };
+  }
+
+  const totalFiltered = await Events.countDocuments({
+    creator: organizer,
+    status: "active",
+  });
+
+  // Step 2: Return the simplified response with meta
+  const meta = generateMeta(page, limit, totalFiltered);
+
+  return { MenuItems: menuItems, meta };
+};
 
 
 module.exports = {
-  getMenu,
+  getMenuItems,
   findMenuById,
   findByIdAndUpdate,
-
-
+  getMenuItemCategories,
+  getEvents
 };
