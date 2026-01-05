@@ -40,17 +40,20 @@ const menuItemsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    
+
     menu: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Menus",
       required: true,
     },
 
+
     startTime: {
       type: Date,
       default: null,
     },
+
+
     endTime: {
       type: Date,
       default: null,
@@ -62,11 +65,42 @@ const menuItemsSchema = new mongoose.Schema(
       required: true,
     },
 
-    status: { 
+    status: {
       type: String,
       enum: ["active", "inactive", "deleted"],
       default: "active",
     },
+
+
+    //in case of limited time offer
+    isLimitedTimeOffer: {
+      type: Boolean,
+      default: false,
+    },
+    startDate: {
+      type: Date,
+      default: null,
+    },
+    endDate: {
+      type: Date,
+      default: null,
+    },
+    event: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Events",
+      required: true,
+    },
+    availabilityType: {
+      type: String,
+      enum: ['preOrdersOnly', 'preOrdersEvent', 'preOrderExclusive'],
+      default: null
+    }
+    ,
+    upSellItem: {
+      type: Boolean,
+      default: false,
+    },
+
   },
   {
     timestamps: true,

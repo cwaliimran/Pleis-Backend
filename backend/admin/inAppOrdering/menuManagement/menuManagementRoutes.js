@@ -3,6 +3,7 @@ const {
   createMenu,
   getMenuItems,
   getMenuItemCategories,
+  getEvents,
   updateMenu,
   deleteMenu,
   getevents,
@@ -24,6 +25,7 @@ const MenuRateLimiter = createRateLimiter("Menu");
 
 // router.post("/", roleMiddleware(["admin"]), MenuRateLimiter, createMenu);
 router.get("/menu-items", roleMiddleware(["admin"]), getMenuItems);
+router.get("/events", roleMiddleware(["admin"]), getEvents);
 router.get("/menu-item-categories", roleMiddleware(["admin"]), getMenuItemCategories);
 
 

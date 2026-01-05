@@ -236,8 +236,51 @@ const getMenuItemCategories = async (req, res) => {
 };
 
 
+const getEvents = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let { keyword, status , date, range ,organizer} = req.query;
+  try {
+if(!organizer){
+  return sendResponse({
+    res,
+    statusCode: 400,
+    translationKey: "organizer_id_is_required",
+  });
+}
+
+    organizer = new  mongoose.Types.ObjectId(organizer); 
+    const timezone = req.user.timezone;
+    const { MenuItems, meta } = await Menuervice.getEvents({
+      timezone,
+      page,
+      limit,
+      keyword,
+      status,
+      organizer,
+      date,
+      range,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "Menu_fetched_successfully",
+      data: MenuItems,
+      meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 module.exports = {
   getMenuItems,
   updateMenu,
-  getMenuItemCategories
+  getMenuItemCategories,
+  getEvents
 };

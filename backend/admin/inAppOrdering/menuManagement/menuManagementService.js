@@ -104,7 +104,34 @@ const updateMenu = async (id, data) => {
 
 
 
+const getEvents = async ({ timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  organizer,
+  date,
+  range, }) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
+  let { MenuItems, meta } = await MenuRepo.getEvents({
+    timezone,
+    page,
+    limit,
+    keyword,
+    status,
+    organizer,
+    date,
+    range,
+    today,
+    skip,
+  });
 
+  return {
+    MenuItems,
+    meta
+  };
+};
 
 const deleteMenu = async (id) => {
   const updated = await MenuRepo.findByIdAndUpdate(id, {
@@ -209,6 +236,7 @@ module.exports = {
   getevents,
   gettickets,
   getWinners,
-  getMenuItemCategories
+  getMenuItemCategories,
+  getEvents
 
 };

@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const Organizations = require("@OrganizationModel");
 const { UserReservations } = require("@UserReservationsModel");
 const MenuItems = require("@MenuItemsModel");
+const {Events} = require("@EventsModel");
 const MenuItemCategories = require("@MenuItemCategoriesModel");
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const getUserIdsForEvent = async (eventId) => {
@@ -190,9 +191,44 @@ const getMenuItemCategories = async ({
 };
 
 
+
+
+const getEvents = async ({
+  page,
+  limit,
+  skip,
+  organizer, // Creator (organizer)
+}) => {
+  // Step 1: Find MenuItems by organizer (creator)
+  const menuItems = await Events.find({
+    creator: organizer, // Filter by creator (organizer)
+    status: "active" // Only active items
+  })
+    .select("_id basicInfo.title") // Select only _id and title fields
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
+  if (!menuItems.length) {
+    return { MenuItems: [], meta: generateMeta(page, limit, 0) };
+  }
+
+  const totalFiltered = await Events.countDocuments({
+    creator: organizer,
+    status: "active",
+  });
+
+  // Step 2: Return the simplified response with meta
+  const meta = generateMeta(page, limit, totalFiltered);
+
+  return { MenuItems: menuItems, meta };
+};
+
+
 module.exports = {
   getMenuItems,
   findMenuById,
   findByIdAndUpdate,
-  getMenuItemCategories
+  getMenuItemCategories,
+  getEvents
 };
