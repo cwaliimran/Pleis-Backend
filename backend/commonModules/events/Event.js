@@ -123,7 +123,7 @@ const eventSchema = new mongoose.Schema(
       },
     },
 
-    recurringMeta: {
+    recurringMeta: {  // only for recurring events
       isTemplate: {
         type: Boolean,
         default: false,

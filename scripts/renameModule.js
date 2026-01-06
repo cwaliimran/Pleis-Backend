@@ -4,8 +4,8 @@ const path = require("path");
 // ============== CONFIG ==============
 const currentDir = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/admin/browserControl/popularEvents"; // Directory to process
 
-const oldSingular = "TopPromo";
-const oldPlural = "TopPromos";
+const oldSingular = "Bundle";
+const oldPlural = "Bundles";
 const newSingular = "PopularEvent";
 const newPlural = "PopularEvents";
 // =====================================

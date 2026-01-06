@@ -1,21 +1,20 @@
 // services/eventService.js
 
 const { getCurrentDateInTimezone, convertUtcToTimezone, generateMeta } = require("../../helperUtils/responseUtil");
-const Organizations = require("@OrganizationModel");
 const eventRepo = require("./eventRepository");
-const _ = require("lodash");
 const { formatEventResponse } = require("./formatter/eventFormatter");
 const { getTicketingsByEventId } = require("../ticketing/ticketingsService");
 const { generateImmediatelyForTemplate } = require("../../commonModules/events/crons/recurringEvents.core");
+const { Events } = require("@EventsModel");
 
 const createEvent = async ({ data, ticketingData }, timezone) => {
   let event = await eventRepo.createEvent(data, ticketingData);
   if (!event) return null;
 
   if (event?.recurringMeta?.isTemplate) {
-  // Fire-and-forget or await (recommended)
-  await generateImmediatelyForTemplate(event._id);
-}
+    // Fire-and-forget or await (recommended)
+    await generateImmediatelyForTemplate(event._id);
+  }
 
 
   return formatEventResponse(event, { timezone });
@@ -23,8 +22,8 @@ const createEvent = async ({ data, ticketingData }, timezone) => {
 
 const getEvents = async ({ page, limit, keyword, status, creator, startDate, endDate, organization, timezone }) => {
   const query = {};
-    // ALWAYS exclude templates events
-    //templates event are only for internal use to generate occurrences
+  // ALWAYS exclude templates events
+  //templates event are only for internal use to generate occurrences
   query.$and = [
     {
       $or: [
@@ -92,7 +91,6 @@ const getMinimalEventsInfo = async ({ organization, timezone }) => {
   const query = {
     status: "active"
   };
-  console.log("organization",organization );
   if (organization) {
     query["basicInfo.organization"] = organization;
   }
@@ -111,7 +109,8 @@ const getMinimalEventsInfo = async ({ organization, timezone }) => {
 };
 
 const getPublicEvents = async ({ page, limit, keyword, timezone = "Asia/Karachi" }) => {
-  const query = { status: "active" };
+  //remove template events from public listing
+  const query = { status: "active", "recurringMeta.isTemplate": { $ne: true } };
   if (keyword) {
     query.$or = [
       { title: { $regex: keyword, $options: "i" } },
@@ -153,7 +152,7 @@ const updateEventsWithVenueLocation = async (venueId, location) => {
 };
 
 
-const updateEvent = async (id, data) => {
+/* const updateEvent = async (id, data, scope) => {
   const event = await eventRepo.findEventById(id);
   if (!event) return null;
 
@@ -274,17 +273,62 @@ const updateEvent = async (id, data) => {
 
   await event.save();
   return event;
+}; */
+
+
+
+const deleteEvent = async (eventId, scope = "single") => {
+  const event = await Events.findById(eventId);
+
+  if (!event) return null;
+
+  const { recurringMeta } = event;
+
+  // ==================================================
+  // CASE 1: Not part of recurring series
+  // ==================================================
+  if (!recurringMeta || (!recurringMeta.isTemplate && !recurringMeta.parentEvent)) {
+    await Events.updateOne(
+      { _id: eventId },
+      { status: "deleted" }
+    );
+
+    return { deleted: 1 };
+  }
+
+  // ==================================================
+  // CASE 2: DELETE ONLY THIS OCCURRENCE
+  // ==================================================
+  if (scope === "single") {
+    await Events.updateOne(
+      { _id: eventId },
+      { status: "deleted" }
+    );
+
+    return { deleted: 1 };
+  }
+
+  // ==================================================
+  // CASE 3: DELETE THIS + FUTURE OCCURRENCES
+  // ==================================================
+  const parentId = recurringMeta.parentEvent || event._id;
+  const occurrenceIndex = recurringMeta.occurrenceIndex;
+
+  const result = await Events.updateMany(
+    {
+      "recurringMeta.parentEvent": parentId,
+      "recurringMeta.occurrenceIndex": { $gte: occurrenceIndex },
+      status: { $ne: "deleted" }
+    },
+    { $set: { status: "deleted" } }
+  );
+
+  return {
+    deleted: result.modifiedCount,
+    scope: "future"
+  };
 };
 
-
-
-const deleteEvent = async (id) => {
-  const updated = await eventRepo.findByIdAndUpdate(id, {
-    status: "deleted",
-  });
-  if (!updated) return null;
-  return true;
-};
 
 const getEventDetails = async (id, timezone) => {
   const [event, ticketing] = await Promise.all([eventRepo.findEventById(id),
@@ -316,7 +360,6 @@ module.exports = {
   getEvents,
   getEventIdByNanoid,
   cloneEvent,
-  updateEvent,
   deleteEvent,
   getPublicEvents,
   getEventDetails,

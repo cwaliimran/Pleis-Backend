@@ -18,7 +18,7 @@ const TicketingsModel = require("@TicketingsModel");
 // CONFIG
 // ======================================================
 const HORIZON_DAYS = 7; // create events N days ahead
-const DAY_MS = 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000; // milliseconds in a day
 
 // ======================================================
 // DATE HELPERS (UTC SAFE)
@@ -81,10 +81,9 @@ const runRecurringEventsCron = async () => {
 // ======================================================
 const processTemplate = async (template, horizonDate) => {
   // Existing upcoming occurrences (avoid duplicates)
-  const existing = await Events.find({
-    "recurringMeta.parentEvent": template._id,
-    "schedule.startDateTime": { $gte: new Date() },
-  }).select("schedule.startDateTime recurringMeta.occurrenceIndex");
+const existing = await Events.find({
+  "recurringMeta.parentEvent": template._id
+}).select("schedule.startDateTime recurringMeta.occurrenceIndex");
 
   const existingKeySet = new Set(
     existing.map(e => e.schedule.startDateTime.getTime())
@@ -106,7 +105,7 @@ const processTemplate = async (template, horizonDate) => {
       ? lastOccurrence.recurringMeta.occurrenceIndex + 1
       : 1;
 
-  const dates = getUpcomingDates(template, horizonDate, existingCount);
+const dates = await getUpcomingDates(template, horizonDate, existingCount);
 
   for (const date of dates) {
     const key = date.getTime();
@@ -120,10 +119,22 @@ const processTemplate = async (template, horizonDate) => {
 // ======================================================
 // GENERATE UPCOMING DATES
 // ======================================================
-const getUpcomingDates = (template, horizonDate, existingCount) => {
+const getUpcomingDates = async (template, horizonDate, existingCount) => {
   const rule = template.schedule.recurringDetails;
-  const baseStart = new Date(template.schedule.startDateTime);
+
+  // REAL ANCHOR: first occurrence, NOT template
+  const firstOccurrence = await Events.findOne({
+    "recurringMeta.parentEvent": template._id
+  })
+  .sort({ "recurringMeta.occurrenceIndex": 1 })
+  .select("schedule.startDateTime");
+
+  const baseStart = firstOccurrence
+    ? new Date(firstOccurrence.schedule.startDateTime)
+    : new Date(template.schedule.startDateTime);
+
   const baseDay = startOfDayUTC(baseStart);
+
 
   const today = startOfDayUTC(new Date());
   let cursor = baseDay > today ? baseDay : today;
