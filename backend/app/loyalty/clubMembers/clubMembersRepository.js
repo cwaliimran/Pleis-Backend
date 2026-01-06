@@ -37,7 +37,7 @@ const getCompanyLoyaltyProfile = async (companyOrganizer) => {
 
 
   if (!companyDoc) return null;
-  companyDoc.companyDetails.totalMembers = totalMembers;
+  companyDoc.companyDetails.totalMembers = totalMembers || 0;
   return {
     companyDetails: companyDoc.companyDetails,
   };

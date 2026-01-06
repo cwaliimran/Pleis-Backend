@@ -4,6 +4,7 @@ const eventRepo = require("./eventRepository");
 const _ = require("lodash");
 const { formatEventResponse } = require("./formatter/eventFormatter");
 const { formatEventAttendeesResponse } = require("./formatter/eventAttendeesFormatter");
+const { formatTicketing } = require("../../app/ticketing/fomatter/formatTicketing");
 
 const getEvents = async ({ page, limit, keyword, startDate, endDate, organization, timezone, filter }) => {
   const query = {};
@@ -67,15 +68,23 @@ const getEvents = async ({ page, limit, keyword, startDate, endDate, organizatio
   };
 };
 
-const getEventDetails = async (id, timezone) => {
-  const [event, audienceAnalytics, ticketAttendanceAnalytics] = await Promise.all([eventRepo.findEventById(id),
-  eventRepo.getEventAudienceAnalytics(id),
-  eventRepo.getEventTicketAttendanceAnalytics(id)
+const getEventDetails = async (eventId, timezone, ticketId) => {
+  const [event, eventTicketings, ticketAttendanceAnalytics, audienceAnalytics] = await Promise.all([eventRepo.findEventById(eventId),
+  eventRepo.getTicketingsByEventId(eventId, ticketId),
+  eventRepo.getEventTicketAttendanceAnalytics(eventId, ticketId),
+  eventRepo.getEventAudienceAnalytics(eventId, ticketId),
   ])
-  // let data = formatEventResponse(event, { timezone });
-  // data.audienceAnalytics = audienceAnalytics;
-  // data.ticketAttendanceAnalytics = ticketAttendanceAnalytics;
-  return ticketAttendanceAnalytics
+  let formattedEvent = formatEventResponse(event, { timezone });
+  let data = { event: formattedEvent };
+
+  const formattedTicketings = eventTicketings.map((item) => formatTicketing(timezone, item));
+  data.ticketings = formattedTicketings;
+
+  data.ticketAttendanceAnalytics = ticketAttendanceAnalytics;
+  data.audienceAnalytics = audienceAnalytics;
+
+
+  return data;
 };
 
 const getEventAttendeesService = async (eventId, keyword, page, limit, skip) => {
