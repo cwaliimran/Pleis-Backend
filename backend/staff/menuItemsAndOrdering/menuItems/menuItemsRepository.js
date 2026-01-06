@@ -30,7 +30,16 @@ const findMenuItemById = async (id) => {
 };
 
 const getMenuIdByOrganization = async (organizationId) => {
-  return await Menus.findOne({ organization: organizationId, status: "active" }).select("_id");
+  return await Menus.findOne({ organization: organizationId, status: "active" }).select("_id isOrderingEnabled");
+}
+
+const updateMenuStock = async ({ type, menu }) => {
+  //allInStock="all status active", allOutOfStock="all status inactive"
+  let statusToSet = type === "allInStock" ? "active" : "inactive";
+  return await MenuItems.updateMany(
+    { menu: new mongoose.Types.ObjectId(menu) },
+    { $set: { status: statusToSet } }
+  ).lean();
 }
 
 module.exports = {
@@ -38,6 +47,7 @@ module.exports = {
   countMenuItems,
   findMenuItemById,
   getMenuIdByOrganization,
-  getOrganizationIdByMenuItemId
+  getOrganizationIdByMenuItemId,
+  updateMenuStock
 
 };

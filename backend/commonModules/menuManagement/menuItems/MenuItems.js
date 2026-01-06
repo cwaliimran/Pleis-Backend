@@ -88,14 +88,13 @@ const menuItemsSchema = new mongoose.Schema(
     event: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Events",
-      required: true,
+      default: null,
     },
     availabilityType: {
       type: String,
       enum: ['preOrdersOnly', 'preOrdersEvent', 'preOrderExclusive'],
       default: null
-    }
-    ,
+    },
     upSellItem: {
       type: Boolean,
       default: false,

@@ -21,11 +21,11 @@ const menusSchema = new mongoose.Schema(
       required: true,
     },
     creator: {
-      type: mongoose.Schema.Types.ObjectId, 
+      type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-isOrderingEnabled: {
+    isOrderingEnabled: { //if currently accepting orders
       type: Boolean,
       default: true,
     },
