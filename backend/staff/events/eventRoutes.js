@@ -7,7 +7,6 @@ const {
 } = require("./eventController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
-const roleMiddleware = require("../../middlewares/roleMiddleware");
 
 const router = express.Router();
 
@@ -26,7 +25,7 @@ router.get("/:id/attendees", getEventAttendees);
 router.post("/:id/checkin/:ticketBookingId", checkInEventAttendee);
 
 //get event details
-router.get("/:id", getEventDetails);
+router.post("/:id", getEventDetails);
 
 
 module.exports = router;

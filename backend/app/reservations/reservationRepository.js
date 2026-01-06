@@ -508,6 +508,7 @@ const getReservationDetails = async (id) => {
       // Project Final fields
       {
         $project: {
+          organizationId: "$organization._id",
           organizationName: "$organization.basicInfo.name",
           organizationLogo: "$organization.basicInfo.media.logo",
           eventName: "$event.basicInfo.title",

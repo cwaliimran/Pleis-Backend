@@ -1,11 +1,12 @@
 // repositories/eventRepository.js
 const { Events } = require("@EventsModel");
 const TicketingsModel = require("@TicketingsModel");
-const { getModelCounts, } = require('@dbUtils/queryUtil');
 const { TicketingOrders } = require("../../commonModules/bookings/ticketings/TicketingOrders");
 const mongoose = require("mongoose");
 const { TicketingBookings } = require("../../commonModules/bookings/ticketings/TicketingBookings");
 const { generateMeta } = require("../../helperUtils/responseUtil");
+const { getWithFilters, getModelCounts } = require("@dbUtils/queryUtil");
+
 // Get all with filters
 const getEventsWithFilters = async (query, skip, limit) => {
   return Events.find(query).select("basicInfo schedule")
@@ -44,15 +45,19 @@ const findEventById = async (id) => {
   // });
 };
 
-const getEventAudienceAnalytics = async (eventId) => {
-  const rows = await TicketingOrders.aggregate([
+
+const getEventAudienceAnalytics = async (eventId, ticketId = null) => {
+  const rows = await TicketingBookings.aggregate([
     {
       $match: {
-        event: new mongoose.Types.ObjectId(eventId),
-        status: { $in: ["confirmed", "completed"] }
+        "ticket.snapshot.event": new mongoose.Types.ObjectId(eventId),
+        ...(ticketId
+          ? { "ticket.ticketId": new mongoose.Types.ObjectId(ticketId) }
+          : {})
       }
     },
 
+    // join user
     {
       $lookup: {
         from: "users",
@@ -74,7 +79,7 @@ const getEventAudienceAnalytics = async (eventId) => {
   ]);
 
   // -----------------
-  // POST PROCESSING
+  // INITIALIZE BUCKETS
   // -----------------
 
   const genders = {
@@ -94,15 +99,23 @@ const getEventAudienceAnalytics = async (eventId) => {
 
   const now = new Date();
 
+  // -----------------
+  // PROCESS ROWS
+  // -----------------
+
   for (const r of rows) {
-    // ----- gender -----
+    //
+    // gender
+    //
     if (["Male", "Female", "Other"].includes(r.gender)) {
       genders[r.gender]++;
     } else {
       genders.Unknown++;
     }
 
-    // ----- age -----
+    //
+    // age
+    //
     if (!r.dob) continue;
 
     let age;
@@ -125,7 +138,7 @@ const getEventAudienceAnalytics = async (eventId) => {
   }
 
   // -----------------
-  // GENDER (counts + % together)
+  // GENDER: COUNTS + %
   // -----------------
 
   const totalGenderCount =
@@ -163,6 +176,7 @@ const getEventAudienceAnalytics = async (eventId) => {
     total: totalGenderCount
   };
 
+
   return {
     gender,
     ageRanges: [
@@ -176,11 +190,12 @@ const getEventAudienceAnalytics = async (eventId) => {
 };
 
 
-const getEventTicketAttendanceAnalytics = async (eventId) => {
+const getEventTicketAttendanceAnalytics = async (eventId, ticketId) => {
   const rows = await TicketingBookings.aggregate([
     {
       $match: {
-        "ticket.snapshot.event": new mongoose.Types.ObjectId(eventId)
+        "ticket.snapshot.event": new mongoose.Types.ObjectId(eventId),
+        "ticket.ticketId": ticketId ? new mongoose.Types.ObjectId(ticketId) : { $exists: true }
       }
     },
 
@@ -284,7 +299,22 @@ const getEventAttendees = async ({
           }
         }
       }
+    },
+    // compute repeatable + remaining visits
+    {
+      $addFields: {
+        isRepeatable: {
+          $ifNull: ["$ticket.snapshot.repeatable.isRepeatable", false]
+        },
+        maxVisits: {
+          $ifNull: ["$ticket.snapshot.repeatable.visits", 1]
+        },
+        usedVisits: {
+          $size: { $ifNull: ["$checkInHistory", []] }
+        }
+      }
     }
+
   ];
 
   const keywordStage = [];
@@ -333,11 +363,34 @@ const getEventAttendees = async ({
           ticketId: "$ticket.ticketId",
           title: "$ticket.snapshot.title",
           price: "$ticket.snapshot.price",
-          timeSlot: "$ticket.timeSlot"
+          timeSlot: "$ticket.timeSlot",
+
+          // new fields
+          repeatable: "$isRepeatable",
+          maxVisits: "$maxVisits",
+          usedVisits: "$usedVisits",
+
+          remainingVisits: {
+            $cond: [
+              "$isRepeatable",
+              {
+                $cond: [
+                  { $lte: ["$usedVisits", "$maxVisits"] },
+                  { $subtract: ["$maxVisits", "$usedVisits"] },
+                  0
+                ]
+              },
+              {
+                // non-repeatable → 1 or 0 based on status
+                $cond: [{ $eq: ["$status", "used"] }, 0, 1]
+              }
+            ]
+          }
         }
       }
     }
   ];
+
 
   // ---- RUN PAGINATED + TOTAL ----
   const [rows, totalRows] = await Promise.all([
@@ -365,10 +418,9 @@ const getEventAttendees = async ({
   };
 };
 
-//check in event attendee
 // check in event attendee (by ticketBookingId)
 const checkInEventAttendee = async (eventId, ticketBookingId, scannedBy = null) => {
-  console.log("eventId, ticketBookingId, scannedBy = null",eventId, ticketBookingId, scannedBy)
+  console.log("eventId, ticketBookingId, scannedBy = null", eventId, ticketBookingId, scannedBy)
   const attendee = await TicketingBookings.findOne({
     ticketBookingId,
     "ticket.snapshot.event": new mongoose.Types.ObjectId(eventId),
@@ -420,6 +472,113 @@ const checkInEventAttendee = async (eventId, ticketBookingId, scannedBy = null) 
   return { success: true, attendee };
 };
 
+
+const getTicketingsByEventId = async (eventId, ticketId) => {
+  return TicketingsModel.aggregate([
+    {
+      $match: {
+        event: new mongoose.Types.ObjectId(eventId),
+        ...(ticketId
+          ? { _id: new mongoose.Types.ObjectId(ticketId) }
+          : {}),
+        status: "active"
+      }
+    },
+
+    // join bookings for each ticket
+    {
+      $lookup: {
+        from: "ticketingbookings",
+        localField: "_id",
+        foreignField: "ticket.ticketId",
+        as: "bookings"
+      }
+    },
+
+    // flatten calculations
+    {
+      $addFields: {
+        stats: {
+          total: { $size: "$bookings" },
+
+          valid: {
+            $size: {
+              $filter: {
+                input: "$bookings",
+                as: "b",
+                cond: { $eq: ["$$b.status", "valid"] }
+              }
+            }
+          },
+
+          used: {
+            $size: {
+              $filter: {
+                input: "$bookings",
+                as: "b",
+                cond: { $eq: ["$$b.status", "used"] }
+              }
+            }
+          },
+
+          cancelled: {
+            $size: {
+              $filter: {
+                input: "$bookings",
+                as: "b",
+                cond: { $eq: ["$$b.status", "cancelled"] }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    // compute attendance %
+    {
+      $addFields: {
+        "stats.attendancePercentage": {
+          $cond: [
+            {
+              $eq: [
+                { $add: ["$stats.valid", "$stats.used"] },
+                0
+              ]
+            },
+            0,
+            {
+              $round: [
+                {
+                  $multiply: [
+                    {
+                      $divide: [
+                        "$stats.used",
+                        { $add: ["$stats.valid", "$stats.used"] }
+                      ]
+                    },
+                    100
+                  ]
+                },
+                2
+              ]
+            }
+          ]
+        }
+      }
+    },
+
+    // clean up bookings to avoid payload bloat
+    {
+      $project: {
+        bookings: 0
+      }
+    },
+
+    { $sort: { createdAt: -1 } }
+  ]);
+};
+
+
 module.exports = {
   getEventsWithFilters,
   countEvents,
@@ -428,5 +587,6 @@ module.exports = {
   getEventAudienceAnalytics,
   getEventTicketAttendanceAnalytics,
   getEventAttendees,
-  checkInEventAttendee
+  checkInEventAttendee,
+  getTicketingsByEventId
 };
