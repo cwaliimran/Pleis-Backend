@@ -79,18 +79,19 @@ const getEvents = async (req, res) => {
 };
 
 const getEventDetails = async (req, res) => {
-  let { id } = req.params;
+  let { id: eventId } = req.params;
   let { timezone } = req.user;
+  const { ticketId } = req.body;
   // Accept both nanoid and ObjectId for event id
   if (
-    (!isValidNanoid(id) && !validateParams(req, res, {
+    (!validateParams(req, res, {
       pathParams: ["id"],
       objectIdFields: ["id"],
     }))
   ) return;
 
   try {
-    let data = await eventService.getEventDetails(id, timezone);
+    let data = await eventService.getEventDetails(eventId, timezone, ticketId);
     if (!data) {
       return sendResponse({
         res,

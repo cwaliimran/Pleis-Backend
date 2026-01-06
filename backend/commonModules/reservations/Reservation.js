@@ -24,6 +24,14 @@ const ReservationsSchema = new mongoose.Schema(
       ],
       default: "regular",
     },
+    reservationSource: {
+      type: String,
+      enum: [
+        "auto", //booked by user from app
+        "manual", // added by staff from staff app
+      ],
+      default: "auto",
+    },
 
     availableReservations: {
       type: Number,
