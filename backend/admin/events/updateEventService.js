@@ -1,18 +1,27 @@
-const { Events } = require("@EventsModel");
-
 /**
- * UPDATE EVENT (single | future)
+ * updateEventService.js
  *
- * "single"  -> only update selected event
- * "future"  -> keep same recurrence anchors, only shift time & fields
+ * Modes:
+ *  - single  -> only current event
+ *  - future  -> current + all future, template updated, history preserved
  */
 
+const { Events } = require("@EventsModel");
+
 const updateEventService = async (eventId, payload, mode = "single") => {
+  console.log("🔁 updateEventService:start", { eventId, mode });
+
   const event = await Events.findById(eventId);
-  if (!event) return null;
+  if (!event) {
+    console.log("❌ event not found");
+    return null;
+  }
 
   const isChild = !!event?.recurringMeta?.parentEvent;
 
+  // -----------------------------
+  // SAFE FIELD APPLIER
+  // -----------------------------
   const applyFields = (doc, data, skipSchedule = false) => {
     if (data.basicInfo) {
       doc.basicInfo = { ...doc.basicInfo, ...data.basicInfo };
@@ -27,118 +36,170 @@ const updateEventService = async (eventId, payload, mode = "single") => {
 
     if (data.status !== undefined)
       doc.status = data.status;
+
+    // recurringDetails may change too
+    if (data.schedule?.recurringDetails) {
+      doc.schedule.recurringDetails = {
+        ...doc.schedule.recurringDetails,
+        ...data.schedule.recurringDetails,
+      };
+    }
   };
 
-  // SINGLE EVENT MODE
+  // ================================================
+  // NON-RECURRING OR SINGLE MODE
+  // ================================================
   if (mode === "single" || !isChild) {
+    console.log("➡ single-mode update");
+
     applyFields(event, payload);
     await event.save();
+
+    console.log("✅ saved single event");
     return event;
   }
 
-  // =========================
+  // ================================================
   // FUTURE MODE
-  // =========================
+  // ================================================
+
+  console.log("➡ future-mode update");
 
   const parentId = event.recurringMeta.parentEvent;
   const template = await Events.findById(parentId);
-  if (!template) return null;
 
-  // ⛔ capture the ORIGINAL base before editing template
-  const originalBaseStart = new Date(template.schedule.startDateTime);
-  const originalBaseEnd = new Date(template.schedule.endDateTime);
-  const durationMs = originalBaseEnd - originalBaseStart;
+  if (!template) {
+    console.log("❌ template not found");
+    return null;
+  }
 
   const rule = template.schedule.recurringDetails;
 
-  // apply update to template EXCEPT schedule dates (we recompute)
-  applyFields(template, payload, true);
-  await template.save();
+  // -------------------------------------------
+  // STEP 1 — UPDATE THE CURRENT OCCURRENCE
+  // -------------------------------------------
+  console.log("✏ updating current occurrence");
 
-  // determine new time-of-day window from CURRENT event payload
-  const newStartTime = new Date(payload.schedule.startDateTime);
-  const newEndTime = new Date(payload.schedule.endDateTime);
+  applyFields(event, payload);
 
-  const newTimeDeltaStart =
-    newStartTime.getUTCHours() * 3600000 +
-    newStartTime.getUTCMinutes() * 60000;
+  const editedStart = new Date(payload.schedule.startDateTime);
+  const editedEnd = new Date(payload.schedule.endDateTime);
+  const editedDuration = editedEnd - editedStart;
 
-  const newTimeDeltaEnd =
-    newEndTime.getUTCHours() * 3600000 +
-    newEndTime.getUTCMinutes() * 60000;
+  event.schedule.startDateTime = editedStart;
+  event.schedule.endDateTime = editedEnd;
 
-  // fetch current & future
-  const occurrences = await Events.find({
-    "recurringMeta.parentEvent": parentId,
-    "schedule.startDateTime": { $gte: event.schedule.startDateTime },
-    status: { $ne: "deleted" }
+  await event.save();
+
+  console.log("✅ saved current occurrence as NEW ANCHOR", {
+    newStart: editedStart,
   });
 
-  for (const occ of occurrences) {
-    const idx = occ.recurringMeta.occurrenceIndex;
+  // -------------------------------------------
+  // STEP 2 — UPDATE TEMPLATE TO MATCH CURRENT
+  // -------------------------------------------
+  console.log("✏ syncing template to follow future pattern");
 
-    // anchor: original pattern
-    const anchoredDate = computeAnchoredDate(originalBaseStart, rule, idx);
+  applyFields(template, payload, true);
 
-    // attach new time-of-day only
+  template.schedule.startDateTime = new Date(editedStart);
+  template.schedule.endDateTime = new Date(editedEnd);
+
+  await template.save();
+
+  console.log("✅ template updated", {
+    templateStart: template.schedule.startDateTime,
+  });
+
+  // -------------------------------------------
+  // STEP 3 — FETCH STRICTLY FUTURE OCCURRENCES
+  // -------------------------------------------
+  const futureOccurrences = await Events.find({
+    "recurringMeta.parentEvent": parentId,
+    "schedule.startDateTime": { $gt: editedStart },
+    status: { $ne: "deleted" }
+  }).sort({ "recurringMeta.occurrenceIndex": 1 });
+
+  console.log("📌 future occurrences count:", futureOccurrences.length);
+
+  // -------------------------------------------
+  // STEP 4 — REBUILD FUTURE DATES BASED ON ANCHOR
+  // -------------------------------------------
+  let anchorDate = new Date(editedStart);
+  let anchorIndex = event.recurringMeta.occurrenceIndex;
+
+  for (const occ of futureOccurrences) {
+    anchorIndex++;
+
+    const newDate = computeNextDate(anchorDate, rule);
+
     occ.schedule.startDateTime = new Date(
       Date.UTC(
-        anchoredDate.getUTCFullYear(),
-        anchoredDate.getUTCMonth(),
-        anchoredDate.getUTCDate(),
-        newStartTime.getUTCHours(),
-        newStartTime.getUTCMinutes()
+        newDate.getUTCFullYear(),
+        newDate.getUTCMonth(),
+        newDate.getUTCDate(),
+        editedStart.getUTCHours(),
+        editedStart.getUTCMinutes()
       )
     );
 
     occ.schedule.endDateTime = new Date(
-      occ.schedule.startDateTime.getTime() + (newEndTime - newStartTime)
+      occ.schedule.startDateTime.getTime() + editedDuration
     );
 
     applyFields(occ, payload, true);
 
     await occ.save();
+
+    console.log(
+      `🔄 rebuilt occurrence ${occ.recurringMeta.occurrenceIndex}`,
+      occ.schedule.startDateTime
+    );
+
+    anchorDate = newDate;
   }
 
+  console.log("🎯 future update complete");
   return true;
 };
 
+// ===================================================================
+// COMPUTE NEXT DATE FROM ANCHOR (NOT FROM ORIGINAL TEMPLATE)
+// ===================================================================
+function computeNextDate(date, rule) {
+  const DAY_MS = 24 * 60 * 60 * 1000;
 
-// ========================================================
-// ANCHORED RECURRENCE
-// keeps original calendar positioning
-// ========================================================
-function computeAnchoredDate(base, rule, index) {
-  if (!rule?.isEnabled) return base;
+  if (!rule?.isEnabled) return date;
+
+  const d = new Date(date);
 
   if (rule.frequency === "daily") {
-    return new Date(
-      base.getTime() +
-        (index - 1) *
-          rule.interval *
-          24 *
-          60 *
-          60 *
-          1000
-    );
+    d.setUTCDate(d.getUTCDate() + rule.interval);
+    return d;
   }
 
   if (rule.frequency === "weekly") {
-    return new Date(
-      base.getTime() +
-        (index - 1) *
-          rule.interval *
-          7 *
-          24 *
-          60 *
-          60 *
-          1000
-    );
+    d.setUTCDate(d.getUTCDate() + rule.interval * 7);
+    return d;
   }
 
-  return base;
+  if (rule.frequency === "monthly") {
+    const baseDay = d.getUTCDate();
+
+    d.setUTCMonth(d.getUTCMonth() + rule.interval);
+
+    const lastDay = new Date(
+      Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)
+    ).getUTCDate();
+
+    d.setUTCDate(Math.min(baseDay, lastDay));
+
+    return d;
+  }
+
+  return d;
 }
 
 module.exports = {
-  updateEventService
+  updateEventService,
 };

@@ -163,6 +163,7 @@ eventSchema.index({ "basicInfo.categories": 1 });
 
 eventSchema.index(
   {
+    "basicInfo.organization": 1,
     "recurringMeta.parentEvent": 1,
     "schedule.startDateTime": 1
   },

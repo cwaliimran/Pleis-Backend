@@ -58,7 +58,7 @@ const allowedOrigins = [
   "https://ebook-what-premiere-totals.trycloudflare.com",
   "https://individual-travesti-hockey-cancel.trycloudflare.com",
   "https://handy-floral-implementation-pumps.trycloudflare.com",
-  "https://permanent-commitments-winston-impressive.trycloudflare.com",
+  "https://info-strategies-via-null.trycloudflare.com",
   "http://192.168.13.220:4003",
   "http://192.168.13.221:4003",
   "http://192.168.100.65:4003",
@@ -116,8 +116,8 @@ setInterval(() => backupMongoDB(), backupTime);
   let cronTickCount = 1;
   setInterval(async () => {
     try {
-      // await runRecurringEventsCron();
-      // console.log(`✅ Recurring cron tick complete ${cronTickCount}`);
+      await runRecurringEventsCron();
+      console.log(`✅ Recurring cron tick complete ${cronTickCount}`);
     } catch (err) {
       console.error(`❌ Recurring cron error ${cronTickCount}`, err);
     }

@@ -6,6 +6,7 @@ const { formatEventResponse } = require("./formatter/eventFormatter");
 const { getTicketingsByEventId } = require("../ticketing/ticketingsService");
 const { generateImmediatelyForTemplate } = require("../../commonModules/events/crons/recurringEvents.core");
 const { Events } = require("@EventsModel");
+const { default: mongoose } = require("mongoose");
 
 const createEvent = async ({ data, ticketingData }, timezone) => {
   let event = await eventRepo.createEvent(data, ticketingData);
@@ -43,7 +44,7 @@ const getEvents = async ({ page, limit, keyword, status, creator, startDate, end
   }
 
   if (organization) {
-    query["basicInfo.organization"] = organization;
+    query["basicInfo.organization"] = new mongoose.Types.ObjectId(organization);
   }
 
   if (startDate) {
@@ -55,8 +56,8 @@ const getEvents = async ({ page, limit, keyword, status, creator, startDate, end
 
   if (keyword) {
     query.$or = [
-      { title: { $regex: keyword, $options: "i" } },
-      { description: { $regex: keyword, $options: "i" } },
+      { "basicInfo.title": { $regex: keyword, $options: "i" } },
+      { "basicInfo.description": { $regex: keyword, $options: "i" } },
     ];
   }
 
@@ -321,6 +322,12 @@ const deleteEvent = async (eventId, scope = "single") => {
       status: { $ne: "deleted" }
     },
     { $set: { status: "deleted" } }
+  );
+
+  //also delete template so no future occurrences are generated
+  await Events.updateOne(
+    { _id: parentId },
+    { status: "deleted" }
   );
 
   return {
