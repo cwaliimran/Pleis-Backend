@@ -130,7 +130,11 @@ const ticketingsSchema = new mongoose.Schema(
     scheduledPublishAt: { // for "scheduled" type
       type: Date,
       default: null,
-    }
+    },
+    isTemplate: { //when an event is recurring, ticketings for template event are marked as isTemplate=true
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
