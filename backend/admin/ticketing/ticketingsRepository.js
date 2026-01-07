@@ -10,6 +10,7 @@ const createTicketing = async (data) => {
 
 // Get all with filters (e.g. filter by eventId)
 const getTicketingsWithFilters = async (query, page, limit) => {
+  query.isTemplate = false; // exclude template ticketings
   return getWithFilters({
     model: TicketingsModel,
     query,

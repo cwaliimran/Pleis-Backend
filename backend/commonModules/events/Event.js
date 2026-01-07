@@ -123,7 +123,7 @@ const eventSchema = new mongoose.Schema(
       },
     },
 
-    recurringMeta: {
+    recurringMeta: {  // only for recurring events
       isTemplate: {
         type: Boolean,
         default: false,
@@ -163,6 +163,7 @@ eventSchema.index({ "basicInfo.categories": 1 });
 
 eventSchema.index(
   {
+    "basicInfo.organization": 1,
     "recurringMeta.parentEvent": 1,
     "schedule.startDateTime": 1
   },

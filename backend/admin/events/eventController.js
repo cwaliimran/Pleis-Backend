@@ -11,6 +11,7 @@ const { getVenueDetails } = require("../venues/venuesService");
 const mongoose = require('mongoose');
 const eventService = require("./eventService");
 const ticketingService = require("../ticketing/ticketingsService");
+const { updateEventService } = require("./updateEventService");
 
 const createEvent = async (req, res) => {
   let { timezone, _id: userId } = req.user;
@@ -165,6 +166,7 @@ const createEvent = async (req, res) => {
       if (lastMinute?.startDate)
         lastMinute.startDate = convertTimezoneToUtc(lastMinute.startDate, timezone, "YYYY-MM-DD hh:mm A");
     }
+
 
     // Build ticketing payload
     ticketingData = {
@@ -359,6 +361,8 @@ const getPublicEvents = async (req, res) => {
 const updateEvent = async (req, res) => {
   const { id } = req.params;
 
+  const { scope = "single" } = req.query; // single | future
+
   let { timezone } = req.user;
 
   if (
@@ -437,7 +441,7 @@ const updateEvent = async (req, res) => {
     }
 
 
-    const updated = await eventService.updateEvent(id, data);
+    const updated = await updateEventService(id, data, scope);
 
     if (!updated) {
       return sendResponse({
@@ -468,6 +472,7 @@ const updateEvent = async (req, res) => {
 
 const deleteEvent = async (req, res) => {
   const { id } = req.params;
+  const { scope = "single" } = req.query; // single | future
 
   if (
     !validateParams(req, res, {
@@ -478,7 +483,7 @@ const deleteEvent = async (req, res) => {
     return;
 
   try {
-    const deleted = await eventService.deleteEvent(id);
+    const deleted = await eventService.deleteEvent(id, scope);
     if (!deleted) {
       return sendResponse({
         res,

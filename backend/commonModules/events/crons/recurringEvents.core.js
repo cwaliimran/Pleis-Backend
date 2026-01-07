@@ -1,28 +1,12 @@
 const { Events } = require("@EventsModel");
 const TicketingsModel = require("@TicketingsModel");
 
-/**
- * recurringEvents.core.js
- *
- * ✅ CORE LOGIC ONLY
- * ✅ UTC SAFE
- * ✅ Supports multi-day recurring events
- * ✅ Supports:
- *    - daily / weekly
- *    - interval
- *    - endType: never | onDate | afterOccurrences
- * ✅ Rolling horizon generation
- */
-
-// ======================================================
-// CONFIG
-// ======================================================
-const HORIZON_DAYS = 7; // create events N days ahead
+const HORIZON_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// ======================================================
+// ----------------------------------------
 // DATE HELPERS (UTC SAFE)
-// ======================================================
+// ----------------------------------------
 const startOfDayUTC = (d) =>
   new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 
@@ -54,12 +38,15 @@ const mergeDateAndTimeUTC = (day, time) =>
     0
   ));
 
+
 // ======================================================
 // MAIN CRON ENTRY
 // ======================================================
 const runRecurringEventsCron = async () => {
+  let fakeDate = new Date("2026-01-14T00:00:00Z");
+
   const now = new Date();
-  const horizonDate = addDaysUTC(startOfDayUTC(now), HORIZON_DAYS);
+  const horizonDate = addDaysUTC(startOfDayUTC(fakeDate), HORIZON_DAYS);
 
   const templates = await Events.find({
     "schedule.recurringDetails.isEnabled": true,
@@ -76,21 +63,20 @@ const runRecurringEventsCron = async () => {
   }
 };
 
+
 // ======================================================
 // PROCESS ONE TEMPLATE
 // ======================================================
 const processTemplate = async (template, horizonDate) => {
-  // Existing upcoming occurrences (avoid duplicates)
+
   const existing = await Events.find({
-    "recurringMeta.parentEvent": template._id,
-    "schedule.startDateTime": { $gte: new Date() },
+    "recurringMeta.parentEvent": template._id
   }).select("schedule.startDateTime recurringMeta.occurrenceIndex");
 
   const existingKeySet = new Set(
     existing.map(e => e.schedule.startDateTime.getTime())
   );
 
-  // Count total already-created occurrences (for afterOccurrences)
   const existingCount = await Events.countDocuments({
     "recurringMeta.parentEvent": template._id,
   });
@@ -106,7 +92,7 @@ const processTemplate = async (template, horizonDate) => {
       ? lastOccurrence.recurringMeta.occurrenceIndex + 1
       : 1;
 
-  const dates = getUpcomingDates(template, horizonDate, existingCount);
+  const dates = await getUpcomingDates(template, horizonDate, existingCount);
 
   for (const date of dates) {
     const key = date.getTime();
@@ -117,11 +103,13 @@ const processTemplate = async (template, horizonDate) => {
   }
 };
 
+
 // ======================================================
-// GENERATE UPCOMING DATES
+// GENERATE UPCOMING DATES (ANCHOR = TEMPLATE ONLY)
 // ======================================================
-const getUpcomingDates = (template, horizonDate, existingCount) => {
+const getUpcomingDates = async (template, horizonDate, existingCount) => {
   const rule = template.schedule.recurringDetails;
+
   const baseStart = new Date(template.schedule.startDateTime);
   const baseDay = startOfDayUTC(baseStart);
 
@@ -138,40 +126,33 @@ const getUpcomingDates = (template, horizonDate, existingCount) => {
 
   while (cursor <= horizonDate) {
 
-    // ======================
-    // STOP CONDITIONS
-    // ======================
     if (
       rule.endType === "onDate" &&
       recurrenceEndDate &&
       cursor > recurrenceEndDate
-    ) {
-      break;
-    }
+    ) break;
 
     if (
       rule.endType === "afterOccurrences" &&
       generatedCount >= rule.occurrences
-    ) {
-      break;
-    }
+    ) break;
 
-    // ======================
+
     // DAILY
-    // ======================
     if (rule.frequency === "daily") {
       const diff = diffDaysUTC(baseDay, cursor);
+
       if (diff >= 0 && diff % rule.interval === 0) {
         list.push(withSameTimeUTC(cursor, baseStart));
         generatedCount++;
       }
+
       cursor = addDaysUTC(cursor, 1);
       continue;
     }
 
-    // ======================
+
     // WEEKLY
-    // ======================
     if (rule.frequency === "weekly") {
       const diffWeeks = Math.floor(diffDaysUTC(baseDay, cursor) / 7);
 
@@ -196,14 +177,32 @@ const getUpcomingDates = (template, horizonDate, existingCount) => {
       continue;
     }
 
+
+    // MONTHLY
+    if (rule.frequency === "monthly") {
+
+      const monthsDiff =
+        (cursor.getUTCFullYear() - baseDay.getUTCFullYear()) * 12 +
+        (cursor.getUTCMonth() - baseDay.getUTCMonth());
+
+      if (monthsDiff >= 0 && monthsDiff % rule.interval === 0) {
+        list.push(withSameTimeUTC(cursor, baseStart));
+        generatedCount++;
+      }
+
+      cursor = addDaysUTC(cursor, 1);
+      continue;
+    }
+
     cursor = addDaysUTC(cursor, 1);
   }
 
   return list;
 };
 
+
 // ======================================================
-// CREATE REAL EVENT (OCCURRENCE)
+// CREATE OCCURRENCE
 // ======================================================
 const createOccurrence = async (template, startDate, index) => {
   const durationMs =
@@ -216,7 +215,7 @@ const createOccurrence = async (template, startDate, index) => {
       type: "oneTime",
       startDateTime: startDate,
       endDateTime: new Date(startDate.getTime() + durationMs),
-      recurringDetails: null,
+      recurringDetails: template.schedule.recurringDetails,
     },
     creator: template.creator,
     status: "active",
@@ -230,8 +229,9 @@ const createOccurrence = async (template, startDate, index) => {
   await cloneTicketing(template._id, newEvent._id);
 };
 
+
 // ======================================================
-// CLONE TICKETING + TIMING SLOTS
+// TICKETING COPY
 // ======================================================
 const cloneTicketing = async (templateEventId, newEventId) => {
   const tickets = await TicketingsModel.find({
@@ -248,6 +248,7 @@ const cloneTicketing = async (templateEventId, newEventId) => {
     delete clone._id;
 
     clone.event = newEventId;
+    clone.isTemplate = false; // cloned ticketings are not templates
 
     if (clone.timingSlots?.enabled) {
       clone.timingSlots.dateTimeSlots = rebuildSlots(
@@ -260,8 +261,9 @@ const cloneTicketing = async (templateEventId, newEventId) => {
   }
 };
 
+
 // ======================================================
-// REBUILD TIME SLOTS FOR OCCURRENCE
+// TIMING SLOTS ALIGNMENT
 // ======================================================
 const rebuildSlots = (blocks, newEventStart) => {
   if (!blocks?.length) return [];

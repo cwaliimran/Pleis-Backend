@@ -12,6 +12,7 @@ const createEvent = async (data, ticketingData) => {
 
     if (ticketingData) {
       ticketingData.event = event._id; // 🔑 binds ticketing to template or one-time event
+      ticketingData.isTemplate = data.recurringMeta?.isTemplate || false; // mark ticketing as template if event is template
       const ticketing = new TicketingsModel(ticketingData);
       await ticketing.save({ session });
     }
@@ -35,7 +36,7 @@ const getEventsWithFilters = async (query, skip, limit) => {
     .populate("basicInfo.tags", "title")
     .populate("basicInfo.organization", "basicInfo.name basicInfo.media otherInfo.description")
     .populate("basicInfo.partnerOrganization", "basicInfo.name basicInfo.media otherInfo.description")
-    .sort({ createdAt: -1 })
+    .sort({ "schedule.startDateTime": -1 })
     .skip(skip)
     .limit(limit);
 };
