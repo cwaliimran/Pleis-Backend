@@ -169,6 +169,7 @@ const getOrganizationMenuWithItems = async (organizationId) => {
       $match: {
         organization: orgObjId,
         status: "active",
+        isOrderingEnabled: true,
       },
     },
     {

@@ -30,7 +30,7 @@ const findMenuItemById = async (id) => {
 };
 
 const getMenuIdByOrganization = async (organizationId) => {
-  return await Menus.findOne({ organization: organizationId, status: "active" }).select("_id");
+  return await Menus.findOne({ organization: organizationId, status: "active", isOrderingEnabled: true }).select("_id");
 }
 
 // Recommended items
