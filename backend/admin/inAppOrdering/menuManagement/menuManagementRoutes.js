@@ -1,6 +1,6 @@
 const express = require("express");
 const {
-  createMenu,
+  createSale,
   getMenuItems,
   getMenuItemCategories,
   getEvents,
@@ -23,7 +23,7 @@ router.use(auth);
 // Create a rate limiter for Promo Codes
 const MenuRateLimiter = createRateLimiter("Menu");
 
-// router.post("/", roleMiddleware(["admin"]), MenuRateLimiter, createMenu);
+router.post("/sale", roleMiddleware(["admin"]), MenuRateLimiter, createSale);
 router.get("/menu-items", roleMiddleware(["admin"]), getMenuItems);
 router.get("/events", roleMiddleware(["admin"]), getEvents);
 router.get("/menu-item-categories", roleMiddleware(["admin"]), getMenuItemCategories);

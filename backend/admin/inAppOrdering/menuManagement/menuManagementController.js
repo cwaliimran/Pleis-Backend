@@ -10,72 +10,76 @@ const mongoose = require('mongoose'); // Import mongoose
 
 const Menuervice = require("./menuManagementService");
 
-
-
-
-
-const createMenu = async (req, res) => {
+const createSale = async (req, res) => {
   let {
     title,
-    ticket,
-    event,
-    numberOfWinners,
-    status="active",
-    ticketsPerWinner,
-    organization,
+    discountType = "fixed",
+    discountValue = 0,
+    menuItems,
+    startDateTime,
     endDateTime,
-    MenuStatus="live",
-
+    creator
   } = req.body;
 
-  const creator = new  mongoose.Types.ObjectId(organization);
-  const timezone = req.user.timezone;
-  endDateTime = convertTimezoneToUtc(
-    endDateTime,
-    timezone,
-    "YYYY-MM-DD hh:mm A"
-  );
+  // Ensure that menuItems is an array and is not empty
+  if (!Array.isArray(menuItems) || menuItems.length === 0) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "Invalid_menu_items",
+      error: "menuItems must be a non-empty array of menu item IDs",
+    });
+  }
 
+
+
+  // Convert endDateTime to UTC based on the user's timezone
+  const timezone = req.user.timezone; 
+  endDateTime = convertTimezoneToUtc(endDateTime, timezone, "YYYY-MM-DD hh:mm A");
+  startDateTime = convertTimezoneToUtc(startDateTime, timezone, "YYYY-MM-DD hh:mm A");
+
+  // Validate required parameters
   if (
     !validateParams(req, res, {
       rawData: [
         "title",
-        "ticket",
-        "ticketsPerWinner",
-        "organization",
+        "menuItems",
+        "startDateTime",
         "endDateTime",
-        "numberOfWinners",
-        "event",
+        "creator",
       ],
     })
   ) return;
- 
+  creator = new mongoose.Types.ObjectId(creator);
+  // Construct the sale data
   let data = {
-    creator,
     title,
-    ticket,
-    event,
-    numberOfWinners,
-    ticketsPerWinner,
-    organization,
+    discountType,
+    discountValue,
+    menuItems,
+    startDateTime,
     endDateTime,
-    MenuStatus,
-    status,
+    creator,
   };
+
   try {
-    const Menu = await Menuervice.createMenu(data);
-    if (!Menu) {
+    // Create the MenuItemsSale entry
+    const menuItemSale = await Menuervice.createSale(data);
+
+    if (!menuItemSale) {
       return sendResponse({
         res,
         statusCode: 400,
         translationKey: "Menu_creation_failed",
       });
     }
+
+    // Respond with the success message
     return sendResponse({
       res,
       statusCode: 201,
       translationKey: "Menu_created_successfully",
-      data: Menu,
+      data: menuItemSale,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -87,6 +91,7 @@ const createMenu = async (req, res) => {
     });
   }
 };
+
 const getMenuItems = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let { keyword, status , date, range ,organizer} = req.query;
@@ -282,5 +287,6 @@ module.exports = {
   getMenuItems,
   updateMenu,
   getMenuItemCategories,
-  getEvents
+  getEvents,
+  createSale
 };

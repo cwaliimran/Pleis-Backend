@@ -4,9 +4,9 @@ const { sendUserNotifications } = require("../../../controllers/communicationCon
 const { NotificationTypes } = require("@NotificationsModel");
 
 
-const createMenu = async (data) => {
+const createSale = async (data) => {
 
-  let Menu = await MenuRepo.createMenu(data);
+  let Menu = await MenuRepo.createSale(data);
   return Menu;
 };
 const getMenuItems = async ({ timezone,
@@ -213,7 +213,7 @@ const getMenuItemCategories = async ({ timezone,
     limit,
     keyword,
     status,
-    
+
     date,
     range,
     today,
@@ -229,7 +229,7 @@ const getMenuItemCategories = async ({ timezone,
 
 
 module.exports = {
-  createMenu,
+  createSale,
   getMenuItems,
   updateMenu,
   deleteMenu,

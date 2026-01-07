@@ -99,6 +99,10 @@ const menuItemsSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isAvailableInStock: {
+      type: Boolean,
+      default: true,
+    },
 
   },
   {
