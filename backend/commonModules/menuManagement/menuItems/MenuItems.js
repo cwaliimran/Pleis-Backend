@@ -77,6 +77,10 @@ const menuItemsSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isScheduled: {
+      type: Boolean,
+      default: false,
+    },
     startDate: {
       type: Date,
       default: null,

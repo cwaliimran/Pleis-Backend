@@ -8,6 +8,12 @@ const supportRequestSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  user:{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+  },
+
   email: {
     type: String,
     required: [true, 'email_required'], // Generic error message key
@@ -28,6 +34,11 @@ const supportRequestSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true,
+  },
+  response: {
+    type: String,
+    trim: true,
+    default: null,
   },
   status: {
     type: String,
