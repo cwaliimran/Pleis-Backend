@@ -8,6 +8,12 @@ const supportRequestSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  ticket: {
+    type: String,
+    required: true, 
+    unique: true,
+    default: () => `TCK-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+  },
   user:{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -42,7 +48,7 @@ const supportRequestSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'responded', 'resolved', 'closed'],
+    enum: ['pending', 'responded', 'resolved', 'closed', 'deleted'],
     default: 'pending',
   },
 }, {

@@ -8,7 +8,7 @@ const menuItemsSchema = new mongoose.Schema(
       default: "",
     },
     title: {
-      type: String,
+      type: String, 
       trim: true,
       required: true,
       default: "",
