@@ -2,6 +2,7 @@ const { generateMeta } = require("../../helperUtils/responseUtil");
 const { getEventIdsByOrganization } = require("../events/eventRepository");
 const { formatTicketing, formatEventTicketing } = require("./fomatter/formatTicketing");
 const ticketingRepo = require("./ticketingsRepository");
+const TicketingsModel = require("@TicketingsModel");
 
 const createTicketing = async (timezone, data) => {
 
@@ -187,11 +188,68 @@ const updateTicketing = async (id, data, timezone) => {
 };
 
 
-const deleteTicketing = async (id) => {
-  const updated = await ticketingRepo.findByIdAndUpdate(id, { status: "deleted" });
-  if (!updated) return null;
-  return true;
+/**
+ * deleteTicketing
+ *
+ * scope:
+ *  - single  -> delete only this ticket
+ *  - future  -> delete this + all future + template
+ */
+const deleteTicketing = async (ticketId, scope = "single") => {
+  const ticket = await TicketingsModel.findById(ticketId);
+  if (!ticket) return null;
+
+  const { recurringMeta } = ticket;
+
+  // ==================================================
+  // CASE 1: Not part of recurring series
+  // ==================================================
+  if (!recurringMeta || (!recurringMeta.isTemplate && !recurringMeta.parentTicket)) {
+    await TicketingsModel.updateOne(
+      { _id: ticketId },
+      { status: "deleted" }
+    );
+    return { deleted: 1 };
+  }
+
+  // ==================================================
+  // CASE 2: DELETE ONLY THIS OCCURRENCE
+  // ==================================================
+  if (scope === "single") {
+    await TicketingsModel.updateOne(
+      { _id: ticketId },
+      { status: "deleted" }
+    );
+    return { deleted: 1 };
+  }
+
+  // ==================================================
+  // CASE 3: DELETE THIS + FUTURE OCCURRENCES
+  // ==================================================
+  const parentTicketId = recurringMeta.parentTicket || ticket._id;
+  const occurrenceIndex = recurringMeta.occurrenceIndex;
+
+  const result = await TicketingsModel.updateMany(
+    {
+      "recurringMeta.parentTicket": parentTicketId,
+      "recurringMeta.occurrenceIndex": { $gte: occurrenceIndex },
+      status: { $ne: "deleted" },
+    },
+    { $set: { status: "deleted" } }
+  );
+
+  // Also delete template so cron does NOT regenerate
+  await TicketingsModel.updateOne(
+    { _id: parentTicketId },
+    { status: "deleted" }
+  );
+
+  return {
+    deleted: result.modifiedCount,
+    scope: "future",
+  };
 };
+
 
 const getOrganizationTicketings = async ({ timezone, page, limit, keyword, status, date, organization }) => {
 

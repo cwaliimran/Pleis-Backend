@@ -2,17 +2,38 @@
 const { Events } = require("@EventsModel");
 const TicketingsModel = require("@TicketingsModel");
 const { getModelCounts, } = require('@dbUtils/queryUtil');
-// Create
+
+
 const createEvent = async (data, ticketingData) => {
   const session = await Events.startSession();
   session.startTransaction();
+
   try {
+    const isAvailable = await isEventStartTimeAvailableForOrganization({
+      organizationId: data.basicInfo.organization,
+      startDateTime: data.schedule.startDateTime,
+    });
+
+    if (!isAvailable) {
+      throw new Error(
+        "Another event already exists for this organization at the same start time"
+      );
+    }
+
     let event = new Events(data);
     event = await event.save({ session });
 
     if (ticketingData) {
-      ticketingData.event = event._id; // 🔑 binds ticketing to template or one-time event
-      ticketingData.isTemplate = data.recurringMeta?.isTemplate || false; // mark ticketing as template if event is template
+      ticketingData.event = event._id;
+
+      if (data.recurringMeta?.isTemplate) {
+        ticketingData.recurringMeta = {
+          isTemplate: true,
+          parentTicket: null,
+          occurrenceIndex: 1,
+        };
+      }
+
       const ticketing = new TicketingsModel(ticketingData);
       await ticketing.save({ session });
     }
@@ -26,6 +47,8 @@ const createEvent = async (data, ticketingData) => {
     throw err;
   }
 };
+
+
 
 
 // Get all with filters
@@ -42,7 +65,7 @@ const getEventsWithFilters = async (query, skip, limit) => {
 };
 // Get all with filters
 const getMinimalEventsWithFilters = async (query) => {
-  console.log("query",query );
+  console.log("query", query);
   return Events.find(query).select("basicInfo.title schedule")
     .sort({ createdAt: -1 })
 };
@@ -112,6 +135,32 @@ const findEventByNanoid = async (nanoid) => {
 const getEventIdsByOrganization = async (organization) => {
   return Events.find({ "basicInfo.organization": organization }).select("_id");
 }
+/**
+ * Checks whether an organization already has an event
+ * at the same startDateTime (excluding deleted events)
+ *
+ * @returns {boolean} true if available, false if conflict exists
+ */
+const isEventStartTimeAvailableForOrganization = async ({
+  organizationId,
+  startDateTime,
+  excludeEventId = null,
+}) => {
+  const query = {
+    "basicInfo.organization": organizationId,
+    "schedule.startDateTime": startDateTime,
+    status: { $ne: "deleted" },
+  };
+
+  if (excludeEventId) {
+    query._id = { $ne: excludeEventId };
+  }
+
+  const existingEvent = await Events.findOne(query).select("_id");
+
+  return !existingEvent;
+};
+
 
 module.exports = {
   createEvent,
@@ -125,5 +174,6 @@ module.exports = {
   findEventByNanoid,
   getEventsCounts,
   getMinimalEventsWithFilters,
-  getEventIdsByOrganization
+  getEventIdsByOrganization,
+  
 };

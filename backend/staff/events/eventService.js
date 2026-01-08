@@ -14,7 +14,6 @@ const getEvents = async ({ page, limit, keyword, startDate, endDate, organizatio
     {
       $or: [
         { "recurringMeta.isTemplate": false },
-        { "recurringMeta.isTemplate": { $exists: false } },
       ],
     },
   ];
