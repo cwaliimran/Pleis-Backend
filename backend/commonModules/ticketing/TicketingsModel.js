@@ -131,10 +131,26 @@ const ticketingsSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    isTemplate: { //when an event is recurring, ticketings for template event are marked as isTemplate=true
-      type: Boolean,
-      default: false,
+    recurringMeta: {  // only for recurring events
+      isTemplate: {
+        type: Boolean,
+        default: false,
+        index: true,
+      },
+
+      parentTicket: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Ticketings",
+        default: null,
+        index: true,
+      },
+
+      occurrenceIndex: {
+        type: Number,
+        default: 1,
+      }
     },
+
   },
   {
     timestamps: true,

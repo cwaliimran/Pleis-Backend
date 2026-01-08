@@ -10,7 +10,14 @@ const createTicketing = async (data) => {
 
 // Get all with filters (e.g. filter by eventId)
 const getTicketingsWithFilters = async (query, page, limit) => {
-  query.isTemplate = false; // exclude template ticketings
+  if (!query.$and) query.$and = [];
+  query.$and.push({
+    $or: [
+        { "recurringMeta.isTemplate": false },
+    ]
+  });
+
+
   return getWithFilters({
     model: TicketingsModel,
     query,
@@ -21,10 +28,16 @@ const getTicketingsWithFilters = async (query, page, limit) => {
       },
     ],
     options: {
+      sort: { createdAt: -1 },
       page,
       limit,
     },
   });
+};
+
+
+const getCounts = async (query) => {
+  return getModelCounts({ model: TicketingsModel, filterQuery: query });
 };
 // Get all with filters (e.g. filter by eventId)
 const getTicketingsByEventId = async (query) => {
@@ -40,10 +53,6 @@ const getTicketingsByEventId = async (query) => {
   });
 };
 
-
-const getCounts = async (query) => {
-  return getModelCounts({ model: TicketingsModel, filterQuery: query });
-};
 
 // Count by condition
 const countTicketings = async (query = {}) => {
