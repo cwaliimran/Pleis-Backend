@@ -39,39 +39,39 @@ const { getRedisClient } = require("./config/redis/redisConfig");
 // Express app
 const app = express();
 
-app.set("trust proxy", 1); // trust first proxy to get correct IP in req.ip
+// app.set("trust proxy", 1); // trust first proxy to get correct IP in req.ip
 
-// ================== Security Middleware ================== //
-const allowedOrigins = [
-  "https://pleis.com",
-  "https://www.pleis.com",
-  "https://dev.pleis.com",
-  "https://www.dev.pleis.com",
-  "http://localhost:4003",
-  "http://192.168.12.121:4003",
-  "https://pleis.vercel.app",
-  " https://latex-industry-bridges-wines.trycloudflare.com",
-  "https://nelson-sponsor-santa-interact.trycloudflare.com",
-  "https://specification-medicine-exec-deaf.trycloudflare.com",
-  "https://willow-zealand-currency-fortune.trycloudflare.com",
-  "http://192.168.12.121:4003",
-  "https://ebook-what-premiere-totals.trycloudflare.com",
-  "https://individual-travesti-hockey-cancel.trycloudflare.com",
-  "https://handy-floral-implementation-pumps.trycloudflare.com",
-  "https://info-strategies-via-null.trycloudflare.com",
-  "http://192.168.13.220:4003",
-  "http://192.168.13.221:4003",
-  "http://192.168.100.65:4003",
-  "http://192.168.13.84:4003",
-  "http://192.168.100.65:4003"
-];
-securityMiddleware(app, {
-  allowedOrigins,
-  adminIPWhitelist: [], // Example whitelist
-  maxRequestSize: "10mb",
-  rateLimitWindow: 15 * 60 * 1000, // 15 minutes
-  rateLimitMax: 200, // max requests per window
-});
+// // ================== Security Middleware ================== //
+// const allowedOrigins = [
+//   "https://pleis.com",
+//   "https://www.pleis.com",
+//   "https://dev.pleis.com",
+//   "https://www.dev.pleis.com",
+//   "http://localhost:4003",
+//   "http://192.168.12.121:4003",
+//   "https://pleis.vercel.app",
+//   " https://latex-industry-bridges-wines.trycloudflare.com",
+//   "https://nelson-sponsor-santa-interact.trycloudflare.com",
+//   "https://specification-medicine-exec-deaf.trycloudflare.com",
+//   "https://willow-zealand-currency-fortune.trycloudflare.com",
+//   "http://192.168.12.121:4003",
+//   "https://ebook-what-premiere-totals.trycloudflare.com",
+//   "https://individual-travesti-hockey-cancel.trycloudflare.com",
+//   "https://handy-floral-implementation-pumps.trycloudflare.com",
+//   "https://info-strategies-via-null.trycloudflare.com",
+//   "http://192.168.13.220:4003",
+//   "http://192.168.13.221:4003",
+//   "http://192.168.100.65:4003",
+//   "http://192.168.13.84:4003",
+//   "http://192.168.100.65:4003"
+// ];
+// securityMiddleware(app, {
+//   allowedOrigins,
+//   adminIPWhitelist: [], // Example whitelist
+//   maxRequestSize: "10mb",
+//   rateLimitWindow: 15 * 60 * 1000, // 15 minutes
+//   rateLimitMax: 200, // max requests per window
+// });
 
 
 app.use(i18nConfig.init);
@@ -117,7 +117,7 @@ setInterval(() => backupMongoDB(), backupTime);
   setInterval(async () => {
     try {
       await runRecurringEventsCron();
-      console.log(`✅ Recurring cron tick complete ${cronTickCount}`);
+      // console.log(`✅ Recurring cron tick complete ${cronTickCount}`);
     } catch (err) {
       console.error(`❌ Recurring cron error ${cronTickCount}`, err);
     }
