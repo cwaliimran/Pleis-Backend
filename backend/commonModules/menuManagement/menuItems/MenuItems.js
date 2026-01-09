@@ -8,7 +8,7 @@ const menuItemsSchema = new mongoose.Schema(
       default: "",
     },
     title: {
-      type: String,
+      type: String, 
       trim: true,
       required: true,
       default: "",
@@ -77,6 +77,10 @@ const menuItemsSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isScheduled: {
+      type: Boolean,
+      default: false,
+    },
     startDate: {
       type: Date,
       default: null,
@@ -98,6 +102,10 @@ const menuItemsSchema = new mongoose.Schema(
     upSellItem: {
       type: Boolean,
       default: false,
+    },
+    isAvailableInStock: {
+      type: Boolean,
+      default: true,
     },
 
   },

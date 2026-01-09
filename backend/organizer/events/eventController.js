@@ -128,11 +128,7 @@ const getEvents = async (req, res) => {
   try {
 
 
-    if (organization) {
-      if (!validateParams(req, res, {
-        objectIdFields: ["organization"],
-      })) return;
-    }
+
 
     if (startDate && !validateParams(req, res, {
       dateFields: {

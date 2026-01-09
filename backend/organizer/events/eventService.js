@@ -1,7 +1,8 @@
 // services/eventService.js
 
 const { getCurrentDateInTimezone, convertUtcToTimezone, generateMeta } = require("../../helperUtils/responseUtil");
-const Organizations = require("../organizations/Organization");
+const Organizations = require("@OrganizationModel");
+mongoose = require("mongoose");
 const eventRepo = require("./eventRepository");
 const _ = require("lodash");
 const { formatEventResponse } = require("./formatter/eventFormatter");
@@ -14,16 +15,34 @@ const createEvent = async ({ data }, timezone) => {
 
 const getEvents = async ({ page, limit, keyword, status, creator, startDate, endDate, organization, timezone }) => {
   const query = {};
-  if (creator) query.creator = creator;
+  if (!organization && creator) {
+  query.creator = creator;
+}
   if (status) {
     query.status = status;
   } else {
     query.status = { $ne: "deleted" };
   }
 
-  if (organization) {
-    query["basicInfo.organization"] = organization;
+if (organization) {
+  let organizationIds = [];
+
+  if (Array.isArray(organization)) {
+    organizationIds = organization;
+  } else if (typeof organization === "string") {
+    // support comma and % separated values
+    organizationIds = organization.split(/[, %]+/);
   }
+
+  organizationIds = organizationIds.filter(Boolean);
+console.log("organizationIds",organizationIds );
+  if (organizationIds.length > 0) {
+    query["basicInfo.organization"] = {
+      $in: organizationIds.map(id => new mongoose.Types.ObjectId(id)),
+    };
+  }
+}
+
 
   if (startDate) {
     query["schedule.startDateTime"] = { $gte: new Date(startDate) };

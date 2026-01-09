@@ -1,5 +1,5 @@
 // repositories/menuItemRepository.js
-const MenuItems = require("./MenuItems");
+const MenuItems = require("@MenuItemsModel");
 
 // Create menuItem in a transaction and update organization
 const createMenuItem = async (data) => {

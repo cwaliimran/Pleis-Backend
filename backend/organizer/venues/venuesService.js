@@ -2,9 +2,9 @@
 const { buildKeywordQueryFromModel, buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
 const { generateMeta } = require("../../helperUtils/responseUtil");
 const { formatOrganization } = require("../organizations/formatter/formatOrganization");
-const Organizations = require("../organizations/Organization");
+const Organizations = require("@OrganizationModel");
 const { formatVenue } = require("./formatter/formatVenue");
-const Venues = require("./Venues");
+const Venues = require("@VenuesModel");
 const venueRepo = require("./venuesRepository");
 
 const createVenue = async (data) => {

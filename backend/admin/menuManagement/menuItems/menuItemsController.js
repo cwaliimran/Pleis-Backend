@@ -183,7 +183,7 @@ const getMenuItemDetails = async (req, res) => {
 const updateMenuItem = async (req, res) => {
   const { id } = req.params;
   let { timezone } = req.user;
-  const {
+  let {
     image,
     title,
     description,
@@ -196,7 +196,51 @@ const updateMenuItem = async (req, res) => {
     startTime,
     endTime,
     status = "active",
+    isLimitedTimeOffer,
+    isScheduled,
+    startDate,
+    endDate,
+    isAvailableInStock,
+    upSellItem,
+    availabilityType,
+    event,
   } = req.body;
+    if (availabilityType === 'preOrdersEvent' && !event) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "event_is_required_for_preOrdersEvent",
+  
+      });
+    }
+
+  if (upSellItem) {
+    if (upSellItem === "true") {
+      upSellItem = true;
+    } else if (upSellItem === "false") {
+      upSellItem = false;
+    } else {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_upSellItem_value",
+      });
+    }
+  }
+  if (isScheduled) {
+    if (isScheduled === "true") {
+      isScheduled = true;
+    } else if (isScheduled === "false") {
+      isScheduled = false;
+    } else {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_upSellItem_value",
+      });
+    }
+  }
+
 
   if (
     !validateParams(req, res, {
@@ -222,13 +266,46 @@ const updateMenuItem = async (req, res) => {
     startTime,
     endTime,
     status,
+    isLimitedTimeOffer,
+    isScheduled,
+    startDate,
+    endDate,
+    isAvailableInStock,
+    upSellItem,
+    availabilityType,
+    event,
   };
 
   try {
+    if (startDate && endDate) {
+      data.startDate = convertTimezoneToUtc(startDate, timezone, "YYYY-MM-DD");
+      data.endDate = convertTimezoneToUtc(endDate, timezone, "YYYY-MM-DD");
+    }
+    const allowedAvailabilityTypes = ['preOrdersOnly', 'preOrdersEvent', 'preOrderExclusive'];
+    if (availabilityType && !allowedAvailabilityTypes.includes(availabilityType)) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_availability_type",
+        error: `availabilityType must be one of ${allowedAvailabilityTypes.join(', ')}`,
+      });
+    }
 
     if (startTime && endTime) {
       data.startTime = convertTimezoneToUtc(startTime, req.user.timezone, "hh:mm A");
       data.endTime = convertTimezoneToUtc(endTime, req.user.timezone, "hh:mm A");
+
+      if (data.startTime >= data.endTime) {
+        return sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "end_time_must_be_after_start_time",
+        });
+      }
+    }
+    if (startDate && endDate) {
+      data.startDate = convertTimezoneToUtc(startDate, req.user.timezone, "hh:mm A");
+      data.endDate = convertTimezoneToUtc(endDate, req.user.timezone, "hh:mm A");
 
       if (data.startTime >= data.endTime) {
         return sendResponse({
