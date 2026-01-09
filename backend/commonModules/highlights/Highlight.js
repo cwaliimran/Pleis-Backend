@@ -20,7 +20,7 @@ const highlightSchema = new mongoose.Schema(
       required: true,
       default: "",
     },
-    type: {
+    type: { 
       type: String,
       enum: ["event", "organization"],
       default: "event",

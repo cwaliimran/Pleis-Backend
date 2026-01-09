@@ -5,6 +5,8 @@ const menuItemRepo = require("./menuItemsRepository");
 const mongoose = require("mongoose");
 const MenuItems = require("@MenuItemsModel");
 const Menus = require("@MenusModel");
+const Organizations = require("@OrganizationModel");
+
 // const Venues = require("../../venues/Venues");
 // const MenuItemCategories = require("../menuItemCategories/MenuItemCategories");
 const { formatMenuItem } = require("./formatter/formatMenuItems");
@@ -15,7 +17,7 @@ const createMenuItem = async (data, timezone) => {
   return obj;
 };
 
-const getMenuItems = async ({ page, limit, keyword, status, userId, date, organization }) => {
+const getMenuItems = async ({ timezone,page, limit, keyword, status, userId, date, organization }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let pipeline = [];
 
@@ -98,6 +100,26 @@ const getMenuItems = async ({ page, limit, keyword, status, userId, date, organi
         preserveNullAndEmptyArrays: true  // Allow for menus that may not have an organization
       }
     });
+    pipeline.push({
+      $lookup: {
+        from: "menuitemcategories",  // Join with the Menus collection
+        localField: "category",  // Match menu field in MenuItems with _id in Menus
+        foreignField: "_id",  // Match _id in Menus collection
+        pipeline: [
+          {
+            $project: { title: 1, _id: 1 }  // Only get the name field
+          }
+
+        ],
+        as: "category"  // Output array containing menu details
+      }
+    });
+    pipeline.push({
+      $unwind: {
+        path: "$category",
+        preserveNullAndEmptyArrays: true  // Allow for menus that may not have an organization
+      }
+    });
 
   } else {
     // If no organizationIds are provided, match based on userId (creator)
@@ -131,8 +153,22 @@ const getMenuItems = async ({ page, limit, keyword, status, userId, date, organi
       }
     });
     pipeline.push({
+      $lookup: {
+        from: "menuitemcategories",  // Join with the Menus collection
+        localField: "category",  // Match menu field in MenuItems with _id in Menus
+        foreignField: "_id",  // Match _id in Menus collection
+        pipeline: [
+          {
+            $project: { title: 1, _id: 1 }  // Only get the name field
+          }
+
+        ],
+        as: "category"  // Output array containing menu details
+      }
+    });
+    pipeline.push({
       $unwind: {
-        path: "$menu",
+        path: "$category",
         preserveNullAndEmptyArrays: true  // Allow for menus that may not have an organization
       }
     });
@@ -143,6 +179,7 @@ const getMenuItems = async ({ page, limit, keyword, status, userId, date, organi
         preserveNullAndEmptyArrays: true  // Allow for menus that may not have an organization
       }
     });
+
   }
 
   // Additional filters: status, date, keyword
@@ -155,15 +192,25 @@ const getMenuItems = async ({ page, limit, keyword, status, userId, date, organi
     pipeline.push({ $match: { createdAt: { $gte: start, $lt: end } } });
   }
 
-  if (keyword) {
-    const keywordMatch = buildKeywordQueryFromModels(
-      [{ schema: Menus.schema }],  // Only Menu fields for keyword search
-      keyword
-    );
-    if (Object.keys(keywordMatch).length) {
-      pipeline.push({ $match: keywordMatch });
-    }
+const safeKeyword = String(keyword || "").trim();
+
+if (safeKeyword) {
+  const keywordMatch = buildKeywordQueryFromModels(
+    [
+      { schema: MenuItems.schema }, // root document
+      { schema: Menus.schema, prefix: "menu." },
+      { schema: Organizations.schema, prefix: "menu.organization." },
+    ],
+    safeKeyword
+  );
+
+  if (Object.keys(keywordMatch).length) {
+    pipeline.push({ $match: keywordMatch });
   }
+}
+
+
+
 
   // Sort by createdAt
   pipeline.push({ $sort: { createdAt: -1 } });
@@ -182,7 +229,7 @@ const getMenuItems = async ({ page, limit, keyword, status, userId, date, organi
 
   const menuItems = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
-
+const formattedMenuItems = menuItems.map(item => formatMenuItem(item, timezone));
   // Additional counts for meta: active/inactive/total by userId as creator
   const [total, active, inactive] = await Promise.all([
     Menus.countDocuments({ creator: userId, status: { $ne: "deleted" } }),
@@ -193,7 +240,7 @@ const getMenuItems = async ({ page, limit, keyword, status, userId, date, organi
   const meta = generateMeta(page, limit, totalFiltered);
   meta.menuItemsCount = { total, active, inactive };
 
-  return { menuItems, meta };
+  return { menuItems: formattedMenuItems, meta };
 };
 
 

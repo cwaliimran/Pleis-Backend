@@ -63,7 +63,7 @@ const createMenu = async (req, res) => {
 
 const getMenus = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", organizations, date, companyOrganizer } = req.query;
+  const { keyword, status = "active", organization, date, companyOrganizer } = req.query;
 
   const userId = req.user._id;
   
@@ -141,6 +141,7 @@ const updateMenu = async (req, res) => {
     description,
     organization,
     status = "active",
+    isOrderingEnabled
   } = req.body;
 
   if (
@@ -155,6 +156,7 @@ const updateMenu = async (req, res) => {
     title,
     description,
     organization,
+    isOrderingEnabled,
     status,
   };
 

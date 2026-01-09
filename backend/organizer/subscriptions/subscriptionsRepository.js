@@ -209,7 +209,10 @@ const getSubscriptions = async ({ timezone, page, limit, keyword, status, userId
   return { Subscriptions, meta }
 }
 
-
+const findUserInactiveSubscriptionById = async (id) => {
+  const user = await User.findById(id).select("inActiveSubscription").lean();
+  return user?.inActiveSubscription || null;
+};
 const getUserSubscriptions = async ({
   timezone,
   page = 1,
@@ -222,6 +225,7 @@ const getUserSubscriptions = async ({
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const now = getCurrentDateInTimezone({ timezone });
+  console.log("userId",userId );
 
   /* ================================
      BASE MATCH (SINGLE USER)
@@ -341,8 +345,15 @@ const getUserSubscriptions = async ({
   ================================= */
   const result = await User.aggregate(pipeline);
 
-  const users = result[0]?.data || [];
-  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+const users = result[0]?.data || [];
+const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+
+// attach inactive subscription
+const inactiveSubscription =
+  users.length > 0
+    ? await findUserInactiveSubscriptionById(users[0]._id)
+    : null;
+
 
   /* ================================
      FORMAT RESPONSE
@@ -359,6 +370,7 @@ const getUserSubscriptions = async ({
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
+      inactiveSubscription,
 
       subscription: {
         subscriptionTypes: user.subscriptionTypes,

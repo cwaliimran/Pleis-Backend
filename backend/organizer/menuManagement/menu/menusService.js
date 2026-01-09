@@ -1,8 +1,8 @@
 // services/menuService.js
 const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
 const { generateMeta } = require("@utils/responseUtil");
-// const Organizations = require("../../organizations/Organization");
-// const Menus = require("./Menus");
+const Organizations = require("@OrganizationModel");
+const Menus = require("@MenusModel");
 const menuRepo = require("./menusRepository");
 const mongoose = require("mongoose");
 
@@ -44,14 +44,29 @@ const getMenus = async ({ page, limit, keyword, status, userId, date, organizati
 
   // Apply filters
   let organizationIds = [];
-  if (organization && Array.isArray(organization) && organization.length > 0) {
-    organizationIds = organization.map(id => new mongoose.Types.ObjectId(id));
-    pipeline.push({
-      $match: {
-        organization: { $in: organizationIds }
-      }
-    });
+
+  if (organization) {
+    let orgArray = [];
+
+    if (Array.isArray(organization)) {
+      orgArray = organization;
+    } else if (typeof organization === "string") {
+      // support comma or % separated values
+      orgArray = organization.split(/[, %]+/);
+    }
+    orgArray = orgArray.filter(Boolean);
+
+    if (orgArray.length > 0) {
+      organizationIds = orgArray.map(id => new mongoose.Types.ObjectId(id));
+
+      pipeline.push({
+        $match: {
+          organization: { $in: organizationIds }
+        }
+      });
+    }
   }
+
 
   if (status) {
     pipeline.push({ $match: { status } });
@@ -136,7 +151,8 @@ const updateMenu = async (id, data) => {
     "title",
     "description",
     "organization",
-    "status"
+    "status",
+    "isOrderingEnabled"
   ];
   const updateData = {};
   for (const key of allowedFields) {
@@ -188,7 +204,7 @@ const duplicateMenuAndItems = async (menuId, organization) => {
     const duplicatedMenu = {
       ...menu.toObject(),
       _id: new mongoose.Types.ObjectId(),
-      title: `${menu.title}`, 
+      title: `${menu.title}`,
       organization: organization,
     };
 
