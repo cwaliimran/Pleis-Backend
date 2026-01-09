@@ -1,5 +1,5 @@
 // repositories/venueRepository.js
-const Venues = require("./Venues");
+const Venues = require("@VenuesModel");
 const mongoose = require("mongoose");
 
 // Create venue in a transaction and update organization
@@ -8,7 +8,7 @@ const createVenue = async (data) => {
   session.startTransaction();
   try {
     if (data.organization) {
-      // Make all venues ifPrimary to false
+      // Make all venues ifPrimary to falseEventsModel
       await Venues.updateMany(
         { organization: data.organization, isPrimary: true },
         { isPrimary: false },

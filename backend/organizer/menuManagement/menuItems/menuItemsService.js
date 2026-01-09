@@ -3,10 +3,12 @@ const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
 const { generateMeta, convertUtcToTimezone } = require("@utils/responseUtil");
 const menuItemRepo = require("./menuItemsRepository");
 const mongoose = require("mongoose");
-const MenuItems = require("./MenuItems");
-const Menus = require("../menu/Menus");
-const Venues = require("../../venues/Venues");
-const MenuItemCategories = require("../menuItemCategories/MenuItemCategories");
+const MenuItems = require("@MenuItemsModel");
+const Menus = require("@MenusModel");
+const Organizations = require("@OrganizationModel");
+
+// const Venues = require("../../venues/Venues");
+// const MenuItemCategories = require("../menuItemCategories/MenuItemCategories");
 const { formatMenuItem } = require("./formatter/formatMenuItems");
 
 const createMenuItem = async (data, timezone) => {
@@ -15,115 +17,235 @@ const createMenuItem = async (data, timezone) => {
   return obj;
 };
 
-// Populate menu data for menuItems
-const getMenuItems = async ({ page, limit, keyword, status, userId, date, menu, timezone }) => {
+const getMenuItems = async ({ timezone,page, limit, keyword, status, userId, date, organization }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
+  let pipeline = [];
 
-  // Build early $match for performance
-  const match = { creator: new mongoose.Types.ObjectId(userId) };
-  if (status) match.status = status; else match.status = { $ne: "deleted" };
-  if (menu) match.menu = new mongoose.Types.ObjectId(menu);
+  const userMatch = { creator: new mongoose.Types.ObjectId(userId) };
+
+  let organizationIds = [];
+  if (organization) {
+    organizationIds = decodeURIComponent(organization).split(',').map(id => new mongoose.Types.ObjectId(id.trim()));
+  }
+
+  // If organizationIds are provided
+  if (organizationIds.length > 0) {
+    // Match the menus based on organizationIds
+    pipeline.push({
+      $match: {
+        organization: { $in: organizationIds }
+      }
+    });
+
+    // Get menuIds
+    pipeline.push({
+      $project: { _id: 1 }
+    });
+
+    const menus = await Menus.aggregate(pipeline);
+    const menuIds = menus.map(menu => menu._id);
+
+    if (menuIds.length === 0) {
+      return { menuItems: [], meta: {} }; // Return empty if no menus found
+    }
+
+    pipeline = [];  // Reset pipeline for MenuItems aggregation
+
+    // Match MenuItems by menuIds
+    pipeline.push({
+      $match: {
+        menu: { $in: menuIds }
+      }
+    });
+
+    // Perform the lookup to join with Menus and get organization details
+    pipeline.push({
+      $lookup: {
+        from: "menus",  // Join with the Menus collection
+        localField: "menu",  // Match menu field in MenuItems with _id in Menus
+        foreignField: "_id",  // Match _id in Menus collection
+        pipeline: [
+          {
+            $lookup: {
+              from: "organizations",  // Join with Organizations collection
+              localField: "organization",  // Match the organization field in Menus
+              foreignField: "_id",  // Match _id in Organizations collection
+              pipeline: [
+                {
+                  $project: {
+                    _id: 1,
+                    "basicInfo.name": 1  // Get the name from basicInfo in Organizations
+                  }
+                }
+              ],
+              as: "organization"  // Store the result in organization field
+            }
+          }
+        ],
+        as: "menu"  // Output array containing menu details
+      }
+    });
+
+    // Unwind the menu and organization to get them as a single object
+    pipeline.push({
+      $unwind: {
+        path: "$menu",
+        preserveNullAndEmptyArrays: true  // Allow for menus that may not have an organization
+      }
+    });
+
+    pipeline.push({
+      $unwind: {
+        path: "$menu.organization",
+        preserveNullAndEmptyArrays: true  // Allow for menus that may not have an organization
+      }
+    });
+    pipeline.push({
+      $lookup: {
+        from: "menuitemcategories",  // Join with the Menus collection
+        localField: "category",  // Match menu field in MenuItems with _id in Menus
+        foreignField: "_id",  // Match _id in Menus collection
+        pipeline: [
+          {
+            $project: { title: 1, _id: 1 }  // Only get the name field
+          }
+
+        ],
+        as: "category"  // Output array containing menu details
+      }
+    });
+    pipeline.push({
+      $unwind: {
+        path: "$category",
+        preserveNullAndEmptyArrays: true  // Allow for menus that may not have an organization
+      }
+    });
+
+  } else {
+    // If no organizationIds are provided, match based on userId (creator)
+    pipeline.push({ $match: userMatch });
+
+    // Lookup menu details from Menus collection based on userId
+    pipeline.push({
+      $lookup: {
+        from: "menus",  // Join with the Menus collection
+        localField: "menu",  // Match menu field in MenuItems with _id in Menus
+        foreignField: "_id",  // Match _id in Menus collection
+        pipeline: [
+          {
+            $lookup: {
+              from: "organizations",  // Join with Organizations collection
+              localField: "organization",  // Match the organization field in Menus
+              foreignField: "_id",  // Match _id in Organizations collection
+              pipeline: [
+                {
+                  $project: {
+                    _id: 1,
+                    "basicInfo.name": 1  // Get the name from basicInfo in Organizations
+                  }
+                }
+              ],
+              as: "organization"  // Store the result in organization field
+            }
+          }
+        ],
+        as: "menu"  // Output array containing menu details
+      }
+    });
+    pipeline.push({
+      $lookup: {
+        from: "menuitemcategories",  // Join with the Menus collection
+        localField: "category",  // Match menu field in MenuItems with _id in Menus
+        foreignField: "_id",  // Match _id in Menus collection
+        pipeline: [
+          {
+            $project: { title: 1, _id: 1 }  // Only get the name field
+          }
+
+        ],
+        as: "category"  // Output array containing menu details
+      }
+    });
+    pipeline.push({
+      $unwind: {
+        path: "$category",
+        preserveNullAndEmptyArrays: true  // Allow for menus that may not have an organization
+      }
+    });
+
+    pipeline.push({
+      $unwind: {
+        path: "$menu.organization",
+        preserveNullAndEmptyArrays: true  // Allow for menus that may not have an organization
+      }
+    });
+
+  }
+
+  // Additional filters: status, date, keyword
+  if (status) pipeline.push({ $match: { status } });
+  else pipeline.push({ $match: { status: { $ne: "deleted" } } });
+
   if (date) {
     const start = new Date(date);
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
-    match.createdAt = { $gte: start, $lt: end };
+    pipeline.push({ $match: { createdAt: { $gte: start, $lt: end } } });
   }
 
-  const pipeline = [
-    { $match: match },
+const safeKeyword = String(keyword || "").trim();
 
-    // Lookup Menus with nested Venue
-    {
-      $lookup: {
-        from: "menus",
-        let: { menu: "$menu" },
-        pipeline: [
-          { $match: { $expr: { $eq: ["$_id", "$$menu"] } } },
-          { $project: { _id: 1, title: 1, image: 1, venue: 1 } },
-          {
-            $lookup: {
-              from: "venues",
-              let: { venueId: "$venue" },
-              pipeline: [
-                { $match: { $expr: { $eq: ["$_id", "$$venueId"] } } },
-                { $project: { _id: 1, title: 1, image: 1 } }
-              ],
-              as: "venue"
-            }
-          },
-          { $unwind: { path: "$venue", preserveNullAndEmptyArrays: true } }
-        ],
-        as: "menuData"
-      }
-    },
-    { $unwind: { path: "$menuData", preserveNullAndEmptyArrays: true } },
+if (safeKeyword) {
+  const keywordMatch = buildKeywordQueryFromModels(
+    [
+      { schema: MenuItems.schema }, // root document
+      { schema: Menus.schema, prefix: "menu." },
+      { schema: Organizations.schema, prefix: "menu.organization." },
+    ],
+    safeKeyword
+  );
 
-    // Lookup Category
-    {
-      $lookup: {
-        from: "menuitemcategories",
-        let: { categoryId: "$category" },
-        pipeline: [
-          { $match: { $expr: { $eq: ["$_id", "$$categoryId"] } } },
-          { $project: { _id: 1, title: 1, } }
-        ],
-        as: "categoryData"
-      }
-    },
-    { $unwind: { path: "$categoryData", preserveNullAndEmptyArrays: true } },
-  ];
-
-  // Keyword search across item, menu, venue (nested), category
-  if (keyword) {
-    const keywordMatch = buildKeywordQueryFromModels(
-      [
-        { schema: MenuItems.schema },                         // item fields
-        { schema: Menus.schema, prefix: "menuData." },        // menu fields
-        { schema: Venues.schema, prefix: "menuData.venue." }, // venue fields (nested under menu)
-        { schema: MenuItemCategories.schema, prefix: "categoryData." } // category fields
-      ],
-      keyword
-    );
-    if (Object.keys(keywordMatch).length) pipeline.push({ $match: keywordMatch });
+  if (Object.keys(keywordMatch).length) {
+    pipeline.push({ $match: keywordMatch });
   }
+}
 
+
+
+
+  // Sort by createdAt
   pipeline.push({ $sort: { createdAt: -1 } });
 
-  // Pagination + counts
+  // Apply pagination
   pipeline.push({
     $facet: {
-      data: [
-        { $skip: skip },
-        ...(limit === 0 ? [] : [{ $limit: limit }])
-      ],
+      data: [{ $skip: skip }, ...(limit === 0 ? [] : [{ $limit: limit }])],
       totalFiltered: [{ $count: "count" }]
     }
   });
 
+  // Run the aggregation to get the menu items
   const result = await MenuItems.aggregate(pipeline);
+
+
   const menuItems = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
-
-  // Side counts
-  const menuFilter = menu ? { menu: menu } : {};
+const formattedMenuItems = menuItems.map(item => formatMenuItem(item, timezone));
+  // Additional counts for meta: active/inactive/total by userId as creator
   const [total, active, inactive] = await Promise.all([
-    MenuItems.countDocuments({ creator: userId, status: { $ne: "deleted" }, ...menuFilter }),
-    MenuItems.countDocuments({ status: "active", creator: userId, ...menuFilter }),
-    MenuItems.countDocuments({ status: "inactive", creator: userId, ...menuFilter })
+    Menus.countDocuments({ creator: userId, status: { $ne: "deleted" } }),
+    Menus.countDocuments({ status: "active", creator: userId }),
+    Menus.countDocuments({ status: "inactive", creator: userId })
   ]);
-
-  // Shape final docs
-  const formattedMenuItems = menuItems.map(doc => {
-    let obj = formatMenuItem(doc, timezone);
-  
-    return obj;
-  });
 
   const meta = generateMeta(page, limit, totalFiltered);
   meta.menuItemsCount = { total, active, inactive };
 
   return { menuItems: formattedMenuItems, meta };
 };
+
+
+
+
 
 
 const updateMenuItem = async (id, data, timezone) => {

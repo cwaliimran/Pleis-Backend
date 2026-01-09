@@ -204,7 +204,15 @@ const updateMenuItem = async (id, data, timezone) => {
     "menu",
     "startTime",
     "endTime",
-    "status"
+    "status",
+    "isLimitedTimeOffer",
+    "isScheduled",
+    "startDate",
+    "endDate",
+    "isAvailableInStock",
+    "upSellItem",
+    "availabilityType",
+    "event",
   ];
   const updateData = {};
   for (const key of allowedFields) {
