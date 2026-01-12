@@ -12,26 +12,60 @@ const createVenue = async (data) => {
 };
 const mongoose = require("mongoose");
 
-const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, organization }) => {
+const getVenues = async ({
+  page,
+  limit,
+  keyword,
+  status,
+  pinned,
+  userId,
+  date,
+  organization
+}) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
+  console.log("userId", userId);
+
+  // 🔹 Normalize organization param → array of ObjectIds
+  let organizationIds = null;
+  if (organization) {
+    organizationIds = organization
+      .split(/[,%]/) // supports comma and %
+      .filter(Boolean)
+      .map(id => new mongoose.Types.ObjectId(id));
+  }
 
   const pipeline = [
-    // Join with Organizations collection
+    // 1️⃣ Join with Organizations collection
     {
       $lookup: {
         from: "organizations",
         localField: "organization",
         foreignField: "_id",
         as: "organizationData",
-        pipeline: [
-          { $project: { basicInfo: 1 } }
-        ]
+        pipeline: [{ $project: { basicInfo: 1, creator: 1, staff: 1 } }]
       }
     },
-    // Flatten organizationData array for easier matching
-    { $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true } },
-    // Match user access (venue creator OR org creator OR org staff)
+
+    // 2️⃣ Flatten organizationData
     {
+      $unwind: {
+        path: "$organizationData",
+        preserveNullAndEmptyArrays: true
+      }
+    }
+  ];
+
+  // 3️⃣ Organization filter OR user access fallback
+  if (organizationIds?.length) {
+    // 🔹 STRICT organization filter
+    pipeline.push({
+      $match: {
+        organization: { $in: organizationIds }
+      }
+    });
+  } else {
+    // 🔹 User-based access
+    pipeline.push({
       $match: {
         $or: [
           { creator: new mongoose.Types.ObjectId(userId) },
@@ -39,24 +73,17 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
           { "organizationData.staff.user": new mongoose.Types.ObjectId(userId) }
         ]
       }
-    }
-  ];
-
-  // Apply filters
-  if (organization) {
-    pipeline.push({
-      $match: {
-        organization: new mongoose.Types.ObjectId(organization)
-      }
     });
   }
 
+  // 4️⃣ Status filter
   if (status) {
     pipeline.push({ $match: { status } });
   } else {
     pipeline.push({ $match: { status: { $ne: "deleted" } } });
   }
 
+  // 5️⃣ Date filter
   if (date) {
     const start = new Date(date);
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
@@ -67,10 +94,11 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
     });
   }
 
+  // 6️⃣ Keyword search
   const keywordMatch = buildKeywordQueryFromModels(
     [
-      { schema: Venues.schema },                       // Venue fields
-      { schema: Organizations.schema, prefix: 'organizationData.' } // Organization fields (with prefix)
+      { schema: Venues.schema },
+      { schema: Organizations.schema, prefix: "organizationData." }
     ],
     keyword
   );
@@ -79,7 +107,7 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
     pipeline.push({ $match: keywordMatch });
   }
 
-
+  // 7️⃣ Pinned filter
   if (pinned !== undefined) {
     pipeline.push({
       $match: {
@@ -92,9 +120,10 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
     });
   }
 
+  // 8️⃣ Sorting
   pipeline.push({ $sort: { createdAt: -1 } });
 
-  // Apply pagination + counts using $facet
+  // 9️⃣ Pagination + count
   pipeline.push({
     $facet: {
       data: [
@@ -105,19 +134,20 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
     }
   });
 
-
+  // 🔟 Execute aggregation
   const result = await Venues.aggregate(pipeline);
 
   const venues = result[0]?.data || [];
-  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+  const totalFiltered = result[0]?.totalFiltered?.[0]?.count || 0;
 
-  // Additional counts for meta (active/inactive/total by userId as creator)
+  // 1️⃣1️⃣ Meta counts
   const [total, active, inactive] = await Promise.all([
     Venues.countDocuments({ creator: userId, status: { $ne: "deleted" } }),
-    Venues.countDocuments({ status: "active", creator: userId }),
-    Venues.countDocuments({ status: "inactive", creator: userId })
+    Venues.countDocuments({ creator: userId, status: "active" }),
+    Venues.countDocuments({ creator: userId, status: "inactive" })
   ]);
 
+  // 1️⃣2️⃣ Format response
   const formattedVenues = venues.map(venue => {
     const venueDoc = new Venues(venue);
     const formattedVenue = venueDoc.formatResponse();
@@ -137,6 +167,9 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
     meta
   };
 };
+
+module.exports = { getVenues };
+
 
 
 //get venues for menu options dropdown where organization is not assigned yet

@@ -11,7 +11,6 @@ const clubCollaborationsService = require("./clubCollaborationsService");
 
 const createClubCollaboration = async (req, res) => {
   const {
-    sender,
     receiver,
     notes,
     expiryDate,
@@ -19,13 +18,14 @@ const createClubCollaboration = async (req, res) => {
 
   if (
     !validateParams(req, res, {
-      rawData: ["sender", "receiver"],
+      rawData: ["receiver"],
     })
   ) return;
+  const sender = req.user._id;
 
   // Set initial status as 'pending' for both sender and receiver
   let data = {
-    sender: { id: sender, status: "pending" },
+    sender: { id: req.user._id, status: "pending" },
     receiver: { id: receiver, status: "pending" },
     notes,
     expiryDate,
@@ -87,6 +87,7 @@ const getClubCollaborations = async (req, res) => {
       keyword,
       status,
       date,
+      userId: req.user._id,
     });
 
     return sendResponse({
@@ -150,8 +151,8 @@ const getClubCollaborationDetails = async (req, res) => {
 const updateClubCollaboration = async (req, res) => {
   const { id } = req.params;
   const { status, notes, expiryDate } = req.body;
-  const userId = req.user.id; // Get the authenticated user ID
-
+  const userId = req.user._id; // Get the authenticated user ID
+console.log("userId",userId);
   if (
     !validateParams(req, res, {
       pathParams: ["id"],

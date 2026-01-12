@@ -20,7 +20,7 @@ const apiRateLimiter = createRateLimiter("Venues");
 const apiRateLimiterDetails = createRateLimiter("Venues/:id");
 
 // Create a new venue
-router.post("/", roleMiddleware(["admin", "organizer", "staff", "manager"]), createVenue);
+router.post("/", roleMiddleware([ "organizer"]), createVenue);
 
 // Get all venues with pagination
 router.get("/", apiRateLimiter, getVenues);

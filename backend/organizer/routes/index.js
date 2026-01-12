@@ -25,6 +25,11 @@ router.use("/menu-management/menu", require("../menuManagement/menu/menusRoutes"
 router.use("/qr-code", require("../qr/qrRoutes"));
 router.use("/highlights", require("../highlights/highlightRoutes"));
 router.use("/events", require("../events/eventRoutes"));
+router.use("/venues", require("../venues/venuesRoutes"));
+router.use("/ticketing", require("../ticketing/ticketingsRoutes"));
+router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));
+router.use("/bundles", require("../bundles/bundleRoutes"));
+router.use("/general", require("../bundles copy/generalAPIRoutes"));
 
 
 

@@ -11,9 +11,10 @@ const challengeService = require("./challengesService");
 const createChallenge = async (req, res) => {
 
   //"visit", "earnPoints", "buyMenuItem", "referUsers"
-
+const companyOrganizer = req.user._id;
+req.body.companyOrganizer = companyOrganizer;
   var dateFields = {}
-  var rawData = ["title", "taskType", "reward", "endDate", "companyOrganizer", "reward", "reward.rewardType"]
+  var rawData = ["title", "taskType", "reward", "endDate",  "reward", "reward.rewardType"]
   var objectIdFields = ["companyOrganizer"]
 
   if (req.body.promotionType === "buyMenuItem") {
@@ -21,7 +22,7 @@ const createChallenge = async (req, res) => {
     objectIdFields.push("menuItem")
   }
 
-  if (taskType === "visit" || taskType === "earnPoints" || taskType === "referUsers") {
+  if (req.body.taskType === "visit" || req.body.taskType === "earnPoints" || req.body.taskType === "referUsers") {
     rawData.push("taskValue")
   }
 
@@ -75,19 +76,12 @@ const createChallenge = async (req, res) => {
 
 const getChallenges = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, companyOrganizer } = req.query;
+  const { keyword, status, date } = req.query;
   try {
-    //companyOrganizer is required to filter for specific company
-    if (!companyOrganizer) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "company_organizer_is_required",
-      });
-    }
+
 
     const { challenges, meta } = await challengeService.getChallenges({
-      companyOrganizer,
+      companyOrganizer: req.user._id,
       page,
       limit,
       keyword,

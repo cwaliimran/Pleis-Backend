@@ -13,7 +13,8 @@ const create = async (req, res) => {
   let recurringDetails = req.body?.recurringDetails || {};
 
   var dateFields = {}
-  var rawData = ["image", "title", "promotionType", "startDate", "endDate", "companyOrganizer"]
+  req.body.companyOrganizer = req.user._id;
+  var rawData = ["image", "title", "promotionType", "startDate", "endDate"]
   var objectIdFields = ["companyOrganizer"]
 
   if (req.body.promotionType === "happyHour") {
@@ -116,20 +117,12 @@ const create = async (req, res) => {
 
 const get = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, companyOrganizer } = req.query;
+  const { keyword, status, date } = req.query;
 
   try {
-    //companyOrganizer is required to filter for specific company
-    if (!companyOrganizer) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "company_organizer_is_required",
-      });
-    }
-    
+
     const { responses, meta } = await service.get({
-      companyOrganizer,
+      companyOrganizer: req.user._id,
       page,
       limit,
       keyword,
