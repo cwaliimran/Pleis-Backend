@@ -7,6 +7,7 @@ const {
 } = require("../../helperUtils/responseUtil");
 
 const ticketingsService = require("./ticketingsService");
+const { updateTicketingService } = require("./updateTicketingService");
 
 const createTicketing = async (req, res) => {
   const data = req.body;
@@ -260,6 +261,7 @@ const updateTicketing = async (req, res) => {
   const { id } = req.params;
   const data = req.body;
   const { timezone } = req.user;
+  const { scope = "single" } = req.query; // single | future
 
   // --- Validate route params ---
   if (
@@ -273,7 +275,6 @@ const updateTicketing = async (req, res) => {
   const validateData = {
     rawData: [],
     dateFields: {},
-    objectIdFields: ["event"],
   };
 
   // --- Optional: validate date formats for timeSensitivePricing ---
@@ -406,7 +407,7 @@ const updateTicketing = async (req, res) => {
   }
 
   try {
-    const updated = await ticketingsService.updateTicketing(id, data, timezone);
+    const updated = await updateTicketingService(id, data, scope);
 
     if (!updated) {
       return sendResponse({
@@ -435,6 +436,7 @@ const updateTicketing = async (req, res) => {
 
 const deleteTicketing = async (req, res) => {
   const { id } = req.params;
+  const { scope = "single" } = req.query; // single | future
 
   if (
     !validateParams(req, res, {
@@ -445,7 +447,7 @@ const deleteTicketing = async (req, res) => {
     return;
 
   try {
-    const deleted = await ticketingsService.deleteTicketing(id);
+    const deleted = await ticketingsService.deleteTicketing(id, scope);
     if (!deleted) {
       return sendResponse({
         res,
