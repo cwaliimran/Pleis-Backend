@@ -84,28 +84,28 @@ const countEvents = async (query = {}) => {
 // Find by ID
 const findEventById = async (id) => {
   return Events.findById(id)
-    .populate("basicInfo.venue", "title location floorPlan")
+    .populate({
+      path: "basicInfo.venue",
+      select: "title location floorPlan venueType",
+      populate: {
+        path: "venueType",
+        select: "title",
+      },
+    })
     .populate("basicInfo.categories", "title image otherInfo")
     .populate("basicInfo.tags", "title otherInfo")
     .populate({
       path: "basicInfo.organization",
-      select: "basicInfo otherInfo operatingHours",
-      populate: [
-        {
-          path: "otherInfo.categories",
-          select: "title image otherInfo",
-        },
-        {
-          path: "otherInfo.tags",
-          select: "title otherInfo",
-        },
-      ],
+      select:
+        "basicInfo.media.logo basicInfo.name otherInfo.description operatingHours",
     })
     .populate({
       path: "basicInfo.partnerOrganization",
-      select: "basicInfo.name otherInfo.description basicInfo.media.logo",
+      select:
+        "basicInfo.name otherInfo.description basicInfo.media.logo",
     });
 };
+
 
 // Delete
 const deleteEventById = async (event) => {

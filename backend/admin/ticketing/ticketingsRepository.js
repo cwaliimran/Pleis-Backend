@@ -90,19 +90,20 @@ const findByIdAndUpdate = async (id, data) => {
 };
 
 
-
 const validateTicketsAndQuantity = async (ticketings) => {
   const errors = [];
   const ticketSnapshots = [];
 
-  const ticketCounts = ticketings.reduce((acc, t) => {
+  // Group requests by ticketId
+  const grouped = {};
+  for (const t of ticketings) {
     const key = t.ticketId.toString();
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {});
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(t);
+  }
 
-  for (const ticketId of Object.keys(ticketCounts)) {
-    const countInPayload = ticketCounts[ticketId];
+  for (const ticketId of Object.keys(grouped)) {
+    const requests = grouped[ticketId];
     const ticket = await TicketingsModel.findById(ticketId);
 
     if (!ticket) {
@@ -110,109 +111,151 @@ const validateTicketsAndQuantity = async (ticketings) => {
       continue;
     }
 
+    /* =====================================================
+       SLOT-BASED TICKETS
+       → ONLY slot.quantity matters
+       → IGNORE ticket.quantity COMPLETELY
+    ===================================================== */
+    if (ticket.timingSlots?.enabled === true) {
+      for (const req of requests) {
+        if (!req.timeSlot) {
+          errors.push({
+            ticketId,
+            message: "Time slot required for this ticket"
+          });
+          continue;
+        }
+
+        const slot = ticket.timingSlots.dateTimeSlots
+          .flatMap(d => d.timeSlots)
+          .find(s => s._id.toString() === req.timeSlot);
+
+        if (!slot) {
+          errors.push({
+            ticketId,
+            message: "Invalid time slot"
+          });
+          continue;
+        }
+
+        const slotBooked = await TicketingBookings.countDocuments({
+          "ticket.ticketId": ticketId,
+          "ticket.timeSlot": req.timeSlot,
+          status: { $in: ["valid", "used"] }
+        });
+
+        if (slot.quantity - slotBooked <= 0) {
+          errors.push({
+            ticketId,
+            message: "Selected time slot is sold out"
+          });
+          continue;
+        }
+
+        /* ---------- FAST TRACK (slot tickets allowed) ---------- */
+        if (req.isFastTrack === true) {
+          if (!ticket.fastTrackEntry?.enabled) {
+            errors.push({
+              ticketId,
+              message: "Fast track not enabled for this ticket"
+            });
+            continue;
+          }
+
+          const fastTrackBooked = await TicketingBookings.countDocuments({
+            "ticket.ticketId": ticketId,
+            "ticket.snapshot.fastTrack": true,
+            status: { $in: ["valid", "used"] }
+          });
+
+          if (
+            ticket.fastTrackEntry.quantity - fastTrackBooked <= 0
+          ) {
+            errors.push({
+              ticketId,
+              message: "Fast track capacity exceeded"
+            });
+            continue;
+          }
+        }
+
+        ticketSnapshots.push({
+          ticketId,
+          snapshot: ticket.toObject(),
+          timeSlot: req.timeSlot,
+          isFastTrack: req.isFastTrack === true
+        });
+      }
+
+      continue; // ⬅️ CRITICAL: DO NOT FALL THROUGH
+    }
+
+    /* =====================================================
+       NON-SLOT TICKETS
+       → ONLY ticket.quantity matters
+    ===================================================== */
     const totalBooked = await TicketingBookings.countDocuments({
       "ticket.ticketId": ticketId,
       status: { $in: ["valid", "used"] }
     });
 
-    const remainingGlobalQty = ticket.quantity - totalBooked;
+    const remaining = ticket.quantity - totalBooked;
 
-    if (ticket.timingSlots?.enabled) {
-      const requestsForTicket = ticketings.filter(
-        (t) => t.ticketId.toString() === ticketId
-      );
+    if (remaining < requests.length) {
+      errors.push({
+        ticketId,
+        message: "Not enough tickets available",
+        available: remaining,
+        requested: requests.length
+      });
+      continue;
+    }
 
-      const allSlots = ticket.timingSlots.dateTimeSlots.flatMap(d =>
-        d.timeSlots.map(s => ({
-          ...s.toObject(),
-          date: d.date,
-          slotId: s._id.toString(),
-        }))
-      );
+    /* ---------- FAST TRACK (non-slot) ---------- */
+    const fastTrackRequested = requests.filter(r => r.isFastTrack === true).length;
 
-      for (const req of requestsForTicket) {
-        const reqSlot = req.timeSlot;
-
-        if (reqSlot) {
-          const slot = allSlots.find(s => s.slotId === reqSlot);
-
-          if (!slot) {
-            errors.push({ ticketId, message: `Time slot not found: ${reqSlot}` });
-            continue;
-          }
-
-          const slotBooked = await TicketingBookings.countDocuments({
-            "ticket.ticketId": ticketId,
-            "ticket.timeSlot": reqSlot,
-            status: { $in: ["valid", "used"] }
-          });
-
-          const remainingSlotQty = slot.quantity - slotBooked;
-
-          if (remainingSlotQty <= 0) {
-            errors.push({ ticketId, message: `No tickets available for this slot` });
-            continue;
-          }
-
-          ticketSnapshots.push({
-            ticketId,
-            snapshot: ticket.toObject(),
-            timeSlot: reqSlot,
-          });
-
-        } else {
-          if (remainingGlobalQty < countInPayload) {
-            errors.push({
-              ticketId,
-              message: `Not enough tickets available (global)`,
-            });
-            continue;
-          }
-
-          ticketSnapshots.push({
-            ticketId,
-            snapshot: ticket.toObject(),
-            timeSlot: null,
-          });
-        }
+    if (fastTrackRequested > 0) {
+      if (!ticket.fastTrackEntry?.enabled) {
+        errors.push({
+          ticketId,
+          message: "Fast track not enabled for this ticket"
+        });
+        continue;
       }
 
-      continue;
-    }
-
-    if (remainingGlobalQty <= 0) {
-      errors.push({
-        ticketId,
-        message: "No tickets available (global limit reached).",
+      const fastTrackBooked = await TicketingBookings.countDocuments({
+        "ticket.ticketId": ticketId,
+        "ticket.snapshot.fastTrack": true,
+        status: { $in: ["valid", "used"] }
       });
-      continue;
+
+      if (
+        ticket.fastTrackEntry.quantity - fastTrackBooked < fastTrackRequested
+      ) {
+        errors.push({
+          ticketId,
+          message: "Fast track capacity exceeded"
+        });
+        continue;
+      }
     }
 
-    if (countInPayload > remainingGlobalQty) {
-      errors.push({
-        ticketId,
-        message: `Not enough tickets available`,
-        requested: countInPayload,
-        available: remainingGlobalQty,
-      });
-      continue;
-    }
-
-    for (let i = 0; i < countInPayload; i++) {
+    for (const req of requests) {
       ticketSnapshots.push({
         ticketId,
         snapshot: ticket.toObject(),
         timeSlot: null,
+        isFastTrack: req.isFastTrack === true
       });
     }
   }
 
-  if (errors.length > 0) return { valid: false, errors };
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
 
   return { valid: true, ticketSnapshots };
 };
-
-
 
 
 const getOrganizationIdFromTicketId = async (ticketId) => {

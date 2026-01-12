@@ -3,13 +3,13 @@ const menuItemRepo = require("./menuItemsRepository");
 const { formatMenuItem } = require("./formatter/formatMenuItems");
 const MenuItemCategories = require("@MenuItemCategoriesModel");
 
-const getMenuItems = async ({ status, timezone, organization }) => {
+const getMenuItems = async ({ timezone, organization }) => {
   const menuId = await menuItemRepo.getMenuIdByOrganization(organization);
   if (!menuId) return { menu: [] };
 
   const menuItems = await menuItemRepo.getMenuItemsWithFilters({
     menu: menuId._id,
-    status,
+    status: "active",
   });
 
   if (!menuItems.length) return { menu: [] };
@@ -40,6 +40,7 @@ const getMenuItemsToManage = async ({ timezone, organization }) => {
 
   const menuItems = await menuItemRepo.getMenuItemsWithFilters({
     menu: menu._id,
+    status: { $in: ["active", "inactive"] }
   });
 
   if (!menuItems.length) return { menu: [] };

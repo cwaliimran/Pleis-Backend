@@ -1,4 +1,6 @@
 const crypto = require("crypto");
+const axios = require("axios");
+
 const monriRepository = require("./monriRepository");
 
 /**
@@ -75,54 +77,59 @@ async function extractPayload(req) {
 
 exports.handleSuccess = async (req, res) => {
   try {
-    const payload = await extractPayload(req);
-    const orderNumber = payload.order_number || payload.orderNumber;
+    const payload = req.query; // Monri SUCCESS = GET redirect
+    const orderNumber = payload.order_number;
 
     if (!orderNumber) {
-      console.log("Payload:", payload);
       return res.status(400).json({ message: "Missing order_number" });
     }
 
     const tx = await monriRepository.findByOrderNumber(orderNumber);
     if (!tx) {
-      console.warn("Monri success callback for unknown order", { orderNumber });
       return res.status(404).json({ message: "Transaction not found" });
     }
 
-    const amount = payload.amount ? Number(payload.amount) : tx.amount;
-    const currency = payload.currency || tx.currency || "EUR";
-    const digest = payload.digest;
+    const isValid = verifyMonriSuccessDigest({
+      payload,
+      successUrl: process.env.SUCCESS_URL
+    });
 
-    if (!digest) {
-      return res.status(400).json({ message: "Missing digest" });
-    }
+    if (!isValid) {
+      console.warn("Monri success digest mismatch", {
+        orderNumber,
+        payload
+      });
 
-    const expected = generateDigest({ orderNumber, amount, currency });
-    if (expected !== digest) {
-      console.warn("Monri success digest mismatch", { orderNumber });
-      await monriRepository.updateTransaction(orderNumber, { rawCallback: payload });
+      await monriRepository.updateTransaction(orderNumber, {
+        status: "invalid",
+        rawCallback: payload
+      });
+
       return res.status(400).json({ message: "Invalid digest" });
     }
 
-    const approvalCode = payload.approval_code || payload.approvalCode || payload.approval;
-
     await monriRepository.updateTransaction(orderNumber, {
       status: "paid",
-      approvalCode,
-      rawCallback: payload,
+      approvalCode: payload.approval_code,
+      referenceNumber: payload.reference_number,
+      rawCallback: payload
     });
 
-    return res.status(200).json({ message: "Payment recorded", orderNumber });
-  } catch (error) {
-    console.error("Monri success handler error:", error);
+    return res.status(200).json({
+      message: "Payment successful",
+      orderNumber
+    });
+  } catch (err) {
+    console.error("Monri success handler error:", err);
     return res.status(500).json({ message: "Processing failed" });
   }
 };
 
+
 exports.handleCancel = async (req, res) => {
   try {
-    const payload = await extractPayload(req);
-    const orderNumber = payload.order_number || payload.orderNumber;
+    const payload = req.query;
+    const orderNumber = payload.order_number;
 
     if (!orderNumber) {
       return res.status(400).json({ message: "Missing order_number" });
@@ -130,18 +137,94 @@ exports.handleCancel = async (req, res) => {
 
     const tx = await monriRepository.findByOrderNumber(orderNumber);
     if (!tx) {
-      console.warn("Monri cancel callback for unknown order", { orderNumber });
       return res.status(404).json({ message: "Transaction not found" });
     }
 
     await monriRepository.updateTransaction(orderNumber, {
-      status: "failed",
-      rawCallback: payload,
+      status: "cancelled",
+      rawCallback: payload
     });
 
-    return res.status(200).json({ message: "Payment cancelled", orderNumber });
-  } catch (error) {
-    console.error("Monri cancel handler error:", error);
+    return res.status(200).json({
+      message: "Payment cancelled",
+      orderNumber
+    });
+  } catch (err) {
+    console.error("Monri cancel handler error:", err);
     return res.status(500).json({ message: "Processing failed" });
+  }
+};
+
+
+
+function verifyMonriSuccessDigest({ payload, successUrl }) {
+  const url = new URL(successUrl);
+
+  // Append all params EXCEPT digest
+  Object.keys(payload).forEach((key) => {
+    if (key !== "digest") {
+      url.searchParams.append(key, payload[key]);
+    }
+  });
+
+  const raw = `${process.env.MONRI_KEY}${url.toString()}`;
+  const expected = crypto.createHash("sha512").update(raw).digest("hex");
+
+  return expected === payload.digest;
+}
+
+
+
+exports.createClientSecret = async (req, res) => {
+  const {
+    amount,
+    currency = "EUR",
+    orderInfo,
+  } = req.body;
+
+  const orderNumber = crypto.randomUUID();
+  const timestamp = Math.floor(Date.now() / 1000);
+
+  const path = "/v2/payment/new";
+
+  // 🔐 Authorization digest (THIS IS DIFFERENT FROM WEBPAY)
+  const raw = `${process.env.MONRI_KEY}${path}${timestamp}${process.env.MONRI_AUTH_TOKEN}`;
+  const digest = crypto.createHash("sha512").update(raw).digest("hex");
+
+  const authorization = `WP3-v2.1 ${process.env.MONRI_AUTH_TOKEN}:${timestamp}:${digest}`;
+
+  try {
+    const response = await axios.post(
+      `https://ipgtest.monri.com${path}`,
+      {
+        order_number: orderNumber,
+        order_info: orderInfo,
+        amount,
+        currency,
+      },
+      {
+        headers: {
+          Authorization: authorization,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+      }
+    );
+
+    // Save transaction locally
+    await monriRepository.createTransaction({
+      orderNumber,
+      amount,
+      currency,
+      status: "pending",
+    });
+
+    return res.json({
+      orderNumber,
+      clientSecret: response.data.client_secret,
+    });
+  } catch (err) {
+    console.error("Monri create payment error", err.response?.data || err);
+    return res.status(500).json({ message: "Failed to create payment" });
   }
 };

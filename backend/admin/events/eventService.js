@@ -7,6 +7,7 @@ const { getTicketingsByEventId } = require("../ticketing/ticketingsService");
 const { generateImmediatelyForTemplate } = require("../../commonModules/events/crons/recurringEvents.core");
 const { Events } = require("@EventsModel");
 const { default: mongoose } = require("mongoose");
+const { getUpdatesByEventIdService } = require("../updates/updatesService");
 
 const createEvent = async ({ data, ticketingData }, timezone) => {
   let event = await eventRepo.createEvent(data, ticketingData);
@@ -338,10 +339,14 @@ const deleteEvent = async (eventId, scope = "single") => {
 
 
 const getEventDetails = async (id, timezone) => {
-  const [event, ticketing] = await Promise.all([eventRepo.findEventById(id),
-  getTicketingsByEventId({ timezone, eventId: id })
+  const [event, updates, ticketing, ticketingStats] = await Promise.all([
+    eventRepo.findEventById(id),
+    getUpdatesByEventIdService(id),
+    getTicketingsByEventId({ timezone, eventId: id }),
+    
   ])
   let data = formatEventResponse(event, { timezone });
+  data.updates = updates || [];
   data.ticketing = ticketing?.ticketings || [];
   return data
 };
