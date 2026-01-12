@@ -113,16 +113,16 @@ const backupTime = 24 * 60 * 60 * 1000;
 setInterval(() => backupMongoDB(), backupTime);
 
 
-  let cronTickCount = 1;
-  setInterval(async () => {
-    try {
-      await runRecurringEventsCron();
-      // console.log(`✅ Recurring cron tick complete ${cronTickCount}`);
-    } catch (err) {
-      console.error(`❌ Recurring cron error ${cronTickCount}`, err);
-    }
-    cronTickCount++;
-  }, 5000);
+let cronTickCount = 1;
+setInterval(async () => {
+  try {
+    await runRecurringEventsCron();
+    // console.log(`✅ Recurring cron tick complete ${cronTickCount}`);
+  } catch (err) {
+    console.error(`❌ Recurring cron error ${cronTickCount}`, err);
+  }
+  cronTickCount++;
+}, 5000);
 
 //export app
 // module.exports = { app };

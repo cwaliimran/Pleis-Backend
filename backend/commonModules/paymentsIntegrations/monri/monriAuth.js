@@ -16,7 +16,6 @@ function buildAuthorizationHeader({ body, fullpath }) {
     )
     .digest("hex");
 
-  // 🔴 merchantKey MUST be here — NOT authenticity token
   return `WP3-v2.1 ${merchantKey}:${timestamp}:${digest}`;
 }
 
