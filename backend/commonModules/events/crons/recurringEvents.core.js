@@ -43,17 +43,16 @@ const mergeDateAndTimeUTC = (day, time) =>
 // MAIN CRON ENTRY
 // ======================================================
 const runRecurringEventsCron = async () => {
-  let fakeDate = new Date("2026-01-14T00:00:00Z");
+  let fakeDate = new Date("2026-01-15T00:00:00Z");
 
   const now = new Date();
-  const horizonDate = addDaysUTC(startOfDayUTC(fakeDate), HORIZON_DAYS);
+  const horizonDate = addDaysUTC(startOfDayUTC(now), HORIZON_DAYS);
 
   const templates = await Events.find({
     "schedule.recurringDetails.isEnabled": true,
     "recurringMeta.isTemplate": true,
     status: "active",
   });
-
   for (const template of templates) {
     try {
       await processTemplate(template, horizonDate);
@@ -226,7 +225,7 @@ const createOccurrence = async (template, startDate, index) => {
     },
   });
 
-  await cloneTicketing(template._id, newEvent._id);
+  await cloneTicketing(template._id, newEvent._id, index);
 };
 
 
@@ -241,7 +240,11 @@ const cloneTicketing = async (templateEventId, newEventId) => {
 
   if (!tickets.length) return;
 
+  const templateEvent = await Events.findById(templateEventId);
   const newEvent = await Events.findById(newEventId);
+
+  const templateStart = new Date(templateEvent.schedule.startDateTime);
+  const occurrenceStart = new Date(newEvent.schedule.startDateTime);
 
   for (const t of tickets) {
     const clone = t.toObject();
@@ -250,6 +253,16 @@ const cloneTicketing = async (templateEventId, newEventId) => {
     clone.event = newEventId;
     clone.isTemplate = false; // cloned ticketings are not templates
 
+    // recurring linking
+    clone.recurringMeta = {
+      isTemplate: false,
+      parentTicket: t._id,
+      occurrenceIndex: newEvent.recurringMeta.occurrenceIndex,
+    };
+
+    // -----------------------------------------
+    // 1️⃣ ALIGN TIMING SLOTS TO OCCURRENCE DATE
+    // -----------------------------------------
     if (clone.timingSlots?.enabled) {
       clone.timingSlots.dateTimeSlots = rebuildSlots(
         t.timingSlots.dateTimeSlots,
@@ -257,9 +270,41 @@ const cloneTicketing = async (templateEventId, newEventId) => {
       );
     }
 
+    // -----------------------------------------
+    // 2️⃣ ALIGN TIME-SENSITIVE PRICING
+    // -----------------------------------------
+    if (clone.timeSensitivePricing) {
+      const { earlyBird, lastMinute } = clone.timeSensitivePricing;
+
+      // EARLY BIRD
+      if (earlyBird?.endDate) {
+        const original = new Date(earlyBird.endDate);
+
+        // offset relative to template start
+        const offset = original.getTime() - templateStart.getTime();
+
+        clone.timeSensitivePricing.earlyBird.endDate = new Date(
+          occurrenceStart.getTime() + offset
+        );
+      }
+
+      // LAST MINUTE
+      if (lastMinute?.startDate) {
+        const original = new Date(lastMinute.startDate);
+
+        const offset = original.getTime() - templateStart.getTime();
+
+        clone.timeSensitivePricing.lastMinute.startDate = new Date(
+          occurrenceStart.getTime() + offset
+        );
+      }
+    }
+
     await TicketingsModel.create(clone);
   }
 };
+
+
 
 
 // ======================================================

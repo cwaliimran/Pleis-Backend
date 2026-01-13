@@ -10,13 +10,23 @@ const createTicketingBooking = async (data) => {
 const getTicketingBookings = async (query = {}, options = {}) => {
   return TicketingBookings.aggregate([
     { $match: query },
+
+    // --- Event lookup ---
     {
       $lookup: {
         from: "events",
         let: { eventId: "$ticket.snapshot.event" },
         pipeline: [
           { $match: { $expr: { $eq: ["$_id", "$$eventId"] } } },
-          { $project: { _id: 1, "basicInfo.title": 1, "basicInfo.media": 1, "basicInfo.venueLocation": 1, schedule: 1 } }
+          {
+            $project: {
+              _id: 1,
+              "basicInfo.title": 1,
+              "basicInfo.media": 1,
+              "basicInfo.venueLocation": 1,
+              schedule: 1,
+            }
+          }
         ],
         as: "ticketEvent"
       }
@@ -26,7 +36,8 @@ const getTicketingBookings = async (query = {}, options = {}) => {
         "ticket.snapshot.event": { $arrayElemAt: ["$ticketEvent", 0] }
       }
     },
-    // --- companyOrganizer lookup ---
+
+    // --- Organization lookup ---
     {
       $lookup: {
         from: "organizations",
@@ -44,19 +55,51 @@ const getTicketingBookings = async (query = {}, options = {}) => {
         as: "organizationPopulated"
       }
     },
-
     {
       $addFields: {
         organization: { $arrayElemAt: ["$organizationPopulated", 0] }
       }
     },
 
-    { $project: { ticketEvent: 0, organizationPopulated: 0 } },
+    // --- Order lookup (payment details) ---
+    {
+      $lookup: {
+        from: "ticketingorders",
+        let: { orderId: "$order" },
+        pipeline: [
+          { $match: { $expr: { $eq: ["$_id", "$$orderId"] } } },
+          {
+            $project: {
+              _id: 1,
+              paymentDetails: 1,
+              status: 1,
+            }
+          }
+        ],
+        as: "orderPopulated"
+      }
+    },
+    {
+      $addFields: {
+        order: { $arrayElemAt: ["$orderPopulated", 0] }
+      }
+    },
+
+    // --- Cleanup ---
+    {
+      $project: {
+        ticketEvent: 0,
+        organizationPopulated: 0,
+        orderPopulated: 0,
+      }
+    },
+
     { $sort: options.sort || { createdAt: -1 } },
     { $skip: options.skip || 0 },
-    { $limit: options.limit || 10 }
+    { $limit: options.limit || 10 },
   ]);
 };
+
 
 
 const getTicketingBookingById = async (id) => {
@@ -188,5 +231,5 @@ module.exports = {
   findTagByIdAndUpdate,
   getTicketingBookingsCount,
   createManyTicketBookings,
-  getTicketingBookingForTransfer
+  getTicketingBookingForTransfer,
 };

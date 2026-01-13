@@ -24,7 +24,7 @@ const createTransaction = async (data, session) => {
     if (!user) throw new Error("User is required");
     if (!domainType) throw new Error("domainType required");
     // if (!points || points.base === undefined || points.total === undefined) throw new Error("Invalid points payload");
-    if (companyPoints === null && globalPoints === null) {
+    if (companyPoints === null || globalPoints === null) {
         throw new Error("At least one of companyPoints or globalPoints must be provided");
     }
 

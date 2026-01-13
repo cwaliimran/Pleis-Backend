@@ -9,12 +9,10 @@ const menuItemsService = require("./menuItemsService");
 
 const getMenuItems = async (req, res) => {
   const {
-    status = "active",
     organization
   } = req.query;
   try {
     const { menu } = await menuItemsService.getMenuItems({
-      status,
       timezone: req.user?.timezone,
       organization,
     });

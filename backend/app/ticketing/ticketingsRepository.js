@@ -128,37 +128,48 @@ const getMinTicketPricesByEventIds = async (eventIds = []) => {
 async function attachAvailabilityToTicket(ticket) {
   const t = ticket.toObject ? ticket.toObject() : { ...ticket };
 
-  // preserve organizer-defined capacity
-  t.originalQuantity = t.quantity;
-
+  /* ---------------- GLOBAL TICKET AVAILABILITY ---------------- */
   const totalBooked = await TicketingBookings.countDocuments({
     "ticket.ticketId": t._id,
+    status: { $in: ["valid", "used"] }
   });
 
-  const remainingGlobal = Math.max(t.quantity - totalBooked, 0);
+  t.remainingQuantity = Math.max(t.quantity - totalBooked, 0);
 
-  t.remainingQuantity = remainingGlobal;
-
+  /* ---------------- SLOT AVAILABILITY ---------------- */
   if (t.timingSlots?.enabled && Array.isArray(t.timingSlots.dateTimeSlots)) {
     for (const dateSlot of t.timingSlots.dateTimeSlots) {
-      if (!dateSlot.timeSlots) continue;
-
-      for (const slot of dateSlot.timeSlots) {
-        const bookedForSlot = await TicketingBookings.countDocuments({
+      for (const slot of dateSlot.timeSlots || []) {
+        const slotBooked = await TicketingBookings.countDocuments({
           "ticket.ticketId": t._id,
           "ticket.timeSlot": slot._id.toString(),
+          status: { $in: ["valid", "used"] }
         });
 
         slot.remainingQuantity = Math.max(
-          (slot.quantity || 0) - bookedForSlot,
+          (slot.quantity || 0) - slotBooked,
           0
         );
       }
     }
   }
 
+  /* ---------------- FAST TRACK ---------------- */
+  if (t.fastTrackEntry?.enabled) {
+    const fastTrackBooked = await TicketingBookings.countDocuments({
+      "ticket.ticketId": t._id,
+      "ticket.snapshot.fastTrack": true,
+      status: { $in: ["valid", "used"] }
+    });
+
+    t.fastTrackEntry.remainingQuantity = Math.max(
+      t.fastTrackEntry.quantity - fastTrackBooked,
+      0
+    );
+  }
   return t;
 }
+
 
 
 module.exports = {

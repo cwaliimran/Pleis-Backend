@@ -122,6 +122,8 @@ const UserReservationsSchema = new mongoose.Schema(
       type: String, required: true,
       enum: ["applePay", "card", "cash", "payLater"], default: "card"
     },
+    paymentId: { type: String, default: null },
+
     //with payLater user can add more items to cart
     // for applePay/card order can't be cancelled
     paymentStatus: {

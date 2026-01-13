@@ -82,7 +82,7 @@ const ticketingBookingSchema = new mongoose.Schema(
             enum: ["valid", "cancelled", "used"],
             default: "valid",
         },
-        
+
         checkInHistory: {
             type: [
                 {

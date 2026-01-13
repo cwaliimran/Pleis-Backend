@@ -185,27 +185,36 @@ async function getModelCounts({
     }
   }
 
-  const [filteredCount, globalCounts] = await Promise.all([
-    model.countDocuments(filterQuery),
-    model.aggregate([
-      // { $match: filterQuery },
-      { $facet: facetStages },
-      {
-        $project: {
-          total: { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
-          ...Object.values(statusMap)
-            .flat()
-            .reduce(
-              (acc, val) => ({
-                ...acc,
-                [val]: { $ifNull: [{ $arrayElemAt: [`$${val}.count`, 0] }, 0] },
-              }),
-              {}
-            ),
-        },
+const [filteredCount, globalCounts] = await Promise.all([
+  model.countDocuments(filterQuery),
+
+  model.aggregate([
+    {
+      $match: {
+        "recurringMeta.isTemplate": false,
+        status: { $ne: "deleted" }
+      }
+    },
+    { $facet: facetStages },
+    {
+      $project: {
+        total: { $ifNull: [{ $arrayElemAt: ["$total.count", 0] }, 0] },
+        ...Object.values(statusMap)
+          .flat()
+          .reduce(
+            (acc, val) => ({
+              ...acc,
+              [val]: {
+                $ifNull: [{ $arrayElemAt: [`$${val}.count`, 0] }, 0],
+              },
+            }),
+            {}
+          ),
       },
-    ]),
-  ]);
+    },
+  ]),
+]);
+
 
   const counts = globalCounts[0] || {};
   return {

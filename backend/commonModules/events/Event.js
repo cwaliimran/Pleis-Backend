@@ -127,14 +127,12 @@ const eventSchema = new mongoose.Schema(
       isTemplate: {
         type: Boolean,
         default: false,
-        index: true,
       },
 
       parentEvent: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Event",
         default: null,
-        index: true,
       },
 
       occurrenceIndex: {
