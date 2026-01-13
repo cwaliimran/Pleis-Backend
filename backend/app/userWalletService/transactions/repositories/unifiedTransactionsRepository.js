@@ -21,7 +21,6 @@ const createTransaction = async (data, session) => {
     allowNegative,
     description
   } = data;
-
   const userId = typeof user === "string" ? user : (user._id || user.id);
 
   const batchId = nanoid();

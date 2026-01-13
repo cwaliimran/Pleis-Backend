@@ -652,6 +652,61 @@ const getEventTicketings = async (req, res) => {
     });
   }
 };
+
+const getEventAnalytics = async (req, res) => {
+  let { id } = req.params;
+
+  // ObjectId for event id
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })) return;
+  try {
+    const analytics = await eventService.getEventAnalyticsService(id);
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "event_analytics_fetched_successfully",
+      data: analytics,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+}
+
+const getEventTicketsAnalytics = async (req, res) => {
+  let { id } = req.params;
+
+  // ObjectId for event id
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })) return;
+  try {
+    const analytics = await eventService.getEventTicketsAnalyticsService(id);
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "event_tickets_analytics_fetched_successfully",
+      data: analytics,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+
 module.exports = {
   createEvent,
   getEvents,
@@ -660,6 +715,8 @@ module.exports = {
   updateEvent,
   deleteEvent,
   getEventDetails,
+  getEventAnalytics,
+  getEventTicketsAnalytics,
   getMinimalEventsInfo,
   getEventTicketings
 };

@@ -336,7 +336,7 @@ const getevents = async ({
 
 //get updates against event id
 const getUpdatesByEventId = async (eventId) => {
-  return Updates.find({ event: eventId, status: "active" }).select("title description image").sort({ createdAt: -1 });
+  return Updates.find({ event: eventId, status: "active" }).select("title description image updatedAt").sort({ createdAt: -1 });
 };
 
 

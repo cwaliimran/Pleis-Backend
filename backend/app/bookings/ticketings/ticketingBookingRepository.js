@@ -231,5 +231,5 @@ module.exports = {
   findTagByIdAndUpdate,
   getTicketingBookingsCount,
   createManyTicketBookings,
-  getTicketingBookingForTransfer
+  getTicketingBookingForTransfer,
 };

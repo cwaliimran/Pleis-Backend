@@ -298,11 +298,6 @@ const getOrganizationTicketings = async ({ timezone, page, limit, keyword, statu
 };
 
 
-
-
-
-
-
 const EventsgetTicketings = async ({ timezone, eventId }) => {
 
   const query = { event: eventId, status: { $eq: "active" } };
@@ -318,6 +313,9 @@ const EventsgetTicketings = async ({ timezone, eventId }) => {
 };
 
 
+const getTicketSalesStatsService = async (eventId, startDate, endDate) => {
+  return ticketingRepo.getTicketSalesStats({ eventId, startDate, endDate });
+};
 
 module.exports = {
   createTicketing,
@@ -327,5 +325,6 @@ module.exports = {
   deleteTicketing,
   getOrganizationTicketings,
   getTicketingsByEventId,
-  EventsgetTicketings
+  EventsgetTicketings,
+  getTicketSalesStatsService
 };
