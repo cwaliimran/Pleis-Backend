@@ -229,6 +229,9 @@
       ],
       "@UserInterests": [
         "backend/models/UserInterests.js"
+      ],
+      "@MenuItemsSaleModel": [
+        "backend/commonModules/menuManagement/sale/MenuItemsSale.js"
       ]
     }
   },

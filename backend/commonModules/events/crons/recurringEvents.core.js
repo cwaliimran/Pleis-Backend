@@ -251,6 +251,7 @@ const cloneTicketing = async (templateEventId, newEventId) => {
     delete clone._id;
 
     clone.event = newEventId;
+    clone.isTemplate = false; // cloned ticketings are not templates
 
     // recurring linking
     clone.recurringMeta = {

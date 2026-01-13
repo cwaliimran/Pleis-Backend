@@ -81,6 +81,7 @@ const isPricingPlanChanged = (oldPlan, newPlan) =>
 const updateSubscription = async (data) => {
   const user = await User.findById(data.userId);
   if (!user) return { error: "user_not_found" };
+  console.log("user", data.userId);
 
   const now = new Date();
 
@@ -128,7 +129,7 @@ if (!user.activeSubscription) {
     startDate,
     endDate, // ✅ ALWAYS SET HERE
   };
-
+console.log("user.activeSubscription",user.activeSubscription );
   await user.save();
 
   return {

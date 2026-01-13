@@ -1,6 +1,5 @@
 // repositories/ReservationRepository.js
 const LoyaltyReferralSettings = require("@LoyaltyReferralSettingsModel");
-const UserReservations = require("@UserReservationsModel");
 const { User } = require("../../../models/UserModel");
 const Event = require("@EventsModel");
 const mongoose = require("mongoose");

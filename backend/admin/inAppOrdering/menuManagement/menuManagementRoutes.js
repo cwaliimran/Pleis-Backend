@@ -1,14 +1,17 @@
 const express = require("express");
 const {
-  createMenu,
+  createSale,
   getMenuItems,
   getMenuItemCategories,
   getEvents,
+  createMenuItemFromPreset,
+  getSummary,
   updateMenu,
   deleteMenu,
   getevents,
   gettickets,
   getWinners,
+  createLimitedTimeItem
 } = require("./menuManagementController"); // Assuming you have a separate controller for promo codes
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
@@ -23,10 +26,14 @@ router.use(auth);
 // Create a rate limiter for Promo Codes
 const MenuRateLimiter = createRateLimiter("Menu");
 
-// router.post("/", roleMiddleware(["admin"]), MenuRateLimiter, createMenu);
+router.post("/sale", roleMiddleware(["admin"]), MenuRateLimiter, createSale);
+router.get("/", roleMiddleware(["admin"]), getSummary);
 router.get("/menu-items", roleMiddleware(["admin"]), getMenuItems);
 router.get("/events", roleMiddleware(["admin"]), getEvents);
 router.get("/menu-item-categories", roleMiddleware(["admin"]), getMenuItemCategories);
+// Update an existing menuItem
+router.put("/limited-time", roleMiddleware(["admin"]), createLimitedTimeItem);
+router.post("/", roleMiddleware(["admin"]), createMenuItemFromPreset);
 
 
 

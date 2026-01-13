@@ -158,7 +158,9 @@ const updateEventsWithVenueLocation = async (venueId, location) => {
   return result;
 };
 
-
+/* 
+now we are using updateEventService for updating events
+*/
 /* const updateEvent = async (id, data, scope) => {
   const event = await eventRepo.findEventById(id);
   if (!event) return null;
@@ -281,7 +283,6 @@ const updateEventsWithVenueLocation = async (venueId, location) => {
   await event.save();
   return event;
 }; */
-
 
 
 const deleteEvent = async (eventId, scope = "single") => {
@@ -422,6 +423,7 @@ const getEventTicketsAnalyticsService = async (id) => {
     ticketingStats
   };
 };
+
 
 module.exports = {
   createEvent,

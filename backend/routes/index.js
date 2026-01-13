@@ -6,7 +6,7 @@ router.use("/upload/azure", require("./uploadAzureBlobRoutes"));
 router.use("/settings", require("../admin/settings/adminSettingsRoutes"));
 router.use("/communications", require("./communicationRoutes"));
 router.use("/notifications", require("./notificationsRoutes"));
-router.use("/support", require("./supportRoutes"));
+// router.use("/support", require("./supportRoutes"));
 router.use("/contact-us", require("./contactUsRoutes"));
 router.use("/languages", require("./languageRoutes"));
 // router.use("/util", require("./dbRoutes"));
