@@ -1,9 +1,9 @@
 // repositories/ReservationRepository.js
 const GlobalReferral = require("@GlobalReferralModel");
-const UserReservations = require("@UserReservationsModel");
+const { UserReservations } = require("@UserReservationsModel");
 const { User } = require("../../../models/UserModel");
 const Event = require("@EventsModel");
-const {ReferredRecord} = require("@ReferredRecordModel");
+const { ReferredRecord } = require("@ReferredRecordModel");
 const mongoose = require("mongoose");
 // const { reservationsFormatter, reservationsFormatterAdjustDates } = require("../../app/reservations/formaters/reservationFormetter");
 const {
@@ -37,48 +37,48 @@ const createGlobalReferral = async (data) => {
     return globalReferral;
 
   } catch (err) {
-    throw err; 
+    throw err;
   }
 };
 
 
-const getGlobalReferrals = async ({ timezone,page, limit, keyword, status, userId, date, range,today,skip, type }) => {
+const getGlobalReferrals = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip, type }) => {
   const pipeline = [
-  {
-$match: {
-  ...(userId && { creator: new mongoose.Types.ObjectId(userId) }), // Match by userId if provided
-  ...(type && { type: type }), // Match by type if provided (e.g., "global", "company", etc.)
-}
+    {
+      $match: {
+        ...(userId && { creator: new mongoose.Types.ObjectId(userId) }), // Match by userId if provided
+        ...(type && { type: type }), // Match by type if provided (e.g., "global", "company", etc.)
+      }
+    }
+  ];
+  if (range == "monthly") {
+    const { start, end } = getStartAndEndOfMonth(today, timezone);
+
+    pipeline.push({
+      $match: {
+        createdAt: { $gte: start, $lt: end }
+      }
+    });
   }
-];
-if (range == "monthly") {
-  const { start, end } = getStartAndEndOfMonth(today, timezone);
+  if (range == "weekly") {
+    const { start, end } = getStartAndEndOfWeek(today, timezone);
 
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
-if (range == "weekly") {
-  const { start, end } = getStartAndEndOfWeek(today, timezone);
-
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
-if (range == "today") {
+    pipeline.push({
+      $match: {
+        createdAt: { $gte: start, $lt: end }
+      }
+    });
+  }
+  if (range == "today") {
     const start = new Date(today);
     const end = new Date(new Date(today).setDate(start.getDate() + 1));
 
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
+    pipeline.push({
+      $match: {
+        createdAt: { $gte: start, $lt: end }
+      }
+    });
+  }
   // Apply filters
   if (status) {
     pipeline.push({ $match: { status } });
@@ -96,18 +96,18 @@ if (range == "today") {
     });
   }
 
-if (keyword) {
-  const keywordMatch = buildKeywordQueryFromModels(
-    [
-      { schema: GlobalReferral.schema }
-    ],
-    keyword
-  );
+  if (keyword) {
+    const keywordMatch = buildKeywordQueryFromModels(
+      [
+        { schema: GlobalReferral.schema }
+      ],
+      keyword
+    );
 
-  if (Object.keys(keywordMatch).length) {
-    pipeline.push({ $match: keywordMatch });
+    if (Object.keys(keywordMatch).length) {
+      pipeline.push({ $match: keywordMatch });
+    }
   }
-}
 
   pipeline.push({ $sort: { createdAt: -1 } });
 
@@ -140,7 +140,7 @@ if (keyword) {
   meta.globalReferralCount = { total, active, inactive };
 
 
-  return {globalReferral , meta}
+  return { globalReferral, meta }
 }
 
 
@@ -179,7 +179,7 @@ const getUserGlobalReferrals = async ({
   skip,
   type
 }) => {
-console.log("keyword",keyword);
+  console.log("keyword", keyword);
   const pipeline = [
     {
       $match: {
@@ -230,75 +230,75 @@ console.log("keyword",keyword);
     ReferredRecord.countDocuments({ status: "inactive", ...(userId && { userId: userId }) })
   ]);
 
- // Fetching the user names from the Users table
-const userNames = await User.find({
-  _id: { $in: [...new Set(globalReferral.map(record => record.userId.toString()))] }
-})
-.select("firstName lastName _id");
-
-// Fetching the referrer user names from the Users table
-const referrerNames = await User.find({
-  _id: { $in: [...new Set(globalReferral.map(record => record.referrerUserId.toString()))] }
-})
-.select("firstName lastName _id remainingReferrals");
-
-// Fetch global referral data for the given userId
-const globalReferrals = await GlobalReferral.find({
-  creator: userId,
-  type: "global"
-}).lean();
-
-// Create a map to count how many times each referrerUserId appears
-const referrerCountMap = globalReferral.reduce((acc, record) => {
-  const key = record.referrerUserId.toString();
-  acc[key] = (acc[key] || 0) + 1;
-  return acc;
-}, {});
-
-// Use it
-globalReferral = await Promise.all(
-  globalReferral.map(record => {
-    const userName = userNames.find(
-      user => user._id.toString() === record.userId.toString()
-    );
-
-    const referrerUser = referrerNames.find(
-      user => user._id.toString() === record.referrerUserId.toString()
-    );
-
-    const referrerUserName = referrerUser
-      ? `${referrerUser.firstName} ${referrerUser.lastName}`
-      : "";
-
-    const referralLimit = globalReferrals?.[0]?.referralLimit ?? 0;
-
-    const remainingReferrals = referrerUser?.remainingReferrals ?? 0;
-
-    return getUserImage(record.userId).then(profileIcon => ({
-      ...record,
-      firstName: userName?.firstName,
-      lastName: userName?.lastName,
-      profileIcon,
-      referrerUserName,
-      remainingReferrals,
-      referralLimit,
-      referrerCount:
-        referrerCountMap[record.referrerUserId.toString()] || 0,
-    }));
+  // Fetching the user names from the Users table
+  const userNames = await User.find({
+    _id: { $in: [...new Set(globalReferral.map(record => record.userId.toString()))] }
   })
-);
+    .select("firstName lastName _id");
 
-  console.log("globalReferral", );
-  if (keyword) {
-  const regex = new RegExp(keyword, "i");
+  // Fetching the referrer user names from the Users table
+  const referrerNames = await User.find({
+    _id: { $in: [...new Set(globalReferral.map(record => record.referrerUserId.toString()))] }
+  })
+    .select("firstName lastName _id remainingReferrals");
 
-  globalReferral = globalReferral.filter(item =>
-    regex.test(item.firstName || "") ||
-    regex.test(item.lastName || "") ||
-    regex.test(item.referrerUserName || "")
+  // Fetch global referral data for the given userId
+  const globalReferrals = await GlobalReferral.find({
+    creator: userId,
+    type: "global"
+  }).lean();
+
+  // Create a map to count how many times each referrerUserId appears
+  const referrerCountMap = globalReferral.reduce((acc, record) => {
+    const key = record.referrerUserId.toString();
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Use it
+  globalReferral = await Promise.all(
+    globalReferral.map(record => {
+      const userName = userNames.find(
+        user => user._id.toString() === record.userId.toString()
+      );
+
+      const referrerUser = referrerNames.find(
+        user => user._id.toString() === record.referrerUserId.toString()
+      );
+
+      const referrerUserName = referrerUser
+        ? `${referrerUser.firstName} ${referrerUser.lastName}`
+        : "";
+
+      const referralLimit = globalReferrals?.[0]?.referralLimit ?? 0;
+
+      const remainingReferrals = referrerUser?.remainingReferrals ?? 0;
+
+      return getUserImage(record.userId).then(profileIcon => ({
+        ...record,
+        firstName: userName?.firstName,
+        lastName: userName?.lastName,
+        profileIcon,
+        referrerUserName,
+        remainingReferrals,
+        referralLimit,
+        referrerCount:
+          referrerCountMap[record.referrerUserId.toString()] || 0,
+      }));
+    })
   );
-}
-console.log("globalReferral",globalReferral );
+
+  console.log("globalReferral",);
+  if (keyword) {
+    const regex = new RegExp(keyword, "i");
+
+    globalReferral = globalReferral.filter(item =>
+      regex.test(item.firstName || "") ||
+      regex.test(item.lastName || "") ||
+      regex.test(item.referrerUserName || "")
+    );
+  }
+  console.log("globalReferral", globalReferral);
   const meta = generateMeta(page, limit, totalFiltered);
   meta.globalReferralCount = { total, active, inactive };
 
@@ -314,7 +314,7 @@ const findGlobalReferrals = async (filter = {}) => {
 };
 const resetUserReferralLimits = async (limit) => {
   try {
-    console.log("limit",limit );
+    console.log("limit", limit);
     // Force numeric conversion
     limit = Number(limit);
 
