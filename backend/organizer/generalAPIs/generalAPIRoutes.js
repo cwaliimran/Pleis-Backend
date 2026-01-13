@@ -5,7 +5,11 @@ const {
   getVenues,
   getCategories,
   getTags,
-  getEvents
+  getEvents,
+  getmenuItemCategories,
+  getmenuItem,
+  getmenu,
+  getTiers
 } = require("./generalAPIController");
 const auth = require("../../middlewares/authMiddleware");
 
@@ -20,7 +24,11 @@ router.get("/events", getEvents);
 router.get("/organizations", getOrganizations);
 router.get("/categories", getCategories);
 router.get("/tags", getTags);
-router.get("/menu-item-categories", getTags);
+router.get("/menu-item-categories", getmenuItemCategories);
+router.get("/menu", getmenu);
+router.get("/menu-item", getmenuItem);
+router.get("/tiers", getTiers);
+
 
 
 

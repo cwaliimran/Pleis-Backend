@@ -187,8 +187,12 @@ const formatOrdersForUI = (
     pickupFilter,
   });
 
+  // Apply pagination (limit and skip)
+  const paginatedOrders = filteredOrders.slice(skip, skip + limit);
 
   return {
+    orders: paginatedOrders,
+    totalFiltered: filteredOrders.length, // Total records after filtering
     activeOrdersCount: counts.activeOrdersCount,
     preordersCount: counts.preordersCount,
     pastOrdersCount: counts.pastOrdersCount,

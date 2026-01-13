@@ -208,8 +208,141 @@ const getEvents = async ({
 
   return Events;
 };
-module.exports = {
+const getmenuItemCategories = async ({
+  page,
+  limit,
+  keyword,
+  status,
+  date,
+  companyOrganizer
+}) => {
+  page = Number(page) || 1;
+  limit = Number(limit);
+  if (limit) {
+    limit += 1;
+  }
 
-  getOrganizations, getVenueTypes, getVenues, getCategories, getTags, getEvents
+  if (Number.isNaN(limit) || limit < 0) {
+    limit = 10;
+  }
+
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+
+  let itemCategories = await generalAPIRepo.getmenuItemCategories({
+    page,
+    limit,
+    keyword,
+    status,
+    date,
+    skip,
+    companyOrganizer
+  });
+
+  return itemCategories;
+};
+const getmenuItem = async ({
+  page,
+  limit,
+  keyword,
+  status,
+  date,
+  creator,
+  menu
+}) => {
+  page = Number(page) || 1;
+  limit = Number(limit);
+  if (limit) {
+    limit += 1;
+  }
+
+  if (Number.isNaN(limit) || limit < 0) {
+    limit = 10;
+  }
+
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+
+  let itemCategories = await generalAPIRepo.getmenuItem({
+    page,
+    limit,
+    keyword,
+    status,
+    date,
+    skip,
+    creator,
+    menu
+  });
+
+  return itemCategories;
+};
+const getmenu = async ({
+  page,
+  limit,
+  keyword,
+  status,
+  date,
+  organization,
+  creator
+}) => {
+  page = Number(page) || 1;
+  limit = Number(limit);
+  if (limit) {
+    limit += 1;
+  }
+
+  if (Number.isNaN(limit) || limit < 0) {
+    limit = 10;
+  }
+
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+
+  let menu = await generalAPIRepo.getmenu({
+    page,
+    limit,
+    keyword,
+    status,
+    date,
+    skip,
+    organization,
+    creator
+  });
+
+  return menu;
+};
+const getTiers = async ({
+  page,
+  limit,
+  keyword,
+  status,
+  date,
+  creator
+}) => {
+  page = Number(page) || 1;
+  limit = Number(limit);
+  if (limit) {
+    limit += 1;
+  }
+
+  if (Number.isNaN(limit) || limit < 0) {
+    limit = 10;
+  }
+
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+
+  let tiers = await generalAPIRepo.getTiers({
+    page,
+    limit,
+    keyword,
+    status,
+    date,
+    skip,
+    creator
+  });
+
+  return tiers;
+};
+module.exports = {
+  getmenu, getmenuItem,getTiers,
+
+  getmenuItemCategories, getOrganizations, getVenueTypes, getVenues, getCategories, getTags, getEvents
 
 };

@@ -1,11 +1,6 @@
 
 const { sendResponse, getReadableErrorMessage, validateParams, convertTimezoneToUtc, parsePaginationParams } = require("@utils/responseUtil");
-const { 
-  getBundlesService,
- } = require("./generalAPIService");
 const generalAPIServices = require("./generalAPIService");
-
-
 const getVenueTypes = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date } = req.query;
@@ -45,7 +40,10 @@ const getVenueTypes = async (req, res) => {
 };
 const getOrganizations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date ,companyOrganizer} = req.query;
+  let { keyword, status, date ,companyOrganizer} = req.query;
+    if(!companyOrganizer){
+  companyOrganizer=req.user._id;
+  }
 if(!companyOrganizer){
   return sendResponse({
     res,
@@ -88,10 +86,12 @@ if(!companyOrganizer){
     });
   }
 };
-
 const getVenues = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date ,organization} = req.query;
+  let { keyword, status, date ,organization} = req.query;
+  if(!organization){
+  organization=req.user._id;
+  }
 if(!organization){
   return sendResponse({
     res,
@@ -207,9 +207,6 @@ const getTags = async (req, res) => {
     });
   }
 };
-
-
-
 const getEvents = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date,organization } = req.query;
@@ -248,5 +245,164 @@ const getEvents = async (req, res) => {
     });
   }
 };
+const getmenuItemCategories = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let { keyword, status, date,companyOrganizer } = req.query;
+if(!companyOrganizer){
+  companyOrganizer=req.user._id;
+  }
+  try {
 
-module.exports = {  getVenueTypes,getOrganizations,getVenues,getCategories,getTags,getEvents };
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+
+
+    const{ itemCategories } = await generalAPIServices.getmenuItemCategories({
+      page,
+      limit,
+      keyword,
+      status,
+      date,
+      companyOrganizer,
+      creator:req.user._id
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "menu_item_categories_fetched_successfully",
+      data: itemCategories
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+const getmenu = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let { keyword, status, date,organization } = req.query;
+
+  try {
+
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+
+
+    const{ menu } = await generalAPIServices.getmenu({
+      page,
+      limit,
+      keyword,
+      status,
+      date,
+      organization,
+      creator:req.user._id
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "menu_fetched_successfully",
+      data: menu
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+const getmenuItem = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let { keyword, status, date,menu } = req.query;
+if(!menu){
+  return sendResponse({
+    res,
+    statusCode: 400,
+    translationKey: "menu_id_required", 
+ 
+  }
+  );
+}
+  try {
+
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+
+
+    const{ itemCategories } = await generalAPIServices.getmenuItem({
+      page,
+      limit,
+      keyword,
+      status,
+      date,
+      menu,
+      creator:req.user._id
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "menu_items_fetched_successfully",
+      data: itemCategories
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+const getTiers = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let { keyword, status, date } = req.query;
+  try {
+
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+
+
+    const{ tiers } = await generalAPIServices.getTiers({
+      page,
+      limit,
+      keyword,
+      status,
+      date,
+      creator:req.user._id
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "tiers_fetched_successfully",
+      data: tiers
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+module.exports = {getTiers,getmenuItem,getmenu, getmenuItemCategories, getVenueTypes,getOrganizations,getVenues,getCategories,getTags,getEvents };

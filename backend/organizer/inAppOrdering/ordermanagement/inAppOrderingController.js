@@ -10,9 +10,9 @@ const mongoose = require('mongoose'); // Import mongoose
 const Orderservice = require("./inAppOrderingService");
 const getOrders = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, range, companyOrganizer, activeKeyword, orderStatus, activeorderStatus, pickupFilter } = req.query;
+  let { keyword, status, date, range, organizationId, activeKeyword, orderStatus, activeorderStatus, pickupFilter } = req.query;
   try {
-    if (!companyOrganizer) {
+    if (!organizationId) {
       return sendResponse({
         res,
         statusCode: 400,
@@ -20,7 +20,6 @@ const getOrders = async (req, res) => {
       });
     }
 
-      companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
     const timezone = req.user.timezone;
     const { Orderss, meta } = await Orderservice.getOrders({
       timezone,
@@ -28,7 +27,7 @@ const getOrders = async (req, res) => {
       limit,
       keyword,
       status,
-      companyOrganizer,
+      organizationId,
       date,
       range,
       activeKeyword,
@@ -125,17 +124,12 @@ const updateOrders = async (req, res) => {
 
 
 const updateInAppOrders = async (req, res) => {
-  const { companyOrganizer } = req.params;
+  let { companyOrganizer } = req.params;
+    companyOrganizer = req.user._id;
+  console.log("companyOrganizer",companyOrganizer );
   const {
     isOrderingEnabled
   } = req.body;
-  if (
-    !validateParams(req, res, {
-      pathParams: ["companyOrganizer"],
-      objectIdFields: ["companyOrganizer"],
-    })
-  ) return;
-
   try {
     const { matchedCount,
       modifiedCount } = await Orderservice.updateInAppOrders(companyOrganizer, isOrderingEnabled);
@@ -174,7 +168,8 @@ const updateInAppOrders = async (req, res) => {
 
 const getInAppOrders = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, range, companyOrganizer } = req.query;
+  let { keyword, status, date, range, } = req.query;
+  const companyOrganizer = req.user._id;
   try {
     if (!companyOrganizer) {
       return sendResponse({

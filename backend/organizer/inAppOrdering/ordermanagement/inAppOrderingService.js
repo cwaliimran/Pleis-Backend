@@ -17,7 +17,7 @@ const getOrders = async ({
   limit,
   keyword,
   status,
-  companyOrganizer,
+  organizationId,
   date,
   range
 }) => {
@@ -42,7 +42,7 @@ const getOrders = async ({
     limit,
     keyword,
     status,
-    companyOrganizer,
+    organizationId,
     date,
     range,
     today,

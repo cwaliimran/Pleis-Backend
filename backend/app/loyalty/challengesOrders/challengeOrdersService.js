@@ -241,6 +241,8 @@ const resolveBuyMenuItemChallengeService = async ({
     return { success: false, message: "menu_item_not_applicable" };
   }
 
+  //TODO send notification for completed challenge
+  
   return { success: true, message: "challenge_progress_updated" };
 };
 

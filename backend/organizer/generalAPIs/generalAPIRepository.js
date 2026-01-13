@@ -6,12 +6,11 @@ const Venues = require("@VenuesModel");
 const Categories = require("@CategoriesModel");
 const Tags = require("@TagsModel");
 const { Events } = require("@EventsModel");
-const getBundles = async (query = {}, options = {}) => {
-  return Bundle.find(query)
-    .sort(options.sort || { createdAt: -1 })
-    .skip(options.skip || 0)
-    .limit(options.limit || 10);
-};
+const MenuItemCategories = require("@MenuItemCategoriesModel");
+const Menus = require("@MenusModel");
+const MenuItems = require("@MenuItemsModel");
+const Tiers = require("@TiersModel");
+
 const getBundlesCount = async (query) => {
   return getModelCounts({ model: Bundle, filterQuery: query });
 }
@@ -219,14 +218,99 @@ const getEvents = async ({ organization, creator }) => {
     Events: events
   };
 };
+const getmenuItemCategories = async ({ companyOrganizer }) => {
+  const query = {
+    status: { $ne: "deleted" }
+  };
+  // if (companyOrganizer) {
+  //   query.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
+  // }
+  const itemCategories = await MenuItemCategories.find(query)
+    .select("_id title")
+    .sort({ title: 1 })
+    .lean();
 
+  return {
+    itemCategories: itemCategories
+  };
+};
+const getmenuItem = async ({     creator,
+    menu }) => {
+  const query = {
+    status: { $ne: "deleted" }
+  };
+    if (menu) {
+    const menuIds = menu
+      .split(/[,%]/)
+      .filter(Boolean)
+      .map(id => new mongoose.Types.ObjectId(id));
+    query["menu"] = { $in: menuIds };
+  }
+  else if (creator) {
+    query.creator = new mongoose.Types.ObjectId(creator);
+  }
+  const itemCategories = await MenuItems.find(query)
+    .select("_id title type")
+    .sort({ title: 1 })
+    .lean();
+
+  return {
+    itemCategories: itemCategories
+  };
+}
+const getTiers = async ({   
+  creator }) => {
+  const query = {
+    status: { $ne: "deleted" }
+  };
+
+  const tiers= await Tiers.find(query)
+    .select("_id title bonusPointsPerEuro")
+    .sort({ title: 1 })
+    .lean();
+
+  return {
+    tiers: tiers
+  };
+}
+const getmenu = async ({   organization,
+  creator }) => {
+  const query = {
+    status: { $ne: "deleted" }
+  };
+    if (organization) {
+    const organizationIds = organization
+      .split(/[,%]/)
+      .filter(Boolean)
+      .map(id => new mongoose.Types.ObjectId(id));
+
+    query["organization"] = { $in: organizationIds };
+  }
+  else if (creator) {
+    query.creator = new mongoose.Types.ObjectId(creator);
+  }
+  // if (companyOrganizer) {
+  //   query.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
+  // }
+  const menu= await Menus.find(query)
+    .select("_id title")
+    .sort({ title: 1 })
+    .lean();
+
+  return {
+    menu: menu
+  };
+}
 module.exports = {
-  getBundles,
+getTiers,
   getBundlesCount,
   getVenueTypesWithFilters,
   getOrganizations,
   getVenues,
   getCategories,
   getTags,
-  getEvents
+  getEvents,
+  getmenu,
+  getmenuItem,
+  getmenuItemCategories
 };

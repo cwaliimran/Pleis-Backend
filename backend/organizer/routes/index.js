@@ -29,7 +29,8 @@ router.use("/venues", require("../venues/venuesRoutes"));
 router.use("/ticketing", require("../ticketing/ticketingsRoutes"));
 router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));
 router.use("/bundles", require("../bundles/bundleRoutes"));
-router.use("/general", require("../bundles copy/generalAPIRoutes"));
+router.use("/general", require("../generalAPIs/generalAPIRoutes"));
+router.use("/in-app-ordering", require("../inAppOrdering/inAppOrderingRoutes"));
 
 
 
