@@ -1,6 +1,7 @@
 const { getWithFilters, getModelCounts } = require("@dbUtils/queryUtil");
 const TicketingsModel = require("@TicketingsModel");
 const { TicketingBookings } = require("@TicketingBookingsModel");
+const { default: mongoose } = require("mongoose");
 
 // Create
 const createTicketing = async (data) => {
@@ -13,7 +14,7 @@ const getTicketingsWithFilters = async (query, page, limit) => {
   if (!query.$and) query.$and = [];
   query.$and.push({
     $or: [
-        { "recurringMeta.isTemplate": false },
+      { "recurringMeta.isTemplate": false },
     ]
   });
 
@@ -311,6 +312,108 @@ const getEventsTicketingsWithFilters = async (query) => {
     },
   });
 };
+
+
+
+const getEventTotalCapacity = async (eventId) => {
+  const tickets = await TicketingsModel.find({
+    event: eventId,
+    status: "active"
+  });
+  let total = 0;
+
+  for (const t of tickets) {
+    if (t.timingSlots?.enabled) {
+      for (const d of t.timingSlots.dateTimeSlots) {
+        for (const s of d.timeSlots) {
+          total += s.quantity;
+        }
+      }
+    } else {
+      total += t.quantity;
+    }
+  }
+
+  return total;
+};
+
+
+const getPricingSalesStats = async ({ eventId, startDate, endDate }) => {
+  const match = {
+    "ticket.snapshot.event": new mongoose.Types.ObjectId(eventId)
+  };
+
+  if (startDate || endDate) {
+    match.createdAt = {};
+    if (startDate) match.createdAt.$gte = new Date(startDate);
+    if (endDate) match.createdAt.$lte = new Date(endDate);
+  }
+
+  const rows = await TicketingBookings.find(match).select(
+    "status ticket.snapshot.pricing.unitPrice ticket.snapshot.pricing.phase"
+  );
+
+  const phases = ["earlyBird", "lastMinute", "regular"];
+
+  const stats = {};
+  phases.forEach(p => {
+    stats[p] = {
+      valid: { count: 0, amount: 0 },
+      used: { count: 0, amount: 0 },
+      cancelled: { count: 0, amount: 0 },
+      total: { count: 0, amount: 0 }
+    };
+  });
+
+  let grandCount = 0;
+  let grandAmount = 0;
+
+  for (const b of rows) {
+    const phase = b.ticket.snapshot.pricing?.phase || "regular";
+    const price = b.ticket.snapshot.pricing?.unitPrice || 0;
+    const status = b.status;
+
+    if (!stats[phase]) continue;
+
+    stats[phase][status].count += 1;
+    stats[phase][status].amount += price;
+
+    stats[phase].total.count += 1;
+    stats[phase].total.amount += price;
+
+    if (status !== "cancelled") {
+      grandCount += 1;
+      grandAmount += price;
+    }
+  }
+
+  return { stats, grandCount, grandAmount };
+};
+
+const getTicketSalesStats = async ({
+  eventId,
+  startDate,
+  endDate
+}) => {
+  const totalCapacity = await getEventTotalCapacity(eventId);
+  const { stats, grandCount, grandAmount } =
+    await getPricingSalesStats({ eventId, startDate, endDate });
+
+  // Attach totalCreated to each pricing phase
+  Object.keys(stats).forEach(phase => {
+    stats[phase].totalCreated = totalCapacity;
+  });
+
+  return {
+      ...stats,
+      grandTotal: {
+        count: grandCount,
+        amount: grandAmount
+      }
+  };
+};
+
+
 module.exports = {
   createTicketing,
   getTicketingsWithFilters,
@@ -325,5 +428,6 @@ module.exports = {
   validateTicketsAndQuantity,
   getOrganizationIdFromTicketId,
   getTicketsByOrderIds,
-  getEventsTicketingsWithFilters
+  getEventsTicketingsWithFilters,
+  getTicketSalesStats
 };

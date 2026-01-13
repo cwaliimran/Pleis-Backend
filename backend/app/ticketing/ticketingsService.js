@@ -17,8 +17,6 @@ const getTicketings = async ({ timezone, eventId }) => {
   // Apply pricing resolution
   ticketings = ticketings.map(ticket => {
     const pricing = resolveTimeSensitivePricing(ticket, now);
-    console.log("pricing",pricing)
-
     return {
       ...ticket,
       pricing: {

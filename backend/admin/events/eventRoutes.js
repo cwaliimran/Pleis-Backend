@@ -5,6 +5,8 @@ const {
   updateEvent,
   deleteEvent,
   getEventDetails,
+  getEventAnalytics,
+  getEventTicketsAnalytics,
   cloneEvent,
   getMinimalEventsInfo,
   getEventTicketings,
@@ -31,6 +33,11 @@ router.get("/organization/:organization", apiRateLimiter, getMinimalEventsInfo);
 
 //get event details
 router.get("/:id", getEventDetails);
+
+//get event analytics
+router.get("/:id/analytics", getEventAnalytics);
+//get event tickets analytics
+router.get("/:id/tickets-analytics", getEventTicketsAnalytics);
 
 // Update an existing event
 router.put("/:id", updateEvent);

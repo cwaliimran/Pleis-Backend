@@ -4,6 +4,8 @@ const { updatePoints } = require("../../../app/loyalty/clubMembers/clubMembersRe
 const { updateGlobalPoints } = require("../../../app/userWalletService/global/walletManagement/userWalletRepository");
 const { TicketingBookings } = require("@TicketingBookingsModel");
 
+const mongoose = require("mongoose");
+
 const { nanoid } = require("nanoid");
 let batchId = null;
 
@@ -95,9 +97,6 @@ const createTransaction = async ({
 
   return createdTransactions;
 };
-
-
-
 
 /**
  * Find transactions with filters + pagination + ticketingBookings (if ticketingorders)
@@ -195,6 +194,8 @@ const findTransactionsByUserId = async (userId) => {
   return UnifiedWalletTransactions.find({ user: userId }).sort({ createdAt: -1 });
 };
 
+
+
 module.exports = {
   createTransaction,
   getTransactionsWithFilters,
@@ -203,5 +204,5 @@ module.exports = {
   updateTransactionData,
   findByIdAndUpdate,
   deleteTransactionById,
-  findTransactionsByUserId
+  findTransactionsByUserId,
 };

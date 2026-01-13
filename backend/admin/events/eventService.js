@@ -3,11 +3,16 @@
 const { getCurrentDateInTimezone, convertUtcToTimezone, generateMeta } = require("../../helperUtils/responseUtil");
 const eventRepo = require("./eventRepository");
 const { formatEventResponse } = require("./formatter/eventFormatter");
-const { getTicketingsByEventId } = require("../ticketing/ticketingsService");
+const { getTicketingsByEventId, getTicketSalesStatsService } = require("../ticketing/ticketingsService");
 const { generateImmediatelyForTemplate } = require("../../commonModules/events/crons/recurringEvents.core");
 const { Events } = require("@EventsModel");
 const { default: mongoose } = require("mongoose");
 const { getUpdatesByEventIdService } = require("../updates/updatesService");
+const { getLatestEventTransactions } = require("../transactions/repositories/unifiedTransactionsRepository");
+const { formatEventOrder } = require("./formatter/formatEventOrder");
+const { countEngagementService } = require("../../commonModules/appEngagement/engagementEventsService");
+const { getEngagementCountsByEntity, getWeeklyEngagementStats } = require("../../commonModules/appEngagement/engagementEventsRepository");
+const { getEventAudienceAnalytics } = require("../../staff/events/eventRepository");
 
 const createEvent = async ({ data, ticketingData }, timezone) => {
   let event = await eventRepo.createEvent(data, ticketingData);
@@ -339,15 +344,22 @@ const deleteEvent = async (eventId, scope = "single") => {
 
 
 const getEventDetails = async (id, timezone) => {
-  const [event, updates, ticketing, ticketingStats] = await Promise.all([
+  const [event, updates, ticketingStats, latestEventOrders, eventViews] = await Promise.all([
     eventRepo.findEventById(id),
     getUpdatesByEventIdService(id),
-    getTicketingsByEventId({ timezone, eventId: id }),
-    
+    getTicketSalesStatsService(id),
+    eventRepo.getLatestEventOrders({ eventId: id }),
+    countEngagementService({ entityId: id, entityType: 'events', action: 'view' })
+
   ])
   let data = formatEventResponse(event, { timezone });
   data.updates = updates || [];
-  data.ticketing = ticketing?.ticketings || [];
+  let formatLatestEventOrders = latestEventOrders.map(order => {
+    return formatEventOrder(order);
+  });
+  data.ticketingStats = ticketingStats || {};
+  data.latestEventOrders = formatLatestEventOrders || [];
+  data.eventViews = eventViews || 0;
   return data
 };
 
@@ -367,6 +379,50 @@ const getEventIdByNanoid = async (nanoid) => {
   return event ? event._id : null;
 };
 
+const getEventAnalyticsService = async (id) => {
+  const [engagementStats, weeklyViews, audienceAnalytics, ticketPerformanceWeekly, revenueAnalytics] = await Promise.all([
+    getEngagementCountsByEntity({ entityId: id, entityType: 'events', actions: ['view', 'favorite'] }),
+    getWeeklyEngagementStats({
+      entityType: "events",
+      entityId: id,
+      action: "view"
+    }),
+    getEventAudienceAnalytics(id),
+    eventRepo.getTicketPerformanceWeekly({ eventId: id }),
+    eventRepo.getEventRevenueAnalytics({ eventId: id })
+  ]);
+
+  return {
+    engagementStats: {
+      views: engagementStats.view || 0,
+      favorites: engagementStats.favorite || 0
+    },
+    weeklyViews,
+    audienceAnalytics,
+    ticketPerformanceWeekly,
+    revenueAnalytics
+  };
+};
+
+const getEventTicketsAnalyticsService = async (id) => {
+  const [paidVsUnpaidTicketStats, scannedTicketProgress, ticketPerformanceWeekly,
+    ticketingStats
+  ] = await Promise.all([
+    eventRepo.getPaidVsUnpaidTicketStats({ eventId: id }),
+    eventRepo.getScannedTicketProgress({ eventId: id }),
+    eventRepo.getTicketPerformanceWeekly({ eventId: id }),
+    getTicketSalesStatsService(id),
+
+  ]);
+
+  return {
+    paidVsUnpaidTicketStats,
+    scannedTicketProgress,
+    ticketPerformanceWeekly,
+    ticketingStats
+  };
+};
+
 module.exports = {
   createEvent,
   getEvents,
@@ -376,5 +432,7 @@ module.exports = {
   getPublicEvents,
   getEventDetails,
   updateEventsWithVenueLocation,
-  getMinimalEventsInfo
+  getMinimalEventsInfo,
+  getEventAnalyticsService,
+  getEventTicketsAnalyticsService
 };

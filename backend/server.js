@@ -59,6 +59,7 @@ const allowedOrigins = [
   "https://individual-travesti-hockey-cancel.trycloudflare.com",
   "https://handy-floral-implementation-pumps.trycloudflare.com",
   "https://info-strategies-via-null.trycloudflare.com",
+  "https://honolulu-wants-rrp-med.trycloudflare.com",
   "http://192.168.13.220:4003",
   "http://192.168.13.221:4003",
   "http://192.168.100.65:4003",
