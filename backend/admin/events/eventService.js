@@ -303,6 +303,25 @@ const deleteEvent = async (eventId, scope = "single") => {
     return { deleted: 1 };
   }
 
+const deleteEvent = async (eventId, scope = "single") => {
+  const event = await Events.findById(eventId);
+
+  if (!event) return null;
+
+  const { recurringMeta } = event;
+
+  // ==================================================
+  // CASE 1: Not part of recurring series
+  // ==================================================
+  if (!recurringMeta || (!recurringMeta.isTemplate && !recurringMeta.parentEvent)) {
+    await Events.updateOne(
+      { _id: eventId },
+      { status: "deleted" }
+    );
+
+    return { deleted: 1 };
+  }
+
   // ==================================================
   // CASE 2: DELETE ONLY THIS OCCURRENCE
   // ==================================================

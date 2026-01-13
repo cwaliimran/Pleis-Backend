@@ -27,8 +27,6 @@ const createEvent = async (data, ticketingData) => {
     event = await event.save({ session });
 
     if (ticketingData) {
-      ticketingData.event = event._id;
-
       if (data.recurringMeta?.isTemplate) {
         ticketingData.recurringMeta = {
           isTemplate: true,
@@ -37,6 +35,8 @@ const createEvent = async (data, ticketingData) => {
         };
       }
 
+      ticketingData.event = event._id; // 🔑 binds ticketing to template or one-time event
+      ticketingData.isTemplate = data.recurringMeta?.isTemplate || false; // mark ticketing as template if event is template
       const ticketing = new TicketingsModel(ticketingData);
       await ticketing.save({ session });
     }
