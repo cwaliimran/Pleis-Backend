@@ -1,5 +1,5 @@
 // services/organizationService.js
-const { buildKeywordQueryFromModel } = require("../../helperUtils/dbUtils/queryUtil");
+const { buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
 const Venues = require("../../commonModules/venues/Venues");
 const Organizations = require("@OrganizationModel");
 const organizationRepo = require("./organizationRepository");
@@ -34,7 +34,7 @@ const getOrganizations = async ({ page, limit, keyword, status, creator, date, t
   if (keyword && keyword.trim() !== "") {
     Object.assign(
       query,
-      buildKeywordQueryFromModel(Organizations, keyword)
+      buildKeywordQueryFromModels(Organizations, keyword)
     );
   }
 
@@ -86,7 +86,7 @@ const getOrganizationsByAdmin = async ({ companyOrganizer, page, limit, keyword,
   if (keyword && keyword.trim() !== "") {
     Object.assign(
       query,
-      buildKeywordQueryFromModel(Organizations, keyword)
+      buildKeywordQueryFromModels(Organizations, keyword)
     );
   }
 
