@@ -479,6 +479,7 @@ const createUserReferradrecord = async (referrerId, userId, companyOrganizer) =>
       user: userId,                    // Save the user ID directly
       referrer: referrerId,             // Save the referrer ID directly
       companyOrganizer: companyOrganizer, // Save the companyOrganizer ID directly
+       expiryDate:  new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
     });
 
     // Update the referrer's loyaltyReferralsCount by incrementing it by 1

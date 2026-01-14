@@ -137,7 +137,7 @@ const createReservation = async (req, res) => {
 
       // Replace the date with UTC date (adjusted for timezone)
       dateBlock.date = convertToUtcDateOnly(dateBlock.date, timezone);
-      console.log("dateBlock.date", dateBlock.date);
+  
     }
   }
 
@@ -664,7 +664,7 @@ const updateUserReservation = async (req, res) => {
           timezone,
           "YYYY-MM-DD hh:mm A"
         );
-        console.log("start time ", slots.startTime);
+      
 
       }
 

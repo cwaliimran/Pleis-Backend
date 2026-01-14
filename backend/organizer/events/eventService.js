@@ -35,7 +35,7 @@ if (organization) {
   }
 
   organizationIds = organizationIds.filter(Boolean);
-console.log("organizationIds",organizationIds );
+
   if (organizationIds.length > 0) {
     query["basicInfo.organization"] = {
       $in: organizationIds.map(id => new mongoose.Types.ObjectId(id)),

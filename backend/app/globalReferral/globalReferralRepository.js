@@ -12,7 +12,7 @@ const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const { formatCategories } = require("./formatters/categoryFormatter");
 const createGlobalReferral = async (data) => {
   try {
-    console.log("Creating global referral with data:", data);
+  
     const globalReferral = new GlobalReferral(data);
     await globalReferral.save();
     return globalReferral;
@@ -23,7 +23,7 @@ const createGlobalReferral = async (data) => {
 const saveReferralData = async (referralId, type) => {
   try {
     const user = await User.findById(referralId).lean();
-    console.log("user", user);
+  
 
     if (!user) {
       throw new Error("User not found for referralId");
@@ -187,7 +187,7 @@ if (keyword) {
   meta.globalReferralCount = { total, active, inactive };
 
 
-  console.log("globalReferral repository ",globalReferral );
+
   return {globalReferral , meta}
 }
 
@@ -266,6 +266,7 @@ const createUserReferradrecord = async (data) => {
       userIp,
       referrerUserId: referrer._id,
       userId,
+      expiryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
     });
 
     return {

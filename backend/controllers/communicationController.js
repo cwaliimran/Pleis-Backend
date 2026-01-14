@@ -133,6 +133,7 @@ const sendUserNotifications = async ({
   objectId = null, // Optional: object ID
   saveNotification = true, // send false if you don't want to save notification in db
 }) => {
+
   setImmediate(async () => {
     try {
       // Fetch devices for all the user IDs

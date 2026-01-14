@@ -129,7 +129,7 @@ const createNotifications = async (req, res) => {
       };
       radius = Number(location.radius) || 0;
     }
-    console.log("center", center);
+   
     // Prepare the data object to be saved (only include provided fields)
     const data = {
       creator: userId,
@@ -246,7 +246,7 @@ const updateNotifications = async (req, res) => {
     expiryDate,
     maxUsage,
   } = req.body;
-  console.log("expiryDate", expiryDate);
+
   const userId = req.user._id;
   const timezone = req.user.timezone;
   expiryDate = convertTimezoneToUtc(
@@ -260,7 +260,7 @@ const updateNotifications = async (req, res) => {
     })
   )
     return;
-  console.log("expiryDate", expiryDate);
+
   let data = {
     companyOrganizer: userId,
     title,

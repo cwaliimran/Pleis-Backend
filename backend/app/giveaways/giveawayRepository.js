@@ -98,7 +98,7 @@ const createGiveaway = async (data) => {
   try {
     // Get the giveaway details first
     const giveawayDetails = await getGiveawayDetails(data.giveaway);
-    console.log("giveawayDetails", giveawayDetails);
+    
 
     // Check if the status is not 'active' or giveawayStatus is not 'live'
     if (giveawayDetails.status !== 'active' || giveawayDetails.giveawayStatus !== 'live') {

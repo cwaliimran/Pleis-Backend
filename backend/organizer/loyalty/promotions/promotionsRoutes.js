@@ -17,10 +17,10 @@ router.use(auth);
 const apiRateLimiter = createRateLimiter("Promotions");
 const apiRateLimiterDetails = createRateLimiter("Promotions/:id");
 
-router.post("/", roleMiddleware(["admin", "organizer", "manager"]), create);
+router.post("/", roleMiddleware([ "organizer"]), create);
 router.get("/", apiRateLimiter, get);
 router.get("/:id", apiRateLimiterDetails, getDetails);
-router.put("/:id", roleMiddleware(["admin", "organizer", "manager"]), update);
-router.delete("/:id", roleMiddleware(["admin", "organizer", "manager"]), deleteItem);
+router.put("/:id", roleMiddleware(["organizer"]), update);
+router.delete("/:id", roleMiddleware(["organizer"]), deleteItem);
 
 module.exports = router;

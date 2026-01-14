@@ -88,7 +88,7 @@ const getBannerControls = async (req, res) => {
 const updateBannerControls = async (req, res) => {
   const { id } = req.params;
   const { status, type, object, title, image,description } = req.body;
-  console.log("body is ", req.body);
+
 
   if (
     !validateParams(req, res, {

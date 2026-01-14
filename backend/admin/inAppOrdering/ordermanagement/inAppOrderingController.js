@@ -2,104 +2,26 @@ const {
   sendResponse,
   parsePaginationParams,
   validateParams,
-  generateMeta,
   getReadableErrorMessage,
   convertTimezoneToUtc,
 } = require("../../../helperUtils/responseUtil");
 const mongoose = require('mongoose'); // Import mongoose
 
 const Orderservice = require("./inAppOrderingService");
-
-
-
-
-
-const createOrders = async (req, res) => {
-  let {
-    title,
-    ticket,
-    event,
-    numberOfWinners,
-    status="active",
-    ticketsPerWinner,
-    organization,
-    endDateTime,
-    OrdersStatus="live",
-
-  } = req.body;
-
-  const creator = new  mongoose.Types.ObjectId(organization);
-  const timezone = req.user.timezone;
-  endDateTime = convertTimezoneToUtc(
-    endDateTime,
-    timezone,
-    "YYYY-MM-DD hh:mm A"
-  );
-
-  if (
-    !validateParams(req, res, {
-      rawData: [
-        "title",
-        "ticket",
-        "ticketsPerWinner",
-        "organization",
-        "endDateTime",
-        "numberOfWinners",
-        "event",
-      ],
-    })
-  ) return;
- 
-  let data = {
-    creator,
-    title,
-    ticket,
-    event,
-    numberOfWinners,
-    ticketsPerWinner,
-    organization,
-    endDateTime,
-    OrdersStatus,
-    status,
-  };
+const getOrders = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let { keyword, status, date, range, companyOrganizer, activeKeyword, orderStatus, activeorderStatus, pickupFilter } = req.query;
   try {
-    const Orders = await Orderservice.createOrders(data);
-    if (!Orders) {
+    if (!companyOrganizer) {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "Orders_creation_failed",
+        translationKey: "organization_id_is_required",
       });
     }
-    return sendResponse({
-      res,
-      statusCode: 201,
-      translationKey: "Orders_created_successfully",
-      data: Orders,
-    });
-  } catch (error) {
-    const readableError = getReadableErrorMessage(error);
-    return sendResponse({
-      res,
-      statusCode: readableError.statusCode,
-      translationKey: readableError.message,
-      error,
-    });
-  }
-};
-const getOrders = async (req, res) => {
-  const { page, limit } = parsePaginationParams(req);
-  let { keyword, status , date, range ,organizationId,activeKeyword,orderStatus,activeorderStatus,pickupFilter} = req.query;
-  try {
-if(!organizationId){
-  return sendResponse({
-    res,
-    statusCode: 400,
-    translationKey: "organization_id_is_required",
-  });
-}
 
-    organizationId = new  mongoose.Types.ObjectId(organizationId); 
+      companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
+
     const timezone = req.user.timezone;
     const { Orderss, meta } = await Orderservice.getOrders({
       timezone,
@@ -107,7 +29,7 @@ if(!organizationId){
       limit,
       keyword,
       status,
-      organizationId,
+      companyOrganizer,
       date,
       range,
       activeKeyword,
@@ -135,26 +57,26 @@ if(!organizationId){
 };
 const updateOrders = async (req, res) => {
   const { id } = req.params;
-const {
-  status,
-  paymentStatus,
-  deliveredMenuItem,
-  deliveredall
-} = req.body;
+  const {
+    status,
+    paymentStatus,
+    deliveredMenuItem,
+    deliveredall
+  } = req.body;
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
       objectIdFields: ["id"],
     })
-  )    return;
+  ) return;
 
 
-let data = {
-  status,
-  paymentStatus,
-  deliveredMenuItem,
-  deliveredall
-};
+  let data = {
+    status,
+    paymentStatus,
+    deliveredMenuItem,
+    deliveredall
+  };
 
 
 
@@ -203,11 +125,97 @@ let data = {
 
 
 
+const updateInAppOrders = async (req, res) => {
+  const { companyOrganizer } = req.params;
+  const {
+    isOrderingEnabled
+  } = req.body;
+  if (
+    !validateParams(req, res, {
+      pathParams: ["companyOrganizer"],
+      objectIdFields: ["companyOrganizer"],
+    })
+  ) return;
+
+  try {
+    const { matchedCount,
+      modifiedCount } = await Orderservice.updateInAppOrders(companyOrganizer, isOrderingEnabled);
+
+    if (!modifiedCount) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "order_not_found",
+      });
+    }
+    if (isOrderingEnabled == "true" || isOrderingEnabled == true) {
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: `in_app_ordering_${isOrderingEnabled ? "enabled" : "disabled"}`,
+      });
+    } else {
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "in_app_ordering_disabled",
+      });
+    }
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 
 
+const getInAppOrders = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let { keyword, status, date, range, companyOrganizer } = req.query;
+  try {
+    if (!companyOrganizer) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "company_organizer_is_required",
+      });
+    }
 
+    creator = new mongoose.Types.ObjectId(companyOrganizer);
+    const timezone = req.user.timezone;
+    const data = await Orderservice.getInAppOrders({
+      timezone,
+      page,
+      limit,
+      keyword,
+      status,
+      creator,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "Orders_fetched_successfully",
+      data: data,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 
 module.exports = {
   getOrders,
   updateOrders,
+  updateInAppOrders,
+  getInAppOrders
 };

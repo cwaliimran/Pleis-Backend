@@ -135,7 +135,7 @@ const getReservationDetails = async (id, timezone) => {
 
     // Check if the reservation exists
     if (!reservation) {
-      console.log("Reservation not found for ID:", id); // Log if reservation is not found
+   
       return { reservation: null };  // Return null for reservation
     }
 

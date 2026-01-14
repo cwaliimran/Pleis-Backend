@@ -74,7 +74,6 @@ const createGiveaway = async (req, res) => {
     timezone,
     "YYYY-MM-DD hh:mm A"
   );
-  console.log("endDateTime", endDateTime);
   if (
     !validateParams(req, res, {
       rawData: [

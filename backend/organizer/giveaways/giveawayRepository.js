@@ -281,7 +281,7 @@ const getGiveaway = async ({organizationId, timezone, page, limit, keyword, stat
 
   // Execute the aggregation pipeline
   const result = await Giveaway.aggregate(pipeline);
-  console.log("result", result);
+ 
 
   // Step 10: Check if the result is valid and contains data
   if (!result || !result[0] || !result[0].data) {

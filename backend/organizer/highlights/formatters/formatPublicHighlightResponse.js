@@ -14,7 +14,7 @@ const formatPublicHighlightResponse = (object = {}, options = {}) => {
   let highlightObject = typeof object.toObject === "function" ? object.toObject() : object;
   if (!highlightObject) return null;
   const { userLocation } = options;
-console.log("highlightObject",highlightObject );
+
   // Always attach root-level media if present
   if (highlightObject.media && highlightObject.media.name) {
     highlightObject.media = getFullImageUrl(highlightObject.media.name);

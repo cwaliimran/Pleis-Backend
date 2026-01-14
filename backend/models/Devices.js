@@ -34,7 +34,7 @@ const Devices = mongoose.model("device", DevicesSchema);
 function createOrSkipDevice(userId, deviceId, deviceType) {
   setImmediate(async () => {
     try {
-      // Check if a device with the given deviceId already exists for this user
+
       const userDevice = await Devices.findOne({
         userId: userId,
         "devices.deviceId": deviceId,
