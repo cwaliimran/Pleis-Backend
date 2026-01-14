@@ -154,6 +154,8 @@ const buildGridKey = ([lng, lat]) => {
   return `${latKey}:${lngKey}`;
 };
 
+
+
 // ---- Controller ----
 const getNearbyCities = async (req, res) => {
   let { latitude, longitude } = req.query;
@@ -266,17 +268,21 @@ const getNearbyCities = async (req, res) => {
   }
 
   // 5️⃣ Group by distance threshold
+  // Deduplicate cities (city-only or city+country)
+  cities = dedupeCities(cities);
+
+  // 5️⃣ Group by distance threshold
   let nearbyCities = [];
   let suggestedCities = [];
 
-  cities.forEach(c => {
-    // Only treat as nearby if distance is known AND <= 50km
+  cities.forEach((c) => {
     if (c.distanceKm !== null && c.distanceKm <= 50) {
       nearbyCities.push(c);
     } else {
       suggestedCities.push(c);
     }
   });
+
 
 
   return sendResponse({
@@ -288,6 +294,58 @@ const getNearbyCities = async (req, res) => {
       suggestedCities,
     },
   });
+};
+
+// Toggle for city deduplication strategy
+const USE_COUNTRY_IN_CITY_DEDUPE = false;
+
+
+const normalizeCity = (value) =>
+  value
+    ?.toString()
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+
+
+const dedupeCities = (cities) => {
+  const map = new Map();
+
+  for (const c of cities) {
+    const cityKey = normalizeCity(c.city);
+
+    // Build dedupe key
+    const key = cityKey
+      ? USE_COUNTRY_IN_CITY_DEDUPE
+        ? `${cityKey}|${(c.country || "").toLowerCase()}`
+        : cityKey
+      : `${c.latitude},${c.longitude}`; // fallback safety
+
+    if (!map.has(key)) {
+      map.set(key, { ...c });
+      continue;
+    }
+
+    const existing = map.get(key);
+
+    // Sum organizers
+    existing.organizers += c.organizers;
+
+    // Prefer closest distance & coordinates
+    if (
+      c.distanceKm !== null &&
+      (existing.distanceKm === null || c.distanceKm < existing.distanceKm)
+    ) {
+      existing.distanceKm = c.distanceKm;
+      existing.latitude = c.latitude;
+      existing.longitude = c.longitude;
+    }
+
+    // Keep best score
+    existing.score = Math.max(existing.score, c.score);
+  }
+
+  return Array.from(map.values());
 };
 
 

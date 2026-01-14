@@ -62,21 +62,33 @@ const scanQrController = async (req, res) => {
       let warnings = [];
       //or organization mismatch
       if (eventTicket.organization._id.toString() !== organization.toString()) {
-        warnings.push("Organization mismatch for the ticket");
+        warnings.push({
+          warning: "Organization mismatch for the ticket",
+          warningCode: "organization_mismatch"
+        });
       }
       if (eventTicket?.order?.paymentDetails?.paymentStatus !== "paid") {
-        warnings.push("Ticket payment is not completed");
+        warnings.push({
+          warning: "Ticket payment is not completed",
+          warningCode: "payment_not_completed"
+        });
       }
 
       if (eventTicket.status !== "valid") {
-        warnings.push(`Ticket is marked as ${eventTicket.status}`);
+        warnings.push({
+          warning: `Ticket status is ${eventTicket.status}`,
+          warningCode: "invalid_ticket_status"
+        });
       }
 
       if (eventTicket?.ticket?.snapshot?.repeatable?.isRepeatable) {
         const visits = eventTicket.ticket.snapshot.repeatable.visits || 0;
 
         if (visits <= 0) {
-          warnings.push("No remaining visits on this ticket");
+          warnings.push({
+            warning: "No remaining visits on this ticket",
+            warningCode: "no_remaining_visits"
+          });
         }
       }
 

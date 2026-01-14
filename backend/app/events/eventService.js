@@ -341,7 +341,7 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
   const {
     time,
     distanceFrom = 0,
-    distanceTo = 0,           // 0 = NO LIMIT
+    distanceTo = 0,
     dateFrom,
     dateTo,
     categories = [],
@@ -357,6 +357,8 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
     distanceTo && Number(distanceTo) > 0 ? distanceTo * 1000 : undefined;
 
   const distanceFromMeters = distanceFrom * 1000;
+
+  
   const skip = Math.max(0, (page - 1) * limit);
   const now = getCurrentDateInTimezone({ timezone });
 
@@ -365,18 +367,33 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
   }
 
   // ------------------------------------
-  // DATE FILTER
+  // DATE FILTER — OPTION 2 (FULLY INSIDE RANGE)
   // ------------------------------------
   let dateFilter = {};
 
   if (dateFrom || dateTo) {
-    const start = dateFrom ? new Date(dateFrom) : new Date("1970-01-01");
-    const end = dateTo ? new Date(dateTo) : new Date("2999-12-31");
+    const start = dateFrom
+      ? new Date(`${dateFrom}T00:00:00.000Z`)
+      : null;
 
-    dateFilter = {
-      "schedule.startDateTime": { $lte: end },
-      "schedule.endDateTime": { $gte: start },
-    };
+    const end = dateTo
+      ? new Date(`${dateTo}T23:59:59.999Z`)
+      : null;
+
+    if (start && end) {
+      dateFilter = {
+        "schedule.startDateTime": { $gte: start },
+        "schedule.endDateTime": { $lte: end },
+      };
+    } else if (start) {
+      dateFilter = {
+        "schedule.startDateTime": { $gte: start },
+      };
+    } else if (end) {
+      dateFilter = {
+        "schedule.endDateTime": { $lte: end },
+      };
+    }
   } else if (time && time !== "all") {
     let start, end;
 
@@ -391,8 +408,8 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
       case "today":
         ({ start, end } = getStartAndEndOfDay(now, timezone));
         dateFilter = {
-          "schedule.startDateTime": { $lte: end },
-          "schedule.endDateTime": { $gte: start },
+          "schedule.startDateTime": { $gte: start },
+          "schedule.endDateTime": { $lte: end },
         };
         break;
 
@@ -401,16 +418,16 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
         t.setDate(now.getDate() + 1);
         ({ start, end } = getStartAndEndOfDay(t, timezone));
         dateFilter = {
-          "schedule.startDateTime": { $lte: end },
-          "schedule.endDateTime": { $gte: start },
+          "schedule.startDateTime": { $gte: start },
+          "schedule.endDateTime": { $lte: end },
         };
         break;
 
       case "thisWeek":
         ({ start, end } = getStartAndEndOfWeek(now, timezone));
         dateFilter = {
-          "schedule.startDateTime": { $lte: end },
-          "schedule.endDateTime": { $gte: start },
+          "schedule.startDateTime": { $gte: start },
+          "schedule.endDateTime": { $lte: end },
         };
         break;
 
@@ -426,10 +443,10 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
   // ------------------------------------
   const categoryFilter = categories.length
     ? {
-      "basicInfo.categories": {
-        $in: categories.map((id) => new mongoose.Types.ObjectId(id)),
-      },
-    }
+        "basicInfo.categories": {
+          $in: categories.map((id) => new mongoose.Types.ObjectId(id)),
+        },
+      }
     : {};
 
   // ------------------------------------
@@ -441,14 +458,10 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
       .map((id) => new mongoose.Types.ObjectId(id));
 
   const tagObjectIds = toObjectIds(tags);
-
   let genreTagIds = [];
 
   if (genre.length) {
-    //convert to new object ids
-    const genreObjectIds = genre
-      .filter((id) => mongoose.Types.ObjectId.isValid(id))
-      .map((id) => new mongoose.Types.ObjectId(id));
+    const genreObjectIds = toObjectIds(genre);
     const genreTags = await Tags.find({
       status: "active",
       _id: { $in: genreObjectIds },
@@ -457,10 +470,8 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
     genreTagIds = genreTags.map((t) => t._id);
   }
 
-  // 👉 REQUIRE BOTH — strict filter
   let tagFilter = {};
 
-  // If genre provided but no matching tag -> return NOTHING
   if (genre.length && genreTagIds.length === 0) {
     tagFilter = { "basicInfo.tags": { $in: [] } };
   } else if (tagObjectIds.length || genreTagIds.length) {
@@ -472,15 +483,14 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
   // ------------------------------------
   // KEYWORD
   // ------------------------------------
-  const keywordFilter =
-    keyword?.trim()
-      ? {
+  const keywordFilter = keyword?.trim()
+    ? {
         $or: [
           { "basicInfo.title": { $regex: keyword, $options: "i" } },
           { "basicInfo.description": { $regex: keyword, $options: "i" } },
         ],
       }
-      : {};
+    : {};
 
   // ------------------------------------
   // FINAL COMBINED FILTER
@@ -520,16 +530,16 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
             { $project: { title: 1, venueType: 1, location: 1 } },
             ...(venueTypes.length
               ? [
-                {
-                  $match: {
-                    venueType: {
-                      $in: venueTypes.map(
-                        (id) => new mongoose.Types.ObjectId(id)
-                      ),
+                  {
+                    $match: {
+                      venueType: {
+                        $in: venueTypes.map(
+                          (id) => new mongoose.Types.ObjectId(id)
+                        ),
+                      },
                     },
                   },
-                },
-              ]
+                ]
               : []),
           ],
         },
@@ -549,7 +559,12 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
         },
       },
 
-      { $unwind: { path: "$basicInfo.organization", preserveNullAndEmptyArrays: true } },
+      {
+        $unwind: {
+          path: "$basicInfo.organization",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
 
       { $sort: { "schedule.startDateTime": sort === "desc" ? -1 : 1 } },
 
@@ -594,6 +609,7 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
     throw new Error(`Failed to fetch nearby events: ${error.message}`);
   }
 };
+
 
 
 const getEventDetails = async (userLocation, userId, id, timezone) => {

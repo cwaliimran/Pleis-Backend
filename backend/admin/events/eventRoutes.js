@@ -5,9 +5,12 @@ const {
   updateEvent,
   deleteEvent,
   getEventDetails,
+  getEventAnalytics,
+  getEventTicketsAnalytics,
   cloneEvent,
   getMinimalEventsInfo,
   getEventTicketings,
+  getEventNotifications,
 } = require("./eventController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -31,6 +34,13 @@ router.get("/organization/:organization", apiRateLimiter, getMinimalEventsInfo);
 
 //get event details
 router.get("/:id", getEventDetails);
+
+//get event analytics
+router.get("/:id/analytics", getEventAnalytics);
+//get event tickets analytics
+router.get("/:id/tickets-analytics", getEventTicketsAnalytics);
+//get event notificaitons
+router.get("/:id/notifications", getEventNotifications);
 
 // Update an existing event
 router.put("/:id", updateEvent);

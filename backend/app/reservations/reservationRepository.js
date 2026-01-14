@@ -69,6 +69,8 @@ const createReservation = async (data) => {
 
       if (data.paymentMethod === "applePay" || data.paymentMethod === "card") {
         order.paymentStatus = "paid";
+        //TODO save paymentId
+        order.paymentId = data.paymentId || null;
         await order.save({ session });
 
         //totalPrice including menu items + reservation amount

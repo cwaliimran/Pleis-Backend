@@ -1,6 +1,6 @@
 // repositories/ReservationRepository.js
 const Reservations = require("@ReservationsModel");
-const UserReservations = require("@UserReservationsModel");
+const { UserReservations } = require("@UserReservationsModel");
 const { User } = require("../../models/UserModel");
 const Event = require("@EventsModel");
 const mongoose = require("mongoose");
@@ -254,22 +254,22 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
       }
     },
     {
-  $lookup: {
-    from: "userreservations",
-    localField: "_id",          // reservation _id
-    foreignField: "_id",        // reservation _id
-    pipeline: [
-      {
-        $project: {
-          firstName: 1,
-          lastName: 1,
-          phoneNumber: 1
-        }
+      $lookup: {
+        from: "userreservations",
+        localField: "_id",          // reservation _id
+        foreignField: "_id",        // reservation _id
+        pipeline: [
+          {
+            $project: {
+              firstName: 1,
+              lastName: 1,
+              phoneNumber: 1
+            }
+          }
+        ],
+        as: "user"
       }
-    ],
-    as: "user"
-  }
-},
+    },
     {
       $addFields: {
         user: { $arrayElemAt: ["$user", 0] }
@@ -454,8 +454,8 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
   //   now,
   //   timezone
   // );
-  
-      const now = getCurrentUtcDateOnly();
+
+  const now = getCurrentUtcDateOnly();
 
 
   let organizationsIds = Array.isArray(organizationsId)
@@ -470,68 +470,68 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
       }
     }
   ];
-if (range == "monthly") {
+  if (range == "monthly") {
 
 
-  // Update the pipeline to match events within the specified date range
-  pipeline.push({
-    $match: {
-      "timingSlots.dateTimeSlots": {
-        $elemMatch: {
-          date: { $gte: start, $lt: adjustedEnd }
+    // Update the pipeline to match events within the specified date range
+    pipeline.push({
+      $match: {
+        "timingSlots.dateTimeSlots": {
+          $elemMatch: {
+            date: { $gte: start, $lt: adjustedEnd }
+          }
         }
       }
-    }
-  });
+    });
 
 
-}
+  }
 
-if (range == "weekly") {
-  // Get the start and end of the current week based on the timezone
-  const { start, end } = getStartAndEndOfWeek(now, timezone);
+  if (range == "weekly") {
+    // Get the start and end of the current week based on the timezone
+    const { start, end } = getStartAndEndOfWeek(now, timezone);
 
-  // Add 1 minute to the end date to capture events at the very end of the week
-  const adjustedEnd = new Date(end.getTime() + 60000); // Add 1 minute to the end time
+    // Add 1 minute to the end date to capture events at the very end of the week
+    const adjustedEnd = new Date(end.getTime() + 60000); // Add 1 minute to the end time
 
 
 
-  // Update the pipeline to match events within the specified date range
-  pipeline.push({
-    $match: {
-      "timingSlots.dateTimeSlots": {
-        $elemMatch: {
-          date: { $gte: start, $lt: adjustedEnd }
+    // Update the pipeline to match events within the specified date range
+    pipeline.push({
+      $match: {
+        "timingSlots.dateTimeSlots": {
+          $elemMatch: {
+            date: { $gte: start, $lt: adjustedEnd }
+          }
         }
       }
-    }
-  });
+    });
 
 
-}
+  }
 
-if (range == "today") {
-  // Get the start and end of today based on the timezone
-  const { start, end } = getStartAndEndOfDay(now, timezone);
-
-
-  // Add 1 minute to the end date to capture events at the very end of the day
-  const adjustedEnd = new Date(end.getTime() + 60000); // Add 1 minute to the end time
+  if (range == "today") {
+    // Get the start and end of today based on the timezone
+    const { start, end } = getStartAndEndOfDay(now, timezone);
 
 
+    // Add 1 minute to the end date to capture events at the very end of the day
+    const adjustedEnd = new Date(end.getTime() + 60000); // Add 1 minute to the end time
 
-  // Update the pipeline to match events within the specified date range
-  pipeline.push({
-    $match: {
-      "timingSlots.dateTimeSlots": {
-        $elemMatch: {
-          date: { $gte: start, $lt: adjustedEnd }
+
+
+    // Update the pipeline to match events within the specified date range
+    pipeline.push({
+      $match: {
+        "timingSlots.dateTimeSlots": {
+          $elemMatch: {
+            date: { $gte: start, $lt: adjustedEnd }
+          }
         }
       }
-    }
-  });
+    });
 
-}
+  }
 
 
   // Apply filters
@@ -541,44 +541,44 @@ if (range == "today") {
     pipeline.push({ $match: { status: { $ne: "deleted" } } });
   }
 
-if (date) {
-  let { start, end } = getStartAndEndOfDay(date, timezone);
+  if (date) {
+    let { start, end } = getStartAndEndOfDay(date, timezone);
 
-  // Log the start and end dates for debugging
-
-
-  // Add 1 minute to the end date to capture events that are scheduled at the very last minute
-  end = new Date(end.getTime() + 60000); // 60,000 ms = 1 minute
+    // Log the start and end dates for debugging
 
 
+    // Add 1 minute to the end date to capture events that are scheduled at the very last minute
+    end = new Date(end.getTime() + 60000); // 60,000 ms = 1 minute
 
-  pipeline.push({
-    $match: {
-      $expr: {
-        $gt: [
-          {
-            $size: {
-              $filter: {
-                input: "$timingSlots.dateTimeSlots", // Array of dateTimeSlots
-                as: "slot",
-                cond: {
-                  $and: [
-                    { $gte: ["$$slot.date", start] }, // Match slot date >= start date
-                    { $lt: ["$$slot.date", end] } // Match slot date < end date
-                  ]
+
+
+    pipeline.push({
+      $match: {
+        $expr: {
+          $gt: [
+            {
+              $size: {
+                $filter: {
+                  input: "$timingSlots.dateTimeSlots", // Array of dateTimeSlots
+                  as: "slot",
+                  cond: {
+                    $and: [
+                      { $gte: ["$$slot.date", start] }, // Match slot date >= start date
+                      { $lt: ["$$slot.date", end] } // Match slot date < end date
+                    ]
+                  }
                 }
               }
-            }
-          },
-          0
-        ]
+            },
+            0
+          ]
+        }
       }
-    }
-  });
+    });
 
-  // Log the pipeline for debugging
+    // Log the pipeline for debugging
 
-}
+  }
 
   if (keyword) {
     const keywordMatch = buildKeywordQueryFromModels(
@@ -639,6 +639,175 @@ if (date) {
 }
 
 
+const getCalendarReservations = async ({
+  timezone,
+  companyOrganizer,
+  organizationsId,
+  date
+}) => {
+
+  let organizationsIds = Array.isArray(organizationsId)
+    ? organizationsId
+    : JSON.parse(organizationsId || "[]");
+
+  organizationsIds = organizationsIds.map(id => new mongoose.Types.ObjectId(id));
+
+  const pipeline = [
+    {
+      $match: {
+        ...(companyOrganizer && {
+          companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer)
+        }),
+        ...(organizationsIds.length > 0 && {
+          organizationId: { $in: organizationsIds }
+        }),
+      }
+    },
+
+    {
+      $lookup: {
+        from: "users",
+        localField: "userId",
+        foreignField: "_id",
+        pipeline: [
+          {
+            $project: {
+              firstName: 1,
+              lastName: 1,
+              phoneNumber: 1
+            }
+          }
+        ],
+        as: "user"
+      }
+    },
+
+    {
+      $addFields: {
+        user: { $arrayElemAt: ["$user", 0] }
+      }
+    },
+
+    // {
+    //   $unwind: {
+    //     path: "$user",
+    //     preserveNullAndEmptyArrays: true
+    //   }
+    // },
+
+    {
+      $addFields: {
+        validEventId: {
+          $cond: {
+            if: {
+              $and: [
+                { $ne: ["$optionalEventId", ""] },
+                { $ne: ["$optionalEventId", null] }
+              ]
+            },
+            then: { $toObjectId: "$optionalEventId" },
+            else: null
+          }
+        }
+      }
+    },
+
+    {
+      $lookup: {
+        from: "events",
+        localField: "validEventId",
+        foreignField: "_id",
+        as: "event"
+      }
+    },
+
+    {
+      $unwind: {
+        path: "$event",
+        preserveNullAndEmptyArrays: true
+      }
+    },
+
+    {
+      $project: {
+        _id: 1,
+        userId: 1,
+        user: 1,
+        partySize: 1,
+        reservationType: 1,
+        organizationId: 1,
+        reservationStatus: 1,
+        companyOrganizer: 1,
+        reservationId: 1,
+        timingSlots: 1,
+        status: 1,
+        optionalEventId: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        notes: 1,
+        member: "Gold",
+        eventTitle: {
+          $ifNull: ["$event.basicInfo.title", "No Event Title"]
+        }
+      }
+    },
+
+    {
+      $match: {
+        status: { $ne: "deleted" }
+      }
+    }
+  ];
+
+  // ✅ DATE FILTER (added safely)
+  if (date) {
+    const dateFilter = new Date(date);
+    console.log("timezone",timezone)
+    console.log("date",date)
+    console.log("dateFilter",dateFilter)
+    const { start, end } = getStartAndEndOfDay(dateFilter, timezone);
+    console.log("start, end", start, end)
+
+    pipeline.push({
+      $match: {
+        "timingSlots.dateTimeSlots": {
+          $elemMatch: {
+            date: { $gte: start, $lt: end }
+          }
+        }
+      }
+    });
+  }
+
+  pipeline.push({ $sort: { createdAt: -1 } });
+
+  const reservations = await UserReservations.aggregate(pipeline);
+
+  const formattedReservations = reservations.map(item => {
+    const formatted = reservationsFormatterAdjustDates(item);
+
+    if (
+      formatted.conditionType === "noCondition" ||
+      formatted.conditionType === "ticketRequirement" ||
+      formatted.conditionType === "customText"
+    ) {
+      delete formatted.amount;
+      if (formatted.conditionType === "noCondition") {
+        delete formatted.ticketType;
+      }
+    } else {
+      delete formatted.ticketType;
+    }
+
+    return formatted;
+  });
+
+  return { reservations: formattedReservations };
+};
+
+
+
+
 
 module.exports = {
   createReservation,
@@ -652,5 +821,6 @@ module.exports = {
   getUserReservations,
   findUserReservationById,
   findUserById,
-  getavailableReservations
+  getavailableReservations,
+  getCalendarReservations
 };

@@ -2,16 +2,41 @@
 const { Events } = require("@EventsModel");
 const TicketingsModel = require("@TicketingsModel");
 const { getModelCounts, } = require('@dbUtils/queryUtil');
-// Create
+const mongoose = require("mongoose");
+const { TicketingOrders } = require("@TicketingOrdersModel");
+const { TicketingBookings } = require("@TicketingBookingsModel");
+
+
 const createEvent = async (data, ticketingData) => {
   const session = await Events.startSession();
   session.startTransaction();
+
   try {
+    const isAvailable = await isEventStartTimeAvailableForOrganization({
+      organizationId: data.basicInfo.organization,
+      startDateTime: data.schedule.startDateTime,
+    });
+
+    if (!isAvailable) {
+      throw new Error(
+        "Another event already exists for this organization at the same start time"
+      );
+    }
+
     let event = new Events(data);
     event = await event.save({ session });
 
     if (ticketingData) {
+      if (data.recurringMeta?.isTemplate) {
+        ticketingData.recurringMeta = {
+          isTemplate: true,
+          parentTicket: null,
+          occurrenceIndex: 1,
+        };
+      }
+
       ticketingData.event = event._id; // 🔑 binds ticketing to template or one-time event
+      ticketingData.isTemplate = data.recurringMeta?.isTemplate || false; // mark ticketing as template if event is template
       const ticketing = new TicketingsModel(ticketingData);
       await ticketing.save({ session });
     }
@@ -35,7 +60,7 @@ const getEventsWithFilters = async (query, skip, limit) => {
     .populate("basicInfo.tags", "title")
     .populate("basicInfo.organization", "basicInfo.name basicInfo.media otherInfo.description")
     .populate("basicInfo.partnerOrganization", "basicInfo.name basicInfo.media otherInfo.description")
-    .sort({ createdAt: -1 })
+    .sort({ "schedule.startDateTime": -1 })
     .skip(skip)
     .limit(limit);
 };
@@ -60,28 +85,28 @@ const countEvents = async (query = {}) => {
 // Find by ID
 const findEventById = async (id) => {
   return Events.findById(id)
-    .populate("basicInfo.venue", "title location floorPlan")
+    .populate({
+      path: "basicInfo.venue",
+      select: "title location floorPlan venueType",
+      populate: {
+        path: "venueType",
+        select: "title",
+      },
+    })
     .populate("basicInfo.categories", "title image otherInfo")
     .populate("basicInfo.tags", "title otherInfo")
     .populate({
       path: "basicInfo.organization",
-      select: "basicInfo otherInfo operatingHours",
-      populate: [
-        {
-          path: "otherInfo.categories",
-          select: "title image otherInfo",
-        },
-        {
-          path: "otherInfo.tags",
-          select: "title otherInfo",
-        },
-      ],
+      select:
+        "basicInfo.media.logo basicInfo.name otherInfo.description operatingHours",
     })
     .populate({
       path: "basicInfo.partnerOrganization",
-      select: "basicInfo.name otherInfo.description basicInfo.media.logo",
+      select:
+        "basicInfo.name otherInfo.description basicInfo.media.logo",
     });
 };
+
 
 // Delete
 const deleteEventById = async (event) => {
@@ -111,6 +136,410 @@ const findEventByNanoid = async (nanoid) => {
 const getEventIdsByOrganization = async (organization) => {
   return Events.find({ "basicInfo.organization": organization }).select("_id");
 }
+/**
+ * Checks whether an organization already has an event
+ * at the same startDateTime (excluding deleted events)
+ *
+ * @returns {boolean} true if available, false if conflict exists
+ */
+const isEventStartTimeAvailableForOrganization = async ({
+  organizationId,
+  startDateTime,
+  excludeEventId = null,
+}) => {
+  const query = {
+    "basicInfo.organization": organizationId,
+    "schedule.startDateTime": startDateTime,
+    status: { $ne: "deleted" },
+  };
+
+  if (excludeEventId) {
+    query._id = { $ne: excludeEventId };
+  }
+
+  const existingEvent = await Events.findOne(query).select("_id");
+
+  return !existingEvent;
+};
+
+
+const getLatestEventOrders = async ({
+  eventId,
+  limit = 10,
+  skip = 0
+}) => {
+  return TicketingOrders.aggregate([
+    /* 1️⃣ Match event ticket orders */
+    {
+      $match: {
+        event: new mongoose.Types.ObjectId(eventId),
+        purpose: "eventTicketPurchase"
+      }
+    },
+
+    /* 2️⃣ Sort newest first */
+    {
+      $sort: { createdAt: -1 }
+    },
+
+    /* 3️⃣ Pagination */
+    { $skip: skip },
+    { $limit: limit },
+
+    /* 4️⃣ Populate user (minimal fields only) */
+    {
+      $lookup: {
+        from: "users",
+        localField: "user",
+        foreignField: "_id",
+        as: "user"
+      }
+    },
+    {
+      $unwind: {
+        path: "$user",
+        preserveNullAndEmptyArrays: true
+      }
+    },
+
+    /* 5️⃣ Shape final response */
+    {
+      $project: {
+        _id: 1,
+        createdAt: 1,
+        status: 1,
+        ticketsPurchased: 1,
+
+        orderPricing: 1,
+        paymentDetails: 1,
+
+        user: {
+          _id: "$user._id",
+          firstName: "$user.firstName",
+          lastName: "$user.lastName",
+          profileIcon: "$user.profileIcon"
+        }
+      }
+    }
+  ]);
+};
+
+
+const getTicketPerformanceWeekly = async ({
+  eventId,
+  timezone = "UTC",
+  startDate = null,
+  endDate = null
+}) => {
+  const match = {
+    event: new mongoose.Types.ObjectId(eventId),
+    status: { $in: ["confirmed", "completed"] }
+  };
+
+  if (startDate || endDate) {
+    match.createdAt = {};
+    if (startDate) match.createdAt.$gte = new Date(startDate);
+    if (endDate) match.createdAt.$lte = new Date(endDate);
+  }
+
+  const rows = await TicketingOrders.aggregate([
+    { $match: match },
+
+    {
+      $addFields: {
+        dayOfWeek: {
+          $dayOfWeek: {
+            date: "$createdAt",
+            timezone
+          }
+        }
+      }
+    },
+
+    {
+      $group: {
+        _id: "$dayOfWeek",
+        totalAmount: { $sum: "$orderPricing.total" }
+      }
+    }
+  ]);
+
+  // Mongo: 1 = Sunday, 7 = Saturday
+  const dayMap = {
+    1: "Sun",
+    2: "Mon",
+    3: "Tue",
+    4: "Wed",
+    5: "Thu",
+    6: "Fri",
+    7: "Sat"
+  };
+
+  // Initialize full week
+  const weekly = {
+    Mon: 0,
+    Tue: 0,
+    Wed: 0,
+    Thu: 0,
+    Fri: 0,
+    Sat: 0,
+    Sun: 0
+  };
+
+  for (const r of rows) {
+    const day = dayMap[r._id];
+    if (day) {
+      weekly[day] = Math.round(r.totalAmount);
+    }
+  }
+
+  return Object.entries(weekly).map(([day, value]) => ({
+    day,
+    value
+  }));
+};
+
+const getEventRevenueAnalytics = async ({
+  eventId,
+  timezone = "UTC",
+  mode = "all"
+}) => {
+  const now = new Date();
+
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+  let currentMatch = {
+    event: new mongoose.Types.ObjectId(eventId),
+    status: { $in: ["confirmed", "completed"] }
+  };
+
+  let previousMatch = { ...currentMatch };
+
+  // ---------------------------
+  // DATE FILTERS
+  // ---------------------------
+  if (mode === "thisMonth") {
+    currentMatch.createdAt = { $gte: startOfMonth };
+    previousMatch.createdAt = {
+      $gte: startOfPrevMonth,
+      $lt: startOfMonth
+    };
+  }
+
+  if (mode === "lastMonth") {
+    currentMatch.createdAt = {
+      $gte: startOfPrevMonth,
+      $lt: startOfMonth
+    };
+  }
+
+  if (mode === "thisYear") {
+    currentMatch.createdAt = { $gte: startOfYear };
+  }
+
+  // ---------------------------
+  // AGGREGATION PIPELINE
+  // ---------------------------
+  const aggregateByMonth = async (match) =>
+    TicketingOrders.aggregate([
+      { $match: match },
+      {
+        $addFields: {
+          month: {
+            $month: { date: "$createdAt", timezone }
+          }
+        }
+      },
+      {
+        $group: {
+          _id: "$month",
+          amount: { $sum: "$orderPricing.total" }
+        }
+      }
+    ]);
+
+  const [currentRows, previousRows] = await Promise.all([
+    aggregateByMonth(currentMatch),
+    mode === "thisMonth" ? aggregateByMonth(previousMatch) : []
+  ]);
+
+  // ---------------------------
+  // NORMALIZE MONTHS
+  // ---------------------------
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+
+  const currentMap = {};
+  const previousMap = {};
+
+  for (const r of currentRows) {
+    currentMap[r._id] = r.amount;
+  }
+
+  for (const r of previousRows) {
+    previousMap[r._id] = r.amount;
+  }
+
+  const trend = months.map((m, i) => ({
+    month: m,
+    current: Math.round(currentMap[i + 1] || 0),
+    previous: Math.round(previousMap[i + 1] || 0)
+  }));
+
+  // ---------------------------
+  // TOTAL REVENUE
+  // ---------------------------
+  const totalRevenue = trend.reduce(
+    (sum, m) => sum + m.current,
+    0
+  );
+
+  return {
+    totalRevenue,
+    currency: "€",
+    trend
+  };
+};
+
+
+const getPaidVsUnpaidTicketStats = async ({ eventId }) => {
+  const eventObjectId = new mongoose.Types.ObjectId(eventId);
+
+  /* --------------------------------
+     1️⃣ TOTAL TICKETS CREATED
+     -------------------------------- */
+  const ticketDocs = await TicketingsModel.find({
+    event: eventObjectId,
+    status: "active"
+  }).lean();
+
+  let totalTickets = 0;
+
+  for (const t of ticketDocs) {
+    if (t.timingSlots?.enabled) {
+      for (const d of t.timingSlots.dateTimeSlots) {
+        for (const s of d.timeSlots) {
+          totalTickets += s.quantity || 0;
+        }
+      }
+    } else {
+      totalTickets += t.quantity || 0;
+    }
+  }
+
+  /* --------------------------------
+     2️⃣ PAID / UNPAID ORDERS
+     -------------------------------- */
+  const orders = await TicketingOrders.find({
+    event: eventObjectId,
+    status: { $in: ["confirmed", "completed"] }
+  })
+    .select("ticketsPurchased orderPricing paymentDetails")
+    .lean();
+
+  let paidCount = 0;
+  let unpaidCount = 0;
+  let paidAmount = 0;
+  let unpaidAmount = 0;
+
+  for (const o of orders) {
+    const isPaid =
+      ["card", "applePay"].includes(o.paymentDetails?.paymentMethod) &&
+      o.paymentDetails?.paymentStatus === "completed";
+
+    if (isPaid) {
+      paidCount += o.ticketsPurchased;
+      paidAmount += o.orderPricing.total || 0;
+    } else {
+      unpaidCount += o.ticketsPurchased;
+      unpaidAmount += o.orderPricing.total || 0;
+    }
+  }
+
+  const soldTickets = paidCount + unpaidCount;
+
+  const paidPercentage =
+    soldTickets === 0 ? 0 : Math.round((paidCount / soldTickets) * 100);
+
+  const unpaidPercentage =
+    soldTickets === 0 ? 0 : 100 - paidPercentage;
+
+  return {
+    soldTickets,
+    totalTickets,
+
+    paid: {
+      count: paidCount,
+      percentage: paidPercentage,
+      amount: Math.round(paidAmount)
+    },
+
+    unpaid: {
+      count: unpaidCount,
+      percentage: unpaidPercentage,
+      amount: Math.round(unpaidAmount)
+    }
+  };
+};
+
+
+const getScannedTicketProgress = async ({ eventId }) => {
+  const eventObjectId = new mongoose.Types.ObjectId(eventId);
+
+  /* --------------------------------
+     AGGREGATE SCAN COUNTS
+     -------------------------------- */
+  const stats = await TicketingBookings.aggregate([
+    {
+      $match: {
+        "ticket.snapshot.event": eventObjectId,
+        status: { $in: ["valid", "used"] }
+      }
+    },
+    {
+      $group: {
+        _id: "$status",
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+
+  let scannedCount = 0;
+  let notScannedCount = 0;
+
+  for (const row of stats) {
+    if (row._id === "used") scannedCount = row.count;
+    if (row._id === "valid") notScannedCount = row.count;
+  }
+
+  const totalSold = scannedCount + notScannedCount;
+
+  const scannedPercentage =
+    totalSold === 0 ? 0 : Math.round((scannedCount / totalSold) * 100);
+
+  const notScannedPercentage =
+    totalSold === 0 ? 0 : 100 - scannedPercentage;
+
+  return {
+    totalSold,
+
+    scanned: {
+      count: scannedCount,
+      percentage: scannedPercentage
+    },
+
+    notScanned: {
+      count: notScannedCount,
+      percentage: notScannedPercentage
+    }
+  };
+};
+
+
 
 module.exports = {
   createEvent,
@@ -124,5 +553,11 @@ module.exports = {
   findEventByNanoid,
   getEventsCounts,
   getMinimalEventsWithFilters,
-  getEventIdsByOrganization
+  getEventIdsByOrganization,
+  getLatestEventOrders,
+  getTicketPerformanceWeekly,
+  getEventRevenueAnalytics,
+  getPaidVsUnpaidTicketStats,
+  getScannedTicketProgress
+
 };
