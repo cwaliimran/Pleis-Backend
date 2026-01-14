@@ -21,7 +21,7 @@ const OrdersRateLimiter = createRateLimiter("Orders");
 // router.post("/", roleMiddleware(["admin"]), OrdersRateLimiter, createOrders);
 router.get("/", roleMiddleware(["admin"]), OrdersRateLimiter, getOrders);
 router.put("/:id", roleMiddleware(["admin"]), updateOrders);
-router.put("/update/:companyOrganizer", roleMiddleware(["admin"]), updateInAppOrders);
+router.put("/update/:organization", roleMiddleware(["admin"]), updateInAppOrders);
 router.get("/update", roleMiddleware(["admin"]), getInAppOrders);
 
 
