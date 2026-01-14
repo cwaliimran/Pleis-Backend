@@ -12,6 +12,7 @@ const mongoose = require('mongoose');
 const eventService = require("./eventService");
 const ticketingService = require("../ticketing/ticketingsService");
 const { updateEventService } = require("./updateEventService");
+const { getNotificationsByEventIdService } = require("../notifications/notificationsService");
 
 const createEvent = async (req, res) => {
   let { timezone, _id: userId } = req.user;
@@ -707,6 +708,33 @@ const getEventTicketsAnalytics = async (req, res) => {
   }
 };
 
+const getEventNotifications = async (req, res) => {
+  let { id } = req.params;
+
+  // ObjectId for event id
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })) return;
+  try {
+    const notifications = await getNotificationsByEventIdService(id);
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "event_notifications_fetched_successfully",
+      data: notifications,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+
 module.exports = {
   createEvent,
   getEvents,
@@ -718,5 +746,6 @@ module.exports = {
   getEventAnalytics,
   getEventTicketsAnalytics,
   getMinimalEventsInfo,
-  getEventTicketings
+  getEventTicketings,
+  getEventNotifications
 };

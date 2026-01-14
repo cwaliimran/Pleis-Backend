@@ -643,32 +643,29 @@ const getCurrentDateInTimezone = ({
 
 
 const getStartAndEndOfDay = (date, timezone) => {
-  const start = moment(date)
-    .tz(timezone)
+  const start = moment.tz(date, timezone)
     .startOf("day")
     .utc()
-    .startOf("day")
     .toDate();
 
-  const end = moment(date)
-    .tz(timezone)
+  const end = moment.tz(date, timezone)
     .endOf("day")
     .utc()
-    .startOf("day")
     .toDate();
 
   return { start, end };
 };
+  
 
 
 const getStartAndEndOfWeek = (date, timezone) => {
-  const start = moment(date).tz(timezone).startOf("week").toDate();
-  const end = moment(date).tz(timezone).endOf("week").toDate();
+  const start = moment.tz(date, timezone).startOf("week").toDate();
+  const end = moment.tz(date, timezone).endOf("week").toDate();
   return { start, end };
 };
 const getStartAndEndOfMonth = (date, timezone) => {
-  const start = moment(date).tz(timezone).startOf("month").toDate();
-  const end = moment(date).tz(timezone).endOf("month").toDate();
+  const start = moment.tz(date, timezone).startOf("month").toDate();
+  const end = moment.tz(date, timezone).endOf("month").toDate();
   return { start, end };
 };
 

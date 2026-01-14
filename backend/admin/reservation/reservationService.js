@@ -212,6 +212,14 @@ const updateUserReservation = async (data) => {
 };
 
 
+const getCalendarReservationsService = async ({ timezone, companyOrganizer, organizationsId, date }) => {
+  let { reservations } = await ReservationRepo.getCalendarReservations({ timezone, companyOrganizer, organizationsId, date, });
+
+  return {
+    reservations,
+  };
+};
+
 module.exports = {
   createReservation,
   getReservations,
@@ -221,5 +229,6 @@ module.exports = {
   getUserReservations,
   updateUserReservationStatus,
   updateUserReservation,
-  getavailableReservations
+  getavailableReservations,
+  getCalendarReservationsService
 };

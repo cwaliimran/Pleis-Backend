@@ -148,7 +148,7 @@ const getAllUserIds = async () => {
 
 const createNotifications = async (data) => {
   try {
-   
+
     const result = await getFilteredUserIdsCombined({
       ageRange: data.ageRange || null,
       gender: data.gender || null,
@@ -196,7 +196,7 @@ const createNotifications = async (data) => {
         globalNotification = new Model(data);
         await globalNotification.save();
       }
-            if (data.sendTiming === "schedule") {
+      if (data.sendTiming === "schedule") {
         data.estimated = result.userIds.length;
         const Model = getModelByTaskType(data.destinationType);
         globalNotification = new Model(data);
@@ -227,7 +227,7 @@ const createNotifications = async (data) => {
         globalNotification = new Model(data);
         await globalNotification.save();
       }
-            if (data.sendTiming === "schedule") {
+      if (data.sendTiming === "schedule") {
         data.estimated = result.userIds.length;
         const Model = getModelByTaskType(data.destinationType);
         globalNotification = new Model(data);
@@ -273,8 +273,8 @@ const createNotifications = async (data) => {
 };
 
 
-const getNotificationss = async ({isDelivered, sendTiming,timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
-console.log("isDelivered", isDelivered);
+const getNotificationss = async ({ isDelivered, sendTiming, timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
+  console.log("isDelivered", isDelivered);
   const pipeline = [
     {
       $match: {
@@ -316,22 +316,22 @@ console.log("isDelivered", isDelivered);
 
 
   if (status) {
-      pipeline.push({ $match: { status } });
-    } else {
+    pipeline.push({ $match: { status } });
+  } else {
     pipeline.push({ $match: { status: { $ne: "deleted" } } });
   }
-if (sendTiming) {
-  pipeline.push({ $match: { sendTiming } });
-}
-if(isDelivered){
-  if (isDelivered === "true") isDelivered = true;
-if (isDelivered === "false") isDelivered = false;
-if (typeof isDelivered === "boolean") {
-  pipeline.push({
-    $match: { isDelivered }
-  });
-}
-}
+  if (sendTiming) {
+    pipeline.push({ $match: { sendTiming } });
+  }
+  if (isDelivered) {
+    if (isDelivered === "true") isDelivered = true;
+    if (isDelivered === "false") isDelivered = false;
+    if (typeof isDelivered === "boolean") {
+      pipeline.push({
+        $match: { isDelivered }
+      });
+    }
+  }
   if (date) {
     const start = new Date(date);
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
@@ -559,13 +559,6 @@ const findByIdAndUpdate = async (id, data) => {
 
 
 
-
-
-
-
-
-
-
 const getOrganizations = async ({ skip, limit }) => {
   try {
     const pipeline = [
@@ -639,12 +632,6 @@ const getEvents = async ({ skip, limit }) => {
 };
 
 
-
-
-
-
-
-
 const gettags = async ({ skip, limit }) => {
   try {
 
@@ -680,6 +667,14 @@ const gettags = async ({ skip, limit }) => {
     };
   }
 };
+
+//get notification by eventId
+const getNotificationsByEventId = async (eventId) => {
+  return GlobalNotification.find({ eventId: new mongoose.Types.ObjectId(eventId) })
+    .sort({ createdAt: -1 })
+}
+
+
 module.exports = {
   createNotifications,
   getNotificationss,
@@ -687,6 +682,7 @@ module.exports = {
   findByIdAndUpdate,
   getOrganizations,
   getEvents,
-  gettags
+  gettags,
+  getNotificationsByEventId,
 
 };
