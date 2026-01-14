@@ -15,7 +15,7 @@ const sendEmailViaMailgun = async (emails, subject, body, config = {}) => {
       isHtml = true,
     } = config;
     
-    console.log(config)
+
 
     const data = await mg.messages.create(process.env.MAILGUN_DOMAIN, {
       from: fromEmail,

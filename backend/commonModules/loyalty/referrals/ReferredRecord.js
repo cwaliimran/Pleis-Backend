@@ -39,6 +39,10 @@ const loyaltyreferredRecordSchema = new mongoose.Schema(
       type: Number,
       default: 0,  // Default to 0 if not provided
     },
+    expiryDate: {
+      type: Date,
+      required: true, // Expiry date must be provided
+    },
     // Add status field with enum for active or inactive
     status: {
       type: String,

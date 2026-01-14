@@ -404,7 +404,7 @@ const getEventAttendees = async ({
 
 // check in event attendee (by ticketBookingId)
 const checkInEventAttendee = async (eventId, ticketBookingId, scannedBy = null) => {
-  console.log("eventId, ticketBookingId, scannedBy = null", eventId, ticketBookingId, scannedBy)
+
   const attendee = await TicketingBookings.findOne({
     ticketBookingId,
     "ticket.snapshot.event": new mongoose.Types.ObjectId(eventId),

@@ -5,6 +5,8 @@ const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
 const { LoyaltyChallengesOrders } = require("@LoyaltyChallengesOrdersModel");
 const { findBestActiveChallengeByTaskType } = require("../challenges/challengesRepository");
 const { Challenge } = require("../../../commonModules/loyalty/challenges/models/Challenge");
+const { sendUserNotifications } = require("../../../controllers/communicationController");
+const { NotificationTypes } = require("@NotificationsModel");
 
 
 
@@ -139,6 +141,9 @@ const resolveBuyMenuItemChallengeService = async ({
   items = []
 }) => {
 
+  let challenge_id = null;
+  let reward_id = null;
+  let challenge_title = null;
   const qtyMap = new Map();
   for (const item of items) {
     if (!item.menuItem || !item.quantity) continue;
@@ -175,7 +180,9 @@ const resolveBuyMenuItemChallengeService = async ({
         const match = challenge.title.match(/\d+/);
         target = match ? Number(match[0]) : 1;
       }
-
+      challenge_id = challenge._id;
+      reward_id = challenge.reward._id;
+      challenge_title = challenge.title;
       // Count completed cycles
       let completedCycles = await LoyaltyChallengesOrders.countDocuments({
         user: userId,
@@ -241,6 +248,16 @@ const resolveBuyMenuItemChallengeService = async ({
     return { success: false, message: "menu_item_not_applicable" };
   }
 
+  //TODO send notification for completed challenge
+  await sendUserNotifications({
+    recipientIds: [userId.toString()],
+    title: challenge_title,
+    body: `Your challenge has been updated: ${challenge_id}`,
+    data: { type: NotificationTypes.ChALLENGE_UPDATE, objectType: "group" },
+    sender: userId,
+    objectId: challenge_id,
+  });
+
   return { success: true, message: "challenge_progress_updated" };
 };
 
@@ -258,6 +275,7 @@ const resolveGenericTaskTypeService = async ({
   taskType,
   value = 1
 }) => {
+
   // 1️⃣ Find active in-progress order
   let order = await repo.findActiveOrderByTaskType({
     userId,
@@ -284,6 +302,7 @@ const resolveGenericTaskTypeService = async ({
       });
 
       challenge = ch;
+
       break;
     }
 
@@ -315,9 +334,15 @@ const resolveGenericTaskTypeService = async ({
 
 
 const finalizeChallengeCompletion = async (order) => {
+    let challenge_title = null;
+  let challenge_id = null;
+  let reward_id = null;
   const challenge = order.challengeSnapshot;
+  challenge_title = challenge.title;
+  challenge_id = challenge._id;
+  reward_id = challenge.reward._id;
 
-const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
+  const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
 
   // 1️⃣ Issue reward
   if (challenge.reward.rewardType === "points" && challenge.rewardValue > 0) {
@@ -352,7 +377,14 @@ const { createTransaction } = require("../../userWalletService/transactions/serv
     rewardClaimed: true,
     rewardClaimedAt: new Date()
   });
-
+  await sendUserNotifications({
+    recipientIds: [userId.toString()],
+    title: challenge_title,
+    body: `Your challenge has been updated: ${challenge_id}`,
+    data: { type: NotificationTypes.ChALLENGE_UPDATE, objectType: "group" },
+    sender: userId,
+    objectId: challenge_id,
+  });
   return { success: true, order, message: "challenge_completed" };
 };
 

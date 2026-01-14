@@ -19,18 +19,18 @@ const apiRateLimiter = createRateLimiter("ClubCollaborations");
 const apiRateLimiterDetails = createRateLimiter("ClubCollaborations/:id");
 
 // Create a new clubCollaboration
-router.post("/", roleMiddleware(["admin", "organizer", "manager"]), createClubCollaboration);
+router.post("/", roleMiddleware(["admin", "organizer", "manager"]),auth, createClubCollaboration);
 
 // Get all clubCollaborations with pagination
 router.get("/", apiRateLimiter, getClubCollaborations);
 
 //get clubCollaboration details
-router.get("/:id", apiRateLimiterDetails, getClubCollaborationDetails);
+router.get("/:id", apiRateLimiterDetails, auth, getClubCollaborationDetails);
 
 // Update an existing clubCollaboration
-router.put("/:id", roleMiddleware(["admin", "organizer", "manager"]), updateClubCollaboration);
+router.put("/:id", roleMiddleware(["admin", "organizer", "manager"]),auth, updateClubCollaboration);
 
 // Delete a clubCollaboration
-router.delete("/:id", roleMiddleware(["admin", "organizer", "manager"]), deleteClubCollaboration);
+router.delete("/:id", roleMiddleware(["admin", "organizer", "manager"]),auth, deleteClubCollaboration);
 
 module.exports = router;

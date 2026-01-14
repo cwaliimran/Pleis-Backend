@@ -273,7 +273,6 @@ const createLimitedTimeItem = async (data, timezone) => {
     updateData.upSellItem = data.upSellItem;
   }
 
-console.log("Update Data:", updateData);
   try {
     // Use updateMany to update all menu items in a single query
     const result = await MenuItems.updateMany(

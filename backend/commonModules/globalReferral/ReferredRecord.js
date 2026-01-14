@@ -41,6 +41,10 @@ const referredRecordSchema = new mongoose.Schema(
       type: Boolean,
       default: false,  // Default to false (will be set to true if purchases >= 3)
     },
+        expiryDate: {
+      type: Date,
+      required: true, // Expiry date must be provided
+    },
 
     userReward: {
       type: Number,

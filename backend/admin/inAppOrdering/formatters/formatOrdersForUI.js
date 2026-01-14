@@ -17,7 +17,6 @@ const matchPickupType = (order, pickupFilter) => {
   );
 };
 
-
 const hasUndeliveredItem = (order) =>
   Array.isArray(order.items) &&
   order.items.some(item => item.isdelivered === false);
@@ -58,7 +57,7 @@ const isPreorderOrder = (order) =>
 const isPreorderOrderppickup = (order) =>
   order.orderType === "preorder" &&
   order.status === "pending";
-isPreorderOrderppickup
+
 /* ================= COUNTS ================= */
 
 const countOrders = (orders) => {
@@ -73,7 +72,6 @@ const countOrders = (orders) => {
   };
 
   orders.forEach(order => {
-
     // ✅ PREORDERS (only active pending preorders)
     if (isPreorderOrder(order)) {
       preordersCount++;
@@ -101,7 +99,6 @@ const countOrders = (orders) => {
     }
   });
 
-
   return {
     activeOrdersCount,
     preordersCount,
@@ -123,7 +120,6 @@ const filterOrders = ({
   const pickup = pickupFilter.trim();
 
   return orders.filter(order => {
-
     // 🚫 Cancelled orders ONLY appear in past
     if (order.status === "cancelled") {
       return ["postorder", "postorders", "past"].includes(status);
@@ -159,7 +155,6 @@ const filterOrders = ({
       return isPreorderOrder(order);
     }
 
-
     /* ========= PAST ========= */
     if (["postorder", "postorders", "past"].includes(status)) {
       return isPastOrder(order);
@@ -175,18 +170,29 @@ const formatOrdersForUI = (
   orders = [],
   orderStatus = "",
   activeorderStatus = "",
-  pickupFilter = ""
+  pickupFilter = "",
+  limit = 10,
+  page = 1
 ) => {
   const counts = countOrders(orders);
 
+  // Calculate skip (pagination offset)
+  const skip = (page - 1) * limit;
+
+  // Filter orders
+  const filteredOrders = filterOrders({
+    orders,
+    orderStatus,
+    activeorderStatus,
+    pickupFilter,
+  });
+
+
   return {
-    orders: filterOrders({
-      orders,
-      orderStatus,
-      activeorderStatus,
-      pickupFilter,
-    }),
-    ...counts,
+    activeOrdersCount: counts.activeOrdersCount,
+    preordersCount: counts.preordersCount,
+    pastOrdersCount: counts.pastOrdersCount,
+    activeDetails: counts.activeDetails,
   };
 };
 

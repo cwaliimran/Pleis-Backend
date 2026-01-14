@@ -3,7 +3,7 @@ const {
   BuyMenuItemPromotion,
   HappyHourPromotion,
   ProductSalePromotion,
-} = require("@PromotionModel");
+} = require("../../../commonModules/loyalty/promotions/models/Promotion");
 const mongoose = require("mongoose");
 
 // Decide which discriminator model to use

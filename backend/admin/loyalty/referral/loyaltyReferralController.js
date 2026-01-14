@@ -15,7 +15,7 @@ const createLoyaltyReferral = async (req, res) => {
     referrerPoints,
     minimumPurchases,
     purchaseThresholdAmount,
-    expiryDate,
+
     referralLimit,
     companyOrganizer
   } = req.body;
@@ -31,14 +31,13 @@ const createLoyaltyReferral = async (req, res) => {
         "minimumPurchases",
         "purchaseThresholdAmount",
         "referralLimit",
-        "expiryDate",
+  
         "companyOrganizer"
       ],
     })
   ) return;
 
-  // Convert expiry date to UTC
-  expiryDate = convertTimezoneToUtc(expiryDate, timezone);
+ 
 
   // Prepare data for creation
   let data = {
@@ -49,7 +48,7 @@ const createLoyaltyReferral = async (req, res) => {
     minimumPurchases,
     purchaseThresholdAmount,
     referralLimit,
-    expiryDate,
+
     status:"active",
   };
 
@@ -134,7 +133,6 @@ let {
   purchaseThresholdAmount,
   referralLimit,
   referrerPoints,
-  expiryDate,
   status,
 } = req.body;
 const companyOrganizer = req.user._id;
@@ -156,13 +154,9 @@ const timezone = req.user.timezone;
     companyOrganizer,
   minimumPurchases,
   purchaseThresholdAmount,
-  expiryDate,
   status,
   };
-        expiryDate = convertTimezoneToUtc(
-          expiryDate,
-          timezone,
-        );
+
   try {
     const updated = await LoyaltyReferralService.updateLoyaltyReferral(data);
     if (updated && updated.error) {

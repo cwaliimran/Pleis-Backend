@@ -37,7 +37,7 @@ const get = async ({ page, limit, keyword, status, date, timezone }) => {
   // Use repository function to get promotions with population
   const records = await repository.getWithFilters(query, skip, limit);
 
-  console.log("records",records)
+
 
   // Get total counts
   const [total, active, inactive, totalFiltered] = await Promise.all([

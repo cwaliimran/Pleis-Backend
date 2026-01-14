@@ -121,7 +121,7 @@ const updateUserThirdpartyStatus = async (id, value) => {
 const updateUserThirdparty = async (data) => {
   const UserThirdparty = await ThirdpartyRepo.findUserThirdpartyById(data.id);
 
-console.log("UserThirdparty", UserThirdparty);
+
   const allowedFields = [
     "firstName",
     "lastName",
@@ -152,7 +152,7 @@ console.log("UserThirdparty", UserThirdparty);
       updateData[key] = data[key];
     }
   }
-console.log("updateData",updateData );
+
   Object.assign(UserThirdparty, updateData);
 
   await UserThirdparty.save();

@@ -179,7 +179,7 @@ const getUserGlobalReferrals = async ({
   skip,
   type
 }) => {
-  console.log("keyword", keyword);
+
   const pipeline = [
     {
       $match: {
@@ -288,17 +288,17 @@ const getUserGlobalReferrals = async ({
     })
   );
 
-  console.log("globalReferral",);
+  
   if (keyword) {
     const regex = new RegExp(keyword, "i");
 
-    globalReferral = globalReferral.filter(item =>
-      regex.test(item.firstName || "") ||
-      regex.test(item.lastName || "") ||
-      regex.test(item.referrerUserName || "")
-    );
-  }
-  console.log("globalReferral", globalReferral);
+  globalReferral = globalReferral.filter(item =>
+    regex.test(item.firstName || "") ||
+    regex.test(item.lastName || "") ||
+    regex.test(item.referrerUserName || "")
+  );
+}
+
   const meta = generateMeta(page, limit, totalFiltered);
   meta.globalReferralCount = { total, active, inactive };
 
@@ -314,7 +314,7 @@ const findGlobalReferrals = async (filter = {}) => {
 };
 const resetUserReferralLimits = async (limit) => {
   try {
-    console.log("limit", limit);
+
     // Force numeric conversion
     limit = Number(limit);
 

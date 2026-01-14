@@ -169,7 +169,7 @@ const updateUserReservationStatus = async (id, value) => {
 const updateUserReservation = async (data) => {
   const UserReservation = await ReservationRepo.findUserReservationById(data.id);
 
-  console.log("UserReservation", UserReservation);
+
   const allowedFields = [
     "firstName",
     "lastName",
@@ -200,7 +200,7 @@ const updateUserReservation = async (data) => {
       updateData[key] = data[key];
     }
   }
-  console.log("updateData", updateData);
+
   Object.assign(UserReservation, updateData);
 
   await UserReservation.save();

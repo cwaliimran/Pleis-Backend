@@ -218,7 +218,7 @@ const attachVenueTypesToEvent = (event, venueTypeTitles = []) => {
 };
 function reservationsFormatterAdjustDates(reservations, timezone) {
   if (!reservations) {
-    console.log("No reservations found.");
+
     return [];
   }
 
@@ -236,13 +236,13 @@ function reservationsFormatterAdjustDates(reservations, timezone) {
 
     // Check if the object has only the _id field
     if (Object.keys(cat).length === 1 && cat._id) {
-      console.log("Excluding item with only _id:", cat._id);  // Log the exclusion of this record
+    // Log the exclusion of this record
       return false;  // Exclude the record
     }
 
     // Further filtering to ensure empty dateTimeSlots are excluded
     if (cat.timingSlots?.dateTimeSlots && cat.timingSlots.dateTimeSlots.length === 0) {
-      console.log("Excluding item with empty dateTimeSlots:", cat._id);
+
       return false;  // Exclude the record if no valid dateTimeSlots are present
     }
 

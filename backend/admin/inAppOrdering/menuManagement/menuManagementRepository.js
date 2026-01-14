@@ -188,7 +188,7 @@ const getSummary = async ({
   filter,
   sortBy,
 }) => {
-  let pipeline = [
+  let basePipeline = [
     {
       $match: {
         creator: new mongoose.Types.ObjectId(organizer),
@@ -196,10 +196,9 @@ const getSummary = async ({
       }
     }
   ];
-  console.log("categoryId",categoryId );
 
   if (categoryId) {
-    pipeline.push({
+    basePipeline.push({
       $match: { category: new mongoose.Types.ObjectId(categoryId) }
     });
   }
@@ -214,26 +213,26 @@ const getSummary = async ({
     );
 
     if (Object.keys(keywordMatch).length > 0) {
-      pipeline.push({ $match: keywordMatch });
+      basePipeline.push({ $match: keywordMatch });
     }
   }
 
   // Apply custom filters
   if (filter) {
     if (filter === "limited") {
-      pipeline.push({
+      basePipeline.push({
         $match: { isLimitedTimeOffer: true }
       });
     } else if (filter === "upsell") {
-      pipeline.push({
+      basePipeline.push({
         $match: { upSellItem: true }
       });
     } else if (filter === "outOfStock") {
-      pipeline.push({
+      basePipeline.push({
         $match: { isAvailableInStock: false }
       });
     } else if (filter === "schedule") {
-      pipeline.push({
+      basePipeline.push({
         $match: { isScheduled: true }
       });
     }
@@ -241,103 +240,152 @@ const getSummary = async ({
 
   // Sorting options
   if (sortBy === "name") {
-    pipeline.push({ $sort: { title: 1 } });
+    basePipeline.push({ $sort: { title: 1 } });
   } else if (sortBy === "priceLowToHigh") {
-    pipeline.push({ $sort: { basePrice: 1 } });
+    basePipeline.push({ $sort: { basePrice: 1 } });
   } else if (sortBy === "priceHighToLow") {
-    pipeline.push({ $sort: { basePrice: -1 } });
+    basePipeline.push({ $sort: { basePrice: -1 } });
   } else if (sortBy === "recentlyAdded") {
-    pipeline.push({ $sort: { createdAt: -1 } });
+    basePipeline.push({ $sort: { createdAt: -1 } });
   }
 
-  // Pagination
-  pipeline.push({ $skip: skip }, { $limit: limit });
-
-  // Facet for menu items and meta data
-  pipeline.push({
-    $facet: {
-      menuItems: [
-        {
-          $project: {
-            _id: 1,
-            title: 1,
-            basePrice: 1,
-            discountPrice: 1,
-            taxPercent: 1,
-            image: 1,
-            category: 1,
-            startDate: 1,
-            endDate: 1,
-            isAvailableInStock: 1,
-            upSellItem: 1,
-            isLimitedTimeOffer: 1,
-            createdAt: 1,
-            category: 1,
-            event: 1,
-            isScheduled: 1,
-            description: 1,
-            startTime: 1,
-            availabilityType: 1,
-            endTime: 1
-          }
-        },
-        {
-          $lookup: {
-            from: 'menuitemcategories',
-            localField: 'category',
-            foreignField: '_id',
-            pipeline: [{ $project: { title: 1 } }],
-            as: 'category'
-          }
-        },
-        {
-          $lookup: {
-            from: 'events',
-            localField: 'event',
-            foreignField: '_id',
-            pipeline: [{ $project: { 'basicInfo.title': 1, startDate: 1, endDate: 1 } }],
-            as: 'event'
-          }
-        },
-        {
-          // Unwind categoryDetails and eventDetails to flatten them into objects
-          $unwind: {
-            path: '$categoryDetails',
-            preserveNullAndEmptyArrays: true // This will keep the object null if no match is found
-          }
-        },
-        {
-          $unwind: {
-            path: '$eventDetails',
-            preserveNullAndEmptyArrays: true // This will keep the object null if no match is found
-          }
-        }
-      ],
+  // Pagination Pipeline
+  const paginationPipeline = [
+    ...basePipeline,
+    { $skip: skip },
+    { $limit: limit },
+    {
+      $facet: {
+        menuItems: [
+          {
+            $project: {
+              _id: 1,
+              title: 1,
+              basePrice: 1,
+              discountPrice: 1,
+              taxPercent: 1,
+              image: 1,
+              category: 1,
+              startDate: 1,
+              endDate: 1,
+              isAvailableInStock: 1,
+              upSellItem: 1,
+              isLimitedTimeOffer: 1,
+              createdAt: 1,
+              category: 1,
+              event: 1,
+              isScheduled: 1,
+              description: 1,
+              startTime: 1,
+              availabilityType: 1,
+              endTime: 1
+            }
+          },
+          {
+            $lookup: {
+              from: 'menuitemcategories',
+              localField: 'category',
+              foreignField: '_id',
+              pipeline: [{ $project: { title: 1 } }],
+              as: 'category'
+            }
+          },
+          {
+            $lookup: {
+              from: 'events',
+              localField: 'event',
+              foreignField: '_id',
+              pipeline: [{ $project: { 'basicInfo.title': 1, startDate: 1, endDate: 1 } }],
+              as: 'event'
+            }
+          },
+          { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
+          { $unwind: { path: '$event', preserveNullAndEmptyArrays: true } }
+        ],
+      }
     }
-  });
+  ];
+
+  // Non-pagination Pipeline (without $skip and $limit)
+  const nonPaginationPipeline = [
+    ...basePipeline,
+    {
+      $facet: {
+        menuItems: [
+          {
+            $project: {
+              _id: 1,
+              title: 1,
+              basePrice: 1,
+              discountPrice: 1,
+              taxPercent: 1,
+              image: 1,
+              category: 1,
+              startDate: 1,
+              endDate: 1,
+              isAvailableInStock: 1,
+              upSellItem: 1,
+              isLimitedTimeOffer: 1,
+              createdAt: 1,
+              category: 1,
+              event: 1,
+              isScheduled: 1,
+              description: 1,
+              startTime: 1,
+              availabilityType: 1,
+              endTime: 1
+            }
+          },
+          {
+            $lookup: {
+              from: 'menuitemcategories',
+              localField: 'category',
+              foreignField: '_id',
+              pipeline: [{ $project: { title: 1 } }],
+              as: 'category'
+            }
+          },
+          {
+            $lookup: {
+              from: 'events',
+              localField: 'event',
+              foreignField: '_id',
+              pipeline: [{ $project: { 'basicInfo.title': 1, startDate: 1, endDate: 1 } }],
+              as: 'event'
+            }
+          },
+          { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
+          { $unwind: { path: '$event', preserveNullAndEmptyArrays: true } }
+        ],
+      }
+    }
+  ];
 
   try {
-        const [aggregationResult, allMenuItems] = await Promise.all([
-      MenuItems.aggregate(pipeline),
-      fetchMenuItems(organizer) // Fetch all menu items without any filters
+    // Run both pipelines in parallel
+    const [paginationResult, nonPaginationResult,allData] = await Promise.all([
+      MenuItems.aggregate(paginationPipeline),
+      MenuItems.aggregate(nonPaginationPipeline),
+      fetchMenuItems(organizer)
     ]);
-    console.log("result", aggregationResult);
 
-    if (!aggregationResult || aggregationResult[0].menuItems.length === 0) {
-      return { MenuItems: [], meta: { totalMenuItems: 0, inStock: 0, outOfStock: 0, limitedTimeItems: 0, upSellItems: 0, scheduledItems: 0 } };
-    }
-        const formatedMenuItems = aggregationResult[0].menuItems.map(item => formatUpdate(item));
+    // Process results
+    const formattedMenuItems = paginationResult[0]?.menuItems?.map(item => formatUpdate(item)) || [];
+    const allMenuItems = nonPaginationResult[0]?.menuItems?.map(item => formatUpdate(item)) || [];
+    const allMenuItemsData = allData?.map(item => formatUpdate(item)) || [];
+    let meta = calculateMeta(allMenuItemsData);
+    meta.count = generateMeta(page, limit, allMenuItems.length);
 
-const meta=calculateMeta(allMenuItems);
     return {
-      MenuItems: formatedMenuItems,
-       meta
+      MenuItems: formattedMenuItems,
+      meta,
     };
   } catch (error) {
     console.error("Error in getSummary aggregation pipeline:", error);
     return { error: "Error fetching summary data." };
   }
 };
+
 
 
 
