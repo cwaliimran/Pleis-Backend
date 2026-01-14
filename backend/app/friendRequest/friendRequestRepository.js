@@ -17,7 +17,7 @@ const allRequests = await mongoose.model("FriendRequest").find({}).lean();
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const pipeline = [];
-console.log("keyword",keyword );
+
   pipeline.push({
     $match: {
       _id: { $ne: new mongoose.Types.ObjectId(userId) }

@@ -52,7 +52,7 @@ const createReviews = async (req, res) => {
 
   try {
     const reviews = await promoCodeService.createReviews(data);
-    console.log("Reviews", reviews);
+  
 
     if (reviews.error) {
       return sendResponse({

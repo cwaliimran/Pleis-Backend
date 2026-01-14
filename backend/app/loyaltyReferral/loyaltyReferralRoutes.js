@@ -92,11 +92,11 @@ router.get("/share", async (req, res) => {
         const { organizer, user } = req.query;
         const referrer=user
 const result = await saveUserReferralData(organizer,referrer);
-console.log(result );
+
         const appLink = `com.pleis://organizer=${result.organizerId}/referrer=${result.referrerId}`; // Deep link to open the app
         const iosFallback = "https://apps.apple.com/app/pleisapp/id1234567890"; // iOS fallback URL
         const androidFallback = "https://play.google.com/store/apps/details?id=com.pleis"; // Android fallback URL
-console.log("appLink",appLink );
+
         // Smart redirect HTML with the link to the app or store
         return res.send(`
       <!DOCTYPE html>

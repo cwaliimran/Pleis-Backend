@@ -7,6 +7,9 @@ const { calculatePointsRepo } = require("../../loyalty/calculatePointsEarning/po
 const { getOrgCompanyOrganizer } = require("../../organizationProfile/organizationProfileRepository");
 const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
 const { resolveChallengeByTaskTypeService } = require("../../loyalty/challengesOrders/challengeOrdersService");
+const { sendUserNotifications } = require("../../../controllers/communicationController");
+const { NotificationTypes } = require("@NotificationsModel");
+const { getFullImageUrl } = require("@utils/imageHelper");
 
 
 // 1️⃣ Place an order
@@ -132,6 +135,21 @@ const placeOrder = async ({
     session.endSession();
 
     const formattedOrder = menuItemOrderFormatter(order, timezone);
+    
+    await sendUserNotifications({
+      recipientIds: [userId.toString()],
+      title: "Order Placed Successfully",
+      body: `Your Order Has been placed : ${formattedOrder._id} and is now being ${formattedOrder.status} and will be ready soon. The total amount is ${formattedOrder.totalPrice} EUR`,
+      data: { type: NotificationTypes.ORDER_UPDATE,
+         objectType: "group",
+         organization_id:organizationId.toString(),
+          menu_image:getFullImageUrl(formattedOrder.items[0].menuItemSnapShot.image)},
+      sender: userId,
+      objectId: formattedOrder._id,
+    });
+
+
+
     return { order: formattedOrder };
 
   } catch (err) {
@@ -244,6 +262,15 @@ const addMoreItemsToOrder = async ({ orderId, items }) => {
   // Save updated order
   let updatedOrder = await order.save();
   let formattedOrder = menuItemOrderFormatter(updatedOrder);
+      await sendUserNotifications({
+      recipientIds: [userId.toString()],
+      title: "Order Placed Successfully",
+      body: `Your Order Has been placed : ${order._id} and is now being ${order.status} and will be ready soon. The total amount is ${order.totalPrice} EUR`,
+      data: { type: NotificationTypes.ORDER_UPDATE, objectType: "group" },
+      sender: userId,
+      objectId: order._id,
+    });
+
 
   return { order: formattedOrder };
 };

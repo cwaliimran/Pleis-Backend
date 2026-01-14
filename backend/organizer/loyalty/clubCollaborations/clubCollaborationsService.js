@@ -82,7 +82,6 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const pipeline = [
-    // Match user access (clubCollaboration creator)
     {
       $match: {
         ...(userId && { "sender.id": new mongoose.Types.ObjectId(userId) })
@@ -90,13 +89,14 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
     }
   ];
 
-  // Apply filters
+  // 🔹 Status filter (sender.status)
   if (status) {
     pipeline.push({ $match: { "sender.status": status } });
   } else {
     pipeline.push({ $match: { "sender.status": { $ne: "deleted" } } });
   }
 
+  // 🔹 Date filter
   if (date) {
     const start = new Date(date);
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
@@ -107,47 +107,68 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
     });
   }
 
+  // 🔹 Keyword filter
   const keywordMatch = buildKeywordQueryFromModels(
-    [
-      { schema: ClubCollaborations.schema }
-    ],
+    [{ schema: ClubCollaborations.schema }],
     keyword
   );
-
   if (Object.keys(keywordMatch).length) {
     pipeline.push({ $match: keywordMatch });
   }
 
   pipeline.push({ $sort: { createdAt: -1 } });
 
-  // Populate sender and receiver completely (not just the status)
+  // 🔹 Lookup sender user
   pipeline.push({
     $lookup: {
       from: "users",
       localField: "sender.id",
       foreignField: "_id",
-      as: "sender"
+      pipeline: [
+        { $project: { "companyDetails.name": 1, "companyDetails.representativeName": 1 } }
+      ],
+      as: "senderUser"
     }
   });
 
+  // 🔹 Lookup receiver user
   pipeline.push({
     $lookup: {
       from: "users",
       localField: "receiver.id",
       foreignField: "_id",
-      as: "receiver"
+      pipeline: [
+        { $project: { "companyDetails.name": 1, "companyDetails.representativeName": 1 } }
+      ],
+      as: "receiverUser"
     }
   });
 
-  // Instead of using $unwind, check for a single user population
+  // 🔹 Merge user info WITHOUT losing status
   pipeline.push({
     $addFields: {
-      sender: { $arrayElemAt: ["$sender", 0] }, // Get first (and only) element from the array
-      receiver: { $arrayElemAt: ["$receiver", 0] } // Same for receiver
+      sender: {
+        id: "$sender.id",
+        status: "$sender.status",
+        user: { $arrayElemAt: ["$senderUser", 0] }
+      },
+      receiver: {
+        id: "$receiver.id",
+        status: "$receiver.status",
+        user: { $arrayElemAt: ["$receiverUser", 0] }
+      }
     }
   });
 
-  // Apply pagination + counts using $facet
+  // 🔹 Cleanup temp arrays
+  pipeline.push({
+    $project: {
+      senderUser: 0,
+      receiverUser: 0
+    }
+  });
+
+  // 🔹 Pagination + count
   pipeline.push({
     $facet: {
       data: [
@@ -161,20 +182,29 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
   const result = await clubCollaborationRepo.getClubCollaborationsWithFilters(pipeline);
 
   const clubCollaborations = result[0]?.data || [];
-  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+  const totalFiltered = result[0]?.totalFiltered?.[0]?.count || 0;
 
-  // Additional counts for meta (active/inactive/total by userId as sender)
+  // 🔹 Meta counts
   const [total, active, inactive] = await Promise.all([
-    ClubCollaborations.countDocuments({ ...(userId && { "sender.id": userId }), "sender.status": { $ne: "deleted" } }),
-    ClubCollaborations.countDocuments({ "sender.status": "accepted", ...(userId && { "sender.id": userId }) }),
-    ClubCollaborations.countDocuments({ "sender.status": "rejected", ...(userId && { "sender.id": userId }) })
+    ClubCollaborations.countDocuments({
+      ...(userId && { "sender.id": userId }),
+      "sender.status": { $ne: "deleted" }
+    }),
+    ClubCollaborations.countDocuments({
+      ...(userId && { "sender.id": userId }),
+      "sender.status": "accepted"
+    }),
+    ClubCollaborations.countDocuments({
+      ...(userId && { "sender.id": userId }),
+      "sender.status": "rejected"
+    })
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
   meta.clubCollaborationsCount = { total, active, inactive };
 
   return {
-    clubCollaborations: clubCollaborations,
+    clubCollaborations,
     meta
   };
 };
@@ -193,6 +223,7 @@ const updateClubCollaboration = async (id, data, userId) => {
   if (clubCollaboration.sender.id.toString() === userId.toString()) {
     // Update the sender's status directly
     clubCollaboration.sender.status = data.status;
+    clubCollaboration.receiver.status = data.status;
     updated = true;
   }
 
@@ -200,6 +231,7 @@ const updateClubCollaboration = async (id, data, userId) => {
   if (clubCollaboration.receiver.id.toString() === userId.toString()) {
     // Update the receiver's status directly
     clubCollaboration.receiver.status = data.status;
+    clubCollaboration.sender.status = data.status;
     updated = true;
   }
 

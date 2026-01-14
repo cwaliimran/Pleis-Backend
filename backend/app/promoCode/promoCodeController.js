@@ -37,13 +37,12 @@ promoCode,
   };
   try {
     const PromoCode = await promoCodeService.usePromoCode(data);
-    console.log("Promocode ",PromoCode);
+  
     if (PromoCode.error) {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "PromoCode_used_failed",
-        data: { error: PromoCode.error },  
+        translationKey: `PromoCode_used_failed_${PromoCode.error}`,
       });
     }
     else{

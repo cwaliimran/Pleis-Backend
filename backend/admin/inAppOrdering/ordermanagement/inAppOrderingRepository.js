@@ -1,250 +1,250 @@
-const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
+
 const { generateMeta } = require("@utils/responseUtil");
 const mongoose = require("mongoose");
-const {Events}= require("@EventsModel");
 const Orders = require("@OrdersModel");
 const { TicketingOrders } = require("@TicketingOrdersModel");
-const  TicketingsModel  = require("@TicketingsModel");
 const Organizations = require("@OrganizationModel");
 const { UserReservations } = require("@UserReservationsModel");
 const { formatUpdate } = require("../formatters/updateFormatter");
-const {NotificationExp, NotificationTypes} = require("@NotificationsModel");
 const Menus = require("@MenusModel");
 const MenuItems = require("@MenuItemsModel");
 const MenuOrders = require("@OrdersModel");
-const {sendUserNotifications} = require("../../../controllers/communicationController");
 const { formatOrdersForUI } = require("../formatters/formatOrdersForUI");
-const getUserIdsForEvent = async (eventId) => {
-  try {
+const { getModelCounts } = require("@utils/dbUtils/queryUtil");
 
+const getOrganizationIdsByOrganizer = async (organizerId) => {
+  const orgs = await Organizations.find(
+    { creator: new mongoose.Types.ObjectId(organizerId) },
+    { _id: 1 }
+  ).lean();
 
-    // Aggregate users from both TicketingOrders and UserReservations collections
-
-    const ticketingUsers = await TicketingOrders.aggregate([
-      {
-        $match: {
-          event: new mongoose.Types.ObjectId(eventId), // Match by eventId
-        },
-      },
-      {
-        $project: {
-          user: 1, // Only return user field
-        },
-      },
-      {
-        $group: {
-          _id: null, // No group key needed
-          users: { $addToSet: "$user" }, // Collect unique users
-        },
-      },
-    ]);
-
-    const reservationUsers = await UserReservations.aggregate([
-      {
-        $match: {
-          optionalEventId: new mongoose.Types.ObjectId(eventId), // Match by eventId
-        },
-      },
-      {
-        $project: {
-          userId: 1, // Only return userId field
-        },
-      },
-      {
-        $group: {
-          _id: null, // No group key needed
-          users: { $addToSet: "$userId" }, // Collect unique users
-        },
-      },
-    ]);
-
-    // Safely check if we have results from both collections
-    const ticketingUserIds = ticketingUsers[0]?.users || []; // Default to empty array if no users found
-    const reservationUserIds = reservationUsers[0]?.users || []; // Default to empty array if no users found
-
-    // Combine both user arrays (deduplicate using addToSet)
-    const combinedUsers = [
-      ...ticketingUserIds,
-      ...reservationUserIds,
-    ];
-
-    // Remove duplicates by converting ObjectId to string and using Set
-    const uniqueUserIds = [
-      ...new Set(combinedUsers.map(userId => userId.toString())) // Convert each ObjectId to string before deduplicating
-    ];
-    return uniqueUserIds; // Return the list of unique user IDs
-  } catch (err) {
-
-    return []; // Return an empty array in case of an error
-  }
+  return orgs.map(o => o._id);
 };
+const normalizePickupType = (value = "") =>
+  value.toLowerCase().replace(/\s+/g, "");
 
-
-const createOrders = async (data) => {
-  try {
-    const userIds = await getUserIdsForEvent(data.event);
-    data.creator = await getCreatorOrganizationId(data.creator)
-
-    const update = new Orders(data);
-    await update.save();
-        await sendUserNotifications({
-            recipientIds: userIds, 
-            title: update.title,
-            body: `A new Orders is live join now : ${update._id}`,
-            data: { type: NotificationTypes.Orders_UPDATE, objectType: "group",OrdersId: update._id },
-            sender: update.creator,
-            objectId: update.event,
-          });
-
-    return update; 
-  } catch (err) {
-    throw new Error("Error saving update: " + err.message); 
-  }
-};
-
-
+const getEventsCounts = async (query) => {
+  return getModelCounts({ model: MenuOrders, filterQuery: query });
+}
 const getOrders = async ({
   timezone,
   page,
   limit,
   keyword,
   status,
-  organizationId,
+  companyOrganizer,
   date,
-  skip,
+  skip, // skip is calculated based on page and limit
   pickupFilter,
   orderStatus,
-  activeorderStatus
+  activeorderStatus,
+    sortDirection = -1
 }) => {
-  const menus = await Menus.find({
-    organization: organizationId,
-    status: "active"
-  }).select("_id").lean();
 
-  if (!menus.length) {
-    return { Orderss: [], meta: generateMeta(page, limit, 0) };
+
+  const organizationsIds = await getOrganizationIdsByOrganizer(companyOrganizer);
+
+  // Prepare status filter dynamically
+  let statusFilter = {};
+  // if(pickupFilter=="tableService"){
+  //   tableService
+  // }
+if (orderStatus === 'postorders') {
+  // For postorders, include both completed and cancelled orders, with at least one item marked as delivered
+  statusFilter = {
+    status: { $in: ["completed", "cancelled"] },
+    // Ensure that at least one item has been delivered for completed orders
+    $or: [
+      { 
+        status: "completed",
+        items: { $elemMatch: { isdelivered: true } }  // At least one item is delivered
+      },
+      { 
+        status: "cancelled"  // Include all cancelled orders
+      }
+    ]
+  };
+} else if (orderStatus === "completed") {
+  // For completed orders, ensure that all items are delivered
+  statusFilter = {
+    status: "completed",
+    items: { $elemMatch: { isdelivered: true } }  // All items are delivered
+  };
+} else if (orderStatus === "cancelled") {
+  // For cancelled orders, include all cancelled orders
+  statusFilter = {
+    status: "cancelled"
+  };
+}
+
+  else if (orderStatus === "active") {
+    if (activeorderStatus === "new") {
+      // Initialize the status filter with 'pending' status
+      statusFilter = { status: "pending" };
+
+
+      // Add pickupType to the filter if pickupFilter exists
+      if (pickupFilter) {
+        if (pickupFilter === "preorder") {
+          // If pickupFilter is "preorder", set the orderType to "preorder"
+          statusFilter.orderType = "preorder";
+        } else {
+          // Otherwise, set pickupType and ensure orderType is not "preorder"
+          statusFilter.pickupType = pickupFilter; // Merge pickupType with statusFilter
+          statusFilter.orderType = { $ne: "preorder" };
+        }
+      }
+    }
+    else if (activeorderStatus === "inProgress") {
+      statusFilter = { status: { $in: ["confirmed", "sent"] } };
+    } else if (activeorderStatus === "completed") {
+      statusFilter = {
+        status: "completed",
+        items: { $elemMatch: { isdelivered: false } }
+      };
+    }
   }
-  const menuIds = menus.map(m => m._id);
-  const menuItems = await MenuItems.find({
-    menu: { $in: menuIds },
-    status: "active"
-  }).select("_id menu").lean();
-  if (!menuItems.length) {
-
-    return { Orderss: [], meta: generateMeta(page, limit, 0) };
+  else if (orderStatus === 'preorder') {
+    statusFilter = {
+      status: 'preorder',
+      orderType: 'preorder'
+    };
   }
 
-  const menuItemIds = menuItems.map(i => i._id);
-const keywordMatch =
-  keyword && keyword.trim()
-    ? {
-        $match: {
+  let keywordMatch = {};
+  if (keyword && keyword.trim()) {
+    keywordMatch =
+      keyword && keyword.trim()
+        ? {
           $or: [
             { "user.firstName": { $regex: keyword, $options: "i" } },
-            { "user.userlastName": { $regex: keyword, $options: "i" } },
-            { "user.email": { $regex: keyword, $options: "i" } }
+            { "user.lastName": { $regex: keyword, $options: "i" } },
+            { "user.email": { $regex: keyword, $options: "i" } },
+            { "orderNumber": { $regex: keyword, $options: "i" } }
+          ]
+        }
+        : null;
+  }
+
+  // Create query for event count
+  const eventCountQuery = {
+    ...statusFilter,
+    ...keywordMatch // Add keyword filter for event count as well
+  };
+
+  const skipValue = (page - 1) * limit; // Skip formula
+
+  const pipeline = [
+    // 🔹 Match status and keyword filter
+
+
+    // 🔹 Add userObjectId field to ensure it's in ObjectId format
+    {
+      $addFields: {
+        userObjectId: {
+          $cond: [
+            { $eq: [{ $type: "$user" }, "objectId"] },
+            "$user",
+            { $toObjectId: "$user" }
           ]
         }
       }
-    : null;
+    },
 
-const pipeline = [
-  {
-    $match: {
-      ...(status && { status }),
-      ...(date && {
-        createdAt: {
-          $gte: new Date(date),
-          $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1))
+    // 🔹 Lookup user information from the "users" collection
+    {
+      $lookup: {
+        from: "users",
+        localField: "userObjectId",
+        foreignField: "_id",
+        as: "userInfo"
+      }
+    },
+
+    // 🔹 Build the user object and add it to the document
+    {
+      $addFields: {
+        user: {
+          _id: "$userObjectId",
+          username: { $arrayElemAt: ["$userInfo.username", 0] },
+          firstName: { $arrayElemAt: ["$userInfo.firstName", 0] },
+          lastName: { $arrayElemAt: ["$userInfo.lastName", 0] },
+          email: { $arrayElemAt: ["$userInfo.email", 0] }
         }
-      }),
-      "items.menuItem": { $in: menuItemIds }
-    }
-  },
+      }
+    },
+    {
+      $match: {
+        ...statusFilter,
+        ...keywordMatch, // Combine the filters in the match stage
 
-  // 🔹 Ensure ObjectId
-  {
-    $addFields: {
-      userObjectId: {
-        $cond: [
-          { $eq: [{ $type: "$user" }, "objectId"] },
-          "$user",
-          { $toObjectId: "$user" }
+      }
+    },
+
+    // 🔹 Pagination with skip and limit
+    { $skip: skipValue || 0 }, // Use skipValue to skip records based on page and limit
+    { $limit: limit || 10 },
+    { $sort: { createdAt: sortDirection } },
+
+    // 🔹 Project the necessary fields for the response
+    {
+      $project: {
+        _id: 1,
+        orderNumber: 1,
+        status: 1,
+        items: 1,
+        totalPrice: 1,
+        paymentStatus: 1,
+        paymentMethod: 1,
+        pickupType: 1,
+        createdAt: 1,
+        orderType: 1,
+        user: 1 // Include the user info in the final result
+      }
+    },
+
+    // 🔹 Return additional metadata and pagination details
+    {
+      $facet: {
+        data: [{ $match: {} }], // Pass through the matched data
+        meta: [
+          { $count: "totalRecords" },
+          {
+            $project: {
+              totalPages: {
+                $ceil: { $divide: ["$totalRecords", limit || 10] }
+              },
+              totalRecords: 1
+            }
+          }
         ]
       }
     }
-  },
-
-  // 🔹 Lookup user
-  {
-    $lookup: {
-      from: "users",
-      localField: "userObjectId",
-      foreignField: "_id",
-      as: "userInfo"
-    }
-  },
-
-  // 🔹 Build user {}
-  {
-    $addFields: {
-      user: {
-        _id: "$userObjectId",
-        username: { $arrayElemAt: ["$userInfo.username", 0] },
-        firstName: { $arrayElemAt: ["$userInfo.firstName", 0] },
-        userlastName: { $arrayElemAt: ["$userInfo.lastName", 0] },
-        email: { $arrayElemAt: ["$userInfo.email", 0] }
-      }
-    }
-  },
-
-  // ✅ 🔍 KEYWORD SEARCH GOES HERE
-  ...(keywordMatch ? [keywordMatch] : []),
-
-  // 🔹 Cleanup
-  {
-    $project: {
-      userInfo: 0,
-      userObjectId: 0
-    }
-  },
-
-  { $sort: { createdAt: -1 } },
-
-  {
-    $facet: {
-      data: [
-        { $skip: skip },
-        ...(limit === 0 ? [] : [{ $limit: limit }])
-      ],
-      totalFiltered: [{ $count: "count" }]
-    }
-  }
-];
+  ];
 
 
 
 
-
-
-  // 4️⃣ Run aggregation
-  const result = await MenuOrders.aggregate(pipeline);
-
-
+  const [filteredOrders, allOrders, count] = await Promise.all([
+    MenuOrders.aggregate(pipeline),
+    MenuOrders.find({ organization: { $in: organizationsIds } }),
+    getEventsCounts(eventCountQuery)
+  ]);
+  const result = filteredOrders;
   if (!result?.[0]) {
-
     return { Orderss: [], meta: generateMeta(page, limit, 0) };
   }
-
+  const constantData = formatOrdersForUI(allOrders);
   const Orderss = result[0].data || [];
-  const totalFiltered = result[0]?.totalFiltered?.[0]?.count || 0;
+  let meta = generateMeta(page, limit, count.totalFiltered);
+  meta.constantData = constantData;
+  meta.count = count;
 
-
-const formated =formatOrdersForUI(Orderss, orderStatus,activeorderStatus,pickupFilter);
-  const meta = generateMeta(page, limit, totalFiltered);
-
-  return { Orderss: formated, meta };
+  return { Orderss, meta };
 };
+
+
+
 
 
 
@@ -276,17 +276,18 @@ const getCreatorOrganizationId = async (organizationId) => {
   }
 };
 
+const getInAppOrders = async ({ creator }) => {
+  const menus = await Menus.find({ creator, status: "active" })
+    .select("isOrderingEnabled")
+    .lean();
 
-
-
-
-
-
-
+  return menus[0]
+};
 module.exports = {
   getOrders,
   findOrdersById,
   findByIdAndUpdate,
+  getInAppOrders
 
 
 };

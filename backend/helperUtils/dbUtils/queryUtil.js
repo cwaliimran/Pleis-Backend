@@ -275,7 +275,7 @@ async function normalizeOrders({ model, orderField = "order" }) {
 
 
 function buildKeywordQueryFromModels(models, keyword) {
-  console.log("keyword",keyword);
+  
   if (!keyword || !keyword.trim()) return {};
 
   const orConditions = [];

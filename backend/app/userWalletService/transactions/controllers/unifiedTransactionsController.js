@@ -63,7 +63,7 @@ const createTransaction = async (req, res) => {
         });
     } catch (e) {
         const err = getReadableErrorMessage(e);
-        console.log("e", e)
+       
         return sendResponse({ res, statusCode: err.statusCode ?? 400, translationKey: err.message });
     }
 };

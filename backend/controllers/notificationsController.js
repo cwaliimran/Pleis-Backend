@@ -23,7 +23,6 @@ const formatImage = require("./notificationHelper/formatImage");
 const getNotifications = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const keyword= req.query.keyword || null;
-console.log("keyword",keyword );
   try {
     // Build the query to filter notifications
     const query = {
@@ -75,7 +74,7 @@ console.log("keyword",keyword );
         let eventDetails = null;
         if (type === "eventUpdate") {
           eventDetails = await fetchEventDetails(objectId); // Fetch event details
-          console.log("eventDetails", eventDetails);  // Log event details for debugging
+   
         }
 
         // Return the notification with event details

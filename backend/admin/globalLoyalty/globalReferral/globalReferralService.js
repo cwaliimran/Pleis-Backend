@@ -50,15 +50,12 @@ const updateGlobalReferral = async (data) => {
     "userPoints",
     "minimumPurchases",
     "purchaseThresholdAmount",
-    "expiryDate",
+
     "status",
     "referralLimit",
     "referrerPoints",
   ];
 
-  if (data.expiryDate === "Invalid date") {
-    delete data.expiryDate;
-  }
 
   // Build update data
   const updateData = {};

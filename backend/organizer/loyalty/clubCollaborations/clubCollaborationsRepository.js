@@ -26,7 +26,7 @@ const countClubCollaborations = async (query = {}) => {
 
 // Find by ID
 const findClubCollaborationById = async (id) => {
-  return ClubCollaborations.findById(id).populate('sender.id receiver.id');
+  return ClubCollaborations.findById(id);
 };
 
 // Update and save

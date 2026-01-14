@@ -10,6 +10,9 @@ const NotificationTypes = {
   ORGANIZATION_DETAILS: "organizationDetails",
   HOME: "home",
   GIVEAWAY_UPDATE: "giveawayUpdate",
+  CHALLENGE_UPDATE: "challengeUpdate",
+  ORDER_UPDATE: "orderUpdate",
+  PROMO_UPDATE: "promoUpdate",
 };
 
 // Define the NotificationSchema

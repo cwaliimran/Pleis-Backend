@@ -16,7 +16,6 @@ const createGlobalReferral = async (req, res) => {
     referrerPoints,
     minimumPurchases,
     purchaseThresholdAmount,
-    expiryDate,
   } = req.body;
 
   const userId = req.user._id;
@@ -34,8 +33,7 @@ const createGlobalReferral = async (req, res) => {
     })
   ) return;
 
-  // Convert expiry date to UTC
-  expiryDate = convertTimezoneToUtc(expiryDate, timezone);
+
 
   // Prepare data for creation
   let data = {
@@ -45,7 +43,7 @@ const createGlobalReferral = async (req, res) => {
     type:"global",
     minimumPurchases,
     purchaseThresholdAmount,
-    expiryDate,
+
     status:"active",
   };
 
@@ -124,7 +122,6 @@ let {
   purchaseThresholdAmount,
   referralLimit,
   referrerPoints,
-  expiryDate,
   status,
 } = req.body;
 const userId = req.user._id;
@@ -146,13 +143,10 @@ const timezone = req.user.timezone;
     userId,
   minimumPurchases,
   purchaseThresholdAmount,
-  expiryDate,
+
   status,
   };
-        expiryDate = convertTimezoneToUtc(
-          expiryDate,
-          timezone,
-        );
+
   try {
     const updated = await globalReferralService.updateGlobalReferral(data);
     if (updated && updated.error) {

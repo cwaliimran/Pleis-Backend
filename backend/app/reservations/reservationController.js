@@ -208,14 +208,12 @@ const getReservations = async (req, res) => {
         translationKey: "date_and_eventId_or_organizationId_is_required",
       });
     }
-console.log("date",date );
+
  date = convertToUtcDateOnly(
     date,
     "UTC"
   );
-  console.log("date",date );
 
-    console.log("Converted date:", date);
 
     const userId = req.user._id;
     eventId, organizationId;

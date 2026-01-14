@@ -96,7 +96,7 @@ const getMenuItems = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let { keyword, status, date, range, organizer } = req.query;
   try {
-    console.log("req.query", req.query);
+ 
     if (!organizer) {
       return sendResponse({
         res,

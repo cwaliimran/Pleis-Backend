@@ -191,7 +191,7 @@ const updateUserSubscription = async ({
 
 const updateOrganization = async ({ id, data }) => {
   const organization = await organizationRepo.findOrganizationById(id);
-  console.log("id",organization );
+
   if (!organization) return null;
 
   const {

@@ -2,24 +2,57 @@ const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const OrdersRepo = require("./inAppOrderingRepository");
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
+const mongoose = require("mongoose");
+const Menus = require("@MenusModel");
 
 
-const createOrders = async (data) => {
 
-  let Orders = await OrdersRepo.createOrders(data);
-  return Orders;
-};
-const getOrders = async ({ activeorderStatus, pickupFilter, orderStatus, activeKeyword, timezone, page, limit, keyword, status, organizationId, date, range }) => {
+const getOrders = async ({
+  activeorderStatus,
+  pickupFilter,
+  orderStatus,
+  activeKeyword,
+  timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  companyOrganizer,
+  date,
+  range
+}) => {
+  page = Number(page) || 1;
+  limit = Number(limit);
+
+
+  if (Number.isNaN(limit) || limit < 0) {
+    limit = 10;
+  }
+
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { Orderss, meta } = await OrdersRepo.getOrders({ activeorderStatus, pickupFilter, orderStatus, activeKeyword, timezone, page, limit, keyword, status, organizationId, date, range, today, skip });
 
-  return {
-    Orderss,
-    meta
-  };
+
+  let { Orderss, meta } = await OrdersRepo.getOrders({
+    activeorderStatus,
+    pickupFilter,
+    orderStatus,
+    activeKeyword,
+    timezone,
+    page,
+    limit,
+    keyword,
+    status,
+    companyOrganizer,
+    date,
+    range,
+    today,
+    skip
+  });
+
+  return { Orderss, meta };
 };
-const mongoose = require("mongoose");
+
 
 const updateOrders = async (id, data) => {
   const order = await OrdersRepo.findOrdersById(id);
@@ -88,69 +121,79 @@ const updateOrders = async (id, data) => {
 
 
 
-const deleteOrders = async (id) => {
-  const updated = await OrdersRepo.findByIdAndUpdate(id, {
-    status: "deleted",
+
+
+
+
+
+const updateInAppOrders = async (companyOrganizer, isOrderingEnabled) => {
+  try {
+    const result = await Menus.updateMany(
+      { creator: companyOrganizer },
+      { $set: { isOrderingEnabled } }
+    );
+
+    return {
+      matchedCount: result.matchedCount,
+      modifiedCount: result.modifiedCount,
+    }
+  } catch (error) {
+    console.error("updateInAppOrders error:", error);
+    return ({
+      message: "Something went wrong",
+      error: error.message,
+    });
+  }
+};
+
+
+
+
+
+
+const getInAppOrders = async ({
+  timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  creator,
+}) => {
+  page = Number(page) || 1;
+  limit = Number(limit);
+  if (limit) {
+    limit += 1;
+  }
+
+  if (Number.isNaN(limit) || limit < 0) {
+    limit = 10;
+  }
+
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
+
+  let data = await OrdersRepo.getInAppOrders({
+    timezone,
+    page,
+    limit,
+    keyword,
+    status,
+    creator,
+    today,
+    skip
   });
-  if (!updated) return null;
-  return true;
+
+  return data;
 };
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-const getevents = async ({ timezone, page, limit, keyword, status, organizationId, date, range }) => {
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
-  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { events, meta } = await OrdersRepo.getevents({ timezone, page, limit, keyword, status, organizationId, date, range, today, skip });
-
-  return {
-    events,
-    meta
-  };
-};
-
-
-const gettickets = async ({ timezone, page, limit, keyword, status, userId, date, range, eventId }) => {
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
-  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { tickets, meta } = await OrdersRepo.gettickets({ timezone, page, limit, keyword, status, userId, date, range, today, skip, eventId });
-
-  return {
-    tickets,
-    meta
-  };
-};
-
-const getWinners = async ({ timezone, page, limit, keyword, status, userId, date, range, OrdersId }) => {
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
-  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { winners, meta } = await OrdersRepo.getWinners({ timezone, page, limit, keyword, status, userId, date, range, today, skip, OrdersId });
-
-  return {
-    winners,
-    meta
-  };
-};
 
 module.exports = {
-  createOrders,
   getOrders,
+  updateInAppOrders,
   updateOrders,
-  deleteOrders,
-  getevents,
-  gettickets,
-  getWinners
+  getInAppOrders
 
 };

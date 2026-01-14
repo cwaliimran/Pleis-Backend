@@ -98,6 +98,7 @@ const getMinimalEventsInfo = async ({ organization, timezone }) => {
   const query = {
     status: "active"
   };
+
   if (organization) {
     query["basicInfo.organization"] = organization;
   }

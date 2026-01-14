@@ -36,14 +36,12 @@ const updateLoyaltyReferral = async (data) => {
     "userPoints",
     "minimumPurchases",
     "purchaseThresholdAmount",
-    "expiryDate",
+
     "referralLimit",
     "referrerPoints",
   ];
 
-  if (data.expiryDate === "Invalid date") {
-    delete data.expiryDate;
-  }
+ 
 
   // Build update data
   const updateData = {};

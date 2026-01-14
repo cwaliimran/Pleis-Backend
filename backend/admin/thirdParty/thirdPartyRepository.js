@@ -416,7 +416,7 @@ const getUserThirdpartys = async ({ timezone, page, limit, keyword, status, user
   });
 
   const result = await UserThirdpartys.aggregate(pipeline);
-console.log("pipeline",result );
+
   let Thirdpartys = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
