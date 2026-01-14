@@ -130,7 +130,27 @@ const ticketingsSchema = new mongoose.Schema(
     scheduledPublishAt: { // for "scheduled" type
       type: Date,
       default: null,
-    }
+    },
+    recurringMeta: {  // only for recurring events
+      isTemplate: {
+        type: Boolean,
+        default: false,
+        index: true,
+      },
+
+      parentTicket: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Ticketings",
+        default: null,
+        index: true,
+      },
+
+      occurrenceIndex: {
+        type: Number,
+        default: 1,
+      }
+    },
+
   },
   {
     timestamps: true,

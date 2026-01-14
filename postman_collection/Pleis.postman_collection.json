@@ -349,6 +349,70 @@
 										}
 									},
 									"response": []
+								},
+								{
+									"name": "login guest",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Set Variables on Environment and Collection\", function () {",
+													"    var jsonData = pm.response.json();",
+													"",
+													"    // Setting environment variables",
+													"    pm.environment.set(\"tokenUser\", jsonData.data.token);",
+													"",
+													"    // Extracting password from request body",
+													"    let requestBody = JSON.parse(pm.request.body.raw);",
+													"    pm.environment.set(\"passwordUser\", requestBody.password);",
+													"});"
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"email\": \"{{emailUser}}\", //guest4@pleis.com\n    \"password\": \"{{passwordUser}}\",\n    \"userType\": \"guest\", //user, organizer, admin, manager, guest\n    \"deviceType\": \"android\", //andoird/ios\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/auth/login",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"auth",
+												"login"
+											]
+										}
+									},
+									"response": []
 								}
 							]
 						},
@@ -2062,11 +2126,12 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{url}}users/interests",
+											"raw": "{{url}}app/users/interests",
 											"host": [
-												"{{url}}users"
+												"{{url}}app"
 											],
 											"path": [
+												"users",
 												"interests"
 											]
 										}
@@ -2470,6 +2535,181 @@
 							]
 						},
 						{
+							"name": "Search Suggestions",
+							"item": [
+								{
+									"name": "trending",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/search-suggestions/trending?latitude=31.57261&longitude=74.4557234",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"search-suggestions",
+												"trending"
+											],
+											"query": [
+												{
+													"key": "latitude",
+													"value": "31.57261"
+												},
+												{
+													"key": "longitude",
+													"value": "74.4557234"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "user searches *testing only",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/search-suggestions/user",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"search-suggestions",
+												"user"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "add *testing only",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"keyword\": \"beach\",\n    \"advanceFilters\": {\n        \"categories\": [\n            // \"6911bd65d49fc086aabd254e\",\n            // \"6911bd6bd49fc086aabd2561\",\n            \"6911bd7cd49fc086aabd257c\"\n        ],\n        \"venueTypes\": [\n             \"6911bd00d49fc086aabd24b3\"\n        ],\n        \"tags\": [\n            \"6911bde7d49fc086aabd25f1\"\n        ] // vibes are tags\n        ,\n        \"genre\": [\n            \"6953c6029c8a1a1042ef899c\"\n        ] //are subtypes of tags\n    },\n    \"location\":{\n        \"coordinates\":[74.4557234,31.48252] //longitude, latitude\n    }\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/search-suggestions/",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"search-suggestions",
+												""
+											]
+										},
+										"description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+									},
+									"response": []
+								}
+							]
+						},
+						{
 							"name": "home",
 							"event": [
 								{
@@ -2836,7 +3076,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    // \"sort\": \"asc\", //asc/desc\n    \"advanceFilters\": {\n        // \"distanceFrom\": 0,\n        // \"distanceTo\": 50,\n        // \"time\": \"thisWeek\", //live, today, thisWeek\n        // \"dateFrom\": \"2025-11-13\", //YYYY-MM-DD\n        // \"dateTo\": \"2025-11-16\",\n        \"categories\": [\n            // \"6911bd65d49fc086aabd254e\",\n            // \"6911bd6bd49fc086aabd2561\",\n            // \"6911bd7cd49fc086aabd257c\"\n        ],\n        \"venueTypes\": [\n          //  \"6911bd00d49fc086aabd24b3\"\n        ],\n        \"tags\": [\n           // \"6911bde7d49fc086aabd25f1\"\n        ] // vibes are tags\n        ,\n        \"genre\": [\n           \"6953c6029c8a1a1042ef899c\"\n        ] //are subtypes of tags\n    }\n}",
+									"raw": "{\n    // \"sort\": \"asc\", //asc/desc\n    \"advanceFilters\": {\n        // \"distanceFrom\": 0,\n        // \"distanceTo\": 50,\n        // \"time\": \"thisWeek\", //live, today, thisWeek\n        // \"dateFrom\": \"2025-11-13\", //YYYY-MM-DD\n        // \"dateTo\": \"2025-11-16\",\n        \"categories\": [\n            // \"6911bd65d49fc086aabd254e\",\n            // \"6911bd6bd49fc086aabd2561\",\n            // \"6911bd7cd49fc086aabd257c\"\n        ],\n        \"venueTypes\": [\n          //  \"6911bd00d49fc086aabd24b3\"\n        ],\n        \"tags\": [\n           // \"6911bde7d49fc086aabd25f1\"\n        ] // vibes are tags\n        ,\n        \"genre\": [\n        //    \"6953c6029c8a1a1042ef899c\"\n        ] //are subtypes of tags\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -2844,7 +3084,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}app/home/global/search?page=1&limit=10&latitude=31.48252&longitude=74.4557234",
+									"raw": "{{url}}app/home/global/search?page=1&limit=10&latitude=31.48252&longitude=74.4557234&keyword=Sports",
 									"host": [
 										"{{url}}app"
 									],
@@ -2872,14 +3112,85 @@
 										},
 										{
 											"key": "keyword",
-											"value": "Suheer",
-											"disabled": true
+											"value": "Sports"
 										},
 										{
 											"key": "type",
 											"value": "organizations",
 											"description": "events/organizations/loyaltyClubs",
 											"disabled": true
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "advance filters",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/home/global/filters?latitude=31.48252&longitude=74.4557234&radiusKm=50",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"home",
+										"global",
+										"filters"
+									],
+									"query": [
+										{
+											"key": "latitude",
+											"value": "31.48252",
+											"description": "//optional"
+										},
+										{
+											"key": "longitude",
+											"value": "74.4557234",
+											"description": "//optional"
+										},
+										{
+											"key": "radiusKm",
+											"value": "50",
+											"description": "//optional"
 										}
 									]
 								}
@@ -2945,7 +3256,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "6915c3e448a5a4c172122332"
+											"value": "695364a79c8a1a1042ef45c0"
 										}
 									]
 								}
@@ -4792,7 +5103,7 @@
 											"variable": [
 												{
 													"key": "companyOrganizer",
-													"value": "6911c14b6fc7cbd864e745b6"
+													"value": "691c694615c5e4a506226db8"
 												}
 											]
 										}
@@ -14769,10 +15080,71 @@
 							]
 						},
 						{
-							"name": "Scan QR",
+							"name": "Manage Menu Items",
 							"item": [
 								{
-									"name": "scan qr",
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/staff/menu-items/manage?organization=6911c1b36fc7cbd864e74659",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"staff",
+												"menu-items",
+												"manage"
+											],
+											"query": [
+												{
+													"key": "organization",
+													"value": "6911c1b36fc7cbd864e74659"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "stock update",
 									"event": [
 										{
 											"listen": "test",
@@ -14802,7 +15174,7 @@
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"qrData\": {\n        \"type\": \"loyaltyCard\", //loyaltyCard, eventTicket\n        \"user\": \"6926f5f9d9366d79ebf73f72\",\n        \"companyOrganizer\": \"691c683da512c38d3350d13e\"\n    }\n}",
+											"raw": "{\n    \"type\": \"allOutOfStock\", //allInStock, allOutOfStock\n    \"menu\":\"6911c1cc6fc7cbd864e7466d\"\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -14810,19 +15182,689 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}app/staff/scan-qr",
+											"raw": "{{url}}app/staff/menu-items/manage/stock-update",
 											"host": [
 												"{{url}}app"
 											],
 											"path": [
 												"staff",
-												"scan-qr"
+												"menu-items",
+												"manage",
+												"stock-update"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "item update",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n//   \"image\": \"burger_beef.png\",\n//   \"title\": \"Pizza Max Cheese\",\n//   \"description\": \"A delicious cheeseburger with lettuce, tomato, and fries.\",\n//   \"type\": \"food\",\n//   \"category\": \"68d699f66513527e7a236563\",\n//   \"basePrice\": 10.99,\n//   \"discountPrice\": 8.99,\n//   \"taxPercent\": 5,\n//   \"menu\": \"68d69376fbccb319035eb13e\",\n//   \"startTime\": \"10:30 AM\",\n//   \"endTime\": \"05:35 PM\",\n  \"status\": \"active\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/staff/menu-items/:itemId/manage/",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"staff",
+												"menu-items",
+												":itemId",
+												"manage",
+												""
+											],
+											"variable": [
+												{
+													"key": "itemId",
+													"value": "691d6c785246547c1826337d"
+												}
 											]
 										}
 									},
 									"response": []
 								}
 							]
+						},
+						{
+							"name": "Manage Orders",
+							"item": [
+								{
+									"name": "get",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/staff/in-app-ordering?organizationId=6911c1b36fc7cbd864e74659&keyword=&status=active&date=&range=&activeKeyword=&orderStatus=&activeorderStatus=&pickupFilter=",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"staff",
+												"in-app-ordering"
+											],
+											"query": [
+												{
+													"key": "organizationId",
+													"value": "6911c1b36fc7cbd864e74659"
+												},
+												{
+													"key": "keyword",
+													"value": ""
+												},
+												{
+													"key": "status",
+													"value": "active"
+												},
+												{
+													"key": "date",
+													"value": ""
+												},
+												{
+													"key": "range",
+													"value": ""
+												},
+												{
+													"key": "activeKeyword",
+													"value": ""
+												},
+												{
+													"key": "orderStatus",
+													"value": ""
+												},
+												{
+													"key": "activeorderStatus",
+													"value": ""
+												},
+												{
+													"key": "pickupFilter",
+													"value": ""
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "pause/resume orders",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"organization\":\"6911c1b36fc7cbd864e74659\",\n    \"isOrderingEnabled\": true //true/false\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/staff/in-app-ordering/status",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"staff",
+												"in-app-ordering",
+												"status"
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "item update",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript",
+												"packages": {},
+												"requests": {}
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n//   \"image\": \"burger_beef.png\",\n//   \"title\": \"Pizza Max Cheese\",\n//   \"description\": \"A delicious cheeseburger with lettuce, tomato, and fries.\",\n//   \"type\": \"food\",\n//   \"category\": \"68d699f66513527e7a236563\",\n//   \"basePrice\": 10.99,\n//   \"discountPrice\": 8.99,\n//   \"taxPercent\": 5,\n//   \"menu\": \"68d69376fbccb319035eb13e\",\n//   \"startTime\": \"10:30 AM\",\n//   \"endTime\": \"05:35 PM\",\n  \"status\": \"active\"\n}\n",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}app/staff/menu-items/:itemId/manage/",
+											"host": [
+												"{{url}}app"
+											],
+											"path": [
+												"staff",
+												"menu-items",
+												":itemId",
+												"manage",
+												""
+											],
+											"variable": [
+												{
+													"key": "itemId",
+													"value": "691d6c785246547c1826337d"
+												}
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "Scan QR",
+					"item": [
+						{
+							"name": "scan qr - loyaltyCard",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"qrData\": {\n        \"type\": \"loyaltyCard\", //loyaltyCard, eventTicket\n        \"user\": \"6926f5f9d9366d79ebf73f72\",\n        \"companyOrganizer\": \"691c683da512c38d3350d13e\"\n    }\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/staff/scan-qr",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"staff",
+										"scan-qr"
+									]
+								}
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Events",
+					"item": [
+						{
+							"name": "get",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/staff/events/?organization=6911ccb36aca10eb719d7358&filter=past",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"staff",
+										"events",
+										""
+									],
+									"query": [
+										{
+											"key": "startDate",
+											"value": "2025-08-15",
+											"disabled": true
+										},
+										{
+											"key": "endDate",
+											"value": "2025-08-06",
+											"disabled": true
+										},
+										{
+											"key": "organization",
+											"value": "6911ccb36aca10eb719d7358"
+										},
+										{
+											"key": "keyword",
+											"value": "",
+											"disabled": true
+										},
+										{
+											"key": "filter",
+											"value": "past",
+											"description": "active/thisWeek/past"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "details",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    //for date filter use ticket id\n    // \"ticketId\":\"691f175e5a83c7de34bad930\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/staff/events/:id",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"staff",
+										"events",
+										":id"
+									],
+									"variable": [
+										{
+											"key": "id",
+											"value": "691f06598d9b5d3fe5e37abd"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "attendees",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"protocolProfileBehavior": {
+								"disableBodyPruning": true
+							},
+							"request": {
+								"method": "GET",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/staff/events/:eventId/attendees?page=1&limit=10",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"staff",
+										"events",
+										":eventId",
+										"attendees"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "keyword",
+											"value": "usama",
+											"disabled": true
+										}
+									],
+									"variable": [
+										{
+											"key": "eventId",
+											"value": "691f06598d9b5d3fe5e37abd"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "checkin",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/staff/events/:eventId/checkin/:ticketBookingId",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"staff",
+										"events",
+										":eventId",
+										"checkin",
+										":ticketBookingId"
+									],
+									"query": [
+										{
+											"key": "keyword",
+											"value": "usama",
+											"disabled": true
+										}
+									],
+									"variable": [
+										{
+											"key": "eventId",
+											"value": "691f06598d9b5d3fe5e37abd"
+										},
+										{
+											"key": "ticketBookingId",
+											"value": "TBK-QQA2UC"
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "scan qr - eventTicket",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript",
+										"packages": {},
+										"requests": {}
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"qrData\": {\n        \"type\": \"eventTicket\", //loyaltyCard, eventTicket\n        \"id\": \"69206c727f5d36d3cbf94ce5\",\n        \"companyOrganizer\": \"691c683da512c38d3350d13e\",\n        \"organization\":\"6911c1b36fc7cbd864e74659\"\n    }\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}app/staff/scan-qr",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"staff",
+										"scan-qr"
+									]
+								}
+							},
+							"response": []
 						}
 					]
 				},
@@ -17697,7 +18739,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "6911bc8b2280acc8015fe1e6"
+											"value": "69576d1bc12ca8d4d26d05e8"
 										}
 									]
 								}
@@ -17797,7 +18839,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"logo\": \"org-logo_pic1.png\",\n            \"cover\": \"org-cover.jpg\"\n        },\n        \"name\": \"Lex Events\",\n        \"user\":\"68c2a6f5896889fb5455b5d7\",\n        \"phoneNumber\": {\n            \"code\": \"+385\",\n            \"number\": \"998798769\"\n        },\n        \"website\": \"http:lex.com\",\n        \"socialLinks\": {\n            \"youtube\": \"https://youtube.com/lexevents\",\n            \"facebook\": \"https://facebook.com/lexevents\",\n            \"instagram\": \"https://instagram.com/lexevents\",\n            \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        }\n    }\n}",
+									"raw": "{\n    \"basicInfo\": {\n        \"media\": {\n            \"logo\": \"org-logo_pic1.png\",\n            \"cover\": \"org-cover.jpg\"\n        },\n        \"name\": \"Apple Org\",\n        \"user\":\"68c2a6f5896889fb5455b5d7\",\n        \"phoneNumber\": {\n            \"code\": \"+385\",\n            \"number\": \"998798769\"\n        },\n        \"website\": \"http:lex.com\",\n        \"socialLinks\": {\n            \"youtube\": \"https://youtube.com/lexevents\",\n            \"facebook\": \"https://facebook.com/lexevents\",\n            \"instagram\": \"https://instagram.com/lexevents\",\n            \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        }\n    },\n       \"operatingHours\": {\n        \"monday\": {\n            \"from\": \"10:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": true\n        },\n        \"tuesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": true\n        },\n        \"wednesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": true\n        },\n        \"thursday\": {\n            \"from\": \"05:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": true\n        },\n        \"friday\": {\n            \"from\": \"09:00\",\n            \"to\": \"20:00\",\n            \"break\": {\n                \"from\": \"14:00\",\n                \"to\": \"15:00\"\n            },\n            \"isOpen\": true\n        },\n        \"saturday\": {\n            \"from\": \"12:00\",\n            \"to\": \"22:00\",\n            \"break\": {\n                \"from\": \"16:00\",\n                \"to\": \"17:00\"\n            },\n            \"isOpen\": true\n        },\n        \"sunday\": {\n            \"from\": \"\",\n            \"to\": \"\",\n            \"break\": {\n                \"from\": \"\",\n                \"to\": \"\"\n            },\n            \"isOpen\": false\n        }\n    }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -17918,7 +18960,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"basicInfo\": {\n        // \"media\": {\n        //     // \"logo\": \"org-logo_pic1.png\",\n        //     // \"cover\": \"org-cover.jpg\"\n        // }\n        // ,\n        // \"name\": \"Lex Events\",\n        // \"phoneNumber\": {\n        //     \"code\": \"+385\",\n        //     \"number\": \"998798769\"\n        // },\n        // \"website\": \"http:lex.com\",\n        // \"socialLinks\": {\n        //     \"youtube\": \"https://youtube.com/lexevents\",\n        //     \"facebook\": \"https://facebook.com/lexevents\",\n        //     \"instagram\": \"https://instagram.com/lexevents\",\n        //     \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        // }\n    },\n    // \"otherInfo\": {\n    //     \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n    //     \"minAge\": 18,\n    //     \"tags\": [\n    //         \"68822a624ebf07788604301b\",\n    //         \"68b294c4a09f4da7cdf23d47\"\n    //     ],\n    //     \"categories\": [\n    //         \"64f7206e442c7dfc4aa00002\"\n    //     ],\n    //     \"galleryMedia\": [\n    //         \"gallery1.jpg\",\n    //         \"gallery2.jpg\"\n    //     ]\n    // },\n    \"operatingHours\": {\n        \"monday\": {\n            \"from\": \"10:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": true\n        },\n        \"tuesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": true\n        },\n        \"wednesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": true\n        },\n        \"thursday\": {\n            \"from\": \"05:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": true\n        },\n        \"friday\": {\n            \"from\": \"09:00\",\n            \"to\": \"20:00\",\n            \"break\": {\n                \"from\": \"14:00\",\n                \"to\": \"15:00\"\n            },\n            \"isOpen\": true\n        },\n        \"saturday\": {\n            \"from\": \"12:00\",\n            \"to\": \"22:00\",\n            \"break\": {\n                \"from\": \"16:00\",\n                \"to\": \"17:00\"\n            },\n            \"isOpen\": true\n        },\n        \"sunday\": {\n            \"from\": \"\",\n            \"to\": \"\",\n            \"break\": {\n                \"from\": \"\",\n                \"to\": \"\"\n            },\n            \"isOpen\": true\n        }\n    }\n    // ,\n    // \"status\": \"active\",\n    // \"venue\": \"68b680ef739209915c262222\",\n    // \"location\": {\n    //     \"fullAddress\": \"Zagreb, Croatia\",\n    //     \"city\": \"Zagreb\",\n    //     \"state\": \"Zagreb\",\n    //     \"country\": \"Croatia\",\n    //     \"postalCode\": \"10000\",\n    //     \"coordinates\": [\n    //         15.9819,\n    //         45.8150\n    //     ]\n    // }\n}",
+									"raw": "{\n    \"basicInfo\": {\n        // \"media\": {\n        //     // \"logo\": \"org-logo_pic1.png\",\n        //     // \"cover\": \"org-cover.jpg\"\n        // }\n        // ,\n        \"name\": \"Apple Org\"\n        // \"phoneNumber\": {\n        //     \"code\": \"+385\",\n        //     \"number\": \"998798769\"\n        // },\n        // \"website\": \"http:lex.com\",\n        // \"socialLinks\": {\n        //     \"youtube\": \"https://youtube.com/lexevents\",\n        //     \"facebook\": \"https://facebook.com/lexevents\",\n        //     \"instagram\": \"https://instagram.com/lexevents\",\n        //     \"linkedin\": \"https://linkedin.com/company/lexevents\"\n        // }\n    },\n    // \"otherInfo\": {\n    //     \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n    //     \"minAge\": 18,\n    //     \"tags\": [\n    //         \"68822a624ebf07788604301b\",\n    //         \"68b294c4a09f4da7cdf23d47\"\n    //     ],\n    //     \"categories\": [\n    //         \"64f7206e442c7dfc4aa00002\"\n    //     ],\n    //     \"galleryMedia\": [\n    //         \"gallery1.jpg\",\n    //         \"gallery2.jpg\"\n    //     ]\n    // },\n    \"operatingHours\": {\n        \"monday\": {\n            \"from\": \"10:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": true\n        },\n        \"tuesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": true\n        },\n        \"wednesday\": {\n            \"from\": \"09:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": true\n        },\n        \"thursday\": {\n            \"from\": \"05:00\",\n            \"to\": \"18:00\",\n            \"break\": {\n                \"from\": \"13:00\",\n                \"to\": \"14:00\"\n            },\n            \"isOpen\": true\n        },\n        \"friday\": {\n            \"from\": \"09:00\",\n            \"to\": \"20:00\",\n            \"break\": {\n                \"from\": \"14:00\",\n                \"to\": \"15:00\"\n            },\n            \"isOpen\": true\n        },\n        \"saturday\": {\n            \"from\": \"12:00\",\n            \"to\": \"22:00\",\n            \"break\": {\n                \"from\": \"16:00\",\n                \"to\": \"17:00\"\n            },\n            \"isOpen\": true\n        },\n        \"sunday\": {\n            \"from\": \"\",\n            \"to\": \"\",\n            \"break\": {\n                \"from\": \"\",\n                \"to\": \"\"\n            },\n            \"isOpen\": false\n        }\n    }\n    // ,\n    // \"status\": \"active\",\n    // \"venue\": \"68b680ef739209915c262222\",\n    // \"location\": {\n    //     \"fullAddress\": \"Zagreb, Croatia\",\n    //     \"city\": \"Zagreb\",\n    //     \"state\": \"Zagreb\",\n    //     \"country\": \"Croatia\",\n    //     \"postalCode\": \"10000\",\n    //     \"coordinates\": [\n    //         15.9819,\n    //         45.8150\n    //     ]\n    // }\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -17937,7 +18979,7 @@
 									"variable": [
 										{
 											"key": "id",
-											"value": "6911b9cd1902fd1c55eb4842"
+											"value": "695765cbf1f8f38256fae4f3"
 										}
 									]
 								},

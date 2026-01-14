@@ -2,8 +2,6 @@
 const { buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
 const { generateMeta, getCurrentDateInTimezone } = require("../../helperUtils/responseUtil");
 const { reservationsFormatter } = require("../../app/reservations/formaters/reservationFormetter");
-const Reservations = require("@ReservationsModel");
-const UserReservations = require("@UserReservationsModel");
 const GlobalReferralRepo = require("./globalReferralRepository");
 const mongoose = require("mongoose");
 const {

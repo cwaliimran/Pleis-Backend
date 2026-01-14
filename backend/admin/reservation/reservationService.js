@@ -3,7 +3,7 @@ const { buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/query
 const { generateMeta, getCurrentDateInTimezone } = require("../../helperUtils/responseUtil");
 const { reservationsFormatter } = require("../../app/reservations/formaters/reservationFormetter");
 const Reservations = require("@ReservationsModel");
-const UserReservations = require("@UserReservationsModel");
+const { UserReservations } = require("@UserReservationsModel");
 const ReservationRepo = require("./reservationRepository");
 const mongoose = require("mongoose");
 const {
@@ -127,42 +127,42 @@ const updateReservation = async (id, data) => {
   return reservationsFormatter(Reservation);
 };
 
-  const deleteReservation = async (id) => {
-      const updated = await ReservationRepo.findByIdAndUpdate(id, {
-        status: "deleted",
-      });
-      if (!updated) return null;
-      return true;
-    };
+const deleteReservation = async (id) => {
+  const updated = await ReservationRepo.findByIdAndUpdate(id, {
+    status: "deleted",
+  });
+  if (!updated) return null;
+  return true;
+};
 
 const getReservationDetails = async (id) => {
-      const Reservation = await ReservationRepo.findReservationById(id);
-      if (!Reservation) return null;
-      return reservationsFormatter(Reservation);
-    };
+  const Reservation = await ReservationRepo.findReservationById(id);
+  if (!Reservation) return null;
+  return reservationsFormatter(Reservation);
+};
 
 
 
 
 
-const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, reservationStatus,reservationId }) => {
-      const skip = limit === 0 ? 0 : (page - 1) * limit;
-      const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-      let { reservations, meta } = await ReservationRepo.getUserReservations({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationStatus, reservationId });
+const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, reservationStatus, reservationId }) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
+  let { reservations, meta } = await ReservationRepo.getUserReservations({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationStatus, reservationId });
 
-      return {
-        reservations,
-        meta
-      };
-    };
+  return {
+    reservations,
+    meta
+  };
+};
 
 const updateUserReservationStatus = async (id, value) => {
-      const updated = await UserReservations.findByIdAndUpdate(id, {
-        reservationStatus: value,
-      });
-      if (!updated) return null;
-      return true;
-    };
+  const updated = await UserReservations.findByIdAndUpdate(id, {
+    reservationStatus: value,
+  });
+  if (!updated) return null;
+  return true;
+};
 
 
 
@@ -212,14 +212,23 @@ const updateUserReservation = async (data) => {
 };
 
 
-  module.exports = {
-    createReservation,
-    getReservations,
-    updateReservation,
-    getReservationDetails,
-    deleteReservation,
-    getUserReservations,
-    updateUserReservationStatus,
-    updateUserReservation,
-    getavailableReservations
+const getCalendarReservationsService = async ({ timezone, companyOrganizer, organizationsId, date }) => {
+  let { reservations } = await ReservationRepo.getCalendarReservations({ timezone, companyOrganizer, organizationsId, date, });
+
+  return {
+    reservations,
   };
+};
+
+module.exports = {
+  createReservation,
+  getReservations,
+  updateReservation,
+  getReservationDetails,
+  deleteReservation,
+  getUserReservations,
+  updateUserReservationStatus,
+  updateUserReservation,
+  getavailableReservations,
+  getCalendarReservationsService
+};

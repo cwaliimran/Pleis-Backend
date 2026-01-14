@@ -46,6 +46,7 @@ const findEventById = async (id) => {
 };
 
 
+
 const getEventAudienceAnalytics = async (eventId, ticketId = null) => {
   const rows = await TicketingBookings.aggregate([
     {
@@ -57,11 +58,18 @@ const getEventAudienceAnalytics = async (eventId, ticketId = null) => {
       }
     },
 
-    // join user
+    // ✅ DEDUPLICATE USERS FIRST
+    {
+      $group: {
+        _id: "$user"
+      }
+    },
+
+    // join user ONCE
     {
       $lookup: {
         from: "users",
-        localField: "user",
+        localField: "_id",
         foreignField: "_id",
         as: "user"
       }
@@ -100,35 +108,28 @@ const getEventAudienceAnalytics = async (eventId, ticketId = null) => {
   const now = new Date();
 
   // -----------------
-  // PROCESS ROWS
+  // PROCESS UNIQUE USERS
   // -----------------
 
   for (const r of rows) {
-    //
-    // gender
-    //
+    // ---- Gender ----
     if (["Male", "Female", "Other"].includes(r.gender)) {
       genders[r.gender]++;
     } else {
       genders.Unknown++;
     }
 
-    //
-    // age
-    //
+    // ---- Age ----
     if (!r.dob) continue;
 
-    let age;
-    try {
-      const dobDate = new Date(r.dob);
-      if (!isNaN(dobDate)) {
-        age = Math.floor(
-          (now - dobDate) / (1000 * 60 * 60 * 24 * 365.25)
-        );
-      }
-    } catch (_) { }
+    const dobDate = new Date(r.dob);
+    if (isNaN(dobDate)) continue;
 
-    if (!age || age < 18) continue;
+    const age = Math.floor(
+      (now - dobDate) / (1000 * 60 * 60 * 24 * 365.25)
+    );
+
+    if (age < 18) continue;
 
     if (age < 25) ageBuckets["18-25"]++;
     else if (age < 35) ageBuckets["25-35"]++;
@@ -138,44 +139,26 @@ const getEventAudienceAnalytics = async (eventId, ticketId = null) => {
   }
 
   // -----------------
-  // GENDER: COUNTS + %
+  // GENDER COUNTS + %
   // -----------------
 
   const totalGenderCount =
     genders.Male + genders.Female + genders.Other + genders.Unknown;
 
-  const gender = {
-    Male: {
-      count: genders.Male,
-      percentage:
-        totalGenderCount === 0
-          ? 0
-          : Number(((genders.Male / totalGenderCount) * 100).toFixed(2))
-    },
-    Female: {
-      count: genders.Female,
-      percentage:
-        totalGenderCount === 0
-          ? 0
-          : Number(((genders.Female / totalGenderCount) * 100).toFixed(2))
-    },
-    Other: {
-      count: genders.Other,
-      percentage:
-        totalGenderCount === 0
-          ? 0
-          : Number(((genders.Other / totalGenderCount) * 100).toFixed(2))
-    },
-    Unknown: {
-      count: genders.Unknown,
-      percentage:
-        totalGenderCount === 0
-          ? 0
-          : Number(((genders.Unknown / totalGenderCount) * 100).toFixed(2))
-    },
-    total: totalGenderCount
-  };
+  const gender = Object.fromEntries(
+    Object.entries(genders).map(([key, count]) => [
+      key,
+      {
+        count,
+        percentage:
+          totalGenderCount === 0
+            ? 0
+            : Number(((count / totalGenderCount) * 100).toFixed(2))
+      }
+    ])
+  );
 
+  gender.total = totalGenderCount;
 
   return {
     gender,
@@ -188,6 +171,7 @@ const getEventAudienceAnalytics = async (eventId, ticketId = null) => {
     ]
   };
 };
+
 
 
 const getEventTicketAttendanceAnalytics = async (eventId, ticketId) => {
