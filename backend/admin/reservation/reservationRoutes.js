@@ -8,7 +8,8 @@ const {
   getUserReservations,
   updateUserReservationStatus,
   updateUserReservation,
-  getavailableReservations
+  getavailableReservations,
+  getCalendarReservations
 } = require("./reservationController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -27,6 +28,7 @@ router.post("/", auth,roleMiddleware(["admin"]), createReservation);
 
 // Get all Reservations with pagination
 router.get("/", roleMiddleware(["admin"]),apiRateLimiter, getReservations);
+router.get("/calendar", roleMiddleware(["admin"]),apiRateLimiter, getCalendarReservations);
 // Get all Reservations with pagination
 router.get("/available", roleMiddleware(["admin"]),apiRateLimiter, getavailableReservations);
 
