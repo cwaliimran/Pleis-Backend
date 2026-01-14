@@ -17,10 +17,17 @@ if (!fs.existsSync(filePath)) {
 
 const serviceAccount = require("../secretAssets/serviceAccountKey.json");
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://pleis-50810.firebaseio.com",
-});
+try {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://pleis-50810.firebaseio.com",
+  });
 
+  // Log after successful initialization
+  console.log('Firebase Admin SDK initialized successfully.');
+} catch (error) {
+  // Log any errors during initialization
+  console.error('Error initializing Firebase Admin SDK:', error);
+}
 module.exports = admin;
 

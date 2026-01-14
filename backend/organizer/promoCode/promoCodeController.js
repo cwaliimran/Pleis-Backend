@@ -133,7 +133,7 @@ let {
   expiryDate,
   maxUsage,
 } = req.body;
-console.log("expiryDate",expiryDate );
+
 const userId = req.user._id;
 const timezone = req.user.timezone;
          expiryDate = convertTimezoneToUtc(
@@ -147,7 +147,7 @@ const timezone = req.user.timezone;
     })
   )
     return;
-console.log("expiryDate",expiryDate );
+
   let data = {
     companyOrganizer:userId,
 title,

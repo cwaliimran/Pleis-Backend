@@ -37,7 +37,7 @@ promoCode,
   };
   try {
     const PromoCode = await promoCodeService.usePromoCode(data);
-    console.log("Promocode ",PromoCode);
+  
     if (PromoCode.error) {
       return sendResponse({
         res,

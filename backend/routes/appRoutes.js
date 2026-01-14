@@ -69,4 +69,15 @@ router.use("/badges", require("../app/badges/badgesRoutes"));
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 module.exports = router;

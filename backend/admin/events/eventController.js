@@ -589,7 +589,7 @@ const getMinimalEventsInfo = async (req, res) => {
   let { timezone } = req.user;
   try {
     organizationId = new mongoose.Types.ObjectId(organization);
-    console.log("organization", organization);
+
     if (organization) {
       if (!validateParams(req, res, {
         objectIdFields: ["organization"],

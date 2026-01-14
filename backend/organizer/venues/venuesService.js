@@ -23,7 +23,6 @@ const getVenues = async ({
   organization
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-  console.log("userId", userId);
 
   // 🔹 Normalize organization param → array of ObjectIds
   let organizationIds = null;

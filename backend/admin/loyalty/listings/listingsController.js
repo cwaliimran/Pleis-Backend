@@ -13,7 +13,7 @@ const getListings = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date, companyOrganizer } = req.query;
   const userId = companyOrganizer || req.user._id;
-  console.log("User ID:", userId);
+ 
 
   try {
     const { listings, meta } = await service.getListings({

@@ -33,7 +33,7 @@ const getStreaks = async ({ page, limit, keyword, status, date, orderSort = "asc
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const sort = { order: orderSort === "desc" ? -1 : 1 };
-console.log("query", query);
+
   let [streaks, getStreaksCounts] = await Promise.all([
     streakRepo.getStreaksWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
     streakRepo.getStreaksCounts(query),
@@ -43,8 +43,7 @@ console.log("query", query);
   const meta = generateMeta(page, limit, totalFiltered);
   meta.streaksCount = { total, active, inactive };
 
-  // streaks = formatStreaks(streaks);
-console.log("streaks",streaks );
+
   return { streaks, meta };
 };
 

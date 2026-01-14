@@ -126,7 +126,7 @@ const updateOrders = async (req, res) => {
 const updateInAppOrders = async (req, res) => {
   let { companyOrganizer } = req.params;
     companyOrganizer = req.user._id;
-  console.log("companyOrganizer",companyOrganizer );
+
   const {
     isOrderingEnabled
   } = req.body;

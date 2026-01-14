@@ -216,8 +216,7 @@ const updateClubCollaboration = async (id, data, userId) => {
   if (!clubCollaboration) {
     throw new Error("Collaboration request not found");
   }
-  console.log("user", userId);
-console.log("clubCollaboration",clubCollaboration.sender.id.toString());
+
   let updated = false;
 
   // Check if the requesting user is the sender

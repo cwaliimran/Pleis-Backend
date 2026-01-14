@@ -471,7 +471,7 @@ const updateUserThirdparty = async (req, res) => {
           timezone,
           "YYYY-MM-DD hh:mm A"
         );
-        console.log("start time ", slots.startTime);
+ 
 
       }
 

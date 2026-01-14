@@ -152,7 +152,7 @@ const updateClubCollaboration = async (req, res) => {
   const { id } = req.params;
   const { status, notes, expiryDate } = req.body;
   const userId = req.user._id; // Get the authenticated user ID
-console.log("userId",userId);
+
   if (
     !validateParams(req, res, {
       pathParams: ["id"],

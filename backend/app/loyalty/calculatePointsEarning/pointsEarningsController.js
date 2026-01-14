@@ -20,10 +20,10 @@ const calculatePoints = async (req, res) => {
       companyOrganizer,
       totalSpending
     });
-    // console.log("user", userId);
+ 
     // const recipientIds = Array.isArray(userId) ? userId : [userId.toString()];
 
-    // console.log("user", recipientIds);
+   
     // await sendUserNotifications({
     //   recipientIds: recipientIds,
     //   title: "Loyalty Points Update",

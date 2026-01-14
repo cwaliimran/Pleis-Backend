@@ -134,7 +134,7 @@ const getEventSingleMetric = async ({ match, range }) => {
     }),
   };
 
-  console.log("finalMatch", finalMatch)
+
 
   const result = await Events.aggregate([
     { $match: finalMatch },

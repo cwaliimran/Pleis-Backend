@@ -116,7 +116,7 @@ const createReservation = async (data) => {
             items: data.preOrderMenuItems.items
           });
         } catch (err) {
-          console.error("Challenge resolve failed", err);
+          
         }
 
       }
@@ -204,7 +204,7 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
   }
 
   // DATE FILTER
-  console.log("date", date);
+
   if (date) {
     // Convert: "2025-12-16T19:00:00.000+00:00" -> "2025-12-16"
     const dayOnly = date.split("T")[0];
@@ -213,7 +213,7 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
     const start = new Date(`${dayOnly}T00:00:00.000Z`);
     const end = new Date(`${dayOnly}T23:59:59.999Z`);
 
-    console.log("DATE RANGE:", start, end);
+
 
     pipeline.push(
       {
@@ -257,10 +257,10 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
       totalFiltered: [{ $count: "count" }]
     }
   });
-  console.log("pipeline", pipeline);
+
   const result = await Reservations.aggregate(pipeline);
   const reservations = result[0]?.data || [];
-  console.log("reservations", reservations);
+
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   // META COUNT
@@ -298,7 +298,7 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
   if (date) {
     date = convertToUtcDateOnly(date, "UTC");
   }
-  console.log("date", date);
+
   // Querying UserReservations collection directly
   const query = {
     ...(userId && { userId }),  // Match userId if provided
@@ -874,7 +874,7 @@ const getOrganizationReservations = async ({ organizationId, timezone }) => {
 
     return results;
   } catch (error) {
-    console.error("getOrganizationReservations error:", error);
+    
     return [];
   }
 };

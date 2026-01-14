@@ -63,7 +63,9 @@ const allowedOrigins = [
   "http://192.168.13.221:4003",
   "http://192.168.100.65:4003",
   "http://192.168.13.84:4003",
-  "http://192.168.100.65:4003"
+  "http://192.168.100.65:4003",
+  "http://192.168.13.128:4003",
+  
 ];
 securityMiddleware(app, {
   allowedOrigins,

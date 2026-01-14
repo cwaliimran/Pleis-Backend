@@ -274,7 +274,7 @@ const createNotifications = async (data) => {
 
 
 const getNotificationss = async ({isDelivered, sendTiming,timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
-console.log("isDelivered", isDelivered);
+
   const pipeline = [
     {
       $match: {

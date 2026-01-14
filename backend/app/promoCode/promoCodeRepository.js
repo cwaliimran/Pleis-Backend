@@ -1,4 +1,6 @@
+const { NotificationTypes } = require('@NotificationsModel');
 const { PromoCode } = require('@PromoCodeModel'); // Adjust path to your PromoCode model
+const { sendUserNotifications } = require('../../controllers/communicationController');
 
 const usePromoCode = async (data) => {
   try {
@@ -26,6 +28,14 @@ const usePromoCode = async (data) => {
     const userUsage = foundPromoCode.usersUsed.get(userId); // Retrieve the user's usage object by userId
 
     if (userUsage && userUsage.count >= foundPromoCode.maxCountPerUser) {
+      await sendUserNotifications({
+        recipientIds: [userId.toString()],
+        title: "You Exceeded Promo Code Usage!",
+        body: `You have exceeded the maximum usage for this promo code ${promoCode}.`,
+        data: { type: NotificationTypes.PROMO_UPDATE, objectType: "group" },
+        sender: userId,
+        objectId: foundPromoCode._id,
+      });
       return { error: "You have exceeded the maximum usage for this promo code." };
     }
 
@@ -39,18 +49,28 @@ const usePromoCode = async (data) => {
 
     // Increment the usage count for the user and the promo code
     const incremented = await foundPromoCode.incrementUsage(userId);
-    console.log("incremented",incremented );
+
 
     if (!incremented) {
       return { error: "Unable to increment usage for this promo code." };
     }
-console.log("discountResponse",discountResponse );
+
     // Return the successful response with the discount details
-    return { 
-      message: "Promo code applied successfully", 
-discount: foundPromoCode.discountValue,
-maxDiscountCap: foundPromoCode.maxDiscountCap,
-discountType: foundPromoCode.discountType,
+    await sendUserNotifications({
+      recipientIds: [userId.toString()],
+      title: "You have used a Promo Code!",
+      body: `You have successfully applied the promo code ${promoCode} and received a discount of ${foundPromoCode.discountValue}.`,
+      
+      data: { type: NotificationTypes.PROMO_UPDATE, objectType: "group",promocode_id:foundPromoCode._id.toString() },
+      sender: userId,
+      objectId: foundPromoCode._id,
+    });
+    return {
+      message: "Promo code applied successfully",
+      discount: foundPromoCode.discountValue,
+      maxDiscountCap: foundPromoCode.maxDiscountCap,
+      discountType: foundPromoCode.discountType,
+
 
     };
   } catch (err) {

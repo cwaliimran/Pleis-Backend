@@ -146,7 +146,7 @@ const updateMenuStock = async (req, res) => {
 };
 
 const updateMenuItem = async (req, res) => {
-  console.log("here")
+
   const { id } = req.params;
   let { timezone } = req.user;
   const {

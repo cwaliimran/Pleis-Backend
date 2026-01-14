@@ -63,7 +63,7 @@ if(data.expiryDate=="Invalid date"){
       updateData[key] = data[key];
     }
   }
-console.log("updateData", updateData );
+
   if (Object.keys(updateData).length === 0) {
     return promoCode;
   }

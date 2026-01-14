@@ -34,40 +34,75 @@ const getOrders = async ({
   status,
   companyOrganizer,
   date,
-  skip,
+  skip, // skip is calculated based on page and limit
   pickupFilter,
   orderStatus,
-  activeorderStatus
+  activeorderStatus,
+    sortDirection = -1
 }) => {
 
+
   const organizationsIds = await getOrganizationIdsByOrganizer(companyOrganizer);
+
   // Prepare status filter dynamically
   let statusFilter = {};
+  // if(pickupFilter=="tableService"){
+  //   tableService
+  // }
+if (orderStatus === 'postorders') {
+  // For postorders, include both completed and cancelled orders, with at least one item marked as delivered
+  statusFilter = {
+    status: { $in: ["completed", "cancelled"] },
+    // Ensure that at least one item has been delivered for completed orders
+    $or: [
+      { 
+        status: "completed",
+        items: { $elemMatch: { isdelivered: true } }  // At least one item is delivered
+      },
+      { 
+        status: "cancelled"  // Include all cancelled orders
+      }
+    ]
+  };
+} else if (orderStatus === "completed") {
+  // For completed orders, ensure that all items are delivered
+  statusFilter = {
+    status: "completed",
+    items: { $elemMatch: { isdelivered: true } }  // All items are delivered
+  };
+} else if (orderStatus === "cancelled") {
+  // For cancelled orders, include all cancelled orders
+  statusFilter = {
+    status: "cancelled"
+  };
+}
 
-  if (orderStatus === 'postorders') {
-    statusFilter = {
-      status: { $in: ["completed", "cancelled"] },
-      paymentStatus: "paid",
-      items: { $elemMatch: { isdelivered: true } }
-    };
-  } if (orderStatus === "active" && status != "cancelled") {
+  else if (orderStatus === "active") {
     if (activeorderStatus === "new") {
+      // Initialize the status filter with 'pending' status
       statusFilter = { status: "pending" };
-      statusFilter = { pickupType: normalizePickupType(pickupFilter) };
+
+
+      // Add pickupType to the filter if pickupFilter exists
+      if (pickupFilter) {
+        if (pickupFilter === "preorder") {
+          // If pickupFilter is "preorder", set the orderType to "preorder"
+          statusFilter.orderType = "preorder";
+        } else {
+          // Otherwise, set pickupType and ensure orderType is not "preorder"
+          statusFilter.pickupType = pickupFilter; // Merge pickupType with statusFilter
+          statusFilter.orderType = { $ne: "preorder" };
+        }
+      }
     }
     else if (activeorderStatus === "inProgress") {
       statusFilter = { status: { $in: ["confirmed", "sent"] } };
-    }
-    else if (activeorderStatus === "completed") {
+    } else if (activeorderStatus === "completed") {
       statusFilter = {
-        status: "completed", items: {
-          $elemMatch: { isdelivered: false },
-          paymentStatus: { $in: ["pending", "failed"] }
-        }
+        status: "completed",
+        items: { $elemMatch: { isdelivered: false } }
       };
     }
-
-
   }
   else if (orderStatus === 'preorder') {
     statusFilter = {
@@ -75,105 +110,118 @@ const getOrders = async ({
       orderType: 'preorder'
     };
   }
-  const keywordMatch =
-    keyword && keyword.trim()
-      ? {
+
+  let keywordMatch = {};
+  if (keyword && keyword.trim()) {
+    keywordMatch =
+      keyword && keyword.trim()
+        ? {
           $or: [
             { "user.firstName": { $regex: keyword, $options: "i" } },
             { "user.lastName": { $regex: keyword, $options: "i" } },
-            { "user.email": { $regex: keyword, $options: "i" } }
+            { "user.email": { $regex: keyword, $options: "i" } },
+            { "orderNumber": { $regex: keyword, $options: "i" } }
           ]
         }
-      : null;
+        : null;
+  }
+
   // Create query for event count
   const eventCountQuery = {
     ...statusFilter,
     ...keywordMatch // Add keyword filter for event count as well
   };
-const pipeline = [
-  // 🔹 Match status and keyword filter
-  {
-    $match: {
-      ...statusFilter,
-      ...keywordMatch, // Combine the filters in the match stage
-    }
-  },
 
-  // 🔹 Add userObjectId field to ensure it's in ObjectId format
-  {
-    $addFields: {
-      userObjectId: {
-        $cond: [
-          { $eq: [{ $type: "$user" }, "objectId"] },
-          "$user",
-          { $toObjectId: "$user" }
+  const skipValue = (page - 1) * limit; // Skip formula
+
+  const pipeline = [
+    // 🔹 Match status and keyword filter
+
+
+    // 🔹 Add userObjectId field to ensure it's in ObjectId format
+    {
+      $addFields: {
+        userObjectId: {
+          $cond: [
+            { $eq: [{ $type: "$user" }, "objectId"] },
+            "$user",
+            { $toObjectId: "$user" }
+          ]
+        }
+      }
+    },
+
+    // 🔹 Lookup user information from the "users" collection
+    {
+      $lookup: {
+        from: "users",
+        localField: "userObjectId",
+        foreignField: "_id",
+        as: "userInfo"
+      }
+    },
+
+    // 🔹 Build the user object and add it to the document
+    {
+      $addFields: {
+        user: {
+          _id: "$userObjectId",
+          username: { $arrayElemAt: ["$userInfo.username", 0] },
+          firstName: { $arrayElemAt: ["$userInfo.firstName", 0] },
+          lastName: { $arrayElemAt: ["$userInfo.lastName", 0] },
+          email: { $arrayElemAt: ["$userInfo.email", 0] }
+        }
+      }
+    },
+    {
+      $match: {
+        ...statusFilter,
+        ...keywordMatch, // Combine the filters in the match stage
+
+      }
+    },
+
+    // 🔹 Pagination with skip and limit
+    { $skip: skipValue || 0 }, // Use skipValue to skip records based on page and limit
+    { $limit: limit || 10 },
+    { $sort: { createdAt: sortDirection } },
+
+    // 🔹 Project the necessary fields for the response
+    {
+      $project: {
+        _id: 1,
+        orderNumber: 1,
+        status: 1,
+        items: 1,
+        totalPrice: 1,
+        paymentStatus: 1,
+        paymentMethod: 1,
+        pickupType: 1,
+        createdAt: 1,
+        orderType: 1,
+        user: 1 // Include the user info in the final result
+      }
+    },
+
+    // 🔹 Return additional metadata and pagination details
+    {
+      $facet: {
+        data: [{ $match: {} }], // Pass through the matched data
+        meta: [
+          { $count: "totalRecords" },
+          {
+            $project: {
+              totalPages: {
+                $ceil: { $divide: ["$totalRecords", limit || 10] }
+              },
+              totalRecords: 1
+            }
+          }
         ]
       }
     }
-  },
+  ];
 
-  // 🔹 Lookup user information from the "users" collection
-  {
-    $lookup: {
-      from: "users",
-      localField: "userObjectId",
-      foreignField: "_id",
-      as: "userInfo"
-    }
-  },
-
-  // 🔹 Build the user object and add it to the document
-  {
-    $addFields: {
-      user: {
-        _id: "$userObjectId",
-        username: { $arrayElemAt: ["$userInfo.username", 0] },
-        firstName: { $arrayElemAt: ["$userInfo.firstName", 0] },
-        lastName: { $arrayElemAt: ["$userInfo.lastName", 0] },
-        email: { $arrayElemAt: ["$userInfo.email", 0] }
-      }
-    }
-  },
-
-  // 🔹 Pagination with skip and limit
-  { $skip: skip || 0 },
-  { $limit: limit || 10 },
-
-  // 🔹 Project the necessary fields for the response
-  {
-    $project: {
-      _id: 1,
-      orderNumber: 1,
-      status: 1,
-      items: 1,
-      totalPrice: 1,
-      paymentStatus: 1,
-      paymentMethod: 1,
-      pickupType: 1,
-      createdAt: 1,
-      orderType: 1,
-      user: 1 // Include the user info in the final result
-    }
-  },
-
-  // 🔹 Return additional metadata and pagination details
-  {
-    $facet: {
-      data: [{ $skip: skip || 0 }, { $limit: limit || 10 }],
-      meta: [
-        { $count: "totalRecords" },
-        {
-          $project: {
-            totalPages: {
-              $ceil: { $divide: ["$totalRecords", limit || 10] }
-            },
-            totalRecords: 1
-          }
-        }
-      ]
-    }
-  }
-];
 
 
 
@@ -182,19 +230,19 @@ const pipeline = [
     MenuOrders.find({ organization: { $in: organizationsIds } }),
     getEventsCounts(eventCountQuery)
   ]);
-  console.log("organizationsIds", organizationsIds);
   const result = filteredOrders;
   if (!result?.[0]) {
     return { Orderss: [], meta: generateMeta(page, limit, 0) };
   }
   const constantData = formatOrdersForUI(allOrders);
   const Orderss = result[0].data || [];
-  const totalFiltered = Orderss.length || 0;
-  let meta = generateMeta(page, limit, totalFiltered);
+  let meta = generateMeta(page, limit, count.totalFiltered);
   meta.constantData = constantData;
   meta.count = count;
+
   return { Orderss, meta };
 };
+
 
 
 

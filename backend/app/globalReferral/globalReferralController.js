@@ -91,7 +91,7 @@ const getGlobalReferrals = async (req, res) => {
       range,
       type
     });
-console.log("GlobalReferrals",globalReferral );
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -195,7 +195,7 @@ const getUserReferradrecord = async (req, res) => {
   const { keyword, status = "active", date, range } = req.query;
   try {
     const userId = req.user._id;
-    console.log("userID",userId );
+   
     const timezone = req.user.timezone;
     const { globalReferral, meta } = await globalReferralService.getUserReferradrecord({
         timezone,

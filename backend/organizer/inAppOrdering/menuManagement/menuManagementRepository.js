@@ -196,7 +196,7 @@ const getSummary = async ({
       }
     }
   ];
-  console.log("categoryId",categoryId );
+
 
   if (categoryId) {
     pipeline.push({

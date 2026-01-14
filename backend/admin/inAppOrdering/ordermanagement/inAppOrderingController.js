@@ -21,6 +21,7 @@ const getOrders = async (req, res) => {
     }
 
       companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
+
     const timezone = req.user.timezone;
     const { Orderss, meta } = await Orderservice.getOrders({
       timezone,
