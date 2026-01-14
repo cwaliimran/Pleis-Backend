@@ -137,7 +137,7 @@ const createReservation = async (req, res) => {
 
       // Replace the date with UTC date (adjusted for timezone)
       dateBlock.date = convertToUtcDateOnly(dateBlock.date, timezone);
-      console.log("dateBlock.date",dateBlock.date );
+      console.log("dateBlock.date", dateBlock.date);
     }
   }
 
@@ -738,10 +738,10 @@ const getReservations = async (req, res) => {
 
     const userId = companyOrganizer;
     const timezone = req.user.timezone;
-//  date = convertTimezoneToUtcDateOnly(
-//     date,
-//     timezone
-//   );
+    //  date = convertTimezoneToUtcDateOnly(
+    //     date,
+    //     timezone
+    //   );
     const { reservations, meta } = await reservationService.getavailableReservations({
       timezone,
       page,
@@ -772,6 +772,55 @@ const getReservations = async (req, res) => {
   }
 };
 
+const getCalendarReservations = async (req, res) => {
+  const { date, organizationsId, companyOrganizer } = req.query;
+
+  try {
+
+    if (!validateParams(req, res, {
+      queryParams: ["date"],
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+
+
+    if (
+      (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
+      (!organizationsId || !Array.isArray(JSON.parse(organizationsId)) || JSON.parse(organizationsId).length === 0)
+    ) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "companyOrganizer_or_organizationsIds_is_required",
+      });
+    }
+
+    const timezone = req.user.timezone;
+    const { reservations } = await reservationService.getCalendarReservationsService({
+      timezone,
+      companyOrganizer,
+      organizationsId,
+      date,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "reservations_fetched_successfully",
+      data: reservations,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
 
 module.exports = {
   createReservation,
@@ -782,5 +831,6 @@ module.exports = {
   getUserReservations,
   updateUserReservationStatus,
   updateUserReservation,
-  getavailableReservations
+  getavailableReservations,
+  getCalendarReservations
 };
