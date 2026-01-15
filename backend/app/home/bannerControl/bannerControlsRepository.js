@@ -1,5 +1,5 @@
 const BannerControls = require("@BannerControlsModel");
-const { cache } = require("@redisCache");
+const { cache, invalidate } = require("@redisCache");
 
 async function getBannerControlsWithFilters(
   filter,
@@ -8,7 +8,6 @@ async function getBannerControlsWithFilters(
   sort = { order: 1 }
 ) {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-
   return cache({
     namespace: "banners",          // prefix for all banner caches
     params: { page, limit },       // supports pagination

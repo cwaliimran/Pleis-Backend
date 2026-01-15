@@ -239,17 +239,14 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
 const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationStatus, reservationId }) => {
   const now = getCurrentDateInTimezone({ timezone });
 
-  let organizationsIds = Array.isArray(organizationsId)
-    ? organizationsId
-    : JSON.parse(organizationsId || '[]');
-  organizationsIds = organizationsIds.map(id => new mongoose.Types.ObjectId(id));
+
 
   const pipeline = [
     {
       $match: {
         ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
-        ...(organizationsIds.length > 0 && { organizationId: { $in: organizationsIds } }),
         ...(reservationStatus && { reservationStatus: reservationStatus }),
+        ...(organizationsId && {  organizationId: new mongoose.Types.ObjectId(organizationsId) }),
         ...(reservationId && { reservationId: new mongoose.Types.ObjectId(reservationId) })
       }
     },
@@ -401,9 +398,11 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
     }
   });
 
+
   const result = await UserReservations.aggregate(pipeline);
 
   let reservations = result[0]?.data || [];
+  console.log("reservations-->", JSON.stringify(pipeline))
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   // Additional counts for meta (active/inactive/total by userId as creator)
@@ -762,9 +761,9 @@ const getCalendarReservations = async ({
   // ✅ DATE FILTER (added safely)
   if (date) {
     const dateFilter = new Date(date);
-    console.log("timezone",timezone)
-    console.log("date",date)
-    console.log("dateFilter",dateFilter)
+    console.log("timezone", timezone)
+    console.log("date", date)
+    console.log("dateFilter", dateFilter)
     const { start, end } = getStartAndEndOfDay(dateFilter, timezone);
     console.log("start, end", start, end)
 
@@ -807,9 +806,21 @@ const getCalendarReservations = async ({
 
 
 
+const findUserReservationsByIds = async (ids) => {
+  return UserReservations.find({
+    _id: { $in: ids },
+    status: { $ne: "deleted" },
+  }).lean();
+};
 
+const insertUserReservations = async (docs) => {
+  if (!docs.length) return [];
+  return UserReservations.insertMany(docs);
+};
 
 module.exports = {
+  findUserReservationsByIds,
+  insertUserReservations,
   createReservation,
   getReservationsWithFilters,
   countReservations,

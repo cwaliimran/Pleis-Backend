@@ -10,9 +10,9 @@ const mongoose = require('mongoose'); // Import mongoose
 const Orderservice = require("./inAppOrderingService");
 const getOrders = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, range, companyOrganizer, activeKeyword, orderStatus, activeorderStatus, pickupFilter } = req.query;
+  let { keyword, status, date, range, organization, activeKeyword, orderStatus, activeorderStatus, pickupFilter } = req.query;
   try {
-    if (!companyOrganizer) {
+    if (!organization) {
       return sendResponse({
         res,
         statusCode: 400,
@@ -20,16 +20,15 @@ const getOrders = async (req, res) => {
       });
     }
 
-      companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
 
     const timezone = req.user.timezone;
-    const { Orderss, meta } = await Orderservice.getOrders({
+    const { Orderss, meta } = await Orderservice.getOrdersService({
       timezone,
       page,
       limit,
       keyword,
       status,
-      companyOrganizer,
+      organization,
       date,
       range,
       activeKeyword,
@@ -126,20 +125,20 @@ const updateOrders = async (req, res) => {
 
 
 const updateInAppOrders = async (req, res) => {
-  const { companyOrganizer } = req.params;
+  const { organization } = req.params;
   const {
     isOrderingEnabled
   } = req.body;
   if (
     !validateParams(req, res, {
-      pathParams: ["companyOrganizer"],
-      objectIdFields: ["companyOrganizer"],
+      pathParams: ["organization"],
+      objectIdFields: ["organization"],
     })
   ) return;
 
   try {
     const { matchedCount,
-      modifiedCount } = await Orderservice.updateInAppOrders(companyOrganizer, isOrderingEnabled);
+      modifiedCount } = await Orderservice.updateInAppOrders(organization, isOrderingEnabled);
 
     if (!modifiedCount) {
       return sendResponse({
@@ -175,9 +174,9 @@ const updateInAppOrders = async (req, res) => {
 
 const getInAppOrders = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, range, companyOrganizer } = req.query;
+  let { keyword, status, date, range, organization } = req.query;
   try {
-    if (!companyOrganizer) {
+    if (!organization) {
       return sendResponse({
         res,
         statusCode: 400,
@@ -185,7 +184,7 @@ const getInAppOrders = async (req, res) => {
       });
     }
 
-    creator = new mongoose.Types.ObjectId(companyOrganizer);
+    organization  = new mongoose.Types.ObjectId(organization);
     const timezone = req.user.timezone;
     const data = await Orderservice.getInAppOrders({
       timezone,
@@ -193,7 +192,7 @@ const getInAppOrders = async (req, res) => {
       limit,
       keyword,
       status,
-      creator,
+      organization,
     });
 
     return sendResponse({

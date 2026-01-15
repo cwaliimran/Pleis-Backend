@@ -136,6 +136,7 @@ const createTicketingBookingService = async (data, timezone) => {
       } else {
         snapshotToSave.timingSlots = null;
       }
+      
 
       return {
         order: order._id,

@@ -34,10 +34,7 @@ const loyaltyReferralSettingsSchema = new mongoose.Schema(
       default: 0,
     },  
 
-    expiryDate: {
-      type: Date,
-      required: true,
-    },
+
 
     status: {
       type: String,

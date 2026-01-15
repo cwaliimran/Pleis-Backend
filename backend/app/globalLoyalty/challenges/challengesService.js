@@ -28,8 +28,8 @@ const getGlobalLoyaltyChallenges = async ({
     return { items: [], meta: generateMeta(page, limit, 0) };
   }
 
-  const tierKey = wallet.global.level.type || "blue";
-  const userTierEntry = wallet.global.level.entryPoints ?? 0;
+  const tierKey = wallet.global.level?.type || "blue";
+  const userTierEntry = wallet.global.level?.entryPoints ?? 0;
 
   // 2️⃣ Active global challenges
   let challenges = await challengesRepo.getActiveGlobalChallenges({ now, keyword });

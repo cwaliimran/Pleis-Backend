@@ -7,7 +7,7 @@ const Menus = require("@MenusModel");
 
 
 
-const getOrders = async ({
+const getOrdersService = async ({
   activeorderStatus,
   pickupFilter,
   orderStatus,
@@ -17,7 +17,7 @@ const getOrders = async ({
   limit,
   keyword,
   status,
-  companyOrganizer,
+  organization,
   date,
   range
 }) => {
@@ -43,7 +43,7 @@ const getOrders = async ({
     limit,
     keyword,
     status,
-    companyOrganizer,
+    organization,
     date,
     range,
     today,
@@ -126,10 +126,10 @@ const updateOrders = async (id, data) => {
 
 
 
-const updateInAppOrders = async (companyOrganizer, isOrderingEnabled) => {
+const updateInAppOrders = async (organization, isOrderingEnabled) => {
   try {
     const result = await Menus.updateMany(
-      { creator: companyOrganizer },
+      { organization: organization },
       { $set: { isOrderingEnabled } }
     );
 
@@ -157,7 +157,7 @@ const getInAppOrders = async ({
   limit,
   keyword,
   status,
-  creator,
+  organization,
 }) => {
   page = Number(page) || 1;
   limit = Number(limit);
@@ -178,7 +178,7 @@ const getInAppOrders = async ({
     limit,
     keyword,
     status,
-    creator,
+    organization,
     today,
     skip
   });
@@ -191,7 +191,7 @@ const getInAppOrders = async ({
 
 
 module.exports = {
-  getOrders,
+  getOrdersService,
   updateInAppOrders,
   updateOrders,
   getInAppOrders

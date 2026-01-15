@@ -94,18 +94,18 @@ const createSale = async (req, res) => {
 
 const getMenuItems = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, range, organizer } = req.query;
+  let { keyword, status, date, range, organization } = req.query;
   try {
  
-    if (!organizer) {
+    if (!organization) {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "organizer_id_is_required",
+        translationKey: "organization_id_is_required",
       });
     }
 
-    organizer = new mongoose.Types.ObjectId(organizer);
+    organization = new mongoose.Types.ObjectId(organization);
     const timezone = req.user.timezone;
     const { MenuItems, meta } = await Menuervice.getMenuItems({
       timezone,
@@ -113,7 +113,7 @@ const getMenuItems = async (req, res) => {
       limit,
       keyword,
       status,
-      organizer,
+      organization,
       date,
       range,
     });
@@ -524,17 +524,17 @@ if (
 };
 const getSummary = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, range, organizer,filter,sortBy,categoryId } = req.query;
+  let { keyword, status, date, range, organization,filter,sortBy,categoryId } = req.query;
   try {
-    if (!organizer) {
+    if (!organization) {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "organizer_id_is_required",
+        translationKey: "organization_id_is_required",
       });
     }
 
-    organizer = new mongoose.Types.ObjectId(organizer);
+    organization = new mongoose.Types.ObjectId(organization);
     const timezone = req.user.timezone;
     const { MenuItems, meta } = await Menuervice.getSummary({
       timezone,
@@ -542,7 +542,7 @@ const getSummary = async (req, res) => {
       limit,
       keyword,
       status,
-      organizer,
+      organization,
       date,
       range,
       filter,sortBy,categoryId

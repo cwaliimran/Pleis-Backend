@@ -177,7 +177,7 @@ const getEventDetails = async (req, res) => {
   const eventId = new mongoose.Types.ObjectId(id);
 
   try {
-    let [data, Reservations, isFavoriteEvent = false, giveaway] = await Promise.all([
+    let [data, reservations, isFavoriteEvent = false, giveaway] = await Promise.all([
       eventService.getEventDetails(userLocation, userId, id, timezone),
       eventService.getEventReservations(id, timezone),
       isFavorited(userId, id, 'event'),
@@ -191,7 +191,7 @@ const getEventDetails = async (req, res) => {
       });
     }
     data.event.isFavorite = isFavoriteEvent;
-    data.Reservations = Reservations;
+    data.reservations = reservations;
     data.announcements.giveaways = giveaway.Giveaways;
 
     return sendResponse({
