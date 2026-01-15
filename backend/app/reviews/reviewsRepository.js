@@ -1,8 +1,22 @@
-const Reviews  = require('@ReviewsModel'); // Adjust path to your PromoCode model
+const Reviews = require('@ReviewsModel'); // Adjust path to your PromoCode model
 const mongoose = require('mongoose');
 const createReviews = async (data) => {
   try {
     const reviews = await Reviews.create(data);
+    await sendUserNotifications({
+      recipientIds: [reviews.user.toString()],
+      title: "Review Created",
+      body: `Your review ${reviews._id} has been sent successfully.`,
+      data: {
+        type: NotificationTypes.EVENT_UPDATE,
+        objectType: "group",
+        organization_id: reviews.organization.toString(),
+      },
+      image: "noimage",
+      sender: reviews.user,
+      objectId: reviews.event,
+    });
+
     return reviews;
 
   } catch (err) {
@@ -11,6 +25,8 @@ const createReviews = async (data) => {
 };
 
 const formatLoyaltyListing = require('./formater/formateImage');
+const { sendUserNotifications } = require('../../controllers/communicationController');
+const { NotificationTypes } = require('@NotificationsModel');
 
 
 const getReviews = async ({ organizationId, timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
@@ -63,11 +79,11 @@ const getReviews = async ({ organizationId, timezone, page, limit, keyword, stat
         organization: 1,
         event: 1,
         createdAt: 1,
-        user:{
-        firstName: "$userDetails.firstName",
-        lastName: "$userDetails.lastName", 
-        location: "$userDetails.location",
-        profileIcon:"$userDetails.profileIcon",  
+        user: {
+          firstName: "$userDetails.firstName",
+          lastName: "$userDetails.lastName",
+          location: "$userDetails.location",
+          profileIcon: "$userDetails.profileIcon",
         }
       },
     },

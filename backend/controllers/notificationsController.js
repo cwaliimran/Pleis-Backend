@@ -7,6 +7,7 @@ const moment = require("moment-timezone");
 const { NotificationExp } = require("../models/Notifications");
 const { fetchEventDetails } = require("./notificationHelper/EventDetails");
 const formatImage = require("./notificationHelper/formatImage");
+const { getFullImageUrl } = require("@utils/imageHelper");
 
 
 
@@ -39,7 +40,8 @@ const getNotifications = async (req, res) => {
     const [notifications, totalNotifications] = await Promise.all([
       NotificationExp.find(query)
         .populate("subjectId", "_id firstName lastName username profileIcon")
-        .populate("receiverId", "_id firstName lastName username profileIcon") // Populate full subjectId object
+        .populate("receiverId", "_id firstName lastName username profileIcon isRead ") // Populate full subjectId object
+        
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -49,7 +51,6 @@ const getNotifications = async (req, res) => {
 
     // Calculate pagination meta
     const meta = generateMeta(page, limit, totalNotifications);
-
     // Use Promise.all to wait for all async calls inside map
     const formattedNotifications = await Promise.all(
       notifications.map(async (notification) => {
@@ -66,6 +67,7 @@ const getNotifications = async (req, res) => {
           objectType,
           subjectId,
           receiverId,
+          image
         } = notification;
         const userTimezone = req.user.timezone || "UTC";
         const timeSince = moment(createdAt).tz(userTimezone).fromNow();
@@ -90,6 +92,7 @@ const getNotifications = async (req, res) => {
           data,
           isRead,
           timeSince,
+          image: getFullImageUrl(image),
           ...eventDetails,  // Add event details if available
         };
       })

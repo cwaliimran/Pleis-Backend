@@ -98,7 +98,7 @@ const createGiveaway = async (data) => {
   try {
     // Get the giveaway details first
     const giveawayDetails = await getGiveawayDetails(data.giveaway);
-    
+
 
     // Check if the status is not 'active' or giveawayStatus is not 'live'
     if (giveawayDetails.status !== 'active' || giveawayDetails.giveawayStatus !== 'live') {
@@ -114,6 +114,19 @@ const createGiveaway = async (data) => {
     data.organization = giveawayDetails.organization;
     const update = new GiveawayParticipant(data);
     await update.save();
+    await sendUserNotifications({
+      recipientIds: [update.user.toString()],
+      title: "Successful Participate in giveaway",
+      body:`You have successfully participated in the giveaway.`,
+      data: {
+        type: NotificationTypes.GIVEAWAY_UPDATE,
+        objectType: "group",
+        organization_id: update.organization.toString(),
+      },
+      image: "noimage",
+      sender: update.user,
+      objectId: update._id,
+    });
     return update;
   } catch (err) {
     throw new Error("Error saving update: " + err.message);

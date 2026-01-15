@@ -1,6 +1,7 @@
 const { NotificationTypes } = require('@NotificationsModel');
 const { PromoCode } = require('@PromoCodeModel'); // Adjust path to your PromoCode model
 const { sendUserNotifications } = require('../../controllers/communicationController');
+const { getFullImageUrl } = require('@utils/imageHelper');
 
 const usePromoCode = async (data) => {
   try {
@@ -21,6 +22,18 @@ const usePromoCode = async (data) => {
     // Check if the promo code has expired
     const now = new Date();
     if (now > foundPromoCode.expiryDate) {
+      await sendUserNotifications({
+        recipientIds: [userId.toString()],
+        title: "Promo Code Expired",
+        body: `The promo code: ${promoCode} has expired.`,
+        data: {
+          type: NotificationTypes.PROMO_UPDATE,
+          objectType: "group",
+        },
+        image: (foundPromoCode.image) || "noimage",
+        sender: userId,
+        objectId: foundPromoCode._id,
+      });
       return { error: "Promo code has expired." };
     }
 
@@ -30,9 +43,13 @@ const usePromoCode = async (data) => {
     if (userUsage && userUsage.count >= foundPromoCode.maxCountPerUser) {
       await sendUserNotifications({
         recipientIds: [userId.toString()],
-        title: "You Exceeded Promo Code Usage!",
-        body: `You have exceeded the maximum usage for this promo code ${promoCode}.`,
-        data: { type: NotificationTypes.PROMO_UPDATE, objectType: "group" },
+        title: "Promo Code Usage Exceeded",
+        body: `You have exceeded the maximum usage for the promo code: ${promoCode}.`,
+        data: {
+          type: NotificationTypes.PROMO_UPDATE,
+          objectType: "group",
+        },
+        image: (foundPromoCode.image) || "noimage",
         sender: userId,
         objectId: foundPromoCode._id,
       });
@@ -58,10 +75,13 @@ const usePromoCode = async (data) => {
     // Return the successful response with the discount details
     await sendUserNotifications({
       recipientIds: [userId.toString()],
-      title: "You have used a Promo Code!",
-      body: `You have successfully applied the promo code ${promoCode} and received a discount of ${foundPromoCode.discountValue}.`,
-      
-      data: { type: NotificationTypes.PROMO_UPDATE, objectType: "group",promocode_id:foundPromoCode._id.toString() },
+      title: "Promo Code Applied Successfully",
+      body: `You have successfully applied the promo code: ${promoCode}.`,
+      data: {
+        type: NotificationTypes.PROMO_UPDATE,
+        objectType: "group",
+      },
+      image: (foundPromoCode.image) || "noimage",
       sender: userId,
       objectId: foundPromoCode._id,
     });

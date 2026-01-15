@@ -32,7 +32,7 @@ const getOrders = async ({
   limit,
   keyword,
   status,
-  companyOrganizer,
+  organization,
   date,
   skip, // skip is calculated based on page and limit
   pickupFilter,
@@ -42,7 +42,13 @@ const getOrders = async ({
 }) => {
 
 
-  const organizationsIds = await getOrganizationIdsByOrganizer(companyOrganizer);
+    let organizationsIds = [];
+  if (organization) {
+    // Handle comma or '%' separated values and convert to ObjectIds
+    organizationsIds = organization
+      .split(/[,%]+/)  // Split by comma or '%'
+      .map(id => new mongoose.Types.ObjectId(id.trim()));  // Convert to ObjectId
+  }
 
   // Prepare status filter dynamically
   let statusFilter = {};
@@ -129,7 +135,8 @@ if (orderStatus === 'postorders') {
   // Create query for event count
   const eventCountQuery = {
     ...statusFilter,
-    ...keywordMatch // Add keyword filter for event count as well
+    ...keywordMatch,
+    organization: { $in: organizationsIds }  // Add organization match
   };
 
   const skipValue = (page - 1) * limit; // Skip formula
@@ -148,6 +155,11 @@ if (orderStatus === 'postorders') {
             { $toObjectId: "$user" }
           ]
         }
+      }
+    },
+        {
+      $match: {
+        organization: { $in: organizationsIds }  // Match against the parsed organizations
       }
     },
 
@@ -199,7 +211,8 @@ if (orderStatus === 'postorders') {
         pickupType: 1,
         createdAt: 1,
         orderType: 1,
-        user: 1 // Include the user info in the final result
+        user: 1, // Include the user info in the final result
+        organization: 1
       }
     },
 
@@ -276,11 +289,11 @@ const getCreatorOrganizationId = async (organizationId) => {
   }
 };
 
-const getInAppOrders = async ({ creator }) => {
-  const menus = await Menus.find({ creator, status: "active" })
+const getInAppOrders = async ({ organization }) => {
+  const menus = await Menus.find({ organization, status: "active" })
     .select("isOrderingEnabled")
     .lean();
-
+console.log("menus",menus );
   return menus[0]
 };
 module.exports = {

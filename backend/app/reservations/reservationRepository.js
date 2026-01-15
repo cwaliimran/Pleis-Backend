@@ -19,6 +19,8 @@ const { placePreOrderMenuItemsWithReservation } = require("../menuItemsAndOrderi
 const { resolveChallengeByTaskTypeService } = require("../loyalty/challengesOrders/challengeOrdersService");
 const { calculatePointsRepo } = require("../loyalty/calculatePointsEarning/pointsEarningsRepository");
 const { createTransaction } = require("../userWalletService/transactions/services/unifiedTransactionsService");
+const { sendUserNotifications } = require("../../controllers/communicationController");
+const { NotificationTypes } = require("@NotificationsModel");
 const createReservation = async (data) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -118,12 +120,26 @@ const createReservation = async (data) => {
             items: data.preOrderMenuItems.items
           });
         } catch (err) {
-          
+
         }
 
       }
 
       await userReservation.save({ session });
+      await sendUserNotifications({
+        recipientIds: [userId.toString()],
+        title: `Reservation Placed Successfully for ${userReservation.timingSlots.dateTimeSlots[0].date.toDateString()}`,
+        body: `Your reservation is in  ${userReservation.reservationStatus} status.`,
+        data: {
+          type: NotificationTypes.RESERVATION_UPDATE,
+          objectType: "group",
+          organization_id: userReservation.organizationId.toString(),
+        },
+        image: (userReservation.preOrderMenuItemsOrder.items[0].menuItemSnapShot.image) || null,
+        sender: userId,
+        objectId: userReservation.reservationId,
+      });
+
 
     }
 
@@ -876,7 +892,7 @@ const getOrganizationReservations = async ({ organizationId, timezone }) => {
 
     return results;
   } catch (error) {
-    
+
     return [];
   }
 };
