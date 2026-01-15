@@ -166,7 +166,7 @@ const applyFields = (doc, data, options = { futureMode: false }) => {
 // MAIN SERVICE
 // ======================================================
 const updateTicketingService = async (ticketId, payload, mode = "single") => {
-  console.log("🎟 updateTicketingService:start", { ticketId, mode });
+  console.log("🎟 updateTicketingService:start", { ticketId, mode,payload });
 
   const ticket = await Ticketings.findById(ticketId);
   if (!ticket) return null;

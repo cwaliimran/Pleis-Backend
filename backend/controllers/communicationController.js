@@ -132,6 +132,7 @@ const sendUserNotifications = async ({
   sender = null, // Optional: sender ID
   objectId = null, // Optional: object ID
   saveNotification = true, // send false if you don't want to save notification in db
+  image = null, // optional image url
 }) => {
 
   setImmediate(async () => {
@@ -186,6 +187,7 @@ const sendUserNotifications = async ({
               ...dataWithStringValues, // Additional data payload
               subjectId: sender ? sender.toString() : null, // Convert subjectId to plain text
               objectId: objectId.toString(), // Ensure objectId is also plain text
+              image
             },
           });
 
@@ -208,6 +210,7 @@ const sendUserNotifications = async ({
           objectId: objectId,
           objectType: data.objectType,
           receiverId: userId,
+          image,
           title,
           body,
         }));
@@ -243,6 +246,7 @@ const sendNotification = async (recipients, payload) => {
   payload.data = {
     ...payload.data,
     notificationId: notificationId,
+    image: payload.image || "",
   };
 
   // Notification payload for Android

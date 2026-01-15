@@ -142,22 +142,62 @@ const getVenueTypeTitles = async (venueId) => {
 
 
 const getEventReservations = async (eventId) => {
+  const now = new Date(); // UTC now
+
   const pipeline = [
     {
       $match: {
         optionalEventId: eventId,
-        status: { $ne: "deleted" }   // ignore deleted reservations
+        status: { $ne: "deleted" },
+        "timingSlots.enabled": true
       }
     },
+
+    // Keep only future time slots
     {
       $project: {
-        timingSlots: 1,
+        timingSlots: {
+          enabled: 1,
+          dateTimeSlots: {
+            $map: {
+              input: "$timingSlots.dateTimeSlots",
+              as: "day",
+              in: {
+                date: "$$day.date",
+                timeSlots: {
+                  $filter: {
+                    input: "$$day.timeSlots",
+                    as: "slot",
+                    cond: {
+                      $gt: ["$$slot.endTime", now]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    // Remove days that have no remaining future slots
+    {
+      $project: {
+        timingSlots: {
+          enabled: 1,
+          dateTimeSlots: {
+            $filter: {
+              input: "$timingSlots.dateTimeSlots",
+              as: "day",
+              cond: { $gt: [{ $size: "$$day.timeSlots" }, 0] }
+            }
+          }
+        }
       }
     }
   ];
 
-  const reservations = await Reservations.aggregate(pipeline);
-  return reservations;
+  return Reservations.aggregate(pipeline);
 };
 
 

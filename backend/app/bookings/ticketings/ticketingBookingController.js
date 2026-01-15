@@ -5,6 +5,8 @@ const { createTicketingBookingService,
   updateTicketingBookingService,
   transferTicketingBookingService,
   deleteTicketingBookingService, } = require("./ticketingBookingService");
+const { sendUserNotifications } = require("../../../controllers/communicationController");
+const { NotificationTypes } = require("@NotificationsModel");
 
 const createTicketingBooking = async (req, res) => {
   try {
@@ -39,6 +41,19 @@ const createTicketingBooking = async (req, res) => {
     // STEP 4: CREATE TICKETINGBOOKING
     // ==============================
     const ticketingBooking = await createTicketingBookingService(ticketingBookingPayload, timezone);
+    await sendUserNotifications({
+      recipientIds: [ticketingBooking.user.toString()],
+      title: "Ticketing Booking Created",
+      body: `Your ticketing booking ${ticketingBooking._id} has been created successfully.`,
+      data: {
+        type: NotificationTypes.TICKET_UPDATE,
+        objectType: "group",
+        organization_id: ticketingBooking.organization.toString(),
+      },
+      image: "noimage",
+      sender: userId,
+      objectId: ticketingBooking.organization,
+    });
     return sendResponse({
       res,
       statusCode: 201,

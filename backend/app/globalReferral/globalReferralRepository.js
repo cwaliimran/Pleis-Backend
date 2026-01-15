@@ -1,6 +1,6 @@
 // repositories/ReservationRepository.js
 const GlobalReferral = require("@GlobalReferralModel");
-const {ReferredRecord} = require("@ReferredRecordModel");
+const { ReferredRecord } = require("@ReferredRecordModel");
 const mongoose = require("mongoose");
 const { User } = require("../../models/UserModel");
 const {
@@ -10,9 +10,11 @@ const {
 } = require("../../helperUtils/responseUtil");
 const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const { formatCategories } = require("./formatters/categoryFormatter");
+const { NotificationTypes } = require("@NotificationsModel");
+const { sendUserNotifications } = require("../../controllers/communicationController");
 const createGlobalReferral = async (data) => {
   try {
-  
+
     const globalReferral = new GlobalReferral(data);
     await globalReferral.save();
     return globalReferral;
@@ -23,7 +25,7 @@ const createGlobalReferral = async (data) => {
 const saveReferralData = async (referralId, type) => {
   try {
     const user = await User.findById(referralId).lean();
-  
+
 
     if (!user) {
       throw new Error("User not found for referralId");
@@ -35,7 +37,7 @@ const saveReferralData = async (referralId, type) => {
     return user.username;
 
   } catch (err) {
-    throw err; 
+    throw err;
   }
 };
 
@@ -61,7 +63,7 @@ const saveUserReferralData = async (username, ip) => {
 
         // Step 2: Set referrerUserId with the referrer ObjectId
         existing.referrerUserId = referrer._id;  // Set referrer userId (ObjectId)
-        
+
         await existing.save();
         return { userId: existing.userId, referrerUserName: existing.referrerUserName };
       }
@@ -90,42 +92,42 @@ const saveUserReferralData = async (username, ip) => {
   }
 };
 
-const getGlobalReferrals = async ({ timezone,page, limit, keyword, status, userId, date, range,today,skip, type }) => {
+const getGlobalReferrals = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip, type }) => {
   const pipeline = [
-  {
-$match: {
-  ...(type && { type: type }), // Match by type if provided (e.g., "global", "company", etc.)
-}
+    {
+      $match: {
+        ...(type && { type: type }), // Match by type if provided (e.g., "global", "company", etc.)
+      }
+    }
+  ];
+  if (range == "monthly") {
+    const { start, end } = getStartAndEndOfMonth(today, timezone);
+
+    pipeline.push({
+      $match: {
+        createdAt: { $gte: start, $lt: end }
+      }
+    });
   }
-];
-if (range == "monthly") {
-  const { start, end } = getStartAndEndOfMonth(today, timezone);
+  if (range == "weekly") {
+    const { start, end } = getStartAndEndOfWeek(today, timezone);
 
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
-if (range == "weekly") {
-  const { start, end } = getStartAndEndOfWeek(today, timezone);
-
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
-if (range == "today") {
+    pipeline.push({
+      $match: {
+        createdAt: { $gte: start, $lt: end }
+      }
+    });
+  }
+  if (range == "today") {
     const start = new Date(today);
     const end = new Date(new Date(today).setDate(start.getDate() + 1));
 
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
+    pipeline.push({
+      $match: {
+        createdAt: { $gte: start, $lt: end }
+      }
+    });
+  }
   // Apply filters
   if (status) {
     pipeline.push({ $match: { status } });
@@ -143,18 +145,18 @@ if (range == "today") {
     });
   }
 
-if (keyword) {
-  const keywordMatch = buildKeywordQueryFromModels(
-    [
-      { schema: GlobalReferral.schema }
-    ],
-    keyword
-  );
+  if (keyword) {
+    const keywordMatch = buildKeywordQueryFromModels(
+      [
+        { schema: GlobalReferral.schema }
+      ],
+      keyword
+    );
 
-  if (Object.keys(keywordMatch).length) {
-    pipeline.push({ $match: keywordMatch });
+    if (Object.keys(keywordMatch).length) {
+      pipeline.push({ $match: keywordMatch });
+    }
   }
-}
 
   pipeline.push({ $sort: { createdAt: -1 } });
 
@@ -188,7 +190,7 @@ if (keyword) {
 
 
 
-  return {globalReferral , meta}
+  return { globalReferral, meta }
 }
 
 const createUserReferradrecord = async (data) => {
@@ -268,6 +270,31 @@ const createUserReferradrecord = async (data) => {
       userId,
       expiryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
     });
+    await sendUserNotifications({
+      recipientIds: [userId.toString()],
+      title: "Referral Successful",
+      body: `You have successfully referred by ${username}.`,
+      data: {
+        type: NotificationTypes.REFERRAL_UPDATE,
+        objectType: "group",
+      },
+      image: "noimage",
+      sender: userId,
+      objectId: userId,
+    });
+    await sendUserNotifications({
+      recipientIds: [referrer._id.toString()],
+      title: "Some one Joined PLEIS through your Referral",
+      body: `Congratulations! someone has joined PLEIS using your referral.`,
+      data: {
+        type: NotificationTypes.REFERRAL_UPDATE,
+        objectType: "group",
+      },
+      image: "noimage",
+      sender: userId,
+      objectId: userId,
+    });
+
 
     return {
       userId: newRecord.userId,
@@ -392,16 +419,16 @@ const getUserReferradrecord = async ({
 
   /* ================= CLEANUP ================= */
 
-pipeline.push({
-  $project: {
-    _id: "$user._id",
-    firstName: "$user.firstName",
-    lastName: "$user.lastName",
-    userName: "$user.userName",
-    email: "$user.email",
-    profileIcon: "$user.profileIcon"
-  }
-});
+  pipeline.push({
+    $project: {
+      _id: "$user._id",
+      firstName: "$user.firstName",
+      lastName: "$user.lastName",
+      userName: "$user.userName",
+      email: "$user.email",
+      profileIcon: "$user.profileIcon"
+    }
+  });
 
 
   pipeline.push({ $sort: { createdAt: -1 } });
@@ -447,7 +474,7 @@ pipeline.push({
 
   const meta = generateMeta(page, limit, totalFiltered);
   meta.globalReferralCount = { total, active, inactive };
-const formattedGlobalReferral = formatCategories(globalReferral);
+  const formattedGlobalReferral = formatCategories(globalReferral);
   return { globalReferral: formattedGlobalReferral, meta };
 };
 

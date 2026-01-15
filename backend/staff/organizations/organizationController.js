@@ -13,7 +13,7 @@ const organizationService = require("./organizationService");
 const getOrganizationsAsStaff = async (req, res) => {
   try {
     const userId = req.user._id;
-    const timezone = req.user.timezone;   // ✅ FIX #1
+    const timezone = req.user.timezone;  
 
     // Fetch organizations array
     let organizations = await organizationService.getOrganizationsAsStaff(userId);

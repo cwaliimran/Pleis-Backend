@@ -40,7 +40,6 @@ const getEvents = async (req, res) => {
       const { start, end } = getStartAndEndOfWeek(now, timezone);
       startDate = start;
       endDate = end;
-
     } else if (filter === "past") {
       endDate = nowInTz;
 
@@ -58,6 +57,7 @@ const getEvents = async (req, res) => {
       organization,
       timezone,
       filter,
+      nowInTz
     });
 
 
