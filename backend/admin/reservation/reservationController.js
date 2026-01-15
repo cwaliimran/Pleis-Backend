@@ -480,14 +480,11 @@ const getUserReservations = async (req, res) => {
   const { keyword, status = "active", date, range, organizationsId, companyOrganizer, reservationStatus = "pending", reservationId } = req.query;
 
   try {
-    if (
-      (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
-      (!organizationsId || !Array.isArray(JSON.parse(organizationsId)) || JSON.parse(organizationsId).length === 0)
-    ) {
+    if(!organizationsId){
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "companyOrganizer_or_organizationsIds_is_required",
+        translationKey: "organizationsId_is_required",
       });
     }
     if (!reservationId || reservationId === "undefined" || reservationId === "null") {

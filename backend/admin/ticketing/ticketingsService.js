@@ -255,7 +255,7 @@ const getOrganizationTicketings = async ({ timezone, page, limit, keyword, statu
 
   const organizationEvents = await getEventIdsByOrganization(organization);
   const eventIds = organizationEvents.map(event => event._id);
-
+console.log("eventIds",eventIds );
   const andConditions = [];
   andConditions.push({ event: { $in: eventIds } });
 
@@ -285,7 +285,7 @@ const getOrganizationTicketings = async ({ timezone, page, limit, keyword, statu
     ticketingRepo.getTicketingsWithFilters(query, page, limit),
     ticketingRepo.getCounts(query),
   ]);
-
+console.log("ticketings",ticketings );
   const formattedTicketings = ticketings.map((item) => formatTicketing(timezone, item));
   const { totalFiltered, total, active, inactive } = counts;
 
@@ -293,7 +293,7 @@ const getOrganizationTicketings = async ({ timezone, page, limit, keyword, statu
     ...generateMeta(page, limit, totalFiltered),
     ticketingsCount: { total, active, inactive },
   };
-
+console.log("formattedTicketings",formattedTicketings );
   return { ticketings: formattedTicketings, meta };
 };
 

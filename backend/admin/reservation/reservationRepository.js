@@ -239,17 +239,14 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
 const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationStatus, reservationId }) => {
   const now = getCurrentDateInTimezone({ timezone });
 
-  let organizationsIds = Array.isArray(organizationsId)
-    ? organizationsId
-    : JSON.parse(organizationsId || '[]');
-  organizationsIds = organizationsIds.map(id => new mongoose.Types.ObjectId(id));
+
 
   const pipeline = [
     {
       $match: {
         ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
-        ...(organizationsIds.length > 0 && { organizationId: { $in: organizationsIds } }),
         ...(reservationStatus && { reservationStatus: reservationStatus }),
+        ...(organizationsId && {  organizationId: new mongoose.Types.ObjectId(organizationsId) }),
         ...(reservationId && { reservationId: new mongoose.Types.ObjectId(reservationId) })
       }
     },
@@ -400,6 +397,7 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
       totalFiltered: [{ $count: "count" }]
     }
   });
+console.log("pipeline", JSON.stringify(pipeline, null, 2));
 
   const result = await UserReservations.aggregate(pipeline);
 
