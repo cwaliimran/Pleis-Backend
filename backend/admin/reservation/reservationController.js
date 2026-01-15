@@ -137,7 +137,7 @@ const createReservation = async (req, res) => {
 
       // Replace the date with UTC date (adjusted for timezone)
       dateBlock.date = convertToUtcDateOnly(dateBlock.date, timezone);
-  
+
     }
   }
 
@@ -661,7 +661,7 @@ const updateUserReservation = async (req, res) => {
           timezone,
           "YYYY-MM-DD hh:mm A"
         );
-      
+
 
       }
 
@@ -818,6 +818,49 @@ const getCalendarReservations = async (req, res) => {
   }
 };
 
+const copyUserReservationsController = async (req, res) => {
+  try {
+    const { reservations, dates } = req.body;
+    const timezone = req.user.timezone;
+
+    if (
+      !Array.isArray(reservations) ||
+      reservations.length === 0 ||
+      !Array.isArray(dates) ||
+      dates.length === 0
+    ) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "reservations_and_dates_required",
+      });
+    }
+
+    const copiedReservations =
+      await reservationService.copyUserReservations({
+        reservations,
+        dates,
+        timezone,
+        copiedBy: req.user._id,
+      });
+
+    return sendResponse({
+      res,
+      statusCode: 201,
+      translationKey: "reservations_copied_successfully",
+      data: copiedReservations,
+    });
+  } catch (error) {
+    console.error("COPY_RESERVATION_ERROR:", error);
+
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server_error",
+      error,
+    });
+  }
+};
 
 module.exports = {
   createReservation,
@@ -829,5 +872,7 @@ module.exports = {
   updateUserReservationStatus,
   updateUserReservation,
   getavailableReservations,
-  getCalendarReservations
+  getCalendarReservations,
+  copyUserReservationsController,
+
 };

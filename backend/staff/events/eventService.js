@@ -6,7 +6,7 @@ const { formatEventResponse } = require("./formatter/eventFormatter");
 const { formatEventAttendeesResponse } = require("./formatter/eventAttendeesFormatter");
 const { formatTicketing } = require("../../app/ticketing/fomatter/formatTicketing");
 
-const getEvents = async ({ page, limit, keyword, startDate, endDate, organization, timezone, filter }) => {
+const getEvents = async ({ page, limit, keyword, startDate, endDate, organization, timezone, filter, nowInTz }) => {
   const query = {};
   // ALWAYS exclude templates events
   //templates event are only for internal use to generate occurrences
@@ -32,6 +32,15 @@ const getEvents = async ({ page, limit, keyword, startDate, endDate, organizatio
   if (endDate) {
     query["schedule.endDateTime"] = { $lte: new Date(endDate) };
   }
+
+  else if (filter === "active") {
+    query.$and = [
+      ...(query.$and || []),
+      { "schedule.startDateTime": { $lte: nowInTz } },
+      { "schedule.endDateTime": { $gte: nowInTz } },
+    ];
+  }
+
 
   if (keyword) {
     query.$or = [

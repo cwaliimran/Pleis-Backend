@@ -15,6 +15,7 @@ const {
   getStartAndEndOfMonth,
   getStartAndEndOfWeek,
 } = require("@utils/responseUtil");
+const { cloneTimingSlots } = require("./utils/cloneTimingSlots");
 
 const createReservation = async (data) => {
   let Reservation = await ReservationRepo.createReservation(data);
@@ -220,6 +221,57 @@ const getCalendarReservationsService = async ({ timezone, companyOrganizer, orga
   };
 };
 
+
+const copyUserReservations = async ({
+  reservations,
+  dates,
+  timezone,
+  copiedBy,
+}) => {
+  const reservationIds = reservations.map(
+    (id) => new mongoose.Types.ObjectId(id)
+  );
+
+  // 1️⃣ Fetch source reservations
+  const sourceReservations =
+    await ReservationRepo.findUserReservationsByIds(reservationIds);
+
+  if (!sourceReservations.length) {
+    throw new Error("No reservations found to copy");
+  }
+
+  const docsToInsert = [];
+
+  // 2️⃣ Clone per date
+  for (const source of sourceReservations) {
+    for (const targetDate of dates) {
+      const cloned = { ...source };
+
+      // ❌ Remove Mongo-managed fields
+      delete cloned._id;
+      delete cloned.createdAt;
+      delete cloned.updatedAt;
+      delete cloned.__v;
+
+      // ✅ Optional audit metadata
+      cloned.clonedFromReservationId = source._id;
+      cloned.clonedBy = copiedBy;
+
+      // ✅ Update timing slots (date + times)
+      cloned.timingSlots = cloneTimingSlots({
+        timingSlots: source.timingSlots,
+        targetDate,
+        timezone,
+      });
+
+      docsToInsert.push(cloned);
+    }
+  }
+
+  // 3️⃣ Bulk insert
+  return ReservationRepo.insertUserReservations(docsToInsert);
+};
+
 module.exports = {
   createReservation,
   getReservations,
@@ -230,5 +282,6 @@ module.exports = {
   updateUserReservationStatus,
   updateUserReservation,
   getavailableReservations,
-  getCalendarReservationsService
+  getCalendarReservationsService,
+  copyUserReservations,
 };

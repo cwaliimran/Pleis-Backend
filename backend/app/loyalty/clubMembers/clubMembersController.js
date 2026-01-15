@@ -17,7 +17,6 @@ const joinClub = async (req, res) => {
   try {
     const data = await clubService.joinClub(userId, companyOrganizer,referrerId);
 
-
     return sendResponse({
       res,
       statusCode: 200,

@@ -135,7 +135,7 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
-        loyaltyReferralsCount: {
+    loyaltyReferralsCount: {
       type: Number,
       default: 0
     },
@@ -370,7 +370,10 @@ const userSchema = new mongoose.Schema(
     },
     location: {
       type: LocationSchema,
-      default: {},
+      default: {
+        type: "Point",
+        coordinates: [0, 0], // VALID but meaningless
+      },
     },
     globalReferralLimit: {
       type: Number,

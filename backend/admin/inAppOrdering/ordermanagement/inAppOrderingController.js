@@ -22,7 +22,7 @@ const getOrders = async (req, res) => {
 
 
     const timezone = req.user.timezone;
-    const { Orderss, meta } = await Orderservice.getOrders({
+    const { Orderss, meta } = await Orderservice.getOrdersService({
       timezone,
       page,
       limit,

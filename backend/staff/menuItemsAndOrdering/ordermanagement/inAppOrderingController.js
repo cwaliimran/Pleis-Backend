@@ -9,29 +9,29 @@ const {
 const mongoose = require('mongoose'); // Import mongoose
 
 const Orderservice = require("./inAppOrderingService");
+const { getOrdersService } = require("../../../admin/inAppOrdering/ordermanagement/inAppOrderingService");
 
 
 const getOrders = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status , date, range ,organizationId,activeKeyword,orderStatus,activeorderStatus,pickupFilter} = req.query;
+  let { keyword, status, date, range, organization, activeKeyword, orderStatus, activeorderStatus, pickupFilter } = req.query;
   try {
-if(!organizationId){
-  return sendResponse({
-    res,
-    statusCode: 400,
-    translationKey: "organization_id_is_required",
-  });
-}
+    if (!organization) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "organization_is_required",
+      });
+    }
 
-    organizationId = new  mongoose.Types.ObjectId(organizationId); 
     const timezone = req.user.timezone;
-    const { Orderss, meta } = await Orderservice.getOrders({
+    const { Orderss, meta } = await getOrdersService({
       timezone,
       page,
       limit,
       keyword,
       status,
-      organizationId,
+      organization,
       date,
       range,
       activeKeyword,
@@ -59,26 +59,26 @@ if(!organizationId){
 };
 const updateOrders = async (req, res) => {
   const { id } = req.params;
-const {
-  status,
-  paymentStatus,
-  deliveredMenuItem,
-  deliveredall
-} = req.body;
+  const {
+    status,
+    paymentStatus,
+    deliveredMenuItem,
+    deliveredall
+  } = req.body;
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
       objectIdFields: ["id"],
     })
-  )    return;
+  ) return;
 
 
-let data = {
-  status,
-  paymentStatus,
-  deliveredMenuItem,
-  deliveredall
-};
+  let data = {
+    status,
+    paymentStatus,
+    deliveredMenuItem,
+    deliveredall
+  };
 
 
 

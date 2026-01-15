@@ -16,6 +16,8 @@ router.use("/points", require("../staff/transactions/transactionsRoutes"));
 router.use("/scan-qr", require("../staff/scanQrCode/scanQrRoutes"));
 //events
 router.use("/events", require("../staff/events/eventRoutes"));
+//reservations
+router.use("/reservations", require("../staff/reservations/reservationRoutes"));
 // router.use("/orders", require("../staff/menuItemsAndOrdering/orders/orderRoutes"));
 
 
