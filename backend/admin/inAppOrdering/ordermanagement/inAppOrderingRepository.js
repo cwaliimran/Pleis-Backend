@@ -293,7 +293,7 @@ const getInAppOrders = async ({ organization }) => {
   const menus = await Menus.find({ organization, status: "active" })
     .select("isOrderingEnabled")
     .lean();
-console.log("menus",menus );
+
   return menus[0]
 };
 module.exports = {
