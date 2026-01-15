@@ -13,6 +13,10 @@ const NotificationTypes = {
   CHALLENGE_UPDATE: "challengeUpdate",
   ORDER_UPDATE: "orderUpdate",
   PROMO_UPDATE: "promoUpdate",
+  RESERVATION_UPDATE: "reservationUpdate",
+  REFERRAL_UPDATE: "referralUpdate",
+  TICKET_UPDATE: "ticketUpdate",
+  FRIEND_REQUEST: "friendRequest",
 };
 
 // Define the NotificationSchema
@@ -56,6 +60,10 @@ const NotificationSchema = new mongoose.Schema({
   isDeleted: {
     type: Boolean,
     default: false,
+  },
+  image: {
+    type: String,
+    default: null,
   },
   createdAt: {
     type: Date,

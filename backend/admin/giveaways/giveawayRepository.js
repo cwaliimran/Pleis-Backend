@@ -370,13 +370,11 @@ const getevents = async ({
   date,
   skip
 }) => {
-
-   let userId = await getCreatorOrganizationId(organizationId)
   const pipeline = [
     // Step 1: Match events where creator matches the provided userId
     {
       $match: {
-        ...(userId && { creator: userId }) // Filter events where creator == userId
+        ...(organizationId && {  "basicInfo.organization": organizationId }) // Filter events where creator == userId
       }
     }
   ];
@@ -443,9 +441,9 @@ const getevents = async ({
 
   // Step 9: Meta counts (active/inactive/total events for the given userId)
   const [total, active, inactive] = await Promise.all([
-    Events.countDocuments({ creator: userId, status: { $ne: "deleted" } }), // Total events for the user
-    Events.countDocuments({ creator: userId, status: "active" }), // Active events for the user
-    Events.countDocuments({ creator: userId, status: "inactive" }) // Inactive events for the user
+    Events.countDocuments({ "basicInfo.organization": organizationId, status: { $ne: "deleted" } }), // Total events for the user
+    Events.countDocuments({ "basicInfo.organization": organizationId, status: "active" }), // Active events for the user
+    Events.countDocuments({ "basicInfo.organization": organizationId, status: "inactive" }) // Inactive events for the user
   ]);
 
   // Step 10: Generate meta information for pagination
