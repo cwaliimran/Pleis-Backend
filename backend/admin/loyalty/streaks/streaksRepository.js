@@ -5,8 +5,33 @@ const { getModelCounts } = require("@dbUtils/queryUtil");
 // Create
 // Create streak and automatically assign next order
 const createStreak = async (data) => {
-  const streak = new Streaks(data);
-  return await streak.save();
+  try {
+
+    const existingStreak = await Streaks.findOne({
+      companyOrganizer: data.companyOrganizer,
+      visits: data.visits,
+    });
+
+    if (existingStreak) {
+      // If it exists, return a message indicating it's already present
+      return {
+        error: "Rule with this visits already exists.",
+      };
+    }
+
+    // If no existing streak, create a new one
+    const streak = new Streaks(data);
+    await streak.save();
+
+    return {
+      streak,
+    };
+  } catch (error) {
+    // Handle errors (e.g., validation errors, database errors)
+    return {
+      error: error.message,
+    };
+  }
 };
 
 // Get all with filters, sorted by 'order' ascending and then 'createdAt' descending

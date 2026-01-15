@@ -32,32 +32,90 @@ const getMenuItems = async ({
   page,
   limit,
   skip,
-  organizer, // Creator (organizer)
+  organization, // Organization ID to match
 }) => {
-  // Step 1: Find MenuItems by organizer (creator)
-  const menuItems = await MenuItems.find({
-    creator: organizer, // Filter by creator (organizer)
-    status: "active" // Only active items
-  })
-    .select("_id title basePrice discountPrice taxPercent ") // Select only _id and title fields
-    .skip(skip)
-    .limit(limit)
-    .lean();
+  // Step 1: Find MenuItems by matching organization in the menu field
+  const menuItems = await MenuItems.aggregate([
+    // Match by organization linked in the 'menu' field
+    {
+      $lookup: {
+        from: "menus", // Reference to the 'menus' collection
+        localField: "menu", // Field in MenuItems
+        foreignField: "_id", // Match the _id field in 'menus'
+        as: "menuDetails" // The result of the lookup will be saved in menuDetails
+      }
+    },
+    {
+      $unwind: "$menuDetails" // Flatten the array to match the first item
+    },
+    {
+      $match: {
+        "menuDetails.organization": organization, // Match the organization field in the menuDetails
+        status: "active" // Only include active items
+      }
+    },
+    // Select the fields you want to return
+    {
+      $project: {
+        _id: 1,
+        title: 1,
+        basePrice: 1,
+        discountPrice: 1,
+        taxPercent: 1
+      }
+    },
+    {
+      $skip: skip || (page - 1) * limit // Skip based on pagination
+    },
+    {
+      $limit: limit // Limit the number of results based on pagination
+    }
+  ]);
 
   if (!menuItems.length) {
-    return { MenuItems: [], meta: generateMeta(page, limit, 0) };
+    return {
+      message: "Menu fetched successfully",
+      data: [],
+      meta: generateMeta(page, limit, 0)
+    };
   }
 
-  const totalFiltered = await MenuItems.countDocuments({
-    creator: organizer,
-    status: "active",
-  });
+  // Step 2: Count the total number of items matching the filters
+  const totalFiltered = await MenuItems.aggregate([
+    {
+      $lookup: {
+        from: "menus",
+        localField: "menu",
+        foreignField: "_id",
+        as: "menuDetails"
+      }
+    },
+    {
+      $unwind: "$menuDetails"
+    },
+    {
+      $match: {
+        "menuDetails.organization": organization,
+        status: "active",
+        isAvailableInStock: true
+      }
+    },
+    {
+      $count: "totalItems"
+    }
+  ]);
 
-  // Step 2: Return the simplified response with meta
-  const meta = generateMeta(page, limit, totalFiltered);
+  const totalItems = totalFiltered.length > 0 ? totalFiltered[0].totalItems : 0;
 
-  return { MenuItems: menuItems, meta };
+  // Step 3: Return the response with meta and message
+  const meta = generateMeta(page, limit, totalItems);
+
+  return {
+    MenuItems: menuItems, // MenuItems array
+    meta: meta // Pagination metadata
+  };
 };
+
 
 
 
@@ -164,24 +222,63 @@ const getEvents = async ({
 
 
 
-const fetchMenuItems = async (organizer) => {
+const fetchMenuItems = async (organization) => {
   try {
-    const menuItems = await MenuItems.find({ 
-      creator: new mongoose.Types.ObjectId(organizer),
-      status: "active"
-    }).lean(); 
-    
+    // Fetch menu items based on the organization in the 'menu' field in MenuItems collection
+    const menuItems = await MenuItems.aggregate([
+      {
+        $lookup: {
+          from: "menus", // Reference to the 'menus' collection
+          localField: "menu", // Field in MenuItems
+          foreignField: "_id", // Match the _id field in 'menus'
+          as: "menuDetails" // The result of the lookup will be saved in menuDetails
+        }
+      },
+      {
+        $unwind: "$menuDetails" // Unwind the menuDetails array to access organization
+      },
+      {
+        $match: {
+          "menuDetails.organization": new mongoose.Types.ObjectId(organization), // Match organization field in menuDetails
+          status: "active" // Only active items
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          basePrice: 1,
+          discountPrice: 1,
+          taxPercent: 1,
+          image: 1,
+          category: 1,
+          startTime: 1,
+          endTime: 1,
+          availabilityType: 1,
+          event: 1,
+          isLimitedTimeOffer: 1,
+          upSellItem: 1,
+          endDate: 1,
+          isAvailableInStock: 1,
+          startDate: 1,
+          isScheduled: 1,
+          createdAt: 1
+        }
+      }
+    ]);
+
     return menuItems;
   } catch (error) {
-    console.error("Error fetching menu items:", error);
+
     return [];
   }
 };
+
 const getSummary = async ({
   page,
   limit,
   skip,
-  organizer,
+  organization, // Organization ID to match
   categoryId,
   eventId,
   keyword,
@@ -191,11 +288,30 @@ const getSummary = async ({
   let basePipeline = [
     {
       $match: {
-        creator: new mongoose.Types.ObjectId(organizer),
         status: "active",
       }
     }
   ];
+
+  // Match by organization in the MenuItems collection using $lookup
+  basePipeline.push({
+    $lookup: {
+      from: "menus", // Reference to the 'menus' collection
+      localField: "menu", // Field in MenuItems
+      foreignField: "_id", // Match the _id field in 'menus'
+      as: "menuDetails" // The result of the lookup will be saved in menuDetails
+    }
+  });
+
+  // Unwind to flatten the array of menuDetails
+  basePipeline.push({ $unwind: "$menuDetails" });
+
+  // Match the organization field in menuDetails
+  if (organization) {
+    basePipeline.push({
+      $match: { "menuDetails.organization": new mongoose.Types.ObjectId(organization) }
+    });
+  }
 
   if (categoryId) {
     basePipeline.push({
@@ -260,25 +376,24 @@ const getSummary = async ({
           {
             $project: {
               _id: 1,
+              image: 1,
               title: 1,
+              description: 1,
+              category: 1,
               basePrice: 1,
               discountPrice: 1,
               taxPercent: 1,
-              image: 1,
-              category: 1,
-              startDate: 1,
+              startTime: 1,
+              endTime: 1,
+              availabilityType: 1,
+              event: 1,
+              isLimitedTimeOffer: 1,
+              upSellItem: 1,
               endDate: 1,
               isAvailableInStock: 1,
-              upSellItem: 1,
-              isLimitedTimeOffer: 1,
-              createdAt: 1,
-              category: 1,
-              event: 1,
+              startDate: 1,
               isScheduled: 1,
-              description: 1,
-              startTime: 1,
-              availabilityType: 1,
-              endTime: 1
+              createdAt: 1
             }
           },
           {
@@ -295,7 +410,7 @@ const getSummary = async ({
               from: 'events',
               localField: 'event',
               foreignField: '_id',
-              pipeline: [{ $project: { 'basicInfo.title': 1, startDate: 1, endDate: 1 } }],
+              pipeline: [{ $project: { 'basicInfo.title': 1 } }],
               as: 'event'
             }
           },
@@ -315,25 +430,24 @@ const getSummary = async ({
           {
             $project: {
               _id: 1,
+              image: 1,
               title: 1,
+              description: 1,
+              category: 1,
               basePrice: 1,
               discountPrice: 1,
               taxPercent: 1,
-              image: 1,
-              category: 1,
-              startDate: 1,
+              startTime: 1,
+              endTime: 1,
+              availabilityType: 1,
+              event: 1,
+              isLimitedTimeOffer: 1,
+              upSellItem: 1,
               endDate: 1,
               isAvailableInStock: 1,
-              upSellItem: 1,
-              isLimitedTimeOffer: 1,
-              createdAt: 1,
-              category: 1,
-              event: 1,
+              startDate: 1,
               isScheduled: 1,
-              description: 1,
-              startTime: 1,
-              availabilityType: 1,
-              endTime: 1
+              createdAt: 1
             }
           },
           {
@@ -350,7 +464,7 @@ const getSummary = async ({
               from: 'events',
               localField: 'event',
               foreignField: '_id',
-              pipeline: [{ $project: { 'basicInfo.title': 1, startDate: 1, endDate: 1 } }],
+              pipeline: [{ $project: { 'basicInfo.title': 1 } }],
               as: 'event'
             }
           },
@@ -363,10 +477,10 @@ const getSummary = async ({
 
   try {
     // Run both pipelines in parallel
-    const [paginationResult, nonPaginationResult,allData] = await Promise.all([
+    const [paginationResult, nonPaginationResult, allData] = await Promise.all([
       MenuItems.aggregate(paginationPipeline),
       MenuItems.aggregate(nonPaginationPipeline),
-      fetchMenuItems(organizer)
+      fetchMenuItems(organization)
     ]);
 
     // Process results
@@ -381,7 +495,7 @@ const getSummary = async ({
       meta,
     };
   } catch (error) {
-    console.error("Error in getSummary aggregation pipeline:", error);
+
     return { error: "Error fetching summary data." };
   }
 };

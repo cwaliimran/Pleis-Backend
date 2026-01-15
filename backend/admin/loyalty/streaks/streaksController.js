@@ -20,7 +20,13 @@ const createStreak = async (req, res) => {
       companyOrganizer,
       status,
     });
-
+    if (streak.error) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: streak.error,
+      });
+    }
     return sendResponse({
       res,
       statusCode: 201,
