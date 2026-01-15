@@ -397,7 +397,7 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
       totalFiltered: [{ $count: "count" }]
     }
   });
-console.log("pipeline", JSON.stringify(pipeline, null, 2));
+
 
   const result = await UserReservations.aggregate(pipeline);
 
