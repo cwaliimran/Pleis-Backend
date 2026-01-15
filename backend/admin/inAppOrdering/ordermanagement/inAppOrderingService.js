@@ -7,7 +7,7 @@ const Menus = require("@MenusModel");
 
 
 
-const getOrders = async ({
+const getOrdersService = async ({
   activeorderStatus,
   pickupFilter,
   orderStatus,
@@ -191,7 +191,7 @@ const getInAppOrders = async ({
 
 
 module.exports = {
-  getOrders,
+  getOrdersService,
   updateInAppOrders,
   updateOrders,
   getInAppOrders

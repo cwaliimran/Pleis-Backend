@@ -7508,7 +7508,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{url}}app/reservations/all?page=1&limit=10",
+									"raw": "{{url}}app/reservations/all?date=2026-01-15&page=1&limit=10",
 									"host": [
 										"{{url}}app"
 									],
@@ -7524,8 +7524,7 @@
 										},
 										{
 											"key": "date",
-											"value": "2025-12-17",
-											"disabled": true
+											"value": "2026-01-15"
 										},
 										{
 											"key": "page",
@@ -15081,7 +15080,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}app/staff/in-app-ordering?organizationId=6911c1b36fc7cbd864e74659&keyword=&date=&range=&activeKeyword=&orderStatus=&activeorderStatus=&pickupFilter=",
+											"raw": "{{url}}app/staff/in-app-ordering?organization=696888da8199413a4bc83c1e&keyword=&date=&range=&activeKeyword=&orderStatus=&activeorderStatus=&pickupFilter=",
 											"host": [
 												"{{url}}app"
 											],
@@ -15091,8 +15090,8 @@
 											],
 											"query": [
 												{
-													"key": "organizationId",
-													"value": "6911c1b36fc7cbd864e74659"
+													"key": "organization",
+													"value": "696888da8199413a4bc83c1e"
 												},
 												{
 													"key": "keyword",
@@ -15186,7 +15185,7 @@
 									"response": []
 								},
 								{
-									"name": "item update",
+									"name": "update orders",
 									"event": [
 										{
 											"listen": "test",
@@ -15212,11 +15211,11 @@
 										}
 									],
 									"request": {
-										"method": "POST",
+										"method": "PUT",
 										"header": [],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n//   \"image\": \"burger_beef.png\",\n//   \"title\": \"Pizza Max Cheese\",\n//   \"description\": \"A delicious cheeseburger with lettuce, tomato, and fries.\",\n//   \"type\": \"food\",\n//   \"category\": \"68d699f66513527e7a236563\",\n//   \"basePrice\": 10.99,\n//   \"discountPrice\": 8.99,\n//   \"taxPercent\": 5,\n//   \"menu\": \"68d69376fbccb319035eb13e\",\n//   \"startTime\": \"10:30 AM\",\n//   \"endTime\": \"05:35 PM\",\n  \"status\": \"active\"\n}\n",
+											"raw": "{\n    \"status\": \"sent\", //\"pending\", \"confirmed\", \"sent\", \"completed\", \"cancelled\",\"preorder\"\n    \"paymentStatus\": \"pending\" //\"pending\", \"paid\", \"failed\",\n    // \"deliveredMenuItem\":\"6911c3516aca10eb719d6f72,6911d21601e061abb7bbc00b,6911c3cb6aca10eb719d6f9e\"\n    // \"deliveredall\":false //false true\n}",
 											"options": {
 												"raw": {
 													"language": "json"
@@ -15224,21 +15223,19 @@
 											}
 										},
 										"url": {
-											"raw": "{{url}}app/staff/menu-items/:itemId/manage/",
+											"raw": "{{url}}app/staff/in-app-ordering/:orderId",
 											"host": [
 												"{{url}}app"
 											],
 											"path": [
 												"staff",
-												"menu-items",
-												":itemId",
-												"manage",
-												""
+												"in-app-ordering",
+												":orderId"
 											],
 											"variable": [
 												{
-													"key": "itemId",
-													"value": "691d6c785246547c1826337d"
+													"key": "orderId",
+													"value": ""
 												}
 											]
 										}
@@ -15412,7 +15409,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{url}}app/staff/events/?organization=6911ccb36aca10eb719d7358&filter=past",
+									"raw": "{{url}}app/staff/events/?organization=696888da8199413a4bc83c1e&filter=active",
 									"host": [
 										"{{url}}app"
 									],
@@ -15434,7 +15431,7 @@
 										},
 										{
 											"key": "organization",
-											"value": "6911ccb36aca10eb719d7358"
+											"value": "696888da8199413a4bc83c1e"
 										},
 										{
 											"key": "keyword",
@@ -15443,8 +15440,13 @@
 										},
 										{
 											"key": "filter",
-											"value": "past",
+											"value": "active",
 											"description": "active/thisWeek/past"
+										},
+										{
+											"key": "filter",
+											"value": "thisWeek",
+											"disabled": true
 										}
 									]
 								}
@@ -15854,7 +15856,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\r\n    \"firstName\": \"{{$randomUserName}}\",\r\n    \"lastName\": \"Mike\",\r\n    \"phoneNumber\": {\r\n        \"code\": \"+92\",\r\n        \"number\": \"3005098446\"\r\n    },\r\n    \"companyOrganizer\": \"696888a88199413a4bc83bb4\", // required\r\n    \"organizationId\": \"696888da8199413a4bc83c1e\", // Required\r\n    \"partySize\": 2, // Required\r\n    \"reservationType\": \"vip\", // Required \r\n    \"notes\":\"booking for Mr Joe.\",\r\n    \"timingSlots\": { // Required\r\n        \"dateTimeSlots\": [\r\n            {\r\n                \"date\": \"2025-12-17\", // Required\r\n                \"timeSlots\": [\r\n                    {\r\n                        \"startTime\": \"03:00 PM\", // Required\r\n                        \"endTime\": \"05:30 PM\" // Required\r\n                    }\r\n                ]\r\n            }\r\n        ]\r\n    }\r\n}",
+									"raw": "{\r\n    \"firstName\": \"{{$randomUserName}}\",\r\n    \"lastName\": \"Mike\",\r\n    \"phoneNumber\": {\r\n        \"code\": \"+92\",\r\n        \"number\": \"3005098446\"\r\n    },\r\n    \"companyOrganizer\": \"696888a88199413a4bc83bb4\", // required\r\n    \"organizationId\": \"696888da8199413a4bc83c1e\", // Required\r\n    \"partySize\": 2, // Required\r\n    \"reservationType\": \"vip\", // Required  \"regular\", \"vip\", \"outdoor\", \"private\", \"bar\", \"window\",\r\n    \"notes\":\"booking for Mr Joe.\",\r\n    \"timingSlots\": { // Required\r\n        \"dateTimeSlots\": [\r\n            {\r\n                \"date\": \"2025-12-17\", // Required\r\n                \"timeSlots\": [\r\n                    {\r\n                        \"startTime\": \"03:00 PM\", // Required\r\n                        \"endTime\": \"05:30 PM\" // Required\r\n                    }\r\n                ]\r\n            }\r\n        ]\r\n    }\r\n}",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -15880,6 +15882,31 @@
 											"key": "date",
 											"value": "2025-12-17",
 											"disabled": true
+										}
+									]
+								}
+							},
+							"response": []
+						},
+						{
+							"name": "get reservations by date",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{url}}app/staff/reservations/?date=2025-12-17",
+									"host": [
+										"{{url}}app"
+									],
+									"path": [
+										"staff",
+										"reservations",
+										""
+									],
+									"query": [
+										{
+											"key": "date",
+											"value": "2025-12-17"
 										}
 									]
 								}
@@ -15914,31 +15941,6 @@
 										{
 											"key": "id",
 											"value": "6968c0ed612bec6f95896362"
-										}
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "get reservations by date",
-							"request": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{url}}app/staff/reservations/?date=2025-12-17",
-									"host": [
-										"{{url}}app"
-									],
-									"path": [
-										"staff",
-										"reservations",
-										""
-									],
-									"query": [
-										{
-											"key": "date",
-											"value": "2025-12-17"
 										}
 									]
 								}
@@ -30032,6 +30034,78 @@
 					"name": "Reservation",
 					"item": [
 						{
+							"name": "Calendar",
+							"item": [
+								{
+									"name": "get calendar",
+									"protocolProfileBehavior": {
+										"disableBodyPruning": true
+									},
+									"request": {
+										"method": "GET",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": ""
+										},
+										"url": {
+											"raw": "{{url}}admin/reservations/calendar?date=2026-01-28&companyOrganizer=696888a88199413a4bc83bb4",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"reservations",
+												"calendar"
+											],
+											"query": [
+												{
+													"key": "date",
+													"value": "2026-01-28"
+												},
+												{
+													"key": "organizationsId",
+													"value": "[\"6911c1b36fc7cbd864e74659\",\"6901b980e762df10a0acc13f\"]",
+													"disabled": true
+												},
+												{
+													"key": "companyOrganizer",
+													"value": "696888a88199413a4bc83bb4"
+												}
+											]
+										}
+									},
+									"response": []
+								},
+								{
+									"name": "copy on dates",
+									"request": {
+										"method": "POST",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"reservations\": [\n        \"6968d34defa7655298986a45\",\n        \"6968d0a2ce5e44bb6f5d3647\"\n    ],\n    \"dates\": [\n        \"2026-01-28\"\n    ]\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{url}}admin/reservations/copy",
+											"host": [
+												"{{url}}admin"
+											],
+											"path": [
+												"reservations",
+												"copy"
+											]
+										}
+									},
+									"response": []
+								}
+							]
+						},
+						{
 							"name": "add",
 							"request": {
 								"method": "POST",
@@ -30070,7 +30144,7 @@
 									"raw": ""
 								},
 								"url": {
-									"raw": "{{url}}admin/reservations?date=2025-11-20&companyOrganizer=6911c14b6fc7cbd864e745b6",
+									"raw": "{{url}}admin/reservations?companyOrganizer=696888a88199413a4bc83bb4",
 									"host": [
 										"{{url}}admin"
 									],
@@ -30080,7 +30154,8 @@
 									"query": [
 										{
 											"key": "date",
-											"value": "2025-11-20"
+											"value": "2025-11-20",
+											"disabled": true
 										},
 										{
 											"key": "range",
@@ -30114,7 +30189,7 @@
 										},
 										{
 											"key": "companyOrganizer",
-											"value": "6911c14b6fc7cbd864e745b6"
+											"value": "696888a88199413a4bc83bb4"
 										}
 									]
 								}
@@ -30188,7 +30263,7 @@
 								"method": "GET",
 								"header": [],
 								"url": {
-									"raw": "{{url}}admin/reservations/users?companyOrganizer=6911c14b6fc7cbd864e745b6&reservationId=691ebc4f62df7ea9abdbdf5d",
+									"raw": "{{url}}admin/reservations/users?organizationsId=[\"696888da8199413a4bc83c1e\"]&reservationId=6968cd79efa76552989867d2",
 									"host": [
 										"{{url}}admin"
 									],
@@ -30199,17 +30274,12 @@
 									"query": [
 										{
 											"key": "organizationsId",
-											"value": "[\"690b3b568edb7659cb7a7884\",\"6901b980e762df10a0acc13f\"]",
-											"disabled": true
+											"value": "[\"696888da8199413a4bc83c1e\"]"
 										},
 										{
 											"key": "date",
-											"value": "2025-12-17",
+											"value": "2026-01-15",
 											"disabled": true
-										},
-										{
-											"key": "companyOrganizer",
-											"value": "6911c14b6fc7cbd864e745b6"
 										},
 										{
 											"key": "reservationStatus",
@@ -30223,7 +30293,7 @@
 										},
 										{
 											"key": "reservationId",
-											"value": "691ebc4f62df7ea9abdbdf5d"
+											"value": "6968cd79efa76552989867d2"
 										}
 									]
 								}
