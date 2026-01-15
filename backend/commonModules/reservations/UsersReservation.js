@@ -2,10 +2,10 @@ const mongoose = require("mongoose");
 
 const UserReservationsSchema = new mongoose.Schema(
   {
-    userId: {
+    userId: { // the user who made the reservation if null then it's a walk-in reservation booked by staff
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      default: null,
     },
     transferHistory: {
       type: [
@@ -52,10 +52,10 @@ const UserReservationsSchema = new mongoose.Schema(
       ref: "Organization",
       required: true,
     },
-    reservationId: {
+    reservationId: { //if this is null then it's a standalone reservation added by staff for user
       type: mongoose.Schema.Types.ObjectId,
       ref: "Reservations",
-      required: true,
+      default: null,
     },
 
     companyOrganizer: {
@@ -109,7 +109,7 @@ const UserReservationsSchema = new mongoose.Schema(
 
     reservationStatus: {
       type: String,
-      enum: ["confirmed", "rejected", "pending", "cancelled"],
+      enum: ["confirmed", "checkedIn", "rejected", "pending", "cancelled", "completed"],
       default: "pending",
     },
     status: {
@@ -120,7 +120,7 @@ const UserReservationsSchema = new mongoose.Schema(
 
     paymentMethod: {
       type: String, required: true,
-      enum: ["applePay", "card", "cash", "payLater"], default: "card"
+      enum: ["applePay", "card", "cash", "payLater"], default: "payLater"
     },
     paymentId: { type: String, default: null },
 

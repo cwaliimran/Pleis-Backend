@@ -54,6 +54,7 @@ const getCategoriesWithFilters = async (
  * ============================
  */
 const getPublicActiveCategories = async () => {
+
   return cache({
     namespace: "categories:public",
     ttl: null,

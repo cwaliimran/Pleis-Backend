@@ -48,19 +48,6 @@ const getUserFavorites = async (userId, targetType, page, limit) => {
             options: { page, limit },
         });
 
-        // Fetch minimum ticket prices for all events in results if targetType is 'event'
-        if (targetType === 'event') {
-            const eventIds = filtered.map((e) => e?.object?._id);
-            const ticketPriceMap = await getMinTicketPricesByEventIds(eventIds);
-
-            // Attach minimum ticket price to each event
-            filtered.forEach((event) => {
-                const eventId = event?.object?._id?.toString();
-                const minPrice = eventId ? ticketPriceMap[eventId] : null;
-                event.ticketInfo = minPrice ? { price: `€${minPrice}` } : null;
-            });
-        }
-
         // REMOVE records where lookup failed
         filtered = filtered.filter(fav => fav.object);
 
@@ -85,17 +72,6 @@ const getUserFavorites = async (userId, targetType, page, limit) => {
                 options: { page, limit: 10 },
             }),
         ]);
-
-        // Fetch minimum ticket prices for all events in results
-        const eventIds = events.map((e) => e._id);
-        const ticketPriceMap = await getMinTicketPricesByEventIds(eventIds);
-
-        // Attach minimum ticket price to each event
-        events.forEach((event) => {
-            const minPrice = ticketPriceMap[event._id.toString()] || null;
-            event.ticketInfo = minPrice ? { price: `€${minPrice}` } : null;
-        });
-
 
         // FILTER NULL TARGETS
         const events = eventsRaw.filter(e => e.object);
