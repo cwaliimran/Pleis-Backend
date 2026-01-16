@@ -480,7 +480,7 @@ const getUserReservations = async (req, res) => {
   const { keyword, status = "active", date, range, organizationsId, companyOrganizer, reservationStatus = "pending", reservationId } = req.query;
 
   try {
-    if(!organizationsId){
+    if (!organizationsId) {
       return sendResponse({
         res,
         statusCode: 400,
@@ -862,6 +862,56 @@ const copyUserReservationsController = async (req, res) => {
   }
 };
 
+
+const copySingleSlotReservationController = async (req, res) => {
+  try {
+    const { reservationId, targetDate, startTime, reservationType } = req.body;
+    const timezone = req.user.timezone;
+
+    if (!validateParams(req, res, {
+      rawData: ["reservationId", "targetDate", "startTime", "reservationType"],
+      objectIdFields: ["reservationId"],
+      enumFields: {
+        reservationType: [
+          "regular",
+          "vip",
+          "outdoor",
+          "private",
+          "bar",
+          "window",
+        ],
+      },
+      dateFields: { targetDate: "YYYY-MM-DD", startTime: "hh:mm A" },
+    })) return;
+
+    const newReservation =
+      await reservationService.copySingleSlotReservation({
+        reservationId,
+        targetDate,
+        startTime,
+        reservationType,
+        timezone,
+        copiedBy: req.user._id,
+      });
+
+    return sendResponse({
+      res,
+      statusCode: 201,
+      translationKey: "reservation_copied_successfully",
+      data: newReservation,
+    });
+  } catch (error) {
+    console.error("COPY_SINGLE_SLOT_ERROR:", error);
+
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: error.message || "internal_server_error",
+      error,
+    });
+  }
+};
+
 module.exports = {
   createReservation,
   getReservations,
@@ -874,5 +924,5 @@ module.exports = {
   getavailableReservations,
   getCalendarReservations,
   copyUserReservationsController,
-
+  copySingleSlotReservationController
 };

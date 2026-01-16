@@ -1,13 +1,12 @@
 const { getUserDetailsForQRService } = require("../../admin/usersManagement/usersService");
 const { getTicketingBookingByIdService } = require("../../app/bookings/ticketings/ticketingBookingService");
-const { getEventTicketings } = require("../../app/events/eventController");
 const { getUserCompanyWallet } = require("../../app/loyalty/clubMembers/clubMembersService");
 const { sendResponse, validateParams } = require("@utils/responseUtil");
-
+const { User } = require("@UserModel");
 const scanQrController = async (req, res) => {
   try {
     const { qrData } = req.body;
-    const { user, companyOrganizer, type = "loyaltyCard" } = qrData;
+    const { publicId, user, companyOrganizer, type = "loyaltyCard" } = qrData;
 
     let validateData = {
       rawData: [
@@ -15,7 +14,7 @@ const scanQrController = async (req, res) => {
         "qrData.type",
       ],
       enumFields: {
-        "qrData.type": ["loyaltyCard", "eventTicket"],
+        "qrData.type": ["loyaltyCard", "loyaltyCardManual", "eventTicket"],
       },
     };
 
@@ -29,6 +28,36 @@ const scanQrController = async (req, res) => {
       let [wallet, userDetails] = await Promise.all([
         getUserCompanyWallet(user, companyOrganizer),
         getUserDetailsForQRService(user)
+      ]);
+
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "qr_code_scanned_successfully",
+        data: {
+          wallet,
+          userDetails
+        },
+      });
+    }
+    else if (type === "loyaltyCardManual") {
+      validateData.rawData.push("qrData.publicId");
+      if (
+        !validateParams(req, res, validateData)
+      ) return;
+
+      const user = await User.findOne({ publicId }).select("_id").lean();
+      if (!user) {
+        return sendResponse({
+          res,
+          statusCode: 404,
+          translationKey: "user_not_found",
+        });
+      }
+
+      let [wallet, userDetails] = await Promise.all([
+        getUserCompanyWallet(user._id, companyOrganizer),
+        getUserDetailsForQRService(user._id)
       ]);
 
       return sendResponse({

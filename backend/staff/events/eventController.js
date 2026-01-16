@@ -16,7 +16,6 @@ const getEvents = async (req, res) => {
   let { keyword, filter = "", startDate, endDate, organization } = req.query;
   let { timezone } = req.user;
   const now = new Date();
-  const nowInTz = getCurrentDateInTimezone({ timezone });
 
   try {
 
@@ -41,10 +40,8 @@ const getEvents = async (req, res) => {
       startDate = start;
       endDate = end;
     } else if (filter === "past") {
-      endDate = nowInTz;
+      endDate = now;
 
-    } else if (filter === "active") {
-      startDate = nowInTz;
     }
 
 
@@ -57,7 +54,7 @@ const getEvents = async (req, res) => {
       organization,
       timezone,
       filter,
-      nowInTz
+      now
     });
 
 

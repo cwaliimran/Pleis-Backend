@@ -49,18 +49,22 @@ const DASHBOARD_KEYS = {
         title: "Average Ticket Price",
         subFilters: [],
     },
+    averageRevenuePerUser: {
+        title: "Avg Revenue per User",
+        subFilters: [],
+    },
 };
 
 const withSubFilters = (key) => {
-  const subFilters = DASHBOARD_KEYS[key]?.subFilters;
+    const subFilters = DASHBOARD_KEYS[key]?.subFilters;
 
-  const hasSubFilters =
-    Array.isArray(subFilters) && subFilters.length > 0;
+    const hasSubFilters =
+        Array.isArray(subFilters) && subFilters.length > 0;
 
-  return {
-    subFilters: hasSubFilters ? subFilters : [],
-    selectedSubFilter: hasSubFilters ? "all" : undefined,
-  };
+    return {
+        subFilters: hasSubFilters ? subFilters : [],
+        selectedSubFilter: hasSubFilters ? "all" : undefined,
+    };
 };
 
 module.exports = {

@@ -37,7 +37,7 @@ const getMembers = async (page,
 };
 // giftPoints
 const giftPoints = async (userId, points, companyOrganizer, notes) => {
-return true;
+  return true;
   // return await clubMemberRepo.giftPoints(userId, points, companyOrganizer, notes);
 };
 
@@ -50,6 +50,43 @@ const getUserJoinedClubs = async (userId) => {
   return await clubMemberRepo.getUserJoinedClubs(userId);
 };
 
+const calculateRewardPointsForOrganizerService = async ({
+  companyOrganizer,
+  itemPrice,
+  overridePercentage
+}) => {
+  const { pointValuePercentage } =
+    await clubMemberRepo.getCompanyLoyaltyInfo(companyOrganizer);
+
+  const effectivePercentage =
+    typeof overridePercentage === "number" && overridePercentage > 0
+      ? overridePercentage
+      : pointValuePercentage;
+
+  if (!effectivePercentage || effectivePercentage <= 0) {
+    return {
+      points: 0,
+      reason: "Loyalty percentage not configured"
+    };
+  }
+
+  const price = Number(itemPrice || 0);
+  const basePointsPerEuro = 10;
+
+  const points =
+    price *
+    (effectivePercentage / 100) *
+    basePointsPerEuro;
+
+  return {
+    price,
+    pointValuePercentage: effectivePercentage,
+    basePointsPerEuro,
+    points: Math.round(points)
+  };
+};
+
+
 
 module.exports = {
   countClubMembers,
@@ -57,5 +94,6 @@ module.exports = {
   getMembers,
   giftPoints,
   isClubMember,
-  getUserJoinedClubs
+  getUserJoinedClubs,
+  calculateRewardPointsForOrganizerService
 };

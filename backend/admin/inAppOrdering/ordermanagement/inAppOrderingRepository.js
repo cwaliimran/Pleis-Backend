@@ -11,6 +11,7 @@ const MenuItems = require("@MenuItemsModel");
 const MenuOrders = require("@OrdersModel");
 const { formatOrdersForUI } = require("../formatters/formatOrdersForUI");
 const { getModelCounts } = require("@utils/dbUtils/queryUtil");
+const { getFullImageUrl } = require("@utils/imageHelper");
 
 const getOrganizationIdsByOrganizer = async (organizerId) => {
   const orgs = await Organizations.find(
@@ -38,11 +39,11 @@ const getOrders = async ({
   pickupFilter,
   orderStatus,
   activeorderStatus,
-    sortDirection = -1
+  sortDirection = -1
 }) => {
 
 
-    let organizationsIds = [];
+  let organizationsIds = [];
   if (organization) {
     // Handle comma or '%' separated values and convert to ObjectIds
     organizationsIds = organization
@@ -55,33 +56,33 @@ const getOrders = async ({
   // if(pickupFilter=="tableService"){
   //   tableService
   // }
-if (orderStatus === 'postorders') {
-  // For postorders, include both completed and cancelled orders, with at least one item marked as delivered
-  statusFilter = {
-    status: { $in: ["completed", "cancelled"] },
-    // Ensure that at least one item has been delivered for completed orders
-    $or: [
-      { 
-        status: "completed",
-        items: { $elemMatch: { isdelivered: true } }  // At least one item is delivered
-      },
-      { 
-        status: "cancelled"  // Include all cancelled orders
-      }
-    ]
-  };
-} else if (orderStatus === "completed") {
-  // For completed orders, ensure that all items are delivered
-  statusFilter = {
-    status: "completed",
-    items: { $elemMatch: { isdelivered: true } }  // All items are delivered
-  };
-} else if (orderStatus === "cancelled") {
-  // For cancelled orders, include all cancelled orders
-  statusFilter = {
-    status: "cancelled"
-  };
-}
+  if (orderStatus === 'postorders') {
+    // For postorders, include both completed and cancelled orders, with at least one item marked as delivered
+    statusFilter = {
+      status: { $in: ["completed", "cancelled"] },
+      // Ensure that at least one item has been delivered for completed orders
+      $or: [
+        {
+          status: "completed",
+          items: { $elemMatch: { isdelivered: true } }  // At least one item is delivered
+        },
+        {
+          status: "cancelled"  // Include all cancelled orders
+        }
+      ]
+    };
+  } else if (orderStatus === "completed") {
+    // For completed orders, ensure that all items are delivered
+    statusFilter = {
+      status: "completed",
+      items: { $elemMatch: { isdelivered: true } }  // All items are delivered
+    };
+  } else if (orderStatus === "cancelled") {
+    // For cancelled orders, include all cancelled orders
+    statusFilter = {
+      status: "cancelled"
+    };
+  }
 
   else if (orderStatus === "active") {
     if (activeorderStatus === "new") {
@@ -157,7 +158,7 @@ if (orderStatus === 'postorders') {
         }
       }
     },
-        {
+    {
       $match: {
         organization: { $in: organizationsIds }  // Match against the parsed organizations
       }
@@ -181,7 +182,13 @@ if (orderStatus === 'postorders') {
           username: { $arrayElemAt: ["$userInfo.username", 0] },
           firstName: { $arrayElemAt: ["$userInfo.firstName", 0] },
           lastName: { $arrayElemAt: ["$userInfo.lastName", 0] },
-          email: { $arrayElemAt: ["$userInfo.email", 0] }
+          email: { $arrayElemAt: ["$userInfo.email", 0] },
+          profileIcon: {
+            $concat: [
+              process.env.AZURE_STORAGE_BASE_URL,
+              { $ifNull: [{ $arrayElemAt: ["$userInfo.profileIcon", 0] }, "noimage.png"] }
+            ]
+          }
         }
       }
     },
