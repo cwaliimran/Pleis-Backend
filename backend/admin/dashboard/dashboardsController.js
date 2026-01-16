@@ -22,7 +22,7 @@ const getDashboard = async (req, res) => {
       },
     })) return;
 
-    const { dashboard } = await dashboardService.getDashboard({
+    const dashboard = await dashboardService.getDashboard({
       dateFilter,
       timezone,
     });

@@ -78,6 +78,7 @@ module.exports = {
     "@ApplyPointsByStaffModel": "backend/commonModules/applyPointsByStaff/ApplyPointsByStaff.js",
     "@UserBadgesModel": "backend/commonModules/badgeCategories/UserBadages.js",
     "@UserInterests": "backend/models/UserInterests.js",
-    "@MenuItemsSaleModel": "backend/commonModules/menuManagement/sale/MenuItemsSale.js"
+    "@MenuItemsSaleModel": "backend/commonModules/menuManagement/sale/MenuItemsSale.js",
+    "@SearchSuggestionModel": "backend/app/searchSuggestions/SearchSuggestion.js",
     
 };
