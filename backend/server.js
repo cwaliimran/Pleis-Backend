@@ -60,6 +60,7 @@ const allowedOrigins = [
   "https://handy-floral-implementation-pumps.trycloudflare.com",
   "https://protected-betty-allows-gale.trycloudflare.com",
   "https://personnel-event-waves-alexander.trycloudflare.com",
+  "https://book-resource-proceeds-casey.trycloudflare.com",
   "http://192.168.13.106:4003",
   "http://192.168.13.106:4009",
   "http://192.168.13.221:4003",

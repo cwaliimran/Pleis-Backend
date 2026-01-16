@@ -126,7 +126,7 @@ const createReservation = async (data) => {
       }
 
       await userReservation.save({ session });
-      await sendUserNotifications({
+   /*    await sendUserNotifications({
         recipientIds: [userId.toString()],
         title: `Reservation Placed Successfully for ${userReservation.timingSlots.dateTimeSlots[0].date.toDateString()}`,
         body: `Your reservation is in  ${userReservation.reservationStatus} status.`,
@@ -138,7 +138,7 @@ const createReservation = async (data) => {
         image: (userReservation.preOrderMenuItemsOrder.items[0].menuItemSnapShot.image) || null,
         sender: userId,
         objectId: userReservation.reservationId,
-      });
+      }); */
 
 
     }
@@ -379,6 +379,20 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
         preserveNullAndEmptyArrays: true  // If no organization is found, it will be null
       }
     },
+    {
+      $lookup: {
+        from: "menuorders",
+        localField: "preOrderMenuItemsOrder",
+        foreignField: "_id",
+        as: "preOrderMenuItemsOrder"
+      }
+    },
+    {
+      $unwind: {
+        path: "$preOrderMenuItemsOrder",
+        preserveNullAndEmptyArrays: true
+      }
+    },
     // Project necessary fields, including user, event, and organization details
     {
       $project: {
@@ -403,6 +417,7 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
         organizationTitle: "$organization.basicInfo.name",  // Fetch organization title
         organizationLogo: "$organization.basicInfo.media.logo",  // Fetch organization logo
         organizationCover: "$organization.basicInfo.media.cover",  // Fetch organization cover image
+        preOrderMenuItemsOrder: 1,
       }
     },
     // Sort by createdAt in descending order
