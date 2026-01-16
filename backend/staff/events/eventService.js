@@ -6,7 +6,7 @@ const { formatEventResponse } = require("./formatter/eventFormatter");
 const { formatEventAttendeesResponse } = require("./formatter/eventAttendeesFormatter");
 const { formatTicketing } = require("../../app/ticketing/fomatter/formatTicketing");
 
-const getEvents = async ({ page, limit, keyword, startDate, endDate, organization, timezone, filter, nowInTz }) => {
+const getEvents = async ({ page, limit, keyword, startDate, endDate, organization, timezone, filter, now }) => {
   const query = {};
   // ALWAYS exclude templates events
   //templates event are only for internal use to generate occurrences
@@ -33,19 +33,20 @@ const getEvents = async ({ page, limit, keyword, startDate, endDate, organizatio
     query["schedule.endDateTime"] = { $lte: new Date(endDate) };
   }
 
+
   else if (filter === "active") {
     query.$and = [
       ...(query.$and || []),
-      { "schedule.startDateTime": { $lte: nowInTz } },
-      { "schedule.endDateTime": { $gte: nowInTz } },
+      { "schedule.startDateTime": { $lte: now } },
+      { "schedule.endDateTime": { $gte: now } },
     ];
   }
 
 
   if (keyword) {
     query.$or = [
-      { title: { $regex: keyword, $options: "i" } },
-      { description: { $regex: keyword, $options: "i" } },
+      { "basicInfo.title": { $regex: keyword, $options: "i" } },
+      { "basicInfo.description": { $regex: keyword, $options: "i" } },
     ];
   }
 

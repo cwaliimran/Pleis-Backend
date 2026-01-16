@@ -1,7 +1,7 @@
 // services/reservationservice.js
 const { buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
 const { generateMeta, getCurrentDateInTimezone } = require("../../helperUtils/responseUtil");
-const { reservationsFormatter } = require("../../app/reservations/formaters/reservationFormetter");
+const { reservationsFormatter, userReservationsFormatter } = require("../../app/reservations/formaters/reservationFormetter");
 const Reservations = require("@ReservationsModel");
 const { UserReservations } = require("@UserReservationsModel");
 const ReservationRepo = require("./reservationRepository");
@@ -16,6 +16,7 @@ const {
   getStartAndEndOfWeek,
 } = require("@utils/responseUtil");
 const { cloneTimingSlots } = require("./utils/cloneTimingSlots");
+const { cloneSingleSlot } = require("./utils/cloneSingleSlot");
 
 const createReservation = async (data) => {
   let Reservation = await ReservationRepo.createReservation(data);
@@ -248,6 +249,7 @@ const copyUserReservations = async ({
       const cloned = { ...source };
 
       // ❌ Remove Mongo-managed fields
+      cloned.transferHistory = [];
       delete cloned._id;
       delete cloned.createdAt;
       delete cloned.updatedAt;
@@ -269,10 +271,57 @@ const copyUserReservations = async ({
   }
 
   // 3️⃣ Bulk insert
-  return ReservationRepo.insertUserReservations(docsToInsert);
+  let reservationsItems = await ReservationRepo.insertUserReservations(docsToInsert);
+  return reservationsItems.map((res) => reservationsFormatter(res, timezone));
+};
+
+
+const copySingleSlotReservation = async ({
+  reservationId,
+  targetDate,
+  startTime,
+  reservationType,
+  timezone,
+  copiedBy,
+}) => {
+  const source = await ReservationRepo.findUserReservationByIdLean(
+    new mongoose.Types.ObjectId(reservationId)
+  );
+
+  if (!source) {
+    throw new Error("Reservation not found");
+  }
+
+  // ❌ Remove Mongo-managed fields
+  const cloned = { ...source };
+  delete cloned._id;
+  delete cloned.createdAt;
+  delete cloned.updatedAt;
+  delete cloned.__v;
+
+  // ✅ Update reservationType
+  cloned.reservationType = reservationType;
+
+  // ✅ Clear transfer history
+  cloned.transferHistory = [];
+
+  // ✅ Audit
+  cloned.clonedFromReservationId = source._id;
+  cloned.clonedBy = copiedBy;
+
+  // ✅ Clone ONLY one slot
+  cloned.timingSlots = cloneSingleSlot({
+    timingSlots: source.timingSlots,
+    targetDate,
+    startTime,
+    timezone,
+  });
+  let reservation = await ReservationRepo.insertSingleUserReservation(cloned);
+  return reservationsFormatter(reservation, timezone);
 };
 
 module.exports = {
+  copySingleSlotReservation,
   createReservation,
   getReservations,
   updateReservation,

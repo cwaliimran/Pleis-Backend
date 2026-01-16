@@ -246,7 +246,7 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
       $match: {
         ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
         ...(reservationStatus && { reservationStatus: reservationStatus }),
-        ...(organizationsId && {  organizationId: new mongoose.Types.ObjectId(organizationsId) }),
+        ...(organizationsId && { organizationId: new mongoose.Types.ObjectId(organizationsId) }),
         ...(reservationId && { reservationId: new mongoose.Types.ObjectId(reservationId) })
       }
     },
@@ -436,6 +436,11 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
 
 const findUserReservationById = async (id) => {
   return UserReservations.findById(id);
+};
+
+
+const findUserReservationByIdLean = async (id) => {
+  return UserReservations.findById(id).lean();
 };
 
 
@@ -818,7 +823,14 @@ const insertUserReservations = async (docs) => {
   return UserReservations.insertMany(docs);
 };
 
+const insertSingleUserReservation = async (doc) => {
+  const created = await UserReservations.create(doc);
+  return created;
+};
+
 module.exports = {
+  findUserReservationById,
+  insertSingleUserReservation,
   findUserReservationsByIds,
   insertUserReservations,
   createReservation,
@@ -830,8 +842,8 @@ module.exports = {
   findByIdAndUpdate,
   getReservations,
   getUserReservations,
-  findUserReservationById,
   findUserById,
   getavailableReservations,
-  getCalendarReservations
+  getCalendarReservations,
+  findUserReservationByIdLean
 };

@@ -2,6 +2,10 @@ const { User } = require("@UserModel");
 const { Events } = require("@EventsModel");
 const { TicketingOrders } = require("@TicketingOrdersModel");
 const { getDateRanges } = require("./utils/dashboardDate.utils");
+const { UserInterests } = require("@UserInterests");
+const SearchSuggestion = require("@SearchSuggestionModel");
+const { UnifiedWalletTransactions } = require("@UnifiedWalletTransactionsModel");
+const mongoose = require("mongoose");
 
 
 
@@ -255,9 +259,292 @@ const getAverageTicketPriceStats = async ({ dateFilter, timezone }) => {
   };
 };
 
+const getOrganizerPerformanceByMonth = async ({
+  organizerId,
+  organizationId,
+  timezone = "UTC",
+  year = new Date().getFullYear(),
+}) => {
+  const match = {
+    purpose: "eventTicketPurchase",
+    status: { $in: ["confirmed", "completed"] },
+    createdAt: {
+      $gte: new Date(`${year}-01-01T00:00:00.000Z`),
+      $lte: new Date(`${year}-12-31T23:59:59.999Z`),
+    },
+  };
+
+  if (organizerId) {
+    match.companyOrganizer = new mongoose.Types.ObjectId(organizerId);
+  }
+
+  if (organizationId) {
+    match.organization = new mongoose.Types.ObjectId(organizationId);
+  }
+
+  const rows = await TicketingOrders.aggregate([
+    { $match: match },
+
+    {
+      $addFields: {
+        month: {
+          $month: { date: "$createdAt", timezone },
+        },
+      },
+    },
+
+    {
+      $group: {
+        _id: "$month",
+        ticketsSold: { $sum: "$ticketsPurchased" },
+        revenue: { $sum: "$orderPricing.total" },
+      },
+    },
+  ]);
+
+  return rows;
+};
+
+const getUsersForDashboardAnalytics = async (year = new Date().getFullYear()) => {
+  const start = new Date(`${year}-01-01T00:00:00.000Z`);
+  const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+
+  const users = await User.aggregate([
+    {
+      $match: {
+        "accountState.status": "active",
+        createdAt: { $gte: start, $lt: end }
+      }
+    },
+    {
+      $project: {
+        gender: 1,
+        dob: 1,
+        timezone: 1,
+        createdAt: 1
+      }
+    }
+  ]);
+
+  return users;
+};
+
+
+
+const getRawInterestData = async () => {
+  return UserInterests.aggregate([
+    /* Join user (gender only) */
+    {
+      $lookup: {
+        from: "users",
+        localField: "user",
+        foreignField: "_id",
+        as: "user"
+      }
+    },
+    { $unwind: "$user" },
+
+    /* Only active users */
+    {
+      $match: {
+        "user.accountState.status": "active"
+      }
+    },
+
+    /* Explode categories */
+    { $unwind: "$categories" },
+
+    /* Join category title */
+    {
+      $lookup: {
+        from: "categories",
+        localField: "categories",
+        foreignField: "_id",
+        as: "category"
+      }
+    },
+    { $unwind: "$category" },
+
+    /* Minimal projection */
+    {
+      $project: {
+        categoryId: "$category._id",
+        categoryTitle: "$category.title",
+        gender: "$user.gender"
+      }
+    }
+  ]);
+};
+
+
+const getRawSearchStats = async () => {
+  let year = new Date().getFullYear()
+  const start = new Date(`${year}-01-01T00:00:00.000Z`);
+  const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+
+  return SearchSuggestion.find(
+    {
+      createdAt: { $gte: start, $lt: end }
+    },
+    {
+      count: 1,
+      lastSearchedAt: 1,
+      createdAt: 1
+    }
+  ).lean();
+};
+
+
+const getRawTopPerformingOrganizers = async () => {
+return UnifiedWalletTransactions.aggregate([
+    /* --------------------------------
+       1️⃣ FILTER RELEVANT TRANSACTIONS
+    -------------------------------- */
+    {
+      $match: {
+        walletType: "companyLoyalty",
+        companyOrganizer: { $ne: null }
+      }
+    },
+
+    /* --------------------------------
+       2️⃣ GROUP PER ORGANIZER
+    -------------------------------- */
+    {
+      $group: {
+        _id: "$companyOrganizer",
+        revenue: { $sum: "$points.total" },
+        transactions: { $sum: 1 },
+        users: { $addToSet: "$user" }
+      }
+    },
+
+    /* --------------------------------
+       3️⃣ SHAPE LIGHT DATA
+    -------------------------------- */
+    {
+      $project: {
+        revenue: 1,
+        transactions: 1,
+        uniqueUsers: { $size: "$users" }
+      }
+    },
+
+    /* --------------------------------
+       4️⃣ JOIN ORGANIZER USER (ONCE)
+    -------------------------------- */
+    {
+      $lookup: {
+        from: "users",
+        localField: "_id",
+        foreignField: "_id",
+        as: "organizer"
+      }
+    },
+    { $unwind: "$organizer" },
+
+    /* --------------------------------
+       5️⃣ PROJECT ONLY REQUIRED FIELDS
+    -------------------------------- */
+    {
+      $project: {
+        revenue: 1,
+        transactions: 1,
+        uniqueUsers: 1,
+        organizerName: "$organizer.companyDetails.name",
+        organizerLogo: "$organizer.companyDetails.logo"
+      }
+    }
+  ]);
+};
+
+const getEventsOverTimeRaw = async () => {
+  let year = new Date().getFullYear()
+  const start = new Date(`${year}-01-01T00:00:00.000Z`);
+  const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+
+  return Events.aggregate([
+    {
+      $match: {
+        createdAt: { $gte: start, $lt: end }
+      }
+    },
+    {
+      $project: {
+        month: { $month: "$createdAt" }
+      }
+    },
+    {
+      $group: {
+        _id: "$month",
+        events: { $sum: 1 }
+      }
+    }
+  ]);
+};
+
+const getAverageRevenuePerUserStats = async ({ dateFilter, timezone }) => {
+  const ranges = getDateRanges({ dateFilter, timezone });
+
+  const getRevenue = async (range) => {
+    const result = await TicketingOrders.aggregate([
+      {
+        $match: {
+          purpose: "eventTicketPurchase",
+          ...(range && { createdAt: range }),
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: "$orderPricing.total" },
+        },
+      },
+    ]);
+
+    return result[0]?.totalRevenue || 0;
+  };
+
+  const [
+    revenueCurrent,
+    revenuePrevious,
+    activeUsersCurrent,
+    activeUsersPrevious,
+  ] = await Promise.all([
+    getRevenue(ranges && { $gte: ranges.start, $lt: ranges.end }),
+    ranges
+      ? getRevenue({ $gte: ranges.prevStart, $lt: ranges.prevEnd })
+      : 0,
+    User.countDocuments({
+      "accountState.userType": "user",
+      "accountState.status": "active",
+      ...(ranges && { createdAt: { $gte: ranges.start, $lt: ranges.end } }),
+    }),
+    ranges
+      ? User.countDocuments({
+          "accountState.userType": "user",
+          "accountState.status": "active",
+          createdAt: { $gte: ranges.prevStart, $lt: ranges.prevEnd },
+        })
+      : 0,
+  ]);
+
+  return {
+    current:
+      activeUsersCurrent === 0
+        ? 0
+        : Number((revenueCurrent / activeUsersCurrent).toFixed(2)),
+
+    previous:
+      activeUsersPrevious === 0
+        ? 0
+        : Number((revenuePrevious / activeUsersPrevious).toFixed(2)),
+  };
+};
 
 
 module.exports = {
+  getOrganizerPerformanceByMonth,
   getUserStats,
   getUserSingleMetric,
   getEventStats,
@@ -265,5 +552,10 @@ module.exports = {
   getTicketsSoldStats,
   getTicketSingleMetric,
   getAverageTicketPriceStats,
-
+  getUsersForDashboardAnalytics,
+  getRawInterestData,
+  getRawSearchStats,
+  getRawTopPerformingOrganizers,
+  getEventsOverTimeRaw,
+  getAverageRevenuePerUserStats
 };

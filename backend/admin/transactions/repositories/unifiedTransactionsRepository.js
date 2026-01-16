@@ -98,77 +98,228 @@ const createTransaction = async ({
   return createdTransactions;
 };
 
-/**
- * Find transactions with filters + pagination + ticketingBookings (if ticketingorders)
- */
-const getTransactionsWithFilters = async (query = {}, skip = 0, limit = 10) => {
 
-    // -------------------------------------------------------------
-    // 1) Fetch Unified Wallet Transactions
-    // -------------------------------------------------------------
-    const txList = await UnifiedWalletTransactions.find(query)
-        .populate({ path: "user", select: "firstName lastName email profileIcon" })
-        .populate({
-            path: "organization",
-            select: "basicInfo.name basicInfo.media.logo"
-        })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(); // IMPORTANT for performance + custom merging
+const buildKeywordMatch = (keyword) => {
+  if (!keyword?.trim()) return null;
+  const regex = new RegExp(keyword, "i");
 
-    if (!txList.length) return [];
+  return {
+    $or: [
+      // ---- Transaction ----
+      { description: regex },
+      { batchId: regex },
+      { publicId: regex },
+      { domainType: regex },
+      { walletType: regex },
+      { type: regex },
 
-    // -------------------------------------------------------------
-    // 2) Extract all entityIds where domainType = ticketingorders
-    // -------------------------------------------------------------
-    const orderIds = txList
-        .filter(t => t.domainType === "ticketingorders" && t.entityId)
-        .map(t => t.entityId);
+      // ---- User ----
+      { "user.firstName": regex },
+      { "user.lastName": regex },
+      { "user.email": regex },
 
-    // No ticketing orders → return as is
-    if (orderIds.length === 0) {
-        return txList.map(tx => ({ ...tx, ticketingBookings: [] }));
-    }
+      // ---- Organizer ----
+      { "companyOrganizer.firstName": regex },
+      { "companyOrganizer.lastName": regex },
 
-    // -------------------------------------------------------------
-    // 3) Fetch all TicketingBookings for these orderIds
-    // -------------------------------------------------------------
-    const bookings = await TicketingBookings.find({
-        order: { $in: orderIds }
-    }).lean();
-
-    // -------------------------------------------------------------
-    // 4) Create lookup map: orderId → array of bookings
-    // -------------------------------------------------------------
-    const bookingMap = {};
-    for (const bk of bookings) {
-        const oid = bk.order.toString();
-        if (!bookingMap[oid]) bookingMap[oid] = [];
-        bookingMap[oid].push(bk);
-    }
-
-    // -------------------------------------------------------------
-    // 5) Attach bookings to each transaction
-    // -------------------------------------------------------------
-    const final = txList.map(tx => {
-        const oid = tx.entityId?.toString();
-
-        return {
-            ...tx,
-            ticketingBookings:
-                tx.domainType === "ticketingorders"
-                    ? bookingMap[oid] || []
-                    : []
-        };
-    });
-
-    return final;
+      // ---- Organization ----
+      { "organization.basicInfo.name": regex }
+    ]
+  };
 };
 
-const countTransactions = (query = {}) => {
-  return UnifiedWalletTransactions.countDocuments(query);
+const getTransactionsWithFilters = async ({
+  match = {},
+  keyword,
+  skip = 0,
+  limit = 10
+}) => {
+  const pipeline = [];
+
+  /* ---------------- BASE MATCH ---------------- */
+  if (Object.keys(match).length) {
+    pipeline.push({ $match: match });
+  }
+
+  /* ---------------- LOOKUPS ---------------- */
+  pipeline.push(
+    {
+      $lookup: {
+        from: "users",
+        localField: "user",
+        foreignField: "_id",
+        as: "user"
+      }
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "companyOrganizer",
+        foreignField: "_id",
+        as: "companyOrganizer"
+      }
+    },
+    {
+      $lookup: {
+        from: "organizations",
+        localField: "organization",
+        foreignField: "_id",
+        as: "organization"
+      }
+    }
+  );
+
+  /* ---------------- FLATTEN ---------------- */
+  pipeline.push({
+    $addFields: {
+      user: { $arrayElemAt: ["$user", 0] },
+      companyOrganizer: { $arrayElemAt: ["$companyOrganizer", 0] },
+      organization: { $arrayElemAt: ["$organization", 0] }
+    }
+  });
+
+  /* ---------------- KEYWORD SEARCH ---------------- */
+  const keywordMatch = buildKeywordMatch(keyword);
+  if (keywordMatch) {
+    pipeline.push({ $match: keywordMatch });
+  }
+
+  /* ---------------- SORT + PAGINATION ---------------- */
+  pipeline.push(
+    { $sort: { createdAt: -1 } },
+    { $skip: skip }
+  );
+
+  if (limit > 0) {
+    pipeline.push({ $limit: limit });
+  }
+
+  /* ---------------- MINIMAL PROJECTION ---------------- */
+  pipeline.push({
+    $project: {
+      batchId: 1,
+      walletType: 1,
+      type: 1,
+      domainType: 1,
+      entityId: 1,
+      points: 1,
+      closingBalance: 1,
+      description: 1,
+      publicId: 1,
+      createdAt: 1,
+      updatedAt: 1,
+
+      user: {
+        _id: "$user._id",
+        firstName: "$user.firstName",
+        lastName: "$user.lastName",
+        email: "$user.email",
+        profileIcon: "$user.profileIcon"
+      },
+
+      companyOrganizer: "$companyOrganizer._id",
+
+      organization: {
+        _id: "$organization._id",
+        basicInfo: {
+          name: "$organization.basicInfo.name",
+          media: {
+            logo: "$organization.basicInfo.media.logo"
+          }
+        }
+      }
+    }
+  });
+
+  /* ---------------- RUN AGGREGATION ---------------- */
+  const txList = await UnifiedWalletTransactions.aggregate(pipeline);
+
+  if (!txList.length) return [];
+
+  /* =====================================================
+     🔥 RESTORE TICKETING BOOKINGS (LIKE OLD CODE)
+     ===================================================== */
+
+  const orderIds = txList
+    .filter(t => t.domainType === "ticketingorders" && t.entityId)
+    .map(t => new mongoose.Types.ObjectId(t.entityId));
+
+  if (!orderIds.length) {
+    return txList.map(tx => ({ ...tx, ticketingBookings: [] }));
+  }
+
+  const bookings = await TicketingBookings.find({
+    order: { $in: orderIds }
+  }).lean();
+
+  const bookingMap = {};
+  for (const bk of bookings) {
+    const oid = bk.order.toString();
+    if (!bookingMap[oid]) bookingMap[oid] = [];
+    bookingMap[oid].push(bk);
+  }
+
+  return txList.map(tx => ({
+    ...tx,
+    ticketingBookings:
+      tx.domainType === "ticketingorders"
+        ? bookingMap[tx.entityId?.toString()] || []
+        : []
+  }));
 };
+
+const countTransactions = async ({ match = {}, keyword }) => {
+  const pipeline = [];
+
+  if (Object.keys(match).length) {
+    pipeline.push({ $match: match });
+  }
+
+  pipeline.push(
+    {
+      $lookup: {
+        from: "users",
+        localField: "user",
+        foreignField: "_id",
+        as: "user"
+      }
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "companyOrganizer",
+        foreignField: "_id",
+        as: "companyOrganizer"
+      }
+    },
+    {
+      $lookup: {
+        from: "organizations",
+        localField: "organization",
+        foreignField: "_id",
+        as: "organization"
+      }
+    },
+    {
+      $addFields: {
+        user: { $arrayElemAt: ["$user", 0] },
+        companyOrganizer: { $arrayElemAt: ["$companyOrganizer", 0] },
+        organization: { $arrayElemAt: ["$organization", 0] }
+      }
+    }
+  );
+
+  const keywordMatch = buildKeywordMatch(keyword);
+  if (keywordMatch) {
+    pipeline.push({ $match: keywordMatch });
+  }
+
+  pipeline.push({ $count: "total" });
+
+  const res = await UnifiedWalletTransactions.aggregate(pipeline);
+  return res[0]?.total || 0;
+};
+
 
 const findTransactionById = (id) => {
   return UnifiedWalletTransactions.findById(id)

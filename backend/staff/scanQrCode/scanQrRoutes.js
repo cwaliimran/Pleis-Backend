@@ -1,6 +1,7 @@
 const express = require("express");
 const {
-  scanQrController
+  scanQrController,
+  scanQrControllerManual
 } = require("./scanQrController");
 
 const router = express.Router();
