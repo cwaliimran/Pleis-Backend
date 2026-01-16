@@ -36,43 +36,52 @@ const createTransaction = async (data) => {
 /**
  * List transactions with filters and pagination
  */
-const getTransactions = async ({ page = 1, limit = 10, walletType, domainType, type, organization, companyOrganizer, entityId, startDate, endDate }) => {
-    const skip = limit === 0 ? 0 : (page - 1) * limit;
-    const query = {};
-    if (walletType) query.walletType = walletType;
-    if (domainType) query.domainType = domainType;
-    if (type) query.type = type;
-    if (organization) query.organization = new mongoose.Types.ObjectId(organization);
-    if (companyOrganizer) query.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
-    if (entityId) query.entityId = entityId;
-    if (startDate || endDate) {
-        query.createdAt = {};
-        if (startDate) {
-            query.createdAt.$gte = new Date(startDate);
-        }
-        if (endDate) {
-            // Set endDate to end of the day for inclusivity
-            const end = new Date(endDate);
-            end.setHours(23, 59, 59, 999);
-            query.createdAt.$lte = end;
-        }
-        // Remove createdAt if empty
-        if (Object.keys(query.createdAt).length === 0) {
-            delete query.createdAt;
-        }
+const getTransactions = async ({
+  page = 1,
+  limit = 10,
+  walletType,
+  domainType,
+  type,
+  organization,
+  companyOrganizer,
+  entityId,
+  startDate,
+  endDate,
+  keyword
+}) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+
+  const match = {};
+
+  if (walletType) match.walletType = walletType;
+  if (domainType) match.domainType = domainType;
+  if (type) match.type = type;
+  if (organization) match.organization = new mongoose.Types.ObjectId(organization);
+  if (companyOrganizer) match.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
+  if (entityId) match.entityId = entityId;
+
+  if (startDate || endDate) {
+    match.createdAt = {};
+    if (startDate) match.createdAt.$gte = new Date(startDate);
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      match.createdAt.$lte = end;
     }
+    if (!Object.keys(match.createdAt).length) delete match.createdAt;
+  }
 
-    const [items, total] = await Promise.all([
-        unifiedRepo.getTransactionsWithFilters(query, skip, limit),
-        unifiedRepo.countTransactions(query)
-    ]);
+  const [items, total] = await Promise.all([
+    unifiedRepo.getTransactionsWithFilters({ match, keyword, skip, limit }),
+    unifiedRepo.countTransactions({ match, keyword })
+  ]);
 
-    let formattedItems = items.map(i => formatTransactionItem(i));
-
-
-    const meta = generateMeta(page, limit, total);
-    return { items: formattedItems, meta };
+  return {
+    items: items.map(formatTransactionItem),
+    meta: generateMeta(page, limit, total)
+  };
 };
+
 
 const getTransactionDetails = async (id) => {
     const trx = await unifiedRepo.findTransactionById(id);

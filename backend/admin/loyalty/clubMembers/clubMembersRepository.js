@@ -4,7 +4,7 @@ const {
 const { getModelCounts } = require("../../../helperUtils/dbUtils/queryUtil");
 const { default: mongoose } = require("mongoose");
 const { generateMeta } = require("../../../helperUtils/responseUtil");
-
+const { User } = require("@UserModel");
 // Count
 const countClubMembers = async (query = {}) => {
   return ClubMembers.countDocuments(query);
@@ -187,6 +187,18 @@ const giftPoints = async (query = {}) => {
   return ClubMembers.giftPoints(query);
 };
 
+// ==========================================================
+// GET COMPANY LOYALTY SETTINGS (tier model + pointValuePercentage)
+// ==========================================================
+const getCompanyLoyaltyInfo = async (companyId) => {
+  const company = await User.findById(companyId)
+    .select("companyDetails.loyaltySettings.model companyDetails.loyaltySettings.pointValuePercentage");
+    console.log("company", company)
+  return {
+    tierKey: company?.companyDetails?.loyaltySettings?.model || "essential",
+    pointValuePercentage: company?.companyDetails?.loyaltySettings?.pointValuePercentage || 0
+  };
+};
 
 module.exports = {
   countClubMembers,
@@ -194,5 +206,6 @@ module.exports = {
   getMembers,
   isClubMember,
   getUserJoinedClubs,
-  giftPoints
+  giftPoints,
+  getCompanyLoyaltyInfo
 };

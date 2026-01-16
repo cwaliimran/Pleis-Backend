@@ -63,6 +63,7 @@ const applyFields = (doc, data, options = { futureMode: false }) => {
   if (data.quantity !== undefined) doc.quantity = data.quantity;
   if (data.price !== undefined) doc.price = data.price;
   if (data.taxPercentage !== undefined) doc.taxPercentage = data.taxPercentage;
+  if (data.resaleProtection !== undefined) doc.resaleProtection = data.resaleProtection;
 
   if (data.event !== undefined) doc.event = data.event;
 
@@ -166,7 +167,6 @@ const applyFields = (doc, data, options = { futureMode: false }) => {
 // MAIN SERVICE
 // ======================================================
 const updateTicketingService = async (ticketId, payload, mode = "single") => {
-  console.log("🎟 updateTicketingService:start", { ticketId, mode,payload });
 
   const ticket = await Ticketings.findById(ticketId);
   if (!ticket) return null;
