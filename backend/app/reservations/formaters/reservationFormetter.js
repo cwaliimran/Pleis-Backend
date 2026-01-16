@@ -15,6 +15,7 @@ function reservationsFormatter(item, timezone) {
     dateTimeSlots.forEach(slot => {
       if (!slot.timeSlots) return;
 
+      slot.date = moment(slot.date).format("YYYY-MM-DD");
       // normalize timeSlots into array too
       const timeSlots = Array.isArray(slot.timeSlots)
         ? slot.timeSlots
@@ -31,6 +32,7 @@ function reservationsFormatter(item, timezone) {
         if (moment(endTime, "hh:mm A", true).isValid()) {
           endTime = moment(endTime, "hh:mm A").toISOString();
         }
+
 
         timeSlot.startTime = convertUtcToTimezoneAMPM(startTime, timezone);
         timeSlot.endTime = convertUtcToTimezoneAMPM(endTime, timezone);

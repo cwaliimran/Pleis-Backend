@@ -69,7 +69,39 @@ const giftPoints = async (req, res) => {
   }
 };
 
+const calculateRewardPointsForOrganizer = async (req, res) => {
+  const { companyOrganizer, itemPrice, overridePercentage = 0 } = req.body;
+
+  if (!validateParams(req, res, {
+    rawData: ["companyOrganizer", "itemPrice"],
+    objectIdFields: ["companyOrganizer"],
+  })) return;
+
+  try {
+    const points = await clubMemberService.calculateRewardPointsForOrganizerService({
+      companyOrganizer,
+      itemPrice,
+      overridePercentage
+    });
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "reward_points_calculated_successfully",
+      data: points,
+    });
+  } catch (error) {
+    let readableMessage = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: readableMessage.message,
+      error: readableMessage,
+    });
+  }
+};
+
 module.exports = {
   getMembers,
   giftPoints,
+  calculateRewardPointsForOrganizer
 };
