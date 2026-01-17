@@ -7,69 +7,48 @@ const { createTicketingBookingService,
   deleteTicketingBookingService, } = require("./ticketingBookingService");
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
+const { validateTicketingPayload } = require("./validators/ticketingValidation");
+const { checkoutWithTicketsAndReservation } = require("./services/checkoutOrchestratorService");
+const { validateReservationPayload } = require("../../reservations/validators/reservationValidation");
+const { attemptTicketingOrdersPayment } = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/paymentService");
+const { ticketingOrderFinalizerService } = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/ticketingOrderFinalizerService");
 
 const createTicketingBooking = async (req, res) => {
+  const session = await mongoose.startSession();
+
   try {
-    const { timezone, _id: userId } = req.user;
-    const {
-      paymentDetails,
-      ticketings = [],
-    } = req.body;
+    session.startTransaction();
 
-    // ==============================
-    // STEP 1: PREPARE VALIDATION DATA
-    // ==============================
-    const validateData = {
-      rawData: ["ticketings", "paymentDetails"],
-    };
-
-    // ==============================
-    // STEP 2: VALIDATE ALL FIELDS
-    // ==============================
-    if (!validateParams(req, res, validateData)) return;
-
-    // ==============================
-    // STEP 3: CONVERT DATES TO UTC
-    // ==============================
-    const ticketingBookingPayload = {
-      user: userId,
-      ticketings,
-      paymentDetails,
-    };
-
-    // ==============================
-    // STEP 4: CREATE TICKETINGBOOKING
-    // ==============================
-    const ticketingBooking = await createTicketingBookingService(ticketingBookingPayload, timezone);
-    await sendUserNotifications({
-      recipientIds: [ticketingBooking.user.toString()],
-      title: "Ticketing Booking Created",
-      body: `Your ticketing booking ${ticketingBooking._id} has been created successfully.`,
-      data: {
-        type: NotificationTypes.TICKET_UPDATE,
-        objectType: "group",
-        organization_id: ticketingBooking.organization.toString(),
+    const result = await createTicketingBookingService(
+      {
+        user: req.user._id,
+        ticketings: req.body.ticketings,
+        paymentDetails: req.body.paymentDetails,
       },
-      image: "noimage",
-      sender: userId,
-      objectId: ticketingBooking.organization,
-    });
+      req.user.timezone,
+      session
+    );
+
+    await session.commitTransaction();
+
     return sendResponse({
       res,
       statusCode: 201,
       translationKey: "ticketing_booking_created_successfully",
-      data: ticketingBooking,
+      data: result,
     });
-  } catch (error) {
-    const readableError = getReadableErrorMessage(error);
-    return sendResponse({
-      res,
-      statusCode: readableError.statusCode,
-      translationKey: readableError.message,
-      error,
-    });
+
+  } catch (err) {
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    throw err;
+  } finally {
+    session.endSession();
   }
 };
+
+
 
 const getTicketingBookings = async (req, res) => {
   try {

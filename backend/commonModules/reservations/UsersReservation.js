@@ -107,38 +107,37 @@ const UserReservationsSchema = new mongoose.Schema(
       default: "",
     },
 
-    reservationStatus: {
-      type: String,
-      enum: ["confirmed", "checkedIn", "rejected", "pending", "cancelled", "completed"],
-      default: "pending",
-    },
+
     status: {
       type: String,
-      enum: ["active", "inactive", "deleted"],
-      default: "active",
-    },
-
-    paymentMethod: {
-      type: String, required: true,
-      enum: ["applePay", "card", "cash", "payLater"], default: "payLater"
-    },
-    paymentId: { type: String, default: null },
-
-    //with payLater user can add more items to cart
-    // for applePay/card order can't be cancelled
-    paymentStatus: {
-      type: String,
-      enum: ["pending", "paid", "failed"],
+      enum: ["confirmed", "checkedIn", "rejected", "pending", "cancelled", "completed", "deleted"],
       default: "pending",
     },
+
+    paymentDetails: {
+      cardId: { type: String, default: null },
+      paymentId: { type: String, default: null }, // gateway ref
+      paymentMethod: {
+        type: String,
+        enum: ["applePay", "card", "cash"],
+        required: true,
+      },
+      paymentStatus: {
+        type: String,
+        enum: ["pending", "paid", "failed", "refunded"],
+        default: "pending",
+        index: true,
+      },
+    },
+
+    lockUntil: {
+      type: Date,
+      index: true,
+    },
+
     paidAt: {
       type: Date,
       default: null,
-    },
-    transactionId: {
-      type: String,
-      default: null,
-      index: true,
     },
 
     //menu item orders associated with this reservation when preOrdering is enabled against event
@@ -146,13 +145,30 @@ const UserReservationsSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "MenuOrders",
       default: null,
-    }
+    },
+    // Ticketing references (for combined booking)
+    ticketingOrderRef: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TicketingOrder",
+      default: null,
+      index: true, // important for refunds & accounting
+    },
+
+    ticketingBookingRefs: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "TicketingBookings",
+        index: true, // enables fast reverse lookup
+      }
+    ],
+
   },
 
   {
     timestamps: true,
   }
 );
+
 
 const UserReservations = mongoose.model("UserReservations", UserReservationsSchema);
 

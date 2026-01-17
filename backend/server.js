@@ -26,6 +26,7 @@ const adminRoutes = require("./admin/routes");
 const organizerRoutes = require("./organizer/routes");
 const appRoutes = require("./routes/appRoutes");
 const staffRoutes = require("./routes/staffRoutes");
+const webhooksRoutes = require("./commonModules/paymentsIntegrations/paymentsWebhook/routes/webhookRoutes");
 const { sendResponse } = require("./helperUtils/responseUtil");
 const connectToDB = require("./helperUtils/server-setup");
 const { backupMongoDB } = require("./helperUtils/dataBaseBackup.js");
@@ -34,6 +35,7 @@ const { securityMiddleware } = require("./middlewares/security.js");
 const swaggerUi = require('swagger-ui-express');
 const swaggerFile = require('../swagger/swagger_output.json');
 const { getRedisClient } = require("./config/redis/redisConfig");
+const { startCrons } = require("./config/cron");
 
 
 // Express app
@@ -60,7 +62,7 @@ const allowedOrigins = [
   "https://handy-floral-implementation-pumps.trycloudflare.com",
   "https://protected-betty-allows-gale.trycloudflare.com",
   "https://personnel-event-waves-alexander.trycloudflare.com",
-  "https://book-resource-proceeds-casey.trycloudflare.com",
+  "https://loaded-incentive-warning-workflow.trycloudflare.com",
   "http://192.168.13.106:4003",
   "http://192.168.13.106:4009",
   "http://192.168.13.221:4003",
@@ -98,6 +100,7 @@ app.use("/api/v1/organizer", organizerRoutes);
 // Organizer staff
 app.use("/api/v1/app/staff", staffRoutes);
 
+app.use("/api/v1/webhooks", webhooksRoutes);
 app.use("/api/v1", routes);
 
 
@@ -128,6 +131,8 @@ setInterval(async () => {
   }
   cronTickCount++;
 }, 5000);
+
+startCrons();
 
 //export app
 // module.exports = { app };
