@@ -299,17 +299,26 @@ const getSummary = async ({
       from: "menus", // Reference to the 'menus' collection
       localField: "menu", // Field in MenuItems
       foreignField: "_id", // Match the _id field in 'menus'
-      as: "menuDetails" // The result of the lookup will be saved in menuDetails
+      pipeline: [
+        {
+          $project: {
+            title: 1,
+            organization: 1
+          }
+        }
+      ],
+
+      as: "menu" // The result of the lookup will be saved in menuDetails
     }
   });
 
   // Unwind to flatten the array of menuDetails
-  basePipeline.push({ $unwind: "$menuDetails" });
+  basePipeline.push({ $unwind: "$menu" });
 
   // Match the organization field in menuDetails
   if (organization) {
     basePipeline.push({
-      $match: { "menuDetails.organization": new mongoose.Types.ObjectId(organization) }
+      $match: { "menu.organization": new mongoose.Types.ObjectId(organization) }
     });
   }
 
@@ -393,7 +402,22 @@ const getSummary = async ({
               isAvailableInStock: 1,
               startDate: 1,
               isScheduled: 1,
-              createdAt: 1
+              createdAt: 1,
+              menu: 1,
+              status: 1,
+              isLimitedTimeOffer: 1,
+              startDate: 1,
+              endDate: 1,
+              isScheduled: 1,
+              availabilityType: 1,
+              upSellItem: 1,
+              isAvailableInStock: 1,
+              type: 1
+
+
+
+
+
             }
           },
           {

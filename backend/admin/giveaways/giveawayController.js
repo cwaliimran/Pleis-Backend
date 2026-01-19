@@ -8,7 +8,7 @@ const {
 } = require("../../helperUtils/responseUtil");
 const mongoose = require('mongoose'); // Import mongoose
 
-const Giveawayervice = require("./GiveawayService");
+const Giveawayervice = require("./giveawayService");
 
 
 
@@ -187,14 +187,14 @@ let data = {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "Reservation_not_found",
+        translationKey: "giveaway_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Reservation_updated_successfully",
+      translationKey: "giveaway_updated_successfully",
       data: updated,
     });
   } catch (error) {

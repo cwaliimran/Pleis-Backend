@@ -294,14 +294,14 @@ const limit = 0;
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "LoyaltyReferral_reset_failed",
+        translationKey: "Loyalty_referral_reset_failed",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "LoyaltyReferral_reset_successfully",
+      translationKey: "Loyalty_referral_reset_successfully",
       data: LoyaltyReferral,
     });
 
