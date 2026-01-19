@@ -21,139 +21,66 @@ const { calculatePointsRepo } = require("../loyalty/calculatePointsEarning/point
 const { createTransaction } = require("../userWalletService/transactions/services/unifiedTransactionsService");
 const { sendUserNotifications } = require("../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
-const createReservation = async (data) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+const createReservation = async (data, session) => {
+  if (!session) throw new Error("session_required");
 
-  try {
-    const { userId, reservationId, partySize, preOrderMenuItems, timezone } = data;
+  const { userId, reservationId, partySize, preOrderMenuItems, timezone } = data;
 
-    // Fetch user profile
-    const userData = await User.aggregate([
+  // Fetch user profile
+  const userData = await User.aggregate(
+    [
       { $match: { _id: new mongoose.Types.ObjectId(userId) } },
-      { $project: { firstName: 1, lastName: 1, phoneNumber: 1 } }
-    ]);
+      { $project: { firstName: 1, lastName: 1, phoneNumber: 1 } },
+    ],
+    { session }
+  );
 
-    if (!userData?.length) throw new Error("User not found");
+  if (!userData?.length) throw new Error("User not found");
 
-    data.firstName = userData[0].firstName || "";
-    data.lastName = userData[0].lastName || "";
-    data.phoneNumber = userData[0].phoneNumber || "";
+  data.firstName = userData[0].firstName || "";
+  data.lastName = userData[0].lastName || "";
+  data.phoneNumber = userData[0].phoneNumber || "";
 
-    // Get reservation base price
-    const reservation = await Reservations.aggregate([
+  // Reservation base price
+  const reservationBase = await Reservations.aggregate(
+    [
       { $match: { _id: new mongoose.Types.ObjectId(reservationId) } },
-      { $project: { amount: { $toDouble: { $ifNull: ["$amount", 0] } } } }
-    ]);
+      { $project: { amount: { $toDouble: { $ifNull: ["$amount", 0] } } } },
+    ],
+    { session }
+  );
 
-    const amountPerPerson = reservation.length > 0 ? reservation[0].amount : 0;
-    const totalReservationAmount = amountPerPerson * partySize;
-    data.amount = totalReservationAmount;
+  const amountPerPerson = reservationBase[0]?.amount || 0;
+  data.amount = amountPerPerson * partySize;
 
-    // SAVE reservation inside session
-    const userReservation = new UserReservations(data);
-    await userReservation.save({ session });
+  // Lock only for card / applePay
+  if (["card", "applePay"].includes(data.paymentDetails.paymentMethod)) {
+    data.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
+  }
 
-    // If pre-order exists -> create order
-    if (preOrderMenuItems?.items?.length) {
-      const order = await placePreOrderMenuItemsWithReservation({
+  const userReservation = new UserReservations(data);
+  await userReservation.save({ session });
+
+  // Pre-order handling
+  if (preOrderMenuItems?.items?.length) {
+    const order =
+      await placePreOrderMenuItemsWithReservation({
         userId,
         timezone,
         items: preOrderMenuItems.items,
         notes: preOrderMenuItems.notes,
         reservation: userReservation._id,
-        paymentMethod: data.paymentMethod,
+        paymentDetails: data.paymentDetails,
         session,
       });
 
-      userReservation.preOrderMenuItemsOrder = order._id;
-
-
-      if (data.paymentMethod === "applePay" || data.paymentMethod === "card") {
-        order.paymentStatus = "paid";
-        //TODO save paymentId
-        order.paymentId = data.paymentId || null;
-        await order.save({ session });
-
-        //totalPrice including menu items + reservation amount
-        const totalPrice = order.totalPrice + totalReservationAmount;
-
-
-        const pointsCalculation =
-          await calculatePointsRepo(userId, data.companyOrganizer, totalPrice);
-
-        const trx = await createTransaction(
-          {
-            user: userId,
-            companyOrganizer: data.companyOrganizer,
-            organization: data.organizationId,
-            companyPoints: {
-              base: pointsCalculation.organizer.earnedPoints,
-              multiplier: 1,
-              total: pointsCalculation.organizer.earnedPoints,
-              pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
-            },
-            globalPoints: {
-              base: pointsCalculation.global.earnedPoints,
-              multiplier: 1,
-              total: pointsCalculation.global.earnedPoints,
-              pointsPerEuro: pointsCalculation.global.pointsPerEuro,
-            },
-            allowNegative: false,
-            type: "earn",
-            description: "",
-            entityId: userReservation._id,
-            domainType: "userreservations",
-          },
-          session
-        );
-
-        if (!trx.success) {
-          throw new Error(trx.message || "failed_loyalty_update");
-        }
-
-        try {
-          await resolveChallengeByTaskTypeService({
-            userId,
-            companyOrganizer: data.companyOrganizer,
-            taskType: "buyMenuItem",
-            items: data.preOrderMenuItems.items
-          });
-        } catch (err) {
-
-        }
-
-      }
-
-      await userReservation.save({ session });
-   /*    await sendUserNotifications({
-        recipientIds: [userId.toString()],
-        title: `Reservation Placed Successfully for ${userReservation.timingSlots.dateTimeSlots[0].date.toDateString()}`,
-        body: `Your reservation is in  ${userReservation.reservationStatus} status.`,
-        data: {
-          type: NotificationTypes.RESERVATION_UPDATE,
-          objectType: "group",
-          organization_id: userReservation.organizationId.toString(),
-        },
-        image: (userReservation.preOrderMenuItemsOrder.items[0].menuItemSnapShot.image) || null,
-        sender: userId,
-        objectId: userReservation.reservationId,
-      }); */
-
-
-    }
-
-    await session.commitTransaction();
-    session.endSession();
-
-    return userReservation;
-
-  } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-    throw err;
+    userReservation.preOrderMenuItemsOrder = order._id;
+    await userReservation.save({ session });
   }
+
+  return userReservation;
 };
+
 
 
 
@@ -407,7 +334,6 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
         organizationId: 1,
         companyOrganizer: 1,
         optionalEventId: 1,
-        reservationStatus: 1,
         userName: {
           $concat: ["$user.firstName", " ", "$user.lastName"]  // Concatenate firstName and lastName
         },
@@ -418,6 +344,8 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
         organizationLogo: "$organization.basicInfo.media.logo",  // Fetch organization logo
         organizationCover: "$organization.basicInfo.media.cover",  // Fetch organization cover image
         preOrderMenuItemsOrder: 1,
+        ticketingBookingRefs: 1,
+
       }
     },
     // Sort by createdAt in descending order
@@ -537,6 +465,29 @@ const getReservationDetails = async (id) => {
           preserveNullAndEmptyArrays: true
         }
       },
+      {
+        $lookup: {
+          from: "menuorders",
+          localField: "preOrderMenuItemsOrder",
+          foreignField: "_id",
+          as: "preOrderMenuItemsOrder"
+        }
+      },
+      {
+        $unwind: {
+          path: "$preOrderMenuItemsOrder",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      // {
+      //   $lookup: {
+      //     from: "ticketingbookings",
+      //     localField: "ticketingBookingRefs",
+      //     foreignField: "_id",
+      //     as: "ticketingBookingRefs"
+      //   }
+      // }
+      // ,
 
       // Project Final fields
       {
@@ -559,7 +510,9 @@ const getReservationDetails = async (id) => {
           companyOrganizer: 1,
           optionalEventId: 1,
           createdAt: 1,
-          updatedAt: 1
+          updatedAt: 1,
+          preOrderMenuItemsOrder: 1,
+          ticketingBookingRefs: 1,
         }
       },
 

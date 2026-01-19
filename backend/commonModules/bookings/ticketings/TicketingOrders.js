@@ -52,28 +52,41 @@ const ticketingOrderSchema = new mongoose.Schema(
             currency: { type: String, default: "€" },
         },
 
+        ticketsPurchased: { type: Number, default: 0 },
+
         paymentDetails: {
             cardId: { type: String, default: null },
-            paymentId: { type: String, default: null },
+            paymentId: { type: String, default: null }, // gateway ref
             paymentMethod: {
                 type: String,
-                enum: ["applePay", "card", ""],
-                default: "",
+                enum: ["applePay", "card", "cash"],
+                required: true,
             },
             paymentStatus: {
                 type: String,
-                enum: ["pending", "completed", "failed"],
+                enum: ["pending", "paid", "failed", "refunded"],
                 default: "pending",
+                index: true,
             },
         },
 
-        ticketsPurchased: { type: Number, default: 0 },
+        lockUntil: {
+            type: Date,
+            index: true,
+        },
 
         status: {
             type: String,
-            enum: ["pending", "confirmed", "cancelled", "completed"],
-            default: "pending",
+            enum: [
+                "pendingPayment",
+                "paid",
+                "cancelled",
+                "completed",
+            ],
+            default: "pendingPayment",
+            index: true,
         },
+
     },
     { timestamps: true }
 );

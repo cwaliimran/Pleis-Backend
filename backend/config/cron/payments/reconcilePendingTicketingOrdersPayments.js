@@ -1,0 +1,19 @@
+const { TicketingOrders } = require("@TicketingOrdersModel");
+const { attemptTicketingOrdersPayment } = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/paymentService");
+const { ticketingOrderFinalizerService } = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/ticketingOrderFinalizerService");
+
+const reconcilePendingTicketingOrdersPayments = async () => {
+  const orders = await TicketingOrders.find({
+    status: "pendingPayment",
+    // lockUntil: { $lt: new Date() },
+  });
+
+  // console.log("🔄 Reconciling", orders.length, "pending orders...");
+  for (const order of orders) {
+    const result = await attemptTicketingOrdersPayment(order._id);
+    console.log("result.status==>",result.status)
+    await ticketingOrderFinalizerService({ orderId: order._id, result });
+  }
+};
+
+module.exports = { reconcilePendingTicketingOrdersPayments };

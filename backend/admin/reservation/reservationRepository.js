@@ -236,7 +236,7 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
 }
 
 
-const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationStatus, reservationId }) => {
+const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationId }) => {
   const now = getCurrentDateInTimezone({ timezone });
 
 
@@ -245,7 +245,7 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
     {
       $match: {
         ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
-        ...(reservationStatus && { reservationStatus: reservationStatus }),
+        ...(status && { status: status }),
         ...(organizationsId && { organizationId: new mongoose.Types.ObjectId(organizationsId) }),
         ...(reservationId && { reservationId: new mongoose.Types.ObjectId(reservationId) })
       }
@@ -301,7 +301,6 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
         partySize: 1,
         reservationType: 1,
         organizationId: 1,
-        reservationStatus: 1,
         companyOrganizer: 1,
         reservationId: 1,
         timingSlots: 1,
@@ -402,14 +401,13 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
   const result = await UserReservations.aggregate(pipeline);
 
   let reservations = result[0]?.data || [];
-  console.log("reservations-->", JSON.stringify(pipeline))
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   // Additional counts for meta (active/inactive/total by userId as creator)
   const [total, active, inactive] = await Promise.all([
-    UserReservations.countDocuments({ ...(userId && { userId: userId }), reservationStatus: { $ne: "cancelled" } }),
-    UserReservations.countDocuments({ reservationStatus: "active", ...(userId && { userId: userId }) }),
-    UserReservations.countDocuments({ reservationStatus: "inactive", ...(userId && { userId: userId }) })
+    UserReservations.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "cancelled" } }),
+    UserReservations.countDocuments({ status: "active", ...(userId && { userId: userId }) }),
+    UserReservations.countDocuments({ status: "inactive", ...(userId && { userId: userId }) })
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
@@ -740,7 +738,6 @@ const getCalendarReservations = async ({
         partySize: 1,
         reservationType: 1,
         organizationId: 1,
-        reservationStatus: 1,
         companyOrganizer: 1,
         reservationId: 1,
         timingSlots: 1,

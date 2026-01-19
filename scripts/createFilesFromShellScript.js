@@ -1,14 +1,20 @@
 /**
- * Monri Payments Module Generator
- * Absolute path – safe overwrite
+ * Unified Payments Webhook Module Generator
+ * - Supports Stripe / Monri / future providers
+ * - Supports ticketing + reservations
+ * - Safe overwrite
  */
 
 const fs = require("fs");
 const path = require("path");
 
+/* 🔧 CHANGE THIS ONLY */
 const BASE_DIR =
-  "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/paymentsIntegrations/monri";
+  "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/paymentsIntegrations/paymentsWebhook";
 
+/* ============================
+   Helpers
+============================ */
 const ensureDir = (dir) => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 };
@@ -19,241 +25,250 @@ const write = (file, content) => {
 };
 
 ensureDir(BASE_DIR);
+ensureDir(path.join(BASE_DIR, "controllers"));
+ensureDir(path.join(BASE_DIR, "services"));
+ensureDir(path.join(BASE_DIR, "repositories"));
+ensureDir(path.join(BASE_DIR, "routes"));
+ensureDir(path.join(BASE_DIR, "utils"));
 
 /* ============================
-   MonriTransaction.js
+   WebhookEvent.model.js
 ============================ */
 write(
-  path.join(BASE_DIR, "MonriTransaction.js"),
+  path.join(BASE_DIR, "repositories", "WebhookEvent.model.js"),
   `
 const mongoose = require("mongoose");
 
-const monriTransactionSchema = new mongoose.Schema(
+const webhookEventSchema = new mongoose.Schema(
   {
-    orderNumber: { type: String, required: true, unique: true },
-    amount: { type: Number, required: true },
-    currency: { type: String, default: "EUR" },
-    status: {
-      type: String,
-      enum: ["pending", "paid", "failed"],
-      default: "pending",
-    },
-    approvalCode: String,
-    rawCallback: Object,
+    provider: { type: String, required: true }, // stripe | monri
+    eventId: { type: String, required: true },
+    type: { type: String, enum: ["ticketing", "reservation"], required: true },
+    orderId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    payload: Object,
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model(
-  "MonriTransaction",
-  monriTransactionSchema
-);
+webhookEventSchema.index({ provider: 1, eventId: 1 }, { unique: true });
+
+module.exports = mongoose.model("WebhookEvent", webhookEventSchema);
 `
 );
 
 /* ============================
-   monriCrypto.js
+   webhookRepository.js
 ============================ */
 write(
-  path.join(BASE_DIR, "monriCrypto.js"),
+  path.join(BASE_DIR, "repositories", "webhookRepository.js"),
+  `
+const WebhookEvent = require("./WebhookEvent.model");
+
+const saveIfNotProcessed = async (data) => {
+  try {
+    return await WebhookEvent.create(data);
+  } catch (err) {
+    if (err.code === 11000) return null; // already processed
+    throw err;
+  }
+};
+
+module.exports = { saveIfNotProcessed };
+`
+);
+
+/* ============================
+   paymentWebhookService.js
+============================ */
+write(
+  path.join(BASE_DIR, "services", "paymentWebhookService.js"),
+  `
+const { saveIfNotProcessed } = require("../repositories/webhookRepository");
+const { ticketingOrderFinalizerService } =
+  require("../orderFinalizers/ticketingOrderFinalizerService");
+const { reservationOrderFinalizerService } =
+  require("../orderFinalizers/reservationOrderFinalizerService");
+
+const processPaymentWebhook = async ({
+  provider,
+  eventId,
+  type,
+  orderId,
+  paymentStatus,
+  paymentId,
+  payload,
+}) => {
+  const event = await saveIfNotProcessed({
+    provider,
+    eventId,
+    type,
+    orderId,
+    payload,
+  });
+
+  if (!event) return; // idempotent exit
+
+  const result = {
+    status: paymentStatus,
+    paymentId,
+  };
+
+  if (type === "ticketing") {
+    await ticketingOrderFinalizerService({ orderId, result });
+  }
+
+  if (type === "reservation") {
+    await reservationOrderFinalizerService({ reservationId: orderId, result });
+  }
+};
+
+module.exports = { processPaymentWebhook };
+`
+);
+
+/* ============================
+   monriSignature.js
+============================ */
+write(
+  path.join(BASE_DIR, "utils", "monriSignature.js"),
   `
 const crypto = require("crypto");
 
-const sign = ({ orderNumber, amount, currency }) => {
-  return crypto
-    .createHash("sha256")
-    .update(
-      orderNumber +
-        amount +
-        currency +
-        process.env.MONRI_AUTH_TOKEN
-    )
+const verifyMonriSignature = (req) => {
+  const signature = req.headers["x-monri-signature"];
+  const payload = JSON.stringify(req.body);
+
+  const expected = crypto
+    .createHmac("sha256", process.env.MONRI_WEBHOOK_SECRET)
+    .update(payload)
     .digest("hex");
+
+  if (signature !== expected) {
+    throw new Error("invalid_monri_signature");
+  }
 };
 
-const verify = ({ orderNumber, amount, currency, digest }) => {
-  return digest === sign({ orderNumber, amount, currency });
-};
-
-module.exports = { sign, verify };
+module.exports = { verifyMonriSignature };
 `
 );
 
 /* ============================
-   monriRepository.js
+   stripeSignature.js
 ============================ */
 write(
-  path.join(BASE_DIR, "monriRepository.js"),
+  path.join(BASE_DIR, "utils", "stripeSignature.js"),
   `
-const MonriTransaction = require("./MonriTransaction");
+const Stripe = require("stripe");
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-const createTransaction = async (data) => {
-  return MonriTransaction.create(data);
-};
-
-const findByOrderNumber = async (orderNumber) => {
-  return MonriTransaction.findOne({ orderNumber });
-};
-
-const updateTransaction = async (orderNumber, data) => {
-  return MonriTransaction.findOneAndUpdate(
-    { orderNumber },
-    data,
-    { new: true }
+const verifyStripeSignature = (req, rawBody) => {
+  return stripe.webhooks.constructEvent(
+    rawBody,
+    req.headers["stripe-signature"],
+    process.env.STRIPE_WEBHOOK_SECRET
   );
 };
 
-module.exports = {
-  createTransaction,
-  findByOrderNumber,
-  updateTransaction,
-};
+module.exports = { verifyStripeSignature };
 `
 );
 
 /* ============================
-   monriService.js
+   monriWebhookController.js
 ============================ */
 write(
-  path.join(BASE_DIR, "monriService.js"),
+  path.join(BASE_DIR, "controllers", "monriWebhookController.js"),
   `
-const { v4: uuid } = require("uuid");
-const repo = require("./monriRepository");
-const { sign } = require("./monriCrypto");
+const { processPaymentWebhook } = require("../services/paymentWebhookService");
+const { verifyMonriSignature } = require("../utils/monriSignature");
 
-const createPayment = async ({ amount }) => {
-  const orderNumber = uuid();
+const monriWebhookController = async (req, res) => {
+  try {
+    verifyMonriSignature(req);
 
-  await repo.createTransaction({
-    orderNumber,
-    amount,
-  });
+    const event = req.body;
 
-  const payload = {
-    merchant_id: process.env.MONRI_MERCHANT_ID,
-    order_number: orderNumber,
-    amount,
-    currency: "EUR",
-    transaction_type: "purchase",
-  };
+    await processPaymentWebhook({
+      provider: "monri",
+      eventId: event.transaction.id,
+      type: event.transaction.metadata.type,
+      orderId: event.transaction.order_number,
+      paymentStatus:
+        event.transaction.status === "approved" ? "paid" : "failed",
+      paymentId: event.transaction.id,
+      payload: event,
+    });
 
-  payload.digest = sign({
-    orderNumber,
-    amount,
-    currency: "EUR",
-  });
-
-  return {
-    checkoutUrl: "https://ipgtest.monri.com/checkout",
-    payload,
-  };
+    res.status(200).json({ received: true });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: "invalid_webhook" });
+  }
 };
 
-const handleCallback = async (payload) => {
-  const { order_number, approved, approval_code } = payload;
-
-  const status =
-    approved === true || approved === "true"
-      ? "paid"
-      : "failed";
-
-  return repo.updateTransaction(order_number, {
-    status,
-    approvalCode: approval_code,
-    rawCallback: payload,
-  });
-};
-
-module.exports = {
-  createPayment,
-  handleCallback,
-};
+module.exports = { monriWebhookController };
 `
 );
 
 /* ============================
-   monriController.js
+   stripeWebhookController.js
 ============================ */
 write(
-  path.join(BASE_DIR, "monriController.js"),
+  path.join(BASE_DIR, "controllers", "stripeWebhookController.js"),
   `
-const {
-  sendResponse,
-  validateParams,
-} = require("../../helperUtils/responseUtil");
+const { processPaymentWebhook } = require("../services/paymentWebhookService");
+const { verifyStripeSignature } = require("../utils/stripeSignature");
 
-const monriService = require("./monriService");
-const { verify } = require("./monriCrypto");
-
-const createPayment = async (req, res) => {
-  if (!validateParams(req, res, { rawData: ["amount"] })) return;
+const stripeWebhookController = async (req, res) => {
+  let event;
 
   try {
-    const session = await monriService.createPayment(req.body);
-
-    return sendResponse({
-      res,
-      statusCode: 201,
-      translationKey: "payment_session_created",
-      data: session,
-    });
-  } catch (error) {
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: "internal_server_error",
-      error,
-    });
-  }
-};
-
-const callback = async (req, res) => {
-  const {
-    order_number,
-    amount,
-    currency,
-    digest,
-  } = req.body;
-
-  const valid = verify({
-    orderNumber: order_number,
-    amount,
-    currency,
-    digest,
-  });
-
-  if (!valid) {
-    return res.status(400).send("INVALID_SIGNATURE");
+    event = verifyStripeSignature(req, req.rawBody);
+  } catch (err) {
+    return res.status(400).send("Webhook Error");
   }
 
-  await monriService.handleCallback(req.body);
+  if (event.type === "payment_intent.succeeded") {
+    const intent = event.data.object;
 
-  res.send("OK");
+    await processPaymentWebhook({
+      provider: "stripe",
+      eventId: intent.id,
+      type: intent.metadata.type,
+      orderId: intent.metadata.orderId,
+      paymentStatus: "paid",
+      paymentId: intent.id,
+      payload: event,
+    });
+  }
+
+  res.json({ received: true });
 };
 
-module.exports = {
-  createPayment,
-  callback,
-};
+module.exports = { stripeWebhookController };
 `
 );
 
 /* ============================
-   monriRoutes.js
+   webhookRoutes.js
 ============================ */
 write(
-  path.join(BASE_DIR, "monriRoutes.js"),
+  path.join(BASE_DIR, "routes", "webhookRoutes.js"),
   `
 const express = require("express");
-const {
-  createPayment,
-  callback,
-} = require("./monriController");
-
 const router = express.Router();
 
-router.post("/create", createPayment);
-router.post("/callback", callback);
+const { monriWebhookController } =
+  require("../controllers/monriWebhookController");
+const { stripeWebhookController } =
+  require("../controllers/stripeWebhookController");
+
+router.post("/monri", express.json({ type: "*/*" }), monriWebhookController);
+router.post(
+  "/stripe",
+  express.raw({ type: "application/json" }),
+  stripeWebhookController
+);
 
 module.exports = router;
 `
@@ -266,9 +281,9 @@ write(
   path.join(BASE_DIR, "index.js"),
   `
 module.exports = {
-  routes: require("./monriRoutes"),
+  routes: require("./routes/webhookRoutes"),
 };
 `
 );
 
-console.log("\\n🎉 Monri module created (Categories-style compliant)");
+console.log("\\n🎉 Unified Payments Webhook module created successfully");

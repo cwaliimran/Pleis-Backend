@@ -147,10 +147,10 @@ const getReservationDetails = async (id) => {
 
 
 
-const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, reservationStatus, reservationId }) => {
+const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, reservationId }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { reservations, meta } = await ReservationRepo.getUserReservations({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationStatus, reservationId });
+  let { reservations, meta } = await ReservationRepo.getUserReservations({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationId });
 
   return {
     reservations,
@@ -160,7 +160,7 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
 
 const updateUserReservationStatus = async (id, value) => {
   const updated = await UserReservations.findByIdAndUpdate(id, {
-    reservationStatus: value,
+    status: value,
   });
   if (!updated) return null;
   return true;
