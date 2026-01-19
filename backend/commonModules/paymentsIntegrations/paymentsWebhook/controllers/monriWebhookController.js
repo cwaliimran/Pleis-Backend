@@ -7,21 +7,32 @@ const monriWebhookController = async (req, res) => {
 
     const event = req.body;
 
-    await processPaymentWebhook({
+    const result = await processPaymentWebhook({
       provider: "monri",
       eventId: event.transaction.id,
-      type: event.transaction.metadata.type,
+      orderType: event.transaction.metadata.type, // ticketing | reservation
       orderId: event.transaction.orderNumber,
       paymentStatus: event.transaction.status,
       paymentId: event.transaction.id,
       payload: event,
     });
 
-    res.status(200).json({ received: true });
+    // ✅ Always return 200, but with clarity
+    return res.status(200).json({
+      received: true,
+      processed: result.handled,
+      reason: result.reason || null,
+    });
   } catch (err) {
-    console.error(err);
-    res.status(400).json({ error: "invalid_webhook" });
+    console.error("Webhook error:", err);
+
+    // ❌ Only reject if truly invalid
+    return res.status(400).json({
+      received: false,
+      error: "invalid_webhook",
+    });
   }
 };
+
 
 module.exports = { monriWebhookController };

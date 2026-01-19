@@ -15,38 +15,68 @@ const { ticketingOrderFinalizerService } = require("../../../commonModules/payme
 
 const createTicketingBooking = async (req, res) => {
   const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
-    session.startTransaction();
+    const { timezone } = req.user;
+    const { ticketings, paymentDetails, reservation } = req.body;
 
-    const result = await createTicketingBookingService(
-      {
-        user: req.user._id,
-        ticketings: req.body.ticketings,
-        paymentDetails: req.body.paymentDetails,
-      },
-      req.user.timezone,
-      session
-    );
+    if (!validateTicketingPayload(req, res)) return;
+
+    let result;
+
+    if (reservation) {
+      // Combined flow
+      const normalizedReservation =
+        validateReservationPayload(req, res, reservation);
+      if (!normalizedReservation) return;
+
+      result = await checkoutWithTicketsAndReservation(
+        {
+          user: req.user,
+          timezone,
+          ticketings,
+          reservation: normalizedReservation,
+          paymentDetails,
+        },
+        session
+      );
+    } else {
+      // Ticketing-only flow
+      result = await createTicketingBookingService(
+        {
+          user: req.user._id,
+          ticketings,
+          paymentDetails,
+        },
+        timezone,
+        session
+      );
+    }
 
     await session.commitTransaction();
 
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "ticketing_booking_created_successfully",
+      translationKey: "booking_created_successfully",
       data: result,
     });
 
   } catch (err) {
-    if (session.inTransaction()) {
-      await session.abortTransaction();
-    }
-    throw err;
+    await session.abortTransaction();
+
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: err.message,
+      error: err,
+    });
   } finally {
     session.endSession();
   }
 };
+
 
 
 

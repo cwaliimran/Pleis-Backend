@@ -3,6 +3,8 @@ const { TicketingOrders } = require("@TicketingOrdersModel");
 const { TicketingBookings } = require("@TicketingBookingsModel");
 const { UserReservations } = require("@UserReservationsModel");
 const MenuOrders = require("@OrdersModel");
+const { calculatePointsRepo } = require("../../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
+const { createTransaction } = require("../../../../app/userWalletService/transactions/services/unifiedTransactionsService");
 
 /**
  * Ticketing Order Finalizer
@@ -20,10 +22,10 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
     if (!order) throw new Error("order_not_found");
 
     // 🛑 Idempotency guard (CRITICAL)
-    if (order.status !== "pendingPayment") {
-      await session.commitTransaction();
-      return;
-    }
+    // if (order.status !== "pendingPayment") {
+    //   await session.commitTransaction();
+    //   return;
+    // }
 
     // ⏳ Gateway still pending → do nothing
     if (result.status === "pending") {
@@ -88,6 +90,45 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
           { session }
         );
       }
+
+      /* 
+      when everything is successful, give points to user
+      Loyalty points */
+      const pointsCalculation =
+        await calculatePointsRepo(order.user, order.companyOrganizer, order.orderPricing.total);
+
+      const globalPoints = {
+        base: pointsCalculation.global.earnedPoints,
+        multiplier: 1,
+        total: pointsCalculation.global.earnedPoints,
+        pointsPerEuro: pointsCalculation.global.pointsPerEuro,
+      };
+
+      const companyPoints = {
+        base: pointsCalculation.organizer.earnedPoints,
+        multiplier: 1,
+        total: pointsCalculation.organizer.earnedPoints,
+        pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
+      };
+
+
+      const trxData = {
+        user: order.user,
+        companyOrganizer: order.companyOrganizer,
+        organization: order.organization,
+        companyPoints,
+        globalPoints,
+        allowNegative: false,
+        type: "earn",
+        description: "Booked tickets.",
+        entityId: order._id,
+        domainType: "ticketingorders",
+      };
+
+      const trx = await createTransaction(trxData, session);
+
+      if (!trx.success) throw new Error(trx.message || "wallet_update_failed");
+
     }
 
     // ==========================

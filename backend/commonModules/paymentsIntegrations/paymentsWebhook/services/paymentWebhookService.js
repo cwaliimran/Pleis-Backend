@@ -6,7 +6,7 @@ const { reservationOrderFinalizerService } = require("../../dummyChargeForTestin
 const processPaymentWebhook = async ({
   provider,
   eventId,
-  type,
+  orderType,
   orderId,
   paymentStatus,
   paymentId,
@@ -15,24 +15,41 @@ const processPaymentWebhook = async ({
   const event = await saveIfNotProcessed({
     provider,
     eventId,
-    type,
+    orderType,
     orderId,
+    paymentStatus,
+    paymentId,
     payload,
   });
-  
-  if (!event) return; // idempotent exit
+
+  // 👇 EXPLICIT RESULT
+  if (!event) {
+    return {
+      handled: false,
+      reason: "duplicate event",
+    };
+  }
 
   const result = {
     status: paymentStatus,
     paymentId,
   };
 
-  if (type === "ticketing") {
+  if (orderType === "ticketing") {
     await ticketingOrderFinalizerService({ orderId, result });
   }
-  if (type === "reservation") {
-    await reservationOrderFinalizerService({ reservationId: orderId, result });
+
+  if (orderType === "reservation") {
+    await reservationOrderFinalizerService({
+      reservationId: orderId,
+      result,
+    });
   }
+
+  return {
+    handled: true,
+  };
 };
+
 
 module.exports = { processPaymentWebhook };

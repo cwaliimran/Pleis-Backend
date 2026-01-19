@@ -24,7 +24,9 @@ const createTicketingBookingService = async (
   /* 1️⃣ Validate tickets */
   const validationResult = await validateTicketsAndQuantity(data.ticketings);
   if (!validationResult.valid) {
-    throw new Error("ticket_validation_failed");
+    const error = new Error("ticket_validation_failed");
+    error.details = validationResult.errors; // optional but powerful
+    throw error;
   }
 
   /* 2️⃣ Resolve org / event */

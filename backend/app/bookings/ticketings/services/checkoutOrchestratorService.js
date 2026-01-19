@@ -2,6 +2,7 @@
 const mongoose = require("mongoose");
 const { createTicketingBookingService } = require("../ticketingBookingService");
 const { createReservationService } = require("../../../reservations/reservationService");
+const { TicketingBookings } = require("@TicketingBookingsModel");
 
 const checkoutWithTicketsAndReservation = async ({
   user,
