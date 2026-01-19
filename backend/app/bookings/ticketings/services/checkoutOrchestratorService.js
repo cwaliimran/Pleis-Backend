@@ -44,6 +44,13 @@ const checkoutWithTicketsAndReservation = async ({
       { $set: { reservationRef: reservationResult._id } },
       { session }
     );
+/* will decide later
+    //also update order with reservation ref
+    await mongoose.model("TicketingOrders").updateOne(
+      { _id: order._id },
+      { $set: { reservation: reservationResult._id } },
+      { session }
+    ); */
 
     await session.commitTransaction();
 

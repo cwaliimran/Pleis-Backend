@@ -2,6 +2,7 @@ const { saveIfNotProcessed } = require("../repositories/webhookRepository");
 
 const { ticketingOrderFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/ticketingOrderFinalizerService");
 const { reservationOrderFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/reservationOrderFinalizerService");
+const { menuOrderFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/menuOrderFinalizerService");
 
 const processPaymentWebhook = async ({
   provider,
@@ -34,14 +35,20 @@ const processPaymentWebhook = async ({
     status: paymentStatus,
     paymentId,
   };
-
-  if (orderType === "ticketing") {
+  
+  if (orderType === "ticketingbookings") {
     await ticketingOrderFinalizerService({ orderId, result });
   }
 
-  if (orderType === "reservation") {
+  if (orderType === "userreservations") {
     await reservationOrderFinalizerService({
       reservationId: orderId,
+      result,
+    });
+  }
+  if (orderType === "menuorders") {
+    await menuOrderFinalizerService({
+      menuOrderId: orderId,
       result,
     });
   }

@@ -47,6 +47,10 @@ const UserReservationsSchema = new mongoose.Schema(
       type: Number,
       min: [0, "Price must be positive"],
     },
+    priceBreakDown: {
+      type: Object,
+      default: {},
+    },
     organizationId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organization",
