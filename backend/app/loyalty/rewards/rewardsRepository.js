@@ -8,7 +8,6 @@ const {
 const { createRewardOrderService } = require("../rewardsOrders/rewardsOrdersService");
 
 
-// Get rewards by company organizer
 // Get ALL rewards by company organizer (no pagination)
 const getRewardsByCompanyOrganizer = async ({ companyOrganizer }) => {
   const now = new Date();
@@ -55,16 +54,30 @@ const getRewardsForDashboardPaged = async ({
   clubIds,
   now,
   skip,
-  limit
+  limit,
+  keyword = "",
 }) => {
-  return Reward.find({
+  const query = {
     companyOrganizer: { $in: clubIds },
     status: "active",
     $or: [
       { endDate: null },
-      { endDate: { $gt: now } }
-    ]
-  })
+      { endDate: { $gt: now } },
+    ],
+  };
+
+  if (keyword) {
+    query.$and = [
+      {
+        $or: [
+          { title: { $regex: keyword, $options: "i" } },
+          { description: { $regex: keyword, $options: "i" } },
+        ],
+      },
+    ];
+  }
+
+  return Reward.find(query)
     .populate("tierLimit")
     .populate("menuItem", "title image")
     .populate(
@@ -77,16 +90,31 @@ const getRewardsForDashboardPaged = async ({
     .lean();
 };
 
-const countDashboardRewards = async ({ clubIds, now }) => {
-  return Reward.countDocuments({
+
+const countDashboardRewards = async ({ clubIds, now, keyword = "" }) => {
+  const query = {
     companyOrganizer: { $in: clubIds },
     status: "active",
     $or: [
       { endDate: null },
       { endDate: { $gt: now } }
     ]
-  });
+  };
+
+  if (keyword) {
+    query.$and = [
+      {
+        $or: [
+          { title: { $regex: keyword, $options: "i" } },
+          { description: { $regex: keyword, $options: "i" } }
+        ]
+      }
+    ];
+  }
+
+  return Reward.countDocuments(query);
 };
+
 
 
 module.exports = {

@@ -8,40 +8,28 @@ const { NotificationExp } = require("../models/Notifications");
 const { fetchEventDetails } = require("./notificationHelper/EventDetails");
 const formatImage = require("./notificationHelper/formatImage");
 const { getFullImageUrl } = require("@utils/imageHelper");
-
-
-
-
-
-
-
-
-
-
-
-
+const Organizations = require("@OrganizationModel");
+const { default: mongoose } = require("mongoose");
+const { User } = require("@UserModel");
 
 const getNotifications = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const keyword= req.query.keyword || null;
+  const keyword = req.query.keyword || null;
+  const userId = req.user._id;
+  const timezone = req.user.timezone || "UTC";
+
   try {
-    // Build the query to filter notifications
-    const query = {
-      receiverId: req.user._id,
-    };
+    const query = { receiverId: userId };
+    if (keyword) query.type = { $regex: keyword, $options: "i" };
 
-    if (keyword) {
-      // Use a regex search to find the keyword in title, body, or type fields (case-insensitive)
-      query.$or = [
-        { type: { $regex: keyword, $options: "i" } },   // Search within type
-      ];
-    }
-
-    const [notifications, totalNotifications] = await Promise.all([
+    /* ===============================
+       FETCH NOTIFICATIONS (NO POPULATE)
+    =============================== */
+    const [notifications, total] = await Promise.all([
       NotificationExp.find(query)
-        .populate("subjectId", "_id firstName lastName username profileIcon")
-        .populate("receiverId", "_id firstName lastName username profileIcon isRead ") // Populate full subjectId object
-        
+        .select(
+          "_id type objectId objectType title body isRead subjectId image createdAt"
+        )
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -49,75 +37,122 @@ const getNotifications = async (req, res) => {
       NotificationExp.countDocuments(query),
     ]);
 
-    // Calculate pagination meta
-    const meta = generateMeta(page, limit, totalNotifications);
-    // Use Promise.all to wait for all async calls inside map
-    const formattedNotifications = await Promise.all(
-      notifications.map(async (notification) => {
-        const {
-          _id,
-          type,
-          objectId,
-          title,
-          body,
-          data,
-          url,
-          isRead,
-          createdAt,
-          objectType,
-          subjectId,
-          receiverId,
-          image
-        } = notification;
-        const userTimezone = req.user.timezone || "UTC";
-        const timeSince = moment(createdAt).tz(userTimezone).fromNow();
+    if (!notifications.length) {
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "notifications_fetched_success",
+        data: [],
+        meta: generateMeta(page, limit, total),
+      });
+    }
+ 
+    /* ===============================
+       COLLECT IDS BY TYPE
+    =============================== */
+    const userIds = [];
+    const orgIds = [];
 
-        // If type is eventUpdate, fetch event details
-        let eventDetails = null;
-        if (type === "eventUpdate") {
-          eventDetails = await fetchEventDetails(objectId); // Fetch event details
-   
-        }
+    for (const n of notifications) {
+      if (!mongoose.Types.ObjectId.isValid(n.subjectId)) continue;
 
-        // Return the notification with event details
-        return {
-          _id,
-          type,
-          objectId,
-          objectType,
-          subject: subjectId,
-          receiver: receiverId,
-          title,
-          body,
-          data,
-          isRead,
-          timeSince,
-          image: getFullImageUrl(image),
-          ...eventDetails,  // Add event details if available
-        };
-      })
+      if (n.objectType === "menuorders") {
+        orgIds.push(new mongoose.Types.ObjectId(n.subjectId));
+      } else {
+        userIds.push(new mongoose.Types.ObjectId(n.subjectId));
+      }
+    }
+
+    /* ===============================
+       FETCH ORGANIZATIONS
+    =============================== */
+    const organizations = orgIds.length
+      ? await Organizations.find({ _id: { $in: orgIds } })
+        .select("basicInfo.name basicInfo.media.logo")
+        .lean()
+      : [];
+
+    const orgMap = new Map(
+      organizations.map(o => [
+        o._id.toString(),
+        {
+          _id: o._id,
+          title: o.basicInfo?.name || "",
+          image: o.basicInfo?.media?.logo || "",
+        },
+      ])
     );
 
-    const formattedNotificationsWithImages = formattedNotifications.map(notification =>
-      formatImage(notification, req.user.timezone)
+    /* ===============================
+       FETCH USERS
+    =============================== */
+    const users = userIds.length
+      ? await User.find({ _id: { $in: userIds } })
+        .select("companyDetails.loyaltySettings.title companyDetails.logo")
+        .lean()
+      : [];
+
+    const userMap = new Map(
+      users.map(u => [
+        u._id.toString(),
+        {
+          _id: u._id,
+          title: u.companyDetails?.loyaltySettings?.title || "",
+          image: u.companyDetails?.logo || "",
+        },
+      ])
     );
+
+    /* ===============================
+       FORMAT RESPONSE
+    =============================== */
+    const formatted = notifications.map(n => {
+      let subject = { _id: null, title: "", image: "" };
+
+      if (n.objectType === "menuorders") {
+        subject = orgMap.get(String(n.subjectId)) || subject;
+      } else {
+        subject = userMap.get(String(n.subjectId)) || subject;
+      }
+
+      return {
+        _id: n._id,
+        type: n.type,
+        objectId: n.objectId,
+        objectType: n.objectType,
+        title: n.title,
+        body: n.body,
+        isRead: n.isRead,
+        subject: {
+          _id: subject._id,
+          title: subject.title,
+          image: getFullImageUrl(subject.image),
+        },
+        image: getFullImageUrl(n.image),
+        timeSince: moment(n.createdAt).tz(timezone).fromNow(),
+        createdAt: n.createdAt,
+      };
+    });
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "notifications_fetched_success", // Use translation key
-      data: formattedNotificationsWithImages,
-      meta: meta,
+      translationKey: "notifications_fetched_success",
+      data: formatted,
+      meta: generateMeta(page, limit, total),
     });
+
   } catch (error) {
     return sendResponse({
       res,
       statusCode: 500,
-      translationKey: "notifications_fetch_error", // Use translation key for errors
+      translationKey: "notifications_fetch_error",
       error,
     });
   }
 };
+
+
 
 
 

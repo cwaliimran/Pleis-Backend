@@ -64,10 +64,58 @@ const getEligibleChallengesForDashboard = async ({
   return challenges;
 };
 
+
+// challengesRepo.js
+const getChallengesWithPagination = async ({
+  clubIds,
+  now,
+  skip,
+  limit,
+  keyword = ""
+}) => {
+  return Challenge.find({
+    companyOrganizer: { $in: clubIds },
+    status: "active",
+    $or: [{ endDate: null }, { endDate: { $gt: now } }],
+    ...(keyword
+      ? {
+          $or: [
+            { "title": { $regex: keyword, $options: "i" } },
+            { "description": { $regex: keyword, $options: "i" } },
+          ],
+        }
+      : {}),
+  })
+    .populate("tierLimit")
+    .sort({ createdAt: -1 }) // cheap + indexed
+    .skip(skip)
+    .limit(limit)
+    .lean();
+};
+
+const countChallengesWithPagination = async ({ clubIds, now, keyword = "" }) => {
+  return Challenge.countDocuments({
+    companyOrganizer: { $in: clubIds },
+    status: "active",
+    $or: [{ endDate: null }, { endDate: { $gt: now } }],
+    ...(keyword
+      ? {
+          $or: [
+            { "title": { $regex: keyword, $options: "i" } },
+            { "description": { $regex: keyword, $options: "i" } },
+          ],
+        }
+      : {}),
+  });
+};
+
+
 module.exports = {
   getChallengesWithFilters,
   countChallenges,
   findChallengeById,
   findBestActiveChallengeByTaskType,
-  getEligibleChallengesForDashboard
+  getEligibleChallengesForDashboard,
+  getChallengesWithPagination,
+  countChallengesWithPagination,
 };

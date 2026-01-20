@@ -3,6 +3,8 @@ const Reward = require("@RewardModel");
 const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
 const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
 const { getModelCounts } = require("@dbUtils/queryUtil");
+const { sendUserNotifications } = require("@notificationsUtil");
+const { NotificationTypes } = require("@NotificationsModel");
 
 // Create reward order (claim)
 const createRewardOrder = async ({ userId, rewardId }) => {
@@ -73,6 +75,18 @@ const createRewardOrder = async ({ userId, rewardId }) => {
 
     await session.commitTransaction();
     session.endSession();
+
+    /* SEND NOTIFICATION IN BACKGROUND */
+    await sendUserNotifications({
+      recipientIds: [userId.toString()],
+      title: `Claimed reward ${reward.title}`,
+      body: `You have successfully claimed the reward ${reward.title} using ${reward.minPointsRequiredToClaim || 0} points.`,
+      data: { type: NotificationTypes.REWARD_CLAIMED, rewardId: reward._id, objectType: "loyaltyrewardsorders" },
+      sender: orderDoc.companyOrganizer,
+      objectId: orderDoc._id,
+      image: reward.image || null,
+
+    });
 
     return { success: true, order: orderDoc, transactions: trx.transactions };
   } catch (err) {

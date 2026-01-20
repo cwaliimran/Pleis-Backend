@@ -10,6 +10,8 @@ const rewardService = require("./rewardsService");
 const { getUserCompanyWallet } = require("../clubMembers/clubMembersService");
 const { formatRewardsByTierKey } = require("../../../commonModules/loyalty/rewards/utils/formatReward");
 
+const { REWARD_CLAIM_REASONS } = require("./formatters/rewardClaimReasons");
+
 const getRewards = async (req, res) => {
   const keyword = req.query.keyword || "";
 
@@ -27,7 +29,6 @@ const getRewards = async (req, res) => {
       getUserCompanyWallet(userId, companyOrganizer),
     ]);
 
-    // Tier-specific formatting
     const formattedRewards = formatRewardsByTierKey(
       rewardsResponse?.rewards || [],
       userCompanyWallet?.tierKey || "essential"
@@ -39,20 +40,37 @@ const getRewards = async (req, res) => {
     const finalRewards = formattedRewards.map(group => ({
       ...group,
       items: group.items.map(item => {
-        // ❌ Already not claimable by limit → stop
-        if (!item.canClaim) return item;
+        const cannotClaimReasons = [
+          ...(item.cannotClaimReasons || []),
+        ];
 
-        // Tier eligibility
-        if (userTierEntry < (item?.tierLimit?.entryPoints ?? 0)) {
-          return { ...item, canClaim: false };
+        /* -----------------------------
+           Tier eligibility
+        ----------------------------- */
+        if (
+          userTierEntry < (item?.tierLimit?.entryPoints ?? 0)
+        ) {
+          cannotClaimReasons.push(
+            REWARD_CLAIM_REASONS.TIER_NOT_ELIGIBLE
+          );
         }
 
-        // Points eligibility
-        if (userPoints < (item.pointsRequired ?? 0)) {
-          return { ...item, canClaim: false };
+        /* -----------------------------
+           Points eligibility
+        ----------------------------- */
+        if (
+          userPoints < (item.pointsRequired ?? 0)
+        ) {
+          cannotClaimReasons.push(
+            REWARD_CLAIM_REASONS.INSUFFICIENT_POINTS
+          );
         }
 
-        return item; // still canClaim === true
+        return {
+          ...item,
+          canClaim: cannotClaimReasons.length === 0,
+          cannotClaimReasons,
+        };
       }),
     }));
 
@@ -62,6 +80,7 @@ const getRewards = async (req, res) => {
       translationKey: "rewards_fetched_successfully",
       data: finalRewards,
     });
+
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
     return sendResponse({
@@ -123,8 +142,43 @@ const claimReward = async (req, res) => {
   }
 };
 
+const getJoinedClubsRewards = async (req, res) => {
+  try {
+    const { page, limit, skip } = parsePaginationParams(req);
+    const { keyword } = req.query;
+    const userId = req.user._id;
+
+    const result =
+      await rewardService.getRewardsForUserJoinedClubs({
+        userId,
+        page,
+        limit,
+        skip,
+        keyword
+      });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "rewards_fetched_successfully",
+      data: result.items,
+      meta: result.meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
+
 module.exports = {
   getRewards,
   // getRewardDetails,
-  claimReward
+  claimReward,
+  getJoinedClubsRewards
 };

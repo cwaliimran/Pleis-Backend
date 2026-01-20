@@ -1,15 +1,15 @@
 const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const { generateMeta } = require("@utils/responseUtil");
 const mongoose = require("mongoose");
-const {Events}= require("@EventsModel");
+const { Events } = require("@EventsModel");
 const Giveaway = require("@GiveawayModel");
 const { TicketingOrders } = require("@TicketingOrdersModel");
-const  TicketingsModel  = require("@TicketingsModel");
+const TicketingsModel = require("@TicketingsModel");
 const Organizations = require("@OrganizationModel");
 const { UserReservations } = require("@UserReservationsModel");
 const { formatUpdate } = require("./formatters/updateFormatter");
-const {NotificationExp, NotificationTypes} = require("@NotificationsModel");
-const {sendUserNotifications} = require("../../controllers/communicationController");
+const { NotificationExp, NotificationTypes } = require("@NotificationsModel");
+const { sendUserNotifications } = require("../../controllers/communicationController");
 const getUserIdsForEvent = async (eventId) => {
   try {
 
@@ -83,18 +83,18 @@ const createGiveaway = async (data) => {
 
     const update = new Giveaway(data);
     await update.save();
-        await sendUserNotifications({
-            recipientIds: userIds, 
-            title: update.title,
-            body: `A new giveaway is live join now : ${update._id}`,
-            data: { type: NotificationTypes.GIVEAWAY_UPDATE, objectType: "group",giveawayId: update._id },
-            sender: update.creator,
-            objectId: update.event,
-          });
+    await sendUserNotifications({
+      recipientIds: userIds,
+      title: update.title,
+      body: `A new giveaway is live join now : ${update._id}`,
+      data: { type: NotificationTypes.GIVEAWAY_UPDATE, objectType: "group", giveawayId: update._id },
+      sender: update.creator,
+      objectId: update.event,
+    });
 
-    return update; 
+    return update;
   } catch (err) {
-    throw new Error("Error saving update: " + err.message); 
+    throw new Error("Error saving update: " + err.message);
   }
 };
 
@@ -172,15 +172,15 @@ const getGiveaway = async ({ timezone, page, limit, keyword, status, userId, dat
     ...(keyword ? [{
       $match: {
         $or: [
-          { title: { $regex: keyword, $options: "i" } },  
-          { "event.basicInfo.title": { $regex: keyword, $options: "i" } },  
-          { "ticket.title": { $regex: keyword, $options: "i" } },  
-          { $expr: { $regexMatch: { input: { $toString: "$numberOfWinners" }, regex: keyword, options: "i" } } },  
-          { $expr: { $regexMatch: { input: { $toString: "$ticketsPerWinner" }, regex: keyword, options: "i" } } }, 
-          { "ticketType": { $regex: keyword, $options: "i" } }, 
+          { title: { $regex: keyword, $options: "i" } },
+          { "event.basicInfo.title": { $regex: keyword, $options: "i" } },
+          { "ticket.title": { $regex: keyword, $options: "i" } },
+          { $expr: { $regexMatch: { input: { $toString: "$numberOfWinners" }, regex: keyword, options: "i" } } },
+          { $expr: { $regexMatch: { input: { $toString: "$ticketsPerWinner" }, regex: keyword, options: "i" } } },
+          { "ticketType": { $regex: keyword, $options: "i" } },
           { $expr: { $regexMatch: { input: { $toString: "$totalParticipants" }, regex: keyword, options: "i" } } },
-          { "giveawayStatus": { $regex: keyword, $options: "i" } },  
-          { $expr: { $regexMatch: { input: { $toString: "$endDateTime" }, regex: keyword, options: "i" } } }, 
+          { "giveawayStatus": { $regex: keyword, $options: "i" } },
+          { $expr: { $regexMatch: { input: { $toString: "$endDateTime" }, regex: keyword, options: "i" } } },
         ],
       },
     }] : []),
@@ -190,9 +190,9 @@ const getGiveaway = async ({ timezone, page, limit, keyword, status, userId, dat
       $project: {
         eventTitle: "$event.basicInfo.title",  // Only return event title
         ticketTitle: "$ticket.title",  // Only return ticket title
-                eventId: "$event._id",  // Only return event title
+        eventId: "$event._id",  // Only return event title
         ticketId: "$ticket._id",  // Only return ticket title
-        title: 1, 
+        title: 1,
         numberOfWinners: 1,
         ticketsPerWinner: 1,
         startDateTime: 1,
@@ -233,7 +233,7 @@ const getGiveaway = async ({ timezone, page, limit, keyword, status, userId, dat
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   // Step 13: Meta counts (active/inactive/total Giveaway for the given userId)
-  const [total, active, inactive] = await Promise.all([ 
+  const [total, active, inactive] = await Promise.all([
     Giveaway.countDocuments({ creator: userId, status: { $ne: "deleted" } }),  // Total Giveaway for the user
     Giveaway.countDocuments({ creator: userId, status: "active" }),  // Active Giveaway for the user
     Giveaway.countDocuments({ creator: userId, status: "inactive" })  // Inactive Giveaway for the user
@@ -374,7 +374,7 @@ const getevents = async ({
     // Step 1: Match events where creator matches the provided userId
     {
       $match: {
-        ...(organizationId && {  "basicInfo.organization": organizationId }) // Filter events where creator == userId
+        ...(organizationId && { "basicInfo.organization": organizationId }) // Filter events where creator == userId
       }
     }
   ];
@@ -410,7 +410,7 @@ const getevents = async ({
   pipeline.push({
     $project: {
       _id: 1, // Include _id
-     title: "$basicInfo.title" // Include title from basicInfo
+      title: "$basicInfo.title" // Include title from basicInfo
     }
   });
 
@@ -508,7 +508,7 @@ const gettickets = async ({
   pipeline.push({
     $project: {
       _id: 1, // Include _id
-     title: "$title" // Include title from basicInfo
+      title: "$title" // Include title from basicInfo
     }
   });
 

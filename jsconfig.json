@@ -5,6 +5,9 @@
       "@utils/*": [
         "backend/helperUtils/*"
       ],
+      "@notificationsUtil": [
+        "backend/controllers/communicationController.js"
+      ],
       "@redisCache": [
         "backend/config/redis/redisCache.js"
       ],
