@@ -20,12 +20,12 @@ const getClubMemberDetails = async (id) => {
 };
 
 // Join club
-const joinClub = async (userId, companyOrganizer,referrerId) => {
+const joinClub = async (userId, companyOrganizer, referrerId) => {
   const isValidCompanyOrganizer = await findUserByIdAndCheckExists(companyOrganizer);
   if (!isValidCompanyOrganizer) {
     throw new Error("Invalid company organizer.");
   }
-  return clubMemberRepo.joinClub(userId, companyOrganizer,referrerId);
+  return clubMemberRepo.joinClub(userId, companyOrganizer, referrerId);
 };
 
 // Leave club
@@ -44,11 +44,18 @@ const getUserJoinedClubs = async (userId) => {
 };
 
 const getUserJoinedClubsWithPoints = async ({ page, limit, skip, userId, keyword }) => {
-  let clubs = await clubMemberRepo.getUserJoinedClubsWithPoints({ page, limit, skip, userId, keyword });
-  let count = await clubMemberRepo.countUserJoinedClubsWithPoints({ userId, keyword });
-  let meta = generateMeta(page, limit, count);
-  let data = formatUserWallets(clubs);
-  return { data, meta };
+  const { data, total } =
+    await clubMemberRepo.getUserJoinedClubsWithPointsUsingFacet({
+      page,
+      limit,
+      userId,
+      keyword,
+    });
+
+  return {
+    data: formatUserWallets(data),
+    meta: generateMeta(page, limit, total),
+  };
 };
 
 // 🔥 NEW: Get Wallet (points, current tier, next tier)
@@ -96,7 +103,7 @@ const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganiz
 
   let formattedLoyaltyProfile = formatLoyaltyProfile(profile?.companyDetails);
 
-  
+
   void logEngagementService({
     entityType: "users",
     entityId: companyOrganizer,

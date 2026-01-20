@@ -141,3 +141,4 @@ scripts.js/renameModule.js
 /backend/database_backups
 .env.localhost
 .env.mobileapps
+backend/secretAssets/serviceAccountKey.json

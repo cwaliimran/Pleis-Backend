@@ -198,18 +198,15 @@ const getSuggestedRewardsForDashboard = async ({
   });
 
   // 3️⃣ Fetch rewards (DB paginated)
-  const [rewards, total] = await Promise.all([
-    rewardsRepo.getRewardsForDashboardPaged({
-      clubIds,
-      now,
-      skip,
-      limit
-    }),
-    rewardsRepo.countDashboardRewards({ clubIds, now })
-  ]);
+  const rewards = await rewardsRepo.getRewardsForDashboardPaged({
+    clubIds,
+    now,
+    skip,
+    limit
+  })
 
   if (!rewards.length) {
-    return { items: [], meta: generateMeta(page, limit, total) };
+    return { items: [] };
   }
 
   // 4️⃣ Count how many times user already claimed each reward
@@ -287,7 +284,6 @@ const getSuggestedRewardsForDashboard = async ({
 
   return {
     items: eligible,
-    meta: generateMeta(page, limit, total)
   };
 };
 

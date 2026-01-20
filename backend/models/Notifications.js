@@ -18,6 +18,7 @@ const NotificationTypes = {
   TICKET_UPDATE: "ticketUpdate",
   FRIEND_REQUEST: "friendRequest",
   POINTS_UPDATE: "pointsUpdate",
+  REWARD_CLAIMED: "rewardClaimed",
 };
 
 // Define the NotificationSchema

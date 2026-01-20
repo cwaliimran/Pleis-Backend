@@ -81,13 +81,13 @@ const updateOrders = async (staffId,id, data) => {
   await sendUserNotifications({
     recipientIds: [order.user.toString()],
     title: "Order Updated",
-    body: `Your order ${order.orderNumber} has been updated.`,
+    body: `Your order ${order.orderNumber} has been updated to status: ${order.status}`,
     data: {
       type: NotificationTypes.ORDER_UPDATE,
-      objectType: "group",
+      objectType: "menuorders",
     },
     image: order.items[0].menuItemSnapShot.image || null,
-    sender: staffId,
+    sender: order.organization,
     objectId: order._id,
   });
   return order;

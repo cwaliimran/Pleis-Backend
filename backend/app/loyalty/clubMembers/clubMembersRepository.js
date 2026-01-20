@@ -257,7 +257,7 @@ const isClubMemberWithWallet = async (userId, companyOrganizer) => {
   return getWallet(userId, companyOrganizer);
 };
 
-const joinClub = async (userId, companyOrganizer,referrerId) => {
+const joinClub = async (userId, companyOrganizer, referrerId) => {
   let existingMember = await ClubMembers.findOne({ user: userId, companyOrganizer });
 
   if (existingMember) {
@@ -270,10 +270,10 @@ const joinClub = async (userId, companyOrganizer,referrerId) => {
     return existingMember;
   }
 
-      //insert data in referral collection if referrerId is present
-      if (referrerId) {
-        await createUserReferradrecord(referrerId, userId,companyOrganizer);
-      }
+  //insert data in referral collection if referrerId is present
+  if (referrerId) {
+    await createUserReferradrecord(referrerId, userId, companyOrganizer);
+  }
   return ensureClubMemberWallet(userId, companyOrganizer);
 };
 
@@ -360,7 +360,7 @@ const getUserJoinedClubsWithPoints = async ({ page = 1, limit = 10, skip, userId
 
   // 6️⃣ Pagination
   pipeline.push(
-    { $sort: { _id: -1 } },
+    { $sort: { points: -1 } },
     { $skip: skip ?? (page - 1) * limit },
     { $limit: limit }
   );
@@ -369,48 +369,93 @@ const getUserJoinedClubsWithPoints = async ({ page = 1, limit = 10, skip, userId
 };
 
 
-const countUserJoinedClubsWithPoints = async ({ userId, keyword }) => {
+const getUserJoinedClubsWithPointsUsingFacet = async ({
+  page = 1,
+  limit = 10,
+  userId,
+  keyword,
+}) => {
+  const skip = (page - 1) * limit;
 
   const pipeline = [
-    // 1️⃣ Base match (ONLY native fields)
+    /* ===============================
+       BASE MATCH (INDEXED)
+    =============================== */
     {
       $match: {
-        user: userId,
-        status: { $ne: "left" }
-      }
+        user: new mongoose.Types.ObjectId(userId),
+        status: { $ne: "left" },
+      },
     },
 
-    // 2️⃣ Populate companyOrganizer
+    /* ===============================
+       LOOKUPS (ONLY ONCE)
+    =============================== */
     {
       $lookup: {
         from: "users",
         localField: "companyOrganizer",
         foreignField: "_id",
-        as: "companyOrganizer"
-      }
+        as: "companyOrganizer",
+        pipeline: [
+          {
+            $project: {
+              "companyDetails.loyaltySettings.title": 1,
+              "companyDetails.logo": 1,
+            },
+          },
+        ],
+      },
     },
+    { $unwind: "$companyOrganizer" },
 
-    // 3️⃣ Unwind populated organizer
-    { $unwind: "$companyOrganizer" }
+    {
+      $lookup: {
+        from: "tiers",
+        localField: "level",
+        foreignField: "_id",
+        as: "level",
+      },
+    },
+    { $unwind: { path: "$level", preserveNullAndEmptyArrays: true } },
+
+    /* ===============================
+       KEYWORD FILTER (POST-LOOKUP)
+    =============================== */
+    ...(keyword
+      ? [
+        {
+          $match: {
+            "companyOrganizer.companyDetails.loyaltySettings.title": {
+              $regex: keyword,
+              $options: "i",
+            },
+          },
+        },
+      ]
+      : []),
+
+    /* ===============================
+       FACET (COUNT + DATA)
+    =============================== */
+    {
+      $facet: {
+        data: [
+          { $sort: { points: -1 } },
+          { $skip: skip },
+          { $limit: limit },
+        ],
+        meta: [{ $count: "total" }],
+      },
+    },
   ];
 
-  // 4️⃣ Keyword filter (NOW valid)
-  if (keyword) {
-    pipeline.push({
-      $match: {
-        "companyOrganizer.companyDetails.loyaltySettings.title": {
-          $regex: keyword,
-          $options: "i"
-        }
-      }
-    });
-  }
+  const [result] = await ClubMembers.aggregate(pipeline);
 
-  // 5️⃣ Count
-  pipeline.push({ $count: "total" });
-
-  const result = await ClubMembers.aggregate(pipeline);
-  return result.length ? result[0].total : 0;
+  return {
+    data: result.data,
+    total: result.meta[0]?.total ?? 0,
+  };
 };
 
 
@@ -479,7 +524,7 @@ const createUserReferradrecord = async (referrerId, userId, companyOrganizer) =>
       user: userId,                    // Save the user ID directly
       referrer: referrerId,             // Save the referrer ID directly
       companyOrganizer: companyOrganizer, // Save the companyOrganizer ID directly
-       expiryDate:  new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      expiryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
     });
 
     // Update the referrer's loyaltyReferralsCount by incrementing it by 1
@@ -536,6 +581,6 @@ module.exports = {
   getCompanyLoyaltyProfile,
   updateCompanyLoyaltySettings,
   getFollowedClubIds,
-  countUserJoinedClubsWithPoints,
+  getUserJoinedClubsWithPointsUsingFacet,
   getClubMemberUserIdsByCompanyOrganizer
 };

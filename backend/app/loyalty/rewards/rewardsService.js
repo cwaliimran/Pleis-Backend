@@ -3,7 +3,11 @@ const rewardRepo = require("./rewardsRepository");
 const { checkClaimLimitForLoyaltyRewards } = require("../rewardsOrders/rewardsOrdersRepository");
 const { formatReward } = require("./formatters/formatReward");
 const { normalizeRewardClaimMeta } = require("./formatters/normalizeRewardClaimMeta");
-
+const clubMemberRepo = require("../clubMembers/clubMembersRepository");
+const { formatUserWallet } = require("../clubMembers/formatters/formatUserWallet");
+const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
+const { generateMeta } = require("../../../helperUtils/responseUtil");
+const { formatSingleRewardByTierKey } = require("../../../commonModules/loyalty/rewards/utils/formatReward");
 
 const getRewardsByCompanyOrganizerService = async ({
   companyOrganizer,
@@ -56,8 +60,6 @@ const getRewardsByCompanyOrganizerService = async ({
   };
 };
 
-
-
 const groupRewardsBySortingType = (rewards) => {
   const groups = {};
 
@@ -83,8 +85,125 @@ const claimRewardService = async (userId, rewardId) => {
   return result;
 };
 
+const getRewardsForUserJoinedClubs = async ({
+  userId,
+  page = 1,
+  limit = 10,
+  skip = 0,
+  keyword = "",
+}) => {
+  const now = new Date();
+  /* ===============================
+     1️⃣ Clubs user is member of
+  =============================== */
+  const clubIds = await clubMemberRepo.getFollowedClubIds(userId);
+  if (!clubIds.length) {
+    return { items: [], meta: generateMeta(page, limit, 0) };
+  }
+
+  /* ===============================
+     2️⃣ Wallets (ONCE)
+  =============================== */
+  const wallets = await Promise.all(
+    clubIds.map(orgId => clubMemberRepo.getWallet(userId, orgId))
+  );
+
+  const walletMap = new Map();
+  wallets.forEach(w => {
+    const fw = formatUserWallet(w);
+    walletMap.set(String(fw.companyOrganizer), fw);
+  });
+
+  /* ===============================
+     3️⃣ Fetch rewards (paged)
+  =============================== */
+  const [rewards, total] = await Promise.all([
+    rewardRepo.getRewardsForDashboardPaged({
+      clubIds,
+      now,
+      skip,
+      limit,
+      keyword,
+    }),
+    rewardRepo.countDashboardRewards({ clubIds, now, keyword }),
+  ]);
+
+  if (!rewards.length) {
+    return { items: [], meta: generateMeta(page, limit, total) };
+  }
+
+  /* ===============================
+     4️⃣ Claim counts (ONE QUERY)
+  =============================== */
+  const claimedCounts = await RewardsOrders.aggregate([
+    {
+      $match: {
+        user: userId,
+        sourceType: "rewards",
+        sourceId: { $in: rewards.map(r => r._id) },
+      },
+    },
+    {
+      $group: {
+        _id: "$sourceId",
+        total: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const claimedMap = new Map(
+    claimedCounts.map(c => [String(c._id), c.total])
+  );
+
+  /* ===============================
+     5️⃣ Eligibility + normalize
+  =============================== */
+  const items = [];
+
+  for (const reward of rewards) {
+    const wallet =
+      walletMap.get(String(reward.companyOrganizer._id));
+    if (!wallet) continue;
+
+    // Tier-specific reward view
+    const rewardByTierKey = formatSingleRewardByTierKey(
+      reward,
+      wallet.tierKey || "essential"
+    );
+
+    const formattedReward = formatReward(rewardByTierKey);
+
+    const claimedCount =
+      claimedMap.get(String(formattedReward._id)) || 0;
+
+    items.push({
+      ...formattedReward,
+      ...normalizeRewardClaimMeta({
+        reward: formattedReward,
+        claimedCount,
+        userPoints: wallet.points ?? 0,
+      }),
+    });
+  }
+
+  /* ===============================
+     6️⃣ Sort (dashboard UX)
+  =============================== */
+  items.sort((a, b) => {
+    if (a.canClaim && !b.canClaim) return -1;
+    if (!a.canClaim && b.canClaim) return 1;
+    return a.pointsRequired - b.pointsRequired;
+  });
+
+  return {
+    items,
+    meta: generateMeta(page, limit, total),
+  };
+};
+
 
 module.exports = {
   getRewardsByCompanyOrganizerService,
   claimRewardService,
+  getRewardsForUserJoinedClubs,
 };
