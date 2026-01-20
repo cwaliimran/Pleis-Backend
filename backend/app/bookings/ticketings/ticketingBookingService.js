@@ -6,9 +6,6 @@ const {
   getOrganizationIdFromTicketId
 } = require("../../../admin/ticketing/ticketingsRepository");
 const { TicketingOrders } = require("@TicketingOrdersModel");
-const { calculatePointsRepo } = require("../../loyalty/calculatePointsEarning/pointsEarningsRepository");
-const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
-const mongoose = require("mongoose");
 const { resolveTimeSensitivePricing } = require("./utils/timeSensitivePricing");
 
 

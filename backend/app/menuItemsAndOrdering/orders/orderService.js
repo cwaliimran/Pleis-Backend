@@ -3,13 +3,8 @@ const menuItemRepo = require("../menuItems/menuItemsRepository");
 const mongoose = require("mongoose");
 const { menuItemOrderFormatter } = require("./formatter/menuItemOrderFormatter");
 const { generateMeta } = require("../../../helperUtils/responseUtil");
-const { calculatePointsRepo } = require("../../loyalty/calculatePointsEarning/pointsEarningsRepository");
-const { getOrgCompanyOrganizer } = require("../../organizationProfile/organizationProfileRepository");
-const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
-const { resolveChallengeByTaskTypeService } = require("../../loyalty/challengesOrders/challengeOrdersService");
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
-const { getFullImageUrl } = require("@utils/imageHelper");
 const Organizations = require("@OrganizationModel");
 
 const getStaffIdsByOrganization = async (organizationId) => {

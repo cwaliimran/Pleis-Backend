@@ -15,6 +15,7 @@ const { formatReward } = require("../rewards/formatters/formatReward");
 const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
 const { getPromotionsForDashboard } = require("../promotions/promotionsRepository");
 const { getUserWallet } = require("../../userWalletService/global/walletManagement/userWalletService");
+const { normalizeRewardClaimMeta } = require("../rewards/formatters/normalizeRewardClaimMeta");
 
 
 
@@ -22,7 +23,7 @@ const getDashboard = async ({ timezone, userId }) => {
 
   let [userGlobalWallet, joinedClubs, suggestedClubs, loyaltyRewards, loyaltyChallenges, loyaltyPromotions] = await Promise.all([
     getUserWallet(userId),
-    getUserJoinedClubsWithPoints({userId, page: 1, limit: 10, skip: 0}),
+    getUserJoinedClubsWithPoints({ userId, page: 1, limit: 10, skip: 0 }),
     getSuggestedLoyaltyClubs({ userId }),
     getSuggestedRewardsForDashboard({
       userId,
@@ -133,14 +134,14 @@ const getLoyaltyDashboardChallenges = async ({
       isActive: Boolean(activeOrder),
       progress: activeOrder
         ? {
-            current: activeOrder.progress.current,
-            target: activeOrder.progress.target,
-            percentage: Math.round(
-              (activeOrder.progress.current /
-                activeOrder.progress.target) *
-                100
-            )
-          }
+          current: activeOrder.progress.current,
+          target: activeOrder.progress.target,
+          percentage: Math.round(
+            (activeOrder.progress.current /
+              activeOrder.progress.target) *
+            100
+          )
+        }
         : null,
     });
   }
@@ -266,32 +267,15 @@ const getSuggestedRewardsForDashboard = async ({
     const claimedCount =
       claimedMap.get(String(formattedReward._id)) || 0;
 
-    const claimLimit = formattedReward.claimLimit ?? 0;
-
-    const hasRemainingClaims =
-      claimLimit <= 0 || claimedCount < claimLimit;
-
-    if (!hasRemainingClaims) continue;
-    if (claimMap.get(String(formattedReward._id)) === false) continue;
-
-    const pointsRequired =
-      formattedReward.minPointsRequiredToClaim ?? 0;
-
-    const canClaim =
-      hasRemainingClaims && userPoints >= pointsRequired;
-
     eligible.push({
       ...formattedReward,
-      canClaim,
-      isClaimed: claimedCount > 0,
-      claimedCount,
-      claimRemaining:
-        claimLimit > 0
-          ? Math.max(claimLimit - claimedCount, 0)
-          : null,
-      userPoints,
-      pointsRequired
+      ...normalizeRewardClaimMeta({
+        reward: formattedReward,
+        claimedCount,
+        userPoints,
+      }),
     });
+
   }
 
   // 7️⃣ Sort (dashboard priority)
