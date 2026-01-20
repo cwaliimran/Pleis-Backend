@@ -35,7 +35,6 @@ const updateLoyaltyReferral = async (data) => {
   const allowedFields = [
     "userPoints",
     "minimumPurchases",
-    "purchaseThresholdAmount",
     "expiryDate",
     "referralLimit",
     "referrerPoints",
