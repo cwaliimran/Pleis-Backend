@@ -5,6 +5,7 @@ const { UserReservations } = require("@UserReservationsModel");
 const MenuOrders = require("@OrdersModel");
 const { calculatePointsRepo } = require("../../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
 const { createTransaction } = require("../../../../app/userWalletService/transactions/services/unifiedTransactionsService");
+const { resolveChallengeByTaskTypeService } = require("../../../../app/loyalty/challengesOrders/challengeOrdersService");
 
 /**
  * Ticketing Order Finalizer
@@ -33,11 +34,12 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
       return;
     }
 
-    const reservation = await UserReservations
+    const userReservation = await UserReservations
       .findOne({ ticketingOrderRef: orderId })
+      .populate("preOrderMenuItemsOrder")
       .session(session);
 
-    const menuOrderId = reservation?.preOrderMenuItemsOrder || null;
+    const menuOrder = userReservation?.preOrderMenuItemsOrder || null;
 
     // ==========================
     // ✅ PAYMENT SUCCESS
@@ -61,9 +63,9 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
         { session }
       );
 
-      if (reservation) {
+      if (userReservation) {
         await UserReservations.updateOne(
-          { _id: reservation._id },
+          { _id: userReservation._id },
           {
             $set: {
               status: "confirmed",
@@ -76,9 +78,9 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
         );
       }
 
-      if (menuOrderId) {
+      if (menuOrder) {
         await MenuOrders.updateOne(
-          { _id: menuOrderId },
+          { _id: menuOrder._id },
           {
             $set: {
               status: "confirmed",
@@ -129,6 +131,22 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
 
       if (!trx.success) throw new Error(trx.message || "wallet_update_failed");
 
+      if (menuOrder) {
+        var items = menuOrder.items.map(i => i.menuItem);
+        if (items.length > 0) {
+          try {
+            await resolveChallengeByTaskTypeService({
+              userId: userReservation.userId,
+              companyOrganizer: userReservation.companyOrganizer,
+              taskType: "buyMenuItem",
+              items: items
+            });
+          } catch (err) {
+
+          }
+        }
+      }
+
     }
 
     // ==========================
@@ -165,9 +183,9 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
         );
       }
 
-      if (menuOrderId) {
+      if (menuOrder) {
         await MenuOrders.updateOne(
-          { _id: menuOrderId },
+          { _id: menuOrder._id },
           {
             $set: {
               status: "cancelled",

@@ -368,24 +368,29 @@ const getPricingSalesStats = async ({ eventId, startDate, endDate }) => {
   let grandCount = 0;
   let grandAmount = 0;
 
-  for (const b of rows) {
-    const phase = b.ticket.snapshot.pricing?.phase || "regular";
-    const price = b.ticket.snapshot.pricing?.unitPrice || 0;
-    const status = b.status;
+for (const b of rows) {
+  const phase = b.ticket.snapshot.pricing?.phase || "regular";
+  const price = b.ticket.snapshot.pricing?.unitPrice || 0;
+  const status = b.status;
 
-    if (!stats[phase]) continue;
+  // phase must exist
+  if (!stats[phase]) continue;
 
-    stats[phase][status].count += 1;
-    stats[phase][status].amount += price;
+  // 🚀 dynamic status guard (key line)
+  if (!stats[phase][status]) continue;
 
-    stats[phase].total.count += 1;
-    stats[phase].total.amount += price;
+  stats[phase][status].count += 1;
+  stats[phase][status].amount += price;
 
-    if (status !== "cancelled") {
-      grandCount += 1;
-      grandAmount += price;
-    }
+  stats[phase].total.count += 1;
+  stats[phase].total.amount += price;
+
+  if (status !== "cancelled") {
+    grandCount += 1;
+    grandAmount += price;
   }
+}
+
 
   return { stats, grandCount, grandAmount };
 };

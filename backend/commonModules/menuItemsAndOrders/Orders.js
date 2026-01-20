@@ -24,9 +24,14 @@ const OrdersSchema = new mongoose.Schema(
         totalPrice: { type: Number, required: true },
         status: {
             type: String,
-            enum: ["pending", "confirmed", "sent", "completed", "cancelled", "preorder"],
+            enum: ["pendingPayment", "pending", "confirmed", "sent", "completed", "cancelled", "preorder"],
             default: "pending",
         },
+        lockUntil: {
+            type: Date,
+            index: true,
+        },
+
         notes: { type: String, default: "" },
 
         paymentMethod: {
@@ -56,7 +61,7 @@ const OrdersSchema = new mongoose.Schema(
                 "preorder",    // Scheduled for later
                 "walkIn",      // In-store / counter
             ],
-            default: "walkIn",
+            default: "online",
         },
         reservation: {
             type: mongoose.Schema.Types.ObjectId,

@@ -51,7 +51,8 @@ const createReservation = async (data, session) => {
   );
 
   const amountPerPerson = reservationBase[0]?.amount || 0;
-  data.amount = amountPerPerson * partySize;
+    const totalReservationAmount = amountPerPerson * partySize;
+    data.amount = totalReservationAmount;
 
   // Lock only for card / applePay
   if (["card", "applePay"].includes(data.paymentDetails.paymentMethod)) {
@@ -75,6 +76,13 @@ const createReservation = async (data, session) => {
       });
 
     userReservation.preOrderMenuItemsOrder = order._id;
+    //totalPrice including menu items + reservation amount
+    const totalPrice = order.totalPrice + totalReservationAmount;
+    userReservation.amount = totalPrice;
+    userReservation.priceBreakDown = {
+      reservationAmount: data.amount,
+      preOrderMenuItemsAmount: order.totalPrice,
+    };
     await userReservation.save({ session });
   }
 

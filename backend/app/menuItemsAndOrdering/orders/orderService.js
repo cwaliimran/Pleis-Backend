@@ -59,76 +59,27 @@ const placeOrder = async ({
       };
     });
 
+
     // 3️⃣ Create order document inside session
-    const orderData = {
+    let orderData = {
       user: userId,
       organization: organizationId,
       items: orderItems,
       totalPrice,
       notes,
       paymentMethod,
-      status: "pending",
       pickupType,
       tableNumber,
+      orderType: "online",
     };
 
-    let order = await orderRepo.createOrder(orderData, session);
-
-    // 4️⃣ If payment method is online → award points
+    let orderStatus = "pending";
     if (paymentMethod === "applePay" || paymentMethod === "card") {
-      // mark paid
-      order.paymentStatus = "paid";
-      await order.save({ session });
-
-      // Fetch organizer and calculate points
-      const companyOrganizer = await getOrgCompanyOrganizer(organizationId);
-      const pointsCalculation =
-        await calculatePointsRepo(userId, companyOrganizer, totalPrice);
-
-      const globalPoints = {
-        base: pointsCalculation.global.earnedPoints,
-        multiplier: 1,
-        total: pointsCalculation.global.earnedPoints,
-        pointsPerEuro: pointsCalculation.global.pointsPerEuro,
-      };
-
-      const companyPoints = {
-        base: pointsCalculation.organizer.earnedPoints,
-        multiplier: 1,
-        total: pointsCalculation.organizer.earnedPoints,
-        pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
-      };
-
-      // Create loyalty transactions inside same session
-      const trx = await createTransaction(
-        {
-          user: userId,
-          companyOrganizer,
-          organization: organizationId,
-          companyPoints,
-          globalPoints,
-          allowNegative: false,
-          type: "earn",
-          description: "",
-          entityId: order._id,
-          domainType: "menuorders",
-        },
-        session
-      );
-
-      if (!trx.success) {
-        throw new Error(trx.message || "failed_loyalty_update");
-      }
-
-      //TODO use this function also on admin side as well when they will complete the order for payLater method
-      //resolveChallengeByTaskTypeService
-      resolveChallengeByTaskTypeService({
-        userId,
-        companyOrganizer,
-        taskType: "buyMenuItem",
-        items
-      });
+      orderStatus = "pendingPayment";
+      orderData.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
     }
+    orderData.status = orderStatus;
+    let order = await orderRepo.createOrder(orderData, session);
 
     // 5️⃣ Commit atomic transaction
     await session.commitTransaction();
@@ -139,7 +90,7 @@ const placeOrder = async ({
     await sendUserNotifications({
       recipientIds: [userId.toString()],
       title: "Order Placed Successfully",
-      body: `Your Order Has been placed : ${formattedOrder._id} and is now being ${formattedOrder.status} and will be ready soon. The total amount is ${formattedOrder.totalPrice} EUR`,
+      body: `Your Order Has been placed. The total amount is ${formattedOrder.totalPrice} EUR`,
       data: {
         type: NotificationTypes.ORDER_UPDATE,
         objectType: "group",
