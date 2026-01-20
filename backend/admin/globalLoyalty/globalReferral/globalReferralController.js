@@ -75,7 +75,7 @@ const createGlobalReferral = async (req, res) => {
 
 const getGlobalReferrals = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range,type="global" } = req.query;
+  const { keyword, status , date, range,type="global" } = req.query;
   try {
     const userId = req.user._id;
     const timezone = req.user.timezone;

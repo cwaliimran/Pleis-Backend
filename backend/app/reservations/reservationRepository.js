@@ -21,6 +21,7 @@ const { calculatePointsRepo } = require("../loyalty/calculatePointsEarning/point
 const { createTransaction } = require("../userWalletService/transactions/services/unifiedTransactionsService");
 const { sendUserNotifications } = require("../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
+const { getStaffIdsByOrganization } = require("../../admin/organizations/organizationRepository");
 const createReservation = async (data, session) => {
   if (!session) throw new Error("session_required");
 
@@ -51,8 +52,8 @@ const createReservation = async (data, session) => {
   );
 
   const amountPerPerson = reservationBase[0]?.amount || 0;
-    const totalReservationAmount = amountPerPerson * partySize;
-    data.amount = totalReservationAmount;
+  const totalReservationAmount = amountPerPerson * partySize;
+  data.amount = totalReservationAmount;
 
   // Lock only for card / applePay
   if (["card", "applePay"].includes(data.paymentDetails.paymentMethod)) {
@@ -85,6 +86,31 @@ const createReservation = async (data, session) => {
     };
     await userReservation.save({ session });
   }
+  await sendUserNotifications({
+    recipientIds: [userReservation.userId.toString()],
+    title: " Reservation Created",
+    body: `Your reservation has been created successfully.`,
+    data: {
+      type: NotificationTypes.RESERVATION_UPDATE,
+      objectType: "group",
+    },
+    image: "noimage",
+    sender: userId,
+    objectId: userReservation.reservationId,
+  });
+  const staffIds = await getStaffIdsByOrganization(userReservation.organizationId);
+  await sendUserNotifications({
+    recipientIds: staffIds,
+    title: " Reservation Created",
+    body: `Your reservation has been created successfully.`,
+    data: {
+      type: NotificationTypes.RESERVATION_UPDATE,
+      objectType: "group",
+    },
+    image: "noimage",
+    sender: userId,
+    objectId: userReservation.reservationId,
+  });
 
   return userReservation;
 };

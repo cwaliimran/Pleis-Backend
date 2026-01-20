@@ -14,6 +14,7 @@ const createLoyaltyReferral = async (req, res) => {
     userPoints,
     referrerPoints,
     minimumPurchases,
+    status,
 
 
     referralLimit,
@@ -45,7 +46,7 @@ const createLoyaltyReferral = async (req, res) => {
     type:"loyalty",
     minimumPurchases,
     referralLimit,
-    status:"active",
+    status: status || "inactive",
   };
 
   try {
@@ -80,7 +81,7 @@ const createLoyaltyReferral = async (req, res) => {
 
 const getLoyaltyReferrals = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range,type="loyalty", companyOrganizer} = req.query;
+  const { keyword, status , date, range,type="loyalty", companyOrganizer} = req.query;
   try {
     if (!companyOrganizer) {
       return sendResponse({
@@ -230,7 +231,7 @@ const deleteLoyaltyReferral = async (req, res) => {
 
 const getUserLoyaltyReferrals = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date,type="loyalty", companyOrganizer} = req.query;
+  const { keyword, status , date,type="loyalty", companyOrganizer} = req.query;
   try {
     if (!companyOrganizer) {
       return sendResponse({

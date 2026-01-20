@@ -59,14 +59,9 @@ const createMenuItem = async (req, res) => {
   if (startTime && endTime) {
     data.startTime = convertTimezoneToUtc(startTime, timezone, "hh:mm A");
     data.endTime = convertTimezoneToUtc(endTime, timezone, "hh:mm A");
+    console.log("data.startTime >= data.endTime",data.startTime , data.endTime );
 
-    if (data.startTime >= data.endTime) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "end_time_must_be_after_start_time",
-      });
-    }
+
   }
 
   try {
@@ -306,25 +301,13 @@ const updateMenuItem = async (req, res) => {
       data.startTime = convertTimezoneToUtc(startTime, req.user.timezone, "hh:mm A");
       data.endTime = convertTimezoneToUtc(endTime, req.user.timezone, "hh:mm A");
 
-      if (data.startTime >= data.endTime) {
-        return sendResponse({
-          res,
-          statusCode: 400,
-          translationKey: "end_time_must_be_after_start_time",
-        });
-      }
+
     }
     if (startDate && endDate) {
       data.startDate = convertTimezoneToUtc(startDate, req.user.timezone, "hh:mm A");
       data.endDate = convertTimezoneToUtc(endDate, req.user.timezone, "hh:mm A");
 
-      if (data.startTime >= data.endTime) {
-        return sendResponse({
-          res,
-          statusCode: 400,
-          translationKey: "end_time_must_be_after_start_time",
-        });
-      }
+
     }
 
     const updated = await menuItemsService.updateMenuItem(id, data, timezone);

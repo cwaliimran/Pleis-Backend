@@ -49,17 +49,14 @@ router.use("/bundles", require("../bundles/bundleRoutes"));
 
 //Promo Codes
 router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));
-
 // transactions
 router.use("/transactions", require("../transactions/routes/unifiedTransactionsRoutes"));
-
 // thirdPParty
 router.use("/third-party", require("../thirdParty/thirdPartyRoutes"));
 // thirdPParty
 router.use("/referrals", require("../globalLoyalty/globalReferral/globalReferralRoutes"));
 // thirdPParty
 router.use("/marketing", require("../marketing/marketingRoutes"));
-
 // thirdPParty
 router.use("/subscriptions", require("../subscriptions/subscriptionsRoutes"));
 // updates

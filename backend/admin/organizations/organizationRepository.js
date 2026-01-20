@@ -86,6 +86,30 @@ const getOrganizationsAsStaff = async (userId) => {
   });
 };
 
+const getStaffIdsByOrganization = async (organizationId) => {
+  if (!mongoose.Types.ObjectId.isValid(organizationId)) {
+    throw new Error("Invalid organization ID");
+  }
+
+  const organization = await Organizations.findById(
+    organizationId,
+    { staff: 1 }
+  ).lean();
+
+  if (!organization || !organization.staff) {
+    return [];
+  }
+
+  // Extract staff user IDs
+  const staffIds = organization.staff
+    .map(item => item.user)
+    .filter(Boolean)
+    .map(id => id.toString());
+
+  return staffIds;
+};
+
+
 //get organization ids by company organizer
 const getOrganizationIdsByCompanyOrganizer = async (companyOrganizer) => {
   const organizations = await Organizations.find({ creator: companyOrganizer }).select("_id").lean();
@@ -118,4 +142,5 @@ module.exports = {
   getOrganizationIdsByCompanyOrganizer,
   getMenuIdsByCompanyOrganizer,
   getOrganizationNamesByCompanyOrganizer,
+  getStaffIdsByOrganization
 };

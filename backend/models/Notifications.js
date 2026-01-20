@@ -17,6 +17,7 @@ const NotificationTypes = {
   REFERRAL_UPDATE: "referralUpdate",
   TICKET_UPDATE: "ticketUpdate",
   FRIEND_REQUEST: "friendRequest",
+  POINTS_UPDATE: "pointsUpdate",
 };
 
 // Define the NotificationSchema

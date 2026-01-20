@@ -24,9 +24,6 @@ const create = async (req, res) => {
     rawData.push("menuItem")
     objectIdFields.push("menuItem")
   }
-  if (req.body.rewardType === "customReward") {
-    rawData.push("customReward", "customReward.image", "customReward.title", "customReward.description")
-  }
 
   if (!validateParams(req, res, {
     rawData,

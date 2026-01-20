@@ -1,6 +1,8 @@
 const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const OrdersRepo = require("./inAppOrderingRepository");
 const mongoose = require("mongoose");
+const { sendUserNotifications } = require("../../../controllers/communicationController");
+const { NotificationTypes } = require("@NotificationsModel");
 
 
 const getOrders = async ({ activeorderStatus, pickupFilter, orderStatus, activeKeyword, timezone, page, limit, keyword, status, organizationId, date, range }) => {
@@ -14,7 +16,7 @@ const getOrders = async ({ activeorderStatus, pickupFilter, orderStatus, activeK
   };
 };
 
-const updateOrders = async (id, data) => {
+const updateOrders = async (staffId,id, data) => {
   const order = await OrdersRepo.findOrdersById(id);
 
   if (!order) {
@@ -31,6 +33,7 @@ const updateOrders = async (id, data) => {
   =============================== */
   if (data.status !== undefined) {
     order.status = data.status;
+
   }
 
   /* ===============================
@@ -73,7 +76,20 @@ const updateOrders = async (id, data) => {
     });
   }
 
+
   await order.save();
+  await sendUserNotifications({
+    recipientIds: [order.user.toString()],
+    title: "Order Updated",
+    body: `Your order ${order.orderNumber} has been updated.`,
+    data: {
+      type: NotificationTypes.ORDER_UPDATE,
+      objectType: "group",
+    },
+    image: order.items[0].menuItemSnapShot.image || null,
+    sender: staffId,
+    objectId: order._id,
+  });
   return order;
 };
 
