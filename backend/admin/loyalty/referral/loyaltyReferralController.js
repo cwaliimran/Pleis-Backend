@@ -14,7 +14,7 @@ const createLoyaltyReferral = async (req, res) => {
     userPoints,
     referrerPoints,
     minimumPurchases,
-    purchaseThresholdAmount,
+
 
     referralLimit,
     companyOrganizer
@@ -29,9 +29,7 @@ const createLoyaltyReferral = async (req, res) => {
         "userPoints",
         "referrerPoints",
         "minimumPurchases",
-        "purchaseThresholdAmount",
         "referralLimit",
-  
         "companyOrganizer"
       ],
     })
@@ -46,9 +44,7 @@ const createLoyaltyReferral = async (req, res) => {
     referrerPoints,
     type:"loyalty",
     minimumPurchases,
-    purchaseThresholdAmount,
     referralLimit,
-
     status:"active",
   };
 
@@ -130,7 +126,6 @@ const updateLoyaltyReferral = async (req, res) => {
 let {
   userPoints,
   minimumPurchases,
-  purchaseThresholdAmount,
   referralLimit,
   referrerPoints,
   status,
@@ -153,7 +148,6 @@ const timezone = req.user.timezone;
     referrerPoints,
     companyOrganizer,
   minimumPurchases,
-  purchaseThresholdAmount,
   status,
   };
 
@@ -294,14 +288,14 @@ const limit = 0;
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "LoyaltyReferral_reset_failed",
+        translationKey: "Loyalty_referral_reset_failed",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "LoyaltyReferral_reset_successfully",
+      translationKey: "Loyalty_referral_reset_successfully",
       data: LoyaltyReferral,
     });
 

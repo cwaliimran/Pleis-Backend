@@ -10,8 +10,30 @@ const { resolveChallengeByTaskTypeService } = require("../../loyalty/challengesO
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 const { getFullImageUrl } = require("@utils/imageHelper");
+const Organizations = require("@OrganizationModel");
 
+const getStaffIdsByOrganization = async (organizationId) => {
+  if (!mongoose.Types.ObjectId.isValid(organizationId)) {
+    throw new Error("Invalid organization ID");
+  }
 
+  const organization = await Organizations.findById(
+    organizationId,
+    { staff: 1 }
+  ).lean();
+
+  if (!organization || !organization.staff) {
+    return [];
+  }
+
+  // Extract staff user IDs
+  const staffIds = organization.staff
+    .map(item => item.user)
+    .filter(Boolean)
+    .map(id => id.toString());
+
+  return staffIds;
+};
 // 1️⃣ Place an order
 
 const placeOrder = async ({
@@ -86,11 +108,27 @@ const placeOrder = async ({
     session.endSession();
 
     const formattedOrder = menuItemOrderFormatter(order, timezone);
+    const staffIds = await getStaffIdsByOrganization(organizationId);
+    console.log("organizationId",organizationId );
+    console.log("staff ", staffIds);
 
     await sendUserNotifications({
       recipientIds: [userId.toString()],
       title: "Order Placed Successfully",
       body: `Your Order Has been placed. The total amount is ${formattedOrder.totalPrice} EUR`,
+      data: {
+        type: NotificationTypes.ORDER_UPDATE,
+        objectType: "group",
+        organization_id: organizationId.toString(),
+      },
+      image: (order.items[0].menuItemSnapShot.image) || "noimage",
+      sender: userId,
+      objectId: formattedOrder._id,
+    });
+        await sendUserNotifications({
+      recipientIds: staffIds,
+      title: "New Order Placed",
+      body: `New Order Has been placed : ${formattedOrder._id} and is now being ${formattedOrder.status}. The total amount is ${formattedOrder.totalPrice} EUR`,
       data: {
         type: NotificationTypes.ORDER_UPDATE,
         objectType: "group",

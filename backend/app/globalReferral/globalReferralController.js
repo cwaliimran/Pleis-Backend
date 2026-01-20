@@ -15,7 +15,6 @@ let {
   rewardAmount,
   type,
   minimumPurchases,
-  purchaseThresholdAmount,
   expiryDate,
   status,
 } = req.body;
@@ -28,7 +27,6 @@ if (
       "type", 
       "minimumPurchases",
       "expiryDate",
-      "purchaseThresholdAmount",
     ],
   })
 ) return;
@@ -44,7 +42,6 @@ rewardAmount,
   type,
   minimumPurchases,
   expiryDate,
-  purchaseThresholdAmount,
   status,
   };
   try {

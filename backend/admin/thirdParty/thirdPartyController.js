@@ -67,14 +67,14 @@ const createThirdparty = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "thirdparty_reward_creation_failed",
+        translationKey: "third_party_reward_creation_failed",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "thirdparty_reward_created_successfully",
+      translationKey: "third_party_reward_created_successfully",
       data: reward,
     });
 

@@ -15,7 +15,6 @@ const createGlobalReferral = async (req, res) => {
     userPoints,
     referrerPoints,
     minimumPurchases,
-    purchaseThresholdAmount,
   } = req.body;
 
   const userId = req.user._id;
@@ -28,7 +27,6 @@ const createGlobalReferral = async (req, res) => {
         "userPoints",
         "referrerPoints",
         "minimumPurchases",
-        "purchaseThresholdAmount"
       ],
     })
   ) return;
@@ -42,9 +40,7 @@ const createGlobalReferral = async (req, res) => {
     referrerPoints,
     type:"global",
     minimumPurchases,
-    purchaseThresholdAmount,
-
-    status:"active",
+    status:"inactive",
   };
 
   try {
@@ -119,7 +115,6 @@ const updateGlobalReferral = async (req, res) => {
 let {
   userPoints,
   minimumPurchases,
-  purchaseThresholdAmount,
   referralLimit,
   referrerPoints,
   status,
@@ -142,8 +137,6 @@ const timezone = req.user.timezone;
     referrerPoints,
     userId,
   minimumPurchases,
-  purchaseThresholdAmount,
-
   status,
   };
 

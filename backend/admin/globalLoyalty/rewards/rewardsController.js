@@ -143,7 +143,7 @@ if (req.body.rewardType) {
     !validateParams(req, res, {
       rawData: ["rewardType"],
       enumFields: {
-        rewardType: ["ticketReward", "customReward"],
+        rewardType: ["globalTicketReward", "globalCustomReward"],
       },
     })
   ) {
@@ -151,12 +151,12 @@ if (req.body.rewardType) {
   }
 
   // STEP 3: Map rewardType -> globalRewardType
-  if (req.body.rewardType === "ticketReward") {
-    req.body.globalRewardType = "GlobalTicketReward";
+  if (req.body.rewardType === "globalTicketReward") {
+    req.body.globalRewardType = "globalTicketReward";
   }
 
-  if (req.body.rewardType === "customReward") {
-    req.body.globalRewardType = "GlobalCustomReward";
+  if (req.body.rewardType === "globalCustomReward") {
+    req.body.globalRewardType = "globalCustomReward";
   }
 
   // Remove user field so it doesn't cause schema errors

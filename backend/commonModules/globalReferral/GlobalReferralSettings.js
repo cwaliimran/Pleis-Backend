@@ -9,11 +9,6 @@ const globalReferralSchema = new mongoose.Schema(
       index: true,
       default: () => nanoid(),
     },
-
-
-
-
-
     // USER POINTS (reward earned by user)
     userPoints: {
       type: Number,
@@ -28,11 +23,6 @@ const globalReferralSchema = new mongoose.Schema(
 
     // Conditions
     minimumPurchases: {
-      type: Number,
-      required: true,
-    },
-
-    purchaseThresholdAmount: {
       type: Number,
       required: true,
     },
@@ -57,7 +47,7 @@ const globalReferralSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["active", "inactive", "deleted"],
-      default: "active",
+      default: "inactive",
     },
 
     type: {

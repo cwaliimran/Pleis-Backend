@@ -9,6 +9,7 @@ const {
 } = require("@utils/responseUtil");
 
 const menuItemsService = require("./menuItemsService");
+const { default: mongoose } = require("mongoose");
 
 const createMenuItem = async (req, res) => {
   let { timezone } = req.user;
@@ -97,7 +98,7 @@ const createMenuItem = async (req, res) => {
 
 const getMenuItems = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const {
+  let {
     keyword,
     status = "active",
     menu,
@@ -108,6 +109,16 @@ const getMenuItems = async (req, res) => {
     date,
     companyOrganizer
   } = req.query;
+  if(!companyOrganizer){
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "company_organizer_is_required",
+    });
+
+    
+  }
+  companyOrganizer =new mongoose.Types.ObjectId(companyOrganizer);
   try {
     const { menuItems, meta } = await menuItemsService.getMenuItems({
       page,
