@@ -21,6 +21,7 @@ const createThirdparty = async (req, res) => {
     rewardSourceLink,
     publicKeyForPartner,
     statusLevel,
+    globalRewardCategory,
     status
   } = req.body;
 
@@ -37,6 +38,7 @@ const createThirdparty = async (req, res) => {
         "statusLevel",
         "rewardSourceLink",
         "publicKeyForPartner",
+        "globalRewardCategory",
 
       ],
     })
@@ -57,6 +59,7 @@ const createThirdparty = async (req, res) => {
     publicKeyForPartner: publicKeyForPartner || "",
     statusLevel,
     status: status || "active",
+    globalRewardCategory: globalRewardCategory,
     createID: userId,
   };
 
@@ -174,6 +177,7 @@ const updateThirdparty = async (req, res) => {
     rewardSourceLink,
     publicKeyForPartner,
     statusLevel,
+    globalRewardCategory,
     status,
     notes
   } = req.body;
@@ -199,6 +203,7 @@ const updateThirdparty = async (req, res) => {
     ...(publicKeyForPartner !== undefined && { publicKeyForPartner }),
     ...(statusLevel !== undefined && { statusLevel }),
     ...(status !== undefined && { status }),
+    ...(globalRewardCategory !== undefined && { globalRewardCategory }),
     ...(notes !== undefined && { notes }),
     updateID: userId
   };

@@ -37,6 +37,7 @@ const updateLoyaltyReferral = async (data) => {
     "minimumPurchases",
     "referralLimit",
     "referrerPoints",
+    "status",
   ];
 
  
@@ -57,18 +58,7 @@ const updateLoyaltyReferral = async (data) => {
     delete updateData.status;
   }
 
-  // Case 2: Record is NOT active, but user wants to activate it
-  if (updateData.status === "active" && LoyaltyReferral.status !== "active") {
-    const existingActiveReferral = await LoyaltyReferral.findOne({
-      _id: { $ne: LoyaltyReferral._id }, // exclude current
-      status: "active",
-      type: "loyalty",
-    });
 
-    if (existingActiveReferral) {
-      return { error: "Another active Loyalty referral already exists." };
-    }
-  }
 
   // If nothing to update
   if (Object.keys(updateData).length === 0) {

@@ -32,15 +32,7 @@ if (rewardType === "globalTicketReward") {
   objectIdFields.push("event");
 }
 
-if (rewardType === "globalCustomReward") {
-  // ✔ Require the customReward object and its inner fields
-  rawData.push(
-    "customReward",
-    "customReward.image",
-    "customReward.title",
-    "customReward.description"
-  );
-}
+
 
 // -------------------------
 // STEP 4: Final validation after mapping

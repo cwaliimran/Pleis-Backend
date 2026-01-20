@@ -207,7 +207,6 @@ const getUserLoyaltyReferrals = async ({
   // Fetch referral settings based on companyOrganizer
   const referralSettings = await LoyaltyReferralSettings.findOne({
     companyOrganizer: companyOrganizerId,
-    status: 'active',
   });
 
   if (!referralSettings) {

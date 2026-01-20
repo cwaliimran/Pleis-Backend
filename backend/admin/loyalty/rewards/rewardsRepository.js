@@ -24,7 +24,9 @@ const getModelByrewardType = (rewardType) => {
 // Create reward
 const create = async (data) => {
   try {
+    console.log("data",data );
     const Model = getModelByrewardType(data.rewardType);
+    console.log("model", Model);
     const item = new Model(data);
     await item.save();
     // Clean up the Mongoose properties before returning
@@ -38,8 +40,18 @@ const create = async (data) => {
 // Get reward with population
 const getWithFilters = async (query = {}, skip = 0, limit = 10) => {
   return Reward.find(query)
-    .populate("menuItem", "title")
-    .populate({ path: "tierLimit", select: "title" })
+    .populate({
+      path: "menuItem",
+      select: "title menu",
+      populate: {
+        path: "menu",
+        select: "title"
+      }
+    })
+    .populate({
+      path: "tierLimit",
+      select: "title"
+    })
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)

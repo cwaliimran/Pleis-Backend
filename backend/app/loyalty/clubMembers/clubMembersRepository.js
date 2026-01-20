@@ -499,7 +499,26 @@ const createUserReferradrecord = async (referrerId, userId, companyOrganizer) =>
     throw err;
   }
 };
+const getClubMemberUserIdsByCompanyOrganizer = async (companyOrganizer) => {
+  if (!companyOrganizer) return [];
 
+  const organizerId =
+    typeof companyOrganizer === "string"
+      ? new mongoose.Types.ObjectId(companyOrganizer)
+      : companyOrganizer;
+
+  const members = await ClubMembers.find(
+    {
+      companyOrganizer: organizerId,
+      status: "active",
+    },
+    { user: 1, _id: 0 } // ✅ only fetch user field
+  )
+    .lean()
+    .exec();
+
+  return members.map((m) => m.user.toString());
+};
 
 
 module.exports = {
@@ -518,4 +537,5 @@ module.exports = {
   updateCompanyLoyaltySettings,
   getFollowedClubIds,
   countUserJoinedClubsWithPoints,
+  getClubMemberUserIdsByCompanyOrganizer
 };

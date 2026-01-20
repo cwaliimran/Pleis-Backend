@@ -25,6 +25,7 @@ const createReservation = async (req, res) => {
     needsConfirmation,
     optionalEventId,
     status,
+    ticketRequirement,
     organizationId,
     timingSlots
   } = req.body;
@@ -55,6 +56,14 @@ const createReservation = async (req, res) => {
       ],
     })
   ) return;
+  if(ticketRequirement===true||ticketRequirement==="true")
+      {
+        if (!validateParams(req, res, {
+          rawData: [
+            "ticketType"
+          ],
+        })) return;
+      }
 
   if (conditionType == "fixedPrice" || conditionType == "prepayOption") {
     if (
@@ -152,6 +161,7 @@ const createReservation = async (req, res) => {
     customText,
     taxPercentage,
     needsConfirmation,
+    ticketRequirement,
     optionalEventId,
     status,
     organizationId,

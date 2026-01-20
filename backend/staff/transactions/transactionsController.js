@@ -4,6 +4,8 @@ const { calculatePointsRepo } = require("../../app/loyalty/calculatePointsEarnin
 const { createTransaction } = require("../../app/userWalletService/transactions/services/unifiedTransactionsService");
 const menuItemRepo = require("../../admin/menuManagement/menuItems/menuItemsRepository");
 const { sendResponse } = require("../../helperUtils/responseUtil");
+const { sendUserNotifications } = require("../../controllers/communicationController");
+const { NotificationTypes } = require("@NotificationsModel");
 
 const applyPoints = async (req, res) => {
   const session = await mongoose.startSession();
@@ -108,6 +110,18 @@ const applyPoints = async (req, res) => {
 
     await session.commitTransaction();
     session.endSession();
+    await sendUserNotifications({
+      recipientIds: [user.toString()],
+      title: "Points Applied",
+      body: `You earn ${trx.companyPoints.total + trx.globalPoints.total} points.`,
+      data: {
+        type: NotificationTypes.POINTS_UPDATE,
+        objectType: "group",
+      },
+      image: "noimage",
+      sender: companyOrganizer,
+      objectId: applyRecord._id,
+    });
 
     return sendResponse({
       res,

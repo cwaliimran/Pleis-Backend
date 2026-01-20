@@ -7,7 +7,7 @@ const {
   getevents,
   gettickets,
   getWinners,
-} = require("./GiveawayController"); // Assuming you have a separate controller for promo codes
+} = require("./giveawayController"); // Assuming you have a separate controller for promo codes
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
 const roleMiddleware = require("../../middlewares/roleMiddleware");

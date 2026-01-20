@@ -14,6 +14,8 @@ function formatMenuItem(item, timezone) {
   if (!obj) return null;
 
   obj.image = getFullImageUrl(obj.image || "noimage.png");
+  obj.startTime=convertUtcToTimezone(obj.startTime,timezone,"hh:mm A");
+  obj.endTime=convertUtcToTimezone(obj.endTime,timezone,"hh:mm A");
 
   // ✅ SAFE MENU HANDLING
   if (obj.menuData) {

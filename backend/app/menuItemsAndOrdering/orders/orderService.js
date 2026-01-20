@@ -109,8 +109,7 @@ const placeOrder = async ({
 
     const formattedOrder = menuItemOrderFormatter(order, timezone);
     const staffIds = await getStaffIdsByOrganization(organizationId);
-    console.log("organizationId",organizationId );
-    console.log("staff ", staffIds);
+
 
     await sendUserNotifications({
       recipientIds: [userId.toString()],
@@ -128,7 +127,7 @@ const placeOrder = async ({
         await sendUserNotifications({
       recipientIds: staffIds,
       title: "New Order Placed",
-      body: `New Order Has been placed : ${formattedOrder._id} and is now being ${formattedOrder.status}. The total amount is ${formattedOrder.totalPrice} EUR`,
+      body: `New Order Has been placed : and is now being ${formattedOrder.status}. The total amount is ${formattedOrder.totalPrice} EUR`,
       data: {
         type: NotificationTypes.ORDER_UPDATE,
         objectType: "group",

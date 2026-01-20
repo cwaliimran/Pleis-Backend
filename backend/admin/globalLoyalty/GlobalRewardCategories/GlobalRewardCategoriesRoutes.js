@@ -4,7 +4,8 @@ const {
   getCategories,
   updateCategory,
   deleteCategory,
-} = require("./GlobalRewardCategoriesController");
+  getCategoriesTitleOnly
+} = require("./globalRewardCategoriesController");
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
 const roleMiddleware = require("../../../middlewares/roleMiddleware");
@@ -19,6 +20,7 @@ router.post("/", roleMiddleware(["admin"]), createCategory);
 
 // Get all categories with pagination
 router.get("/", getCategories);
+router.get("/summary", getCategoriesTitleOnly);
 
 // Update an existing category
 router.put("/:id", roleMiddleware(["admin"]), updateCategory);

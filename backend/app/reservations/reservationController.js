@@ -72,10 +72,10 @@ const getReservations = async (req, res) => {
       });
     }
 
- date = convertToUtcDateOnly(
-    date,
-    "UTC"
-  );
+    date = convertToUtcDateOnly(
+      date,
+      "UTC"
+    );
 
 
     const userId = req.user._id;
