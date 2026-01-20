@@ -8,6 +8,7 @@
     "start": "nodemon backend/server.js",
     "update:alias": "node aliasConfig/update-aliases.js",
     "localhost": "cross-env NODE_ENV=localhost node backend/server.js",
+    "mobileapps": "cross-env NODE_ENV=mobileapps node backend/server.js",
     "dev": "NODE_ENV=dev nodemon backend/server.js",
     "prod": "NODE_ENV=prod node backend/server.js",
     "d": "npm run dev",

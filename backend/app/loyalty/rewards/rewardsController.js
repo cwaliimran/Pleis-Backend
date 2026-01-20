@@ -17,7 +17,6 @@ const getRewards = async (req, res) => {
     const userId = req.user._id;
     const companyOrganizer = req.params.companyOrganizer;
 
-    // Fetch rewards + wallet
     const [rewardsResponse, userCompanyWallet] = await Promise.all([
       rewardService.getRewardsByCompanyOrganizerService({
         userId,
@@ -25,59 +24,44 @@ const getRewards = async (req, res) => {
         timezone: req.user?.timezone,
         keyword,
       }),
-      getUserCompanyWallet(userId, companyOrganizer)
+      getUserCompanyWallet(userId, companyOrganizer),
     ]);
 
-
-    // Step 1: Format tier-specific limits
-    let formattedRewards = formatRewardsByTierKey(
+    // Tier-specific formatting
+    const formattedRewards = formatRewardsByTierKey(
       rewardsResponse?.rewards || [],
       userCompanyWallet?.tierKey || "essential"
     );
 
-    // User tier info
     const userTierEntry = userCompanyWallet?.level?.entryPoints ?? 0;
     const userPoints = userCompanyWallet?.points ?? 0;
 
-    formattedRewards = formattedRewards.map(group => ({
+    const finalRewards = formattedRewards.map(group => ({
       ...group,
       items: group.items.map(item => {
+        // ❌ Already not claimable by limit → stop
+        if (!item.canClaim) return item;
 
-        const rewardTierEntry = item?.tierLimit?.entryPoints ?? 0;
-        const rewardMinPoints = item?.minPointsRequiredToClaim ?? 0;
-
-
-        // 1️⃣ If claimLimit says NO → keep it false
-        if (item.canClaim === false) return item;
-
-        // 2️⃣ Tier eligibility check
-        const eligibleByTier = userTierEntry >= rewardTierEntry;
-        if (!eligibleByTier) {
+        // Tier eligibility
+        if (userTierEntry < (item?.tierLimit?.entryPoints ?? 0)) {
           return { ...item, canClaim: false };
         }
 
-        // 3️⃣ Points eligibility check
-        const eligibleByPoints = userPoints >= rewardMinPoints;
-        if (!eligibleByPoints) {
+        // Points eligibility
+        if (userPoints < (item.pointsRequired ?? 0)) {
           return { ...item, canClaim: false };
         }
 
-        // All checks passed → claim allowed
-        return {
-          ...item,
-          canClaim: true
-        };
-      })
+        return item; // still canClaim === true
+      }),
     }));
-
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "rewards_fetched_successfully",
-      data: formattedRewards,
+      data: finalRewards,
     });
-
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
     return sendResponse({
@@ -88,6 +72,7 @@ const getRewards = async (req, res) => {
     });
   }
 };
+
 
 
 /* const getRewardDetails = async (req, res) => {

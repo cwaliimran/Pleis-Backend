@@ -16,9 +16,6 @@ const {
   getCurrentDateInTimezone,
 } = require("../../helperUtils/responseUtil");
 const { placePreOrderMenuItemsWithReservation } = require("../menuItemsAndOrdering/orders/orderService");
-const { resolveChallengeByTaskTypeService } = require("../loyalty/challengesOrders/challengeOrdersService");
-const { calculatePointsRepo } = require("../loyalty/calculatePointsEarning/pointsEarningsRepository");
-const { createTransaction } = require("../userWalletService/transactions/services/unifiedTransactionsService");
 const { sendUserNotifications } = require("../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 const createReservation = async (data, session) => {

@@ -37,9 +37,8 @@ const getPromotions = async ({ page, limit, keyword, timezone }) => {
       pipeline: [
         {
           $project: {
-            "companyDetails.name": 1,
-            firstName: 1,
-            profileIcon: 1,
+            "companyDetails.loyaltySettings.title": 1,
+            "companyDetails.logo": 1,
           },
         },
       ],
@@ -106,9 +105,9 @@ const getPromotionsForHome = async ({ page = 1, limit = 10, timezone }) => {
         pipeline: [
           {
             $project: {
-              "companyDetails.name": 1,
-              firstName: 1,
-              profileIcon: 1
+              _id: 1,
+              "companyDetails.logo": 1,
+              "companyDetails.loyaltySettings.title": 1
             }
           }
         ]
@@ -120,6 +119,7 @@ const getPromotionsForHome = async ({ page = 1, limit = 10, timezone }) => {
         preserveNullAndEmptyArrays: true
       }
     },
+
 
     /* ===============================
        SORT (newest first)

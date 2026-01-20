@@ -21,6 +21,14 @@ const getTiersWithFilters = async (query = {}, skip = 0, limit = 10) => {
     .limit(limit);
 };
 
+const getActiveTiersWithProjection = async (projection = { title: 1, _id: 1 }) => {
+  return Tiers.find(
+    { status: "active" },
+    projection
+  ).lean();
+};
+
+
 // Count by condition
 const countTiers = async (query = {}) => {
   return Tiers.countDocuments(query);
@@ -87,4 +95,5 @@ module.exports = {
   updateTierData,
   deleteTierById,
   findByIdAndUpdate,
+  getActiveTiersWithProjection,
 };
