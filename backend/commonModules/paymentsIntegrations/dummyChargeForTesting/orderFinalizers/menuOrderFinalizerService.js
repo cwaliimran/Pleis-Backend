@@ -109,7 +109,7 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
         try {
           //TODO use this function also on admin side as well when they will complete the order for payLater method
       //resolveChallengeByTaskTypeService
-          await resolveChallengeByTaskTypeService({
+           resolveChallengeByTaskTypeService({
             userId: menuOrder.user,
             companyOrganizer,
             taskType: "buyMenuItem",

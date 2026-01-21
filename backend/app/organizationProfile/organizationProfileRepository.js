@@ -22,8 +22,9 @@ const findOrganizationById = async (userId, organizationId) => {
     Organizations.findById(organizationId)
       .where({ status: "active" })
       .populate("otherInfo.categories")
-
-      .populate("otherInfo.tags"),
+      .populate("otherInfo.tags")
+      .populate("creator", "companyDetails.logo companyDetails.loyaltySettings.title")
+      ,
     Favorites.exists({ user: userId, targetType: "organization", targetId: organizationId }),
     Venues.findOne({
       organization: organizationId,

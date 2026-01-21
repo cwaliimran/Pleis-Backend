@@ -86,7 +86,7 @@ const ensureClubMemberWallet = async (userId, companyOrganizer, session) => {
 // ==========================================================
 // HELPER: Calculate 12-Month Earned Points from Unified Transactions
 // ==========================================================
-const getEarnedPointsLast12Months = async (userId, companyOrganizer) => {
+const getEarnedPointsLast12Months = async (userId, companyOrganizer, session) => {
   const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
 
   const rows = await UnifiedWalletTransactions.aggregate([
@@ -105,7 +105,9 @@ const getEarnedPointsLast12Months = async (userId, companyOrganizer) => {
         total: { $sum: "$points.total" }
       }
     }
-  ]);
+  ],
+    { session }
+  );
 
   return rows.length ? rows[0].total : 0;
 };
@@ -113,18 +115,38 @@ const getEarnedPointsLast12Months = async (userId, companyOrganizer) => {
 // ==========================================================
 // PROMOTION LOGIC
 // ==========================================================
-const checkPromotion = async (userId, companyOrganizer, tierKey) => {
-  const earned12Months = await getEarnedPointsLast12Months(userId, companyOrganizer);
+const checkPromotion = async (userId, companyOrganizer, session) => {
+  // 1️⃣ Earned points (must use session)
+  const earned12Months = await getEarnedPointsLast12Months(
+    userId,
+    companyOrganizer,
+    session
+  );
 
-  const member = await ClubMembers.findOne({ user: userId, companyOrganizer }).populate("level");
+  // 2️⃣ Member lookup with session + populate
+  const member = await ClubMembers.findOne(
+    { user: userId, companyOrganizer },
+    null,
+    { session }
+  ).populate({
+    path: "level",
+    options: { session },
+  });
+
   if (!member || !member.level) return;
 
+  const tierKey = member.tierKey;
   const currentLevel = member.level;
   const currentEntry = currentLevel[tierKey]?.entryPoints || 0;
 
-  const higherTiers = await Tiers.find({
-    [`${tierKey}.entryPoints`]: { $gt: currentEntry }
-  }).sort({ [`${tierKey}.entryPoints`]: 1 });
+  // 3️⃣ Load higher tiers with session
+  const higherTiers = await Tiers.find(
+    {
+      [`${tierKey}.entryPoints`]: { $gt: currentEntry },
+    },
+    null,
+    { session }
+  ).sort({ [`${tierKey}.entryPoints`]: 1 });
 
   let promotionTarget = null;
 
@@ -136,49 +158,76 @@ const checkPromotion = async (userId, companyOrganizer, tierKey) => {
 
   if (!promotionTarget) return;
 
+  // 4️⃣ Update member level using same session
   await ClubMembers.updateOne(
     { user: userId, companyOrganizer },
     {
       $set: {
         level: promotionTarget._id,
-        lastEvaluated: new Date()
-      }
-    }
+        lastEvaluated: new Date(),
+      },
+    },
+    { session }
   );
 
   return { promoted: true, newLevel: promotionTarget };
 };
 
+
 // ==========================================================
 // DEMOTION LOGIC
 // ==========================================================
-const checkDemotion = async (userId, companyOrganizer, tierKey) => {
-  const earned12Months = await getEarnedPointsLast12Months(userId, companyOrganizer);
+const checkDemotion = async (userId, companyOrganizer, session) => {
+  // 1️⃣ IMPORTANT: earned points query must use session
+  const earned12Months = await getEarnedPointsLast12Months(
+    userId,
+    companyOrganizer,
+    session
+  );
 
-  const member = await ClubMembers.findOne({ user: userId, companyOrganizer }).populate("level");
+  // 2️⃣ Member lookup must use session
+  const member = await ClubMembers.findOne(
+    { user: userId, companyOrganizer },
+    null,
+    { session }
+  ).populate({
+    path: "level",
+    options: { session },
+  });
+
   if (!member || !member.level) return;
 
+  const tierKey = member.tierKey;
   const currentLevel = member.level;
   const retainNeeded = currentLevel[tierKey]?.retainPoints || 0;
 
   if (earned12Months >= retainNeeded) return;
 
-  const fallbackTier = await TierRepo.getPreviousTierByRetainPoints(tierKey, earned12Months);
+  // 3️⃣ Tier lookup must use session
+  const fallbackTier = await TierRepo.getPreviousTierByRetainPoints(
+    tierKey,
+    earned12Months,
+    session
+  );
 
-  if (!fallbackTier || fallbackTier._id.toString() === currentLevel._id.toString()) return;
+  if (!fallbackTier) return;
+  if (fallbackTier._id.toString() === currentLevel._id.toString()) return;
 
+  // 4️⃣ Update must use session
   await ClubMembers.updateOne(
     { user: userId, companyOrganizer },
     {
       $set: {
         level: fallbackTier._id,
-        lastEvaluated: Date.now()
-      }
-    }
+        lastEvaluated: Date.now(),
+      },
+    },
+    { session }
   );
 
   return { demoted: true, newLevel: fallbackTier };
 };
+
 
 // ==========================================================
 // UPDATE COMPANY LOYALTY POINTS — WALLET ONLY (NO TRANSACTIONS HERE)
@@ -206,9 +255,11 @@ const updatePoints = async ({
     if (delta > 0) member.lifetimePoints += delta;
 
     await member.save({ session });
+    await checkPromotion(userId, companyOrganizer, session);
+    //TODO demotion call via cron job
+    // await checkDemotion(userId, companyOrganizer, session);
 
     const wallet = await getWallet(userId, companyOrganizer, session);
-
     return { success: true, newBalance, wallet };
   } catch (err) {
     return { success: false, message: err.message };

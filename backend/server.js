@@ -65,7 +65,7 @@ const allowedOrigins = [
   "https://glow-task-hood-meditation.trycloudflare.com",
   "https://detective-viruses-manufacture-arrives.trycloudflare.com",
   "https://genome-exploring-browser-brown.trycloudflare.com",
-  "https://someone-some-bull-postcards.trycloudflare.com",
+  "https://abraham-pipes-activity-polar.trycloudflare.com",
   "http://192.168.13.221:4003",
   "http://192.168.100.65:4003",
   "http://192.168.13.84:4003",

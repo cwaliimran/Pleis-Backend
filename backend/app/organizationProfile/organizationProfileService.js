@@ -43,7 +43,6 @@ const getOrganizationProfile = async (queryData) => {
       getOrganizationReviews(organizationId), // Get reviews with reviewer names
       getSimilarOrganizations(organizationId)
     ]);
-
     if (!orgProfile.org) {
       throw new Error("Organization not found");
     }
