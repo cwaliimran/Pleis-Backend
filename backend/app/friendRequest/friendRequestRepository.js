@@ -137,7 +137,7 @@ const createFriendRequest = async (data) => {
       title: "Friend Request Created",
       body: (recipientId === userId)
         ? `You have successfully created a friend request.`
-        : `A friend request has been created for you.`,
+        : `A New friend request is received.`,
       data: {
         type: NotificationTypes.FRIEND_REQUEST,
         objectType: "group",

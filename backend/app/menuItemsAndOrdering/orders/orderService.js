@@ -255,7 +255,7 @@ const addMoreItemsToOrder = async ({ orderId, items }) => {
   await sendUserNotifications({
     recipientIds: [userId.toString()],
     title: "Order Placed Successfully",
-    body: `Your Order Has been placed : ${order._id} and is now being ${order.status} and will be ready soon. The total amount is ${order.totalPrice} EUR`,
+    body: `Your Order Has been updated :  and is now being ${order.status} and will be ready soon. The total amount is ${order.totalPrice} EUR`,
     data: { type: NotificationTypes.ORDER_UPDATE, objectType: "group" },
     sender: userId,
     objectId: order._id,

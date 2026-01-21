@@ -5,10 +5,14 @@ const { getModelCounts, } = require('@dbUtils/queryUtil');
 const mongoose = require("mongoose");
 const { TicketingOrders } = require("@TicketingOrdersModel");
 const { TicketingBookings } = require("@TicketingBookingsModel");
+const { getAllUsers } = require("../usersManagement/usersService");
+const { sendUserNotifications } = require("@notificationsUtil");
+const { NotificationTypes } = require("@NotificationsModel");
 
 
 const createEvent = async (data, ticketingData) => {
   const session = await Events.startSession();
+    const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
   session.startTransaction();
 
   try {
@@ -43,6 +47,16 @@ const createEvent = async (data, ticketingData) => {
 
     await session.commitTransaction();
     session.endSession();
+    await sendUserNotifications({
+      recipientIds: userIds,
+      title: `A new event ${event.basicInfo.title} has been created.`,
+      body: `A new event ${event.basicInfo.title} is now available in the system.`,
+      data: { type: NotificationTypes.EVENT_UPDATE, eventId: event._id, objectType: "events" },
+      sender: event.creator,
+      objectId: event._id,
+      image: event.basicInfo.media.type === 'image' ? event.basicInfo.media.name : null,
+
+    });
     return event;
   } catch (err) {
     await session.abortTransaction();

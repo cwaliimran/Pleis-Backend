@@ -1,4 +1,4 @@
-const {User} = require('@UserModel');
+const { User } = require('@UserModel');
 const { buildKeywordQueryFromModels } = require('@utils/dbUtils/queryUtil');
 const { generateMeta } = require('@utils/responseUtil');
 // const  Badges  = require('@BadgesModel');
@@ -7,6 +7,8 @@ const { escapeRegex } = require("./formater/helper");
 const BadgeCategoriesModel = require("@BadgeCategoriesModel");
 const UserBadges = require("@UserBadgesModel");
 const { getFullImageUrl } = require('@utils/imageHelper');
+const { sendUserNotifications } = require('@notificationsUtil');
+const { NotificationTypes } = require('@NotificationsModel');
 
 const addUserBadges = async (data) => {
   try {
@@ -21,6 +23,18 @@ const addUserBadges = async (data) => {
     const userBadge = await UserBadges.create({
       user: data.userId,
       badgeCategory: data.badageId
+    });
+    await sendUserNotifications({
+      recipientIds: [data.userId.toString()],
+      title: "Badge Earned!",
+      body: `Congratulations! You've earned a new badge.`,
+      data: {
+        type: NotificationTypes.BADAGE_EARNED,
+        objectType: "group",
+      },
+      image: "noimage",
+      sender: data.userId,
+      objectId: data.badageId,
     });
     return userBadge;
   } catch (err) {
@@ -72,10 +86,10 @@ const getBadgess = async ({ page = 1, limit = 10, keyword, status, userId }) => 
 
     ...(keyword
       ? [{
-          $match: {
-            "badge.title": { $regex: keyword, $options: "i" }
-          }
-        }]
+        $match: {
+          "badge.title": { $regex: keyword, $options: "i" }
+        }
+      }]
       : []),
     { $sort: { earnedAt: -1 } }
   ]);
@@ -110,9 +124,11 @@ const getBadgess = async ({ page = 1, limit = 10, keyword, status, userId }) => 
     BadgeCategoriesModel.countDocuments(badgeFilter)
   ]);
 
-  const data={    streak,
+  const data = {
+    streak,
     userBadges,
-    allBadges,}
+    allBadges,
+  }
 
   /* ===================== FINAL RESPONSE ===================== */
   return {
@@ -143,5 +159,5 @@ const detailBadgess = async (id) => {
 module.exports = {
   addUserBadges,
   getBadgess,
-detailBadgess
+  detailBadgess
 };

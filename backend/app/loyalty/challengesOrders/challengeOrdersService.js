@@ -252,8 +252,8 @@ const resolveBuyMenuItemChallengeService = async ({
   await sendUserNotifications({
     recipientIds: [userId.toString()],
     title: challenge_title,
-    body: `Your challenge has been updated: ${challenge_id}`,
-    data: { type: NotificationTypes.ChALLENGE_UPDATE, objectType: "group" },
+    body: `Congratulations! Your challenge has been completed`,
+    data: { type: NotificationTypes.CHALLENGE_UPDATE, objectType: "group" },
     sender: userId,
     objectId: challenge_id,
   });
@@ -380,8 +380,8 @@ const finalizeChallengeCompletion = async (order) => {
   await sendUserNotifications({
     recipientIds: [userId.toString()],
     title: challenge_title,
-    body: `Your challenge has been updated: ${challenge_id}`,
-    data: { type: NotificationTypes.ChALLENGE_UPDATE, objectType: "group" },
+    body: `Congratulations! Your challenge has been completed.`,
+    data: { type: NotificationTypes.CHALLENGE_UPDATE, objectType: "group" },
     sender: userId,
     objectId: challenge_id,
   });

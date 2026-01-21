@@ -14,6 +14,9 @@ const {
   getCurrentDateInTimezone,
   getCurrentUtcDateOnly,
 } = require("../../helperUtils/responseUtil");
+const { getAllUsers } = require("../usersManagement/usersService");
+const { sendUserNotifications } = require("@notificationsUtil");
+const { NotificationTypes } = require("@NotificationsModel");
 const getCreatorFromOrganization = async (organizationId) => {
   try {
     const result = await Organizations.aggregate([
@@ -55,6 +58,16 @@ const createReservation = async (data) => {
     data.companyOrganizer = await getCreatorFromOrganization(data.organizationId);
     const Reservation = new Reservations(data);
     await Reservation.save();
+    const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
+    await sendUserNotifications({
+      recipientIds: userIds,
+      title: `New Reservation Available`,
+      body: ` A new reservation has been created. Check it out!`,
+      data: { type: NotificationTypes.RESERVATION_UPDATE, reservationId: Reservation._id, objectType: "reservations" },
+      sender: Reservation.companyOrganizer,
+      objectId: Reservation._id,
+      image: null,
+    });
     return Reservation;
   } catch (err) {
     throw err;
