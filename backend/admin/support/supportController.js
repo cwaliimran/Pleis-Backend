@@ -8,6 +8,8 @@ const {
 const { formatUpdate } = require("./helper/helper");
 
 const supportService = require("./supportService");
+const { sendUserNotifications } = require("@notificationsUtil");
+const { NotificationTypes } = require("@NotificationsModel");
 const createSupportRequest = async (req, res) => {
   const { name, email, subject, message } = req.body;
   const validationOptions = {
@@ -22,8 +24,8 @@ const createSupportRequest = async (req, res) => {
       email,
       subject,
       message,
-      status: "pending", 
-      user:req.user._id
+      status: "pending",
+      user: req.user._id
     });
     await supportRequest.save();
     return sendResponse({
@@ -33,8 +35,8 @@ const createSupportRequest = async (req, res) => {
     });
   } catch (error) {
     const statusCode = error.name === "ValidationError" ? 400 : 500;
-    const translationKey = error.name === "ValidationError" 
-      ? Object.values(error.errors)[0].message 
+    const translationKey = error.name === "ValidationError"
+      ? Object.values(error.errors)[0].message
       : "internal_server";
 
     return sendResponse({
@@ -49,7 +51,7 @@ const createSupportRequest = async (req, res) => {
 const getSupportRequest = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date, orderSort } = req.query;
-const timezone=req.user.timezone || 'UTC';
+  const timezone = req.user.timezone || 'UTC';
   try {
     if (date && !validateParams(req, res, {
       dateFields: {
@@ -126,7 +128,7 @@ const deleteSupportRequest = async (req, res) => {
 };
 const updateSupportRequest = async (req, res) => {
   const { id } = req.params; // Assume the ID of the support request is passed as a URL parameter
-const {response} = req.body;
+  const { response } = req.body;
   if (!id) {
     return sendResponse({
       res,
@@ -147,6 +149,8 @@ const {response} = req.body;
       { _id: id },
       { $set: { status: 'closed', response } }
     );
+    const updatedRecord = await SupportRequest.findById(id);
+
 
     if (result.modifiedCount === 0) {
       return sendResponse({
@@ -156,7 +160,16 @@ const {response} = req.body;
         error: "Support request not found or already deleted",
       });
     }
+    await sendUserNotifications({
+      recipientIds: [updatedRecord.user.toString()],
+      title: `Support request updated and closed`,
+      body: `Your support request has been responded to and closed by the admin.${response ? ' Response: ' + response : ''}`,
+      data: { type: NotificationTypes.SUPPORT_REQUEST, supportRequestId: updatedRecord._id, objectType: "supportrequests" },
+      sender: updatedRecord.user,
+      objectId: updatedRecord._id,
+      image: null,
 
+    });
     return sendResponse({
       res,
       statusCode: 200,

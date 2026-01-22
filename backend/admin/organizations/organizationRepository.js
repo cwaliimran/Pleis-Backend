@@ -128,6 +128,10 @@ const getMenuIdsByCompanyOrganizer = async (companyOrganizer) => {
   const menus = await Menus.find({ organization: { $in: organizationIds } }).select("_id").lean();
   return menus.map(menu => menu._id);
 };
+const getOrgCompanyOrganizer = async (organizationId) => {
+  const org = await Organizations.findById(organizationId).select("creator").lean();
+  return org ? org.creator : null;
+}
 
 module.exports = {
   createOrganization,
@@ -142,5 +146,6 @@ module.exports = {
   getOrganizationIdsByCompanyOrganizer,
   getMenuIdsByCompanyOrganizer,
   getOrganizationNamesByCompanyOrganizer,
-  getStaffIdsByOrganization
+  getStaffIdsByOrganization,
+  getOrgCompanyOrganizer
 };

@@ -1,9 +1,24 @@
 // repositories/eventRepository.js
 const { Events } = require("@EventsModel");
 const { getModelCounts, } = require('@dbUtils/queryUtil');
+const { getAllUsers } = require("../usersManagement/usersService");
+const { sendUserNotifications } = require("@notificationsUtil");
+const { NotificationTypes } = require("@NotificationsModel");
 // Create
 const createEvent = async (data) => {
   const event = new Events(data);
+      const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
+    await sendUserNotifications({
+      recipientIds: userIds,
+      title: `A new event ${event.basicInfo.title} has been created.`,
+      body: `A new event ${event.basicInfo.title} is now available in the system.`,
+      data: { type: NotificationTypes.EVENT_UPDATE, eventId: event._id, objectType: "events" },
+      sender: event.creator,
+      objectId: event._id,
+     image: event.basicInfo.media.type === 'image' ? event.basicInfo.media.name : null,
+
+    });
+ 
   return await event.save();
 };
 

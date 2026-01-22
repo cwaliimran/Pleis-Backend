@@ -19,6 +19,11 @@ const NotificationTypes = {
   FRIEND_REQUEST: "friendRequest",
   POINTS_UPDATE: "pointsUpdate",
   REWARD_CLAIMED: "rewardClaimed",
+  MENU_ITEM_CREATED: "menuItemCreated",
+  BADAGE_EARNED: "badgeEarned",
+  REVIEW_UPDATED: "reviewUpdated",
+  HIGHLIGHT_CREATED: "highlightCreated",
+  SUPPORT_REQUEST: "supportRequest",
 };
 
 // Define the NotificationSchema
@@ -35,7 +40,6 @@ const NotificationSchema = new mongoose.Schema({
   },
   objectId: {
     type: mongoose.Schema.Types.ObjectId,
-    required: true,
   },
   objectType: {
     type: String,

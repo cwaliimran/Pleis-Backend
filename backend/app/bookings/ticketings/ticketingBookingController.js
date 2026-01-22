@@ -5,7 +5,7 @@ const { createTicketingBookingService,
   updateTicketingBookingService,
   transferTicketingBookingService,
   deleteTicketingBookingService, } = require("./ticketingBookingService");
-const { sendUserNotifications } = require("../../../controllers/communicationController");
+
 const { NotificationTypes } = require("@NotificationsModel");
 const { validateTicketingPayload } = require("./validators/ticketingValidation");
 const { checkoutWithTicketsAndReservation } = require("./services/checkoutOrchestratorService");

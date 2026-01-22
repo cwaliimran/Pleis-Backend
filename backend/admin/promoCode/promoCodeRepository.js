@@ -1,13 +1,28 @@
 
-const {PromoCode }= require("@PromoCodeModel"); 
+const { PromoCode } = require("@PromoCodeModel");
 const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const { generateMeta } = require("@utils/responseUtil");
 const mongoose = require("mongoose");
+const { getAllUsers } = require("../usersManagement/usersService");
+const { sendUserNotifications } = require("@notificationsUtil");
+const { NotificationTypes } = require("@NotificationsModel");
 
 const createPromoCode = async (data) => {
   try {
     const promoCode = new PromoCode(data);
     await promoCode.save();
+    const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
+    await sendUserNotifications({
+      recipientIds: userIds,
+      title: `A new promo code "${promoCode.title}" has been created.`,
+      body: `use that promocode  ${promoCode.promoCode} for discounts.`,
+      data: { type: NotificationTypes.PROMO_UPDATE, promoCodeId: promoCode._id, objectType: "promoCode" },
+      sender: promoCode.companyOrganizer,
+      objectId: promoCode._id,
+      image: null,
+
+    });
+
     return promoCode;
   } catch (err) {
     throw err;
@@ -16,44 +31,44 @@ const createPromoCode = async (data) => {
 
 
 
-const getPromoCodes = async ({ timezone,page, limit, keyword, status, userId, date, range,today,skip }) => {
+const getPromoCodes = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
 
   const pipeline = [
-  {
-    $match: {
-      ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
-    
+    {
+      $match: {
+        ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
+
+      }
     }
+  ];
+  if (range == "monthly") {
+    const { start, end } = getStartAndEndOfMonth(today, timezone);
+
+    pipeline.push({
+      $match: {
+        createdAt: { $gte: start, $lt: end }
+      }
+    });
   }
-];
-if (range == "monthly") {
-  const { start, end } = getStartAndEndOfMonth(today, timezone);
+  if (range == "weekly") {
+    const { start, end } = getStartAndEndOfWeek(today, timezone);
 
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
-if (range == "weekly") {
-  const { start, end } = getStartAndEndOfWeek(today, timezone);
-
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
-if (range == "today") {
+    pipeline.push({
+      $match: {
+        createdAt: { $gte: start, $lt: end }
+      }
+    });
+  }
+  if (range == "today") {
     const start = new Date(today);
     const end = new Date(new Date(today).setDate(start.getDate() + 1));
 
-  pipeline.push({
-    $match: {
-      createdAt: { $gte: start, $lt: end }
-    }
-  });
-}
+    pipeline.push({
+      $match: {
+        createdAt: { $gte: start, $lt: end }
+      }
+    });
+  }
   // Apply filters
   if (status) {
     pipeline.push({ $match: { status } });
@@ -71,18 +86,18 @@ if (range == "today") {
     });
   }
 
-if (keyword) {
-  const keywordMatch = buildKeywordQueryFromModels(
-    [
-      { schema: PromoCode.schema }
-    ],
-    keyword
-  );
+  if (keyword) {
+    const keywordMatch = buildKeywordQueryFromModels(
+      [
+        { schema: PromoCode.schema }
+      ],
+      keyword
+    );
 
-  if (Object.keys(keywordMatch).length) {
-    pipeline.push({ $match: keywordMatch });
+    if (Object.keys(keywordMatch).length) {
+      pipeline.push({ $match: keywordMatch });
+    }
   }
-}
 
   pipeline.push({ $sort: { createdAt: -1 } });
 
@@ -113,21 +128,21 @@ if (keyword) {
   meta.promoCodesCount = { total, active, inactive };
 
 
-//   reservations = reservations.map(item => {
-//     const formatted = reservationsFormatter(item);
-//     if (formatted.conditionType == "noCondition"||formatted.conditionType=="ticketRequirement"||formatted.conditionType=="customText"||formatted.conditionType=="ticketRequirement") {
-//       delete formatted.amount;
-//       if(formatted.conditionType == "noCondition")
-//       {
-//       delete formatted.ticketType;
-//       }
-//     }
-//     else{
-//             delete formatted.ticketType;
-//     }
-//     return formatted;
-//   });
-  return {promoCodes , meta}
+  //   reservations = reservations.map(item => {
+  //     const formatted = reservationsFormatter(item);
+  //     if (formatted.conditionType == "noCondition"||formatted.conditionType=="ticketRequirement"||formatted.conditionType=="customText"||formatted.conditionType=="ticketRequirement") {
+  //       delete formatted.amount;
+  //       if(formatted.conditionType == "noCondition")
+  //       {
+  //       delete formatted.ticketType;
+  //       }
+  //     }
+  //     else{
+  //             delete formatted.ticketType;
+  //     }
+  //     return formatted;
+  //   });
+  return { promoCodes, meta }
 }
 
 const findPromoCodeById = async (id) => {

@@ -1,6 +1,5 @@
 const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const MenuRepo = require("./menuManagementRepository");
-const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 const MenuItems = require("@MenuItemsModel");
 const PresetModel = require("@PresetsModel");

@@ -1,12 +1,30 @@
 const Reviews = require('@ReviewsModel'); // Adjust path to your PromoCode model
 const mongoose = require('mongoose');
+const formatLoyaltyListing = require('./formater/formateImage');
+const { sendUserNotifications } = require('../../controllers/communicationController');
+const { NotificationTypes } = require('@NotificationsModel');
+const { getOrgCompanyOrganizer } = require('../organizationProfile/organizationProfileRepository');
 const createReviews = async (data) => {
   try {
     const reviews = await Reviews.create(data);
+    const organizerId = await getOrgCompanyOrganizer(data.organization);
     await sendUserNotifications({
       recipientIds: [reviews.user.toString()],
       title: "Review Created",
-      body: `Your review ${reviews._id} has been sent successfully.`,
+      body: `Your review  has been sent successfully.`,
+      data: {
+        type: NotificationTypes.EVENT_UPDATE,
+        objectType: "group",
+        organization_id: reviews.organization.toString(),
+      },
+      image: "noimage",
+      sender: reviews.user,
+      objectId: reviews.event,
+    });
+        await sendUserNotifications({
+      recipientIds: [organizerId.toString()],
+      title: "Someone Reviewed Your Event",
+      body: `A user has submitted a review for your event.`,
       data: {
         type: NotificationTypes.EVENT_UPDATE,
         objectType: "group",
@@ -24,9 +42,7 @@ const createReviews = async (data) => {
   }
 };
 
-const formatLoyaltyListing = require('./formater/formateImage');
-const { sendUserNotifications } = require('../../controllers/communicationController');
-const { NotificationTypes } = require('@NotificationsModel');
+
 
 
 const getReviews = async ({ organizationId, timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
