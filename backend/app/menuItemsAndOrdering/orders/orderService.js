@@ -6,6 +6,7 @@ const { generateMeta } = require("../../../helperUtils/responseUtil");
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 const Organizations = require("@OrganizationModel");
+const { emitOrderEvent } = require("../../../config/sockets/orders/orderSocketEmitter");
 
 const getStaffIdsByOrganization = async (organizationId) => {
   if (!mongoose.Types.ObjectId.isValid(organizationId)) {
@@ -104,6 +105,10 @@ const placeOrder = async ({
 
     const formattedOrder = menuItemOrderFormatter(order, timezone);
     const staffIds = await getStaffIdsByOrganization(organizationId);
+    emitOrderEvent(global.io, "NEW_ORDER", order, {
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+    });
 
 
     await sendUserNotifications({
@@ -119,7 +124,7 @@ const placeOrder = async ({
       sender: userId,
       objectId: formattedOrder._id,
     });
-        await sendUserNotifications({
+    await sendUserNotifications({
       recipientIds: staffIds,
       title: "New Order Placed",
       body: `New Order Has been placed : and is now being ${formattedOrder.status}. The total amount is ${formattedOrder.totalPrice} EUR`,

@@ -1,49 +1,63 @@
-require("dotenv").config({ path: `.env.${process.env.NODE_ENV || "dev"}` });
+/**
+ * ================================
+ * Server Bootstrap (FINAL)
+ * ================================
+ */
+
+require("dotenv").config({
+  path: `.env.${process.env.NODE_ENV || "dev"}`,
+});
+
+// ---- Global Logger (early) ----
 global.logger = require("../backend/helperUtils/logger");
 
 const express = require("express");
 const morgan = require("morgan");
-
-// --- Load aliases dynamically from config ---
 const path = require("path");
 const moduleAlias = require("module-alias");
-const aliases = require("../aliasConfig/pathAliases.config");
 
+// ---- Load module aliases ----
+const aliases = require("../aliasConfig/pathAliases.config");
 for (const [alias, target] of Object.entries(aliases)) {
   moduleAlias.addAlias(alias, path.join(__dirname, "..", target));
 }
+require("module-alias/register");
 
-const { runRecurringEventsCron } = require("../backend/commonModules/events/crons/recurringEvents.core");
-
-
-require('module-alias/register');
-
-
+// ---- App & Infra Imports ----
 const { i18nConfig } = require("./config/i18nConfig");
 const { loggerMiddleware } = require("./middlewares/logger");
+const { securityMiddleware } = require("./middlewares/security");
+const { sendResponse } = require("./helperUtils/responseUtil");
+
+const connectToDB = require("./helperUtils/server-setup");
+const { backupMongoDB } = require("./helperUtils/dataBaseBackup");
+const { getRedisClient } = require("./config/redis/redisConfig");
+const { startCrons } = require("./config/cron");
+
+// ---- Socket Server ----
+const { createSocketServer } = require("./config/sockets/socketServer");
+
+// ---- Routes ----
 const routes = require("./routes");
 const adminRoutes = require("./admin/routes");
 const organizerRoutes = require("./organizer/routes");
 const appRoutes = require("./routes/appRoutes");
 const staffRoutes = require("./routes/staffRoutes");
 const webhooksRoutes = require("./commonModules/paymentsIntegrations/paymentsWebhook/routes/webhookRoutes");
-const { sendResponse } = require("./helperUtils/responseUtil");
-const connectToDB = require("./helperUtils/server-setup");
-const { backupMongoDB } = require("./helperUtils/dataBaseBackup.js");
-const { securityMiddleware } = require("./middlewares/security.js");
 
-const swaggerUi = require('swagger-ui-express');
-const swaggerFile = require('../swagger/swagger_output.json');
-const { getRedisClient } = require("./config/redis/redisConfig");
-const { startCrons } = require("./config/cron");
+// ---- Swagger ----
+const swaggerUi = require("swagger-ui-express");
+const swaggerFile = require("../swagger/swagger_output.json");
 
-
-// Express app
+// =======================================================
+// Express App
+// =======================================================
 const app = express();
+app.set("trust proxy", 1);
 
-app.set("trust proxy", 1); // trust first proxy to get correct IP in req.ip
-
-// ================== Security Middleware ================== //
+// =======================================================
+// Security
+// =======================================================
 const allowedOrigins = [
   "https://pleis.com",
   "https://www.pleis.com",
@@ -73,67 +87,66 @@ const allowedOrigins = [
   "http://192.168.13.128:4003",
   
 ];
+
 securityMiddleware(app, {
   allowedOrigins,
-  adminIPWhitelist: [], // Example whitelist
+  adminIPWhitelist: [],
   maxRequestSize: "10mb",
-  rateLimitWindow: 15 * 60 * 1000, // 15 minutes
-  rateLimitMax: 200, // max requests per window
+  rateLimitWindow: 15 * 60 * 1000,
+  rateLimitMax: 200,
 });
 
-
+// =======================================================
+// Middlewares
+// =======================================================
 app.use(i18nConfig.init);
 app.use(loggerMiddleware);
-if (process.env.NODE_ENV != "prod") {
-}
 app.use(morgan("dev"));
 app.use(express.json());
 
-
-
+// =======================================================
 // Routes
-//app routes
+// =======================================================
 app.use("/api/v1/app", appRoutes);
-// Admin routes
 app.use("/api/v1/admin", adminRoutes);
-// Organizer routes
 app.use("/api/v1/organizer", organizerRoutes);
-// Organizer staff
 app.use("/api/v1/app/staff", staffRoutes);
-
 app.use("/api/v1/webhooks", webhooksRoutes);
 app.use("/api/v1", routes);
 
+// Swagger
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerFile));
 
-
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
-
-// Fallback Route
+// Fallback
 app.use((req, res) => {
-  sendResponse({ res, statusCode: 404, translationKey: "route_not_found" });
+  sendResponse({
+    res,
+    statusCode: 404,
+    translationKey: "route_not_found",
+  });
 });
 
-// Connect to DB and start server
-connectToDB(app);
-getRedisClient()
+// =======================================================
+// Infrastructure Bootstrap
+// =======================================================
 
-// Start MongoDB backup timer (24 hours)
-const backupTime = 24 * 60 * 60 * 1000;
-setInterval(() => backupMongoDB(), backupTime);
+// Redis (warm up)
+getRedisClient();
 
-
-let cronTickCount = 1;
-setInterval(async () => {
-  try {
-    // await runRecurringEventsCron();
-    // console.log(`✅ Recurring cron tick complete ${cronTickCount}`);
-  } catch (err) {
-    console.error(`❌ Recurring cron error ${cronTickCount}`, err);
-  }
-  cronTickCount++;
-}, 5000);
-
+// Crons
 startCrons();
 
-//export app
-// module.exports = { app };
+// MongoDB Backup (24h)
+setInterval(() => {
+  backupMongoDB();
+}, 24 * 60 * 60 * 1000);
+
+// =======================================================
+// Socket + HTTP Server (SINGLE SOURCE OF TRUTH)
+// =======================================================
+const server = createSocketServer(app, allowedOrigins);
+
+// =======================================================
+// Start Server AFTER DB Connection
+// =======================================================
+connectToDB(server);
