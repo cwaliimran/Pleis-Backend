@@ -54,12 +54,17 @@ router.post("/register", signupRateLimiter, register);
 router.post("/login", loginRateLimiter, login);
 router.post("/forgot-password", generateOtpRateLimiter, (req, res, next) => {
   req.body.type = "email";
+  req.body.purpose = "forgot_password";
   generateOtp(req, res, next);
 });
+
 router.post("/resend-otp/email", resendOtpRateLimiter, (req, res, next) => {
   req.body.type = "email";
+  // purpose must come from client OR fallback safely
+  req.body.purpose = req.body.purpose || "generic";
   generateOtp(req, res, next);
 });
+
 router.post("/resend-otp/phone", resendOtpRateLimiter, (req, res, next) => {
   req.body.type = "phoneNumber";
   generateOtp(req, res, next);

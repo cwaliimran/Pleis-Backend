@@ -40,6 +40,9 @@ function formatOrganization(item, excludeFields = []) {
   if (org.otherInfo?.galleryMedia && Array.isArray(org.otherInfo.galleryMedia)) {
     org.otherInfo.galleryMedia = org.otherInfo.galleryMedia.map((mediaName) => (getFullImageUrl(mediaName)));
   }
+  if (org.creator?.companyDetails?.logo) {
+    org.creator.companyDetails.logo = getFullImageUrl(org.creator.companyDetails.logo);
+  }
 
   // also transform otherInfo.categories if they are populated and not just ObjectIds
   if (org.otherInfo?.categories && Array.isArray(org.otherInfo.categories)) {

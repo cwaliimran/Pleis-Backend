@@ -1,5 +1,6 @@
 const Orders = require("@OrdersModel");
 const { getModelCounts } = require("../../../helperUtils/dbUtils/queryUtil");
+const mongoose = require("mongoose");
 
 const createOrder = async (orderData, session = null) => {
   return Orders.create([orderData], { session }).then(res => res[0]);
@@ -7,8 +8,88 @@ const createOrder = async (orderData, session = null) => {
 
 
 const getOrderById = async (id) => {
-  return Orders.findById(id).populate("organization", "basicInfo.name basicInfo.media.logo location");
+  const orderId = new mongoose.Types.ObjectId(id);
+
+  const result = await Orders.aggregate([
+    // 1️⃣ Match order
+    {
+      $match: { _id: orderId },
+    },
+
+    // 2️⃣ Lookup transactions
+    {
+      $lookup: {
+        from: "unifiedwallettransactions",
+        let: { orderId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$entityId", "$$orderId"] },
+            },
+          },
+          {
+            $project: {
+              walletType: 1,
+              points: "$points.total",
+            },
+          },
+        ],
+        as: "transactions",
+      },
+    },
+
+    // 3️⃣ Convert transactions array → object
+    {
+      $addFields: {
+        transactions: {
+          $arrayToObject: {
+            $map: {
+              input: "$transactions",
+              as: "tx",
+              in: {
+                k: "$$tx.walletType",
+                v: {
+                  points: "$$tx.points",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    // 4️⃣ Populate organization
+    {
+      $lookup: {
+        from: "organizations",
+        localField: "organization",
+        foreignField: "_id",
+        as: "organization",
+        pipeline: [
+          {
+            $project: {
+              "basicInfo.name": 1,
+              "basicInfo.media.logo": 1,
+              location: 1,
+            },
+          },
+        ],
+      },
+    },
+
+    // 5️⃣ Flatten organization
+    {
+      $unwind: {
+        path: "$organization",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+  ]);
+
+  return result[0] || null;
 };
+
+
 
 const getOrdersByUser = async (userId, page, limit, query = {}) => {
   return Orders.find({ user: userId, ...query }).select("orderNumber createdAt status").populate("organization", "basicInfo.name basicInfo.media.logo")

@@ -417,23 +417,68 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
 
 const getReservationDetails = async (id) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
-
     throw new Error("Invalid Reservation ID");
   }
 
   try {
+    const reservationId = new mongoose.Types.ObjectId(id);
+
     const pipeline = [
+      // 1️⃣ Match reservation
       {
-        $match: { _id: new mongoose.Types.ObjectId(id) }
+        $match: { _id: reservationId }
       },
 
+      // 2️⃣ Lookup unified wallet transactions (entityId = reservation._id)
+      {
+        $lookup: {
+          from: "unifiedwallettransactions",
+          let: { reservationId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$entityId", "$$reservationId"] },
+              },
+            },
+            {
+              $project: {
+                walletType: 1,
+                points: "$points.total",
+              },
+            },
+          ],
+          as: "transactions",
+        },
+      },
+
+      // 3️⃣ Convert transactions array → object
+      {
+        $addFields: {
+          transactions: {
+            $arrayToObject: {
+              $map: {
+                input: "$transactions",
+                as: "tx",
+                in: {
+                  k: "$$tx.walletType",
+                  v: {
+                    points: "$$tx.points",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      // 4️⃣ Convert optionalEventId
       {
         $addFields: {
           optionalEventId: { $toObjectId: "$optionalEventId" }
         }
       },
 
-      // Lookup Event
+      // 5️⃣ Lookup Event
       {
         $lookup: {
           from: "events",
@@ -449,7 +494,7 @@ const getReservationDetails = async (id) => {
         }
       },
 
-      // Lookup Organization
+      // 6️⃣ Lookup Organization
       {
         $lookup: {
           from: "organizations",
@@ -465,7 +510,7 @@ const getReservationDetails = async (id) => {
         }
       },
 
-      // Lookup User
+      // 7️⃣ Lookup User
       {
         $lookup: {
           from: "users",
@@ -481,11 +526,11 @@ const getReservationDetails = async (id) => {
         }
       },
 
-      // ⭐ NEW: Lookup Venue using venueID
+      // 8️⃣ Lookup Venue
       {
         $lookup: {
-          from: "venues",                         // <── your venues table name
-          localField: "event.basicInfo.venue",    // <── the venueID
+          from: "venues",
+          localField: "event.basicInfo.venue",
           foreignField: "_id",
           as: "venue"
         }
@@ -496,6 +541,8 @@ const getReservationDetails = async (id) => {
           preserveNullAndEmptyArrays: true
         }
       },
+
+      // 9️⃣ Lookup Pre-order Menu Order
       {
         $lookup: {
           from: "menuorders",
@@ -510,17 +557,8 @@ const getReservationDetails = async (id) => {
           preserveNullAndEmptyArrays: true
         }
       },
-      // {
-      //   $lookup: {
-      //     from: "ticketingbookings",
-      //     localField: "ticketingBookingRefs",
-      //     foreignField: "_id",
-      //     as: "ticketingBookingRefs"
-      //   }
-      // }
-      // ,
 
-      // Project Final fields
+      // 🔟 Final projection
       {
         $project: {
           organizationId: "$organization._id",
@@ -531,6 +569,7 @@ const getReservationDetails = async (id) => {
           userName: { $concat: ["$user.firstName", " ", "$user.lastName"] },
           venueFullAddress: "$venue.location.fullAddress",
 
+          transactions: 1, // ✅ included here
 
           _id: 1,
           userId: 1,
@@ -550,24 +589,14 @@ const getReservationDetails = async (id) => {
       { $sort: { createdAt: -1 } }
     ];
 
-
-
-    // Run the aggregation pipeline
     const reservation = await UserReservations.aggregate(pipeline);
 
-    // Check if no reservation found
-    if (!reservation || reservation.length === 0) {
-
-      return null;  // Return null if no reservation found
-    }
-
-
-    return reservation[0];  // Return the first result (since we match by ID)
+    return reservation[0] || null;
   } catch (error) {
-
-    throw error;  // Propagate the error for further handling
+    throw error;
   }
 };
+
 
 
 const getOrganizationsWithReservationsForHome = async ({

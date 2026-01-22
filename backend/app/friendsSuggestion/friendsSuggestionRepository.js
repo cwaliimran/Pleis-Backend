@@ -1,6 +1,6 @@
 
 const { UserContacts } = require('@UserContacts');
-const {User} = require('@UserModel');
+const { User } = require('@UserModel');
 const { generateMeta } = require('@utils/responseUtil');
 const { splitPhoneNumbers } = require('./formater/splitnumberToCountryCode');
 
@@ -21,66 +21,105 @@ const getPhoneNumbers = async (userId) => {
   }
 };
 
-const getFriendSuggestions = async ({
-  page,
-  limit,
-  userId,
-}) => {
- const phoneNumbers= await splitPhoneNumbers(await getPhoneNumbers(userId));
+const getFriendSuggestions = async ({ page, limit, userId }) => {
+  const phoneNumbers = await splitPhoneNumbers(await getPhoneNumbers(userId));
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const pipeline = [];
-
-  if (Array.isArray(phoneNumbers) && phoneNumbers.length > 0) {
-
-    const phoneMatch = phoneNumbers.map(p => ({
-      "phoneNumber.code": p.code,
-      "phoneNumber.number": p.number
-    }));
-
-    // match using OR
-    pipeline.push({
-      $match: {
-        $or: phoneMatch
-      }
-    });
+  if (!Array.isArray(phoneNumbers) || phoneNumbers.length === 0) {
+    return {
+      users: [],
+      meta: generateMeta(page, limit, 0),
+    };
   }
-  pipeline.push({
-    $match: {
-      _id: { $ne: userId }
-    }
-  });
 
-  pipeline.push({
-    $project: {
-      firstName: 1,
-      lastName: 1,
-      username: 1,
-      phoneNumber: 1,
-      profileIcon: 1,
-    }
-  });
+  const phoneMatch = phoneNumbers.map((p) => ({
+    "phoneNumber.code": p.code,
+    "phoneNumber.number": p.number,
+  }));
 
-  pipeline.push({ $sort: { createdAt: -1 } });
-  pipeline.push({
-    $facet: {
-      data: [
-        { $skip: skip },
-        ...(limit === 0 ? [] : [{ $limit: limit }])
-      ],
-      totalFiltered: [{ $count: "count" }]
-    }
-  });
+  const pipeline = [
+    // 1️⃣ Match contacts
+    {
+      $match: {
+        $or: phoneMatch,
+        _id: { $ne: new mongoose.Types.ObjectId(userId) }, // exclude self
+      },
+    },
+
+    // 2️⃣ Lookup friend requests (both directions)
+    {
+      $lookup: {
+        from: "friendrequests",
+        let: { suggestedUserId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $or: [
+                  {
+                    $and: [
+                      { $eq: ["$sender.id", "$$suggestedUserId"] },
+                      { $eq: ["$receiver.id", new mongoose.Types.ObjectId(userId)] },
+                    ],
+                  },
+                  {
+                    $and: [
+                      { $eq: ["$sender.id", new mongoose.Types.ObjectId(userId)] },
+                      { $eq: ["$receiver.id", "$$suggestedUserId"] },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        ],
+        as: "friendRequest",
+      },
+    },
+
+    // 3️⃣ Exclude users having any friend request
+    {
+      $match: {
+        friendRequest: { $eq: [] },
+      },
+    },
+
+    // 4️⃣ Projection
+    {
+      $project: {
+        firstName: 1,
+        lastName: 1,
+        username: 1,
+        phoneNumber: 1,
+        profileIcon: 1,
+      },
+    },
+
+    { $sort: { createdAt: -1 } },
+
+    // 5️⃣ Pagination
+    {
+      $facet: {
+        data: [
+          { $skip: skip },
+          ...(limit === 0 ? [] : [{ $limit: limit }]),
+        ],
+        totalFiltered: [{ $count: "count" }],
+      },
+    },
+  ];
 
   const result = await User.aggregate(pipeline);
 
   const users = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-  const meta = generateMeta(page, limit, totalFiltered);
-
-  return { users, meta };
+  return {
+    users,
+    meta: generateMeta(page, limit, totalFiltered),
+  };
 };
+
 const addContacts = async ({ phoneNumbers, userId }) => {
   try {
     // Remove duplicates from the provided phoneNumbers array

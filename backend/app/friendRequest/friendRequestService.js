@@ -17,7 +17,6 @@ const getFriends = async ({
 }) => {
   try {
 
-
     // Pass everything to repo
     let { users, meta } = await friendRequestRepo.getFriends({
       timezone,

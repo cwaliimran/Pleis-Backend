@@ -9,6 +9,7 @@ const {
 const {
   resolveChallengeByTaskTypeService,
 } = require("../../../../app/loyalty/challengesOrders/challengeOrdersService");
+const { emitOrderEvent } = require("../../../../config/sockets/orders/orderSocketEmitter");
 
 /**
  * Menu Order Payment Finalizer
@@ -108,8 +109,8 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       if (items.length) {
         try {
           //TODO use this function also on admin side as well when they will complete the order for payLater method
-      //resolveChallengeByTaskTypeService
-          await resolveChallengeByTaskTypeService({
+          //resolveChallengeByTaskTypeService
+          resolveChallengeByTaskTypeService({
             userId: menuOrder.user,
             companyOrganizer,
             taskType: "buyMenuItem",
@@ -119,6 +120,14 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
           // challenge failure must NEVER break payment finalization
         }
       }
+
+      emitOrderEvent(global.io, "ORDER_CREATED", {
+        _id: menuOrder._id,
+        organization: menuOrder.organization._id,
+      }, {
+        status: menuOrder.status,
+        paymentStatus: menuOrder.paymentStatus,
+      });
     }
 
     /* ==========================
@@ -128,6 +137,14 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       menuOrder.status = "cancelled";
       menuOrder.paymentStatus = "failed";
       await menuOrder.save({ session });
+
+      emitOrderEvent(global.io, "ORDER_UPDATED", {
+        _id: menuOrder._id,
+        organization: menuOrder.organization._id,
+      }, {
+        status: menuOrder.status,
+        paymentStatus: menuOrder.paymentStatus,
+      });
     }
 
     await session.commitTransaction();

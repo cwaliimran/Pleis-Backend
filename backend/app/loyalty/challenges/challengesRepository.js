@@ -71,21 +71,28 @@ const getChallengesWithPagination = async ({
   now,
   skip,
   limit,
-  keyword = ""
+  keyword = "",
 }) => {
-  return Challenge.find({
-    companyOrganizer: { $in: clubIds },
-    status: "active",
-    $or: [{ endDate: null }, { endDate: { $gt: now } }],
-    ...(keyword
-      ? {
-          $or: [
-            { "title": { $regex: keyword, $options: "i" } },
-            { "description": { $regex: keyword, $options: "i" } },
-          ],
-        }
-      : {}),
-  })
+  const filters = [
+    {
+      companyOrganizer: { $in: clubIds },
+      status: "active",
+    },
+    {
+      $or: [{ endDate: null }, { endDate: { $gt: now } }],
+    },
+  ];
+
+  if (keyword) {
+    filters.push({
+      $or: [
+        { title: { $regex: keyword, $options: "i" } },
+        { description: { $regex: keyword, $options: "i" } },
+      ],
+    });
+  }
+
+  return Challenge.find({ $and: filters })
     .populate("tierLimit")
     .sort({ createdAt: -1 }) // cheap + indexed
     .skip(skip)
@@ -93,21 +100,32 @@ const getChallengesWithPagination = async ({
     .lean();
 };
 
+
 const countChallengesWithPagination = async ({ clubIds, now, keyword = "" }) => {
+  const baseFilters = [
+    {
+      companyOrganizer: { $in: clubIds },
+      status: "active",
+    },
+    {
+      $or: [{ endDate: null }, { endDate: { $gt: now } }],
+    },
+  ];
+
+  if (keyword) {
+    baseFilters.push({
+      $or: [
+        { title: { $regex: keyword, $options: "i" } },
+        { description: { $regex: keyword, $options: "i" } },
+      ],
+    });
+  }
+
   return Challenge.countDocuments({
-    companyOrganizer: { $in: clubIds },
-    status: "active",
-    $or: [{ endDate: null }, { endDate: { $gt: now } }],
-    ...(keyword
-      ? {
-          $or: [
-            { "title": { $regex: keyword, $options: "i" } },
-            { "description": { $regex: keyword, $options: "i" } },
-          ],
-        }
-      : {}),
+    $and: baseFilters,
   });
 };
+
 
 
 module.exports = {

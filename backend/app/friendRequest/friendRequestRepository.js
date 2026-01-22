@@ -7,140 +7,120 @@ const { escapeRegex } = require("./formater/helper");
 const { sendUserNotifications } = require('../../controllers/communicationController');
 const { NotificationTypes } = require('@NotificationsModel');
 const getFriends = async ({
-  timezone,
   page,
   limit,
   keyword,
-  status,
   userId,
-  date
 }) => {
-  const allRequests = await mongoose.model("FriendRequest").find({}).lean();
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const pipeline = [];
+  const pipeline = [
+    // 1️⃣ Exclude self
+    {
+      $match: {
+        _id: { $ne: new mongoose.Types.ObjectId(userId) },
+      },
+    },
+  ];
 
-  pipeline.push({
-    $match: {
-      _id: { $ne: new mongoose.Types.ObjectId(userId) }
-    }
-  });
+  // 2️⃣ Keyword search
   if (keyword) {
     const safeKeyword = escapeRegex(keyword);
-
     pipeline.push({
       $match: {
         $or: [
           { firstName: { $regex: safeKeyword, $options: "i" } },
           { lastName: { $regex: safeKeyword, $options: "i" } },
           { username: { $regex: safeKeyword, $options: "i" } },
-        ]
-      }
+        ],
+      },
     });
   }
 
+  // 3️⃣ Lookup ONLY accepted friend requests
   pipeline.push({
     $lookup: {
       from: "friendrequests",
       let: {
         me: new mongoose.Types.ObjectId(userId),
-        otherUserId: "$_id"
+        otherUserId: "$_id",
       },
       pipeline: [
         {
           $match: {
             $expr: {
-              $or: [
+              $and: [
                 {
-                  $and: [
-                    { $eq: ["$sender.id", "$$me"] },
-                    { $eq: ["$receiver.id", "$$otherUserId"] }
-                  ]
+                  $or: [
+                    {
+                      $and: [
+                        { $eq: ["$sender.id", "$$me"] },
+                        { $eq: ["$receiver.id", "$$otherUserId"] },
+                      ],
+                    },
+                    {
+                      $and: [
+                        { $eq: ["$sender.id", "$$otherUserId"] },
+                        { $eq: ["$receiver.id", "$$me"] },
+                      ],
+                    },
+                  ],
                 },
-                {
-                  $and: [
-                    { $eq: ["$sender.id", "$$otherUserId"] },
-                    { $eq: ["$receiver.id", "$$me"] }
-                  ]
-                }
-              ]
-            }
-          }
-        },
-        { $sort: { createdAt: -1 } },  // <-- IMPORTANT
-        { $limit: 1 },                 // <-- PICK LATEST REQUEST
-        { $project: { sender: 1, receiver: 1, createdAt: 1 } }
-      ],
-      as: "friendRequest"
-    }
-  });
-
-
-
-  pipeline.push({
-    $addFields: {
-      relationshipStatus: {
-        $cond: {
-          if: { $gt: [{ $size: "$friendRequest" }, 0] },   // has any friendRequest
-          then: {
-            $let: {
-              vars: { req: { $arrayElemAt: ["$friendRequest", 0] } },
-              in: {
-                $cond: [
-                  {
-                    $eq: ["$$req.sender.id", new mongoose.Types.ObjectId(userId)]
-                  },
-                  "$$req.sender.status",       // you sent → show sender.status
-                  "$$req.receiver.status"      // they sent → show receiver.status
-                ]
-              }
-            }
+                { $eq: ["$sender.status", "accept"] },
+                { $eq: ["$receiver.status", "accept"] },
+              ],
+            },
           },
-          else: "send"   // no record → user can send request
-        }
-      }
-    }
+        },
+        { $limit: 1 },
+      ],
+      as: "friendRequest",
+    },
   });
+
+  // 4️⃣ KEEP ONLY USERS WHO ARE FRIENDS
+  pipeline.push({
+    $match: {
+      $expr: { $gt: [{ $size: "$friendRequest" }, 0] },
+    },
+  });
+
+  // 5️⃣ Projection
   pipeline.push({
     $project: {
       firstName: 1,
-      username: 1,
-      status: 1,
       lastName: 1,
       username: 1,
       phoneNumber: 1,
       profileIcon: 1,
-      relationshipStatus: 1,
-
-    }
+    },
   });
+
   pipeline.push({ $sort: { createdAt: -1 } });
 
+  // 6️⃣ Pagination
   pipeline.push({
     $facet: {
       data: [
         { $skip: skip },
-        ...(limit === 0 ? [] : [{ $limit: limit }])
+        ...(limit === 0 ? [] : [{ $limit: limit }]),
       ],
-      totalFiltered: [{ $count: "count" }]
-    }
+      totalFiltered: [{ $count: "count" }],
+    },
   });
-
 
   const result = await User.aggregate(pipeline);
 
-
-  const users = result[0]?.data || [];
-  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
-
-
-
-  const meta = generateMeta(page, limit, totalFiltered);
-
-
-
-  return { users, meta };
+  return {
+    users: result[0]?.data || [],
+    meta: generateMeta(
+      page,
+      limit,
+      result[0]?.totalFiltered[0]?.count || 0
+    ),
+  };
 };
+
 const createFriendRequest = async (data) => {
   try {
     const { userId, friendUserId, notes } = data;
@@ -152,7 +132,7 @@ const createFriendRequest = async (data) => {
     });
 
     await friendRequest.save();
-    await sendUserNotifications({
+  /*   await sendUserNotifications({
       recipientIds: [friendUserId.toString(), userId.toString()],
       title: "Friend Request Created",
       body: (recipientId === userId)
@@ -166,7 +146,7 @@ const createFriendRequest = async (data) => {
       image: "noimage",
       sender: userId,
       objectId: userId,
-    });
+    }); */
 
     return friendRequest;
   } catch (err) {
