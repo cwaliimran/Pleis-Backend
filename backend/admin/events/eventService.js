@@ -354,6 +354,7 @@ const getEventDetails = async (id, timezone) => {
     countEngagementService({ entityId: id, entityType: 'events', action: 'view' })
 
   ])
+  if (!event) return null;
   let data = formatEventResponse(event, { timezone });
   data.updates = updates || [];
   let formatLatestEventOrders = latestEventOrders.map(order => {

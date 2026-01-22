@@ -1,27 +1,49 @@
-function emitOrderEvent(io, event, order, diff = {}) {
-    const payload = {
-        event,
-        orderId: String(order._id),
-        organizationId: String(order.organization),
-        data: diff,
-        timestamp: Date.now(),
-    };
+function emitOrderEvent({
+  io,
+  eventName,
+  orderId,
+  organizationId,
+  userId,
+  data = {},
+}) {
+  const payload = {
+    event: eventName,
+    orderId: String(orderId),
+    organizationId: organizationId ? String(organizationId) : null,
+    data,
+    timestamp: Date.now(),
+  };
 
+  // console.log(
+  //   `📡 Emitting ${eventName} → order ${orderId}` +
+  //   (organizationId ? ` | org ${organizationId}` : " | NO ORG")
+  // );
+  // console.log("Payload:", payload);
 
-    console.log(`📡 Emitting event ${event} for order ${String(order._id)} in org ${String(order.organization)}`);
-    console.log("Payload:", payload);
+  /* ======================================================
+     👥 ORG-SCOPED EMITS (ONLY IF orgId EXISTS)
+     ====================================================== */
+  if (organizationId) {
+    io.of("/staff/orders")
+      .to(`org:${organizationId}`)
+      .emit(eventName, payload);
 
-    io.of("/orders/staff")
-        .to(`org:${String(order.organization)}`)
-        .emit(event, payload);
+    io.of("/admin/orders")
+      .to(`org:${organizationId}`)
+      .emit(eventName, payload);
 
-    io.of("/orders/admin")
-        .to(`org:${String(order.organization)}`)
-        .emit(event, payload);
+    io.of("/organizer/orders")
+      .to(`org:${organizationId}`)
+      .emit(eventName, payload);
+  }
 
-    io.of("/orders/organizer")
-        .to(`org:${String(order.organization)}`)
-        .emit(event, payload);
+  /* ======================================================
+     👤 USER-SCOPED EMIT (INDEPENDENT OF ORG)
+     ====================================================== */
+  if (userId) {
+    io.of("/user/orders")
+      .to(`user:${String(userId)}`)
+      .emit(eventName, payload);
+  }
 }
-
 module.exports = { emitOrderEvent };

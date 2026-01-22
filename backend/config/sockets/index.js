@@ -4,10 +4,10 @@ const { orderSocketHandler } = require("./orders/orderSocketHandler");
 function initializeSockets(io) {
   attachRedisAdapter(io);
 
-  orderSocketHandler(io.of("/orders/staff"), "staff");
-  orderSocketHandler(io.of("/orders/admin"), "admin");
-  orderSocketHandler(io.of("/orders/organizer"), "organizer");
-  orderSocketHandler(io.of("/orders/user"), "user");
+  orderSocketHandler(io.of("/staff/orders"), "staff");
+  orderSocketHandler(io.of("/admin/orders"), "admin");
+  orderSocketHandler(io.of("/organizer/orders"), "organizer");
+  orderSocketHandler(io.of("/user/orders"), "user");
 
   console.log("🚀 Order sockets initialized");
 }

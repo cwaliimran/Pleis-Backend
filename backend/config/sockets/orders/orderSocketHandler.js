@@ -10,18 +10,48 @@ function orderSocketHandler(io, role) {
 
     const { Types } = mongoose;
 
-    if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(organizationId)) {
-      console.error(`❌ Invalid connection attempt to ${role} socket`, {
+    /* ======================================================
+       1️⃣ VALIDATE USER (REQUIRED FOR ALL ROLES)
+       ====================================================== */
+    if (!Types.ObjectId.isValid(userId)) {
+      console.warn("❌ Socket rejected: invalid userId", { userId, role });
+      socket.disconnect(true);
+      return;
+    }
+
+    /* ======================================================
+       2️⃣ USER SOCKET (NO ORGANIZATION REQUIRED)
+       ====================================================== */
+    if (role === "user") {
+      socket.join(`user:${String(userId)}`);
+
+      console.log("🟢 user connected", {
+        userId,
+        socketId: socket.id,
+      });
+
+      socket.on("disconnect", () => {
+        console.log("🔴 user disconnected", { userId });
+      });
+
+      return;
+    }
+
+    /* ======================================================
+       3️⃣ STAFF / ADMIN / ORGANIZER SOCKETS
+       (ORGANIZATION IS REQUIRED)
+       ====================================================== */
+    if (!Types.ObjectId.isValid(organizationId)) {
+      console.warn("❌ Socket rejected: missing or invalid organizationId", {
         userId,
         organizationId,
+        role,
       });
       socket.disconnect(true);
       return;
     }
 
-    // ✅ Join rooms
     socket.join(`org:${String(organizationId)}`);
-    socket.join(`user:${String(userId)}`);
 
     console.log(`🟢 ${role} connected`, {
       userId,
@@ -30,7 +60,10 @@ function orderSocketHandler(io, role) {
     });
 
     socket.on("disconnect", () => {
-      console.log(`🔴 ${role} disconnected`, { userId, organizationId });
+      console.log(`🔴 ${role} disconnected`, {
+        userId,
+        organizationId,
+      });
     });
   });
 }

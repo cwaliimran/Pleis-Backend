@@ -9,7 +9,9 @@ const {
 const {
   resolveChallengeByTaskTypeService,
 } = require("../../../../app/loyalty/challengesOrders/challengeOrdersService");
-const { emitOrderEvent } = require("../../../../config/sockets/orders/orderSocketEmitter");
+const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
+const { menuItemOrderFormatter } = require("../../../../app/menuItemsAndOrdering/orders/formatter/menuItemOrderFormatter");
+const { findAppUserByIdWithProjectionService } = require("../../../../app/usersManagement/usersService");
 
 /**
  * Menu Order Payment Finalizer
@@ -121,13 +123,19 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
         }
       }
 
-      emitOrderEvent(global.io, "ORDER_CREATED", {
-        _id: menuOrder._id,
-        organization: menuOrder.organization._id,
-      }, {
-        status: menuOrder.status,
-        paymentStatus: menuOrder.paymentStatus,
+
+      let userDetails = await findAppUserByIdWithProjectionService(menuOrder.user, { profileIcon: 1, firstName: 1, lastName: 1, profileIcon: 1, email: 1, username: 1, timezone: 1 });
+      let formattedOrder = menuItemOrderFormatter(menuOrder, userDetails.timezone);
+      formattedOrder.user = userDetails;
+      formattedOrder.organization = menuOrder.organization._id;
+      emitOrderEvent({
+        io: global.io,
+        eventName: "NEW_ORDER",
+        orderId: menuOrder._id,
+        organizationId: menuOrder.organization._id,
+        data: formattedOrder,
       });
+
     }
 
     /* ==========================
@@ -138,13 +146,16 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       menuOrder.paymentStatus = "failed";
       await menuOrder.save({ session });
 
-      emitOrderEvent(global.io, "ORDER_UPDATED", {
-        _id: menuOrder._id,
-        organization: menuOrder.organization._id,
-      }, {
-        status: menuOrder.status,
-        paymentStatus: menuOrder.paymentStatus,
-      });
+      // emitOrderEvent({
+      //   io: global.io,
+      //   eventName: "ORDER_UPDATE",
+      //   orderId: menuOrder._id,
+      //   organizationId: menuOrder.organization._id,
+      //   data: {
+      //     status: menuOrder.status,
+      //     paymentStatus: menuOrder.paymentStatus,
+      //   },
+      // });
     }
 
     await session.commitTransaction();

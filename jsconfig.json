@@ -11,6 +11,9 @@
       "@redisCache": [
         "backend/config/redis/redisCache.js"
       ],
+      "@socketIo/*": [
+        "backend/config/sockets/*"
+      ],
       "@UsersModel": [
         "backend/models/UserModel.js"
       ],

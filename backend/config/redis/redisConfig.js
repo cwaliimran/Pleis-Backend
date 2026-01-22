@@ -73,7 +73,8 @@ function getRedisClient() {
     console.log("🚀 Redis connected:", isAzure ? "Azure" : "Local");
   });
 
-  redisClient.on("error", () => {
+  redisClient.on("error", (error) => {
+    console.log("⚠️ Redis connection error", error);
     redisAvailable = false;
   });
 

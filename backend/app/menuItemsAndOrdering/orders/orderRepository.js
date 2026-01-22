@@ -92,6 +92,7 @@ const getOrderById = async (id) => {
 
 
 const getOrdersByUser = async (userId, page, limit, query = {}) => {
+  query.status = { $ne: "pendingPayment" }; // Exclude pendingPayment orders
   return Orders.find({ user: userId, ...query }).select("orderNumber createdAt status").populate("organization", "basicInfo.name basicInfo.media.logo")
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
@@ -99,6 +100,7 @@ const getOrdersByUser = async (userId, page, limit, query = {}) => {
 };
 
 const getCounts = async (query) => {
+  query.status = { $ne: "pendingPayment" }; // Exclude pendingPayment orders
   let counts = getModelCounts({
     model: Orders,
     filterQuery: query,
