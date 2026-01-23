@@ -567,7 +567,7 @@ const getSummary = async (req, res) => {
 };
 const getSaleItems = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, range, organization } = req.query;
+  let { keyword, status, date, range, organization,filter,sortBy,categoryId } = req.query;
   try {
  
     if (!organization) {
@@ -589,6 +589,7 @@ const getSaleItems = async (req, res) => {
       organization,
       date,
       range,
+      filter,sortBy,categoryId
     });
 
     return sendResponse({
