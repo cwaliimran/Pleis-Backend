@@ -361,7 +361,6 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
       $project: {
         userId: 1,
         partySize: 1,
-        reservationType: 1,
         amount: 1,
         timingSlots: 1,
         status: 1,
@@ -578,7 +577,6 @@ const getReservationDetails = async (id) => {
 
           _id: 1,
           userId: 1,
-          reservationType: 1,
           amount: 1,
           timingSlots: 1,
           needsConfirmation: 1,
