@@ -13,6 +13,7 @@ const eventService = require("./eventService");
 const ticketingService = require("../ticketing/ticketingsService");
 const { updateEventService } = require("./updateEventService");
 const { getNotificationsByEventIdService } = require("../notifications/notificationsService");
+const { getRatingsByEventIdService } = require("../reviews/reviewsService");
 
 const createEvent = async (req, res) => {
   let { timezone, _id: userId } = req.user;
@@ -710,6 +711,8 @@ const getEventTicketsAnalytics = async (req, res) => {
 
 const getEventNotifications = async (req, res) => {
   let { id } = req.params;
+  let { limit, page } = req.query;
+
 
   // ObjectId for event id
   if (
@@ -718,12 +721,43 @@ const getEventNotifications = async (req, res) => {
       objectIdFields: ["id"],
     })) return;
   try {
-    const notifications = await getNotificationsByEventIdService(id);
+    const {notifications, meta} = await getNotificationsByEventIdService(id,limit, page);
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "event_notifications_fetched_successfully",
       data: notifications,
+      meta,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+const getEventRatings = async (req, res) => {
+  let { id } = req.params;
+  let { limit, page , keyword} = req.query;
+
+
+  // ObjectId for event id
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })) return;
+    const eventId = id;
+  try {
+    const {reviews, meta} = await getRatingsByEventIdService(eventId,limit, page, keyword);
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "event_ratings_fetched_successfully",
+      data: reviews,
+      meta,
     });
   } catch (error) {
     return sendResponse({
@@ -747,5 +781,6 @@ module.exports = {
   getEventTicketsAnalytics,
   getMinimalEventsInfo,
   getEventTicketings,
-  getEventNotifications
+  getEventNotifications,
+  getEventRatings
 };

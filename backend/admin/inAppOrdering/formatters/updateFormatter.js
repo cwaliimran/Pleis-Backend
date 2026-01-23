@@ -21,5 +21,21 @@ function formatUpdate(Update) {
 function formatCategories(categories = []) {
   return categories.map(formatUpdate);
 }
+function formatMenuItemSale(sale) {
+  if (!sale) return null;
 
-module.exports = { formatUpdate, formatCategories };
+  const s = sale.toObject ? sale.toObject() : { ...sale };
+
+  return {
+    ...s,
+    menuItems: Array.isArray(s.menuItems)
+      ? s.menuItems.map(item => ({
+          ...item,
+          image: getFullImageUrl(item.image || "noimage.png"),
+        }))
+      : [],
+  };
+}
+
+
+module.exports = { formatUpdate, formatCategories, formatMenuItemSale };

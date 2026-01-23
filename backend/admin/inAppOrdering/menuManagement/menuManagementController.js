@@ -551,7 +551,8 @@ const getSummary = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "Menu_fetched_successfully",
-      data: MenuItems,
+      data:  MenuItems,
+      
       meta,
     });
   } catch (error) {
@@ -564,9 +565,52 @@ const getSummary = async (req, res) => {
     });
   }
 };
+const getSaleItems = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let { keyword, status, date, range, organization } = req.query;
+  try {
+ 
+    if (!organization) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "organization_id_is_required",
+      });
+    }
 
+    organization = new mongoose.Types.ObjectId(organization);
+    const timezone = req.user.timezone;
+    const { data, meta } = await Menuervice.getSaleItems({
+      timezone,
+      page,
+      limit,
+      keyword,
+      status,
+      organization,
+      date,
+      range,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "sale_items_fetched_successfully",
+      data: data,
+      meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 module.exports = {
   getMenuItems,
+  getSaleItems,
   updateMenu,
   getMenuItemCategories,
   getEvents,

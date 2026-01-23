@@ -62,9 +62,16 @@ const deleteReview = async (id) => {
   if (!updated) return null;
   return true;
 };
+
+const getRatingsByEventIdService = async (eventId,limit, page,keyword) => {
+  let { reviews, meta } = await reviewRepo.getRatingsByEventIdService(eventId,limit, page,keyword);
+  return { reviews, meta };
+};
+
 module.exports = {
   getReviews,
   updateReviews,
-  deleteReview
+  deleteReview,
+  getRatingsByEventIdService
 
 };

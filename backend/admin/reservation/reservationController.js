@@ -56,14 +56,13 @@ const createReservation = async (req, res) => {
       ],
     })
   ) return;
-  if(ticketRequirement===true||ticketRequirement==="true")
-      {
-        if (!validateParams(req, res, {
-          rawData: [
-            "ticketType"
-          ],
-        })) return;
-      }
+  if (ticketRequirement === true || ticketRequirement === "true") {
+    if (!validateParams(req, res, {
+      rawData: [
+        "ticketType"
+      ],
+    })) return;
+  }
 
   if (conditionType == "fixedPrice" || conditionType == "prepayOption") {
     if (
@@ -733,7 +732,7 @@ const getReservations = async (req, res) => {
   try {
     if (
       (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
-      (!organizationsId || !Array.isArray(JSON.parse(organizationsId)) || JSON.parse(organizationsId).length === 0)
+      (!organizationsId || organizationsId === "undefined" || organizationsId === "null")
     ) {
       return sendResponse({
         res,
@@ -741,6 +740,7 @@ const getReservations = async (req, res) => {
         translationKey: "companyOrganizer_or_organizationsId_is_required",
       });
     }
+
 
     const userId = companyOrganizer;
     const timezone = req.user.timezone;

@@ -468,18 +468,26 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
   const now = getCurrentUtcDateOnly();
 
 
-  let organizationsIds = Array.isArray(organizationsId)
-    ? organizationsId
-    : JSON.parse(organizationsId || '[]');
-  organizationsIds = organizationsIds.map(id => new mongoose.Types.ObjectId(id));
+  let organizationObjectId = null;
+
+  if (
+    organizationsId &&
+    organizationsId !== "undefined" &&
+    organizationsId !== "null"
+  ) {
+    organizationObjectId = new mongoose.Types.ObjectId(organizationsId);
+  }
+console.log("organizationObjectId:", organizationObjectId);
+console.log("userId:", userId);
   const pipeline = [
     {
       $match: {
         ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
-        ...(organizationsIds.length > 0 && { organizationId: { $in: organizationsIds } }) // Match as ObjectId
-      }
-    }
+        ...(organizationObjectId && { organizationId: organizationObjectId }),
+      },
+    },
   ];
+
   if (range == "monthly") {
 
 

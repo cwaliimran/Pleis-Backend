@@ -28,6 +28,7 @@ const createEvent = async ({ data, ticketingData }, timezone) => {
 };
 
 const getEvents = async ({ page, limit, keyword, status, creator, startDate, endDate, organization, timezone }) => {
+  console.log("age, limit, keyword, status, creator, startDate, endDate, organization, timezone", creator);
   const query = {};
   // ALWAYS exclude templates events
   //templates event are only for internal use to generate occurrences
