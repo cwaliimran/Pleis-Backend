@@ -39,14 +39,6 @@ const createReservation = async (req, res) => {
         "timingSlots",
       ],
       enumFields: {
-        reservationType: [
-          "regular",
-          "vip",
-          "outdoor",
-          "private",
-          "bar",
-          "window",
-        ],
         paymentMethod: ["applePay", "card", "cash", "payLater"],
       },
       objectIdFields: [

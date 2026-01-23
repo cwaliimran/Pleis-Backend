@@ -233,9 +233,6 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
 
 const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationId }) => {
   const now = getCurrentDateInTimezone({ timezone });
-
-
-
   const pipeline = [
     {
       $match: {

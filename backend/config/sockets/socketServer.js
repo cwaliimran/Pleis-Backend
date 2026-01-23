@@ -17,7 +17,7 @@ function createSocketServer(app, allowedOrigins) {
   global.io = io;
 
   initializeSockets(io);
-
+             
   return server;
 }
 

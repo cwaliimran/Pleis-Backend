@@ -33,15 +33,7 @@ const UserReservationsSchema = new mongoose.Schema(
 
     reservationType: {
       type: String,
-      enum: [
-        "regular",
-        "vip",
-        "outdoor",
-        "private",
-        "bar",
-        "window",
-      ],
-      default: "regular",
+      default: "",
     },
     amount: {
       type: Number,
