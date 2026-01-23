@@ -17,11 +17,29 @@ const basePromotionsSchema = new mongoose.Schema(
 
     startDate: { type: Date, default: null }, //contains date/time in happyHour case otherwise just date
     endDate: { type: Date, default: null },
-    
+
     recurringDetails: {
       type: RecurringPromotionSchema,
       default: null,
     },
+    recurringMeta: {
+      isTemplate: {
+        type: Boolean,
+        default: false,
+      },
+
+      parentPromotion: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Promotion",
+        default: null,
+      },
+
+      occurrenceIndex: {
+        type: Number,
+        default: 1,
+      }
+    },
+
 
     tierLimit: {
       type: mongoose.Schema.Types.ObjectId,
@@ -44,5 +62,15 @@ const basePromotionsSchema = new mongoose.Schema(
   },
   { timestamps: true, discriminatorKey: "promotionType" }
 );
+
+basePromotionsSchema.index(
+  {
+    companyOrganizer: 1,
+    "recurringMeta.parentPromotion": 1,
+    startDate: 1,
+  },
+  { unique: true, sparse: true }
+);
+
 
 module.exports = mongoose.model("Promotion", basePromotionsSchema);
