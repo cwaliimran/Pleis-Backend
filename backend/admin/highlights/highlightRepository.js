@@ -5,6 +5,8 @@ const { getModelCounts } = require("@dbUtils/queryUtil");
 const { getAllUsers } = require("../usersManagement/usersService");
 const { sendUserNotifications } = require("@notificationsUtil");
 const { NotificationTypes } = require("@NotificationsModel");
+const { cache, invalidate } = require("@redisCache");
+ 
 
 // Create
 const createHighlight = async (data) => {
@@ -17,7 +19,7 @@ const createHighlight = async (data) => {
     data: { type: NotificationTypes.HIGHLIGHT_CREATED, highlightId: highlight._id, objectType: "highlights" },
     sender: highlight.creator,
     objectId: highlight._id,
-  image: highlight.media.type === 'image' ? event.basicInfo.media.name : null,
+    image: highlight.media.type === 'image' ? event.basicInfo.media.name : null,
 
   });
   return await highlight.save();
