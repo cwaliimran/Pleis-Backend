@@ -11,6 +11,7 @@ const service = require("./promotionsService");
 const create = async (req, res) => {
   let { timezone } = req.user;
   let recurringDetails = req.body?.recurringDetails || {};
+  const isRecurringEnabled = !!recurringDetails.isEnabled;
 
   var dateFields = {}
   var rawData = ["image", "title", "promotionType", "startDate", "endDate", "companyOrganizer"]
@@ -102,6 +103,20 @@ const create = async (req, res) => {
         translationKey: "end_date_cannot_be_before_start_date",
       });
     }
+
+
+    // 🔑 IMPORTANT: mark this promotion as a TEMPLATE on the server
+    if (isRecurringEnabled) {
+      req.body.recurringMeta = {
+        isTemplate: true,
+        parentPromotion: null,
+        occurrenceIndex: 1,
+      };
+    }
+
+
+
+
     const response = await service.create(req.body, timezone);
     return sendResponse({
       res,
@@ -133,7 +148,7 @@ const get = async (req, res) => {
         translationKey: "company_organizer_is_required",
       });
     }
-    
+
     const { responses, meta } = await service.get({
       companyOrganizer,
       page,
@@ -177,12 +192,19 @@ const getDetails = async (req, res) => {
 };
 
 const update = async (req, res) => {
-  if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
+  const { scope = "single" } = req.query; // single | future
+
+  if (!validateParams(req, res, {
+    pathParams: ["id"],
+    objectIdFields: ["id"],
+  })) return;
+
   try {
-    const updated = await service.update(req.params.id, req.body);
+    const updated = await service.update(req.params.id, req.body, scope);
     if (!updated) {
       return sendResponse({ res, statusCode: 404, translationKey: "promotion_not_found" });
     }
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -195,10 +217,13 @@ const update = async (req, res) => {
   }
 };
 
+
 const deleteItem = async (req, res) => {
+    const { scope = "single" } = req.query; // single | future
+
   if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
   try {
-    const deleted = await service.deleteItem(req.params.id);
+    const deleted = await service.deleteItem(req.params.id, scope);
     if (!deleted) {
       return sendResponse({ res, statusCode: 404, translationKey: "promotion_not_found" });
     }
