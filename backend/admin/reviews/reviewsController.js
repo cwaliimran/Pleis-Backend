@@ -12,7 +12,7 @@ const reviewService = require("./reviewsService");
 
 const getReviews = async (req, res) => {
   let {
-    companyOrganizer, keyword
+    companyOrganizer, keyword , page, limit, 
   } = req.query;
   if (!companyOrganizer) {
     return sendResponse({
@@ -37,6 +37,7 @@ const getReviews = async (req, res) => {
     organization: organizationArray,
     keyword,
     organizer,
+     page:page || 1, limit: limit || 10, 
   };
 
   try {

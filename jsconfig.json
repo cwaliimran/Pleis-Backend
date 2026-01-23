@@ -241,6 +241,9 @@
       ],
       "@SearchSuggestionModel": [
         "backend/app/searchSuggestions/SearchSuggestion.js"
+      ],
+      "MensuItemSaleModel": [
+        "backend/commonModules/menuManagement/sale/MenuItemsSale.js"
       ]
     }
   },

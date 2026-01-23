@@ -82,5 +82,6 @@ module.exports = {
     "@UserInterests": "backend/models/UserInterests.js",
     "@MenuItemsSaleModel": "backend/commonModules/menuManagement/sale/MenuItemsSale.js",
     "@SearchSuggestionModel": "backend/app/searchSuggestions/SearchSuggestion.js",
+    "MensuItemSaleModel": "backend/commonModules/menuManagement/sale/MenuItemsSale.js"
     
 };

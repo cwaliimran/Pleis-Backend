@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Reviews = require('@ReviewsModel'); // Adjust path to your Reviews model
 const { formatReviewData } = require('./formatters/updateFormatter');
 const Organizations = require('@OrganizationModel');
+const { generateMeta } = require('@utils/responseUtil');
 
 const getOrganizationIdsByOrganizerId = async (organizerId) => {
   try {
@@ -208,18 +209,27 @@ const getReviews = async (data) => {
 
     // Execute the aggregation pipeline
     const result = await Reviews.aggregate(pipeline);
-    const formattedReviews = result.flatMap(doc => doc.reviews.map(review => formatReviewData(review)));
-
+    console.log("result",result );
+    const formattedReviews =
+      result[0]?.reviews?.map(review => formatReviewData(review)) || [];
+    const totalFiltered = result[0]?.reviews?.length || 0;
+    console.log("formattedReviews",data.page );
+    const meta = generateMeta(Number(data.page), Number(data.limit), totalFiltered);
+    meta.avgRating = result[0]?.meta?.avgRating || 0;
+    meta.totalCount = result[0]?.meta?.totalCount || 0;
+    meta.distribution = result[0]?.meta?.distribution || [];
+    console.log("meta",meta );
 
     return {
-      reviews: formattedReviews || [],
-      meta: result[0]?.meta || { totalCount: 0, avgRating: 0, ratingCounts: {} }, // Metadata with total count, avg rating, and rating counts
+      reviews: formattedReviews,
+      meta: {
+        ...meta
+      },
     };
   } catch (err) {
     throw err;
   }
 };
-
 
 
 
@@ -231,8 +241,197 @@ const findReviewById = async (id) => {
 const findByIdAndUpdate = async (id, data) => {
   return Reviews.findByIdAndUpdate(id, data, { new: true });
 };
+
+
+const getRatingsByEventIdService = async (eventId, limit = 10, page = 1, keyword) => {
+  try {
+    const safeLimit = Number(limit) || 10;
+    const safePage = Number(page) || 1;
+    const skip = safeLimit === 0 ? 0 : (safePage - 1) * safeLimit;
+
+    const pipeline = [
+      {
+        $match: {
+          event: new mongoose.Types.ObjectId(eventId),
+          status: "active",
+        },
+      },
+
+      // 🔹 User lookup
+      {
+        $lookup: {
+          from: "users",
+          localField: "user",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                firstName: 1,
+                lastName: 1,
+                profileIcon: 1,
+                location: 1,
+              },
+            },
+          ],
+          as: "userDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$userDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // 🔹 Organization lookup (REQUIRED by formatReviewData)
+      {
+        $lookup: {
+          from: "organizations",
+          localField: "organization",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                basicInfo: 1,
+              },
+            },
+          ],
+          as: "organizationDetails",
+        },
+      },
+      {
+        $unwind: {
+          path: "$organizationDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // 🔹 Optional keyword filter
+      ...(keyword
+        ? [
+          {
+            $match: {
+              $or: [
+                { comment: { $regex: keyword, $options: "i" } },
+                { "userDetails.firstName": { $regex: keyword, $options: "i" } },
+                { "userDetails.lastName": { $regex: keyword, $options: "i" } },
+                { "userDetails.location.fullAddress": { $regex: keyword, $options: "i" } },
+                { "organizationDetails.basicInfo.name": { $regex: keyword, $options: "i" } },
+              ],
+            },
+          },
+        ]
+        : []),
+
+      // 🔹 Facet: paginated reviews + rating summary
+      {
+        $facet: {
+          reviews: [
+            { $sort: { createdAt: -1 } },
+            { $skip: skip },
+            ...(safeLimit ? [{ $limit: safeLimit }] : []),
+          ],
+
+          meta: [
+            {
+              $group: {
+                _id: null,
+                totalCount: { $sum: 1 },
+                avgRating: { $avg: "$rating" },
+                ratings: { $push: "$rating" },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                totalCount: 1,
+                avgRating: { $round: ["$avgRating", 1] },
+
+                distribution: {
+                  $map: {
+                    input: { $reverseArray: { $range: [1, 6] } }, // ⭐ 5 → 1
+                    as: "star",
+                    in: {
+                      stars: "$$star",
+                      count: {
+                        $size: {
+                          $filter: {
+                            input: "$ratings",
+                            as: "r",
+                            cond: { $eq: ["$$r", "$$star"] },
+                          },
+                        },
+                      },
+                      percentage: {
+                        $cond: [
+                          { $eq: ["$totalCount", 0] },
+                          0,
+                          {
+                            $round: [
+                              {
+                                $multiply: [
+                                  {
+                                    $divide: [
+                                      {
+                                        $size: {
+                                          $filter: {
+                                            input: "$ratings",
+                                            as: "r",
+                                            cond: { $eq: ["$$r", "$$star"] },
+                                          },
+                                        },
+                                      },
+                                      "$totalCount",
+                                    ],
+                                  },
+                                  100,
+                                ],
+                              },
+                              0,
+                            ],
+                          },
+                        ],
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+
+      { $unwind: "$meta" },
+    ];
+
+    const result = await Reviews.aggregate(pipeline);
+
+    const formattedReviews =
+      result[0]?.reviews?.map(review => formatReviewData(review)) || [];
+    const totalFiltered = result[0]?.reviews?.length || 0;
+    const meta = generateMeta(page, limit, totalFiltered);
+    meta.avgRating = result[0]?.meta?.avgRating || 0;
+    meta.totalCount = result[0]?.meta?.totalCount || 0;
+    meta.distribution = result[0]?.meta?.distribution || [];
+
+
+    return {
+      reviews: formattedReviews,
+      meta: {
+        ...meta,
+        currentPage: safePage,
+        limit: safeLimit,
+      },
+    };
+  } catch (err) {
+    throw err;
+  }
+};
+
+
 module.exports = {
   getReviews,
   findReviewById,
-  findByIdAndUpdate
+  findByIdAndUpdate,
+  getRatingsByEventIdService
 };
