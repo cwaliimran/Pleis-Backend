@@ -55,6 +55,7 @@ const createReservation = async (data, session) => {
   // Lock only for card / applePay
   if (["card", "applePay"].includes(data.paymentDetails.paymentMethod)) {
     data.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
+    data.status = "pendingPayment";
   }
 
   const userReservation = new UserReservations(data);
@@ -174,9 +175,13 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
 
   // STATUS FILTER
   if (status) {
-    pipeline.push({ $match: { status } });
+    pipeline.push({ $match: { status: { $in: status } } });
   } else {
-    pipeline.push({ $match: { status: { $ne: "deleted" } } });
+    pipeline.push({
+      $match: {
+        status: { $nin: ["pendingPayment", "deleted"] }
+      }
+    });
   }
 
   // DATE FILTER
@@ -241,7 +246,7 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
 
   // META COUNT
   const [total, active, inactive] = await Promise.all([
-    Reservations.countDocuments({ ...(userId && { userId }), status: { $ne: "deleted" } }),
+    Reservations.countDocuments({ ...(userId && { userId }), status: { $nin: ["pendingPayment", "deleted"] } }),
     Reservations.countDocuments({ status: "active", ...(userId && { userId }) }),
     Reservations.countDocuments({ status: "inactive", ...(userId && { userId }) })
   ]);

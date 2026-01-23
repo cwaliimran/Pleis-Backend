@@ -22,21 +22,12 @@ const validateReservationPayload = (req, res, reservation) => {
       !validateParams(req, res, {
         rawData: [
           "partySize",
-          "reservationType",
           "timingSlots",
           "organizationId",
           "companyOrganizer",
           "reservationId",
         ],
         enumFields: {
-          reservationType: [
-            "regular",
-            "vip",
-            "outdoor",
-            "private",
-            "bar",
-            "window",
-          ],
           "paymentDetails.paymentMethod": ["applePay", "card", "cash", "payLater"],
         },
         objectIdFields: [

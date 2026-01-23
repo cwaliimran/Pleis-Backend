@@ -4,7 +4,7 @@ const { getCurrentDateInTimezone, convertUtcToTimezone, generateMeta } = require
 const eventRepo = require("./eventRepository");
 const { formatEventResponse } = require("./formatter/eventFormatter");
 const { getTicketingsByEventId, getTicketSalesStatsService } = require("../ticketing/ticketingsService");
-const { generateImmediatelyForTemplate } = require("../../commonModules/events/crons/recurringEvents.core");
+const { generateImmediatelyForTemplate } = require("../../config/cron/events/recurringEvents.core");
 const { Events } = require("@EventsModel");
 const { default: mongoose } = require("mongoose");
 const { getUpdatesByEventIdService } = require("../updates/updatesService");
@@ -354,6 +354,7 @@ const getEventDetails = async (id, timezone) => {
     countEngagementService({ entityId: id, entityType: 'events', action: 'view' })
 
   ])
+  if (!event) return null;
   let data = formatEventResponse(event, { timezone });
   data.updates = updates || [];
   let formatLatestEventOrders = latestEventOrders.map(order => {

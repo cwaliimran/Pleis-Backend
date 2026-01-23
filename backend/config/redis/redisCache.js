@@ -149,4 +149,6 @@ module.exports = {
   cache,
   invalidate,
   buildKey,
+  acquireLock,
+  releaseLock,
 };

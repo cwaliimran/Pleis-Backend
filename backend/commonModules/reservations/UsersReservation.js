@@ -33,15 +33,7 @@ const UserReservationsSchema = new mongoose.Schema(
 
     reservationType: {
       type: String,
-      enum: [
-        "regular",
-        "vip",
-        "outdoor",
-        "private",
-        "bar",
-        "window",
-      ],
-      default: "regular",
+      default: "",
     },
     amount: {
       type: Number,
@@ -114,7 +106,7 @@ const UserReservationsSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["confirmed", "checkedIn", "rejected", "pending", "cancelled", "completed", "deleted"],
+      enum: ["pendingPayment", "confirmed", "checkedIn", "rejected", "pending", "cancelled", "completed", "deleted"],
       default: "pending",
     },
 

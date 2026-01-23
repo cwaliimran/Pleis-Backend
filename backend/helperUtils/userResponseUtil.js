@@ -129,6 +129,15 @@ const formatUserResponse = (
   return response;
 };
 
+//attach url to profile icon without any other formatting
+const formatUserProfileIconOnly = (userObject) => {
+  if (!userObject) return null;
+  const pIcon = getFullImageUrl(userObject?.profileIcon) || null;
+  userObject.profileIcon = pIcon;
+  return userObject;
+};
+
 module.exports = {
   formatUserResponse,
+  formatUserProfileIconOnly
 };

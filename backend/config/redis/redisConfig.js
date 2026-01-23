@@ -48,6 +48,7 @@ function getRedisClient() {
   const isAzure = url.startsWith("rediss://");
 
   redisClient = new Redis(url, {
+    connectTimeout: 10000,
     // Do not hard-fail requests
     maxRetriesPerRequest: null,
     enableReadyCheck: true,
@@ -73,7 +74,8 @@ function getRedisClient() {
     console.log("🚀 Redis connected:", isAzure ? "Azure" : "Local");
   });
 
-  redisClient.on("error", () => {
+  redisClient.on("error", (error) => {
+    console.log("⚠️ Redis connection error", error);
     redisAvailable = false;
   });
 
@@ -105,12 +107,13 @@ function createNewRedisClient() {
   const isAzure = url.startsWith("rediss://");
 
   return new Redis(url, {
+    connectTimeout: 10000,
     maxRetriesPerRequest: null,
     enableReadyCheck: true,
 
     retryStrategy(times) {
       return Math.min(times * 500, 5000);
-    },
+  },
 
     reconnectOnError() {
       return true;

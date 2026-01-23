@@ -880,16 +880,6 @@ const copySingleSlotReservationController = async (req, res) => {
     if (!validateParams(req, res, {
       rawData: ["reservationId", "targetDate", "startTime", "reservationType"],
       objectIdFields: ["reservationId"],
-      enumFields: {
-        reservationType: [
-          "regular",
-          "vip",
-          "outdoor",
-          "private",
-          "bar",
-          "window",
-        ],
-      },
       dateFields: { targetDate: "YYYY-MM-DD", startTime: "hh:mm A" },
     })) return;
 

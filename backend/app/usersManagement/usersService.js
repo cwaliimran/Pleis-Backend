@@ -1,7 +1,7 @@
 // services/userService.js
 const { generateMeta, sendResponse } = require("../../helperUtils/responseUtil");
 const userRepo = require("./usersRepository");
-const { formatUserResponse } = require("../../helperUtils/userResponseUtil");
+const { formatUserResponse, formatUserProfileIconOnly } = require("../../helperUtils/userResponseUtil");
 const { userCache } = require("../../config/nodeCache");
 const validator = require("validator");
 const { User } = require("../../models/UserModel");
@@ -336,6 +336,11 @@ const getUserDetails = async (id) => {
   return await userRepo.findUserById(id);
 };
 
+const findAppUserByIdWithProjectionService = async (id, projection = null) => {
+  let user =  await userRepo.findAppUserByIdWithProjection(id, projection);
+  return formatUserProfileIconOnly(user);
+};
+
 
 /**
  * Setup 2FA (Generate QR and Secret, but do not enable yet)
@@ -425,5 +430,6 @@ module.exports = {
   confirmTwoFA,
   disableTwoFA,
   updateUserInterests,
-  getUserInterestsByUserId
+  getUserInterestsByUserId,
+  findAppUserByIdWithProjectionService
 };

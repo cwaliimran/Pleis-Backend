@@ -6,7 +6,8 @@ const { generateMeta } = require("../../../helperUtils/responseUtil");
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 const Organizations = require("@OrganizationModel");
-const { emitOrderEvent } = require("../../../config/sockets/orders/orderSocketEmitter");
+const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
+const { findAppUserByIdWithProjectionService } = require("../../usersManagement/usersService");
 
 const getStaffIdsByOrganization = async (organizationId) => {
   if (!mongoose.Types.ObjectId.isValid(organizationId)) {
@@ -97,33 +98,31 @@ const placeOrder = async ({
       orderData.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
     }
     orderData.status = orderStatus;
+
     let order = await orderRepo.createOrder(orderData, session);
 
     // 5️⃣ Commit atomic transaction
     await session.commitTransaction();
     session.endSession();
 
-    const formattedOrder = menuItemOrderFormatter(order, timezone);
+    let formattedOrder = menuItemOrderFormatter(order, timezone);
     const staffIds = await getStaffIdsByOrganization(organizationId);
-    emitOrderEvent(global.io, "NEW_ORDER", order, {
-      status: order.status,
-      paymentStatus: order.paymentStatus,
-    });
+    //get user details
+    let userDetails = await findAppUserByIdWithProjectionService(userId, { profileIcon: 1, firstName: 1, lastName: 1, profileIcon: 1, email: 1, username: 1 });
+    formattedOrder.user = userDetails;
 
+    // Emit socket event for new order (only for cash payments)
+    if (paymentMethod === "cash") {
+      emitOrderEvent({
+        io: global.io,
+        eventName: "NEW_ORDER",
+        orderId: order._id,
+        organizationId: order.organization,
+        data: formattedOrder,
+      });
 
-    await sendUserNotifications({
-      recipientIds: [userId.toString()],
-      title: "Order Placed Successfully",
-      body: `Your Order Has been placed. The total amount is ${formattedOrder.totalPrice} EUR`,
-      data: {
-        type: NotificationTypes.ORDER_UPDATE,
-        objectType: "group",
-        organization_id: organizationId.toString(),
-      },
-      image: (order.items[0].menuItemSnapShot.image) || "noimage",
-      sender: userId,
-      objectId: formattedOrder._id,
-    });
+    }
+
     await sendUserNotifications({
       recipientIds: staffIds,
       title: "New Order Placed",

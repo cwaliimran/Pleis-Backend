@@ -44,7 +44,7 @@ const sendPasswordResetLinkRateLimiter = createRateLimiter("link/send-password-r
 const verifyPasswordResetLinkRateLimiter = createRateLimiter("link/reset-password/verify", 15, 15); // 15 requests per 15 minutes
 const resetPasswordViaLinkRateLimiter = createRateLimiter("link/reset-password", 15, 15); // 15 requests per 15 minutes
 
-const changePasswordRateLimiter = createRateLimiter("changePassword", 15, 5);
+const changePasswordRateLimiter = createRateLimiter("changePassword", 15, 10);
 
 // Apply rate limiters to routes
 router.post("/internal/admin/create", signupRateLimiter, createAdmin);
