@@ -246,10 +246,12 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
 
 const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationId }) => {
   const now = getCurrentDateInTimezone({ timezone });
+  console.log("reservation", reservationId);
+  console.log("organizationsId",organizationsId);
+  console.log("status",status );
   const pipeline = [
     {
       $match: {
-        ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
         ...(status && { status: status }),
         ...(organizationsId && { organizationId: new mongoose.Types.ObjectId(organizationsId) }),
         ...(reservationId && { reservationId: new mongoose.Types.ObjectId(reservationId) })
@@ -404,7 +406,7 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
 
 
   const result = await UserReservations.aggregate(pipeline);
-
+console.log("result",result );
   let reservations = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
@@ -474,8 +476,8 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
   ) {
     organizationObjectId = new mongoose.Types.ObjectId(organizationsId);
   }
-console.log("organizationObjectId:", organizationObjectId);
-console.log("userId:", userId);
+  console.log("organizationObjectId:", organizationObjectId);
+  console.log("userId:", userId);
   const pipeline = [
     {
       $match: {
@@ -657,15 +659,12 @@ console.log("userId:", userId);
 const getCalendarReservations = async ({
   timezone,
   companyOrganizer,
-  organizationsId,
+  organization,
   date
 }) => {
 
-  let organizationsIds = Array.isArray(organizationsId)
-    ? organizationsId
-    : JSON.parse(organizationsId || "[]");
 
-  organizationsIds = organizationsIds.map(id => new mongoose.Types.ObjectId(id));
+  organization = new mongoose.Types.ObjectId(organization);
 
   const pipeline = [
     {
@@ -673,8 +672,8 @@ const getCalendarReservations = async ({
         ...(companyOrganizer && {
           companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer)
         }),
-        ...(organizationsIds.length > 0 && {
-          organizationId: { $in: organizationsIds }
+        ...(organization && {
+          organizationId: organization
         }),
       }
     },
@@ -700,6 +699,28 @@ const getCalendarReservations = async ({
     {
       $addFields: {
         user: { $arrayElemAt: ["$user", 0] }
+      }
+    },
+
+    //lookup reservationId from reservations collection
+    {
+      $lookup: {
+        from: "reservations",
+        localField: "reservationId",
+        foreignField: "_id",
+        as: "reservation",
+        pipeline: [
+          {
+            $project: {
+              reservationType: 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      $addFields: {
+        reservation: { $arrayElemAt: ["$reservation", 0] }
       }
     },
 
@@ -749,8 +770,8 @@ const getCalendarReservations = async ({
         userId: 1,
         user: 1,
         partySize: 1,
-        reservationType: 1,
         organizationId: 1,
+        reservation: 1,
         companyOrganizer: 1,
         reservationId: 1,
         timingSlots: 1,

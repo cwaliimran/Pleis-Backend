@@ -192,17 +192,114 @@ const getDetails = async (req, res) => {
 };
 
 const update = async (req, res) => {
-  const { scope = "single" } = req.query; // single | future
+  const { scope = "single" } = req.query;
+  const { timezone } = req.user;
 
   if (!validateParams(req, res, {
     pathParams: ["id"],
     objectIdFields: ["id"],
   })) return;
 
+  const data = { ...req.body };
+
   try {
-    const updated = await service.update(req.params.id, req.body, scope);
+    // ----------------------------------
+    // FETCH EXISTING (raw intent)
+    // ----------------------------------
+    const existing = await service.getDetails(req.params.id, timezone);
+    if (!existing) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "promotion_not_found",
+      });
+    }
+
+    const isHappyHour = existing.promotionType === "happyHour";
+
+    // ----------------------------------
+    // DATE VALIDATION + CONVERSION
+    // ----------------------------------
+    if (data.startDate || data.endDate) {
+      let dateFields = {};
+
+      if (isHappyHour) {
+        if (data.startDate) dateFields.startDate = "YYYY-MM-DD hh:mm A";
+        if (data.endDate) dateFields.endDate = "YYYY-MM-DD hh:mm A";
+      } else {
+        if (data.startDate) dateFields.startDate = "YYYY-MM-DD";
+        if (data.endDate) dateFields.endDate = "YYYY-MM-DD";
+      }
+
+      if (!validateParams(req, res, { dateFields })) return;
+
+      if (data.startDate) {
+        data.startDate = convertTimezoneToUtc(
+          data.startDate,
+          timezone,
+          isHappyHour ? "YYYY-MM-DD hh:mm A" : "YYYY-MM-DD"
+        );
+      }
+
+      if (data.endDate) {
+        data.endDate = convertTimezoneToUtc(
+          data.endDate,
+          timezone,
+          isHappyHour ? "YYYY-MM-DD hh:mm A" : "YYYY-MM-DD"
+        );
+      }
+
+      if (data.startDate && data.endDate && data.endDate < data.startDate) {
+        return sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "end_date_cannot_be_before_start_date",
+        });
+      }
+    }
+
+    // ----------------------------------
+    // RECURRING DETAILS (ADMIN ONLY)
+    // ----------------------------------
+    if (data.recurringDetails?.isEnabled) {
+      // ❌ Never allow changing recurrence on a single occurrence
+      if (scope === "single") {
+        delete data.recurringDetails;
+      } else {
+        const rd = data.recurringDetails;
+
+        let validateData = {
+          rawData: [
+            "recurringDetails.frequency",
+            "recurringDetails.interval",
+            "recurringDetails.endType",
+          ],
+          dateFields: {},
+        };
+
+        if (rd.endType === "onDate") {
+          validateData.dateFields["recurringDetails.endDate"] = "YYYY-MM-DD";
+        }
+
+        if (["weekly", "monthly"].includes(rd.frequency)) {
+          validateData.rawData.push("recurringDetails.daysOfWeek");
+        }
+
+        if (!validateParams(req, res, validateData)) return;
+      }
+    }
+
+    // ----------------------------------
+    // UPDATE WITH SCOPE
+    // ----------------------------------
+    const updated = await service.update(req.params.id, data, scope);
+
     if (!updated) {
-      return sendResponse({ res, statusCode: 404, translationKey: "promotion_not_found" });
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "promotion_not_found",
+      });
     }
 
     return sendResponse({
@@ -211,11 +308,18 @@ const update = async (req, res) => {
       translationKey: "promotion_updated_successfully",
       data: updated,
     });
+
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
-    return sendResponse({ res, statusCode: 500, translationKey: readableError.message, error });
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: readableError.message,
+      error,
+    });
   }
 };
+
 
 
 const deleteItem = async (req, res) => {
