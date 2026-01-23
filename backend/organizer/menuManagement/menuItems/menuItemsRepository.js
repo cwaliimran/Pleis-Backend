@@ -1,12 +1,26 @@
 // repositories/menuItemRepository.js
 const MenuItems = require("@MenuItemsModel");
+const { NotificationTypes } = require("@NotificationsModel");
+const { sendUserNotifications } = require("@notificationsUtil");
+const { getAllUsers } = require("../../../admin/usersManagement/usersService");
 
 // Create menuItem in a transaction and update organization
 const createMenuItem = async (data) => {
   try {
     // Create menuItem
+    const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
     const menuItem = new MenuItems(data);
     await menuItem.save();
+    await sendUserNotifications({
+      recipientIds: userIds,
+      title: `A new menu item "${menuItem.title}" has been created.`,
+      body: `A new menu item "${menuItem.title}" is now available in the system.`,
+      data: { type: NotificationTypes.MENU_ITEM_CREATED, menuItemId: menuItem._id, objectType: "menuItems" },
+      sender: menuItem.creator,
+      objectId: menuItem._id,
+      image: menuItem.image || null,
+
+    });
 
     return menuItem;
   } catch (err) {
@@ -61,7 +75,7 @@ const getUnassignedMenuItems = async (userId) => {
     creator: userId
   });
 };
-  
+
 
 
 module.exports = {

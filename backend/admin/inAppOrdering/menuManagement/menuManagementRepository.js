@@ -7,9 +7,8 @@ const MenuItems = require("@MenuItemsModel");
 const { Events } = require("@EventsModel");
 const MenuItemCategories = require("@MenuItemCategoriesModel");
 const MenuItemsSale = require("@MenuItemsSaleModel");
-const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { calculateMeta } = require("./helper/calculateMeta");
-const { formatUpdate } = require("../formatters/updateFormatter");
+const { formatUpdate, formatMenuItemSale } = require("../formatters/updateFormatter");
 const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const findMenuItemById = async (id) => {
   return MenuItems.findById(id);
@@ -273,6 +272,218 @@ const fetchMenuItems = async (organization) => {
     return [];
   }
 };
+const getMenuItemsSales = async ({
+  page = 1,
+  limit = 3,
+  skip = 0,
+  organization,
+  categoryId,
+  keyword,
+  filter,
+  sortBy,
+}) => {
+  if (!mongoose.Types.ObjectId.isValid(organization)) {
+    return { data: [], meta: generateMeta(page, limit, 0) };
+  }
+
+  skip = Number(skip) || 0;
+  limit = Number(limit) || 10;
+
+  const basePipeline = [
+    // 1️⃣ Active sales
+    { $match: { status: "active" } },
+
+    // 2️⃣ Unwind menuItems
+    { $unwind: "$menuItems" },
+
+    // 3️⃣ Join menuitems
+    {
+      $lookup: {
+        from: "menuitems",
+        localField: "menuItems",
+        foreignField: "_id",
+        as: "menuItem",
+      },
+    },
+    { $unwind: "$menuItem" },
+
+    // 4️⃣ Join menus
+    {
+      $lookup: {
+        from: "menus",
+        localField: "menuItem.menu",
+        foreignField: "_id",
+        as: "menu",
+      },
+    },
+    { $unwind: "$menu" },
+
+    // 5️⃣ Join category
+    {
+      $lookup: {
+        from: "menuitemcategories",
+        localField: "menuItem.category",
+        foreignField: "_id",
+        as: "category",
+      },
+    },
+    { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
+
+    // 6️⃣ Organization filter
+    {
+      $match: {
+        "menu.organization": new mongoose.Types.ObjectId(organization),
+      },
+    },
+  ];
+
+  /* 🔹 CATEGORY FILTER */
+  if (categoryId) {
+    basePipeline.push({
+      $match: {
+        "menuItem.category": new mongoose.Types.ObjectId(categoryId),
+      },
+    });
+  }
+  /* 🔹 KEYWORD FILTER */
+  if (keyword) {
+    basePipeline.push({
+      $match: {
+        $or: [
+          { "menuItem.title": { $regex: keyword, $options: "i" } },
+          { "menuItem.description": { $regex: keyword, $options: "i" } },
+          {title: { $regex: keyword, $options: "i" }},
+        ],
+      },
+    });
+  }
+
+  /* 🔹 CUSTOM FILTERS */
+  if (filter === "limited") {
+    basePipeline.push({ $match: { "menuItem.isLimitedTimeOffer": true } });
+  } else if (filter === "upsell") {
+    basePipeline.push({ $match: { "menuItem.upSellItem": true } });
+  } else if (filter === "outOfStock") {
+    basePipeline.push({ $match: { "menuItem.isAvailableInStock": false } });
+  } else if (filter === "schedule") {
+    basePipeline.push({ $match: { "menuItem.isScheduled": true } });
+  }
+
+  /* 🔹 SORTING */
+  if (sortBy === "name") {
+    basePipeline.push({ $sort: { "menuItem.title": 1 } });
+  } else if (sortBy === "priceLowToHigh") {
+    basePipeline.push({ $sort: { "menuItem.basePrice": 1 } });
+  } else if (sortBy === "priceHighToLow") {
+    basePipeline.push({ $sort: { "menuItem.basePrice": -1 } });
+  } else {
+    basePipeline.push({ $sort: { "menuItem.createdAt": -1 } });
+  }
+
+  // 7️⃣ Group back per sale
+  basePipeline.push({
+    $group: {
+      _id: "$_id",
+      title: { $first: "$title" },
+      discountType: { $first: "$discountType" },
+      discountValue: { $first: "$discountValue" },
+      startDateTime: { $first: "$startDateTime" },
+      endDateTime: { $first: "$endDateTime" },
+      status: { $first: "$status" },
+      createdAt: { $first: "$createdAt" }, // ✅ ADD THIS
+
+      menuItems: {
+        $push: {
+          _id: "$menuItem._id",
+          title: "$menuItem.title",
+          image: "$menuItem.image",
+          description: "$menuItem.description",
+          basePrice: "$menuItem.basePrice",
+          discountPrice: "$menuItem.discountPrice",
+          taxPercent: "$menuItem.taxPercent",
+          availabilityType: "$menuItem.availabilityType",
+          isLimitedTimeOffer: "$menuItem.isLimitedTimeOffer",
+          upSellItem: "$menuItem.upSellItem",
+          isAvailableInStock: "$menuItem.isAvailableInStock",
+          isScheduled: "$menuItem.isScheduled",
+          createdAt: "$menuItem.createdAt",
+
+          menu: {
+            _id: "$menu._id",
+            title: "$menu.title",
+            organization: "$menu.organization",
+          },
+
+          category: {
+            _id: "$category._id",
+            title: "$category.title",
+          },
+        },
+      },
+    },
+  });
+
+  basePipeline.push({ $sort: { createdAt: -1 } }); // newest sales first
+
+  // 8️⃣ Facet (data + total count)
+  const result = await MenuItemsSale.aggregate([
+    {
+      $facet: {
+        data: [
+          ...basePipeline,
+          { $skip: skip },
+          { $limit: limit },
+        ],
+        total: [
+          ...basePipeline,
+          { $count: "count" },
+        ],
+      },
+    },
+  ]);
+
+  const rawData = result[0]?.data || [];
+  const totalCount = result[0]?.total[0]?.count || 0;
+
+  // 9️⃣ Apply final pricing INSIDE each sale object
+  const data = rawData.map(sale => {
+    const totalPriceBeforeDiscount = sale.menuItems.reduce((sum, item) => {
+      const price =
+        item.discountPrice !== null && item.discountPrice !== undefined
+          ? item.discountPrice
+          : item.basePrice || 0;
+      return sum + price;
+    }, 0);
+
+    let totalPrice = totalPriceBeforeDiscount;
+
+    if (sale.discountType === "fixed") {
+      totalPrice -= sale.discountValue || 0;
+    }
+
+    if (sale.discountType === "percentage") {
+      totalPrice -= (totalPriceBeforeDiscount * (sale.discountValue || 0)) / 100;
+    }
+
+    totalPrice = Math.max(totalPrice, 0);
+
+    return {
+      totalPriceBeforeDiscount: totalPriceBeforeDiscount,
+      totalPrice: totalPrice,
+      ...sale,
+
+    };
+  });
+
+  return {
+    data,
+    meta: generateMeta(page, limit, totalCount),
+  };
+};
+
+
+
+
 
 const getSummary = async ({
   page,
@@ -299,17 +510,26 @@ const getSummary = async ({
       from: "menus", // Reference to the 'menus' collection
       localField: "menu", // Field in MenuItems
       foreignField: "_id", // Match the _id field in 'menus'
-      as: "menuDetails" // The result of the lookup will be saved in menuDetails
+      pipeline: [
+        {
+          $project: {
+            title: 1,
+            organization: 1
+          }
+        }
+      ],
+
+      as: "menu" // The result of the lookup will be saved in menuDetails
     }
   });
 
   // Unwind to flatten the array of menuDetails
-  basePipeline.push({ $unwind: "$menuDetails" });
+  basePipeline.push({ $unwind: "$menu" });
 
   // Match the organization field in menuDetails
   if (organization) {
     basePipeline.push({
-      $match: { "menuDetails.organization": new mongoose.Types.ObjectId(organization) }
+      $match: { "menu.organization": new mongoose.Types.ObjectId(organization) }
     });
   }
 
@@ -393,7 +613,22 @@ const getSummary = async ({
               isAvailableInStock: 1,
               startDate: 1,
               isScheduled: 1,
-              createdAt: 1
+              createdAt: 1,
+              menu: 1,
+              status: 1,
+              isLimitedTimeOffer: 1,
+              startDate: 1,
+              endDate: 1,
+              isScheduled: 1,
+              availabilityType: 1,
+              upSellItem: 1,
+              isAvailableInStock: 1,
+              type: 1
+
+
+
+
+
             }
           },
           {
@@ -476,28 +711,45 @@ const getSummary = async ({
   ];
 
   try {
-    // Run both pipelines in parallel
-    const [paginationResult, nonPaginationResult, allData] = await Promise.all([
+    const [
+      paginationResult,
+      nonPaginationResult,
+      allData,
+      MenuItemSale,
+    ] = await Promise.all([
       MenuItems.aggregate(paginationPipeline),
       MenuItems.aggregate(nonPaginationPipeline),
-      fetchMenuItems(organization)
+      fetchMenuItems(organization),
+      getMenuItemsSales({ organization }),
     ]);
+    const formattedMenuItems =
+      paginationResult[0]?.menuItems?.map(item => formatUpdate(item)) || [];
+    const formattedMenuItemSale =
+      MenuItemSale?.data?.map(sale => formatMenuItemSale(sale)) || [];
+    const allMenuItems =
+      nonPaginationResult[0]?.menuItems?.map(item => formatUpdate(item)) || [];
 
-    // Process results
-    const formattedMenuItems = paginationResult[0]?.menuItems?.map(item => formatUpdate(item)) || [];
-    const allMenuItems = nonPaginationResult[0]?.menuItems?.map(item => formatUpdate(item)) || [];
-    const allMenuItemsData = allData?.map(item => formatUpdate(item)) || [];
+    const allMenuItemsData =
+      allData?.map(item => formatUpdate(item)) || [];
+
+
     let meta = calculateMeta(allMenuItemsData);
+    meta.totalSalesItems = MenuItemSale.meta.totalRecords;
     meta.count = generateMeta(page, limit, allMenuItems.length);
 
     return {
-      MenuItems: formattedMenuItems,
+      MenuItems: [
+        ...(formattedMenuItemSale || []),
+        ...(formattedMenuItems || []),
+      ],
       meta,
     };
-  } catch (error) {
 
+  } catch (error) {
+    console.error("getSummary error:", error);
     return { error: "Error fetching summary data." };
   }
+
 };
 
 
@@ -510,5 +762,7 @@ module.exports = {
   getMenuItemCategories,
   getEvents,
   createSale,
-  getSummary
+  getSummary,
+  getMenuItemsSales
+
 };

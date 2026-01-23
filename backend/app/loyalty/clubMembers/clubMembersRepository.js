@@ -86,7 +86,7 @@ const ensureClubMemberWallet = async (userId, companyOrganizer, session) => {
 // ==========================================================
 // HELPER: Calculate 12-Month Earned Points from Unified Transactions
 // ==========================================================
-const getEarnedPointsLast12Months = async (userId, companyOrganizer) => {
+const getEarnedPointsLast12Months = async (userId, companyOrganizer, session) => {
   const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
 
   const rows = await UnifiedWalletTransactions.aggregate([
@@ -105,7 +105,9 @@ const getEarnedPointsLast12Months = async (userId, companyOrganizer) => {
         total: { $sum: "$points.total" }
       }
     }
-  ]);
+  ],
+    { session }
+  );
 
   return rows.length ? rows[0].total : 0;
 };
@@ -113,18 +115,38 @@ const getEarnedPointsLast12Months = async (userId, companyOrganizer) => {
 // ==========================================================
 // PROMOTION LOGIC
 // ==========================================================
-const checkPromotion = async (userId, companyOrganizer, tierKey) => {
-  const earned12Months = await getEarnedPointsLast12Months(userId, companyOrganizer);
+const checkPromotion = async (userId, companyOrganizer, session) => {
+  // 1️⃣ Earned points (must use session)
+  const earned12Months = await getEarnedPointsLast12Months(
+    userId,
+    companyOrganizer,
+    session
+  );
 
-  const member = await ClubMembers.findOne({ user: userId, companyOrganizer }).populate("level");
+  // 2️⃣ Member lookup with session + populate
+  const member = await ClubMembers.findOne(
+    { user: userId, companyOrganizer },
+    null,
+    { session }
+  ).populate({
+    path: "level",
+    options: { session },
+  });
+
   if (!member || !member.level) return;
 
+  const tierKey = member.tierKey;
   const currentLevel = member.level;
   const currentEntry = currentLevel[tierKey]?.entryPoints || 0;
 
-  const higherTiers = await Tiers.find({
-    [`${tierKey}.entryPoints`]: { $gt: currentEntry }
-  }).sort({ [`${tierKey}.entryPoints`]: 1 });
+  // 3️⃣ Load higher tiers with session
+  const higherTiers = await Tiers.find(
+    {
+      [`${tierKey}.entryPoints`]: { $gt: currentEntry },
+    },
+    null,
+    { session }
+  ).sort({ [`${tierKey}.entryPoints`]: 1 });
 
   let promotionTarget = null;
 
@@ -136,49 +158,76 @@ const checkPromotion = async (userId, companyOrganizer, tierKey) => {
 
   if (!promotionTarget) return;
 
+  // 4️⃣ Update member level using same session
   await ClubMembers.updateOne(
     { user: userId, companyOrganizer },
     {
       $set: {
         level: promotionTarget._id,
-        lastEvaluated: new Date()
-      }
-    }
+        lastEvaluated: new Date(),
+      },
+    },
+    { session }
   );
 
   return { promoted: true, newLevel: promotionTarget };
 };
 
+
 // ==========================================================
 // DEMOTION LOGIC
 // ==========================================================
-const checkDemotion = async (userId, companyOrganizer, tierKey) => {
-  const earned12Months = await getEarnedPointsLast12Months(userId, companyOrganizer);
+const checkDemotion = async (userId, companyOrganizer, session) => {
+  // 1️⃣ IMPORTANT: earned points query must use session
+  const earned12Months = await getEarnedPointsLast12Months(
+    userId,
+    companyOrganizer,
+    session
+  );
 
-  const member = await ClubMembers.findOne({ user: userId, companyOrganizer }).populate("level");
+  // 2️⃣ Member lookup must use session
+  const member = await ClubMembers.findOne(
+    { user: userId, companyOrganizer },
+    null,
+    { session }
+  ).populate({
+    path: "level",
+    options: { session },
+  });
+
   if (!member || !member.level) return;
 
+  const tierKey = member.tierKey;
   const currentLevel = member.level;
   const retainNeeded = currentLevel[tierKey]?.retainPoints || 0;
 
   if (earned12Months >= retainNeeded) return;
 
-  const fallbackTier = await TierRepo.getPreviousTierByRetainPoints(tierKey, earned12Months);
+  // 3️⃣ Tier lookup must use session
+  const fallbackTier = await TierRepo.getPreviousTierByRetainPoints(
+    tierKey,
+    earned12Months,
+    session
+  );
 
-  if (!fallbackTier || fallbackTier._id.toString() === currentLevel._id.toString()) return;
+  if (!fallbackTier) return;
+  if (fallbackTier._id.toString() === currentLevel._id.toString()) return;
 
+  // 4️⃣ Update must use session
   await ClubMembers.updateOne(
     { user: userId, companyOrganizer },
     {
       $set: {
         level: fallbackTier._id,
-        lastEvaluated: Date.now()
-      }
-    }
+        lastEvaluated: Date.now(),
+      },
+    },
+    { session }
   );
 
   return { demoted: true, newLevel: fallbackTier };
 };
+
 
 // ==========================================================
 // UPDATE COMPANY LOYALTY POINTS — WALLET ONLY (NO TRANSACTIONS HERE)
@@ -206,9 +255,11 @@ const updatePoints = async ({
     if (delta > 0) member.lifetimePoints += delta;
 
     await member.save({ session });
+    await checkPromotion(userId, companyOrganizer, session);
+    //TODO demotion call via cron job
+    // await checkDemotion(userId, companyOrganizer, session);
 
     const wallet = await getWallet(userId, companyOrganizer, session);
-
     return { success: true, newBalance, wallet };
   } catch (err) {
     return { success: false, message: err.message };
@@ -257,7 +308,7 @@ const isClubMemberWithWallet = async (userId, companyOrganizer) => {
   return getWallet(userId, companyOrganizer);
 };
 
-const joinClub = async (userId, companyOrganizer,referrerId) => {
+const joinClub = async (userId, companyOrganizer, referrerId) => {
   let existingMember = await ClubMembers.findOne({ user: userId, companyOrganizer });
 
   if (existingMember) {
@@ -270,10 +321,10 @@ const joinClub = async (userId, companyOrganizer,referrerId) => {
     return existingMember;
   }
 
-      //insert data in referral collection if referrerId is present
-      if (referrerId) {
-        await createUserReferradrecord(referrerId, userId,companyOrganizer);
-      }
+  //insert data in referral collection if referrerId is present
+  if (referrerId) {
+    await createUserReferradrecord(referrerId, userId, companyOrganizer);
+  }
   return ensureClubMemberWallet(userId, companyOrganizer);
 };
 
@@ -360,7 +411,7 @@ const getUserJoinedClubsWithPoints = async ({ page = 1, limit = 10, skip, userId
 
   // 6️⃣ Pagination
   pipeline.push(
-    { $sort: { _id: -1 } },
+    { $sort: { points: -1 } },
     { $skip: skip ?? (page - 1) * limit },
     { $limit: limit }
   );
@@ -369,48 +420,93 @@ const getUserJoinedClubsWithPoints = async ({ page = 1, limit = 10, skip, userId
 };
 
 
-const countUserJoinedClubsWithPoints = async ({ userId, keyword }) => {
+const getUserJoinedClubsWithPointsUsingFacet = async ({
+  page = 1,
+  limit = 10,
+  userId,
+  keyword,
+}) => {
+  const skip = (page - 1) * limit;
 
   const pipeline = [
-    // 1️⃣ Base match (ONLY native fields)
+    /* ===============================
+       BASE MATCH (INDEXED)
+    =============================== */
     {
       $match: {
-        user: userId,
-        status: { $ne: "left" }
-      }
+        user: new mongoose.Types.ObjectId(userId),
+        status: { $ne: "left" },
+      },
     },
 
-    // 2️⃣ Populate companyOrganizer
+    /* ===============================
+       LOOKUPS (ONLY ONCE)
+    =============================== */
     {
       $lookup: {
         from: "users",
         localField: "companyOrganizer",
         foreignField: "_id",
-        as: "companyOrganizer"
-      }
+        as: "companyOrganizer",
+        pipeline: [
+          {
+            $project: {
+              "companyDetails.loyaltySettings.title": 1,
+              "companyDetails.logo": 1,
+            },
+          },
+        ],
+      },
     },
+    { $unwind: "$companyOrganizer" },
 
-    // 3️⃣ Unwind populated organizer
-    { $unwind: "$companyOrganizer" }
+    {
+      $lookup: {
+        from: "tiers",
+        localField: "level",
+        foreignField: "_id",
+        as: "level",
+      },
+    },
+    { $unwind: { path: "$level", preserveNullAndEmptyArrays: true } },
+
+    /* ===============================
+       KEYWORD FILTER (POST-LOOKUP)
+    =============================== */
+    ...(keyword
+      ? [
+        {
+          $match: {
+            "companyOrganizer.companyDetails.loyaltySettings.title": {
+              $regex: keyword,
+              $options: "i",
+            },
+          },
+        },
+      ]
+      : []),
+
+    /* ===============================
+       FACET (COUNT + DATA)
+    =============================== */
+    {
+      $facet: {
+        data: [
+          { $sort: { points: -1 } },
+          { $skip: skip },
+          { $limit: limit },
+        ],
+        meta: [{ $count: "total" }],
+      },
+    },
   ];
 
-  // 4️⃣ Keyword filter (NOW valid)
-  if (keyword) {
-    pipeline.push({
-      $match: {
-        "companyOrganizer.companyDetails.loyaltySettings.title": {
-          $regex: keyword,
-          $options: "i"
-        }
-      }
-    });
-  }
+  const [result] = await ClubMembers.aggregate(pipeline);
 
-  // 5️⃣ Count
-  pipeline.push({ $count: "total" });
-
-  const result = await ClubMembers.aggregate(pipeline);
-  return result.length ? result[0].total : 0;
+  return {
+    data: result.data,
+    total: result.meta[0]?.total ?? 0,
+  };
 };
 
 
@@ -479,7 +575,7 @@ const createUserReferradrecord = async (referrerId, userId, companyOrganizer) =>
       user: userId,                    // Save the user ID directly
       referrer: referrerId,             // Save the referrer ID directly
       companyOrganizer: companyOrganizer, // Save the companyOrganizer ID directly
-       expiryDate:  new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      expiryDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
     });
 
     // Update the referrer's loyaltyReferralsCount by incrementing it by 1
@@ -499,7 +595,26 @@ const createUserReferradrecord = async (referrerId, userId, companyOrganizer) =>
     throw err;
   }
 };
+const getClubMemberUserIdsByCompanyOrganizer = async (companyOrganizer) => {
+  if (!companyOrganizer) return [];
 
+  const organizerId =
+    typeof companyOrganizer === "string"
+      ? new mongoose.Types.ObjectId(companyOrganizer)
+      : companyOrganizer;
+
+  const members = await ClubMembers.find(
+    {
+      companyOrganizer: organizerId,
+      status: "active",
+    },
+    { user: 1, _id: 0 } // ✅ only fetch user field
+  )
+    .lean()
+    .exec();
+
+  return members.map((m) => m.user.toString());
+};
 
 
 module.exports = {
@@ -517,5 +632,6 @@ module.exports = {
   getCompanyLoyaltyProfile,
   updateCompanyLoyaltySettings,
   getFollowedClubIds,
-  countUserJoinedClubsWithPoints,
+  getUserJoinedClubsWithPointsUsingFacet,
+  getClubMemberUserIdsByCompanyOrganizer
 };

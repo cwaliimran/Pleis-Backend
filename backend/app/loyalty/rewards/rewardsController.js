@@ -10,6 +10,8 @@ const rewardService = require("./rewardsService");
 const { getUserCompanyWallet } = require("../clubMembers/clubMembersService");
 const { formatRewardsByTierKey } = require("../../../commonModules/loyalty/rewards/utils/formatReward");
 
+const { REWARD_CLAIM_REASONS } = require("./formatters/rewardClaimReasons");
+
 const getRewards = async (req, res) => {
   const keyword = req.query.keyword || "";
 
@@ -17,7 +19,6 @@ const getRewards = async (req, res) => {
     const userId = req.user._id;
     const companyOrganizer = req.params.companyOrganizer;
 
-    // Fetch rewards + wallet
     const [rewardsResponse, userCompanyWallet] = await Promise.all([
       rewardService.getRewardsByCompanyOrganizerService({
         userId,
@@ -25,57 +26,59 @@ const getRewards = async (req, res) => {
         timezone: req.user?.timezone,
         keyword,
       }),
-      getUserCompanyWallet(userId, companyOrganizer)
+      getUserCompanyWallet(userId, companyOrganizer),
     ]);
 
-
-    // Step 1: Format tier-specific limits
-    let formattedRewards = formatRewardsByTierKey(
+    const formattedRewards = formatRewardsByTierKey(
       rewardsResponse?.rewards || [],
       userCompanyWallet?.tierKey || "essential"
     );
 
-    // User tier info
     const userTierEntry = userCompanyWallet?.level?.entryPoints ?? 0;
     const userPoints = userCompanyWallet?.points ?? 0;
 
-    formattedRewards = formattedRewards.map(group => ({
+    const finalRewards = formattedRewards.map(group => ({
       ...group,
       items: group.items.map(item => {
+        const cannotClaimReasons = [
+          ...(item.cannotClaimReasons || []),
+        ];
 
-        const rewardTierEntry = item?.tierLimit?.entryPoints ?? 0;
-        const rewardMinPoints = item?.minPointsRequiredToClaim ?? 0;
-
-
-        // 1️⃣ If claimLimit says NO → keep it false
-        if (item.canClaim === false) return item;
-
-        // 2️⃣ Tier eligibility check
-        const eligibleByTier = userTierEntry >= rewardTierEntry;
-        if (!eligibleByTier) {
-          return { ...item, canClaim: false };
+        /* -----------------------------
+           Tier eligibility
+        ----------------------------- */
+        if (
+          userTierEntry < (item?.tierLimit?.entryPoints ?? 0)
+        ) {
+          cannotClaimReasons.push(
+            REWARD_CLAIM_REASONS.TIER_NOT_ELIGIBLE
+          );
         }
 
-        // 3️⃣ Points eligibility check
-        const eligibleByPoints = userPoints >= rewardMinPoints;
-        if (!eligibleByPoints) {
-          return { ...item, canClaim: false };
+        /* -----------------------------
+           Points eligibility
+        ----------------------------- */
+        if (
+          userPoints < (item.pointsRequired ?? 0)
+        ) {
+          cannotClaimReasons.push(
+            REWARD_CLAIM_REASONS.INSUFFICIENT_POINTS
+          );
         }
 
-        // All checks passed → claim allowed
         return {
           ...item,
-          canClaim: true
+          canClaim: cannotClaimReasons.length === 0,
+          cannotClaimReasons,
         };
-      })
+      }),
     }));
-
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "rewards_fetched_successfully",
-      data: formattedRewards,
+      data: finalRewards,
     });
 
   } catch (error) {
@@ -88,6 +91,7 @@ const getRewards = async (req, res) => {
     });
   }
 };
+
 
 
 /* const getRewardDetails = async (req, res) => {
@@ -138,8 +142,43 @@ const claimReward = async (req, res) => {
   }
 };
 
+const getJoinedClubsRewards = async (req, res) => {
+  try {
+    const { page, limit, skip } = parsePaginationParams(req);
+    const { keyword } = req.query;
+    const userId = req.user._id;
+
+    const result =
+      await rewardService.getRewardsForUserJoinedClubs({
+        userId,
+        page,
+        limit,
+        skip,
+        keyword
+      });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "rewards_fetched_successfully",
+      data: result.items,
+      meta: result.meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
+
 module.exports = {
   getRewards,
   // getRewardDetails,
-  claimReward
+  claimReward,
+  getJoinedClubsRewards
 };

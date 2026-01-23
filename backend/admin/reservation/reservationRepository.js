@@ -7,18 +7,16 @@ const mongoose = require("mongoose");
 const { reservationsFormatter, reservationsFormatterAdjustDates } = require("../../app/reservations/formaters/reservationFormetter");
 const Organizations = require("@OrganizationModel")
 const {
-  sendResponse,
-  parsePaginationParams,
-  validateParams,
   generateMeta,
-  getReadableErrorMessage,
   getStartAndEndOfMonth,
   getStartAndEndOfWeek,
   getStartAndEndOfDay,
   getCurrentDateInTimezone,
-  convertTimezoneToUtcDateOnly,
   getCurrentUtcDateOnly,
 } = require("../../helperUtils/responseUtil");
+const { getAllUsers } = require("../usersManagement/usersService");
+const { sendUserNotifications } = require("@notificationsUtil");
+const { NotificationTypes } = require("@NotificationsModel");
 const getCreatorFromOrganization = async (organizationId) => {
   try {
     const result = await Organizations.aggregate([
@@ -60,6 +58,16 @@ const createReservation = async (data) => {
     data.companyOrganizer = await getCreatorFromOrganization(data.organizationId);
     const Reservation = new Reservations(data);
     await Reservation.save();
+    const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
+    await sendUserNotifications({
+      recipientIds: userIds,
+      title: `New Reservation Available`,
+      body: ` A new reservation has been created. Check it out!`,
+      data: { type: NotificationTypes.RESERVATION_UPDATE, reservationId: Reservation._id, objectType: "reservations" },
+      sender: Reservation.companyOrganizer,
+      objectId: Reservation._id,
+      image: null,
+    });
     return Reservation;
   } catch (err) {
     throw err;
@@ -236,16 +244,15 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
 }
 
 
-const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationStatus, reservationId }) => {
+const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationId }) => {
   const now = getCurrentDateInTimezone({ timezone });
-
-
-
+  console.log("reservation", reservationId);
+  console.log("organizationsId",organizationsId);
+  console.log("status",status );
   const pipeline = [
     {
       $match: {
-        ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
-        ...(reservationStatus && { reservationStatus: reservationStatus }),
+        ...(status && { status: status }),
         ...(organizationsId && { organizationId: new mongoose.Types.ObjectId(organizationsId) }),
         ...(reservationId && { reservationId: new mongoose.Types.ObjectId(reservationId) })
       }
@@ -301,7 +308,6 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
         partySize: 1,
         reservationType: 1,
         organizationId: 1,
-        reservationStatus: 1,
         companyOrganizer: 1,
         reservationId: 1,
         timingSlots: 1,
@@ -400,16 +406,15 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
 
 
   const result = await UserReservations.aggregate(pipeline);
-
+console.log("result",result );
   let reservations = result[0]?.data || [];
-  console.log("reservations-->", JSON.stringify(pipeline))
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   // Additional counts for meta (active/inactive/total by userId as creator)
   const [total, active, inactive] = await Promise.all([
-    UserReservations.countDocuments({ ...(userId && { userId: userId }), reservationStatus: { $ne: "cancelled" } }),
-    UserReservations.countDocuments({ reservationStatus: "active", ...(userId && { userId: userId }) }),
-    UserReservations.countDocuments({ reservationStatus: "inactive", ...(userId && { userId: userId }) })
+    UserReservations.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "cancelled" } }),
+    UserReservations.countDocuments({ status: "active", ...(userId && { userId: userId }) }),
+    UserReservations.countDocuments({ status: "inactive", ...(userId && { userId: userId }) })
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
@@ -462,18 +467,26 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
   const now = getCurrentUtcDateOnly();
 
 
-  let organizationsIds = Array.isArray(organizationsId)
-    ? organizationsId
-    : JSON.parse(organizationsId || '[]');
-  organizationsIds = organizationsIds.map(id => new mongoose.Types.ObjectId(id));
+  let organizationObjectId = null;
+
+  if (
+    organizationsId &&
+    organizationsId !== "undefined" &&
+    organizationsId !== "null"
+  ) {
+    organizationObjectId = new mongoose.Types.ObjectId(organizationsId);
+  }
+  console.log("organizationObjectId:", organizationObjectId);
+  console.log("userId:", userId);
   const pipeline = [
     {
       $match: {
         ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
-        ...(organizationsIds.length > 0 && { organizationId: { $in: organizationsIds } }) // Match as ObjectId
-      }
-    }
+        ...(organizationObjectId && { organizationId: organizationObjectId }),
+      },
+    },
   ];
+
   if (range == "monthly") {
 
 
@@ -646,15 +659,12 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
 const getCalendarReservations = async ({
   timezone,
   companyOrganizer,
-  organizationsId,
+  organization,
   date
 }) => {
 
-  let organizationsIds = Array.isArray(organizationsId)
-    ? organizationsId
-    : JSON.parse(organizationsId || "[]");
 
-  organizationsIds = organizationsIds.map(id => new mongoose.Types.ObjectId(id));
+  organization = new mongoose.Types.ObjectId(organization);
 
   const pipeline = [
     {
@@ -662,8 +672,8 @@ const getCalendarReservations = async ({
         ...(companyOrganizer && {
           companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer)
         }),
-        ...(organizationsIds.length > 0 && {
-          organizationId: { $in: organizationsIds }
+        ...(organization && {
+          organizationId: organization
         }),
       }
     },
@@ -689,6 +699,28 @@ const getCalendarReservations = async ({
     {
       $addFields: {
         user: { $arrayElemAt: ["$user", 0] }
+      }
+    },
+
+    //lookup reservationId from reservations collection
+    {
+      $lookup: {
+        from: "reservations",
+        localField: "reservationId",
+        foreignField: "_id",
+        as: "reservation",
+        pipeline: [
+          {
+            $project: {
+              reservationType: 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      $addFields: {
+        reservation: { $arrayElemAt: ["$reservation", 0] }
       }
     },
 
@@ -738,9 +770,8 @@ const getCalendarReservations = async ({
         userId: 1,
         user: 1,
         partySize: 1,
-        reservationType: 1,
         organizationId: 1,
-        reservationStatus: 1,
+        reservation: 1,
         companyOrganizer: 1,
         reservationId: 1,
         timingSlots: 1,

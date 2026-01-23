@@ -20,6 +20,11 @@ const globalThirdPartySchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    globalRewardCategory: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "GlobalRewardCategory",
+      required: true,
+    },
 
     pointCost: {
       type: Number,
@@ -46,11 +51,11 @@ const globalThirdPartySchema = new mongoose.Schema(
       default: "",
     },
 
-statusLevel: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: 'StatusLevels',
-        required: true,
-},
+    statusLevel: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'StatusLevels',
+      required: true,
+    },
 
     status: {
       type: String,

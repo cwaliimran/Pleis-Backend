@@ -273,7 +273,7 @@ const createNotifications = async (data) => {
 };
 
 
-const getNotificationss = async ({isDelivered, sendTiming,timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
+const getNotificationss = async ({ isDelivered, sendTiming, timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
 
   const pipeline = [
     {
@@ -595,34 +595,42 @@ const getOrganizations = async ({ skip, limit }) => {
 };
 
 
-const getEvents = async ({ skip, limit }) => {
+const getEvents = async ({ skip, limit, status }) => {
   try {
+    const match = {
+      ...(status && { status }),
+      $or: [
+        { "recurringMeta.isTemplate": false },
+        { "recurringMeta.isTemplate": { $exists: false } },
+      ],
+    };
 
     const pipeline = [
+      { $match: match },
+
       {
         $project: {
           _id: 1,
           title: "$basicInfo.title",
-        }
+          status: 1,
+        },
       },
 
       { $skip: skip || 0 },
       ...(limit ? [{ $limit: limit }] : []),
     ];
 
-    const result = await Events.aggregate(pipeline);
+    const events = await Events.aggregate(pipeline);
+    const totalEvents = await Events.countDocuments(match);
 
-    const events = result || [];
-    const totalEvents = await Events.countDocuments();
-
-    const meta = {
-      total: totalEvents,
-      filtered: events.length,
+    return {
+      events,
+      meta: {
+        total: totalEvents,
+        filtered: events.length,
+      },
     };
-
-    return { events, meta };
   } catch (error) {
-
     return {
       statusCode: 500,
       message: "Error fetching events",
@@ -630,6 +638,7 @@ const getEvents = async ({ skip, limit }) => {
     };
   }
 };
+
 
 
 const gettags = async ({ skip, limit }) => {
@@ -669,10 +678,65 @@ const gettags = async ({ skip, limit }) => {
 };
 
 //get notification by eventId
-const getNotificationsByEventId = async (eventId) => {
-  return GlobalNotification.find({ eventId: new mongoose.Types.ObjectId(eventId) })
-    .sort({ createdAt: -1 })
-}
+const getNotificationsByEventId = async (eventId, page = 1, limit = 10) => {
+  const safePage = Number(page) || 1;
+  const safeLimit = Number(limit) || 10;
+  const skip = safeLimit === 0 ? 0 : (safePage - 1) * safeLimit;
+
+  const pipeline = [
+    {
+      $match: {
+        eventId: new mongoose.Types.ObjectId(eventId),
+      },
+    },
+    {
+      $lookup: {
+        from: "tags", 
+        localField: "interests",
+        foreignField: "_id",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              title: 1,
+            },
+          },
+        ],
+        as: "interests",
+      },
+    },
+    { $sort: { createdAt: -1 } },
+    {
+      $facet: {
+        notifications: [
+          { $skip: skip },
+          ...(safeLimit ? [{ $limit: safeLimit }] : []),
+        ],
+        totalCount: [{ $count: "count" }],
+      },
+    },
+  ];
+
+  const result = await GlobalNotification.aggregate(pipeline);
+
+  const notifications = result[0]?.notifications || [];
+  const total = result[0]?.totalCount[0]?.count || 0;
+
+  const totalPages = safeLimit === 0 ? 1 : Math.ceil(total / safeLimit);
+
+  return {
+    notifications, // ✅ RAW documents (unchanged)
+    meta: {
+      currentPage: safePage,
+
+      totalRecords: total,
+      totalPages,
+      limit: safeLimit,
+    },
+  };
+};
+
+
 
 
 module.exports = {

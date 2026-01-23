@@ -6,207 +6,108 @@ const {
   getOrganizationIdFromTicketId
 } = require("../../../admin/ticketing/ticketingsRepository");
 const { TicketingOrders } = require("@TicketingOrdersModel");
-const { calculatePointsRepo } = require("../../loyalty/calculatePointsEarning/pointsEarningsRepository");
-const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
-const mongoose = require("mongoose");
 const { resolveTimeSensitivePricing } = require("./utils/timeSensitivePricing");
 
 
-const createTicketingBookingService = async (data, timezone) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+const createTicketingBookingService = async (
+  data,
+  timezone,
+  session
+) => {
+  if (!session) {
+    throw new Error("session_required");
+  }
 
-  try {
-    /* 1️⃣ Validate tickets */
-    const validationResult = await validateTicketsAndQuantity(data.ticketings);
-    if (!validationResult.valid) {
-      const errorMessages = validationResult.errors
-        .map(err => `TicketId: ${err.ticketId} - ${err.message}`)
-        .join("; ");
-      throw new Error(`Ticket validation failed: ${errorMessages}`);
-    }
-
-    /* 2️⃣ Resolve organization */
-    const firstTicketId = data.ticketings[0].ticketId;
-    const { organizationId, companyOrganizer } =
-      await getOrganizationIdFromTicketId(firstTicketId);
-
-    const eventId =
-      validationResult.ticketSnapshots[0]?.snapshot?.event || null;
-
-    /* 3️⃣ Resolve pricing (ONCE, IMMUTABLE) */
-    /* 3️⃣ Resolve pricing (ONCE, IMMUTABLE) */
-    const now = getCurrentDateInTimezone({ timezone });
-    const pricingMap = new Map();
-
-    let sumOfPrices = 0;
-
-    for (const t of data.ticketings) {
-      const snapshotInfo = validationResult.ticketSnapshots.find(
-        ts => ts.ticketId.toString() === t.ticketId.toString()
-      );
-
-      if (!snapshotInfo?.snapshot) {
-        throw new Error(`Snapshot missing for ticket ${t.ticketId}`);
-      }
-
-      const ticketSnapshot = snapshotInfo.snapshot;
-
-      // 1️⃣ Resolve base / time-sensitive price
-      const resolvedPricing = resolveTimeSensitivePricing(ticketSnapshot, now);
-      const basePrice = resolvedPricing.price;
-
-      // 2️⃣ Fast track pricing
-      let fastTrackExtra = 0;
-      if (
-        t.isFastTrack === true &&
-        ticketSnapshot.fastTrackEntry?.enabled === true
-      ) {
-        fastTrackExtra = ticketSnapshot.fastTrackEntry.extraPrice || 0;
-      }
-
-      const finalUnitPrice = basePrice + fastTrackExtra;
-
-      pricingMap.set(t.ticketId.toString(), {
-        phase: resolvedPricing.phase,
-        basePrice,
-        fastTrackExtra,
-        unitPrice: finalUnitPrice,
-        isFastTrack: t.isFastTrack === true
-      });
-
-      sumOfPrices += finalUnitPrice;
-    }
-
-    // const taxRate = 0.0;
-    // const taxAmount = taxRate > 0 ? +(sumOfPrices * taxRate).toFixed(2) : 0;
-    // const totalAmount = +(sumOfPrices + taxAmount).toFixed(2);
-    const totalAmount = sumOfPrices;
-
-    const orderPricing = {
-      subtotal: +sumOfPrices.toFixed(2),
-      taxAmount: 0,
-      total: totalAmount,
-      currency: "€",
-    };
-
-    /* 4️⃣ Create order */
-    const [order] = await TicketingOrders.create([{
-      user: data.user,
-      organization: organizationId,
-      companyOrganizer,
-      event: eventId,
-      status: "confirmed",
-      purpose: "eventTicketPurchase",
-      orderPricing,
-      ticketsPurchased: data.ticketings.length,
-      paymentDetails: data.paymentDetails || {},
-    }], { session });
-
-    /* 5️⃣ Create ticket bookings */
-    const ticketDocs = data.ticketings.map(t => {
-      const snapshotInfo = validationResult.ticketSnapshots.find(
-        ts => ts.ticketId.toString() === t.ticketId.toString()
-      );
-
-      const pricing = pricingMap.get(t.ticketId.toString());
-      let snapshotToSave = { ...snapshotInfo.snapshot };
-
-      snapshotToSave.pricing = {
-        phase: pricing.phase,
-        basePrice: pricing.basePrice,
-        fastTrackExtra: pricing.fastTrackExtra,
-        unitPrice: pricing.unitPrice
-      };
-
-      snapshotToSave.fastTrack = pricing.isFastTrack;
-
-      if (snapshotToSave?.timingSlots?.enabled && t.timeSlot) {
-        const allSlots = snapshotToSave.timingSlots.dateTimeSlots
-          .flatMap(d => d.timeSlots);
-
-        const selectedSlot = allSlots.find(
-          s => s._id.toString() === t.timeSlot
-        );
-
-        snapshotToSave.timingSlots = {
-          enabled: true,
-          selectedSlot,
-        };
-      } else {
-        snapshotToSave.timingSlots = null;
-      }
-      
-
-      return {
-        order: order._id,
-        user: data.user,
-        organization: organizationId,
-        companyOrganizer,
-        ticket: {
-          ticketId: t.ticketId,
-          snapshot: snapshotToSave,
-          timeSlot: t.timeSlot || null,
-          protectionUserDetails: t.protectionUserDetails || {},
-        },
-        status: "valid",
-      };
-    });
-
-    const createdTickets =
-      await ticketingBookingRepo.createManyTicketBookings(ticketDocs, session);
-
-    /* 6️⃣ Loyalty points */
-    if (["applePay", "card"].includes(data.paymentDetails?.paymentMethod)) {
-      const pointsCalculation =
-        await calculatePointsRepo(data.user, companyOrganizer, totalAmount);
-
-      const globalPoints = {
-        base: pointsCalculation.global.earnedPoints,
-        multiplier: 1,
-        total: pointsCalculation.global.earnedPoints,
-        pointsPerEuro: pointsCalculation.global.pointsPerEuro,
-      };
-
-      const companyPoints = {
-        base: pointsCalculation.organizer.earnedPoints,
-        multiplier: 1,
-        total: pointsCalculation.organizer.earnedPoints,
-        pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
-      };
-
-
-      const trxData = {
-        user: data.user,
-        companyOrganizer,
-        organization: organizationId,
-        companyPoints,
-        globalPoints,
-        allowNegative: false,
-        type: "earn",
-        description: "Booked tickets.",
-        entityId: order._id,
-        domainType: "ticketingorders",
-      };
-
-      const trx = await createTransaction(trxData, session);
-      if (!trx.success) throw new Error(trx.message || "wallet_update_failed");
-    }
-
-    await session.commitTransaction();
-    session.endSession();
-
-    return { order, tickets: createdTickets };
-
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
+  /* 1️⃣ Validate tickets */
+  const validationResult = await validateTicketsAndQuantity(data.ticketings);
+  if (!validationResult.valid) {
+    const error = new Error("ticket_validation_failed");
+    error.details = validationResult.errors; // optional but powerful
     throw error;
   }
+
+  /* 2️⃣ Resolve org / event */
+  const firstTicketId = data.ticketings[0].ticketId;
+  const { organizationId, companyOrganizer } =
+    await getOrganizationIdFromTicketId(firstTicketId);
+
+  const eventId =
+    validationResult.ticketSnapshots[0]?.snapshot?.event || null;
+
+  /* 3️⃣ Pricing */
+  const now = getCurrentDateInTimezone({ timezone });
+  let sumOfPrices = 0;
+
+  for (const t of data.ticketings) {
+    const snap = validationResult.ticketSnapshots.find(
+      ts => ts.ticketId.toString() === t.ticketId.toString()
+    )?.snapshot;
+
+    const resolved = resolveTimeSensitivePricing(snap, now);
+    sumOfPrices += resolved.price;
+  }
+
+  const isFreeOrder = sumOfPrices === 0;
+
+  /* 4️⃣ Create order */
+  const orderPayload = {
+    user: data.user,
+    organization: organizationId,
+    companyOrganizer,
+    event: eventId,
+    purpose: "eventTicketPurchase",
+    orderPricing: {
+      subtotal: sumOfPrices,
+      taxAmount: 0,
+      total: sumOfPrices,
+      currency: "€",
+    },
+    ticketsPurchased: data.ticketings.length,
+    paymentDetails: {
+      paymentMethod: isFreeOrder ? "cash" : data.paymentDetails.paymentMethod,
+      cardId: isFreeOrder ? null : data.paymentDetails.cardId || null,
+      paymentId: isFreeOrder ? "FREE_ORDER" : null,
+      paymentStatus: isFreeOrder ? "paid" : "pending",
+    },
+    status: isFreeOrder ? "paid" : "pendingPayment",
+    ...(isFreeOrder ? {} : {
+      lockUntil: new Date(Date.now() + 10 * 60 * 1000),
+    }),
+  };
+
+  const [order] = await TicketingOrders.create(
+    [orderPayload],
+    { session }
+  );
+
+  /* 5️⃣ Create bookings */
+  const ticketDocs = data.ticketings.map(t => ({
+    order: order._id,
+    user: data.user,
+    organization: organizationId,
+    companyOrganizer,
+    ticket: {
+      ticketId: t.ticketId,
+      snapshot: validationResult.ticketSnapshots.find(
+        ts => ts.ticketId.toString() === t.ticketId.toString()
+      ).snapshot,
+      protectionUserDetails: t.protectionUserDetails || {},
+    },
+    status: isFreeOrder ? "valid" : "pending",
+  }));
+
+  const tickets =
+    await ticketingBookingRepo.createManyTicketBookings(
+      ticketDocs,
+      session
+    );
+
+  return { order, tickets };
 };
 
+
 const getTicketingBookingsService = async ({ page = 1, limit = 10, keyword, status = "valid", date, orderSort = "asc", timezone = "UTC", userId }) => {
-  const query = { status };
+  const query = { status: { $in: ["valid", "used"] } };
   if (userId) query.user = userId;
 
   if (date) {

@@ -44,7 +44,7 @@ const sendPasswordResetLinkRateLimiter = createRateLimiter("link/send-password-r
 const verifyPasswordResetLinkRateLimiter = createRateLimiter("link/reset-password/verify", 15, 15); // 15 requests per 15 minutes
 const resetPasswordViaLinkRateLimiter = createRateLimiter("link/reset-password", 15, 15); // 15 requests per 15 minutes
 
-const changePasswordRateLimiter = createRateLimiter("changePassword", 15, 5);
+const changePasswordRateLimiter = createRateLimiter("changePassword", 15, 10);
 
 // Apply rate limiters to routes
 router.post("/internal/admin/create", signupRateLimiter, createAdmin);
@@ -54,12 +54,17 @@ router.post("/register", signupRateLimiter, register);
 router.post("/login", loginRateLimiter, login);
 router.post("/forgot-password", generateOtpRateLimiter, (req, res, next) => {
   req.body.type = "email";
+  req.body.purpose = "forgot_password";
   generateOtp(req, res, next);
 });
+
 router.post("/resend-otp/email", resendOtpRateLimiter, (req, res, next) => {
   req.body.type = "email";
+  // purpose must come from client OR fallback safely
+  req.body.purpose = req.body.purpose || "generic";
   generateOtp(req, res, next);
 });
+
 router.post("/resend-otp/phone", resendOtpRateLimiter, (req, res, next) => {
   req.body.type = "phoneNumber";
   generateOtp(req, res, next);

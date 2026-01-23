@@ -1,9 +1,9 @@
 const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const OrdersRepo = require("./inAppOrderingRepository");
-const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 const mongoose = require("mongoose");
 const Menus = require("@MenusModel");
+const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
 
 
 
@@ -114,6 +114,20 @@ const updateOrders = async (id, data) => {
   }
 
   await order.save();
+
+   emitOrderEvent({
+      io: global.io,
+      eventName: "ORDER_UPDATE",
+      orderId: order._id,
+      organizationId: order.organization,
+      userId: order.user,
+      data: {
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+      },
+    });
+  
+
   return order;
 };
 

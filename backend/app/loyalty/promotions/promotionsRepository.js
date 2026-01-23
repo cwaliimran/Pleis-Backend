@@ -48,7 +48,7 @@ const getPromotionsByCompanyOrganizer = async ({
   return Promotion.find(match)
     .populate({
       path: "companyOrganizer",
-      select: "companyDetails.name firstName profileIcon",
+      select: "companyDetails.loyaltySettings.title companyDetails.logo",
     })
     .populate("menuItem")
     .populate("tierLimit")
@@ -98,7 +98,7 @@ const getPromotionsForDashboard = async ({
     ]
   })
     .populate("tierLimit")
-    .populate("companyOrganizer", "companyDetails.loyaltySettings.title profileIcon")
+    .populate("companyOrganizer", "companyDetails.loyaltySettings.title companyDetails.logo")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)

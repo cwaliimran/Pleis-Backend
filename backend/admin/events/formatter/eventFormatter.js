@@ -10,6 +10,7 @@ const { transformOperatingHoursToLocal } = require("../../../shared/commonSchema
  * @param {Object} options - optional settings: { timezone, includeFields, excludeFields }
  */
 const formatEventResponse = (eventObject, options = {}) => {
+  if (!eventObject) return null;
   let event = typeof eventObject.toObject === "function" ? eventObject.toObject() : eventObject;
 
   if (!event) return null;

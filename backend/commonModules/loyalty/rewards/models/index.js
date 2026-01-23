@@ -1,4 +1,4 @@
-const Reward = require("./BaseReward");
+const Reward = require("./baseReward");
 const BuyMenuItemReward = require("./buyMenuItemReward");
 const TicketReward = require("./ticketReward");
 const CustomReward = require("./customReward");

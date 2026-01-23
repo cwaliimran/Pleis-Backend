@@ -7,7 +7,6 @@ const MenuItems = require("@MenuItemsModel");
 const { Events } = require("@EventsModel");
 const MenuItemCategories = require("@MenuItemCategoriesModel");
 const MenuItemsSale = require("@MenuItemsSaleModel");
-const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { calculateMeta } = require("./helper/calculateMeta");
 const { formatUpdate } = require("../formatters/updateFormatter");
 const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");

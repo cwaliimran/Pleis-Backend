@@ -1,6 +1,5 @@
 const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const MenuRepo = require("./menuManagementRepository");
-const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 const MenuItems = require("@MenuItemsModel");
 const PresetModel = require("@PresetsModel");
@@ -374,6 +373,34 @@ const getSummary = async ({ timezone,
     meta,
   };
 };
+const getSaleItems = async ({ timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  organization,
+  date,filter,sortBy,categoryId,
+  range, }) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
+  let { data, meta } = await MenuRepo.getMenuItemsSales({
+    timezone,
+    page,
+    limit,
+    keyword,
+    status,
+    organization,
+    date,
+    range,
+    today,
+    skip,filter,sortBy,categoryId
+  }); 
+
+  return {
+   data,
+    meta,
+  };
+};
 
 module.exports = {
   createSale,
@@ -387,6 +414,7 @@ module.exports = {
   getEvents,
   createLimitedTimeItem,
   createMenuItemFromPreset,
-  getSummary
+  getSummary,
+  getSaleItems
 
 };

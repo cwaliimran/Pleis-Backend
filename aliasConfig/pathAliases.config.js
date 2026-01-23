@@ -1,6 +1,8 @@
 module.exports = {
     "@utils": "backend/helperUtils",
+    "@notificationsUtil": "backend/controllers/communicationController.js",
     "@redisCache": "backend/config/redis/redisCache.js",
+    "@socketIo": "backend/config/sockets",
     "@UsersModel": "backend/models/UserModel.js",
     "@dbUtils": "backend/helperUtils/dbUtils",
     "@appEngagement": "backend/commonModules/appEngagement",
@@ -80,5 +82,6 @@ module.exports = {
     "@UserInterests": "backend/models/UserInterests.js",
     "@MenuItemsSaleModel": "backend/commonModules/menuManagement/sale/MenuItemsSale.js",
     "@SearchSuggestionModel": "backend/app/searchSuggestions/SearchSuggestion.js",
+    "MensuItemSaleModel": "backend/commonModules/menuManagement/sale/MenuItemsSale.js"
     
 };

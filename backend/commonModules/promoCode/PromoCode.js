@@ -165,18 +165,28 @@ promoCodeSchema.methods.incrementUsage = async function (userId) {
 
 
 // Method to ensure a user can only create a unique promo code (no duplication across users)
-promoCodeSchema.statics.createPromoCodeForUser = async function (userId, data) {
-  // Check if the promo code already exists for the given user
-  const existingPromoCode = await this.findOne({ promoCode: data.promoCode, companyOrganizer: userId });
-  if (existingPromoCode) {
-    throw new Error("A promo code with this code already exists for this user.");
+promoCodeSchema.methods.incrementUsage = async function (userId) {
+  const userKey = userId.toString();
+
+  if (this.usedCount >= this.maxUsage) {
+    return null;
   }
 
-  // Create and save a new promo code
-  const promoCode = new this(data);
-  await promoCode.save();
-  return promoCode;
+  this.usedCount += 1;
+
+  const userUsage = this.usersUsed.get(userKey);
+
+  if (userUsage) {
+    this.usersUsed.set(userKey, { count: userUsage.count + 1 });
+  } else {
+    this.usersUsed.set(userKey, { count: 1 });
+  }
+
+  await this.save();
+
+  return this.usersUsed.get(userKey);
 };
+
 
 const PromoCode = mongoose.model("PromoCode", promoCodeSchema);
 

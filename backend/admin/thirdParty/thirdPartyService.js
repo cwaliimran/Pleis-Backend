@@ -53,7 +53,8 @@ const updateThirdparty = async (id, data) => {
     "publicKeyForPartner",
     "statusLevel",
     "status",
-    "notes"
+    "notes",
+    "globalRewardCategory"
   ];
 
   // Build update data based on allowed fields

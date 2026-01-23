@@ -7,8 +7,8 @@ const {
 } = require("../../../commonModules/loyalty/promotions/models/Promotion/");
 
 // Decide which discriminator model to use
-const getModelByTaskType = (taskType) => {
-  switch (taskType) {
+const getModelBypromotionType = (promotionType) => {
+  switch (promotionType) {
 
     case "buyMenuItemPromotion":
       return BuyMenuItemPromotion;
@@ -26,7 +26,7 @@ const getModelByTaskType = (taskType) => {
 // Create promotion
 const create = async (data) => {
   try {
-    const Model = getModelByTaskType(data.taskType);
+    const Model = getModelBypromotionType(data.promotionType);
     const item = new Model(data);
     const saved = await item.save();
     return saved.toObject(); // Removes Mongoose internals

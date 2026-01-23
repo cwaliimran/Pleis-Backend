@@ -134,6 +134,15 @@ const findUserById = async (id, projection = null) => {
   });
 };
 
+// Find by ID with optional projection and populate suppliers
+const findAppUserByIdWithProjection = async (id, projection = null) => {
+  // Prepare projection object if needed
+  const proj = projection ? projection : {};
+  // Find user and populate suppliers
+  return User.findById(id, proj).lean();
+};
+
+
 //get user by id and and select only _id and verify if exists
 const findUserByIdAndCheckExists = async (id) => {
   return await User.findById(id).select("_id");
@@ -214,5 +223,6 @@ module.exports = {
   getUserInterestsByUserId,
   getUserInterestsIdsForRecommendation,
   findUserByIdAndCheckExists,
-  getInAppOrderingSettings
+  getInAppOrderingSettings,
+  findAppUserByIdWithProjection
 };

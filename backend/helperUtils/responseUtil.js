@@ -186,7 +186,6 @@ const convertUnderscoresToSpaces = (str) => String(str).replace(/_/g, " ");
 // }
 
 // Generic validation function
-// Generic validation function
 const validateParams = (req, res, options = {}) => {
   const {
     queryParams = [],

@@ -4,7 +4,7 @@ const router = express.Router();
 
 router.use("/status-levels", require("./statusLevels/globalStatusLevelsRoutes"));
 // global reward categories
-router.use("/reward-categories", require("../globalLoyalty/GlobalRewardCategories/GlobalRewardCategoriesRoutes"));
+router.use("/reward-categories", require("./globalRewardCategories/globalRewardCategoriesRoutes"));
 // global Loyalty reward
 router.use("/reward", require("../globalLoyalty/rewards/rewardsRoutes"));
 

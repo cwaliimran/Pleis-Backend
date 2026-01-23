@@ -22,15 +22,16 @@ const countCategories = async (query = {}) => {
 };
 
 
-const getCounts = async () => {
-  let counts = getModelCounts({
+const getCounts = async (query = {}) => {
+  return await getModelCounts({
     model: GlobalRewardCategories,
+    filterQuery: query, // ✅ THIS is what was missing
     statusMap: {
-      status: ["active", "inactive"]
-    }
+      status: ["active", "inactive"],
+    },
   });
-  return counts;
 };
+
 
 // Find by ID
 const findCategoryById = async (id) => {
@@ -52,6 +53,15 @@ const deleteCategoryById = async (category) => {
 const findByIdAndUpdate = async (id, data) => {
   return GlobalRewardCategories.findByIdAndUpdate(id, data, { new: true });
 };
+const getCategoriesWithFiltersTitleonly = async (query, skip, limit) => {
+  return GlobalRewardCategories.find(query)
+    .select({ _id: 1, title: 1 }) 
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean(); // optional but recommended
+};
+
 
 module.exports = {
   createCategory,
@@ -62,4 +72,5 @@ module.exports = {
   deleteCategoryById,
   findByIdAndUpdate,
   getCounts,
+  getCategoriesWithFiltersTitleonly
 };

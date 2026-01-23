@@ -4,10 +4,7 @@ const Tags = require("@TagsModel");
 const Organizations = require("@OrganizationModel");
 const { getWithFilters, getModelCounts } = require('@dbUtils/queryUtil');
 const { cache, invalidate } = require("@redisCache");
-
 const TagTypesModel = require("./TagTypesModel");
-const { createDuplicatedMenu } = require("../menuManagement/menu/menusRepository");
-
 // Create
 const createTagsType = async (data) => {
   const Tagstype = new TagTypesModel(data);

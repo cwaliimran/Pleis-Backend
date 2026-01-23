@@ -64,10 +64,76 @@ const getEligibleChallengesForDashboard = async ({
   return challenges;
 };
 
+
+// challengesRepo.js
+const getChallengesWithPagination = async ({
+  clubIds,
+  now,
+  skip,
+  limit,
+  keyword = "",
+}) => {
+  const filters = [
+    {
+      companyOrganizer: { $in: clubIds },
+      status: "active",
+    },
+    {
+      $or: [{ endDate: null }, { endDate: { $gt: now } }],
+    },
+  ];
+
+  if (keyword) {
+    filters.push({
+      $or: [
+        { title: { $regex: keyword, $options: "i" } },
+        { description: { $regex: keyword, $options: "i" } },
+      ],
+    });
+  }
+
+  return Challenge.find({ $and: filters })
+    .populate("tierLimit")
+    .sort({ createdAt: -1 }) // cheap + indexed
+    .skip(skip)
+    .limit(limit)
+    .lean();
+};
+
+
+const countChallengesWithPagination = async ({ clubIds, now, keyword = "" }) => {
+  const baseFilters = [
+    {
+      companyOrganizer: { $in: clubIds },
+      status: "active",
+    },
+    {
+      $or: [{ endDate: null }, { endDate: { $gt: now } }],
+    },
+  ];
+
+  if (keyword) {
+    baseFilters.push({
+      $or: [
+        { title: { $regex: keyword, $options: "i" } },
+        { description: { $regex: keyword, $options: "i" } },
+      ],
+    });
+  }
+
+  return Challenge.countDocuments({
+    $and: baseFilters,
+  });
+};
+
+
+
 module.exports = {
   getChallengesWithFilters,
   countChallenges,
   findChallengeById,
   findBestActiveChallengeByTaskType,
-  getEligibleChallengesForDashboard
+  getEligibleChallengesForDashboard,
+  getChallengesWithPagination,
+  countChallengesWithPagination,
 };

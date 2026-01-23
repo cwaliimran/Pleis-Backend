@@ -14,7 +14,8 @@ const createLoyaltyReferral = async (req, res) => {
     userPoints,
     referrerPoints,
     minimumPurchases,
-    purchaseThresholdAmount,
+    status,
+
 
     referralLimit,
     companyOrganizer
@@ -29,9 +30,7 @@ const createLoyaltyReferral = async (req, res) => {
         "userPoints",
         "referrerPoints",
         "minimumPurchases",
-        "purchaseThresholdAmount",
         "referralLimit",
-  
         "companyOrganizer"
       ],
     })
@@ -46,10 +45,8 @@ const createLoyaltyReferral = async (req, res) => {
     referrerPoints,
     type:"loyalty",
     minimumPurchases,
-    purchaseThresholdAmount,
     referralLimit,
-
-    status:"active",
+    status: status || "inactive",
   };
 
   try {
@@ -84,7 +81,7 @@ const createLoyaltyReferral = async (req, res) => {
 
 const getLoyaltyReferrals = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range,type="loyalty", companyOrganizer} = req.query;
+  const { keyword, status , date, range,type="loyalty", companyOrganizer} = req.query;
   try {
     if (!companyOrganizer) {
       return sendResponse({
@@ -130,7 +127,6 @@ const updateLoyaltyReferral = async (req, res) => {
 let {
   userPoints,
   minimumPurchases,
-  purchaseThresholdAmount,
   referralLimit,
   referrerPoints,
   status,
@@ -153,7 +149,6 @@ const timezone = req.user.timezone;
     referrerPoints,
     companyOrganizer,
   minimumPurchases,
-  purchaseThresholdAmount,
   status,
   };
 
@@ -236,7 +231,7 @@ const deleteLoyaltyReferral = async (req, res) => {
 
 const getUserLoyaltyReferrals = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date,type="loyalty", companyOrganizer} = req.query;
+  const { keyword, status , date,type="loyalty", companyOrganizer} = req.query;
   try {
     if (!companyOrganizer) {
       return sendResponse({
@@ -294,14 +289,14 @@ const limit = 0;
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "LoyaltyReferral_reset_failed",
+        translationKey: "Loyalty_referral_reset_failed",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "LoyaltyReferral_reset_successfully",
+      translationKey: "Loyalty_referral_reset_successfully",
       data: LoyaltyReferral,
     });
 

@@ -24,14 +24,19 @@ const OrdersSchema = new mongoose.Schema(
         totalPrice: { type: Number, required: true },
         status: {
             type: String,
-            enum: ["pending", "confirmed", "sent", "completed", "cancelled", "preorder"],
+            enum: ["pendingPayment", "pending", "confirmed", "sent", "completed", "cancelled", "preorder"],
             default: "pending",
         },
+        lockUntil: {
+            type: Date,
+            index: true,
+        },
+
         notes: { type: String, default: "" },
 
         paymentMethod: {
             type: String, required: true,
-            enum: ["applePay", "card", "cash", "payLater"], default: "card"
+            enum: ["applePay", "card", "cash"], default: "card"
         },
         //with payLater user can add more items to cart
         // for applePay/card order can't be cancelled
@@ -56,7 +61,7 @@ const OrdersSchema = new mongoose.Schema(
                 "preorder",    // Scheduled for later
                 "walkIn",      // In-store / counter
             ],
-            default: "walkIn",
+            default: "online",
         },
         reservation: {
             type: mongoose.Schema.Types.ObjectId,

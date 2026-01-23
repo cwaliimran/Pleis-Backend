@@ -5,8 +5,14 @@
       "@utils/*": [
         "backend/helperUtils/*"
       ],
+      "@notificationsUtil": [
+        "backend/controllers/communicationController.js"
+      ],
       "@redisCache": [
         "backend/config/redis/redisCache.js"
+      ],
+      "@socketIo/*": [
+        "backend/config/sockets/*"
       ],
       "@UsersModel": [
         "backend/models/UserModel.js"
@@ -235,6 +241,9 @@
       ],
       "@SearchSuggestionModel": [
         "backend/app/searchSuggestions/SearchSuggestion.js"
+      ],
+      "MensuItemSaleModel": [
+        "backend/commonModules/menuManagement/sale/MenuItemsSale.js"
       ]
     }
   },

@@ -25,6 +25,7 @@ const createReservation = async (req, res) => {
     needsConfirmation,
     optionalEventId,
     status,
+    ticketRequirement,
     organizationId,
     timingSlots
   } = req.body;
@@ -55,6 +56,13 @@ const createReservation = async (req, res) => {
       ],
     })
   ) return;
+  if (ticketRequirement === true || ticketRequirement === "true") {
+    if (!validateParams(req, res, {
+      rawData: [
+        "ticketType"
+      ],
+    })) return;
+  }
 
   if (conditionType == "fixedPrice" || conditionType == "prepayOption") {
     if (
@@ -152,6 +160,7 @@ const createReservation = async (req, res) => {
     customText,
     taxPercentage,
     needsConfirmation,
+    ticketRequirement,
     optionalEventId,
     status,
     organizationId,
@@ -477,7 +486,7 @@ const deleteReservation = async (req, res) => {
 
 const getUserReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range, organizationsId, companyOrganizer, reservationStatus = "pending", reservationId } = req.query;
+  const { keyword, status = "active", date, range, organizationsId, companyOrganizer, reservationId } = req.query;
 
   try {
     if (!organizationsId) {
@@ -507,7 +516,6 @@ const getUserReservations = async (req, res) => {
       organizationsId,
       date,
       range,
-      reservationStatus,
       reservationId,
     });
 
@@ -724,7 +732,7 @@ const getReservations = async (req, res) => {
   try {
     if (
       (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
-      (!organizationsId || !Array.isArray(JSON.parse(organizationsId)) || JSON.parse(organizationsId).length === 0)
+      (!organizationsId || organizationsId === "undefined" || organizationsId === "null")
     ) {
       return sendResponse({
         res,
@@ -732,6 +740,7 @@ const getReservations = async (req, res) => {
         translationKey: "companyOrganizer_or_organizationsId_is_required",
       });
     }
+
 
     const userId = companyOrganizer;
     const timezone = req.user.timezone;
@@ -770,7 +779,7 @@ const getReservations = async (req, res) => {
 };
 
 const getCalendarReservations = async (req, res) => {
-  const { date, organizationsId, companyOrganizer } = req.query;
+  const { date, organization, companyOrganizer } = req.query;
 
   try {
 
@@ -784,12 +793,12 @@ const getCalendarReservations = async (req, res) => {
 
     if (
       (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
-      (!organizationsId || !Array.isArray(JSON.parse(organizationsId)) || JSON.parse(organizationsId).length === 0)
+      (!organization || organization === "undefined" || organization === "null")
     ) {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "companyOrganizer_or_organizationsIds_is_required",
+        translationKey: "companyOrganizer_and_organization_is_required",
       });
     }
 
@@ -797,7 +806,7 @@ const getCalendarReservations = async (req, res) => {
     const { reservations } = await reservationService.getCalendarReservationsService({
       timezone,
       companyOrganizer,
-      organizationsId,
+      organization,
       date,
     });
 
@@ -871,16 +880,6 @@ const copySingleSlotReservationController = async (req, res) => {
     if (!validateParams(req, res, {
       rawData: ["reservationId", "targetDate", "startTime", "reservationType"],
       objectIdFields: ["reservationId"],
-      enumFields: {
-        reservationType: [
-          "regular",
-          "vip",
-          "outdoor",
-          "private",
-          "bar",
-          "window",
-        ],
-      },
       dateFields: { targetDate: "YYYY-MM-DD", startTime: "hh:mm A" },
     })) return;
 

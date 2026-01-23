@@ -12,8 +12,6 @@ const getFriends = async (req, res) => {
   // ✔ keyword stays separate
   let { keyword } = req.query;
 
-
-
   try {
     const timezone = req.user.timezone;
     const userId = req.user._id;
