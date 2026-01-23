@@ -779,7 +779,7 @@ const getReservations = async (req, res) => {
 };
 
 const getCalendarReservations = async (req, res) => {
-  const { date, organizationsId, companyOrganizer } = req.query;
+  const { date, organization, companyOrganizer } = req.query;
 
   try {
 
@@ -793,12 +793,12 @@ const getCalendarReservations = async (req, res) => {
 
     if (
       (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
-      (!organizationsId || !Array.isArray(JSON.parse(organizationsId)) || JSON.parse(organizationsId).length === 0)
+      (!organization || organization === "undefined" || organization === "null")
     ) {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "companyOrganizer_or_organizationsIds_is_required",
+        translationKey: "companyOrganizer_and_organization_is_required",
       });
     }
 
@@ -806,7 +806,7 @@ const getCalendarReservations = async (req, res) => {
     const { reservations } = await reservationService.getCalendarReservationsService({
       timezone,
       companyOrganizer,
-      organizationsId,
+      organization,
       date,
     });
 

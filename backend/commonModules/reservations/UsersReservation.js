@@ -30,11 +30,7 @@ const UserReservationsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-
-    reservationType: {
-      type: String,
-      default: "",
-    },
+  
     amount: {
       type: Number,
       min: [0, "Price must be positive"],

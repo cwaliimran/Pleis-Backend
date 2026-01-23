@@ -52,9 +52,11 @@ const runRecurringPromotionsCron = async () => {
 // PROCESS TEMPLATE
 // ======================================================
 const processPromotionTemplate = async (template, horizonDate) => {
+  if (!template.startDate) return;
 
   const existing = await Promotion.find({
     "recurringMeta.parentPromotion": template._id,
+    status: { $ne: "deleted" },
   }).select("startDate recurringMeta.occurrenceIndex");
 
   const existingKeySet = new Set(
@@ -69,15 +71,15 @@ const processPromotionTemplate = async (template, horizonDate) => {
     ? lastOccurrence.recurringMeta.occurrenceIndex + 1
     : 1;
 
-  const dates = getUpcomingPromotionDates(template, horizonDate, existing.length);
+  const dates = getUpcomingPromotionDates(template, horizonDate);
 
   for (const date of dates) {
     if (existingKeySet.has(date.getTime())) continue;
-
-    await createPromotionOccurrence(template, date, nextIndex);
-    nextIndex++;
+    await createPromotionOccurrence(template, date, nextIndex++);
   }
 };
+
+
 
 // ======================================================
 // DATE GENERATION
@@ -172,8 +174,15 @@ const createPromotionOccurrence = async (template, startDate, index) => {
     occurrenceIndex: index,
   };
 
+  // 🔑 IMPORTANT
+  clone.recurringDetails = {
+    ...clone.recurringDetails,
+    isEnabled: false,
+  };
+
   await Promotion.create(clone);
 };
+
 
 // ======================================================
 // IMMEDIATE GENERATION (ON CREATE)

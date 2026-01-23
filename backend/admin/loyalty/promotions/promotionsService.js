@@ -18,12 +18,12 @@ const create = async (data, timezone) => {
 const get = async ({ companyOrganizer, page, limit, keyword, status, date, timezone }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const query = {
-  };
+  const query = {};
 
+  // ✅ EXCLUDE TEMPLATES (CORRECT)
   query.$or = [
     { "recurringMeta.isTemplate": false },
-    { "recurringMeta.isTemplate": { $exists: false } },
+    { "recurringMeta.isTemplate": { $exists: false } }
   ];
 
   if (companyOrganizer) {
@@ -43,30 +43,36 @@ const get = async ({ companyOrganizer, page, limit, keyword, status, date, timez
   }
 
   if (keyword) {
-    const keywordMatch = buildKeywordQueryFromModels([{ schema: Promotion.schema }], keyword);
+    const keywordMatch = buildKeywordQueryFromModels(
+      [{ schema: Promotion.schema }],
+      keyword
+    );
     Object.assign(query, keywordMatch);
   }
 
-  // Use repository function to get promotions with population
   const records = await repository.getWithFilters(query, skip, limit);
 
-  // Get total counts
+  // ✅ COUNTS MUST ALSO EXCLUDE TEMPLATES
+  const baseCountFilter = {
+    ...(companyOrganizer && { companyOrganizer }),
+    "recurringMeta.isTemplate": { $ne: true },
+    status: { $ne: "deleted" }
+  };
+
   const [total, active, inactive, totalFiltered] = await Promise.all([
-    Promotion.countDocuments({
-      ...(companyOrganizer && { companyOrganizer }), status: { $ne: "deleted" },
-      "recurringMeta.isTemplate": false
-    }),
-    Promotion.countDocuments({ status: "active", ...(companyOrganizer && { companyOrganizer }), "recurringMeta.isTemplate": false }),
-    Promotion.countDocuments({ status: "inactive", ...(companyOrganizer && { companyOrganizer }), "recurringMeta.isTemplate": false }),
+    Promotion.countDocuments(baseCountFilter),
+    Promotion.countDocuments({ ...baseCountFilter, status: "active" }),
+    Promotion.countDocuments({ ...baseCountFilter, status: "inactive" }),
     Promotion.countDocuments(query),
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
   meta.counts = { total, active, inactive };
-  const formatted = records.map(item => formatPromotion(item, timezone));
 
+  const formatted = records.map(r => formatPromotion(r, timezone));
   return { responses: formatted, meta };
 };
+
 
 const update = async (id, data, scope = "single") => {
   const promotion = await Promotion.findById(id);
@@ -74,34 +80,33 @@ const update = async (id, data, scope = "single") => {
 
   const { recurringMeta } = promotion;
 
-  // ---------------------------
+  // ❌ Never mutate recurrence on single instance
+  if (scope === "single" && data.recurringDetails) {
+    delete data.recurringDetails;
+  }
+
   // NON-RECURRING
-  // ---------------------------
   if (!recurringMeta || !recurringMeta.parentPromotion) {
     Object.assign(promotion, data);
     await promotion.save();
     return await getDetails(id);
   }
 
-  // ---------------------------
-  // SINGLE OCCURRENCE
-  // ---------------------------
+  // SINGLE
   if (scope === "single") {
     Object.assign(promotion, data);
     await promotion.save();
     return await getDetails(id);
   }
 
-  // ---------------------------
-  // FUTURE OCCURRENCES
-  // ---------------------------
+  // FUTURE
   const parentId = recurringMeta.parentPromotion;
-  const occurrenceIndex = recurringMeta.occurrenceIndex;
+  const index = recurringMeta.occurrenceIndex;
 
   await Promotion.updateMany(
     {
       "recurringMeta.parentPromotion": parentId,
-      "recurringMeta.occurrenceIndex": { $gte: occurrenceIndex },
+      "recurringMeta.occurrenceIndex": { $gte: index },
       status: { $ne: "deleted" },
     },
     { $set: data }
@@ -109,6 +114,7 @@ const update = async (id, data, scope = "single") => {
 
   return await getDetails(id);
 };
+
 
 
 const deleteItem = async (id, scope = "single") => {
