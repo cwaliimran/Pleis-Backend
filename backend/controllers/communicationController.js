@@ -214,7 +214,6 @@ const sendUserNotifications = async ({
           title,
           body,
         }));
-
         // Save all notifications in a batch to the database
         await NotificationExp.insertMany(notificationsToSave);
       } else {

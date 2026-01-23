@@ -79,11 +79,11 @@ const updateOrders = async (req, res) => {
     deliveredMenuItem,
     deliveredall
   };
-
+const staffId= req.user._id;
 
 
   try {
-    const updated = await Orderservice.updateOrders(id, data);
+    const updated = await Orderservice.updateOrders(staffId,id, data);
     if (updated && updated.error) {
       return sendResponse({
         res,

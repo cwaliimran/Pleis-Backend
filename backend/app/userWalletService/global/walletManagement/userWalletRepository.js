@@ -98,6 +98,10 @@ const updateGlobalPoints = async ({
   walletDoc.global.points = newBalance;
 
   await walletDoc.save({ session });
+  checkPromotion(userId).catch(() => { });
+  //TODO call via cron job
+  // checkDemotion(userId).catch(() => { });
+
 
   return { success: true, newBalance };
 };

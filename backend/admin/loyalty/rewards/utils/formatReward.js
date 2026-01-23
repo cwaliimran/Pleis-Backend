@@ -21,11 +21,6 @@ function formatReward(reward, timezone) {
 
     // Adjust obj properties based on rewardType
     switch (obj.rewardType) {
-        case "customReward":
-            delete obj.menuItem;
-            delete obj.event;
-            obj.customReward.image = getFullImageUrl(obj.customReward?.image);
-            break;
 
         case "buyMenuItemReward":
             delete obj.event;

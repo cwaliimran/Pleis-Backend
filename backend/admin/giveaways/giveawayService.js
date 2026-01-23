@@ -1,6 +1,5 @@
 const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const GiveawayRepo = require("./giveawayRepository");
-const { sendUserNotifications } = require("../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 
 

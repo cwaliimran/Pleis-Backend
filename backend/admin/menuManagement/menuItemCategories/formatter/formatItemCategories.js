@@ -11,26 +11,28 @@ const { convertUtcToTimezone } = require("@utils/responseUtil");
  */
 function formatMenuItem(item, timezone) {
   let obj = typeof item.toObject === "function" ? item.toObject() : item;
-
   if (!obj) return null;
 
-  // Format image URL
   obj.image = getFullImageUrl(obj.image || "noimage.png");
+  obj.startTime=convertUtcToTimezone(obj.startTime,timezone,"hh:mm A");
+  obj.endTime=convertUtcToTimezone(obj.endTime,timezone,"hh:mm A");
 
-  // Convert stored UTC times to user timezone (display only)
-  if (obj.startTime && obj.endTime) {
-    obj.startTime = convertUtcToTimezone(obj.startTime, timezone, "hh:mm A");
-    obj.endTime = convertUtcToTimezone(obj.endTime, timezone, "hh:mm A");
+  // ✅ SAFE MENU HANDLING
+  if (obj.menuData) {
+    obj.menu = obj.menuData;
   }
 
-  // Attach nested menu (with venue inside) and category
-  if (obj.menu && typeof obj.menu === "object" && !obj.menu._bsontype) {
-    obj.menu = obj.menuData || null;
-    obj.category = obj.categoryData || null;
+  if (obj.categoryData) {
+    obj.category = obj.categoryData;
   }
+
+  // Optional cleanup
+  delete obj.menuData;
+  delete obj.categoryData;
 
   return obj;
 }
+
 function formatBundleMenuItem(item, timezone) {
   let obj = typeof item.toObject === "function" ? item.toObject() : item;
   if (!obj) return null;

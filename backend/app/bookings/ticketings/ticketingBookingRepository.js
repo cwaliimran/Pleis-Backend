@@ -101,13 +101,14 @@ const getTicketingBookings = async (query = {}, options = {}) => {
 };
 
 
-
 const getTicketingBookingById = async (id) => {
+  const bookingId = new mongoose.Types.ObjectId(id);
 
   const result = await TicketingBookings.aggregate([
-    { $match: { _id: new mongoose.Types.ObjectId(id) } },
+    // 1️⃣ Match booking
+    { $match: { _id: bookingId } },
 
-    // Populate organization with only required fields
+    // 2️⃣ Populate organization
     {
       $lookup: {
         from: "organizations",
@@ -127,7 +128,7 @@ const getTicketingBookingById = async (id) => {
     },
     { $unwind: { path: "$organization", preserveNullAndEmptyArrays: true } },
 
-    // Populate order with only paymentDetails
+    // 3️⃣ Populate ticketing order FIRST
     {
       $lookup: {
         from: "ticketingorders",
@@ -138,6 +139,7 @@ const getTicketingBookingById = async (id) => {
             $project: {
               _id: 1,
               paymentDetails: 1,
+              status: 1,
             },
           },
         ],
@@ -146,7 +148,49 @@ const getTicketingBookingById = async (id) => {
     },
     { $unwind: { path: "$order", preserveNullAndEmptyArrays: true } },
 
-    // Populate event inside snapshot
+    // 4️⃣ Lookup unified wallet transactions USING order._id
+    {
+      $lookup: {
+        from: "unifiedwallettransactions",
+        let: { orderId: "$order._id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$entityId", "$$orderId"] },
+            },
+          },
+          {
+            $project: {
+              walletType: 1,
+              points: "$points.total",
+            },
+          },
+        ],
+        as: "transactions",
+      },
+    },
+
+    // 5️⃣ Convert transactions array → object
+    {
+      $addFields: {
+        transactions: {
+          $arrayToObject: {
+            $map: {
+              input: "$transactions",
+              as: "tx",
+              in: {
+                k: "$$tx.walletType",
+                v: {
+                  points: "$$tx.points",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    // 6️⃣ Populate event inside ticket snapshot
     {
       $lookup: {
         from: "events",
@@ -159,7 +203,7 @@ const getTicketingBookingById = async (id) => {
               "basicInfo.title": 1,
               "basicInfo.media": 1,
               "basicInfo.venueLocation": 1,
-              "schedule": 1,
+              schedule: 1,
             },
           },
         ],
@@ -174,12 +218,10 @@ const getTicketingBookingById = async (id) => {
     { $project: { ticketEvent: 0 } },
   ]);
 
-  if (!result[0]) {
-    return null;
-  }
-
-  return result[0];
+  return result[0] || null;
 };
+
+
 
 
 const getTicketingBookingForTransfer = async (id) => {

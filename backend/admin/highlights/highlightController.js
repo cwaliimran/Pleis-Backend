@@ -90,7 +90,7 @@ const createHighlight = async (req, res) => {
     return sendResponse({
       res,
       statusCode: readableError.statusCode,
-      translationKey: readableerror,
+      translationKey: readableError,
       error,
     });
   }

@@ -79,9 +79,11 @@ const ticketingBookingSchema = new mongoose.Schema(
 
         status: {
             type: String,
-            enum: ["valid", "cancelled", "used"],
-            default: "valid",
+            enum: ["pending", "valid", "cancelled", "used"],
+            default: "pending",
+            index: true,
         },
+
 
         checkInHistory: {
             type: [
@@ -95,9 +97,17 @@ const ticketingBookingSchema = new mongoose.Schema(
                 }
             ],
             default: []
+        },
+        // if this booking is associated with a reservation
+        reservationRef: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "UserReservations",
+            default: null,
+            index: true,
         }
 
     },
+
     { timestamps: true }
 );
 

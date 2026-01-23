@@ -13,6 +13,8 @@ const {
   forgotPasswordViaLinkEmailTemplate,
   registrationViaLinkEmailTemplate,
   forgotPasswordViaOtpEmailTemplate,
+  OTP_PURPOSE_CONFIG,
+  otpEmailTemplate
 } = require("../helperUtils/emailTemplates");
 const { createOrSkipDevice, Devices } = require("../models/Devices");
 const validator = require("validator");
@@ -349,23 +351,22 @@ const generateOtp = async (req, res) => {
   session.startTransaction();
 
   try {
-    const { email, phoneNumber, type } = req.body;
+    const { email, phoneNumber, type, purpose = "generic" } = req.body;
+
     const validationOptions = {
       rawData: [type === "email" ? "email" : "phoneNumber"],
     };
-    if (!validateParams(req, res, validationOptions)) {
-      return;
-    }
 
-    // Validate phone number format (expects phoneNumber as { code, number })
+    if (!validateParams(req, res, validationOptions)) return;
+
+    // Validate phone number
     if (
       type === "phoneNumber" &&
       phoneNumber &&
       (typeof phoneNumber !== "object" ||
         !phoneNumber.code ||
         !phoneNumber.number ||
-        !validatePhoneNumber(`${phoneNumber.code}${phoneNumber.number}`).valid
-      )
+        !validatePhoneNumber(`${phoneNumber.code}${phoneNumber.number}`).valid)
     ) {
       return sendResponse({
         res,
@@ -374,16 +375,17 @@ const generateOtp = async (req, res) => {
       });
     }
 
+    // Load user
     let user;
     if (type === "email") {
       user = await User.findOne({ email: email.toLowerCase() }).select(
-        "email accountState otpInfo"
+        "email accountState otpInfo timezone"
       );
-    } else if (type === "phoneNumber") {
+    } else {
       user = await User.findOne({
         "phoneNumber.code": phoneNumber.code,
         "phoneNumber.number": phoneNumber.number,
-      }).select("phoneNumber accountState otpInfo");
+      }).select("phoneNumber accountState otpInfo timezone");
     }
 
     if (!user) {
@@ -394,7 +396,7 @@ const generateOtp = async (req, res) => {
       });
     }
 
-    // Check if account is restricted
+    // Account state check
     if (["restricted", "suspended"].includes(user.accountState.status)) {
       return sendResponse({
         res,
@@ -403,33 +405,47 @@ const generateOtp = async (req, res) => {
       });
     }
 
-    const otp = user.generateOtp(type, user.timezone);
+    // Generate OTP (should internally store purpose)
+    const otp = user.generateOtp(type, user.timezone, purpose);
 
-    if (otp.error) {
-      if (otp.error === "too_many_otp_requests") {
-        return sendResponse({
-          res,
-          statusCode: 400,
-          translationKey: "too_many_otp_requests",
-        });
-      }
+    if (otp?.error === "too_many_otp_requests") {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "too_many_otp_requests",
+      });
     }
 
     await user.save({ session });
 
-    // Send email or SMS within the transaction
-    const subject = "Password Reset OTP";
-    const mBody = forgotPasswordViaOtpEmailTemplate(otp);
-    await sendEmailViaMailgun([email], subject, mBody);
-
+    // Commit BEFORE sending email/SMS
     await session.commitTransaction();
     session.endSession();
+
+    // -----------------------------
+    // 📩 Send OTP (outside txn)
+    // -----------------------------
+    const config =
+      OTP_PURPOSE_CONFIG[purpose] || OTP_PURPOSE_CONFIG.generic;
+
+    if (type === "email") {
+      const subject = config.subject;
+
+      const mBody = otpEmailTemplate({
+        otp,
+        title: config.title,
+        message: config.message,
+      });
+
+      await sendEmailViaMailgun([email], subject, mBody);
+    }
+
+    // (SMS version can reuse same config.message)
 
     return sendResponse({
       res,
       statusCode: 201,
       translationKey: "otp_generated",
-      data: { otp },
     });
   } catch (error) {
     await session.abortTransaction();
@@ -439,10 +455,11 @@ const generateOtp = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: error.message,
-      error: error,
+      error,
     });
   }
 };
+
 
 //Verify otp
 const verifyOtp = async (req, res) => {

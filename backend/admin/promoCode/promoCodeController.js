@@ -14,49 +14,49 @@ const promoCodeService = require("./promoCodeService");
 
 
 const createPromoCode = async (req, res) => {
-let {
-  title,
-  description,
-  promoCode,
-  discountType,
-  discountValue,
-  maxDiscountCap,
-  maxCountPerUser,
-  expiryDate,
-  maxUsage,
-} = req.body;
+  let {
+    title,
+    description,
+    promoCode,
+    discountType,
+    discountValue,
+    maxDiscountCap,
+    maxCountPerUser,
+    expiryDate,
+    maxUsage,
+  } = req.body;
 
-const userId = req.user._id;
-const timezone = req.user.timezone;
+  const userId = req.user._id;
+  const timezone = req.user.timezone;
 
-if (
-  !validateParams(req, res, {
-    rawData: [
-      "title", 
-      "description", 
-      "discountType",
-      "discountValue", 
-      "expiryDate",
-      "maxUsage",
-      "promoCode"
-    ],
-  })
-) return;
-         expiryDate = convertTimezoneToUtc(
-          expiryDate,
-          timezone,
-        );
+  if (
+    !validateParams(req, res, {
+      rawData: [
+        "title",
+        "description",
+        "discountType",
+        "discountValue",
+        "expiryDate",
+        "maxUsage",
+        "promoCode"
+      ],
+    })
+  ) return;
+  expiryDate = convertTimezoneToUtc(
+    expiryDate,
+    timezone,
+  );
   let data = {
-    companyOrganizer:userId,
-title,
-promoCode,
-  description,
-  discountType,
-  discountValue,
-  maxDiscountCap,
-  expiryDate,
-  maxUsage,
-  maxCountPerUser,
+    companyOrganizer: userId,
+    title,
+    promoCode,
+    description,
+    discountType,
+    discountValue,
+    maxDiscountCap,
+    expiryDate,
+    maxUsage,
+    maxCountPerUser,
   };
   try {
     const PromoCode = await promoCodeService.createPromoCode(data);
@@ -92,7 +92,7 @@ const getPromoCodes = async (req, res) => {
     const userId = req.user._id;
     const timezone = req.user.timezone;
     const { promoCodes, meta } = await promoCodeService.getPromoCodes({
-        timezone,
+      timezone,
       page,
       limit,
       keyword,
@@ -121,25 +121,25 @@ const getPromoCodes = async (req, res) => {
 };
 const updatePromoCode = async (req, res) => {
   const { id } = req.params;
-let {
-   title,
-  description,
-  discountType,
-  discountValue,
-  promoCode,
-  maxDiscountCap,
-  maxCountPerUser,
-  status,
-  expiryDate,
-  maxUsage,
-} = req.body;
+  let {
+    title,
+    description,
+    discountType,
+    discountValue,
+    promoCode,
+    maxDiscountCap,
+    maxCountPerUser,
+    status,
+    expiryDate,
+    maxUsage,
+  } = req.body;
 
-const userId = req.user._id;
-const timezone = req.user.timezone;
-         expiryDate = convertTimezoneToUtc(
-          expiryDate,
-          timezone,
-        );
+  const userId = req.user._id;
+  const timezone = req.user.timezone;
+  expiryDate = convertTimezoneToUtc(
+    expiryDate,
+    timezone,
+  );
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
@@ -149,20 +149,20 @@ const timezone = req.user.timezone;
     return;
 
   let data = {
-    companyOrganizer:userId,
-title,
-  description,
-  promoCode,
-  discountType,
-  discountValue,
-  status,
-  maxDiscountCap,
-  expiryDate,
-  maxUsage,
-  maxCountPerUser,
+    companyOrganizer: userId,
+    title,
+    description,
+    promoCode,
+    discountType,
+    discountValue,
+    status,
+    maxDiscountCap,
+    expiryDate,
+    maxUsage,
+    maxCountPerUser,
   };
 
- 
+
   try {
     const updated = await promoCodeService.updatePromoCode(id, data);
     if (updated && updated.error) {

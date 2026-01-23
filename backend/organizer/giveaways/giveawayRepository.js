@@ -1,15 +1,16 @@
 const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const { generateMeta } = require("@utils/responseUtil");
 const mongoose = require("mongoose");
-const {Events}= require("@EventsModel");
+const { Events } = require("@EventsModel");
 const Giveaway = require("@GiveawayModel");
 const { TicketingOrders } = require("@TicketingOrdersModel");
-const  TicketingsModel  = require("@TicketingsModel");
+const TicketingsModel = require("@TicketingsModel");
 const Organizations = require("@OrganizationModel");
 const { UserReservations } = require("@UserReservationsModel");
 const { formatUpdate } = require("./formatters/updateFormatter");
-const {NotificationExp, NotificationTypes} = require("@NotificationsModel");
-const {sendUserNotifications} = require("../../controllers/communicationController");
+const { NotificationExp, NotificationTypes } = require("@NotificationsModel");
+const { sendUserNotifications } = require("../../controllers/communicationController");
+const { getClubMemberUserIdsByCompanyOrganizer } = require("../../app/loyalty/clubMembers/clubMembersRepository");
 const getUserIdsForEvent = async (eventId) => {
   try {
 
@@ -83,11 +84,22 @@ const createGiveaway = async (data) => {
     if (!organization) {
       throw new Error("No organization found for the provided user ID.");
     }
-
-    // Step 2: Include the organization ID in the giveaway data
     data.organization = organization._id;
+    const clubMemberUserIds = await getClubMemberUserIdsByCompanyOrganizer(data.creator);
     const giveaway = new Giveaway(data);
     await giveaway.save();
+    await sendUserNotifications({
+      recipientIds: clubMemberUserIds,
+      title: "A new giveaway has been created!",
+      body: `You have a chance to win: ${giveaway.title}`,
+      data: {
+        type: NotificationTypes.GIVEAWAY_UPDATE,
+        objectType: "group",
+      },
+      image: "noimage",
+      sender: data.creator,
+      objectId: giveaway._id,
+    });
 
     return giveaway;
   } catch (err) {
@@ -181,11 +193,11 @@ const getWinners = async ({ giveawayId, timezone, page, limit, skip }) => {
     throw new Error("Error retrieving winners: " + err.message);
   }
 };
-const getGiveaway = async ({organizationId, timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
-    const organizationIds = organizationId
+const getGiveaway = async ({ organizationId, timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
+  const organizationIds = organizationId
     ? organizationId.split(',').map(id => new mongoose.Types.ObjectId(id))
     : [];
-  let totalParticipants=10
+  let totalParticipants = 10
   const pipeline = [
     {
       $match: {
@@ -250,9 +262,9 @@ const getGiveaway = async ({organizationId, timezone, page, limit, keyword, stat
       $project: {
         eventTitle: "$event.basicInfo.title", // Only return event title
         ticketTitle: "$ticket.title", // Only return ticket title
-                eventId: "$event._id", // Only return event title
+        eventId: "$event._id", // Only return event title
         ticketId: "$ticket._id", // Only return ticket title
-        title: 1, 
+        title: 1,
         numberOfWinners: 1,
         ticketsPerWinner: 1,
         startDateTime: 1,
@@ -281,7 +293,7 @@ const getGiveaway = async ({organizationId, timezone, page, limit, keyword, stat
 
   // Execute the aggregation pipeline
   const result = await Giveaway.aggregate(pipeline);
- 
+
 
   // Step 10: Check if the result is valid and contains data
   if (!result || !result[0] || !result[0].data) {
@@ -373,7 +385,7 @@ const getevents = async ({
   pipeline.push({
     $project: {
       _id: 1, // Include _id
-     title: "$basicInfo.title" // Include title from basicInfo
+      title: "$basicInfo.title" // Include title from basicInfo
     }
   });
 
@@ -472,7 +484,7 @@ const gettickets = async ({
   pipeline.push({
     $project: {
       _id: 1, // Include _id
-     title: "$title" // Include title from basicInfo
+      title: "$title" // Include title from basicInfo
     }
   });
 

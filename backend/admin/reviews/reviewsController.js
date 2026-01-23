@@ -12,35 +12,36 @@ const reviewService = require("./reviewsService");
 
 const getReviews = async (req, res) => {
   let {
-    companyOrganizer,keyword
+    companyOrganizer, keyword , page, limit, 
   } = req.query;
-if(!companyOrganizer){
-  return sendResponse({
-    res,
-    statusCode: 400,
-    translationKey: "organization_required",
-  });
-}
-let organizer=companyOrganizer;
-  let organizationArray=[]
-const organization =null;
-if(organization){
-   organizationArray = organization.split(','); 
-}
-  else{
+  if (!companyOrganizer) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "organization_required",
+    });
+  }
+  let organizer = companyOrganizer;
+  let organizationArray = []
+  const organization = null;
+  if (organization) {
+    organizationArray = organization.split(',');
+  }
+  else {
     organizationArray = [];
   }
- 
+
 
   // Prepare the review data
   let data = {
     organization: organizationArray,
     keyword,
     organizer,
+     page:page || 1, limit: limit || 10, 
   };
 
   try {
-    const {reviews, meta} = await reviewService.getReviews(data);
+    const { reviews, meta } = await reviewService.getReviews(data);
 
     if (reviews.error) {
       return sendResponse({
@@ -70,9 +71,9 @@ if(organization){
 };
 const updateReviews = async (req, res) => {
   const { id } = req.params;
-let {
-comment
-} = req.body;
+  let {
+    comment
+  } = req.body;
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
@@ -81,10 +82,10 @@ comment
   )
     return;
   let data = {
-comment
+    comment
   };
 
- 
+
   try {
     const updated = await reviewService.updateReviews(id, data);
     if (updated && updated.error) {
@@ -99,14 +100,14 @@ comment
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "Reservation_not_found",
+        translationKey: "review_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Reservation_updated_successfully",
+      translationKey: "review_updated_successfully",
       data: updated,
     });
   } catch (error) {
@@ -157,7 +158,7 @@ const deleteReview = async (req, res) => {
 };
 module.exports = {
   getReviews,
-updateReviews,
-deleteReview
+  updateReviews,
+  deleteReview
 
 };

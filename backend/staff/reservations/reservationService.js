@@ -8,7 +8,7 @@ const createReservation = async (data) => {
 
 const updateReservationStatus = async (id, status) => {
   const updated = await ReservationRepo.findByIdAndUpdate(id, {
-    reservationStatus: status,
+    status: status,
   });
   if (!updated) return null;
   return true;

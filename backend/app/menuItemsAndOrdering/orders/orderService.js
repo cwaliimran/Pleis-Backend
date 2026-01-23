@@ -3,15 +3,34 @@ const menuItemRepo = require("../menuItems/menuItemsRepository");
 const mongoose = require("mongoose");
 const { menuItemOrderFormatter } = require("./formatter/menuItemOrderFormatter");
 const { generateMeta } = require("../../../helperUtils/responseUtil");
-const { calculatePointsRepo } = require("../../loyalty/calculatePointsEarning/pointsEarningsRepository");
-const { getOrgCompanyOrganizer } = require("../../organizationProfile/organizationProfileRepository");
-const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
-const { resolveChallengeByTaskTypeService } = require("../../loyalty/challengesOrders/challengeOrdersService");
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
-const { getFullImageUrl } = require("@utils/imageHelper");
+const Organizations = require("@OrganizationModel");
+const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
+const { findAppUserByIdWithProjectionService } = require("../../usersManagement/usersService");
 
+const getStaffIdsByOrganization = async (organizationId) => {
+  if (!mongoose.Types.ObjectId.isValid(organizationId)) {
+    throw new Error("Invalid organization ID");
+  }
 
+  const organization = await Organizations.findById(
+    organizationId,
+    { staff: 1 }
+  ).lean();
+
+  if (!organization || !organization.staff) {
+    return [];
+  }
+
+  // Extract staff user IDs
+  const staffIds = organization.staff
+    .map(item => item.user)
+    .filter(Boolean)
+    .map(id => id.toString());
+
+  return staffIds;
+};
 // 1️⃣ Place an order
 
 const placeOrder = async ({
@@ -59,87 +78,55 @@ const placeOrder = async ({
       };
     });
 
+
     // 3️⃣ Create order document inside session
-    const orderData = {
+    let orderData = {
       user: userId,
       organization: organizationId,
       items: orderItems,
       totalPrice,
       notes,
       paymentMethod,
-      status: "pending",
       pickupType,
       tableNumber,
+      orderType: "online",
     };
 
-    let order = await orderRepo.createOrder(orderData, session);
-
-    // 4️⃣ If payment method is online → award points
+    let orderStatus = "pending";
     if (paymentMethod === "applePay" || paymentMethod === "card") {
-      // mark paid
-      order.paymentStatus = "paid";
-      await order.save({ session });
-
-      // Fetch organizer and calculate points
-      const companyOrganizer = await getOrgCompanyOrganizer(organizationId);
-      const pointsCalculation =
-        await calculatePointsRepo(userId, companyOrganizer, totalPrice);
-
-      const globalPoints = {
-        base: pointsCalculation.global.earnedPoints,
-        multiplier: 1,
-        total: pointsCalculation.global.earnedPoints,
-        pointsPerEuro: pointsCalculation.global.pointsPerEuro,
-      };
-
-      const companyPoints = {
-        base: pointsCalculation.organizer.earnedPoints,
-        multiplier: 1,
-        total: pointsCalculation.organizer.earnedPoints,
-        pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
-      };
-
-      // Create loyalty transactions inside same session
-      const trx = await createTransaction(
-        {
-          user: userId,
-          companyOrganizer,
-          organization: organizationId,
-          companyPoints,
-          globalPoints,
-          allowNegative: false,
-          type: "earn",
-          description: "",
-          entityId: order._id,
-          domainType: "menuorders",
-        },
-        session
-      );
-
-      if (!trx.success) {
-        throw new Error(trx.message || "failed_loyalty_update");
-      }
-
-      //TODO use this function also on admin side as well when they will complete the order for payLater method
-      //resolveChallengeByTaskTypeService
-      resolveChallengeByTaskTypeService({
-        userId,
-        companyOrganizer,
-        taskType: "buyMenuItem",
-        items
-      });
+      orderStatus = "pendingPayment";
+      orderData.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
     }
+    orderData.status = orderStatus;
+
+    let order = await orderRepo.createOrder(orderData, session);
 
     // 5️⃣ Commit atomic transaction
     await session.commitTransaction();
     session.endSession();
 
-    const formattedOrder = menuItemOrderFormatter(order, timezone);
+    let formattedOrder = menuItemOrderFormatter(order, timezone);
+    const staffIds = await getStaffIdsByOrganization(organizationId);
+    //get user details
+    let userDetails = await findAppUserByIdWithProjectionService(userId, { profileIcon: 1, firstName: 1, lastName: 1, profileIcon: 1, email: 1, username: 1 });
+    formattedOrder.user = userDetails;
+
+    // Emit socket event for new order (only for cash payments)
+    if (paymentMethod === "cash") {
+      emitOrderEvent({
+        io: global.io,
+        eventName: "NEW_ORDER",
+        orderId: order._id,
+        organizationId: order.organization,
+        data: formattedOrder,
+      });
+
+    }
 
     await sendUserNotifications({
-      recipientIds: [userId.toString()],
-      title: "Order Placed Successfully",
-      body: `Your Order Has been placed : ${formattedOrder._id} and is now being ${formattedOrder.status} and will be ready soon. The total amount is ${formattedOrder.totalPrice} EUR`,
+      recipientIds: staffIds,
+      title: "New Order Placed",
+      body: `New Order Has been placed : and is now being ${formattedOrder.status}. The total amount is ${formattedOrder.totalPrice} EUR`,
       data: {
         type: NotificationTypes.ORDER_UPDATE,
         objectType: "group",
@@ -267,7 +254,7 @@ const addMoreItemsToOrder = async ({ orderId, items }) => {
   await sendUserNotifications({
     recipientIds: [userId.toString()],
     title: "Order Placed Successfully",
-    body: `Your Order Has been placed : ${order._id} and is now being ${order.status} and will be ready soon. The total amount is ${order.totalPrice} EUR`,
+    body: `Your Order Has been updated :  and is now being ${order.status} and will be ready soon. The total amount is ${order.totalPrice} EUR`,
     data: { type: NotificationTypes.ORDER_UPDATE, objectType: "group" },
     sender: userId,
     objectId: order._id,

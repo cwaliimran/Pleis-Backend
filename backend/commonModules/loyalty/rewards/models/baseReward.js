@@ -48,4 +48,7 @@ const baseRewardsSchema = new mongoose.Schema(
   { timestamps: true, discriminatorKey: "rewardType" }
 );
 
-module.exports = mongoose.model("Reward", baseRewardsSchema);
+module.exports =
+  mongoose.models.Reward ||
+  mongoose.model("Reward", baseRewardsSchema);
+

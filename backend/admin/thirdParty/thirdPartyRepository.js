@@ -131,42 +131,42 @@ const getThirdpartys = async ({ timezone, page, limit, keyword, status, createrI
   }
 
   // Keyword search
-if (keyword) {
-  const filterQuery = {};
+  if (keyword) {
+    const filterQuery = {};
 
-  // Convert keyword to lowercase for case-insensitive matching (string fields)
-  const keywordLower = keyword.toLowerCase();
+    // Convert keyword to lowercase for case-insensitive matching (string fields)
+    const keywordLower = keyword.toLowerCase();
 
-  // Search across different fields using regex for strings
-  filterQuery.$or = [
-    { title: { $regex: keywordLower, $options: 'i' } },
-    { description: { $regex: keywordLower, $options: 'i' } },
-    { rewardSourceLink: { $regex: keywordLower, $options: 'i' } },
-    { publicKeyForPartner: { $regex: keywordLower, $options: 'i' } },
-    { statusLevel: { $regex: keywordLower, $options: 'i' } },
-    { status: { $regex: keywordLower, $options: 'i' } },
-    { createID: { $regex: keywordLower, $options: 'i' } }
-  ];
+    // Search across different fields using regex for strings
+    filterQuery.$or = [
+      { title: { $regex: keywordLower, $options: 'i' } },
+      { description: { $regex: keywordLower, $options: 'i' } },
+      { rewardSourceLink: { $regex: keywordLower, $options: 'i' } },
+      { publicKeyForPartner: { $regex: keywordLower, $options: 'i' } },
+      { statusLevel: { $regex: keywordLower, $options: 'i' } },
+      { status: { $regex: keywordLower, $options: 'i' } },
+      { createID: { $regex: keywordLower, $options: 'i' } }
+    ];
 
-  // Match pointCost if the keyword is a number (for exact numeric matching)
-  const numericKeyword = parseFloat(keyword);
-  if (!isNaN(numericKeyword)) {
-    filterQuery.$or.push(
-      { pointCost: numericKeyword },  // Match pointCost if keyword is a number
-      { claimLimit: numericKeyword }  // Match claimLimit if keyword is a number
-    );
+    // Match pointCost if the keyword is a number (for exact numeric matching)
+    const numericKeyword = parseFloat(keyword);
+    if (!isNaN(numericKeyword)) {
+      filterQuery.$or.push(
+        { pointCost: numericKeyword },  // Match pointCost if keyword is a number
+        { claimLimit: numericKeyword }  // Match claimLimit if keyword is a number
+      );
+    }
+
+    // Optionally, match _id or other fields (for strict matches) if keyword is valid ObjectId
+    if (ObjectId.isValid(keyword)) {
+      filterQuery._id = new ObjectId(keyword);  // Match _id if keyword is a valid ObjectId
+    }
+
+    // If filters were added, push them into the pipeline
+    if (Object.keys(filterQuery).length) {
+      pipeline.push({ $match: filterQuery });
+    }
   }
-
-  // Optionally, match _id or other fields (for strict matches) if keyword is valid ObjectId
-  if (ObjectId.isValid(keyword)) {
-    filterQuery._id = new ObjectId(keyword);  // Match _id if keyword is a valid ObjectId
-  }
-
-  // If filters were added, push them into the pipeline
-  if (Object.keys(filterQuery).length) {
-    pipeline.push({ $match: filterQuery });
-  }
-}
 
 
   // Lookup to join the StatusLevels collection and get the title field
@@ -178,31 +178,54 @@ if (keyword) {
       as: 'statusLevelDetails' // Alias for the joined documents
     }
   });
+  pipeline.push(
+    {
+      $lookup: {
+        from: "globalrewardcategories",
+        localField: "globalRewardCategory",
+        foreignField: "_id",
+        pipeline: [
+          {
+            $project: {
+              title: 1,_id: 1
+            }
+          }
+        ],
+        as: "globalrewardcategories"
+      }
+    },
+    {
+      $unwind: "$globalrewardcategories"
+    }
+  );
+
 
   // Project the required fields, including the title from StatusLevels
-pipeline.push({
-  $project: {
-    _id: 1,  // Include _id
-    title: 1,  // Include title
-    image: 1,  // Include image
-    description: 1,  // Include description
-    pointCost: 1,  // Include pointCost
-    claimLimit: 1,  // Include claimLimit
-    rewardSourceLink: 1,  // Include rewardSourceLink
-    publicKeyForPartner: 1,  // Include publicKeyForPartner
-    status: 1,  // Include status
-    createID: 1,  // Include createID
-    createdAt: 1,  // Include createdAt
-    updatedAt: 1,  // Include updatedAt
-    __v: 1,  // Include __v
+  pipeline.push({
+    $project: {
+      _id: 1,  // Include _id
+      title: 1,  // Include title
+      image: 1,  // Include image
+      description: 1,  // Include description
+      pointCost: 1,  // Include pointCost
+      claimLimit: 1,  // Include claimLimit
+      rewardSourceLink: 1,  // Include rewardSourceLink
+      publicKeyForPartner: 1,  // Include publicKeyForPartner
+      status: 1,  // Include status
+      createID: 1,  // Include createID
+      createdAt: 1,  // Include createdAt
+      updatedAt: 1,  // Include updatedAt
+      globalrewardcategories: 1,
+      __v: 1,  // Include __v
 
-    // Create a statusLevel object with id and title
-    statusLevel: {
-      _id: { $arrayElemAt: ["$statusLevelDetails._id", 0] },  // Get the _id from StatusLevels
-      title: { $arrayElemAt: ["$statusLevelDetails.title", 0] }  // Get the title from StatusLevels
+
+      // Create a statusLevel object with id and title
+      statusLevel: {
+        _id: { $arrayElemAt: ["$statusLevelDetails._id", 0] },  // Get the _id from StatusLevels
+        title: { $arrayElemAt: ["$statusLevelDetails.title", 0] }  // Get the title from StatusLevels
+      }
     }
-  }
-});
+  });
 
 
   // Sort by newest
@@ -268,22 +291,22 @@ const getUserThirdpartys = async ({ timezone, page, limit, keyword, status, user
       }
     },
     {
-  $lookup: {
-    from: "userThirdpartys",
-    localField: "_id",          // Thirdparty _id
-    foreignField: "_id",        // Thirdparty _id
-    pipeline: [
-      {
-        $project: {
-          firstName: 1,
-          lastName: 1,
-          phoneNumber: 1
-        }
+      $lookup: {
+        from: "userThirdpartys",
+        localField: "_id",          // Thirdparty _id
+        foreignField: "_id",        // Thirdparty _id
+        pipeline: [
+          {
+            $project: {
+              firstName: 1,
+              lastName: 1,
+              phoneNumber: 1
+            }
+          }
+        ],
+        as: "user"
       }
-    ],
-    as: "user"
-  }
-},
+    },
     {
       $addFields: {
         user: { $arrayElemAt: ["$user", 0] }

@@ -16,144 +16,103 @@ const {
   getCurrentDateInTimezone,
 } = require("../../helperUtils/responseUtil");
 const { placePreOrderMenuItemsWithReservation } = require("../menuItemsAndOrdering/orders/orderService");
-const { resolveChallengeByTaskTypeService } = require("../loyalty/challengesOrders/challengeOrdersService");
-const { calculatePointsRepo } = require("../loyalty/calculatePointsEarning/pointsEarningsRepository");
-const { createTransaction } = require("../userWalletService/transactions/services/unifiedTransactionsService");
 const { sendUserNotifications } = require("../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
-const createReservation = async (data) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+const { getStaffIdsByOrganization } = require("../../admin/organizations/organizationRepository");
+const createReservation = async (data, session) => {
+  if (!session) throw new Error("session_required");
 
-  try {
-    const { userId, reservationId, partySize, preOrderMenuItems, timezone } = data;
+  const { userId, reservationId, partySize, preOrderMenuItems, timezone } = data;
 
-    // Fetch user profile
-    const userData = await User.aggregate([
+  // Fetch user profile
+  const userData = await User.aggregate(
+    [
       { $match: { _id: new mongoose.Types.ObjectId(userId) } },
-      { $project: { firstName: 1, lastName: 1, phoneNumber: 1 } }
-    ]);
+      { $project: { firstName: 1, lastName: 1, phoneNumber: 1 } },
+    ],
+    { session }
+  );
 
-    if (!userData?.length) throw new Error("User not found");
+  if (!userData?.length) throw new Error("User not found");
 
-    data.firstName = userData[0].firstName || "";
-    data.lastName = userData[0].lastName || "";
-    data.phoneNumber = userData[0].phoneNumber || "";
+  data.firstName = userData[0].firstName || "";
+  data.lastName = userData[0].lastName || "";
+  data.phoneNumber = userData[0].phoneNumber || "";
 
-    // Get reservation base price
-    const reservation = await Reservations.aggregate([
+  // Reservation base price
+  const reservationBase = await Reservations.aggregate(
+    [
       { $match: { _id: new mongoose.Types.ObjectId(reservationId) } },
-      { $project: { amount: { $toDouble: { $ifNull: ["$amount", 0] } } } }
-    ]);
+      { $project: { amount: { $toDouble: { $ifNull: ["$amount", 0] } } } },
+    ],
+    { session }
+  );
 
-    const amountPerPerson = reservation.length > 0 ? reservation[0].amount : 0;
-    const totalReservationAmount = amountPerPerson * partySize;
-    data.amount = totalReservationAmount;
+  const amountPerPerson = reservationBase[0]?.amount || 0;
+  const totalReservationAmount = amountPerPerson * partySize;
+  data.amount = totalReservationAmount;
 
-    // SAVE reservation inside session
-    const userReservation = new UserReservations(data);
-    await userReservation.save({ session });
+  // Lock only for card / applePay
+  if (["card", "applePay"].includes(data.paymentDetails.paymentMethod)) {
+    data.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
+    data.status = "pendingPayment";
+  }
 
-    // If pre-order exists -> create order
-    if (preOrderMenuItems?.items?.length) {
-      const order = await placePreOrderMenuItemsWithReservation({
+  const userReservation = new UserReservations(data);
+  await userReservation.save({ session });
+
+  // Pre-order handling
+  if (preOrderMenuItems?.items?.length) {
+    const order =
+      await placePreOrderMenuItemsWithReservation({
         userId,
         timezone,
         items: preOrderMenuItems.items,
         notes: preOrderMenuItems.notes,
         reservation: userReservation._id,
-        paymentMethod: data.paymentMethod,
+        paymentDetails: data.paymentDetails,
         session,
       });
 
-      userReservation.preOrderMenuItemsOrder = order._id;
-
-
-      if (data.paymentMethod === "applePay" || data.paymentMethod === "card") {
-        order.paymentStatus = "paid";
-        //TODO save paymentId
-        order.paymentId = data.paymentId || null;
-        await order.save({ session });
-
-        //totalPrice including menu items + reservation amount
-        const totalPrice = order.totalPrice + totalReservationAmount;
-
-
-        const pointsCalculation =
-          await calculatePointsRepo(userId, data.companyOrganizer, totalPrice);
-
-        const trx = await createTransaction(
-          {
-            user: userId,
-            companyOrganizer: data.companyOrganizer,
-            organization: data.organizationId,
-            companyPoints: {
-              base: pointsCalculation.organizer.earnedPoints,
-              multiplier: 1,
-              total: pointsCalculation.organizer.earnedPoints,
-              pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
-            },
-            globalPoints: {
-              base: pointsCalculation.global.earnedPoints,
-              multiplier: 1,
-              total: pointsCalculation.global.earnedPoints,
-              pointsPerEuro: pointsCalculation.global.pointsPerEuro,
-            },
-            allowNegative: false,
-            type: "earn",
-            description: "",
-            entityId: userReservation._id,
-            domainType: "userreservations",
-          },
-          session
-        );
-
-        if (!trx.success) {
-          throw new Error(trx.message || "failed_loyalty_update");
-        }
-
-        try {
-          await resolveChallengeByTaskTypeService({
-            userId,
-            companyOrganizer: data.companyOrganizer,
-            taskType: "buyMenuItem",
-            items: data.preOrderMenuItems.items
-          });
-        } catch (err) {
-
-        }
-
-      }
-
-      await userReservation.save({ session });
-      await sendUserNotifications({
-        recipientIds: [userId.toString()],
-        title: `Reservation Placed Successfully for ${userReservation.timingSlots.dateTimeSlots[0].date.toDateString()}`,
-        body: `Your reservation is in  ${userReservation.reservationStatus} status.`,
-        data: {
-          type: NotificationTypes.RESERVATION_UPDATE,
-          objectType: "group",
-          organization_id: userReservation.organizationId.toString(),
-        },
-        image: (userReservation.preOrderMenuItemsOrder.items[0].menuItemSnapShot.image) || null,
-        sender: userId,
-        objectId: userReservation.reservationId,
-      });
-
-
-    }
-
-    await session.commitTransaction();
-    session.endSession();
-
-    return userReservation;
-
-  } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-    throw err;
+    userReservation.preOrderMenuItemsOrder = order._id;
+    //totalPrice including menu items + reservation amount
+    const totalPrice = order.totalPrice + totalReservationAmount;
+    userReservation.amount = totalPrice;
+    userReservation.priceBreakDown = {
+      reservationAmount: data.amount,
+      preOrderMenuItemsAmount: order.totalPrice,
+    };
+    await userReservation.save({ session });
   }
+  await sendUserNotifications({
+    recipientIds: [userReservation.userId.toString()],
+    title: "Reservation Created",
+    body: `Your reservation has been created successfully.`,
+    data: {
+      type: NotificationTypes.RESERVATION_UPDATE,
+      objectType: "group",
+    },
+    image: "noimage",
+    sender: userId,
+    objectId: userReservation.reservationId,
+  });
+  const staffIds = await getStaffIdsByOrganization(userReservation.organizationId);
+  await sendUserNotifications({
+    recipientIds: staffIds,
+    title: "A New Reservation Created",
+    body: `A new reservation has been created successfully.`,
+    data: {
+      type: NotificationTypes.RESERVATION_UPDATE,
+      objectType: "group",
+    },
+    image: "noimage",
+    sender: userId,
+    objectId: userReservation.reservationId,
+  });
+
+  return userReservation;
 };
+
 
 
 
@@ -216,9 +175,13 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
 
   // STATUS FILTER
   if (status) {
-    pipeline.push({ $match: { status } });
+    pipeline.push({ $match: { status: { $in: status } } });
   } else {
-    pipeline.push({ $match: { status: { $ne: "deleted" } } });
+    pipeline.push({
+      $match: {
+        status: { $nin: ["pendingPayment", "deleted"] }
+      }
+    });
   }
 
   // DATE FILTER
@@ -283,7 +246,7 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
 
   // META COUNT
   const [total, active, inactive] = await Promise.all([
-    Reservations.countDocuments({ ...(userId && { userId }), status: { $ne: "deleted" } }),
+    Reservations.countDocuments({ ...(userId && { userId }), status: { $nin: ["pendingPayment", "deleted"] } }),
     Reservations.countDocuments({ status: "active", ...(userId && { userId }) }),
     Reservations.countDocuments({ status: "inactive", ...(userId && { userId }) })
   ]);
@@ -379,6 +342,20 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
         preserveNullAndEmptyArrays: true  // If no organization is found, it will be null
       }
     },
+    {
+      $lookup: {
+        from: "menuorders",
+        localField: "preOrderMenuItemsOrder",
+        foreignField: "_id",
+        as: "preOrderMenuItemsOrder"
+      }
+    },
+    {
+      $unwind: {
+        path: "$preOrderMenuItemsOrder",
+        preserveNullAndEmptyArrays: true
+      }
+    },
     // Project necessary fields, including user, event, and organization details
     {
       $project: {
@@ -393,7 +370,6 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
         organizationId: 1,
         companyOrganizer: 1,
         optionalEventId: 1,
-        reservationStatus: 1,
         userName: {
           $concat: ["$user.firstName", " ", "$user.lastName"]  // Concatenate firstName and lastName
         },
@@ -403,6 +379,9 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
         organizationTitle: "$organization.basicInfo.name",  // Fetch organization title
         organizationLogo: "$organization.basicInfo.media.logo",  // Fetch organization logo
         organizationCover: "$organization.basicInfo.media.cover",  // Fetch organization cover image
+        preOrderMenuItemsOrder: 1,
+        ticketingBookingRefs: 1,
+
       }
     },
     // Sort by createdAt in descending order
@@ -443,23 +422,68 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
 
 const getReservationDetails = async (id) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
-
     throw new Error("Invalid Reservation ID");
   }
 
   try {
+    const reservationId = new mongoose.Types.ObjectId(id);
+
     const pipeline = [
+      // 1️⃣ Match reservation
       {
-        $match: { _id: new mongoose.Types.ObjectId(id) }
+        $match: { _id: reservationId }
       },
 
+      // 2️⃣ Lookup unified wallet transactions (entityId = reservation._id)
+      {
+        $lookup: {
+          from: "unifiedwallettransactions",
+          let: { reservationId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$entityId", "$$reservationId"] },
+              },
+            },
+            {
+              $project: {
+                walletType: 1,
+                points: "$points.total",
+              },
+            },
+          ],
+          as: "transactions",
+        },
+      },
+
+      // 3️⃣ Convert transactions array → object
+      {
+        $addFields: {
+          transactions: {
+            $arrayToObject: {
+              $map: {
+                input: "$transactions",
+                as: "tx",
+                in: {
+                  k: "$$tx.walletType",
+                  v: {
+                    points: "$$tx.points",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+
+      // 4️⃣ Convert optionalEventId
       {
         $addFields: {
           optionalEventId: { $toObjectId: "$optionalEventId" }
         }
       },
 
-      // Lookup Event
+      // 5️⃣ Lookup Event
       {
         $lookup: {
           from: "events",
@@ -475,7 +499,7 @@ const getReservationDetails = async (id) => {
         }
       },
 
-      // Lookup Organization
+      // 6️⃣ Lookup Organization
       {
         $lookup: {
           from: "organizations",
@@ -491,7 +515,7 @@ const getReservationDetails = async (id) => {
         }
       },
 
-      // Lookup User
+      // 7️⃣ Lookup User
       {
         $lookup: {
           from: "users",
@@ -507,11 +531,11 @@ const getReservationDetails = async (id) => {
         }
       },
 
-      // ⭐ NEW: Lookup Venue using venueID
+      // 8️⃣ Lookup Venue
       {
         $lookup: {
-          from: "venues",                         // <── your venues table name
-          localField: "event.basicInfo.venue",    // <── the venueID
+          from: "venues",
+          localField: "event.basicInfo.venue",
           foreignField: "_id",
           as: "venue"
         }
@@ -523,7 +547,23 @@ const getReservationDetails = async (id) => {
         }
       },
 
-      // Project Final fields
+      // 9️⃣ Lookup Pre-order Menu Order
+      {
+        $lookup: {
+          from: "menuorders",
+          localField: "preOrderMenuItemsOrder",
+          foreignField: "_id",
+          as: "preOrderMenuItemsOrder"
+        }
+      },
+      {
+        $unwind: {
+          path: "$preOrderMenuItemsOrder",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+
+      // 🔟 Final projection
       {
         $project: {
           organizationId: "$organization._id",
@@ -534,6 +574,7 @@ const getReservationDetails = async (id) => {
           userName: { $concat: ["$user.firstName", " ", "$user.lastName"] },
           venueFullAddress: "$venue.location.fullAddress",
 
+          transactions: 1, // ✅ included here
 
           _id: 1,
           userId: 1,
@@ -544,31 +585,23 @@ const getReservationDetails = async (id) => {
           companyOrganizer: 1,
           optionalEventId: 1,
           createdAt: 1,
-          updatedAt: 1
+          updatedAt: 1,
+          preOrderMenuItemsOrder: 1,
+          ticketingBookingRefs: 1,
         }
       },
 
       { $sort: { createdAt: -1 } }
     ];
 
-
-
-    // Run the aggregation pipeline
     const reservation = await UserReservations.aggregate(pipeline);
 
-    // Check if no reservation found
-    if (!reservation || reservation.length === 0) {
-
-      return null;  // Return null if no reservation found
-    }
-
-
-    return reservation[0];  // Return the first result (since we match by ID)
+    return reservation[0] || null;
   } catch (error) {
-
-    throw error;  // Propagate the error for further handling
+    throw error;
   }
 };
+
 
 
 const getOrganizationsWithReservationsForHome = async ({

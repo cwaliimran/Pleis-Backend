@@ -2,6 +2,30 @@
 const APP_NAME = "Pleis App"; // Define the app name as a constant at the top
 const currentYear = new Date().getFullYear(); // Dynamically get the current year
 
+const OTP_PURPOSE_CONFIG = {
+  signup: {
+    subject: `Welcome to ${APP_NAME}`,
+    title: `Welcome to ${APP_NAME}`,
+    message: "Use the OTP below to complete your registration.",
+  },
+  forgot_password: {
+    subject: "Password Reset OTP",
+    title: "Password Reset Request",
+    message: `We received a request to reset your password for your ${APP_NAME} account.`,
+  },
+  login: {
+    subject: "Login Verification OTP",
+    title: "Login Verification",
+    message: "Use the OTP below to log in to your account.",
+  },
+  generic: {
+    subject: "Your Verification Code",
+    title: "Verification Code",
+    message: "Use the OTP below to proceed.",
+  },
+};
+
+
 // Function to generate Registration link email template
 const registrationViaLinkEmailTemplate = (verificationLink) => `
  <!DOCTYPE html>
@@ -274,6 +298,67 @@ const forgotPasswordViaOtpEmailTemplate = (otp) => `
 </html>
 `;
 
+const otpEmailTemplate = ({ otp, title, message }) => `
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      .email-container {
+        font-family: Arial, sans-serif;
+        line-height: 1.5;
+        color: #333;
+      }
+      .email-header {
+        background-color: #1B1A1D;
+        color: white;
+        text-align: center;
+        padding: 10px 0;
+      }
+      .email-header h2 {
+        color: white;
+        margin: 0;
+      }
+      .email-body {
+        margin: 20px;
+      }
+      .otp-code {
+        display: inline-block;
+        padding: 15px 25px;
+        margin: 15px 0;
+        background-color: #1B1A1D;
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        border-radius: 5px;
+        text-align: center;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 20px;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="email-header">
+        <h2>${title}</h2>
+      </div>
+      <div class="email-body">
+        <p>Hello,</p>
+        <p>${message}</p>
+        <div class="otp-code">${otp}</div>
+        <p>This OTP is valid for 10 minutes. If you didn’t request this, please ignore this email.</p>
+      </div>
+      <div class="footer">
+        &copy; ${currentYear} ${APP_NAME}. All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>
+`;
+
 
 
 /**
@@ -457,4 +542,6 @@ module.exports = {
   forgotPasswordViaOtpEmailTemplate,
   accountStatusEmailTemplate,
   stripeEmailTemplate,
+  otpEmailTemplate,
+  OTP_PURPOSE_CONFIG
 };

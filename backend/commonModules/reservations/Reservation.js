@@ -14,15 +14,11 @@ const ReservationsSchema = new mongoose.Schema(
     },
     reservationType: {
       type: String,
-      enum: [
-        "regular",
-        "vip",
-        "outdoor",
-        "private",
-        "bar",
-        "window",
-      ],
-      default: "regular",
+      required: true,
+    },
+    ticketRequirement: {
+      type: Boolean,
+      default: false,
     },
     reservationSource: {
       type: String,
@@ -50,7 +46,6 @@ const ReservationsSchema = new mongoose.Schema(
         "minimumSpendOnLocation",
         "prepayOption",
         "noCondition",
-        "ticketRequirement",
         "customText",
       ],
       default: "noCondition",
@@ -88,10 +83,8 @@ const ReservationsSchema = new mongoose.Schema(
     ticketType: {
       type: String,
       enum: ["vipEventPass", "generalAdmission", "premiumAccess"],
-      required: function () {
-        return this.conditionType === "ticketRequirement";
-      },
       trim: true,
+      default: null,
     },
 
     customText: {
@@ -152,6 +145,6 @@ const ReservationsSchema = new mongoose.Schema(
   }
 );
 
-const Reservations = mongoose.model("Reservations", ReservationsSchema);
+const   Reservations = mongoose.model("Reservations", ReservationsSchema);
 
 module.exports = Reservations;

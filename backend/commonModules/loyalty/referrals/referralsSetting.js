@@ -28,18 +28,13 @@ const loyaltyReferralSettingsSchema = new mongoose.Schema(
       default: 0,
     },
 
-    purchaseThresholdAmount: {
-      type: Number,
-      required: true,
-      default: 0,
-    },  
 
 
 
     status: {
       type: String,
       enum: ["active", "inactive", "deleted"],
-      default: "active",
+      default: "inactive",
     },
 
     companyOrganizer: {

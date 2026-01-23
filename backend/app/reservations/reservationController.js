@@ -8,187 +8,50 @@ const {
   convertToUtcDateOnly,
 } = require("../../helperUtils/responseUtil");
 const reservationService = require("./reservationService");
+const { validateReservationPayload } = require("./validators/reservationValidation");
 
 
 const createReservation = async (req, res) => {
-  const {
-    partySize,
-    reservationType,
-    companyOrganizer,
-    optionalEventId,
-    organizationId,
-    reservationId,
-    timingSlots,
-    notes,
-    paymentMethod,
-    preOrderMenuItems,
-    
-  } = req.body;
-
-  const userId = req.user._id;
-  const timezone = req.user.timezone;
-
-  // Validate required fields
-  if (
-    !validateParams(req, res, {
-      rawData: [
-        "partySize",
-        "reservationType",
-        "timingSlots",
-        "organizationId",
-        "companyOrganizer",
-        "reservationId",
-        "paymentMethod",
-      ],
-      enumFields: {
-        reservationType: [
-          "regular",
-          "vip",
-          "outdoor",
-          "private",
-          "bar",
-          "window",
-        ],
-        paymentMethod: ["applePay", "card", "cash", "payLater"],
-      },
-      objectIdFields: [
-        "organizationId",
-        "companyOrganizer",
-        "reservationId",
-        "optionalEventId",
-      ],
-    })
-  )
-    return;
-
-  // Timing slots validation
-  if (timingSlots?.enabled === true) {
-    const slots = timingSlots.dateTimeSlots || [];
-
-    if (!Array.isArray(slots) || slots.length === 0) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "timing_slots_required_when_enabled",
-      });
-    }
-
-    // Validate and convert each date/time
-    for (const dateBlock of slots) {
-      if (!dateBlock.date) {
-        return sendResponse({
-          res,
-          statusCode: 400,
-          translationKey: "invalid_date_in_timing_slots",
-        });
-      }
-
-      if (
-        !Array.isArray(dateBlock.timeSlots) ||
-        dateBlock.timeSlots.length === 0
-      ) {
-        return sendResponse({
-          res,
-          statusCode: 400,
-          translationKey: "time_slots_required_for_date",
-        });
-      }
-
-      for (const slot of dateBlock.timeSlots) {
-        if (!slot.startTime || !slot.endTime) {
-          return sendResponse({
-            res,
-            statusCode: 400,
-            translationKey: "invalid_start_or_end_time_in_slot",
-          });
-        }
-
-        // Convert to UTC DateTime strings
-        const startUtc = convertTimezoneToUtc(
-          `${dateBlock.date} ${slot.startTime}`,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-        const endUtc = convertTimezoneToUtc(
-          `${dateBlock.date} ${slot.endTime}`,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-
-        // Replace in object
-        slot.startTime = startUtc;
-        slot.endTime = endUtc;
-      }
-    }
-  } else {
-    // Don't check for empty array if timingSlots is disabled, only apply format conversion
-    const slots = timingSlots.dateTimeSlots || [];
-    for (const dateBlock of slots) {
-      if (!dateBlock.date) continue;
-
-      for (const slot of dateBlock.timeSlots) {
-        if (!slot.startTime || !slot.endTime) continue;
-
-        // Convert to UTC DateTime strings
-        const startUtc = convertTimezoneToUtc(
-          `${dateBlock.date} ${slot.startTime}`,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-        const endUtc = convertTimezoneToUtc(
-          `${dateBlock.date} ${slot.endTime}`,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-
-        // Replace in object
-        slot.startTime = startUtc;
-        slot.endTime = endUtc;
-      }
-    }
-  }
-
-  const data = {
-    userId,
-    partySize,
-    reservationType,
-    optionalEventId,
-    organizationId,
-    companyOrganizer,
-    reservationId,
-    notes,
-    paymentMethod,
-    timingSlots: timingSlots || { enabled: false, dateTimeSlots: [] },
-    preOrderMenuItems,
-
-  };
+  const session = await mongoose.startSession();
 
   try {
-    const Reservation = await reservationService.createReservation(data);
-    if (!Reservation) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "Reservation_creation_failed",
-      });
-    }
+    session.startTransaction();
+
+    const normalizedReservation =
+      validateReservationPayload(req, res, req.body);
+
+    if (!normalizedReservation) return;
+
+    const reservation =
+      await reservationService.createReservationService(
+        {
+          ...normalizedReservation,
+          userId: req.user._id,
+        },
+        session
+      );
+
+    await session.commitTransaction();
 
     return sendResponse({
       res,
       statusCode: 201,
       translationKey: "Reservation_created_successfully",
-      data: Reservation,
+      data: reservation,
     });
-  } catch (error) {
-    const readableError = getReadableErrorMessage(error);
-    return sendResponse({
-      res,
-      statusCode: readableError.statusCode,
-      translationKey: readableError.message,
-      error,
-    });
+
+  } catch (err) {
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    throw err;
+  } finally {
+    session.endSession();
   }
 };
+
+
+
 const getReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let { keyword, status = "active", date, eventId, organizationId } = req.query;
@@ -209,10 +72,10 @@ const getReservations = async (req, res) => {
       });
     }
 
- date = convertToUtcDateOnly(
-    date,
-    "UTC"
-  );
+    date = convertToUtcDateOnly(
+      date,
+      "UTC"
+    );
 
 
     const userId = req.user._id;

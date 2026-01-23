@@ -132,10 +132,16 @@ const gettags = async ({ timezone, page, limit, keyword, status, userId, date, r
   };
 };
 
-const getNotificationsByEventIdService = async (eventId) => {
-  const notifications = await NotificationsRepo.getNotificationsByEventId(eventId);
-  return notifications.map(formatGlobalNotification);
+const getNotificationsByEventIdService = async (eventId, limit, page) => {
+  const { notifications, meta } =
+    await NotificationsRepo.getNotificationsByEventId(eventId, page, limit);
+
+  return {
+    notifications: notifications.map(formatGlobalNotification),
+    meta,
+  };
 };
+
 
 module.exports = {
   createNotifications,

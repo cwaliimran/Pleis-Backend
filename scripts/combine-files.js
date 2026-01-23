@@ -4,7 +4,7 @@ const path = require("path");
 // Target directory (CLI arg or fallback)
 const targetDir =
   process.argv[2] ||
-  "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/admin/reservation";
+  "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/config/redis";
 
 if (!fs.existsSync(targetDir)) {
   console.error("Directory does not exist:", targetDir);
@@ -31,7 +31,9 @@ const IGNORE_DIRS = new Set([
   ".vscode",
 ]);
 
-const outputFile = path.join(targetDir, "combined.txt");
+//use folder name instead of "combined.txt"
+// save at /Users/s/Downloads following folder name
+const outputFile = path.join("/Users/s/Downloads", path.basename(targetDir) + ".txt");
 let combined = "";
 let fileCount = 0;
 

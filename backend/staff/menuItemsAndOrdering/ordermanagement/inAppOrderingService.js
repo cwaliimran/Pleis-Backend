@@ -1,6 +1,9 @@
 const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const OrdersRepo = require("./inAppOrderingRepository");
 const mongoose = require("mongoose");
+const { sendUserNotifications } = require("../../../controllers/communicationController");
+const { NotificationTypes } = require("@NotificationsModel");
+const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
 
 
 const getOrders = async ({ activeorderStatus, pickupFilter, orderStatus, activeKeyword, timezone, page, limit, keyword, status, organizationId, date, range }) => {
@@ -14,7 +17,7 @@ const getOrders = async ({ activeorderStatus, pickupFilter, orderStatus, activeK
   };
 };
 
-const updateOrders = async (id, data) => {
+const updateOrders = async (staffId, id, data) => {
   const order = await OrdersRepo.findOrdersById(id);
 
   if (!order) {
@@ -31,6 +34,7 @@ const updateOrders = async (id, data) => {
   =============================== */
   if (data.status !== undefined) {
     order.status = data.status;
+
   }
 
   /* ===============================
@@ -73,7 +77,34 @@ const updateOrders = async (id, data) => {
     });
   }
 
+
   await order.save();
+
+  emitOrderEvent({
+    io: global.io,
+    eventName: "ORDER_UPDATE",
+    orderId: order._id,
+    organizationId: order.organization,
+    userId: order.user,
+    data: {
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+    },
+  });
+
+
+  sendUserNotifications({
+    recipientIds: [order.user.toString()],
+    title: "Order Updated",
+    body: `Your order ${order.orderNumber} has been updated to status: ${order.status}`,
+    data: {
+      type: NotificationTypes.ORDER_UPDATE,
+      objectType: "menuorders",
+    },
+    image: order.items[0].menuItemSnapShot.image || null,
+    sender: order.organization,
+    objectId: order._id,
+  });
   return order;
 };
 

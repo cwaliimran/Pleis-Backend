@@ -4,10 +4,14 @@ const ReservationRepo = require("./reservationRepository");
 const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
 const { isOrganizationOpenNow } = require("../../shared/commonSchemas/operatingHours");
 
-const createReservation = async (data) => {
-  let Reservation = await ReservationRepo.createReservation(data);
-  return reservationsFormatter(Reservation);
+const createReservationService = async (data, session) => {
+  if (!session) throw new Error("session_required");
+  const reservation =
+    await ReservationRepo.createReservation(data, session);
+
+  return reservationsFormatter(reservation);
 };
+
 
 // Populate venue data for reservations (updated for new schema)
 const getReservations = async ({ timezone, page, limit, keyword, status, userId, eventId, organizationId, date }) => {
@@ -141,7 +145,7 @@ const getReservationDetails = async (id, timezone) => {
 
     // Format the reservation if necessary
     reservation = userReservationsFormatter(reservation, timezone);
-    reservation.qrCode = await logQRCode(reservation);
+    // reservation.qrCode = await logQRCode(reservation);
 
     // Return the reservation object in the response
     return {
@@ -254,7 +258,7 @@ const transferReservation = async (reservationId, newUserId, userId) => {
 
 module.exports = {
   getOrganizationsWithReservationsForHomeService,
-  createReservation,
+  createReservationService,
   getReservations,
   updateReservation,
   getUserReservations,

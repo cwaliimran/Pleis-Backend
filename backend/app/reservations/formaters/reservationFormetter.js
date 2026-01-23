@@ -141,6 +141,16 @@ const userReservationsFormatter = (item, timezone) => {
     }
   }
 
+  //formt preOrderMenuItemsOrder 
+  if (cat.preOrderMenuItemsOrder) {
+    cat.preOrderMenuItemsOrder.items =
+      cat.preOrderMenuItemsOrder.items = cat.preOrderMenuItemsOrder.items.map(item => {
+        item.menuItemSnapShot.image = getFullImageUrl(item.menuItemSnapShot.image || "noimage.png");
+        return item;
+      });
+
+  }
+
   return { ...cat };
 };
 

@@ -49,8 +49,6 @@ const updateGlobalReferral = async (data) => {
   const allowedFields = [
     "userPoints",
     "minimumPurchases",
-    "purchaseThresholdAmount",
-
     "status",
     "referralLimit",
     "referrerPoints",
