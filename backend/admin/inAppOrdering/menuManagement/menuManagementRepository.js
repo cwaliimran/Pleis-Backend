@@ -338,32 +338,13 @@ const getMenuItemsSales = async ({
   ];
 
   /* 🔹 CATEGORY FILTER */
-if (categoryId && mongoose.Types.ObjectId.isValid(categoryId)) {
-  basePipeline.push({
-    $addFields: {
-      menuItems: {
-        $filter: {
-          input: "$menuItems",
-          as: "item",
-          cond: {
-            $eq: [
-              "$$item.category._id",
-              new mongoose.Types.ObjectId(categoryId),
-            ],
-          },
-        },
+  if (categoryId) {
+    basePipeline.push({
+      $match: {
+        "menuItem.category": new mongoose.Types.ObjectId(categoryId),
       },
-    },
-  });
-
-  // Remove sales with no matching items
-  basePipeline.push({
-    $match: {
-      "menuItems.0": { $exists: true },
-    },
-  });
-}
-
+    });
+  }
   /* 🔹 KEYWORD FILTER */
   if (keyword) {
     basePipeline.push({
