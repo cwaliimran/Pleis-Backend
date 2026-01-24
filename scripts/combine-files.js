@@ -4,7 +4,7 @@ const path = require("path");
 // Target directory (CLI arg or fallback)
 const targetDir =
   process.argv[2] ||
-  "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/config/redis";
+  "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/staff/organizations";
 
 if (!fs.existsSync(targetDir)) {
   console.error("Directory does not exist:", targetDir);

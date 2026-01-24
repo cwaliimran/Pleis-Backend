@@ -5,6 +5,7 @@ const { getWithFilters } = require('@dbUtils/queryUtil');
 const { Favorites } = require("../../commonModules/favorites/Favorite");
 const  Venues  = require("@VenuesModel");
 const  VenueTypes = require("@VenueTypesModel");
+const mongoose = require("mongoose");
 
 const  Reservations = require("@ReservationsModel");
 const { getCurrentDateInTimezone } = require("@utils/responseUtil");
@@ -134,17 +135,14 @@ const getVenueTypeTitles = async (venueId) => {
   return venueTypes.map(v => v.title);
 };
 
-
-
-
-
-
-
-
 const getEventReservations = async (eventId) => {
-  const now = new Date(); // UTC now
+  console.log("eventId",eventId)
+  const now = new Date();
 
   const pipeline = [
+    // -----------------------------
+    // 1️⃣ BASE MATCH
+    // -----------------------------
     {
       $match: {
         optionalEventId: eventId,
@@ -153,9 +151,72 @@ const getEventReservations = async (eventId) => {
       }
     },
 
-    // Keep only future time slots
+    // -----------------------------
+    // 2️⃣ LOOKUP USED CAPACITY
+    // -----------------------------
+    {
+      $lookup: {
+        from: "userreservations",
+        let: { reservationId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$reservationId", "$$reservationId"] }
+            }
+          },
+          {
+            $match: {
+              $or: [
+                { status: { $in: ["confirmed", "checkedIn", "completed"] } },
+                {
+                  status: "pendingPayment",
+                  lockUntil: { $gt: now }
+                }
+              ]
+            }
+          },
+          {
+            $count: "used"
+          }
+        ],
+        as: "usage"
+      }
+    },
+
+    // -----------------------------
+    // 3️⃣ COMPUTE REMAINING QTY
+    // -----------------------------
+    {
+      $addFields: {
+        usedReservations: {
+          $ifNull: [{ $first: "$usage.used" }, 0]
+        }
+      }
+    },
+    {
+      $addFields: {
+        remainingReservations: {
+          $subtract: ["$availableReservations", "$usedReservations"]
+        }
+      }
+    },
+
+    // -----------------------------
+    // 4️⃣ FILTER SOLD OUT
+    // -----------------------------
+    {
+      $match: {
+        remainingReservations: { $gt: 0 }
+      }
+    },
+
+    // -----------------------------
+    // 5️⃣ KEEP ONLY FUTURE SLOTS
+    // -----------------------------
     {
       $project: {
+        availableReservations: 1,
+        remainingReservations: 1,
         timingSlots: {
           enabled: 1,
           dateTimeSlots: {
@@ -168,9 +229,7 @@ const getEventReservations = async (eventId) => {
                   $filter: {
                     input: "$$day.timeSlots",
                     as: "slot",
-                    cond: {
-                      $gt: ["$$slot.endTime", now]
-                    }
+                    cond: { $gt: ["$$slot.endTime", now] }
                   }
                 }
               }
@@ -180,9 +239,13 @@ const getEventReservations = async (eventId) => {
       }
     },
 
-    // Remove days that have no remaining future slots
+    // -----------------------------
+    // 6️⃣ REMOVE EMPTY DAYS
+    // -----------------------------
     {
       $project: {
+        availableReservations: 1,
+        remainingReservations: 1,
         timingSlots: {
           enabled: 1,
           dateTimeSlots: {
