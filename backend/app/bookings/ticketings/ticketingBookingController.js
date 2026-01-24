@@ -41,6 +41,10 @@ const createTicketingBooking = async (req, res) => {
         },
         session
       );
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
     } else {
       // Ticketing-only flow
       result = await createTicketingBookingService(

@@ -22,7 +22,7 @@ const createReservation = async (req, res) => {
 
     if (!normalizedReservation) return;
 
-    const reservation =
+    const result =
       await reservationService.createReservationService(
         {
           ...normalizedReservation,
@@ -31,25 +31,41 @@ const createReservation = async (req, res) => {
         session
       );
 
+    if (!result.success) {
+      await session.abortTransaction();
+
+      return sendResponse({
+        res,
+        statusCode: 409,
+        translationKey: result.error
+      });
+    }
+
     await session.commitTransaction();
 
     return sendResponse({
       res,
       statusCode: 201,
       translationKey: "Reservation_created_successfully",
-      data: reservation,
+      data: result.reservation,
     });
 
   } catch (err) {
     if (session.inTransaction()) {
       await session.abortTransaction();
     }
-    throw err;
+
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: err,
+    });
+
   } finally {
     session.endSession();
   }
 };
-
 
 
 const getReservations = async (req, res) => {

@@ -107,12 +107,19 @@ const checkInEventAttendeeService = async (eventId, ticketBookingId, scannedBy) 
   return eventRepo.checkInEventAttendee(eventId, ticketBookingId, scannedBy);
 };
 
+const getOfflineEventTicketsService = async (eventId) => {
+  return eventRepo.getOfflineEventTickets(eventId);
+}
 
-
+const bulkCheckInEventAttendeesService = async (eventId, scans, scannedBy) => {
+  return eventRepo.bulkCheckInEventAttendees(eventId, scans, scannedBy);
+};
 
 module.exports = {
   getEvents,
   getEventDetails,
   getEventAttendeesService,
-  checkInEventAttendeeService
+  checkInEventAttendeeService,
+  getOfflineEventTicketsService,
+  bulkCheckInEventAttendeesService
 };

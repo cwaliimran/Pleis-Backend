@@ -2,7 +2,10 @@
 
 const Organizations = require("@OrganizationModel");
 const mongoose = require("mongoose");
-
+const moment = require("moment-timezone");
+const { OrganizationStaffAttendance } = require(
+  "@OrganizationStaffAttendanceModel"
+);
 
 const getOrganizationsAsStaff = async (userId) => {
   userId = userId?.userId || userId;
@@ -92,9 +95,137 @@ const getOrganizationsAsStaff = async (userId) => {
 
 
 
+// -----------------------------
+// CHECK-IN
+// -----------------------------
+const checkInToOrganization = async ({
+  organizationId,
+  staffId,
+  source = "manual",
+  timezone = "UTC"
+}) => {
+  const orgId = new mongoose.Types.ObjectId(organizationId);
+  const userId = new mongoose.Types.ObjectId(staffId);
+
+  // 🔒 Validate staff assignment
+  const exists = await Organizations.exists({
+    _id: orgId,
+    $or: [{ creator: userId }, { "staff.user": userId }]
+  });
+
+  if (!exists) {
+    throw new Error("staff_not_assigned_to_organization");
+  }
+
+  const attendanceDate = moment()
+    .tz(timezone)
+    .format("YYYY-MM-DD");
+
+  // ⛔ Prevent double check-in
+  const alreadyCheckedIn = await OrganizationStaffAttendance.exists({
+    organization: orgId,
+    staff: userId,
+    attendanceDate,
+    status: "checkedIn"
+  });
+
+  if (alreadyCheckedIn) return true;
+
+  await OrganizationStaffAttendance.updateOne(
+    {
+      organization: orgId,
+      staff: userId,
+      attendanceDate
+    },
+    {
+      $set: { status: "checkedIn" },
+      $push: {
+        history: {
+          type: "checkIn",
+          at: new Date(),
+          source
+        }
+      }
+    },
+    { upsert: true }
+  );
+
+  return true;
+};
+
+// -----------------------------
+// CHECK-OUT
+// -----------------------------
+const checkOutFromOrganization = async ({
+  organizationId,
+  staffId,
+  timezone = "UTC"
+}) => {
+  const orgId = new mongoose.Types.ObjectId(organizationId);
+  const userId = new mongoose.Types.ObjectId(staffId);
+
+  const attendanceDate = moment()
+    .tz(timezone)
+    .format("YYYY-MM-DD");
+
+  // ⛔ Prevent double checkout
+  const alreadyCheckedOut = await OrganizationStaffAttendance.exists({
+    organization: orgId,
+    staff: userId,
+    attendanceDate,
+    status: "checkedOut"
+  });
+
+  if (alreadyCheckedOut) return true;
+
+  await OrganizationStaffAttendance.updateOne(
+    {
+      organization: orgId,
+      staff: userId,
+      attendanceDate,
+      status: "checkedIn"
+    },
+    {
+      $set: { status: "checkedOut" },
+      $push: {
+        history: {
+          type: "checkOut",
+          at: new Date(),
+          source: "manual"
+        }
+      }
+    }
+  );
+
+  return true;
+};
+
+// get checked-in staff IDs for organization (plain string IDs)
+const getCheckedInStaffForOrganization = async (organizationId, timezone = "UTC") => {
+  const orgId = new mongoose.Types.ObjectId(organizationId);
+
+  /* 
+  commented out to allow checking all-time checked-in staff may a staff checked in on a previous date and hasn't checked out yet
+  */
+  // const today = moment()
+  //   .tz(timezone)
+  //   .format("YYYY-MM-DD");
+
+  const staffIds = await OrganizationStaffAttendance.distinct("staff", {
+    organization: orgId,
+    // attendanceDate: today,
+    status: "checkedIn"
+  });
+
+  // convert ObjectId → string
+  return staffIds.map(id => id.toString());
+};
+
 
 module.exports = {
-
   getOrganizationsAsStaff,
+  checkInToOrganization,
+  checkOutFromOrganization,
+  getCheckedInStaffForOrganization
 
 };

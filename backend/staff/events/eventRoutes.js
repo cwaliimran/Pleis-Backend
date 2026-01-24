@@ -3,7 +3,9 @@ const {
   getEvents,
   getEventDetails,
   getEventAttendees,
-  checkInEventAttendee
+  checkInEventAttendee,
+  getOfflineEventTickets,
+  bulkCheckInEventAttendees
 } = require("./eventController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -26,6 +28,9 @@ router.post("/:id/checkin/:ticketBookingId", checkInEventAttendee);
 
 //get event details
 router.post("/:id", getEventDetails);
+
+router.get("/:id/offline-tickets", getOfflineEventTickets);
+router.post("/:id/bulk-checkin", bulkCheckInEventAttendees);
 
 
 module.exports = router;
