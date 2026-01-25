@@ -244,130 +244,127 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
 }
 
 
-const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationId }) => {
+const getUserReservations = async ({
+  timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  userId,
+  organizationsId,
+  date,
+  range,
+  skip = 0,
+  reservationId
+}) => {
   const now = getCurrentDateInTimezone({ timezone });
-  console.log("reservation", reservationId);
-  console.log("organizationsId",organizationsId);
-  console.log("status",status );
-  const pipeline = [
-    {
-      $match: {
-        ...(status && { status: status }),
-        ...(organizationsId && { organizationId: new mongoose.Types.ObjectId(organizationsId) }),
-        ...(reservationId && { reservationId: new mongoose.Types.ObjectId(reservationId) })
-      }
-    },
+
+  const pipeline = [];
+
+  // -----------------------------
+  // 1️⃣ BASE MATCH (UserReservations)
+  // -----------------------------
+  const match = {};
+
+  if (status) {
+    match.status = status;
+  } else {
+    match.status = { $ne: "deleted" };
+  }
+
+  if (organizationsId) {
+    match.organizationId = new mongoose.Types.ObjectId(organizationsId);
+  }
+
+  if (reservationId) {
+    match.reservationId = new mongoose.Types.ObjectId(reservationId);
+  }
+
+  if (userId) {
+    match.userId = new mongoose.Types.ObjectId(userId);
+  }
+
+  pipeline.push({ $match: match });
+
+  // -----------------------------
+  // 2️⃣ JOIN RESERVATION DEFINITION
+  // -----------------------------
+  pipeline.push(
     {
       $lookup: {
-        from: "userreservations",
-        localField: "_id",          // reservation _id
-        foreignField: "_id",        // reservation _id
-        pipeline: [
-          {
-            $project: {
-              firstName: 1,
-              lastName: 1,
-              phoneNumber: 1
-            }
-          }
-        ],
-        as: "user"
+        from: "reservations",
+        localField: "reservationId",
+        foreignField: "_id",
+        as: "reservation"
       }
     },
     {
-      $addFields: {
-        user: { $arrayElemAt: ["$user", 0] }
+      $unwind: {
+        path: "$reservation",
+        preserveNullAndEmptyArrays: true
       }
-    },
-    { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
-    {
-      $addFields: {
-        validEventId: {
-          $cond: {
-            if: { $and: [{ $ne: ["$optionalEventId", ""] }, { $ne: ["$optionalEventId", null] }] },
-            then: { $toObjectId: "$optionalEventId" },
-            else: null
-          }
-        }
-      }
-    },
+    }
+  );
+
+  // -----------------------------
+  // 3️⃣ JOIN EVENT (ObjectId ref)
+  // -----------------------------
+  pipeline.push(
     {
       $lookup: {
         from: "events",
-        localField: "validEventId",
+        localField: "optionalEventId",
         foreignField: "_id",
         as: "event"
       }
     },
-    { $unwind: { path: "$event", preserveNullAndEmptyArrays: true } },
     {
-      $project: {
-        _id: 1,
-        userId: 1,
-        user: 1,
-        partySize: 1,
-        reservationType: 1,
-        organizationId: 1,
-        companyOrganizer: 1,
-        reservationId: 1,
-        timingSlots: 1,
-        status: 1,
-        optionalEventId: 1,
-        createdAt: 1,
-        updatedAt: 1,
-        notes: 1,
-        member: "Gold",
-        eventTitle: { $ifNull: ["$event.basicInfo.title", "No Event Title"] }
+      $unwind: {
+        path: "$event",
+        preserveNullAndEmptyArrays: true
       }
     }
-  ];
+  );
 
-
-  if (range == "monthly") {
+  // -----------------------------
+  // 4️⃣ DATE RANGE FILTERS (Slots)
+  // -----------------------------
+  if (range === "monthly") {
     const { start, end } = getStartAndEndOfMonth(now, timezone);
-
     pipeline.push({
       $match: {
         "timingSlots.dateTimeSlots": {
-          $elemMatch: {
-            date: { $gte: start, $lt: end }
-          }
+          $elemMatch: { date: { $gte: start, $lt: end } }
         }
       }
     });
   }
-  if (range == "weekly") {
+
+  if (range === "weekly") {
     const { start, end } = getStartAndEndOfWeek(now, timezone);
-
     pipeline.push({
       $match: {
         "timingSlots.dateTimeSlots": {
-          $elemMatch: {
-            date: { $gte: start, $lt: end }
-          }
+          $elemMatch: { date: { $gte: start, $lt: end } }
         }
       }
     });
   }
-  if (range == "today") {
+
+  if (range === "today") {
     const { start, end } = getStartAndEndOfDay(now, timezone);
     pipeline.push({
       $match: {
         "timingSlots.dateTimeSlots": {
-          $elemMatch: {
-            date: { $gte: start, $lt: end }
-          }
+          $elemMatch: { date: { $gte: start, $lt: end } }
         }
       }
     });
   }
-  // Apply filters
-  if (status) {
-    pipeline.push({ $match: { status } });
-  } else {
-    pipeline.push({ $match: { status: { $ne: "deleted" } } });
-  }
 
+  // -----------------------------
+  // 5️⃣ CREATED DATE FILTER
+  // -----------------------------
   if (date) {
     const start = new Date(date);
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
@@ -378,11 +375,12 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
     });
   }
 
+  // -----------------------------
+  // 6️⃣ KEYWORD SEARCH
+  // -----------------------------
   if (keyword) {
     const keywordMatch = buildKeywordQueryFromModels(
-      [
-        { schema: UserReservations.schema }
-      ],
+      [{ schema: UserReservations.schema }],
       keyword
     );
 
@@ -391,9 +389,14 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
     }
   }
 
+  // -----------------------------
+  // 7️⃣ SORT
+  // -----------------------------
   pipeline.push({ $sort: { createdAt: -1 } });
 
-  // Apply pagination + counts using $facet
+  // -----------------------------
+  // 8️⃣ PAGINATION + TOTAL (SINGLE SOURCE)
+  // -----------------------------
   pipeline.push({
     $facet: {
       data: [
@@ -404,38 +407,21 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
     }
   });
 
-
+  // -----------------------------
+  // 9️⃣ EXECUTION
+  // -----------------------------
   const result = await UserReservations.aggregate(pipeline);
-console.log("result",result );
-  let reservations = result[0]?.data || [];
+
+  const reservations = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-  // Additional counts for meta (active/inactive/total by userId as creator)
-  const [total, active, inactive] = await Promise.all([
-    UserReservations.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "cancelled" } }),
-    UserReservations.countDocuments({ status: "active", ...(userId && { userId: userId }) }),
-    UserReservations.countDocuments({ status: "inactive", ...(userId && { userId: userId }) })
-  ]);
-
   const meta = generateMeta(page, limit, totalFiltered);
-  meta.reservationsCount = { total, active, inactive };
 
-
-  reservations = reservations.map(item => {
-    const formatted = reservationsFormatterAdjustDates(item);
-    if (formatted.conditionType == "noCondition" || formatted.conditionType == "ticketRequirement" || formatted.conditionType == "customText" || formatted.conditionType == "ticketRequirement") {
-      delete formatted.amount;
-      if (formatted.conditionType == "noCondition") {
-        delete formatted.ticketType;
-      }
-    }
-    else {
-      delete formatted.ticketType;
-    }
-    return formatted;
-  });
-  return { reservations, meta }
-}
+  return {
+    reservations: reservations.map(reservationsFormatterAdjustDates),
+    meta
+  };
+};
 
 
 
@@ -662,22 +648,29 @@ const getCalendarReservations = async ({
   organization,
   date
 }) => {
+  const pipeline = [];
 
+  // -----------------------------
+  // 1️⃣ BASE MATCH
+  // -----------------------------
+  const match = {
+    status: { $ne: "deleted" }
+  };
 
-  organization = new mongoose.Types.ObjectId(organization);
+  if (companyOrganizer) {
+    match.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
+  }
 
-  const pipeline = [
-    {
-      $match: {
-        ...(companyOrganizer && {
-          companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer)
-        }),
-        ...(organization && {
-          organizationId: organization
-        }),
-      }
-    },
+  if (organization) {
+    match.organizationId = new mongoose.Types.ObjectId(organization);
+  }
 
+  pipeline.push({ $match: match });
+
+  // -----------------------------
+  // 2️⃣ JOIN USER
+  // -----------------------------
+  pipeline.push(
     {
       $lookup: {
         from: "users",
@@ -695,113 +688,70 @@ const getCalendarReservations = async ({
         as: "user"
       }
     },
-
     {
-      $addFields: {
-        user: { $arrayElemAt: ["$user", 0] }
+      $unwind: {
+        path: "$user",
+        preserveNullAndEmptyArrays: true
       }
-    },
+    }
+  );
 
-    //lookup reservationId from reservations collection
+  // -----------------------------
+  // 3️⃣ JOIN RESERVATION DEFINITION
+  // -----------------------------
+  pipeline.push(
     {
       $lookup: {
         from: "reservations",
         localField: "reservationId",
         foreignField: "_id",
-        as: "reservation",
         pipeline: [
           {
             $project: {
-              reservationType: 1
+              reservationType: 1,
+              conditionType: 1,
+              ticketType: 1,
+              amount: 1
             }
           }
-        ]
+        ],
+        as: "reservation"
       }
     },
     {
-      $addFields: {
-        reservation: { $arrayElemAt: ["$reservation", 0] }
+      $unwind: {
+        path: "$reservation",
+        preserveNullAndEmptyArrays: true
       }
-    },
+    }
+  );
 
-    // {
-    //   $unwind: {
-    //     path: "$user",
-    //     preserveNullAndEmptyArrays: true
-    //   }
-    // },
-
-    {
-      $addFields: {
-        validEventId: {
-          $cond: {
-            if: {
-              $and: [
-                { $ne: ["$optionalEventId", ""] },
-                { $ne: ["$optionalEventId", null] }
-              ]
-            },
-            then: { $toObjectId: "$optionalEventId" },
-            else: null
-          }
-        }
-      }
-    },
-
+  // -----------------------------
+  // 4️⃣ JOIN EVENT (ObjectId ref)
+  // -----------------------------
+  pipeline.push(
     {
       $lookup: {
         from: "events",
-        localField: "validEventId",
+        localField: "optionalEventId",
         foreignField: "_id",
         as: "event"
       }
     },
-
     {
       $unwind: {
         path: "$event",
         preserveNullAndEmptyArrays: true
       }
-    },
-
-    {
-      $project: {
-        _id: 1,
-        userId: 1,
-        user: 1,
-        partySize: 1,
-        organizationId: 1,
-        reservation: 1,
-        companyOrganizer: 1,
-        reservationId: 1,
-        timingSlots: 1,
-        status: 1,
-        optionalEventId: 1,
-        createdAt: 1,
-        updatedAt: 1,
-        notes: 1,
-        member: "Gold",
-        eventTitle: {
-          $ifNull: ["$event.basicInfo.title", "No Event Title"]
-        }
-      }
-    },
-
-    {
-      $match: {
-        status: { $ne: "deleted" }
-      }
     }
-  ];
+  );
 
-  // ✅ DATE FILTER (added safely)
+  // -----------------------------
+  // 5️⃣ DATE FILTER (calendar day)
+  // -----------------------------
   if (date) {
-    const dateFilter = new Date(date);
-    console.log("timezone", timezone)
-    console.log("date", date)
-    console.log("dateFilter", dateFilter)
-    const { start, end } = getStartAndEndOfDay(dateFilter, timezone);
-    console.log("start, end", start, end)
+    const dateObj = new Date(date);
+    const { start, end } = getStartAndEndOfDay(dateObj, timezone);
 
     pipeline.push({
       $match: {
@@ -814,31 +764,47 @@ const getCalendarReservations = async ({
     });
   }
 
-  pipeline.push({ $sort: { createdAt: -1 } });
-
-  const reservations = await UserReservations.aggregate(pipeline);
-
-  const formattedReservations = reservations.map(item => {
-    const formatted = reservationsFormatterAdjustDates(item);
-
-    if (
-      formatted.conditionType === "noCondition" ||
-      formatted.conditionType === "ticketRequirement" ||
-      formatted.conditionType === "customText"
-    ) {
-      delete formatted.amount;
-      if (formatted.conditionType === "noCondition") {
-        delete formatted.ticketType;
+  // -----------------------------
+  // 6️⃣ FINAL PROJECTION
+  // -----------------------------
+  pipeline.push({
+    $project: {
+      _id: 1,
+      userId: 1,
+      user: 1,
+      partySize: 1,
+      organizationId: 1,
+      companyOrganizer: 1,
+      reservationId: 1,
+      reservation: 1,
+      timingSlots: 1,
+      status: 1,
+      optionalEventId: 1,
+      createdAt: 1,
+      updatedAt: 1,
+      notes: 1,
+      member: "Gold",
+      eventTitle: {
+        $ifNull: ["$event.basicInfo.title", "No Event Title"]
       }
-    } else {
-      delete formatted.ticketType;
     }
-
-    return formatted;
   });
 
-  return { reservations: formattedReservations };
+  // -----------------------------
+  // 7️⃣ SORT
+  // -----------------------------
+  pipeline.push({ $sort: { createdAt: -1 } });
+
+  // -----------------------------
+  // 8️⃣ EXECUTE
+  // -----------------------------
+  const reservations = await UserReservations.aggregate(pipeline);
+
+  return {
+    reservations: reservations.map(reservationsFormatterAdjustDates)
+  };
 };
+
 
 
 

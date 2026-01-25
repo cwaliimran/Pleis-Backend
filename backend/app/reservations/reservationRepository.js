@@ -244,8 +244,10 @@ const getReservations = async ({
   // -----------------------------
   const match = {};
 
+  let eventObjectId = new mongoose.Types.ObjectId(eventId);
+
   if (eventId) {
-    match.optionalEventId = eventId;
+    match.optionalEventId = eventObjectId;
   }
 
   if (organizationId) {

@@ -136,8 +136,9 @@ const getVenueTypeTitles = async (venueId) => {
 };
 
 const getEventReservations = async (eventId) => {
-  console.log("eventId",eventId)
   const now = new Date();
+
+  let eventObjectId = new mongoose.Types.ObjectId(eventId);
 
   const pipeline = [
     // -----------------------------
@@ -145,7 +146,7 @@ const getEventReservations = async (eventId) => {
     // -----------------------------
     {
       $match: {
-        optionalEventId: eventId,
+        optionalEventId: eventObjectId,
         status: { $ne: "deleted" },
         "timingSlots.enabled": true
       }

@@ -127,11 +127,10 @@ const ReservationsSchema = new mongoose.Schema(
       default: false,
     },
 
-    optionalEventId: {
-      type: String,
-      default: "",
-    },
-
+     optionalEventId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "events",
+      },
 
     status: {
       type: String,
@@ -144,6 +143,8 @@ const ReservationsSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+ReservationsSchema.index({ optionalEventId: 1 });
 
 const   Reservations = mongoose.model("Reservations", ReservationsSchema);
 
