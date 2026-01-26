@@ -176,44 +176,12 @@ const deleteChallenge = async (req, res) => {
 
 
 
-const getTicketings = async (req, res) => {
-  const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, eventId } = req.query;
-  const { timezone } = req.user;
 
-  try {
-    const { ticketings, meta } = await challengeService.getTicketings({
-      timezone,
-      page,
-      limit,
-      keyword,
-      status,
-      date,
-      eventId,
-    });
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "ticketings_fetched_successfully",
-      data: ticketings,
-      meta,
-    });
-  } catch (error) {
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error,
-    });
-  }
-};
 
 module.exports = {
   createChallenge,
   getChallenges,
   getChallengeDetails,
   updateChallenge,
-  getTicketings,
   deleteChallenge,
 };

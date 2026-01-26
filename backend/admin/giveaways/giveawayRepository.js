@@ -10,6 +10,16 @@ const { UserReservations } = require("@UserReservationsModel");
 const { formatUpdate } = require("./formatters/updateFormatter");
 const { NotificationExp, NotificationTypes } = require("@NotificationsModel");
 const { sendUserNotifications } = require("../../controllers/communicationController");
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_GIVEAWAYS_CACHE_KEY = "giveaways:active";
+const buildGiveawaysCacheKey = ({
+  scope = "public", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_GIVEAWAYS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
+ 
 const getUserIdsForEvent = async (eventId) => {
   try {
 
@@ -78,6 +88,7 @@ const getUserIdsForEvent = async (eventId) => {
 
 const createGiveaway = async (data) => {
   try {
+    await invalidate(ACTIVE_GIVEAWAYS_CACHE_KEY);
     const userIds = await getUserIdsForEvent(data.event);
     data.creator = await getCreatorOrganizationId(data.creator)
 
@@ -100,6 +111,16 @@ const createGiveaway = async (data) => {
 
 
 const getGiveaway = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
+    const cacheKey = buildGiveawaysCacheKey({
+    scope: "admin",
+    skip,
+    limit,
+  });
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400, // 1 day
+ 
+    fetchFn: async () => {
   let totalParticipants = 0;
   // userId = await getCreatorOrganizationId(userId);  // Assuming getCreatorOrganizationId returns a valid userId
 
@@ -244,6 +265,8 @@ const getGiveaway = async ({ timezone, page, limit, keyword, status, userId, dat
   meta.GiveawayCount = { total, active, inactive };
 
   return { Giveaways, meta };
+    },
+  });
 };
 
 const getWinners = async ({ giveawayId, timezone, page, limit, skip }) => {
@@ -341,6 +364,7 @@ const findGiveawayById = async (id) => {
 };
 
 const findByIdAndUpdate = async (id, data) => {
+  await invalidate(ACTIVE_GIVEAWAYS_CACHE_KEY);
   return Giveaway.findByIdAndUpdate(id, data, { new: true });
 };
 
