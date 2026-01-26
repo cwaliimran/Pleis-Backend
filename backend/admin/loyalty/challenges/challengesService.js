@@ -4,7 +4,16 @@ const challengeRepo = require("./challengesRepository");
 const { generateMeta } = require("@utils/responseUtil");
 const formatChallenge = require("../../../commonModules/loyalty/challenges/formatters/formatChallenge");
 const { default: mongoose } = require("mongoose");
-
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_LOYALTY_CHALLENGE_CACHE_KEY = "loyaltyChallenge:active";
+const buildLoyaltyChallengeCacheKey = ({
+  scope = "public", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_LOYALTY_CHALLENGE_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
+ 
 const createChallenge = async (data) => {
   let challenge = await challengeRepo.createChallenge(data);
   return formatChallenge(challenge.toObject());
@@ -51,6 +60,7 @@ const updateChallenge = async (id, data) => {
   if (!challenge) return null;
   Object.assign(challenge, data);
   await challenge.save();
+  await invalidate(ACTIVE_LOYALTY_CHALLENGE_CACHE_KEY);
 
   return formatChallenge(challenge.toObject());
 };

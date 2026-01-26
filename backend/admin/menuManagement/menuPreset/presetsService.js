@@ -1,13 +1,21 @@
 // services/presetService.js
 const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
-const { getFullImageUrl } = require("@utils/imageHelper"); 
+const { getFullImageUrl } = require("@utils/imageHelper");
 
 const { generateMeta } = require("@utils/responseUtil");
 const Presets = require("@PresetsModel");
 const presetRepo = require("./presetsRepository");
 const mongoose = require("mongoose");
 const { formatItemCategory } = require("../menuItems/formatter/formatMenuItems");
-
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_MENU_PRESETS_CACHE_KEY = "menuPresets:active";
+const buildMenuPresetsCacheKey = ({
+  scope = "admin", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_MENU_PRESETS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
 const createPreset = async (data) => {
   let preset = await presetRepo.createPreset(data);
   preset.image = getFullImageUrl(preset.image || "noimage.png");
@@ -15,114 +23,137 @@ const createPreset = async (data) => {
 };
 
 // Populate venue data for presets (updated for new schema)
-const getPresets = async ({ page, limit, keyword, status, userId, date }) => {
+const getPresets = async ({
+  page,
+  limit,
+  keyword,
+  status,
+  userId,
+  date,
+}) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const pipeline = [
-    // Match user access (preset creator)
-    {
-      $match: {
-        ...(userId && { creator: new mongoose.Types.ObjectId(userId) })
-      }
-    }
-  ];
+  const cacheKey = buildMenuPresetsCacheKey({
+    scope: "admin",
+    skip,
+    limit,
+  });
 
-  // Apply filters
-  if (status) {
-    pipeline.push({ $match: { status } });
-  } else {
-    pipeline.push({ $match: { status: { $ne: "deleted" } } });
-  }
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400, // 1 day
 
-  if (date) {
-    const start = new Date(date);
-    const end = new Date(new Date(date).setDate(start.getDate() + 1));
-    pipeline.push({
-      $match: {
-        createdAt: { $gte: start, $lt: end }
-      }
-    });
-  }
-
-  const keywordMatch = buildKeywordQueryFromModels(
-    [
-      { schema: Presets.schema }
-    ],
-    keyword
-  );
-
-  if (Object.keys(keywordMatch).length) {
-    pipeline.push({ $match: keywordMatch });
-  }
-
-  pipeline.push({ $sort: { createdAt: -1 } });
-
-  // Populate category and project only _id, image, and title
-  pipeline.push({
-    $lookup: {
-      from: "menuitemcategories",
-      localField: "category",
-      foreignField: "_id",
-      as: "category",
-      pipeline: [
+    fetchFn: async () => {
+      const pipeline = [
         {
-          $project: {
-            _id: 1,
-            image: 1,
-            title: 1
-          }
-        }
-      ]
-    }
+          $match: {
+            ...(userId && { creator: new mongoose.Types.ObjectId(userId) }),
+          },
+        },
+      ];
+
+      if (status) {
+        pipeline.push({ $match: { status } });
+      } else {
+        pipeline.push({ $match: { status: { $ne: "deleted" } } });
+      }
+
+      if (date) {
+        const start = new Date(date);
+        const end = new Date(new Date(date).setDate(start.getDate() + 1));
+        pipeline.push({
+          $match: {
+            createdAt: { $gte: start, $lt: end },
+          },
+        });
+      }
+
+      const keywordMatch = buildKeywordQueryFromModels(
+        [{ schema: Presets.schema }],
+        keyword
+      );
+
+      if (Object.keys(keywordMatch).length) {
+        pipeline.push({ $match: keywordMatch });
+      }
+
+      pipeline.push({ $sort: { createdAt: -1 } });
+
+      pipeline.push({
+        $lookup: {
+          from: "menuitemcategories",
+          localField: "category",
+          foreignField: "_id",
+          as: "category",
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                image: 1,
+                title: 1,
+              },
+            },
+          ],
+        },
+      });
+
+      pipeline.push({
+        $unwind: {
+          path: "$category",
+          preserveNullAndEmptyArrays: true,
+        },
+      });
+
+      pipeline.push({
+        $facet: {
+          data: [
+            { $skip: skip },
+            ...(limit === 0 ? [] : [{ $limit: limit }]),
+          ],
+          totalFiltered: [{ $count: "count" }],
+        },
+      });
+
+      const result = await Presets.aggregate(pipeline);
+
+      const presets = result[0]?.data || [];
+      const totalFiltered = result[0]?.totalFiltered?.[0]?.count || 0;
+
+      const [total, active, inactive] = await Promise.all([
+        Presets.countDocuments({
+          ...(userId && { creator: userId }),
+          status: { $ne: "deleted" },
+        }),
+        Presets.countDocuments({
+          status: "active",
+          ...(userId && { creator: userId }),
+        }),
+        Presets.countDocuments({
+          status: "inactive",
+          ...(userId && { creator: userId }),
+        }),
+      ]);
+
+      const formattedPresets = presets.map((preset) => ({
+        ...preset,
+        category: formatItemCategory(preset.category),
+        image: getFullImageUrl(preset.image || "noimage.png"),
+      }));
+
+      const meta = generateMeta(page, limit, totalFiltered);
+      meta.presetsCount = { total, active, inactive };
+
+      return {
+        presets: formattedPresets,
+        meta,
+      };
+    },
   });
-  pipeline.push({
-    $unwind: {
-      path: "$category",
-      preserveNullAndEmptyArrays: true
-    }
-  });
-
-  // Apply pagination + counts using $facet
-  pipeline.push({
-    $facet: {
-      data: [
-        { $skip: skip },
-        ...(limit === 0 ? [] : [{ $limit: limit }])
-      ],
-      totalFiltered: [{ $count: "count" }]
-    }
-  });
-
-  const result = await Presets.aggregate(pipeline);
-
-  const presets = result[0]?.data || [];
-  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
-
-  // Additional counts for meta (active/inactive/total by userId as creator)
-  const [total, active, inactive] = await Promise.all([
-    Presets.countDocuments({ ...(userId && { creator: userId }), status: { $ne: "deleted" } }),
-    Presets.countDocuments({ status: "active", ...(userId && { creator: userId }) }),
-    Presets.countDocuments({ status: "inactive", ...(userId && { creator: userId }) })
-  ]);
-
-  //format presets
-  const formattedPresets = presets.map(preset => ({
-    ...preset,
-    category: formatItemCategory(preset.category),
-    image: getFullImageUrl(preset.image || "noimage.png")
-  }));
-
-  const meta = generateMeta(page, limit, totalFiltered);
-  meta.presetsCount = { total, active, inactive };
-
-  return {
-    presets: formattedPresets,
-    meta
-  };
 };
 
 const updatePreset = async (id, data) => {
   const preset = await presetRepo.findPresetById(id);
+  await invalidate(ACTIVE_MENU_PRESETS_CACHE_KEY);
   if (!preset) return null;
 
   const allowedFields = [

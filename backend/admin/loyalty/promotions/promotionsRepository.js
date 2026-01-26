@@ -5,7 +5,16 @@ const {
   ProductSalePromotion,
   ClaimPromotion,
 } = require("../../../commonModules/loyalty/promotions/models/Promotion/");
-
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_LOYALTY_PROMOTION_CACHE_KEY = "loyaltyPromotion:active";
+const buildLoyaltyPromotionCacheKey = ({
+  scope = "public", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_LOYALTY_PROMOTION_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
+ 
 // Decide which discriminator model to use
 const getModelBypromotionType = (promotionType) => {
   switch (promotionType) {
@@ -29,6 +38,7 @@ const create = async (data) => {
     const Model = getModelBypromotionType(data.promotionType);
     const item = new Model(data);
     const saved = await item.save();
+    await invalidate(ACTIVE_LOYALTY_PROMOTION_CACHE_KEY); // Invalidate relevant cache
     return saved.toObject(); // Removes Mongoose internals
   } catch (err) {
     throw err;
@@ -37,6 +47,16 @@ const create = async (data) => {
 
 
 const getWithFilters = async (query, skip = 0, limit = 20) => {
+    const cacheKey = buildLoyaltyPromotionCacheKey({
+    scope: "admin",
+    skip,
+    limit,
+  });
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400, // 1 day
+ 
+    fetchFn: async () => {
   // Build aggregation pipeline
   const pipeline = [
     { $match: query },
@@ -108,6 +128,8 @@ const getWithFilters = async (query, skip = 0, limit = 20) => {
 
   const results = await Promotion.aggregate(pipeline).allowDiskUse(true);
   return results;
+    },
+  });
 };
 
 module.exports = {
@@ -130,16 +152,19 @@ const findById = async (id) => {
 // Update and save
 const updateData = async (item, data) => {
   Object.assign(item, data);
+  await invalidate(ACTIVE_LOYALTY_PROMOTION_CACHE_KEY); // Invalidate relevant cache
   return await item.save();
 };
 
 // Delete
 const deleteItem = async (item) => {
+  await invalidate(ACTIVE_LOYALTY_PROMOTION_CACHE_KEY); // Invalidate relevant cache
   return await item.deleteOne();
 };
 
 // findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
+  await invalidate(ACTIVE_LOYALTY_PROMOTION_CACHE_KEY); // Invalidate relevant cache
   return Promotion.findByIdAndUpdate(id, data, { new: true })
     .populate("menuItem")
     .populate("tierLimit");

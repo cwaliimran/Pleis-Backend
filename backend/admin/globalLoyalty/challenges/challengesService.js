@@ -4,7 +4,15 @@ const challengeRepo = require("./challengesRepository");
 const { generateMeta } = require("@utils/responseUtil");
 const formatChallenge = require("../../../commonModules/loyalty/challenges/formatters/formatChallenge");
 const { default: mongoose } = require("mongoose");
-
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_GLOBAL_LOYALTY_CHALLENGES_CACHE_KEY = "globalLoyaltyChallenges:active";
+const buildGlobalLoyaltyChallengesCacheKey = ({
+  scope = "public", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_GLOBAL_LOYALTY_CHALLENGES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
 const createChallenge = async (data) => {
   let challenge = await challengeRepo.createChallenge(data);
   return formatChallenge(challenge.toObject());
@@ -48,6 +56,7 @@ const updateChallenge = async (id, data) => {
   const challenge = await challengeRepo.findChallengeById(id);
   if (!challenge) return null;
   Object.assign(challenge, data);
+  await invalidate(ACTIVE_GLOBAL_LOYALTY_CHALLENGES_CACHE_KEY);
   await challenge.save();
 
   return formatChallenge(challenge.toObject());
@@ -61,56 +70,11 @@ const deleteChallenge = async (id) => {
 const getChallengeDetails = async (id) => {
   return await challengeRepo.findChallengeById(id);
 };
-const getTicketings = async ({ timezone, page, limit, keyword, status, date, eventId }) => {
-  const andConditions = [];
 
-  if (eventId) {
-    andConditions.push({ event: eventId });
-  }
-
-  if (date) {
-    andConditions.push({
-      createdAt: {
-        $gte: new Date(date),
-        $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
-      },
-    });
-  }
-
-  if (status) {
-    andConditions.push({ status });
-  } else {
-    andConditions.push({ status: { $ne: "deleted" } });
-  }
-
-  if (keyword) {
-    andConditions.push({
-      $or: [{ title: { $regex: keyword, $options: "i" } }],
-    });
-  }
-
-  const query = andConditions.length ? { $and: andConditions } : {};
-
-  const [ticketings, counts] = await Promise.all([
-    ticketingRepo.getTicketingsWithFilters(query, page, limit),
-    ticketingRepo.getCounts(query),
-  ]);
-
-  const formattedTicketings = ticketings.map((item) => formatTicketing(timezone, item));
-  const { totalFiltered, total, active, inactive } = counts;
-
-  const meta = {
-    ...generateMeta(page, limit, totalFiltered),
-    ticketingsCount: { total, active, inactive },
-  };
-
-  return { ticketings: formattedTicketings, meta };
-};
 module.exports = {
   createChallenge,
   getChallenges,
   updateChallenge,
   getChallengeDetails,
   deleteChallenge,
-  getTicketings,
 };

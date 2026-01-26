@@ -8,7 +8,7 @@ const TagTypesModel = require("./TagTypesModel");
 // Create
 const createTagsType = async (data) => {
   const Tagstype = new TagTypesModel(data);
-  await invalidate("tags:activeTypes");
+  await invalidate("tagsTypes:activeTypes");
   return await Tagstype.save();
 };
 
@@ -31,7 +31,7 @@ const getTagsTypesWithFilters = async (query, page, limit) => {
 const getActiveTagTypes = async (limit = 15) => {
 
   return cache({
-    namespace: "tags:activeTypes",
+    namespace: "tagsTypes:activeTypes",
     ttl: 86400, // 1 day
 
     fetchFn: async () => {
@@ -143,13 +143,13 @@ const findTagsTypeById = async (id) => {
 // Update and save
 const updateTagsTypeData = async (Tagstype, data) => {
   Object.assign(Tagstype, data);
-  await invalidate("tags:activeTypes");
+  await invalidate("tagsTypes:activeTypes");
   return await Tagstype.save();
 };
 
 // Delete
 const deleteTagsTypeById = async (Tagstype) => {
-  await invalidate("tags:activeTypes");
+  await invalidate("tagsTypes:activeTypes");
   return await Tagstype.deleteOne();
 };
 
