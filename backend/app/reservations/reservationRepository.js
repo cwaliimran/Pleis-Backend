@@ -67,7 +67,7 @@ const createReservation = async (data, session) => {
   data.amount = totalReservationAmount;
 
   // Lock only for card / applePay
-  if (["card", "applePay"].includes(data.paymentDetails.paymentMethod)) {
+  if (["card", "applePay"].includes(data.paymentDetails?.paymentMethod)) {
     data.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
     data.status = "pendingPayment";
   }
@@ -124,7 +124,10 @@ const createReservation = async (data, session) => {
     objectId: userReservation.reservationId,
   });
 
-  return userReservation;
+  return {
+    success: true,
+    reservation: userReservation
+  };
 };
 
 

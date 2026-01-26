@@ -33,6 +33,7 @@ const createReservation = async (req, res) => {
 
     if (!result.success) {
       await session.abortTransaction();
+      console.log("result", result)
 
       return sendResponse({
         res,
@@ -50,18 +51,19 @@ const createReservation = async (req, res) => {
       data: result.reservation,
     });
 
-  } catch (err) {
+  } catch (error) {
     if (session.inTransaction()) {
       await session.abortTransaction();
     }
+    console.log("error--->", error)
+    const readableError = getReadableErrorMessage(error);
 
     return sendResponse({
       res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: err,
+      statusCode: readableError.statusCode || 500,
+      translationKey: readableError.message,
+      error,
     });
-
   } finally {
     session.endSession();
   }
