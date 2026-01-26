@@ -6,7 +6,8 @@ const { getAllUsers } = require("../usersManagement/usersService");
 const { sendUserNotifications } = require("@notificationsUtil");
 const { NotificationTypes } = require("@NotificationsModel");
 const { cache, invalidate } = require("@redisCache");
- 
+ const ACTIVE_HIGHLIGHTS_CACHE_KEY = "highlights:active";
+
 
 // Create
 const createHighlight = async (data) => {
@@ -22,6 +23,7 @@ const createHighlight = async (data) => {
     image: highlight.media.type === 'image' ? event.basicInfo.media.name : null,
 
   });
+  await invalidate(ACTIVE_HIGHLIGHTS_CACHE_KEY);
   return await highlight.save();
 };
 
