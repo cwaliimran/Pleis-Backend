@@ -17,6 +17,9 @@ const createVenue = async (data) => {
   session.startTransaction();
   try {
     if (data.organization) {
+      //get organization companyOrganizer
+      let creator = await getOrgCompanyOrganizer(data.organization);
+      data.creator = creator;
       // Make all venues ifPrimary to false
       await Venues.updateMany(
         { organization: data.organization, isPrimary: true },

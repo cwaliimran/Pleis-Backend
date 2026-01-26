@@ -25,13 +25,21 @@ const getVenues = async ({
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   // 🔹 Normalize organization param → array of ObjectIds
-  let organizationIds = null;
+  // 🔹 Normalize organization param → array of ObjectIds
+  let organizationIds;
+
   if (organization) {
     organizationIds = organization
-      .split(/[,%]/) // supports comma and %
-      .filter(Boolean)
+      .split(",")
+      .map(id => id.trim())
+      .filter(id => mongoose.Types.ObjectId.isValid(id))
       .map(id => new mongoose.Types.ObjectId(id));
+
+    if (!organizationIds.length) {
+      organizationIds = undefined;
+    }
   }
+
 
   const pipeline = [
     // 1️⃣ Join with Organizations collection
@@ -193,6 +201,7 @@ const updateVenue = async (id, data) => {
     "status",
     "pinned",
   ];
+
   const updateData = {};
   for (const key of allowedFields) {
     if (data[key] !== undefined) {
@@ -200,24 +209,16 @@ const updateVenue = async (id, data) => {
     }
   }
 
-  if (Object.keys(updateData).length === 0) {
-    return venue; // nothing to update
+  if (!Object.keys(updateData).length) {
+    return venue;
   }
 
-  // Handle organization change and primary logic
-  let organizationChanged = false;
-
-  if (updateData.organization && String(updateData.organization) !== String(venue.organization)) {
-    organizationChanged = true;
-  }
-
-  // Step 1: Update venue fields
+  // Step 1: Apply updates
   Object.assign(venue, updateData);
   await venue.save();
 
-  // Step 2: If isPrimary = true
-  if (updateData.isPrimary) {
-    // Ensure only one primary per organization
+  // Step 2: Enforce single primary ONLY for the CURRENT organization
+  if (updateData.isPrimary === true) {
     await Venues.updateMany(
       {
         organization: venue.organization,
@@ -228,22 +229,10 @@ const updateVenue = async (id, data) => {
     );
   }
 
-  // Step 3: If organization changed and isPrimary = true, double-check previous organization
-  if (organizationChanged && updateData.isPrimary) {
-    // Just to make sure previous org doesn't keep old primary (edge case)
-    await Venues.updateMany(
-      {
-        organization: data.organization, // old org
-        isPrimary: true
-      },
-      { $set: { isPrimary: false } }
-    );
-  }
-
-  //get updated venue with venueDetails
-  venue = await getVenueDetails(venue._id);
-  return venue;
+  return await getVenueDetails(venue._id);
 };
+
+
 
 
 const deleteVenue = async (id) => {

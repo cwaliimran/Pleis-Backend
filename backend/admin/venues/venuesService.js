@@ -5,6 +5,7 @@ const { formatOrganization } = require("../organizations/formatter/formatOrganiz
 const Organizations = require("@OrganizationModel");
 const { formatVenue } = require("./formatter/formatVenue");
 const Venues = require("@VenuesModel");
+const mongoose = require("mongoose");
 const venueRepo = require("./venuesRepository");
 const { cache, invalidate } = require("@redisCache");
 const ACTIVE_VENUES_CACHE_KEY = "venues:active";
@@ -18,7 +19,6 @@ const buildVenuesCacheKey = ({
 const createVenue = async (data) => {
   return await venueRepo.createVenue(data);
 };
-const mongoose = require("mongoose");
 
 const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, organization }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
@@ -49,15 +49,15 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
     // Flatten organizationData array for easier matching
     { $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true } },
     // Match user access (venue creator OR org creator OR org staff)
-    {
-      $match: {
-        $or: [
-          { creator: new mongoose.Types.ObjectId(userId) },
-          { "organizationData.creator": new mongoose.Types.ObjectId(userId) },
-          { "organizationData.staff.user": new mongoose.Types.ObjectId(userId) }
-        ]
-      }
-    }
+    // {
+    //   $match: {
+    //     $or: [
+    //       { creator: new mongoose.Types.ObjectId(userId) },
+    //       { "organizationData.creator": new mongoose.Types.ObjectId(userId) },
+    //       { "organizationData.staff.user": new mongoose.Types.ObjectId(userId) }
+    //     ]
+    //   }
+    // }
   ];
 
   // Apply filters

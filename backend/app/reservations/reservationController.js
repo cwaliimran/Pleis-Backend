@@ -50,18 +50,18 @@ const createReservation = async (req, res) => {
       data: result.reservation,
     });
 
-  } catch (err) {
+  } catch (error) {
     if (session.inTransaction()) {
       await session.abortTransaction();
     }
+    const readableError = getReadableErrorMessage(error);
 
     return sendResponse({
       res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: err,
+      statusCode: readableError.statusCode || 500,
+      translationKey: readableError.message,
+      error,
     });
-
   } finally {
     session.endSession();
   }
@@ -70,7 +70,7 @@ const createReservation = async (req, res) => {
 
 const getReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "active", date, eventId, organizationId } = req.query;
+  let { keyword, status = "confirmed", date, eventId, organizationId } = req.query;
   const timezone = req.user.timezone;
   try {
     if (

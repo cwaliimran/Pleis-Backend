@@ -59,11 +59,13 @@ const OrganizationStaffAttendanceSchema = new mongoose.Schema(
   }
 );
 
-// 🔒 One record per staff per organization per day
-OrganizationStaffAttendanceSchema.index(
-  { organization: 1, staff: 1, attendanceDate: 1 },
-  { unique: true }
-);
+OrganizationStaffAttendanceSchema.index({
+  organization: 1,
+  staff: 1,
+  status: 1,
+  attendanceDate: 1
+});
+
 
 const OrganizationStaffAttendance = mongoose.model(
   "OrganizationStaffAttendance",

@@ -102,8 +102,8 @@ const UserReservationsSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["pendingPayment", "confirmed", "checkedIn", "rejected", "pending", "cancelled", "completed", "deleted"],
-      default: "pending",
+      enum: ["pendingPayment", "confirmed", "checkedIn", "rejected", "cancelled", "completed", "deleted"],
+      default: "confirmed",
     },
 
     paymentDetails: {

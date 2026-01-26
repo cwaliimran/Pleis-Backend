@@ -7,6 +7,7 @@ const { isOrganizationOpenNow } = require("../../shared/commonSchemas/operatingH
 const createReservationService = async (data, session) => {
   if (!session) throw new Error("session_required");
 
+
   const result = await ReservationRepo.createReservation(data, session);
 
   if (!result?.success) {

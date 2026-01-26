@@ -67,7 +67,7 @@ const createReservation = async (data, session) => {
   data.amount = totalReservationAmount;
 
   // Lock only for card / applePay
-  if (["card", "applePay"].includes(data.paymentDetails.paymentMethod)) {
+  if (["card", "applePay"].includes(data?.paymentDetails?.paymentMethod)) {
     data.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
     data.status = "pendingPayment";
   }
@@ -84,7 +84,7 @@ const createReservation = async (data, session) => {
         items: preOrderMenuItems.items,
         notes: preOrderMenuItems.notes,
         reservation: userReservation._id,
-        paymentDetails: data.paymentDetails,
+        paymentDetails: data?.paymentDetails,
         session,
       });
 
@@ -93,7 +93,7 @@ const createReservation = async (data, session) => {
     const totalPrice = order.totalPrice + totalReservationAmount;
     userReservation.amount = totalPrice;
     userReservation.priceBreakDown = {
-      reservationAmount: data.amount,
+      reservationAmount: data?.amount,
       preOrderMenuItemsAmount: order.totalPrice,
     };
     await userReservation.save({ session });
@@ -124,7 +124,10 @@ const createReservation = async (data, session) => {
     objectId: userReservation.reservationId,
   });
 
-  return userReservation;
+  return {
+    success: true,
+    reservation: userReservation
+  };
 };
 
 
@@ -225,8 +228,8 @@ const findByIdAndUpdate = async (id, data) => {
 
 const getReservations = async ({
   timezone,
-  page,
-  limit,
+  page = 1,
+  limit = 10,
   keyword,
   status,
   userId,
@@ -240,12 +243,12 @@ const getReservations = async ({
   const pipeline = [];
 
   // -----------------------------
-  // BASE MATCH
+  // 1️⃣ BASE MATCH
   // -----------------------------
   const match = {};
 
   if (eventId) {
-    match.optionalEventId = eventId;
+    match.optionalEventId = new mongoose.Types.ObjectId(eventId);
   }
 
   if (organizationId) {
@@ -255,10 +258,10 @@ const getReservations = async ({
   pipeline.push({ $match: match });
 
   // -----------------------------
-  // STATUS FILTER
+  // 2️⃣ STATUS FILTER (FIXED)
   // -----------------------------
   if (status) {
-    pipeline.push({ $match: { status: { $in: status } } });
+    pipeline.push({ $match: { status } });
   } else {
     pipeline.push({
       $match: {
@@ -268,7 +271,7 @@ const getReservations = async ({
   }
 
   // -----------------------------
-  // DATE FILTER (SLOT-BASED)
+  // 3️⃣ DATE FILTER (SLOT-BASED, SAFE)
   // -----------------------------
   if (date) {
     const dayOnly = date.split("T")[0];
@@ -287,12 +290,22 @@ const getReservations = async ({
           "timingSlots.enabled": true,
           "timingSlots.dateTimeSlots.date": { $gte: start, $lte: end }
         }
+      },
+      {
+        // Restore original document shape
+        $group: {
+          _id: "$_id",
+          doc: { $first: "$$ROOT" }
+        }
+      },
+      {
+        $replaceRoot: { newRoot: "$doc" }
       }
     );
   }
 
   // -----------------------------
-  // KEYWORD SEARCH
+  // 4️⃣ KEYWORD SEARCH
   // -----------------------------
   if (keyword) {
     const keywordMatch = buildKeywordQueryFromModels(
@@ -306,7 +319,7 @@ const getReservations = async ({
   }
 
   // -----------------------------
-  // CAPACITY ENFORCEMENT (CRITICAL)
+  // 5️⃣ CAPACITY ENFORCEMENT
   // -----------------------------
   pipeline.push(
     {
@@ -321,7 +334,12 @@ const getReservations = async ({
                   { $eq: ["$reservationId", "$$reservationId"] },
                   {
                     $or: [
-                      { $in: ["$status", ["confirmed", "checkedIn", "completed"]] },
+                      {
+                        $in: [
+                          "$status",
+                          ["confirmed", "checkedIn", "completed"]
+                        ]
+                      },
                       {
                         $and: [
                           { $eq: ["$status", "pendingPayment"] },
@@ -342,12 +360,20 @@ const getReservations = async ({
     {
       $addFields: {
         blockedCount: {
-          $ifNull: [{ $arrayElemAt: ["$blockedReservations.count", 0] }, 0]
+          $ifNull: [
+            { $arrayElemAt: ["$blockedReservations.count", 0] },
+            0
+          ]
         },
         remainingReservations: {
           $subtract: [
             "$availableReservations",
-            { $ifNull: [{ $arrayElemAt: ["$blockedReservations.count", 0] }, 0] }
+            {
+              $ifNull: [
+                { $arrayElemAt: ["$blockedReservations.count", 0] },
+                0
+              ]
+            }
           ]
         }
       }
@@ -360,12 +386,12 @@ const getReservations = async ({
   );
 
   // -----------------------------
-  // SORT
+  // 6️⃣ SORT
   // -----------------------------
   pipeline.push({ $sort: { createdAt: -1 } });
 
   // -----------------------------
-  // PAGINATION
+  // 7️⃣ PAGINATION + COUNT
   // -----------------------------
   pipeline.push({
     $facet: {
@@ -378,33 +404,35 @@ const getReservations = async ({
   });
 
   // -----------------------------
-  // EXECUTE
+  // 8️⃣ EXECUTION
   // -----------------------------
   const result = await Reservations.aggregate(pipeline);
+
   const reservations = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   const meta = generateMeta(page, limit, totalFiltered);
 
   // -----------------------------
-  // FORMAT OUTPUT
+  // 9️⃣ FORMAT OUTPUT
   // -----------------------------
   const finalReservations = reservations.map(item => {
     const formatted = reservationsFormatter(item, timezone);
 
-    // Optional cleanup
+    // Cleanup based on conditionType
     if (
       formatted.conditionType === "noCondition" ||
       formatted.conditionType === "ticketRequirement" ||
       formatted.conditionType === "customText"
     ) {
       delete formatted.amount;
-      if (formatted.conditionType === "noCondition") delete formatted.ticketType;
+      if (formatted.conditionType === "noCondition") {
+        delete formatted.ticketType;
+      }
     } else {
       delete formatted.ticketType;
     }
 
-    // expose availability if needed
     formatted.remainingReservations = item.remainingReservations;
 
     return formatted;
@@ -412,7 +440,6 @@ const getReservations = async ({
 
   return { reservations: finalReservations, meta };
 };
-
 
 
 const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
@@ -595,6 +622,22 @@ const getReservationDetails = async (id) => {
           as: "transactions",
         },
       },
+      //also lookup reservations to get reservationType
+      {
+        $lookup: {
+          from: "reservations",
+          localField: "reservationId",
+          foreignField: "_id",
+          as: "reservationDetails",
+        }
+      },
+      //undwind reservationDetails
+      {
+        $unwind: {
+          path: "$reservationDetails",
+          preserveNullAndEmptyArrays: true
+        }
+      },
 
       // 3️⃣ Convert transactions array → object
       {
@@ -713,6 +756,7 @@ const getReservationDetails = async (id) => {
           eventStartDate: "$event.schedule.startDateTime",
           userName: { $concat: ["$user.firstName", " ", "$user.lastName"] },
           venueFullAddress: "$venue.location.fullAddress",
+          reservationType: "$reservationDetails.reservationType",
 
           transactions: 1, // ✅ included here
 

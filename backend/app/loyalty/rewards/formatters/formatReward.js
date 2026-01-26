@@ -29,6 +29,10 @@ function formatReward(reward) {
         obj.menuItem.image = getFullImageUrl(obj.menuItem.image);
     }
 
+    if (obj?.image) {
+        obj.image = getFullImageUrl(obj.image);
+    }
+
     // Adjust obj properties based on rewardType
     switch (obj.rewardType) {
         case "customReward":
@@ -48,8 +52,7 @@ function formatReward(reward) {
             break;
     }
 
-    //remove image
-    delete obj.image;
+
 
     return obj;
 }
