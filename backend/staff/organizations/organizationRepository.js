@@ -159,46 +159,45 @@ const checkInToOrganization = async ({
 const checkOutFromOrganization = async ({
   organizationId,
   staffId,
-  timezone = "UTC"
+  timezone = "UTC",
+  source = "manual"
 }) => {
   const orgId = new mongoose.Types.ObjectId(organizationId);
   const userId = new mongoose.Types.ObjectId(staffId);
 
-  const attendanceDate = moment()
+  const now = new Date();
+
+  const today = moment(now)
     .tz(timezone)
     .format("YYYY-MM-DD");
 
-  // ⛔ Prevent double checkout
-  const alreadyCheckedOut = await OrganizationStaffAttendance.exists({
-    organization: orgId,
-    staff: userId,
-    attendanceDate,
-    status: "checkedOut"
-  });
-
-  if (alreadyCheckedOut) return true;
-
-  await OrganizationStaffAttendance.updateOne(
+  const result = await OrganizationStaffAttendance.updateMany(
     {
       organization: orgId,
       staff: userId,
-      attendanceDate,
-      status: "checkedIn"
+      status: "checkedIn",
+      attendanceDate: { $lte: today }
     },
     {
-      $set: { status: "checkedOut" },
+      $set: {
+        status: "checkedOut"
+      },
       $push: {
         history: {
           type: "checkOut",
-          at: new Date(),
-          source: "manual"
+          at: now,
+          source
         }
       }
     }
   );
- 
-  return true;
+
+  return {
+    success: true,
+    checkedOutDays: result.modifiedCount
+  };
 };
+
 
 // get checked-in staff IDs for organization (plain string IDs)
 const getCheckedInStaffForOrganization = async (organizationId, timezone = "UTC") => {
