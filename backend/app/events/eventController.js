@@ -7,7 +7,6 @@ const {
   getReadableErrorMessage,
 } = require("../../helperUtils/responseUtil");
 const { getTicketings } = require("../ticketing/ticketingsService");
-const { reservationsFormatterAdjustDates_ } = require("./formatter/eventFormatter")
 const eventService = require("./eventService");
 const { default: mongoose } = require("mongoose");
 const { getGiveaway } = require("../giveaways/GiveawayService");

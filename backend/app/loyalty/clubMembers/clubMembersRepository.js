@@ -174,6 +174,7 @@ const checkPromotion = async (userId, companyOrganizer, session) => {
 };
 
 
+//TODO check demotion via cron job
 // ==========================================================
 // DEMOTION LOGIC
 // ==========================================================
@@ -528,15 +529,6 @@ const getFollowedClubIds = async (userId) => {
 };
 
 
-
-
-
-
-
-
-
-
-
 const createUserReferradrecord = async (referrerId, userId, companyOrganizer) => {
   try {
     // Find the loyalty referral settings for the given company
@@ -616,6 +608,16 @@ const getClubMemberUserIdsByCompanyOrganizer = async (companyOrganizer) => {
   return members.map((m) => m.user.toString());
 };
 
+const getClubMembersForUsers = async ({ userIds, companyOrganizers }) => {
+  return ClubMembers.find({
+    user: { $in: userIds },
+    companyOrganizer: { $in: companyOrganizers },
+    status: "active"
+  })
+    .select("user companyOrganizer level tierKey")
+    .lean();
+};
+
 
 module.exports = {
   joinClub,
@@ -633,5 +635,6 @@ module.exports = {
   updateCompanyLoyaltySettings,
   getFollowedClubIds,
   getUserJoinedClubsWithPointsUsingFacet,
-  getClubMemberUserIdsByCompanyOrganizer
+  getClubMemberUserIdsByCompanyOrganizer,
+  getClubMembersForUsers
 };

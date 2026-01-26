@@ -33,7 +33,6 @@ const createReservation = async (req, res) => {
 
     if (!result.success) {
       await session.abortTransaction();
-      console.log("result", result)
 
       return sendResponse({
         res,
@@ -55,7 +54,6 @@ const createReservation = async (req, res) => {
     if (session.inTransaction()) {
       await session.abortTransaction();
     }
-    console.log("error--->", error)
     const readableError = getReadableErrorMessage(error);
 
     return sendResponse({
@@ -72,7 +70,7 @@ const createReservation = async (req, res) => {
 
 const getReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "active", date, eventId, organizationId } = req.query;
+  let { keyword, status = "confirmed", date, eventId, organizationId } = req.query;
   const timezone = req.user.timezone;
   try {
     if (

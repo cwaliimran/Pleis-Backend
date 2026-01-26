@@ -17,6 +17,10 @@ const {
 const { getAllUsers } = require("../usersManagement/usersService");
 const { sendUserNotifications } = require("@notificationsUtil");
 const { NotificationTypes } = require("@NotificationsModel");
+const { userReservationFormatterAdjustDates } = require("./formatters/userReservationFormatterAdjustDates");
+const { attachUserLevelsToReservations, buildClubMemberMap } = require("./utils/attachUserLevelsToReservations");
+const { getClubMembersForUsers } = require("../../app/loyalty/clubMembers/clubMembersRepository");
+const { getActiveTiersWithProjection } = require("../tiers/tiersRepository");
 const getCreatorFromOrganization = async (organizationId) => {
   try {
     const result = await Organizations.aggregate([
@@ -313,8 +317,20 @@ const getUserReservations = async ({
     {
       $lookup: {
         from: "events",
-        localField: "optionalEventId",
-        foreignField: "_id",
+        let: { eventId: "$reservation.optionalEventId" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$_id", "$$eventId"] }
+            }
+          },
+          {
+            $project: {
+              _id: 1,
+              "basicInfo.title": 1
+            }
+          }
+        ],
         as: "event"
       }
     },
@@ -325,6 +341,7 @@ const getUserReservations = async ({
       }
     }
   );
+
 
   // -----------------------------
   // 4️⃣ DATE RANGE FILTERS (Slots)
@@ -412,15 +429,61 @@ const getUserReservations = async ({
   // -----------------------------
   const result = await UserReservations.aggregate(pipeline);
 
-  const reservations = result[0]?.data || [];
+  const userReservations = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
-
   const meta = generateMeta(page, limit, totalFiltered);
 
+  // -----------------------------
+  // COLLECT IDS (DEDUPED)
+  // -----------------------------
+  const userIds = [
+    ...new Set(userReservations.map(r => r.userId.toString()))
+  ].map(id => new mongoose.Types.ObjectId(id));
+
+  const companyOrganizers = [
+    ...new Set(userReservations.map(r => r.companyOrganizer.toString()))
+  ].map(id => new mongoose.Types.ObjectId(id));
+
+  // -----------------------------
+  // FETCH ONCE (BULK)
+  // -----------------------------
+  const [members, activeTiers] = await Promise.all([
+    getClubMembersForUsers({ userIds, companyOrganizers }),
+    getActiveTiersWithProjection({ _id: 1, title: 1 })
+  ]);
+
+  // -----------------------------
+  // BUILD TIER MAP (ID → TITLE)
+  // -----------------------------
+  const tierIdToTitle = {};
+  for (const t of activeTiers) {
+    tierIdToTitle[t._id.toString()] = t.title;
+  }
+
+  // -----------------------------
+  // BUILD MEMBER MAP
+  // -----------------------------
+  const memberMap = buildClubMemberMap(members);
+
+  // -----------------------------
+  // ENRICH RESERVATIONS
+  // -----------------------------
+  const enrichedReservations = attachUserLevelsToReservations({
+    reservations: userReservations,
+    clubMemberMap: memberMap,
+    tierIdToTitle
+  });
+
+  // -----------------------------
+  // FORMAT + RETURN
+  // -----------------------------
   return {
-    reservations: reservations.map(reservationsFormatterAdjustDates),
+    reservations: enrichedReservations.map(item =>
+      userReservationFormatterAdjustDates(item, timezone)
+    ),
     meta
   };
+
 };
 
 
@@ -798,10 +861,11 @@ const getCalendarReservations = async ({
   // -----------------------------
   // 8️⃣ EXECUTE
   // -----------------------------
-  const reservations = await UserReservations.aggregate(pipeline);
+  const reservationsResponse = await UserReservations.aggregate(pipeline);
 
   return {
-    reservations: reservations.map(reservationsFormatterAdjustDates)
+    reservations: reservationsResponse.map(item => reservationsFormatter(item, timezone))
+      .filter(Boolean)
   };
 };
 

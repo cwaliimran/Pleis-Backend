@@ -135,6 +135,7 @@ const getVenueTypeTitles = async (venueId) => {
   return venueTypes.map(v => v.title);
 };
 
+
 const getEventReservations = async (eventId) => {
   const now = new Date();
 

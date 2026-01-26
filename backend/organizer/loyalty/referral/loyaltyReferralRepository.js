@@ -5,7 +5,6 @@ const { User } = require("../../../models/UserModel");
 const Event = require("@EventsModel");
 const {ReferredRecord} = require("@ReferredRecordModel");
 const mongoose = require("mongoose");
-// const { reservationsFormatter, reservationsFormatterAdjustDates } = require("../../app/reservations/formaters/reservationFormetter");
 const {
   generateMeta,
   getStartAndEndOfMonth,
