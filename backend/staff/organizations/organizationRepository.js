@@ -196,7 +196,7 @@ const checkOutFromOrganization = async ({
       }
     }
   );
-
+ 
   return true;
 };
 

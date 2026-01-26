@@ -63,7 +63,7 @@ const OrganizationStaffAttendanceSchema = new mongoose.Schema(
 OrganizationStaffAttendanceSchema.index(
   { organization: 1, staff: 1, attendanceDate: 1 },
   { unique: true }
-);
+); 
 
 const OrganizationStaffAttendance = mongoose.model(
   "OrganizationStaffAttendance",
