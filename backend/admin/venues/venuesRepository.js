@@ -1,6 +1,7 @@
 // repositories/venueRepository.js
 const Venues = require("@VenuesModel");
 const mongoose = require("mongoose");
+const { getOrgCompanyOrganizer } = require("../organizations/organizationRepository");
 
 // Create venue in a transaction and update organization
 const createVenue = async (data) => {
@@ -8,6 +9,9 @@ const createVenue = async (data) => {
   session.startTransaction();
   try {
     if (data.organization) {
+      //get organization companyOrganizer
+      let creator = await getOrgCompanyOrganizer(data.organization);
+      data.creator = creator;
       // Make all venues ifPrimary to false
       await Venues.updateMany(
         { organization: data.organization, isPrimary: true },

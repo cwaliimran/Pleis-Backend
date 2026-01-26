@@ -14,6 +14,7 @@ const createOrganization = async (data) => {
 // Get all with filters
 const getOrganizationsWithFilters = async (query, skip, limit) => {
   return Organizations.find(query)
+    .populate("creator", "firstName lastName")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);

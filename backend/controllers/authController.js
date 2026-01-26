@@ -160,7 +160,6 @@ const companyDetails = async (req, res) => {
           "bankAccountNumber",
           "representativeName",
           "location",
-          "suppliers",
         ],
       };
       if (!validateParams(req, res, validationOptions)) {
