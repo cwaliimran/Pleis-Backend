@@ -4,19 +4,43 @@ const Venues = require("@VenuesModel");
 const Organizations = require("@OrganizationModel");
 const Menus = require("@MenusModel");
 const { getModelCounts } = require("@dbUtils/queryUtil");
+const { cache, invalidate } = require("@redisCache");
+ const ACTIVE_ORGANIZATIONS_CACHE_KEY = "organizations:active";
+const buildOrganizationsCacheKey = ({
+  scope = "staff", // staff | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_ORGANIZATIONS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
+ 
 
 // Create
 const createOrganization = async (data) => {
   const organization = new Organizations(data);
+  await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY); // Invalidate cache on create
   return await organization.save();
 };
 
 // Get all with filters
 const getOrganizationsWithFilters = async (query, skip, limit) => {
-  return Organizations.find(query)
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
+    const cacheKey = buildOrganizationsCacheKey({
+      scope: "admin",
+      skip,
+      limit,
+    });
+    return cache({
+      namespace: cacheKey,
+      ttl: 86400, // 1 day
+  
+      fetchFn: async () => {
+        const results = await Organizations.find(query)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit);
+        return results;
+      }
+    });
 };
 
 // Count by condition
@@ -56,11 +80,13 @@ const getOrganizationDetails = async (id) => {
 
 // Delete
 const deleteOrganizationById = async (organization) => {
+  await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
   return await organization.deleteOne();
 };
 
 // Optional: keep this only for non-nested shallow updates
 const findByIdAndUpdate = async (id, data) => {
+  await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
   return Organizations.findByIdAndUpdate(id, { $set: data }, { new: true });
 };
 

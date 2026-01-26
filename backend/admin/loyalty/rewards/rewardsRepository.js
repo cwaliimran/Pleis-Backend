@@ -5,6 +5,17 @@ const {
   Reward,
 } = require("../../../commonModules/loyalty/rewards/models");
 const formatReward = require("./utils/formatReward");
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_LOYALTY_REWARD_CACHE_KEY = "loyaltyReward:active";
+const buildLoyaltyRewardCacheKey = ({
+  scope = "public", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_LOYALTY_REWARD_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
+ 
+ 
 
 // Decide which discriminator model to use
 const getModelByrewardType = (rewardType) => {
@@ -24,11 +35,10 @@ const getModelByrewardType = (rewardType) => {
 // Create reward
 const create = async (data) => {
   try {
-    console.log("data",data );
     const Model = getModelByrewardType(data.rewardType);
-    console.log("model", Model);
     const item = new Model(data);
     await item.save();
+    await invalidate(ACTIVE_LOYALTY_REWARD_CACHE_KEY);
     // Clean up the Mongoose properties before returning
     const formattedItem = formatReward(item.toObject(), null);  // Pass the clean object here
     return formattedItem;
@@ -39,6 +49,17 @@ const create = async (data) => {
 
 // Get reward with population
 const getWithFilters = async (query = {}, skip = 0, limit = 10) => {
+    const cacheKey = buildLoyaltyRewardCacheKey({
+    scope: "admin",
+    skip,
+    limit,
+  });
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400, // 1 day
+ 
+    fetchFn: async () => {
+ 
   return Reward.find(query)
     .populate({
       path: "menuItem",
@@ -57,6 +78,8 @@ const getWithFilters = async (query = {}, skip = 0, limit = 10) => {
     .limit(limit)
     .lean()
     .exec();
+    },
+  });
 };
 
 // Count
@@ -75,16 +98,19 @@ const findById = async (id) => {
 // Update and save
 const updateData = async (item, data) => {
   Object.assign(item, data);
+  await invalidate(ACTIVE_LOYALTY_REWARD_CACHE_KEY);
   return await item.save();
 };
 
 // Delete
 const deleteItem = async (item) => {
+  await invalidate(ACTIVE_LOYALTY_REWARD_CACHE_KEY);
   return await item.deleteOne();
 };
 
 // findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
+  await invalidate(ACTIVE_LOYALTY_REWARD_CACHE_KEY);
   return Reward.findByIdAndUpdate(id, data, { new: true })
     .populate("menuItem")
     .populate("tierLimit");

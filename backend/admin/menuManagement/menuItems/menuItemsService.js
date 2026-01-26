@@ -10,6 +10,15 @@ const MenuItemCategories = require("@MenuItemCategoriesModel");
 const { getMenuIdsByCompanyOrganizer } = require("../../organizations/organizationRepository");
 const { formatMenuItem, formatBundleMenuItem } = require("../menuItemCategories/formatter/formatItemCategories");
 const Organizations = require("@OrganizationModel");
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_MENU_ITEMS_CACHE_KEY = "menuItems:active";
+const buildMenuItemsCacheKey = ({
+  scope = "public", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_MENU_ITEMS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
 
 const createMenuItem = async (data, timezone) => {
   let doc = await menuItemRepo.createMenuItem(data);
@@ -28,6 +37,17 @@ const getMenuItems = async ({
   timezone,
   companyOrganizer
 }) => {
+    const skip = limit === 0 ? 0 : (page - 1) * limit;
+    const cacheKey = buildMenuItemsCacheKey({
+      scope: "admin",
+      skip,
+      limit,
+    });
+    return cache({
+      namespace: cacheKey,
+      ttl: 86400, // 1 day
+  
+      fetchFn: async () => {
   let menuIds = [];
 
   if (companyOrganizer) {
@@ -41,7 +61,7 @@ const getMenuItems = async ({
     }
   }
 
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
+
 
   // ✅ BASE MATCH (NO menu here)
   const baseMatch = {
@@ -127,15 +147,17 @@ const getMenuItems = async ({
   return {
     menuItems: data.map(item => formatMenuItem(item, timezone)),
     meta: generateMeta(page, limit, total)
-  };
+      };
+    },
+  });
 };
 
 
 
 
 
-
 const updateMenuItem = async (id, data, timezone) => {
+  await invalidate(ACTIVE_MENU_ITEMS_CACHE_KEY);
   const menuItem = await menuItemRepo.findMenuItemById(id);
   if (!menuItem) return null;
 
