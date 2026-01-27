@@ -5,7 +5,15 @@ const {
   GlobalBuyMenuItemChallenge,
   GlobalReferUsersChallenge,
 } = require("../../../commonModules/globalLoyalty/rewards/models/Challenge/models/Challenge");
-
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_GLOBAL_LOYALTY_CHALLENGES_CACHE_KEY = "globalLoyaltyChallenges:active";
+const buildGlobalLoyaltyChallengesCacheKey = ({
+  scope = "public", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_GLOBAL_LOYALTY_CHALLENGES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
 // Decide which discriminator model to use
 const getModelByTaskType = (taskType) => {
   switch (taskType) {
@@ -29,6 +37,7 @@ const createChallenge = async (data) => {
     const challenge = new Model(data);
     
     await challenge.save();
+    await invalidate(ACTIVE_GLOBAL_LOYALTY_CHALLENGES_CACHE_KEY);
     return challenge;
   } catch (err) {
     throw err;
@@ -37,6 +46,16 @@ const createChallenge = async (data) => {
 
 // Get challenges with population
 const getChallengesWithFilters = async (query = {}, skip = 0, limit = 10) => {
+    const cacheKey = buildGlobalLoyaltyChallengesCacheKey({
+    scope: "admin",
+    skip,
+    limit,
+  });
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400, // 1 day
+ 
+    fetchFn: async () => {
   return GlobalChallenge.find(query)
     // Task-related
     .populate("taskMenuItem")
@@ -70,8 +89,9 @@ const getChallengesWithFilters = async (query = {}, skip = 0, limit = 10) => {
     .limit(limit)
     .lean()
     .exec();
+    },
+  });
 };
-
 
 // Count
 const countChallenges = async (query = {}) => {
@@ -89,16 +109,19 @@ const findChallengeById = async (id) => {
 // Update and save
 const updateChallengeData = async (challenge, data) => {
   Object.assign(GlobalChallenge, data);
+  await invalidate(ACTIVE_GLOBAL_LOYALTY_CHALLENGES_CACHE_KEY);
   return await GlobalChallenge.save();
 };
 
 // Delete
 const deleteChallengeById = async (challenge) => {
+  await invalidate(ACTIVE_GLOBAL_LOYALTY_CHALLENGES_CACHE_KEY);
   return await GlobalChallenge.deleteOne();
 };
 
 // findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
+  await invalidate(ACTIVE_GLOBAL_LOYALTY_CHALLENGES_CACHE_KEY);
   return GlobalChallenge.findByIdAndUpdate(id, data, { new: true })
     .populate("taskMenuItem")
     .populate("reward.rewardMenuItem")

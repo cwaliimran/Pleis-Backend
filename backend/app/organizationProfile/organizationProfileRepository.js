@@ -237,79 +237,129 @@ const getRecommendedOrganizations = async (organizationId, options = {}) => {
 
   if (!tags.length && !categories.length) return [];
 
-  // Step 2: Define weights (separated logic)
+  // Step 2: Define weights
   const weights = getSimilarityWeights(options);
 
-  // Step 3: Build aggregation
   const result = await Organizations.aggregate([
+    /* ===============================
+       1️⃣ BASE MATCH
+    =============================== */
     {
       $match: {
         _id: { $ne: orgObjId },
         status: "active",
         $or: [
           { "otherInfo.tags": { $in: tags } },
-          { "otherInfo.categories": { $in: categories } },
-        ],
-      },
+          { "otherInfo.categories": { $in: categories } }
+        ]
+      }
     },
+
+    /* ===============================
+       2️⃣ MATCH COUNTS
+    =============================== */
     {
       $addFields: {
         matchedTags: { $setIntersection: ["$otherInfo.tags", tags] },
-        matchedCategories: { $setIntersection: ["$otherInfo.categories", categories] },
-      },
+        matchedCategories: { $setIntersection: ["$otherInfo.categories", categories] }
+      }
     },
+
+    /* ===============================
+       3️⃣ SIMILARITY SCORE
+    =============================== */
     {
-      // Use weights dynamically here
       $addFields: {
         similarityScore: {
           $add: [
             { $multiply: [{ $size: "$matchedTags" }, weights.tagWeight] },
-            { $multiply: [{ $size: "$matchedCategories" }, weights.categoryWeight] },
-          ],
-        },
-      },
+            { $multiply: [{ $size: "$matchedCategories" }, weights.categoryWeight] }
+          ]
+        }
+      }
     },
-    {
-      $match: {
-        similarityScore: { $gt: 0 },
-      },
-    },
-    {
-      $sort: { similarityScore: -1, createdAt: -1 },
-    },
+
+    { $match: { similarityScore: { $gt: 0 } } },
+
+    { $sort: { similarityScore: -1, createdAt: -1 } },
+
     { $limit: options.limit || 10 },
+
+    /* ===============================
+       4️⃣ PRIMARY VENUE
+    =============================== */
     {
       $lookup: {
-        from: "categories",
-        localField: "otherInfo.categories",
-        foreignField: "_id",
-        as: "otherInfo.categories",
-        pipeline: [{ $project: { _id: 1, title: 1, image: 1 } }],
-      },
+        from: "venues",
+        let: { orgId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$organization", "$$orgId"] },
+              isPrimary: true,
+              status: "active"
+            }
+          },
+          {
+            $project: {
+              _id: 0,
+              venueType: 1
+            }
+          }
+        ],
+        as: "primaryVenue"
+      }
     },
+
+    /* ===============================
+       5️⃣ VENUE TYPES
+    =============================== */
+    {
+      $lookup: {
+        from: "venuetypes",
+        localField: "primaryVenue.venueType",
+        foreignField: "_id",
+        as: "venueTypes",
+        pipeline: [{ $project: { _id: 1, title: 1 } }]
+      }
+    },
+
+    /* ===============================
+       6️⃣ TAGS
+    =============================== */
     {
       $lookup: {
         from: "tags",
         localField: "otherInfo.tags",
         foreignField: "_id",
-        as: "otherInfo.tags",
-        pipeline: [{ $project: { _id: 1, title: 1 } }],
-      },
+        as: "tags",
+        pipeline: [{ $project: { _id: 1, title: 1 } }]
+      }
     },
+
+    /* ===============================
+       7️⃣ FINAL SHAPE
+    =============================== */
     {
       $project: {
         _id: 1,
         "basicInfo.name": 1,
         "basicInfo.media": 1,
         "otherInfo.description": 1,
-        "otherInfo.categories": 1,
-        "otherInfo.tags": 1,
-        similarityScore: 1,
-      },
-    },
+        operatingHours: 1,
+
+        tags: 1,
+
+        venue: {
+          venueType: "$venueTypes"
+        },
+
+        similarityScore: 1
+      }
+    }
   ]);
 
-  return result.map((org) => formatOrganization(org));
+  return result;
 };
 
 /**
@@ -712,8 +762,6 @@ const getCompanyOrganizersWithinRadius = async ({
 
   return result.map(r => r._id);
 };
-
-
 
 //get organization creator
 const getOrgCompanyOrganizer = async (organizationId) => {

@@ -6,7 +6,7 @@ const mongoose = require("mongoose");
 const { TicketingBookings } = require("../../commonModules/bookings/ticketings/TicketingBookings");
 const { generateMeta } = require("../../helperUtils/responseUtil");
 const { getWithFilters, getModelCounts } = require("@dbUtils/queryUtil");
-
+const crypto = require("crypto");
 // Get all with filters
 const getEventsWithFilters = async (query, skip, limit) => {
   return Events.find(query).select("basicInfo schedule")
@@ -563,6 +563,191 @@ const getTicketingsByEventId = async (eventId, ticketId) => {
 };
 
 
+const getOfflineEventTickets = async (eventId) => {
+  return TicketingBookings.aggregate([
+    {
+      $match: {
+        "ticket.snapshot.event": new mongoose.Types.ObjectId(eventId),
+        status: { $ne: "cancelled" }
+      }
+    },
+
+    // ---- order (payment status) ----
+    {
+      $lookup: {
+        from: "ticketingorders",
+        localField: "order",
+        foreignField: "_id",
+        as: "order"
+      }
+    },
+    { $unwind: { path: "$order", preserveNullAndEmptyArrays: true } },
+
+    // ---- minimal projection ----
+    {
+      $project: {
+        ticketBookingId: 1,
+        status: 1,
+        organization: 1,
+
+        paymentStatus: "$order.paymentDetails.paymentStatus",
+
+        ticket: {
+          ticketId: "$ticket.ticketId",
+          event: "$ticket.snapshot.event",
+
+          repeatable: {
+            isRepeatable: {
+              $ifNull: ["$ticket.snapshot.repeatable.isRepeatable", false]
+            },
+            maxVisits: {
+              $ifNull: ["$ticket.snapshot.repeatable.visits", 1]
+            }
+          }
+        },
+
+        usedVisits: {
+          $size: { $ifNull: ["$checkInHistory", []] }
+        }
+      }
+    },
+
+    // ---- compute remaining visits ----
+    {
+      $addFields: {
+        remainingVisits: {
+          $cond: [
+            "$ticket.repeatable.isRepeatable",
+            {
+              $max: [
+                {
+                  $subtract: [
+                    "$ticket.repeatable.maxVisits",
+                    "$usedVisits"
+                  ]
+                },
+                0
+              ]
+            },
+            {
+              $cond: [{ $eq: ["$status", "used"] }, 0, 1]
+            }
+          ]
+        }
+      }
+    }
+  ]);
+};
+
+
+const bulkCheckInEventAttendees = async (eventId, scans, scannedBy) => {
+  const eventObjectId = new mongoose.Types.ObjectId(eventId);
+
+  if (!Array.isArray(scans) || scans.length === 0) {
+    return { acceptedCount: 0, ignoredCount: 0 };
+  }
+
+  // -----------------------------
+  // 1️⃣ PREPARE BULK INSERTS
+  // -----------------------------
+  const bulkOps = scans.map(scan => {
+    const bookingId = new mongoose.Types.ObjectId(scan._id);
+
+    const scannedAt = scan.scannedAt
+      ? new Date(scan.scannedAt)
+      : new Date();
+
+    const scanKey = crypto
+      .createHash("sha256")
+      .update(
+        `${eventId}|${bookingId}|${scannedBy}|${scannedAt.getTime()}`
+      )
+      .digest("hex");
+
+    return {
+      updateOne: {
+        filter: {
+          _id: bookingId,
+          "ticket.snapshot.event": eventObjectId,
+          status: { $ne: "cancelled" },
+
+          // 🔒 dedupe exact replays
+          "checkInHistory.scanKey": { $ne: scanKey },
+
+          // 🔒 HARD VISIT LIMIT (CRITICAL FIX)
+          $expr: {
+            $cond: [
+              { $eq: ["$ticket.snapshot.repeatable.isRepeatable", true] },
+              {
+                $lt: [
+                  { $size: { $ifNull: ["$checkInHistory", []] } },
+                  "$ticket.snapshot.repeatable.visits"
+                ]
+              },
+              // non-repeatable → allow only if not already used
+              { $ne: ["$status", "used"] }
+            ]
+          }
+        },
+        update: {
+          $push: {
+            checkInHistory: {
+              checkedInAt: scannedAt,
+              scannedBy,
+              scanKey
+            }
+          }
+        }
+      }
+    };
+  });
+
+  // -----------------------------
+  // 2️⃣ APPLY CHECK-INS
+  // -----------------------------
+  const writeResult = await TicketingBookings.bulkWrite(bulkOps, {
+    ordered: false
+  });
+
+  // -----------------------------
+  // 3️⃣ MARK NON-REPEATABLE USED
+  // -----------------------------
+  await TicketingBookings.updateMany(
+    {
+      "ticket.snapshot.event": eventObjectId,
+      "ticket.snapshot.repeatable.isRepeatable": false,
+      status: "valid",
+      "checkInHistory.0": { $exists: true }
+    },
+    { $set: { status: "used" } }
+  );
+
+  // -----------------------------
+  // 4️⃣ MARK REPEATABLE USED (LIMIT REACHED)
+  // -----------------------------
+  await TicketingBookings.updateMany(
+    {
+      "ticket.snapshot.event": eventObjectId,
+      "ticket.snapshot.repeatable.isRepeatable": true,
+      $expr: {
+        $gte: [
+          { $size: { $ifNull: ["$checkInHistory", []] } },
+          "$ticket.snapshot.repeatable.visits"
+        ]
+      }
+    },
+    { $set: { status: "used" } }
+  );
+
+  return {
+    acceptedCount: writeResult.modifiedCount,
+    ignoredCount: scans.length - writeResult.modifiedCount
+  };
+};
+
+
+
+
 module.exports = {
   getEventsWithFilters,
   countEvents,
@@ -572,5 +757,7 @@ module.exports = {
   getEventTicketAttendanceAnalytics,
   getEventAttendees,
   checkInEventAttendee,
-  getTicketingsByEventId
+  getTicketingsByEventId,
+  getOfflineEventTickets,
+  bulkCheckInEventAttendees
 };

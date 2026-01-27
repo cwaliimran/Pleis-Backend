@@ -51,47 +51,64 @@ function reservationsFormatter(item, timezone) {
 function reservationsFormatterAdjustDates(item, timezone) {
   if (!item) return null;
 
-  const cat = item.toObject ? item.toObject() : { ...item };
+  let cat;
+  try {
+    cat = item.toObject ? item.toObject() : JSON.parse(JSON.stringify(item));
+  } catch {
+    cat = { ...item };
+  }
 
-  // Adjust timingSlots and dateTimeSlots
-  if (cat.timingSlots && cat.timingSlots.dateTimeSlots) {
-    const dateTimeSlots = Array.isArray(cat.timingSlots.dateTimeSlots)
-      ? cat.timingSlots.dateTimeSlots
-      : [cat.timingSlots.dateTimeSlots];
+  if (!cat.timingSlots || !cat.timingSlots.dateTimeSlots) {
+    return cat;
+  }
 
-    dateTimeSlots.forEach(slot => {
-      // Format the date field (convert to YYYY-MM-DD)
-      if (slot.date) {
-        const formattedDate = moment(slot.date).format("YYYY-MM-DD"); // Convert to "YYYY-MM-DD"
-        slot.date = formattedDate;
-      }
+  const dateTimeSlots = Array.isArray(cat.timingSlots.dateTimeSlots)
+    ? cat.timingSlots.dateTimeSlots
+    : [cat.timingSlots.dateTimeSlots];
 
-      // Handle timeSlots if present
-      if (slot.timeSlots && Array.isArray(slot.timeSlots)) {
-        slot.timeSlots.forEach(timeSlot => {
-          let startTime = timeSlot.startTime;
-          let endTime = timeSlot.endTime;
+  dateTimeSlots.forEach(slot => {
+    // -----------------------------
+    // DATE NORMALIZATION
+    // -----------------------------
+    if (slot.date) {
+      slot.date = moment(slot.date).format("YYYY-MM-DD");
+    }
 
-          // Check if startTime is a valid time format and convert to ISO string
+    // -----------------------------
+    // TIME SLOTS NORMALIZATION
+    // -----------------------------
+    if (Array.isArray(slot.timeSlots)) {
+      slot.timeSlots.forEach(timeSlot => {
+        let { startTime, endTime } = timeSlot;
+
+        // Normalize startTime
+        if (startTime instanceof Date) {
+          startTime = startTime.toISOString();
+        } else if (typeof startTime === "string") {
           if (moment(startTime, "hh:mm A", true).isValid()) {
             startTime = moment(startTime, "hh:mm A").toISOString();
           }
+        }
 
-          // Check if endTime is a valid time format and convert to ISO string
+        // Normalize endTime
+        if (endTime instanceof Date) {
+          endTime = endTime.toISOString();
+        } else if (typeof endTime === "string") {
           if (moment(endTime, "hh:mm A", true).isValid()) {
             endTime = moment(endTime, "hh:mm A").toISOString();
           }
+        }
 
-          // Convert times to the desired timezone (adjusting for start and end times)
-          timeSlot.startTime = convertUtcToTimezoneAMPM(startTime, timezone);
-          timeSlot.endTime = convertUtcToTimezoneAMPM(endTime, timezone);
-        });
-      }
-    });
-  }
+        // Final timezone conversion (SAFE)
+        timeSlot.startTime = convertUtcToTimezoneAMPM(startTime, timezone);
+        timeSlot.endTime = convertUtcToTimezoneAMPM(endTime, timezone);
+      });
+    }
+  });
 
-  return { ...cat };
+  return cat;
 }
+
 
 
 

@@ -189,13 +189,74 @@ const checkInEventAttendee = async (req, res) => {
   }
 };
 
+const getOfflineEventTickets = async (req, res) => {
+  const { id: eventId } = req.params;
 
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })
+  ) return;
 
+  try {
+    const tickets = await eventService.getOfflineEventTicketsService(eventId);
 
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "offline_event_tickets_fetched_successfully",
+      data: tickets,
+    });
+
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+
+const bulkCheckInEventAttendees = async (req, res) => {
+  const { id: eventId } = req.params;
+  const { scans } = req.body;
+  const scannedBy = req.user._id;
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })
+  ) return;
+
+  try {
+    const result = await eventService.bulkCheckInEventAttendeesService(
+      eventId, scans, scannedBy
+    );
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "event_attendees_checked_in_successfully",
+      data: result,
+    });
+
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
 
 module.exports = {
   getEvents,
   getEventDetails,
   getEventAttendees,
-  checkInEventAttendee
+  checkInEventAttendee,
+  getOfflineEventTickets,
+  bulkCheckInEventAttendees
 };

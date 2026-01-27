@@ -266,7 +266,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"provider\": \"google\", //\"google\", \"facebook\", \"apple\",\n    \"socialId\": \"mWQZ2pYQnZbC2Zfcp5sdZ4otq0f2\",\n    // \"profileIcon\": \"noimage.png\",\n    \"firstName\": \"Usama\",\n    \"lastName\": \"Jamil\",\n    \"email\": \"ujamil503@gmail.com\",\n    \"deviceType\": \"ios\", //andoird/ios/web\n    \"userType\": \"user\", //organizer, user, admin\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
+                      "raw": "{\n    \"provider\": \"google\", //\"google\", \"facebook\", \"apple\",\n    \"socialId\": \"mWQZ2pYQnZbC2Zfcp5sdZ4otq0f2\",\n    // \"profileIcon\": \"noimage.png\",\n    \"firstName\": \"Ali\",\n    \"lastName\": \"Imran\",\n    \"email\": \"cwaliimrandev@gmail.com\",\n    \"deviceType\": \"ios\", //andoird/ios/web\n    \"userType\": \"user\", //organizer, user, admin\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -8256,7 +8256,7 @@
                     ],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"event\": \"transaction.approved\",\n  \"transaction\": {\n    \"id\": \"{{$randomUUID}}\",\n    \"orderNumber\": \"6971f82bc58bf1eff251875c\",\n    \"status\": \"paid\", //paid, failed\n    \"amount\": 300,\n    \"currency\": \"EUR\",\n    \"metadata\": {\n      \"type\": \"menuorders\" // \"ticketingbookings\", \"userreservations\", \"menuorders\"\n    }\n  }\n}\n",
+                      "raw": "{\n  \"event\": \"transaction.approved\",\n  \"transaction\": {\n    \"id\": \"{{$randomUUID}}\",\n    \"orderNumber\": \"697471de20f1da0f3c92c509\",\n    \"status\": \"paid\", //paid, failed\n    \"amount\": 3,\n    \"currency\": \"EUR\",\n    \"metadata\": {\n      \"type\": \"menuorders\" // \"ticketingbookings\", \"userreservations\", \"menuorders\"\n    }\n  }\n}\n",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -15711,7 +15711,7 @@
                       "variable": [
                         {
                           "key": "orderId",
-                          "value": "6971dcc188ad0f5cb439cfe5"
+                          "value": "6973763a07fc19a717f55da0"
                         }
                       ]
                     }
@@ -15844,6 +15844,140 @@
           "name": "Events",
           "item": [
             {
+              "name": "Offline scanning",
+              "item": [
+                {
+                  "name": "offline tickets",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    },
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    }
+                  ],
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}app/staff/events/:id/offline-tickets",
+                      "host": [
+                        "{{url}}app"
+                      ],
+                      "path": [
+                        "staff",
+                        "events",
+                        ":id",
+                        "offline-tickets"
+                      ],
+                      "variable": [
+                        {
+                          "key": "id",
+                          "value": "691f06598d9b5d3fe5e37abd"
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "bulk checkin for offline scanned tickets",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    },
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"scans\": [\n    {\n      \"_id\": \"69206c727f5d36d3cbf94ce3\",\n      \"scannedAt\": \"2026-01-24T18:05:21.000Z\"\n    },\n    {\n      \"_id\": \"69206c727f5d36d3cbf94ce3\",\n      \"scannedAt\": \"2026-01-24T18:05:22.000Z\"\n    },\n    {\n      \"_id\": \"69206c727f5d36d3cbf94ce3\",\n      \"scannedAt\": \"2026-01-24T18:03:14.000Z\"\n    },\n    {\n      \"_id\": \"69206c727f5d36d3cbf94ce1\",\n      \"scannedAt\": \"2026-01-24T18:05:10.000Z\"\n    },\n    {\n      \"_id\": \"69207cc38f69a227d6af22a8\",\n      \"scannedAt\": \"2026-01-24T18:05:35.000Z\"\n    }\n  ]\n}\n",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}app/staff/events/:eventId/bulk-checkin",
+                      "host": [
+                        "{{url}}app"
+                      ],
+                      "path": [
+                        "staff",
+                        "events",
+                        ":eventId",
+                        "bulk-checkin"
+                      ],
+                      "query": [
+                        {
+                          "key": "keyword",
+                          "value": "usama",
+                          "disabled": true
+                        }
+                      ],
+                      "variable": [
+                        {
+                          "key": "eventId",
+                          "value": "691f06598d9b5d3fe5e37abd"
+                        }
+                      ]
+                    },
+                    "description": "## **Bulk Event Attendee Check-In (Offline Sync)**\n\n### **Endpoint**\n\n`POST /app/staff/events/{eventId}/bulk-checkin`\n\n---\n\n### **Description**\n\nThis API is used to **synchronize offline ticket scans** performed by staff during an event when internet connectivity is unavailable or unstable.\n\nStaff applications may scan tickets multiple times, resend partial or full scan payloads, or retry failed uploads.  \nThis endpoint is **fully idempotent** and **backend-controlled**, ensuring ticket usage counts remain accurate and consistent.\n\nThe backend determines which scans are accepted or ignored—**no frontend assumptions are required**.\n\n---\n\n### **Key Characteristics**\n\n- Uses **Ticket Booking** **`_id`** as the single source of truth\n    \n- Supports **repeatable tickets** with visit limits\n    \n- Prevents **duplicate check-ins**\n    \n- Prevents **over-consumption** beyond `maxVisits`\n    \n- Safe for **replayed or partial payloads**\n    \n- Designed for **offline-first workflows**\n    \n\n---\n\n### **Path Parameters**\n\n| Name | Type | Required | Description |\n| --- | --- | --- | --- |\n| `eventId` | ObjectId | Yes | Event identifier |\n\n---\n\n### **Request Body**\n\n``` json\n{\n  \"scans\": [\n    {\n      \"_id\": \"69206c727f5d36d3cbf94ce1\",\n      \"scannedAt\": \"2026-01-24T18:05:30.000Z\"\n    },\n    {\n      \"_id\": \"69206c727f5d36d3cbf94ce3\"\n    }\n  ]\n}\n\n ```\n\n---\n\n### **Request Fields**\n\n| Field | Type | Required | Description |\n| --- | --- | --- | --- |\n| `scans` | Array | Yes | List of scanned ticket entries |\n| `scans._id` | ObjectId | Yes | Ticket booking ID (`TicketingBookings._id`) |\n| `scans.scannedAt` | ISO Date | No | Time the scan occurred (used for deduplication). If omitted, server time is used |\n\n---\n\n### **How It Works**\n\n- Each scan is validated against:\n    \n    - Event ID\n        \n    - Ticket cancellation status\n        \n    - Ticket repeatability rules\n        \n- Each scan is **deduplicated** using a backend-generated hash\n    \n- Repeatable tickets are accepted **only until** **`maxVisits`** **is reached**\n    \n- Non-repeatable tickets are accepted **once only**\n    \n- Replayed or duplicate scans are safely ignored\n    \n\n---\n\n### **Response**\n\n``` json\n{\n  \"message\": \"Event attendees checked in successfully\",\n  \"data\": {\n    \"acceptedCount\": 1,\n    \"ignoredCount\": 1\n  }\n}\n\n ```\n\n---\n\n### **Response Fields**\n\n| Field | Description |\n| --- | --- |\n| `acceptedCount` | Number of scans successfully applied |\n| `ignoredCount` | Number of scans ignored (duplicates, over-limit, invalid) |\n\n---\n\n### **Important Notes**\n\n- `acceptedCount = 0` **does not indicate failure**\n    \n- Ignored scans typically occur when:\n    \n    - Ticket has already reached its visit limit\n        \n    - The same scan payload is replayed\n        \n    - Ticket was previously checked in\n        \n- Frontend applications **may safely resend the same payload multiple times**\n    \n\n---\n\n### **Error Responses**\n\n| Status | Message |\n| --- | --- |\n| `400` | Invalid request parameters |\n| `401` | Unauthorized |\n| `500` | Internal server error |\n\n---\n\n### **Use Cases**\n\n- Offline event check-in\n    \n- Bulk upload after network recovery\n    \n- Staff device retries\n    \n- Partial or delayed synchronization\n    \n\n---\n\n### **Best Practices**\n\n- Always send all locally stored scans during sync\n    \n- Do not attempt to deduplicate on the frontend\n    \n- Rely on backend response counts for reporting"
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
               "name": "get",
               "event": [
                 {
@@ -15885,7 +16019,7 @@
                   }
                 },
                 "url": {
-                  "raw": "{{url}}app/staff/events/?organization=696888da8199413a4bc83c1e&keyword=Best&filter=active",
+                  "raw": "{{url}}app/staff/events/?organization=6911ccb36aca10eb719d7358",
                   "host": [
                     "{{url}}app"
                   ],
@@ -15907,16 +16041,18 @@
                     },
                     {
                       "key": "organization",
-                      "value": "696888da8199413a4bc83c1e"
+                      "value": "6911ccb36aca10eb719d7358"
                     },
                     {
                       "key": "keyword",
-                      "value": "Best"
+                      "value": "Best",
+                      "disabled": true
                     },
                     {
                       "key": "filter",
-                      "value": "active",
-                      "description": "active/thisWeek/past"
+                      "value": "past",
+                      "description": "active/thisWeek/past",
+                      "disabled": true
                     },
                     {
                       "key": "filter",
@@ -16165,7 +16301,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"qrData\": {\n        \"type\": \"eventTicket\", //loyaltyCard, eventTicket\n        \"id\": \"69206c727f5d36d3cbf94ce5\",\n        \"companyOrganizer\": \"691c683da512c38d3350d13e\",\n        \"organization\":\"6911c1b36fc7cbd864e74659\"\n    }\n}",
+                  "raw": "{\n    \"qrData\": {\n        \"type\": \"eventTicket\", //loyaltyCard, eventTicket\n        \"id\": \"69206c727f5d36d3cbf94ce1\",\n        \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n        \"organization\":\"6911c1b36fc7cbd864e74659\"\n    }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -16425,75 +16561,53 @@
           ]
         },
         {
-          "name": "login",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Set Variables on Environment and Collection\", function () {",
-                  "    var jsonData = pm.response.json();",
-                  "",
-                  "    // Setting environment variables",
-                  "    pm.environment.set(\"tokenStaff\", jsonData.data.token);",
-                  "",
-                  "    // Extracting password from request body",
-                  "    let requestBody = JSON.parse(pm.request.body.raw);",
-                  "    pm.environment.set(\"passwordStaff\", requestBody.password);",
-                  "});"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  ""
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"email\": \"staff@pleis.com\",\n    \"password\": \"{{passwordStaff}}\",\n    \"userType\": \"staff\",\n    \"deviceType\": \"android\", //andoird/ios\n    \"deviceId\": \"1234\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}auth/login",
-              "host": [
-                "{{url}}auth"
-              ],
-              "path": [
-                "login"
-              ]
-            }
-          },
-          "response": [
+          "name": "Auth",
+          "item": [
             {
               "name": "login",
-              "originalRequest": {
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "pm.test(\"Set Variables on Environment and Collection\", function () {",
+                      "    var jsonData = pm.response.json();",
+                      "",
+                      "    // Setting environment variables",
+                      "    pm.environment.set(\"tokenStaff\", jsonData.data.token);",
+                      "",
+                      "    // Extracting password from request body",
+                      "    let requestBody = JSON.parse(pm.request.body.raw);",
+                      "    pm.environment.set(\"passwordStaff\", requestBody.password);",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
                 "method": "POST",
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"email\": \"jadon67@example.com\",\n    \"password\": \"{{passwordStaff}}\",\n    \"userType\": \"staff\",\n    \"deviceType\": \"android\", //andoird/ios\n    \"deviceId\": \"1234\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
+                  "raw": "{\n    \"email\": \"caroline.kiehn50@example.com\",\n    \"password\": \"{{passwordStaff}}\",\n    \"userType\": \"staff\",\n    \"deviceType\": \"android\", //andoird/ios\n    \"deviceId\": \"1234\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -16510,176 +16624,473 @@
                   ]
                 }
               },
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "Text",
-              "header": [
+              "response": [
                 {
-                  "key": "X-Powered-By",
-                  "value": "Express"
-                },
-                {
-                  "key": "Access-Control-Allow-Origin",
-                  "value": "*"
-                },
-                {
-                  "key": "Content-Type",
-                  "value": "application/json; charset=utf-8"
-                },
-                {
-                  "key": "Content-Length",
-                  "value": "806"
-                },
-                {
-                  "key": "ETag",
-                  "value": "W/\"326-Xx33fqKZU0pKiLPaSC7+t2st4iI\""
-                },
-                {
-                  "key": "Date",
-                  "value": "Tue, 09 Sep 2025 11:03:22 GMT"
-                },
-                {
-                  "key": "Connection",
-                  "value": "keep-alive"
-                },
-                {
-                  "key": "Keep-Alive",
-                  "value": "timeout=5"
+                  "name": "login",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n    \"email\": \"jadon67@example.com\",\n    \"password\": \"{{passwordStaff}}\",\n    \"userType\": \"staff\",\n    \"deviceType\": \"android\", //andoird/ios\n    \"deviceId\": \"1234\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}auth/login",
+                      "host": [
+                        "{{url}}auth"
+                      ],
+                      "path": [
+                        "login"
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "Text",
+                  "header": [
+                    {
+                      "key": "X-Powered-By",
+                      "value": "Express"
+                    },
+                    {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "*"
+                    },
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    },
+                    {
+                      "key": "Content-Length",
+                      "value": "806"
+                    },
+                    {
+                      "key": "ETag",
+                      "value": "W/\"326-Xx33fqKZU0pKiLPaSC7+t2st4iI\""
+                    },
+                    {
+                      "key": "Date",
+                      "value": "Tue, 09 Sep 2025 11:03:22 GMT"
+                    },
+                    {
+                      "key": "Connection",
+                      "value": "keep-alive"
+                    },
+                    {
+                      "key": "Keep-Alive",
+                      "value": "timeout=5"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n    \"message\": \"Login success\",\n    \"data\": {\n        \"basicInfo\": {\n            \"_id\": \"68c007f0268ed3fad5687426\",\n            \"profileIcon\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/435dff23-2928-494b-9ed1-aee72d118066.png\",\n            \"firstName\": \"Marilie_Wehner\",\n            \"lastName\": \"Aleen.Thompson26\",\n            \"email\": \"jadon67@example.com\",\n            \"phoneNumber\": {\n                \"code\": \"+92\",\n                \"number\": \"3001122104\"\n            },\n            \"language\": \"en\"\n        },\n        \"accountState\": {\n            \"twoFactorAuth\": false,\n            \"userType\": \"staff\",\n            \"status\": \"active\",\n            \"verificationStatus\": {\n                \"email\": \"verified\",\n                \"phoneNumber\": \"pending\"\n            }\n        },\n        \"metadata\": {\n            \"timezone\": \"Asia/Karachi\",\n            \"createdAt\": \"2025-09-09T10:56:48.204Z\",\n            \"updatedAt\": \"2025-09-09T11:02:10.323Z\",\n            \"__v\": 0\n        },\n        \"organizations\": [],\n        \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGMwMDdmMDI2OGVkM2ZhZDU2ODc0MjYiLCJpYXQiOjE3NTc0MTU4MDJ9.F7GbwVz9E92cC3E66cN9qgXPtRKs7AuOFcliBAOHkfE\"\n    }\n}"
                 }
-              ],
-              "cookie": [],
-              "body": "{\n    \"message\": \"Login success\",\n    \"data\": {\n        \"basicInfo\": {\n            \"_id\": \"68c007f0268ed3fad5687426\",\n            \"profileIcon\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/435dff23-2928-494b-9ed1-aee72d118066.png\",\n            \"firstName\": \"Marilie_Wehner\",\n            \"lastName\": \"Aleen.Thompson26\",\n            \"email\": \"jadon67@example.com\",\n            \"phoneNumber\": {\n                \"code\": \"+92\",\n                \"number\": \"3001122104\"\n            },\n            \"language\": \"en\"\n        },\n        \"accountState\": {\n            \"twoFactorAuth\": false,\n            \"userType\": \"staff\",\n            \"status\": \"active\",\n            \"verificationStatus\": {\n                \"email\": \"verified\",\n                \"phoneNumber\": \"pending\"\n            }\n        },\n        \"metadata\": {\n            \"timezone\": \"Asia/Karachi\",\n            \"createdAt\": \"2025-09-09T10:56:48.204Z\",\n            \"updatedAt\": \"2025-09-09T11:02:10.323Z\",\n            \"__v\": 0\n        },\n        \"organizations\": [],\n        \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGMwMDdmMDI2OGVkM2ZhZDU2ODc0MjYiLCJpYXQiOjE3NTc0MTU4MDJ9.F7GbwVz9E92cC3E66cN9qgXPtRKs7AuOFcliBAOHkfE\"\n    }\n}"
-            }
-          ]
-        },
-        {
-          "name": "organizations",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  ""
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  ""
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            }
-          ],
-          "protocolProfileBehavior": {
-            "disableBodyPruning": true
-          },
-          "request": {
-            "method": "GET",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}app/staff/organizations/",
-              "host": [
-                "{{url}}app"
-              ],
-              "path": [
-                "staff",
-                "organizations",
-                ""
               ]
-            }
-          },
-          "response": [
+            },
             {
               "name": "organizations",
-              "originalRequest": {
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
                 "method": "GET",
                 "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
                 "url": {
-                  "raw": "{{url}}organizations/?page=1&limit=10",
+                  "raw": "{{url}}app/staff/organizations/",
                   "host": [
-                    "{{url}}organizations"
+                    "{{url}}app"
                   ],
                   "path": [
+                    "staff",
+                    "organizations",
                     ""
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "organizations",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{url}}organizations/?page=1&limit=10",
+                      "host": [
+                        "{{url}}organizations"
+                      ],
+                      "path": [
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "page",
+                          "value": "1"
+                        },
+                        {
+                          "key": "limit",
+                          "value": "10"
+                        },
+                        {
+                          "key": "date",
+                          "value": "2025-09-02",
+                          "disabled": true
+                        },
+                        {
+                          "key": "keyword",
+                          "value": "Big hall",
+                          "disabled": true
+                        }
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "Text",
+                  "header": [
+                    {
+                      "key": "X-Powered-By",
+                      "value": "Express"
+                    },
+                    {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "*"
+                    },
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    },
+                    {
+                      "key": "Content-Length",
+                      "value": "2159"
+                    },
+                    {
+                      "key": "ETag",
+                      "value": "W/\"86f-/nM6KXoXiErs7/oYcGdBhdW5YL4\""
+                    },
+                    {
+                      "key": "Date",
+                      "value": "Tue, 09 Sep 2025 11:03:41 GMT"
+                    },
+                    {
+                      "key": "Connection",
+                      "value": "keep-alive"
+                    },
+                    {
+                      "key": "Keep-Alive",
+                      "value": "timeout=5"
+                    }
                   ],
-                  "query": [
+                  "cookie": [],
+                  "body": "{\n    \"message\": \"Organizations fetched successfully\",\n    \"data\": [\n        {\n            \"basicInfo\": {\n                \"socialLinks\": {\n                    \"youtube\": \"https://youtube.com/lexevents\",\n                    \"facebook\": \"https://facebook.com/lexevents\",\n                    \"instagram\": \"https://instagram.com/lexevents\",\n                    \"linkedin\": \"https://linkedin.com/company/lexevents\"\n                },\n                \"name\": \"Lex Events\",\n                \"mediaInfo\": {\n                    \"logo\": {\n                        \"name\": \"org-logo_pic1.png\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-logo_pic1.png\"\n                    },\n                    \"cover\": {\n                        \"name\": \"org-cover.jpg\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-cover.jpg\"\n                    }\n                }\n            },\n            \"otherInfo\": {\n                \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n                \"minAge\": 18,\n                \"tags\": [\n                    \"64f7206e442c7dfc4aa00001\"\n                ],\n                \"categories\": [\n                    \"64f7206e442c7dfc4aa00002\"\n                ],\n                \"galleryMediaInfo\": [\n                    {\n                        \"name\": \"gallery1.jpg\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/gallery1.jpg\"\n                    },\n                    {\n                        \"name\": \"gallery2.jpg\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/gallery2.jpg\"\n                    }\n                ]\n            },\n            \"_id\": \"68c0077f268ed3fad568741e\",\n            \"operatingHours\": {\n                \"monday\": {\n                    \"break\": {\n                        \"from\": \"13:00\",\n                        \"to\": \"14:00\"\n                    },\n                    \"from\": \"10:00\",\n                    \"to\": \"18:00\",\n                    \"isOpen\": false\n                },\n                \"tuesday\": {\n                    \"break\": {\n                        \"from\": \"13:00\",\n                        \"to\": \"14:00\"\n                    },\n                    \"from\": \"09:00\",\n                    \"to\": \"18:00\",\n                    \"isOpen\": false\n                },\n                \"wednesday\": {\n                    \"break\": {\n                        \"from\": \"13:00\",\n                        \"to\": \"14:00\"\n                    },\n                    \"from\": \"09:00\",\n                    \"to\": \"18:00\",\n                    \"isOpen\": false\n                },\n                \"thursday\": {\n                    \"break\": {\n                        \"from\": \"13:00\",\n                        \"to\": \"14:00\"\n                    },\n                    \"from\": \"09:00\",\n                    \"to\": \"18:00\",\n                    \"isOpen\": false\n                },\n                \"friday\": {\n                    \"break\": {\n                        \"from\": \"14:00\",\n                        \"to\": \"15:00\"\n                    },\n                    \"from\": \"09:00\",\n                    \"to\": \"20:00\",\n                    \"isOpen\": false\n                },\n                \"saturday\": {\n                    \"break\": {\n                        \"from\": \"16:00\",\n                        \"to\": \"17:00\"\n                    },\n                    \"from\": \"12:00\",\n                    \"to\": \"22:00\",\n                    \"isOpen\": false\n                },\n                \"sunday\": {\n                    \"break\": {\n                        \"from\": \"\",\n                        \"to\": \"\"\n                    },\n                    \"from\": \"\",\n                    \"to\": \"\",\n                    \"isOpen\": true\n                },\n                \"_id\": \"68c0077f268ed3fad568741f\"\n            },\n            \"creator\": \"68bf20db62e71e3681c53ec2\",\n            \"status\": \"active\",\n            \"location\": {\n                \"type\": \"Point\",\n                \"coordinates\": [],\n                \"fullAddress\": \"\",\n                \"city\": \"\",\n                \"country\": \"\",\n                \"state\": \"\",\n                \"postalCode\": \"\"\n            },\n            \"staff\": [\n                {\n                    \"user\": \"68c007f0268ed3fad5687426\",\n                    \"featuresAccess\": [\n                        \"inAppOrdering\",\n                        \"reservationManagement\",\n                        \"loyaltyScanning\",\n                        \"ticketing\"\n                    ]\n                }\n            ],\n            \"createdAt\": \"2025-09-09T10:54:55.051Z\",\n            \"updatedAt\": \"2025-09-09T10:56:48.034Z\",\n            \"__v\": 1\n        }\n    ],\n    \"meta\": {\n        \"currentPage\": 1,\n        \"totalPages\": 1,\n        \"totalRecords\": 1,\n        \"limit\": 10\n    }\n}"
+                }
+              ]
+            },
+            {
+              "name": "checkin",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}app/staff/organizations/:id/checkin",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "staff",
+                    "organizations",
+                    ":id",
+                    "checkin"
+                  ],
+                  "variable": [
                     {
-                      "key": "page",
-                      "value": "1"
-                    },
-                    {
-                      "key": "limit",
-                      "value": "10"
-                    },
-                    {
-                      "key": "date",
-                      "value": "2025-09-02",
-                      "disabled": true
-                    },
-                    {
-                      "key": "keyword",
-                      "value": "Big hall",
-                      "disabled": true
+                      "key": "id",
+                      "value": "6911ccb36aca10eb719d7358"
                     }
                   ]
                 }
               },
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "Text",
-              "header": [
+              "response": [
                 {
-                  "key": "X-Powered-By",
-                  "value": "Express"
+                  "name": "organizations",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{url}}organizations/?page=1&limit=10",
+                      "host": [
+                        "{{url}}organizations"
+                      ],
+                      "path": [
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "page",
+                          "value": "1"
+                        },
+                        {
+                          "key": "limit",
+                          "value": "10"
+                        },
+                        {
+                          "key": "date",
+                          "value": "2025-09-02",
+                          "disabled": true
+                        },
+                        {
+                          "key": "keyword",
+                          "value": "Big hall",
+                          "disabled": true
+                        }
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "Text",
+                  "header": [
+                    {
+                      "key": "X-Powered-By",
+                      "value": "Express"
+                    },
+                    {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "*"
+                    },
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    },
+                    {
+                      "key": "Content-Length",
+                      "value": "2159"
+                    },
+                    {
+                      "key": "ETag",
+                      "value": "W/\"86f-/nM6KXoXiErs7/oYcGdBhdW5YL4\""
+                    },
+                    {
+                      "key": "Date",
+                      "value": "Tue, 09 Sep 2025 11:03:41 GMT"
+                    },
+                    {
+                      "key": "Connection",
+                      "value": "keep-alive"
+                    },
+                    {
+                      "key": "Keep-Alive",
+                      "value": "timeout=5"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n    \"message\": \"Organizations fetched successfully\",\n    \"data\": [\n        {\n            \"basicInfo\": {\n                \"socialLinks\": {\n                    \"youtube\": \"https://youtube.com/lexevents\",\n                    \"facebook\": \"https://facebook.com/lexevents\",\n                    \"instagram\": \"https://instagram.com/lexevents\",\n                    \"linkedin\": \"https://linkedin.com/company/lexevents\"\n                },\n                \"name\": \"Lex Events\",\n                \"mediaInfo\": {\n                    \"logo\": {\n                        \"name\": \"org-logo_pic1.png\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-logo_pic1.png\"\n                    },\n                    \"cover\": {\n                        \"name\": \"org-cover.jpg\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-cover.jpg\"\n                    }\n                }\n            },\n            \"otherInfo\": {\n                \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n                \"minAge\": 18,\n                \"tags\": [\n                    \"64f7206e442c7dfc4aa00001\"\n                ],\n                \"categories\": [\n                    \"64f7206e442c7dfc4aa00002\"\n                ],\n                \"galleryMediaInfo\": [\n                    {\n                        \"name\": \"gallery1.jpg\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/gallery1.jpg\"\n                    },\n                    {\n                        \"name\": \"gallery2.jpg\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/gallery2.jpg\"\n                    }\n                ]\n            },\n            \"_id\": \"68c0077f268ed3fad568741e\",\n            \"operatingHours\": {\n                \"monday\": {\n                    \"break\": {\n                        \"from\": \"13:00\",\n                        \"to\": \"14:00\"\n                    },\n                    \"from\": \"10:00\",\n                    \"to\": \"18:00\",\n                    \"isOpen\": false\n                },\n                \"tuesday\": {\n                    \"break\": {\n                        \"from\": \"13:00\",\n                        \"to\": \"14:00\"\n                    },\n                    \"from\": \"09:00\",\n                    \"to\": \"18:00\",\n                    \"isOpen\": false\n                },\n                \"wednesday\": {\n                    \"break\": {\n                        \"from\": \"13:00\",\n                        \"to\": \"14:00\"\n                    },\n                    \"from\": \"09:00\",\n                    \"to\": \"18:00\",\n                    \"isOpen\": false\n                },\n                \"thursday\": {\n                    \"break\": {\n                        \"from\": \"13:00\",\n                        \"to\": \"14:00\"\n                    },\n                    \"from\": \"09:00\",\n                    \"to\": \"18:00\",\n                    \"isOpen\": false\n                },\n                \"friday\": {\n                    \"break\": {\n                        \"from\": \"14:00\",\n                        \"to\": \"15:00\"\n                    },\n                    \"from\": \"09:00\",\n                    \"to\": \"20:00\",\n                    \"isOpen\": false\n                },\n                \"saturday\": {\n                    \"break\": {\n                        \"from\": \"16:00\",\n                        \"to\": \"17:00\"\n                    },\n                    \"from\": \"12:00\",\n                    \"to\": \"22:00\",\n                    \"isOpen\": false\n                },\n                \"sunday\": {\n                    \"break\": {\n                        \"from\": \"\",\n                        \"to\": \"\"\n                    },\n                    \"from\": \"\",\n                    \"to\": \"\",\n                    \"isOpen\": true\n                },\n                \"_id\": \"68c0077f268ed3fad568741f\"\n            },\n            \"creator\": \"68bf20db62e71e3681c53ec2\",\n            \"status\": \"active\",\n            \"location\": {\n                \"type\": \"Point\",\n                \"coordinates\": [],\n                \"fullAddress\": \"\",\n                \"city\": \"\",\n                \"country\": \"\",\n                \"state\": \"\",\n                \"postalCode\": \"\"\n            },\n            \"staff\": [\n                {\n                    \"user\": \"68c007f0268ed3fad5687426\",\n                    \"featuresAccess\": [\n                        \"inAppOrdering\",\n                        \"reservationManagement\",\n                        \"loyaltyScanning\",\n                        \"ticketing\"\n                    ]\n                }\n            ],\n            \"createdAt\": \"2025-09-09T10:54:55.051Z\",\n            \"updatedAt\": \"2025-09-09T10:56:48.034Z\",\n            \"__v\": 1\n        }\n    ],\n    \"meta\": {\n        \"currentPage\": 1,\n        \"totalPages\": 1,\n        \"totalRecords\": 1,\n        \"limit\": 10\n    }\n}"
+                }
+              ]
+            },
+            {
+              "name": "checkout",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
                 },
                 {
-                  "key": "Access-Control-Allow-Origin",
-                  "value": "*"
-                },
-                {
-                  "key": "Content-Type",
-                  "value": "application/json; charset=utf-8"
-                },
-                {
-                  "key": "Content-Length",
-                  "value": "2159"
-                },
-                {
-                  "key": "ETag",
-                  "value": "W/\"86f-/nM6KXoXiErs7/oYcGdBhdW5YL4\""
-                },
-                {
-                  "key": "Date",
-                  "value": "Tue, 09 Sep 2025 11:03:41 GMT"
-                },
-                {
-                  "key": "Connection",
-                  "value": "keep-alive"
-                },
-                {
-                  "key": "Keep-Alive",
-                  "value": "timeout=5"
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
                 }
               ],
-              "cookie": [],
-              "body": "{\n    \"message\": \"Organizations fetched successfully\",\n    \"data\": [\n        {\n            \"basicInfo\": {\n                \"socialLinks\": {\n                    \"youtube\": \"https://youtube.com/lexevents\",\n                    \"facebook\": \"https://facebook.com/lexevents\",\n                    \"instagram\": \"https://instagram.com/lexevents\",\n                    \"linkedin\": \"https://linkedin.com/company/lexevents\"\n                },\n                \"name\": \"Lex Events\",\n                \"mediaInfo\": {\n                    \"logo\": {\n                        \"name\": \"org-logo_pic1.png\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-logo_pic1.png\"\n                    },\n                    \"cover\": {\n                        \"name\": \"org-cover.jpg\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-cover.jpg\"\n                    }\n                }\n            },\n            \"otherInfo\": {\n                \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n                \"minAge\": 18,\n                \"tags\": [\n                    \"64f7206e442c7dfc4aa00001\"\n                ],\n                \"categories\": [\n                    \"64f7206e442c7dfc4aa00002\"\n                ],\n                \"galleryMediaInfo\": [\n                    {\n                        \"name\": \"gallery1.jpg\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/gallery1.jpg\"\n                    },\n                    {\n                        \"name\": \"gallery2.jpg\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/gallery2.jpg\"\n                    }\n                ]\n            },\n            \"_id\": \"68c0077f268ed3fad568741e\",\n            \"operatingHours\": {\n                \"monday\": {\n                    \"break\": {\n                        \"from\": \"13:00\",\n                        \"to\": \"14:00\"\n                    },\n                    \"from\": \"10:00\",\n                    \"to\": \"18:00\",\n                    \"isOpen\": false\n                },\n                \"tuesday\": {\n                    \"break\": {\n                        \"from\": \"13:00\",\n                        \"to\": \"14:00\"\n                    },\n                    \"from\": \"09:00\",\n                    \"to\": \"18:00\",\n                    \"isOpen\": false\n                },\n                \"wednesday\": {\n                    \"break\": {\n                        \"from\": \"13:00\",\n                        \"to\": \"14:00\"\n                    },\n                    \"from\": \"09:00\",\n                    \"to\": \"18:00\",\n                    \"isOpen\": false\n                },\n                \"thursday\": {\n                    \"break\": {\n                        \"from\": \"13:00\",\n                        \"to\": \"14:00\"\n                    },\n                    \"from\": \"09:00\",\n                    \"to\": \"18:00\",\n                    \"isOpen\": false\n                },\n                \"friday\": {\n                    \"break\": {\n                        \"from\": \"14:00\",\n                        \"to\": \"15:00\"\n                    },\n                    \"from\": \"09:00\",\n                    \"to\": \"20:00\",\n                    \"isOpen\": false\n                },\n                \"saturday\": {\n                    \"break\": {\n                        \"from\": \"16:00\",\n                        \"to\": \"17:00\"\n                    },\n                    \"from\": \"12:00\",\n                    \"to\": \"22:00\",\n                    \"isOpen\": false\n                },\n                \"sunday\": {\n                    \"break\": {\n                        \"from\": \"\",\n                        \"to\": \"\"\n                    },\n                    \"from\": \"\",\n                    \"to\": \"\",\n                    \"isOpen\": true\n                },\n                \"_id\": \"68c0077f268ed3fad568741f\"\n            },\n            \"creator\": \"68bf20db62e71e3681c53ec2\",\n            \"status\": \"active\",\n            \"location\": {\n                \"type\": \"Point\",\n                \"coordinates\": [],\n                \"fullAddress\": \"\",\n                \"city\": \"\",\n                \"country\": \"\",\n                \"state\": \"\",\n                \"postalCode\": \"\"\n            },\n            \"staff\": [\n                {\n                    \"user\": \"68c007f0268ed3fad5687426\",\n                    \"featuresAccess\": [\n                        \"inAppOrdering\",\n                        \"reservationManagement\",\n                        \"loyaltyScanning\",\n                        \"ticketing\"\n                    ]\n                }\n            ],\n            \"createdAt\": \"2025-09-09T10:54:55.051Z\",\n            \"updatedAt\": \"2025-09-09T10:56:48.034Z\",\n            \"__v\": 1\n        }\n    ],\n    \"meta\": {\n        \"currentPage\": 1,\n        \"totalPages\": 1,\n        \"totalRecords\": 1,\n        \"limit\": 10\n    }\n}"
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}app/staff/organizations/:id/checkout",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "staff",
+                    "organizations",
+                    ":id",
+                    "checkout"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "6911ccb36aca10eb719d7358"
+                    }
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "organizations",
+                  "originalRequest": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{url}}organizations/?page=1&limit=10",
+                      "host": [
+                        "{{url}}organizations"
+                      ],
+                      "path": [
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "page",
+                          "value": "1"
+                        },
+                        {
+                          "key": "limit",
+                          "value": "10"
+                        },
+                        {
+                          "key": "date",
+                          "value": "2025-09-02",
+                          "disabled": true
+                        },
+                        {
+                          "key": "keyword",
+                          "value": "Big hall",
+                          "disabled": true
+                        }
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": "Text",
+                  "header": [
+                    {
+                      "key": "X-Powered-By",
+                      "value": "Express"
+                    },
+                    {
+                      "key": "Access-Control-Allow-Origin",
+                      "value": "*"
+                    },
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    },
+                    {
+                      "key": "Content-Length",
+                      "value": "2159"
+                    },
+                    {
+                      "key": "ETag",
+                      "value": "W/\"86f-/nM6KXoXiErs7/oYcGdBhdW5YL4\""
+                    },
+                    {
+                      "key": "Date",
+                      "value": "Tue, 09 Sep 2025 11:03:41 GMT"
+                    },
+                    {
+                      "key": "Connection",
+                      "value": "keep-alive"
+                    },
+                    {
+                      "key": "Keep-Alive",
+                      "value": "timeout=5"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n    \"message\": \"Organizations fetched successfully\",\n    \"data\": [\n        {\n            \"basicInfo\": {\n                \"socialLinks\": {\n                    \"youtube\": \"https://youtube.com/lexevents\",\n                    \"facebook\": \"https://facebook.com/lexevents\",\n                    \"instagram\": \"https://instagram.com/lexevents\",\n                    \"linkedin\": \"https://linkedin.com/company/lexevents\"\n                },\n                \"name\": \"Lex Events\",\n                \"mediaInfo\": {\n                    \"logo\": {\n                        \"name\": \"org-logo_pic1.png\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-logo_pic1.png\"\n                    },\n                    \"cover\": {\n                        \"name\": \"org-cover.jpg\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/org-cover.jpg\"\n                    }\n                }\n            },\n            \"otherInfo\": {\n                \"description\": \"Lex Events specializes in tech meetups and creative networking experiences.\",\n                \"minAge\": 18,\n                \"tags\": [\n                    \"64f7206e442c7dfc4aa00001\"\n                ],\n                \"categories\": [\n                    \"64f7206e442c7dfc4aa00002\"\n                ],\n                \"galleryMediaInfo\": [\n                    {\n                        \"name\": \"gallery1.jpg\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/gallery1.jpg\"\n                    },\n                    {\n                        \"name\": \"gallery2.jpg\",\n                        \"url\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/gallery2.jpg\"\n                    }\n                ]\n            },\n            \"_id\": \"68c0077f268ed3fad568741e\",\n            \"operatingHours\": {\n                \"monday\": {\n                    \"break\": {\n                        \"from\": \"13:00\",\n                        \"to\": \"14:00\"\n                    },\n                    \"from\": \"10:00\",\n                    \"to\": \"18:00\",\n                    \"isOpen\": false\n                },\n                \"tuesday\": {\n                    \"break\": {\n                        \"from\": \"13:00\",\n                        \"to\": \"14:00\"\n                    },\n                    \"from\": \"09:00\",\n                    \"to\": \"18:00\",\n                    \"isOpen\": false\n                },\n                \"wednesday\": {\n                    \"break\": {\n                        \"from\": \"13:00\",\n                        \"to\": \"14:00\"\n                    },\n                    \"from\": \"09:00\",\n                    \"to\": \"18:00\",\n                    \"isOpen\": false\n                },\n                \"thursday\": {\n                    \"break\": {\n                        \"from\": \"13:00\",\n                        \"to\": \"14:00\"\n                    },\n                    \"from\": \"09:00\",\n                    \"to\": \"18:00\",\n                    \"isOpen\": false\n                },\n                \"friday\": {\n                    \"break\": {\n                        \"from\": \"14:00\",\n                        \"to\": \"15:00\"\n                    },\n                    \"from\": \"09:00\",\n                    \"to\": \"20:00\",\n                    \"isOpen\": false\n                },\n                \"saturday\": {\n                    \"break\": {\n                        \"from\": \"16:00\",\n                        \"to\": \"17:00\"\n                    },\n                    \"from\": \"12:00\",\n                    \"to\": \"22:00\",\n                    \"isOpen\": false\n                },\n                \"sunday\": {\n                    \"break\": {\n                        \"from\": \"\",\n                        \"to\": \"\"\n                    },\n                    \"from\": \"\",\n                    \"to\": \"\",\n                    \"isOpen\": true\n                },\n                \"_id\": \"68c0077f268ed3fad568741f\"\n            },\n            \"creator\": \"68bf20db62e71e3681c53ec2\",\n            \"status\": \"active\",\n            \"location\": {\n                \"type\": \"Point\",\n                \"coordinates\": [],\n                \"fullAddress\": \"\",\n                \"city\": \"\",\n                \"country\": \"\",\n                \"state\": \"\",\n                \"postalCode\": \"\"\n            },\n            \"staff\": [\n                {\n                    \"user\": \"68c007f0268ed3fad5687426\",\n                    \"featuresAccess\": [\n                        \"inAppOrdering\",\n                        \"reservationManagement\",\n                        \"loyaltyScanning\",\n                        \"ticketing\"\n                    ]\n                }\n            ],\n            \"createdAt\": \"2025-09-09T10:54:55.051Z\",\n            \"updatedAt\": \"2025-09-09T10:56:48.034Z\",\n            \"__v\": 1\n        }\n    ],\n    \"meta\": {\n        \"currentPage\": 1,\n        \"totalPages\": 1,\n        \"totalRecords\": 1,\n        \"limit\": 10\n    }\n}"
+                }
+              ]
             }
           ]
         }
@@ -19217,7 +19628,7 @@
                   }
                 },
                 "url": {
-                  "raw": "{{url}}admin/organizations/?page=1&limit=10",
+                  "raw": "{{url}}admin/organizations/?page=1&limit=100",
                   "host": [
                     "{{url}}admin"
                   ],
@@ -19232,7 +19643,7 @@
                     },
                     {
                       "key": "limit",
-                      "value": "10"
+                      "value": "100"
                     },
                     {
                       "key": "date",
@@ -24328,7 +24739,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"{{$randomUserName}}\",\n    \"email\": \"{{$randomExampleEmail}}\",\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122104\"\n    },\n    \"password\": \"123456\",\n    \"userType\": \"staff\",\n    \"organizations\":[\"6954ea3e9c8a1a1042efc569\"],\n    \"modules\":[\"inAppOrdering\",\"reservationManagement\",\"loyaltyScanning\",\"ticketing\"]\n}",
+                  "raw": "{\n    \"profileIcon\": \"435dff23-2928-494b-9ed1-aee72d118066.png\",\n    \"firstName\": \"{{$randomUserName}}\",\n    \"lastName\": \"{{$randomUserName}}\",\n    \"email\": \"{{$randomExampleEmail}}\",\n    \"phoneNumber\": {\n        \"code\": \"+92\",\n        \"number\": \"3001122105\"\n    },\n    \"password\": \"123456\",\n    \"userType\": \"staff\",\n    \"organizations\":[\"6911ccb36aca10eb719d7358\"],\n    \"modules\":[\"inAppOrdering\",\"reservationManagement\",\"loyaltyScanning\",\"ticketing\"]\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -26261,7 +26672,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"companyOrganizer\": \"68d69157fbccb319035eb118\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"happyHour\", //[\"happyHour\", \"buyMenuItem\", \"productSale\"]\n    \"title\": \"Sample title\",\n    \"description\": \"description of item\",\n    \"startDate\":\"2025-11-05 05:00 AM\",\n    \"endDate\": \"2025-11-05 11:00 AM\",\n    \"tierLimit\": \"690c821e1fe6edd47cca0695\",\n    \"pointsMultiplier\":\"1.5\",\n    \"status\": \"active\"\n\n        /*Ending on specific date*/\n        ,\n        \"recurringDetails\": {\n          \"isEnabled\": true,\n          \"frequency\": \"weekly\",\n          \"interval\": 1,\n          \"daysOfWeek\": [\"fri\"],\n          \"endType\": \"onDate\",\n          \"endDate\": \"2025-11-05\" //date value from promotion endDate\n        }\n        \n}",
+                      "raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"happyHour\", //[\"happyHour\", \"buyMenuItem\", \"productSale\"]\n    \"title\": \"Sample title\",\n    \"description\": \"description of item\",\n    \"startDate\": \"2026-01-23 09:00 PM\",\n    \"endDate\": \"2026-01-23 10:00 PM\",\n    \"tierLimit\": \"6911c41f6aca10eb719d6fc7\",\n    \"pointsMultiplier\": \"1.5\",\n    \"status\": \"active\"\n    /*Ending on specific date*/\n    ,\n    \"recurringDetails\": {\n        \"isEnabled\": true,\n        \"frequency\": \"daily\", // \"daily\", \"weekly\", \"monthly\"\n        \"interval\": 1,\n        \"daysOfWeek\": [\n            \"mon\",\n            \"tue\",\n            \"wed\",\n            \"thu\",\n            \"fri\",\n            \"sat\",\n            \"sun\"\n        ],\n        \"endType\": \"onDate\",\n        \"endDate\": \"2026-02-20\"\n    }\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -26473,7 +26884,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n//   \"title\": \"Sample title\",\n//   \"description\": \"description of item\",\n  \"tierLimit\":\"690b3cea8d15be3d21bdd31d\"\n\n}\n",
+                      "raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"happyHour\", //[\"happyHour\", \"buyMenuItem\", \"productSale\"]\n    \"title\": \"Sample title\",\n    \"description\": \"description of item\",\n    // \"startDate\": \"2026-01-23 11:00 PM\",\n    // \"endDate\": \"2026-01-23 11:30 PM\",\n    // \"tierLimit\": \"6911c41f6aca10eb719d6fc7\",\n    \"pointsMultiplier\": \"1.5\",\n    \"status\": \"active\"\n    /*Ending on specific date*/\n    ,\n    \"recurringDetails\": {\n        \"isEnabled\": true,\n        \"frequency\": \"daily\", // \"daily\", \"weekly\", \"monthly\"\n        \"interval\": 1,\n        \"daysOfWeek\": [\n            \"mon\",\n            \"tue\",\n            \"wed\",\n            \"thu\",\n            \"fri\",\n            \"sat\",\n            \"sun\"\n        ],\n        \"endType\": \"onDate\",\n        \"endDate\": \"2026-03-25\"\n    }\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -26481,7 +26892,7 @@
                       }
                     },
                     "url": {
-                      "raw": "{{url}}admin/loyalty/promotions/:id",
+                      "raw": "{{url}}admin/loyalty/promotions/:id?scope=future",
                       "host": [
                         "{{url}}admin"
                       ],
@@ -26490,10 +26901,17 @@
                         "promotions",
                         ":id"
                       ],
+                      "query": [
+                        {
+                          "key": "scope",
+                          "value": "future",
+                          "description": "single/future"
+                        }
+                      ],
                       "variable": [
                         {
                           "key": "id",
-                          "value": "69099c8731c9226aeed16dd7"
+                          "value": "69737c9f2eb4f4917f9f2649"
                         }
                       ]
                     },
@@ -30605,7 +31023,7 @@
                       "raw": ""
                     },
                     "url": {
-                      "raw": "{{url}}admin/reservations/calendar?date=2025-12-16&organizationsId=[\"6911ccb36aca10eb719d7358\"]",
+                      "raw": "{{url}}admin/reservations/calendar?date=2026-01-23&organization=6911c1b36fc7cbd864e74659",
                       "host": [
                         "{{url}}admin"
                       ],
@@ -30616,11 +31034,11 @@
                       "query": [
                         {
                           "key": "date",
-                          "value": "2025-12-16"
+                          "value": "2026-01-23"
                         },
                         {
-                          "key": "organizationsId",
-                          "value": "[\"6911ccb36aca10eb719d7358\"]"
+                          "key": "organization",
+                          "value": "6911c1b36fc7cbd864e74659"
                         },
                         {
                           "key": "companyOrganizer",
@@ -30727,7 +31145,7 @@
                   "raw": ""
                 },
                 "url": {
-                  "raw": "{{url}}admin/reservations?organizationsId=6911ccb36aca10eb719d7358",
+                  "raw": "{{url}}admin/reservations?organizationsId=6911c1b36fc7cbd864e74659",
                   "host": [
                     "{{url}}admin"
                   ],
@@ -30767,7 +31185,7 @@
                     },
                     {
                       "key": "organizationsId",
-                      "value": "6911ccb36aca10eb719d7358"
+                      "value": "6911c1b36fc7cbd864e74659"
                     },
                     {
                       "key": "companyOrganizer",
@@ -30846,7 +31264,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{url}}admin/reservations/users?organizationsId=6911ccb36aca10eb719d7358&reservationStatus=active&reservationId=697323b3f18b87e8b5ca1233",
+                  "raw": "{{url}}admin/reservations/users?organizationsId=6911c1b36fc7cbd864e74659&reservationId=69734d40297ca37e0f106214",
                   "host": [
                     "{{url}}admin"
                   ],
@@ -30857,7 +31275,7 @@
                   "query": [
                     {
                       "key": "organizationsId",
-                      "value": "6911ccb36aca10eb719d7358"
+                      "value": "6911c1b36fc7cbd864e74659"
                     },
                     {
                       "key": "date",
@@ -30871,11 +31289,12 @@
                     },
                     {
                       "key": "reservationStatus",
-                      "value": "active"
+                      "value": "active",
+                      "disabled": true
                     },
                     {
                       "key": "reservationId",
-                      "value": "697323b3f18b87e8b5ca1233"
+                      "value": "69734d40297ca37e0f106214"
                     }
                   ]
                 }

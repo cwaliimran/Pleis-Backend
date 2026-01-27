@@ -8,6 +8,7 @@ const { NotificationTypes } = require("@NotificationsModel");
 const Organizations = require("@OrganizationModel");
 const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
 const { findAppUserByIdWithProjectionService } = require("../../usersManagement/usersService");
+const { getCheckedInStaffForOrganization } = require("../../../staff/organizations/organizationRepository");
 
 const getStaffIdsByOrganization = async (organizationId) => {
   if (!mongoose.Types.ObjectId.isValid(organizationId)) {
@@ -106,7 +107,6 @@ const placeOrder = async ({
     session.endSession();
 
     let formattedOrder = menuItemOrderFormatter(order, timezone);
-    const staffIds = await getStaffIdsByOrganization(organizationId);
     //get user details
     let userDetails = await findAppUserByIdWithProjectionService(userId, { profileIcon: 1, firstName: 1, lastName: 1, profileIcon: 1, email: 1, username: 1 });
     formattedOrder.user = userDetails;
@@ -121,22 +121,24 @@ const placeOrder = async ({
         data: formattedOrder,
       });
 
+      const staffIds = await getCheckedInStaffForOrganization(organizationId, timezone);
+
+      sendUserNotifications({
+        recipientIds: staffIds,
+        title: "New Order Placed",
+        body: `New Order Has been placed : and is now being ${formattedOrder.status}. The total amount is ${formattedOrder.totalPrice} EUR`,
+        data: {
+          type: NotificationTypes.ORDER_UPDATE,
+          objectType: "group",
+          organization_id: organizationId.toString(),
+        },
+        image: (order.items[0].menuItemSnapShot.image) || "noimage",
+        sender: userId,
+        objectId: formattedOrder._id,
+      });
     }
 
-    await sendUserNotifications({
-      recipientIds: staffIds,
-      title: "New Order Placed",
-      body: `New Order Has been placed : and is now being ${formattedOrder.status}. The total amount is ${formattedOrder.totalPrice} EUR`,
-      data: {
-        type: NotificationTypes.ORDER_UPDATE,
-        objectType: "group",
-        organization_id: organizationId.toString(),
-      },
-      image: (order.items[0].menuItemSnapShot.image) || "noimage",
-      sender: userId,
-      objectId: formattedOrder._id,
-    });
-
+    //TODO if paymentMethod is card/applePay and paid then send notification to staff as well, or maybe check from service where monri is processing payment 
 
 
     return { order: formattedOrder };

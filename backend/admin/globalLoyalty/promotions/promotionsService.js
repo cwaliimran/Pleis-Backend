@@ -4,7 +4,16 @@ const repository = require("./promotionsRepository");
 const mongoose = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
 const formatPromotion = require("./utils/formatPromotion");
-
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY = "globalLoyaltyPromotions:active";
+const buildGlobalLoyaltyPromotionsCacheKey = ({
+  scope = "public", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
+ 
 const create = async (data,timezone) => {
   let promotion = await repository.create(data);
   return formatPromotion(promotion, timezone);
@@ -59,12 +68,14 @@ const update = async (id, data) => {
   if (!item) return null;
   Object.assign(item, data);
   await item.save();
+  await invalidate(ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY);
   //fetch updated item and return
   return await getDetails(id);
 };
 
 const deleteItem = async (id) => {
   const updated = await repository.findByIdAndUpdate(id, { status: "deleted" });
+  await invalidate(ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY); 
   return !!updated;
 };
 

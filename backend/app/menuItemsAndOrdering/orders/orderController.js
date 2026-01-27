@@ -14,7 +14,7 @@ const placeOrder = async (req, res) => {
       ],
       enumFields: {
         pickupType: ["counter", "tableService", "togo"],
-        paymentMethod: ["applePay", "card", "cash", "payLater"],
+        paymentMethod: ["applePay", "card", "cash"],
       },
     }
 

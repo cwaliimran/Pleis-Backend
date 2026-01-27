@@ -1,5 +1,6 @@
 const {
   sendResponse,
+  validateParams,
 } = require("../../helperUtils/responseUtil");
 
 const {
@@ -13,7 +14,7 @@ const organizationService = require("./organizationService");
 const getOrganizationsAsStaff = async (req, res) => {
   try {
     const userId = req.user._id;
-    const timezone = req.user.timezone;  
+    const timezone = req.user.timezone;
 
     // Fetch organizations array
     let organizations = await organizationService.getOrganizationsAsStaff(userId);
@@ -50,7 +51,86 @@ const getOrganizationsAsStaff = async (req, res) => {
   }
 };
 
+// -----------------------------
+// CHECK-IN
+// -----------------------------
+const checkInToOrganization = async (req, res) => {
+  const { id: organizationId } = req.params;
+  const staffId = req.user._id;
+  const timezone = req.user.timezone || "UTC";
+  const { source } = req.body;
+
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"]
+    })
+  ) return;
+
+  try {
+    await organizationService.checkInToOrganization(
+      organizationId,
+      staffId,
+      source,
+      timezone
+    );
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "organization_checked_in_successfully"
+    });
+
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error
+    });
+  }
+};
+
+// -----------------------------
+// CHECK-OUT
+// -----------------------------
+const checkOutFromOrganization = async (req, res) => {
+  const { id: organizationId } = req.params;
+  const staffId = req.user._id;
+  const timezone = req.user.timezone || "UTC";
+
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"]
+    })
+  ) return;
+
+  try {
+    await organizationService.checkOutFromOrganization(
+      organizationId,
+      staffId,
+      timezone
+    );
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "organization_checked_out_successfully"
+    });
+
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error
+    });
+  }
+};
 
 module.exports = {
+  checkInToOrganization,
+  checkOutFromOrganization,
   getOrganizationsAsStaff,
 };

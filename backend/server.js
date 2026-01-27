@@ -4,28 +4,53 @@
  * ================================
  */
 
+/**
+ * ------------------------------------------------
+ * Unified Logging (FIRST – before anything else)
+ * ------------------------------------------------
+ */
+require("./config/logging");
+const {
+  logger,
+  crashLogger,
+  accessLogger,
+} = require("./config/logging");
+
+// expose globally (safe + intentional)
+global.logger = logger;
+
+/**
+ * ------------------------------------------------
+ * Env
+ * ------------------------------------------------
+ */
 require("dotenv").config({
   path: `.env.${process.env.NODE_ENV || "dev"}`,
 });
 
-// ---- Global Logger (early) ----
-global.logger = require("../backend/helperUtils/logger");
-
+require("express-async-errors");
 const express = require("express");
 const morgan = require("morgan");
 const path = require("path");
 const moduleAlias = require("module-alias");
 
-// ---- Load module aliases ----
+/**
+ * ------------------------------------------------
+ * Module aliases
+ * ------------------------------------------------
+ */
 const aliases = require("../aliasConfig/pathAliases.config");
 for (const [alias, target] of Object.entries(aliases)) {
   moduleAlias.addAlias(alias, path.join(__dirname, "..", target));
 }
 require("module-alias/register");
 
-// ---- App & Infra Imports ----
+/**
+ * ------------------------------------------------
+ * App & Infra Imports
+ * ------------------------------------------------
+ */
 const { i18nConfig } = require("./config/i18nConfig");
-const { loggerMiddleware } = require("./middlewares/logger");
 const { securityMiddleware } = require("./middlewares/security");
 const { sendResponse } = require("./helperUtils/responseUtil");
 
@@ -34,30 +59,67 @@ const { backupMongoDB } = require("./helperUtils/dataBaseBackup");
 const { getRedisClient } = require("./config/redis/redisConfig");
 const { startCrons } = require("./config/cron");
 
-// ---- Socket Server ----
+/**
+ * ------------------------------------------------
+ * Socket Server
+ * ------------------------------------------------
+ */
 const { createSocketServer } = require("./config/sockets/socketServer");
 
-// ---- Routes ----
+/**
+ * ------------------------------------------------
+ * Routes
+ * ------------------------------------------------
+ */
 const routes = require("./routes");
 const adminRoutes = require("./admin/routes");
 const organizerRoutes = require("./organizer/routes");
 const appRoutes = require("./routes/appRoutes");
 const staffRoutes = require("./routes/staffRoutes");
-const webhooksRoutes = require("./commonModules/paymentsIntegrations/paymentsWebhook/routes/webhookRoutes");
+const webhooksRoutes =
+  require("./commonModules/paymentsIntegrations/paymentsWebhook/routes/webhookRoutes");
 
-// ---- Swagger ----
+/**
+ * ------------------------------------------------
+ * Swagger
+ * ------------------------------------------------
+ */
 const swaggerUi = require("swagger-ui-express");
 const swaggerFile = require("../swagger/swagger_output.json");
 
-// =======================================================
-// Express App
-// =======================================================
+/**
+ * =======================================================
+ * Express App
+ * =======================================================
+ */
 const app = express();
 app.set("trust proxy", 1);
 
-// =======================================================
-// Security
-// =======================================================
+/**
+ * ------------------------------------------------
+ * Health & Root
+ * ------------------------------------------------
+ */
+app.get("/api", (req, res) => {
+  res.json({
+    name: "Pleis API",
+    version: "v1",
+    status: "running",
+  });
+});
+
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    uptime: process.uptime(),
+  });
+});
+
+/**
+ * =======================================================
+ * Security
+ * =======================================================
+ */
 const allowedOrigins = [
   "https://pleis.com",
   "https://www.pleis.com",
@@ -66,27 +128,6 @@ const allowedOrigins = [
   "http://localhost:4003",
   "http://192.168.12.121:4003",
   "https://pleis.vercel.app",
-  "https://latex-industry-bridges-wines.trycloudflare.com",
-  "https://nelson-sponsor-santa-interact.trycloudflare.com",
-  "https://specification-medicine-exec-deaf.trycloudflare.com",
-  "https://willow-zealand-currency-fortune.trycloudflare.com",
-  "http://192.168.12.121:4003",
-  "https://ebook-what-premiere-totals.trycloudflare.com",
-  "https://individual-travesti-hockey-cancel.trycloudflare.com",
-  "https://handy-floral-implementation-pumps.trycloudflare.com",
-  "https://protected-betty-allows-gale.trycloudflare.com",
-  "https://personnel-event-waves-alexander.trycloudflare.com",
-  "https://glow-task-hood-meditation.trycloudflare.com",
-  "https://detective-viruses-manufacture-arrives.trycloudflare.com",
-  "https://genome-exploring-browser-brown.trycloudflare.com",
-  "https://abraham-pipes-activity-polar.trycloudflare.com",
-  "https://integrated-points-inspired-country.trycloudflare.com",
-  "http://192.168.13.221:4003",
-  "http://192.168.100.65:4003",
-  "http://192.168.13.84:4003",
-  "http://192.168.100.65:4003",
-  "http://192.168.13.128:4003",
-  
 ];
 
 securityMiddleware(app, {
@@ -97,17 +138,25 @@ securityMiddleware(app, {
   rateLimitMax: 200,
 });
 
-// =======================================================
-// Middlewares
-// =======================================================
+/**
+ * =======================================================
+ * Middlewares
+ * =======================================================
+ */
 app.use(i18nConfig.init);
-app.use(loggerMiddleware);
-app.use(morgan("dev"));
+
+// ✅ unified access logs
+app.use(accessLogger);
+
+// keep existing middleware (unchanged)
+app.use(morgan("dev")); // dev only
 app.use(express.json());
 
-// =======================================================
-// Routes
-// =======================================================
+/**
+ * =======================================================
+ * Routes
+ * =======================================================
+ */
 app.use("/api/v1/app", appRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/organizer", organizerRoutes);
@@ -127,27 +176,101 @@ app.use((req, res) => {
   });
 });
 
-// =======================================================
-// Infrastructure Bootstrap
-// =======================================================
+/**
+ * =======================================================
+ * Global Express Error Handler
+ * =======================================================
+ */
+app.use((err, req, res, next) => {
+  logger.error("Request error", {
+    method: req.method,
+    path: req.originalUrl,
+    error: err.message,
+    stack: err.stack,
+  });
 
-// Redis (warm up)
+  res.status(500).json({
+    message: "Internal server error",
+  });
+});
+
+/**
+ * =======================================================
+ * Infrastructure Bootstrap
+ * =======================================================
+ */
 getRedisClient();
-
-// Crons
 startCrons();
 
-// MongoDB Backup (24h)
+// MongoDB backup (24h)
 setInterval(() => {
   backupMongoDB();
 }, 24 * 60 * 60 * 1000);
 
-// =======================================================
-// Socket + HTTP Server (SINGLE SOURCE OF TRUTH)
-// =======================================================
+/**
+ * =======================================================
+ * Socket + HTTP Server
+ * =======================================================
+ */
 const server = createSocketServer(app, allowedOrigins);
 
-// =======================================================
-// Start Server AFTER DB Connection
-// =======================================================
+/**
+ * =======================================================
+ * Start Server AFTER DB Connection
+ * =======================================================
+ */
 connectToDB(server);
+
+/**
+ * =======================================================
+ * Graceful shutdown (expected)
+ * =======================================================
+ */
+const shutdown = async (signal) => {
+  logger.warn("Shutdown signal received", { signal });
+
+  try {
+    if (global.io) {
+      await global.io.close();
+      logger.info("Socket.IO closed");
+    }
+    process.exit(0);
+  } catch (err) {
+    logger.error("Error during graceful shutdown", {
+      error: err.message,
+      stack: err.stack,
+    });
+    process.exit(1);
+  }
+};
+
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
+
+/**
+ * =======================================================
+ * Crash handlers (unexpected)
+ * =======================================================
+ */
+process.on("unhandledRejection", (reason, promise) => {
+  crashLogger.fatal("Unhandled Promise Rejection", {
+    reason: reason?.message || reason,
+    stack: reason?.stack,
+  });
+
+  // Give logger time to flush
+  setTimeout(() => {
+    process.exit(1);
+  }, 100);
+});
+
+process.on("uncaughtException", (err) => {
+  crashLogger.fatal("Uncaught Exception", {
+    error: err.message,
+    stack: err.stack,
+  });
+
+  setTimeout(() => {
+    process.exit(1);
+  }, 100);
+});

@@ -94,8 +94,11 @@ const findByIdAndUpdate = async (id, data) => {
 const validateTicketsAndQuantity = async (ticketings) => {
   const errors = [];
   const ticketSnapshots = [];
+  const now = new Date();
 
-  // Group requests by ticketId
+  // -----------------------------
+  // GROUP REQUESTS BY TICKET ID
+  // -----------------------------
   const grouped = {};
   for (const t of ticketings) {
     const key = t.ticketId.toString();
@@ -114,8 +117,6 @@ const validateTicketsAndQuantity = async (ticketings) => {
 
     /* =====================================================
        SLOT-BASED TICKETS
-       → ONLY slot.quantity matters
-       → IGNORE ticket.quantity COMPLETELY
     ===================================================== */
     if (ticket.timingSlots?.enabled === true) {
       for (const req of requests) {
@@ -139,11 +140,41 @@ const validateTicketsAndQuantity = async (ticketings) => {
           continue;
         }
 
-        const slotBooked = await TicketingBookings.countDocuments({
-          "ticket.ticketId": ticketId,
-          "ticket.timeSlot": req.timeSlot,
-          status: { $in: ["valid", "used"] }
-        });
+        // -----------------------------
+        // COUNT BLOCKED SLOT BOOKINGS
+        // -----------------------------
+        const slotBookedAgg = await TicketingBookings.aggregate([
+          {
+            $match: {
+              "ticket.ticketId": ticket._id,
+              "ticket.timeSlot": req.timeSlot
+            }
+          },
+          {
+            $lookup: {
+              from: "ticketingorders",
+              localField: "order",
+              foreignField: "_id",
+              as: "order"
+            }
+          },
+          { $unwind: "$order" },
+          {
+            $match: {
+              $or: [
+                { status: { $in: ["valid", "used"] } },
+                {
+                  status: "pending",
+                  "order.status": "pendingPayment",
+                  "order.lockUntil": { $gt: now }
+                }
+              ]
+            }
+          },
+          { $count: "count" }
+        ]);
+
+        const slotBooked = slotBookedAgg[0]?.count || 0;
 
         if (slot.quantity - slotBooked <= 0) {
           errors.push({
@@ -153,7 +184,7 @@ const validateTicketsAndQuantity = async (ticketings) => {
           continue;
         }
 
-        /* ---------- FAST TRACK (slot tickets allowed) ---------- */
+        /* ---------- FAST TRACK (SLOT) ---------- */
         if (req.isFastTrack === true) {
           if (!ticket.fastTrackEntry?.enabled) {
             errors.push({
@@ -163,11 +194,38 @@ const validateTicketsAndQuantity = async (ticketings) => {
             continue;
           }
 
-          const fastTrackBooked = await TicketingBookings.countDocuments({
-            "ticket.ticketId": ticketId,
-            "ticket.snapshot.fastTrack": true,
-            status: { $in: ["valid", "used"] }
-          });
+          const fastTrackAgg = await TicketingBookings.aggregate([
+            {
+              $match: {
+                "ticket.ticketId": ticket._id,
+                "ticket.snapshot.fastTrack": true
+              }
+            },
+            {
+              $lookup: {
+                from: "ticketingorders",
+                localField: "order",
+                foreignField: "_id",
+                as: "order"
+              }
+            },
+            { $unwind: "$order" },
+            {
+              $match: {
+                $or: [
+                  { status: { $in: ["valid", "used"] } },
+                  {
+                    status: "pending",
+                    "order.status": "pendingPayment",
+                    "order.lockUntil": { $gt: now }
+                  }
+                ]
+              }
+            },
+            { $count: "count" }
+          ]);
+
+          const fastTrackBooked = fastTrackAgg[0]?.count || 0;
 
           if (
             ticket.fastTrackEntry.quantity - fastTrackBooked <= 0
@@ -188,19 +246,44 @@ const validateTicketsAndQuantity = async (ticketings) => {
         });
       }
 
-      continue; // ⬅️ CRITICAL: DO NOT FALL THROUGH
+      continue; // ⬅️ CRITICAL
     }
 
     /* =====================================================
        NON-SLOT TICKETS
-       → ONLY ticket.quantity matters
     ===================================================== */
-    const totalBooked = await TicketingBookings.countDocuments({
-      "ticket.ticketId": ticketId,
-      status: { $in: ["valid", "used"] }
-    });
+    const totalBookedAgg = await TicketingBookings.aggregate([
+      {
+        $match: {
+          "ticket.ticketId": ticket._id
+        }
+      },
+      {
+        $lookup: {
+          from: "ticketingorders",
+          localField: "order",
+          foreignField: "_id",
+          as: "order"
+        }
+      },
+      { $unwind: "$order" },
+      {
+        $match: {
+          $or: [
+            { status: { $in: ["valid", "used"] } },
+            {
+              status: "pending",
+              "order.status": "pendingPayment",
+              "order.lockUntil": { $gt: now }
+            }
+          ]
+        }
+      },
+      { $count: "count" }
+    ]);
 
-    const remaining = ticket.quantity - totalBooked;
+    const booked = totalBookedAgg[0]?.count || 0;
+    const remaining = ticket.quantity - booked;
 
     if (remaining < requests.length) {
       errors.push({
@@ -212,8 +295,9 @@ const validateTicketsAndQuantity = async (ticketings) => {
       continue;
     }
 
-    /* ---------- FAST TRACK (non-slot) ---------- */
-    const fastTrackRequested = requests.filter(r => r.isFastTrack === true).length;
+    /* ---------- FAST TRACK (NON-SLOT) ---------- */
+    const fastTrackRequested =
+      requests.filter(r => r.isFastTrack === true).length;
 
     if (fastTrackRequested > 0) {
       if (!ticket.fastTrackEntry?.enabled) {
@@ -224,11 +308,38 @@ const validateTicketsAndQuantity = async (ticketings) => {
         continue;
       }
 
-      const fastTrackBooked = await TicketingBookings.countDocuments({
-        "ticket.ticketId": ticketId,
-        "ticket.snapshot.fastTrack": true,
-        status: { $in: ["valid", "used"] }
-      });
+      const fastTrackAgg = await TicketingBookings.aggregate([
+        {
+          $match: {
+            "ticket.ticketId": ticket._id,
+            "ticket.snapshot.fastTrack": true
+          }
+        },
+        {
+          $lookup: {
+            from: "ticketingorders",
+            localField: "order",
+            foreignField: "_id",
+            as: "order"
+          }
+        },
+        { $unwind: "$order" },
+        {
+          $match: {
+            $or: [
+              { status: { $in: ["valid", "used"] } },
+              {
+                status: "pending",
+                "order.status": "pendingPayment",
+                "order.lockUntil": { $gt: now }
+              }
+            ]
+          }
+        },
+        { $count: "count" }
+      ]);
+
+      const fastTrackBooked = fastTrackAgg[0]?.count || 0;
 
       if (
         ticket.fastTrackEntry.quantity - fastTrackBooked < fastTrackRequested
@@ -257,6 +368,7 @@ const validateTicketsAndQuantity = async (ticketings) => {
 
   return { valid: true, ticketSnapshots };
 };
+
 
 
 const getOrganizationIdFromTicketId = async (ticketId) => {
