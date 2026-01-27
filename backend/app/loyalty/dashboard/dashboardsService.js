@@ -270,6 +270,7 @@ const getSuggestedRewardsForDashboard = async ({
         reward: formattedReward,
         claimedCount,
         userPoints,
+        userTierEntry,
       }),
     });
 

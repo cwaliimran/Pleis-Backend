@@ -1,10 +1,4 @@
 /**
- * ================================
- * Server Bootstrap (FINAL)
- * ================================
- */
-
-/**
  * ------------------------------------------------
  * Unified Logging (FIRST – before anything else)
  * ------------------------------------------------
@@ -128,7 +122,24 @@ const allowedOrigins = [
   "http://localhost:4003",
   "http://192.168.12.121:4003",
   "https://pleis.vercel.app",
-];
+  "https://latex-industry-bridges-wines.trycloudflare.com",
+  "https://nelson-sponsor-santa-interact.trycloudflare.com",
+  "https://specification-medicine-exec-deaf.trycloudflare.com",
+  "https://willow-zealand-currency-fortune.trycloudflare.com",
+  "https://ebook-what-premiere-totals.trycloudflare.com",
+  "https://individual-travesti-hockey-cancel.trycloudflare.com",
+  "https://handy-floral-implementation-pumps.trycloudflare.com",
+  "https://protected-betty-allows-gale.trycloudflare.com",
+  "https://personnel-event-waves-alexander.trycloudflare.com",
+  "https://glow-task-hood-meditation.trycloudflare.com",
+  "https://detective-viruses-manufacture-arrives.trycloudflare.com",
+  "https://genome-exploring-browser-brown.trycloudflare.com",
+  "https://abraham-pipes-activity-polar.trycloudflare.com",
+  "https://should-whats-les-mining.trycloudflare.com",
+  "http://192.168.13.221:4003",
+  "http://192.168.13.84:4003",
+  "http://192.168.100.65:4003",
+  "http://192.168.13.128:4003",];
 
 securityMiddleware(app, {
   allowedOrigins,
@@ -214,8 +225,6 @@ const server = createSocketServer(app, allowedOrigins);
 const PORT = process.env.PORT || 8080;
 
 server.listen(PORT, () => {
-  console.log("HTTP server listening")
-
   logger.info("HTTP server listening", {
     port: PORT,
     env: process.env.NODE_ENV,

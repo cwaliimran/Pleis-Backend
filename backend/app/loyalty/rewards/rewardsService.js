@@ -13,18 +13,35 @@ const getRewardsByCompanyOrganizerService = async ({
   companyOrganizer,
   userId,
 }) => {
-  // 1️⃣ Fetch all rewards
+  // 1️⃣ Fetch user wallet (points + tier)
+  const wallet = await clubMemberRepo.getWallet(userId, companyOrganizer);
+
+  const userPoints = wallet?.points ?? 0;
+  const userTierEntry = wallet?.level?.entryPoints ?? 0;
+  const tierKey = wallet?.tierKey || "essential";
+
+  // 2️⃣ Fetch rewards
   const rewards = await rewardRepo.getRewardsByCompanyOrganizer({
     companyOrganizer,
   });
 
-  // 2️⃣ Format rewards
-  const formatted = rewards.map(item => formatReward(item));
+  if (!rewards.length) {
+    return { rewards: [] };
+  }
 
-  // 3️⃣ Batch check claim limits for user
-  const claimResults = await checkClaimLimitForLoyaltyRewards(userId, rewards);
+  // 3️⃣ Apply tier-specific formatting BEFORE eligibility
+  const formatted = rewards.map(item =>
+    formatReward(
+      formatSingleRewardByTierKey(item, tierKey)
+    )
+  );
 
-  // rewardId -> { totalClaimed, available }
+  // 4️⃣ Batch check claim limits
+  const claimResults = await checkClaimLimitForLoyaltyRewards(
+    userId,
+    rewards
+  );
+
   const claimMetaMap = new Map(
     claimResults.map(r => [
       String(r.rewardId),
@@ -35,7 +52,7 @@ const getRewardsByCompanyOrganizerService = async ({
     ])
   );
 
-  // 4️⃣ Normalize claim metadata (SINGLE SOURCE OF TRUTH)
+  // 5️⃣ Normalize eligibility (SINGLE SOURCE OF TRUTH)
   const normalizedRewards = formatted.map((reward) => {
     const meta = claimMetaMap.get(String(reward._id)) ?? {
       totalClaimed: 0,
@@ -47,18 +64,21 @@ const getRewardsByCompanyOrganizerService = async ({
       ...normalizeRewardClaimMeta({
         reward,
         claimedCount: meta.totalClaimed,
-        userPoints: null, // not available in this endpoint
+        userPoints,
+        userTierEntry,
       }),
     };
   });
 
-  // 5️⃣ Group by sortingType
-  const groupedRewards = groupRewardsBySortingType(normalizedRewards);
+  // 6️⃣ Group by sortingType
+  const groupedRewards =
+    groupRewardsBySortingType(normalizedRewards);
 
   return {
     rewards: groupedRewards,
   };
 };
+
 
 const groupRewardsBySortingType = (rewards) => {
   const groups = {};

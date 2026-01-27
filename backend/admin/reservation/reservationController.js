@@ -27,7 +27,8 @@ const createReservation = async (req, res) => {
     status,
     ticketRequirement,
     organizationId,
-    timingSlots
+    timingSlots,
+    allowPreOrderMenuItems = false,
   } = req.body;
 
   const userId = req.user._id;
@@ -164,6 +165,7 @@ const createReservation = async (req, res) => {
     optionalEventId,
     status,
     organizationId,
+    allowPreOrderMenuItems,
     timingSlots: timingSlots || { enabled: false, dateTimeSlots: [] },
   };
 

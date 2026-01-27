@@ -19,66 +19,19 @@ const getRewards = async (req, res) => {
     const userId = req.user._id;
     const companyOrganizer = req.params.companyOrganizer;
 
-    const [rewardsResponse, userCompanyWallet] = await Promise.all([
-      rewardService.getRewardsByCompanyOrganizerService({
+    const { rewards } =
+      await rewardService.getRewardsByCompanyOrganizerService({
         userId,
         companyOrganizer,
         timezone: req.user?.timezone,
         keyword,
-      }),
-      getUserCompanyWallet(userId, companyOrganizer),
-    ]);
-
-    const formattedRewards = formatRewardsByTierKey(
-      rewardsResponse?.rewards || [],
-      userCompanyWallet?.tierKey || "essential"
-    );
-
-    const userTierEntry = userCompanyWallet?.level?.entryPoints ?? 0;
-    const userPoints = userCompanyWallet?.points ?? 0;
-
-    const finalRewards = formattedRewards.map(group => ({
-      ...group,
-      items: group.items.map(item => {
-        const cannotClaimReasons = [
-          ...(item.cannotClaimReasons || []),
-        ];
-
-        /* -----------------------------
-           Tier eligibility
-        ----------------------------- */
-        if (
-          userTierEntry < (item?.tierLimit?.entryPoints ?? 0)
-        ) {
-          cannotClaimReasons.push(
-            REWARD_CLAIM_REASONS.TIER_NOT_ELIGIBLE
-          );
-        }
-
-        /* -----------------------------
-           Points eligibility
-        ----------------------------- */
-        if (
-          userPoints < (item.pointsRequired ?? 0)
-        ) {
-          cannotClaimReasons.push(
-            REWARD_CLAIM_REASONS.INSUFFICIENT_POINTS
-          );
-        }
-
-        return {
-          ...item,
-          canClaim: cannotClaimReasons.length === 0,
-          cannotClaimReasons,
-        };
-      }),
-    }));
+      });
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "rewards_fetched_successfully",
-      data: finalRewards,
+      data: rewards,
     });
 
   } catch (error) {
@@ -91,6 +44,7 @@ const getRewards = async (req, res) => {
     });
   }
 };
+
 
 
 

@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const axios = require("axios");
+const { buildAuthorizationHeader } = require("./monriAuth");
 
 const monriRepository = require("./monriRepository");
 
@@ -174,57 +175,45 @@ function verifyMonriSuccessDigest({ payload, successUrl }) {
 }
 
 
-
 exports.createClientSecret = async (req, res) => {
-  const {
-    amount,
-    currency = "EUR",
-    orderInfo,
-  } = req.body;
-
-  const orderNumber = crypto.randomUUID();
-  const timestamp = Math.floor(Date.now() / 1000);
-
-  const path = "/v2/payment/new";
-
-  // 🔐 Authorization digest (THIS IS DIFFERENT FROM WEBPAY)
-  const raw = `${process.env.MONRI_KEY}${path}${timestamp}${process.env.MONRI_AUTH_TOKEN}`;
-  const digest = crypto.createHash("sha512").update(raw).digest("hex");
-
-  const authorization = `WP3-v2.1 ${process.env.MONRI_AUTH_TOKEN}:${timestamp}:${digest}`;
-
   try {
+    let { amount, currency = "EUR", orderInfo } = req.body;
+
+    amount = Number(amount);
+    if (!Number.isInteger(amount)) {
+      return res.status(400).json({ message: "Amount must be integer (minor units)" });
+    }
+
+    const payload = {
+      amount,
+      order_number: crypto.randomUUID(),
+      currency,
+      transaction_type: "purchase",
+      order_info: orderInfo,
+      scenario: "charge",
+    };
+
+    const body = JSON.stringify(payload);
+
+    const authorization = buildAuthorizationHeader({ body });
+
     const response = await axios.post(
-      `https://ipgtest.monri.com${path}`,
-      {
-        order_number: orderNumber,
-        order_info: orderInfo,
-        amount,
-        currency,
-      },
+      "https://ipgtest.monri.com/v2/payment/new",
+      body,
       {
         headers: {
           Authorization: authorization,
           "Content-Type": "application/json",
-          Accept: "application/json",
         },
       }
     );
 
-    // Save transaction locally
-    await monriRepository.createTransaction({
-      orderNumber,
-      amount,
-      currency,
-      status: "pending",
-    });
-
     return res.json({
-      orderNumber,
       clientSecret: response.data.client_secret,
+      status: response.data.status,
     });
   } catch (err) {
-    console.error("Monri create payment error", err.response?.data || err);
+    console.error("Monri error:", err.response?.data || err);
     return res.status(500).json({ message: "Failed to create payment" });
   }
 };
