@@ -14,6 +14,17 @@ const { User } = require("@UserModel");
 const { sendUserNotifications } = require("../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 const { notificationFormatter } = require("./helper/notificationFormatter");
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_GLOBAL_NOTIFICATIONS_CACHE_KEY = "GlobalNotifications:active";
+const buildGlobalNotificationsCacheKey = ({
+  scope = "admin", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_GLOBAL_NOTIFICATIONS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
+ 
+ 
 // Decide which discriminator model to use
 const getModelByTaskType = (taskType) => {
   switch (taskType) {
@@ -148,6 +159,7 @@ const getAllUserIds = async () => {
 
 const createNotifications = async (data) => {
   try {
+    await invalidate(ACTIVE_GLOBAL_NOTIFICATIONS_CACHE_KEY);
 
     const result = await getFilteredUserIdsCombined({
       ageRange: data.ageRange || null,
@@ -274,7 +286,16 @@ const createNotifications = async (data) => {
 
 
 const getNotificationss = async ({ isDelivered, sendTiming, timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
-
+  const cacheKey = buildGlobalNotificationsCacheKey({
+    scope: "admin",
+    skip,
+    limit,
+  });
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400, // 1 day
+ 
+    fetchFn: async () => {
   const pipeline = [
     {
       $match: {
@@ -535,16 +556,14 @@ const getNotificationss = async ({ isDelivered, sendTiming, timezone, page, limi
   meta.NotificationssCount = { total, active, inactive };
   meta.scheduled = totalScheduled;
   meta.sent = totalDelivered;
-  // meta.totalLocationFiltered = totalLocationFiltered;
-  // meta.totalAgeFiltered = totalAgeFiltered;
-  // meta.totalInterestsFiltered = totalInterestsFiltered;
-  // meta.activeFilters = totalGenderFiltered;
   meta.activeFilters = grandTotalFiltered; // Grand total of all filters combined
   meta.totalReached = totalReached;
   const filteredNotifications = (result[0]?.data || []).map(notificationFormatter);
   Notificationss = filteredNotifications;
 
   return { Notificationss, meta };
+    },
+  });
 };
 
 
