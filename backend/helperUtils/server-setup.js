@@ -7,7 +7,12 @@ const connectToDB = async (server, retries = 5, delay = 3000) => {
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      await mongoose.connect(uri);
+      await mongoose.connect(uri, {
+        maxPoolSize: 10,
+        minPoolSize: 2,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+      });
 
       server.listen(process.env.PORT || 4014, () => {
         logger.log(
