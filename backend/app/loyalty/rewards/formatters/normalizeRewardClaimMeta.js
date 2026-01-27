@@ -1,6 +1,12 @@
-const { REWARD_CLAIM_REASONS } = require("./rewardClaimReasons");
+const REWARD_CLAIM_REASONS = require("./rewardClaimReasons");
 
-const REASON_ORDER = Object.values(REWARD_CLAIM_REASONS);
+const REWARD_REASON_ORDER = Object.freeze({
+  [REWARD_CLAIM_REASONS.TIER_NOT_ELIGIBLE]: 1,
+  [REWARD_CLAIM_REASONS.CLAIM_LIMIT_REACHED]: 2,
+  [REWARD_CLAIM_REASONS.INSUFFICIENT_POINTS]: 3,
+  [REWARD_CLAIM_REASONS.REWARD_INACTIVE]: 4,
+  [REWARD_CLAIM_REASONS.REWARD_EXPIRED]: 5,
+});
 
 const normalizeRewardClaimMeta = ({
   reward,
@@ -10,77 +16,45 @@ const normalizeRewardClaimMeta = ({
   now = new Date(),
 }) => {
   const cannotClaimReasons = [];
+  const rewardId = reward?._id?.toString();
 
-  const claimLimit = reward.claimLimit ?? 0;
-  const pointsRequired = reward.minPointsRequiredToClaim ?? 0;
+  const claimLimit = reward?.claimLimit ?? 0;
+  const pointsRequired = reward?.minPointsRequiredToClaim ?? 0;
   const tierRequired = reward?.tierLimit?.entryPoints ?? 0;
 
-  /* -------------------------------
-     Tier eligibility
-  ------------------------------- */
   if (userTierEntry !== null && userTierEntry < tierRequired) {
-    cannotClaimReasons.push(
-      REWARD_CLAIM_REASONS.TIER_NOT_ELIGIBLE
-    );
+    cannotClaimReasons.push(REWARD_CLAIM_REASONS.TIER_NOT_ELIGIBLE);
   }
 
-  /* -------------------------------
-     Points eligibility
-  ------------------------------- */
-  if (userPoints !== null && userPoints < pointsRequired) {
-    cannotClaimReasons.push(
-      REWARD_CLAIM_REASONS.INSUFFICIENT_POINTS
-    );
-  }
-
-  /* -------------------------------
-     Claim limit
-  ------------------------------- */
   if (claimLimit > 0 && claimedCount >= claimLimit) {
-    cannotClaimReasons.push(
-      REWARD_CLAIM_REASONS.CLAIM_LIMIT_REACHED
-    );
+    cannotClaimReasons.push(REWARD_CLAIM_REASONS.CLAIM_LIMIT_REACHED);
   }
 
-  /* -------------------------------
-     Reward state
-  ------------------------------- */
-  if (reward.status && reward.status !== "active") {
-    cannotClaimReasons.push(
-      REWARD_CLAIM_REASONS.REWARD_INACTIVE
-    );
+  if (userPoints !== null && userPoints < pointsRequired) {
+    cannotClaimReasons.push(REWARD_CLAIM_REASONS.INSUFFICIENT_POINTS);
   }
 
-  if (reward.endDate && new Date(reward.endDate) < now) {
-    cannotClaimReasons.push(
-      REWARD_CLAIM_REASONS.REWARD_EXPIRED
-    );
+  if (reward?.status && reward.status !== "active") {
+    cannotClaimReasons.push(REWARD_CLAIM_REASONS.REWARD_INACTIVE);
   }
 
-  /* -------------------------------
-     Canonical ordering (enum-driven)
-  ------------------------------- */
+  if (reward?.endDate && new Date(reward.endDate) < now) {
+    cannotClaimReasons.push(REWARD_CLAIM_REASONS.REWARD_EXPIRED);
+  }
+
   cannotClaimReasons.sort(
     (a, b) =>
-      REASON_ORDER.indexOf(a) -
-      REASON_ORDER.indexOf(b)
+      (REWARD_REASON_ORDER[a] ?? 999) -
+      (REWARD_REASON_ORDER[b] ?? 999)
   );
 
-  /* -------------------------------
-     Derived flags
-  ------------------------------- */
-  const hasLimit = claimLimit > 0;
-  const claimRemaining = hasLimit
-    ? Math.max(claimLimit - claimedCount, 0)
-    : null;
-
-  const isClaimed = claimedCount > 0;
-  const canClaim = cannotClaimReasons.length === 0;
-
   return {
-    canClaim,
-    isClaimed,
-    claimRemaining,
+    canClaim: cannotClaimReasons.length === 0,
+    isClaimed: claimedCount > 0,
+    claimRemaining:
+      claimLimit > 0
+        ? Math.max(claimLimit - claimedCount, 0)
+        : null,
     cannotClaimReasons,
   };
 };

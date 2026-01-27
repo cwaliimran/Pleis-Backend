@@ -6,4 +6,4 @@ const REWARD_CLAIM_REASONS = Object.freeze({
   REWARD_INACTIVE: "REWARD_INACTIVE",
 });
 
-module.exports = { REWARD_CLAIM_REASONS };
+module.exports = REWARD_CLAIM_REASONS;
