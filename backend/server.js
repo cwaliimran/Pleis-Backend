@@ -232,21 +232,19 @@ server.listen(PORT, () => {
 (async () => {
   try {
     await connectToDB();
-
     getRedisClient();
     startCrons();
 
-    setInterval(() => {
-      backupMongoDB();
-    }, 24 * 60 * 60 * 1000);
+    setInterval(backupMongoDB, 24 * 60 * 60 * 1000);
   } catch (err) {
     logger.fatal("Startup failure", {
       error: err.message,
       stack: err.stack,
     });
-    process.exit(1);
+
   }
 })();
+
 
 
 /**
