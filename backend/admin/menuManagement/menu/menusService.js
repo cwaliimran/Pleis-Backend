@@ -13,120 +13,120 @@ const createMenu = async (data) => {
 
 // Populate organization data for menus, but merge into "organization" field
 const getMenus = async ({ page, limit, keyword, status, date, organizations, companyOrganizer }) => {
-  let organizationIds = [];
-
-  // 1️⃣ If organizations explicitly provided, use them directly
-  if (Array.isArray(organizations) && organizations.length > 0) {
-    organizationIds = organizations.map(id => new mongoose.Types.ObjectId(id));
-  // 2️⃣ Otherwise, if companyOrganizer provided, get orgs created by it
-  } else if (companyOrganizer) {
-     organizationIds = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
-    if (organizationIds.length === 0) {
-      return {
-        menus: [],
-        meta: generateMeta(page, limit, 0, { total: 0, active: 0, inactive: 0 })
-      };
-    }
-  }
   // 3️⃣ Pagination setup
   const skip = limit === 0 ? 0 : (page - 1) * limit;
+      let organizationIds = [];
 
-  const pipeline = [
-    {
-      $lookup: {
-        from: "organizations",
-        localField: "organization",
-        foreignField: "_id",
-        as: "organizationData",
-        pipeline: [
-          {
-            $project: {
-              _id: 1,
-              "basicInfo.name": 1
-            }
+      // 1️⃣ If organizations explicitly provided, use them directly
+      if (Array.isArray(organizations) && organizations.length > 0) {
+        organizationIds = organizations.map(id => new mongoose.Types.ObjectId(id));
+        // 2️⃣ Otherwise, if companyOrganizer provided, get orgs created by it
+      } else if (companyOrganizer) {
+        organizationIds = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
+        if (organizationIds.length === 0) {
+          return {
+            menus: [],
+            meta: generateMeta(page, limit, 0, { total: 0, active: 0, inactive: 0 })
+          };
+        }
+      }
+
+
+      const pipeline = [
+        {
+          $lookup: {
+            from: "organizations",
+            localField: "organization",
+            foreignField: "_id",
+            as: "organizationData",
+            pipeline: [
+              {
+                $project: {
+                  _id: 1,
+                  "basicInfo.name": 1
+                }
+              }
+            ]
           }
-        ]
+        },
+        { $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true } },
+      ];
+
+      // 4️⃣ Apply filters dynamically
+      if (organizationIds.length > 0) {
+        pipeline.push({
+          $match: {
+            organization: { $in: organizationIds }
+          }
+        });
       }
-    },
-    { $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true } },
-  ];
 
-  // 4️⃣ Apply filters dynamically
-  if (organizationIds.length > 0) {
-    pipeline.push({
-      $match: {
-        organization: { $in: organizationIds }
+      if (status) {
+        pipeline.push({ $match: { status } });
+      } else {
+        pipeline.push({ $match: { status: { $ne: "deleted" } } });
       }
-    });
-  }
 
-  if (status) {
-    pipeline.push({ $match: { status } });
-  } else {
-    pipeline.push({ $match: { status: { $ne: "deleted" } } });
-  }
+      if (date) {
+        const start = new Date(date);
+        const end = new Date(new Date(date).setDate(start.getDate() + 1));
+        pipeline.push({
+          $match: { createdAt: { $gte: start, $lt: end } }
+        });
+      }
 
-  if (date) {
-    const start = new Date(date);
-    const end = new Date(new Date(date).setDate(start.getDate() + 1));
-    pipeline.push({
-      $match: { createdAt: { $gte: start, $lt: end } }
-    });
-  }
+      // Keyword search across Menu and Organization fields
+      const keywordMatch = buildKeywordQueryFromModels(
+        [
+          { schema: Menus.schema },
+          { schema: Organizations.schema, prefix: "organizationData." }
+        ],
+        keyword
+      );
 
-  // Keyword search across Menu and Organization fields
-  const keywordMatch = buildKeywordQueryFromModels(
-    [
-      { schema: Menus.schema },
-      { schema: Organizations.schema, prefix: "organizationData." }
-    ],
-    keyword
-  );
+      if (Object.keys(keywordMatch).length > 0) {
+        pipeline.push({ $match: keywordMatch });
+      }
 
-  if (Object.keys(keywordMatch).length > 0) {
-    pipeline.push({ $match: keywordMatch });
-  }
+      // Sort, merge, clean
+      pipeline.push({ $sort: { createdAt: -1 } });
+      pipeline.push(
+        { $addFields: { organization: "$organizationData" } },
+        { $project: { organizationData: 0 } }
+      );
 
-  // Sort, merge, clean
-  pipeline.push({ $sort: { createdAt: -1 } });
-  pipeline.push(
-    { $addFields: { organization: "$organizationData" } },
-    { $project: { organizationData: 0 } }
-  );
+      // Pagination + count
+      pipeline.push({
+        $facet: {
+          data: [{ $skip: skip }, ...(limit === 0 ? [] : [{ $limit: limit }])],
+          totalFiltered: [{ $count: "count" }]
+        }
+      });
 
-  // Pagination + count
-  pipeline.push({
-    $facet: {
-      data: [{ $skip: skip }, ...(limit === 0 ? [] : [{ $limit: limit }])],
-      totalFiltered: [{ $count: "count" }]
-    }
-  });
+      const result = await Menus.aggregate(pipeline);
+      const menus = result[0]?.data || [];
+      const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-  const result = await Menus.aggregate(pipeline);
-  const menus = result[0]?.data || [];
-  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+      // 5️⃣ Counts for meta
+      const baseFilter =
+        organizationIds.length > 0
+          ? { organization: { $in: organizationIds } }
+          : {}; // ✅ fetch all if no orgs or organizer
 
-  // 5️⃣ Counts for meta
-  const baseFilter =
-    organizationIds.length > 0
-      ? { organization: { $in: organizationIds } }
-      : {}; // ✅ fetch all if no orgs or organizer
+      const [total, active, inactive] = await Promise.all([
+        Menus.countDocuments({ ...baseFilter, status: { $ne: "deleted" } }),
+        Menus.countDocuments({ ...baseFilter, status: "active" }),
+        Menus.countDocuments({ ...baseFilter, status: "inactive" })
+      ]);
 
-  const [total, active, inactive] = await Promise.all([
-    Menus.countDocuments({ ...baseFilter, status: { $ne: "deleted" } }),
-    Menus.countDocuments({ ...baseFilter, status: "active" }),
-    Menus.countDocuments({ ...baseFilter, status: "inactive" })
-  ]);
+      const meta = generateMeta(page, limit, totalFiltered);
+      meta.menusCount = { total, active, inactive };
 
-  const meta = generateMeta(page, limit, totalFiltered);
-  meta.menusCount = { total, active, inactive };
-
-  return {
-    menus,
-    meta
-  };
-};
-
+      return {
+        menus,
+        meta
+      };
+    };
 
 
 const updateMenu = async (id, data) => {

@@ -25,7 +25,6 @@ const createMenu = async (data) => {
     // Commit transaction
     await session.commitTransaction();
     session.endSession();
-
     return menu;
   } catch (err) {
     // Rollback transaction if anything fails
@@ -37,15 +36,23 @@ const createMenu = async (data) => {
 
 // Get all menus with their assigned organization populated, sorted by createdAt descending
 const getMenusWithFilters = async (query = {}, skip = 0, limit = 10) => {
-  return Menus.find(query)
-    .populate({
-      path: "organization",
-      select: "basicInfo.name"
-    })
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
-};
+      const menus = await Menus.find(query)
+        .populate({
+          path: "organization",
+          select: "basicInfo.name",
+        })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
+
+      if (!menus) {
+        return [];
+      }
+
+      return menus;
+    };
+
+
 
 // Count by condition
 const countMenus = async (query = {}) => {
@@ -60,16 +67,19 @@ const findMenuById = async (id) => {
 // Update and save
 const updateMenuData = async (menu, data) => {
   Object.assign(menu, data);
+
   return await menu.save();
 };
 
 // Delete
 const deleteMenuById = async (menu) => {
+
   return await menu.deleteOne();
 };
 
 //findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
+
   return Menus.findByIdAndUpdate(id, data, { new: true });
 };
 
@@ -86,6 +96,7 @@ const getUnassignedMenus = async (userId) => {
 
 const createDuplicatedMenu = async (menuData, session = null) => {
   const duplicatedMenu = new Menus(menuData);
+
   return await duplicatedMenu.save({ session });
 };
 
@@ -95,6 +106,7 @@ const getMenuItemsByMenuId = async (menuId, session = null) => {
 
 const createDuplicatedMenuItem = async (itemData, session = null) => {
   const duplicatedItem = new Menus(itemData);
+
   return await duplicatedItem.save({ session });
 };
 

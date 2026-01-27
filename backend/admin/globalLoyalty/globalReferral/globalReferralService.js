@@ -7,6 +7,7 @@ const Reservations = require("@ReservationsModel");
 const UserReservations = require("@UserReservationsModel");
 const GlobalReferralRepo = require("./globalReferralRepository");
 const mongoose = require("mongoose");
+const { cache, invalidate } = require("@redisCache");
 const {
   sendResponse,
   parsePaginationParams,
@@ -16,6 +17,14 @@ const {
   getStartAndEndOfMonth,
   getStartAndEndOfWeek,
 } = require("@utils/responseUtil");
+const ACTIVE_GLOBAL_REFERRAL_CACHE_KEY = "globalReferral:active";
+const buildGlobalReferralCacheKey = ({
+  scope = "public", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_GLOBAL_REFERRAL_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
 
 const createGlobalReferral = async (data) => {
   let GlobalReferral = await GlobalReferralRepo.createGlobalReferral(data);
@@ -91,6 +100,7 @@ const updateGlobalReferral = async (data) => {
 
   // Save updates
   Object.assign(globalReferral, updateData);
+  await invalidate(ACTIVE_GLOBAL_REFERRAL_CACHE_KEY);
   await globalReferral.save();
 
   return globalReferral;

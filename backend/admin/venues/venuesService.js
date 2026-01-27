@@ -5,16 +5,34 @@ const { formatOrganization } = require("../organizations/formatter/formatOrganiz
 const Organizations = require("@OrganizationModel");
 const { formatVenue } = require("./formatter/formatVenue");
 const Venues = require("@VenuesModel");
+const mongoose = require("mongoose");
 const venueRepo = require("./venuesRepository");
-
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_VENUES_CACHE_KEY = "venues:active";
+const buildVenuesCacheKey = ({
+  scope = "admin", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_VENUES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+}
 const createVenue = async (data) => {
   return await venueRepo.createVenue(data);
 };
-const mongoose = require("mongoose");
 
 const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, organization }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const cacheKey = buildVenuesCacheKey({
+    scope: "admin",
+    skip,
+    limit,
+  });
 
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400, // 1 day
+
+    fetchFn: async () => {
   const pipeline = [
     // Join with Organizations collection
     {
@@ -31,15 +49,15 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
     // Flatten organizationData array for easier matching
     { $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true } },
     // Match user access (venue creator OR org creator OR org staff)
-    {
-      $match: {
-        $or: [
-          { creator: new mongoose.Types.ObjectId(userId) },
-          { "organizationData.creator": new mongoose.Types.ObjectId(userId) },
-          { "organizationData.staff.user": new mongoose.Types.ObjectId(userId) }
-        ]
-      }
-    }
+    // {
+    //   $match: {
+    //     $or: [
+    //       { creator: new mongoose.Types.ObjectId(userId) },
+    //       { "organizationData.creator": new mongoose.Types.ObjectId(userId) },
+    //       { "organizationData.staff.user": new mongoose.Types.ObjectId(userId) }
+    //     ]
+    //   }
+    // }
   ];
 
   // Apply filters
@@ -106,7 +124,8 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
   });
 
 
-  const result = await Venues.aggregate(pipeline);
+  const result = await Venues.aggregate(pipeline)
+
 
   const venues = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
@@ -127,6 +146,7 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
     }
 
     return formattedVenue;
+
   });
 
   const meta = generateMeta(page, limit, totalFiltered);
@@ -135,9 +155,10 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
   return {
     venues: formattedVenues,
     meta
-  };
+      };
+    },
+  });
 };
-
 
 //get venues for menu options dropdown where organization is not assigned yet
 
@@ -148,6 +169,7 @@ const getUnassignedVenues = async (userId) => {
 
 const updateVenue = async (id, data) => {
   let venue = await venueRepo.findVenueById(id);
+  await invalidate(ACTIVE_VENUES_CACHE_KEY);
   if (!venue) return null;
 
   const allowedFields = [

@@ -13,12 +13,12 @@ const createOrganization = async (data) => {
 
 // Get all with filters
 const getOrganizationsWithFilters = async (query, skip, limit) => {
-  return Organizations.find(query)
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
-};
-
+        const results = await Organizations.find(query)
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit);
+        return results;
+      };
 // Count by condition
 const countOrganizations = async (query = {}) => {
   return Organizations.countDocuments(query);
@@ -56,11 +56,13 @@ const getOrganizationDetails = async (id) => {
 
 // Delete
 const deleteOrganizationById = async (organization) => {
+  await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
   return await organization.deleteOne();
 };
 
 // Optional: keep this only for non-nested shallow updates
 const findByIdAndUpdate = async (id, data) => {
+  await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
   return Organizations.findByIdAndUpdate(id, { $set: data }, { new: true });
 };
 

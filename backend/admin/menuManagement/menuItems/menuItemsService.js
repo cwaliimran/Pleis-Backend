@@ -11,6 +11,7 @@ const { getMenuIdsByCompanyOrganizer } = require("../../organizations/organizati
 const { formatMenuItem, formatBundleMenuItem } = require("../menuItemCategories/formatter/formatItemCategories");
 const Organizations = require("@OrganizationModel");
 
+
 const createMenuItem = async (data, timezone) => {
   let doc = await menuItemRepo.createMenuItem(data);
   let obj = formatMenuItem(doc, timezone);
@@ -28,6 +29,7 @@ const getMenuItems = async ({
   timezone,
   companyOrganizer
 }) => {
+    const skip = limit === 0 ? 0 : (page - 1) * limit;
   let menuIds = [];
 
   if (companyOrganizer) {
@@ -41,7 +43,7 @@ const getMenuItems = async ({
     }
   }
 
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
+
 
   // ✅ BASE MATCH (NO menu here)
   const baseMatch = {
@@ -127,10 +129,8 @@ const getMenuItems = async ({
   return {
     menuItems: data.map(item => formatMenuItem(item, timezone)),
     meta: generateMeta(page, limit, total)
-  };
-};
-
-
+      };
+    };
 
 
 

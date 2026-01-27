@@ -24,6 +24,20 @@ const createReservation = async (data, session) => {
 
   const { userId, reservationId, partySize, preOrderMenuItems, timezone } = data;
 
+  const capacityCheck = await validateReservationCapacity({
+    reservationId,
+    session
+
+  });
+
+  if (!capacityCheck.valid) {
+    return {
+      success: false,
+      error: capacityCheck.error
+    };
+  }
+
+
   // Fetch user profile
   const userData = await User.aggregate(
     [
@@ -53,7 +67,7 @@ const createReservation = async (data, session) => {
   data.amount = totalReservationAmount;
 
   // Lock only for card / applePay
-  if (["card", "applePay"].includes(data.paymentDetails.paymentMethod)) {
+  if (["card", "applePay"].includes(data?.paymentDetails?.paymentMethod)) {
     data.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
     data.status = "pendingPayment";
   }
@@ -70,7 +84,7 @@ const createReservation = async (data, session) => {
         items: preOrderMenuItems.items,
         notes: preOrderMenuItems.notes,
         reservation: userReservation._id,
-        paymentDetails: data.paymentDetails,
+        paymentDetails: data?.paymentDetails,
         session,
       });
 
@@ -79,7 +93,7 @@ const createReservation = async (data, session) => {
     const totalPrice = order.totalPrice + totalReservationAmount;
     userReservation.amount = totalPrice;
     userReservation.priceBreakDown = {
-      reservationAmount: data.amount,
+      reservationAmount: data?.amount,
       preOrderMenuItemsAmount: order.totalPrice,
     };
     await userReservation.save({ session });
@@ -110,9 +124,66 @@ const createReservation = async (data, session) => {
     objectId: userReservation.reservationId,
   });
 
-  return userReservation;
+  return {
+    success: true,
+    reservation: userReservation
+  };
 };
 
+
+const validateReservationCapacity = async ({
+  reservationId
+}) => {
+  const now = new Date();
+  const reservationObjectId = new mongoose.Types.ObjectId(reservationId);
+
+  // 1️⃣ Fetch reservation definition
+  const reservation = await Reservations.findById(reservationObjectId)
+    .select("availableReservations");
+
+  if (!reservation) {
+    return { valid: false, error: "reservation_not_found" };
+  }
+
+  // 2️⃣ Count BLOCKED reservations
+  const bookedAgg = await UserReservations.aggregate([
+    {
+      $match: {
+        reservationId: reservationObjectId
+      }
+    },
+    {
+      $match: {
+        $or: [
+          { status: { $in: ["confirmed", "checkedIn", "completed"] } },
+          {
+            status: "pendingPayment",
+            lockUntil: { $gt: now }
+          }
+        ]
+      }
+    },
+    {
+      $count: "count"
+    }
+  ]);
+
+  const used = bookedAgg[0]?.count || 0;
+  const remaining = reservation.availableReservations - used;
+
+  if (remaining <= 0) {
+    return {
+      valid: false,
+      error: "reservation_capacity_exceeded",
+      available: 0
+    };
+  }
+
+  return {
+    valid: true,
+    available: remaining
+  };
+};
 
 
 
@@ -155,16 +226,29 @@ const findByIdAndUpdate = async (id, data) => {
   return UserReservations.findByIdAndUpdate(id, data, { new: true });
 };
 
-const getReservations = async ({ timezone, page, limit, keyword, status, userId, eventId, organizationId, date }) => {
+const getReservations = async ({
+  timezone,
+  page = 1,
+  limit = 10,
+  keyword,
+  status,
+  userId,
+  eventId,
+  organizationId,
+  date
+}) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const now = new Date();
 
   const pipeline = [];
 
-  // MATCH BASE FILTERS
+  // -----------------------------
+  // 1️⃣ BASE MATCH
+  // -----------------------------
   const match = {};
 
   if (eventId) {
-    match.optionalEventId = eventId;
+    match.optionalEventId = new mongoose.Types.ObjectId(eventId);
   }
 
   if (organizationId) {
@@ -173,9 +257,11 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
 
   pipeline.push({ $match: match });
 
-  // STATUS FILTER
+  // -----------------------------
+  // 2️⃣ STATUS FILTER (FIXED)
+  // -----------------------------
   if (status) {
-    pipeline.push({ $match: { status: { $in: status } } });
+    pipeline.push({ $match: { status } });
   } else {
     pipeline.push({
       $match: {
@@ -184,17 +270,13 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
     });
   }
 
-  // DATE FILTER
-
+  // -----------------------------
+  // 3️⃣ DATE FILTER (SLOT-BASED, SAFE)
+  // -----------------------------
   if (date) {
-    // Convert: "2025-12-16T19:00:00.000+00:00" -> "2025-12-16"
     const dayOnly = date.split("T")[0];
-
-    // Build date range
     const start = new Date(`${dayOnly}T00:00:00.000Z`);
     const end = new Date(`${dayOnly}T23:59:59.999Z`);
-
-
 
     pipeline.push(
       {
@@ -208,27 +290,109 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
           "timingSlots.enabled": true,
           "timingSlots.dateTimeSlots.date": { $gte: start, $lte: end }
         }
+      },
+      {
+        // Restore original document shape
+        $group: {
+          _id: "$_id",
+          doc: { $first: "$$ROOT" }
+        }
+      },
+      {
+        $replaceRoot: { newRoot: "$doc" }
       }
     );
   }
 
-
-
-
-
-  // KEYWORD SEARCH
+  // -----------------------------
+  // 4️⃣ KEYWORD SEARCH
+  // -----------------------------
   if (keyword) {
-    const keywordMatch = buildKeywordQueryFromModels([{ schema: Reservations.schema }], keyword);
+    const keywordMatch = buildKeywordQueryFromModels(
+      [{ schema: Reservations.schema }],
+      keyword
+    );
 
     if (Object.keys(keywordMatch).length) {
       pipeline.push({ $match: keywordMatch });
     }
   }
 
-  // SORT
+  // -----------------------------
+  // 5️⃣ CAPACITY ENFORCEMENT
+  // -----------------------------
+  pipeline.push(
+    {
+      $lookup: {
+        from: "userreservations",
+        let: { reservationId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$reservationId", "$$reservationId"] },
+                  {
+                    $or: [
+                      {
+                        $in: [
+                          "$status",
+                          ["confirmed", "checkedIn", "completed"]
+                        ]
+                      },
+                      {
+                        $and: [
+                          { $eq: ["$status", "pendingPayment"] },
+                          { $gt: ["$lockUntil", now] }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          { $count: "count" }
+        ],
+        as: "blockedReservations"
+      }
+    },
+    {
+      $addFields: {
+        blockedCount: {
+          $ifNull: [
+            { $arrayElemAt: ["$blockedReservations.count", 0] },
+            0
+          ]
+        },
+        remainingReservations: {
+          $subtract: [
+            "$availableReservations",
+            {
+              $ifNull: [
+                { $arrayElemAt: ["$blockedReservations.count", 0] },
+                0
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      $match: {
+        remainingReservations: { $gt: 0 }
+      }
+    }
+  );
+
+  // -----------------------------
+  // 6️⃣ SORT
+  // -----------------------------
   pipeline.push({ $sort: { createdAt: -1 } });
 
-  // PAGINATION
+  // -----------------------------
+  // 7️⃣ PAGINATION + COUNT
+  // -----------------------------
   pipeline.push({
     $facet: {
       data: [
@@ -239,34 +403,38 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
     }
   });
 
+  // -----------------------------
+  // 8️⃣ EXECUTION
+  // -----------------------------
   const result = await Reservations.aggregate(pipeline);
-  const reservations = result[0]?.data || [];
 
+  const reservations = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-  // META COUNT
-  const [total, active, inactive] = await Promise.all([
-    Reservations.countDocuments({ ...(userId && { userId }), status: { $nin: ["pendingPayment", "deleted"] } }),
-    Reservations.countDocuments({ status: "active", ...(userId && { userId }) }),
-    Reservations.countDocuments({ status: "inactive", ...(userId && { userId }) })
-  ]);
-
   const meta = generateMeta(page, limit, totalFiltered);
-  meta.reservationsCount = { total, active, inactive };
 
-  // FORMAT OUTPUT
+  // -----------------------------
+  // 9️⃣ FORMAT OUTPUT
+  // -----------------------------
   const finalReservations = reservations.map(item => {
-    const formatted = reservationsFormatter(item);
+    const formatted = reservationsFormatter(item, timezone);
+
+    // Cleanup based on conditionType
     if (
       formatted.conditionType === "noCondition" ||
       formatted.conditionType === "ticketRequirement" ||
       formatted.conditionType === "customText"
     ) {
       delete formatted.amount;
-      if (formatted.conditionType === "noCondition") delete formatted.ticketType;
+      if (formatted.conditionType === "noCondition") {
+        delete formatted.ticketType;
+      }
     } else {
       delete formatted.ticketType;
     }
+
+    formatted.remainingReservations = item.remainingReservations;
+
     return formatted;
   });
 
@@ -454,6 +622,22 @@ const getReservationDetails = async (id) => {
           as: "transactions",
         },
       },
+      //also lookup reservations to get reservationType
+      {
+        $lookup: {
+          from: "reservations",
+          localField: "reservationId",
+          foreignField: "_id",
+          as: "reservationDetails",
+        }
+      },
+      //undwind reservationDetails
+      {
+        $unwind: {
+          path: "$reservationDetails",
+          preserveNullAndEmptyArrays: true
+        }
+      },
 
       // 3️⃣ Convert transactions array → object
       {
@@ -572,6 +756,7 @@ const getReservationDetails = async (id) => {
           eventStartDate: "$event.schedule.startDateTime",
           userName: { $concat: ["$user.firstName", " ", "$user.lastName"] },
           venueFullAddress: "$venue.location.fullAddress",
+          reservationType: "$reservationDetails.reservationType",
 
           transactions: 1, // ✅ included here
 

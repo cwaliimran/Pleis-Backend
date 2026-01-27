@@ -5,6 +5,7 @@ const { generateMeta } = require("@utils/responseUtil");
 const formatData = require("./utils/formatReward");
 const BaseReward = require("@RewardModel");
 
+ 
 const create = async (data) => {
   return await repository.create(data);
 };

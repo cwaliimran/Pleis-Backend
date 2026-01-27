@@ -128,15 +128,18 @@ const ReservationsSchema = new mongoose.Schema(
     },
 
     optionalEventId: {
-      type: String,
-      default: "",
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "events",
     },
-
 
     status: {
       type: String,
       enum: ["active", "inactive", "deleted"],
       default: "active",
+    },
+    allowPreOrderMenuItems: {
+      type: Boolean,
+      default: false,
     },
   },
 
@@ -145,6 +148,8 @@ const ReservationsSchema = new mongoose.Schema(
   }
 );
 
-const   Reservations = mongoose.model("Reservations", ReservationsSchema);
+ReservationsSchema.index({ optionalEventId: 1 });
+
+const Reservations = mongoose.model("Reservations", ReservationsSchema);
 
 module.exports = Reservations;

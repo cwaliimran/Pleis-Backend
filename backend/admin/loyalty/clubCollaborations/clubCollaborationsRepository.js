@@ -14,9 +14,23 @@ const createClubCollaboration = async (data) => {
 };
 
 // Get all clubCollaborations with their assigned organization populated, sorted by createdAt descending
-const getClubCollaborationsWithFilters = async (pipeline) => {
-  return ClubCollaborations.aggregate(pipeline);
+const getClubCollaborationsWithFilters = async (pipeline, skip, limit) => {
+  const cacheKey = buildLoyaltyClubCollaborationCacheKey({
+    scope: "admin",
+    skip,
+    limit,
+  });
+
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400, // 1 day
+
+    fetchFn: async () => {
+      return ClubCollaborations.aggregate(pipeline);
+    },
+  });
 };
+
 
 const checkExistingCollaboration = async ({ senderId, receiverId }) => {
   return ClubCollaborations.findOne({
@@ -40,19 +54,23 @@ const findClubCollaborationById = async (id) => {
 // Update and save
 const updateClubCollaborationData = async (clubCollaboration, data) => {
   Object.assign(clubCollaboration, data);
+
   return await clubCollaboration.save();
 };
 
 // Delete
 const deleteClubCollaborationById = async (clubCollaboration) => {
+
   return await clubCollaboration.deleteOne();
 };
 
 //findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
+
   return ClubCollaborations.findByIdAndUpdate(id, data, { new: true }).populate('sender.id receiver.id');
 };
 const findByIdAndDelete = async (id) => {
+
   return ClubCollaborations.findByIdAndDelete(id);
 };
 

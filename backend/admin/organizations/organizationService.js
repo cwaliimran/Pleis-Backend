@@ -7,7 +7,8 @@ const { generateMeta } = require("../../helperUtils/responseUtil");
 
 const { formatOrganization } = require("./formatter/formatOrganization");
 const { default: mongoose } = require("mongoose");
-
+const { invalidate } = require("@redisCache");
+ const ACTIVE_ORGANIZATIONS_CACHE_KEY = "organizations:active";
 const createOrganization = async ({ data, timezone }) => {
   let org = await organizationRepo.createOrganization(data);
   return formatOrganization(org, [], timezone);
@@ -166,7 +167,7 @@ const updateOrganization = async ({ id, data, timezone }) => {
     description,
     title,
   } = data;
-
+await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
   const session = await mongoose.startSession();
   session.startTransaction();
 

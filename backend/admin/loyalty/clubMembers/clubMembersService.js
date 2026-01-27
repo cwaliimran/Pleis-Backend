@@ -1,7 +1,4 @@
 const clubMemberRepo = require("./clubMembersRepository");
-const { generateMeta, getCurrentDateInTimezone } = require("@utils/responseUtil");
-const { ClubMembers } = require("@ClubMembersModel");
-const { buildKeywordQueryFromModels } = require("../../../helperUtils/dbUtils/queryUtil");
 const formatClubMembers = require("./formatter/formatClubMembers");
 
 //count members
@@ -52,39 +49,41 @@ const getUserJoinedClubs = async (userId) => {
 
 const calculateRewardPointsForOrganizerService = async ({
   companyOrganizer,
-  itemPrice,
+  itemPrice,        // ← this is 3.99
   overridePercentage
 }) => {
   const { pointValuePercentage } =
     await clubMemberRepo.getCompanyLoyaltyInfo(companyOrganizer);
 
-  const effectivePercentage =
+  const percentage =
     typeof overridePercentage === "number" && overridePercentage > 0
       ? overridePercentage
       : pointValuePercentage;
 
-  if (!effectivePercentage || effectivePercentage <= 0) {
+  if (!percentage || percentage <= 0) {
     return {
+      totalSpend: 0,
       points: 0,
       reason: "Loyalty percentage not configured"
     };
   }
 
-  const price = Number(itemPrice || 0);
+  const reward = Number(itemPrice || 0);
   const basePointsPerEuro = 10;
 
-  const points =
-    price *
-    (effectivePercentage / 100) *
-    basePointsPerEuro;
+  // ✅ CORRECT FORMULA
+  const totalSpend = reward / (percentage / 100);
+  const points = totalSpend * basePointsPerEuro;
 
   return {
-    price,
-    pointValuePercentage: effectivePercentage,
+    itemPrice: reward,
+    pointValuePercentage: percentage,
+    totalSpend: Math.round(totalSpend),
     basePointsPerEuro,
     points: Math.round(points)
   };
 };
+
 
 
 

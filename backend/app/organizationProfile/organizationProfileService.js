@@ -41,7 +41,7 @@ const getOrganizationProfile = async (queryData) => {
       getOrganizationReservationsService({ organizationId, timezone }),
       getOrganizationMenu(organizationId, timezone),
       getOrganizationReviews(organizationId), // Get reviews with reviewer names
-      getSimilarOrganizations(organizationId)
+      getSimilarOrganizations(organizationId, timezone)
     ]);
     if (!orgProfile.org) {
       throw new Error("Organization not found");
@@ -255,8 +255,11 @@ const getOrganizationReviews = async (organizationId, page = 1, limit = 10) => {
 
 
 //you might also like
-const getSimilarOrganizations = async (organizationId) => {
+const getSimilarOrganizations = async (organizationId, timezone) => {
   let result = await getRecommendedOrganizations(organizationId);
+  if (Array.isArray(result)) {
+    result = result.map(org => formatNearByOrganization(org, timezone));
+  }
   return result || [];
 };
 

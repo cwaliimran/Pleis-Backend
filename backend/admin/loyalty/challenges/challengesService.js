@@ -51,10 +51,8 @@ const updateChallenge = async (id, data) => {
   if (!challenge) return null;
   Object.assign(challenge, data);
   await challenge.save();
-
   return formatChallenge(challenge.toObject());
 };
-
 const deleteChallenge = async (id) => {
   const updated = await challengeRepo.findByIdAndUpdate(id, { status: "deleted" });
   return !!updated;

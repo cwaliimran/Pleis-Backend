@@ -1,19 +1,43 @@
 // repositories/supplierRepository.js
 const Supplier = require("@SuppliersModel");
-
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_SUPPLIERS_CACHE_KEY = "suppliers:active";
+const buildSuppliersCacheKey = ({
+  scope = "public", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_SUPPLIERS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
+ 
 // Create
 const createSupplier = async (data) => {
   const supplier = new Supplier(data);
+  await invalidate(ACTIVE_SUPPLIERS_CACHE_KEY); // Invalidate cache on create
   return await supplier.save();
 };
 
 // Get all with filters
 const getSuppliersWithFilters = async (query, skip, limit) => {
-  return Supplier.find(query)
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
+  const cacheKey = buildSuppliersCacheKey({
+    scope: "admin",
+    skip,
+    limit,
+  });
+
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400, // 1 day
+
+    fetchFn: async () => {
+      return Supplier.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
+    },
+  });
 };
+
 
 // Count by condition
 const countSuppliers = async (query = {}) => {
@@ -28,11 +52,13 @@ const findSupplierById = async (id) => {
 // Update and save
 const updateSupplierData = async (supplier, data) => {
   Object.assign(supplier, data);
+  await invalidate(ACTIVE_SUPPLIERS_CACHE_KEY); // Invalidate cache on update
   return await supplier.save();
 };
 
 // Delete
 const deleteSupplierById = async (supplier) => {
+  await invalidate(ACTIVE_SUPPLIERS_CACHE_KEY); // Invalidate cache on delete
   return await supplier.deleteOne();
 };
 

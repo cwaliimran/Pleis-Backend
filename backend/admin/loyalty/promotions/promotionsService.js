@@ -75,7 +75,9 @@ const get = async ({ companyOrganizer, page, limit, keyword, status, date, timez
 
 
 const update = async (id, data, scope = "single") => {
+
   const promotion = await Promotion.findById(id);
+
   if (!promotion) return null;
 
   const { recurringMeta } = promotion;

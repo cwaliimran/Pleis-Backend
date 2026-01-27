@@ -5,7 +5,6 @@ const ClubCollaborations = require("@ClubCollaborationModel");
 const clubCollaborationRepo = require("./clubCollaborationsRepository");
 const mongoose = require("mongoose");
 const { formatClubCollaborations } = require("./formatters/clubCollaborationFormatter");
-
 const createClubCollaboration = async ({ sender, receiver, notes, expiryDate }) => {
   // Check existing
   const existing = await clubCollaborationRepo.checkExistingCollaboration({
@@ -195,8 +194,7 @@ const getClubCollaborations = async ({ page, limit, keyword, status, userId, dat
       totalFiltered: [{ $count: "count" }]
     }
   });
-
-  const result = await clubCollaborationRepo.getClubCollaborationsWithFilters(pipeline);
+  const result = await clubCollaborationRepo.getClubCollaborationsWithFilters(pipeline,skip,limit);
 
   const clubCollaborations = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;

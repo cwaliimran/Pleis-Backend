@@ -93,7 +93,8 @@ const ticketingBookingSchema = new mongoose.Schema(
                         type: mongoose.Schema.Types.ObjectId,
                         ref: "User",
                         default: null
-                    }
+                    },
+                    scanKey: String // to identify which QR code scan led to this check-in for sync purposes
                 }
             ],
             default: []
@@ -111,6 +112,13 @@ const ticketingBookingSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+ticketingBookingSchema.index({
+    ticketBookingId: 1,
+    "ticket.snapshot.event": 1
+});
+ticketingBookingSchema.index({
+    "checkInHistory.scanKey": 1
+});
 
 const TicketingBookings = mongoose.model("TicketingBookings", ticketingBookingSchema);
 

@@ -5,7 +5,15 @@ const { statusLevelsFormatter } = require("./formatters/statusLevelsFormatter");
 const GlobalStatusLevels = require("@GlobalStatusLevelsModel");
 const statusLevelRepo = require("./globalStatusLevelsRepository");
 const mongoose = require("mongoose");
-
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY = "globalLLoyaltyStatusLevel:active";
+const buildGlobalLoyaltyStatusLevelCacheKey = ({
+  scope = "public", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
 const createStatusLevel = async (data) => {
   const allowedFields = [
     "image",
@@ -28,7 +36,16 @@ const createStatusLevel = async (data) => {
 // Populate venue data for statusLevels (updated for new schema)
 const getStatusLevels = async ({ page, limit, keyword, status, userId, date }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-
+  const cacheKey = buildGlobalLoyaltyStatusLevelCacheKey({
+    scope: "admin",
+    skip,
+    limit,
+  });
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400, // 1 day
+ 
+    fetchFn: async () => {
   const pipeline = [
     // Match user access (statusLevel creator)
     {
@@ -101,9 +118,12 @@ const getStatusLevels = async ({ page, limit, keyword, status, userId, date }) =
     statusLevels,
     meta
   };
+},
+  });
 };
 
 const updateStatusLevel = async (id, data) => {
+  await invalidate(ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY);
   const statusLevel = await statusLevelRepo.findStatusLevelById(id);
   if (!statusLevel) return null;
 

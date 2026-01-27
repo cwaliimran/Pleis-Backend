@@ -4,6 +4,7 @@ const { getAllUsers } = require("../../../admin/usersManagement/usersService");
 const { sendUserNotifications } = require("@notificationsUtil");
 const { NotificationTypes } = require("@NotificationsModel");
 
+
 // Create menuItem in a transaction and update organization
 const createMenuItem = async (data) => {
   try {
@@ -29,7 +30,8 @@ const createMenuItem = async (data) => {
 
 // Get all menuItems with their assigned organization populated, sorted by createdAt descending
 const getMenuItemsWithFilters = async (query = {}, skip = 0, limit = 10) => {
-  return MenuItems.find(query)
+
+  const menuItems = await MenuItems.find(query)
     .populate({
       path: "menu",
       select: "title description",
@@ -37,8 +39,11 @@ const getMenuItemsWithFilters = async (query = {}, skip = 0, limit = 10) => {
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
+  if (!menuItems || menuItems.length === 0) {
+    return menuItems;
+  }
+  return menuItems;
 };
-
 // Count by condition
 const countMenuItems = async (query = {}) => {
   return MenuItems.countDocuments(query);
@@ -52,16 +57,19 @@ const findMenuItemById = async (id) => {
 // Update and save
 const updateMenuItemData = async (menuItem, data) => {
   Object.assign(menuItem, data);
+
   return await menuItem.save();
 };
 
 // Delete
 const deleteMenuItemById = async (menuItem) => {
+
   return await menuItem.deleteOne();
 };
 
 //findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
+
   return MenuItems.findByIdAndUpdate(id, data, { new: true });
 };
 

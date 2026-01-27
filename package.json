@@ -4,15 +4,24 @@
   "description": "",
   "main": "backend/server.js",
   "scripts": {
-    "test": "mocha test/**/*.test.js --timeout 10000",
-    "start": "nodemon backend/server.js",
-    "update:alias": "node aliasConfig/update-aliases.js",
-    "localhost": "cross-env NODE_ENV=localhost node backend/server.js",
+    "dev": "cross-env NODE_ENV=dev nodemon backend/server.js",
+    "prod": "cross-env NODE_ENV=prod node backend/server.js",
     "mobileapps": "cross-env NODE_ENV=mobileapps node backend/server.js",
-    "dev": "NODE_ENV=dev nodemon backend/server.js",
-    "prod": "NODE_ENV=prod node backend/server.js",
-    "d": "npm run dev",
-    "p": "npm run prod"
+    "pm2:dev:start": "pm2 start backend/config/ecosystem.config.js --env dev",
+    "pm2:dev:reload": "pm2 reload pleis-backend --update-env",
+    "pm2:dev:stop": "pm2 stop pleis-backend",
+    "pm2:dev:delete": "pm2 delete pleis-backend",
+    "pm2:prod:start": "pm2 start backend/config/ecosystem.config.js --env prod",
+    "pm2:prod:reload": "pm2 reload pleis-backend --update-env",
+    "pm2:prod:stop": "pm2 stop pleis-backend",
+    "pm2:prod:delete": "pm2 delete pleis-backend",
+    "pm2:logs": "pm2 logs pleis-backend",
+    "pm2:status": "pm2 status",
+    "pm2:save": "pm2 save",
+    "pm2:startup": "pm2 startup",
+
+    "pm2:azure:prod": "pm2-runtime backend/config/ecosystem.config.prod.azure.js",
+    "pm2:azure:dev": "pm2-runtime backend/config/ecosystem.config.dev.azure.js"
   },
   "_moduleAliases": {
     "@utils": "backend/helperUtils",
@@ -95,7 +104,7 @@
     "@UserInterests": "backend/models/UserInterests.js",
     "@MenuItemsSaleModel": "backend/commonModules/menuManagement/sale/MenuItemsSale.js",
     "@SearchSuggestionModel": "backend/app/searchSuggestions/SearchSuggestion.js",
-    "MensuItemSaleModel": "backend/commonModules/menuManagement/sale/MenuItemsSale.js"
+    "@OrganizationStaffAttendanceModel": "backend/commonModules/staff/OrganizationStaffAttendance.js"
   },
   "keywords": [],
   "author": "",
@@ -109,6 +118,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "express-async-errors": "^3.1.1",
     "express-rate-limit": "^7.4.0",
     "firebase": "^10.13.1",
     "firebase-admin": "^12.4.0",

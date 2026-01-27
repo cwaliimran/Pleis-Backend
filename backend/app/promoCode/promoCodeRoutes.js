@@ -1,6 +1,7 @@
 const express = require("express");
 const {
   usePromoCode,
+  validatePromoCode,
 } = require("./promoCodeController"); // Assuming you have a separate controller for promo codes
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -16,6 +17,7 @@ const promoCodeRateLimiter = createRateLimiter("PromoCodes");
 // Routes for Promo Code Management
 // use  Promo Code
 router.post("/", usePromoCode);
+router.post("/validate", validatePromoCode);
 
 
 module.exports = router;

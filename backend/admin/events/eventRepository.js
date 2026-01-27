@@ -420,84 +420,134 @@ const getEventRevenueAnalytics = async ({
 };
 
 
-const getPaidVsUnpaidTicketStats = async ({ eventId }) => {
+const getTicketTypeStats = async ({ eventId }) => {
   const eventObjectId = new mongoose.Types.ObjectId(eventId);
 
-  /* --------------------------------
-     1️⃣ TOTAL TICKETS CREATED
+    /* --------------------------------
+     1️⃣ LOAD TICKET TYPES
      -------------------------------- */
   const ticketDocs = await TicketingsModel.find({
     event: eventObjectId,
-    status: "active"
-  }).lean();
+    status: { $ne: "deleted" }
+  })
+    .select("_id title quantity timingSlots")
+    .lean();
 
-  let totalTickets = 0;
+  const ticketMap = {};
 
   for (const t of ticketDocs) {
+    let totalQuantity = 0;
+
     if (t.timingSlots?.enabled) {
       for (const d of t.timingSlots.dateTimeSlots) {
         for (const s of d.timeSlots) {
-          totalTickets += s.quantity || 0;
+          totalQuantity += s.quantity || 0;
         }
       }
     } else {
-      totalTickets += t.quantity || 0;
+      totalQuantity = t.quantity || 0;
+    }
+
+    ticketMap[t._id.toString()] = {
+      ticketId: t._id,
+      title: t.title,
+      totalCreated: totalQuantity,
+      sold: 0,
+      paid: 0,
+      unpaid: 0,
+      paidAmount: 0,
+      unpaidAmount: 0,
+    };
+  }
+
+  /* --------------------------------
+     2️⃣ LOAD ORDERS FOR EVENT
+     -------------------------------- */
+  const orders = await TicketingOrders.find({
+    event: eventObjectId,
+    status: { $in: ["paid", "completed"] }
+  })
+    .select("_id status paymentDetails orderPricing ticketsPurchased")
+    .lean();
+
+  if (!orders.length) return Object.values(ticketMap);
+
+  const orderMap = {};
+  const orderIds = orders.map(o => {
+    orderMap[o._id.toString()] = o;
+    return o._id;
+  });
+
+  /* --------------------------------
+     3️⃣ LOAD BOOKINGS FOR THOSE ORDERS
+     -------------------------------- */
+  const bookings = await TicketingBookings.find({
+    order: { $in: orderIds }
+  })
+    .select("order ticket.ticketId")
+    .lean();
+
+  /* --------------------------------
+     4️⃣ PROCESS BOOKINGS
+     -------------------------------- */
+  for (const b of bookings) {
+    const ticketId = b.ticket?.ticketId?.toString();
+    const order = orderMap[b.order?.toString()];
+
+    if (!ticketId) {
+      continue;
+    }
+
+    if (!ticketMap[ticketId]) {
+      continue;
+    }
+
+    if (!order) {
+      continue;
+    }
+
+    const isPaid =
+      order.status === "paid" &&
+      ["card", "applePay"].includes(order.paymentDetails?.paymentMethod) &&
+      order.paymentDetails?.paymentStatus === "paid";
+
+    ticketMap[ticketId].sold += 1;
+
+    // ⚠️ Revenue distribution decision
+    const perTicketAmount =
+      order.ticketsPurchased > 0
+        ? (order.orderPricing.total || 0) / order.ticketsPurchased
+        : 0;
+
+    if (isPaid) {
+      ticketMap[ticketId].paid += 1;
+      ticketMap[ticketId].paidAmount += perTicketAmount;
+    } else {
+      ticketMap[ticketId].unpaid += 1;
+      ticketMap[ticketId].unpaidAmount += perTicketAmount;
     }
   }
 
   /* --------------------------------
-     2️⃣ PAID / UNPAID ORDERS
+     5️⃣ FINAL RESPONSE
      -------------------------------- */
-  const orders = await TicketingOrders.find({
-    event: eventObjectId,
-    status: { $in: ["confirmed", "completed"] }
-  })
-    .select("ticketsPurchased orderPricing paymentDetails")
-    .lean();
-
-  let paidCount = 0;
-  let unpaidCount = 0;
-  let paidAmount = 0;
-  let unpaidAmount = 0;
-
-  for (const o of orders) {
-    const isPaid =
-      ["card", "applePay"].includes(o.paymentDetails?.paymentMethod) &&
-      o.paymentDetails?.paymentStatus === "completed";
-
-    if (isPaid) {
-      paidCount += o.ticketsPurchased;
-      paidAmount += o.orderPricing.total || 0;
-    } else {
-      unpaidCount += o.ticketsPurchased;
-      unpaidAmount += o.orderPricing.total || 0;
-    }
-  }
-
-  const soldTickets = paidCount + unpaidCount;
-
-  const paidPercentage =
-    soldTickets === 0 ? 0 : Math.round((paidCount / soldTickets) * 100);
-
-  const unpaidPercentage =
-    soldTickets === 0 ? 0 : 100 - paidPercentage;
-
-  return {
-    soldTickets,
-    totalTickets,
-
+  const result = Object.values(ticketMap).map(t => ({
+    ticketId: t.ticketId,
+    title: t.title,
+    totalCreated: t.totalCreated,
+    sold: t.sold,
+    remaining: Math.max(t.totalCreated - t.sold, 0),
     paid: {
-      count: paidCount,
-      percentage: paidPercentage,
-      amount: Math.round(paidAmount)
+      count: t.paid,
+      amount: Math.round(t.paidAmount),
     },
-
     unpaid: {
-      count: unpaidCount,
-      percentage: unpaidPercentage,
-      amount: Math.round(unpaidAmount)
+      count: t.unpaid,
+      amount: Math.round(t.unpaidAmount),
     }
-  };
+  }));
+
+  return result;
 };
 
 
@@ -571,7 +621,7 @@ module.exports = {
   getLatestEventOrders,
   getTicketPerformanceWeekly,
   getEventRevenueAnalytics,
-  getPaidVsUnpaidTicketStats,
+  getTicketTypeStats,
   getScannedTicketProgress
 
 };

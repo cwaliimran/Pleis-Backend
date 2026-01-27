@@ -26,9 +26,10 @@ const validateReservationPayload = (req, res, reservation) => {
           "organizationId",
           "companyOrganizer",
           "reservationId",
+          "paymentDetails.paymentMethod"
         ],
         enumFields: {
-          "paymentDetails.paymentMethod": ["applePay", "card", "cash", "payLater"],
+          "paymentDetails.paymentMethod": ["applePay", "card", "cash"],
         },
         objectIdFields: [
           "organizationId",

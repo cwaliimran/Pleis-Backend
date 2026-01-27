@@ -3,7 +3,17 @@ const {
   GlobalHappyHourPromotion,
   GlobalClaimPromotion,
 } = require("../../../commonModules/globalLoyalty/promotions/models/Promotion");
-
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY = "globalLoyaltyPromotions:active";
+const buildGlobalLoyaltyPromotionsCacheKey = ({
+  scope = "public", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
+ 
+ 
 
 // Decide which discriminator model to use
 const getModelByTaskType = (taskType) => {
@@ -23,6 +33,7 @@ const create = async (data) => {
     const Model = getModelByTaskType(data.taskType);
     const item = new Model(data);
     const saved = await item.save();
+    await invalidate(ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY);
     return saved.toObject(); // Removes Mongoose internals
   } catch (err) {
     throw err;
@@ -31,6 +42,17 @@ const create = async (data) => {
 
 
 const getWithFilters = async (query, skip = 0, limit = 20) => {
+    const cacheKey = buildGlobalLoyaltyPromotionsCacheKey({
+    scope: "admin",
+    skip,
+    limit,
+  });
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400, // 1 day
+ 
+    fetchFn: async () => {
+ 
   const pipeline = [
     { $match: query },
     { $sort: { createdAt: -1 } },
@@ -79,6 +101,8 @@ const getWithFilters = async (query, skip = 0, limit = 20) => {
   });
 
   return await GlobalBasePromotion.aggregate(pipeline).allowDiskUse(true);
+    },
+  });
 };
 
 module.exports = {
@@ -101,16 +125,19 @@ const findById = async (id) => {
 // Update and save
 const updateData = async (item, data) => {
   Object.assign(item, data);
+  await invalidate(ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY);
   return await item.save();
 };
 
 // Delete
 const deleteItem = async (item) => {
+  await invalidate(ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY);
   return await item.deleteOne();
 };
 
 // findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
+  await invalidate(ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY);
   return GlobalBasePromotion.findByIdAndUpdate(id, data, { new: true })
     .populate("menuItem")
     .populate("tierLimit");

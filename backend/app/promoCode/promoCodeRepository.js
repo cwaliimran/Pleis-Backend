@@ -98,7 +98,71 @@ const usePromoCode = async (data) => {
     throw err;
   }
 };
+const validatePromoCode = async (data) => {
+  try {
+    const { promoCode, userId, companyOrganizer } = data;
+
+
+    const foundPromoCode = await PromoCode.findOne({ promoCode, companyOrganizer });
+
+    if (!foundPromoCode) {
+      return { error: "Promo code not found for the given organizer." };
+    }
+
+    // Check if the promo code is active
+    if (foundPromoCode.status !== "active") {
+      return { error: "Promo code is not active." };
+    }
+
+    // Check if the promo code has expired
+    const now = new Date();
+    if (now > foundPromoCode.expiryDate) {
+      await sendUserNotifications({
+        recipientIds: [userId.toString()],
+        title: "Promo Code Expired",
+        body: `The promo code: ${promoCode} has expired.`,
+        data: {
+          type: NotificationTypes.PROMO_UPDATE,
+          objectType: "group",
+        },
+        image: (foundPromoCode.image) || "noimage",
+        sender: userId,
+        objectId: foundPromoCode._id,
+      });
+      return { error: "Promo code has expired." };
+    }
+
+    // Check if the user has exceeded the allowed usage limit for this promo code
+    const userUsage = foundPromoCode.usersUsed.get(userId); // Retrieve the user's usage object by userId
+
+    if (userUsage && userUsage.count >= foundPromoCode.maxCountPerUser) {
+      await sendUserNotifications({
+        recipientIds: [userId.toString()],
+        title: "Promo Code Usage Exceeded",
+        body: `You have exceeded the maximum usage for the promo code: ${promoCode}.`,
+        data: {
+          type: NotificationTypes.PROMO_UPDATE,
+          objectType: "group",
+        },
+        image: (foundPromoCode.image) || "noimage",
+        sender: userId,
+        objectId: foundPromoCode._id,
+      });
+      return { error: "You have exceeded the maximum usage for this promo code." };
+    }
+
+    return {
+      discount: foundPromoCode.discountValue,
+      maxDiscountCap: foundPromoCode.maxDiscountCap,
+      discountType: foundPromoCode.discountType,
+    };
+  } catch (err) {
+    console.error("Error in usePromoCode:", err);
+    throw err;
+  }
+};
 
 module.exports = {
   usePromoCode,
+  validatePromoCode
 };

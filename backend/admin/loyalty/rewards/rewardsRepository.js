@@ -6,6 +6,9 @@ const {
 } = require("../../../commonModules/loyalty/rewards/models");
 const formatReward = require("./utils/formatReward");
 
+ 
+ 
+
 // Decide which discriminator model to use
 const getModelByrewardType = (rewardType) => {
   switch (rewardType) {
@@ -24,9 +27,7 @@ const getModelByrewardType = (rewardType) => {
 // Create reward
 const create = async (data) => {
   try {
-    console.log("data",data );
     const Model = getModelByrewardType(data.rewardType);
-    console.log("model", Model);
     const item = new Model(data);
     await item.save();
     // Clean up the Mongoose properties before returning
@@ -39,6 +40,8 @@ const create = async (data) => {
 
 // Get reward with population
 const getWithFilters = async (query = {}, skip = 0, limit = 10) => {
+
+ 
   return Reward.find(query)
     .populate({
       path: "menuItem",
@@ -57,7 +60,7 @@ const getWithFilters = async (query = {}, skip = 0, limit = 10) => {
     .limit(limit)
     .lean()
     .exec();
-};
+    };
 
 // Count
 const count = async (query = {}) => {

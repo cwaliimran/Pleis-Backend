@@ -29,6 +29,7 @@ const create = async (data) => {
     const Model = getModelBypromotionType(data.promotionType);
     const item = new Model(data);
     const saved = await item.save();
+
     return saved.toObject(); // Removes Mongoose internals
   } catch (err) {
     throw err;
@@ -37,6 +38,7 @@ const create = async (data) => {
 
 
 const getWithFilters = async (query, skip = 0, limit = 20) => {
+
   // Build aggregation pipeline
   const pipeline = [
     { $match: query },
@@ -108,7 +110,7 @@ const getWithFilters = async (query, skip = 0, limit = 20) => {
 
   const results = await Promotion.aggregate(pipeline).allowDiskUse(true);
   return results;
-};
+    };
 
 module.exports = {
   getWithFilters,
@@ -130,16 +132,19 @@ const findById = async (id) => {
 // Update and save
 const updateData = async (item, data) => {
   Object.assign(item, data);
+
   return await item.save();
 };
 
 // Delete
 const deleteItem = async (item) => {
+
   return await item.deleteOne();
 };
 
 // findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
+
   return Promotion.findByIdAndUpdate(id, data, { new: true })
     .populate("menuItem")
     .populate("tierLimit");
