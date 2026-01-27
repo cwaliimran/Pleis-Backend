@@ -5,7 +5,15 @@ const { tiersFormatter } = require("./formatters/tiersFormatter");
 const Tiers = require("./Tiers");
 const tierRepo = require("./tiersRepository");
 const mongoose = require("mongoose");
-
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_TIERS_CACHE_KEY = "tiers:active";
+const buildTiersCacheKey = ({
+  scope = "public", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_TIERS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
 const createTier = async (data) => {
   let tier = await tierRepo.createTier(data);
   return tiersFormatter(tier);
@@ -15,7 +23,16 @@ const createTier = async (data) => {
 // Sort tiers so the one with lowest bonusPointsPerEuro (e.g. Silver) is on top
 const getTiers = async ({ page, limit, keyword, status, date }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-
+  const cacheKey = buildTiersCacheKey({
+    scope: "admin",
+    skip,
+    limit,
+  });
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400, // 1 day
+ 
+    fetchFn: async () => {
   const pipeline = [
   ];
 
@@ -84,9 +101,12 @@ const getTiers = async ({ page, limit, keyword, status, date }) => {
     tiers,
     meta
   };
+},
+  });
 };
 
 const updateTier = async (id, data) => {
+  await invalidate(ACTIVE_TIERS_CACHE_KEY); // Invalidate cache
   const tier = await tierRepo.findTierById(id);
   if (!tier) return null;
 

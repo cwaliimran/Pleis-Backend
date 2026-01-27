@@ -1,8 +1,7 @@
 const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const GiveawayRepo = require("./giveawayRepository");
 const { NotificationTypes } = require("@NotificationsModel");
-const { cache, invalidate } = require("@redisCache");
-const ACTIVE_GIVEAWAYS_CACHE_KEY = "giveaways:active";
+
 
 const createGiveaway = async (data) => {
 
@@ -72,7 +71,7 @@ if(data.expiryDate=="Invalid date"){
 
 // const userIds = await GiveawayRepo.getUserIdsForEvent(Giveaway.event);
   Object.assign(Giveaway, updateData);
-await invalidate(ACTIVE_GIVEAWAYS_CACHE_KEY);
+
   await Giveaway.save();
 
 

@@ -2,11 +2,40 @@ const { sendResponse, parsePaginationParams, generateMeta } = require("@utils/re
 const { User } = require("../../../models/UserModel");
 const AdminSettings = require("../models/AdminSettings");
 const Faq = require("../models/Faq");
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_ADMIN_SETTINGS_CACHE_KEY = "adminSettings:active";
+const buildAdminSettingsCacheKey = ({
+  scope = "public", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_ADMIN_SETTINGS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
+const invalidateAdminSettingsScope = async (scope) => {
+  await invalidate(`${ACTIVE_ADMIN_SETTINGS_CACHE_KEY}:${scope}`);
+};
 
 // Get Terms and Conditions
 const getTermsAndConditions = async (req, res) => {
   try {
-    const settings = await AdminSettings.findOne({}, "terms_and_conditions");
+    const cacheKey = buildAdminSettingsCacheKey({
+      scope: "terms_conditions",
+      skip: 0,
+      limit: 10,
+    });
+
+    const settings = await cache({
+      namespace: cacheKey,
+      ttl: 86400, // 1 day
+
+      fetchFn: async () => {
+        return AdminSettings.findOne(
+          {},
+          "terms_and_conditions"
+        );
+      },
+    });
+
     if (!settings) {
       return sendResponse({
         res,
@@ -14,6 +43,7 @@ const getTermsAndConditions = async (req, res) => {
         translationKey: "terms_and",
       });
     }
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -30,10 +60,26 @@ const getTermsAndConditions = async (req, res) => {
   }
 };
 
+
+
 // Get About Us
 const getAboutUs = async (req, res) => {
   try {
-    const settings = await AdminSettings.findOne({}, "about_us");
+    const cacheKey = buildAdminSettingsCacheKey({
+      scope: "about_us",
+      skip: 0,
+      limit: 10,
+    });
+
+    const settings = await cache({
+      namespace: cacheKey,
+      ttl: 86400, // 1 day
+
+      fetchFn: async () => {
+        return AdminSettings.findOne({}, "about_us");
+      },
+    });
+
     if (!settings) {
       return sendResponse({
         res,
@@ -41,6 +87,7 @@ const getAboutUs = async (req, res) => {
         translationKey: "about_us",
       });
     }
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -60,7 +107,21 @@ const getAboutUs = async (req, res) => {
 // Get Privacy Policy
 const getPrivacyPolicy = async (req, res) => {
   try {
-    const settings = await AdminSettings.findOne({}, "privacy_policy");
+    const cacheKey = buildAdminSettingsCacheKey({
+      scope: "privacy_policy",
+      skip: 0,
+      limit: 10,
+    });
+
+    const settings = await cache({
+      namespace: cacheKey,
+      ttl: 86400, // 1 day
+
+      fetchFn: async () => {
+        return AdminSettings.findOne({}, "privacy_policy");
+      },
+    });
+
     if (!settings) {
       return sendResponse({
         res,
@@ -68,6 +129,7 @@ const getPrivacyPolicy = async (req, res) => {
         translationKey: "privacy_policy",
       });
     }
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -84,36 +146,57 @@ const getPrivacyPolicy = async (req, res) => {
   }
 };
 
+
 // Get Privacy Policy
 const getFaqs = async (req, res) => {
   try {
     const { page, limit } = parsePaginationParams(req);
-    const { keyword } = req.query; // Get keyword from query
+    const { keyword } = req.query;
 
-    // Initialize query object with base condition
-    let queryConditions = {};
-    // Apply keyword search on both `name` and `anonymousName` if keyword is provided
-    if (keyword && keyword.trim() !== "") {
-      queryConditions.$or = [
-        { question: { $regex: keyword, $options: "i" } },
-        { answer: { $regex: keyword, $options: "i" } },
-      ];
-    }
+    const skip = (page - 1) * limit;
 
-    const [faqs, totalRecords] = await Promise.all([
-      Faq.find(queryConditions)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit),
-      Faq.countDocuments(queryConditions),
-    ]);
+    const cacheKey = buildAdminSettingsCacheKey({
+      scope: "faqs",
+      skip,
+      limit,
+    });
 
-    let meta = generateMeta(page, limit, totalRecords);
+    const result = await cache({
+      namespace: cacheKey,
+      ttl: 86400, // 1 day
+
+      fetchFn: async () => {
+        let queryConditions = {};
+
+        if (keyword && keyword.trim() !== "") {
+          queryConditions.$or = [
+            { question: { $regex: keyword, $options: "i" } },
+            { answer: { $regex: keyword, $options: "i" } },
+          ];
+        }
+
+        const [faqs, totalRecords] = await Promise.all([
+          Faq.find(queryConditions)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit),
+          Faq.countDocuments(queryConditions),
+        ]);
+
+        return {
+          faqs,
+          totalRecords,
+        };
+      },
+    });
+
+    const meta = generateMeta(page, limit, result.totalRecords);
+
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "faqs_fetched_successfully",
-      data: faqs,
+      data: result.faqs,
       meta,
     });
   } catch (error) {
@@ -126,12 +209,19 @@ const getFaqs = async (req, res) => {
   }
 };
 
+
 // Create Admin Settings
 const createAdminSettings = async (req, res) => {
-  const { terms_and_conditions, about_us, privacy_policy } = req.body;
-
   try {
-    // Check if AdminSettings already exist
+    // invalidate only relevant sections
+    await Promise.all([
+      invalidateAdminSettingsScope("terms_conditions"),
+      invalidateAdminSettingsScope("about_us"),
+      invalidateAdminSettingsScope("privacy_policy"),
+    ]);
+
+    const { terms_and_conditions, about_us, privacy_policy } = req.body;
+
     const existingSettings = await AdminSettings.findOne();
     if (existingSettings) {
       return sendResponse({
@@ -141,7 +231,6 @@ const createAdminSettings = async (req, res) => {
       });
     }
 
-    // Create new admin settings
     const newSettings = new AdminSettings({
       terms_and_conditions: terms_and_conditions || "",
       about_us: about_us || "",
@@ -149,6 +238,7 @@ const createAdminSettings = async (req, res) => {
     });
 
     const savedSettings = await newSettings.save();
+
     return sendResponse({
       res,
       statusCode: 201,
@@ -164,19 +254,42 @@ const createAdminSettings = async (req, res) => {
     });
   }
 };
+ 
 
 // Update Admin Settings (Optional: To update multiple fields at once)
 const updateAdminSettings = async (req, res) => {
   const { id } = req.params;
   const updateData = {};
 
-  if (req.body.terms_and_conditions)
+  const invalidations = [];
+
+  if (req.body.terms_and_conditions) {
     updateData.terms_and_conditions = req.body.terms_and_conditions;
-    if (req.body.customer_terms_and_conditions)
-    updateData.customer_terms_and_conditions = req.body.customer_terms_and_conditions;
-  if (req.body.about_us) updateData.about_us = req.body.about_us;
-  if (req.body.privacy_policy)
+    invalidations.push("terms_conditions");
+  }
+
+  if (req.body.customer_terms_and_conditions) {
+    updateData.customer_terms_and_conditions =
+      req.body.customer_terms_and_conditions;
+    invalidations.push("customer_terms_and_conditions");
+  }
+
+  if (req.body.about_us) {
+    updateData.about_us = req.body.about_us;
+    invalidations.push("about_us");
+  }
+
+  if (req.body.privacy_policy) {
     updateData.privacy_policy = req.body.privacy_policy;
+    invalidations.push("privacy_policy");
+  }
+
+  // invalidate only touched scopes
+  await Promise.all(
+    [...new Set(invalidations)].map(scope =>
+      invalidateAdminSettingsScope(scope)
+    )
+  );
 
   try {
     const settings = await AdminSettings.findByIdAndUpdate(
@@ -193,8 +306,7 @@ const updateAdminSettings = async (req, res) => {
       });
     }
 
-    if (req.body.terms_and_conditions){
-      //update all organizers with new termsAccepted
+    if (req.body.terms_and_conditions) {
       await User.updateMany(
         { "accountState.userType": "organizer" },
         { $set: { termsAccepted: req.body.termsAccepted || false } }
@@ -216,9 +328,27 @@ const updateAdminSettings = async (req, res) => {
     });
   }
 };
+
 const getCustomerTermsAndConditions = async (req, res) => {
   try {
-    const settings = await AdminSettings.findOne({}, "customer_terms_and_conditions");
+    const cacheKey = buildAdminSettingsCacheKey({
+      scope: "customer_terms_conditions",
+      skip: 0,
+      limit: 10,
+    });
+
+    const settings = await cache({
+      namespace: cacheKey,
+      ttl: 86400, // 1 day
+
+      fetchFn: async () => {
+        return AdminSettings.findOne(
+          {},
+          "customer_terms_and_conditions"
+        );
+      },
+    });
+
     if (!settings) {
       return sendResponse({
         res,
@@ -226,6 +356,7 @@ const getCustomerTermsAndConditions = async (req, res) => {
         translationKey: "terms_and",
       });
     }
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -241,6 +372,7 @@ const getCustomerTermsAndConditions = async (req, res) => {
     });
   }
 };
+
 
 module.exports = {
   getTermsAndConditions,

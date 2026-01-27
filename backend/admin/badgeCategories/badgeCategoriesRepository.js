@@ -4,11 +4,20 @@ const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const { generateMeta } = require("@utils/responseUtil");
 const mongoose = require("mongoose");
 const { formatCategories } = require("./formatters/categoryFormatter");
-
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_BADGE_CATEGORIES_CACHE_KEY = "badgeCategories:active";
+const buildBadgeCategoriesCacheKey = ({
+  scope = "public", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_BADGE_CATEGORIES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
 const createBadgeCategories = async (data) => {
   try {
     const badgeCategories = new BadgeCategories(data);
     await badgeCategories.save();
+    await invalidate(ACTIVE_BADGE_CATEGORIES_CACHE_KEY);
     return badgeCategories;
   } catch (err) {
     throw err;
@@ -18,7 +27,16 @@ const createBadgeCategories = async (data) => {
 
 
 const getBadgeCategoriess = async ({ timezone,page, limit, keyword, status, userId, date, range,today,skip }) => {
-
+  const cacheKey = buildBadgeCategoriesCacheKey({
+    scope: "admin",
+    skip,
+    limit,
+  });
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400, // 1 day
+ 
+    fetchFn: async () => {
   const pipeline = [];
 
   // Apply filters
@@ -80,20 +98,25 @@ if (keyword) {
   meta.BadgeCategoriessCount = { total, active, inactive };
 const formattedBadgeCategoriess = formatCategories(BadgeCategoriess, timezone);
   return {BadgeCategoriess : formattedBadgeCategoriess, meta}
-}
+},
+  });
+};
 
 const findBadgeCategoriesById = async (id) => {
   return BadgeCategories.findById(id);
 };
 
 const findByIdAndUpdate = async (id, data) => {
+   await invalidate(ACTIVE_BADGE_CATEGORIES_CACHE_KEY);
   return BadgeCategories.findByIdAndUpdate(id, data, { new: true });
 };
 const deleteBadgeCategories = async (id) => {
+  await invalidate(ACTIVE_BADGE_CATEGORIES_CACHE_KEY);
   return await BadgeCategories.findByIdAndDelete(id);
 };
 
 const updateBadgeStatusById = async (id, status) => {
+   await invalidate(ACTIVE_BADGE_CATEGORIES_CACHE_KEY);
   return findByIdAndUpdate(id, { status });
 };
 module.exports = {

@@ -6,7 +6,19 @@ const {
 } = require("../../../commonModules/loyalty/rewards/models");
 const { formatReward } = require("./utils/formatReward");
 const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
-
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_LOYALTY_REWARDS_CACHE_KEY = "loyaltyRewards:active";
+const buildLoyaltyRewardsCacheKey = ({
+  user,
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_LOYALTY_REWARDS_CACHE_KEY}:${user}:skip=${skip}:limit=${limit}`;
+};
+const invalidateLoyaltyRewardsCache = async () => {
+  await invalidate(`${ACTIVE_LOYALTY_REWARDS_CACHE_KEY}:${user}`);
+};
+ 
 // Decide which discriminator model to use
 const getModelByrewardType = (rewardType) => {
   switch (rewardType) {
@@ -25,6 +37,8 @@ const getModelByrewardType = (rewardType) => {
 // Create reward
 const create = async (data) => {
   try {
+    await invalidate(ACTIVE_LOYALTY_REWARDS_CACHE_KEY);
+   await invalidateLoyaltyRewardsCache(data.companyOrganizer);
     const Model = getModelByrewardType(data.rewardType);
     const item = new Model(data);
     await item.save();
@@ -64,6 +78,7 @@ const findById = async (id) => {
 
 // Update and save
 const updateData = async (item, data) => {
+  await invalidateLoyaltyRewardsCache(data.companyOrganizer);
   Object.assign(item, data);
   return await item.save();
 };
@@ -75,6 +90,8 @@ const deleteItem = async (item) => {
 
 // findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
+  const existingReward = await Reward.findById(id)
+  await invalidateLoyaltyRewardsCache(existingReward.companyOrganizer);
   return Reward.findByIdAndUpdate(id, data, { new: true })
     .populate("menuItem")
     .populate("tierLimit");

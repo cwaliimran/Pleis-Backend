@@ -39,10 +39,7 @@ const globalReferralSchema = new mongoose.Schema(
       required: true,
     },
 
-    expiryDate: {
-      type: Date,
-      required: true,
-    },
+
 
     status: {
       type: String,

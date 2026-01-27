@@ -1,6 +1,7 @@
 const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const BadgeCategoriesRepo = require("./badgeCategoriesRepository");
-
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_BADGE_CATEGORIES_CACHE_KEY = "badgeCategories:active";
 
 const createBadgeCategories = async (data) => {
   let badgeCategories = await BadgeCategoriesRepo.createBadgeCategories(data);
@@ -17,6 +18,7 @@ const getBadgeCategoriess = async ({ timezone, page, limit, keyword, status, use
   };
 };
 const updateBadgeCategories = async (id, data) => {
+  await invalidate(ACTIVE_BADGE_CATEGORIES_CACHE_KEY);
   const badge = await BadgeCategoriesRepo.findBadgeCategoriesById(id);
 
   if (!badge) {

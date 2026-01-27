@@ -3,15 +3,7 @@ const LoyaltyReferralSettings = require("@LoyaltyReferralSettingsModel");
 const { User } = require("../../../models/UserModel");
 const Event = require("@EventsModel");
 const mongoose = require("mongoose");
-const { cache, invalidate } = require("@redisCache");
-const ACTIVE_LOYALTY_REFERRAL_CACHE_KEY = "loyaltyReferral:active";
-const buildLoyaltyReferralCacheKey = ({
-  scope = "admin", // public | admin
-  skip = 0,
-  limit = 10
-}) => {
-  return `${ACTIVE_LOYALTY_REFERRAL_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
-};
+
 const {
   generateMeta,
   getStartAndEndOfMonth,
@@ -39,7 +31,7 @@ const createLoyaltyReferral = async (data) => {
 
     // Create and save the new Loyalty Referral
     const loyaltyReferral = await LoyaltyReferralSettings.create(data);
-    await invalidate(ACTIVE_LOYALTY_REFERRAL_CACHE_KEY); // Invalidate cache
+
     return loyaltyReferral;
 
   } catch (err) {
@@ -49,16 +41,7 @@ const createLoyaltyReferral = async (data) => {
 
 
 const getLoyaltyReferrals = async ({ timezone,page, limit, keyword, status, companyOrganizer, date, range,today,skip, type }) => {
-    const cacheKey = buildLoyaltyReferralCacheKey({
-    scope: "admin",
-    skip,
-    limit,
-  });
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400, // 1 day
- 
-    fetchFn: async () => {
+
   const pipeline = [
   {
 $match: {
@@ -157,15 +140,12 @@ if (keyword) {
 
 
   return {LoyaltyReferral , meta}
-    },
-  });
-};
-
+    };
 
 
 
 const findByIdAndUpdate = async (id, data) => {
-  await invalidate(ACTIVE_LOYALTY_REFERRAL_CACHE_KEY); // Invalidate cache
+
   return LoyaltyReferralSettings.findByIdAndUpdate(id, data, { new: true });
 };
 
@@ -201,17 +181,7 @@ const getUserLoyaltyReferrals = async ({
   skip,
   type,
 }) => {
-  const cacheKey = buildLoyaltyReferralCacheKey({
-    scope: "public",
-    skip,
-    limit,
-  });
 
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400, // 1 day
-
-    fetchFn: async () => {
       const pipeline = [
         {
           $match: {
@@ -240,7 +210,7 @@ const getUserLoyaltyReferrals = async ({
       });
 
       if (!referralSettings) {
-        throw new Error("Referral settings not found for the given company.");
+        return { LoyaltyReferral: [], meta: generateMeta(page, limit, 0) };
       }
 
       const { referralLimit } = referralSettings;
@@ -338,8 +308,6 @@ const getUserLoyaltyReferrals = async ({
       meta.LoyaltyReferralCount = { total, active, inactive };
 
       return { LoyaltyReferral, meta };
-    },
-  });
 };
 
 
@@ -353,7 +321,7 @@ const findLoyaltyReferrals = async (filter = {}) => {
 };
 const resetUserReferralLimits = async (limit) => {
   try {
-    await invalidate(ACTIVE_LOYALTY_REFERRAL_CACHE_KEY); // Invalidate cache
+
    
     // Force numeric conversion
     limit = Number(limit);

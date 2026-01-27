@@ -50,14 +50,14 @@ const createGlobalReferral = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "GlobalReferral_creation_failed",
+        translationKey: "global_referral_creation_failed",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "GlobalReferral_created_successfully",
+      translationKey: "global_referral_created_successfully",
       data: GlobalReferral,
     });
 
@@ -94,7 +94,7 @@ const getGlobalReferrals = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "GlobalReferrals_fetched_successfully",
+      translationKey: "global_referrals_fetched_successfully",
       data: globalReferral,
       meta,
     });
@@ -154,14 +154,14 @@ const timezone = req.user.timezone;
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "updateGlobalReferral_not_found",
+        translationKey: "update_global_referral_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "updateGlobalReferral_updated_successfully",
+      translationKey: "update_global_referral_updated_successfully",
       data: updated,
     });
   } catch (error) {
@@ -192,14 +192,14 @@ const deleteGlobalReferral = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "GlobalReferral_not_found",
+        translationKey: "global_referral_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "GlobalReferral_deleted_successfully",
+      translationKey: "global_referral_deleted_successfully",
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -238,7 +238,7 @@ const getUserGlobalReferrals = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "GlobalReferrals_fetched_successfully",
+      translationKey: "global_referrals_fetched_successfully",
       data: globalReferral.map(item => formatLoyaltyListing(item))
       ,
       meta,
@@ -270,14 +270,14 @@ const limit = 0;
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "GlobalReferral_reset_failed",
+        translationKey: "global_referral_reset_failed",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "GlobalReferral_reset_successfully",
+      translationKey: "global_referral_reset_successfully",
       data: GlobalReferral,
     });
 

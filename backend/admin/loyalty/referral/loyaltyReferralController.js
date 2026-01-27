@@ -56,14 +56,14 @@ const createLoyaltyReferral = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "LoyaltyReferral_creation_failed",
+        translationKey: "loyalty_referral_creation_failed",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "LoyaltyReferral_created_successfully",
+      translationKey: "loyalty_referral_created_successfully",
       data: LoyaltyReferral,
     });
 
@@ -106,7 +106,7 @@ const getLoyaltyReferrals = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "LoyaltyReferrals_fetched_successfully",
+      translationKey: "loyalty_referrals_fetched_successfully",
       data: LoyaltyReferral,
       meta,
     });
@@ -166,14 +166,14 @@ const timezone = req.user.timezone;
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "updateLoyaltyReferral_not_found",
+        translationKey: "update_loyalty_referral_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "updateLoyaltyReferral_updated_successfully",
+      translationKey: "update_loyalty_referral_updated_successfully",
       data: updated,
     });
   } catch (error) {
@@ -204,14 +204,14 @@ const deleteLoyaltyReferral = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "LoyaltyReferral_not_found",
+        translationKey: "loyalty_referral_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "LoyaltyReferral_deleted_successfully",
+      translationKey: "loyalty_referral_deleted_successfully",
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -257,7 +257,7 @@ const getUserLoyaltyReferrals = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "LoyaltyReferrals_fetched_successfully",
+      translationKey: "loyalty_referrals_fetched_successfully",
       data: LoyaltyReferral.map(item => formatLoyaltyListing(item))
       ,
       meta,
@@ -289,14 +289,14 @@ const limit = 0;
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "Loyalty_referral_reset_failed",
+        translationKey: "loyalty_referral_reset_failed",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "Loyalty_referral_reset_successfully",
+      translationKey: "loyalty_referral_reset_successfully",
       data: LoyaltyReferral,
     });
 
