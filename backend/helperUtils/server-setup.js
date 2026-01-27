@@ -27,9 +27,14 @@ const connectToDB = async (retries = 5, delay = 3000) => {
       });
 
       if (attempt === retries) {
-        logger.fatal("MongoDB connection failed after retries");
-        process.exit(1);
+        logger.fatal("MongoDB connection failed after retries", {
+          uri: uri.replace(/\/\/.*@/, "//***@"),
+        });
+        // ❗ DO NOT EXIT
+        // Let the app stay alive and retry later
+        return;
       }
+
 
       await new Promise((r) => setTimeout(r, delay));
     }
