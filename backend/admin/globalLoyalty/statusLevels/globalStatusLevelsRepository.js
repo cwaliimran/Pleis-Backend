@@ -1,12 +1,21 @@
 // repositories/statusLevelRepository.js
 const GlobalStatusLevels = require("@GlobalStatusLevelsModel");
-
+const { cache, invalidate } = require("@redisCache");
+const ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY = "globalLLoyaltyStatusLevel:active";
+const buildGlobalLoyaltyStatusLevelCacheKey = ({
+  scope = "public", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
 // Create statusLevel in a transaction and update organization
 const createStatusLevel = async (data) => {
   try {
     // Create statusLevel
     const statusLevel = new GlobalStatusLevels(data);
     await statusLevel.save();
+    await invalidate(ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY);
     return statusLevel;
   } catch (err) {
     throw err;
@@ -50,10 +59,23 @@ const getPreviousStatusLevelByRetainPoints = async (earned12Months) => {
 
 // Get all statusLevels with their assigned organization populated, sorted by createdAt descending
 const getStatusLevelsWithFilters = async (query = {}, skip = 0, limit = 10) => {
+    const cacheKey = buildGlobalLoyaltyStatusLevelCacheKey({
+    scope: "admin",
+    skip,
+    limit,
+  });
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400, // 1 day
+ 
+    fetchFn: async () => {
+ 
   return GlobalStatusLevels.find(query)
     .sort({ entryPoints: 1 }) // ascending: Blue → Black
     .skip(skip)
     .limit(limit);
+},
+  });
 };
 
 // Count by condition
@@ -68,12 +90,14 @@ const findStatusLevelById = async (id) => {
 
 // Update and save
 const updateStatusLevelData = async (statusLevel, data) => {
+  await invalidate(ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY);
   Object.assign(statusLevel, data);
   return await statusLevel.save();
 };
 
 //findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
+  await invalidate(ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY);
   return GlobalStatusLevels.findByIdAndUpdate(id, data, { new: true });
 };
 

@@ -9,6 +9,29 @@ const rewardSchema = new mongoose.Schema(
       default: "points",
     },
     rewardValue: { type: Number, default: 0 },
+    specialTicket: {
+          companyOrganizer: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            default: null,
+          },
+          organization: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Organizations",
+            default: null,
+          },
+          event: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Event",
+            default: null,
+          },
+    
+          ticket: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Ticketings",
+            default: null,
+          },
+        },
 
     // menu item reward
     rewardMenuItem: {
