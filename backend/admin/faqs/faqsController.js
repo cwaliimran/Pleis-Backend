@@ -14,30 +14,30 @@ const FaqsService = require("./faqsService");
 
 
 const createFaqs = async (req, res) => {
-let {
-  question,
-  answer,
-  type,
+  let {
+    question,
+    answer,
+    type,
 
-} = req.body;
+  } = req.body;
 
-const userId = req.user._id;
-const timezone = req.user.timezone;
+  const userId = req.user._id;
+  const timezone = req.user.timezone;
 
-if (
-  !validateParams(req, res, {
-    rawData: [
-  "question",
-  "answer",
-  "type",
-    ],
-  })
-) return;
+  if (
+    !validateParams(req, res, {
+      rawData: [
+        "question",
+        "answer",
+        "type",
+      ],
+    })
+  ) return;
 
   let data = {
-question,
-answer,
-  type,
+    question,
+    answer,
+    type,
   };
   try {
     const Faqs = await FaqsService.createFaqs(data);
@@ -73,7 +73,7 @@ const getFaqss = async (req, res) => {
     const userId = req.user._id;
     const timezone = req.user.timezone;
     const { Faqss, meta } = await FaqsService.getFaqss({
-        timezone,
+      timezone,
       page,
       limit,
       keyword,
@@ -102,22 +102,21 @@ const getFaqss = async (req, res) => {
 };
 const updateFaqs = async (req, res) => {
   const { id } = req.params;
-let {
-  question,
-  answer,
-  type,
+  let {
+    question,
+    answer,
+    type,
+  } = req.body;
 
-} = req.body;
-
-const userId = req.user._id;
-const timezone = req.user.timezone;
+  const userId = req.user._id;
+  const timezone = req.user.timezone;
 
 
 
   let data = {
-question,
-answer,
-  type,
+    question,
+    answer,
+    type,
   };
   try {
     const updated = await FaqsService.updateFaqs(id, data);

@@ -99,8 +99,6 @@ async function cache({ namespace, params = {}, ttl = 60, fetchFn }) {
 
   try {
     const fresh = await fetchFn();
-
-    // 🚫 DO NOT CACHE empty results
     if (
       fresh === null ||
       fresh === undefined ||

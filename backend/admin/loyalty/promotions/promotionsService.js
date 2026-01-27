@@ -5,16 +5,7 @@ const mongoose = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
 const formatPromotion = require("./utils/formatPromotion");
 const { generateImmediatelyForPromotionTemplate } = require("./utils/recurringPromotion.core");
-const { cache, invalidate } = require("@redisCache");
-const ACTIVE_LOYALTY_PROMOTION_CACHE_KEY = "loyaltyPromotion:active";
-const buildLoyaltyPromotionCacheKey = ({
-  scope = "public", // public | admin
-  skip = 0,
-  limit = 10
-}) => {
-  return `${ACTIVE_LOYALTY_PROMOTION_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
-};
- 
+
 const create = async (data, timezone) => {
   const promotion = await repository.create(data);
 
@@ -84,7 +75,7 @@ const get = async ({ companyOrganizer, page, limit, keyword, status, date, timez
 
 
 const update = async (id, data, scope = "single") => {
-  await invalidate(ACTIVE_LOYALTY_PROMOTION_CACHE_KEY); // Invalidate relevant cache
+
   const promotion = await Promotion.findById(id);
 
   if (!promotion) return null;
@@ -129,7 +120,6 @@ const update = async (id, data, scope = "single") => {
 
 
 const deleteItem = async (id, scope = "single") => {
-  await invalidate(ACTIVE_LOYALTY_PROMOTION_CACHE_KEY); // Invalidate relevant cache
   const promotion = await Promotion.findById(id);
   if (!promotion) return null;
 

@@ -15,12 +15,6 @@ async function searchEvents(ctx) {
 }
 
 //
-// ORGANIZATIONS
-//
-//
-// ORGANIZATIONS
-//
-//
 // ORGANIZATIONS (no primaryVenue)
 //
 async function searchOrganizations(ctx) {
@@ -46,6 +40,11 @@ async function searchOrganizations(ctx) {
   const skip = (page - 1) * limit;
 
   const filter = { status: "active" };
+  filter.location = {
+    $exists: true,
+    $ne: null
+  };
+
 
   const toObjectIds = (arr) =>
     arr

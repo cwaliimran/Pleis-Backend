@@ -30,7 +30,10 @@ const createChallenge = async (req, res) => {
     rawData.push("reward.rewardMenuItem")
     objectIdFields.push("reward.rewardMenuItem")
   } else if (rewardType === "specialTicket") {
-    rawData.push("reward.rewardValue")
+    rawData.push("reward.specialTicket.companyOrganizer");
+    rawData.push("reward.specialTicket.organization");
+    rawData.push("reward.specialTicket.event");
+    rawData.push("reward.specialTicket.ticket");
   } else if (rewardType === "customReward") {
     rawData.push("reward.customReward")
     rawData.push("reward.customReward.image")
@@ -128,6 +131,7 @@ const updateChallenge = async (req, res) => {
   if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
   try {
     const updated = await challengeService.updateChallenge(req.params.id, req.body);
+    console.log("updated",updated );
     if (!updated) {
       return sendResponse({ res, statusCode: 404, translationKey: "challenge_not_found" });
     }

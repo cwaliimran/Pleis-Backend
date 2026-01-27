@@ -1,15 +1,7 @@
 
 const { getCurrentDateInTimezone } = require("../../../helperUtils/responseUtil");
 const LoyaltyReferralRepo = require("./loyaltyReferralRepository");
-const { cache, invalidate } = require("@redisCache");
-const ACTIVE_LOYALTY_REFERRAL_CACHE_KEY = "loyaltyReferral:active";
-const buildLoyaltyReferralCacheKey = ({
-  scope = "admin", // public | admin
-  skip = 0,
-  limit = 10
-}) => {
-  return `${ACTIVE_LOYALTY_REFERRAL_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
-};
+
 
 const createLoyaltyReferral = async (data) => {
   let LoyaltyReferral = await LoyaltyReferralRepo.createLoyaltyReferral(data);
@@ -28,7 +20,7 @@ const getLoyaltyReferrals = async ({ timezone, page, limit, keyword, status, com
 };
 
 const updateLoyaltyReferral = async (data) => {
-  await invalidate(ACTIVE_LOYALTY_REFERRAL_CACHE_KEY); // Invalidate cache
+
   const LoyaltyReferral = await LoyaltyReferralRepo.findLoyaltyReferralsById(data.id);
 
   if (!LoyaltyReferral) {
@@ -84,7 +76,7 @@ const updateLoyaltyReferral = async (data) => {
 
 
 const deleteLoyaltyReferral = async (id) => {
-  await invalidate(ACTIVE_LOYALTY_REFERRAL_CACHE_KEY); // Invalidate cache
+
   const updated = await LoyaltyReferralRepo.findByIdAndUpdate(id, {
     status: "deleted",
   });

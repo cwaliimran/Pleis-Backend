@@ -10,15 +10,7 @@ const { UserReservations } = require("@UserReservationsModel");
 const { formatUpdate } = require("./formatters/updateFormatter");
 const { NotificationExp, NotificationTypes } = require("@NotificationsModel");
 const { sendUserNotifications } = require("../../controllers/communicationController");
-const { cache, invalidate } = require("@redisCache");
-const ACTIVE_GIVEAWAYS_CACHE_KEY = "giveaways:active";
-const buildGiveawaysCacheKey = ({
-  scope = "public", // public | admin
-  skip = 0,
-  limit = 10
-}) => {
-  return `${ACTIVE_GIVEAWAYS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
-};
+
  
 const getUserIdsForEvent = async (eventId) => {
   try {
@@ -88,7 +80,7 @@ const getUserIdsForEvent = async (eventId) => {
 
 const createGiveaway = async (data) => {
   try {
-    await invalidate(ACTIVE_GIVEAWAYS_CACHE_KEY);
+
     const userIds = await getUserIdsForEvent(data.event);
     data.creator = await getCreatorOrganizationId(data.creator)
 
@@ -364,7 +356,7 @@ const findGiveawayById = async (id) => {
 };
 
 const findByIdAndUpdate = async (id, data) => {
-  await invalidate(ACTIVE_GIVEAWAYS_CACHE_KEY);
+
   return Giveaway.findByIdAndUpdate(id, data, { new: true });
 };
 

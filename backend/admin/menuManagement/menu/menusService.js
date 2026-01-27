@@ -6,15 +6,7 @@ const Menus = require("@MenusModel");
 const menuRepo = require("./menusRepository");
 const mongoose = require("mongoose");
 const { getOrganizationIdsByCompanyOrganizer } = require("../../organizations/organizationRepository");
-const { cache, invalidate } = require("@redisCache");
-const ACTIVE_MENUS_CACHE_KEY = "menus:active";
-const buildMenusCacheKey = ({
-  scope = "admin", // public | admin
-  skip = 0,
-  limit = 10
-}) => {
-  return `${ACTIVE_MENUS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
-};
+
 const createMenu = async (data) => {
   return await menuRepo.createMenu(data);
 };
@@ -23,17 +15,6 @@ const createMenu = async (data) => {
 const getMenus = async ({ page, limit, keyword, status, date, organizations, companyOrganizer }) => {
   // 3️⃣ Pagination setup
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-  const cacheKey = buildMenusCacheKey({
-    scope: "admin",
-    skip,
-    limit,
-  });
-
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400, // 1 day
-
-    fetchFn: async () => {
       let organizationIds = [];
 
       // 1️⃣ If organizations explicitly provided, use them directly
@@ -145,15 +126,11 @@ const getMenus = async ({ page, limit, keyword, status, date, organizations, com
         menus,
         meta
       };
-    },
-  });
-};
-
+    };
 
 
 const updateMenu = async (id, data) => {
   const menu = await menuRepo.findMenuById(id);
-  await invalidate(ACTIVE_MENUS_CACHE_KEY);
   if (!menu) return null;
 
   const allowedFields = [

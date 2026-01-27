@@ -5,15 +5,6 @@ const ClubCollaborations = require("@ClubCollaborationModel");
 const clubCollaborationRepo = require("./clubCollaborationsRepository");
 const mongoose = require("mongoose");
 const { formatClubCollaborations } = require("./formatters/clubCollaborationFormatter");
-const { cache, invalidate } = require("@redisCache");
-const ACTIVE_LOYALTY_CLUB_COLLABORATION_CACHE_KEY = "loyaltyClubCollaboration:active";
-const buildLoyaltyClubCollaborationCacheKey = ({
-  scope = "public", // public | admin
-  skip = 0,
-  limit = 10
-}) => {
-  return `${ACTIVE_LOYALTY_CLUB_COLLABORATION_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
-};
 const createClubCollaboration = async ({ sender, receiver, notes, expiryDate }) => {
   // Check existing
   const existing = await clubCollaborationRepo.checkExistingCollaboration({

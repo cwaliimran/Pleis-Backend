@@ -4,16 +4,7 @@ const mongoose = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
 const formatData = require("./utils/formatReward");
 const BaseReward = require("@RewardModel");
-const { cache, invalidate } = require("@redisCache");
-const ACTIVE_LOYALTY_REWARD_CACHE_KEY = "loyaltyReward:active";
-const buildLoyaltyRewardCacheKey = ({
-  scope = "public", // public | admin
-  skip = 0,
-  limit = 10
-}) => {
-  return `${ACTIVE_LOYALTY_REWARD_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
-};
- 
+
  
 const create = async (data) => {
   return await repository.create(data);
@@ -61,7 +52,6 @@ const update = async (id, data) => {
   if (!item) return null;
   Object.assign(item, data);
   await item.save();
-  await invalidate(ACTIVE_LOYALTY_REWARD_CACHE_KEY);
   //fetch updated item and return
   item = await getDetails(id);
   return item;

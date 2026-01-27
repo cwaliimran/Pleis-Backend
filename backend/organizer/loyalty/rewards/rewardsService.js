@@ -4,7 +4,17 @@ const mongoose = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
 const formatData = require("./utils/formatReward");
 const { Reward } = require("../../../commonModules/loyalty/rewards/models");
-
+const ACTIVE_LOYALTY_REWARDS_CACHE_KEY = "loyaltyRewards:active";
+const buildLoyaltyRewardsCacheKey = ({
+  user,
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_LOYALTY_REWARDS_CACHE_KEY}:${user}:skip=${skip}:limit=${limit}`;
+};
+const invalidateLoyaltyRewardsCache = async () => {
+  await invalidate(`${ACTIVE_LOYALTY_REWARDS_CACHE_KEY}:${user}`);
+};
 const create = async (data) => {
   return await repository.create(data);
 };
@@ -48,7 +58,9 @@ const get = async ({ companyOrganizer, page, limit, keyword, status, date, timez
 
 const update = async (id, data) => {
   let item = await repository.findById(id);
+
   if (!item) return null;
+  await invalidateLoyaltyRewardsCache(item.companyOrganizer);
   Object.assign(item, data);
   await item.save();
   //fetch updated item and return

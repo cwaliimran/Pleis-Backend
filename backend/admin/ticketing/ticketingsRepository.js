@@ -512,23 +512,148 @@ const getTicketSalesStats = async ({
   startDate,
   endDate
 }) => {
-  const totalCapacity = await getEventTotalCapacity(eventId);
-  const { stats, grandCount, grandAmount } =
-    await getPricingSalesStats({ eventId, startDate, endDate });
+  const { ticketingStats } =
+    await getTicketTypeSalesStats({
+      eventId,
+      startDate,
+      endDate,
+    });
 
-  // Attach totalCreated to each pricing phase
-  Object.keys(stats).forEach(phase => {
-    stats[phase].totalCreated = totalCapacity;
-  });
+  return ticketingStats
+};
+
+
+const getTicketTypeSalesStats = async ({
+  eventId,
+  startDate,
+  endDate,
+}) => {
+  const match = {
+    "ticket.snapshot.event": new mongoose.Types.ObjectId(eventId),
+  };
+
+  if (startDate || endDate) {
+    match.createdAt = {};
+    if (startDate) match.createdAt.$gte = new Date(startDate);
+    if (endDate) match.createdAt.$lte = new Date(endDate);
+  }
+
+  const bookings = await TicketingBookings.find(match)
+    .select("status ticket.ticketId ticket.snapshot.pricing.unitPrice ticket.snapshot.status")
+    .lean();
+
+  const capacityMap = await getTicketTypeCapacities(eventId);
+
+  const statsById = {};
+  let grandCount = 0;
+  let grandAmount = 0;
+
+  /* --------------------------------
+     INIT PER TICKET TYPE
+     -------------------------------- */
+  for (const [ticketId, meta] of Object.entries(capacityMap)) {
+    statsById[ticketId] = {
+      ticketId,
+      title: meta.title,
+
+      valid: { count: 0, amount: 0 },
+      used: { count: 0, amount: 0 },
+      cancelled: { count: 0, amount: 0 },
+      total: { count: 0, amount: 0 },
+
+      totalCreated: meta.totalCreated,
+
+      // ⬇️ NEW (defaults)
+      saleStatus: "onSale",
+      status: "inactive",
+    };
+  }
+
+  /* --------------------------------
+     PROCESS BOOKINGS
+     -------------------------------- */
+  for (const b of bookings) {
+    const ticketId = b.ticket?.ticketId?.toString();
+    if (!ticketId || !statsById[ticketId]) continue;
+
+    const price = b.ticket?.snapshot?.pricing?.unitPrice || 0;
+    const status = b.status;
+
+    const bucket = statsById[ticketId];
+    if (!bucket[status]) continue;
+
+    bucket[status].count += 1;
+    bucket[status].amount += price;
+
+    bucket.total.count += 1;
+    bucket.total.amount += price;
+
+    // ⬇️ ticket active/inactive from snapshot
+    if (b.ticket?.snapshot?.status === "active") {
+      bucket.status = "active";
+    }
+
+    if (status !== "cancelled") {
+      grandCount += 1;
+      grandAmount += price;
+    }
+  }
+
+  /* --------------------------------
+     FINAL DERIVED FIELDS
+     -------------------------------- */
+  for (const ticket of Object.values(statsById)) {
+    const remaining =
+      ticket.totalCreated - ticket.total.count;
+
+    ticket.saleStatus =
+      remaining > 0 ? "onSale" : "soldOut";
+  }
 
   return {
-      ...stats,
+    ticketingStats: {
+      tickets: Object.values(statsById),
       grandTotal: {
         count: grandCount,
-        amount: grandAmount
-      }
+        amount: grandAmount,
+      },
+    },
   };
 };
+
+
+
+
+const getTicketTypeCapacities = async (eventId) => {
+  const tickets = await TicketingsModel.find({
+    event: eventId,
+    status: {$ne: "deleted"}
+  }).lean();
+
+  const capacityMap = {};
+
+  for (const t of tickets) {
+    let total = 0;
+
+    if (t.timingSlots?.enabled) {
+      for (const d of t.timingSlots.dateTimeSlots) {
+        for (const s of d.timeSlots) {
+          total += s.quantity || 0;
+        }
+      }
+    } else {
+      total = t.quantity || 0;
+    }
+
+    capacityMap[t._id.toString()] = {
+      title: t.title,
+      totalCreated: total
+    };
+  }
+
+  return capacityMap;
+};
+
 
 
 module.exports = {
