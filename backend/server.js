@@ -149,7 +149,10 @@ app.use(i18nConfig.init);
 app.use(accessLogger);
 
 // keep existing middleware (unchanged)
-app.use(morgan("dev")); // dev only
+if (process.env.NODE_ENV !== "prod") {
+  app.use(morgan("dev"));
+}
+
 app.use(express.json());
 
 /**
@@ -199,13 +202,6 @@ app.use((err, req, res, next) => {
  * Infrastructure Bootstrap
  * =======================================================
  */
-getRedisClient();
-startCrons();
-
-// MongoDB backup (24h)
-setInterval(() => {
-  backupMongoDB();
-}, 24 * 60 * 60 * 1000);
 
 /**
  * =======================================================
@@ -214,12 +210,44 @@ setInterval(() => {
  */
 const server = createSocketServer(app, allowedOrigins);
 
+
+const PORT = process.env.PORT || 8080;
+
+server.listen(PORT, () => {
+  console.log("HTTP server listening")
+
+  logger.info("HTTP server listening", {
+    port: PORT,
+    env: process.env.NODE_ENV,
+  });
+});
+
+
 /**
  * =======================================================
  * Start Server AFTER DB Connection
  * =======================================================
  */
-connectToDB(server);
+
+(async () => {
+  try {
+    await connectToDB();
+
+    getRedisClient();
+    startCrons();
+
+    setInterval(() => {
+      backupMongoDB();
+    }, 24 * 60 * 60 * 1000);
+  } catch (err) {
+    logger.fatal("Startup failure", {
+      error: err.message,
+      stack: err.stack,
+    });
+    process.exit(1);
+  }
+})();
+
 
 /**
  * =======================================================

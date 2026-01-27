@@ -26,7 +26,8 @@ const getGlobalChallenges = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "global_loyalty_challenges_fetched",
-      data: result
+      data: result.items || [],
+      meta: result.meta
     });
   } catch (error) {
     const err = getReadableErrorMessage(error);
