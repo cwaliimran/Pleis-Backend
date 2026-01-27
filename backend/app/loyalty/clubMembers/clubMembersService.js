@@ -70,14 +70,28 @@ const updateUserCompanyPoints = async (payload) => {
   return formatUserWallet(wallet);
 };
 
-const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganizer) => {
-  const [profile, userCompanyWallet, rewards, challenges, promotions, transactions] = await Promise.all([
+const getCompanyProfileWithLoyaltyInfo = async (
+  timezone,
+  userId,
+  companyOrganizer
+) => {
+  const [
+    profile,
+    userCompanyWallet,
+    rewardsResponse,
+    challenges,
+    promotions,
+    transactions,
+  ] = await Promise.all([
     clubMemberRepo.getCompanyLoyaltyProfile(companyOrganizer),
     clubMemberRepo.isClubMemberWithWallet(userId, companyOrganizer),
+
+    // ✅ rewards already tiered + normalized inside service
     getRewardsByCompanyOrganizerService({
       companyOrganizer,
       userId,
     }),
+
     getEligibleChallengesForLoyaltyPage({
       page: 1,
       limit: 10,
@@ -85,42 +99,46 @@ const getCompanyProfileWithLoyaltyInfo = async (timezone, userId, companyOrganiz
       companyOrganizer,
       userId,
     }),
+
     getPromotionsByCompanyOrganizerService({
       page: 1,
       limit: 10,
       timezone,
       companyOrganizer,
     }),
-    getRecentTransactionsForDashboard({ limit: 5, user: userId, walletType: "companyLoyalty", companyOrganizer }),
 
+    getRecentTransactionsForDashboard({
+      limit: 5,
+      user: userId,
+      walletType: "companyLoyalty",
+      companyOrganizer,
+    }),
   ]);
 
+  const formattedLoyaltyProfile =
+    formatLoyaltyProfile(profile?.companyDetails);
 
-  const formattedRewards = formatRewardsByTierKey(
-    rewards?.rewards || [],
-    userCompanyWallet?.tierKey || "essential"
-  );
-
-  let formattedLoyaltyProfile = formatLoyaltyProfile(profile?.companyDetails);
-
-
+  // fire-and-forget engagement log
   void logEngagementService({
     entityType: "users",
     entityId: companyOrganizer,
     action: "view",
-    userId
+    userId,
   }).catch(console.error);
 
   return {
     profile: formattedLoyaltyProfile,
     userCompanyWallet: formatUserWallet(userCompanyWallet),
-    rewards: formattedRewards,
+
+    // ✅ NO tier formatting, NO eligibility logic here
+    rewards: rewardsResponse?.rewards || [],
+
     challenges,
     promotions: {
       items: promotions.promotions,
-      meta: promotions.meta
+      meta: promotions.meta,
     },
-    transactions
+    transactions,
   };
 };
 

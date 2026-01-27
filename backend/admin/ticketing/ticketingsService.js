@@ -297,7 +297,7 @@ const getOrganizationTicketings = async ({ timezone, page, limit, keyword, statu
 
 const EventsgetTicketings = async ({ timezone, eventId }) => {
 
-  const query = { event: eventId, status: { $eq: "active" } };
+  const query = { event: eventId, status: { $ne: "deleted" } };
 
   let [ticketings] = await Promise.all([
     ticketingRepo.getEventsTicketingsWithFilters(query),

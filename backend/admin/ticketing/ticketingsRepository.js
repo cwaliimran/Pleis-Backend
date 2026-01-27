@@ -512,23 +512,119 @@ const getTicketSalesStats = async ({
   startDate,
   endDate
 }) => {
-  const totalCapacity = await getEventTotalCapacity(eventId);
-  const { stats, grandCount, grandAmount } =
-    await getPricingSalesStats({ eventId, startDate, endDate });
-
-  // Attach totalCreated to each pricing phase
-  Object.keys(stats).forEach(phase => {
-    stats[phase].totalCreated = totalCapacity;
-  });
+  const {
+    stats,
+    grandCount,
+    grandAmount
+  } = await getTicketTypeSalesStats({ eventId, startDate, endDate });
 
   return {
+    ticketingStats: {
       ...stats,
       grandTotal: {
         count: grandCount,
         amount: grandAmount
       }
+    }
   };
 };
+
+const getTicketTypeSalesStats = async ({ eventId, startDate, endDate }) => {
+  const match = {
+    "ticket.snapshot.event": new mongoose.Types.ObjectId(eventId)
+  };
+
+  if (startDate || endDate) {
+    match.createdAt = {};
+    if (startDate) match.createdAt.$gte = new Date(startDate);
+    if (endDate) match.createdAt.$lte = new Date(endDate);
+  }
+
+  const bookings = await TicketingBookings.find(match).select(
+    "status ticket.ticketId ticket.snapshot.pricing.unitPrice order"
+  ).lean();
+
+  const capacityMap = await getTicketTypeCapacities(eventId);
+
+  const stats = {};
+  let grandCount = 0;
+  let grandAmount = 0;
+
+  /* --------------------------------
+     INIT STATS PER TICKET TYPE
+     -------------------------------- */
+  for (const [ticketId, meta] of Object.entries(capacityMap)) {
+    stats[meta.title] = {
+      valid: { count: 0, amount: 0 },
+      used: { count: 0, amount: 0 },
+      cancelled: { count: 0, amount: 0 },
+      total: { count: 0, amount: 0 },
+      totalCreated: meta.totalCreated
+    };
+  }
+
+  /* --------------------------------
+     PROCESS BOOKINGS
+     -------------------------------- */
+  for (const b of bookings) {
+    const ticketId = b.ticket?.ticketId?.toString();
+    const price = b.ticket.snapshot?.pricing?.unitPrice || 0;
+    const status = b.status;
+
+    if (!capacityMap[ticketId]) continue;
+
+    const ticketTitle = capacityMap[ticketId].title;
+    const bucket = stats[ticketTitle];
+
+    // dynamic guard (future-proof)
+    if (!bucket[status]) continue;
+
+    bucket[status].count += 1;
+    bucket[status].amount += price;
+
+    bucket.total.count += 1;
+    bucket.total.amount += price;
+
+    if (status !== "cancelled") {
+      grandCount += 1;
+      grandAmount += price;
+    }
+  }
+
+  return { stats, grandCount, grandAmount };
+};
+
+
+const getTicketTypeCapacities = async (eventId) => {
+  const tickets = await TicketingsModel.find({
+    event: eventId,
+    status: {$ne: "deleted"}
+  }).lean();
+
+  const capacityMap = {};
+
+  for (const t of tickets) {
+    let total = 0;
+
+    if (t.timingSlots?.enabled) {
+      for (const d of t.timingSlots.dateTimeSlots) {
+        for (const s of d.timeSlots) {
+          total += s.quantity || 0;
+        }
+      }
+    } else {
+      total = t.quantity || 0;
+    }
+
+    capacityMap[t._id.toString()] = {
+      title: t.title,
+      totalCreated: total
+    };
+  }
+
+  return capacityMap;
+};
+
 
 
 module.exports = {

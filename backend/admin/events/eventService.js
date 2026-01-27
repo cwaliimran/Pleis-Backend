@@ -409,10 +409,10 @@ const getEventAnalyticsService = async (id) => {
 };
 
 const getEventTicketsAnalyticsService = async (id) => {
-  const [paidVsUnpaidTicketStats, scannedTicketProgress, ticketPerformanceWeekly,
+  const [ticketTypeStats, scannedTicketProgress, ticketPerformanceWeekly,
     ticketingStats
   ] = await Promise.all([
-    eventRepo.getPaidVsUnpaidTicketStats({ eventId: id }),
+    eventRepo.getTicketTypeStats({ eventId: id }),
     eventRepo.getScannedTicketProgress({ eventId: id }),
     eventRepo.getTicketPerformanceWeekly({ eventId: id }),
     getTicketSalesStatsService(id),
@@ -420,7 +420,7 @@ const getEventTicketsAnalyticsService = async (id) => {
   ]);
 
   return {
-    paidVsUnpaidTicketStats,
+    ticketTypeStats,
     scannedTicketProgress,
     ticketPerformanceWeekly,
     ticketingStats

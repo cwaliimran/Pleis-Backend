@@ -1,10 +1,4 @@
 /**
- * ================================
- * Server Bootstrap (FINAL)
- * ================================
- */
-
-/**
  * ------------------------------------------------
  * Unified Logging (FIRST – before anything else)
  * ------------------------------------------------
@@ -214,8 +208,6 @@ const server = createSocketServer(app, allowedOrigins);
 const PORT = process.env.PORT || 8080;
 
 server.listen(PORT, () => {
-  console.log("HTTP server listening")
-
   logger.info("HTTP server listening", {
     port: PORT,
     env: process.env.NODE_ENV,

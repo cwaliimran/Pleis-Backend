@@ -1,5 +1,7 @@
 const { REWARD_CLAIM_REASONS } = require("./rewardClaimReasons");
 
+const REASON_ORDER = Object.values(REWARD_CLAIM_REASONS);
+
 const normalizeRewardClaimMeta = ({
   reward,
   claimedCount = 0,
@@ -14,35 +16,29 @@ const normalizeRewardClaimMeta = ({
   const tierRequired = reward?.tierLimit?.entryPoints ?? 0;
 
   /* -------------------------------
-     Claim limit
+     Tier eligibility
   ------------------------------- */
-  if (claimLimit > 0 && claimedCount >= claimLimit) {
+  if (userTierEntry !== null && userTierEntry < tierRequired) {
     cannotClaimReasons.push(
-      REWARD_CLAIM_REASONS.CLAIM_LIMIT_REACHED
+      REWARD_CLAIM_REASONS.TIER_NOT_ELIGIBLE
     );
   }
 
   /* -------------------------------
      Points eligibility
   ------------------------------- */
-  if (
-    userPoints !== null &&
-    userPoints < pointsRequired
-  ) {
+  if (userPoints !== null && userPoints < pointsRequired) {
     cannotClaimReasons.push(
       REWARD_CLAIM_REASONS.INSUFFICIENT_POINTS
     );
   }
 
   /* -------------------------------
-     Tier eligibility
+     Claim limit
   ------------------------------- */
-  if (
-    userTierEntry !== null &&
-    userTierEntry < tierRequired
-  ) {
+  if (claimLimit > 0 && claimedCount >= claimLimit) {
     cannotClaimReasons.push(
-      REWARD_CLAIM_REASONS.TIER_NOT_ELIGIBLE
+      REWARD_CLAIM_REASONS.CLAIM_LIMIT_REACHED
     );
   }
 
@@ -62,6 +58,15 @@ const normalizeRewardClaimMeta = ({
   }
 
   /* -------------------------------
+     Canonical ordering (enum-driven)
+  ------------------------------- */
+  cannotClaimReasons.sort(
+    (a, b) =>
+      REASON_ORDER.indexOf(a) -
+      REASON_ORDER.indexOf(b)
+  );
+
+  /* -------------------------------
      Derived flags
   ------------------------------- */
   const hasLimit = claimLimit > 0;
@@ -76,7 +81,7 @@ const normalizeRewardClaimMeta = ({
     canClaim,
     isClaimed,
     claimRemaining,
-    cannotClaimReasons, // ✅ precise naming
+    cannotClaimReasons,
   };
 };
 
