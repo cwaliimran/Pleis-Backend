@@ -23,7 +23,7 @@ const getDashboard = async ({ timezone, userId }) => {
     dashboard: {
       userGlobalWallet: userGlobalWallet?.global ?? userGlobalWallet ?? null,
       categories: categoriesData.categories || [],
-      globalChallenges: globalChallenges.challenges || [],
+      globalChallenges: globalChallenges.items || [],
       globalRewards: globalRewards.rewards || [],
       globalPromotions: globalPromotions.responses || [],
       globalTransactions,
