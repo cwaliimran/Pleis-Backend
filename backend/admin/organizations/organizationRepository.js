@@ -41,7 +41,7 @@ const getOrganizationDetails = async (id) => {
     Organizations.findById(id)
       .populate("otherInfo.tags")
       .populate("otherInfo.categories")
-      .populate("creator", "firstName lastName"),
+      .populate("creator", "firstName lastName companyDetails"),
     Venues.findOne({
       organization: id,
       isPrimary: true
