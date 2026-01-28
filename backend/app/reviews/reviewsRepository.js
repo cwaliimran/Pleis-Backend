@@ -157,8 +157,21 @@ const getReviews = async ({ organizationId, timezone, page, limit, keyword, stat
   return { reviews, meta };
 };
 
+const getRatingsByEventId = async (eventId, userId) => {
+  if (
+    !mongoose.Types.ObjectId.isValid(eventId) ||
+    !mongoose.Types.ObjectId.isValid(userId)
+  ) {
+    return null;
+  }
 
+  return await Reviews.findOne({
+    event: eventId,
+    user: userId,
+  }).lean();
+};
 module.exports = {
   createReviews,
-  getReviews
+  getReviews,
+  getRatingsByEventId
 };

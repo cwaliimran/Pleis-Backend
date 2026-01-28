@@ -1,3 +1,5 @@
+const { getFullImageUrl } = require("@utils/imageHelper");
+
 const calculateMeta = (data) => {
   const meta = {
     totalMenuItems: 0,
@@ -45,8 +47,30 @@ function formatUpdate(Update) {
     image: getFullImageUrl(cat.image || "noimage.png"),
   };
 }
+function formatSaleWithImages(sale) {
+  if (!sale) return null;
+
+  // Handle both Mongoose doc and plain object
+  const s = sale.toObject ? sale.toObject() : { ...sale };
+
+  return {
+    ...s,
+    menuItems: Array.isArray(s.menuItems)
+      ? s.menuItems.map(item => {
+          const i = item.toObject ? item.toObject() : { ...item };
+
+          return {
+            ...i,
+            image: getFullImageUrl(i.image || "noimage.png"),
+          };
+        })
+      : [],
+  };
+}
+
 
 module.exports = {
   calculateMeta,
-  formatUpdate
+  formatUpdate,
+  formatSaleWithImages
 };

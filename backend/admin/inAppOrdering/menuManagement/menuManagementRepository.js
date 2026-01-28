@@ -7,7 +7,7 @@ const MenuItems = require("@MenuItemsModel");
 const { Events } = require("@EventsModel");
 const MenuItemCategories = require("@MenuItemCategoriesModel");
 const MenuItemsSale = require("@MenuItemsSaleModel");
-const { calculateMeta } = require("./helper/calculateMeta");
+const { calculateMeta, formatSaleWithImages } = require("./helper/calculateMeta");
 const { formatUpdate, formatMenuItemSale } = require("../formatters/updateFormatter");
 const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const findMenuItemById = async (id) => {
@@ -446,39 +446,41 @@ const getMenuItemsSales = async ({
   const totalCount = result[0]?.total[0]?.count || 0;
 
   // 9️⃣ Apply final pricing INSIDE each sale object
-  const data = rawData.map(sale => {
-    const totalPriceBeforeDiscount = sale.menuItems.reduce((sum, item) => {
-      const price =
-        item.discountPrice !== null && item.discountPrice !== undefined
-          ? item.discountPrice
-          : item.basePrice || 0;
-      return sum + price;
-    }, 0);
+const data = rawData.map(sale => {
+  const totalPriceBeforeDiscount = sale.menuItems.reduce((sum, item) => {
+    const price =
+      item.discountPrice !== null && item.discountPrice !== undefined
+        ? item.discountPrice
+        : item.basePrice || 0;
+    return sum + price;
+  }, 0);
 
-    let totalPrice = totalPriceBeforeDiscount;
+  let totalPrice = totalPriceBeforeDiscount;
 
-    if (sale.discountType === "fixed") {
-      totalPrice -= sale.discountValue || 0;
-    }
+  if (sale.discountType === "fixed") {
+    totalPrice = sale.discountValue || 0;
+  }
 
-    if (sale.discountType === "percentage") {
-      totalPrice -= (totalPriceBeforeDiscount * (sale.discountValue || 0)) / 100;
-    }
+  if (sale.discountType === "percentage") {
+    totalPrice -=
+      (totalPriceBeforeDiscount * (sale.discountValue || 0)) / 100;
+  }
 
-    totalPrice = Math.max(totalPrice, 0);
+  totalPrice = Math.max(totalPrice, 0);
 
-    return {
-      totalPriceBeforeDiscount: totalPriceBeforeDiscount,
-      totalPrice: totalPrice,
-      ...sale,
-
-    };
-  });
+  // ✅ FORMAT IMAGES HERE
+   sale = formatSaleWithImages(sale);
 
   return {
-    data,
-    meta: generateMeta(page, limit, totalCount),
+    ...sale,
+    totalPriceBeforeDiscount,
+    totalPrice,
   };
+});
+return {
+  data,
+  meta: generateMeta(page, limit, totalCount),
+};
 };
 
 

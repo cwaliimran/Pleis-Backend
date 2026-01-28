@@ -385,6 +385,7 @@ const updateEvent = async (req, res) => {
     description,
     title,
     schedule,
+    feedbackEnabled,
     preOrdersEnabled,
   } = req.body);
 
@@ -455,6 +456,7 @@ const updateEvent = async (req, res) => {
 
     //get updated event details
     const updatedEvent = await eventService.getEventDetails(id, timezone);
+console.log("updatedEvent",updatedEvent );
 
     return sendResponse({
       res,
