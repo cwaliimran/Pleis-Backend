@@ -1,18 +1,10 @@
 const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
-const Promotion = require("@PromotionModel");
 const repository = require("./promotionsRepository");
-const mongoose = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
 const formatPromotion = require("./utils/formatPromotion");
 const { cache, invalidate } = require("@redisCache");
+const { GlobalBasePromotion } = require("../../../commonModules/globalLoyalty/promotions/models/Promotion");
 const ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY = "globalLoyaltyPromotions:active";
-const buildGlobalLoyaltyPromotionsCacheKey = ({
-  scope = "public", // public | admin
-  skip = 0,
-  limit = 10
-}) => {
-  return `${ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
-};
  
 const create = async (data,timezone) => {
   let promotion = await repository.create(data);
@@ -39,7 +31,7 @@ const get = async ({ page, limit, keyword, status, date, timezone }) => {
   }
 
   if (keyword) {
-    const keywordMatch = buildKeywordQueryFromModels([{ schema: Promotion.schema }], keyword);
+    const keywordMatch = buildKeywordQueryFromModels([{ schema: GlobalBasePromotion.schema }], keyword);
     Object.assign(query, keywordMatch);
   }
 
@@ -50,10 +42,10 @@ const get = async ({ page, limit, keyword, status, date, timezone }) => {
 
   // Get total counts
   const [total, active, inactive, totalFiltered] = await Promise.all([
-    Promotion.countDocuments({ status: { $ne: "deleted" } }),
-    Promotion.countDocuments({ status: "active" }),
-    Promotion.countDocuments({ status: "inactive" }),
-    Promotion.countDocuments(query),
+    GlobalBasePromotion.countDocuments({ status: { $ne: "deleted" } }),
+    GlobalBasePromotion.countDocuments({ status: "active" }),
+    GlobalBasePromotion.countDocuments({ status: "inactive" }),
+    GlobalBasePromotion.countDocuments(query),
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);

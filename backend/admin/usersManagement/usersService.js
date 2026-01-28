@@ -20,6 +20,7 @@ const APP_NAME = "Pleis App";
 const getAllUsers = async ({ page, limit, keyword, status, userType }) => {
   const query = {
     "verificationStatus.email": "verified",
+    // "email": { $ne: "guest@pleis.com" }
   };
   if (status) {
     query["accountState.status"] = status;
