@@ -11,7 +11,15 @@ const { formatUpdate } = require("./formatters/updateFormatter");
 const { NotificationExp, NotificationTypes } = require("@NotificationsModel");
 const { sendUserNotifications } = require("../../controllers/communicationController");
 
- 
+const ACTIVE_GIVEAWAYS_CACHE_KEY = "giveaways:active";
+const buildGiveawaysCacheKey = ({
+  scope = "public", // public | admin
+  skip = 0,
+  limit = 10
+}) => {
+  return `${ACTIVE_GIVEAWAYS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+};
+
 const getUserIdsForEvent = async (eventId) => {
   try {
 
@@ -103,7 +111,7 @@ const createGiveaway = async (data) => {
 
 
 const getGiveaway = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
-    const cacheKey = buildGiveawaysCacheKey({
+  const cacheKey = buildGiveawaysCacheKey({
     scope: "admin",
     skip,
     limit,
@@ -111,152 +119,152 @@ const getGiveaway = async ({ timezone, page, limit, keyword, status, userId, dat
   return cache({
     namespace: cacheKey,
     ttl: 86400, // 1 day
- 
+
     fetchFn: async () => {
-  let totalParticipants = 0;
-  // userId = await getCreatorOrganizationId(userId);  // Assuming getCreatorOrganizationId returns a valid userId
+      let totalParticipants = 0;
+      // userId = await getCreatorOrganizationId(userId);  // Assuming getCreatorOrganizationId returns a valid userId
 
 
 
-  const pipeline = [
-    {
-      $match: {
-        ...(userId && { organization: userId })  // Match creator if userId is provided
-      }
-    },
+      const pipeline = [
+        {
+          $match: {
+            ...(userId && { organization: userId })  // Match creator if userId is provided
+          }
+        },
 
-    // Step 3: Apply other filters (status, date, etc.)
-    {
-      $match: {
-        status: status || { $ne: "deleted" }, // Default to excluding "deleted" status
-        ...(date && {
-          createdAt: {
-            $gte: new Date(date),
-            $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)), // Filter by the given date
+        // Step 3: Apply other filters (status, date, etc.)
+        {
+          $match: {
+            status: status || { $ne: "deleted" }, // Default to excluding "deleted" status
+            ...(date && {
+              createdAt: {
+                $gte: new Date(date),
+                $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)), // Filter by the given date
+              },
+            }),
           },
-        }),
-      },
-    },
+        },
 
-    // Step 4: Keyword search for multiple fields
+        // Step 4: Keyword search for multiple fields
 
 
-    // Step 5: Lookup for event title (only the title field)
-    {
-      $lookup: {
-        from: "events",  // Collection name for events
-        localField: "event",  // field in Giveaway
-        foreignField: "_id",  // field in Event collection
-        as: "event",  // Alias for the joined data
-      },
-    },
-    {
-      $unwind: { path: "$event", preserveNullAndEmptyArrays: true },  // Flatten the 'event' array
-    },
+        // Step 5: Lookup for event title (only the title field)
+        {
+          $lookup: {
+            from: "events",  // Collection name for events
+            localField: "event",  // field in Giveaway
+            foreignField: "_id",  // field in Event collection
+            as: "event",  // Alias for the joined data
+          },
+        },
+        {
+          $unwind: { path: "$event", preserveNullAndEmptyArrays: true },  // Flatten the 'event' array
+        },
 
-    // Step 6: Lookup for ticket title (only the title field)
-    {
-      $lookup: {
-        from: "ticketings",  // Collection name for Ticketings
-        localField: "ticket",  // field in Giveaway
-        foreignField: "_id",  // field in Ticketings collection
-        as: "ticket",  // Alias for the joined data
-      },
-    },
-    {
-      $unwind: { path: "$ticket", preserveNullAndEmptyArrays: true },  // Flatten the 'ticket' array
-    },
+        // Step 6: Lookup for ticket title (only the title field)
+        {
+          $lookup: {
+            from: "ticketings",  // Collection name for Ticketings
+            localField: "ticket",  // field in Giveaway
+            foreignField: "_id",  // field in Ticketings collection
+            as: "ticket",  // Alias for the joined data
+          },
+        },
+        {
+          $unwind: { path: "$ticket", preserveNullAndEmptyArrays: true },  // Flatten the 'ticket' array
+        },
 
-    // Step 7: Lookup for giveaway participants and count total participants
-    {
-      $lookup: {
-        from: "giveawayparticipants",  // Collection name for GiveawayParticipants
-        localField: "_id",  // field in Giveaway
-        foreignField: "giveaway",  // field in GiveawayParticipants
-        as: "participants",  // Alias for the joined data
-      },
-    },
-    {
-      $addFields: {
-        totalParticipants: { $size: { $ifNull: ["$participants", []] } },  // Count the participants, default to 0 if none
-      },
-    },
+        // Step 7: Lookup for giveaway participants and count total participants
+        {
+          $lookup: {
+            from: "giveawayparticipants",  // Collection name for GiveawayParticipants
+            localField: "_id",  // field in Giveaway
+            foreignField: "giveaway",  // field in GiveawayParticipants
+            as: "participants",  // Alias for the joined data
+          },
+        },
+        {
+          $addFields: {
+            totalParticipants: { $size: { $ifNull: ["$participants", []] } },  // Count the participants, default to 0 if none
+          },
+        },
 
-    ...(keyword ? [{
-      $match: {
-        $or: [
-          { title: { $regex: keyword, $options: "i" } },
-          { "event.basicInfo.title": { $regex: keyword, $options: "i" } },
-          { "ticket.title": { $regex: keyword, $options: "i" } },
-          { $expr: { $regexMatch: { input: { $toString: "$numberOfWinners" }, regex: keyword, options: "i" } } },
-          { $expr: { $regexMatch: { input: { $toString: "$ticketsPerWinner" }, regex: keyword, options: "i" } } },
-          { "ticketType": { $regex: keyword, $options: "i" } },
-          { $expr: { $regexMatch: { input: { $toString: "$totalParticipants" }, regex: keyword, options: "i" } } },
-          { "giveawayStatus": { $regex: keyword, $options: "i" } },
-          { $expr: { $regexMatch: { input: { $toString: "$endDateTime" }, regex: keyword, options: "i" } } },
-        ],
-      },
-    }] : []),
+        ...(keyword ? [{
+          $match: {
+            $or: [
+              { title: { $regex: keyword, $options: "i" } },
+              { "event.basicInfo.title": { $regex: keyword, $options: "i" } },
+              { "ticket.title": { $regex: keyword, $options: "i" } },
+              { $expr: { $regexMatch: { input: { $toString: "$numberOfWinners" }, regex: keyword, options: "i" } } },
+              { $expr: { $regexMatch: { input: { $toString: "$ticketsPerWinner" }, regex: keyword, options: "i" } } },
+              { "ticketType": { $regex: keyword, $options: "i" } },
+              { $expr: { $regexMatch: { input: { $toString: "$totalParticipants" }, regex: keyword, options: "i" } } },
+              { "giveawayStatus": { $regex: keyword, $options: "i" } },
+              { $expr: { $regexMatch: { input: { $toString: "$endDateTime" }, regex: keyword, options: "i" } } },
+            ],
+          },
+        }] : []),
 
-    // Step 8: Project only the title from the ticket and event, and totalParticipants
-    {
-      $project: {
-        eventTitle: "$event.basicInfo.title",  // Only return event title
-        ticketTitle: "$ticket.title",  // Only return ticket title
-        eventId: "$event._id",  // Only return event title
-        ticketId: "$ticket._id",  // Only return ticket title
-        title: 1,
-        numberOfWinners: 1,
-        ticketsPerWinner: 1,
-        startDateTime: 1,
-        endDateTime: 1,
-        status: 1,
-        giveawayStatus: 1,
-        createdAt: 1,
-        totalParticipants: 1,  // Include the totalParticipants field
-      },
-    },
+        // Step 8: Project only the title from the ticket and event, and totalParticipants
+        {
+          $project: {
+            eventTitle: "$event.basicInfo.title",  // Only return event title
+            ticketTitle: "$ticket.title",  // Only return ticket title
+            eventId: "$event._id",  // Only return event title
+            ticketId: "$ticket._id",  // Only return ticket title
+            title: 1,
+            numberOfWinners: 1,
+            ticketsPerWinner: 1,
+            startDateTime: 1,
+            endDateTime: 1,
+            status: 1,
+            giveawayStatus: 1,
+            createdAt: 1,
+            totalParticipants: 1,  // Include the totalParticipants field
+          },
+        },
 
-    // Step 9: Sort by createdAt (descending)
-    { $sort: { createdAt: -1 } },
+        // Step 9: Sort by createdAt (descending)
+        { $sort: { createdAt: -1 } },
 
-    // Step 10: Apply pagination and count using $facet
-    {
-      $facet: {
-        data: [
-          { $skip: skip },  // Pagination skip
-          ...(limit === 0 ? [] : [{ $limit: limit }])  // Apply limit if provided
-        ],
-        totalFiltered: [{ $count: "count" }],  // Total count of filtered results
-      },
-    },
-  ];
+        // Step 10: Apply pagination and count using $facet
+        {
+          $facet: {
+            data: [
+              { $skip: skip },  // Pagination skip
+              ...(limit === 0 ? [] : [{ $limit: limit }])  // Apply limit if provided
+            ],
+            totalFiltered: [{ $count: "count" }],  // Total count of filtered results
+          },
+        },
+      ];
 
-  // Execute the aggregation pipeline
-  const result = await Giveaway.aggregate(pipeline);
+      // Execute the aggregation pipeline
+      const result = await Giveaway.aggregate(pipeline);
 
 
-  // Step 11: Check if the result is valid and contains data
-  if (!result || !result[0] || !result[0].data) {
-    return { Giveaway: [], meta: { totalFiltered: 0, GiveawayCount: { total: 0, active: 0, inactive: 0 } } };
-  }
+      // Step 11: Check if the result is valid and contains data
+      if (!result || !result[0] || !result[0].data) {
+        return { Giveaway: [], meta: { totalFiltered: 0, GiveawayCount: { total: 0, active: 0, inactive: 0 } } };
+      }
 
-  // Step 12: Handle the aggregation results
-  let Giveaways = result[0].data || [];
-  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+      // Step 12: Handle the aggregation results
+      let Giveaways = result[0].data || [];
+      const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-  // Step 13: Meta counts (active/inactive/total Giveaway for the given userId)
-  const [total, active, inactive] = await Promise.all([
-    Giveaway.countDocuments({ creator: userId, status: { $ne: "deleted" } }),  // Total Giveaway for the user
-    Giveaway.countDocuments({ creator: userId, status: "active" }),  // Active Giveaway for the user
-    Giveaway.countDocuments({ creator: userId, status: "inactive" })  // Inactive Giveaway for the user
-  ]);
+      // Step 13: Meta counts (active/inactive/total Giveaway for the given userId)
+      const [total, active, inactive] = await Promise.all([
+        Giveaway.countDocuments({ creator: userId, status: { $ne: "deleted" } }),  // Total Giveaway for the user
+        Giveaway.countDocuments({ creator: userId, status: "active" }),  // Active Giveaway for the user
+        Giveaway.countDocuments({ creator: userId, status: "inactive" })  // Inactive Giveaway for the user
+      ]);
 
-  // Step 14: Generate meta information for pagination
-  const meta = generateMeta(page, limit, totalFiltered);
-  meta.GiveawayCount = { total, active, inactive };
+      // Step 14: Generate meta information for pagination
+      const meta = generateMeta(page, limit, totalFiltered);
+      meta.GiveawayCount = { total, active, inactive };
 
-  return { Giveaways, meta };
+      return { Giveaways, meta };
     },
   });
 };

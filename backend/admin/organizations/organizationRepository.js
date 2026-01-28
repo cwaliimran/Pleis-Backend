@@ -14,6 +14,7 @@ const createOrganization = async (data) => {
 // Get all with filters
 const getOrganizationsWithFilters = async (query, skip, limit) => {
         const results = await Organizations.find(query)
+        .populate("creator", "firstName lastName")
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limit);
@@ -39,7 +40,8 @@ const getOrganizationDetails = async (id) => {
   const [organization, primaryVenue] = await Promise.all([
     Organizations.findById(id)
       .populate("otherInfo.tags")
-      .populate("otherInfo.categories"),
+      .populate("otherInfo.categories")
+      .populate("creator", "firstName lastName"),
     Venues.findOne({
       organization: id,
       isPrimary: true

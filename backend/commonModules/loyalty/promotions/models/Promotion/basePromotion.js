@@ -17,7 +17,7 @@ const basePromotionsSchema = new mongoose.Schema(
 
     startDate: { type: Date, default: null }, //contains date/time in happyHour case otherwise just date
     endDate: { type: Date, default: null },
-
+    claimLimit: { type: Number, default: null },
     recurringDetails: {
       type: RecurringPromotionSchema,
       default: null,
