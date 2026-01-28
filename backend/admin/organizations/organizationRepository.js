@@ -13,13 +13,13 @@ const createOrganization = async (data) => {
 
 // Get all with filters
 const getOrganizationsWithFilters = async (query, skip, limit) => {
-        const results = await Organizations.find(query)
-        .populate("creator", "firstName lastName")
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit);
-        return results;
-      };
+  const results = await Organizations.find(query)
+    .populate("creator", "firstName lastName")
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+  return results;
+};
 // Count by condition
 const countOrganizations = async (query = {}) => {
   return Organizations.countDocuments(query);
@@ -41,19 +41,31 @@ const getOrganizationDetails = async (id) => {
     Organizations.findById(id)
       .populate("otherInfo.tags")
       .populate("otherInfo.categories")
-      .populate("creator", "firstName lastName companyDetails"),
+      .populate({
+        path: "creator",
+        select: "firstName lastName email companyDetails",
+        populate: {
+          path: "companyDetails.suppliers",
+          select: "title",
+        },
+      }),
     Venues.findOne({
       organization: id,
-      isPrimary: true
-    }).populate("venueType")
+      isPrimary: true,
+    }).populate("venueType"),
   ]);
+
   if (!organization) return null;
 
-  // Attach primaryVenue (formatted) or null inside organization
-  const orgObj = organization.toObject ? organization.toObject() : organization;
+  const orgObj = organization.toObject
+    ? organization.toObject()
+    : organization;
+
   orgObj.venue = primaryVenue ? primaryVenue.formatResponse() : null;
+
   return orgObj;
 };
+
 
 
 // Delete
