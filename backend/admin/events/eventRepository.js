@@ -12,7 +12,7 @@ const { NotificationTypes } = require("@NotificationsModel");
 
 const createEvent = async (data, ticketingData) => {
   const session = await Events.startSession();
-    const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
+  const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
   session.startTransaction();
 
   try {
@@ -423,14 +423,14 @@ const getEventRevenueAnalytics = async ({
 const getTicketTypeStats = async ({ eventId }) => {
   const eventObjectId = new mongoose.Types.ObjectId(eventId);
 
-    /* --------------------------------
+  /* --------------------------------
      1️⃣ LOAD TICKET TYPES
      -------------------------------- */
   const ticketDocs = await TicketingsModel.find({
     event: eventObjectId,
-    status: { $ne: "deleted" }
+    status: { $ne: "deleted" },
   })
-    .select("_id title quantity timingSlots")
+    .select("_id title quantity timingSlots status")
     .lean();
 
   const ticketMap = {};
@@ -451,6 +451,7 @@ const getTicketTypeStats = async ({ eventId }) => {
     ticketMap[t._id.toString()] = {
       ticketId: t._id,
       title: t.title,
+      status: t.status,
       totalCreated: totalQuantity,
       sold: 0,
       paid: 0,
@@ -465,7 +466,7 @@ const getTicketTypeStats = async ({ eventId }) => {
      -------------------------------- */
   const orders = await TicketingOrders.find({
     event: eventObjectId,
-    status: { $in: ["paid", "completed"] }
+    status: { $in: ["paid", "completed"] },
   })
     .select("_id status paymentDetails orderPricing ticketsPurchased")
     .lean();
@@ -482,7 +483,7 @@ const getTicketTypeStats = async ({ eventId }) => {
      3️⃣ LOAD BOOKINGS FOR THOSE ORDERS
      -------------------------------- */
   const bookings = await TicketingBookings.find({
-    order: { $in: orderIds }
+    order: { $in: orderIds },
   })
     .select("order ticket.ticketId")
     .lean();
@@ -494,17 +495,7 @@ const getTicketTypeStats = async ({ eventId }) => {
     const ticketId = b.ticket?.ticketId?.toString();
     const order = orderMap[b.order?.toString()];
 
-    if (!ticketId) {
-      continue;
-    }
-
-    if (!ticketMap[ticketId]) {
-      continue;
-    }
-
-    if (!order) {
-      continue;
-    }
+    if (!ticketId || !ticketMap[ticketId] || !order) continue;
 
     const isPaid =
       order.status === "paid" &&
@@ -513,7 +504,6 @@ const getTicketTypeStats = async ({ eventId }) => {
 
     ticketMap[ticketId].sold += 1;
 
-    // ⚠️ Revenue distribution decision
     const perTicketAmount =
       order.ticketsPurchased > 0
         ? (order.orderPricing.total || 0) / order.ticketsPurchased
@@ -534,6 +524,7 @@ const getTicketTypeStats = async ({ eventId }) => {
   const result = Object.values(ticketMap).map(t => ({
     ticketId: t.ticketId,
     title: t.title,
+    status: t.status,
     totalCreated: t.totalCreated,
     sold: t.sold,
     remaining: Math.max(t.totalCreated - t.sold, 0),
@@ -544,11 +535,13 @@ const getTicketTypeStats = async ({ eventId }) => {
     unpaid: {
       count: t.unpaid,
       amount: Math.round(t.unpaidAmount),
-    }
+    },
   }));
 
   return result;
 };
+
+
 
 
 const getScannedTicketProgress = async ({ eventId }) => {
