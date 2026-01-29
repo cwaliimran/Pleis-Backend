@@ -16,6 +16,8 @@ const { registrationViaLinkEmailTemplate, registrationViaOtpEmailTemplate } = re
 const registerUserUtility = async (req, res, options = {}) => {
   const {
     autoVerify = false, // true if created by admin, false if app user
+    allowAdminCreation = true, // 🔒 internal only
+
   } = options;
 
   let {
@@ -70,18 +72,25 @@ const registerUserUtility = async (req, res, options = {}) => {
       verificationStatus = "pending"; // Organizer starts as pending
     }
 
+    const allowedUserTypes = [
+      "guest",
+      "user",
+      "manager",
+      "staff",
+      "organizer",
+    ];
+
+    if (options.allowAdminCreation) {
+      allowedUserTypes.push("admin");
+    }
+
+
     const validationOptions = {
       rawData,
       objectIdFields,
       dateFields,
       enumFields: {
-        userType: [
-          "guest",
-          "user",
-          "manager",
-          "staff",
-          "organizer",
-        ],
+        userType: allowedUserTypes,
         modules: FEATURE_KEYS, gender: ["", "Male", "Female", "Other"]
       },
       minLengthFields: { password: 6 },
@@ -116,6 +125,24 @@ const registerUserUtility = async (req, res, options = {}) => {
         return { responseSent: true };
       }
     }
+
+    // 🔒 ADMIN CAN ONLY BE CREATED INTERNALLY
+    if (req.body.userType === "admin") {
+      const adminToken = req.header("x-admin-access-token");
+      if (
+        !options.allowAdminCreation ||
+        adminToken !== process.env.ADMIN_ACCESS_TOKEN
+      ) {
+        sendResponse({
+          res,
+          statusCode: 403,
+          translationKey: "unauthorized_to_create_admin",
+        });
+
+        return { responseSent: true };
+      }
+    }
+
 
     // Check if email exists
     const existingUser = await User.findOne({ email: email.trim().toLowerCase() });
@@ -284,6 +311,7 @@ const registerUserUtility = async (req, res, options = {}) => {
     return { success: true, user: formattedResponse, responseSent: false };
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
+    console.log("readableError==>", readableError)
     sendResponse({
       res,
       statusCode: readableError.statusCode,

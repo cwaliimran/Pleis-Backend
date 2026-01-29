@@ -15,22 +15,8 @@ const createClubCollaboration = async (data) => {
 
 // Get all clubCollaborations with their assigned organization populated, sorted by createdAt descending
 const getClubCollaborationsWithFilters = async (pipeline, skip, limit) => {
-  const cacheKey = buildLoyaltyClubCollaborationCacheKey({
-    scope: "admin",
-    skip,
-    limit,
-  });
-
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400, // 1 day
-
-    fetchFn: async () => {
       return ClubCollaborations.aggregate(pipeline);
-    },
-  });
-};
-
+    };
 
 const checkExistingCollaboration = async ({ senderId, receiverId }) => {
   return ClubCollaborations.findOne({

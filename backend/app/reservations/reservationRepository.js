@@ -14,6 +14,8 @@ const {
   generateMeta,
   convertToUtcDateOnly,
   getCurrentDateInTimezone,
+  getStartAndEndOfDay,
+  convertTimezoneToUtc,
 } = require("../../helperUtils/responseUtil");
 const { placePreOrderMenuItemsWithReservation } = require("../menuItemsAndOrdering/orders/orderService");
 const { sendUserNotifications } = require("../../controllers/communicationController");
@@ -238,89 +240,113 @@ const getReservations = async ({
   date
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
+
+  // ✅ Always UTC for comparisons
   const now = new Date();
 
   const pipeline = [];
 
-  // -----------------------------
-  // 1️⃣ BASE MATCH
-  // -----------------------------
+  /* --------------------------------
+     1️⃣ BASE MATCH
+  -------------------------------- */
   const match = {};
-
-  if (eventId) {
-    match.optionalEventId = new mongoose.Types.ObjectId(eventId);
-  }
-
-  if (organizationId) {
-    match.organizationId = new mongoose.Types.ObjectId(organizationId);
-  }
+  if (eventId) match.optionalEventId = new mongoose.Types.ObjectId(eventId);
+  if (organizationId) match.organizationId = new mongoose.Types.ObjectId(organizationId);
 
   pipeline.push({ $match: match });
 
-  // -----------------------------
-  // 2️⃣ STATUS FILTER (FIXED)
-  // -----------------------------
-  if (status) {
-    pipeline.push({ $match: { status } });
-  } else {
-    pipeline.push({
-      $match: {
-        status: { $nin: ["pendingPayment", "deleted"] }
-      }
+  /* --------------------------------
+     2️⃣ STATUS
+  -------------------------------- */
+  pipeline.push({ $match: { status: "active" } });
+
+  /* --------------------------------
+     3️⃣ SLOT FILTER (UNWIND → FILTER)
+  -------------------------------- */
+  const slotExpr = [
+    {
+      $gt: [
+        "$timingSlots.dateTimeSlots.timeSlots.endTime",
+        "$timingSlots.dateTimeSlots.timeSlots.startTime"
+      ]
+    },
+    {
+      $gt: [
+        "$timingSlots.dateTimeSlots.timeSlots.endTime",
+        now
+      ]
+    }
+  ];
+
+  if (date) {
+    const { start, end } = getStartAndEndOfDay(date, timezone);
+
+    slotExpr.push({
+      $and: [
+        { $gte: ["$timingSlots.dateTimeSlots.date", start] },
+        { $lte: ["$timingSlots.dateTimeSlots.date", end] }
+      ]
     });
   }
 
-  // -----------------------------
-  // 3️⃣ DATE FILTER (SLOT-BASED, SAFE)
-  // -----------------------------
-  if (date) {
-    const dayOnly = date.split("T")[0];
-    const start = new Date(`${dayOnly}T00:00:00.000Z`);
-    const end = new Date(`${dayOnly}T23:59:59.999Z`);
-
-    pipeline.push(
-      {
-        $unwind: {
-          path: "$timingSlots.dateTimeSlots",
-          preserveNullAndEmptyArrays: false
-        }
-      },
-      {
-        $match: {
-          "timingSlots.enabled": true,
-          "timingSlots.dateTimeSlots.date": { $gte: start, $lte: end }
-        }
-      },
-      {
-        // Restore original document shape
-        $group: {
-          _id: "$_id",
-          doc: { $first: "$$ROOT" }
-        }
-      },
-      {
-        $replaceRoot: { newRoot: "$doc" }
+  pipeline.push(
+    { $unwind: "$timingSlots.dateTimeSlots" },
+    { $unwind: "$timingSlots.dateTimeSlots.timeSlots" },
+    {
+      $match: {
+        "timingSlots.enabled": true,
+        $expr: { $and: slotExpr }
       }
-    );
-  }
+    },
 
-  // -----------------------------
-  // 4️⃣ KEYWORD SEARCH
-  // -----------------------------
-  if (keyword) {
-    const keywordMatch = buildKeywordQueryFromModels(
-      [{ schema: Reservations.schema }],
-      keyword
-    );
+    /* --------------------------------
+       4️⃣ REBUILD timeSlots PER DATE
+    -------------------------------- */
+    {
+      $group: {
+        _id: {
+          reservationId: "$_id",
+          dateBlockId: "$timingSlots.dateTimeSlots._id"
+        },
+        reservation: { $first: "$$ROOT" },
+        timeSlots: {
+          $push: "$timingSlots.dateTimeSlots.timeSlots"
+        }
+      }
+    },
 
-    if (Object.keys(keywordMatch).length) {
-      pipeline.push({ $match: keywordMatch });
-    }
-  }
+    /* --------------------------------
+       5️⃣ REBUILD dateTimeSlots
+    -------------------------------- */
+    {
+      $addFields: {
+        "reservation.timingSlots.dateTimeSlots": [
+          {
+            _id: "$_id.dateBlockId",
+            date: "$reservation.timingSlots.dateTimeSlots.date",
+            timeSlots: "$timeSlots"
+          }
+        ]
+      }
+    },
 
-  // -----------------------------
-  // 5️⃣ CAPACITY ENFORCEMENT
-  // -----------------------------
+    { $replaceRoot: { newRoot: "$reservation" } },
+
+    /* --------------------------------
+       6️⃣ FINAL GROUP (ONE DOC)
+    -------------------------------- */
+    {
+      $group: {
+        _id: "$_id",
+        doc: { $first: "$$ROOT" }
+      }
+    },
+    { $replaceRoot: { newRoot: "$doc" } }
+  );
+
+  /* --------------------------------
+     7️⃣ CAPACITY ENFORCEMENT
+  -------------------------------- */
   pipeline.push(
     {
       $lookup: {
@@ -334,12 +360,7 @@ const getReservations = async ({
                   { $eq: ["$reservationId", "$$reservationId"] },
                   {
                     $or: [
-                      {
-                        $in: [
-                          "$status",
-                          ["confirmed", "checkedIn", "completed"]
-                        ]
-                      },
+                      { $in: ["$status", ["confirmed", "checkedIn", "completed"]] },
                       {
                         $and: [
                           { $eq: ["$status", "pendingPayment"] },
@@ -354,91 +375,48 @@ const getReservations = async ({
           },
           { $count: "count" }
         ],
-        as: "blockedReservations"
+        as: "blocked"
       }
     },
     {
       $addFields: {
-        blockedCount: {
-          $ifNull: [
-            { $arrayElemAt: ["$blockedReservations.count", 0] },
-            0
-          ]
-        },
         remainingReservations: {
           $subtract: [
             "$availableReservations",
-            {
-              $ifNull: [
-                { $arrayElemAt: ["$blockedReservations.count", 0] },
-                0
-              ]
-            }
+            { $ifNull: [{ $first: "$blocked.count" }, 0] }
           ]
         }
       }
     },
+    { $match: { remainingReservations: { $gt: 0 } } }
+  );
+
+  /* --------------------------------
+     8️⃣ SORT + PAGINATION
+  -------------------------------- */
+  pipeline.push(
+    { $sort: { createdAt: -1 } },
     {
-      $match: {
-        remainingReservations: { $gt: 0 }
+      $facet: {
+        data: [
+          { $skip: skip },
+          ...(limit === 0 ? [] : [{ $limit: limit }])
+        ],
+        totalFiltered: [{ $count: "count" }]
       }
     }
   );
 
-  // -----------------------------
-  // 6️⃣ SORT
-  // -----------------------------
-  pipeline.push({ $sort: { createdAt: -1 } });
-
-  // -----------------------------
-  // 7️⃣ PAGINATION + COUNT
-  // -----------------------------
-  pipeline.push({
-    $facet: {
-      data: [
-        { $skip: skip },
-        ...(limit === 0 ? [] : [{ $limit: limit }])
-      ],
-      totalFiltered: [{ $count: "count" }]
-    }
-  });
-
-  // -----------------------------
-  // 8️⃣ EXECUTION
-  // -----------------------------
   const result = await Reservations.aggregate(pipeline);
 
-  const reservations = result[0]?.data || [];
-  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
-
-  const meta = generateMeta(page, limit, totalFiltered);
-
-  // -----------------------------
-  // 9️⃣ FORMAT OUTPUT
-  // -----------------------------
-  const finalReservations = reservations.map(item => {
-    const formatted = reservationsFormatter(item, timezone);
-
-    // Cleanup based on conditionType
-    if (
-      formatted.conditionType === "noCondition" ||
-      formatted.conditionType === "ticketRequirement" ||
-      formatted.conditionType === "customText"
-    ) {
-      delete formatted.amount;
-      if (formatted.conditionType === "noCondition") {
-        delete formatted.ticketType;
-      }
-    } else {
-      delete formatted.ticketType;
-    }
-
-    formatted.remainingReservations = item.remainingReservations;
-
-    return formatted;
-  });
-
-  return { reservations: finalReservations, meta };
+  return {
+    reservations: result[0]?.data || [],
+    meta: generateMeta(
+      page,
+      limit,
+      result[0]?.totalFiltered[0]?.count || 0
+    )
+  };
 };
 
 
@@ -771,6 +749,7 @@ const getReservationDetails = async (id) => {
           updatedAt: 1,
           preOrderMenuItemsOrder: 1,
           ticketingBookingRefs: 1,
+          paymentDetails: 1,
         }
       },
 
@@ -1061,57 +1040,97 @@ const getOrganizationsWithReservationsForHome = async ({
 };
 
 
-const getOrganizationReservations = async ({ organizationId, timezone }) => {
-  try {
-    if (!organizationId) return [];
+const getOrganizationReservations = async ({ organizationId }) => {
+  if (!organizationId) return [];
 
-    const orgId = new mongoose.Types.ObjectId(organizationId);
+  const orgId = new mongoose.Types.ObjectId(organizationId);
+  const now = new Date(); // UTC only
 
-    const now = getCurrentDateInTimezone({ timezone });
+  const results = await Reservations.aggregate([
+    // 1️⃣ ORG + ACTIVE
+    {
+      $match: {
+        organizationId: orgId,
+        status: "active",
+        "timingSlots.enabled": true
+      }
+    },
 
-    const results = await Reservations.aggregate([
-      // ORG
-      {
-        $match: {
-          organizationId: orgId,
-          status: "active",
-          "timingSlots.enabled": true
-        }
-      },
+    // 2️⃣ UNWIND
+    { $unwind: "$timingSlots.dateTimeSlots" },
+    { $unwind: "$timingSlots.dateTimeSlots.timeSlots" },
 
-      // BREAK DOWN SLOTS
-      { $unwind: "$timingSlots.dateTimeSlots" },
-      { $unwind: "$timingSlots.dateTimeSlots.timeSlots" },
-
-      // FUTURE ONLY (same logic you used)
-      {
-        $match: {
-          $expr: {
-            $and: [
-              {
-                $gt: [
-                  "$timingSlots.dateTimeSlots.timeSlots.endTime",
-                  "$timingSlots.dateTimeSlots.timeSlots.startTime"
-                ]
-              },
-              {
-                $gt: [
-                  "$timingSlots.dateTimeSlots.timeSlots.endTime",
-                  now
-                ]
-              }
-            ]
-          }
+    // 3️⃣ FUTURE SLOT FILTER
+    {
+      $match: {
+        $expr: {
+          $and: [
+            {
+              $gt: [
+                "$timingSlots.dateTimeSlots.timeSlots.endTime",
+                "$timingSlots.dateTimeSlots.timeSlots.startTime"
+              ]
+            },
+            {
+              $gt: [
+                "$timingSlots.dateTimeSlots.timeSlots.endTime",
+                now
+              ]
+            }
+          ]
         }
       }
-    ]);
+    },
 
-    return results;
-  } catch (error) {
+    // 4️⃣ GROUP BACK (THIS IS THE MISSING PIECE)
+    {
+      $group: {
+        _id: {
+          reservationId: "$_id",
+          dateBlockId: "$timingSlots.dateTimeSlots._id"
+        },
+        reservation: { $first: "$$ROOT" },
+        timeSlots: {
+          $push: "$timingSlots.dateTimeSlots.timeSlots"
+        }
+      }
+    },
 
-    return [];
-  }
+    // 5️⃣ REBUILD dateTimeSlots
+    {
+      $addFields: {
+        "reservation.timingSlots.dateTimeSlots": [
+          {
+            _id: "$_id.dateBlockId",
+            date: "$reservation.timingSlots.dateTimeSlots.date",
+            timeSlots: "$timeSlots"
+          }
+        ]
+      }
+    },
+
+    // 6️⃣ FLATTEN ROOT
+    {
+      $replaceRoot: {
+        newRoot: "$reservation"
+      }
+    },
+
+    // 7️⃣ FINAL GROUP (ONE DOC PER RESERVATION)
+    {
+      $group: {
+        _id: "$_id",
+        doc: { $first: "$$ROOT" }
+      }
+    },
+    {
+      $replaceRoot: { newRoot: "$doc" }
+    }
+  ]);
+
+  return results;
 };
+
 
 const getReservationForTransfer = async (id) => {
   return UserReservations.findById(id)

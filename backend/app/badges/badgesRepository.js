@@ -9,6 +9,7 @@ const UserBadges = require("@UserBadgesModel");
 const { getFullImageUrl } = require('@utils/imageHelper');
 const { sendUserNotifications } = require('@notificationsUtil');
 const { NotificationTypes } = require('@NotificationsModel');
+const { getUserMaxStreak } = require('../usersStreaks/usersStreaksService');
 
 const addUserBadges = async (data) => {
   try {
@@ -46,9 +47,7 @@ const getBadgess = async ({ page = 1, limit = 10, keyword, status, userId }) => 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   /* ===================== 1️⃣ STREAK (HARDCODED) ===================== */
-  const streak = {
-    count: 7
-  };
+
 
   /* ===================== 2️⃣ USER BADGES (PIPELINE + LOOKUP) ===================== */
   const userBadges = await UserBadges.aggregate([
@@ -121,14 +120,17 @@ const getBadgess = async ({ page = 1, limit = 10, keyword, status, userId }) => 
       .skip(skip)
       .limit(limit === 0 ? 0 : limit),
 
-    BadgeCategoriesModel.countDocuments(badgeFilter)
-  ]);
+    BadgeCategoriesModel.countDocuments(badgeFilter),
 
+  ]);
+  const streak = await getUserMaxStreak(userId);
+console.log("userBadges",streak );
   const data = {
-    streak,
+    streak: streak || 0,
     userBadges,
     allBadges,
   }
+  console.log("data", data );
 
   /* ===================== FINAL RESPONSE ===================== */
   return {
