@@ -30,8 +30,6 @@ const RecurringPromotionSchema = new mongoose.Schema({
   },
 });
 
- mongoose.model("RecurringPromotion", RecurringPromotionSchema);
-
 module.exports = {
   RecurringPromotionSchema,
 };

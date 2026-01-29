@@ -1,9 +1,29 @@
 // helperUtils/server-setup.js
 const mongoose = require("mongoose");
+const runDBBootstrap = require("../config/startupSetup/db.bootstrap");
+
+let bootstrapTriggered = false; // 🔒 in-process guard
 
 const connectToDB = async (retries = 5, delay = 3000) => {
   const uri = process.env.BASE_URL;
   if (!uri) throw new Error("MongoDB URI not found");
+
+  /**
+   * Register ONCE (outside retry loop)
+   */
+  mongoose.connection.once("open", async () => {
+    if (bootstrapTriggered) return;
+
+    bootstrapTriggered = true;
+
+    try {
+      logger.info("MongoDB connection opened — running bootstrap");
+      await runDBBootstrap();
+    } catch (err) {
+      logger.fatal("DB bootstrap failed", { error: err });
+      // ❗ Do NOT exit — let app continue
+    }
+  });
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
@@ -30,11 +50,8 @@ const connectToDB = async (retries = 5, delay = 3000) => {
         logger.fatal("MongoDB connection failed after retries", {
           uri: uri.replace(/\/\/.*@/, "//***@"),
         });
-        // ❗ DO NOT EXIT
-        // Let the app stay alive and retry later
         return;
       }
-
 
       await new Promise((r) => setTimeout(r, delay));
     }
