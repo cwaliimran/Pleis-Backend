@@ -30,9 +30,6 @@ const GlobalRecurringPromotionSchema = new mongoose.Schema({
   },
 });
 
-// Register model (optional, if needed)
-mongoose.model("GlobalRecurringPromotion", GlobalRecurringPromotionSchema);
-
 module.exports = {
   GlobalRecurringPromotionSchema,
 };
