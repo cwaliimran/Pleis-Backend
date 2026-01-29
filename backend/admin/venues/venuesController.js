@@ -276,12 +276,52 @@ const getUnassignedVenues = async (req, res) => {
     });
   }
 };
+const getVenueTitles = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+   
+  const { keyword, status = "active", pinned, date, companyOrganizer } = req.query;
+  const { _id: userId } = req.user._id;
 
+  try {
+   
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+    if (!companyOrganizer) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "company_organizer_required",
+      });
+    }
+    const data  = await venuesService.getVenueTitles({
+      companyOrganizer,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "venues_fetched_successfully",
+      data: data
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 module.exports = {
   createVenue,
   getVenues,
   updateVenue,
   deleteVenue,
   getVenueDetails,
-  getUnassignedVenues
+  getUnassignedVenues,
+  getVenueTitles
 };

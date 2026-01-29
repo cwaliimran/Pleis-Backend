@@ -88,12 +88,6 @@ const getReservations = async (req, res) => {
       });
     }
 
-    date = convertToUtcDateOnly(
-      date,
-      "UTC"
-    );
-
-
     const userId = req.user._id;
     eventId, organizationId;
 

@@ -3,7 +3,7 @@ const { generateMeta } = require("../../helperUtils/responseUtil");
 const usersStreakRepo = require("./usersStreaksRepository");
 const { formatUsersStreaks } = require("./formatters/usersStreaksFormatter");
 const { default: mongoose } = require("mongoose");
-
+const UserStreaks = require("@UsersStreaksModel");
 const createUsersStreak = async ({ user, companyOrganizer, organization}) => {
   return await usersStreakRepo.createUsersStreak({ user, companyOrganizer, organization });
 };
@@ -111,6 +111,35 @@ const deleteUsersStreak = async (id) => {
 
   return true;
 };
+const getUserMaxStreak = async (userId) => {
+  console.log("userId:", userId);
+
+  // ✅ Guard: invalid or missing userId
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+
+    return 0;
+  }
+
+  const result = await UserStreaks.aggregate([
+    {
+      $match: {
+        user: new mongoose.Types.ObjectId(userId)
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        maxStreak: { $max: { $ifNull: ["$streak", 0] } }
+      }
+    }
+  ]);
+
+
+
+  // ✅ Always return number
+  return result?.[0]?.maxStreak ?? 0;
+};
+
 
 module.exports = {
   createUsersStreak,
@@ -118,4 +147,5 @@ module.exports = {
   updateUsersStreak,
   deleteUsersStreak,
   getPublicUsersUsersStreaks,
+  getUserMaxStreak
 };

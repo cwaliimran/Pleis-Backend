@@ -283,11 +283,86 @@ const getVenueDetails = async (id, select = []) => {
   return venue;
 };
 
+
+
+
+const getVenueTitles = async (companyOrganizer) => {
+  const creatorId = companyOrganizer?.companyOrganizer;
+
+  if (!mongoose.Types.ObjectId.isValid(creatorId)) {
+    throw new Error("Invalid companyOrganizer");
+  }
+
+  const creatorObjectId = new mongoose.Types.ObjectId(creatorId);
+
+  const data = await Organizations.aggregate([
+    /* 1️⃣ Match creator organizations */
+    {
+      $match: {
+        creator: creatorObjectId,
+        status: "active"
+      }
+    },
+
+    /* 2️⃣ Lookup venues */
+    {
+      $lookup: {
+        from: "venues",
+        let: { orgId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$organization", "$$orgId"] },
+                  { $eq: ["$status", "active"] }
+                ]
+              }
+            }
+          },
+          {
+            $project: {
+              _id: 1,
+              title: 1
+            }
+          }
+        ],
+        as: "venues"
+      }
+    },
+
+    /* 3️⃣ Remove orgs with no venues (optional but faster output) */
+    {
+      $match: {
+        "venues.0": { $exists: true }
+      }
+    },
+
+    /* 4️⃣ Flatten */
+    { $unwind: "$venues" },
+
+    /* 5️⃣ Final output */
+    {
+      $project: {
+        _id: 0,
+        venueId: "$venues._id",
+        venueTitle: "$venues.title"
+      }
+    }
+  ]);
+
+  return data;
+};
+
+
+
+
 module.exports = {
   createVenue,
   getVenues,
   updateVenue,
   getVenueDetails,
   deleteVenue,
-  getUnassignedVenues
+  getUnassignedVenues,
+  getVenueTitles
 };

@@ -2,6 +2,7 @@
 const Venues = require("@VenuesModel");
 const mongoose = require("mongoose");
 const { cache, invalidate } = require("@redisCache");
+const { getOrgCompanyOrganizer } = require("../organizations/organizationRepository");
 const ACTIVE_VENUES_CACHE_KEY = "venues:active";
 const buildVenuesCacheKey = ({
   scope = "admin", // public | admin

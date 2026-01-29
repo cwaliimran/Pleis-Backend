@@ -3,6 +3,7 @@ const {
   createUsersStreak,
   getUsersStreaks,
   updateUsersStreak,
+  getUserMaxStreak
 } = require("./usersStreaksController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -18,7 +19,7 @@ const apiRateLimiter = createRateLimiter("UsersStreaks");
 router.post("/", apiRateLimiter, roleMiddleware(["user"]), createUsersStreak);
 
 // Get all usersStreaks with pagination
-// router.get("/", getUsersStreaks);
+router.get("/", getUserMaxStreak);
 
 // // Update an existing usersStreak
 // router.put("/:id", roleMiddleware(["user"]), updateUsersStreak);

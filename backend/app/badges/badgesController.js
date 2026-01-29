@@ -55,7 +55,7 @@ const addUserBadges = async (req, res) => {
 };
 const getBadgess = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "active", date,} = req.query;
+  let { keyword, status = "active", date, } = req.query;
   try {
 
     const userId = req.user._id;
@@ -69,11 +69,11 @@ const getBadgess = async (req, res) => {
       userId,
       date,
     });
-const formateUser= badgesResponseFormatter(badges);
+    const formateUser = badgesResponseFormatter(badges);
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "friend_requests_fetched_successfully",
+      translationKey: "user_badages_fetched_successfully",
       data: formateUser,
       meta,
     });
@@ -89,9 +89,9 @@ const formateUser= badgesResponseFormatter(badges);
 };
 
 const detailBadgess = async (req, res) => {
-const { id} = req.params;
-  
- if (
+  const { id } = req.params;
+
+  if (
 
     !validateParams(req, res, {
       pathParams: ["id"],
@@ -119,7 +119,7 @@ const { id} = req.params;
 };
 
 module.exports = {
-addUserBadges,
-getBadgess,
-detailBadgess
+  addUserBadges,
+  getBadgess,
+  detailBadgess
 };
