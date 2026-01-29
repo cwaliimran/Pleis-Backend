@@ -15,7 +15,7 @@ const globalBasePromotionSchema = new mongoose.Schema(
 
     startDate: { type: Date, default: null },
     endDate: { type: Date, default: null },
-
+    claimLimit: { type: Number, default: null },
     recurringDetails: {
       type: GlobalRecurringPromotionSchema,
       default: null,
