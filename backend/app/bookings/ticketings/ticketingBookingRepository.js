@@ -135,13 +135,7 @@ const getTicketingBookingById = async (id) => {
         let: { orderId: "$order" },
         pipeline: [
           { $match: { $expr: { $eq: ["$_id", "$$orderId"] } } },
-          {
-            $project: {
-              _id: 1,
-              paymentDetails: 1,
-              status: 1,
-            },
-          },
+
         ],
         as: "order",
       },
