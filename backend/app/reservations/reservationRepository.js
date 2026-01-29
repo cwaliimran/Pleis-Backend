@@ -749,6 +749,7 @@ const getReservationDetails = async (id) => {
           updatedAt: 1,
           preOrderMenuItemsOrder: 1,
           ticketingBookingRefs: 1,
+          paymentDetails: 1,
         }
       },
 
