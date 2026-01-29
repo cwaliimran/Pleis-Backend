@@ -70,13 +70,13 @@ const getOrganizationDetails = async (id) => {
 
 // Delete
 const deleteOrganizationById = async (organization) => {
-  await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
+
   return await organization.deleteOne();
 };
 
 // Optional: keep this only for non-nested shallow updates
 const findByIdAndUpdate = async (id, data) => {
-  await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
+
   return Organizations.findByIdAndUpdate(id, { $set: data }, { new: true });
 };
 
