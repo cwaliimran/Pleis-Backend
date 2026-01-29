@@ -145,6 +145,10 @@ const eventSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    feedbackEnabled: {
+      type: Boolean,
+      default: false,
+    },
 
   },
   {

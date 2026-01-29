@@ -8,6 +8,7 @@ const {
 } = require("../../helperUtils/responseUtil");
 const { getTicketings } = require("../ticketing/ticketingsService");
 const eventService = require("./eventService");
+const { getRatingsByEventIdService } = require("../reviews/reviewsService");
 const { default: mongoose } = require("mongoose");
 const { getGiveaway } = require("../giveaways/GiveawayService");
 // const { getGiveaway } = require("../giveaways/giveawayRepository");
@@ -176,11 +177,12 @@ const getEventDetails = async (req, res) => {
   const eventId = new mongoose.Types.ObjectId(id);
 
   try {
-    let [data, reservations, isFavoriteEvent = false, giveaway] = await Promise.all([
+    let [data, reservations, isFavoriteEvent = false, giveaway, reviews] = await Promise.all([
       eventService.getEventDetails(userLocation, userId, id, timezone),
       eventService.getEventReservations(id, timezone),
       isFavorited(userId, id, 'event'),
-      getGiveaway({ eventId, userId, timezone, skip: 0, limit: 10 })
+      getGiveaway({ eventId, userId, timezone, skip: 0, limit: 10 }),
+      getRatingsByEventIdService(eventId,userId )
     ]);
     if (!data?.event) {
       return sendResponse({
@@ -189,10 +191,11 @@ const getEventDetails = async (req, res) => {
         translationKey: "event_not_found",
       });
     }
+    console.log("reviews",reviews );
     data.event.isFavorite = isFavoriteEvent;
     data.reservations = reservations;
     data.announcements.giveaways = giveaway.Giveaways;
-
+    data.reviews = reviews||{};
     return sendResponse({
       res,
       statusCode: 200,

@@ -13,9 +13,10 @@ const updateEventService = async (eventId, payload, mode = "single") => {
 
   const event = await Events.findById(eventId);
   if (!event) {
-    console.log("❌ event not found");
+    console.log(" event not found");
     return null;
   }
+
 
   const isChild = !!event?.recurringMeta?.parentEvent;
 
@@ -36,6 +37,8 @@ const updateEventService = async (eventId, payload, mode = "single") => {
 
     if (data.status !== undefined)
       doc.status = data.status;
+    if(data.feedbackEnabled !== undefined)
+      doc.feedbackEnabled = data.feedbackEnabled;
 
     // recurringDetails may change too
     if (data.schedule?.recurringDetails) {
