@@ -29,10 +29,10 @@ function formatLoyaltyRewardOrders(item) {
   // Attach company logo URL if available
   if (
     obj.companyOrganizer &&
-    obj.companyOrganizer.companyDetails &&
-    obj.companyOrganizer.companyDetails.logo
+    obj.companyOrganizer?.companyDetails &&
+    obj.companyOrganizer?.companyDetails?.logo
   ) {
-    obj.companyOrganizer.companyDetails.logo = getFullImageUrl(obj.companyOrganizer.companyDetails.logo || "noimage.png");
+    obj.companyOrganizer?.companyDetails?.logo = getFullImageUrl(obj.companyOrganizer?.companyDetails?.logo || "noimage.png");
   }
 
   return obj;
