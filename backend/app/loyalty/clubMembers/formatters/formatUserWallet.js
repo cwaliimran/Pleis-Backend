@@ -5,9 +5,10 @@ function formatUserWallet(item) {
 
   const obj = typeof item.toObject === "function" ? item.toObject() : item;
 
-  if (obj?.companyOrganizer && obj.companyOrganizer.companyDetails?.logo) {
-    obj.companyOrganizer.companyDetails.logo = getFullImageUrl(obj.companyOrganizer.companyDetails.logo || "noimage.png");
-  }
+if (obj?.companyOrganizer && obj.companyOrganizer?.companyDetails?.logo) {
+  obj.companyOrganizer?.companyDetails?.logo = getFullImageUrl(obj.companyOrganizer?.companyDetails?.logo || "noimage.png");
+}
+
 
   // Normalize image URLs
   if (obj?.level) {

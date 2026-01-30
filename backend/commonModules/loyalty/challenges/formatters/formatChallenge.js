@@ -9,7 +9,7 @@ function formatChallenge(challenge, timezone) {
         obj.companyOrganizer.profileIcon = getFullImageUrl(obj.companyOrganizer.profileIcon);
     }
     if (obj?.companyOrganizer?.companyDetails?.logo) {
-        obj.companyOrganizer.companyDetails.logo = getFullImageUrl(obj.companyOrganizer.companyDetails.logo);
+        obj.companyOrganizer?.companyDetails?.logo = getFullImageUrl(obj.companyOrganizer?.companyDetails?.logo);
     }
     if(obj?.image){
         obj.image = getFullImageUrl(obj.image);
