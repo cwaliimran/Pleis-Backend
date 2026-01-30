@@ -11,7 +11,8 @@ const {
   getavailableReservations,
   getCalendarReservations,
   copyUserReservationsController,
-  copySingleSlotReservationController
+  copyReservationSlotsController,
+  changeUsersReservationsTiming
 } = require("./reservationController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -32,7 +33,7 @@ router.post("/", auth,roleMiddleware(["admin"]), createReservation);
 router.get("/", roleMiddleware(["admin"]),apiRateLimiter, getReservations);
 router.get("/calendar", roleMiddleware(["admin"]),apiRateLimiter, getCalendarReservations);
 router.post("/copy", roleMiddleware(["admin"]),apiRateLimiter, copyUserReservationsController);
-router.post("/copy-single-slot", roleMiddleware(["admin"]),apiRateLimiter, copySingleSlotReservationController);
+router.post("/copy-slots", roleMiddleware(["admin"]),apiRateLimiter, copyReservationSlotsController);
 // Get all Reservations with pagination
 router.get("/available", roleMiddleware(["admin"]),apiRateLimiter, getavailableReservations);
 
@@ -43,6 +44,9 @@ router.get("/users",roleMiddleware(["admin"]), apiRateLimiter, getUserReservatio
 // //get Reservation details
 // router.get("/:id", apiRateLimiterDetails, getReservationDetails);
 
+// change reservation timing by clicking on clock icon in admin panel reservation calendar
+router.put("/change-timing", roleMiddleware(["admin"]), changeUsersReservationsTiming);
+
 // Update an existing Reservation
 router.put("/:id", roleMiddleware(["admin"]), updateReservation);
 // cancel user reservation
@@ -50,7 +54,6 @@ router.put("/updateStatus/:id/:value", roleMiddleware(["admin"]), updateUserRese
 
 // update user reservation
 router.put("/:userId/:id", roleMiddleware(["admin"]), updateUserReservation);
-
 
 // Delete a Reservation
 router.delete("/:id", roleMiddleware(["admin"]), deleteReservation);

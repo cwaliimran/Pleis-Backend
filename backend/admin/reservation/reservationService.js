@@ -2,10 +2,12 @@
 const { buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
 const { generateMeta, getCurrentDateInTimezone } = require("../../helperUtils/responseUtil");
 const { reservationsFormatter, userReservationsFormatter } = require("../../app/reservations/formaters/reservationFormetter");
+const { userReservationFormatterAdjustDates } = require("./formatters/userReservationFormatterAdjustDates");
 const Reservations = require("@ReservationsModel");
 const { UserReservations } = require("@UserReservationsModel");
 const ReservationRepo = require("./reservationRepository");
 const mongoose = require("mongoose");
+const moment = require("moment-timezone");
 const {
   sendResponse,
   parsePaginationParams,
@@ -276,52 +278,180 @@ const copyUserReservations = async ({
 };
 
 
-const copySingleSlotReservation = async ({
-  reservationId,
+const copyReservationSlots = async ({
+  reservationIds,
   targetDate,
   startTime,
   reservationType,
   timezone,
   copiedBy,
 }) => {
-  const source = await ReservationRepo.findUserReservationByIdLean(
-    new mongoose.Types.ObjectId(reservationId)
-  );
-
-  if (!source) {
-    throw new Error("Reservation not found");
+  if (!Array.isArray(reservationIds) || reservationIds.length === 0) {
+    throw new Error("reservationIds must be a non-empty array");
   }
 
-  // ❌ Remove Mongo-managed fields
-  const cloned = { ...source };
-  delete cloned._id;
-  delete cloned.createdAt;
-  delete cloned.updatedAt;
-  delete cloned.__v;
+  /* --------------------------------
+     1️⃣ Convert to ObjectIds
+     -------------------------------- */
+  const objectIds = reservationIds.map(
+    (id) => new mongoose.Types.ObjectId(id)
+  );
 
-  // ✅ Update reservationType
-  cloned.reservationType = reservationType;
+  /* --------------------------------
+     2️⃣ Fetch all reservations at once
+     -------------------------------- */
+  const sources =
+    await ReservationRepo.findUserReservationsByIdsLean(objectIds);
 
-  // ✅ Clear transfer history
-  cloned.transferHistory = [];
+  /* --------------------------------
+     3️⃣ Validate all exist
+     -------------------------------- */
+  if (sources.length !== reservationIds.length) {
+    const foundIds = sources.map((s) => s._id.toString());
+    const missingIds = reservationIds.filter(
+      (id) => !foundIds.includes(id)
+    );
 
-  // ✅ Audit
-  cloned.clonedFromReservationId = source._id;
-  cloned.clonedBy = copiedBy;
+    throw new Error(
+      `Reservations not found: ${missingIds.join(", ")}`
+    );
+  }
 
-  // ✅ Clone ONLY one slot
-  cloned.timingSlots = cloneSingleSlot({
-    timingSlots: source.timingSlots,
-    targetDate,
-    startTime,
-    timezone,
-  });
-  let reservation = await ReservationRepo.insertSingleUserReservation(cloned);
-  return reservationsFormatter(reservation, timezone);
+  /* --------------------------------
+     4️⃣ Clone reservations
+     -------------------------------- */
+  const docsToInsert = [];
+
+  for (const source of sources) {
+    const cloned = { ...source };
+
+    // ❌ Remove Mongo-managed fields
+    delete cloned._id;
+    delete cloned.createdAt;
+    delete cloned.updatedAt;
+    delete cloned.__v;
+
+    // ✅ Update business fields
+    cloned.reservationType = reservationType;
+    cloned.transferHistory = [];
+    cloned.clonedFromReservationId = source._id;
+    cloned.clonedBy = copiedBy;
+
+    // ✅ Clone only one slot
+    cloned.timingSlots = cloneSingleSlot({
+      timingSlots: source.timingSlots,
+      targetDate,
+      startTime,
+      timezone,
+    });
+
+    docsToInsert.push(cloned);
+  }
+
+  /* --------------------------------
+     5️⃣ Bulk Insert
+     -------------------------------- */
+  const insertedReservations =
+    await ReservationRepo.insertManyUserReservations(docsToInsert);
+
+  /* --------------------------------
+     6️⃣ Format response
+     -------------------------------- */
+  return insertedReservations.map((reservation) =>
+    reservationsFormatter(reservation, timezone)
+  );
 };
 
+
+
+const changeUsersReservationsTiming = async ({
+  reservationIds,
+  startTime,
+  endTime,
+  timezone,
+}) => {
+  if (!Array.isArray(reservationIds) || reservationIds.length === 0) {
+    throw new Error("reservationIds must be a non-empty array");
+  }
+
+  const objectIds = reservationIds.map(
+    (id) => new mongoose.Types.ObjectId(id)
+  );
+
+  /* --------------------------------
+     1️⃣ Fetch reservations
+     -------------------------------- */
+  const reservations =
+    await ReservationRepo.findUserReservationsByIds(objectIds);
+
+  if (!reservations.length) {
+    throw new Error("Reservations not found");
+  }
+
+  /* --------------------------------
+     2️⃣ Prepare bulk operations
+     -------------------------------- */
+  const bulkOps = [];
+  const updatedDocs = [];
+
+  for (const reservation of reservations) {
+    if (!reservation.timingSlots?.dateTimeSlots?.length) continue;
+
+    const block = reservation.timingSlots.dateTimeSlots[0];
+    const slot = block.timeSlots[0];
+    if (!slot) continue;
+
+    const slotDate = moment(block.date)
+      .tz(timezone)
+      .format("YYYY-MM-DD");
+
+    const newStart = moment
+      .tz(`${slotDate} ${startTime}`, "YYYY-MM-DD hh:mm A", timezone)
+      .utc()
+      .toDate();
+
+    const newEnd = moment
+      .tz(`${slotDate} ${endTime}`, "YYYY-MM-DD hh:mm A", timezone)
+      .utc()
+      .toDate();
+
+    bulkOps.push({
+      updateOne: {
+        filter: { _id: reservation._id },
+        update: {
+          $set: {
+            "timingSlots.dateTimeSlots.0.timeSlots.0.startTime": newStart,
+            "timingSlots.dateTimeSlots.0.timeSlots.0.endTime": newEnd,
+          },
+        },
+      },
+    });
+
+    // Keep local copy for formatting later
+    reservation.timingSlots.dateTimeSlots[0].timeSlots[0].startTime = newStart;
+    reservation.timingSlots.dateTimeSlots[0].timeSlots[0].endTime = newEnd;
+
+    updatedDocs.push(reservation);
+  }
+
+  /* --------------------------------
+     3️⃣ Execute bulk update
+     -------------------------------- */
+  if (bulkOps.length) {
+    await ReservationRepo.bulkUpdateUserReservations(bulkOps);
+  }
+
+  /* --------------------------------
+     4️⃣ Format response
+     -------------------------------- */
+  return updatedDocs.map((item) =>
+    userReservationFormatterAdjustDates(item, timezone)
+  );
+};
+
+
 module.exports = {
-  copySingleSlotReservation,
+  copyReservationSlots,
   createReservation,
   getReservations,
   updateReservation,
@@ -333,4 +463,5 @@ module.exports = {
   getavailableReservations,
   getCalendarReservationsService,
   copyUserReservations,
+  changeUsersReservationsTiming
 };

@@ -142,3 +142,4 @@ scripts.js/renameModule.js
 .env.localhost
 .env.mobileapps
 backend/secretAssets/serviceAccountKey.json
+scripts/combine-files.js
