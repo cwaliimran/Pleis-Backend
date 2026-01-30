@@ -354,6 +354,8 @@ const copyReservationSlots = async ({
   const insertedReservations =
     await ReservationRepo.insertManyUserReservations(docsToInsert);
 
+    //TODO notify user about time change
+
   /* --------------------------------
      6️⃣ Format response
      -------------------------------- */
@@ -438,6 +440,7 @@ const changeUsersReservationsTiming = async ({
      3️⃣ Execute bulk update
      -------------------------------- */
   if (bulkOps.length) {
+    //TODO notify user about time change
     await ReservationRepo.bulkUpdateUserReservations(bulkOps);
   }
 
