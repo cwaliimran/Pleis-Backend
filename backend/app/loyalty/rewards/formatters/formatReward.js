@@ -5,18 +5,14 @@ function formatReward(reward) {
     const obj = { ...reward };
 
     // Attach full image URL for company logo if present
-    if (
-        obj.companyOrganizer &&
-        obj.companyOrganizer.companyDetails &&
-        obj.companyOrganizer.companyDetails.logo
-    ) {
+if (obj?.companyOrganizer?.companyDetails) {
+    // Check if logo exists
+    if (obj.companyOrganizer.companyDetails.logo) {
         obj.companyOrganizer.companyDetails.logo = getFullImageUrl(obj.companyOrganizer.companyDetails.logo);
-    } else if (
-        obj.companyOrganizer &&
-        obj.companyOrganizer.companyDetails
-    ) {
+    } else {
         obj.companyOrganizer.companyDetails.logo = getFullImageUrl("noimage.png");
     }
+}
 
 
     if (obj?.tierLimit?.image) {
