@@ -12,7 +12,7 @@ function formatTransactionItem(item) {
     }
 
     if (obj?.companyOrganizer?.companyDetails?.logo) {
-        obj.companyOrganizer.companyDetails.logo = getFullImageUrl(obj.companyOrganizer.companyDetails.logo);
+        obj.companyOrganizer.companyDetails.logo = getFullImageUrl(obj.companyOrganizer?.companyDetails?.logo);
     }
 
     return obj;

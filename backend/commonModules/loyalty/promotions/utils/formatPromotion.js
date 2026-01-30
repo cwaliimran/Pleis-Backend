@@ -18,7 +18,7 @@ function formatPromotion(promotion, timezone) {
         obj.image = getFullImageUrl(obj.image);
     }
     if (obj?.companyOrganizer?.companyDetails?.logo) {
-        obj.companyOrganizer.companyDetails.logo = getFullImageUrl(obj.companyOrganizer.companyDetails.logo);
+        obj.companyOrganizer.companyDetails.logo = getFullImageUrl(obj.companyOrganizer?.companyDetails?.logo);
     }
 
     if (obj?.tierLimit?.image) {

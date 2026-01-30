@@ -1,58 +1,72 @@
 const { getFullImageUrl } = require("../../../../helperUtils/imageHelper");
 
-// utils/formatReward.js
 function formatReward(reward) {
     const obj = { ...reward };
 
-    // Attach full image URL for company logo if present
-    if (
-        obj.companyOrganizer &&
-        obj.companyOrganizer.companyDetails &&
-        obj.companyOrganizer.companyDetails.logo
-    ) {
-        obj.companyOrganizer.companyDetails.logo = getFullImageUrl(obj.companyOrganizer.companyDetails.logo);
-    } else if (
-        obj.companyOrganizer &&
-        obj.companyOrganizer.companyDetails
-    ) {
-        obj.companyOrganizer.companyDetails.logo = getFullImageUrl("noimage.png");
+    // Safely handle company logo (checking existence of all necessary properties)
+    if (obj?.companyOrganizer?.companyDetails) {
+        if (obj.companyOrganizer.companyDetails.logo) {
+            obj.companyOrganizer.companyDetails.logo = getFullImageUrl(obj.companyOrganizer.companyDetails.logo);
+        } else {
+            obj.companyOrganizer.companyDetails.logo = getFullImageUrl("noimage.png");
+        }
     }
 
-
-    if (obj?.tierLimit?.image) {
-        obj.tierLimit.image = getFullImageUrl(obj.tierLimit.image);
-    } else {
-        obj.tierLimit.image = getFullImageUrl("noimage.png");
+    // Safely handle tier limit image (check if tierLimit and image exist)
+    if (obj?.tierLimit) {
+        if (obj.tierLimit?.image) {
+            obj.tierLimit.image = getFullImageUrl(obj.tierLimit.image);
+        } else {
+            obj.tierLimit.image = getFullImageUrl("noimage.png");
+        }
     }
 
+    // Safely handle menuItem image (check if menuItem and image exist)
     if (obj?.menuItem?.image) {
         obj.menuItem.image = getFullImageUrl(obj.menuItem.image);
+    } else if (obj?.menuItem) {
+        // If menuItem exists but no image, set default image
+        obj.menuItem.image = getFullImageUrl("noimage.png");
     }
 
+    // Safely handle the main image of the reward
     if (obj?.image) {
         obj.image = getFullImageUrl(obj.image);
+    } else {
+        obj.image = getFullImageUrl("noimage.png");
     }
+
 
     // Adjust obj properties based on rewardType
     switch (obj.rewardType) {
         case "customReward":
-            delete obj.menuItem;
-            delete obj.event;
-            obj.customReward.image = getFullImageUrl(obj.customReward?.image);
+           
+
+            // Ensure customReward exists before trying to access its properties
+            if (obj.customReward) {
+                delete obj.menuItem;  // Remove menuItem if it's a custom reward
+                delete obj.event;     // Remove event if it's a custom reward
+                
+                // Check if customReward.image exists
+                if (obj.customReward?.image) {
+                    obj.customReward.image = getFullImageUrl(obj.customReward.image);
+                } else {
+                  
+                    obj.customReward.image = getFullImageUrl("noimage.png");  // Fallback to default image
+                }
+            } 
             break;
 
         case "buyMenuItemReward":
-            delete obj.event;
-            delete obj.customReward;
+            delete obj.event;  // Remove event if it's a buyMenuItemReward
+            delete obj.customReward;  // Remove customReward if it's a buyMenuItemReward
             break;
 
         case "ticketReward":
-            delete obj.menuItem;
-            delete obj.customReward;
+            delete obj.menuItem;  // Remove menuItem if it's a ticketReward
+            delete obj.customReward;  // Remove customReward if it's a ticketReward
             break;
     }
-
-
 
     return obj;
 }
@@ -76,7 +90,5 @@ function formatSingleRewardByTierKey(item, tierKey) {
 
     return item;
 }
-
-
 
 module.exports = { formatReward, formatSingleRewardByTierKey };
