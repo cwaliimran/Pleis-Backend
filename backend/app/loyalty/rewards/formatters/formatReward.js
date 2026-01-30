@@ -36,25 +36,21 @@ function formatReward(reward) {
         obj.image = getFullImageUrl("noimage.png");
     }
 
-
     // Adjust obj properties based on rewardType
     switch (obj.rewardType) {
         case "customReward":
-           
-
             // Ensure customReward exists before trying to access its properties
             if (obj.customReward) {
                 delete obj.menuItem;  // Remove menuItem if it's a custom reward
                 delete obj.event;     // Remove event if it's a custom reward
-                
+
                 // Check if customReward.image exists
                 if (obj.customReward?.image) {
                     obj.customReward.image = getFullImageUrl(obj.customReward.image);
                 } else {
-                  
                     obj.customReward.image = getFullImageUrl("noimage.png");  // Fallback to default image
                 }
-            } 
+            }
             break;
 
         case "buyMenuItemReward":
@@ -70,6 +66,7 @@ function formatReward(reward) {
 
     return obj;
 }
+
 
 function formatSingleRewardByTierKey(item, tierKey) {
     if (!tierKey || !item?.tierLimit) return item;
