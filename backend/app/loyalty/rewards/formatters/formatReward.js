@@ -6,11 +6,12 @@ function formatReward(reward) {
     // Safely handle company logo (checking existence of all necessary properties)
     if (obj?.companyOrganizer?.companyDetails) {
         if (obj.companyOrganizer.companyDetails.logo) {
-            obj.companyOrganizer.companyDetails.logo = getFullImageUrl(obj.companyOrganizer.companyDetails.logo);
+            obj.companyOrganizer.companyDetails.logo = getFullImageUrl(obj.companyOrganizer?.companyDetails?.logo);
         } else {
             obj.companyOrganizer.companyDetails.logo = getFullImageUrl("noimage.png");
         }
     }
+}
 
     // Safely handle tier limit image (check if tierLimit and image exist)
     if (obj?.tierLimit) {
