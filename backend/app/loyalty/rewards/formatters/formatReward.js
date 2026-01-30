@@ -11,7 +11,6 @@ function formatReward(reward) {
             obj.companyOrganizer.companyDetails.logo = getFullImageUrl("noimage.png");
         }
     }
-}
 
     // Safely handle tier limit image (check if tierLimit and image exist)
     if (obj?.tierLimit) {
