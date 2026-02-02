@@ -493,9 +493,12 @@ const findUserReservationById = async (id) => {
 };
 
 
-const findUserReservationByIdLean = async (id) => {
-  return UserReservations.findById(id).lean();
+const findUserReservationsByIdsLean = async (ids) => {
+  return UserReservations.find({
+    _id: { $in: ids },
+  }).lean();
 };
+
 
 
 const findUserById = async (id) => {
@@ -889,6 +892,16 @@ const insertSingleUserReservation = async (doc) => {
   return created;
 };
 
+const insertManyUserReservations = async (docs) => {
+  const created = await UserReservations.insertMany(docs);
+  return created;
+};
+
+const bulkUpdateUserReservations = async (bulkOps) => {
+  return UserReservations.bulkWrite(bulkOps);
+};
+
+
 module.exports = {
   findUserReservationById,
   insertSingleUserReservation,
@@ -906,5 +919,7 @@ module.exports = {
   findUserById,
   getavailableReservations,
   getCalendarReservations,
-  findUserReservationByIdLean
+  findUserReservationsByIdsLean,
+  insertManyUserReservations,
+  bulkUpdateUserReservations
 };
