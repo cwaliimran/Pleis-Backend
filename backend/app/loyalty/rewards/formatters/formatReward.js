@@ -64,9 +64,8 @@ function formatReward(reward) {
             break;
     }
 
-    return obj;
+    return obj;  // Correct closing brace here for formatReward function
 }
-
 
 function formatSingleRewardByTierKey(item, tierKey) {
     if (!tierKey || !item?.tierLimit) return item;

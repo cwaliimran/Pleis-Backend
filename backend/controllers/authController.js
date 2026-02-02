@@ -213,7 +213,7 @@ const login = async (req, res) => {
   try {
     const { email, password, deviceId, deviceType, timezone, userType } =
       req.body;
-
+console.log("email, password, deviceId, deviceType, timezone, userType",email, password, deviceId, deviceType, timezone, userType );
     const validationOptions = {
       rawData: [
         "email",
