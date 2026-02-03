@@ -78,7 +78,7 @@ const getPromotions = async ({ page, limit, keyword, timezone }) => {
   return { promotions: formatted, meta };
 };
 
-const getPromotionsForHome = async ({ page = 1, limit = 10, timezone }) => {
+const getPromotionsForHome = async ({ page = 1, limit = 11, timezone }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const now = getCurrentDateInTimezone({ timezone });
 
@@ -116,6 +116,20 @@ const getPromotionsForHome = async ({ page = 1, limit = 10, timezone }) => {
     {
       $unwind: {
         path: "$companyOrganizer",
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $lookup: {
+        from: "menuitems",
+        localField: "menuItem",
+        foreignField: "_id",
+        as: "menuItem",
+      }
+    },
+    {
+      $unwind: {
+        path: "$menuItem",
         preserveNullAndEmptyArrays: true
       }
     },

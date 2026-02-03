@@ -693,15 +693,15 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
 
   reservations = reservations.map(item => {
     const formatted = reservationsFormatter(item);
-    if (formatted.conditionType == "noCondition" || formatted.conditionType == "ticketRequirement" || formatted.conditionType == "customText" || formatted.conditionType == "ticketRequirement") {
-      delete formatted.amount;
-      if (formatted.conditionType == "noCondition") {
-        delete formatted.ticketType;
-      }
-    }
-    else {
-      delete formatted.ticketType;
-    }
+    // if (formatted.conditionType == "noCondition" || formatted.conditionType == "ticketRequirement" || formatted.conditionType == "customText" || formatted.conditionType == "ticketRequirement") {
+    //   delete formatted.amount;
+    //   if (formatted.conditionType == "noCondition") {
+    //     delete formatted.ticketType;
+    //   }
+    // }
+    // else {
+    //   delete formatted.ticketType;
+    // }
     return formatted;
   });
   return { reservations, meta }
@@ -733,34 +733,6 @@ const getCalendarReservations = async ({
 
   pipeline.push({ $match: match });
 
-  // -----------------------------
-  // 2️⃣ JOIN USER
-  // -----------------------------
-  pipeline.push(
-    {
-      $lookup: {
-        from: "users",
-        localField: "userId",
-        foreignField: "_id",
-        pipeline: [
-          {
-            $project: {
-              firstName: 1,
-              lastName: 1,
-              phoneNumber: 1
-            }
-          }
-        ],
-        as: "user"
-      }
-    },
-    {
-      $unwind: {
-        path: "$user",
-        preserveNullAndEmptyArrays: true
-      }
-    }
-  );
 
   // -----------------------------
   // 3️⃣ JOIN RESERVATION DEFINITION
@@ -837,7 +809,14 @@ const getCalendarReservations = async ({
     $project: {
       _id: 1,
       userId: 1,
-      user: 1,
+
+      user: {
+        _id: "$userId",
+        firstName: "$firstName",
+        lastName: "$lastName",
+        phoneNumber: "$phoneNumber"
+      },
+
       partySize: 1,
       organizationId: 1,
       companyOrganizer: 1,
@@ -850,11 +829,13 @@ const getCalendarReservations = async ({
       updatedAt: 1,
       notes: 1,
       member: "Gold",
+
       eventTitle: {
         $ifNull: ["$event.basicInfo.title", "No Event Title"]
       }
     }
   });
+
 
   // -----------------------------
   // 7️⃣ SORT
@@ -900,6 +881,21 @@ const insertManyUserReservations = async (docs) => {
 const bulkUpdateUserReservations = async (bulkOps) => {
   return UserReservations.bulkWrite(bulkOps);
 };
+const getReservationTypeId = async (reservationType) => {
+  if (!reservationType) return null;
+
+  const reservation = await Reservations.findOne(
+    {
+      reservationType: {
+        $regex: new RegExp(`^${reservationType.trim()}$`, "i")
+      },
+      status: "active"
+    },
+    { _id: 1 }
+  ).lean();
+
+  return reservation?._id || null;
+};
 
 
 module.exports = {
@@ -921,5 +917,6 @@ module.exports = {
   getCalendarReservations,
   findUserReservationsByIdsLean,
   insertManyUserReservations,
-  bulkUpdateUserReservations
+  bulkUpdateUserReservations,
+  getReservationTypeId
 };

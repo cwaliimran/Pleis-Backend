@@ -5,6 +5,7 @@ const {
   updateOrganization,
   deleteOrganization,
   getOrganizationDetails,
+  getOrganizationNotifications,
   getOrganizationNamesByCompanyOrganizer,
 } = require("./organizationController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
@@ -26,6 +27,7 @@ router.get("/", apiRateLimiter, getOrganizationsAdmin);
 
 //get details
 router.get("/:id", getOrganizationDetails);
+router.get("/:id/notifications", getOrganizationNotifications);
 
 // Update an existing organization
 router.put("/:id", roleMiddleware(["organizer", "admin", "manager", "staff"]), updateOrganization);

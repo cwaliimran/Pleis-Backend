@@ -730,7 +730,7 @@ const updateUserReservation = async (req, res) => {
 
 const getReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "active", date, range, organizationsId, companyOrganizer } = req.query;
+  let { keyword, status , date, range, organizationsId, companyOrganizer } = req.query;
   try {
     if (
       (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&

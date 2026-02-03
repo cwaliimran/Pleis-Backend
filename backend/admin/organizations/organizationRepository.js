@@ -4,6 +4,8 @@ const Venues = require("@VenuesModel");
 const Organizations = require("@OrganizationModel");
 const Menus = require("@MenusModel");
 const { getModelCounts } = require("@dbUtils/queryUtil");
+const { getPromotionsByCreator } = require("../loyalty/promotions/promotionsRepository");
+const { getNotificationByOrganizationId } = require("../notifications/notificationsRepository");
 
 // Create
 const createOrganization = async (data) => {
@@ -37,6 +39,7 @@ const findOrganizationById = async (id) => {
 
 
 const getOrganizationDetails = async (id) => {
+  // Fetch organization and primary venue concurrently
   const [organization, primaryVenue] = await Promise.all([
     Organizations.findById(id)
       .populate("otherInfo.tags")
@@ -49,22 +52,28 @@ const getOrganizationDetails = async (id) => {
           select: "title",
         },
       }),
-    Venues.findOne({
-      organization: id,
-      isPrimary: true,
-    }).populate("venueType"),
+    Venues.findOne({ organization: id, isPrimary: true }).populate("venueType"),
   ]);
 
+  // Return null if no organization is found
   if (!organization) return null;
 
-  const orgObj = organization.toObject
-    ? organization.toObject()
-    : organization;
+  // Get creator id directly from populated organization
+  const creatorId = organization.creator?._id;
 
+  // Fetch promotions using the creator's id (only if creator exists)
+  const promotions = creatorId ? await getPromotionsByCreator(creatorId) : [];
+
+  // Convert organization to plain object if necessary
+  const orgObj = organization.toObject ? organization.toObject() : organization;
+
+  // Attach venue and promotions data
   orgObj.venue = primaryVenue ? primaryVenue.formatResponse() : null;
+  orgObj.promotions = promotions;
 
   return orgObj;
 };
+
 
 
 
@@ -148,6 +157,10 @@ const getOrgCompanyOrganizer = async (organizationId) => {
   const org = await Organizations.findById(organizationId).select("creator").lean();
   return org ? org.creator : null;
 }
+const getOrganizationNotifications = async (id) => {
+  const notifications= await getNotificationByOrganizationId(id);
+  return notifications;
+};
 
 module.exports = {
   createOrganization,
@@ -163,5 +176,6 @@ module.exports = {
   getMenuIdsByCompanyOrganizer,
   getOrganizationNamesByCompanyOrganizer,
   getStaffIdsByOrganization,
-  getOrgCompanyOrganizer
+  getOrgCompanyOrganizer,
+  getOrganizationNotifications
 };
