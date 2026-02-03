@@ -756,7 +756,16 @@ const getNotificationsByEventId = async (eventId, page = 1, limit = 10) => {
 };
 
 
-
+const getNotificationByOrganizationId = async (organizationId) => {
+  try {
+    const objectId = new mongoose.Types.ObjectId(organizationId);
+    const notification = await GlobalNotification.findOne({ organizationId: objectId });
+    return notification || null;
+  } catch (error) {
+    console.error("Error fetching notification:", error);
+    return null;
+  }
+};
 
 module.exports = {
   createNotifications,
@@ -767,5 +776,6 @@ module.exports = {
   getEvents,
   gettags,
   getNotificationsByEventId,
+  getNotificationByOrganizationId
 
 };

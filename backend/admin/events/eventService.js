@@ -28,7 +28,6 @@ const createEvent = async ({ data, ticketingData }, timezone) => {
 };
 
 const getEvents = async ({ page, limit, keyword, status, creator, startDate, endDate, organization, timezone }) => {
-  console.log("age, limit, keyword, status, creator, startDate, endDate, organization, timezone", creator);
   const query = {};
   // ALWAYS exclude templates events
   //templates event are only for internal use to generate occurrences
@@ -53,13 +52,25 @@ const getEvents = async ({ page, limit, keyword, status, creator, startDate, end
   if (organization) {
     query["basicInfo.organization"] = new mongoose.Types.ObjectId(organization);
   }
+if (startDate) {
+  const start = new Date(startDate);
+  start.setUTCHours(0, 0, 0, 0);
 
-  if (startDate) {
-    query["schedule.startDateTime"] = { $gte: new Date(startDate) };
-  }
-  if (endDate) {
-    query["schedule.endDateTime"] = { $lte: new Date(endDate) };
-  }
+
+  query["schedule.startDateTime"] = { $gte: start };
+}
+
+if (endDate) {
+  const end = new Date(endDate);
+  end.setUTCHours(23, 59, 59, 999);
+
+
+  query["schedule.endDateTime"] = { $lte: end };
+}
+
+
+
+
 
   if (keyword) {
     query.$or = [
@@ -83,6 +94,7 @@ const getEvents = async ({ page, limit, keyword, status, creator, startDate, end
   let { totalFiltered = 0, total = 0, active = 0, inactive = 0 } = eventsCounts || {};
 
   let formattedEvents = events.map(event => formatEventResponse(event, { timezone }));
+
 
   return {
     events: formattedEvents,

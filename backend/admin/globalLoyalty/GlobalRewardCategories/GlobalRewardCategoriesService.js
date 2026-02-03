@@ -40,7 +40,7 @@ const getCategories = async ({ page, limit, keyword, status, date, createID }) =
 
   const [categories, counts] =
     await Promise.all([
-      categoryRepo.getCategoriesWithFilters(query, skip, limit === 0 ? 0 : limit),
+      categoryRepo.getCategoriesWithFilters(query, skip, limit === 0 ? 0 : limit,),
       categoryRepo.getCounts(query),
     ]);
 

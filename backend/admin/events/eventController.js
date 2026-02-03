@@ -278,30 +278,44 @@ const createEvent = async (req, res) => {
 
 const getEvents = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", startDate, endDate, organization } = req.query;
-  let { _id, timezone } = req.user;
+  let { keyword, status = "active", startDate, endDate, organization } = req.query;
+  const { _id, timezone } = req.user;
+
   try {
-
-
+    // ✅ Validate organization
     if (organization) {
-      if (!validateParams(req, res, {
-        objectIdFields: ["organization"],
-      })) return;
+      if (
+        !validateParams(req, res, {
+          objectIdFields: ["organization"],
+        })
+      ) return;
+    }
+    if (startDate) {
+
+
+      const isValid = validateParams(req, res, {
+        dateFields: { startDate: "YYYY-MM-DD" },
+      });
+      if (!isValid) return;
+
+      startDate = convertTimezoneToUtc(startDate, "UTC");
     }
 
-    if (startDate && !validateParams(req, res, {
-      dateFields: {
-        startDate: "YYYY-MM-DD",
-      },
-    })) return;
+    // ✅ Handle endDate
+    if (endDate) {
 
-    if (endDate && !validateParams(req, res, {
-      dateFields: {
-        endDate: "YYYY-MM-DD",
-      },
-    })) return;
 
-    let { events, meta } = await eventService.getEvents({
+      const isValid = validateParams(req, res, {
+        dateFields: { endDate: "YYYY-MM-DD" },
+      });
+      if (!isValid) return;
+
+      endDate = convertTimezoneToUtc(endDate, "UTC");
+
+    }
+
+    // ✅ Continue execution normally
+    const { events, meta } = await eventService.getEvents({
       page,
       limit,
       keyword,
@@ -312,7 +326,6 @@ const getEvents = async (req, res) => {
       organization,
       timezone,
     });
-
 
     return sendResponse({
       res,
@@ -330,6 +343,7 @@ const getEvents = async (req, res) => {
     });
   }
 };
+
 
 const getPublicEvents = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
@@ -456,7 +470,7 @@ const updateEvent = async (req, res) => {
 
     //get updated event details
     const updatedEvent = await eventService.getEventDetails(id, timezone);
-console.log("updatedEvent",updatedEvent );
+    console.log("updatedEvent", updatedEvent);
 
     return sendResponse({
       res,
@@ -723,7 +737,7 @@ const getEventNotifications = async (req, res) => {
       objectIdFields: ["id"],
     })) return;
   try {
-    const {notifications, meta} = await getNotificationsByEventIdService(id,limit, page);
+    const { notifications, meta } = await getNotificationsByEventIdService(id, limit, page);
     return sendResponse({
       res,
       statusCode: 200,
@@ -742,7 +756,7 @@ const getEventNotifications = async (req, res) => {
 };
 const getEventRatings = async (req, res) => {
   let { id } = req.params;
-  let { limit, page , keyword} = req.query;
+  let { limit, page, keyword } = req.query;
 
 
   // ObjectId for event id
@@ -751,9 +765,9 @@ const getEventRatings = async (req, res) => {
       pathParams: ["id"],
       objectIdFields: ["id"],
     })) return;
-    const eventId = id;
+  const eventId = id;
   try {
-    const {reviews, meta} = await getRatingsByEventIdService(eventId,limit, page, keyword);
+    const { reviews, meta } = await getRatingsByEventIdService(eventId, limit, page, keyword);
     return sendResponse({
       res,
       statusCode: 200,

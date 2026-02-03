@@ -41,12 +41,24 @@ const create = async (data) => {
 };
 
 
-const getWithFilters = async (query, skip = 0, limit = 20) => {
-    const cacheKey = buildGlobalLoyaltyPromotionsCacheKey({
+const getWithFilters = async (query, skip = 0, limit = 20,keyword) => {
+    let cacheKey = buildGlobalLoyaltyPromotionsCacheKey({
     scope: "admin",
     skip,
     limit,
   });
+  const filters = [];
+  if (keyword) filters.push(`keyword=${keyword}`);
+  if (query.status && query.status['$ne']) filters.push(`status=${query.status['$ne']}`);
+  if (query.createdAt && query.createdAt['$gte']) filters.push(`createdAt=${query.createdAt['$gte']}`);
+
+  // Concatenate filters to the cache key if they are applied
+  if (filters.length > 0) {
+    cacheKey = `${cacheKey}:${filters.join(":")}`;
+  }
+
+
+  
   return cache({
     namespace: cacheKey,
     ttl: 86400, // 1 day

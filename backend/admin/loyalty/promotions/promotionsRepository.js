@@ -149,6 +149,18 @@ const findByIdAndUpdate = async (id, data) => {
     .populate("menuItem")
     .populate("tierLimit");
 };
+const getPromotionsByCreator = async (creatorId) => {
+  try {
+    // Query the promotions table based on the creator ID
+    const promotions = await Promotion.find({ companyOrganizer: creatorId });
+
+    // Return promotions details or an empty array if none are found
+    return promotions.length > 0 ? promotions : [];
+  } catch (error) {
+    console.error("Error fetching promotions:", error);
+    return [];
+  }
+};
 
 module.exports = {
   create,
@@ -158,4 +170,5 @@ module.exports = {
   updateData,
   deleteItem,
   findByIdAndUpdate,
+  getPromotionsByCreator
 };

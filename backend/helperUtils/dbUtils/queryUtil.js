@@ -292,7 +292,6 @@ function buildKeywordQueryFromModels(models, keyword) {
     });
     return paths;
   }
-
   models.forEach(({ schema, prefix }) => {
     const stringFields = getStringPaths(schema, prefix);
     stringFields.forEach(field => {
