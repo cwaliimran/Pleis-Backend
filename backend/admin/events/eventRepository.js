@@ -596,6 +596,23 @@ const getScannedTicketProgress = async ({ eventId }) => {
   };
 };
 
+const getTotalEventCountByOrganizationId = async (organizationId) => {
+  try {
+    const objectId = new mongoose.Types.ObjectId(organizationId);
+
+    // Use aggregation to count events
+    const result = await Events.aggregate([
+      { $match: { "basicInfo.organization": objectId } },
+      { $count: "totalEvents" } // Count the number of matching events
+    ]);
+
+    // Return the total count, defaulting to 0 if no events are found
+    return result.length > 0 ? result[0].totalEvents : 0;
+  } catch (error) {
+    console.error("Error fetching event count:", error);
+    return 0; // Return 0 if there was an error
+  }
+};
 
 
 module.exports = {
@@ -615,6 +632,7 @@ module.exports = {
   getTicketPerformanceWeekly,
   getEventRevenueAnalytics,
   getTicketTypeStats,
-  getScannedTicketProgress
+  getScannedTicketProgress,
+  getTotalEventCountByOrganizationId
 
 };

@@ -277,6 +277,23 @@ const getWeeklyEngagementStats = async ({
   }));
 };
 
+const getTotalEngagementEventsByOrganizationId = async (organizationId) => {
+  try {
+    // Ensure the organizationId is converted to ObjectId if it's a string
+    const objectId = new mongoose.Types.ObjectId(organizationId);
+
+    // Count the number of documents where entityType is "organization" and entityId matches the organizationId
+    const eventCount = await EngagementEvents.countDocuments({
+      entityType: "organizations",
+      entityId: objectId
+    });
+
+    return eventCount; // Return the total count of matching events
+  } catch (error) {
+    console.error("Error fetching engagement events count:", error);
+    return 0; // Return 0 if there was an error
+  }
+};
 
 module.exports = {
   logEngagement,
@@ -284,5 +301,6 @@ module.exports = {
   getTrendingEntities,
   deleteEngagementsBefore,
   getEngagementCountsByEntity,
-  getWeeklyEngagementStats
+  getWeeklyEngagementStats,
+  getTotalEngagementEventsByOrganizationId
 };

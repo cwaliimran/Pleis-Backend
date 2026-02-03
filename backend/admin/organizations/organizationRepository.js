@@ -6,6 +6,10 @@ const Menus = require("@MenusModel");
 const { getModelCounts } = require("@dbUtils/queryUtil");
 const { getPromotionsByCreator } = require("../loyalty/promotions/promotionsRepository");
 const { getNotificationByOrganizationId } = require("../notifications/notificationsRepository");
+const { getTotalEventCountByOrganizationId } = require("../events/eventRepository");
+const { getTotalTicketsPurchasedByOrganizationId } = require("../ticketing/ticketingsRepository");
+const { getTotalEngagementEventsByOrganizationId } = require("@appEngagement/engagementEventsRepository");
+const { getTotalClosingBalanceByOrganizationId } = require("../transactions/repositories/unifiedTransactionsRepository");
 
 // Create
 const createOrganization = async (data) => {
@@ -39,8 +43,8 @@ const findOrganizationById = async (id) => {
 
 
 const getOrganizationDetails = async (id) => {
-  // Fetch organization and primary venue concurrently
-  const [organization, primaryVenue] = await Promise.all([
+  // Fetch organization, primary venue, and other related data concurrently
+  const [organization, primaryVenue, events, ticketsSold, views, revenue] = await Promise.all([
     Organizations.findById(id)
       .populate("otherInfo.tags")
       .populate("otherInfo.categories")
@@ -53,26 +57,25 @@ const getOrganizationDetails = async (id) => {
         },
       }),
     Venues.findOne({ organization: id, isPrimary: true }).populate("venueType"),
+    getTotalEventCountByOrganizationId(id),
+    getTotalTicketsPurchasedByOrganizationId(id),
+    getTotalEngagementEventsByOrganizationId(id),
+    getTotalClosingBalanceByOrganizationId(id)
   ]);
 
-  // Return null if no organization is found
-  if (!organization) return null;
-
-  // Get creator id directly from populated organization
-  const creatorId = organization.creator?._id;
-
-  // Fetch promotions using the creator's id (only if creator exists)
-  const promotions = creatorId ? await getPromotionsByCreator(creatorId) : [];
-
-  // Convert organization to plain object if necessary
+  // Convert the organization to a plain object if it's a Mongoose document
   const orgObj = organization.toObject ? organization.toObject() : organization;
 
-  // Attach venue and promotions data
+  // Attach related data to the organization object
   orgObj.venue = primaryVenue ? primaryVenue.formatResponse() : null;
-  orgObj.promotions = promotions;
+  orgObj.events = events; // Attach total events count
+  orgObj.ticketsSold = ticketsSold; // Attach total tickets sold
+  orgObj.views = views; // Attach total views
+  orgObj.revenue = revenue; // Attach total revenue
 
   return orgObj;
 };
+
 
 
 
