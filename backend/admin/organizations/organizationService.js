@@ -5,7 +5,7 @@ const Organizations = require("@OrganizationModel");
 const organizationRepo = require("./organizationRepository");
 const { generateMeta } = require("../../helperUtils/responseUtil");
 
-const { formatOrganization } = require("./formatter/formatOrganization");
+const { formatOrganization, formatNotificationImage } = require("./formatter/formatOrganization");
 const { default: mongoose } = require("mongoose");
 const { invalidate } = require("@redisCache");
 const ACTIVE_ORGANIZATIONS_CACHE_KEY = "organizations:active";
@@ -319,7 +319,7 @@ const deepMergeSafe = (target = {}, source = {}) => {
 };
 const getOrganizationNotifications = async (id, timezone) => {
   let notifications = await organizationRepo.getOrganizationNotifications(id);
-  return formatOrganization(notifications, [], timezone);
+  return formatNotificationImage(notifications, [], timezone);
 };
 module.exports = {
   createOrganization,
