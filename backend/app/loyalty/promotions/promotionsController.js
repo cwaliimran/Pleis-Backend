@@ -12,15 +12,18 @@ const service = require("./promotionsService");
 const get = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date } = req.query;
+  const timezone = req.user?.timezone;
+  const { _id: userId } = req.user || {};
 
   try {
     const { promotions, meta } = await service.getPromotions({
+      userId,
       page,
       limit,
       keyword,
       status,
       date,
-      timezone: req.user?.timezone,
+      timezone,
     });
     return sendResponse({
       res,
@@ -38,7 +41,13 @@ const get = async (req, res) => {
 const getDetails = async (req, res) => {
   if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
   try {
-    const response = await service.getDetails(req.params.id);
+    const timezone = req.user?.timezone;
+    const { _id: userId } = req.user || {};
+    const response = await service.getDetails({
+      id: req.params.id,
+      userId,
+      timezone,
+    });
     if (!response) {
       return sendResponse({ res, statusCode: 404, translationKey: "promotion_not_found" });
     }

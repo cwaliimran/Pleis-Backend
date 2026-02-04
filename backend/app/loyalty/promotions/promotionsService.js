@@ -1,172 +1,65 @@
-const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
-const { Promotion } = require("../../../commonModules/loyalty/promotions/models/Promotion");
 const repository = require("./promotionsRepository");
 const { generateMeta, getCurrentDateInTimezone } = require("@utils/responseUtil");
 const formatPromotion = require("../../../commonModules/loyalty/promotions/utils/formatPromotion");
 
-
-const getPromotions = async ({ page, limit, keyword, timezone }) => {
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
+const getPromotions = async ({
+  userId,
+  page,
+  limit,
+  keyword,
+  timezone,
+}) => {
   const now = getCurrentDateInTimezone({ timezone });
 
-  const pipeline = [
-    {
-      $match: {
-        status: { $eq: "active" },
-        endDate: { $gte: now },
-      },
-    },
-  ];
-
-  // 🔍 Keyword filter
-  const keywordMatch = buildKeywordQueryFromModels(
-    [{ schema: Promotion.schema }],
-    keyword
-  );
-  if (Object.keys(keywordMatch).length) {
-    pipeline.push({ $match: keywordMatch });
-  }
-
-  // 🔗 Populate companyOrganizer (Users)
-  pipeline.push({
-    $lookup: {
-      from: "users",
-      localField: "companyOrganizer",
-      foreignField: "_id",
-      as: "companyOrganizer",
-      pipeline: [
-        {
-          $project: {
-            "companyDetails.loyaltySettings.title": 1,
-            "companyDetails.logo": 1,
-          },
-        },
-      ],
-    },
+  return repository.getPromotions({
+    userId,
+    page,
+    limit,
+    keyword,
+    timezone,
+    now,
   });
-
-
-  pipeline.push({
-    $unwind: {
-      path: "$companyOrganizer",
-      preserveNullAndEmptyArrays: true, // in case missing user
-    },
-  });
-
-  // 🧩 Sort + pagination
-  pipeline.push({ $sort: { createdAt: -1 } });
-  pipeline.push({
-    $facet: {
-      data: [
-        { $skip: skip },
-        ...(limit === 0 ? [] : [{ $limit: limit }]),
-      ],
-      totalFiltered: [{ $count: "count" }],
-    },
-  });
-
-  const result = await Promotion.aggregate(pipeline);
-
-  const records = result[0]?.data || [];
-  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
-
-  const meta = generateMeta(page, limit, totalFiltered);
-
-  // Optional: format promotion data
-  const formatted = records.map((item) => formatPromotion(item, timezone));
-
-  return { promotions: formatted, meta };
 };
 
-const getPromotionsForHome = async ({ page = 1, limit = 11, timezone }) => {
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
+
+
+const getPromotionsForHome = async ({
+  userId,
+  page = 1,
+  limit = 11,
+  timezone,
+}) => {
   const now = getCurrentDateInTimezone({ timezone });
 
-  const pipeline = [
-    /* ===============================
-       BASE FILTER
-       =============================== */
-    {
-      $match: {
-        status: "active",
-        endDate: { $gte: now }
-      }
-    },
-
-    /* ===============================
-       POPULATE companyOrganizer
-       =============================== */
-    {
-      $lookup: {
-        from: "users",
-        localField: "companyOrganizer",
-        foreignField: "_id",
-        as: "companyOrganizer",
-        pipeline: [
-          {
-            $project: {
-              _id: 1,
-              "companyDetails.logo": 1,
-              "companyDetails.loyaltySettings.title": 1
-            }
-          }
-        ]
-      }
-    },
-    {
-      $unwind: {
-        path: "$companyOrganizer",
-        preserveNullAndEmptyArrays: true
-      }
-    },
-    {
-      $lookup: {
-        from: "menuitems",
-        localField: "menuItem",
-        foreignField: "_id",
-        as: "menuItem",
-      }
-    },
-    {
-      $unwind: {
-        path: "$menuItem",
-        preserveNullAndEmptyArrays: true
-      }
-    },
-
-
-    /* ===============================
-       SORT (newest first)
-       =============================== */
-    { $sort: { createdAt: -1 } },
-
-    /* ===============================
-       PAGINATION
-       =============================== */
-    { $skip: skip },
-    ...(limit === 0 ? [] : [{ $limit: limit }])
-  ];
-
-  const records = await Promotion.aggregate(pipeline);
-
-  const formatted = records.map(item =>
-    formatPromotion(item, timezone)
-  );
-
-  return {
-    promotions: formatted
-  };
+  return repository.getPromotionsForHome({
+    userId,
+    page,
+    limit,
+    timezone,
+    now,
+  });
 };
 
 
+const getDetails = async ({
+  id,
+  userId,
+  timezone,
+}) => {
+  const now = getCurrentDateInTimezone({ timezone });
 
-
-const getDetails = async (id) => {
-  return await repository.findById(id);
+  return repository.findById({
+    id,
+    userId,
+    timezone,
+    now,
+  });
 };
+
 
 
 const getPromotionsByCompanyOrganizerService = async ({
+  userId,
   page,
   limit,
   timezone,
@@ -175,29 +68,27 @@ const getPromotionsByCompanyOrganizerService = async ({
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const now = getCurrentDateInTimezone({ timezone });
 
-  // Step 1: DB fetch with correct filtering
-  const promotions = await repository.getPromotionsByCompanyOrganizer({
-    skip,
-    limit,
-    now,
-    companyOrganizer,
-  });
+  const promotions =
+    await repository.getPromotionsByCompanyOrganizer({
+      skip,
+      limit,
+      now,
+      companyOrganizer,
+      userId,
+      timezone,
+    });
 
-  // Step 2: Count total from DB directly
   const totalFiltered = await repository.count({
     status: "active",
     companyOrganizer,
     endDate: { $gte: now },
   });
 
-  // Step 3: meta
   const meta = generateMeta(page, limit, totalFiltered);
 
-  // Step 4: formatting
-  const formatted = promotions.map((p) => formatPromotion(p, timezone));
-
-  return { promotions: formatted, meta };
+  return { promotions, meta };
 };
+
 
 
 module.exports = {
