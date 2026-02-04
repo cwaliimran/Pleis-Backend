@@ -11,6 +11,8 @@ const { registerUserUtility } = require("../../controllers/authUtil.js");
 const { User } = require("../../models/UserModel.js");
 const { getOrganizationsAsStaff } = require("../organizations/organizationService.js");
 const { formatOrganization } = require("../organizations/formatter/formatOrganization.js");
+const { getLatestEventByOrganization } = require("../events/eventRepository.js");
+const { getUserJoinedClubs, getUserJoinedClubsall } = require("../loyalty/clubMembers/clubMembersRepository.js");
 
 const createUser = async (req, res) => {
   const result = await registerUserUtility(req, res, {
@@ -246,6 +248,7 @@ const deleteUser = async (req, res) => {
 
 const getUserDetails = async (req, res) => {
   const { id } = req.params;
+
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
@@ -256,6 +259,7 @@ const getUserDetails = async (req, res) => {
 
   try {
     let user = await usersService.getUserDetails(id);
+
     if (!user) {
       return sendResponse({
         res,
@@ -263,25 +267,50 @@ const getUserDetails = async (req, res) => {
         translationKey: "user_details_not_found",
       });
     }
+
     let userObject = new User(user).toJSON();
+    let events = [];
+    let interests = {};
+    let joinedClubs = [];
 
-    if (user.accountState?.userType === "organizer" || user.accountState?.userType === "staff" || user.accountState?.userType === "manager") {
-      // Fetch organizations where this user is staff member
-      const organizations = await getOrganizationsAsStaff(user._id);
+    if (
+      user.accountState?.userType === "organizer" ||
+      user.accountState?.userType === "staff" ||
+      user.accountState?.userType === "manager"
+    ) {
+      const organizationsPromise = getOrganizationsAsStaff(user._id);
+      const eventsPromise = organizationsPromise.then(orgs =>
+        getLatestEventByOrganization(orgs)
+      );
 
-      // Format each organization response
+      const [organizations, eventsData] = await Promise.all([
+        organizationsPromise,
+        eventsPromise,
+      ]);
+
       userObject.organizations = Array.isArray(organizations)
-        ? organizations.map(org => {
-          return formatOrganization(org);
-        })
+        ? organizations.map(org => formatOrganization(org))
         : [];
+
+      events = eventsData;
     }
+    if (user.accountState.userType === "user") {
+      delete userObject.organizations;
+      delete userObject.events;
 
+      // Fetch user interests and clubs concurrently
+      const [interests_, joinedClubs_] = await Promise.all([
+        usersService.getUserInterestsByUserId(user._id),
+        getUserJoinedClubsall(user._id)
+      ]);
 
-    // Format the user response using the utility function
+      interests = interests_;
+      joinedClubs = joinedClubs_;
+    }
     const response = formatUserResponse(userObject);
-
-
+    response.event = events[0] || {};
+    response.interests = interests || {};
+    response.joinedClubs = joinedClubs || [];
     return sendResponse({
       res,
       statusCode: 200,
@@ -297,6 +326,7 @@ const getUserDetails = async (req, res) => {
     });
   }
 };
+
 
 
 // Setup 2FA (get QR code)

@@ -73,7 +73,7 @@ if (
 };
 const getUpdatess = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range ,companyOrganizer} = req.query;
+  const { keyword, status, date, range ,companyOrganizer} = req.query;
   try {
 if (!companyOrganizer) {
   return sendResponse({

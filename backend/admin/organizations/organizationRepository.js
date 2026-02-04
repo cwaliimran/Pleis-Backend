@@ -6,7 +6,7 @@ const Menus = require("@MenusModel");
 const { getModelCounts } = require("@dbUtils/queryUtil");
 const { getPromotionsByCreator } = require("../loyalty/promotions/promotionsRepository");
 const { getNotificationByOrganizationId } = require("../notifications/notificationsRepository");
-const { getTotalEventCountByOrganizationId } = require("../events/eventRepository");
+const { getTotalEventCountByOrganizationId, getLatestEventByOrganization } = require("../events/eventRepository");
 const { getTotalTicketsPurchasedByOrganizationId } = require("../ticketing/ticketingsRepository");
 const { getTotalEngagementEventsByOrganizationId } = require("@appEngagement/engagementEventsRepository");
 const { getTotalClosingBalanceByOrganizationId } = require("../transactions/repositories/unifiedTransactionsRepository");
@@ -95,10 +95,24 @@ const findByIdAndUpdate = async (id, data) => {
 const getOrganizationsAsStaff = async (userId) => {
   const organizations = await Organizations.find({
     $or: [
-      { creator: userId },
-      { "staff.user": userId }
+      { creator: userId }, // Find organizations where the user is the creator
+      { "staff.user": userId } // Find organizations where the user is part of the staff
     ]
-  }).select("basicInfo staff").lean();
+  })
+    .lean() // Ensure you get plain JavaScript objects
+    .populate("otherInfo.tags") // Populate tags under otherInfo
+    .populate("otherInfo.categories") // Populate categories under otherInfo
+    .populate({
+      path: "creator", // Populate the creator field
+      select: "firstName lastName email companyDetails", // Select specific fields for creator
+      populate: {
+        path: "companyDetails.suppliers", // Populate suppliers within companyDetails
+        select: "title", // Select only the title field for suppliers
+      },
+    });
+
+
+
 
   // For each organization, filter staff to only include the current user
   return organizations.map(org => {
@@ -161,7 +175,7 @@ const getOrgCompanyOrganizer = async (organizationId) => {
   return org ? org.creator : null;
 }
 const getOrganizationNotifications = async (id) => {
-  const notifications= await getNotificationByOrganizationId(id);
+  const notifications = await getNotificationByOrganizationId(id);
   return notifications;
 };
 
