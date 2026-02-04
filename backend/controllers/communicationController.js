@@ -5,6 +5,7 @@ const {
 const { Devices } = require("../models/Devices");
 const { sendResponse, validateParams } = require("../helperUtils/responseUtil");
 const adminFireBConfig = require("../config/firebaseAdmin"); // Firebase admin SDK setup
+const { getFullImageUrl } = require("@utils/imageHelper");
 
 const { NotificationExp } = require("../models/Notifications");
 
@@ -174,7 +175,7 @@ const sendUserNotifications = async ({
           ); // Convert Set to Array and include deviceType
 
 
-        //apply .toString to all values in data object
+          //apply .toString to all values in data object
           const dataWithStringValues = Object.fromEntries(
             Object.entries(data).map(([key, value]) => [key, value.toString()])
           );
@@ -187,8 +188,8 @@ const sendUserNotifications = async ({
               ...dataWithStringValues, // Additional data payload
               subjectId: sender ? sender.toString() : null, // Convert subjectId to plain text
               objectId: objectId.toString(), // Ensure objectId is also plain text
-              image
             },
+            image
           });
 
           const sendNotificationResponse = await sendNotificationPromise;
@@ -196,7 +197,8 @@ const sendUserNotifications = async ({
         }
 
         //log all response using json.stringify for better readability
-        // logger.log("Notification responses:", JSON.stringify(responses, null, 2));
+        //  logger.log("Notification responses:", responses);
+
 
         // Process the notifications after sending them
         if (!saveNotification) {
@@ -240,12 +242,12 @@ const sendNotification = async (recipients, payload) => {
   // const additionalToken = "cYp8RW8gREO3vhzf_nHlCB:APA91bHR17qarpZDNK7SlZw-ybhb7JmHHbBGLZGDdYFh_6XJFPzfCCC0HdrOv3R-N36ZnoUrY_3I0h5-nFONRhIyQV8QRbAqkvdadYPOFB4EIavJUdfyXtTJYcMNoJKSeTZ0noJqLp4k";
   // androidTokens.push(additionalToken);
 
-    // Add a random string as notificationId to payload.data
+  // Add a random string as notificationId to payload.data
   const notificationId = Math.floor(1000000000 + Math.random() * 9000000000).toString();
   payload.data = {
     ...payload.data,
     notificationId: notificationId,
-    image: payload.image || "",
+    image: getFullImageUrl(payload.image) || "",
   };
 
   // Notification payload for Android
@@ -300,7 +302,7 @@ const sendNotification = async (recipients, payload) => {
     }
 
     const responses = await Promise.all(promises);
-    
+
     const result = {
       responses: [],
     };

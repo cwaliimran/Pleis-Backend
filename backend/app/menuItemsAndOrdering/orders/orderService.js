@@ -128,8 +128,8 @@ const placeOrder = async ({
         title: "New Order Placed",
         body: `New Order Has been placed : and is now being ${formattedOrder.status}. The total amount is ${formattedOrder.totalPrice} EUR`,
         data: {
-          type: NotificationTypes.ORDER_UPDATE,
-          objectType: "group",
+          type: NotificationTypes.NEW_MENU_ITEMS_ORDER,
+          objectType: "menuorders",
           organization_id: organizationId.toString(),
         },
         image: (order.items[0].menuItemSnapShot.image) || "noimage",
