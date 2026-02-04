@@ -352,7 +352,7 @@ const getMenuItemsSales = async ({
         $or: [
           { "menuItem.title": { $regex: keyword, $options: "i" } },
           { "menuItem.description": { $regex: keyword, $options: "i" } },
-          {title: { $regex: keyword, $options: "i" }},
+          { title: { $regex: keyword, $options: "i" } },
         ],
       },
     });
@@ -446,14 +446,20 @@ const getMenuItemsSales = async ({
   const totalCount = result[0]?.total[0]?.count || 0;
 
   // 9️⃣ Apply final pricing INSIDE each sale object
-const data = rawData.map(sale => {
-  const totalPriceBeforeDiscount = sale.menuItems.reduce((sum, item) => {
-    const price =
-      item.discountPrice !== null && item.discountPrice !== undefined
-        ? item.discountPrice
-        : item.basePrice || 0;
-    return sum + price;
-  }, 0);
+  const data = rawData.map(sale => {
+    const totalPriceBeforeDiscount = sale.menuItems.reduce((sum, item) => {
+      const price =
+        (item.discountPrice!=0) && item.discountPrice !== undefined
+          ? item.discountPrice
+          : item.basePrice || 0;
+
+      // Log the sum and price for each item
+      console.log("sum:", sum, "price:", price, "discountPrice:", item.discountPrice, "basePrice:", item.basePrice);
+
+      return sum + price;
+    }, 0);
+
+console.log("totalPriceBeforeDiscount",totalPriceBeforeDiscount );
 
   let totalPrice = totalPriceBeforeDiscount;
 
@@ -469,7 +475,7 @@ const data = rawData.map(sale => {
   totalPrice = Math.max(totalPrice, 0);
 
   // ✅ FORMAT IMAGES HERE
-   sale = formatSaleWithImages(sale);
+  sale = formatSaleWithImages(sale);
 
   return {
     ...sale,
