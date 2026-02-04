@@ -36,7 +36,7 @@ const get = async ({ page, limit, keyword, status, date, timezone }) => {
   }
 
   // Use repository function to get promotions with population
-  const records = await repository.getWithFilters(query, skip, limit);
+  const records = await repository.getWithFilters(query, skip, limit,keyword);
 
 
 

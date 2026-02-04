@@ -33,12 +33,23 @@ const getPresets = async ({
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const cacheKey = buildMenuPresetsCacheKey({
+  let cacheKey = buildMenuPresetsCacheKey({
     scope: "admin",
     skip,
     limit,
   });
+  // Add filters to the cache key dynamically
+  const filters = [];
 
+  if (keyword) filters.push(`keyword=${keyword}`);
+  if (status) filters.push(`status=${status}`);
+  if (date) filters.push(`date=${date}`);
+  if (userId) filters.push(`userId=${userId}`);
+
+  // Concatenate filters to the cache key if they are applied
+  if (filters.length > 0) {
+    cacheKey = `${cacheKey}:${filters.join(":")}`;
+  }
   return cache({
     namespace: cacheKey,
     ttl: 86400, // 1 day

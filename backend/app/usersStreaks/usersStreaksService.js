@@ -112,9 +112,6 @@ const deleteUsersStreak = async (id) => {
   return true;
 };
 const getUserMaxStreak = async (userId) => {
-  console.log("userId:", userId);
-
-  // ✅ Guard: invalid or missing userId
   if (!mongoose.Types.ObjectId.isValid(userId)) {
 
     return 0;

@@ -8,29 +8,29 @@ const { formatTransactionItem } = require("../repositories/../formatter/formatTr
  * Create a unified transaction (repository updates appropriate wallet)
  */
 const createTransaction = async (data) => {
-    // Validate essential fields here (defensive)
-    const {
-        user,
-        companyOrganizer,
-        organization,
-        type,
-        domainType,
-        entityId,
-        companyPoints,
-        globalPoints,
-        allowNegative,
-        description
-    } = data;
-    if (!user) throw new Error("User is required");
-    if (!domainType) throw new Error("domainType required");
-    // if (!points || points.base === undefined || points.total === undefined) throw new Error("Invalid points payload");
-    if (companyPoints === null && globalPoints === null) {
-        throw new Error("At least one of companyPoints or globalPoints must be provided");
-    }
+  // Validate essential fields here (defensive)
+  const {
+    user,
+    companyOrganizer,
+    organization,
+    type,
+    domainType,
+    entityId,
+    companyPoints,
+    globalPoints,
+    allowNegative,
+    description
+  } = data;
+  if (!user) throw new Error("User is required");
+  if (!domainType) throw new Error("domainType required");
+  // if (!points || points.base === undefined || points.total === undefined) throw new Error("Invalid points payload");
+  if (companyPoints === null && globalPoints === null) {
+    throw new Error("At least one of companyPoints or globalPoints must be provided");
+  }
 
-    const result = await unifiedRepo.createTransaction(data);
-    // return formatted transaction (or full result including walletView)
-    return result;
+  const result = await unifiedRepo.createTransaction(data);
+  // return formatted transaction (or full result including walletView)
+  return result;
 };
 
 /**
@@ -47,7 +47,9 @@ const getTransactions = async ({
   entityId,
   startDate,
   endDate,
-  keyword
+  keyword,
+  user,
+  date
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
@@ -59,14 +61,18 @@ const getTransactions = async ({
   if (organization) match.organization = new mongoose.Types.ObjectId(organization);
   if (companyOrganizer) match.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
   if (entityId) match.entityId = entityId;
-
-  if (startDate || endDate) {
+  if (user) match.user = new mongoose.Types.ObjectId(user);
+  if (startDate || endDate || date) {
     match.createdAt = {};
     if (startDate) match.createdAt.$gte = new Date(startDate);
     if (endDate) {
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
       match.createdAt.$lte = end;
+    }
+    if (date) {
+      match.createdAt.$gte = new Date(date);
+      match.createdAt.$lt = new Date(new Date(date).setDate(new Date(date).getDate() + 1));
     }
     if (!Object.keys(match.createdAt).length) delete match.createdAt;
   }
@@ -84,38 +90,38 @@ const getTransactions = async ({
 
 
 const getTransactionDetails = async (id) => {
-    const trx = await unifiedRepo.findTransactionById(id);
-    if (!trx) return null;
-    return formatTransactionItem(trx);
+  const trx = await unifiedRepo.findTransactionById(id);
+  if (!trx) return null;
+  return formatTransactionItem(trx);
 };
 
 const updateTransaction = async (id, data) => {
-    const trx = await unifiedRepo.findTransactionById(id);
-    if (!trx) return null;
+  const trx = await unifiedRepo.findTransactionById(id);
+  if (!trx) return null;
 
-    // Allowed fields to update manually (administrative)
-    const allowed = ['type', 'domainType', 'points', 'closingBalance', 'description'];
-    const updateData = {};
-    allowed.forEach(k => {
-        if (data[k] !== undefined) updateData[k] = data[k];
-    });
+  // Allowed fields to update manually (administrative)
+  const allowed = ['type', 'domainType', 'points', 'closingBalance', 'description'];
+  const updateData = {};
+  allowed.forEach(k => {
+    if (data[k] !== undefined) updateData[k] = data[k];
+  });
 
-    if (Object.keys(updateData).length === 0) return formatTransactionItem(trx);
+  if (Object.keys(updateData).length === 0) return formatTransactionItem(trx);
 
-    await unifiedRepo.updateTransactionData(trx, updateData);
-    return formatTransactionItem(trx);
+  await unifiedRepo.updateTransactionData(trx, updateData);
+  return formatTransactionItem(trx);
 };
 
 const deleteTransaction = async (id) => {
-    const updated = await unifiedRepo.findByIdAndUpdate(id, { deleted: true });
-    if (!updated) return null;
-    return true;
+  const updated = await unifiedRepo.findByIdAndUpdate(id, { deleted: true });
+  if (!updated) return null;
+  return true;
 };
 
 module.exports = {
-    createTransaction,
-    getTransactions,
-    getTransactionDetails,
-    updateTransaction,
-    deleteTransaction
+  createTransaction,
+  getTransactions,
+  getTransactionDetails,
+  updateTransaction,
+  deleteTransaction
 };

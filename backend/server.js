@@ -120,7 +120,6 @@ const allowedOrigins = [
   "https://dev.pleis.com",
   "https://www.dev.pleis.com",
   "http://localhost:4003",
-  "http://192.168.12.121:4003",
   "https://pleis.vercel.app",
   "https://latex-industry-bridges-wines.trycloudflare.com",
   "https://nelson-sponsor-santa-interact.trycloudflare.com",
@@ -136,10 +135,7 @@ const allowedOrigins = [
   "https://genome-exploring-browser-brown.trycloudflare.com",
   "https://abraham-pipes-activity-polar.trycloudflare.com",
   "https://should-whats-les-mining.trycloudflare.com",
-  "http://192.168.13.221:4003",
-  "http://192.168.13.84:4003",
-  "http://192.168.100.65:4003",
-  "http://192.168.13.128:4003",];
+  "http://192.168.*.*:4003",];
 
 securityMiddleware(app, {
   allowedOrigins,

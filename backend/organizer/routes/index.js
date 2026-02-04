@@ -21,7 +21,7 @@ router.use("/giveaways", require("../giveaways/giveawayRoutes"));
 router.use("/subscriptions", require("../subscriptions/subscriptionsRoutes"));
 router.use("/reviews", require("../reviews/reviewsRoutes"));
 router.use("/menu-management/items", require("../menuManagement/menuItems/menuItemsRoutes"));
-router.use("/menu-management/menu", require("../menuManagement/menu/menusRoutes"));
+router.use("/menu", require("../menuManagement/menu/menusRoutes"));
 router.use("/qr-code", require("../qr/qrRoutes"));
 router.use("/highlights", require("../highlights/highlightRoutes"));
 router.use("/events", require("../events/eventRoutes"));

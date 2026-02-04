@@ -99,5 +99,17 @@ function formatOrganization(item, excludeFields = [], timezone = "UTC") {
 
   return org;
 }
+const formatNotificationImage = (notifications) => {
+  if (!Array.isArray(notifications)) return [];
 
-module.exports = { formatOrganization };
+  // Iterate over the notifications and transform the image to its full URL
+  return notifications.map(notification => {
+    // Transform image to full URL if it exists
+    if (notification.image) {
+      notification.image = getFullImageUrl(notification.image);
+    }
+    return notification;
+  });
+};
+
+module.exports = { formatOrganization,formatNotificationImage };

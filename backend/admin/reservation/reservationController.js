@@ -730,7 +730,7 @@ const updateUserReservation = async (req, res) => {
 
 const getReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "active", date, range, organizationsId, companyOrganizer } = req.query;
+  let { keyword, status , date, range, organizationsId, companyOrganizer } = req.query;
   try {
     if (
       (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
@@ -874,20 +874,19 @@ const copyUserReservationsController = async (req, res) => {
 };
 
 
-const copySingleSlotReservationController = async (req, res) => {
+const copyReservationSlotsController = async (req, res) => {
   try {
-    const { reservationId, targetDate, startTime, reservationType } = req.body;
+    const { reservationIds, targetDate, startTime, reservationType } = req.body;
     const timezone = req.user.timezone;
 
     if (!validateParams(req, res, {
-      rawData: ["reservationId", "targetDate", "startTime", "reservationType"],
-      objectIdFields: ["reservationId"],
+      rawData: ["reservationIds", "targetDate", "startTime", "reservationType"],
       dateFields: { targetDate: "YYYY-MM-DD", startTime: "hh:mm A" },
     })) return;
 
     const newReservation =
-      await reservationService.copySingleSlotReservation({
-        reservationId,
+      await reservationService.copyReservationSlots({
+        reservationIds,
         targetDate,
         startTime,
         reservationType,
@@ -902,7 +901,6 @@ const copySingleSlotReservationController = async (req, res) => {
       data: newReservation,
     });
   } catch (error) {
-    console.error("COPY_SINGLE_SLOT_ERROR:", error);
 
     return sendResponse({
       res,
@@ -912,6 +910,46 @@ const copySingleSlotReservationController = async (req, res) => {
     });
   }
 };
+
+const changeUsersReservationsTiming = async (req, res) => {
+  try {
+    const { reservationIds, startTime, endTime } = req.body;
+    const timezone = req.user.timezone;
+
+    if (
+      !validateParams(req, res, {
+        rawData: ["reservationIds", "startTime", "endTime"],
+        dateFields: {
+          startTime: "hh:mm A",
+          endTime: "hh:mm A",
+        },
+      })
+    ) return;
+
+    const updated =
+      await reservationService.changeUsersReservationsTiming({
+        reservationIds,
+        startTime,
+        endTime,
+        timezone,
+      });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "reservation_timing_updated_successfully",
+      data: updated,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: error.message || "internal_server_error",
+      error,
+    });
+  }
+};
+
 
 module.exports = {
   createReservation,
@@ -925,5 +963,6 @@ module.exports = {
   getavailableReservations,
   getCalendarReservations,
   copyUserReservationsController,
-  copySingleSlotReservationController
+  copyReservationSlotsController,
+  changeUsersReservationsTiming
 };

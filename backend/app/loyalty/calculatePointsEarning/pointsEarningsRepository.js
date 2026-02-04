@@ -18,31 +18,34 @@ const calculatePointsRepo = async (userId, companyOrganizer, totalSpending) => {
 
   // ORGANIZER POINTS
   const organizerPointsPerEuro = 10 + tierBonus + globalBonus;
-  const organizerEarnedPoints = totalSpending * organizerPointsPerEuro;
+  const organizerEarnedPoints = Math.round(
+    totalSpending * organizerPointsPerEuro
+  );
 
   // GLOBAL POINTS
   const globalPointsPerEuro = 10 + globalBonus + tierBonus;
-  const globalEarnedPoints = totalSpending * globalPointsPerEuro;
+  const globalEarnedPoints = Math.round(
+    totalSpending * globalPointsPerEuro
+  );
 
   // Cashback
-  const cashbackPercent = (userCompanyWallet?.pointValuePercentage || 0) / 100;
-  const cashback = totalSpending * cashbackPercent;
+  const cashbackPercent =
+    (userCompanyWallet?.pointValuePercentage || 0) / 100;
+  const cashback = Math.round(totalSpending * cashbackPercent);
 
   return {
     global: {
       pointsPerEuro: globalPointsPerEuro,
       earnedPoints: globalEarnedPoints,
-      cashback
+      cashback,
     },
     organizer: {
       pointsPerEuro: organizerPointsPerEuro,
       earnedPoints: organizerEarnedPoints,
-      cashback
-    }
+      cashback,
+    },
   };
 };
-
-
 
 
 module.exports = {

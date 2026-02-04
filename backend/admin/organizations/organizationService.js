@@ -5,10 +5,10 @@ const Organizations = require("@OrganizationModel");
 const organizationRepo = require("./organizationRepository");
 const { generateMeta } = require("../../helperUtils/responseUtil");
 
-const { formatOrganization } = require("./formatter/formatOrganization");
+const { formatOrganization, formatNotificationImage } = require("./formatter/formatOrganization");
 const { default: mongoose } = require("mongoose");
 const { invalidate } = require("@redisCache");
- const ACTIVE_ORGANIZATIONS_CACHE_KEY = "organizations:active";
+const ACTIVE_ORGANIZATIONS_CACHE_KEY = "organizations:active";
 const createOrganization = async ({ data, timezone }) => {
   let org = await organizationRepo.createOrganization(data);
   return formatOrganization(org, [], timezone);
@@ -87,9 +87,15 @@ const getOrganizationsByAdmin = async ({ companyOrganizer, page, limit, keyword,
   if (keyword && keyword.trim() !== "") {
     Object.assign(
       query,
-      buildKeywordQueryFromModels(Organizations, keyword)
+      buildKeywordQueryFromModels(
+        [
+          { schema: Organizations.schema }
+        ],
+        keyword
+      )
     );
   }
+
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
@@ -106,7 +112,6 @@ const getOrganizationsByAdmin = async ({ companyOrganizer, page, limit, keyword,
   const { totalFiltered, total, active, inactive } = counts;
   let meta = generateMeta(page, limit, totalFiltered);
   meta.tagsCount = { total, active, inactive };
-
   organizations = organizations.map(org => formatOrganization(org, [], timezone));
 
   return {
@@ -167,7 +172,7 @@ const updateOrganization = async ({ id, data, timezone }) => {
     description,
     title,
   } = data;
-await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
+  await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -291,27 +296,30 @@ const getOrganizationNamesByCompanyOrganizer = async (companyOrganizer) => {
   return await organizationRepo.getOrganizationNamesByCompanyOrganizer(companyOrganizer);
 }
 
-    // ---------- DEEP MERGE FUNCTION ----------
-    const deepMergeSafe = (target = {}, source = {}) => {
-      const result = { ...target };
-      for (const key in source) {
-        const value = source[key];
-        if (value === undefined) continue;
-        if (
-          value &&
-          typeof value === "object" &&
-          !Array.isArray(value) &&
-          typeof target[key] === "object" &&
-          !Array.isArray(target[key])
-        ) {
-          result[key] = deepMergeSafe(target[key], value);
-        } else {
-          result[key] = value;
-        }
-      }
-      return result;
-    };
-
+// ---------- DEEP MERGE FUNCTION ----------
+const deepMergeSafe = (target = {}, source = {}) => {
+  const result = { ...target };
+  for (const key in source) {
+    const value = source[key];
+    if (value === undefined) continue;
+    if (
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      typeof target[key] === "object" &&
+      !Array.isArray(target[key])
+    ) {
+      result[key] = deepMergeSafe(target[key], value);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+};
+const getOrganizationNotifications = async (id, timezone) => {
+  let notifications = await organizationRepo.getOrganizationNotifications(id);
+  return formatNotificationImage(notifications, [], timezone);
+};
 module.exports = {
   createOrganization,
   getOrganizations,
@@ -323,5 +331,6 @@ module.exports = {
   checkOrganizationExists,
   getOrganizationsAsStaff,
   getOrganizationDetails,
+  getOrganizationNotifications,
   getOrganizationNamesByCompanyOrganizer
 };

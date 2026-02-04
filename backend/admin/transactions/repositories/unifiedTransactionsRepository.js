@@ -345,6 +345,19 @@ const findTransactionsByUserId = async (userId) => {
   return UnifiedWalletTransactions.find({ user: userId }).sort({ createdAt: -1 });
 };
 
+const getTotalClosingBalanceByOrganizationId = async (organizationId) => {
+  try {
+    const objectId =new mongoose.Types.ObjectId(organizationId);
+    const result = await UnifiedWalletTransactions.aggregate([
+      { $match: { organization: objectId } }, 
+      { $group: { _id: null, totalClosingBalance: { $sum: "$closingBalance" } } } 
+    ]);
+    return result.length > 0 ? result[0].totalClosingBalance : 0;
+  } catch (error) {
+    console.error("Error fetching total closing balance:", error);
+    return 0; 
+  }
+};
 
 
 module.exports = {
@@ -356,4 +369,5 @@ module.exports = {
   findByIdAndUpdate,
   deleteTransactionById,
   findTransactionsByUserId,
+  getTotalClosingBalanceByOrganizationId
 };

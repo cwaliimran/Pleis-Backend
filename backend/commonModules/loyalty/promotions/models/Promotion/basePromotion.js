@@ -67,7 +67,7 @@ basePromotionsSchema.index(
   {
     companyOrganizer: 1,
     "recurringMeta.parentPromotion": 1,
-    startDate: 1,
+    // startDate: 1,
   },
   { unique: true, sparse: true }
 );
