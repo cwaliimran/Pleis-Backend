@@ -112,7 +112,6 @@ const getOrganizationsByAdmin = async ({ companyOrganizer, page, limit, keyword,
   const { totalFiltered, total, active, inactive } = counts;
   let meta = generateMeta(page, limit, totalFiltered);
   meta.tagsCount = { total, active, inactive };
-  console.log("organizations", organizations);
   organizations = organizations.map(org => formatOrganization(org, [], timezone));
 
   return {
