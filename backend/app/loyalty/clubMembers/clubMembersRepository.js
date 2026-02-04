@@ -296,6 +296,17 @@ const getWallet = async (userId, companyOrganizer) => {
   return wallet;
 };
 
+const getWalletsBulk = async (
+  userId,
+  organizerIds
+) => {
+  return ClubMembers.find({
+    user: userId,
+    companyOrganizer: { $in: organizerIds },
+  }).populate("level");
+};
+
+
 // ==========================================================
 // OTHER CLUB MEMBER OPERATIONS (unchanged)
 // ==========================================================
@@ -624,6 +635,7 @@ module.exports = {
   leaveClub,
   updatePoints,
   getWallet,
+  getWalletsBulk,
   isClubMember,
   isClubMemberWithWallet,
   countClubMembers,
@@ -636,5 +648,5 @@ module.exports = {
   getFollowedClubIds,
   getUserJoinedClubsWithPointsUsingFacet,
   getClubMemberUserIdsByCompanyOrganizer,
-  getClubMembersForUsers
+  getClubMembersForUsers,
 };
