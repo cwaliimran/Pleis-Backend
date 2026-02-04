@@ -6,7 +6,7 @@ const { getPromotionsForHome } = require("../../loyalty/promotions/promotionsSer
 const getLoyaltyAndGlobalLoyaltyPromotions = async ({ page, limit, userId, timezone }) => {
 
     let [loyaltyPromotions, globalLoyaltyPromotions] = await Promise.all([
-        getPromotionsForHome({ page, limit, timezone }),
+        getPromotionsForHome({ userId, page, limit, timezone }),
         getGlobalPromotionsForHomeService({
             userId,
             limit,

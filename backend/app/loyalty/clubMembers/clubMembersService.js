@@ -101,6 +101,7 @@ const getCompanyProfileWithLoyaltyInfo = async (
     }),
 
     getPromotionsByCompanyOrganizerService({
+      userId,
       page: 1,
       limit: 10,
       timezone,
