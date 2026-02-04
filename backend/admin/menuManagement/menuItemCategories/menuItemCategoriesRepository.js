@@ -18,13 +18,19 @@ const createCategory = async (data) => {
 };
 
 // Get all with filters
-const getCategoriesWithFilters = async (query, skip, limit) => {
-  const cacheKey = buildMenuItemCategoriesCacheKey({
+const getCategoriesWithFilters = async (query, skip, limit,keyword) => {
+   let cacheKey = buildMenuItemCategoriesCacheKey({
     scope: "admin",
     skip,
     limit,
   });
-
+  const filters = [];
+  if (keyword) filters.push(`keyword=${keyword}`);
+  if (query.status && query.status['$ne']) filters.push(`status=${query.status['$ne']}`);
+  if (query.createdAt && query.createdAt['$gte']) filters.push(`createdAt=${query.createdAt['$gte']}`);
+    if (filters.length > 0) {
+    cacheKey = `${cacheKey}:${filters.join(":")}`;
+  }
   return cache({
     namespace: cacheKey,
     ttl: 86400, // 1 day

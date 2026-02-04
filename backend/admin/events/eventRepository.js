@@ -613,7 +613,23 @@ const getTotalEventCountByOrganizationId = async (organizationId) => {
     return 0; // Return 0 if there was an error
   }
 };
-
+const getLatestEventByOrganization = async (organizations) => {
+  try {
+    const organizationIds = organizations.map(org => org._id);
+    const latestEvents = await Events.find({
+      "basicInfo.organization": { $in: organizationIds },
+    })
+      .sort({ 'schedule.startDateTime': -1 })
+      .limit(1);
+    if (latestEvents.length === 0) {
+      return [];
+    }
+    return latestEvents;
+  } catch (error) {
+    console.error('Error fetching latest event:', error);
+    throw new Error('Error fetching latest event');
+  }
+};
 
 module.exports = {
   createEvent,
@@ -633,6 +649,7 @@ module.exports = {
   getEventRevenueAnalytics,
   getTicketTypeStats,
   getScannedTicketProgress,
-  getTotalEventCountByOrganizationId
+  getTotalEventCountByOrganizationId,
+  getLatestEventByOrganization
 
 };

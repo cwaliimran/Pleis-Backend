@@ -31,7 +31,8 @@ const getCategories = async ({ page, limit, keyword, status, date }) => {
       categoryRepo.getCategoriesWithFilters(
         query,
         skip,
-        limit === 0 ? 0 : limit
+        limit === 0 ? 0 : limit,
+        keyword
       ),
       categoryRepo.countCategories(query),
       categoryRepo.countCategories({ status: { $ne: "deleted" } }),

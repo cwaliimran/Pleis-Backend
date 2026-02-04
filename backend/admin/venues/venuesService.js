@@ -22,139 +22,153 @@ const createVenue = async (data) => {
 
 const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, organization }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-  const cacheKey = buildVenuesCacheKey({
+  let cacheKey = buildVenuesCacheKey({
     scope: "admin",
     skip,
     limit,
   });
+  const filters = [];
+
+  if (keyword) filters.push(`keyword=${keyword}`);
+  if (status) filters.push(`status=${status}`);
+  if (date) filters.push(`date=${date}`);
+  if (userId) filters.push(`userId=${userId}`);
+  if (organization) filters.push(`organization=${organization}`);
+  if (pinned !== undefined) filters.push(`pinned=${pinned}`);
+  
+
+  // Concatenate filters to the cache key if they are applied
+  if (filters.length > 0) {
+    cacheKey = `${cacheKey}:${filters.join(":")}`;
+  }
 
   return cache({
     namespace: cacheKey,
     ttl: 86400, // 1 day
 
     fetchFn: async () => {
-  const pipeline = [
-    // Join with Organizations collection
-    {
-      $lookup: {
-        from: "organizations",
-        localField: "organization",
-        foreignField: "_id",
-        as: "organizationData",
-        pipeline: [
-          { $project: { basicInfo: 1 } }
-        ]
+      const pipeline = [
+        // Join with Organizations collection
+        {
+          $lookup: {
+            from: "organizations",
+            localField: "organization",
+            foreignField: "_id",
+            as: "organizationData",
+            pipeline: [
+              { $project: { basicInfo: 1 } }
+            ]
+          }
+        },
+        // Flatten organizationData array for easier matching
+        { $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true } },
+        // Match user access (venue creator OR org creator OR org staff)
+        // {
+        //   $match: {
+        //     $or: [
+        //       { creator: new mongoose.Types.ObjectId(userId) },
+        //       { "organizationData.creator": new mongoose.Types.ObjectId(userId) },
+        //       { "organizationData.staff.user": new mongoose.Types.ObjectId(userId) }
+        //     ]
+        //   }
+        // }
+      ];
+
+      // Apply filters
+      if (organization) {
+        pipeline.push({
+          $match: {
+            organization: new mongoose.Types.ObjectId(organization)
+          }
+        });
       }
-    },
-    // Flatten organizationData array for easier matching
-    { $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true } },
-    // Match user access (venue creator OR org creator OR org staff)
-    // {
-    //   $match: {
-    //     $or: [
-    //       { creator: new mongoose.Types.ObjectId(userId) },
-    //       { "organizationData.creator": new mongoose.Types.ObjectId(userId) },
-    //       { "organizationData.staff.user": new mongoose.Types.ObjectId(userId) }
-    //     ]
-    //   }
-    // }
-  ];
 
-  // Apply filters
-  if (organization) {
-    pipeline.push({
-      $match: {
-        organization: new mongoose.Types.ObjectId(organization)
+      if (status) {
+        pipeline.push({ $match: { status } });
+      } else {
+        pipeline.push({ $match: { status: { $ne: "deleted" } } });
       }
-    });
-  }
 
-  if (status) {
-    pipeline.push({ $match: { status } });
-  } else {
-    pipeline.push({ $match: { status: { $ne: "deleted" } } });
-  }
-
-  if (date) {
-    const start = new Date(date);
-    const end = new Date(new Date(date).setDate(start.getDate() + 1));
-    pipeline.push({
-      $match: {
-        createdAt: { $gte: start, $lt: end }
+      if (date) {
+        const start = new Date(date);
+        const end = new Date(new Date(date).setDate(start.getDate() + 1));
+        pipeline.push({
+          $match: {
+            createdAt: { $gte: start, $lt: end }
+          }
+        });
       }
-    });
-  }
 
-  const keywordMatch = buildKeywordQueryFromModels(
-    [
-      { schema: Venues.schema },                       // Venue fields
-      { schema: Organizations.schema, prefix: 'organizationData.' } // Organization fields (with prefix)
-    ],
-    keyword
-  );
+      const keywordMatch = buildKeywordQueryFromModels(
+        [
+          { schema: Venues.schema },                       // Venue fields
+          { schema: Organizations.schema, prefix: 'organizationData.' } // Organization fields (with prefix)
+        ],
+        keyword
+      );
 
-  if (Object.keys(keywordMatch).length) {
-    pipeline.push({ $match: keywordMatch });
-  }
-
-
-  if (pinned !== undefined) {
-    pipeline.push({
-      $match: {
-        $or: [
-          { pinned: false },
-          { pinned: null },
-          { pinned: { $exists: false } }
-        ]
+      if (Object.keys(keywordMatch).length) {
+        pipeline.push({ $match: keywordMatch });
       }
-    });
-  }
-
-  pipeline.push({ $sort: { createdAt: -1 } });
-
-  // Apply pagination + counts using $facet
-  pipeline.push({
-    $facet: {
-      data: [
-        { $skip: skip },
-        ...(limit === 0 ? [] : [{ $limit: limit }])
-      ],
-      totalFiltered: [{ $count: "count" }]
-    }
-  });
 
 
-  const result = await Venues.aggregate(pipeline)
+      if (pinned !== undefined) {
+        pipeline.push({
+          $match: {
+            $or: [
+              { pinned: false },
+              { pinned: null },
+              { pinned: { $exists: false } }
+            ]
+          }
+        });
+      }
+
+      pipeline.push({ $sort: { createdAt: -1 } });
+
+      // Apply pagination + counts using $facet
+      pipeline.push({
+        $facet: {
+          data: [
+            { $skip: skip },
+            ...(limit === 0 ? [] : [{ $limit: limit }])
+          ],
+          totalFiltered: [{ $count: "count" }]
+        }
+      });
 
 
-  const venues = result[0]?.data || [];
-  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+      const result = await Venues.aggregate(pipeline)
 
-  // Additional counts for meta (active/inactive/total by userId as creator)
-  const [total, active, inactive] = await Promise.all([
-    Venues.countDocuments({ creator: userId, status: { $ne: "deleted" } }),
-    Venues.countDocuments({ status: "active", creator: userId }),
-    Venues.countDocuments({ status: "inactive", creator: userId })
-  ]);
 
-  const formattedVenues = venues.map(venue => {
-    const venueDoc = new Venues(venue);
-    const formattedVenue = venueDoc.formatResponse();
+      const venues = result[0]?.data || [];
+      const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-    if (venue.organizationData) {
-      formattedVenue.organization = formatOrganization(venue.organizationData);
-    }
+      // Additional counts for meta (active/inactive/total by userId as creator)
+      const [total, active, inactive] = await Promise.all([
+        Venues.countDocuments({ creator: userId, status: { $ne: "deleted" } }),
+        Venues.countDocuments({ status: "active", creator: userId }),
+        Venues.countDocuments({ status: "inactive", creator: userId })
+      ]);
 
-    return formattedVenue;
+      const formattedVenues = venues.map(venue => {
+        const venueDoc = new Venues(venue);
+        const formattedVenue = venueDoc.formatResponse();
 
-  });
+        if (venue.organizationData) {
+          formattedVenue.organization = formatOrganization(venue.organizationData);
+        }
 
-  const meta = generateMeta(page, limit, totalFiltered);
-  meta.venuesCount = { total, active, inactive };
+        return formattedVenue;
 
-  return {
-    venues: formattedVenues,
-    meta
+      });
+
+      const meta = generateMeta(page, limit, totalFiltered);
+      meta.venuesCount = { total, active, inactive };
+
+      return {
+        venues: formattedVenues,
+        meta
       };
     },
   });
