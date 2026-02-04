@@ -35,7 +35,7 @@ const getChallenges = async ({ page, limit, keyword, status, date, timezone }) =
   }
 
   // Get challenges with population
-  const challenges = await challengeRepo.getChallengesWithFilters(query, skip, limit);
+  const challenges = await challengeRepo.getChallengesWithFilters(query, skip, limit,date,status,keyword,);
 
   // Get counts
   const [total, active, inactive, totalFiltered] = await Promise.all([

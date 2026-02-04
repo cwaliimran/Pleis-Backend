@@ -186,6 +186,42 @@ const getUserJoinedClubs = async (userId) => {
 const giftPoints = async (query = {}) => {
   return ClubMembers.giftPoints(query);
 };
+const getUserJoinedClubsall = async (userId) => {
+  return ClubMembers.aggregate([
+    {
+      $match: { user: userId }  // Match the ClubMembers based on userId
+    },
+    {
+      $lookup: {
+        from: "users",  // Specify the Users collection to join
+        localField: "companyOrganizer",  // Match the companyOrganizer field in ClubMembers
+        foreignField: "_id",  // Match the _id field in the Users collection
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              "companyDetails.name": 1
+            }
+          }
+        ],
+        as: "companyOrganizer"  // Add the matched documents as companyOrganizerDetails
+      }
+    },
+    {
+      $unwind: {
+        path: "$companyOrganizer",  // Flatten the companyOrganizerDetails array
+        preserveNullAndEmptyArrays: true  // Keep the field if no match is found
+      }
+    },
+    {
+      $project: {
+        companyOrganizer: "$companyOrganizer",  // Rename the companyOrganizerDetails to companyOrganizer
+        status: 1  // Include the status field
+      }
+    }
+  ]);
+};
+
 
 // ==========================================================
 // GET COMPANY LOYALTY SETTINGS (tier model + pointValuePercentage)
@@ -193,7 +229,6 @@ const giftPoints = async (query = {}) => {
 const getCompanyLoyaltyInfo = async (companyId) => {
   const company = await User.findById(companyId)
     .select("companyDetails.loyaltySettings.model companyDetails.loyaltySettings.pointValuePercentage");
-    console.log("company", company)
   return {
     tierKey: company?.companyDetails?.loyaltySettings?.model || "essential",
     pointValuePercentage: company?.companyDetails?.loyaltySettings?.pointValuePercentage || 0
@@ -207,5 +242,6 @@ module.exports = {
   isClubMember,
   getUserJoinedClubs,
   giftPoints,
-  getCompanyLoyaltyInfo
+  getCompanyLoyaltyInfo,
+  getUserJoinedClubsall
 };
