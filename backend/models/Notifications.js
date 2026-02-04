@@ -24,6 +24,7 @@ const NotificationTypes = {
   REVIEW_UPDATED: "reviewUpdated",
   HIGHLIGHT_CREATED: "highlightCreated",
   SUPPORT_REQUEST: "supportRequest",
+  NEW_MENU_ITEMS_ORDER: "newMenuItemsOrder",
 };
 
 // Define the NotificationSchema
