@@ -45,12 +45,19 @@ const createChallenge = async (data) => {
 };
 
 // Get challenges with population
-const getChallengesWithFilters = async (query = {}, skip = 0, limit = 10) => {
-    const cacheKey = buildGlobalLoyaltyChallengesCacheKey({
+const getChallengesWithFilters = async (query = {}, skip = 0, limit = 10,date,status,keyword) => {
+    let cacheKey = buildGlobalLoyaltyChallengesCacheKey({
     scope: "admin",
     skip,
     limit,
   });
+  const filters = [];
+    if (keyword) filters.push(`keyword=${keyword}`);
+  if (status) filters.push(`status=${status}`);
+  if (date) filters.push(`date=${date}`);
+  if (filters.length > 0) {
+    cacheKey = `${cacheKey}:${filters.join(":")}`;
+  }
   return cache({
     namespace: cacheKey,
     ttl: 86400, // 1 day

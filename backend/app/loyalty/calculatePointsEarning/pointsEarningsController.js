@@ -7,7 +7,6 @@ const {
 } = require("@utils/responseUtil");
 
 const service = require("./pointsEarningsService");
-const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 
 
@@ -21,17 +20,6 @@ const calculatePoints = async (req, res) => {
       totalSpending
     });
  
-    // const recipientIds = Array.isArray(userId) ? userId : [userId.toString()];
-
-   
-    // await sendUserNotifications({
-    //   recipientIds: recipientIds,
-    //   title: "Loyalty Points Update",
-    //   body: `A new Loyalty points earning has been calculated.Go check it out!`,
-    //   data: { type: NotificationTypes.HOME, objectType: "group" },
-    //   senderId: userId,
-    //   objectId: userId,
-    // });
     return sendResponse({
       res,
       statusCode: 200,

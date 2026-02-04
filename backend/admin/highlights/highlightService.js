@@ -27,13 +27,19 @@ const getHighlights = async ({ page, limit, keyword, status, creator, date }) =>
       $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
     };
   }
-  // if (keyword) {
-  //   query.$or = [
-  //     { title: { $regex: keyword, $options: "i" } },
-  //     { description: { $regex: keyword, $options: "i" } },
-  //   ];
-  // }
-  // logger.log("query",query)
+  if (keyword) {
+    query.$or = [
+      { title: { $regex: keyword, $options: "i" } },
+      {
+        "object.basicInfo.name": {
+          $regex: keyword,  // Apply regex to the name field
+          $options: "i"     // Case insensitive
+        }
+      }
+    ];
+  }
+
+
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   let [highlights, getHighlightsCounts] =
@@ -101,7 +107,7 @@ const getPublicHighlights = async ({ page, limit, keyword, userLocation }) => {
 };
 
 const updateHighlight = async (id, data) => {
-  
+
   await invalidate(ACTIVE_HIGHLIGHTS_CACHE_KEY);
   const highlight = await highlightRepo.findHighlightDocById(id);
   if (!highlight) return null;

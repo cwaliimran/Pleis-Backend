@@ -4,6 +4,12 @@ const Venues = require("@VenuesModel");
 const Organizations = require("@OrganizationModel");
 const Menus = require("@MenusModel");
 const { getModelCounts } = require("@dbUtils/queryUtil");
+const { getPromotionsByCreator } = require("../loyalty/promotions/promotionsRepository");
+const { getNotificationByOrganizationId } = require("../notifications/notificationsRepository");
+const { getTotalEventCountByOrganizationId, getLatestEventByOrganization } = require("../events/eventRepository");
+const { getTotalTicketsPurchasedByOrganizationId } = require("../ticketing/ticketingsRepository");
+const { getTotalEngagementEventsByOrganizationId } = require("@appEngagement/engagementEventsRepository");
+const { getTotalClosingBalanceByOrganizationId } = require("../transactions/repositories/unifiedTransactionsRepository");
 
 // Create
 const createOrganization = async (data) => {
@@ -37,7 +43,8 @@ const findOrganizationById = async (id) => {
 
 
 const getOrganizationDetails = async (id) => {
-  const [organization, primaryVenue] = await Promise.all([
+  // Fetch organization, primary venue, and other related data concurrently
+  const [organization, primaryVenue, events, ticketsSold, views, revenue] = await Promise.all([
     Organizations.findById(id)
       .populate("otherInfo.tags")
       .populate("otherInfo.categories")
@@ -49,22 +56,27 @@ const getOrganizationDetails = async (id) => {
           select: "title",
         },
       }),
-    Venues.findOne({
-      organization: id,
-      isPrimary: true,
-    }).populate("venueType"),
+    Venues.findOne({ organization: id, isPrimary: true }).populate("venueType"),
+    getTotalEventCountByOrganizationId(id),
+    getTotalTicketsPurchasedByOrganizationId(id),
+    getTotalEngagementEventsByOrganizationId(id),
+    getTotalClosingBalanceByOrganizationId(id)
   ]);
 
-  if (!organization) return null;
+  // Convert the organization to a plain object if it's a Mongoose document
+  const orgObj = organization.toObject ? organization.toObject() : organization;
 
-  const orgObj = organization.toObject
-    ? organization.toObject()
-    : organization;
-
+  // Attach related data to the organization object
   orgObj.venue = primaryVenue ? primaryVenue.formatResponse() : null;
+  orgObj.events = events; // Attach total events count
+  orgObj.ticketsSold = ticketsSold; // Attach total tickets sold
+  orgObj.views = views; // Attach total views
+  orgObj.revenue = revenue; // Attach total revenue
 
   return orgObj;
 };
+
+
 
 
 
@@ -83,10 +95,24 @@ const findByIdAndUpdate = async (id, data) => {
 const getOrganizationsAsStaff = async (userId) => {
   const organizations = await Organizations.find({
     $or: [
-      { creator: userId },
-      { "staff.user": userId }
+      { creator: userId }, // Find organizations where the user is the creator
+      { "staff.user": userId } // Find organizations where the user is part of the staff
     ]
-  }).select("basicInfo staff").lean();
+  })
+    .lean() // Ensure you get plain JavaScript objects
+    .populate("otherInfo.tags") // Populate tags under otherInfo
+    .populate("otherInfo.categories") // Populate categories under otherInfo
+    .populate({
+      path: "creator", // Populate the creator field
+      select: "firstName lastName email companyDetails", // Select specific fields for creator
+      populate: {
+        path: "companyDetails.suppliers", // Populate suppliers within companyDetails
+        select: "title", // Select only the title field for suppliers
+      },
+    });
+
+
+
 
   // For each organization, filter staff to only include the current user
   return organizations.map(org => {
@@ -148,6 +174,10 @@ const getOrgCompanyOrganizer = async (organizationId) => {
   const org = await Organizations.findById(organizationId).select("creator").lean();
   return org ? org.creator : null;
 }
+const getOrganizationNotifications = async (id) => {
+  const notifications = await getNotificationByOrganizationId(id);
+  return notifications;
+};
 
 module.exports = {
   createOrganization,
@@ -163,5 +193,6 @@ module.exports = {
   getMenuIdsByCompanyOrganizer,
   getOrganizationNamesByCompanyOrganizer,
   getStaffIdsByOrganization,
-  getOrgCompanyOrganizer
+  getOrgCompanyOrganizer,
+  getOrganizationNotifications
 };

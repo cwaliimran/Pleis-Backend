@@ -2,6 +2,7 @@ const { getWithFilters, getModelCounts } = require("@dbUtils/queryUtil");
 const TicketingsModel = require("@TicketingsModel");
 const { TicketingBookings } = require("@TicketingBookingsModel");
 const { default: mongoose } = require("mongoose");
+const { TicketingOrders } = require("@TicketingOrdersModel");
 
 // Create
 const createTicketing = async (data) => {
@@ -673,6 +674,24 @@ const getTicketTypeCapacities = async (eventId) => {
 };
 
 
+const getTotalTicketsPurchasedByOrganizationId = async (organizationId) => {
+  try {
+    // Ensure the organizationId is converted to ObjectId if it's a string
+    const objectId = new mongoose.Types.ObjectId(organizationId);
+
+    // Aggregate the total number of tickets purchased for the given organizationId
+    const result = await TicketingOrders.aggregate([
+      { $match: { organization: objectId, purpose: "eventTicketPurchase" } }, // Filter by organization and ticket purchase purpose
+      { $group: { _id: null, totalTickets: { $sum: "$ticketsPurchased" } } } // Sum the ticketsPurchased field
+    ]);
+
+    // If no results found, return 0, else return the total tickets
+    return result.length > 0 ? result[0].totalTickets : 0;
+  } catch (error) {
+    console.error("Error fetching total tickets purchased:", error);
+    return 0; // Return 0 if there was an error
+  }
+};
 
 module.exports = {
   createTicketing,
@@ -689,5 +708,6 @@ module.exports = {
   getOrganizationIdFromTicketId,
   getTicketsByOrderIds,
   getEventsTicketingsWithFilters,
-  getTicketSalesStats
+  getTicketSalesStats,
+  getTotalTicketsPurchasedByOrganizationId
 };

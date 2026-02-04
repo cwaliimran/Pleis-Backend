@@ -333,6 +333,32 @@ const getOrganizationNamesByCompanyOrganizer = async (req, res) => {
     });
   }
 }
+const getOrganizationNotifications = async (req, res) => {
+  const { id } = req.params;
+  let { timezone } = req.user;
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })
+  )
+    return;
+  const notifications = await organizationService.getOrganizationNotifications(id, timezone);
+  if (!notifications) {
+    return sendResponse({
+      res,
+      statusCode: 404,
+      translationKey: "organization_notifications_not_found",
+    });
+  }
+
+  return sendResponse({
+    res,
+    statusCode: 200,
+    translationKey: "organization_notifications_fetched_successfully",
+    data: notifications,
+  });
+};
 
 module.exports = {
   createOrganization,
@@ -343,4 +369,5 @@ module.exports = {
   deleteOrganization,
   getOrganizationsAdmin,
   getOrganizationNamesByCompanyOrganizer,
+  getOrganizationNotifications
 };
