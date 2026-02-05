@@ -21,7 +21,8 @@ const { placePreOrderMenuItemsWithReservation } = require("../menuItemsAndOrderi
 const { sendUserNotifications } = require("../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 const { getStaffIdsByOrganization } = require("../../admin/organizations/organizationRepository");
-const createReservation = async (data, session) => {
+const 
+createReservation = async (data, session) => {
   if (!session) throw new Error("session_required");
 
   const { userId, reservationId, partySize, preOrderMenuItems, timezone } = data;

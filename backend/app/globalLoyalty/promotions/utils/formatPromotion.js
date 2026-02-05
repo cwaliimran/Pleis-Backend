@@ -45,7 +45,7 @@ function formatPromotion(promotion, timezone) {
       break;
 
     case "globalClaimPromotion":
-      convertPromotionDates(obj, timezone, "YYYY-MM-DD");
+      convertPromotionDates(obj, timezone, "YYYY-MM-DD hh:mm A");
       break;
   }
 
