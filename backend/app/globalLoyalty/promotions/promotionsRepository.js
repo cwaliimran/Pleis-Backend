@@ -12,7 +12,7 @@ const getWithFilters = async (query, skip = 0, limit = 20) => {
 
   if (limit > 0) pipeline.push({ $limit: limit });
 
-  // Reward lookup for globalClaimPromotion
+  // Reward lookup for globalClaimPromotion from globalrewards collection
   pipeline.push({
     $lookup: {
       from: "globalrewards",
@@ -22,7 +22,17 @@ const getWithFilters = async (query, skip = 0, limit = 20) => {
     }
   });
 
-  // Menu item
+  // Reward lookup again for more detailed data from globalrewards collection
+  pipeline.push({
+    $lookup: {
+      from: "globalrewards",         // Same collection for detailed data
+      localField: "reward",          // Using the joined field from the first lookup
+      foreignField: "_id",           // Matching based on the _id of globalrewards
+      as: "rewardDetails"            // Store result in rewardDetails
+    }
+  });
+
+  // Menu item lookup
   pipeline.push({
     $lookup: {
       from: "menuitems",
@@ -32,7 +42,7 @@ const getWithFilters = async (query, skip = 0, limit = 20) => {
     }
   });
 
-  // Tier limit
+  // Tier limit lookup
   pipeline.push({
     $lookup: {
       from: "globalstatuslevels",
@@ -42,17 +52,20 @@ const getWithFilters = async (query, skip = 0, limit = 20) => {
     }
   });
 
-  // Flatten arrays (always return full data)
+  // Flatten arrays into their respective single object fields
   pipeline.push({
     $addFields: {
-      reward: { $arrayElemAt: ["$reward", 0] },
-      menuItem: { $arrayElemAt: ["$menuItem", 0] },
-      tierLimit: { $arrayElemAt: ["$tierLimit", 0] },
+      reward: { $arrayElemAt: ["$reward", 0] },          // Flatten reward array
+      rewardDetails: { $arrayElemAt: ["$rewardDetails", 0] },  // Flatten rewardDetails array
+      menuItem: { $arrayElemAt: ["$menuItem", 0] },      // Flatten menuItem array
+      tierLimit: { $arrayElemAt: ["$tierLimit", 0] },    // Flatten tierLimit array
     }
   });
 
+  // Return the aggregated data
   return await GlobalBasePromotion.aggregate(pipeline).allowDiskUse(true);
 };
+
 
 module.exports = {
   getWithFilters,

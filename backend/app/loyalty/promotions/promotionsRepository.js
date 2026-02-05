@@ -348,6 +348,15 @@ const getPromotionsForHome = async ({
       },
     },
     { $unwind: { path: "$menuItem", preserveNullAndEmptyArrays: true } },
+        {
+      $lookup: {
+        from: "rewards",
+        localField: "reward",
+        foreignField: "_id",
+        as: "reward",
+      },
+    },
+    { $unwind: { path: "$reward", preserveNullAndEmptyArrays: true } },
 
     { $sort: { createdAt: -1 } },
 

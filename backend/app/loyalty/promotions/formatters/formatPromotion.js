@@ -31,7 +31,7 @@ function formatPromotion(promotion, timezone, tierKey) {
             delete obj.menuItem;
             delete obj.extraPoints;
             delete obj.discountedPrice;
-            convertPromotionDates(obj, timezone, "YYYY-MM-DD hh:mm A");
+            convertPromotionDates(obj, timezone, "YYYY-MM-DD");
             break;
 
         case "buyMenuItem":
@@ -48,6 +48,7 @@ function formatPromotion(promotion, timezone, tierKey) {
             delete obj.extraPoints;
             delete obj.discountedPrice;
             delete obj.menuItem;
+            obj.reward.image= getFullImageUrl(obj.reward?.image);
             convertPromotionDates(obj, timezone, "YYYY-MM-DD");
             break;
         default:
