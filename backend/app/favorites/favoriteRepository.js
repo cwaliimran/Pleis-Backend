@@ -1,7 +1,8 @@
 const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { getWithFilters } = require('@dbUtils/queryUtil');
 const { getMinTicketPricesByEventIds } = require("../ticketing/ticketingsRepository");
-
+const { Events } = require("@EventsModel");
+const EngagementEvents = require("@EngagementEventsModel");
 /**
  * Toggle favorite for a user and target
  * If already favorited → remove it
@@ -123,9 +124,108 @@ const refLookups = {
 
 }
 
+
+
+const getUserEventEngagementDetails = async (userId) => {
+    try {
+        // Aggregate everything in one database call
+        const eventsWithEngagementStats = await Favorites.aggregate([
+            {
+                // Step 1: Match favorite events for the given user and targetType = "event"
+                $match: {
+                    user: new mongoose.Types.ObjectId(userId),
+                    targetType: "event"
+                }
+            },
+            {
+                // Step 2: Look up the event details from the "events" collection
+                $lookup: {
+                    from: "events",  // Assuming the event collection is called "events"
+                    localField: "targetId",  // From the favorites collection
+                    foreignField: "_id",  // Match the targetId to _id in events
+                    pipeline: [
+                        {
+                            $project: {
+                                "basicInfo.title": 1,
+                                _id: 1
+                            }
+                        }
+                    ],
+                    as: "eventDetails"  // The resulting array of events will be stored in "eventDetails"
+                }
+            },
+            {
+                // Step 3: Look up engagement stats for the matched events
+                $lookup: {
+                    from: "engagementevents",  // Engagement stats collection
+                    let: { eventId: "$targetId" },  // Using the targetId (event ID)
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: { $eq: ["$entityId", "$$eventId"] },  // Match the entityId (event ID)
+                                action: { $in: ["view", "favorite", "share", "open"] }  // Filter by specific actions
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: "$entityId",  // Group by event ID
+                                viewCount: { $sum: { $cond: [{ $eq: ["$action", "view"] }, 1, 0] } },  // Count views
+                                favoriteCount: { $sum: { $cond: [{ $eq: ["$action", "favorite"] }, 1, 0] } },  // Count favorites
+                                shareCount: { $sum: { $cond: [{ $eq: ["$action", "share"] }, 1, 0] } },  // Count shares
+                                openCount: { $sum: { $cond: [{ $eq: ["$action", "open"] }, 1, 0] } }  // Count opens
+                            }
+                        }
+                    ],
+                    as: "engagementStats"  // Resulting engagement stats will be stored in "engagementStats"
+                }
+            },
+            {
+                // Step 4: Flatten the arrays from the lookup and set defaults for missing stats
+                $addFields: {
+                    eventDetails: { $arrayElemAt: ["$eventDetails", 0] },  // Get the first (and only) event object
+                    views: { $ifNull: [{ $arrayElemAt: ["$engagementStats.viewCount", 0] }, 0] },
+                    favorites: { $ifNull: [{ $arrayElemAt: ["$engagementStats.favoriteCount", 0] }, 0] },
+                    shares: { $ifNull: [{ $arrayElemAt: ["$engagementStats.shareCount", 0] }, 0] },
+                    opens: { $ifNull: [{ $arrayElemAt: ["$engagementStats.openCount", 0] }, 0] }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    eventDetails: 1,  
+                    views: 1,
+                    favorites: 1,
+                    shares: 1,
+                    opens: 1
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    views: { $sum: "$views" },
+                    favorites: { $sum: "$favorites" },
+                    shares: { $sum: "$shares" },
+                    opens: { $sum: "$opens" },
+                    events: { $push: { eventDetails: "$eventDetails", views: "$views", favorites: "$favorites", shares: "$shares", opens: "$opens" } }
+                }
+            }
+        ]);
+
+        // If no favorite events or engagement stats, return an empty object
+        if (eventsWithEngagementStats.length === 0) return {};
+
+        return eventsWithEngagementStats[0];
+    } catch (error) {
+        console.error("Error getting user event engagement details:", error);
+        throw error;
+    }
+};
+
+
 module.exports = {
     toggleFavorite,
     isFavorited,
     countFavorites,
     getUserFavorites,
+    getUserEventEngagementDetails
 };

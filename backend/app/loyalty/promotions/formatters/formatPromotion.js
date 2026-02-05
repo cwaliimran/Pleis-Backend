@@ -34,21 +34,37 @@ function formatPromotion(promotion, timezone, tierKey) {
             convertPromotionDates(obj, timezone, "YYYY-MM-DD hh:mm A");
             break;
 
-        case "buyMenuItem":
+        case "buyMenuItemPromotion":
             delete obj.pointsMultiplier;
             delete obj.discountedPrice;
-            convertPromotionDates(obj, timezone, "YYYY-MM-DD");
+            obj.menuItem.image= getFullImageUrl(obj.menuItem?.image);
+            convertPromotionDates(obj, timezone, "YYYY-MM-DD hh:mm A");
             break;
 
         case "productSale":
             delete obj.extraPoints;
-            convertPromotionDates(obj, timezone, "YYYY-MM-DD");
+             obj.menuItem.image= getFullImageUrl(obj.menuItem?.image);
+            convertPromotionDates(obj, timezone, "YYYY-MM-DD hh:mm A");
             break;
         case "claimPromotion":
             delete obj.extraPoints;
             delete obj.discountedPrice;
             delete obj.menuItem;
-            convertPromotionDates(obj, timezone, "YYYY-MM-DD");
+            obj.reward.image= getFullImageUrl(obj.reward?.image);
+            convertPromotionDates(obj, timezone, "YYYY-MM-DD hh:mm A");
+            break;
+            
+        case  "globalHappyHourPromotion":
+            delete obj.menuItem;
+            delete obj.extraPoints;
+            convertPromotionDates(obj, timezone, "YYYY-MM-DD hh:mm A");
+            break;
+        case "globalClaimPromotion":
+            delete obj.extraPoints;
+            delete obj.discountedPrice;
+            delete obj.menuItem;
+            obj.reward.image= getFullImageUrl(obj.reward?.image);
+            convertPromotionDates(obj, timezone, "YYYY-MM-DD hh:mm A");
             break;
         default:
             break;

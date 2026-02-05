@@ -692,6 +692,30 @@ const getTotalTicketsPurchasedByOrganizationId = async (organizationId) => {
     return 0; // Return 0 if there was an error
   }
 };
+const getTotalPurchases = async (userId) => {
+  try {
+    // Fetch all orders for the user and sum the total from each order
+    const result = await TicketingOrders.aggregate([
+      {
+        $match: {
+          user: new mongoose.Types.ObjectId(userId), // Match by userId
+          status: "paid",  // Optionally, you can filter by status like 'paid'
+        }
+      },
+      {
+        $group: {
+          _id: null,  // Group by nothing to get a single result
+          totalPurchases: { $sum: "$orderPricing.total" }  // Sum up the total from each order
+        }
+      }
+    ]);
+    // If result is empty, return 0
+    return result.length > 0 ? result[0].totalPurchases : 0;
+  } catch (error) {
+    console.error("Error getting total purchases:", error);
+    throw error;
+  }
+};
 
 module.exports = {
   createTicketing,
@@ -709,5 +733,6 @@ module.exports = {
   getTicketsByOrderIds,
   getEventsTicketingsWithFilters,
   getTicketSalesStats,
-  getTotalTicketsPurchasedByOrganizationId
+  getTotalTicketsPurchasedByOrganizationId,
+  getTotalPurchases
 };
