@@ -13,6 +13,7 @@ const { formatUserWallet } = require("../clubMembers/formatters/formatUserWallet
 const { generateMeta } = require("@utils/responseUtil");
 const formatPromotion = require("./formatters/formatPromotion");
 const { normalizePromotionClaimMeta } = require("./formatters/normalizePromotionClaimMeta");
+const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
 
 
 // Count
@@ -498,11 +499,10 @@ const getPromotions = async ({
   };
 };
 
-
-
 const getActiveLoyaltyHappyHourPromotion = async ({
   companyOrganizer,
   userId,
+  userTierEntryPoints = 0,
   now = new Date(),
 }) => {
   if (!companyOrganizer || !userId) return null;
@@ -521,7 +521,24 @@ const getActiveLoyaltyHappyHourPromotion = async ({
       },
     },
 
-    // count user claims only
+    {
+      $lookup: {
+        from: "tiers",
+        localField: "tierLimit",
+        foreignField: "_id",
+        as: "tierLimit",
+      },
+    },
+    { $unwind: "$tierLimit" },
+
+    {
+      $match: {
+        $expr: {
+          $lte: ["$tierLimit.entryPoints", userTierEntryPoints],
+        },
+      },
+    },
+
     {
       $lookup: {
         from: "promotionorders",
@@ -548,7 +565,6 @@ const getActiveLoyaltyHappyHourPromotion = async ({
       },
     },
 
-    // eligible only
     {
       $match: {
         $expr: {
@@ -581,6 +597,79 @@ const getActiveLoyaltyHappyHourPromotion = async ({
   return promotion || null;
 };
 
+const claimPromotion = async (promotionId, userId) => {
+  const now = new Date();
+
+  /* ---------------- Fetch promotion ---------------- */
+  const promotion = await Promotion.findById(promotionId)
+    .populate("tierLimit")
+    .populate("menuItem")
+    .populate({
+      path: "companyOrganizer",
+      select:
+        "companyDetails.loyaltySettings.title companyDetails.logo",
+    })
+    .lean();
+
+  if (!promotion) {
+    throw new Error("Promotion not found");
+  }
+
+  if (promotion.status !== "active") {
+    throw new Error("Promotion is not active");
+  }
+
+  /* ---------------- Eligibility normalization ---------------- */
+  const [eligiblePromo] =
+    await applyPromotionEligibility({
+      promotions: [promotion],
+      userId,
+      timezone: "UTC",
+      now,
+    });
+
+  if (!eligiblePromo) {
+    throw new Error("Promotion not eligible");
+  }
+
+  if (!eligiblePromo.canClaim) {
+    throw new Error(
+      eligiblePromo.claimError ||
+      "Promotion cannot be claimed"
+    );
+  }
+
+  /* ---------------- Create claim ---------------- */
+  const order = await PromotionsOrders.create({
+    promotion: promotionId,
+    promotionType: promotion.promotionType,
+    companyOrganizer: promotion.companyOrganizer._id,
+    pointsSpent: promotion.claimPoints || 0,
+    user: userId,
+    status: "claimed",
+    claimedAt: now,
+  });
+
+  //create transaction
+
+  await createTransaction(
+    {
+      user: userId,
+      companyOrganizer: promotion.companyOrganizer._id,
+      type: "redeem",
+      domainType: "promotionorders",
+      entityId: order._id,
+      companyPoints: {
+        base: promotion.claimPoints || 0,
+        total: -(promotion.claimPoints || 0)
+      },
+      description: `Promotion reward ${promotion.title}`
+    },
+    null
+  );
+
+  return order;
+};
 
 
 module.exports = {
@@ -591,6 +680,7 @@ module.exports = {
   getPromotionsForHome,
   getPromotions,
   getActiveLoyaltyHappyHourPromotion,
+  claimPromotion
 
 };
 

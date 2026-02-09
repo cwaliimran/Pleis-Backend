@@ -1,4 +1,4 @@
-const Promotion = require("@PromotionModel");
+const Promotion = require("@GlobalBasePromotionModel");
 
 const HORIZON_DAYS = 7;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -29,7 +29,7 @@ const withSameTimeUTC = (day, ref) =>
 // ======================================================
 // CRON ENTRY
 // ======================================================
-const runRecurringPromotionsCron = async () => {
+const runRecurringGlobalPromotionsCron = async () => {
   const now = new Date();
   const horizonDate = addDaysUTC(startOfDayUTC(now), HORIZON_DAYS);
 
@@ -186,7 +186,7 @@ const createPromotionOccurrence = async (template, startDate, index) => {
 // ======================================================
 // IMMEDIATE GENERATION (ON CREATE)
 // ======================================================
-const generateImmediatelyForPromotionTemplate = async (templateId) => {
+const generateImmediatelyForGlobalPromotionTemplate = async (templateId) => {
   const template = await Promotion.findOne({
     _id: templateId,
     "recurringMeta.isTemplate": true,
@@ -201,6 +201,6 @@ const generateImmediatelyForPromotionTemplate = async (templateId) => {
 };
 
 module.exports = {
-  runRecurringPromotionsCron,
-  generateImmediatelyForPromotionTemplate,
+  runRecurringGlobalPromotionsCron,
+  generateImmediatelyForGlobalPromotionTemplate,
 };

@@ -1,163 +1,207 @@
+const mongoose = require("mongoose");
+
 const {
   GlobalBasePromotion,
   GlobalHappyHourPromotion,
   GlobalClaimPromotion,
 } = require("../../../commonModules/globalLoyalty/promotions/models/Promotion");
-const { cache, invalidate } = require("@redisCache");
-const ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY = "globalLoyaltyPromotions:active";
-const buildGlobalLoyaltyPromotionsCacheKey = ({
-  scope = "public", // public | admin
-  skip = 0,
-  limit = 10
-}) => {
-  return `${ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
-};
- 
- 
 
-// Decide which discriminator model to use
-const getModelByTaskType = (taskType) => {
-  switch (taskType) {
+const { cache, invalidate } = require("@redisCache");
+
+const ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY =
+  "globalLoyaltyPromotions:active";
+
+const buildGlobalLoyaltyPromotionsCacheKey = ({
+  scope = "public",
+  skip = 0,
+  limit = 10,
+}) =>
+  `${ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+
+
+// ---------------- MODEL SELECTOR ----------------
+const getModelByPromotionType = (promotionType) => {
+  switch (promotionType) {
     case "globalHappyHourPromotion":
       return GlobalHappyHourPromotion;
     case "globalClaimPromotion":
       return GlobalClaimPromotion;
     default:
-      return GlobalBasePromotion; // fallback
+      return GlobalBasePromotion;
   }
 };
 
-// Create promotion
+
+// ---------------- CREATE ----------------
 const create = async (data) => {
-  try {
-    const Model = getModelByTaskType(data.taskType);
-    const item = new Model(data);
-    const saved = await item.save();
-    await invalidate(ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY);
-    return saved.toObject(); // Removes Mongoose internals
-  } catch (err) {
-    throw err;
-  }
+  const Model = getModelByPromotionType(data.promotionType);
+  const item = new Model(data);
+  const saved = await item.save();
+
+  await invalidate(ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY);
+
+  return saved.toObject();
 };
 
 
-const getWithFilters = async (query, skip = 0, limit = 20,keyword) => {
-    let cacheKey = buildGlobalLoyaltyPromotionsCacheKey({
+// ---------------- LIST WITH FILTERS ----------------
+const getWithFilters = async (
+  query,
+  skip = 0,
+  limit = 20,
+  keyword
+) => {
+  let cacheKey = buildGlobalLoyaltyPromotionsCacheKey({
     scope: "admin",
     skip,
     limit,
   });
+
   const filters = [];
   if (keyword) filters.push(`keyword=${keyword}`);
-  if (query.status && query.status['$ne']) filters.push(`status=${query.status['$ne']}`);
-  if (query.createdAt && query.createdAt['$gte']) filters.push(`createdAt=${query.createdAt['$gte']}`);
+  if (query.status?.$ne) filters.push(`status=${query.status.$ne}`);
+  if (query.createdAt?.$gte)
+    filters.push(`createdAt=${query.createdAt.$gte}`);
 
-  // Concatenate filters to the cache key if they are applied
-  if (filters.length > 0) {
-    cacheKey = `${cacheKey}:${filters.join(":")}`;
+  if (filters.length) {
+    cacheKey += `:${filters.join(":")}`;
   }
 
-
-  
   return cache({
     namespace: cacheKey,
-    ttl: 86400, // 1 day
- 
+    ttl: 86400,
+
     fetchFn: async () => {
- 
-  const pipeline = [
-    { $match: query },
-    { $sort: { createdAt: -1 } },
-    { $skip: skip },
-  ];
+      const pipeline = [
+        { $match: query },
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+      ];
 
-  if (limit > 0) pipeline.push({ $limit: limit });
+      if (limit > 0) pipeline.push({ $limit: limit });
 
-  // Reward lookup for globalClaimPromotion
-  pipeline.push({
-    $lookup: {
-      from: "globalrewards",
-      localField: "reward",
-      foreignField: "_id",
-      as: "reward"
-    }
-  });
+      pipeline.push(
+        {
+          $lookup: {
+            from: "globalrewards",
+            localField: "reward",
+            foreignField: "_id",
+            as: "reward",
+          },
+        },
+        {
+          $lookup: {
+            from: "menuitems",
+            localField: "menuItem",
+            foreignField: "_id",
+            as: "menuItem",
+          },
+        },
+        {
+          $lookup: {
+            from: "globalstatuslevels",
+            localField: "tierLimit",
+            foreignField: "_id",
+            as: "tierLimit",
+          },
+        },
+        {
+          $addFields: {
+            reward: { $arrayElemAt: ["$reward", 0] },
+            menuItem: { $arrayElemAt: ["$menuItem", 0] },
+            tierLimit: { $arrayElemAt: ["$tierLimit", 0] },
+          },
+        }
+      );
 
-  // Menu item
-  pipeline.push({
-    $lookup: {
-      from: "menuitems",
-      localField: "menuItem",
-      foreignField: "_id",
-      as: "menuItem"
-    }
-  });
-
-  // Tier limit
-  pipeline.push({
-    $lookup: {
-      from: "globalstatuslevels",
-      localField: "tierLimit",
-      foreignField: "_id",
-      as: "tierLimit"
-    }
-  });
-
-  // Flatten arrays (always return full data)
-  pipeline.push({
-    $addFields: {
-      reward: { $arrayElemAt: ["$reward", 0] },
-      menuItem: { $arrayElemAt: ["$menuItem", 0] },
-      tierLimit: { $arrayElemAt: ["$tierLimit", 0] },
-    }
-  });
-
-  return await GlobalBasePromotion.aggregate(pipeline).allowDiskUse(true);
+      return GlobalBasePromotion.aggregate(pipeline).allowDiskUse(true);
     },
   });
 };
 
-module.exports = {
-  getWithFilters,
-};
 
+// ---------------- BASIC HELPERS ----------------
+const count = async (query = {}) =>
+  GlobalBasePromotion.countDocuments(query);
 
-// Count
-const count = async (query = {}) => {
-  return GlobalBasePromotion.countDocuments(query);
-};
-
-// Find by ID with population
-const findById = async (id) => {
-  return GlobalBasePromotion.findById(id)
+const findById = async (id) =>
+  GlobalBasePromotion.findById(id)
     .populate("menuItem")
-    .populate({ path: "tierLimit", select: "image title" }).exec();
-};
+    .populate({ path: "tierLimit", select: "image title" })
+    .exec();
 
-// Update and save
 const updateData = async (item, data) => {
   Object.assign(item, data);
+  const saved = await item.save();
   await invalidate(ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY);
-  return await item.save();
+  return saved;
 };
 
-// Delete
 const deleteItem = async (item) => {
   await invalidate(ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY);
-  return await item.deleteOne();
+  return item.deleteOne();
 };
 
-// findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
-  await invalidate(ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY);
-  return GlobalBasePromotion.findByIdAndUpdate(id, data, { new: true })
+  const updated = await GlobalBasePromotion.findByIdAndUpdate(
+    id,
+    data,
+    { new: true }
+  )
     .populate("menuItem")
     .populate("tierLimit");
+
+  await invalidate(ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY);
+
+  return updated;
 };
 
 
+// ---------------- RECURRING BULK OPS ----------------
+// used by service FUTURE scope
+
+const updateFutureOccurrences = async (
+  parentId,
+  index,
+  data
+) => {
+  await GlobalBasePromotion.updateMany(
+    {
+      "recurringMeta.parentPromotion": parentId,
+      "recurringMeta.occurrenceIndex": { $gte: index },
+      status: { $ne: "deleted" },
+    },
+    { $set: data }
+  );
+
+  await invalidate(ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY);
+};
+
+const deleteFutureOccurrences = async (
+  parentId,
+  index
+) => {
+  await GlobalBasePromotion.updateMany(
+    {
+      "recurringMeta.parentPromotion": parentId,
+      "recurringMeta.occurrenceIndex": { $gte: index },
+    },
+    { $set: { status: "deleted" } }
+  );
+
+  await GlobalBasePromotion.updateOne(
+    { _id: parentId },
+    { $set: { status: "deleted" } }
+  );
+
+  await invalidate(ACTIVE_GLOBAL_LOYALTY_PROMOTIONS_CACHE_KEY);
+};
+
+
+// ---------------- ACTIVE HAPPY HOUR ----------------
 const getActiveGlobalLoyaltyHappyHourPromotion = async ({
   userId,
+  userTierEntryPoints = 0,
   now = new Date(),
 }) => {
   if (!userId) return null;
@@ -174,7 +218,26 @@ const getActiveGlobalLoyaltyHappyHourPromotion = async ({
       },
     },
 
-    // count claims by this user
+    // lookup tier
+    {
+      $lookup: {
+        from: "globalstatuslevels",
+        localField: "tierLimit",
+        foreignField: "_id",
+        as: "tierLimit",
+      },
+    },
+    { $unwind: "$tierLimit" },
+
+    // tier eligibility
+    {
+      $match: {
+        $expr: {
+          $lte: ["$tierLimit.entryPoints", userTierEntryPoints],
+        },
+      },
+    },
+
     {
       $lookup: {
         from: "globalpromotionsorders",
@@ -196,12 +259,14 @@ const getActiveGlobalLoyaltyHappyHourPromotion = async ({
     {
       $addFields: {
         userClaims: {
-          $ifNull: [{ $arrayElemAt: ["$claimStats.userClaims", 0] }, 0],
+          $ifNull: [
+            { $arrayElemAt: ["$claimStats.userClaims", 0] },
+            0,
+          ],
         },
       },
     },
 
-    // eligible promotions only
     {
       $match: {
         $expr: {
@@ -235,6 +300,15 @@ const getActiveGlobalLoyaltyHappyHourPromotion = async ({
 };
 
 
+const updateMany = async (filter, update) => {
+  return GlobalBasePromotion.updateMany(filter, update);
+};
+
+const updateOne = async (filter, update) => {
+  return GlobalBasePromotion.updateOne(filter, update);
+};
+
+// ---------------- EXPORT ----------------
 module.exports = {
   create,
   getWithFilters,
@@ -243,5 +317,9 @@ module.exports = {
   updateData,
   deleteItem,
   findByIdAndUpdate,
+  updateFutureOccurrences,
+  deleteFutureOccurrences,
   getActiveGlobalLoyaltyHappyHourPromotion,
+  updateMany,
+  updateOne
 };

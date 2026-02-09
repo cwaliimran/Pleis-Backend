@@ -14,14 +14,27 @@ const calculatePointsRepo = async (
   const [
     globalWallet,
     userCompanyWallet,
-    loyaltyHappyHourPromotion,
-    globalLoyaltyHappyHourPromotion,
   ] = await Promise.all([
     getUserWallet(userId),
     getUserCompanyWallet(userId, companyOrganizer),
-    getActiveLoyaltyHappyHourPromotion({ companyOrganizer, userId }),
-    getActiveGlobalLoyaltyHappyHourPromotion({ userId }),
   ]);
+
+  const [
+    globalLoyaltyHappyHourPromotion,
+    loyaltyHappyHourPromotion,
+  ] = await Promise.all([
+    getActiveGlobalLoyaltyHappyHourPromotion({
+      userId,
+      userTierEntryPoints: globalWallet.global?.level?.entryPoints,
+    }),
+    getActiveLoyaltyHappyHourPromotion({
+      companyOrganizer,
+      userId,
+      userTierEntryPoints:
+        userCompanyWallet?.level?.entryPoints,
+    }),
+  ]);
+
 
   /* =============================
      BONUS VALUES
@@ -52,8 +65,8 @@ const calculatePointsRepo = async (
 
   const organizerEarnedPoints = Math.round(
     totalSpending *
-      organizerPointsPerEuro *
-      organizerMultiplier
+    organizerPointsPerEuro *
+    organizerMultiplier
   );
 
   /* =============================
@@ -65,8 +78,8 @@ const calculatePointsRepo = async (
 
   const globalEarnedPoints = Math.round(
     totalSpending *
-      globalPointsPerEuro *
-      globalMultiplier
+    globalPointsPerEuro *
+    globalMultiplier
   );
 
   /* =============================

@@ -282,10 +282,10 @@ const updateTicketing = async (req, res) => {
     const { earlyBird, lastMinute } = data.timeSensitivePricing;
     validateData.dateFields = {};
 
-    if (earlyBird?.endDate) {
+    if (earlyBird?.endDate && earlyBird.endDate !== null) {
       validateData.dateFields = { "timeSensitivePricing.earlyBird.endDate": "YYYY-MM-DD hh:mm A" };
     }
-    if (lastMinute?.startDate) {
+    if (lastMinute?.startDate && lastMinute.startDate !== null) {
       validateData.dateFields = { "timeSensitivePricing.lastMinute.startDate": "YYYY-MM-DD hh:mm A" };
     }
   }

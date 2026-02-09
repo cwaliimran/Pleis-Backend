@@ -3,6 +3,7 @@ const PROMOTION_REASONS = Object.freeze({
   CLAIM_LIMIT_REACHED: "CLAIM_LIMIT_REACHED",
   INSUFFICIENT_POINTS: "INSUFFICIENT_POINTS",
   PROMOTION_INACTIVE: "PROMOTION_INACTIVE",
+  PROMOTION_NOT_STARTED: "PROMOTION_NOT_STARTED",
   PROMOTION_EXPIRED: "PROMOTION_EXPIRED",
 });
 
@@ -11,7 +12,8 @@ const REASON_ORDER = {
   CLAIM_LIMIT_REACHED: 2,
   INSUFFICIENT_POINTS: 3,
   PROMOTION_INACTIVE: 4,
-  PROMOTION_EXPIRED: 5,
+  PROMOTION_NOT_STARTED: 5,
+  PROMOTION_EXPIRED: 6,
 };
 
 const normalizePromotionClaimMeta = ({
@@ -37,7 +39,7 @@ const normalizePromotionClaimMeta = ({
     cannotClaimReasons.push("CLAIM_LIMIT_REACHED");
   }
 
-  /* ---------- Claim promotion points ---------- */
+  /* ---------- Points ---------- */
   if (
     promotion.promotionType === "claimPromotion" &&
     promotion.claimPoints &&
@@ -51,7 +53,15 @@ const normalizePromotionClaimMeta = ({
     cannotClaimReasons.push("PROMOTION_INACTIVE");
   }
 
-  /* ---------- Expiry ---------- */
+  /* ---------- Not started ---------- */
+  if (
+    promotion.startDate &&
+    new Date(promotion.startDate) > now
+  ) {
+    cannotClaimReasons.push("PROMOTION_NOT_STARTED");
+  }
+
+  /* ---------- Expired ---------- */
   if (
     promotion.endDate &&
     new Date(promotion.endDate) < now
@@ -75,5 +85,6 @@ const normalizePromotionClaimMeta = ({
     cannotClaimReasons,
   };
 };
+
 
 module.exports = { normalizePromotionClaimMeta };
