@@ -88,7 +88,8 @@ const getFirstTier = async (tierKey) => {
 
 const getNextTier = async (tierKey, currentPoints) => {
   return Tiers.findOne({
-    [getField(tierKey)]: { $gt: currentPoints }
+    [getField(tierKey)]: { $gt: currentPoints },
+    status: "active",
   })
     .sort({ [getField(tierKey)]: 1 });
 };

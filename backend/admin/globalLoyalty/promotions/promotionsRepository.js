@@ -155,6 +155,86 @@ const findByIdAndUpdate = async (id, data) => {
     .populate("tierLimit");
 };
 
+
+const getActiveGlobalLoyaltyHappyHourPromotion = async ({
+  userId,
+  now = new Date(),
+}) => {
+  if (!userId) return null;
+
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+
+  const [promotion] = await GlobalBasePromotion.aggregate([
+    {
+      $match: {
+        promotionType: "globalHappyHourPromotion",
+        status: "active",
+        startDate: { $lte: now },
+        endDate: { $gte: now },
+      },
+    },
+
+    // count claims by this user
+    {
+      $lookup: {
+        from: "globalpromotionsorders",
+        let: { promoId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$promotion", "$$promoId"] },
+              user: userObjectId,
+              status: { $in: ["claimed", "redeemed"] },
+            },
+          },
+          { $count: "userClaims" },
+        ],
+        as: "claimStats",
+      },
+    },
+
+    {
+      $addFields: {
+        userClaims: {
+          $ifNull: [{ $arrayElemAt: ["$claimStats.userClaims", 0] }, 0],
+        },
+      },
+    },
+
+    // eligible promotions only
+    {
+      $match: {
+        $expr: {
+          $or: [
+            { $eq: ["$claimLimit", null] },
+            { $gt: ["$claimLimit", "$userClaims"] },
+          ],
+        },
+      },
+    },
+
+    { $sort: { pointsMultiplier: -1 } },
+    { $limit: 1 },
+
+    {
+      $addFields: {
+        remainingClaims: {
+          $cond: [
+            { $eq: ["$claimLimit", null] },
+            null,
+            { $subtract: ["$claimLimit", "$userClaims"] },
+          ],
+        },
+      },
+    },
+
+    { $project: { claimStats: 0 } },
+  ]);
+
+  return promotion || null;
+};
+
+
 module.exports = {
   create,
   getWithFilters,
@@ -163,4 +243,5 @@ module.exports = {
   updateData,
   deleteItem,
   findByIdAndUpdate,
+  getActiveGlobalLoyaltyHappyHourPromotion,
 };

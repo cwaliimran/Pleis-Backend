@@ -18,7 +18,9 @@ const create = async (req, res) => {
 
   if (req.body.rewardType === "ticketReward") {
     rawData.push("event")
+    rawData.push("ticket")
     objectIdFields.push("event")
+    objectIdFields.push("ticket")
   }
   if (req.body.rewardType === "buyMenuItemReward") {
     rawData.push("menuItem")

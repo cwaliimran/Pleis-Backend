@@ -22,7 +22,7 @@ module.exports = {
     "@HighlightsModel": "backend/commonModules/highlights/Highlight.js",
     "@ChallengeModel": "backend/commonModules/loyalty/challenges/models/Challenge/BaseChallenge.js",
     "@PromotionModel": "backend/commonModules/loyalty/promotions/models/Promotion/BasePromotion.js",
-    "@RewardModel": "backend/commonModules/loyalty/rewards/models/BaseReward.js",
+    "@RewardModel": "backend/commonModules/loyalty/rewards/models/baseReward.js",
     "@ListingModel": "backend/commonModules/loyalty/listings/Listing.js",
     "@ClubCollaborationModel": "backend/commonModules/loyalty/clubCollaborations/ClubCollaborations.js",
     "@StreaksModel": "backend/commonModules/loyalty/streaks/Streaks.js",

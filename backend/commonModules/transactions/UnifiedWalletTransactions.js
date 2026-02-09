@@ -96,6 +96,8 @@ const unifiedTransactionSchema = new mongoose.Schema(
             base: { type: Number, required: true },
             multiplier: { type: Number, default: 1 },
             total: { type: Number, required: true },
+            bonusPoints: { type: Number, default: 0 },
+            pointsPerEuro: { type: Number, default: 0 },
         },
 
         // --------------------------------------------

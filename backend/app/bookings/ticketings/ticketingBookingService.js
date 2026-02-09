@@ -44,8 +44,16 @@ const createTicketingBookingService = async (
     )?.snapshot;
 
     const resolved = resolveTimeSensitivePricing(snap, now);
-    sumOfPrices += resolved.price;
+
+    let ticketPrice = resolved.basePrice;
+
+    if (t.isFastTrack && resolved.fastTrack.available) {
+      ticketPrice += resolved.fastTrack.extraPrice;
+    }
+
+    sumOfPrices += ticketPrice;
   }
+
 
   const isFreeOrder = sumOfPrices === 0;
 

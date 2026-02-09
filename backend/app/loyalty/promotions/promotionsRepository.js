@@ -495,6 +495,90 @@ const getPromotions = async ({
 };
 
 
+
+const getActiveLoyaltyHappyHourPromotion = async ({
+  companyOrganizer,
+  userId,
+  now = new Date(),
+}) => {
+  if (!companyOrganizer || !userId) return null;
+
+  const organizerId = new mongoose.Types.ObjectId(companyOrganizer);
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+
+  const [promotion] = await Promotion.aggregate([
+    {
+      $match: {
+        promotionType: "happyHour",
+        status: "active",
+        companyOrganizer: organizerId,
+        startDate: { $lte: now },
+        endDate: { $gte: now },
+      },
+    },
+
+    // count user claims only
+    {
+      $lookup: {
+        from: "promotionorders",
+        let: { promoId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$promotion", "$$promoId"] },
+              user: userObjectId,
+              status: { $in: ["claimed", "redeemed"] },
+            },
+          },
+          { $count: "userClaims" },
+        ],
+        as: "claimStats",
+      },
+    },
+
+    {
+      $addFields: {
+        userClaims: {
+          $ifNull: [{ $arrayElemAt: ["$claimStats.userClaims", 0] }, 0],
+        },
+      },
+    },
+
+    // eligible only
+    {
+      $match: {
+        $expr: {
+          $or: [
+            { $eq: ["$claimLimit", null] },
+            { $gt: ["$claimLimit", "$userClaims"] },
+          ],
+        },
+      },
+    },
+
+    { $sort: { pointsMultiplier: -1 } },
+    { $limit: 1 },
+
+    {
+      $addFields: {
+        remainingClaims: {
+          $cond: [
+            { $eq: ["$claimLimit", null] },
+            null,
+            { $subtract: ["$claimLimit", "$userClaims"] },
+          ],
+        },
+      },
+    },
+
+    { $project: { claimStats: 0 } },
+  ]);
+
+  return promotion || null;
+};
+
+
+
 module.exports = {
   count,
   findById,
@@ -502,6 +586,7 @@ module.exports = {
   getPromotionsForDashboard,
   getPromotionsForHome,
   getPromotions,
+  getActiveLoyaltyHappyHourPromotion,
 
 };
 

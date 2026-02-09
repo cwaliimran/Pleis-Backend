@@ -164,16 +164,97 @@ const getRewardOrdersCounts = async (query, statusMap) => {
 }
 
 
-const getUserOrders = async (filter, page = 1, limit = 10, sort = { createdAt: -1 }) => {
+const getUserOrders = async (
+  filter,
+  page = 1,
+  limit = 10,
+  sort = { createdAt: -1 }
+) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  return RewardsOrders.find(filter)
-    .populate("companyOrganizer", "companyDetails.loyaltySettings.title companyDetails.logo")
-    .sort(sort)
-    .skip(skip)
-    .limit(limit)
-    .lean();
+  const pipeline = [
+    { $match: filter },
+    { $sort: sort },
+
+    ...(limit !== 0 ? [{ $skip: skip }, { $limit: limit }] : []),
+
+    // ---- Organizer populate with projection ----
+    {
+      $lookup: {
+        from: "users",
+        let: { organizerId: "$companyOrganizer" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$_id", "$$organizerId"] },
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              "companyDetails.loyaltySettings.title": 1,
+              "companyDetails.logo": 1,
+            },
+          },
+        ],
+        as: "companyOrganizer",
+      },
+    },
+    {
+      $unwind: {
+        path: "$companyOrganizer",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
+    // ---- Ticket extraction ----
+    {
+      $addFields: {
+        ticketObjectId: {
+          $cond: [
+            { $ifNull: ["$snapshot.ticket", false] },
+            { $toObjectId: "$snapshot.ticket" },
+            null,
+          ],
+        },
+      },
+    },
+
+    // ---- Ticket lookup ----
+    {
+      $lookup: {
+        from: "ticketings",
+        localField: "ticketObjectId",
+        foreignField: "_id",
+        as: "ticketDetails",
+      },
+    },
+    {
+      $unwind: {
+        path: "$ticketDetails",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
+    {
+      $addFields: {
+        "snapshot.ticketDetails": "$ticketDetails",
+      },
+    },
+
+    {
+      $project: {
+        ticketDetails: 0,
+        ticketObjectId: 0,
+      },
+    },
+  ];
+
+  return RewardsOrders.aggregate(pipeline);
 };
+
+
+
 
 
 module.exports = {
