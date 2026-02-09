@@ -243,6 +243,10 @@ const applyEligibility = async ({
 
   return items;
 };
+const count = async (query = {}) => {
+  return GlobalBasePromotion.countDocuments(query);
+};
+
 
 module.exports = {
   getWithFilters,
