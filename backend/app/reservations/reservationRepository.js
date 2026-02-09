@@ -56,16 +56,18 @@ const createReservation = async (data, session) => {
   data.phoneNumber = userData[0].phoneNumber || "";
 
   // Reservation base price
-  const reservationBase = await Reservations.aggregate(
-    [
-      { $match: { _id: new mongoose.Types.ObjectId(reservationId) } },
-      { $project: { amount: { $toDouble: { $ifNull: ["$amount", 0] } } } },
-    ],
-    { session }
-  );
+  const reservationBase = await Reservations
+    .findById(reservationId)
+    .session(session)
+    .lean();
 
-  const amountPerPerson = reservationBase[0]?.amount || 0;
-  const totalReservationAmount = amountPerPerson * partySize;
+  data.reservationSnapshot = reservationBase; // Store snapshot for future reference (e.g., if reservation details change later)
+
+  const amount = Number(reservationBase?.amount ?? 0);
+
+
+  //TODO confirm if party size effects price, if yes then we need to multiply price with party size
+  const totalReservationAmount = amount * partySize;
   data.amount = totalReservationAmount;
 
   // Lock only for card / applePay
@@ -95,7 +97,7 @@ const createReservation = async (data, session) => {
     const totalPrice = order.totalPrice + totalReservationAmount;
     userReservation.amount = totalPrice;
     userReservation.priceBreakDown = {
-      reservationAmount: data?.amount,
+      reservationAmount: totalReservationAmount,
       preOrderMenuItemsAmount: order.totalPrice,
     };
     await userReservation.save({ session });

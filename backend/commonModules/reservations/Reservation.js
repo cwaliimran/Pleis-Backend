@@ -141,6 +141,10 @@ const ReservationsSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    bonusPoints: {
+      type: Number,
+      default: 0,
+    },
   },
 
   {

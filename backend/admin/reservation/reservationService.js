@@ -95,6 +95,7 @@ const updateReservation = async (id, data) => {
       "organizationId",
       "reservationType",
       "notes",
+      "bonusPoints"
     ];
 
     // -----------------------------
@@ -123,7 +124,6 @@ const updateReservation = async (id, data) => {
         updateData[key] = data[key];
       }
     }
-    console.log("updateData", updateData);
 
     if (Object.keys(updateData).length === 0) {
       return Reservation;

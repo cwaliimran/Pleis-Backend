@@ -30,7 +30,7 @@ const UserReservationsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-  
+
     amount: {
       type: Number,
       min: [0, "Price must be positive"],
@@ -48,6 +48,10 @@ const UserReservationsSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Reservations",
       default: null,
+    },
+    reservationSnapshot: {
+      type: Object,
+      default: {},
     },
 
     companyOrganizer: {
