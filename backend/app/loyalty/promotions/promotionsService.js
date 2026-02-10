@@ -89,11 +89,17 @@ const getPromotionsByCompanyOrganizerService = async ({
   return { promotions, meta };
 };
 
+const claimPromotion = async (promotionId, userId, timezone) => {
+  const promotion = await repository.claimPromotion(promotionId, userId);
+  if (!promotion) return null;
 
+  return promotion;
+};
 
 module.exports = {
   getPromotions,
   getDetails,
   getPromotionsByCompanyOrganizerService,
-  getPromotionsForHome
+  getPromotionsForHome,
+  claimPromotion
 };

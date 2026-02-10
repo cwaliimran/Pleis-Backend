@@ -82,4 +82,5 @@ module.exports = {
     "@MenuItemsSaleModel": "backend/commonModules/menuManagement/sale/MenuItemsSale.js",
     "@SearchSuggestionModel": "backend/app/searchSuggestions/SearchSuggestion.js",
     "@OrganizationStaffAttendanceModel": "backend/commonModules/staff/OrganizationStaffAttendance.js",
+    "@GlobalBasePromotionModel": "backend/commonModules/globalLoyalty/promotions/models/Promotion/basePromotion.js",
 };

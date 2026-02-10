@@ -254,12 +254,92 @@ const getUserOrders = async (
 };
 
 
+const getOrderDetails = async (orderId, userId) => {
+  const pipeline = [
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(orderId),
+        user: new mongoose.Types.ObjectId(userId),
+      },
+    },
 
+    // ---- Organizer populate with projection ----
+    {
+      $lookup: {
+        from: "users",
+        let: { organizerId: "$companyOrganizer" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$_id", "$$organizerId"] },
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              "companyDetails.loyaltySettings.title": 1,
+              "companyDetails.logo": 1,
+            },
+          },
+        ],
+        as: "companyOrganizer",
+      },
+    },
+    {
+      $unwind: {
+        path: "$companyOrganizer",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
 
+    // ---- Ticket extraction ----
+    {
+      $addFields: {
+        ticketObjectId: {
+          $cond: [
+            { $ifNull: ["$snapshot.ticket", false] },
+            { $toObjectId: "$snapshot.ticket" },
+            null,
+          ],
+        },
+      },
+    },
+
+    // ---- Ticket lookup ----
+    {
+      $lookup: {
+        from: "ticketings",
+        localField: "ticketObjectId",
+        foreignField: "_id",
+        as: "ticketDetails",
+      },
+    },
+    {
+      $unwind: {
+        path: "$ticketDetails",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $addFields: {
+        "snapshot.ticketDetails": "$ticketDetails",
+      },
+    },
+    {
+      $project: {
+        ticketDetails: 0,
+        ticketObjectId: 0,
+      },
+    },
+  ];
+  let order = await RewardsOrders.aggregate(pipeline);
+  return order.length ? order[0] : null;
+};
 
 module.exports = {
   createRewardOrder,
   getUserOrders,
   getRewardOrdersCounts,
-  checkClaimLimitForLoyaltyRewards
+  checkClaimLimitForLoyaltyRewards,
+  getOrderDetails
 };

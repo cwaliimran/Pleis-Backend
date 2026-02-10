@@ -244,6 +244,9 @@
       ],
       "@OrganizationStaffAttendanceModel": [
         "backend/commonModules/staff/OrganizationStaffAttendance.js"
+      ],
+      "@GlobalBasePromotionModel": [
+        "backend/commonModules/globalLoyalty/promotions/models/Promotion/basePromotion.js"
       ]
     }
   },

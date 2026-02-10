@@ -24,6 +24,7 @@ if (obj?.companyOrganizer && obj.companyOrganizer?.companyDetails?.logo) {
     const current = obj.level[obj.tierKey];
 
     obj.level = {
+      _id: obj.level._id,
       title: obj.level.title,
       image: obj.level.image,
       bonusPointsPerEuro: obj.level.bonusPointsPerEuro,
@@ -34,6 +35,7 @@ if (obj?.companyOrganizer && obj.companyOrganizer?.companyDetails?.logo) {
   if (obj.tierKey && obj.nextTier) {
     const next = obj.nextTier[obj.tierKey];
     obj.nextTier = {
+      _id: obj.nextTier._id,
       title: obj.nextTier.title,
       image: obj.nextTier.image,
       entryPoints: next?.entryPoints ?? null,
