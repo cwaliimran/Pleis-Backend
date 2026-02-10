@@ -5,7 +5,8 @@ const {
   getTransactions,
   getTransactionDetails,
   updateTransaction,
-  deleteTransaction
+  deleteTransaction,
+  downloadTransactions
 } = require("../controllers/unifiedTransactionsController");
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
@@ -22,6 +23,7 @@ router.post("/", roleMiddleware(["admin", "organizer", "staff", "manager", "user
 
 // List with pagination
 router.get("/", rl, getTransactions);
+router.get("/download", rl, downloadTransactions);
 
 // Get details
 router.get("/:id", rlDetails, getTransactionDetails);

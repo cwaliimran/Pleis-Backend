@@ -59,7 +59,7 @@ const getCreatorFromOrganization = async (organizationId) => {
 const createReservation = async (data) => {
   try {
 
-    data.companyOrganizer = await getCreatorFromOrganization(data.organizationId);
+    data.companyOrganizer = data.userId;
     const Reservation = new Reservations(data);
     await Reservation.save();
     const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
@@ -510,11 +510,6 @@ const findUserById = async (id) => {
 
 
 const getavailableReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, skip }) => {
-  // let now = getCurrentDateInTimezone({ timezone });
-  //  date = convertTimezoneToUtcDateOnly(
-  //   now,
-  //   timezone
-  // );
 
   const now = getCurrentUtcDateOnly();
 
@@ -526,7 +521,7 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
     organizationsId !== "undefined" &&
     organizationsId !== "null"
   ) {
-    // support comma or % separated ids
+    // support comma OR % separated
     const ids = organizationsId.includes("%")
       ? organizationsId.split("%")
       : organizationsId.split(",");
@@ -535,6 +530,7 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
       .filter(Boolean)
       .map(id => new mongoose.Types.ObjectId(id));
   }
+
   const pipeline = [
     {
       $match: {
@@ -612,6 +608,7 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
   }
 
 
+
   // Apply filters
   if (status) {
     pipeline.push({ $match: { status } });
@@ -660,9 +657,7 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
 
   if (keyword) {
     const keywordMatch = buildKeywordQueryFromModels(
-      [
-        { schema: Reservations.schema }
-      ],
+      [{ schema: Reservations.schema }],
       keyword
     );
 
@@ -671,7 +666,26 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
     }
   }
 
+  /* ✅ ADD LOOKUP HERE */
+  pipeline.push({
+    $lookup: {
+      from: "organizations",
+      localField: "organizationId",
+      foreignField: "_id",
+      as: "organization"
+    }
+  });
+
+  pipeline.push({
+    $unwind: {
+      path: "$organization",
+      preserveNullAndEmptyArrays: true
+    }
+  });
+  /* ✅ END LOOKUP */
+
   pipeline.push({ $sort: { createdAt: -1 } });
+
 
   // Apply pagination + counts using $facet
   pipeline.push({
