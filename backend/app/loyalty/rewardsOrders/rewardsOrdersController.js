@@ -12,7 +12,7 @@ const getUserOrders = async (req, res) => {
     const { page, limit } = parsePaginationParams(req);
     const { keyword, status, orderSort } = req.query;
     const userId = req.user._id;
-    const { orders, meta } = await rewardService.getUserOrdersService({
+    const { orders, meta,globalRewards } = await rewardService.getUserOrdersService({
       userId,
       page,
       limit,
@@ -21,11 +21,12 @@ const getUserOrders = async (req, res) => {
       orderSort
     });
 
+
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "reward_orders_fetched_successfully",
-      data: orders,
+      data: {orders, globalRewards},
       meta
     });
   } catch (error) {

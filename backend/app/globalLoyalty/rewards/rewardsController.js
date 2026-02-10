@@ -39,12 +39,15 @@ const claimReward = async (req, res) => {
       translationKey: result.message || "reward_claim_failed",
     });
   }
-
+const orderResponse = {
+  ...result.order.toObject(),
+  publicId: result.transactions?.[0]?.publicId || null
+};
   sendResponse({
     res,
     statusCode: 200,
     translationKey: "reward_claimed_successfully",
-    data: result.order,
+    data: orderResponse,
   });
 };
 

@@ -50,7 +50,6 @@ const getEligibleChallengesForLoyaltyPage = async ({
   })
     .populate("tierLimit")
     .lean();
-
   // 4️⃣ Apply tier formatting (CRITICAL)
   activeChallenges = formatChallengesByTierKey(activeChallenges, tierKey);
 
@@ -139,6 +138,7 @@ const getChallengesWithPaginationService = async ({
     challengeRepo.countChallengesWithPagination({ clubIds, now, keyword }),
   ]);
 
+
   if (!challenges.length) {
     return { items: [], meta: generateMeta(page, limit, total) };
   }
@@ -190,7 +190,7 @@ const getChallengesWithPaginationService = async ({
   const items = [];
 
   for (const ch of challenges) {
-    const wallet = walletMap.get(String(ch.companyOrganizer));
+    const wallet = walletMap.get(String(ch.companyOrganizer?._id));
     if (!wallet) continue;
 
     const tierKey = wallet.tierKey || "essential";

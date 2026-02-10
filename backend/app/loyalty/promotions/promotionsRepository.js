@@ -32,8 +32,11 @@ const findById = async ({
     .populate("tierLimit")
     .populate({
       path: "companyOrganizer",
-      select:
-        "companyDetails.loyaltySettings.title companyDetails.logo",
+      select: "companyDetails.loyaltySettings.title companyDetails.logo",
+    })
+    .populate({
+      path: "reward",
+      select: "title description image rewardType points ticket event menuItem",
     })
     .lean();
 
@@ -48,6 +51,7 @@ const findById = async ({
 
   return items[0] || null;
 };
+
 
 
 const getPromotionsByCompanyOrganizer = async ({
@@ -348,7 +352,7 @@ const getPromotionsForHome = async ({
       },
     },
     { $unwind: { path: "$menuItem", preserveNullAndEmptyArrays: true } },
-        {
+    {
       $lookup: {
         from: "rewards",
         localField: "reward",

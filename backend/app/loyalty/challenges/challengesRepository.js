@@ -94,12 +94,12 @@ const getChallengesWithPagination = async ({
 
   return Challenge.find({ $and: filters })
     .populate("tierLimit")
-    .sort({ createdAt: -1 }) // cheap + indexed
+    .populate("companyOrganizer", "companyDetails")
+    .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
     .lean();
 };
-
 
 const countChallengesWithPagination = async ({ clubIds, now, keyword = "" }) => {
   const baseFilters = [
