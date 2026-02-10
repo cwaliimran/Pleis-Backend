@@ -98,7 +98,7 @@ const getStaff = async ({ page, limit, keyword, status, userType, currentUser })
     userRepo.getStaffWithFilters(query, skip, limit),
     userRepo.countUsers(query),
   ]);
-
+console.log("users",users );
   const meta = {
     ...generateMeta(page, limit, totalFiltered),
   };

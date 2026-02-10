@@ -112,11 +112,40 @@ const deleteTransaction = async (req, res) => {
         return sendResponse({ res, statusCode: err.statusCode ?? 500, translationKey: err.message });
     }
 };
+const downloadTransactions = async (req, res) => {
+  const { organization, companyOrganizer, startDate, endDate } = req.query;
+
+  try {
+    const csvString = await unifiedService.downloadTransactionsAsCSV({
+      organization,
+      companyOrganizer,
+      startDate,
+      endDate,
+    });
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=transactions_${Date.now()}.csv`
+    );
+
+    return res.send(csvString); // ✅ RAW RESPONSE
+  } catch (error) {
+    const err = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: err.statusCode ?? 500,
+      translationKey: err.message,
+    });
+  }
+};
+
 
 module.exports = {
     createTransaction,
     getTransactions,
     getTransactionDetails,
     updateTransaction,
-    deleteTransaction
+    deleteTransaction,
+    downloadTransactions
 };
