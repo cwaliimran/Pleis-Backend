@@ -467,6 +467,23 @@ const getPromotions = async ({
     },
   });
 
+  //populate reward
+  pipeline.push({
+    $lookup: {
+      from: "rewards",
+      localField: "reward",
+      foreignField: "_id",
+      as: "reward",
+    },
+  });
+
+  pipeline.push({
+    $unwind: {
+      path: "$reward",
+      preserveNullAndEmptyArrays: true,
+    },
+  });
+
   pipeline.push({ $sort: { createdAt: -1 } });
 
   pipeline.push({

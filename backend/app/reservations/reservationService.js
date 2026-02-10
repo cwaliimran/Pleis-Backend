@@ -112,10 +112,10 @@ const deleteReservation = async (id) => {
   return true;
 };
 
-const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, date }) => {
+const getUserReservations = async ({ timezone, page, limit, keyword, userId, date }) => {
   try {
 
-    let { reservations, meta } = await ReservationRepo.getUserReservations({ timezone, page, limit, keyword, status, userId, date });
+    let { reservations, meta } = await ReservationRepo.getUserReservations({ timezone, page, limit, keyword, userId, date });
     if (!reservations || reservations.length === 0) {
       return { reservations: [], meta };
     }

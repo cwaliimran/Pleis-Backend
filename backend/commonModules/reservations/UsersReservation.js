@@ -106,7 +106,7 @@ const UserReservationsSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["pendingPayment", "confirmed", "checkedIn", "rejected", "cancelled", "completed", "deleted"],
+      enum: ["pendingPayment", "needsConfirmation", "confirmed", "checkedIn", "rejected", "cancelled", "completed", "deleted"],
       default: "confirmed",
     },
 
@@ -115,8 +115,8 @@ const UserReservationsSchema = new mongoose.Schema(
       paymentId: { type: String, default: null }, // gateway ref
       paymentMethod: {
         type: String,
-        enum: ["applePay", "card", "cash"],
-        required: true,
+        enum: ["applePay", "card"],
+        required: false,
       },
       paymentStatus: {
         type: String,

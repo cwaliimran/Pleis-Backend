@@ -270,11 +270,20 @@ const getUserReservations = async ({
   // -----------------------------
   const match = {};
 
-  if (status) {
-    match.status = status;
-  } else {
-    match.status = { $ne: "deleted" };
-  }
+  // if (status) {
+  //   match.status = status;
+  // } else {
+  match.status = {
+    $in: [
+      "needsConfirmation",
+      "confirmed",
+      "checkedIn",
+      "rejected",
+      "cancelled",
+      "completed",
+    ],
+  };
+  // }
 
   if (organizationsId) {
     match.organizationId = new mongoose.Types.ObjectId(organizationsId);

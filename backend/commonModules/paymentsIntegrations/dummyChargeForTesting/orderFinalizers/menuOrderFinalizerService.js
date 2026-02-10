@@ -104,14 +104,16 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       }
 
       /* ==========================
-         🏆 Challenges
-      ========================== */
+     🏆 Challenges
+  ========================== */
       const items =
-        menuOrder.items?.map((i) => i.menuItem) || [];
+        menuOrder.items?.map(i => ({
+          menuItem: i.menuItem,
+          quantity: i.quantity,
+        })) || [];
+
       if (items.length) {
         try {
-          //TODO use this function also on admin side as well when they will complete the order for payLater method
-          //resolveChallengeByTaskTypeService
           resolveChallengeByTaskTypeService({
             userId: menuOrder.user,
             companyOrganizer,
@@ -119,9 +121,10 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
             items,
           });
         } catch (_) {
-          // challenge failure must NEVER break payment finalization
+          // challenge failure must NEVER break payment
         }
       }
+
 
 
       let userDetails = await findAppUserByIdWithProjectionService(menuOrder.user, { profileIcon: 1, firstName: 1, lastName: 1, profileIcon: 1, email: 1, username: 1, timezone: 1 });

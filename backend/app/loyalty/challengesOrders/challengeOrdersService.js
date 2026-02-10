@@ -135,12 +135,11 @@ const resolveChallengeByTaskTypeService = async ({
 
 
 
-const resolveBuyMenuItemChallengeService = async ({
+ const resolveBuyMenuItemChallengeService = async ({
   userId,
   companyOrganizer,
   items = []
 }) => {
-
   let challenge_id = null;
   let reward_id = null;
   let challenge_title = null;
@@ -237,6 +236,8 @@ const resolveBuyMenuItemChallengeService = async ({
           order.rewardClaimedAt = new Date();
           completedCycles++;
           console.log(`✅ COMPLETED: ${challenge.title}`);
+
+          //TODO create transaction
         }
 
         await order.save();
@@ -259,8 +260,7 @@ const resolveBuyMenuItemChallengeService = async ({
   });
 
   return { success: true, message: "challenge_progress_updated" };
-};
-
+}; 
 
 /**
  * Simple resolver for visit / referUsers / earnPoints

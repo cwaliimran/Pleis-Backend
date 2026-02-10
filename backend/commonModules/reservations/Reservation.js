@@ -53,27 +53,25 @@ const ReservationsSchema = new mongoose.Schema(
 
     amount: {
       type: Number,
+      min: [0, "Amount must be positive"],
       required: function () {
-        return this.conditionType === "fixedPrice";
+        return [
+          "fixedPrice",
+          "minimumSpendOnLocation",
+          "prepayOption",
+        ].includes(this.conditionType);
       },
-      min: [0, "Price must be positive"],
+      default: 0,
     },
 
-    amount: {
-      type: Number,
+    customText: {
+      type: String,
       required: function () {
-        return this.conditionType === "minimumSpendOnLocation";
+        return this.conditionType === "customText";
       },
-      min: [0, "Minimum spend must be positive"],
+      trim: true,
     },
 
-    amount: {
-      type: Number,
-      required: function () {
-        return this.conditionType === "prepayOption";
-      },
-      min: [0, "Prepay amount must be positive"],
-    },
     organizationId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organization",

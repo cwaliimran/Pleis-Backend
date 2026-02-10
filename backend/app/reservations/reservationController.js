@@ -356,7 +356,7 @@ const deleteReservation = async (req, res) => {
 const getUserReservations = async (req, res) => {
 
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "active", date } = req.query;
+  let { keyword, date } = req.query;
   try {
     const userId = req.user._id;
     const timezone = req.user.timezone;
@@ -365,7 +365,6 @@ const getUserReservations = async (req, res) => {
       page,
       limit,
       keyword,
-      status,
       userId,
       date,
     });

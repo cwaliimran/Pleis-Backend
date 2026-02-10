@@ -18,16 +18,21 @@ const createTicketingBookingService = async (
     throw new Error("session_required");
   }
 
+  const TAX_RATE = 0.06;
+
   /* 1️⃣ Validate tickets */
-  const validationResult = await validateTicketsAndQuantity(data.ticketings);
+  const validationResult =
+    await validateTicketsAndQuantity(data.ticketings);
+
   if (!validationResult.valid) {
     const error = new Error("ticket_validation_failed");
-    error.details = validationResult.errors; // optional but powerful
+    error.details = validationResult.errors;
     throw error;
   }
 
   /* 2️⃣ Resolve org / event */
   const firstTicketId = data.ticketings[0].ticketId;
+
   const { organizationId, companyOrganizer } =
     await getOrganizationIdFromTicketId(firstTicketId);
 
@@ -36,26 +41,49 @@ const createTicketingBookingService = async (
 
   /* 3️⃣ Pricing */
   const now = getCurrentDateInTimezone({ timezone });
+
   let sumOfPrices = 0;
+
+  // store resolved info per ticket
+  const resolvedTicketData = [];
 
   for (const t of data.ticketings) {
     const snap = validationResult.ticketSnapshots.find(
       ts => ts.ticketId.toString() === t.ticketId.toString()
     )?.snapshot;
 
-    const resolved = resolveTimeSensitivePricing(snap, now);
+    const resolved =
+      resolveTimeSensitivePricing(snap, now);
 
     let ticketPrice = resolved.basePrice;
 
-    if (t.isFastTrack && resolved.fastTrack.available) {
+    const useFastTrack =
+      t.isFastTrack && resolved.fastTrack.available;
+
+    if (useFastTrack) {
       ticketPrice += resolved.fastTrack.extraPrice;
     }
 
     sumOfPrices += ticketPrice;
+
+    resolvedTicketData.push({
+      input: t,
+      snapshot: snap,
+      pricingPhase: resolved.phase,
+      isFastTrack: useFastTrack,
+    });
   }
 
+  /* ---------- TAX ---------- */
+  let taxAmount = 0;
 
-  const isFreeOrder = sumOfPrices === 0;
+  if (sumOfPrices > 0) {
+    taxAmount = sumOfPrices * TAX_RATE;
+  }
+
+  const totalWithTax = sumOfPrices + taxAmount;
+
+  const isFreeOrder = totalWithTax === 0;
 
   /* 4️⃣ Create order */
   const orderPayload = {
@@ -64,23 +92,38 @@ const createTicketingBookingService = async (
     companyOrganizer,
     event: eventId,
     purpose: "eventTicketPurchase",
+
     orderPricing: {
       subtotal: sumOfPrices,
-      taxAmount: 0,
-      total: sumOfPrices,
+      taxAmount,
+      total: totalWithTax,
       currency: "€",
     },
+
     ticketsPurchased: data.ticketings.length,
+
     paymentDetails: {
-      paymentMethod: isFreeOrder ? "cash" : data.paymentDetails.paymentMethod,
-      cardId: isFreeOrder ? null : data.paymentDetails.cardId || null,
+      paymentMethod: isFreeOrder
+        ? "cash"
+        : data.paymentDetails.paymentMethod,
+      cardId: isFreeOrder
+        ? null
+        : data.paymentDetails.cardId || null,
       paymentId: isFreeOrder ? "FREE_ORDER" : null,
-      paymentStatus: isFreeOrder ? "paid" : "pending",
+      paymentStatus: isFreeOrder
+        ? "paid"
+        : "pending",
     },
+
     status: isFreeOrder ? "paid" : "pendingPayment",
-    ...(isFreeOrder ? {} : {
-      lockUntil: new Date(Date.now() + 10 * 60 * 1000),
-    }),
+
+    ...(isFreeOrder
+      ? {}
+      : {
+        lockUntil: new Date(
+          Date.now() + 10 * 60 * 1000
+        ),
+      }),
   };
 
   const [order] = await TicketingOrders.create(
@@ -89,20 +132,25 @@ const createTicketingBookingService = async (
   );
 
   /* 5️⃣ Create bookings */
-  const ticketDocs = data.ticketings.map(t => ({
+  const ticketDocs = resolvedTicketData.map(r => ({
     order: order._id,
     user: data.user,
     organization: organizationId,
     companyOrganizer,
+
     ticket: {
-      ticketId: t.ticketId,
-      snapshot: validationResult.ticketSnapshots.find(
-        ts => ts.ticketId.toString() === t.ticketId.toString()
-      ).snapshot,
-      protectionUserDetails: t.protectionUserDetails || {},
+      ticketId: r.input.ticketId,
+      snapshot: r.snapshot,
+      protectionUserDetails:
+        r.input.protectionUserDetails || {},
     },
+    
+    isFastTrack: r.isFastTrack,
+    pricingPhase: r.pricingPhase,
+
     status: isFreeOrder ? "valid" : "pending",
   }));
+
 
   const tickets =
     await ticketingBookingRepo.createManyTicketBookings(
@@ -112,6 +160,7 @@ const createTicketingBookingService = async (
 
   return { order, tickets };
 };
+
 
 
 const getTicketingBookingsService = async ({ page = 1, limit = 10, keyword, status = "valid", date, orderSort = "asc", timezone = "UTC", userId }) => {
