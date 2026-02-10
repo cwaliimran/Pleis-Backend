@@ -1,3 +1,4 @@
+const { getUserGlobalRewards } = require("../../../app/globalLoyalty/rewardsOrders/rewardsOrdersRepository");
 const { generateMeta } = require("../../../helperUtils/responseUtil");
 const { formatLoyaltyRewardOrders } = require("./formatter/formatLoyaltyRewardOrders");
 const rewardRepo = require("./rewardsOrdersRepository");
@@ -35,9 +36,10 @@ const getUserOrdersService = async ({
   const sortQuery = { createdAt: sort === "asc" ? 1 : -1 };
 
   // Run queries in parallel
-  let [orders, counts] = await Promise.all([
+  let [orders, counts,globalRewards] = await Promise.all([
     rewardRepo.getUserOrders(query, page, limit, sortQuery),
-    rewardRepo.getRewardOrdersCounts(query, { status: ["pending", "expired", "completed"] })
+    rewardRepo.getRewardOrdersCounts(query, { status: ["pending", "expired", "completed"] }),
+    getUserGlobalRewards(userId)
   ]);
 
   // Build meta
@@ -47,8 +49,7 @@ const getUserOrdersService = async ({
   let formattedOrders = orders.map(order => {
     return formatLoyaltyRewardOrders(order);
   });
-
-  return { orders: formattedOrders, meta };
+  return { orders: formattedOrders, meta, globalRewards };
 };
 
 

@@ -63,15 +63,13 @@ const createGlobalRewardOrder = async ({ userId, rewardId }) => {
     if (!trx?.success) {
       throw new Error(trx?.message || "transaction_failed");
     }
-
     // 4️⃣ Commit
     await session.commitTransaction();
     session.endSession();
-
     return {
       success: true,
       order,
-      transactions: trx.transactions,
+      transactions: trx.data,
     };
 
   } catch (err) {
@@ -161,8 +159,17 @@ const getUserOrders = async ({ filter, page, limit, skip }) => {
   };
 };
 
-  
+const getUserGlobalRewards = async (userId) => {
+  return GlobalRewardsOrders.find({
+    user: userId,
+    sourceType: "globalRewards",
+  })
+    .sort({ createdAt: -1 })
+    .lean();
+};
+
 module.exports = {
+  getUserGlobalRewards,
   getUserOrders,
   createGlobalRewardOrder,
   checkClaimLimitForGlobalRewards,

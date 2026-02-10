@@ -37,7 +37,6 @@ const createTransaction = async (data, session) => {
             message: result?.message || "transaction_failed"
         };
     }
-
     return {
         success: true,
         data: result.transactions
