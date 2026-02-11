@@ -59,7 +59,7 @@ const getCreatorFromOrganization = async (organizationId) => {
 const createReservation = async (data) => {
   try {
 
-    data.companyOrganizer = await getCreatorFromOrganization(data.organizationId);
+    data.companyOrganizer = data.userId;
     const Reservation = new Reservations(data);
     await Reservation.save();
     const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
@@ -270,20 +270,11 @@ const getUserReservations = async ({
   // -----------------------------
   const match = {};
 
-  // if (status) {
-  //   match.status = status;
-  // } else {
-  match.status = {
-    $in: [
-      "needsConfirmation",
-      "confirmed",
-      "checkedIn",
-      "rejected",
-      "cancelled",
-      "completed",
-    ],
-  };
-  // }
+  if (status) {
+    match.status = status;
+  } else {
+    match.status = { $ne: "deleted" };
+  }
 
   if (organizationsId) {
     match.organizationId = new mongoose.Types.ObjectId(organizationsId);
@@ -519,11 +510,6 @@ const findUserById = async (id) => {
 
 
 const getavailableReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, skip }) => {
-  // let now = getCurrentDateInTimezone({ timezone });
-  //  date = convertTimezoneToUtcDateOnly(
-  //   now,
-  //   timezone
-  // );
 
   const now = getCurrentUtcDateOnly();
 
@@ -535,7 +521,7 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
     organizationsId !== "undefined" &&
     organizationsId !== "null"
   ) {
-    // support comma or % separated ids
+    // support comma OR % separated
     const ids = organizationsId.includes("%")
       ? organizationsId.split("%")
       : organizationsId.split(",");
@@ -544,6 +530,7 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
       .filter(Boolean)
       .map(id => new mongoose.Types.ObjectId(id));
   }
+
   const pipeline = [
     {
       $match: {
@@ -559,13 +546,13 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
 
   if (range == "monthly") {
 
-const { start, end } = getStartAndEndOfMonth(now, timezone);
+
     // Update the pipeline to match events within the specified date range
     pipeline.push({
       $match: {
         "timingSlots.dateTimeSlots": {
           $elemMatch: {
-            date: { $gte: start, $lt: end }
+            date: { $gte: start, $lt: adjustedEnd }
           }
         }
       }
@@ -621,6 +608,7 @@ const { start, end } = getStartAndEndOfMonth(now, timezone);
   }
 
 
+
   // Apply filters
   if (status) {
     pipeline.push({ $match: { status } });
@@ -669,9 +657,7 @@ const { start, end } = getStartAndEndOfMonth(now, timezone);
 
   if (keyword) {
     const keywordMatch = buildKeywordQueryFromModels(
-      [
-        { schema: Reservations.schema }
-      ],
+      [{ schema: Reservations.schema }],
       keyword
     );
 
@@ -680,7 +666,26 @@ const { start, end } = getStartAndEndOfMonth(now, timezone);
     }
   }
 
+  /* ✅ ADD LOOKUP HERE */
+  pipeline.push({
+    $lookup: {
+      from: "organizations",
+      localField: "organizationId",
+      foreignField: "_id",
+      as: "organization"
+    }
+  });
+
+  pipeline.push({
+    $unwind: {
+      path: "$organization",
+      preserveNullAndEmptyArrays: true
+    }
+  });
+  /* ✅ END LOOKUP */
+
   pipeline.push({ $sort: { createdAt: -1 } });
+
 
   // Apply pagination + counts using $facet
   pipeline.push({
