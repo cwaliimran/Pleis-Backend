@@ -133,9 +133,7 @@ const resolveChallengeByTaskTypeService = async ({
   });
 };
 
-
-
- const resolveBuyMenuItemChallengeService = async ({
+const resolveBuyMenuItemChallengeService = async ({
   userId,
   companyOrganizer,
   items = []
@@ -143,9 +141,12 @@ const resolveChallengeByTaskTypeService = async ({
   let challenge_id = null;
   let reward_id = null;
   let challenge_title = null;
+
   const qtyMap = new Map();
+
   for (const item of items) {
     if (!item.menuItem || !item.quantity) continue;
+
     qtyMap.set(
       String(item.menuItem),
       (qtyMap.get(String(item.menuItem)) || 0) + Number(item.quantity)
@@ -161,8 +162,6 @@ const resolveChallengeByTaskTypeService = async ({
   for (const [menuItemId, incomingQty] of qtyMap.entries()) {
     let remaining = incomingQty;
 
-    console.log("🍔 menuItem:", menuItemId, "incoming:", remaining);
-
     const challenges = await Challenge.find({
       companyOrganizer,
       taskType: "buyMenuItem",
@@ -173,16 +172,16 @@ const resolveChallengeByTaskTypeService = async ({
     for (const challenge of challenges) {
       if (remaining <= 0) break;
 
-      // Resolve target safely
       let target = challenge.taskValue;
       if (!target) {
         const match = challenge.title.match(/\d+/);
         target = match ? Number(match[0]) : 1;
       }
+
       challenge_id = challenge._id;
       reward_id = challenge.reward._id;
       challenge_title = challenge.title;
-      // Count completed cycles
+
       let completedCycles = await LoyaltyChallengesOrders.countDocuments({
         user: userId,
         challenge: challenge._id,
@@ -192,7 +191,6 @@ const resolveChallengeByTaskTypeService = async ({
       const maxCycles = challenge.claimLimit || Infinity;
 
       while (remaining > 0 && completedCycles < maxCycles) {
-        // Reuse or create in-progress cycle
         let order = await LoyaltyChallengesOrders.findOne({
           user: userId,
           challenge: challenge._id,
@@ -211,36 +209,19 @@ const resolveChallengeByTaskTypeService = async ({
         }
 
         const capacity = target - order.progress.current;
-        if (capacity <= 0) {
-          order.status = "completed";
-          order.rewardClaimed = true;
-          order.rewardClaimedAt = new Date();
-          await order.save();
-          completedCycles++;
-          continue;
-        }
-
         const applied = Math.min(remaining, capacity);
+
         order.progress.current += applied;
         remaining -= applied;
 
-        console.log(
-          `➡️ ${challenge.title} | applied=${applied} | remaining=${remaining}`
-        );
-
         appliedAnything = true;
 
-        if (order.progress.current >= target) {
-          order.status = "completed";
-          order.rewardClaimed = true;
-          order.rewardClaimedAt = new Date();
-          completedCycles++;
-          console.log(`✅ COMPLETED: ${challenge.title}`);
-
-          //TODO create transaction
-        }
-
         await order.save();
+
+        if (order.progress.current >= target) {
+          await finalizeChallengeCompletion(order);
+          completedCycles++;
+        }
       }
     }
   }
@@ -249,18 +230,10 @@ const resolveChallengeByTaskTypeService = async ({
     return { success: false, message: "menu_item_not_applicable" };
   }
 
-  //TODO send notification for completed challenge
-  await sendUserNotifications({
-    recipientIds: [userId.toString()],
-    title: challenge_title,
-    body: `Congratulations! Your challenge has been completed`,
-    data: { type: NotificationTypes.CHALLENGE_UPDATE, objectType: "group" },
-    sender: userId,
-    objectId: challenge_id,
-  });
-
   return { success: true, message: "challenge_progress_updated" };
-}; 
+};
+
+
 
 /**
  * Simple resolver for visit / referUsers / earnPoints
@@ -334,28 +307,43 @@ const resolveGenericTaskTypeService = async ({
 
 
 const finalizeChallengeCompletion = async (order) => {
-    let challenge_title = null;
-  let challenge_id = null;
-  let reward_id = null;
   const challenge = order.challengeSnapshot;
-  challenge_title = challenge.title;
-  challenge_id = challenge._id;
-  reward_id = challenge.reward._id;
 
-  const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
+  // Atomic guard: finalize only if not already claimed
+  const lockedOrder = await LoyaltyChallengesOrders.findOneAndUpdate(
+    {
+      _id: order._id,
+      rewardClaimed: false
+    },
+    {
+      status: "completed",
+      rewardClaimed: true,
+      rewardClaimedAt: new Date()
+    },
+    { new: true }
+  );
 
-  // 1️⃣ Issue reward
-  if (challenge.reward.rewardType === "points" && challenge.rewardValue > 0) {
+  if (!lockedOrder) return;
+
+  const { createTransaction } = require(
+    "../../userWalletService/transactions/services/unifiedTransactionsService"
+  );
+
+  // Issue reward
+  if (
+    challenge.reward?.rewardType === "points" &&
+    challenge.reward?.rewardValue > 0
+  ) {
     await createTransaction(
       {
-        user: order.user,
+        user: lockedOrder.user,
         companyOrganizer: challenge.companyOrganizer,
         type: "earn",
         domainType: "loyaltychallengesorders",
-        entityId: order._id,
+        entityId: lockedOrder._id,
         companyPoints: {
-          base: challenge.rewardValue,
-          total: challenge.rewardValue
+          base: challenge.reward.rewardValue,
+          total: challenge.reward.rewardValue
         },
         description: `Challenge reward ${challenge.title}`
       },
@@ -363,30 +351,33 @@ const finalizeChallengeCompletion = async (order) => {
     );
   } else {
     await RewardsOrders.create({
-      user: order.user,
+      user: lockedOrder.user,
       sourceType: "loyaltychallengesorders",
-      sourceId: order._id,
+      sourceId: lockedOrder._id,
       snapshot: challenge,
       companyOrganizer: challenge.companyOrganizer
     });
   }
 
-  // 2️⃣ Mark completed
-  await LoyaltyChallengesOrders.findByIdAndUpdate(order._id, {
-    status: "completed",
-    rewardClaimed: true,
-    rewardClaimedAt: new Date()
-  });
+  // Notify user
   await sendUserNotifications({
-    recipientIds: [userId.toString()],
-    title: challenge_title,
-    body: `Congratulations! Your challenge has been completed.`,
-    data: { type: NotificationTypes.CHALLENGE_UPDATE, objectType: "group" },
-    sender: userId,
-    objectId: challenge_id,
+    recipientIds: [lockedOrder.user.toString()],
+    title: challenge.title,
+    body: "Congratulations! Your challenge has been completed.",
+    data: {
+      type: NotificationTypes.CHALLENGE_UPDATE,
+      objectType: "group"
+    },
+    sender: lockedOrder.user,
+    objectId: challenge._id
   });
-  return { success: true, order, message: "challenge_completed" };
+
+  return { success: true };
 };
+
+
+
+
 
 module.exports = {
   resolveChallengeByTaskTypeService,

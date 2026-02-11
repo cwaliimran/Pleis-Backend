@@ -4,7 +4,7 @@ const {
   getReservations,
   updateReservation,
   deleteReservation,
-  getReservationDetails,
+  getUserReservationDetails,
   getUserReservations,
   transferReservation
 } = require("./reservationController");
@@ -28,7 +28,7 @@ router.post("/", auth, createReservation);
 router.get("/", auth, getReservations);
 
 //get Reservation details
-router.get("/details/:id", apiRateLimiterDetails, getReservationDetails);
+router.get("/details/:id", apiRateLimiterDetails, getUserReservationDetails);
 
 // Update an existing Reservation
 router.put("/:id",auth, updateReservation);

@@ -196,8 +196,11 @@ const updateReservationStatus = async (req, res) => {
 };
 
 
+
+
 module.exports = {
   createReservation,
   getUserBookingsByDate,
   updateReservationStatus,
+  // getReservations
 };

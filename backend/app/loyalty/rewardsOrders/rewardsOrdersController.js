@@ -3,6 +3,7 @@ const {
   validateParams,
   getReadableErrorMessage,
   parsePaginationParams,
+  getAllRewardOrdersService
 } = require("@utils/responseUtil");
 
 const rewardService = require("./rewardsOrdersService");
@@ -13,6 +14,39 @@ const getUserOrders = async (req, res) => {
     const { keyword, status, orderSort } = req.query;
     const userId = req.user._id;
     const { orders, meta,globalRewards } = await rewardService.getUserOrdersService({
+      userId,
+      page,
+      limit,
+      keyword,
+      status,
+      orderSort
+    });
+
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "reward_orders_fetched_successfully",
+      data: {orders, globalRewards},
+      meta
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
+const getAllRewardOrders = async (req, res) => {
+  try {
+    const { page, limit } = parsePaginationParams(req);
+    const { keyword, status, orderSort } = req.query;
+    const userId = req.user._id;
+    const { orders, meta,globalRewards } = await rewardService.getAllRewardOrdersService({
       userId,
       page,
       limit,
@@ -52,8 +86,7 @@ const getOrderDetails = async (req, res) => {
     return;
 
   try {
-    const userId = req.user._id;
-    const response = await rewardService.getOrderDetailsService(id, userId);
+    const response = await rewardService.getLoyaltyRewardOrderDetailsService(id);
     if (!response) {
       return sendResponse({
         res,
@@ -82,5 +115,6 @@ const getOrderDetails = async (req, res) => {
 
 module.exports = {
   getUserOrders,
-  getOrderDetails
+  getOrderDetails,
+  getAllRewardOrders
 };

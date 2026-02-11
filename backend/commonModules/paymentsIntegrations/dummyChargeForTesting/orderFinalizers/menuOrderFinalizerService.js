@@ -43,10 +43,10 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
     /* ==========================
        ⛔ Idempotency Guard
     ========================== */
-    if (menuOrder.paymentStatus === "paid") {
-      await session.commitTransaction();
-      return;
-    }
+    // if (menuOrder.paymentStatus === "paid") {
+    //   await session.commitTransaction();
+    //   return;
+    // }
 
     /* ==========================
        ✅ PAYMENT SUCCESS
@@ -113,19 +113,16 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
         })) || [];
 
       if (items.length) {
-        try {
-          resolveChallengeByTaskTypeService({
-            userId: menuOrder.user,
-            companyOrganizer,
-            taskType: "buyMenuItem",
-            items,
-          });
-        } catch (_) {
-          // challenge failure must NEVER break payment
-        }
+        resolveChallengeByTaskTypeService({
+          userId: menuOrder.user,
+          companyOrganizer,
+          taskType: "buyMenuItem",
+          items,
+        }).catch(err => {
+          console.error("Challenge resolver failed:", err);
+        });
+
       }
-
-
 
       let userDetails = await findAppUserByIdWithProjectionService(menuOrder.user, { profileIcon: 1, firstName: 1, lastName: 1, profileIcon: 1, email: 1, username: 1, timezone: 1 });
       let formattedOrder = menuItemOrderFormatter(menuOrder, userDetails.timezone);

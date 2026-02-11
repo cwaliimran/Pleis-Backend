@@ -537,8 +537,6 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
   ) {
     organizationObjectId = new mongoose.Types.ObjectId(organizationsId);
   }
-  console.log("organizationObjectId:", organizationObjectId);
-  console.log("userId:", userId);
   const pipeline = [
     {
       $match: {
@@ -550,13 +548,13 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
 
   if (range == "monthly") {
 
-
+const { start, end } = getStartAndEndOfMonth(now, timezone);
     // Update the pipeline to match events within the specified date range
     pipeline.push({
       $match: {
         "timingSlots.dateTimeSlots": {
           $elemMatch: {
-            date: { $gte: start, $lt: adjustedEnd }
+            date: { $gte: start, $lt: end }
           }
         }
       }

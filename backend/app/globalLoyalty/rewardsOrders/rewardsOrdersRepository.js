@@ -147,11 +147,61 @@ const getUserOrders = async ({ filter, page, limit, skip }) => {
 
   const total = await GlobalRewardsOrders.countDocuments(query);
 
-  const orders = await GlobalRewardsOrders.find(query)
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit)
-    .lean();
+  const orders = await GlobalRewardsOrders.aggregate([
+    { $match: query },
+
+    // Sort before pagination
+    { $sort: { createdAt: -1 } },
+
+    // Pagination
+    { $skip: skip },
+    ...(limit === 0 ? [] : [{ $limit: limit }]),
+
+    // Convert snapshot.ticket → ObjectId safely
+    {
+      $addFields: {
+        ticketObjectId: {
+          $cond: [
+            { $ifNull: ["$snapshot.ticket", false] },
+            { $toObjectId: "$snapshot.ticket" },
+            null
+          ]
+        }
+      }
+    },
+
+    // Lookup ticket details
+    {
+      $lookup: {
+        from: "ticketings",
+        localField: "ticketObjectId",
+        foreignField: "_id",
+        as: "ticketDetails"
+      }
+    },
+
+    {
+      $unwind: {
+        path: "$ticketDetails",
+        preserveNullAndEmptyArrays: true
+      }
+    },
+
+    // Inject populated ticket into snapshot
+    {
+      $addFields: {
+        "snapshot.reward.specialTicket.ticket": "$ticketDetails"
+      }
+    },
+
+    // Cleanup temp fields
+    {
+      $project: {
+        ticketObjectId: 0,
+        ticketDetails: 0
+      }
+    }
+  ]);
 
   return {
     orders,
@@ -159,18 +209,134 @@ const getUserOrders = async ({ filter, page, limit, skip }) => {
   };
 };
 
+
+
 const getUserGlobalRewards = async (userId) => {
-  return GlobalRewardsOrders.find({
-    user: userId,
-    sourceType: "globalRewards",
-  })
-    .sort({ createdAt: -1 })
-    .lean();
+  return GlobalRewardsOrders.aggregate([
+    {
+      $match: {
+        user: new mongoose.Types.ObjectId(userId),
+        sourceType: "globalRewards",
+      }
+    },
+
+    { $sort: { createdAt: -1 } },
+
+    // Convert snapshot.ticket → ObjectId safely
+    {
+      $addFields: {
+        ticketObjectId: {
+          $cond: [
+            { $ifNull: ["$snapshot.ticket", false] },
+            { $toObjectId: "$snapshot.ticket" },
+            null
+          ]
+        }
+      }
+    },
+
+    // Lookup ticket
+    {
+      $lookup: {
+        from: "ticketings",
+        localField: "ticketObjectId",
+        foreignField: "_id",
+        as: "ticketDetails"
+      }
+    },
+
+    {
+      $unwind: {
+        path: "$ticketDetails",
+        preserveNullAndEmptyArrays: true
+      }
+    },
+
+    // Inject populated ticket into snapshot
+    {
+      $addFields: {
+        "snapshot.reward.specialTicket.ticket": "$ticketDetails"
+      }
+    },
+
+    // Cleanup
+    {
+      $project: {
+        ticketObjectId: 0,
+        ticketDetails: 0
+      }
+    }
+  ]);
 };
+
+
+const getOrderDetails = async (orderId, userId) => {
+  const match = {
+    _id: new mongoose.Types.ObjectId(orderId),
+  };
+
+  if (userId) {
+    match.user = new mongoose.Types.ObjectId(userId);
+  }
+
+  const result = await GlobalRewardsOrders.aggregate([
+    { $match: match },
+
+    // Convert snapshot.ticket → ObjectId safely
+    {
+      $addFields: {
+        ticketObjectId: {
+          $cond: [
+            { $ifNull: ["$snapshot.ticket", false] },
+            { $toObjectId: "$snapshot.ticket" },
+            null
+          ]
+        }
+      }
+    },
+
+    // Lookup ticket
+    {
+      $lookup: {
+        from: "ticketings",
+        localField: "ticketObjectId",
+        foreignField: "_id",
+        as: "ticketDetails"
+      }
+    },
+
+    {
+      $unwind: {
+        path: "$ticketDetails",
+        preserveNullAndEmptyArrays: true
+      }
+    },
+
+    // Inject populated ticket into snapshot
+    {
+      $addFields: {
+        "snapshot.reward.specialTicket.ticket": "$ticketDetails"
+      }
+    },
+
+    // Cleanup
+    {
+      $project: {
+        ticketObjectId: 0,
+        ticketDetails: 0
+      }
+    }
+  ]);
+
+  return result[0] || null;
+};
+
+
 
 module.exports = {
   getUserGlobalRewards,
   getUserOrders,
   createGlobalRewardOrder,
   checkClaimLimitForGlobalRewards,
+  getOrderDetails
 };

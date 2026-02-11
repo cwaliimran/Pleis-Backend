@@ -49,6 +49,9 @@ const getEligibleChallengesForLoyaltyPage = async ({
     endDate: { $gte: now }
   })
     .populate("tierLimit")
+    .populate("taskMenuItem")
+    .populate("reward.rewardMenuItem")
+    .populate("reward.specialTicket.ticket")
     .lean();
   // 4️⃣ Apply tier formatting (CRITICAL)
   activeChallenges = formatChallengesByTierKey(activeChallenges, tierKey);

@@ -22,9 +22,9 @@ const createReservationService = async (data, session) => {
 
 
 // Populate venue data for reservations (updated for new schema)
-const getReservations = async ({ timezone, page, limit, keyword, status, userId, eventId, organizationId, date }) => {
+const getReservations = async ({ timezone, page, limit, keyword, status, userId, eventId, organizationId, date, availability }) => {
   try {
-    let { reservations, meta } = await ReservationRepo.getReservations({ timezone, page, limit, keyword, status, userId, eventId, organizationId, date });
+    let { reservations, meta } = await ReservationRepo.getReservations({ timezone, page, limit, keyword, status, userId, eventId, organizationId, date, availability });
     if (!reservations || reservations.length === 0) {
       return { reservations: [], meta };
     }
@@ -138,16 +138,16 @@ const getUserReservations = async ({ timezone, page, limit, keyword, userId, dat
 
 
 
-const getReservationDetails = async (id, timezone) => {
+const getUserReservationDetailsService = async (id, timezone) => {
 
 
   try {
     // Fetch the reservation by id
-    let reservation = await ReservationRepo.getReservationDetails(id);
+    let reservation = await ReservationRepo.getUserReservationDetails(id);
 
     // Check if the reservation exists
     if (!reservation) {
-   
+
       return { reservation: null };  // Return null for reservation
     }
 
@@ -271,7 +271,7 @@ module.exports = {
   updateReservation,
   getUserReservations,
   deleteReservation,
-  getReservationDetails,
+  getUserReservationDetailsService,
   getOrganizationReservationsService,
   transferReservation
 };

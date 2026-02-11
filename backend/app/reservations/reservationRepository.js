@@ -16,6 +16,7 @@ const {
   getCurrentDateInTimezone,
   getStartAndEndOfDay,
   convertTimezoneToUtc,
+  getStartAndEndOfMonth,
 } = require("../../helperUtils/responseUtil");
 const { placePreOrderMenuItemsWithReservation } = require("../menuItemsAndOrdering/orders/orderService");
 const { sendUserNotifications } = require("../../controllers/communicationController");
@@ -309,7 +310,8 @@ const getReservations = async ({
   userId,
   eventId,
   organizationId,
-  date
+  date,
+  availability
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
@@ -351,7 +353,13 @@ const getReservations = async ({
   ];
 
   if (date) {
-    const { start, end } = getStartAndEndOfDay(date, timezone);
+    let start, end;
+
+    if (availability === "full-month") {
+      ({ start, end } = getStartAndEndOfMonth(date, timezone));
+    } else {
+      ({ start, end } = getStartAndEndOfDay(date, timezone));
+    }
 
     slotExpr.push({
       $and: [
@@ -360,6 +368,7 @@ const getReservations = async ({
       ]
     });
   }
+
 
   pipeline.push(
     { $unwind: "$timingSlots.dateTimeSlots" },
@@ -637,7 +646,7 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
   return { reservations, meta };
 };
 
-const getReservationDetails = async (id) => {
+const getUserReservationDetails = async (id) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new Error("Invalid Reservation ID");
   }
@@ -1223,7 +1232,7 @@ module.exports = {
   getReservations,
   getUserReservations,
   findUserReservationById,
-  getReservationDetails,
+  getUserReservationDetails,
   getOrganizationsWithReservationsForHome,
   getOrganizationReservations,
   getReservationForTransfer
