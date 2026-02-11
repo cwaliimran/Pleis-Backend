@@ -105,6 +105,14 @@ const ticketingBookingSchema = new mongoose.Schema(
             ref: "UserReservations",
             default: null,
             index: true,
+        },
+        isFastTrack: {
+            type: Boolean,
+            default: false,
+        },
+        pricingPhase: {
+            type: String,
+            default: "regular"
         }
 
     },

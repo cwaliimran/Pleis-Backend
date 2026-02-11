@@ -270,11 +270,20 @@ const getUserReservations = async ({
   // -----------------------------
   const match = {};
 
-  if (status) {
-    match.status = status;
-  } else {
-    match.status = { $ne: "deleted" };
-  }
+  // if (status) {
+  //   match.status = status;
+  // } else {
+  match.status = {
+    $in: [
+      "needsConfirmation",
+      "confirmed",
+      "checkedIn",
+      "rejected",
+      "cancelled",
+      "completed",
+    ],
+  };
+  // }
 
   if (organizationsId) {
     match.organizationId = new mongoose.Types.ObjectId(organizationsId);
@@ -550,13 +559,13 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
 
   if (range == "monthly") {
 
-
+const { start, end } = getStartAndEndOfMonth(now, timezone);
     // Update the pipeline to match events within the specified date range
     pipeline.push({
       $match: {
         "timingSlots.dateTimeSlots": {
           $elemMatch: {
-            date: { $gte: start, $lt: adjustedEnd }
+            date: { $gte: start, $lt: end }
           }
         }
       }

@@ -124,13 +124,11 @@ const getBadgess = async ({ page = 1, limit = 10, keyword, status, userId }) => 
 
   ]);
   const streak = await getUserMaxStreak(userId);
-console.log("userBadges",streak );
   const data = {
     streak: streak || 0,
     userBadges,
     allBadges,
   }
-  console.log("data", data );
 
   /* ===================== FINAL RESPONSE ===================== */
   return {

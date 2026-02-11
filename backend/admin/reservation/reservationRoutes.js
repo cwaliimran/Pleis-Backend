@@ -27,35 +27,35 @@ const apiRateLimiter = createRateLimiter("Reservations");
 const apiRateLimiterDetails = createRateLimiter("Reservations/:id");
 
 // Create a new Reservation
-router.post("/", auth,roleMiddleware(["admin"]), createReservation);
+router.post("/", auth,roleMiddleware(["admin", "staff", "organizer", "manager"]), createReservation);
 
 // Get all Reservations with pagination
-router.get("/", roleMiddleware(["admin"]),apiRateLimiter, getReservations);
-router.get("/calendar", roleMiddleware(["admin"]),apiRateLimiter, getCalendarReservations);
-router.post("/copy", roleMiddleware(["admin"]),apiRateLimiter, copyUserReservationsController);
-router.post("/copy-slots", roleMiddleware(["admin"]),apiRateLimiter, copyReservationSlotsController);
+router.get("/", roleMiddleware(["admin", "staff", "organizer", "manager"]),apiRateLimiter, getReservations);
+router.get("/calendar", roleMiddleware(["admin", "staff", "organizer", "manager"]),apiRateLimiter, getCalendarReservations);
+router.post("/copy", roleMiddleware(["admin", "staff", "organizer", "manager"]),apiRateLimiter, copyUserReservationsController);
+router.post("/copy-slots", roleMiddleware(["admin", "staff", "organizer", "manager"]),apiRateLimiter, copyReservationSlotsController);
 // Get all Reservations with pagination
-router.get("/available", roleMiddleware(["admin"]),apiRateLimiter, getavailableReservations);
+router.get("/available", roleMiddleware(["admin", "staff", "organizer", "manager"]),apiRateLimiter, getavailableReservations);
 
 // Get all Users Reservations with pagination
-router.get("/users",roleMiddleware(["admin"]), apiRateLimiter, getUserReservations);
+router.get("/users",roleMiddleware(["admin", "staff", "organizer", "manager"]), apiRateLimiter, getUserReservations);
 
 
 // //get Reservation details
 // router.get("/:id", apiRateLimiterDetails, getReservationDetails);
 
 // change reservation timing by clicking on clock icon in admin panel reservation calendar
-router.put("/change-timing", roleMiddleware(["admin"]), changeUsersReservationsTiming);
+router.put("/change-timing", roleMiddleware(["admin", "staff", "organizer", "manager"]), changeUsersReservationsTiming);
 
 // Update an existing Reservation
-router.put("/:id", roleMiddleware(["admin"]), updateReservation);
+router.put("/:id", roleMiddleware(["admin", "staff", "organizer", "manager"]), updateReservation);
 // cancel user reservation
-router.put("/updateStatus/:id/:value", roleMiddleware(["admin"]), updateUserReservationStatus);
+router.put("/updateStatus/:id/:value", roleMiddleware(["admin", "staff", "organizer", "manager"]), updateUserReservationStatus);
 
 // update user reservation
-router.put("/:userId/:id", roleMiddleware(["admin"]), updateUserReservation);
+router.put("/:userId/:id", roleMiddleware(["admin", "staff", "organizer", "manager"]), updateUserReservation);
 
 // Delete a Reservation
-router.delete("/:id", roleMiddleware(["admin"]), deleteReservation);
+router.delete("/:id", roleMiddleware(["admin", "staff", "organizer", "manager"]), deleteReservation);
 
 module.exports = router;

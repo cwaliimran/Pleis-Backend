@@ -254,26 +254,19 @@ const getUserOrders = async (
 };
 
 
-const getOrderDetails = async (orderId, userId) => {
-  const pipeline = [
-    {
-      $match: {
-        _id: new mongoose.Types.ObjectId(orderId),
-        user: new mongoose.Types.ObjectId(userId),
-      },
-    },
+const getOrderDetails = async (orderId) => {
+  const _id = new mongoose.Types.ObjectId(orderId);
 
-    // ---- Organizer populate with projection ----
+  const pipeline = [
+    { $match: { _id } },
+
+    // ---- Organizer populate ----
     {
       $lookup: {
         from: "users",
-        let: { organizerId: "$companyOrganizer" },
+        localField: "companyOrganizer",
+        foreignField: "_id",
         pipeline: [
-          {
-            $match: {
-              $expr: { $eq: ["$_id", "$$organizerId"] },
-            },
-          },
           {
             $project: {
               _id: 1,
@@ -305,7 +298,7 @@ const getOrderDetails = async (orderId, userId) => {
       },
     },
 
-    // ---- Ticket lookup ----
+    // ---- Ticket populate ----
     {
       $lookup: {
         from: "ticketings",
@@ -320,26 +313,135 @@ const getOrderDetails = async (orderId, userId) => {
         preserveNullAndEmptyArrays: true,
       },
     },
+
+    // inject populated ticket
     {
       $addFields: {
-        "snapshot.ticketDetails": "$ticketDetails",
+        "snapshot.reward.specialTicket.ticket": "$ticketDetails",
       },
     },
+
+    // cleanup
     {
       $project: {
-        ticketDetails: 0,
         ticketObjectId: 0,
+        ticketDetails: 0,
       },
     },
   ];
-  let order = await RewardsOrders.aggregate(pipeline);
-  return order.length ? order[0] : null;
+
+  const result = await RewardsOrders.aggregate(pipeline);
+  return result[0] || null;
 };
+
+/* 
+Fetches both loyalty/global reward orders together
+*/
+const getCombinedRewardOrders = async ({
+  userId,
+  status,
+  keyword,
+  skip,
+  limit,
+  sort = -1
+}) => {
+  const baseMatch = {
+    user: new mongoose.Types.ObjectId(userId),
+  };
+
+  if (status) baseMatch.status = status;
+
+  if (keyword) {
+    baseMatch["snapshot.title"] = {
+      $regex: keyword,
+      $options: "i"
+    };
+  }
+
+  const pipeline = [
+    { $match: baseMatch },
+
+    // identify source
+    {
+      $addFields: {
+        rewardScope: "company"
+      }
+    },
+
+    // ---- populate organizer ----
+    {
+      $lookup: {
+        from: "users",
+        let: { organizerId: "$companyOrganizer" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$_id", "$$organizerId"] }
+            }
+          },
+          {
+            $project: {
+              _id: 1,
+              "companyDetails.loyaltySettings.title": 1,
+              "companyDetails.logo": 1
+            }
+          }
+        ],
+        as: "companyOrganizer"
+      }
+    },
+    {
+      $unwind: {
+        path: "$companyOrganizer",
+        preserveNullAndEmptyArrays: true
+      }
+    },
+
+    // ---- merge global orders ----
+    {
+      $unionWith: {
+        coll: "globalrewardsorders",
+        pipeline: [
+          { $match: baseMatch },
+          {
+            $addFields: {
+              rewardScope: "global",
+              companyOrganizer: null
+            }
+          }
+        ]
+      }
+    },
+
+    // ---- unified sorting ----
+    { $sort: { createdAt: sort } },
+
+    // ---- pagination ----
+    {
+      $facet: {
+        data: [
+          { $skip: skip },
+          ...(limit !== 0 ? [{ $limit: limit }] : [])
+        ],
+        total: [{ $count: "count" }]
+      }
+    }
+  ];
+
+  const result = await RewardsOrders.aggregate(pipeline);
+
+  const data = result[0]?.data || [];
+  const total = result[0]?.total?.[0]?.count || 0;
+
+  return { data, total };
+};
+
 
 module.exports = {
   createRewardOrder,
   getUserOrders,
   getRewardOrdersCounts,
   checkClaimLimitForLoyaltyRewards,
-  getOrderDetails
+  getOrderDetails,
+  getCombinedRewardOrders
 };

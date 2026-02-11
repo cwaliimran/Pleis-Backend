@@ -3,10 +3,13 @@ const { getTicketingBookingByIdService } = require("../../app/bookings/ticketing
 const { getUserCompanyWallet } = require("../../app/loyalty/clubMembers/clubMembersService");
 const { sendResponse, validateParams } = require("@utils/responseUtil");
 const { User } = require("@UserModel");
+const { getUserReservationDetailsService } = require("../../app/reservations/reservationService");
+const { getLoyaltyRewardOrderDetailsService } = require("../../app/loyalty/rewardsOrders/rewardsOrdersService");
 const scanQrController = async (req, res) => {
   try {
+    const { timezone } = req.user;
     const { qrData } = req.body;
-    const { publicId, user, companyOrganizer, type = "loyaltyCard" } = qrData;
+    const { publicId, user, companyOrganizer, type = "loyaltyCard", id } = qrData;
 
     let validateData = {
       rawData: [
@@ -14,7 +17,7 @@ const scanQrController = async (req, res) => {
         "qrData.type",
       ],
       enumFields: {
-        "qrData.type": ["loyaltyCard", "loyaltyCardManual", "eventTicket"],
+        "qrData.type": ["loyaltyCard", "loyaltyCardManual", "eventTicket", "userReservation", "loyaltyReward"],
       },
     };
 
@@ -131,6 +134,50 @@ const scanQrController = async (req, res) => {
           eventTicket,
           warnings
         },
+      });
+    }
+    else if (type === "userReservation") {
+      validateData.rawData.push("qrData.id");
+      if (
+        !validateParams(req, res, validateData)
+      ) return;
+
+      const userReservation = await getUserReservationDetailsService(id, timezone);
+      if (!userReservation) {
+        return sendResponse({
+          res,
+          statusCode: 404,
+          translationKey: "user_reservation_not_found",
+        });
+      }
+
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "qr_code_scanned_successfully",
+        data: userReservation,
+      });
+    } else if (type === "loyaltyReward") {
+      validateData.rawData.push("qrData.id");
+      if (
+        !validateParams(req, res, validateData)
+      ) return;
+
+      const loyaltyRewardOrder = await getLoyaltyRewardOrderDetailsService(id)
+      if (!loyaltyRewardOrder) {
+        return sendResponse({
+          res,
+          statusCode: 404,
+          translationKey: "order_not_found",
+        });
+      }
+
+
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "qr_code_scanned_successfully",
+        data: loyaltyRewardOrder
       });
     }
   } catch (error) {

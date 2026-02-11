@@ -29,6 +29,7 @@ let rewardType = req.body.rewardType;
 // -------------------------
 if (rewardType === "globalTicketReward") {
   rawData.push("event");
+  rawData.push("ticket");
   objectIdFields.push("event");
 }
 

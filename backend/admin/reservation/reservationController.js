@@ -544,23 +544,17 @@ const getUserReservations = async (req, res) => {
 };
 
 
-
-
-
-
-
 const updateUserReservationStatus = async (req, res) => {
   const { id, value } = req.params;
-  const validStatuses = ["confirmed", "rejected", "pending", "cancelled"];
-  if (!validStatuses.includes(value)) {
-    return res.status(404).json({
-      message: "Invalid reservation status value. Accepted values are: confirmed, rejected, pending, cancelled.",
-    });
-  }
+
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
       objectIdFields: ["id"],
+      enumFields: {
+        value: ["pendingPayment", "needsConfirmation", "confirmed", "checkedIn", "rejected", "cancelled", "completed",
+        ]
+      }
     })
   )
     return;
@@ -734,7 +728,7 @@ const updateUserReservation = async (req, res) => {
 
 const getReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status , date, range, organizationsId, companyOrganizer } = req.query;
+  let { keyword, status, date, range, organizationsId, companyOrganizer } = req.query;
   try {
     if (
       (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&

@@ -9,6 +9,7 @@ const getChallengesWithFilters = async (query = {}, skip = 0, limit = 10) => {
   return Challenge.find(query)
     .populate("taskMenuItem")
     .populate("reward.rewardMenuItem")
+    .populate("reward.specialTicket.ticket")
     .populate("tierLimit")
     .sort({ createdAt: -1 })
     .skip(skip)
@@ -25,6 +26,7 @@ const findChallengeById = async (id) => {
   return Challenge.findById(id)
     .populate("taskMenuItem")
     .populate("reward.rewardMenuItem")
+    .populate("reward.specialTicket.ticket")
     .populate("tierLimit");
 };
 
@@ -60,6 +62,9 @@ const getEligibleChallengesForDashboard = async ({
       path: "companyOrganizer",
       select: "companyDetails.loyaltySettings.title companyDetails.logo"
     })
+    .populate("taskMenuItem")
+    .populate("reward.rewardMenuItem")
+    .populate("reward.specialTicket.ticket")
     .lean();
   return challenges;
 };
@@ -95,6 +100,9 @@ const getChallengesWithPagination = async ({
   return Challenge.find({ $and: filters })
     .populate("tierLimit")
     .populate("companyOrganizer", "companyDetails")
+    .populate("taskMenuItem")
+    .populate("reward.rewardMenuItem")
+    .populate("reward.specialTicket.ticket")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)

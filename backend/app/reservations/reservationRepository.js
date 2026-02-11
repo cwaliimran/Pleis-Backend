@@ -16,36 +16,46 @@ const {
   getCurrentDateInTimezone,
   getStartAndEndOfDay,
   convertTimezoneToUtc,
+  getStartAndEndOfMonth,
 } = require("../../helperUtils/responseUtil");
 const { placePreOrderMenuItemsWithReservation } = require("../menuItemsAndOrdering/orders/orderService");
 const { sendUserNotifications } = require("../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 const { getStaffIdsByOrganization } = require("../../admin/organizations/organizationRepository");
-const 
-createReservation = async (data, session) => {
+const createReservation = async (data, session) => {
   if (!session) throw new Error("session_required");
 
-  const { userId, reservationId, partySize, preOrderMenuItems, timezone } = data;
+  const {
+    userId,
+    reservationId,
+    partySize,
+    preOrderMenuItems,
+    timezone,
+  } = data;
 
+  const TAX_RATE = 0.06;
+
+  /* ---------- Capacity check ---------- */
   const capacityCheck = await validateReservationCapacity({
     reservationId,
-    session
-
+    session,
   });
 
   if (!capacityCheck.valid) {
-    return {
-      success: false,
-      error: capacityCheck.error
-    };
+    return { success: false, error: capacityCheck.error };
   }
 
-
-  // Fetch user profile
+  /* ---------- Fetch user ---------- */
   const userData = await User.aggregate(
     [
       { $match: { _id: new mongoose.Types.ObjectId(userId) } },
-      { $project: { firstName: 1, lastName: 1, phoneNumber: 1 } },
+      {
+        $project: {
+          firstName: 1,
+          lastName: 1,
+          phoneNumber: 1,
+        },
+      },
     ],
     { session }
   );
@@ -56,31 +66,77 @@ createReservation = async (data, session) => {
   data.lastName = userData[0].lastName || "";
   data.phoneNumber = userData[0].phoneNumber || "";
 
-  // Reservation base price
+  /* ---------- Reservation base ---------- */
   const reservationBase = await Reservations
     .findById(reservationId)
     .session(session)
     .lean();
 
-  data.reservationSnapshot = reservationBase; // Store snapshot for future reference (e.g., if reservation details change later)
+  if (!reservationBase)
+    throw new Error("Reservation not found");
 
-  const amount = Number(reservationBase?.amount ?? 0);
+  data.reservationSnapshot = reservationBase;
 
+  const baseAmount = Number(reservationBase.amount ?? 0);
 
-  //TODO confirm if party size effects price, if yes then we need to multiply price with party size
-  const totalReservationAmount = amount * partySize;
-  data.amount = totalReservationAmount;
+  /* ---------- Pricing ---------- */
+  let totalReservationAmount = 0;
 
-  // Lock only for card / applePay
-  if (["card", "applePay"].includes(data?.paymentDetails?.paymentMethod)) {
-    data.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
-    data.status = "pendingPayment";
+  switch (reservationBase.conditionType) {
+    case "fixedPrice":
+      totalReservationAmount =
+        baseAmount * Number(partySize || 1);
+      break;
+
+    case "prepayOption":
+    case "minimumSpendOnLocation":
+      totalReservationAmount = baseAmount;
+      break;
+
+    case "noCondition":
+    case "customText":
+    default:
+      totalReservationAmount = 0;
   }
 
+  /* ---------- Reservation tax ---------- */
+  let reservationTax = 0;
+
+  if (totalReservationAmount > 0) {
+    reservationTax =
+      totalReservationAmount * TAX_RATE;
+  }
+
+  const reservationTotalWithTax =
+    totalReservationAmount + reservationTax;
+
+  data.amount = reservationTotalWithTax;
+
+  /* ---------- Confirmation flow ---------- */
+  if (reservationBase.needsConfirmation) {
+    data.status = "needsConfirmation";
+  } else {
+    if (
+      reservationTotalWithTax > 0 &&
+      ["card", "applePay"].includes(
+        data?.paymentDetails?.paymentMethod
+      )
+    ) {
+      data.lockUntil = new Date(
+        Date.now() + 10 * 60 * 1000
+      );
+      data.status = "pendingPayment";
+    } else {
+      //throw error payment method is required
+      throw new Error("Payment method is required");
+    }
+  }
+
+  /* ---------- Save reservation ---------- */
   const userReservation = new UserReservations(data);
   await userReservation.save({ session });
 
-  // Pre-order handling
+  /* ---------- Preorder handling ---------- */
   if (preOrderMenuItems?.items?.length) {
     const order =
       await placePreOrderMenuItemsWithReservation({
@@ -93,16 +149,24 @@ createReservation = async (data, session) => {
         session,
       });
 
-    userReservation.preOrderMenuItemsOrder = order._id;
-    //totalPrice including menu items + reservation amount
-    const totalPrice = order.totalPrice + totalReservationAmount;
+    const totalPrice =
+      reservationTotalWithTax + order.totalPrice;
+
+    userReservation.preOrderMenuItemsOrder =
+      order._id;
+
     userReservation.amount = totalPrice;
+
     userReservation.priceBreakDown = {
       reservationAmount: totalReservationAmount,
+      reservationTax,
       preOrderMenuItemsAmount: order.totalPrice,
     };
+
     await userReservation.save({ session });
   }
+
+  /* ---------- Notifications ---------- */
   await sendUserNotifications({
     recipientIds: [userReservation.userId.toString()],
     title: "Reservation Created",
@@ -115,7 +179,12 @@ createReservation = async (data, session) => {
     sender: userId,
     objectId: userReservation.reservationId,
   });
-  const staffIds = await getStaffIdsByOrganization(userReservation.organizationId);
+
+  const staffIds =
+    await getStaffIdsByOrganization(
+      userReservation.organizationId
+    );
+
   await sendUserNotifications({
     recipientIds: staffIds,
     title: "A New Reservation Created",
@@ -131,9 +200,10 @@ createReservation = async (data, session) => {
 
   return {
     success: true,
-    reservation: userReservation
+    reservation: userReservation,
   };
 };
+
 
 
 const validateReservationCapacity = async ({
@@ -240,7 +310,8 @@ const getReservations = async ({
   userId,
   eventId,
   organizationId,
-  date
+  date,
+  availability
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
@@ -282,7 +353,13 @@ const getReservations = async ({
   ];
 
   if (date) {
-    const { start, end } = getStartAndEndOfDay(date, timezone);
+    let start, end;
+
+    if (availability === "full-month") {
+      ({ start, end } = getStartAndEndOfMonth(date, timezone));
+    } else {
+      ({ start, end } = getStartAndEndOfDay(date, timezone));
+    }
 
     slotExpr.push({
       $and: [
@@ -291,6 +368,7 @@ const getReservations = async ({
       ]
     });
   }
+
 
   pipeline.push(
     { $unwind: "$timingSlots.dateTimeSlots" },
@@ -568,7 +646,7 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
   return { reservations, meta };
 };
 
-const getReservationDetails = async (id) => {
+const getUserReservationDetails = async (id) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new Error("Invalid Reservation ID");
   }
@@ -753,6 +831,8 @@ const getReservationDetails = async (id) => {
           preOrderMenuItemsOrder: 1,
           ticketingBookingRefs: 1,
           paymentDetails: 1,
+          reservationSnapshot: 1,
+          status: 1,
         }
       },
 
@@ -1152,7 +1232,7 @@ module.exports = {
   getReservations,
   getUserReservations,
   findUserReservationById,
-  getReservationDetails,
+  getUserReservationDetails,
   getOrganizationsWithReservationsForHome,
   getOrganizationReservations,
   getReservationForTransfer

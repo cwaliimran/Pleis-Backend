@@ -1,5 +1,6 @@
 const { getUserGlobalRewards } = require("../../../app/globalLoyalty/rewardsOrders/rewardsOrdersRepository");
 const { generateMeta } = require("../../../helperUtils/responseUtil");
+const { formatGlobalLoyaltyRewardOrder } = require("../../globalLoyalty/rewardsOrders/formatter/formatLoyaltyRewardOrders");
 const { formatLoyaltyRewardOrders } = require("./formatter/formatLoyaltyRewardOrders");
 const rewardRepo = require("./rewardsOrdersRepository");
 
@@ -36,10 +37,9 @@ const getUserOrdersService = async ({
   const sortQuery = { createdAt: sort === "asc" ? 1 : -1 };
 
   // Run queries in parallel
-  let [orders, counts,globalRewards] = await Promise.all([
+  let [orders, counts] = await Promise.all([
     rewardRepo.getUserOrders(query, page, limit, sortQuery),
     rewardRepo.getRewardOrdersCounts(query, { status: ["pending", "expired", "completed"] }),
-    getUserGlobalRewards(userId)
   ]);
 
   // Build meta
@@ -49,18 +49,52 @@ const getUserOrdersService = async ({
   let formattedOrders = orders.map(order => {
     return formatLoyaltyRewardOrders(order);
   });
-  return { orders: formattedOrders, meta, globalRewards };
+  return { orders: formattedOrders, meta };
 };
 
 // Get reward order details
-const getOrderDetailsService = async (orderId, userId) => {
-  const order = await rewardRepo.getOrderDetails(orderId, userId);
+const getLoyaltyRewardOrderDetailsService = async (orderId) => {
+  const order = await rewardRepo.getOrderDetails(orderId);
   if (!order) return null;
   return formatLoyaltyRewardOrders(order);
 };
 
+const getAllRewardOrdersService = async ({
+  userId,
+  page = 1,
+  limit = 10,
+  status,
+  keyword,
+  sort = "desc"
+}) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+
+  const { data, total } =
+    await rewardRepo.getCombinedRewardOrders({
+      userId,
+      status,
+      keyword,
+      skip,
+      limit,
+      sort: sort === "asc" ? 1 : -1
+    });
+
+  const meta = generateMeta(page, limit, total);
+
+  const formattedOrders = data.map(order => {
+    if (order.rewardScope === "global") {
+      return formatGlobalLoyaltyRewardOrder(order);
+    }
+    return formatLoyaltyRewardOrders(order);
+  });
+
+  return { orders: formattedOrders, meta };
+};
+
+
 module.exports = {
   createRewardOrderService,
   getUserOrdersService,
-  getOrderDetailsService
+  getLoyaltyRewardOrderDetailsService,
+  getAllRewardOrdersService
 };

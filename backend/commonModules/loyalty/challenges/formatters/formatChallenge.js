@@ -11,9 +11,9 @@ function formatChallenge(challenge, timezone) {
     if (obj?.companyOrganizer?.companyDetails?.logo) {
         obj.companyOrganizer.companyDetails.logo = getFullImageUrl(obj.companyOrganizer?.companyDetails?.logo);
     }
-    if(obj?.image){
+    if (obj?.image) {
         obj.image = getFullImageUrl(obj.image);
-    }else{
+    } else {
         //noimage.png
         obj.image = getFullImageUrl("noimage.png");
     }
@@ -36,6 +36,10 @@ function formatChallenge(challenge, timezone) {
             case "menuItem":
                 delete obj.reward.rewardValue;
                 delete obj.reward.customReward;
+                delete obj.reward.specialTicket;
+                if(obj.reward.rewardMenuItem && obj.reward.rewardMenuItem.image){
+                    obj.reward.rewardMenuItem.image = getFullImageUrl(obj.reward.rewardMenuItem.image)
+                }
                 break;
             case "customReward":
                 delete obj.reward.rewardValue;
@@ -58,6 +62,9 @@ function formatChallenge(challenge, timezone) {
             break;
         case "buyMenuItem":
             // delete obj.taskValue;
+            if(obj.taskMenuItem && obj.taskMenuItem.image){
+                obj.taskMenuItem.image = getFullImageUrl(obj.taskMenuItem.image)
+            }
             break;
         case "referUsers":
             delete obj.taskMenuItem;
