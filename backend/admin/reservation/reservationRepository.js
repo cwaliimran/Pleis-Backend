@@ -710,7 +710,7 @@ const { start, end } = getStartAndEndOfMonth(now, timezone);
 
 
   reservations = reservations.map(item => {
-    const formatted = reservationsFormatter(item);
+    const formatted = reservationsFormatter(item, timezone);
     // if (formatted.conditionType == "noCondition" || formatted.conditionType == "ticketRequirement" || formatted.conditionType == "customText" || formatted.conditionType == "ticketRequirement") {
     //   delete formatted.amount;
     //   if (formatted.conditionType == "noCondition") {
