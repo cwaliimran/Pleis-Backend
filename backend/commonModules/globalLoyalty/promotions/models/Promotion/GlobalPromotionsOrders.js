@@ -10,7 +10,6 @@ const GlobalPromotionsOrdersSchema =
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: true,
-        index: true,
       },
 
       /* =============================
@@ -20,7 +19,6 @@ const GlobalPromotionsOrdersSchema =
         type: mongoose.Schema.Types.ObjectId,
         ref: "GlobalBasePromotion",
         required: true,
-        index: true,
       },
 
       /* =============================
@@ -59,7 +57,6 @@ const GlobalPromotionsOrdersSchema =
           "cancelled",
         ],
         default: "claimed",
-        index: true,
       },
 
       /* =============================

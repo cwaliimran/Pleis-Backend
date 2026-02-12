@@ -31,6 +31,9 @@ const createReservation = async (data, session) => {
     partySize,
     preOrderMenuItems,
     timezone,
+    firstName,
+    lastName,
+    phoneNumber,
   } = data;
 
   const TAX_RATE = 0.06;
@@ -44,27 +47,23 @@ const createReservation = async (data, session) => {
   if (!capacityCheck.valid) {
     return { success: false, error: capacityCheck.error };
   }
+  let userData;
+  if (userId) {
+    userData = await User.findById(
+      userId,
+      "firstName lastName phoneNumber",
+      { session }
+    ).lean();
 
-  /* ---------- Fetch user ---------- */
-  const userData = await User.aggregate(
-    [
-      { $match: { _id: new mongoose.Types.ObjectId(userId) } },
-      {
-        $project: {
-          firstName: 1,
-          lastName: 1,
-          phoneNumber: 1,
-        },
-      },
-    ],
-    { session }
-  );
+    if (!userData) throw new Error("User not found");
+  } else {
+    userData = { firstName, lastName, phoneNumber };
+  }
 
-  if (!userData?.length) throw new Error("User not found");
+  data.firstName = userData.firstName || "";
+  data.lastName = userData.lastName || "";
+  data.phoneNumber = userData.phoneNumber || "";
 
-  data.firstName = userData[0].firstName || "";
-  data.lastName = userData[0].lastName || "";
-  data.phoneNumber = userData[0].phoneNumber || "";
 
   /* ---------- Reservation base ---------- */
   const reservationBase = await Reservations
@@ -167,18 +166,20 @@ const createReservation = async (data, session) => {
   }
 
   /* ---------- Notifications ---------- */
-  await sendUserNotifications({
-    recipientIds: [userReservation.userId.toString()],
-    title: "Reservation Created",
-    body: `Your reservation has been created successfully.`,
-    data: {
-      type: NotificationTypes.RESERVATION_UPDATE,
-      objectType: "group",
-    },
-    image: "noimage",
-    sender: userId,
-    objectId: userReservation.reservationId,
-  });
+  if (userReservation.userId) {
+    await sendUserNotifications({
+      recipientIds: [userReservation.userId.toString()],
+      title: "Reservation Created",
+      body: `Your reservation has been created successfully.`,
+      data: {
+        type: NotificationTypes.RESERVATION_UPDATE,
+        objectType: "userreservations",
+      },
+      image: "noimage",
+      sender: userId,
+      objectId: userReservation.reservationId,
+    });
+  }
 
   const staffIds =
     await getStaffIdsByOrganization(
@@ -191,7 +192,7 @@ const createReservation = async (data, session) => {
     body: `A new reservation has been created successfully.`,
     data: {
       type: NotificationTypes.RESERVATION_UPDATE,
-      objectType: "group",
+      objectType: "userreservations",
     },
     image: "noimage",
     sender: userId,

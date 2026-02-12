@@ -6,21 +6,18 @@ const OrganizationStaffAttendanceSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organization",
       required: true,
-      index: true
     },
 
     staff: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true
     },
 
     // Organization-local date (YYYY-MM-DD)
     attendanceDate: {
       type: String,
       required: true,
-      index: true
     },
 
     // 🔹 CURRENT STATE
@@ -28,7 +25,6 @@ const OrganizationStaffAttendanceSchema = new mongoose.Schema(
       type: String,
       enum: ["checkedIn", "checkedOut"],
       default: "checkedOut",
-      index: true
     },
 
     // 🔹 DAILY HISTORY (MULTIPLE IN/OUT)

@@ -1,3 +1,5 @@
+const { createReservationService } = require("../../app/reservations/reservationService");
+const { validateReservationPayload } = require("../../app/reservations/validators/reservationValidation");
 const {
   sendResponse,
   parsePaginationParams,
@@ -10,111 +12,61 @@ const reservationService = require("./reservationService");
 
 
 const createReservation = async (req, res) => {
-  const {
-    firstName,
-    lastName,
-    phoneNumber,
-    partySize,
-    reservationType,
-    companyOrganizer,
-    organizationId,
-    timingSlots,
-    notes = "",
-
-  } = req.body;
-
-  const timezone = req.user.timezone;
-
-  // Validate required fields
-  if (
-    !validateParams(req, res, {
-      rawData: [
-        "firstName",
-        "lastName",
-        "phoneNumber",
-        "partySize",
-        "reservationType",
-        "companyOrganizer",
-        "organizationId",
-        "timingSlots",
-      ],
-      enumFields: {
-        paymentMethod: ["applePay", "card", "cash", "payLater"],
-      },
-      objectIdFields: [
-        "organizationId",
-        "companyOrganizer",
-      ],
-    })
-  )
-    return;
-
-  // Don't check for empty array if timingSlots is disabled, only apply format conversion
-  const slots = timingSlots.dateTimeSlots || [];
-  for (const dateBlock of slots) {
-    if (!dateBlock.date) continue;
-
-    for (const slot of dateBlock.timeSlots) {
-      if (!slot.startTime || !slot.endTime) continue;
-
-      // Convert to UTC DateTime strings
-      const startUtc = convertTimezoneToUtc(
-        `${dateBlock.date} ${slot.startTime}`,
-        timezone,
-        "YYYY-MM-DD hh:mm A"
-      );
-      const endUtc = convertTimezoneToUtc(
-        `${dateBlock.date} ${slot.endTime}`,
-        timezone,
-        "YYYY-MM-DD hh:mm A"
-      );
-
-      // Replace in object
-      slot.startTime = startUtc;
-      slot.endTime = endUtc;
-    }
-  }
-
-  const data = {
-    firstName,
-    lastName,
-    phoneNumber,
-    partySize,
-    reservationType,
-    organizationId,
-    companyOrganizer,
-    notes,
-    paymentMethod: "cash",
-    timingSlots: timingSlots || { enabled: false, dateTimeSlots: [] },
-    timezone,
-
-  };
+  const session = await mongoose.startSession();
 
   try {
-    const Reservation = await reservationService.createReservation(data);
-    if (!Reservation) {
+    session.startTransaction();
+
+    const normalizedReservation =
+      validateReservationPayload(req, res, req.body);
+
+    if (!normalizedReservation) return;
+
+    const result =
+      await createReservationService(
+        {
+          ...normalizedReservation,
+          userId: null, //booking being made by staff from staff app
+        },
+        session
+      );
+
+    if (!result.success) {
+      await session.abortTransaction();
+
       return sendResponse({
         res,
-        statusCode: 400,
-        translationKey: "Reservation_creation_failed",
+        statusCode: 409,
+        translationKey: result.error
       });
     }
+
+    await session.commitTransaction();
 
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "Reservation_created_successfully",
+      translationKey: "reservation_created_successfully",
+      data: result.reservation,
     });
+
   } catch (error) {
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     const readableError = getReadableErrorMessage(error);
+
     return sendResponse({
       res,
-      statusCode: readableError.statusCode,
+      statusCode: readableError.statusCode || 500,
       translationKey: readableError.message,
       error,
     });
+  } finally {
+    session.endSession();
   }
 };
+
 
 const getUserBookingsByDate = async (req, res) => {
   let { date, status = "active" } = req.query;
