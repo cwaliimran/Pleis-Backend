@@ -1,13 +1,7 @@
 const crypto = require("crypto");
 
-/**
- * In-memory dedupe store
- * Key: fingerprint
- * Value: lastSeen timestamp
- */
 const recentCrashes = new Map();
-
-const DEDUPE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const DEDUPE_WINDOW_MS = 10 * 60 * 1000;
 
 function fingerprint(err) {
   return crypto
@@ -32,30 +26,41 @@ function shouldAlert(fp) {
   return true;
 }
 
+function logCrash({ type, error }) {
+  const fp = fingerprint(error);
+
+  const payload = {
+    time: new Date().toISOString(),
+    type,
+    pid: process.pid,
+    workerId: process.env.NODE_APP_INSTANCE,
+    fingerprint: fp,
+    message: error?.message,
+    stack: error?.stack,
+    memory: process.memoryUsage(),
+    uptime: process.uptime(),
+  };
+
+  console.error(JSON.stringify(payload));
+
+  if (shouldAlert(fp)) {
+    // sendSlack(payload)
+    // sendEmail(payload)
+    // sendAzureMonitor(payload)
+  }
+}
+
+/**
+ * Fatal logger wrapper
+ */
+function fatal(type, error) {
+  logCrash({
+    type,
+    error: error instanceof Error ? error : new Error(JSON.stringify(error)),
+  });
+}
+
 module.exports = {
-  logCrash({ type, error }) {
-    const fp = fingerprint(error);
-
-    const payload = {
-      time: new Date().toISOString(),
-      type,
-      pid: process.pid,
-      workerId: process.env.NODE_APP_INSTANCE,
-      fingerprint: fp,
-      message: error?.message,
-      stack: error?.stack,
-      memory: process.memoryUsage(),
-      uptime: process.uptime(),
-    };
-
-    // ALWAYS write crash log
-    console.error(JSON.stringify(payload));
-
-    // Alert only if not duplicate
-    if (shouldAlert(fp)) {
-      // sendSlack(payload)
-      // sendEmail(payload)
-      // sendAzureMonitor(payload)
-    }
-  },
+  logCrash,
+  fatal,
 };

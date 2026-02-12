@@ -202,7 +202,6 @@ const userSchema = new mongoose.Schema(
     publicId: {
       type: String,
       unique: true,
-      index: true,
       immutable: true,
       default: "",
     },
