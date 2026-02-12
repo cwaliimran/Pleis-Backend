@@ -20,15 +20,15 @@ const apiRateLimiter = createRateLimiter("MenuItemCategories");
 router.get("/global", apiRateLimiter, getPublicCategories);
 
 // Create a new category
-router.post("/", roleMiddleware(["admin"]), createCategory);
+router.post("/", roleMiddleware(["admin","organizer"]), createCategory);
 
 // Get all categories with pagination
 router.get("/", getCategories);
 
 // Update an existing category
-router.put("/:id", roleMiddleware(["admin"]), updateCategory);
+router.put("/:id", roleMiddleware(["admin","organizer"]), updateCategory);
 
 // Delete a category
-router.delete("/:id", roleMiddleware(["admin"]), deleteCategory);
+router.delete("/:id", roleMiddleware(["admin","organizer"]), deleteCategory);
 
 module.exports = router;

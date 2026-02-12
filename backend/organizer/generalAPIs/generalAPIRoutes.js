@@ -28,6 +28,8 @@ router.get("/menu-item-categories", getmenuItemCategories);
 router.get("/menu", getmenu);
 router.get("/menu-item", getmenuItem);
 router.get("/tiers", getTiers);
+router.use("/presets", require("../../admin/menuManagement/menuPreset/presetsRoutes"));
+
 
 
 
