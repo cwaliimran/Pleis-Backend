@@ -61,6 +61,9 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
       //totalPrice including menu items + reservation amount
       const totalPrice = userReservation.amount || 0;
 
+      let bonusPoints =
+        userReservation?.reservationSnapshot?.bonusPoints ?? 0;
+
       const pointsCalculation =
         await calculatePointsRepo(userReservation.userId, userReservation.companyOrganizer, totalPrice);
 
@@ -72,14 +75,16 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
           companyPoints: {
             base: pointsCalculation.organizer.earnedPoints,
             multiplier: 1,
-            total: pointsCalculation.organizer.earnedPoints,
+            total: (pointsCalculation.organizer.earnedPoints + bonusPoints),
             pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
+            bonusPoints: bonusPoints,
           },
           globalPoints: {
             base: pointsCalculation.global.earnedPoints,
             multiplier: 1,
-            total: pointsCalculation.global.earnedPoints,
+            total: (pointsCalculation.global.earnedPoints + bonusPoints),
             pointsPerEuro: pointsCalculation.global.pointsPerEuro,
+            bonusPoints: bonusPoints,
           },
           allowNegative: false,
           type: "earn",
@@ -94,7 +99,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
         throw new Error(trx.message || "failed_loyalty_update");
       }
 
-       if (menuOrder) {
+      if (menuOrder) {
         var items = menuOrder.items.map(i => i.menuItem);
 
         if (items.length > 0) {

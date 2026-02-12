@@ -9,9 +9,11 @@ const {
 const streaksService = require("./streaksService");
 
 const createStreak = async (req, res) => {
-  const { visits = 0, points = 0, companyOrganizer, status = "active" } = req.body;
-
-  if (!validateParams(req, res, { rawData: ["points", "visits", "companyOrganizer"] })) return;
+  let { visits = 0, points = 0, companyOrganizer, status = "active" } = req.body;
+  if(!companyOrganizer){
+    companyOrganizer = req.user._id;
+  }
+  if (!validateParams(req, res, { rawData: ["points", "visits",] })) return;
 
   try {
     const streak = await streaksService.createStreak({
@@ -46,8 +48,10 @@ const createStreak = async (req, res) => {
 
 const getStreaks = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, orderSort, companyOrganizer } = req.query;
-
+  let { keyword, status, date, orderSort, companyOrganizer } = req.query;
+if(!companyOrganizer){
+  companyOrganizer = req.user._id;
+}
   try {
 
     //companyOrganizer is required to filter for specific company

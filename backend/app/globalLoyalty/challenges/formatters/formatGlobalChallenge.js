@@ -23,35 +23,41 @@ const formatGlobalChallenge = (challenge, timezone) => {
       "YYYY-MM-DD"
     );
   }
+if (obj.reward) {
+  const {
+    rewardType,
+    rewardValue,
+    customReward,
+    specialTicket
+  } = obj.reward;
 
-  //cleanup
-    // -----------------------
-  // Reward cleanup by taskType
-  // -----------------------
-  if (obj.reward && obj.taskType) {
-    const { rewardType, rewardValue, customReward } = obj.reward;
+  switch (rewardType) {
+    case "points":
+      obj.reward = {
+        rewardType,
+        rewardValue
+      };
+      break;
 
-    switch (obj.taskType) {
-      case "globalEarnPoints":
-      case "globalVisit":
-        obj.reward = {
-          rewardType,
-          rewardValue
-        };
-        break;
+    case "customReward":
+      obj.reward = {
+        rewardType,
+        customReward
+      };
+      break;
 
-      case "globalReferUsers":
-        obj.reward = {
-          rewardType,
-          customReward
-        };
-        break;
+    case "specialTicket":
+      obj.reward = {
+        rewardType,
+        specialTicket
+      };
+      break;
 
-      default:
-        // keep reward unchanged for future task types
-        break;
-    }
+    default:
+      break;
   }
+}
+
 
   return obj;
 };

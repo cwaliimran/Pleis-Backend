@@ -70,7 +70,6 @@ const createID = req.user._id;
       keyword,
       status,
       date,
-      createID,
     });
 
     return sendResponse({

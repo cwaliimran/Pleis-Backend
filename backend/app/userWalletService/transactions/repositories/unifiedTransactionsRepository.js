@@ -19,7 +19,8 @@ const createTransaction = async (data, session) => {
     domainType,
     entityId,
     allowNegative,
-    description
+    description,
+    
   } = data;
   const userId = typeof user === "string" ? user : (user._id || user.id);
 

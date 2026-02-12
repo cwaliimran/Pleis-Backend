@@ -116,7 +116,7 @@ const applyPoints = async (req, res) => {
       body: `You earn ${trx.companyPoints.total + trx.globalPoints.total} points.`,
       data: {
         type: NotificationTypes.POINTS_UPDATE,
-        objectType: "group",
+        objectType: "ApplyPointsByStaff",
       },
       image: "noimage",
       sender: companyOrganizer,

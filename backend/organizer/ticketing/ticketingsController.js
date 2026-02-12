@@ -9,7 +9,8 @@ const {
 const ticketingsService = require("./ticketingsService");
 
 const createTicketing = async (req, res) => {
-  const data = req.body;
+  let data = req.body;
+  data.status = "active"
   const { timezone } = req.user;
 
   // ==============================
@@ -82,12 +83,10 @@ const createTicketing = async (req, res) => {
   }
 
   // Scheduled ticketing date
-  if (data.status === "scheduled") {
-    validateData.dateFields = {
-      ...validateData.dateFields,
-      scheduledPublishAt: "YYYY-MM-DD hh:mm A",
-    };
-  }
+  validateData.dateFields = {
+    ...validateData.dateFields,
+    scheduledPublishAt: "YYYY-MM-DD hh:mm A",
+  };
 
   // ==============================
   // VALIDATE ALL FIELDS FIRST
@@ -97,7 +96,7 @@ const createTicketing = async (req, res) => {
   // ==============================
   // CONVERT DATES TO UTC AFTER VALIDATION
   // ==============================
-  if (data.status === "scheduled" && data.scheduledPublishAt) {
+  if (data.scheduledPublishAt) {
     data.scheduledPublishAt = convertTimezoneToUtc(
       data.scheduledPublishAt,
       timezone,
@@ -289,15 +288,13 @@ const updateTicketing = async (req, res) => {
     }
   }
 
-  if (data.status == "scheduled") {
-    validateData.dateFields = { scheduledPublishAt: "YYYY-MM-DD hh:mm A" };
-  }
+  validateData.dateFields = { scheduledPublishAt: "YYYY-MM-DD hh:mm A" };
 
   // --- Run basic validations ---
   if (!validateParams(req, res, validateData)) return;
 
   // --- Convert scheduledPublishAt to UTC ---
-  if (data.status == "scheduled" && data.scheduledPublishAt) {
+  if (data.scheduledPublishAt) {
     data.scheduledPublishAt = convertTimezoneToUtc(
       data.scheduledPublishAt,
       timezone,

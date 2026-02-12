@@ -13,6 +13,7 @@ const { formatUserWallet } = require("../clubMembers/formatters/formatUserWallet
 const { generateMeta } = require("@utils/responseUtil");
 const formatPromotion = require("./formatters/formatPromotion");
 const { normalizePromotionClaimMeta } = require("./formatters/normalizePromotionClaimMeta");
+const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
 
 
 // Count
@@ -32,8 +33,11 @@ const findById = async ({
     .populate("tierLimit")
     .populate({
       path: "companyOrganizer",
-      select:
-        "companyDetails.loyaltySettings.title companyDetails.logo",
+      select: "companyDetails.loyaltySettings.title companyDetails.logo",
+    })
+    .populate({
+      path: "reward",
+      select: "title description image rewardType points ticket event menuItem",
     })
     .lean();
 
@@ -48,6 +52,7 @@ const findById = async ({
 
   return items[0] || null;
 };
+
 
 
 const getPromotionsByCompanyOrganizer = async ({
@@ -348,6 +353,15 @@ const getPromotionsForHome = async ({
       },
     },
     { $unwind: { path: "$menuItem", preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: "rewards",
+        localField: "reward",
+        foreignField: "_id",
+        as: "reward",
+      },
+    },
+    { $unwind: { path: "$reward", preserveNullAndEmptyArrays: true } },
 
     { $sort: { createdAt: -1 } },
 
@@ -453,6 +467,23 @@ const getPromotions = async ({
     },
   });
 
+  //populate reward
+  pipeline.push({
+    $lookup: {
+      from: "rewards",
+      localField: "reward",
+      foreignField: "_id",
+      as: "reward",
+    },
+  });
+
+  pipeline.push({
+    $unwind: {
+      path: "$reward",
+      preserveNullAndEmptyArrays: true,
+    },
+  });
+
   pipeline.push({ $sort: { createdAt: -1 } });
 
   pipeline.push({
@@ -485,6 +516,178 @@ const getPromotions = async ({
   };
 };
 
+const getActiveLoyaltyHappyHourPromotion = async ({
+  companyOrganizer,
+  userId,
+  userTierEntryPoints = 0,
+  now = new Date(),
+}) => {
+  if (!companyOrganizer || !userId) return null;
+
+  const organizerId = new mongoose.Types.ObjectId(companyOrganizer);
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+
+  const [promotion] = await Promotion.aggregate([
+    {
+      $match: {
+        promotionType: "happyHour",
+        status: "active",
+        companyOrganizer: organizerId,
+        startDate: { $lte: now },
+        endDate: { $gte: now },
+      },
+    },
+
+    {
+      $lookup: {
+        from: "tiers",
+        localField: "tierLimit",
+        foreignField: "_id",
+        as: "tierLimit",
+      },
+    },
+    { $unwind: "$tierLimit" },
+
+    {
+      $match: {
+        $expr: {
+          $lte: ["$tierLimit.entryPoints", userTierEntryPoints],
+        },
+      },
+    },
+
+    {
+      $lookup: {
+        from: "promotionorders",
+        let: { promoId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$promotion", "$$promoId"] },
+              user: userObjectId,
+              status: { $in: ["claimed", "redeemed"] },
+            },
+          },
+          { $count: "userClaims" },
+        ],
+        as: "claimStats",
+      },
+    },
+
+    {
+      $addFields: {
+        userClaims: {
+          $ifNull: [{ $arrayElemAt: ["$claimStats.userClaims", 0] }, 0],
+        },
+      },
+    },
+
+    {
+      $match: {
+        $expr: {
+          $or: [
+            { $eq: ["$claimLimit", null] },
+            { $gt: ["$claimLimit", "$userClaims"] },
+          ],
+        },
+      },
+    },
+
+    { $sort: { pointsMultiplier: -1 } },
+    { $limit: 1 },
+
+    {
+      $addFields: {
+        remainingClaims: {
+          $cond: [
+            { $eq: ["$claimLimit", null] },
+            null,
+            { $subtract: ["$claimLimit", "$userClaims"] },
+          ],
+        },
+      },
+    },
+
+    { $project: { claimStats: 0 } },
+  ]);
+
+  return promotion || null;
+};
+
+const claimPromotion = async (promotionId, userId) => {
+  const now = new Date();
+
+  /* ---------------- Fetch promotion ---------------- */
+  const promotion = await Promotion.findById(promotionId)
+    .populate("tierLimit")
+    .populate("menuItem")
+    .populate({
+      path: "companyOrganizer",
+      select:
+        "companyDetails.loyaltySettings.title companyDetails.logo",
+    })
+    .lean();
+
+  if (!promotion) {
+    throw new Error("Promotion not found");
+  }
+
+  if (promotion.status !== "active") {
+    throw new Error("Promotion is not active");
+  }
+
+  /* ---------------- Eligibility normalization ---------------- */
+  const [eligiblePromo] =
+    await applyPromotionEligibility({
+      promotions: [promotion],
+      userId,
+      timezone: "UTC",
+      now,
+    });
+
+  if (!eligiblePromo) {
+    throw new Error("Promotion not eligible");
+  }
+
+  if (!eligiblePromo.canClaim) {
+    throw new Error(
+      eligiblePromo.claimError ||
+      "Promotion cannot be claimed"
+    );
+  }
+
+  /* ---------------- Create claim ---------------- */
+  const order = await PromotionsOrders.create({
+    promotion: promotionId,
+    promotionType: promotion.promotionType,
+    companyOrganizer: promotion.companyOrganizer._id,
+    pointsSpent: promotion.claimPoints || 0,
+    user: userId,
+    status: "claimed",
+    claimedAt: now,
+  });
+
+  //create transaction
+
+  await createTransaction(
+    {
+      user: userId,
+      companyOrganizer: promotion.companyOrganizer._id,
+      type: "redeem",
+      domainType: "promotionorders",
+      entityId: order._id,
+      companyPoints: {
+        base: promotion.claimPoints || 0,
+        total: -(promotion.claimPoints || 0)
+      },
+      description: `Promotion reward ${promotion.title}`
+    },
+    null
+  );
+
+  return order;
+};
+
 
 module.exports = {
   count,
@@ -493,6 +696,8 @@ module.exports = {
   getPromotionsForDashboard,
   getPromotionsForHome,
   getPromotions,
+  getActiveLoyaltyHappyHourPromotion,
+  claimPromotion
 
 };
 

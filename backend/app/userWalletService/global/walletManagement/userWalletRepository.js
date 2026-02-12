@@ -220,8 +220,34 @@ const checkDemotion = async (userId) => {
   return { demoted: true, newLevel: fallback };
 };
 
+const getTotalRedeemPurchases = async (userId) => {
+  try {
+    // Perform an aggregation to sum up all redeem type transactions for the given user
+    const result = await UnifiedWalletTransactions.aggregate([
+      {
+        $match: {
+          user: new mongoose.Types.ObjectId(userId),  // Match the user by userId
+          type: 'redeem'  // Only include "redeem" type transactions
+        }
+      },
+      {
+        $group: {
+          _id: null,  // Grouping by nothing (we want a single result)
+          totalPurchases: { $sum: "$closingBalance" }  // Sum up the 'total' points field
+        }
+      }
+    ]);
+
+    // If result is empty, return 0
+    return result.length > 0 ? result[0].totalPurchases : 0;
+  } catch (error) {
+    console.error("Error fetching total redeem purchases:", error);
+    throw error;
+  }
+};
 module.exports = {
   createUserWallet,
   updateGlobalPoints,
-  getUserWallet
+  getUserWallet,
+  getTotalRedeemPurchases
 };

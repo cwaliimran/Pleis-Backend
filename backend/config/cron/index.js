@@ -10,6 +10,8 @@ const {
 } = require("./payments/reconcilePendingUserReservationPayments");
 
 const { runRecurringEventsCron } = require("./events/recurringEvents.core");
+const { runRecurringPromotionsCron } = require("../../admin/loyalty/promotions/utils/recurringPromotion.core");
+const { runRecurringGlobalPromotionsCron } = require("../../admin/globalLoyalty/promotions/utils/recurringPromotion.core");
 
 const startCrons = () => {
   /* ======================================================
@@ -35,6 +37,7 @@ const startCrons = () => {
   /* ======================================================
      🕛 CRON 2: Recurring events (every day at midnight)
      ====================================================== */
+  // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
   cron.schedule("0 0 0 * * *", async () => {
     const lockKey = "cron:recurring-events-midnight";
     const lock = await acquireLock(lockKey, 60); // 1 min TTL
@@ -43,7 +46,9 @@ const startCrons = () => {
 
     try {
       await runRecurringEventsCron();
-      console.log("✅ Midnight recurring events cron completed");
+      await runRecurringPromotionsCron();
+      await runRecurringGlobalPromotionsCron();
+      console.log("✅ Midnight recurring cron completed");
     } catch (err) {
       console.error("❌ Midnight recurring cron failed:", err);
     } finally {

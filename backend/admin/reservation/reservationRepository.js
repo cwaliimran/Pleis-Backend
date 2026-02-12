@@ -270,11 +270,20 @@ const getUserReservations = async ({
   // -----------------------------
   const match = {};
 
-  if (status) {
-    match.status = status;
-  } else {
-    match.status = { $ne: "deleted" };
-  }
+  // if (status) {
+  //   match.status = status;
+  // } else {
+  match.status = {
+    $in: [
+      "needsConfirmation",
+      "confirmed",
+      "checkedIn",
+      "rejected",
+      "cancelled",
+      "completed",
+    ],
+  };
+  // }
 
   if (organizationsId) {
     match.organizationId = new mongoose.Types.ObjectId(organizationsId);
@@ -519,35 +528,44 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
   const now = getCurrentUtcDateOnly();
 
 
-  let organizationObjectId = null;
+  let organizationObjectIds = null;
 
   if (
     organizationsId &&
     organizationsId !== "undefined" &&
     organizationsId !== "null"
   ) {
-    organizationObjectId = new mongoose.Types.ObjectId(organizationsId);
+    // support comma or % separated ids
+    const ids = organizationsId.includes("%")
+      ? organizationsId.split("%")
+      : organizationsId.split(",");
+
+    organizationObjectIds = ids
+      .filter(Boolean)
+      .map(id => new mongoose.Types.ObjectId(id));
   }
-  console.log("organizationObjectId:", organizationObjectId);
-  console.log("userId:", userId);
   const pipeline = [
     {
       $match: {
-        ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
-        ...(organizationObjectId && { organizationId: organizationObjectId }),
+        ...(organizationObjectIds
+          ? { organizationId: { $in: organizationObjectIds } }
+          : userId
+            ? { companyOrganizer: new mongoose.Types.ObjectId(userId) }
+            : {}),
       },
     },
   ];
 
+
   if (range == "monthly") {
 
-
+const { start, end } = getStartAndEndOfMonth(now, timezone);
     // Update the pipeline to match events within the specified date range
     pipeline.push({
       $match: {
         "timingSlots.dateTimeSlots": {
           $elemMatch: {
-            date: { $gte: start, $lt: adjustedEnd }
+            date: { $gte: start, $lt: end }
           }
         }
       }

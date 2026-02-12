@@ -15,7 +15,7 @@ const joinClub = async (req, res) => {
   if (!validateParams(req, res, { rawData: ["companyOrganizer"] })) return;
 
   try {
-    const data = await clubService.joinClub(userId, companyOrganizer,referrerId);
+    const data = await clubService.joinClub(userId, companyOrganizer, referrerId);
 
     return sendResponse({
       res,
@@ -68,7 +68,7 @@ const getUserJoinedClubsWithPoints = async (req, res) => {
   const { keyword } = req.query;
 
   try {
-    const {data, meta} = await clubService.getUserJoinedClubsWithPoints({ page, limit, skip, userId, keyword });
+    const { data, meta } = await clubService.getUserJoinedClubsWithPoints({ page, limit, skip, userId, keyword });
 
     return sendResponse({
       res,

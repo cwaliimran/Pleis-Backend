@@ -52,6 +52,7 @@ const getUsers = async (req, res) => {
         status,
         userType
       });
+      console.log("users",users );
       // Ensure toJSON method is applied to strip out sensitive data
       const sanitizedUsers = users.map(user => {
         // Use your updated toJSON (works for docs and plain objects)

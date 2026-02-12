@@ -8,7 +8,6 @@ const globalRewardsOrderSchema = new mongoose.Schema(
   {
     bookingId: {
       type: String,
-      unique: true,
       index: true,
       default: () => `GRWD-${generateRewardId()}`, 
       // GRWD = Global Reward Order

@@ -13,6 +13,10 @@ const { getOrganizationsAsStaff } = require("../organizations/organizationServic
 const { formatOrganization } = require("../organizations/formatter/formatOrganization.js");
 const { getLatestEventByOrganization } = require("../events/eventRepository.js");
 const { getUserJoinedClubs, getUserJoinedClubsall } = require("../loyalty/clubMembers/clubMembersRepository.js");
+const { getUserWallet, getTotalRedeemPurchases } = require("../../app/userWalletService/global/walletManagement/userWalletRepository.js");
+const { getUserEventEngagementDetails } = require("../../app/favorites/favoriteRepository.js");
+const { getTotalPurchases } = require("../ticketing/ticketingsRepository.js");
+const { getTotalOrderPriceByUser } = require("../../app/menuItemsAndOrdering/orders/orderRepository.js");
 
 const createUser = async (req, res) => {
   const result = await registerUserUtility(req, res, {
@@ -272,6 +276,9 @@ const getUserDetails = async (req, res) => {
     let events = [];
     let interests = {};
     let joinedClubs = [];
+    let globalPoints = {};
+    let eventEngagement = [];
+    let totalPurchases = 0
 
     if (
       user.accountState?.userType === "organizer" ||
@@ -299,18 +306,28 @@ const getUserDetails = async (req, res) => {
       delete userObject.events;
 
       // Fetch user interests and clubs concurrently
-      const [interests_, joinedClubs_] = await Promise.all([
+      const [interests_, joinedClubs_, globalPoints_, eventEngagementDetails_, totalorderPurchases_, toalticketPurchases_] = await Promise.all([
         usersService.getUserInterestsByUserId(user._id),
-        getUserJoinedClubsall(user._id)
+        getUserJoinedClubsall(user._id),
+        getUserWallet(user._id),
+        getUserEventEngagementDetails(user._id),
+        getTotalOrderPriceByUser(user._id),
+        getTotalPurchases(user._id)
       ]);
-
       interests = interests_;
       joinedClubs = joinedClubs_;
+      globalPoints = globalPoints_;
+      eventEngagement = eventEngagementDetails_;
+      totalPurchases = totalorderPurchases_ + toalticketPurchases_;
     }
+
     const response = formatUserResponse(userObject);
     response.event = events[0] || {};
     response.interests = interests || {};
     response.joinedClubs = joinedClubs || [];
+    response.globalPoints = globalPoints || {};
+    response.eventEngagement = eventEngagement || [];
+    response.totalPurchases = totalPurchases || 0;
     return sendResponse({
       res,
       statusCode: 200,

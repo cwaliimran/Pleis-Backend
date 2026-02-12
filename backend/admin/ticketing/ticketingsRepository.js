@@ -692,7 +692,68 @@ const getTotalTicketsPurchasedByOrganizationId = async (organizationId) => {
     return 0; // Return 0 if there was an error
   }
 };
+const getTotalPurchases = async (userId) => {
+  try {
+    // Fetch all orders for the user and sum the total from each order
+    const result = await TicketingOrders.aggregate([
+      {
+        $match: {
+          user: new mongoose.Types.ObjectId(userId), // Match by userId
+          status: "paid",  // Optionally, you can filter by status like 'paid'
+        }
+      },
+      {
+        $group: {
+          _id: null,  // Group by nothing to get a single result
+          totalPurchases: { $sum: "$orderPricing.total" }  // Sum up the total from each order
+        }
+      }
+    ]);
+    // If result is empty, return 0
+    return result.length > 0 ? result[0].totalPurchases : 0;
+  } catch (error) {
+    console.error("Error getting total purchases:", error);
+    throw error;
+  }
+};
+const getActiveTicketingByEventId = async ({
+  event, 
+  page = 1, 
+  limit = 10, 
+  status = "active", 
+  keyword = ""
+}) => {
 
+  try {
+    // Skip value for pagination
+    const skip = (page - 1) * limit;
+
+    // Build the filter object
+    let filter = {
+      event: new mongoose.Types.ObjectId(event), // Convert eventId to ObjectId
+      status: status // Filter by status, default to "active"
+    };
+
+    // If keyword is provided, filter by title (case-insensitive)
+    if (keyword) {
+      filter.title = { $regex: keyword, $options: 'i' }; // Case-insensitive search
+    }
+
+    // Query for ticketings with pagination and filters
+    const ticketings = await TicketingsModel.find(filter)
+      .skip(skip)
+      .limit(limit)
+      .select("title event _id"); // Select only the title, event, and _id fields
+
+    // Return the ticketing information (name and ID)
+    return ticketings.map(ticket => ({
+      title: ticket.title,   // Ticket name
+      _id: ticket._id.toString()  // Ticket ID as a string
+    }));
+  } catch (error) {
+    throw new Error("Unable to fetch active ticketings.");
+  }
+};
 module.exports = {
   createTicketing,
   getTicketingsWithFilters,
@@ -709,5 +770,7 @@ module.exports = {
   getTicketsByOrderIds,
   getEventsTicketingsWithFilters,
   getTicketSalesStats,
-  getTotalTicketsPurchasedByOrganizationId
+  getTotalTicketsPurchasedByOrganizationId,
+  getTotalPurchases,
+  getActiveTicketingByEventId
 };

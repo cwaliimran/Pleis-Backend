@@ -72,7 +72,7 @@
         "backend/commonModules/loyalty/promotions/models/Promotion/BasePromotion.js"
       ],
       "@RewardModel": [
-        "backend/commonModules/loyalty/rewards/models/BaseReward.js"
+        "backend/commonModules/loyalty/rewards/models/baseReward.js"
       ],
       "@ListingModel": [
         "backend/commonModules/loyalty/listings/Listing.js"
@@ -244,6 +244,9 @@
       ],
       "@OrganizationStaffAttendanceModel": [
         "backend/commonModules/staff/OrganizationStaffAttendance.js"
+      ],
+      "@GlobalBasePromotionModel": [
+        "backend/commonModules/globalLoyalty/promotions/models/Promotion/basePromotion.js"
       ]
     }
   },

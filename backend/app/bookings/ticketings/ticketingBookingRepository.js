@@ -129,24 +129,26 @@ const getTicketingBookingById = async (id) => {
     { $unwind: { path: "$organization", preserveNullAndEmptyArrays: true } },
 
     // 3️⃣ Populate ticketing order FIRST
-   {
-  $lookup: {
-    from: "ticketingorders",
-    let: { orderId: "$order" },
-    pipeline: [
-      { $match: { $expr: { $eq: ["$_id", "$$orderId"] } } },
-      {
-        $project: {
-          _id: 1,
-          orderPricing: 1,
-          paymentDetails: 1,
-          createdAt: 1,
-        },
+    {
+      $lookup: {
+        from: "ticketingorders",
+        let: { orderId: "$order" },
+        pipeline: [
+          { $match: { $expr: { $eq: ["$_id", "$$orderId"] } } },
+          {
+            $project: {
+              _id: 1,
+              orderPricing: 1,
+              paymentDetails: 1,
+              createdAt: 1,
+              isFastTrack: 1,
+              pricingPhase: 1,
+            },
+          },
+        ],
+        as: "order",
       },
-    ],
-    as: "order",
-  },
-},
+    },
 
     { $unwind: { path: "$order", preserveNullAndEmptyArrays: true } },
 

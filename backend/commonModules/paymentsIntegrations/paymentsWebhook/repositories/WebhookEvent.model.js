@@ -16,7 +16,7 @@ const webhookEventSchema = new mongoose.Schema(
 
     orderType: {
       type: String,
-      enum: ["ticketingbookings", "userreservations", "menuorders"],
+      enum: ["ticketingbookings", "userreservations", "menuorders", "tickettransfer"],
       required: true,
     },
 

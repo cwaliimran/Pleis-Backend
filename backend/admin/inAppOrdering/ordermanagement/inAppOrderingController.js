@@ -80,7 +80,7 @@ const updateOrders = async (req, res) => {
 
 
   try {
-    const updated = await Orderservice.updateOrders(id, data);
+    const updated = await Orderservice.updateOrderDetailsService({ orderId: id, data });
     if (updated && updated.error) {
       return sendResponse({
         res,
@@ -184,7 +184,7 @@ const getInAppOrders = async (req, res) => {
       });
     }
 
-    organization  = new mongoose.Types.ObjectId(organization);
+    organization = new mongoose.Types.ObjectId(organization);
     const timezone = req.user.timezone;
     const data = await Orderservice.getInAppOrders({
       timezone,

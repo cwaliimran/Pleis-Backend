@@ -43,10 +43,10 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
     /* ==========================
        ⛔ Idempotency Guard
     ========================== */
-    if (menuOrder.paymentStatus === "paid") {
-      await session.commitTransaction();
-      return;
-    }
+    // if (menuOrder.paymentStatus === "paid") {
+    //   await session.commitTransaction();
+    //   return;
+    // }
 
     /* ==========================
        ✅ PAYMENT SUCCESS
@@ -104,25 +104,25 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       }
 
       /* ==========================
-         🏆 Challenges
-      ========================== */
+     🏆 Challenges
+  ========================== */
       const items =
-        menuOrder.items?.map((i) => i.menuItem) || [];
-      if (items.length) {
-        try {
-          //TODO use this function also on admin side as well when they will complete the order for payLater method
-          //resolveChallengeByTaskTypeService
-          resolveChallengeByTaskTypeService({
-            userId: menuOrder.user,
-            companyOrganizer,
-            taskType: "buyMenuItem",
-            items,
-          });
-        } catch (_) {
-          // challenge failure must NEVER break payment finalization
-        }
-      }
+        menuOrder.items?.map(i => ({
+          menuItem: i.menuItem,
+          quantity: i.quantity,
+        })) || [];
 
+      if (items.length) {
+        resolveChallengeByTaskTypeService({
+          userId: menuOrder.user,
+          companyOrganizer,
+          taskType: "buyMenuItem",
+          items,
+        }).catch(err => {
+          console.error("Challenge resolver failed:", err);
+        });
+
+      }
 
       let userDetails = await findAppUserByIdWithProjectionService(menuOrder.user, { profileIcon: 1, firstName: 1, lastName: 1, profileIcon: 1, email: 1, username: 1, timezone: 1 });
       let formattedOrder = menuItemOrderFormatter(menuOrder, userDetails.timezone);

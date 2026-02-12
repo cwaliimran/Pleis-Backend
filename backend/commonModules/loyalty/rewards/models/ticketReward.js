@@ -1,4 +1,4 @@
-const Reward = require("./BaseReward");
+const Reward = require("./baseReward");
 const mongoose = require("mongoose");
 
 const TicketReward = Reward.discriminator(
@@ -9,6 +9,15 @@ const TicketReward = Reward.discriminator(
         type: mongoose.Schema.Types.ObjectId,
         ref: "Events",
         required: true,
+      },
+      ticket: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Ticketings",
+        required: true,
+      },
+      timeSlot: {
+        type: String,
+        default: null,
       },
     },
     { _id: false }

@@ -419,7 +419,6 @@ const getEventRevenueAnalytics = async ({
   };
 };
 
-
 const getTicketTypeStats = async ({ eventId }) => {
   const eventObjectId = new mongoose.Types.ObjectId(eventId);
 
@@ -454,10 +453,6 @@ const getTicketTypeStats = async ({ eventId }) => {
       status: t.status,
       totalCreated: totalQuantity,
       sold: 0,
-      paid: 0,
-      unpaid: 0,
-      paidAmount: 0,
-      unpaidAmount: 0,
     };
   }
 
@@ -468,24 +463,20 @@ const getTicketTypeStats = async ({ eventId }) => {
     event: eventObjectId,
     status: { $in: ["paid", "completed"] },
   })
-    .select("_id status paymentDetails orderPricing ticketsPurchased")
+    .select("_id")
     .lean();
 
   if (!orders.length) return Object.values(ticketMap);
 
-  const orderMap = {};
-  const orderIds = orders.map(o => {
-    orderMap[o._id.toString()] = o;
-    return o._id;
-  });
+  const orderIds = orders.map(o => o._id);
 
   /* --------------------------------
-     3️⃣ LOAD BOOKINGS FOR THOSE ORDERS
+     3️⃣ LOAD BOOKINGS
      -------------------------------- */
   const bookings = await TicketingBookings.find({
     order: { $in: orderIds },
   })
-    .select("order ticket.ticketId")
+    .select("ticket.ticketId")
     .lean();
 
   /* --------------------------------
@@ -493,29 +484,10 @@ const getTicketTypeStats = async ({ eventId }) => {
      -------------------------------- */
   for (const b of bookings) {
     const ticketId = b.ticket?.ticketId?.toString();
-    const order = orderMap[b.order?.toString()];
 
-    if (!ticketId || !ticketMap[ticketId] || !order) continue;
-
-    const isPaid =
-      order.status === "paid" &&
-      ["card", "applePay"].includes(order.paymentDetails?.paymentMethod) &&
-      order.paymentDetails?.paymentStatus === "paid";
+    if (!ticketId || !ticketMap[ticketId]) continue;
 
     ticketMap[ticketId].sold += 1;
-
-    const perTicketAmount =
-      order.ticketsPurchased > 0
-        ? (order.orderPricing.total || 0) / order.ticketsPurchased
-        : 0;
-
-    if (isPaid) {
-      ticketMap[ticketId].paid += 1;
-      ticketMap[ticketId].paidAmount += perTicketAmount;
-    } else {
-      ticketMap[ticketId].unpaid += 1;
-      ticketMap[ticketId].unpaidAmount += perTicketAmount;
-    }
   }
 
   /* --------------------------------
@@ -528,18 +500,11 @@ const getTicketTypeStats = async ({ eventId }) => {
     totalCreated: t.totalCreated,
     sold: t.sold,
     remaining: Math.max(t.totalCreated - t.sold, 0),
-    paid: {
-      count: t.paid,
-      amount: Math.round(t.paidAmount),
-    },
-    unpaid: {
-      count: t.unpaid,
-      amount: Math.round(t.unpaidAmount),
-    },
   }));
 
   return result;
 };
+
 
 
 
