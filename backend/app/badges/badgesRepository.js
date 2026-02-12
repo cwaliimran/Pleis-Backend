@@ -31,7 +31,7 @@ const addUserBadges = async (data) => {
       body: `Congratulations! You've earned a new badge.`,
       data: {
         type: NotificationTypes.BADAGE_EARNED,
-        objectType: "group",
+        objectType: "BadgeCategories",
       },
       image: "noimage",
       sender: data.userId,

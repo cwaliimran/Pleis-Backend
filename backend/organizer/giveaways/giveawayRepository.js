@@ -94,7 +94,7 @@ const createGiveaway = async (data) => {
       body: `You have a chance to win: ${giveaway.title}`,
       data: {
         type: NotificationTypes.GIVEAWAY_UPDATE,
-        objectType: "group",
+        objectType: "Giveaway",
       },
       image: "noimage",
       sender: data.creator,

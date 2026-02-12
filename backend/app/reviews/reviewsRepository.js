@@ -14,7 +14,7 @@ const createReviews = async (data) => {
       body: `Your review  has been sent successfully.`,
       data: {
         type: NotificationTypes.EVENT_UPDATE,
-        objectType: "group",
+        objectType: "Reviews",
         organization_id: reviews.organization.toString(),
       },
       image: "noimage",
@@ -27,7 +27,7 @@ const createReviews = async (data) => {
       body: `A user has submitted a review for your event.`,
       data: {
         type: NotificationTypes.EVENT_UPDATE,
-        objectType: "group",
+        objectType: "Reviews",
         organization_id: reviews.organization.toString(),
       },
       image: "noimage",

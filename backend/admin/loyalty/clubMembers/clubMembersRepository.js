@@ -82,7 +82,24 @@ const getMembers = async (
         ]
       }
     },
-    { $unwind: { path: "$companyOrganizerData", preserveNullAndEmptyArrays: true } }
+    { $unwind: { path: "$companyOrganizerData", preserveNullAndEmptyArrays: true } },
+        {
+      $lookup: {
+        from: "tiers",
+        localField: "level",
+        foreignField: "_id",
+        as: "level",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              title: 1,
+            }
+          }
+        ]
+      }
+    },
+    { $unwind: { path: "$level", preserveNullAndEmptyArrays: true } }
   ];
 
   // Apply filters dynamically
