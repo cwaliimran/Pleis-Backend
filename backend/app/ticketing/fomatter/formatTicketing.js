@@ -42,6 +42,14 @@ function formatTicketing(timezone, item) {
     }
   }
 
+  if (obj.scheduledPublishAt) {
+    obj.scheduledPublishAt = convertUtcToTimezone(
+      obj.scheduledPublishAt,
+      timezone,
+      "YYYY-MM-DD hh:mm A"
+    );
+  }
+
   /* =========================
      AVAILABILITY (FIXED)
   ========================== */
@@ -123,18 +131,18 @@ function formatTicketing(timezone, item) {
 
   // ----- FAST TRACK -----
   if (obj.fastTrackEntry?.enabled) {
-  const original = obj.fastTrackEntry.quantity ?? 0;
-  const remaining =
-    typeof obj.fastTrackEntry.remainingQuantity === "number"
-      ? obj.fastTrackEntry.remainingQuantity
-      : original;
+    const original = obj.fastTrackEntry.quantity ?? 0;
+    const remaining =
+      typeof obj.fastTrackEntry.remainingQuantity === "number"
+        ? obj.fastTrackEntry.remainingQuantity
+        : original;
 
-  obj.fastTrackEntry.originalQuantity = original;
-  obj.fastTrackEntry.quantity = remaining;
-  obj.fastTrackEntry.soldOut = remaining === 0;
+    obj.fastTrackEntry.originalQuantity = original;
+    obj.fastTrackEntry.quantity = remaining;
+    obj.fastTrackEntry.soldOut = remaining === 0;
 
-  delete obj.fastTrackEntry.remainingQuantity;
-}
+    delete obj.fastTrackEntry.remainingQuantity;
+  }
 
 
   if (obj.timingSlots?.dateTimeSlots) {

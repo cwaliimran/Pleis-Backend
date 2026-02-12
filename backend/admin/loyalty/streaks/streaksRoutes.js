@@ -20,15 +20,15 @@ const apiRateLimiter = createRateLimiter("Streaks");
 router.get("/global", apiRateLimiter, getPublicStreaks);
 
 // Create a new streak
-router.post("/", roleMiddleware(["admin"]), createStreak);
+router.post("/", roleMiddleware(["admin","organizer"]), createStreak);
 
 // Get all streaks with pagination
 router.get("/", getStreaks);
 
 // Update an existing streak
-router.put("/:id", roleMiddleware(["admin"]), updateStreak);
+router.put("/:id", roleMiddleware(["admin","organizer"]), updateStreak);
 
 // Delete a streak
-router.delete("/:id", roleMiddleware(["admin"]), deleteStreak);
+router.delete("/:id", roleMiddleware(["admin","organizer"]), deleteStreak);
 
 module.exports = router;

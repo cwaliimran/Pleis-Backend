@@ -34,7 +34,14 @@ const getUserOrdersService = async ({
   return { orders: formattedOrders, meta };
 };
 
+// Get reward order details
+const getOrderDetailsService = async (orderId, userId) => {
+  const order = await repo.getOrderDetails(orderId, userId);
+  if (!order) return null;
+  return formatGlobalLoyaltyRewardOrder(order);
+};
 module.exports = {
   createGlobalRewardOrderService,
   getUserOrdersService,
+  getOrderDetailsService
 };

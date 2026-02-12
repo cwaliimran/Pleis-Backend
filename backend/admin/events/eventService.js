@@ -40,7 +40,7 @@ const getEvents = async ({ page, limit, keyword, status, creator, startDate, end
     },
   ];
 
-  if (creator) query.creator = creator;
+  // if (creator) query.creator = creator;
   if (status) {
     query.status = status;
   } else {

@@ -10,6 +10,7 @@ const Organizations = require("@OrganizationModel");
 // const Venues = require("../../venues/Venues");
 // const MenuItemCategories = require("../menuItemCategories/MenuItemCategories");
 const { formatMenuItem } = require("./formatter/formatMenuItems");
+const { getOrganizationIdByCompanyOrganizer } = require("../../../admin/organizations/organizationRepository");
 
 const createMenuItem = async (data, timezone) => {
   let doc = await menuItemRepo.createMenuItem(data);
@@ -18,10 +19,12 @@ const createMenuItem = async (data, timezone) => {
 };
 
 const getMenuItems = async ({ timezone,page, limit, keyword, status, userId, date, organization }) => {
+if (!organization) {
+    organization = await getOrganizationIdByCompanyOrganizer(userId);
+    organization = organization.map(org => org._id.toString()).join(',');
+}
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let pipeline = [];
-
-  const userMatch = { creator: new mongoose.Types.ObjectId(userId) };
 
   let organizationIds = [];
   if (organization) {
@@ -122,8 +125,7 @@ const getMenuItems = async ({ timezone,page, limit, keyword, status, userId, dat
     });
 
   } else {
-    // If no organizationIds are provided, match based on userId (creator)
-    pipeline.push({ $match: userMatch });
+
 
     // Lookup menu details from Menus collection based on userId
     pipeline.push({

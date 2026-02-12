@@ -177,7 +177,6 @@ const createPromotionOccurrence = async (template, startDate, index) => {
   // 🔑 IMPORTANT
   clone.recurringDetails = {
     ...clone.recurringDetails,
-    isEnabled: false,
   };
 
   await Promotion.create(clone);

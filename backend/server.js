@@ -134,7 +134,8 @@ const allowedOrigins = [
   "https://detective-viruses-manufacture-arrives.trycloudflare.com",
   "https://genome-exploring-browser-brown.trycloudflare.com",
   "https://abraham-pipes-activity-polar.trycloudflare.com",
-  "https://should-whats-les-mining.trycloudflare.com",
+  "https://actions-interactive-banana-telling.trycloudflare.com",
+  "http://192.168.13.71:4003",
   "http://192.168.*.*:4003",];
 
 securityMiddleware(app, {

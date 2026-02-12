@@ -132,21 +132,7 @@ const createFriendRequest = async (data) => {
     });
 
     await friendRequest.save();
-  /*   await sendUserNotifications({
-      recipientIds: [friendUserId.toString(), userId.toString()],
-      title: "Friend Request Created",
-      body: (recipientId === userId)
-        ? `You have successfully created a friend request.`
-        : `A New friend request is received.`,
-      data: {
-        type: NotificationTypes.FRIEND_REQUEST,
-        objectType: "group",
-        organization_id: ticketingBooking.organization.toString(),
-      },
-      image: "noimage",
-      sender: userId,
-      objectId: userId,
-    }); */
+
 
     return friendRequest;
   } catch (err) {

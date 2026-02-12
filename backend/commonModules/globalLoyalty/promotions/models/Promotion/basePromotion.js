@@ -7,7 +7,7 @@ const globalBasePromotionSchema = new mongoose.Schema(
     title: { type: String, trim: true, required: true },
     description: { type: String, default: "" },
 
-    promotionType : {
+    promotionType: {
       type: String,
       required: true,
       enum: ["globalHappyHourPromotion", "globalClaimPromotion"],
@@ -19,6 +19,23 @@ const globalBasePromotionSchema = new mongoose.Schema(
     recurringDetails: {
       type: GlobalRecurringPromotionSchema,
       default: null,
+    },
+    recurringMeta: {
+      isTemplate: {
+        type: Boolean,
+        default: false,
+      },
+
+      parentPromotion: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "GlobalBasePromotion",
+        default: null,
+      },
+
+      occurrenceIndex: {
+        type: Number,
+        default: 1,
+      }
     },
 
     tierLimit: {

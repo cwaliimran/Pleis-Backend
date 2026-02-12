@@ -52,6 +52,7 @@ const calculateRewardPointsForOrganizerService = async ({
   itemPrice,        // ← this is 3.99
   overridePercentage
 }) => {
+
   const { pointValuePercentage } =
     await clubMemberRepo.getCompanyLoyaltyInfo(companyOrganizer);
 

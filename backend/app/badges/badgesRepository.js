@@ -31,7 +31,7 @@ const addUserBadges = async (data) => {
       body: `Congratulations! You've earned a new badge.`,
       data: {
         type: NotificationTypes.BADAGE_EARNED,
-        objectType: "group",
+        objectType: "BadgeCategories",
       },
       image: "noimage",
       sender: data.userId,
@@ -124,13 +124,11 @@ const getBadgess = async ({ page = 1, limit = 10, keyword, status, userId }) => 
 
   ]);
   const streak = await getUserMaxStreak(userId);
-console.log("userBadges",streak );
   const data = {
     streak: streak || 0,
     userBadges,
     allBadges,
   }
-  console.log("data", data );
 
   /* ===================== FINAL RESPONSE ===================== */
   return {

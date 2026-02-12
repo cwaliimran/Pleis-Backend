@@ -178,6 +178,10 @@ const getOrganizationNotifications = async (id) => {
   const notifications = await getNotificationByOrganizationId(id);
   return notifications;
 };
+const getOrganizationIdByCompanyOrganizer = async (companyOrganizer) => {
+  const organizations = await Organizations.find({ creator: companyOrganizer }).select("_id").lean();
+  return organizations;
+};
 
 module.exports = {
   createOrganization,
@@ -194,5 +198,6 @@ module.exports = {
   getOrganizationNamesByCompanyOrganizer,
   getStaffIdsByOrganization,
   getOrgCompanyOrganizer,
-  getOrganizationNotifications
+  getOrganizationNotifications,
+  getOrganizationIdByCompanyOrganizer
 };

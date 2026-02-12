@@ -8,7 +8,7 @@ const {
 const categoriesService = require("./menuItemCategoriesService");
 
 const createCategory = async (req, res) => {
-  const { image, title, status = "active" } = req.body;
+  const { image, title, status = "active" ,companyOrganizer} = req.body;
 
   if (!validateParams(req, res, {
     rawData: ["title"], enumFields: {
@@ -22,6 +22,7 @@ const createCategory = async (req, res) => {
       image,
       title,
       status,
+      companyOrganizer
     });
 
     return sendResponse({

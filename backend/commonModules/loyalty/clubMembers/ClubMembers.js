@@ -7,13 +7,11 @@ const clubMembers = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true,
-            index: true,
         },
         companyOrganizer: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             required: true,
-            index: true,
         },
         tierKey: { type: String, default: "essential" }, //tier model key: essential, preferred, premier of the company (companyOrganizer)
         pointValuePercentage: { // percentage of point value for this company

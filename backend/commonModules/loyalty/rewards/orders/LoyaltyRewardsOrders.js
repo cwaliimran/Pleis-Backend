@@ -1,14 +1,13 @@
 const mongoose = require("mongoose");
 const { customAlphabet } = require("nanoid");
-const generateRewardId = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 6);
+const generateUniqueId = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 6);
 
 const rewardsOrderSchema = new mongoose.Schema(
     {
         bookingId: {
             type: String,
-            unique: true,
             index: true,
-            default: () => `RWD-${generateRewardId()}`, //RWD for Reward Order 
+            default: () => `RWD-${generateUniqueId()}`, //RWD for Reward Order 
         },
         user: {
             type: mongoose.Schema.Types.ObjectId,

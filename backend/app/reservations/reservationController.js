@@ -70,7 +70,7 @@ const createReservation = async (req, res) => {
 
 const getReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "confirmed", date, eventId, organizationId } = req.query;
+  let { keyword, status = "confirmed", date, availability = "", eventId, organizationId } = req.query;
   const timezone = req.user.timezone;
   try {
     if (
@@ -111,6 +111,7 @@ const getReservations = async (req, res) => {
       eventId,
       organizationId,
       date,
+      availability
     });
 
     return sendResponse({
@@ -130,7 +131,7 @@ const getReservations = async (req, res) => {
     });
   }
 };
-const getReservationDetails = async (req, res) => {
+const getUserReservationDetails = async (req, res) => {
   const { id } = req.params;  // Capture the ID from params
   const timezone = req.user.timezone;
 
@@ -147,7 +148,7 @@ const getReservationDetails = async (req, res) => {
 
 
     // Call the service directly with the ID
-    const reservationDetails = await reservationService.getReservationDetails(id, timezone);
+    const reservationDetails = await reservationService.getUserReservationDetailsService(id, timezone);
 
 
     if (!reservationDetails) {
@@ -356,7 +357,7 @@ const deleteReservation = async (req, res) => {
 const getUserReservations = async (req, res) => {
 
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "active", date } = req.query;
+  let { keyword, date } = req.query;
   try {
     const userId = req.user._id;
     const timezone = req.user.timezone;
@@ -365,7 +366,6 @@ const getUserReservations = async (req, res) => {
       page,
       limit,
       keyword,
-      status,
       userId,
       date,
     });
@@ -448,6 +448,6 @@ module.exports = {
   updateReservation,
   deleteReservation,
   getUserReservations,
-  getReservationDetails,
+  getUserReservationDetails,
   transferReservation,
 };

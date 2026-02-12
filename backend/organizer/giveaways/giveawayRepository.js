@@ -94,7 +94,7 @@ const createGiveaway = async (data) => {
       body: `You have a chance to win: ${giveaway.title}`,
       data: {
         type: NotificationTypes.GIVEAWAY_UPDATE,
-        objectType: "group",
+        objectType: "Giveaway",
       },
       image: "noimage",
       sender: data.creator,
@@ -448,7 +448,7 @@ const gettickets = async ({
     // Step 1: Match events where creator matches the provided userId
     {
       $match: {
-        ...(eventId && { event: new mongoose.Types.ObjectId(eventId) }) // Filter events where creator == userId
+        ...(eventId && { event: new mongoose.Types.ObjectId(eventId) }), // Filter events where creator == userId
       }
     }
   ];

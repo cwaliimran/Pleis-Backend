@@ -218,6 +218,7 @@ const getOrders = async ({
         pickupType: 1,
         createdAt: 1,
         orderType: 1,
+        tableNumber: 1,
         user: 1, // Include the user info in the final result
         organization: 1
       }

@@ -164,15 +164,336 @@ const getRewardOrdersCounts = async (query, statusMap) => {
 }
 
 
-const getUserOrders = async (filter, page = 1, limit = 10, sort = { createdAt: -1 }) => {
+const getUserOrders = async (
+  filter,
+  page = 1,
+  limit = 10,
+  sort = { createdAt: -1 }
+) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  return RewardsOrders.find(filter)
-    .populate("companyOrganizer", "companyDetails.loyaltySettings.title companyDetails.logo")
-    .sort(sort)
-    .skip(skip)
-    .limit(limit)
-    .lean();
+  const pipeline = [
+    { $match: filter },
+    { $sort: sort },
+
+    ...(limit !== 0 ? [{ $skip: skip }, { $limit: limit }] : []),
+
+    // ---- Organizer populate with projection ----
+    {
+      $lookup: {
+        from: "users",
+        let: { organizerId: "$companyOrganizer" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$_id", "$$organizerId"] },
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              "companyDetails.loyaltySettings.title": 1,
+              "companyDetails.logo": 1,
+            },
+          },
+        ],
+        as: "companyOrganizer",
+      },
+    },
+    {
+      $unwind: {
+        path: "$companyOrganizer",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
+    // ---- Ticket extraction ----
+    {
+      $addFields: {
+        ticketObjectId: {
+          $cond: [
+            { $ifNull: ["$snapshot.ticket", false] },
+            { $toObjectId: "$snapshot.ticket" },
+            null,
+          ],
+        },
+      },
+    },
+
+    // ---- Ticket lookup ----
+    {
+      $lookup: {
+        from: "ticketings",
+        localField: "ticketObjectId",
+        foreignField: "_id",
+        as: "ticketDetails",
+      },
+    },
+    {
+      $unwind: {
+        path: "$ticketDetails",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
+    {
+      $addFields: {
+        "snapshot.ticketDetails": "$ticketDetails",
+      },
+    },
+
+    {
+      $project: {
+        ticketDetails: 0,
+        ticketObjectId: 0,
+      },
+    },
+  ];
+
+  return RewardsOrders.aggregate(pipeline);
+};
+
+
+const getOrderDetails = async (orderId) => {
+  const _id = new mongoose.Types.ObjectId(orderId);
+
+  const pipeline = [
+    { $match: { _id } },
+
+    // ---- Organizer populate ----
+    {
+      $lookup: {
+        from: "users",
+        localField: "companyOrganizer",
+        foreignField: "_id",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              "companyDetails.loyaltySettings.title": 1,
+              "companyDetails.logo": 1,
+            },
+          },
+        ],
+        as: "companyOrganizer",
+      },
+    },
+    {
+      $unwind: {
+        path: "$companyOrganizer",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
+    // ---- Ticket extraction ----
+    {
+      $addFields: {
+        ticketObjectId: {
+          $cond: [
+            { $ifNull: ["$snapshot.ticket", false] },
+            { $toObjectId: "$snapshot.ticket" },
+            null,
+          ],
+        },
+      },
+    },
+
+    // ---- Ticket populate ----
+    {
+      $lookup: {
+        from: "ticketings",
+        localField: "ticketObjectId",
+        foreignField: "_id",
+        as: "ticketDetails",
+      },
+    },
+    {
+      $unwind: {
+        path: "$ticketDetails",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
+    // inject populated ticket
+    {
+      $addFields: {
+        "snapshot.reward.specialTicket.ticket": "$ticketDetails",
+      },
+    },
+
+    // cleanup
+    {
+      $project: {
+        ticketObjectId: 0,
+        ticketDetails: 0,
+      },
+    },
+  ];
+
+  const result = await RewardsOrders.aggregate(pipeline);
+  return result[0] || null;
+};
+
+/* 
+Fetches both loyalty/global reward orders together
+*/
+const getCombinedRewardOrders = async ({
+  userId,
+  status,
+  keyword,
+  skip,
+  limit,
+  sort = -1
+}) => {
+  const baseMatch = {
+    user: new mongoose.Types.ObjectId(userId),
+  };
+
+  if (status) baseMatch.status = status;
+
+  if (keyword) {
+    baseMatch["snapshot.title"] = {
+      $regex: keyword,
+      $options: "i"
+    };
+  }
+
+  const pipeline = [
+    { $match: baseMatch },
+
+    // identify source
+    {
+      $addFields: {
+        rewardScope: "company"
+      }
+    },
+
+    // ---- populate organizer ----
+    {
+      $lookup: {
+        from: "users",
+        let: { organizerId: "$companyOrganizer" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$_id", "$$organizerId"] }
+            }
+          },
+          {
+            $project: {
+              _id: 1,
+              "companyDetails.loyaltySettings.title": 1,
+              "companyDetails.logo": 1
+            }
+          }
+        ],
+        as: "companyOrganizer"
+      }
+    },
+    {
+      $unwind: {
+        path: "$companyOrganizer",
+        preserveNullAndEmptyArrays: true
+      }
+    },
+
+    // ---- merge global orders ----
+    {
+      $unionWith: {
+        coll: "globalrewardsorders",
+        pipeline: [
+          { $match: baseMatch },
+          {
+            $addFields: {
+              rewardScope: "global",
+              companyOrganizer: null
+            }
+          }
+        ]
+      }
+    },
+
+    // ---- unified sorting ----
+    { $sort: { createdAt: sort } },
+
+    // ---- pagination ----
+    {
+      $facet: {
+        data: [
+          { $skip: skip },
+          ...(limit !== 0 ? [{ $limit: limit }] : [])
+        ],
+        total: [{ $count: "count" }]
+      }
+    }
+  ];
+
+  const result = await RewardsOrders.aggregate(pipeline);
+
+  const data = result[0]?.data || [];
+  const total = result[0]?.total?.[0]?.count || 0;
+
+  return { data, total };
+};
+
+const completeRewardOrder = async ({
+  orderId,
+  redeemedBy,
+  status,
+  companyOrganizer,
+}) => {
+  const order = await RewardsOrders.findById(orderId);
+
+  if (!order) {
+    return { error: "reward_order_not_found" };
+  }
+
+  const warnings = [];
+
+  /* ===============================
+     1️⃣ Organizer validation
+  =============================== */
+  if (
+    companyOrganizer &&
+    order.companyOrganizer &&
+    order.companyOrganizer.toString() !== companyOrganizer.toString()
+  ) {
+    return { error: "organizer_mismatch" };
+  }
+
+  /* ===============================
+     2️⃣ Already completed guard
+  =============================== */
+  if (order.status === "completed") {
+    warnings.push({
+      warning: "Reward already redeemed",
+      warningCode: "already_redeemed",
+    });
+
+    return {
+      order,
+      warnings,
+      wasCompletedNow: false,
+    };
+  }
+
+  /* ===============================
+     3️⃣ Apply requested status
+  =============================== */
+  order.status = status || "completed";
+
+  if (order.status === "completed") {
+    order.redeemedAt = new Date();
+    order.redeemedBy = redeemedBy;
+  }
+
+  await order.save();
+
+  return {
+    order,
+    warnings,
+    wasCompletedNow: order.status === "completed",
+  };
 };
 
 
@@ -180,5 +501,8 @@ module.exports = {
   createRewardOrder,
   getUserOrders,
   getRewardOrdersCounts,
-  checkClaimLimitForLoyaltyRewards
+  checkClaimLimitForLoyaltyRewards,
+  getOrderDetails,
+  getCombinedRewardOrders,
+  completeRewardOrder
 };

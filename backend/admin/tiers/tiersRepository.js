@@ -1,5 +1,6 @@
 // repositories/tierRepository.js
 const Tiers = require("./Tiers");
+const { getModelCounts } = require('@dbUtils/queryUtil');
 const { cache, invalidate } = require("@redisCache");
 const ACTIVE_TIERS_CACHE_KEY = "tiers:active";
 const buildTiersCacheKey = ({
@@ -24,7 +25,7 @@ const createTier = async (data) => {
 
 // Get all tiers with their assigned organization populated, sorted by essential.entryPoints ascending (lowest points first)
 const getTiersWithFilters = async (query = {}, skip = 0, limit = 10) => {
-    const cacheKey = buildTiersCacheKey({
+  const cacheKey = buildTiersCacheKey({
     scope: "admin",
     skip,
     limit,
@@ -32,13 +33,13 @@ const getTiersWithFilters = async (query = {}, skip = 0, limit = 10) => {
   return cache({
     namespace: cacheKey,
     ttl: 86400, // 1 day
- 
+
     fetchFn: async () => {
-  return Tiers.find(query)
-    .sort({ "essential.entryPoints": 1 }) // Ascending: lowest points (e.g., Silver) first
-    .skip(skip)
-    .limit(limit);
-},
+      return Tiers.find(query)
+        .sort({ "essential.entryPoints": 1 }) // Ascending: lowest points (e.g., Silver) first
+        .skip(skip)
+        .limit(limit);
+    },
   });
 };
 
@@ -53,6 +54,16 @@ const getActiveTiersWithProjection = async (projection = { title: 1, _id: 1 }) =
 // Count by condition
 const countTiers = async (query = {}) => {
   return Tiers.countDocuments(query);
+};
+
+const getCounts = async (query = {}) => {
+  return await getModelCounts({
+    model: Tiers,
+    filterQuery: query,
+    statusMap: {
+      status: ["active", "inactive"],
+    },
+  });
 };
 
 // Find by ID
@@ -88,7 +99,8 @@ const getFirstTier = async (tierKey) => {
 
 const getNextTier = async (tierKey, currentPoints) => {
   return Tiers.findOne({
-    [getField(tierKey)]: { $gt: currentPoints }
+    [getField(tierKey)]: { $gt: currentPoints },
+    status: "active",
   })
     .sort({ [getField(tierKey)]: 1 });
 };
@@ -120,4 +132,5 @@ module.exports = {
   deleteTierById,
   findByIdAndUpdate,
   getActiveTiersWithProjection,
+  getCounts
 };

@@ -19,6 +19,7 @@ const getActiveGlobalChallenges = async ({ now, keyword }) => {
 
   return Challenge.find(query)
     .populate("tierLimit")
+    .populate("reward.specialTicket.ticket")
     .lean();
 };
 

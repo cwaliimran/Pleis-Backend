@@ -21,7 +21,7 @@ const getTicketings = async ({ timezone, eventId }) => {
       ...ticket,
       pricing: {
         phase: pricing.phase,
-        unitPrice: pricing.price,
+        unitPrice: pricing.basePrice,
         originalPrice: ticket.price,
       },
     };

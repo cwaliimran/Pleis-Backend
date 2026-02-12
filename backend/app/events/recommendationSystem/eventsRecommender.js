@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { generateMeta } = require("@utils/responseUtil");
+const { generateMeta, getCurrentDateInTimezone } = require("@utils/responseUtil");
 const { Events } = require("../../../commonModules/events/Event");
 const { formatEventResponse } = require("../formatter/eventFormatter");
 const { getMinTicketPricesByEventIds } = require("../../ticketing/ticketingsRepository");
@@ -13,6 +13,7 @@ const getRecommendedEvents = async (eventId, options = {}) => {
   const page = parseInt(options.page) || 1;
   const skip = (page - 1) * limit;
   const timezone = options.timezone || "UTC";
+  const now = getCurrentDateInTimezone({ timezone });
 
   // Step 1: Fetch base event info
   const baseEvent = await Events.findById(eventObjId)
@@ -40,6 +41,7 @@ const getRecommendedEvents = async (eventId, options = {}) => {
     weights,
     limit,
     skip,
+    now
   });
 
   // ---------------- Tier 2: Other organizations ----------------
@@ -55,6 +57,7 @@ const getRecommendedEvents = async (eventId, options = {}) => {
       limit: remaining,
       skip: 0,
       excludeIds: results.map((r) => r._id),
+      now
     });
     results = [...results, ...otherOrgResults];
   }
@@ -68,19 +71,93 @@ const getRecommendedEvents = async (eventId, options = {}) => {
           _id: { $ne: eventObjId },
           status: "active",
           "meta.viewsCount": { $gte: 0 },
+          $or: [
+            { "schedule.endDateTime": { $gte: now } },
+            { "schedule.startDateTime": { $gte: now } },
+          ],
+        },
+      },
+      {
+        $lookup: {
+          from: "engagementevents",
+          let: { eventId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$entityId", "$$eventId"] },
+                    { $eq: ["$entityType", "events"] },
+                  ],
+                },
+              },
+            },
+            {
+              $group: {
+                _id: "$action",
+                count: { $sum: 1 },
+              },
+            },
+          ],
+          as: "engagementStats",
+        },
+      },
+      {
+        $addFields: {
+          viewsCount: {
+            $ifNull: [
+              {
+                $first: {
+                  $map: {
+                    input: {
+                      $filter: {
+                        input: "$engagementStats",
+                        as: "s",
+                        cond: { $eq: ["$$s._id", "view"] },
+                      },
+                    },
+                    as: "f",
+                    in: "$$f.count",
+                  },
+                },
+              },
+              0,
+            ],
+          },
+          favoritesCount: {
+            $ifNull: [
+              {
+                $first: {
+                  $map: {
+                    input: {
+                      $filter: {
+                        input: "$engagementStats",
+                        as: "s",
+                        cond: { $eq: ["$$s._id", "favorite"] },
+                      },
+                    },
+                    as: "f",
+                    in: "$$f.count",
+                  },
+                },
+              },
+              0,
+            ],
+          },
         },
       },
       {
         $addFields: {
           trendingScore: {
             $add: [
-              { $multiply: ["$meta.viewsCount", 0.5] },
-              { $multiply: ["$meta.favoritesCount", 1.5] },
+              { $multiply: ["$viewsCount", 0.5] },
+              { $multiply: ["$favoritesCount", 1.5] },
               { $multiply: ["$meta.attendeesCount", 1.0] },
             ],
           },
         },
       },
+
       { $sort: { trendingScore: -1, createdAt: -1 } },
       { $limit: remaining },
       {
@@ -149,11 +226,19 @@ async function runEventSimilarityQuery({
   limit,
   skip = 0,
   excludeIds = [],
+  now
 }) {
   const matchConditions = [
     { _id: { $ne: eventObjId, $nin: excludeIds } },
     { status: "active" },
+    {
+      $or: [
+        { "schedule.endDateTime": { $gte: now } },
+        { "schedule.startDateTime": { $gte: now } },
+      ],
+    },
   ];
+
 
   const orConditions = [];
   if (organization) orConditions.push({ "basicInfo.organization": organization });

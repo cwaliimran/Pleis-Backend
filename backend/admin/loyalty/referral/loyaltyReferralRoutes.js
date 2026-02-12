@@ -23,11 +23,11 @@ const apiRateLimiter = createRateLimiter("LoyaltyReferrals");
 const apiRateLimiterDetails = createRateLimiter("LoyaltyReferrals/:id");
 
 
-router.post("/", auth,roleMiddleware(["admin"]), createLoyaltyReferral);
-router.get("/reset", roleMiddleware(["admin"]), resetUserReferralLimits);
-router.get("/user", roleMiddleware(["admin"]),apiRateLimiter, getUserLoyaltyReferrals);
-router.get("/", roleMiddleware(["admin"]),apiRateLimiter, getLoyaltyReferrals);
-router.put("/:id", roleMiddleware(["admin"]), updateLoyaltyReferral);
-router.delete("/:id", roleMiddleware(["admin"]), deleteLoyaltyReferral);
+router.post("/", auth,roleMiddleware(["admin","organizer"]), createLoyaltyReferral);
+router.get("/reset", roleMiddleware(["admin","organizer"]), resetUserReferralLimits);
+router.get("/user", roleMiddleware(["admin","organizer"]),apiRateLimiter, getUserLoyaltyReferrals);
+router.get("/", roleMiddleware(["admin","organizer"]),apiRateLimiter, getLoyaltyReferrals);
+router.put("/:id", roleMiddleware(["admin","organizer"]), updateLoyaltyReferral);
+router.delete("/:id", roleMiddleware(["admin","organizer"]), deleteLoyaltyReferral);
 
 module.exports = router;

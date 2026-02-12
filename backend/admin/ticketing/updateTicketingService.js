@@ -64,6 +64,7 @@ const applyFields = (doc, data, options = { futureMode: false }) => {
   if (data.price !== undefined) doc.price = data.price;
   if (data.taxPercentage !== undefined) doc.taxPercentage = data.taxPercentage;
   if (data.resaleProtection !== undefined) doc.resaleProtection = data.resaleProtection;
+  if(data.transferFee !== undefined) doc.transferFee = data.transferFee;
 
   if (data.event !== undefined) doc.event = data.event;
 
@@ -167,12 +168,9 @@ const applyFields = (doc, data, options = { futureMode: false }) => {
 // MAIN SERVICE
 // ======================================================
 const updateTicketingService = async (ticketId, payload, mode = "single") => {
-
   const ticket = await Ticketings.findById(ticketId);
   if (!ticket) return null;
-
   const isChild = !!ticket?.recurringMeta?.parentTicket;
-
   // ------------------------------
   // SINGLE MODE
   // ------------------------------
@@ -181,7 +179,6 @@ const updateTicketingService = async (ticketId, payload, mode = "single") => {
     await ticket.save();
     return ticket;
   }
-
   // ------------------------------
   // FUTURE MODE
   // ------------------------------

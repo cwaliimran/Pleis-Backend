@@ -1,0 +1,11 @@
+const PromotionEligibilityReasons = Object.freeze({
+  TIER_NOT_ELIGIBLE: "TIER_NOT_ELIGIBLE",
+  INSUFFICIENT_POINTS: "INSUFFICIENT_POINTS",
+  CLAIM_LIMIT_REACHED: "CLAIM_LIMIT_REACHED",
+  PROMOTION_INACTIVE: "PROMOTION_INACTIVE",
+  PROMOTION_EXPIRED: "PROMOTION_EXPIRED",
+});
+
+module.exports = {
+  PromotionEligibilityReasons,
+};

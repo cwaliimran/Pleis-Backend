@@ -118,12 +118,35 @@ const updateOrderStatus = async (orderId, status) => {
 const deleteOrder = async (orderId) => {
   return Orders.findByIdAndDelete(orderId);
 };
+const getTotalOrderPriceByUser = async (userId) => {
+  try {
+    // Find all orders for the given user
+    const orders = await Orders.find({ user: userId })
+      .select("items totalPrice")  // Only select the items and totalPrice fields
+      .lean();  // Use lean() to return plain JavaScript objects instead of Mongoose documents
 
+    if (orders.length === 0) return 0;
+
+    // Sum the finalPrice of all items in each order
+    let totalAmount = 0;
+    orders.forEach(order => {
+      // Sum finalPrice of all items in the current order
+      const itemsTotal = order.items.reduce((sum, item) => sum + item.finalPrice, 0);
+      totalAmount += itemsTotal;
+    });
+
+    return totalAmount;
+  } catch (error) {
+    console.error("Error getting total order price for user:", error);
+    throw error;
+  }
+};
 module.exports = {
   createOrder,
   getOrderById,
   getOrdersByUser,
   updateOrderStatus,
   deleteOrder,
-  getCounts
+  getCounts,
+  getTotalOrderPriceByUser
 };

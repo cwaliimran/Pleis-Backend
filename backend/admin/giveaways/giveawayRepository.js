@@ -98,9 +98,9 @@ const createGiveaway = async (data) => {
       recipientIds: userIds,
       title: update.title,
       body: `A new giveaway is live join now : ${update._id}`,
-      data: { type: NotificationTypes.GIVEAWAY_UPDATE, objectType: "group", giveawayId: update._id },
+      data: { type: NotificationTypes.GIVEAWAY_UPDATE, objectType: "Giveaway", giveawayId: update._id },
       sender: update.creator,
-      objectId: update.event,
+      objectId: update._id,
     });
 
     return update;

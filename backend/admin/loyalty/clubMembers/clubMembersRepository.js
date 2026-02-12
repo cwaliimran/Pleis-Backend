@@ -82,7 +82,24 @@ const getMembers = async (
         ]
       }
     },
-    { $unwind: { path: "$companyOrganizerData", preserveNullAndEmptyArrays: true } }
+    { $unwind: { path: "$companyOrganizerData", preserveNullAndEmptyArrays: true } },
+        {
+      $lookup: {
+        from: "tiers",
+        localField: "level",
+        foreignField: "_id",
+        as: "level",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              title: 1,
+            }
+          }
+        ]
+      }
+    },
+    { $unwind: { path: "$level", preserveNullAndEmptyArrays: true } }
   ];
 
   // Apply filters dynamically
@@ -214,13 +231,44 @@ const getUserJoinedClubsall = async (userId) => {
       }
     },
     {
+      $lookup: {
+        from: "tiers",  // Specify the Tiers collection to join (this corresponds to your level field)
+        localField: "level",  // Match the level field in ClubMembers with _id in Tiers
+        foreignField: "_id",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              title: 1,
+            }
+          }
+        ],
+        as: "level"  // Add the matched documents as levelDetails
+      }
+    },
+    {
+      $unwind: {
+        path: "$level",  // Flatten the levelDetails array
+        preserveNullAndEmptyArrays: true  // Keep the field if no match is found
+      }
+    },
+    {
       $project: {
-        companyOrganizer: "$companyOrganizer",  // Rename the companyOrganizerDetails to companyOrganizer
-        status: 1  // Include the status field
+        companyOrganizer: "$companyOrganizer",  // Include the companyOrganizer details
+        status: 1,  // Include the status field
+        tierKey: 1,  // Include the tierKey field
+        points: 1,  // Include the points field
+        lifetimePoints: 1,  // Include the lifetimePoints field
+        lastEvaluated: 1,  // Include the lastEvaluated field
+        createdAt: 1,  // Include the createdAt field
+        updatedAt: 1,  // Include the updatedAt field
+        level: 1  // Include the level field from Tiers (Global Status Levels)
       }
     }
   ]);
 };
+
+
 
 
 // ==========================================================

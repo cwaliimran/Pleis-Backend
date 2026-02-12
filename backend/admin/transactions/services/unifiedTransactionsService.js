@@ -2,8 +2,8 @@
 const mongoose = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
 const unifiedRepo = require("../repositories/unifiedTransactionsRepository");
-const { formatTransactionItem } = require("../repositories/../formatter/formatTransactionItems"); // adjust path
-
+const { formatTransactionItem } = require("../repositories/../formatter/formatTransactionItems");
+const { formatEnum, formatDate } = require("./formator/transactionCsvFormatter");
 /**
  * Create a unified transaction (repository updates appropriate wallet)
  */
@@ -58,7 +58,18 @@ const getTransactions = async ({
   if (walletType) match.walletType = walletType;
   if (domainType) match.domainType = domainType;
   if (type) match.type = type;
-  if (organization) match.organization = new mongoose.Types.ObjectId(organization);
+  if (organization && organization !== "undefined" && organization !== "null") {
+    const orgIds = organization.includes("%")
+      ? organization.split("%")
+      : organization.split(",");
+
+    match.organization = {
+      $in: orgIds
+        .filter(Boolean)
+        .map(id => new mongoose.Types.ObjectId(id))
+    };
+  }
+
   if (companyOrganizer) match.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
   if (entityId) match.entityId = entityId;
   if (user) match.user = new mongoose.Types.ObjectId(user);
@@ -117,11 +128,114 @@ const deleteTransaction = async (id) => {
   if (!updated) return null;
   return true;
 };
+const downloadTransactions = async ({
 
+  organization,
+  companyOrganizer,
+  startDate,
+  endDate,
+}) => {
+
+  const match = {};
+
+  if (organization && organization !== "undefined" && organization !== "null") {
+    const orgIds = organization.includes("%")
+      ? organization.split("%")
+      : organization.split(",");
+
+    match.organization = {
+      $in: orgIds
+        .filter(Boolean)
+        .map(id => new mongoose.Types.ObjectId(id))
+    };
+  }
+
+  if (companyOrganizer) match.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
+  if (startDate || endDate) {
+    match.createdAt = {};
+    if (startDate) match.createdAt.$gte = new Date(startDate);
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      match.createdAt.$lte = end;
+    }
+    if (!Object.keys(match.createdAt).length) delete match.createdAt;
+  }
+
+  const [items, total] = await Promise.all([
+    unifiedRepo.getTransactionsWithFilters({ match }),
+    unifiedRepo.countTransactions({ match })
+  ]);
+  return {
+    items: items.map(formatTransactionItem),
+  };
+};
+
+const { Parser } = require("json2csv");
+
+const fields = [
+  "userName",
+  "userEmail",
+  "organizationName",
+  "walletType",
+  "type",
+  "domainType",
+  "pointsBase",
+  "pointsTotal",
+  "closingBalance",
+  "description",
+  "publicId",
+  "createdAt",
+];
+
+const downloadTransactionsAsCSV = async ({
+  organization,
+  companyOrganizer,
+  startDate,
+  endDate,
+}) => {
+  try {
+    const { items } = await downloadTransactions({
+      organization,
+      companyOrganizer,
+      startDate,
+      endDate,
+    });
+
+    if (!items || !items.length) {
+      throw new Error("No transactions found");
+    }
+
+     const csvData = items.map(tx => ({
+      userName: tx.user
+        ? `${tx.user.firstName || ""} ${tx.user.lastName || ""}`.trim()
+        : "",
+      userEmail: tx.user?.email || "",
+      organizationName: tx.organization?.basicInfo?.name || "",
+      walletType: formatEnum(tx.walletType),  
+      type: formatEnum(tx.type),             
+      domainType: formatEnum(tx.domainType),   
+      pointsBase: tx.points?.base || 0,
+      pointsTotal: tx.points?.total || 0,
+      closingBalance: tx.closingBalance,
+      description: tx.description,
+      publicId: tx.publicId,
+      createdAt: formatDate(tx.createdAt),     
+    }));
+
+    const parser = new Parser({ fields });
+    return parser.parse(csvData);
+  } catch (error) {
+    console.error("CSV generation error:", error);
+    throw error;
+  }
+};
 module.exports = {
   createTransaction,
   getTransactions,
   getTransactionDetails,
   updateTransaction,
-  deleteTransaction
+  deleteTransaction,
+  downloadTransactionsAsCSV
+
 };

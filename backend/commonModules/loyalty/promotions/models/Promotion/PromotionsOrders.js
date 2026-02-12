@@ -7,7 +7,6 @@ const PromotionOrderSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
 
     // promotion source
@@ -15,7 +14,6 @@ const PromotionOrderSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Promotion",
       required: true,
-      index: true,
     },
 
     // organizer club/company
@@ -23,7 +21,6 @@ const PromotionOrderSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
 
     /* =============================
@@ -65,7 +62,6 @@ const PromotionOrderSchema = new mongoose.Schema(
         "cancelled",
       ],
       default: "claimed",
-      index: true,
     },
 
     /* =============================

@@ -30,7 +30,7 @@ const UserReservationsSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-  
+
     amount: {
       type: Number,
       min: [0, "Price must be positive"],
@@ -48,6 +48,10 @@ const UserReservationsSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Reservations",
       default: null,
+    },
+    reservationSnapshot: {
+      type: Object,
+      default: {},
     },
 
     companyOrganizer: {
@@ -102,7 +106,7 @@ const UserReservationsSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["pendingPayment", "confirmed", "checkedIn", "rejected", "cancelled", "completed", "deleted"],
+      enum: ["pendingPayment", "needsConfirmation", "confirmed", "checkedIn", "rejected", "cancelled", "completed", "deleted"],
       default: "confirmed",
     },
 
@@ -111,8 +115,8 @@ const UserReservationsSchema = new mongoose.Schema(
       paymentId: { type: String, default: null }, // gateway ref
       paymentMethod: {
         type: String,
-        enum: ["applePay", "card", "cash"],
-        required: true,
+        enum: ["applePay", "card"],
+        required: false,
       },
       paymentStatus: {
         type: String,
