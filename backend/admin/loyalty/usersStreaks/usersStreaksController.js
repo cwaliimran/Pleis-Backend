@@ -40,7 +40,10 @@ const createUsersStreak = async (req, res) => {
 
 const getUsersStreaks = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, orderSort, companyOrganizer } = req.query;
+  let { keyword, status, date, orderSort, companyOrganizer } = req.query;
+  if(!companyOrganizer){
+    companyOrganizer = req.user._id;
+  }
 
   try {
     // companyOrganizer is required to filter for specific companyOrganizer
