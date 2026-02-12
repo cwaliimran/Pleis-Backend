@@ -716,7 +716,44 @@ const getTotalPurchases = async (userId) => {
     throw error;
   }
 };
+const getActiveTicketingByEventId = async ({
+  event, 
+  page = 1, 
+  limit = 10, 
+  status = "active", 
+  keyword = ""
+}) => {
 
+  try {
+    // Skip value for pagination
+    const skip = (page - 1) * limit;
+
+    // Build the filter object
+    let filter = {
+      event: new mongoose.Types.ObjectId(event), // Convert eventId to ObjectId
+      status: status // Filter by status, default to "active"
+    };
+
+    // If keyword is provided, filter by title (case-insensitive)
+    if (keyword) {
+      filter.title = { $regex: keyword, $options: 'i' }; // Case-insensitive search
+    }
+
+    // Query for ticketings with pagination and filters
+    const ticketings = await TicketingsModel.find(filter)
+      .skip(skip)
+      .limit(limit)
+      .select("title event _id"); // Select only the title, event, and _id fields
+
+    // Return the ticketing information (name and ID)
+    return ticketings.map(ticket => ({
+      title: ticket.title,   // Ticket name
+      _id: ticket._id.toString()  // Ticket ID as a string
+    }));
+  } catch (error) {
+    throw new Error("Unable to fetch active ticketings.");
+  }
+};
 module.exports = {
   createTicketing,
   getTicketingsWithFilters,
@@ -734,5 +771,6 @@ module.exports = {
   getEventsTicketingsWithFilters,
   getTicketSalesStats,
   getTotalTicketsPurchasedByOrganizationId,
-  getTotalPurchases
+  getTotalPurchases,
+  getActiveTicketingByEventId
 };

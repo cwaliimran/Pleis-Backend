@@ -12,7 +12,9 @@ const getMembers = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
 
   let { keyword, status, date, companyOrganizer } = req.query;
-
+if(!companyOrganizer){
+  companyOrganizer = req.user._id;
+}
   if (!validateParams(req, res, {
     objectIdFields: ["companyOrganizer"],
   })) return;
@@ -70,11 +72,13 @@ const giftPoints = async (req, res) => {
 };
 
 const calculateRewardPointsForOrganizer = async (req, res) => {
-  const { companyOrganizer, itemPrice, overridePercentage = 0 } = req.body;
+  let { companyOrganizer, itemPrice, overridePercentage = 0 } = req.body;
+if(!companyOrganizer){
+  companyOrganizer = req.user._id;
+}
 
   if (!validateParams(req, res, {
-    rawData: ["companyOrganizer", "itemPrice"],
-    objectIdFields: ["companyOrganizer"],
+    rawData: [ "itemPrice"]
   })) return;
 
   try {

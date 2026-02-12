@@ -276,7 +276,7 @@ const createUserReferradrecord = async (data) => {
       body: `You have successfully referred by ${username}.`,
       data: {
         type: NotificationTypes.REFERRAL_UPDATE,
-        objectType: "group",
+        objectType: "User",
       },
       image: "noimage",
       sender: userId,
@@ -288,7 +288,7 @@ const createUserReferradrecord = async (data) => {
       body: `Congratulations! someone has joined PLEIS using your referral.`,
       data: {
         type: NotificationTypes.REFERRAL_UPDATE,
-        objectType: "group",
+        objectType: "User",
       },
       image: "noimage",
       sender: userId,
