@@ -3,10 +3,16 @@
 const { User } = require("../../models/UserModel");
 
 const { UserInterests } = require("../../models/UserInterests");
+const { cache, invalidate } = require("@redisCache");
+
+const USER_INTERESTS_CACHE_KEY = "user:interests";
+
+const buildUserInterestsCacheKey = (userId) =>
+  `${USER_INTERESTS_CACHE_KEY}:${userId}`;
 
 // Create
 const createUser = async (data) => {
-  const user = new Users(data);
+  const user = new User(data);
   return await user.save();
 };
 
@@ -172,14 +178,15 @@ const updateTwoFA = async (userId, data) => {
 };
 
 const updateUserInterests = async (userId, data) => {
+  const cacheKey = buildUserInterestsCacheKey(userId);
+
   let userInterests = await UserInterests.findOne({ user: userId });
+
   if (userInterests) {
-    // Update existing
     userInterests.categories = data.categories || userInterests.categories;
     userInterests.venueTypes = data.venueTypes || userInterests.venueTypes;
     userInterests.tags = data.tags || userInterests.tags;
   } else {
-    // Create new
     userInterests = new UserInterests({
       user: userId,
       categories: data.categories || [],
@@ -187,8 +194,15 @@ const updateUserInterests = async (userId, data) => {
       tags: data.tags || []
     });
   }
-  return await userInterests.save();
+
+  const result = await userInterests.save();
+
+  // manual invalidation
+  await invalidate(cacheKey);
+
+  return result;
 };
+
 
 //get user interests by userId and populate references
 const getUserInterestsByUserId = async (userId) => {
@@ -200,8 +214,24 @@ const getUserInterestsByUserId = async (userId) => {
 
 //get user interests by userId and populate references
 const getUserInterestsIdsForRecommendation = async (userId) => {
-  return UserInterests.findOne({ user: userId })
+  const cacheKey = buildUserInterestsCacheKey(userId);
+
+  return cache({
+    namespace: cacheKey,
+    fetchFn: async () => {
+      const interests = await UserInterests.findOne({ user: userId })
+        .select("categories venueTypes tags")
+        .lean();
+
+      return interests || {
+        categories: [],
+        venueTypes: [],
+        tags: []
+      };
+    },
+  });
 };
+
 
 //get company pickup options
 const getInAppOrderingSettings = async (companyId) => {
