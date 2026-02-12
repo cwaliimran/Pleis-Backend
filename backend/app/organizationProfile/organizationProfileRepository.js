@@ -901,9 +901,7 @@ const getForYouOrganizationsForHomeRepo = async ({
 
   const pipeline = [];
 
-  /* ===============================
-     1️⃣ CONDITIONAL GEO
-     =============================== */
+  /* ---------- GEO ---------- */
   if (userLocation) {
     pipeline.push({
       $geoNear: {
@@ -919,94 +917,150 @@ const getForYouOrganizationsForHomeRepo = async ({
     pipeline.push({ $match: geoQuery });
   }
 
-  /* ===============================
-     2️⃣ MATCH USER INTERESTS
-     =============================== */
+  /* ---------- LIGHT PROJECTION ---------- */
+  pipeline.push({
+    $project: {
+      basicInfo: 1,
+      otherInfo: 1,
+      distance: 1
+    }
+  });
+
+  /* ---------- INTEREST MATCH ---------- */
+  pipeline.push({
+    $addFields: {
+      matchedCategories: {
+        $size: { $setIntersection: ["$otherInfo.categories", userCategories] }
+      },
+      matchedTags: {
+        $size: { $setIntersection: ["$otherInfo.tags", userTags] }
+      }
+    }
+  });
+
+  /* ---------- RELEVANCE ---------- */
+  pipeline.push({
+    $addFields: {
+      relevanceScore: {
+        $add: [
+          {
+            $multiply: [
+              0.6,
+              {
+                $cond: [
+                  { $gt: [userCategories.length, 0] },
+                  { $divide: ["$matchedCategories", userCategories.length] },
+                  0
+                ]
+              }
+            ]
+          },
+          {
+            $multiply: [
+              0.4,
+              {
+                $cond: [
+                  { $gt: [userTags.length, 0] },
+                  { $divide: ["$matchedTags", userTags.length] },
+                  0
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  });
+
+  /* ---------- PRE-LIMIT CANDIDATES ---------- */
+  pipeline.push(
+    { $sort: { relevanceScore: -1 } },
+    { $limit: limit * 5 } // candidate pool
+  );
+
+  /* ---------- ENGAGEMENT LOOKUP ---------- */
   pipeline.push(
     {
+      $lookup: {
+        from: "engagementevents",
+        let: { orgId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              entityType: "organizations",
+              $expr: { $eq: ["$entityId", "$$orgId"] }
+            }
+          },
+          {
+            $group: {
+              _id: "$action",
+              count: { $sum: 1 }
+            }
+          }
+        ],
+        as: "engagementStats"
+      }
+    },
+    {
       $addFields: {
-        matchedCategories: {
-          $size: { $setIntersection: ["$otherInfo.categories", userCategories] }
+        viewsCount: {
+          $ifNull: [
+            {
+              $first: {
+                $map: {
+                  input: {
+                    $filter: {
+                      input: "$engagementStats",
+                      as: "s",
+                      cond: { $eq: ["$$s._id", "view"] }
+                    }
+                  },
+                  as: "v",
+                  in: "$$v.count"
+                }
+              }
+            },
+            0
+          ]
         },
-        matchedTags: {
-          $size: { $setIntersection: ["$otherInfo.tags", userTags] }
-        }
-      }
-    },
-
-    /* ===============================
-       3️⃣ RELEVANCE SCORE
-       =============================== */
-    {
-      $addFields: {
-        relevanceScore: {
-          $add: [
+        favoritesCount: {
+          $ifNull: [
             {
-              $multiply: [
-                0.6,
-                {
-                  $cond: [
-                    { $gt: [userCategories.length, 0] },
-                    { $divide: ["$matchedCategories", userCategories.length] },
-                    0
-                  ]
+              $first: {
+                $map: {
+                  input: {
+                    $filter: {
+                      input: "$engagementStats",
+                      as: "s",
+                      cond: { $eq: ["$$s._id", "favorite"] }
+                    }
+                  },
+                  as: "v",
+                  in: "$$v.count"
                 }
-              ]
+              }
             },
-            {
-              $multiply: [
-                0.4,
-                {
-                  $cond: [
-                    { $gt: [userTags.length, 0] },
-                    { $divide: ["$matchedTags", userTags.length] },
-                    0
-                  ]
-                }
-              ]
-            }
+            0
           ]
         }
       }
-    },
+    }
+  );
 
-    /* ===============================
-       4️⃣ POPULARITY SCORE
-       =============================== */
-    {
-      $addFields: {
-        popularityScore: {
-          $add: [
-            {
-              $multiply: [
-                0.6,
-                { $ln: { $add: [1, { $ifNull: ["$meta.favoritesCount", 0] }] } }
-              ]
-            },
-            {
-              $multiply: [
-                0.4,
-                { $ln: { $add: [1, { $ifNull: ["$meta.viewsCount", 0] }] } }
-              ]
-            }
-          ]
-        }
+  /* ---------- POPULARITY ---------- */
+  pipeline.push({
+    $addFields: {
+      popularityScore: {
+        $add: [
+          { $multiply: [0.6, { $ln: { $add: [1, "$favoritesCount"] } }] },
+          { $multiply: [0.4, { $ln: { $add: [1, "$viewsCount"] } }] }
+        ]
       }
-    },
+    }
+  });
 
-    /* ===============================
-       5️⃣ ROUND SCORES
-       =============================== */
-    {
-      $addFields: {
-        relevanceScore: { $round: ["$relevanceScore", 2] },
-        popularityScore: { $round: ["$popularityScore", 2] }
-      }
-    },
-
-    /* ===============================
-       6️⃣ FINAL SCORE
-       =============================== */
+  /* ---------- FINAL SCORE ---------- */
+  pipeline.push(
     {
       $addFields: {
         finalScore: {
@@ -1022,93 +1076,14 @@ const getForYouOrganizationsForHomeRepo = async ({
         }
       }
     },
-
-    /* ===============================
-       7️⃣ SORT + PAGINATION
-       =============================== */
     { $sort: { finalScore: -1 } },
     { $skip: skip },
     { $limit: limit }
   );
 
-  /* ===============================
-     8️⃣ PRIMARY VENUE → VENUE TYPE + TAGS
-     =============================== */
-  pipeline.push(
-    // primary venue
-    {
-      $lookup: {
-        from: "venues",
-        let: { orgId: "$_id" },
-        pipeline: [
-          {
-            $match: {
-              $expr: { $eq: ["$organization", "$$orgId"] },
-              isPrimary: true,
-              status: "active"
-            }
-          },
-          {
-            $project: {
-              _id: 0,
-              venueType: 1
-            }
-          }
-        ],
-        as: "primaryVenue"
-      }
-    },
-
-    // populate venueType docs
-    {
-      $lookup: {
-        from: "venuetypes",
-        localField: "primaryVenue.venueType",
-        foreignField: "_id",
-        as: "venueTypes",
-        pipeline: [
-          { $project: { _id: 1, title: 1 } }
-        ]
-      }
-    },
-
-    // tags
-    {
-      $lookup: {
-        from: "tags",
-        localField: "otherInfo.tags",
-        foreignField: "_id",
-        as: "tags",
-        pipeline: [{ $project: { _id: 1, title: 1 } }]
-      }
-    }
-  );
-
-  /* ===============================
-     9️⃣ FINAL SHAPE
-     =============================== */
-  pipeline.push({
-    $project: {
-      _id: 1,
-      distance: userLocation ? 1 : null,
-      "basicInfo.name": 1,
-      "basicInfo.media": 1,
-      "otherInfo.description": 1,
-      operatingHours: 1,
-      tags: 1,
-
-      venue: {
-        venueType: "$venueTypes"
-      },
-
-      relevanceScore: 1,
-      popularityScore: 1,
-      finalScore: 1
-    }
-  });
-
   return Organizations.aggregate(pipeline);
 };
+
 
 
 const getTrendingOrganizationsForHomeRepo = async ({

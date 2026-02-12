@@ -62,7 +62,8 @@ const unifiedTransactionSchema = new mongoose.Schema(
             type: String,
             enum: [
                 "menuorders",
-                "ticketingorders",
+                "ticketingorders", //for ticket bookings
+                "ticketingbookings", //for ticket transfers
                 "loyaltyrewardsorders",
                 "loyaltychallengesorders",
                 "globalrewardsorders",

@@ -31,6 +31,11 @@ const getAvailableTicketings = async (eventId, timezone) => {
       $match: {
         event: eventObjectId,
         status: "active",
+        // scheduled publish guard
+        $or: [
+          { scheduledPublishAt: null },
+          { scheduledPublishAt: { $lte: now } }
+        ]
       },
     },
 
@@ -107,6 +112,7 @@ const getMinTicketPricesByEventIds = async (eventIds = []) => {
         event: { $in: eventIds },
         status: "active",
         price: { $gt: 0 },
+        
       },
     },
     {

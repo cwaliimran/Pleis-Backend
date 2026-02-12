@@ -64,9 +64,7 @@ const createEvent = async (req, res) => {
         validateData.dateFields["ticketing.timeSensitivePricing.lastMinute.startDate"] = "YYYY-MM-DD hh:mm A";
     }
 
-    if (ticketing.status === "scheduled") {
-      validateData.dateFields["ticketing.scheduledPublishAt"] = "YYYY-MM-DD hh:mm A";
-    }
+    validateData.dateFields["ticketing.scheduledPublishAt"] = "YYYY-MM-DD hh:mm A";
   }
 
   // Event schedule validation dates
@@ -131,7 +129,7 @@ const createEvent = async (req, res) => {
   let ticketingData = null;
   if (ticketing && Object.keys(ticketing).length > 0) {
     // Convert scheduledPublishAt
-    if (ticketing.status === "scheduled" && ticketing.scheduledPublishAt) {
+    if (ticketing.scheduledPublishAt) {
       ticketing.scheduledPublishAt = convertTimezoneToUtc(
         ticketing.scheduledPublishAt,
         timezone,

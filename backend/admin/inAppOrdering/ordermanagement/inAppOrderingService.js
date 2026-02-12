@@ -4,6 +4,7 @@ const { NotificationTypes } = require("@NotificationsModel");
 const mongoose = require("mongoose");
 const Menus = require("@MenusModel");
 const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
+const { sendUserNotifications } = require("../../../controllers/communicationController");
 
 
 
@@ -54,30 +55,55 @@ const getOrdersService = async ({
 };
 
 
-const updateOrders = async (id, data) => {
-  const order = await OrdersRepo.findOrdersById(id);
+const updateOrderDetailsService = async ({
+  orderId,
+  data,
+}) => {
+  const order = await OrdersRepo.findOrdersById(orderId);
 
   if (!order) {
     return { error: "Orders_not_found" };
   }
 
-  // ❌ Cannot cancel a paid order
+  /* ===============================
+     🚫 Guards
+  =============================== */
+
+  // ❌ Cannot cancel paid order
   if (order.paymentStatus === "paid" && data.status === "cancelled") {
     return { error: "Cant_Cancel_paid_order" };
   }
 
+  // ❌ Prevent payment change if already paid
+  if (
+    order.paymentStatus === "paid" &&
+    data.paymentStatus !== undefined &&
+    data.paymentStatus !== "paid"
+  ) {
+    return { error: "Cant_change_paid_payment_status" };
+  }
+
+  let statusChanged = false;
+  let paymentChanged = false;
+  let deliveryChanged = false;
+
   /* ===============================
-     1️⃣ UPDATE ORDER STATUS (OPTIONAL)
+     1️⃣ STATUS
   =============================== */
-  if (data.status !== undefined) {
+  if (data.status !== undefined && data.status !== order.status) {
     order.status = data.status;
+    statusChanged = true;
   }
 
   /* ===============================
-     2️⃣ UPDATE PAYMENT STATUS (OPTIONAL)
+     2️⃣ PAYMENT STATUS
   =============================== */
-  if (data.paymentStatus !== undefined) {
+  if (
+    data.paymentStatus !== undefined &&
+    data.paymentStatus !== order.paymentStatus
+  ) {
     order.paymentStatus = data.paymentStatus;
+    paymentChanged = true;
 
     if (data.paymentStatus === "paid" && !order.paidAt) {
       order.paidAt = new Date();
@@ -85,17 +111,17 @@ const updateOrders = async (id, data) => {
   }
 
   /* ===============================
-     3️⃣ DELIVER ALL (HIGHEST PRIORITY)
+     3️⃣ DELIVER ALL
   =============================== */
   if (typeof data.deliveredall === "boolean") {
     order.items.forEach(item => {
       item.isdelivered = data.deliveredall;
     });
+    deliveryChanged = true;
   }
 
   /* ===============================
      4️⃣ DELIVER SELECTED ITEMS
-     (ONLY IF deliveredall NOT SENT)
   =============================== */
   else if (data.deliveredMenuItem) {
     const deliveredIds = data.deliveredMenuItem
@@ -105,39 +131,65 @@ const updateOrders = async (id, data) => {
       .map(id => new mongoose.Types.ObjectId(id));
 
     order.items.forEach(item => {
-      if (
-        deliveredIds.some(dId => dId.equals(item.menuItem))
-      ) {
+      if (deliveredIds.some(dId => dId.equals(item.menuItem))) {
         item.isdelivered = true;
+        deliveryChanged = true;
       }
     });
   }
 
   await order.save();
 
-   emitOrderEvent({
-      io: global.io,
-      eventName: "ORDER_UPDATE",
-      orderId: order._id,
-      organizationId: order.organization,
-      userId: order.user,
+  /* ===============================
+     SOCKET UPDATE
+  =============================== */
+  emitOrderEvent({
+    io: global.io,
+    eventName: "ORDER_UPDATE",
+    orderId: order._id,
+    organizationId: order.organization,
+    userId: order.user,
+    data: {
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+    },
+  });
+
+  /* ===============================
+     NOTIFICATIONS
+  =============================== */
+
+  if (statusChanged || paymentChanged || deliveryChanged) {
+    sendUserNotifications({
+      recipientIds: [order.user.toString()],
+      title: "Order Updated",
+      body: `Your order ${order.orderNumber} status is now ${order.status}`,
       data: {
-        status: order.status,
-        paymentStatus: order.paymentStatus,
+        type: NotificationTypes.ORDER_UPDATE,
+        objectType: "menuorders",
       },
+      image: order.items?.[0]?.menuItemSnapShot?.image || null,
+      sender: order.organization,
+      objectId: order._id,
     });
-  
+  }
+
+  if (paymentChanged && order.paymentStatus === "paid") {
+    sendUserNotifications({
+      recipientIds: [order.organization.toString()],
+      title: "Order Paid",
+      body: `Order ${order.orderNumber} has been paid`,
+      data: {
+        type: NotificationTypes.ORDER_UPDATE,
+        objectType: "menuorders",
+      },
+      sender: order.user,
+      objectId: order._id,
+    });
+  }
 
   return order;
 };
-
-
-
-
-
-
-
-
 
 
 const updateInAppOrders = async (organization, isOrderingEnabled) => {
@@ -207,7 +259,7 @@ const getInAppOrders = async ({
 module.exports = {
   getOrdersService,
   updateInAppOrders,
-  updateOrders,
+  updateOrderDetailsService,
   getInAppOrders
 
 };
