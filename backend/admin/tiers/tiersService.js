@@ -23,87 +23,84 @@ const createTier = async (data) => {
 // Sort tiers so the one with lowest bonusPointsPerEuro (e.g. Silver) is on top
 const getTiers = async ({ page, limit, keyword, status, date }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
+
   const cacheKey = buildTiersCacheKey({
     scope: "admin",
     skip,
     limit,
   });
+
   return cache({
     namespace: cacheKey,
-    ttl: 86400, // 1 day
- 
+    ttl: 86400,
+
     fetchFn: async () => {
-  const pipeline = [
-  ];
+      /* --------------------------
+         Build base query
+      ---------------------------*/
+      const query = {};
 
-  // Apply filters
-  if (status) {
-    pipeline.push({ $match: { status } });
-  } else {
-    pipeline.push({ $match: { status: { $ne: "deleted" } } });
-  }
-
-  if (date) {
-    const start = new Date(date);
-    const end = new Date(new Date(date).setDate(start.getDate() + 1));
-    pipeline.push({
-      $match: {
-        createdAt: { $gte: start, $lt: end }
+      if (status) {
+        query.status = status;
+      } else {
+        query.status = { $ne: "deleted" };
       }
-    });
-  }
 
-  const keywordMatch = buildKeywordQueryFromModels(
-    [
-      { schema: Tiers.schema }
-    ],
-    keyword
-  );
+      if (date) {
+        const start = new Date(date);
+        const end = new Date(date);
+        end.setDate(start.getDate() + 1);
 
-  if (Object.keys(keywordMatch).length) {
-    pipeline.push({ $match: keywordMatch });
-  }
+        query.createdAt = { $gte: start, $lt: end };
+      }
 
-  // Sort by bonusPointsPerEuro ascending (lowest first)
-  pipeline.push({ $sort: { "essential.entryPoints": 1 } });
+      const keywordMatch = buildKeywordQueryFromModels(
+        [{ schema: Tiers.schema }],
+        keyword
+      );
 
-  // Apply pagination + counts using $facet
-  pipeline.push({
-    $facet: {
-      data: [
-        { $skip: skip },
-        ...(limit === 0 ? [] : [{ $limit: limit }])
-      ],
-      totalFiltered: [{ $count: "count" }]
-    }
-  });
+      if (Object.keys(keywordMatch).length) {
+        Object.assign(query, keywordMatch);
+      }
 
-  const result = await Tiers.aggregate(pipeline);
+      /* --------------------------
+         Aggregation pipeline
+      ---------------------------*/
+      const pipeline = [
+        { $match: query },
 
-  let tiers = result[0]?.data || [];
-  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+        { $sort: { "essential.entryPoints": 1 } },
 
-  //TODO use modelCounts utility
-  // Additional counts for meta (active/inactive/total by userId as creator)
-  const [total, active, inactive] = await Promise.all([
-    Tiers.countDocuments({ status: { $ne: "deleted" } }),
-    Tiers.countDocuments({ status: "active", }),
-    Tiers.countDocuments({ status: "inactive", })
-  ]);
+        {
+          $facet: {
+            data: [
+              { $skip: skip },
+              ...(limit === 0 ? [] : [{ $limit: limit }]),
+            ],
+            totalFiltered: [{ $count: "count" }],
+          },
+        },
+      ];
 
-  const meta = generateMeta(page, limit, totalFiltered);
-  meta.tiersCount = { total, active, inactive };
+      const [result, counts] = await Promise.all([
+        Tiers.aggregate(pipeline),
+        tierRepo.getCounts(query),
+      ]);
 
-  //format tiers
-  tiers = tiers.map(item => tiersFormatter(item));
+      const { totalFiltered, total, active, inactive } = counts;
 
-  return {
-    tiers,
-    meta
-  };
-},
+      let tiers = result[0]?.data || [];
+
+      const meta = generateMeta(page, limit, totalFiltered);
+      meta.tiersCount = { total, active, inactive };
+
+      tiers = tiers.map(item => tiersFormatter(item));
+
+      return { tiers, meta };
+    },
   });
 };
+
 
 const updateTier = async (id, data) => {
   await invalidate(ACTIVE_TIERS_CACHE_KEY); // Invalidate cache

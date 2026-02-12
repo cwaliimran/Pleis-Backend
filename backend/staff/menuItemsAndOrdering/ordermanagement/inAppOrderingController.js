@@ -9,7 +9,7 @@ const {
 const mongoose = require('mongoose'); // Import mongoose
 
 const Orderservice = require("./inAppOrderingService");
-const { getOrdersService } = require("../../../admin/inAppOrdering/ordermanagement/inAppOrderingService");
+const { getOrdersService, updateOrderDetailsService } = require("../../../admin/inAppOrdering/ordermanagement/inAppOrderingService");
 
 
 const getOrders = async (req, res) => {
@@ -79,11 +79,11 @@ const updateOrders = async (req, res) => {
     deliveredMenuItem,
     deliveredall
   };
-const staffId= req.user._id;
+  const staffId = req.user._id;
 
 
   try {
-    const updated = await Orderservice.updateOrders(staffId,id, data);
+    const updated = await updateOrderDetailsService({ orderId: id, data })
     if (updated && updated.error) {
       return sendResponse({
         res,

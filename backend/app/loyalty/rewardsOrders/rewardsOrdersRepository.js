@@ -436,6 +436,66 @@ const getCombinedRewardOrders = async ({
   return { data, total };
 };
 
+const completeRewardOrder = async ({
+  orderId,
+  redeemedBy,
+  status,
+  companyOrganizer,
+}) => {
+  const order = await RewardsOrders.findById(orderId);
+
+  if (!order) {
+    return { error: "reward_order_not_found" };
+  }
+
+  const warnings = [];
+
+  /* ===============================
+     1️⃣ Organizer validation
+  =============================== */
+  if (
+    companyOrganizer &&
+    order.companyOrganizer &&
+    order.companyOrganizer.toString() !== companyOrganizer.toString()
+  ) {
+    return { error: "organizer_mismatch" };
+  }
+
+  /* ===============================
+     2️⃣ Already completed guard
+  =============================== */
+  if (order.status === "completed") {
+    warnings.push({
+      warning: "Reward already redeemed",
+      warningCode: "already_redeemed",
+    });
+
+    return {
+      order,
+      warnings,
+      wasCompletedNow: false,
+    };
+  }
+
+  /* ===============================
+     3️⃣ Apply requested status
+  =============================== */
+  order.status = status || "completed";
+
+  if (order.status === "completed") {
+    order.redeemedAt = new Date();
+    order.redeemedBy = redeemedBy;
+  }
+
+  await order.save();
+
+  return {
+    order,
+    warnings,
+    wasCompletedNow: order.status === "completed",
+  };
+};
+
 
 module.exports = {
   createRewardOrder,
@@ -443,5 +503,6 @@ module.exports = {
   getRewardOrdersCounts,
   checkClaimLimitForLoyaltyRewards,
   getOrderDetails,
-  getCombinedRewardOrders
+  getCombinedRewardOrders,
+  completeRewardOrder
 };

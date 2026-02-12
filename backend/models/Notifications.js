@@ -25,6 +25,7 @@ const NotificationTypes = {
   HIGHLIGHT_CREATED: "highlightCreated",
   SUPPORT_REQUEST: "supportRequest",
   NEW_MENU_ITEMS_ORDER: "newMenuItemsOrder",
+  REWARD_REDEEMED: "rewardRedeemed",
 };
 
 // Define the NotificationSchema

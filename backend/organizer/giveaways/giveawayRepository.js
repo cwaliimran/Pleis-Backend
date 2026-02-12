@@ -448,7 +448,7 @@ const gettickets = async ({
     // Step 1: Match events where creator matches the provided userId
     {
       $match: {
-        ...(eventId && { event: new mongoose.Types.ObjectId(eventId) }) // Filter events where creator == userId
+        ...(eventId && { event: new mongoose.Types.ObjectId(eventId) }), // Filter events where creator == userId
       }
     }
   ];

@@ -25,7 +25,7 @@ const countCategories = async (query = {}) => {
 const getCounts = async (query = {}) => {
   return await getModelCounts({
     model: GlobalRewardCategories,
-    filterQuery: query, // ✅ THIS is what was missing
+    filterQuery: query,
     statusMap: {
       status: ["active", "inactive"],
     },

@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const { processPaymentWebhook } = require("../services/paymentWebhookService");
 const { verifyMonriSignature } = require("../utils/monriSignature");
 
@@ -10,8 +11,8 @@ const monriWebhookController = async (req, res) => {
     const result = await processPaymentWebhook({
       provider: "monri",
       eventId: event.transaction.id,
-      orderType: event.transaction.metadata.type, // ticketing | reservation
-      orderId: event.transaction.orderNumber,
+      orderType: event.transaction.metadata.type, // "ticketingbookings", "userreservations", "menuorders", "tickettransfer"
+      orderId: event.transaction.orderNumber || new mongoose.Types.ObjectId(),
       paymentStatus: event.transaction.status,
       paymentId: event.transaction.id,
       payload: event,

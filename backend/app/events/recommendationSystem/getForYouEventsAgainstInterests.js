@@ -2,15 +2,12 @@ const { Events } = require("../../../commonModules/events/Event");
 const { generateMeta } = require("@utils/responseUtil");
 const { formatRecentlyViewedEventResponse } = require("../../recentlyViewed/formatter/recentlyViewedItemsFormatter");
 const { default: mongoose } = require("mongoose");
-
-/**
- * @desc Fetch personalized "For You" events for a user based on interests
- * Prioritizes active, future, and popular events.
- */
-const { getCurrentDateInTimezone} = require("../../../helperUtils/responseUtil");
-const TicketingsModel = require("@TicketingsModel");
+const { getCurrentDateInTimezone } = require("../../../helperUtils/responseUtil");
 const { getMinTicketPricesByEventIds } = require("../../ticketing/ticketingsRepository");
 
+/**
+ * Personalized "For You" events based on interests + engagement signals
+ */
 const getForYouEventsAgainstInterests = async ({
   userLocation,
   timezone,
@@ -49,6 +46,7 @@ const getForYouEventsAgainstInterests = async ({
 
   let pipeline = [];
 
+  /* ---------------- Base geo or normal match ---------------- */
   if (!userLocation) {
     pipeline.push(
       { $match: baseQuery },
@@ -67,6 +65,80 @@ const getForYouEventsAgainstInterests = async ({
     });
   }
 
+  /* ---------------- Engagement stats lookup ---------------- */
+  pipeline.push(
+    {
+      $lookup: {
+        from: "engagementevents",
+        let: { eventId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$entityId", "$$eventId"] },
+                  { $eq: ["$entityType", "events"] }
+                ]
+              }
+            }
+          },
+          {
+            $group: {
+              _id: "$action",
+              count: { $sum: 1 }
+            }
+          }
+        ],
+        as: "engagementStats"
+      }
+    },
+    {
+      $addFields: {
+        viewsCount: {
+          $ifNull: [
+            {
+              $first: {
+                $map: {
+                  input: {
+                    $filter: {
+                      input: "$engagementStats",
+                      as: "s",
+                      cond: { $eq: ["$$s._id", "view"] }
+                    }
+                  },
+                  as: "f",
+                  in: "$$f.count"
+                }
+              }
+            },
+            0
+          ]
+        },
+        favoritesCount: {
+          $ifNull: [
+            {
+              $first: {
+                $map: {
+                  input: {
+                    $filter: {
+                      input: "$engagementStats",
+                      as: "s",
+                      cond: { $eq: ["$$s._id", "favorite"] }
+                    }
+                  },
+                  as: "f",
+                  in: "$$f.count"
+                }
+              }
+            },
+            0
+          ]
+        }
+      }
+    }
+  );
+
+  /* ---------------- Interest scoring ---------------- */
   if (hasInterests) {
     pipeline.push(
       {
@@ -101,23 +173,24 @@ const getForYouEventsAgainstInterests = async ({
               { $multiply: [{ $size: "$matchedTags" }, 1.0] },
               { $multiply: [{ $size: "$matchedCategories" }, 1.2] },
               { $multiply: [{ $size: "$matchedVenueTypes" }, 1.0] },
-              { $divide: [{ $ifNull: ["$meta.viewsCount", 0] }, 100] },
-              { $divide: [{ $ifNull: ["$meta.favoritesCount", 0] }, 50] },
+              { $divide: ["$viewsCount", 100] },
+              { $divide: ["$favoritesCount", 50] },
             ],
           },
         },
       },
       { $match: { matchScore: { $gt: 0 } } },
-      { $sort: { matchScore: -1, "meta.viewsCount": -1, createdAt: -1 } }
+      { $sort: { matchScore: -1, viewsCount: -1, createdAt: -1 } }
     );
   } else {
+    /* ---------------- Trending fallback ---------------- */
     pipeline.push(
       {
         $addFields: {
           trendingScore: {
             $add: [
-              { $multiply: [{ $ifNull: ["$meta.viewsCount", 0] }, 0.5] },
-              { $multiply: [{ $ifNull: ["$meta.favoritesCount", 0] }, 1.5] },
+              { $multiply: ["$viewsCount", 0.5] },
+              { $multiply: ["$favoritesCount", 1.5] },
               { $multiply: [{ $ifNull: ["$meta.attendeesCount", 0] }, 1.0] },
             ],
           },
@@ -127,7 +200,7 @@ const getForYouEventsAgainstInterests = async ({
     );
   }
 
-  // ----- add isFavorite inside pipeline -----
+  /* ---------------- Favorite flag ---------------- */
   if (userId) {
     pipeline.push(
       {
@@ -190,12 +263,7 @@ const getForYouEventsAgainstInterests = async ({
   return { data: formatted, meta };
 };
 
-
-
-
-/**
- * Helper: shared $lookups for enrichment
- */
+/* ---------- Shared lookups ---------- */
 function getEventLookups() {
   return [
     {

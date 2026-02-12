@@ -1,6 +1,7 @@
 const express = require("express");
 const roleMiddleware = require("../middlewares/roleMiddleware");
 const auth = require("../middlewares/authMiddleware");
+const { completeRewardOrder } = require("../staff/loyalty/rewardorders/rewardsOrdersController");
 const router = express.Router();
 
 router.use(auth);
@@ -14,6 +15,8 @@ router.use("/in-app-ordering", require("../staff/menuItemsAndOrdering/ordermanag
 router.use("/points", require("../staff/transactions/transactionsRoutes"));
 //scan qr code
 router.use("/scan-qr", require("../staff/scanQrCode/scanQrRoutes"));
+//complete reward order
+router.put("/loyalty/reward-orders", completeRewardOrder);
 //events
 router.use("/events", require("../staff/events/eventRoutes"));
 //reservations

@@ -59,7 +59,7 @@ function formatTicketing(timezone, item) {
         obj.event.basicInfo.media = getFullImageUrl(obj.event.basicInfo?.media.name);
     }
 
-    if (obj.status === "scheduled" && obj.scheduledPublishAt) {
+    if (obj.scheduledPublishAt) {
         obj.scheduledPublishAt = convertUtcToTimezone(
             obj.scheduledPublishAt,
             timezone,
