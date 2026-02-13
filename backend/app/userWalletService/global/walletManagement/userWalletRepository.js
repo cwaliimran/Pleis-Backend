@@ -98,11 +98,7 @@ const updateGlobalPoints = async ({
   walletDoc.global.points = newBalance;
 
   await walletDoc.save({ session });
-  checkPromotion(userId).catch(() => { });
-  //TODO call via cron job
-  // checkDemotion(userId).catch(() => { });
-
-
+  
   return { success: true, newBalance };
 };
 
@@ -112,8 +108,11 @@ const updateGlobalPoints = async ({
 // ======================================================================
 // PROMOTION CHECK USING UNIFIED TRANSACTIONS
 // ======================================================================
-const checkPromotion = async (userId) => {
+const checkPromotionGlobal = async (userId, session = null) => {
   if (!userId) throw new Error("userId required");
+
+  const now = Date.now();
+  const last12MonthsDate = new Date(now - 365 * 24 * 60 * 60 * 1000);
 
   // Earned in last 12 months from unified ledger
   const earned12MonthsAgg = await UnifiedWalletTransactions.aggregate([
@@ -122,17 +121,23 @@ const checkPromotion = async (userId) => {
         user: new mongoose.Types.ObjectId(userId),
         walletType: "globalWallet",
         type: "earn",
-        createdAt: { $gte: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) }
+        createdAt: { $gte: last12MonthsDate }
       }
     },
     {
       $group: { _id: null, total: { $sum: "$points.total" } }
     }
-  ]);
+  ]).session(session);
 
-  const earned12Months = earned12MonthsAgg.length ? earned12MonthsAgg[0].total : 0;
+  const earned12Months = earned12MonthsAgg.length
+    ? earned12MonthsAgg[0].total
+    : 0;
 
-  const wallet = await UserGlobalWallet.findOne({ user: userId }).populate("global.level");
+  const wallet = await UserGlobalWallet
+    .findOne({ user: userId })
+    .populate("global.level")
+    .session(session);
+
   if (!wallet || !wallet.global.level) return;
 
   const currentLevel = wallet.global.level;
@@ -142,12 +147,14 @@ const checkPromotion = async (userId) => {
     entryPoints: { $gt: currentLevel.entryPoints }
   })
     .sort({ entryPoints: 1 })
-    .select("title entryPoints retainPoints");
+    .select("title entryPoints retainPoints")
+    .session(session);
 
   if (!higherLevels.length) return { promoted: false };
 
   // highest eligible level
   let selected = null;
+
   for (const lvl of higherLevels) {
     if (earned12Months >= lvl.entryPoints) {
       selected = lvl;
@@ -163,17 +170,22 @@ const checkPromotion = async (userId) => {
         "global.level": selected._id,
         "global.lastEvaluated": new Date()
       }
-    }
+    },
+    { session }
   );
 
   return { promoted: true, newLevel: selected };
 };
 
+
 // ======================================================================
 // DEMOTION CHECK USING UNIFIED TRANSACTIONS
 // ======================================================================
-const checkDemotion = async (userId) => {
+const checkDemotionGlobal = async (userId, session = null) => {
   if (!userId) throw new Error("userId required");
+
+  const now = Date.now();
+  const last12MonthsDate = new Date(now - 365 * 24 * 60 * 60 * 1000);
 
   // Earned in last 12 months
   const earned12MonthsAgg = await UnifiedWalletTransactions.aggregate([
@@ -182,17 +194,23 @@ const checkDemotion = async (userId) => {
         user: new mongoose.Types.ObjectId(userId),
         walletType: "globalWallet",
         type: "earn",
-        createdAt: { $gte: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) }
+        createdAt: { $gte: last12MonthsDate }
       }
     },
     {
       $group: { _id: null, total: { $sum: "$points.total" } }
     }
-  ]);
+  ]).session(session);
 
-  const earned12Months = earned12MonthsAgg.length ? earned12MonthsAgg[0].total : 0;
+  const earned12Months = earned12MonthsAgg.length
+    ? earned12MonthsAgg[0].total
+    : 0;
 
-  const wallet = await UserGlobalWallet.findOne({ user: userId }).populate("global.level");
+  const wallet = await UserGlobalWallet
+    .findOne({ user: userId })
+    .populate("global.level")
+    .session(session);
+
   const currentLevel = wallet?.global?.level;
 
   if (!wallet || !currentLevel) return;
@@ -201,9 +219,13 @@ const checkDemotion = async (userId) => {
     return { demoted: false };
   }
 
-  const fallback = await getPreviousStatusLevel(earned12Months);
+  // assumes this helper supports session too; pass it if implemented
+  const fallback = await getPreviousStatusLevel(earned12Months, session);
 
-  if (!fallback || fallback._id.toString() === currentLevel._id.toString()) {
+  if (
+    !fallback ||
+    fallback._id.toString() === currentLevel._id.toString()
+  ) {
     return { demoted: false };
   }
 
@@ -214,11 +236,13 @@ const checkDemotion = async (userId) => {
         "global.level": fallback._id,
         "global.lastEvaluated": new Date()
       }
-    }
+    },
+    { session }
   );
 
   return { demoted: true, newLevel: fallback };
 };
+
 
 const getTotalRedeemPurchases = async (userId) => {
   try {
@@ -249,5 +273,6 @@ module.exports = {
   createUserWallet,
   updateGlobalPoints,
   getUserWallet,
-  getTotalRedeemPurchases
+  getTotalRedeemPurchases,
+  checkPromotionGlobal
 };
