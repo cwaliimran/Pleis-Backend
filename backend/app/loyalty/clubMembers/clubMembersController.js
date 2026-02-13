@@ -98,12 +98,21 @@ const getUserCompanyWallet = async (req, res) => {
   try {
     const data = await clubService.getUserCompanyWallet(userId, companyOrganizer);
 
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "user_company_wallet_fetched_successfully",
-      data,
-    });
+    if (!data) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "user_company_wallet_does_not_exist",
+        data,
+      });
+    } else {
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "user_company_wallet_fetched_successfully",
+        data,
+      });
+    }
 
   } catch (err) {
     const readable = getReadableErrorMessage(err);
@@ -119,7 +128,6 @@ const getUserCompanyWallet = async (req, res) => {
 const getCompanyProfileWithLoyaltyInfo = async (req, res) => {
   const { id: companyOrganizer } = req.params;
   const { _id: userId, timezone } = req.user;
-
   if (!validateParams(req, res, { pathParams: ["id"] })) return;
 
   try {
@@ -133,6 +141,7 @@ const getCompanyProfileWithLoyaltyInfo = async (req, res) => {
     });
 
   } catch (err) {
+    console.log("err", err)
     const readable = getReadableErrorMessage(err);
     return sendResponse({
       res,

@@ -1,6 +1,6 @@
 // repositories/unifiedTransactionsRepository.js
 const { UnifiedWalletTransactions } = require("@UnifiedWalletTransactionsModel"); // new model
-const { updatePoints } = require("../../../app/loyalty/clubMembers/clubMembersRepository");
+const { updatePoints, checkPromotion, checkDemotion } = require("../../../app/loyalty/clubMembers/clubMembersRepository");
 const { updateGlobalPoints } = require("../../../app/userWalletService/global/walletManagement/userWalletRepository");
 const { TicketingBookings } = require("@TicketingBookingsModel");
 
@@ -43,6 +43,7 @@ const createTransaction = async ({
       allowNegative
     });
 
+
     const closingBalance =
       wallet?.company?.points ??
       wallet?.closingBalance ??
@@ -62,6 +63,9 @@ const createTransaction = async ({
       closingBalance,
       description
     });
+    await checkPromotion(userId, companyOrganizer, session);
+    //TODO demotion call via cron job
+    // await checkDemotion(userId, companyOrganizer, session);
 
     createdTransactions.push(trx);
   }
@@ -347,10 +351,10 @@ const findTransactionsByUserId = async (userId) => {
 
 const getTotalClosingBalanceByOrganizationId = async (organizationId) => {
   try {
-    const objectId =new mongoose.Types.ObjectId(organizationId);
+    const objectId = new mongoose.Types.ObjectId(organizationId);
     const result = await UnifiedWalletTransactions.aggregate([
-      { $match: { organization: objectId } }, 
-      { $group: { _id: null, totalClosingBalance: { $sum: "$closingBalance" } } } 
+      { $match: { organization: objectId } },
+      { $group: { _id: null, totalClosingBalance: { $sum: "$closingBalance" } } }
     ]);
     return result.length > 0 ? result[0].totalClosingBalance : 0;
   } catch (error) {
