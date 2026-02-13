@@ -119,7 +119,7 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
           taskType: "buyMenuItem",
           items,
         }).catch(err => {
-          console.error("Challenge resolver failed:", err);
+        
         });
 
       }

@@ -385,7 +385,7 @@ const getHighlightsWithFilters = async (query, keyword, skip, limit) => {
   // Optional: keep this only for non-nested shallow updates
   const findByIdAndUpdate = async (id, data) => {
     await invalidate("highlights");
-    console.log("Invalidated highlights cache");
+
     return Highlights.findByIdAndUpdate(id, { $set: data }, { new: true });
   };
   module.exports = {

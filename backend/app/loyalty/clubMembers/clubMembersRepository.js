@@ -594,7 +594,7 @@ const createUserReferradrecord = async (referrerId, userId, companyOrganizer) =>
     };
 
   } catch (err) {
-    console.error("Error creating referral record:", err);
+  
     throw err;
   }
 };

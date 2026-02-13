@@ -136,7 +136,7 @@ const updateInAppOrders = async (companyOrganizer, isOrderingEnabled) => {
       modifiedCount: result.modifiedCount,
     }
   } catch (error) {
-    console.error("updateInAppOrders error:", error);
+
     return ({
       message: "Something went wrong",
       error: error.message,

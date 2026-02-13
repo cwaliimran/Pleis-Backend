@@ -157,7 +157,7 @@ const getPromotionsByCreator = async (creatorId) => {
     // Return promotions details or an empty array if none are found
     return promotions.length > 0 ? promotions : [];
   } catch (error) {
-    console.error("Error fetching promotions:", error);
+
     return [];
   }
 };

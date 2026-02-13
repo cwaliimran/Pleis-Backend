@@ -43,7 +43,7 @@ const runRecurringPromotionsCron = async () => {
     try {
       await processPromotionTemplate(template, horizonDate);
     } catch (err) {
-      console.error("Recurring promotion cron error:", template._id, err);
+    
     }
   }
 };

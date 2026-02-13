@@ -13,7 +13,7 @@ const createMenu = async (data) => {
 // Populate organization data for menus, but merge into "organization" field
 const getMenus = async ({ page, limit, keyword, status, userId, date, organization }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-console.log("organization",organization );
+
   const pipeline = [
     // 🔐 Only menus created by this user
     {

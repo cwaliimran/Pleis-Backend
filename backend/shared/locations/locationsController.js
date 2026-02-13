@@ -15,7 +15,7 @@ const readJSONFile = (filePath) => {
     const data = fs.readFileSync(filePath, "utf8");
     return JSON.parse(data);
   } catch (error) {
-    console.error(`Error reading file from disk: ${error}`);
+
     return null;
   }
 };

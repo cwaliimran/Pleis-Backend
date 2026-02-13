@@ -71,7 +71,7 @@ const getMenus = async (req, res) => {
       try {
         organizations = JSON.parse(organizations);
       } catch (e) {
-        console.warn("Invalid organizations format, ignoring parse:", organizations);
+     
       }
     }
 
