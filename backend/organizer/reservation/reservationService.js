@@ -49,7 +49,6 @@ const updateReservation = async (id, data) => {
   if (!Reservation) {
     return { error: "Reservation_not_found" };
   }
-  console.log("data", data);
   // -----------------------------
   // VALIDATIONS
   // -----------------------------
