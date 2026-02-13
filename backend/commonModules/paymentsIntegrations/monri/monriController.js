@@ -80,8 +80,7 @@ exports.handleSuccess = async (req, res) => {
 
     console.log("MONRI SUCCESS:", payload);
 
-    const orderNumber = payload.order_number
-
+    const orderNumber = payload.order_number;
 
     if (!orderNumber) {
       return res.status(400).json({ message: "Missing order_number" });
@@ -95,38 +94,37 @@ exports.handleSuccess = async (req, res) => {
 
     const isValid = verifyMonriSuccessDigest({
       payload,
-      successUrl: process.env.SUCCESS_URL
+      successUrl: process.env.SUCCESS_URL,
     });
 
     if (!isValid) {
       await monriRepository.updateTransaction(orderNumber, {
         status: "invalid",
-        rawCallback: payload
+        rawCallback: payload,
       });
 
       return res.status(400).json({ message: "Invalid digest" });
     }
 
-    const trx = await verifyTransaction(orderNumber);
+    // Monri success indicator
+    const approved = payload.response_code === "0000";
 
-    if (trx.status === "approved") {
+    if (approved) {
       await monriRepository.updateTransaction(orderNumber, {
         status: "paid",
-        approvalCode: trx.approval_code,
-        panToken: trx.pan_token,
-        monriTransactionId: trx.id,
-        rawCallback: payload
+        approvalCode: payload.approval_code,
+        rawCallback: payload,
       });
     } else {
       await monriRepository.updateTransaction(orderNumber, {
         status: "failed",
-        rawCallback: payload
+        rawCallback: payload,
       });
     }
 
     return res.status(200).json({
-      message: "Payment successful",
-      orderNumber
+      message: approved ? "Payment successful" : "Payment failed",
+      orderNumber,
     });
 
   } catch (err) {
