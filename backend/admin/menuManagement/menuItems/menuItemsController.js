@@ -59,7 +59,7 @@ const createMenuItem = async (req, res) => {
   if (startTime && endTime) {
     data.startTime = convertTimezoneToUtc(startTime, timezone, "hh:mm A");
     data.endTime = convertTimezoneToUtc(endTime, timezone, "hh:mm A");
-    console.log("data.startTime >= data.endTime",data.startTime , data.endTime );
+
 
 
   }

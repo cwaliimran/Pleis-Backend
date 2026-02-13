@@ -6,8 +6,8 @@ const {
 } = require("../../../commonModules/loyalty/rewards/models");
 const formatReward = require("./utils/formatReward");
 
- 
- 
+
+
 
 // Decide which discriminator model to use
 const getModelByrewardType = (rewardType) => {
@@ -41,7 +41,7 @@ const create = async (data) => {
 // Get reward with population
 const getWithFilters = async (query = {}, skip = 0, limit = 10) => {
 
- 
+
   return Reward.find(query)
     .populate({
       path: "menuItem",
@@ -60,7 +60,7 @@ const getWithFilters = async (query = {}, skip = 0, limit = 10) => {
     .limit(limit)
     .lean()
     .exec();
-    };
+};
 
 // Count
 const count = async (query = {}) => {
@@ -71,7 +71,7 @@ const count = async (query = {}) => {
 const findById = async (id) => {
   return Reward.findById(id)
     .populate("menuItem")
-    .populate({path:"tierLimit", select: "image title" })
+    .populate({ path: "tierLimit", select: "image title" })
     .exec();
 };
 
@@ -93,6 +93,25 @@ const findByIdAndUpdate = async (id, data) => {
     .populate("tierLimit");
 };
 
+const getRewards = async ({ page,
+  limit,
+  companyOrganizer }) => {
+  const skip = (page - 1) * limit;
+  try {
+    const rewards = await Reward.find({
+      companyOrganizer,
+      status: "active",  // Filter by 'active' status
+    })
+      .skip(skip)
+      .limit(limit)
+      .select('_id title'); // Only select _id and title
+    return rewards;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+};
+
 module.exports = {
   create,
   getWithFilters,
@@ -101,4 +120,5 @@ module.exports = {
   updateData,
   deleteItem,
   findByIdAndUpdate,
+  getRewards
 };

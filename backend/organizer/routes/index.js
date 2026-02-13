@@ -32,7 +32,7 @@ router.use("/ticketing", require("../ticketing/ticketingsRoutes"));
 router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));
 router.use("/bundles", require("../bundles/bundleRoutes"));
 router.use("/general", require("../generalAPIs/generalAPIRoutes"));
-router.use("/in-app-ordering", require("../inAppOrdering/inAppOrderingRoutes"));
+router.use("/in-app-ordering", require("../../admin/inAppOrdering/inAppOrderingRoutes"));
 router.use("/transactions", require("../../admin/transactions/routes/unifiedTransactionsRoutes"));
 
 

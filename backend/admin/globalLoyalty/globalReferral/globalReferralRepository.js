@@ -377,7 +377,7 @@ const resetUserReferralLimits = async (limit) => {
     };
 
   } catch (err) {
-    console.error("Error resetting referral limits:", err);
+
     throw err;
   }
 };

@@ -3,6 +3,7 @@ const axios = require("axios");
 const { buildAuthorizationHeader } = require("./monriAuth");
 
 const monriRepository = require("./monriRepository");
+const { verifyTransaction, createTransactionMonriOrder } = require("./monriService");
 
 /**
  * digest = SHA512(key + order_number + amount + currency)
@@ -12,16 +13,18 @@ function generateDigest({ orderNumber, amount, currency }) {
   return crypto.createHash("sha512").update(raw).digest("hex");
 }
 
+
 exports.redirectToMonri = async (req, res) => {
   try {
     // --- REQUIRED PAYMENT DATA ---
-    const orderNumber = crypto.randomUUID();
-    const amount = 500; // 5.00 EUR (minor units)
+
+    let orderNumber = crypto.randomUUID();
     const currency = "EUR";
+    const amount = 500;
 
     // --- PERSIST TRANSACTION (so we can track it) ---
     await monriRepository.createTransaction({
-      orderNumber,
+      orderNumber: orderNumber,
       amount,
       currency,
       status: "pending",
@@ -70,15 +73,13 @@ exports.redirectToMonri = async (req, res) => {
   }
 };
 
-async function extractPayload(req) {
-  // Prefer body, fall back to query string
-  if (req.body && Object.keys(req.body).length) return req.body;
-  return req.query || {};
-}
 
 exports.handleSuccess = async (req, res) => {
   try {
-    const payload = req.query; // Monri SUCCESS = GET redirect
+    const payload = req.query;
+
+    console.log("MONRI SUCCESS:", payload);
+
     const orderNumber = payload.order_number;
 
     if (!orderNumber) {
@@ -87,39 +88,45 @@ exports.handleSuccess = async (req, res) => {
 
     const tx = await monriRepository.findByOrderNumber(orderNumber);
     if (!tx) {
+      console.warn("Order not found:", orderNumber);
       return res.status(404).json({ message: "Transaction not found" });
     }
 
     const isValid = verifyMonriSuccessDigest({
       payload,
-      successUrl: process.env.SUCCESS_URL
+      successUrl: process.env.SUCCESS_URL,
     });
 
     if (!isValid) {
-      console.warn("Monri success digest mismatch", {
-        orderNumber,
-        payload
-      });
-
       await monriRepository.updateTransaction(orderNumber, {
         status: "invalid",
-        rawCallback: payload
+        rawCallback: payload,
       });
 
       return res.status(400).json({ message: "Invalid digest" });
     }
 
-    await monriRepository.updateTransaction(orderNumber, {
-      status: "paid",
-      approvalCode: payload.approval_code,
-      referenceNumber: payload.reference_number,
-      rawCallback: payload
-    });
+    // Monri success indicator
+    const approved = payload.response_code === "0000";
+
+    if (approved) {
+      await monriRepository.updateTransaction(orderNumber, {
+        status: "paid",
+        approvalCode: payload.approval_code,
+        rawCallback: payload,
+      });
+    } else {
+      await monriRepository.updateTransaction(orderNumber, {
+        status: "failed",
+        rawCallback: payload,
+      });
+    }
 
     return res.status(200).json({
-      message: "Payment successful",
-      orderNumber
+      message: approved ? "Payment successful" : "Payment failed",
+      orderNumber,
     });
+
   } catch (err) {
     console.error("Monri success handler error:", err);
     return res.status(500).json({ message: "Processing failed" });
@@ -127,11 +134,14 @@ exports.handleSuccess = async (req, res) => {
 };
 
 
+
 exports.handleCancel = async (req, res) => {
   try {
     const payload = req.query;
-    const orderNumber = payload.order_number;
 
+    console.log("MONRI CANCEL:", payload);
+
+    const orderNumber = payload.order_number
     if (!orderNumber) {
       return res.status(400).json({ message: "Missing order_number" });
     }
@@ -217,3 +227,98 @@ exports.createClientSecret = async (req, res) => {
     return res.status(500).json({ message: "Failed to create payment" });
   }
 };
+
+exports.createWebPaySession = async (req, res) => {
+  try {
+    // --- REQUIRED PAYMENT DATA ---
+    const currency = "EUR";
+    const amount = 500;
+    let orderNumber = crypto.randomUUID();
+    let monriOrder = await monriRepository.createTransaction({
+      orderNumber: orderNumber,
+      amount: amount,
+      currency,
+      status: "pending",
+    });
+
+    const digest = generateDigest({
+      orderNumber: monriOrder.orderNumber,
+      amount,
+      currency,
+    });
+
+    res.json({
+      authenticity_token: process.env.MONRI_AUTH_TOKEN,
+      transaction_type: "purchase",
+      order_number: orderNumber,
+      order_info: "App payment",
+      amount,
+      currency,
+      language: "en",
+      success_url_override: process.env.SUCCESS_URL,
+      cancel_url_override: process.env.CANCEL_URL,
+      digest,
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Init failed", error: err });
+  }
+};
+
+async function refundViaMonri({
+  transactionId,
+  amount,
+  currency,
+}) {
+  const payload = {
+    transaction_type: "refund",
+    transaction_id: transactionId,
+    amount,
+    currency,
+  };
+
+  const response = await axios.post(
+    "https://ipgtest.monri.com/v2/payment/refund",
+    payload,
+    {
+      headers: {
+        Authorization: `key-${process.env.MONRI_AUTH_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  return response.data;
+}
+
+
+exports.refundPayment = async (req, res) => {
+  try {
+    const { orderNumber, amount } = req.body;
+
+    const tx = await monriRepository.findByOrderNumber(orderNumber);
+
+    if (!tx?.monriTransactionId) {
+      return res.status(400).json({
+        message: "Transaction not refundable",
+      });
+    }
+
+    const result = await refundViaMonri({
+      transactionId: tx.monriTransactionId,
+      amount: amount || tx.amount,
+      currency: tx.currency,
+    });
+
+    await monriRepository.updateTransaction(orderNumber, {
+      status: "refunded",
+      refundedAmount: amount || tx.amount,
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error("Refund error:", err);
+    res.status(500).json({ message: "Refund failed" });
+  }
+};
+
+

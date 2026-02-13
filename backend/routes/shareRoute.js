@@ -92,7 +92,7 @@ router.get("/:type/:id", async (req, res) => {
             },
         });
     } catch (err) {
-        console.error("Error generating share link:", err);
+  
         return sendResponse({
             res,
             statusCode: 500,
@@ -178,7 +178,7 @@ router.get("/", async (req, res) => {
       </html>
     `);
     } catch (err) {
-        console.error("Error resolving shared link:", err);
+   
         return sendResponse({
             res,
             statusCode: 500,

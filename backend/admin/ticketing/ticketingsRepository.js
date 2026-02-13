@@ -688,7 +688,7 @@ const getTotalTicketsPurchasedByOrganizationId = async (organizationId) => {
     // If no results found, return 0, else return the total tickets
     return result.length > 0 ? result[0].totalTickets : 0;
   } catch (error) {
-    console.error("Error fetching total tickets purchased:", error);
+  
     return 0; // Return 0 if there was an error
   }
 };
@@ -712,7 +712,7 @@ const getTotalPurchases = async (userId) => {
     // If result is empty, return 0
     return result.length > 0 ? result[0].totalPurchases : 0;
   } catch (error) {
-    console.error("Error getting total purchases:", error);
+
     throw error;
   }
 };

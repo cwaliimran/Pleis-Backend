@@ -36,7 +36,7 @@ const createTransaction = async (data) => {
 /**
  * List transactions with filters and pagination
  */
-const getTransactions = async ({
+const getTransactionsService = async ({
   page = 1,
   limit = 10,
   walletType,
@@ -226,13 +226,13 @@ const downloadTransactionsAsCSV = async ({
     const parser = new Parser({ fields });
     return parser.parse(csvData);
   } catch (error) {
-    console.error("CSV generation error:", error);
+  
     throw error;
   }
 };
 module.exports = {
   createTransaction,
-  getTransactions,
+  getTransactionsService,
   getTransactionDetails,
   updateTransaction,
   deleteTransaction,

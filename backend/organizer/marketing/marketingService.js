@@ -114,8 +114,7 @@ const getUserMarketings = async ({ userId, page, limit, keyword, status, date, t
     return { Marketings: Marketings, meta };
 
   } catch (error) {
-    // Handle any errors that occur during the query or data retrieval
-    console.error("Error fetching marketing campaigns:", error);
+
     throw new Error("Failed to fetch marketing campaigns");
   }
 };

@@ -5,13 +5,32 @@ const monriTransactionSchema = new mongoose.Schema(
     orderNumber: { type: String, required: true, unique: true },
     amount: { type: Number, required: true },
     currency: { type: String, default: "EUR" },
+
     status: {
       type: String,
-      enum: ["pending", "paid", "failed"],
+      enum: [
+        "pending",
+        "paid",
+        "failed",
+        "cancelled",
+        "invalid",
+        "refunded",
+      ],
       default: "pending",
     },
+
     approvalCode: String,
-    rawCallback: Object,
+
+    // Monri transaction id (used for refund/void)
+    monriTransactionId: { type: String, index: true },
+
+    // Saved card token
+    panToken: { type: String, index: true },
+
+    // refund info
+    refundedAmount: { type: Number, default: 0 },
+
+    rawCallback: mongoose.Schema.Types.Mixed,
   },
   { timestamps: true }
 );
