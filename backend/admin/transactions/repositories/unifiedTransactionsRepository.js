@@ -1,7 +1,7 @@
 // repositories/unifiedTransactionsRepository.js
 const { UnifiedWalletTransactions } = require("@UnifiedWalletTransactionsModel"); // new model
 const { updatePoints, checkPromotion, checkDemotion } = require("../../../app/loyalty/clubMembers/clubMembersRepository");
-const { updateGlobalPoints } = require("../../../app/userWalletService/global/walletManagement/userWalletRepository");
+const { updateGlobalPoints, checkPromotionGlobal } = require("../../../app/userWalletService/global/walletManagement/userWalletRepository");
 const { TicketingBookings } = require("@TicketingBookingsModel");
 
 const mongoose = require("mongoose");
@@ -95,6 +95,10 @@ const createTransaction = async ({
       closingBalance: walletUpdate.newBalance,
       description
     });
+
+    await checkPromotionGlobal(userId, session)
+    //TODO call via cron job
+  // checkDemotionGlobal(userId).catch(() => { });
 
     createdTransactions.push(trx);
   }

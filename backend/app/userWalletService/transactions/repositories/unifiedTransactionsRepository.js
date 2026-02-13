@@ -2,7 +2,7 @@
 const { UnifiedWalletTransactions } = require("@UnifiedWalletTransactionsModel"); // new model
 const { updatePoints, checkPromotion } = require("../../../loyalty/clubMembers/clubMembersRepository"); // company loyalty wallet ops
 const { UserGlobalWallet } = require("@UserGlobalWalletModel");
-const { updateGlobalPoints, createUserWallet, getUserWallet } = require("../../global/walletManagement/userWalletRepository");
+const { updateGlobalPoints, createUserWallet, getUserWallet, checkPromotionGlobal } = require("../../global/walletManagement/userWalletRepository");
 
 const { nanoid } = require("nanoid");
 const { resolveChallengeByTaskTypeService } = require("../../../loyalty/challengesOrders/challengeOrdersService");
@@ -56,7 +56,7 @@ const createTransaction = async (data, session) => {
       { session }
     );
 
-     await checkPromotion(userId, companyOrganizer, session);
+    await checkPromotion(userId, companyOrganizer, session);
     //TODO demotion call via cron job
     // await checkDemotion(userId, companyOrganizer, session);
 
@@ -91,6 +91,7 @@ const createTransaction = async (data, session) => {
       { session }
     );
 
+    await checkPromotionGlobal(userId, session)
     createdTransactions.push(trx[0]);
   }
 
