@@ -67,17 +67,24 @@ async function createPayByLink(amount) {
 }
 
 async function verifyTransaction(orderNumber) {
-  const res = await axios.get(
-    `https://ipgtest.monri.com/v2/transactions/${orderNumber}`,
+  const response = await axios.get(
+    "https://ipgtest.monri.com/v2/transactions",
     {
+      params: { order_number: orderNumber },
       headers: {
-        Authorization: process.env.MONRI_KEY,
+        Authorization: `key-${process.env.MONRI_AUTH_TOKEN}`,
       },
     }
   );
 
-  return res.data.transaction;
+  if (!response.data?.transactions?.length) {
+    throw new Error("Transaction not found");
+  }
+
+  return response.data.transactions[0];
 }
+
+
 
 const createTransactionMonriOrder = async (req, res) => {
   try {

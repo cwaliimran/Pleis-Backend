@@ -80,10 +80,8 @@ exports.handleSuccess = async (req, res) => {
 
     console.log("MONRI SUCCESS:", payload);
 
-    const orderNumber =
-      payload.order_number ||
-      payload["order-number"] ||
-      payload.orderNumber;
+    const orderNumber = payload.order_number
+
 
     if (!orderNumber) {
       return res.status(400).json({ message: "Missing order_number" });
@@ -116,6 +114,7 @@ exports.handleSuccess = async (req, res) => {
         status: "paid",
         approvalCode: trx.approval_code,
         panToken: trx.pan_token,
+        monriTransactionId: trx.id,
         rawCallback: payload
       });
     } else {
@@ -141,8 +140,10 @@ exports.handleSuccess = async (req, res) => {
 exports.handleCancel = async (req, res) => {
   try {
     const payload = req.query;
-    const orderNumber = payload.order_number;
 
+    console.log("MONRI CANCEL:", payload);
+
+    const orderNumber = payload.order_number
     if (!orderNumber) {
       return res.status(400).json({ message: "Missing order_number" });
     }
@@ -262,6 +263,63 @@ exports.createWebPaySession = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ message: "Init failed", error: err });
+  }
+};
+
+async function refundViaMonri({
+  transactionId,
+  amount,
+  currency,
+}) {
+  const payload = {
+    transaction_type: "refund",
+    transaction_id: transactionId,
+    amount,
+    currency,
+  };
+
+  const response = await axios.post(
+    "https://ipgtest.monri.com/v2/payment/refund",
+    payload,
+    {
+      headers: {
+        Authorization: `key-${process.env.MONRI_AUTH_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  return response.data;
+}
+
+
+exports.refundPayment = async (req, res) => {
+  try {
+    const { orderNumber, amount } = req.body;
+
+    const tx = await monriRepository.findByOrderNumber(orderNumber);
+
+    if (!tx?.monriTransactionId) {
+      return res.status(400).json({
+        message: "Transaction not refundable",
+      });
+    }
+
+    const result = await refundViaMonri({
+      transactionId: tx.monriTransactionId,
+      amount: amount || tx.amount,
+      currency: tx.currency,
+    });
+
+    await monriRepository.updateTransaction(orderNumber, {
+      status: "refunded",
+      refundedAmount: amount || tx.amount,
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error("Refund error:", err);
+    res.status(500).json({ message: "Refund failed" });
   }
 };
 
