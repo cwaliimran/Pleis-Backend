@@ -12,6 +12,10 @@ const create = async (req, res) => {
   let { timezone } = req.user;
   let recurringDetails = req.body?.recurringDetails || {};
   const isRecurringEnabled = !!recurringDetails.isEnabled;
+  if(!req.body.companyOrganizer){
+    req.body.companyOrganizer = req.user?._id;
+  }
+
 
   var dateFields = {}
   var rawData = ["image", "title", "promotionType", "startDate", "endDate", "companyOrganizer"]
@@ -138,7 +142,9 @@ const create = async (req, res) => {
 const get = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date, companyOrganizer } = req.query;
-
+if(!companyOrganizer){
+    companyOrganizer = req.user?._id;
+  }
   try {
     //companyOrganizer is required to filter for specific company
     if (!companyOrganizer) {
