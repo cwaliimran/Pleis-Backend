@@ -60,7 +60,7 @@ const getUserJoinedClubsWithPoints = async ({ page, limit, skip, userId, keyword
 
 // 🔥 NEW: Get Wallet (points, current tier, next tier)
 const getUserCompanyWallet = async (userId, companyOrganizer) => {
-  let wallet = await clubMemberRepo.getWallet(userId, companyOrganizer);
+  let wallet = await clubMemberRepo.getWallet(userId, companyOrganizer, null);
   return formatUserWallet(wallet);
 };
 
@@ -84,7 +84,7 @@ const getCompanyProfileWithLoyaltyInfo = async (
     transactions,
   ] = await Promise.all([
     clubMemberRepo.getCompanyLoyaltyProfile(companyOrganizer),
-    clubMemberRepo.isClubMemberWithWallet(userId, companyOrganizer),
+    clubMemberRepo.getWallet(userId, companyOrganizer, null),
 
     // ✅ rewards already tiered + normalized inside service
     getRewardsByCompanyOrganizerService({

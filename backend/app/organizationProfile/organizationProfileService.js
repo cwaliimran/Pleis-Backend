@@ -8,7 +8,7 @@ const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { formatMenuItem } = require("../../commonModules/menuManagement/menuItems/formatter/formatMenuItems");
 const { formatEventResponse } = require("../events/formatter/eventFormatter");
 const { formatOrganization, formatNearByOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
-const { isClubMember, isClubMemberWithWallet } = require("../loyalty/clubMembers/clubMembersRepository");
+const { isClubMember, getWallet } = require("../loyalty/clubMembers/clubMembersRepository");
 const { formatSuggestedClub } = require("../loyalty/clubMembers/formatters/formatSuggestedClubs");
 const { logEngagementService } = require("@appEngagement/engagementEventsService");
 const Reservations = require("@ReservationsModel");
@@ -35,7 +35,7 @@ const getOrganizationProfile = async (queryData) => {
     }).catch(console.error);
 
 
-    const [orgProfile, orgEvents, reservations, menu, reviews, similarOrganizations]= await Promise.all([
+    const [orgProfile, orgEvents, reservations, menu, reviews, similarOrganizations] = await Promise.all([
       findOrganizationById(userId, organizationId),
       getOrganizationEvents({ organizationId, filter, timezone, userLocation: queryData.userLocation, userId }), // Filter for "upcoming" or "past"
       getOrganizationReservationsService({ organizationId, timezone }),
@@ -49,7 +49,7 @@ const getOrganizationProfile = async (queryData) => {
 
     // Format organization profile info
     let orgProfileInfo = formatOrganization(orgProfile.org);
-    let userCompanyWallet = await isClubMemberWithWallet(userId, orgProfile.org.creator);
+    let userCompanyWallet = await getWallet(userId, orgProfile.org.creator, null, { autoCreate: false });
     if (userCompanyWallet) {
       userCompanyWallet = formatUserWallet(userCompanyWallet)
     }
