@@ -48,21 +48,15 @@ const getCompanyLoyaltyProfile = async (companyOrganizer) => {
 // ENSURE CLUB MEMBER WALLET EXISTS
 // ==========================================================
 const ensureClubMemberWallet = async (userId, companyOrganizer, session) => {
-  // 1️⃣ Find member using session
-  let member = await ClubMembers.findOne({
-    user: userId,
-    companyOrganizer
-  }).session(session);
+  const { tierKey, pointValuePercentage } =
+    await getCompanyLoyaltyInfo(companyOrganizer);
 
-  // Fetch loyalty system info
-  const { tierKey, pointValuePercentage } = await getCompanyLoyaltyInfo(companyOrganizer);
+  const defaultTier = await TierRepo.getFirstTier(tierKey);
 
-  // 2️⃣ If member does not exist → create inside session
-  if (!member) {
-    const defaultTier = await TierRepo.getFirstTier(tierKey);
-
-    const [created] = await ClubMembers.create(
-      [{
+  const member = await ClubMembers.findOneAndUpdate(
+    { user: userId, companyOrganizer },
+    {
+      $setOnInsert: {
         user: userId,
         companyOrganizer,
         tierKey,
@@ -72,15 +66,18 @@ const ensureClubMemberWallet = async (userId, companyOrganizer, session) => {
         level: defaultTier?._id || null,
         status: "active",
         lastEvaluated: Date.now(),
-      }],
-      { session }
-    );
-
-    member = created;
-  }
+      }
+    },
+    {
+      new: true,
+      upsert: true,
+      session
+    }
+  );
 
   return member;
 };
+
 
 
 // ==========================================================
@@ -115,50 +112,64 @@ const getEarnedPointsLast12Months = async (userId, companyOrganizer, session) =>
 // ==========================================================
 // PROMOTION LOGIC
 // ==========================================================
-const checkPromotion = async (userId, companyOrganizer, session) => {
-  // 1️⃣ Earned points (must use session)
-  const earned12Months = await getEarnedPointsLast12Months(
-    userId,
-    companyOrganizer,
-    session
-  );
+const checkPromotion = async (
+  userId,
+  companyOrganizer,
+  session = null
+) => {
+  // 1️⃣ Earned points
+  const earned12Months =
+    await getEarnedPointsLast12Months(
+      userId,
+      companyOrganizer,
+      session
+    );
 
-  // 2️⃣ Member lookup with session + populate
-  const member = await ClubMembers.findOne(
-    { user: userId, companyOrganizer },
-    null,
-    { session }
-  ).populate({
+  // 2️⃣ Member lookup
+  let memberQuery = ClubMembers.findOne({
+    user: userId,
+    companyOrganizer,
+  });
+
+  if (session) memberQuery = memberQuery.session(session);
+
+  const member = await memberQuery.populate({
     path: "level",
-    options: { session },
+    options: session ? { session } : {},
   });
 
   if (!member || !member.level) return;
 
   const tierKey = member.tierKey;
   const currentLevel = member.level;
-  const currentEntry = currentLevel[tierKey]?.entryPoints || 0;
+  const currentEntry =
+    currentLevel[tierKey]?.entryPoints || 0;
 
-  // 3️⃣ Load higher tiers with session
-  const higherTiers = await Tiers.find(
-    {
-      [`${tierKey}.entryPoints`]: { $gt: currentEntry },
-    },
-    null,
-    { session }
-  ).sort({ [`${tierKey}.entryPoints`]: 1 });
+  // 3️⃣ Load higher tiers
+  let tiersQuery = Tiers.find({
+    [`${tierKey}.entryPoints`]: { $gt: currentEntry },
+  }).sort({ [`${tierKey}.entryPoints`]: 1 });
+
+  if (session) tiersQuery = tiersQuery.session(session);
+
+  const higherTiers = await tiersQuery;
 
   let promotionTarget = null;
 
   for (const tier of higherTiers) {
-    if (earned12Months >= tier[tierKey].entryPoints) {
+    if (
+      earned12Months >=
+      tier[tierKey].entryPoints
+    ) {
       promotionTarget = tier;
     }
   }
 
   if (!promotionTarget) return;
 
-  // 4️⃣ Update member level using same session
+  // 4️⃣ Update level
+  const updateOptions = session ? { session } : {};
+
   await ClubMembers.updateOne(
     { user: userId, companyOrganizer },
     {
@@ -167,54 +178,75 @@ const checkPromotion = async (userId, companyOrganizer, session) => {
         lastEvaluated: new Date(),
       },
     },
-    { session }
+    updateOptions
   );
 
-  return { promoted: true, newLevel: promotionTarget };
+  return {
+    promoted: true,
+    newLevel: promotionTarget,
+  };
 };
+
 
 
 //TODO check demotion via cron job
 // ==========================================================
 // DEMOTION LOGIC
 // ==========================================================
-const checkDemotion = async (userId, companyOrganizer, session) => {
-  // 1️⃣ IMPORTANT: earned points query must use session
-  const earned12Months = await getEarnedPointsLast12Months(
-    userId,
-    companyOrganizer,
-    session
-  );
+const checkDemotion = async (
+  userId,
+  companyOrganizer,
+  session = null
+) => {
+  // 1️⃣ Earned points
+  const earned12Months =
+    await getEarnedPointsLast12Months(
+      userId,
+      companyOrganizer,
+      session
+    );
 
-  // 2️⃣ Member lookup must use session
-  const member = await ClubMembers.findOne(
-    { user: userId, companyOrganizer },
-    null,
-    { session }
-  ).populate({
+  // 2️⃣ Member lookup
+  let memberQuery = ClubMembers.findOne({
+    user: userId,
+    companyOrganizer,
+  });
+
+  if (session) memberQuery = memberQuery.session(session);
+
+  const member = await memberQuery.populate({
     path: "level",
-    options: { session },
+    options: session ? { session } : {},
   });
 
   if (!member || !member.level) return;
 
   const tierKey = member.tierKey;
   const currentLevel = member.level;
-  const retainNeeded = currentLevel[tierKey]?.retainPoints || 0;
+  const retainNeeded =
+    currentLevel[tierKey]?.retainPoints || 0;
 
   if (earned12Months >= retainNeeded) return;
 
-  // 3️⃣ Tier lookup must use session
-  const fallbackTier = await TierRepo.getPreviousTierByRetainPoints(
-    tierKey,
-    earned12Months,
-    session
-  );
+  // 3️⃣ Tier lookup
+  const fallbackTier =
+    await TierRepo.getPreviousTierByRetainPoints(
+      tierKey,
+      earned12Months,
+      session
+    );
 
   if (!fallbackTier) return;
-  if (fallbackTier._id.toString() === currentLevel._id.toString()) return;
 
-  // 4️⃣ Update must use session
+  if (
+    fallbackTier._id.toString() ===
+    currentLevel._id.toString()
+  )
+    return;
+
+  // 4️⃣ Update level
+  const updateOptions = session ? { session } : {};
+
   await ClubMembers.updateOne(
     { user: userId, companyOrganizer },
     {
@@ -223,11 +255,15 @@ const checkDemotion = async (userId, companyOrganizer, session) => {
         lastEvaluated: Date.now(),
       },
     },
-    { session }
+    updateOptions
   );
 
-  return { demoted: true, newLevel: fallbackTier };
+  return {
+    demoted: true,
+    newLevel: fallbackTier,
+  };
 };
+
 
 
 // ==========================================================
@@ -256,12 +292,8 @@ const updatePoints = async ({
     if (delta > 0) member.lifetimePoints += delta;
 
     await member.save({ session });
-    await checkPromotion(userId, companyOrganizer, session);
-    //TODO demotion call via cron job
-    // await checkDemotion(userId, companyOrganizer, session);
 
-    const wallet = await getWallet(userId, companyOrganizer, session);
-    return { success: true, newBalance, wallet };
+    return { success: true, newBalance };
   } catch (err) {
     return { success: false, message: err.message };
   }
@@ -272,22 +304,42 @@ const updatePoints = async ({
 // ==========================================================
 // GET WALLET (WITH NEXT TIER INFO)
 // ==========================================================
-const getWallet = async (userId, companyOrganizer) => {
+const getWallet = async (
+  userId,
+  companyOrganizer,
+  session = null,
+  { autoCreate = false } = {}
+) => {
   const { tierKey } = await getCompanyLoyaltyInfo(companyOrganizer);
 
-  let wallet = await ClubMembers.findOne({
+  let query = ClubMembers.findOne({
     user: userId,
     companyOrganizer
   }).populate("level");
 
+  if (session) query = query.session(session);
+
+  let wallet = await query;
+
   if (!wallet) {
-    await ensureClubMemberWallet(userId, companyOrganizer);
-    return getWallet(userId, companyOrganizer);
+    if (!autoCreate) return null;
+
+    await ensureClubMemberWallet(userId, companyOrganizer, session);
+
+    return getWallet(
+      userId,
+      companyOrganizer,
+      session,
+      { autoCreate }
+    );
   }
 
   if (wallet.level) {
-    const currentEntry = wallet.level[tierKey]?.entryPoints || 0;
-    const nextTier = await TierRepo.getNextTier(tierKey, currentEntry);
+    const currentEntry =
+      wallet.level[tierKey]?.entryPoints || 0;
+
+    const nextTier =
+      await TierRepo.getNextTier(tierKey, currentEntry);
 
     wallet = wallet.toObject();
     wallet.nextTier = nextTier || null;
@@ -295,6 +347,8 @@ const getWallet = async (userId, companyOrganizer) => {
 
   return wallet;
 };
+
+
 
 const getWalletsBulk = async (
   userId,
@@ -306,19 +360,6 @@ const getWalletsBulk = async (
   }).populate("level");
 };
 
-
-// ==========================================================
-// OTHER CLUB MEMBER OPERATIONS (unchanged)
-// ==========================================================
-const isClubMemberWithWallet = async (userId, companyOrganizer) => {
-  const member = await ClubMembers.findOne({
-    user: userId,
-    companyOrganizer,
-    status: "active"
-  });
-  if (!member) return null;
-  return getWallet(userId, companyOrganizer);
-};
 
 const joinClub = async (userId, companyOrganizer, referrerId) => {
   let existingMember = await ClubMembers.findOne({ user: userId, companyOrganizer });
@@ -637,7 +678,6 @@ module.exports = {
   getWallet,
   getWalletsBulk,
   isClubMember,
-  isClubMemberWithWallet,
   countClubMembers,
   findClubMemberById,
   getUserJoinedClubs,
@@ -649,4 +689,6 @@ module.exports = {
   getUserJoinedClubsWithPointsUsingFacet,
   getClubMemberUserIdsByCompanyOrganizer,
   getClubMembersForUsers,
+  checkPromotion,
+  checkDemotion
 };

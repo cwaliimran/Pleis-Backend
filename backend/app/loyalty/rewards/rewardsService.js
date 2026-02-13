@@ -14,7 +14,7 @@ const getRewardsByCompanyOrganizerService = async ({
   userId,
 }) => {
   // 1️⃣ Fetch user wallet (points + tier)
-  const wallet = await clubMemberRepo.getWallet(userId, companyOrganizer);
+  const wallet = await clubMemberRepo.getWallet(userId, companyOrganizer, null, { autoCreate: false });
 
   const userPoints = wallet?.points ?? 0;
   const userTierEntry = wallet?.level?.entryPoints ?? 0;
@@ -125,7 +125,7 @@ const getRewardsForUserJoinedClubs = async ({
      2️⃣ Wallets (ONCE)
   =============================== */
   const wallets = await Promise.all(
-    clubIds.map(orgId => clubMemberRepo.getWallet(userId, orgId))
+    clubIds.map(orgId => clubMemberRepo.getWallet(userId, orgId, null, { autoCreate: false }))
   );
 
   const walletMap = new Map();
