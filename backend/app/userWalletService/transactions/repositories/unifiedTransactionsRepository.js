@@ -1,6 +1,6 @@
 // repositories/unifiedTransactionsRepository.js
 const { UnifiedWalletTransactions } = require("@UnifiedWalletTransactionsModel"); // new model
-const { updatePoints } = require("../../../loyalty/clubMembers/clubMembersRepository"); // company loyalty wallet ops
+const { updatePoints, checkPromotion } = require("../../../loyalty/clubMembers/clubMembersRepository"); // company loyalty wallet ops
 const { UserGlobalWallet } = require("@UserGlobalWalletModel");
 const { updateGlobalPoints, createUserWallet, getUserWallet } = require("../../global/walletManagement/userWalletRepository");
 
@@ -20,7 +20,7 @@ const createTransaction = async (data, session) => {
     entityId,
     allowNegative,
     description,
-    
+
   } = data;
   const userId = typeof user === "string" ? user : (user._id || user.id);
 
@@ -55,6 +55,10 @@ const createTransaction = async (data, session) => {
       }],
       { session }
     );
+
+     await checkPromotion(userId, companyOrganizer, session);
+    //TODO demotion call via cron job
+    // await checkDemotion(userId, companyOrganizer, session);
 
     createdTransactions.push(trx[0]);
   }
