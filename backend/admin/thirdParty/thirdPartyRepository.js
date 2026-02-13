@@ -50,7 +50,7 @@ const getCreatorFromOrganization = async (organizationId) => {
       return null;  // Return null if no matching organization is found
     }
   } catch (err) {
-    console.error("Error in aggregation:", err);
+ 
     throw err;
   }
 };

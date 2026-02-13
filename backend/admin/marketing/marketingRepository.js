@@ -35,7 +35,7 @@ const getMarketingsWithFilters = async (query = {}, skip = 0, limit = 10) => {
 
     return marketingData;  // Return the fetched marketing data
   } catch (error) {
-    console.error("Error fetching marketing campaigns:", error);
+
     throw new Error("Failed to fetch marketing campaigns");  // Handle error appropriately
   }
 };

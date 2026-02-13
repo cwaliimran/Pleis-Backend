@@ -31,7 +31,7 @@ const getFriendSuggestions = async ({
     };
 
   } catch (error) {
-    console.error("addContacts service error:", error);
+  
 
     return {
       users: [],

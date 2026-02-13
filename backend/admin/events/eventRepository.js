@@ -574,7 +574,7 @@ const getTotalEventCountByOrganizationId = async (organizationId) => {
     // Return the total count, defaulting to 0 if no events are found
     return result.length > 0 ? result[0].totalEvents : 0;
   } catch (error) {
-    console.error("Error fetching event count:", error);
+
     return 0; // Return 0 if there was an error
   }
 };
@@ -591,7 +591,7 @@ const getLatestEventByOrganization = async (organizations) => {
     }
     return latestEvents;
   } catch (error) {
-    console.error('Error fetching latest event:', error);
+   
     throw new Error('Error fetching latest event');
   }
 };

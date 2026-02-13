@@ -196,7 +196,7 @@ const logQRCode = async (reservation) => {
     const qrCode = await generateQRCode(reservation);
     return qrCode;
   } catch (error) {
-    console.error("Error generating QR code:", error);
+ 
   }
 };
 

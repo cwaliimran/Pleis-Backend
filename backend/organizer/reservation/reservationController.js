@@ -850,7 +850,6 @@ const copyUserReservationsController = async (req, res) => {
       data: copiedReservations,
     });
   } catch (error) {
-    console.error("COPY_RESERVATION_ERROR:", error);
 
     return sendResponse({
       res,

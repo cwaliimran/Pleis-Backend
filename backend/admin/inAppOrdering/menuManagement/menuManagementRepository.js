@@ -453,13 +453,12 @@ const getMenuItemsSales = async ({
           ? item.discountPrice
           : item.basePrice || 0;
 
-      // Log the sum and price for each item
-      console.log("sum:", sum, "price:", price, "discountPrice:", item.discountPrice, "basePrice:", item.basePrice);
+
 
       return sum + price;
     }, 0);
 
-console.log("totalPriceBeforeDiscount",totalPriceBeforeDiscount );
+
 
   let totalPrice = totalPriceBeforeDiscount;
 
@@ -754,7 +753,7 @@ const getSummary = async ({
     };
 
   } catch (error) {
-    console.error("getSummary error:", error);
+
     return { error: "Error fetching summary data." };
   }
 

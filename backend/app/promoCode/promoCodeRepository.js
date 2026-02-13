@@ -94,7 +94,7 @@ const usePromoCode = async (data) => {
 
     };
   } catch (err) {
-    console.error("Error in usePromoCode:", err);
+   
     throw err;
   }
 };
@@ -157,7 +157,7 @@ const validatePromoCode = async (data) => {
       discountType: foundPromoCode.discountType,
     };
   } catch (err) {
-    console.error("Error in usePromoCode:", err);
+
     throw err;
   }
 };

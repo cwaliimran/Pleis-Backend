@@ -216,7 +216,7 @@ const getUserEventEngagementDetails = async (userId) => {
 
         return eventsWithEngagementStats[0];
     } catch (error) {
-        console.error("Error getting user event engagement details:", error);
+      
         throw error;
     }
 };
