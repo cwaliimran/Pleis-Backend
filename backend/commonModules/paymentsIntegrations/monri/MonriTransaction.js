@@ -30,7 +30,7 @@ const monriTransactionSchema = new mongoose.Schema(
     // refund info
     refundedAmount: { type: Number, default: 0 },
 
-    rawCallback: Object,
+    rawCallback: mongoose.Schema.Types.Mixed,
   },
   { timestamps: true }
 );
