@@ -9,7 +9,9 @@ const {
   getmenuItemCategories,
   getmenuItem,
   getmenu,
-  getTiers
+  getTiers,
+  getTickting,
+  getLoyaltyRewards
 } = require("./generalAPIController");
 const auth = require("../../middlewares/authMiddleware");
 
@@ -28,6 +30,8 @@ router.get("/menu-item-categories", getmenuItemCategories);
 router.get("/menu", getmenu);
 router.get("/menu-item", getmenuItem);
 router.get("/tiers", getTiers);
+router.get("/ticketing", getTickting);
+router.get("/loyalty/rewards", getLoyaltyRewards);
 router.use("/presets", require("../../admin/menuManagement/menuPreset/presetsRoutes"));
 
 

@@ -81,7 +81,11 @@ const createLoyaltyReferral = async (req, res) => {
 
 const getLoyaltyReferrals = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status , date, range,type="loyalty", companyOrganizer} = req.query;
+  let { keyword, status , date, range,type="loyalty", companyOrganizer} = req.query;
+  if(!companyOrganizer){
+    companyOrganizer = req.user._id;
+  }
+
   try {
     if (!companyOrganizer) {
       return sendResponse({
@@ -231,7 +235,10 @@ const deleteLoyaltyReferral = async (req, res) => {
 
 const getUserLoyaltyReferrals = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status , date,type="loyalty", companyOrganizer} = req.query;
+  let { keyword, status , date,type="loyalty", companyOrganizer} = req.query;
+  if(!companyOrganizer){
+    companyOrganizer = req.user._id;
+  }
   try {
     if (!companyOrganizer) {
       return sendResponse({

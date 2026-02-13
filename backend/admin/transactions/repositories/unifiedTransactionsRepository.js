@@ -358,8 +358,8 @@ const getTotalClosingBalanceByOrganizationId = async (organizationId) => {
     ]);
     return result.length > 0 ? result[0].totalClosingBalance : 0;
   } catch (error) {
-    console.error("Error fetching total closing balance:", error);
-    return 0;
+
+    return 0; 
   }
 };
 

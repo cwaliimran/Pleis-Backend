@@ -14,7 +14,7 @@ const createHighlight = async ({ data }) => {
 
 const getHighlights = async ({ page, limit, keyword, status, creator, date }) => {
   const query = {};
-  if (creator) query.creator = creator;
+  // if (creator) query.creator = creator;
   if (status) {
     query.status = status;
   } else {

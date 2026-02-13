@@ -233,7 +233,7 @@ const getEvents = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "venue_types_fetched_successfully",
+      translationKey: "events_fetched_successfully",
       data: Events
     });
   } catch (error) {
@@ -405,4 +405,89 @@ const getTiers = async (req, res) => {
     });
   }
 };
-module.exports = {getTiers,getmenuItem,getmenu, getmenuItemCategories, getVenueTypes,getOrganizations,getVenues,getCategories,getTags,getEvents };
+
+
+
+
+const getTickting = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  const { keyword, status, date,event } = req.query;
+  if(!event){
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "event_id_required",
+    });
+  }
+
+  try {
+
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+
+
+    const ticktings = await generalAPIServices.getTickting({
+      page,
+      limit,
+      keyword,
+      status,
+      date,
+      event,
+      creator:req.user._id
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "ticketings_fetched_successfully",
+      data: ticktings
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+const getLoyaltyRewards = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  const { keyword, status, date } = req.query;
+
+
+  try {
+
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+
+
+    const rewards = await generalAPIServices.getLoyaltyRewards({
+      page,
+      limit,
+      date,
+      companyOrganizer:req.user._id,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "rewards_fetched_successfully",
+      data: rewards
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+module.exports = {getTiers,getmenuItem,getmenu, getmenuItemCategories, getVenueTypes,getOrganizations,getVenues,getCategories,getTags,getEvents,getTickting,getLoyaltyRewards };

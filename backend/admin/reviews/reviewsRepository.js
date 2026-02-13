@@ -209,16 +209,16 @@ const getReviews = async (data) => {
 
     // Execute the aggregation pipeline
     const result = await Reviews.aggregate(pipeline);
-    console.log("result",result );
+
     const formattedReviews =
       result[0]?.reviews?.map(review => formatReviewData(review)) || [];
     const totalFiltered = result[0]?.reviews?.length || 0;
-    console.log("formattedReviews",data.page );
+
     const meta = generateMeta(Number(data.page), Number(data.limit), totalFiltered);
     meta.avgRating = result[0]?.meta?.avgRating || 0;
     meta.totalCount = result[0]?.meta?.totalCount || 0;
     meta.distribution = result[0]?.meta?.distribution || [];
-    console.log("meta",meta );
+
 
     return {
       reviews: formattedReviews,

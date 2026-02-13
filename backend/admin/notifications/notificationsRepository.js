@@ -194,7 +194,7 @@ const createNotifications = async (data) => {
           body: `You received a new message: ${data.description}`,
           data: {
             type: notificationSystemType,
-            objectType: "group",
+            objectType: "GlobalNotification",
           },
           sender: data.creator,
           objectId: data.eventId || data.organizationId || data.creator,
@@ -227,7 +227,7 @@ const createNotifications = async (data) => {
           body: `You received a new message: ${data.description}`,
           data: {
             type: notificationSystemType,
-            objectType: "group",
+            objectType: "GlobalNotification",
           },
           sender: data.creator,
           objectId: data.organizationId,
@@ -258,7 +258,7 @@ const createNotifications = async (data) => {
           body: `You received a new message: ${data.description}`,
           data: {
             type: notificationSystemType,
-            objectType: "group",
+            objectType: "GlobalNotification",
           },
           sender: data.creator,
           objectId: data.eventId,
@@ -762,7 +762,7 @@ const getNotificationByOrganizationId = async (organizationId) => {
     const notification = await GlobalNotification.find({ organizationId: objectId });
     return notification || null;
   } catch (error) {
-    console.error("Error fetching notification:", error);
+   
     return null;
   }
 };

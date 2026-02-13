@@ -87,7 +87,7 @@ const saveUserReferralData = async (username, ip) => {
 
     return { userId: newRecord.userId, referrerUserName: newRecord.referrerUserName };
   } catch (err) {
-    console.error("Error saving referral data:", err);
+
     throw err;  // Rethrow the error for handling in the calling function
   }
 };
@@ -276,7 +276,7 @@ const createUserReferradrecord = async (data) => {
       body: `You have successfully referred by ${username}.`,
       data: {
         type: NotificationTypes.REFERRAL_UPDATE,
-        objectType: "group",
+        objectType: "User",
       },
       image: "noimage",
       sender: userId,
@@ -288,7 +288,7 @@ const createUserReferradrecord = async (data) => {
       body: `Congratulations! someone has joined PLEIS using your referral.`,
       data: {
         type: NotificationTypes.REFERRAL_UPDATE,
-        objectType: "group",
+        objectType: "User",
       },
       image: "noimage",
       sender: userId,
@@ -302,7 +302,7 @@ const createUserReferradrecord = async (data) => {
     };
 
   } catch (err) {
-    console.error("Error saving referral data:", err);
+   
     throw err;
   }
 };

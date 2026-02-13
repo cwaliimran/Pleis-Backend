@@ -226,7 +226,7 @@ const downloadTransactionsAsCSV = async ({
     const parser = new Parser({ fields });
     return parser.parse(csvData);
   } catch (error) {
-    console.error("CSV generation error:", error);
+  
     throw error;
   }
 };

@@ -12,7 +12,7 @@ const { resolveChallengeByTaskTypeService } = require("../loyalty/challengesOrde
 
 const createUsersStreak = async (data) => {
   const { user: userId, companyOrganizer, organization, timezone = "UTC" } = data;
-console.log("user", userId);
+
   const todayReset = getTodayResetTime(timezone);
 
   let companyOrganizerObjectId = new mongoose.Types.ObjectId(companyOrganizer);
@@ -21,7 +21,7 @@ console.log("user", userId);
     companyOrganizer: companyOrganizerObjectId,
     status: "active",
   });
-console.log("streaks",streaks );
+
   if (!streaks.length) {
     return {
       organization,
@@ -34,7 +34,7 @@ console.log("streaks",streaks );
       message: "No active streak rules found."
     };
   }
-  console.log("proceed", );
+
   // 2) Get or create user daily streak record
   const userStreak = await UsersStreaks.findOneAndUpdate(
     { user: userId, companyOrganizer, organization },

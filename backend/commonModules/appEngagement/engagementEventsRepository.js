@@ -290,7 +290,7 @@ const getTotalEngagementEventsByOrganizationId = async (organizationId) => {
 
     return eventCount; // Return the total count of matching events
   } catch (error) {
-    console.error("Error fetching engagement events count:", error);
+ 
     return 0; // Return 0 if there was an error
   }
 };

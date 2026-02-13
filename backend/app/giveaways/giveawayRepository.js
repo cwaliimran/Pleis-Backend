@@ -120,7 +120,7 @@ const createGiveaway = async (data) => {
       body:`You have successfully participated in the giveaway.`,
       data: {
         type: NotificationTypes.GIVEAWAY_UPDATE,
-        objectType: "group",
+        objectType: "Giveaway",
         organization_id: update.organization.toString(),
       },
       image: "noimage",

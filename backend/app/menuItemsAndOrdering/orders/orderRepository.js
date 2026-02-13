@@ -137,7 +137,7 @@ const getTotalOrderPriceByUser = async (userId) => {
 
     return totalAmount;
   } catch (error) {
-    console.error("Error getting total order price for user:", error);
+ 
     throw error;
   }
 };

@@ -9,11 +9,10 @@
 const { Events } = require("@EventsModel");
 
 const updateEventService = async (eventId, payload, mode = "single") => {
-  console.log("🔁 updateEventService:start", { eventId, mode });
 
   const event = await Events.findById(eventId);
   if (!event) {
-    console.log(" event not found");
+
     return null;
   }
 
@@ -53,12 +52,12 @@ const updateEventService = async (eventId, payload, mode = "single") => {
   // NON-RECURRING OR SINGLE MODE
   // ================================================
   if (mode === "single" || !isChild) {
-    console.log("➡ single-mode update");
+ 
 
     applyFields(event, payload);
     await event.save();
 
-    console.log("✅ saved single event");
+ 
     return event;
   }
 
@@ -66,13 +65,13 @@ const updateEventService = async (eventId, payload, mode = "single") => {
   // FUTURE MODE
   // ================================================
 
-  console.log("➡ future-mode update");
+ 
 
   const parentId = event.recurringMeta.parentEvent;
   const template = await Events.findById(parentId);
 
   if (!template) {
-    console.log("❌ template not found");
+
     return null;
   }
 
@@ -81,7 +80,7 @@ const updateEventService = async (eventId, payload, mode = "single") => {
   // -------------------------------------------
   // STEP 1 — UPDATE THE CURRENT OCCURRENCE
   // -------------------------------------------
-  console.log("✏ updating current occurrence");
+ 
 
   applyFields(event, payload);
 
@@ -94,14 +93,12 @@ const updateEventService = async (eventId, payload, mode = "single") => {
 
   await event.save();
 
-  console.log("✅ saved current occurrence as NEW ANCHOR", {
-    newStart: editedStart,
-  });
+
 
   // -------------------------------------------
   // STEP 2 — UPDATE TEMPLATE TO MATCH CURRENT
   // -------------------------------------------
-  console.log("✏ syncing template to follow future pattern");
+
 
   applyFields(template, payload, true);
 
@@ -110,9 +107,7 @@ const updateEventService = async (eventId, payload, mode = "single") => {
 
   await template.save();
 
-  console.log("✅ template updated", {
-    templateStart: template.schedule.startDateTime,
-  });
+
 
   // -------------------------------------------
   // STEP 3 — FETCH STRICTLY FUTURE OCCURRENCES
@@ -123,7 +118,7 @@ const updateEventService = async (eventId, payload, mode = "single") => {
     status: { $ne: "deleted" }
   }).sort({ "recurringMeta.occurrenceIndex": 1 });
 
-  console.log("📌 future occurrences count:", futureOccurrences.length);
+
 
   // -------------------------------------------
   // STEP 4 — REBUILD FUTURE DATES BASED ON ANCHOR
@@ -154,15 +149,10 @@ const updateEventService = async (eventId, payload, mode = "single") => {
 
     await occ.save();
 
-    console.log(
-      `🔄 rebuilt occurrence ${occ.recurringMeta.occurrenceIndex}`,
-      occ.schedule.startDateTime
-    );
 
     anchorDate = newDate;
   }
 
-  console.log("🎯 future update complete");
   return true;
 };
 

@@ -12,9 +12,12 @@ const createChallenge = async (req, res) => {
 
   //"visit", "earnPoints", "buyMenuItem", "referUsers"
   const taskType = req.body.taskType;
+  if(!req.body.companyOrganizer){
+    req.body.companyOrganizer = req.user?._id;
+  }
 
   var dateFields = {}
-  var rawData = ["title", "taskType", "reward", "endDate", "companyOrganizer", "reward", "taskValue", "reward.rewardType"]
+  var rawData = ["title", "taskType", "reward", "endDate", "reward", "taskValue", "reward.rewardType"]
   var objectIdFields = ["companyOrganizer"]
 
   if (req.body.promotionType === "buyMenuItem") {
@@ -75,7 +78,10 @@ const createChallenge = async (req, res) => {
 
 const getChallenges = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, companyOrganizer } = req.query;
+  let { keyword, status, date, companyOrganizer } = req.query;
+  if(!companyOrganizer){
+    companyOrganizer = req.user?._id;
+  }
   try {
     //companyOrganizer is required to filter for specific company
     if (!companyOrganizer) {
@@ -131,7 +137,7 @@ const updateChallenge = async (req, res) => {
   if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
   try {
     const updated = await challengeService.updateChallenge(req.params.id, req.body);
-    console.log("updated",updated );
+ 
     if (!updated) {
       return sendResponse({ res, statusCode: 404, translationKey: "challenge_not_found" });
     }

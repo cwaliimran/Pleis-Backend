@@ -161,8 +161,7 @@ const getUserReservationDetailsService = async (id, timezone) => {
     };
 
   } catch (error) {
-    // Log and return a default response in case of an error
-    console.error("Error fetching reservation details:", error); // Log the error
+
     return {
       reservation: null,
       meta: { totalRecords: 0, currentPage: 1, totalPages: 1, limit: 10 },

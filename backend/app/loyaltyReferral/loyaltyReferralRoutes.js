@@ -75,7 +75,7 @@ const result = await getUserOrganizationPublicIds(
             },
         });
     } catch (err) {
-        console.error("Error generating share link:", err);
+       
         return sendResponse({
             res,
             statusCode: 500,
@@ -133,7 +133,7 @@ const result = await saveUserReferralData(organizer,referrer);
       </html>
     `);  // Serve the HTML page with the smart redirect logic
     } catch (err) {
-        console.error("Error resolving shared link:", err);
+        
         return sendResponse({
             res,
             statusCode: 500,

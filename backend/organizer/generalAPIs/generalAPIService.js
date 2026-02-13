@@ -3,6 +3,8 @@ const generalAPIRepo = require("./generalAPIRepository");
 const { formatVenueType } = require("../venueTypes/fomatter/formatVenueType");
 const Organizations = require("@OrganizationModel");
 const Venues = require("@VenuesModel");
+const { getActiveTicketingByEventId } = require("../../admin/ticketing/ticketingsRepository");
+const { getRewards } = require("../../admin/loyalty/rewards/rewardsRepository");
 
 
 const getOrganizations = async ({
@@ -340,9 +342,66 @@ const getTiers = async ({
 
   return tiers;
 };
-module.exports = {
-  getmenu, getmenuItem,getTiers,
 
-  getmenuItemCategories, getOrganizations, getVenueTypes, getVenues, getCategories, getTags, getEvents
+
+
+
+
+
+
+const getTickting = async ({
+  page,
+  limit,
+  keyword,
+  status,
+  event
+}) => {
+  page = Number(page) || 1;
+  limit = Number(limit);
+  if (limit) {
+    limit += 1;
+  }
+
+  if (Number.isNaN(limit) || limit < 0) {
+    limit = 10;
+  }
+
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+
+  let ticktings = await getActiveTicketingByEventId({
+    page,
+    limit,
+    keyword,
+    status,
+    event
+  });
+  return ticktings;
+};
+const getLoyaltyRewards = async ({
+  page,
+  limit,
+  companyOrganizer
+}) => {
+  page = Number(page) || 1;
+  limit = Number(limit);
+  if (limit) {
+    limit += 1;
+  }
+  if (Number.isNaN(limit) || limit < 0) {
+    limit = 10;
+  }
+
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  let rewards = await getRewards({
+    page,
+    limit,
+    companyOrganizer
+  });
+  return rewards;
+};
+module.exports = {
+  getmenu, getmenuItem, getTiers,
+
+  getmenuItemCategories, getOrganizations, getVenueTypes, getVenues, getCategories, getTags, getEvents, getTickting, getLoyaltyRewards
 
 };

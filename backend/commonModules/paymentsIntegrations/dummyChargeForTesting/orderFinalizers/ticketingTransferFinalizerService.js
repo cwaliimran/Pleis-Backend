@@ -41,7 +41,7 @@ const ticketingTransferFinalizerService = async ({
 
     // Gateway pending → do nothing
     if (result.status === "pending") {
-      console.log("[TicketTransferFinalizer] payment pending, exiting");
+
       await session.commitTransaction();
       return;
     }

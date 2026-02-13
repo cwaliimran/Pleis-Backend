@@ -15,7 +15,7 @@ const getUserOrganizationPublicIds = async (userId, organization) => {
 
 
   } catch (err) {
-    console.error("getUserOrganizationPublicIds error:", err);
+
     throw err;
   }
 };
@@ -36,7 +36,7 @@ const saveUserReferralData = async (organizer,referrer) => {
 
     return { organizerId, referrerId };
   } catch (err) {
-    console.error("saveUserReferralData error:", err);
+   
     throw err;
   }
 };

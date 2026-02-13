@@ -28,7 +28,7 @@ const usePromoCode = async (data) => {
         body: `The promo code: ${promoCode} has expired.`,
         data: {
           type: NotificationTypes.PROMO_UPDATE,
-          objectType: "group",
+          objectType: "PromoCode",
         },
         image: (foundPromoCode.image) || "noimage",
         sender: userId,
@@ -47,7 +47,7 @@ const usePromoCode = async (data) => {
         body: `You have exceeded the maximum usage for the promo code: ${promoCode}.`,
         data: {
           type: NotificationTypes.PROMO_UPDATE,
-          objectType: "group",
+          objectType: "PromoCode",
         },
         image: (foundPromoCode.image) || "noimage",
         sender: userId,
@@ -79,7 +79,7 @@ const usePromoCode = async (data) => {
       body: `You have successfully applied the promo code: ${promoCode}.`,
       data: {
         type: NotificationTypes.PROMO_UPDATE,
-        objectType: "group",
+        objectType: "PromoCode",
       },
       image: (foundPromoCode.image) || "noimage",
       sender: userId,
@@ -94,7 +94,7 @@ const usePromoCode = async (data) => {
 
     };
   } catch (err) {
-    console.error("Error in usePromoCode:", err);
+   
     throw err;
   }
 };
@@ -123,7 +123,7 @@ const validatePromoCode = async (data) => {
         body: `The promo code: ${promoCode} has expired.`,
         data: {
           type: NotificationTypes.PROMO_UPDATE,
-          objectType: "group",
+          objectType: "PromoCode",
         },
         image: (foundPromoCode.image) || "noimage",
         sender: userId,
@@ -142,7 +142,7 @@ const validatePromoCode = async (data) => {
         body: `You have exceeded the maximum usage for the promo code: ${promoCode}.`,
         data: {
           type: NotificationTypes.PROMO_UPDATE,
-          objectType: "group",
+          objectType: "PromoCode",
         },
         image: (foundPromoCode.image) || "noimage",
         sender: userId,
@@ -157,7 +157,7 @@ const validatePromoCode = async (data) => {
       discountType: foundPromoCode.discountType,
     };
   } catch (err) {
-    console.error("Error in usePromoCode:", err);
+
     throw err;
   }
 };
