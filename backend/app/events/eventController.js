@@ -191,7 +191,7 @@ const getEventDetails = async (req, res) => {
         translationKey: "event_not_found",
       });
     }
-    console.log("reviews",reviews );
+
     data.event.isFavorite = isFavoriteEvent;
     data.reservations = reservations;
     data.announcements.giveaways = giveaway.Giveaways;

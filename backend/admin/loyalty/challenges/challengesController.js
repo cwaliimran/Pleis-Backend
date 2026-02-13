@@ -137,7 +137,7 @@ const updateChallenge = async (req, res) => {
   if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
   try {
     const updated = await challengeService.updateChallenge(req.params.id, req.body);
-    console.log("updated",updated );
+ 
     if (!updated) {
       return sendResponse({ res, statusCode: 404, translationKey: "challenge_not_found" });
     }

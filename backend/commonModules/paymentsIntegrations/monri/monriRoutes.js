@@ -4,9 +4,12 @@ const {
   handleSuccess,
   handleCancel,
   createClientSecret,
+  createWebPaySession
 } = require("./monriController");
 
 const router = express.Router();
+//webpay
+router.get("/web-pay-session", createWebPaySession);
 
 router.get("/redirect", redirectToMonri);
 router.post("/payment-intent", createClientSecret);

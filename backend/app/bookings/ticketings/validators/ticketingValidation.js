@@ -7,7 +7,7 @@ const { validateParams } = require("@utils/responseUtil");
  */
 const validateTicketingPayload = (req, res) => {
   const validateData = {
-    rawData: ["ticketings", "paymentDetails"],
+    rawData: ["ticketings"],
   };
 
   if (!validateParams(req, res, validateData)) return false;

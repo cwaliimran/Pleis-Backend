@@ -59,7 +59,7 @@ const getTransactions = async (req, res) => {
     } = req.query;
 
     try {
-        const { items, meta } = await unifiedService.getTransactions({
+        const { items, meta } = await unifiedService.getTransactionsService({
             page, limit, walletType, domainType, type, organization, companyOrganizer, entityId, startDate, date, endDate, keyword, user
         });
         return sendResponse({ res, statusCode: 200, translationKey: "wallet_transactions_fetched", data: items, meta });

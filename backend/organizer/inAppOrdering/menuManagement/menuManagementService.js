@@ -341,7 +341,6 @@ const createMenuItemFromPreset = async (data, timezone) => {
     return createdMenuItems;
 
   } catch (error) {
-    console.error("Error creating menu items from preset:", error);
     return { error: "Error creating menu items from preset: " + error.message };
   }
 };

@@ -233,7 +233,7 @@ const getEvents = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "venue_types_fetched_successfully",
+      translationKey: "events_fetched_successfully",
       data: Events
     });
   } catch (error) {

@@ -6,6 +6,7 @@ const {
     getReadableErrorMessage
 } = require("@utils/responseUtil");
 const unifiedService = require("../services/unifiedTransactionsService");
+const { getTransactionsService } = require("../../../../admin/transactions/services/unifiedTransactionsService");
 
 const createTransaction = async (req, res) => {
     const {
@@ -76,7 +77,7 @@ const getTransactions = async (req, res) => {
     } = req.query;
 
     try {
-        const { items, meta } = await unifiedService.getTransactions({
+        const { items, meta } = await getTransactionsService({
             page, limit, user, walletType, domainType, type, organization, companyOrganizer, entityId, date, keyword
         });
         return sendResponse({ res, statusCode: 200, translationKey: "wallet_transactions_fetched", data: items, meta });

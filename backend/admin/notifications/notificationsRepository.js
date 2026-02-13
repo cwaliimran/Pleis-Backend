@@ -762,7 +762,7 @@ const getNotificationByOrganizationId = async (organizationId) => {
     const notification = await GlobalNotification.find({ organizationId: objectId });
     return notification || null;
   } catch (error) {
-    console.error("Error fetching notification:", error);
+   
     return null;
   }
 };
