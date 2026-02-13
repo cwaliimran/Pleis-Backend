@@ -454,4 +454,40 @@ const getTickting = async (req, res) => {
     });
   }
 };
-module.exports = {getTiers,getmenuItem,getmenu, getmenuItemCategories, getVenueTypes,getOrganizations,getVenues,getCategories,getTags,getEvents,getTickting };
+const getLoyaltyRewards = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  const { keyword, status, date } = req.query;
+
+
+  try {
+
+    if (date && !validateParams(req, res, {
+      dateFields: {
+        date: "YYYY-MM-DD",
+      },
+    })) return;
+
+
+    const rewards = await generalAPIServices.getLoyaltyRewards({
+      page,
+      limit,
+      date,
+      companyOrganizer:req.user._id,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "rewards_fetched_successfully",
+      data: rewards
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+module.exports = {getTiers,getmenuItem,getmenu, getmenuItemCategories, getVenueTypes,getOrganizations,getVenues,getCategories,getTags,getEvents,getTickting,getLoyaltyRewards };
