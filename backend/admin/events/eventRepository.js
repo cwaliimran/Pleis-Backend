@@ -596,6 +596,26 @@ const getLatestEventByOrganization = async (organizations) => {
   }
 };
 
+const getOrganizationIdByEventId = async (eventId) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(eventId)) {
+      throw new Error("Invalid event id");
+    }
+
+    const event = await Events.findById(eventId)
+      .select("basicInfo.organization")
+      .lean();
+
+    if (!event) {
+      return null;
+    }
+
+    return event.basicInfo.organization; // returns ObjectId
+  } catch (error) {
+    console.error("Error getting organization by eventId:", error);
+    throw error;
+  }
+};
 module.exports = {
   createEvent,
   getEventsWithFilters,
@@ -615,6 +635,7 @@ module.exports = {
   getTicketTypeStats,
   getScannedTicketProgress,
   getTotalEventCountByOrganizationId,
-  getLatestEventByOrganization
+  getLatestEventByOrganization,
+  getOrganizationIdByEventId
 
 };

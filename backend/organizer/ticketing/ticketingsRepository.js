@@ -1,22 +1,26 @@
 const { getWithFilters, getModelCounts } = require("@dbUtils/queryUtil");
 const TicketingsModel = require("@TicketingsModel");
 const { TicketingBookings } = require("@TicketingBookingsModel");
-
+const { generateMeta } = require("../../helperUtils/responseUtil");
 // Create
+const { Events } = require("@EventsModel");
 const createTicketing = async (data) => {
   const ticketing = new TicketingsModel(data);
   return await ticketing.save();
 };
-
+const { getOrganizationIdByCompanyOrganizer } = require("../../admin/organizations/organizationRepository");
 // Get all with filters (e.g. filter by eventId)
+
+
 const getTicketingsWithFilters = async (query, page, limit) => {
+  console.log("Constructed query:", JSON.stringify(query, null, 2));
   return getWithFilters({
     model: TicketingsModel,
     query,
     populate: [
       {
         path: "event",
-        select: "basicInfo.media basicInfo.title",
+        select: "basicInfo.media basicInfo.title basicInfo.organization", // Ensure organization is populated
       },
     ],
     options: {
@@ -25,6 +29,119 @@ const getTicketingsWithFilters = async (query, page, limit) => {
     },
   });
 };
+
+const getTicketings = async ({
+  timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  date,
+  eventId,
+  companyOrganizer,
+  organizations,
+}) => {
+  const skip = (page - 1) * limit; // Pagination calculation
+  console.log("Pagination Calculation:", { page, limit, skip });
+
+  const andConditions = []; // Array to store the conditions for the query
+
+  // Check if organizations are provided; if not, fetch them by companyOrganizer
+  if (!organizations) {
+    console.log("Fetching organizations for companyOrganizer:", companyOrganizer);
+    organizations = await getOrganizationIdByCompanyOrganizer(companyOrganizer); // Assuming it's a promise
+    console.log("Fetched organizations:", organizations);
+
+    // If organizations are returned as objects, map them to an array of _id
+    if (organizations && organizations.length > 0) {
+      organizations = organizations.map(org => org._id);
+      console.log("Mapped organizations:", organizations);
+    }
+  }
+
+  // Step 1: Fetch events that belong to the organizations
+  const events = await Events.find({
+    "basicInfo.organization": { $in: organizations },
+    status: { $ne: "deleted" }, // Optional: Ensure the event is not deleted
+  }).select('_id'); // Select only the event _id for the next query
+
+  console.log("Matched Events:", events);
+
+  if (events.length === 0) {
+    console.log("No events found for the organizations.");
+    return { ticketings: [], meta: {} }; // Return empty if no events are matched
+  }
+
+  const eventIds = events.map(event => event._id); // Extract event IDs
+
+  // Step 2: Filter ticketings based on matched eventIds
+  andConditions.push({ event: { $in: eventIds } });
+
+  // Filter by eventId if provided
+  if (eventId) {
+    andConditions.push({ event: eventId });
+    console.log("Filtering by eventId:", eventId);
+  }
+
+  // Filter by date (tickets created on the specified date)
+  if (date) {
+    andConditions.push({
+      createdAt: {
+        $gte: new Date(date),
+        $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)), // Next day's date
+      },
+    });
+    console.log("Filtering by date:", date);
+  }
+
+  // Filter by status (if not provided, exclude "deleted" status by default)
+  if (status) {
+    andConditions.push({ status });
+    console.log("Filtering by status:", status);
+  } else {
+    andConditions.push({ status: { $ne: "deleted" } });
+    console.log("Excluding 'deleted' status");
+  }
+
+  // Filter by keyword (case-insensitive search in title)
+  if (keyword) {
+    andConditions.push({
+      $or: [{ title: { $regex: keyword, $options: "i" } }], // Case-insensitive regex search
+    });
+    console.log("Filtering by keyword:", keyword);
+  }
+
+  // Construct the query
+  const query = andConditions.length ? { $and: andConditions } : {};
+  console.log("Constructed query:", JSON.stringify(query, null, 2));
+
+  try {
+    // Step 3: Fetch ticketings with filters and pagination
+    console.log("Fetching ticketings with filters...");
+    const [ticketings, counts] = await Promise.all([
+      getTicketingsWithFilters(query, page, limit),
+      getCounts(query),
+    ]);
+    console.log("Ticketings Data:", ticketings);
+
+    // Prepare the metadata for pagination
+    const { totalFiltered, total, active, inactive } = counts;
+    console.log("Ticketing counts:", counts);
+
+    const meta = {
+      ...generateMeta(page, limit, totalFiltered),
+      ticketingsCount: { total, active, inactive },
+    };
+
+    // Return ticketings and metadata
+    console.log("Returning ticketings and metadata...");
+    return { ticketings, meta };
+  } catch (error) {
+    console.error("Error in repository:", error);
+    throw error;
+  }
+};
+
 // Get all with filters (e.g. filter by eventId)
 const getTicketingsByEventId = async (query) => {
   return getWithFilters({
@@ -261,6 +378,7 @@ const getEventsTicketingsWithFilters = async (query) => {
 module.exports = {
   createTicketing,
   getTicketingsWithFilters,
+  getTicketings,
   countTicketings,
   findTicketingById,
   updateTicketingData,

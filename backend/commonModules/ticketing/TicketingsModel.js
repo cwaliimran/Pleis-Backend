@@ -35,6 +35,16 @@ const ticketingsSchema = new mongoose.Schema(
       ref: "Event",
       required: true,
     },
+    organization: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organizations",
+      required: true,
+    },
+    companyOrganizer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
 
     //optional fields
     timingSlots: {
