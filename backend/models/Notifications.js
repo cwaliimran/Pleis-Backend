@@ -26,6 +26,8 @@ const NotificationTypes = {
   SUPPORT_REQUEST: "supportRequest",
   NEW_MENU_ITEMS_ORDER: "newMenuItemsOrder",
   REWARD_REDEEMED: "rewardRedeemed",
+  LEVEL_PROMOTED: "levelPromoted",
+  LEVEL_DEMOTED: "levelDemomoted",
 };
 
 // Define the NotificationSchema

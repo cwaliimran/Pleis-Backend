@@ -176,184 +176,7 @@ const getUserReservationDetails = async (req, res) => {
     });
   }
 };
-const updateReservation = async (req, res) => {
-  const { id } = req.params;
-  const {
-    partySize,
-    reservationType,
-    optionalEventId,
-    organizationId,
-    timingSlots,
-    notes,
-  } = req.body;
-  const userId = req.user._id;
-  const timezone = req.user.timezone;
-  if (
-    !validateParams(req, res, {
-      pathParams: ["id"],
-      objectIdFields: ["id"],
-    })
-  )
-    return;
 
-  let data = {
-    userId,
-    partySize,
-    reservationType,
-    optionalEventId,
-    organizationId,
-    timingSlots,
-    notes,
-  };
-  // --- Validate timing slots if enabled ---
-  if (data.timingSlots?.enabled) {
-    const slots = data.timingSlots.dateTimeSlots || [];
-
-    if (!Array.isArray(slots) || slots.length === 0) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "timing_slots_required_when_enabled",
-      });
-    }
-
-    for (const dateBlock of slots) {
-      if (!dateBlock.date) {
-        return sendResponse({
-          res,
-          statusCode: 400,
-          translationKey: "invalid_date_in_timing_slots",
-        });
-      }
-
-      if (
-        !Array.isArray(dateBlock.timeSlots) ||
-        dateBlock.timeSlots.length === 0
-      ) {
-        return sendResponse({
-          res,
-          statusCode: 400,
-          translationKey: "time_slots_required_for_date",
-        });
-      }
-
-      for (const slot of dateBlock.timeSlots) {
-        if (!slot.startTime || !slot.endTime) {
-          return sendResponse({
-            res,
-            statusCode: 400,
-            translationKey: "invalid_start_or_end_time_in_slot",
-          });
-        }
-
-        // Convert times to UTC
-        slot.startTime = convertTimezoneToUtc(
-          `${dateBlock.date} ${slot.startTime}`,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-        slot.endTime = convertTimezoneToUtc(
-          `${dateBlock.date} ${slot.endTime}`,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-      }
-    }
-  } else {
-    //don't check for empty array if timingSlots is disabled only apply format conversion
-    if (data.timingSlots) {
-      const slots = data.timingSlots.dateTimeSlots || [];
-      for (const dateBlock of slots) {
-        if (!dateBlock.date) continue;
-
-        for (const slot of dateBlock.timeSlots) {
-          if (!slot.startTime || !slot.endTime) continue;
-
-          // Convert times to UTC
-          slot.startTime = convertTimezoneToUtc(
-            `${dateBlock.date} ${slot.startTime}`,
-            timezone,
-            "YYYY-MM-DD hh:mm A"
-          );
-          slot.endTime = convertTimezoneToUtc(
-            `${dateBlock.date} ${slot.endTime}`,
-            timezone,
-            "YYYY-MM-DD hh:mm A"
-          );
-        }
-      }
-    }
-  }
-  try {
-    const updated = await reservationService.updateReservation(id, data);
-    if (updated && updated.error) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: updated.error,
-      });
-    }
-
-    if (!updated) {
-      return sendResponse({
-        res,
-        statusCode: 404,
-        translationKey: "Reservation_not_found",
-      });
-    }
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "Reservation_updated_successfully",
-      data: updated,
-    });
-  } catch (error) {
-    const readableError = getReadableErrorMessage(error);
-    return sendResponse({
-      res,
-      statusCode: readableError.statusCode,
-      translationKey: readableError.message,
-      error,
-    });
-  }
-};
-const deleteReservation = async (req, res) => {
-  const { id } = req.params;
-
-  if (
-    !validateParams(req, res, {
-      pathParams: ["id"],
-      objectIdFields: ["id"],
-    })
-  )
-    return;
-
-  try {
-    const deleted = await reservationService.deleteReservation(id);
-    if (!deleted) {
-      return sendResponse({
-        res,
-        statusCode: 404,
-        translationKey: "Reservation_not_found",
-      });
-    }
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "Reservation_deleted_successfully",
-    });
-  } catch (error) {
-    const readableError = getReadableErrorMessage(error);
-    return sendResponse({
-      res,
-      statusCode: readableError.statusCode,
-      translationKey: readableError.message,
-      error,
-    });
-  }
-};
 const getUserReservations = async (req, res) => {
 
   const { page, limit } = parsePaginationParams(req);
@@ -441,13 +264,88 @@ const transferReservation = async (req, res) => {
   }
 };
 
+const acceptReservationChange = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user._id;
+
+  // Validate params
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })
+  )
+    return;
+
+  try {
+    const result =
+      await reservationService.acceptReservationChange(
+        id,
+        userId
+      );
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "Reservation_change_accepted",
+      data: result,
+    });
+  } catch (error) {
+    const readableError =
+      getReadableErrorMessage(error);
+
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode || 500,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
+const cancelReservation = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user._id;
+
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })
+  )
+    return;
+
+  try {
+    const result = await reservationService.cancelReservation(
+      id,
+      userId
+    );
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "Reservation_cancelled_successfully",
+      data: result,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode || 500,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
 
 module.exports = {
   createReservation,
   getReservations,
-  updateReservation,
-  deleteReservation,
   getUserReservations,
   getUserReservationDetails,
   transferReservation,
+  acceptReservationChange,
+  cancelReservation,
 };

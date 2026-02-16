@@ -25,7 +25,8 @@ const calculatePointsRepo = async (
   ] = await Promise.all([
     getActiveGlobalLoyaltyHappyHourPromotion({
       userId,
-      userTierEntryPoints: globalWallet.global?.level?.entryPoints,
+      userTierEntryPoints:
+        globalWallet?.global?.level?.entryPoints,
     }),
     getActiveLoyaltyHappyHourPromotion({
       companyOrganizer,
@@ -35,20 +36,11 @@ const calculatePointsRepo = async (
     }),
   ]);
 
-
-  /* =============================
-     BONUS VALUES
-  ============================== */
-
   const globalBonus =
     globalWallet?.global?.level?.bonusPointsPerEuro || 0;
 
   const tierBonus =
     userCompanyWallet?.level?.bonusPointsPerEuro || 0;
-
-  /* =============================
-     MULTIPLIERS
-  ============================== */
 
   const organizerMultiplier =
     loyaltyHappyHourPromotion?.pointsMultiplier || 1;
@@ -56,35 +48,23 @@ const calculatePointsRepo = async (
   const globalMultiplier =
     globalLoyaltyHappyHourPromotion?.pointsMultiplier || 1;
 
-  /* =============================
-     ORGANIZER POINTS
-  ============================== */
-
   const organizerPointsPerEuro =
     10 + tierBonus + globalBonus;
 
   const organizerEarnedPoints = Math.round(
     totalSpending *
-    organizerPointsPerEuro *
-    organizerMultiplier
+      organizerPointsPerEuro *
+      organizerMultiplier
   );
-
-  /* =============================
-     GLOBAL POINTS
-  ============================== */
 
   const globalPointsPerEuro =
     10 + globalBonus + tierBonus;
 
   const globalEarnedPoints = Math.round(
     totalSpending *
-    globalPointsPerEuro *
-    globalMultiplier
+      globalPointsPerEuro *
+      globalMultiplier
   );
-
-  /* =============================
-     CASHBACK
-  ============================== */
 
   const cashbackPercent =
     (userCompanyWallet?.pointValuePercentage || 0) / 100;
@@ -110,7 +90,6 @@ const calculatePointsRepo = async (
     },
   };
 };
-
 
 
 module.exports = {

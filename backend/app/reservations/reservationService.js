@@ -41,77 +41,6 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
   }
 };
 
-
-const updateReservation = async (id, data) => {
-  const UserReservation = await ReservationRepo.findUserReservationById(id);
-
-  if (!UserReservation) {
-    return { error: "reservation_not_found" };  // Clear error message
-  }
-
-  // Allowed fields for update
-  const allowedFields = [
-    "partySize",
-    "reservationType",
-    "optionalEventId",
-    "organizationId",
-    "timingSlots",
-    "notes",
-  ];
-
-  // Handle timingSlots separately since it's a nested object
-  if (data.timingSlots) {
-    if (!UserReservation.timingSlots) {
-      UserReservation.timingSlots = { enabled: false, dateTimeSlots: [] };  // Default if not present
-    }
-
-    if (data.timingSlots.enabled !== undefined) {
-      UserReservation.timingSlots.enabled = data.timingSlots.enabled;
-    }
-
-    if (Array.isArray(data.timingSlots.dateTimeSlots)) {
-      UserReservation.timingSlots.dateTimeSlots = data.timingSlots.dateTimeSlots;
-    }
-  }
-
-  // Prepare the update data object with the allowed fields
-  const updateData = {};
-  for (const key of allowedFields) {
-    if (data[key] !== undefined) {
-      updateData[key] = data[key];  // Only add valid fields
-    }
-  }
-
-  // If nothing to update, return the original reservation
-  if (Object.keys(updateData).length === 0) {
-    return UserReservation;  // No update needed
-  }
-
-  try {
-    // Update the reservation with the new data
-    Object.assign(UserReservation, updateData);
-
-    // Save the updated reservation
-    await UserReservation.save();
-
-    // Return the formatted reservation
-    return reservationsFormatter(UserReservation);
-  } catch (error) {
-
-    return { error: "Error updating reservation" };  // Error handling if save fails
-  }
-};
-
-
-
-const deleteReservation = async (id) => {
-  const updated = await ReservationRepo.findByIdAndUpdate(id, {
-    status: "deleted",
-  });
-  if (!updated) return null;
-  return true;
-};
-
 const getUserReservations = async ({ timezone, page, limit, keyword, userId, date }) => {
   try {
 
@@ -140,10 +69,10 @@ const getUserReservations = async ({ timezone, page, limit, keyword, userId, dat
 
 const getUserReservationDetailsService = async (id, timezone) => {
 
-
   try {
     // Fetch the reservation by id
     let reservation = await ReservationRepo.getUserReservationDetails(id);
+    console.log("reservation==>", reservation)
 
     // Check if the reservation exists
     if (!reservation) {
@@ -262,15 +191,108 @@ const transferReservation = async (reservationId, newUserId, userId) => {
   return { success: true, message: "reservation_transferred_successfully" };
 };
 
+const acceptReservationChange = async (id, userId) => {
+  const reservation =
+    await ReservationRepo.findUserReservationById(id);
+
+  const change = reservation.reservationChanges
+    .find(c => c.status === "pending");
+
+  if (!change) throw new Error("no_pending_change");
+
+  reservation.timingSlots = change.newTiming;
+  change.status = "accepted";
+
+  reservation.reservationChanges.push({
+    changedBy: userId,
+    action: "accepted",
+    status: "completed",
+  });
+
+  reservation.status = "confirmed";
+
+  await reservation.save();
+
+  return reservation;
+};
+
+const cancelReservation = async (id, userId) => {
+  const reservation =
+    await ReservationRepo.findUserReservationById(id);
+
+  if (!reservation) {
+    throw new Error("Reservation not found");
+  }
+
+  // ---- Refund if paid ----
+  if (
+    reservation.paymentDetails?.paymentStatus === "paid" &&
+    reservation.paymentDetails?.paymentId
+  ) {
+    try {
+      //TODO refund payment
+      // call refund service
+      // await refundViaMonri({
+      //   transactionId: reservation.paymentDetails.paymentId,
+      //   amount: reservation.amount,
+      //   currency: "EUR",
+      // });
+
+      // mark refunded
+      reservation.paymentDetails.paymentStatus = "refunded";
+
+      reservation.reservationChanges.push({
+        changedBy: userId,
+        action: "refundProcessed",
+        status: "completed",
+      });
+
+    } catch (err) {
+      console.error("Refund failed:", err);
+      throw new Error("Refund failed, cancellation aborted");
+    }
+  }
+
+  // ---- Cancel reservation ----
+  reservation.reservationChanges.push({
+    changedBy: userId,
+    action: "cancelled",
+    status: "completed",
+  });
+
+  reservation.status = "cancelled";
+
+  await reservation.save();
+
+  return reservation;
+};
+
+const requestRefund = async (id, userId) => {
+  const reservation =
+    await ReservationRepo.findUserReservationById(id);
+
+  if (reservation.paymentDetails.paymentStatus !== "paid")
+    throw new Error("refund_not_allowed");
+
+  reservation.reservationChanges.push({
+    changedBy: userId,
+    action: "refundRequested",
+    status: "pending",
+  });
+
+  await reservation.save();
+};
+
 
 module.exports = {
   getOrganizationsWithReservationsForHomeService,
   createReservationService,
   getReservations,
-  updateReservation,
   getUserReservations,
-  deleteReservation,
   getUserReservationDetailsService,
   getOrganizationReservationsService,
-  transferReservation
+  transferReservation,
+  acceptReservationChange,
+  cancelReservation,
+  requestRefund
 };

@@ -12,16 +12,16 @@ const createMenuItem = async (data) => {
     const menuItem = new MenuItems(data);
     await menuItem.save();
     const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
-    await sendUserNotifications({
-      recipientIds: userIds,
-      title: `A new menu item "${menuItem.title}" has been created.`,
-      body: `A new menu item "${menuItem.title}" is now available in the system.`,
-      data: { type: NotificationTypes.MENU_ITEM_CREATED, menuItemId: menuItem._id, objectType: "menuItems" },
-      sender: menuItem.creator,
-      objectId: menuItem._id,
-      image: menuItem.image || null,
+    // await sendUserNotifications({
+    //   recipientIds: userIds,
+    //   title: `A new menu item "${menuItem.title}" has been created.`,
+    //   body: `A new menu item "${menuItem.title}" is now available in the system.`,
+    //   data: { type: NotificationTypes.MENU_ITEM_CREATED, menuItemId: menuItem._id, objectType: "menuItems" },
+    //   sender: menuItem.creator,
+    //   objectId: menuItem._id,
+    //   image: menuItem.image || null,
 
-    });
+    // });
     return menuItem;
   } catch (err) {
     throw err;

@@ -7,6 +7,8 @@ const { User } = require("@UserModel");
 const { getModelCounts } = require("../../../helperUtils/dbUtils/queryUtil");
 const LoyaltyReferralSettings = require("@LoyaltyReferralSettingsModel");
 const { LoyaltyReferredRecord, LoyaltyReferredRecords } = require("@LoyaltyReferredRecordModel");
+const { sendUserNotifications } = require("../../../controllers/communicationController");
+const { NotificationTypes } = require("../../../models/Notifications");
 // ==========================================================
 // GET COMPANY LOYALTY SETTINGS (tier model + pointValuePercentage)
 // ==========================================================
@@ -145,14 +147,13 @@ const checkPromotion = async (
   const currentEntry =
     currentLevel[tierKey]?.entryPoints || 0;
 
-  // 3️⃣ Load higher tiers
-  let tiersQuery = Tiers.find({
-    [`${tierKey}.entryPoints`]: { $gt: currentEntry },
-  }).sort({ [`${tierKey}.entryPoints`]: 1 });
+  // 3️⃣ Load higher tiers from cache
+  const tiers = await TierRepo.getCachedActiveTiers(tierKey);
 
-  if (session) tiersQuery = tiersQuery.session(session);
+  const higherTiers = tiers.filter(
+    t => t[tierKey]?.entryPoints > currentEntry
+  );
 
-  const higherTiers = await tiersQuery;
 
   let promotionTarget = null;
 
@@ -179,6 +180,24 @@ const checkPromotion = async (
       },
     },
     updateOptions
+  );
+
+  // 5️⃣ Fire-and-forget notification
+  sendUserNotifications({
+    recipientIds: [userId],
+    title: `🎉 Level upgraded!`,
+    body: `You have been promoted to ${promotionTarget.title}.`,
+    data: {
+      type: NotificationTypes.LEVEL_PROMOTED,
+      levelId: promotionTarget._id,
+      objectType: "tiers",
+      companyOrganizer,
+    },
+    sender: companyOrganizer,
+    objectId: promotionTarget._id,
+    image: null,
+  }).catch(err =>
+    console.error("Promotion notification failed:", err)
   );
 
   return {
@@ -257,6 +276,26 @@ const checkDemotion = async (
     },
     updateOptions
   );
+
+  // 5️⃣ Fire-and-forget notification
+  sendUserNotifications({
+    recipientIds: [userId],
+    title: `Level updated`,
+    body: `Your membership level is now ${fallbackTier.title}.`,
+    data: {
+      type: NotificationTypes.LEVEL_DEMOTED,
+      levelId: fallbackTier._id,
+      objectType: "tiers",
+      companyOrganizer,
+    },
+    sender: companyOrganizer,
+    objectId: fallbackTier._id,
+    image: null,
+  }).catch(err =>
+    console.error("Demotion notification failed:", err)
+  );
+
+
 
   return {
     demoted: true,
@@ -635,7 +674,7 @@ const createUserReferradrecord = async (referrerId, userId, companyOrganizer) =>
     };
 
   } catch (err) {
-  
+
     throw err;
   }
 };

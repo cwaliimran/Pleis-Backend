@@ -40,8 +40,16 @@ const formatTopPick = (item) => {
     );
   }
 
+  if (formatted?.creator?.companyDetails?.logo) {
+    formatted.creator.companyDetails.logo =
+      getFullImageUrl(
+        formatted.creator.companyDetails.logo || "noimage.png"
+      );
+  }
+
+
   // ---- Distance (already formatted in aggregation, just keep it) ----
-  
+
   // distance formatting (meters → km)
   if (formatted.distance !== undefined && formatted.distance !== null) {
     const meters = Number(formatted.distance);

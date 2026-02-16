@@ -315,121 +315,26 @@ const getReservations = async ({
   availability
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-
-  // ✅ Always UTC for comparisons
   const now = new Date();
 
-  const pipeline = [];
+  /* --------------------------------
+     1️⃣ BUILD MATCH
+  -------------------------------- */
+  const match = { status: "active" };
+
+  if (eventId)
+    match.optionalEventId = new mongoose.Types.ObjectId(eventId);
+
+  if (organizationId)
+    match.organizationId = new mongoose.Types.ObjectId(organizationId);
 
   /* --------------------------------
-     1️⃣ BASE MATCH
+     2️⃣ DB PIPELINE (LIGHT)
   -------------------------------- */
-  const match = {};
-  if (eventId) match.optionalEventId = new mongoose.Types.ObjectId(eventId);
-  if (organizationId) match.organizationId = new mongoose.Types.ObjectId(organizationId);
+  const pipeline = [
+    { $match: match },
 
-  pipeline.push({ $match: match });
-
-  /* --------------------------------
-     2️⃣ STATUS
-  -------------------------------- */
-  pipeline.push({ $match: { status: "active" } });
-
-  /* --------------------------------
-     3️⃣ SLOT FILTER (UNWIND → FILTER)
-  -------------------------------- */
-  const slotExpr = [
-    {
-      $gt: [
-        "$timingSlots.dateTimeSlots.timeSlots.endTime",
-        "$timingSlots.dateTimeSlots.timeSlots.startTime"
-      ]
-    },
-    {
-      $gt: [
-        "$timingSlots.dateTimeSlots.timeSlots.endTime",
-        now
-      ]
-    }
-  ];
-
-  if (date) {
-    let start, end;
-
-    if (availability === "full-month") {
-      ({ start, end } = getStartAndEndOfMonth(date, timezone));
-    } else {
-      ({ start, end } = getStartAndEndOfDay(date, timezone));
-    }
-
-    slotExpr.push({
-      $and: [
-        { $gte: ["$timingSlots.dateTimeSlots.date", start] },
-        { $lte: ["$timingSlots.dateTimeSlots.date", end] }
-      ]
-    });
-  }
-
-
-  pipeline.push(
-    { $unwind: "$timingSlots.dateTimeSlots" },
-    { $unwind: "$timingSlots.dateTimeSlots.timeSlots" },
-    {
-      $match: {
-        "timingSlots.enabled": true,
-        $expr: { $and: slotExpr }
-      }
-    },
-
-    /* --------------------------------
-       4️⃣ REBUILD timeSlots PER DATE
-    -------------------------------- */
-    {
-      $group: {
-        _id: {
-          reservationId: "$_id",
-          dateBlockId: "$timingSlots.dateTimeSlots._id"
-        },
-        reservation: { $first: "$$ROOT" },
-        timeSlots: {
-          $push: "$timingSlots.dateTimeSlots.timeSlots"
-        }
-      }
-    },
-
-    /* --------------------------------
-       5️⃣ REBUILD dateTimeSlots
-    -------------------------------- */
-    {
-      $addFields: {
-        "reservation.timingSlots.dateTimeSlots": [
-          {
-            _id: "$_id.dateBlockId",
-            date: "$reservation.timingSlots.dateTimeSlots.date",
-            timeSlots: "$timeSlots"
-          }
-        ]
-      }
-    },
-
-    { $replaceRoot: { newRoot: "$reservation" } },
-
-    /* --------------------------------
-       6️⃣ FINAL GROUP (ONE DOC)
-    -------------------------------- */
-    {
-      $group: {
-        _id: "$_id",
-        doc: { $first: "$$ROOT" }
-      }
-    },
-    { $replaceRoot: { newRoot: "$doc" } }
-  );
-
-  /* --------------------------------
-     7️⃣ CAPACITY ENFORCEMENT
-  -------------------------------- */
-  pipeline.push(
+    /* Capacity enforcement */
     {
       $lookup: {
         from: "userreservations",
@@ -470,14 +375,10 @@ const getReservations = async ({
         }
       }
     },
-    { $match: { remainingReservations: { $gt: 0 } } }
-  );
+    { $match: { remainingReservations: { $gt: 0 } } },
 
-  /* --------------------------------
-     8️⃣ SORT + PAGINATION
-  -------------------------------- */
-  pipeline.push(
     { $sort: { createdAt: -1 } },
+
     {
       $facet: {
         data: [
@@ -487,12 +388,63 @@ const getReservations = async ({
         totalFiltered: [{ $count: "count" }]
       }
     }
-  );
+  ];
 
   const result = await Reservations.aggregate(pipeline);
 
+  let reservations = result[0]?.data || [];
+
+  /* --------------------------------
+     3️⃣ SERVER-SIDE SLOT FILTER
+  -------------------------------- */
+
+  let start, end;
+
+  if (date) {
+    if (availability === "full-month") {
+      ({ start, end } =
+        getStartAndEndOfMonth(date, timezone));
+    } else {
+      ({ start, end } =
+        getStartAndEndOfDay(date, timezone));
+    }
+  }
+
+  reservations = reservations
+    .map(r => {
+      if (!r.timingSlots?.dateTimeSlots) return null;
+
+      const filteredBlocks = r.timingSlots.dateTimeSlots
+        .map(block => {
+          const blockDate = new Date(block.date);
+
+          // date filter
+          if (date && (blockDate < start || blockDate > end))
+            return null;
+
+          const timeSlots = (block.timeSlots || []).filter(slot =>
+            new Date(slot.endTime) > now
+          );
+
+          if (!timeSlots.length) return null;
+
+          return { ...block, timeSlots };
+        })
+        .filter(Boolean);
+
+      if (!filteredBlocks.length) return null;
+
+      r.timingSlots.dateTimeSlots = filteredBlocks;
+
+      return r;
+    })
+    .filter(Boolean);
+
+  /* --------------------------------
+     4️⃣ RETURN SAME FORMAT
+  -------------------------------- */
   return {
-    reservations: result[0]?.data || [],
+    reservations,
     meta: generateMeta(
       page,
       limit,
@@ -608,6 +560,7 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
         organizationCover: "$organization.basicInfo.media.cover",  // Fetch organization cover image
         preOrderMenuItemsOrder: 1,
         ticketingBookingRefs: 1,
+        reservationChanges: 1,
 
       }
     },
@@ -833,6 +786,7 @@ const getUserReservationDetails = async (id) => {
           ticketingBookingRefs: 1,
           paymentDetails: 1,
           reservationSnapshot: 1,
+          reservationChanges: 1,
           status: 1,
         }
       },
@@ -1060,6 +1014,9 @@ const getOrganizationsWithReservationsForHome = async ({
      ---------------------------------- */
   pipeline.push(
     // PRIMARY VENUE
+    /* ----------------------------------
+   PRIMARY VENUE → VENUE TYPE
+---------------------------------- */
     {
       $lookup: {
         from: "venues",
@@ -1072,11 +1029,21 @@ const getOrganizationsWithReservationsForHome = async ({
               status: "active"
             }
           },
-          { $project: { _id: 0, title: 1 } }
+          { $project: { venueType: 1 } }
         ],
         as: "primaryVenue"
       }
     },
+    {
+      $lookup: {
+        from: "venuetypes",
+        localField: "primaryVenue.venueType",
+        foreignField: "_id",
+        as: "venueTypes",
+        pipeline: [{ $project: { _id: 1, title: 1 } }]
+      }
+    },
+
 
     // TAGS
     {
@@ -1103,7 +1070,7 @@ const getOrganizationsWithReservationsForHome = async ({
         tags: 1,
 
         venue: {
-          title: { $ifNull: [{ $first: "$primaryVenue.title" }, null] }
+          venueType: "$venueTypes"
         },
 
         reservationsAvailable: 1,
