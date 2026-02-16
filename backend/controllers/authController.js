@@ -342,6 +342,119 @@ const login = async (req, res) => {
     });
   }
 };
+//loginTest
+const loginTest = async (req, res) => {
+  try {
+    const { email, userType } =
+      req.body;
+    const validationOptions = {
+      rawData: [
+        "email",
+        "userType",
+      ],
+      enumFields: {
+        userType: User.USER_TYPES,
+      },
+    };
+    if (!validateParams(req, res, validationOptions)) {
+      return;
+    }
+    let populateFields = [];
+
+    const user = await User.findOne({
+      email,
+      "accountState.userType": userType,
+    });
+
+    // Check if an error occurred
+    if (!user) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "user_not_found", // Use your translation key for user not found
+      });
+    }
+
+    // Restrict admin login
+    if (user.accountState.userType === "admin") {
+      const adminCreationToken = req.header("x-admin-access-token");
+      if (adminCreationToken === process.env.ADMIN_ACCESS_TOKEN) {
+      } else {
+        return sendResponse({
+          res,
+          statusCode: 403,
+          translationKey: "unauthorized_to_1",
+        });
+      }
+    }
+
+    // Check the user's verification status
+    const verificationStatus = user.verificationStatus["email"];
+    if (verificationStatus === "pending") {
+      return sendResponse({
+        res,
+        statusCode: 401,
+        translationKey: "your_account",
+      });
+    }
+
+    if (
+      user.accountState.status === "pending"
+    ) {
+      return sendResponse({
+        res,
+        statusCode: 403,
+        translationKey: "pending_approval",
+      });
+    }
+
+    if (
+      user.accountState.status === "rejected"
+    ) {
+      return sendResponse({
+        res,
+        statusCode: 403,
+        translationKey: "rejected_verification",
+        data: {
+          reason: user.accountState.reason || "No reason provided",
+        }
+      });
+    }
+
+    if (
+      user.accountState.status === "suspended"
+    ) {
+      return sendResponse({
+        res,
+        statusCode: 403,
+        translationKey: "your_account_2",
+      });
+    }
+
+    const token = user.generateAuthToken();
+
+    // Ensure toJSON method is applied to strip out sensitive data
+    const userObject = user.toJSON();
+
+    // Format the user response using the utility function
+    const response = formatUserResponse(userObject, token, [], ["resetToken", "organizations"]);
+
+    // Send successful response with token and user data
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "login_success",
+      data: response,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: error,
+      error,
+    });
+  }
+};
 
 // Generate OTP
 const generateOtp = async (req, res) => {
@@ -1251,5 +1364,6 @@ module.exports = {
   socialAuth,
   checkEmailExistsAndVerified,
   changePassword,
-  checkUserNameExists
+  checkUserNameExists,
+  loginTest
 };

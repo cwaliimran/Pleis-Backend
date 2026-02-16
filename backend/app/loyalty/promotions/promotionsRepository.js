@@ -611,8 +611,72 @@ const getActiveLoyaltyHappyHourPromotion = async ({
     { $project: { claimStats: 0 } },
   ]);
 
-  return promotion || null;
+  if (!promotion) return null;
+
+  /* =============================
+     RECURRENCE CHECK
+  ============================== */
+
+  const recurrence = promotion.recurringDetails;
+
+  if (recurrence?.isEnabled) {
+    const dayMap = [
+      "sun","mon","tue","wed",
+      "thu","fri","sat"
+    ];
+
+    const todayKey = dayMap[now.getDay()];
+
+    if (
+      recurrence.frequency === "weekly" &&
+      recurrence.daysOfWeek.length &&
+      !recurrence.daysOfWeek.includes(todayKey)
+    ) {
+      return null;
+    }
+
+    if (
+      recurrence.endDate &&
+      now > recurrence.endDate
+    ) {
+      return null;
+    }
+  }
+
+  /* =============================
+     HAPPY HOUR TIME CHECK
+  ============================== */
+
+  const start = promotion.startDate;
+  const end = promotion.endDate;
+
+  if (!start || !end) return promotion;
+
+  const startMinutes =
+    start.getUTCHours() * 60 +
+    start.getUTCMinutes();
+
+  const endMinutes =
+    end.getUTCHours() * 60 +
+    end.getUTCMinutes();
+
+  const currentMinutes =
+    now.getUTCHours() * 60 +
+    now.getUTCMinutes();
+
+  // supports midnight crossing HH
+  const insideWindow =
+    startMinutes <= endMinutes
+      ? currentMinutes >= startMinutes &&
+        currentMinutes <= endMinutes
+      : currentMinutes >= startMinutes ||
+        currentMinutes <= endMinutes;
+
+  if (!insideWindow) return null;
+
+  return promotion;
 };
+
 
 const claimPromotion = async (promotionId, userId) => {
   const now = new Date();

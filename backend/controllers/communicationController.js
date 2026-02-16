@@ -187,7 +187,7 @@ const sendUserNotifications = async ({
             data: {
               ...dataWithStringValues, // Additional data payload
               subjectId: sender ? sender.toString() : null, // Convert subjectId to plain text
-              objectId: objectId.toString(), // Ensure objectId is also plain text
+              objectId: objectId ? objectId.toString(): null, // Ensure objectId is also plain text
             },
             image
           });

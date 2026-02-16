@@ -8,6 +8,9 @@ const {
 const { UnifiedWalletTransactions } = require("@UnifiedWalletTransactionsModel");
 const GlobalStatusLevels = require("@GlobalStatusLevelsModel");
 const mongoose = require("mongoose");
+const { sendUserNotifications } = require("../../../../controllers/communicationController");
+const { NotificationTypes } = require("../../../../models/Notifications");
+const { getStatusLevels } = require("../../../globalLoyalty/statusLevels/globalStatusLevelsRepository");
 
 // ======================================================================
 // CREATE WALLET IF NOT EXISTS
@@ -98,7 +101,7 @@ const updateGlobalPoints = async ({
   walletDoc.global.points = newBalance;
 
   await walletDoc.save({ session });
-  
+
   return { success: true, newBalance };
 };
 
@@ -143,14 +146,18 @@ const checkPromotionGlobal = async (userId, session = null) => {
   const currentLevel = wallet.global.level;
 
   // all higher levels
-  const higherLevels = await GlobalStatusLevels.find({
-    entryPoints: { $gt: currentLevel.entryPoints }
-  })
-    .sort({ entryPoints: 1 })
-    .select("title entryPoints retainPoints")
-    .session(session);
+  const levels =
+    await getStatusLevels({
+      status: { $ne: "deleted" }
+    });
 
-  if (!higherLevels.length) return { promoted: false };
+  const higherLevels = levels.filter(
+    lvl => lvl.entryPoints > currentLevel.entryPoints
+  );
+
+  if (!higherLevels.length)
+    return { promoted: false };
+
 
   // highest eligible level
   let selected = null;
@@ -174,6 +181,27 @@ const checkPromotionGlobal = async (userId, session = null) => {
     { session }
   );
 
+
+  // ---- Send promotion notification ----
+  // Fire and forget notification
+  sendUserNotifications({
+    recipientIds: [userId],
+    title: `🎉 Congratulations! You've been promoted!`,
+    body: `You have reached ${selected.title} level.`,
+    data: {
+      type: NotificationTypes.LEVEL_PROMOTED,
+      levelId: selected._id,
+      objectType: "globalstatuslevels",
+    },
+    sender: null,
+    objectId: selected._id,
+    image: null,
+  }).catch(err =>
+    console.error("Promotion notification failed:", err)
+  );
+
+
+
   return { promoted: true, newLevel: selected };
 };
 
@@ -185,29 +213,35 @@ const checkDemotionGlobal = async (userId, session = null) => {
   if (!userId) throw new Error("userId required");
 
   const now = Date.now();
-  const last12MonthsDate = new Date(now - 365 * 24 * 60 * 60 * 1000);
+  const last12MonthsDate =
+    new Date(now - 365 * 24 * 60 * 60 * 1000);
 
-  // Earned in last 12 months
-  const earned12MonthsAgg = await UnifiedWalletTransactions.aggregate([
-    {
-      $match: {
-        user: new mongoose.Types.ObjectId(userId),
-        walletType: "globalWallet",
-        type: "earn",
-        createdAt: { $gte: last12MonthsDate }
-      }
-    },
-    {
-      $group: { _id: null, total: { $sum: "$points.total" } }
-    }
-  ]).session(session);
+  // Earned points last 12 months
+  const earned12MonthsAgg =
+    await UnifiedWalletTransactions.aggregate([
+      {
+        $match: {
+          user: new mongoose.Types.ObjectId(userId),
+          walletType: "globalWallet",
+          type: "earn",
+          createdAt: { $gte: last12MonthsDate },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$points.total" },
+        },
+      },
+    ]).session(session);
 
   const earned12Months = earned12MonthsAgg.length
     ? earned12MonthsAgg[0].total
     : 0;
 
-  const wallet = await UserGlobalWallet
-    .findOne({ user: userId })
+  const wallet = await UserGlobalWallet.findOne({
+    user: userId,
+  })
     .populate("global.level")
     .session(session);
 
@@ -215,33 +249,61 @@ const checkDemotionGlobal = async (userId, session = null) => {
 
   if (!wallet || !currentLevel) return;
 
+  // User still qualifies → no demotion
   if (earned12Months >= currentLevel.retainPoints) {
     return { demoted: false };
   }
 
-  // assumes this helper supports session too; pass it if implemented
-  const fallback = await getPreviousStatusLevel(earned12Months, session);
+  // Find fallback level
+  const fallback =
+    await getPreviousStatusLevel(
+      earned12Months,
+      session
+    );
 
   if (
     !fallback ||
-    fallback._id.toString() === currentLevel._id.toString()
+    fallback._id.toString() ===
+    currentLevel._id.toString()
   ) {
     return { demoted: false };
   }
 
+  // Update wallet level
   await UserGlobalWallet.updateOne(
     { user: userId },
     {
       $set: {
         "global.level": fallback._id,
-        "global.lastEvaluated": new Date()
-      }
+        "global.lastEvaluated": new Date(),
+      },
     },
     { session }
   );
 
+  // Fire-and-forget notification
+  sendUserNotifications({
+    recipientIds: [userId],
+    title: `Global level updated`,
+    body: `Your global status is now ${fallback.title}.`,
+    data: {
+      type: NotificationTypes.LEVEL_DEMOTED,
+      levelId: fallback._id,
+      objectType: "globalstatuslevels",
+    },
+    sender: null,
+    objectId: fallback._id,
+    image: null,
+  }).catch(err =>
+    console.error(
+      "Global demotion notification failed:",
+      err
+    )
+  );
+
   return { demoted: true, newLevel: fallback };
 };
+
 
 
 const getTotalRedeemPurchases = async (userId) => {

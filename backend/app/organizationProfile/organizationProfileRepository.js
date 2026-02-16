@@ -884,8 +884,8 @@ const getForYouOrganizationsForHomeRepo = async ({
   userId,
   timezone
 }) => {
-
-  const userPreferences = await getUserInterestsIdsForRecommendation(userId);
+  const userPreferences =
+    await getUserInterestsIdsForRecommendation(userId);
 
   const userCategories = userPreferences?.categories || [];
   const userTags = userPreferences?.tags || [];
@@ -917,11 +917,11 @@ const getForYouOrganizationsForHomeRepo = async ({
     pipeline.push({ $match: geoQuery });
   }
 
-  /* ---------- LIGHT PROJECTION ---------- */
   pipeline.push({
     $project: {
       basicInfo: 1,
       otherInfo: 1,
+      operatingHours: 1,
       distance: 1
     }
   });
@@ -930,10 +930,20 @@ const getForYouOrganizationsForHomeRepo = async ({
   pipeline.push({
     $addFields: {
       matchedCategories: {
-        $size: { $setIntersection: ["$otherInfo.categories", userCategories] }
+        $size: {
+          $setIntersection: [
+            "$otherInfo.categories",
+            userCategories
+          ]
+        }
       },
       matchedTags: {
-        $size: { $setIntersection: ["$otherInfo.tags", userTags] }
+        $size: {
+          $setIntersection: [
+            "$otherInfo.tags",
+            userTags
+          ]
+        }
       }
     }
   });
@@ -949,7 +959,12 @@ const getForYouOrganizationsForHomeRepo = async ({
               {
                 $cond: [
                   { $gt: [userCategories.length, 0] },
-                  { $divide: ["$matchedCategories", userCategories.length] },
+                  {
+                    $divide: [
+                      "$matchedCategories",
+                      userCategories.length
+                    ]
+                  },
                   0
                 ]
               }
@@ -961,7 +976,12 @@ const getForYouOrganizationsForHomeRepo = async ({
               {
                 $cond: [
                   { $gt: [userTags.length, 0] },
-                  { $divide: ["$matchedTags", userTags.length] },
+                  {
+                    $divide: [
+                      "$matchedTags",
+                      userTags.length
+                    ]
+                  },
                   0
                 ]
               }
@@ -972,13 +992,12 @@ const getForYouOrganizationsForHomeRepo = async ({
     }
   });
 
-  /* ---------- PRE-LIMIT CANDIDATES ---------- */
   pipeline.push(
     { $sort: { relevanceScore: -1 } },
-    { $limit: limit * 5 } // candidate pool
+    { $limit: limit * 5 }
   );
 
-  /* ---------- ENGAGEMENT LOOKUP ---------- */
+  /* ---------- ENGAGEMENT ---------- */
   pipeline.push(
     {
       $lookup: {
@@ -1047,7 +1066,6 @@ const getForYouOrganizationsForHomeRepo = async ({
     }
   );
 
-  /* ---------- POPULARITY ---------- */
   pipeline.push({
     $addFields: {
       popularityScore: {
@@ -1059,7 +1077,6 @@ const getForYouOrganizationsForHomeRepo = async ({
     }
   });
 
-  /* ---------- FINAL SCORE ---------- */
   pipeline.push(
     {
       $addFields: {
@@ -1081,8 +1098,73 @@ const getForYouOrganizationsForHomeRepo = async ({
     { $limit: limit }
   );
 
+  /* ===============================
+     PRIMARY VENUE → VENUE TYPE
+     =============================== */
+  pipeline.push(
+    {
+      $lookup: {
+        from: "venues",
+        let: { orgId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$organization", "$$orgId"] },
+              isPrimary: true,
+              status: "active"
+            }
+          },
+          { $project: { venueType: 1 } }
+        ],
+        as: "primaryVenue"
+      }
+    },
+    {
+      $lookup: {
+        from: "venuetypes",
+        localField: "primaryVenue.venueType",
+        foreignField: "_id",
+        as: "venueTypes",
+        pipeline: [
+          { $project: { _id: 1, title: 1 } }
+        ]
+      }
+    }
+  );
+
+  /* ===============================
+     TAGS
+     =============================== */
+  pipeline.push({
+    $lookup: {
+      from: "tags",
+      localField: "otherInfo.tags",
+      foreignField: "_id",
+      as: "tags",
+      pipeline: [
+        { $project: { _id: 1, title: 1 } }
+      ]
+    }
+  });
+
+  /* ---------- FINAL SHAPE ---------- */
+  pipeline.push({
+    $project: {
+      _id: 1,
+      distance: userLocation ? 1 : null,
+      basicInfo: 1,
+      operatingHours: 1,
+      tags: 1,
+      venue: {
+        venueType: "$venueTypes"
+      },
+      finalScore: 1
+    }
+  });
+
   return Organizations.aggregate(pipeline);
 };
+
 
 
 

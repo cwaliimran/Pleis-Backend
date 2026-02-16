@@ -14,7 +14,7 @@ function generateDigest({ orderNumber, amount, currency }) {
 }
 
 
-exports.redirectToMonri = async (req, res) => {
+exports.redirectToMonriWebPay = async (req, res) => {
   try {
     // --- REQUIRED PAYMENT DATA ---
 
@@ -72,6 +72,136 @@ exports.redirectToMonri = async (req, res) => {
     });
   }
 };
+
+exports.redirectToMonriWalletPay = async (req, res) => {
+  try {
+    const amount = 500;
+    const currency = "EUR";
+    const orderNumber = crypto.randomUUID();
+
+    // Save transaction
+    await monriRepository.createTransaction({
+      orderNumber,
+      amount,
+      currency,
+      status: "pending",
+    });
+
+    // Create Monri payment session
+    const payload = {
+      amount,
+      currency,
+      order_number: orderNumber,
+      transaction_type: "purchase",
+      order_info: "Mobile payment",
+      scenario: "charge",
+    };
+
+    const body = JSON.stringify(payload);
+    const authorization = buildAuthorizationHeader({ body });
+
+    const response = await axios.post(
+      "https://ipgtest.monri.com/v2/payment/new",
+      body,
+      {
+        headers: {
+          Authorization: authorization,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const clientSecret = response.data.client_secret;
+    const trxToken = response.data.id;
+
+    res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="https://ipgtest.monri.com/dist/components.js"></script>
+
+<style>
+body {
+  font-family: sans-serif;
+  padding: 20px;
+}
+#apple-pay, #google-pay {
+  margin-top: 15px;
+}
+</style>
+</head>
+
+<body>
+
+<h3>Select payment method</h3>
+
+<div id="apple-pay"></div>
+<div id="google-pay"></div>
+
+<script>
+const monri = Monri("${process.env.MONRI_AUTH_TOKEN}");
+
+const components = monri.components({
+  clientSecret: "${clientSecret}"
+});
+
+const transactionData = {
+  ch_full_name: "Test User",
+  address: "Street 1",
+  city: "Zagreb",
+  zip: "10000",
+  phone: "+385991234567",
+  country: "HR",
+  email: "test@test.com",
+  orderInfo: "Mobile payment",
+  language: "en"
+};
+
+const applePay = components.create("apple-pay", {
+  trx_token: "${trxToken}",
+  environment: "test",
+  transaction: transactionData
+});
+
+applePay.mount("apple-pay");
+
+const googlePay = components.create("google-pay", {
+  trx_token: "${trxToken}",
+  environment: "test"
+});
+
+googlePay.mount("google-pay");
+
+// Redirect back so RN WebView detects success
+applePay.on("paymentSuccess", function(result) {
+  window.location.href =
+    "${process.env.SUCCESS_URL}?order_number=${orderNumber}";
+});
+
+googlePay.on("paymentSuccess", function(result) {
+  window.location.href =
+    "${process.env.SUCCESS_URL}?order_number=${orderNumber}";
+});
+
+applePay.on("paymentError", function() {
+  window.location.href = "${process.env.CANCEL_URL}";
+});
+
+googlePay.on("paymentError", function() {
+  window.location.href = "${process.env.CANCEL_URL}";
+});
+</script>
+
+</body>
+</html>
+`);
+  } catch (err) {
+    console.error("Wallet pay init failed:", err);
+    res.status(500).send("Payment init failed");
+  }
+};
+
 
 
 exports.handleSuccess = async (req, res) => {

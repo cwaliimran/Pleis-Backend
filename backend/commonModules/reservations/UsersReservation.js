@@ -103,7 +103,6 @@ const UserReservationsSchema = new mongoose.Schema(
       default: "",
     },
 
-
     status: {
       type: String,
       enum: ["pendingPayment", "needsConfirmation", "confirmed", "checkedIn", "rejected", "cancelled", "completed", "deleted"],
@@ -156,6 +155,64 @@ const UserReservationsSchema = new mongoose.Schema(
         ref: "TicketingBookings",
         index: true, // enables fast reverse lookup
       }
+    ],
+
+    reservationChanges: [
+      {
+        // who performed the change
+        changedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          default: null, // null = system/staff/walk-in
+        },
+
+        // previous confirmed timing
+        oldTiming: {
+          type: Object,
+          default: null,
+        },
+
+        // proposed timing
+        newTiming: {
+          type: Object,
+          default: null,
+        },
+
+        // what type of action
+        action: {
+          type: String,
+          enum: [
+            "timingChanged",   // organizer updated time
+            "accepted",        // user accepted change
+            "cancelled",       // user cancelled reservation
+            "refundRequested", // user asked refund
+            "refundProcessed", // admin refunded
+          ],
+          required: true,
+        },
+
+        // state of change
+        status: {
+          type: String,
+          enum: [
+            "pending",   // waiting user decision
+            "accepted",
+            "rejected",
+            "completed",
+          ],
+          default: "completed",
+        },
+
+        reason: {
+          type: String,
+          default: "",
+        },
+
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
     ],
 
   },

@@ -233,11 +233,6 @@ const getUserInterestsIdsForRecommendation = async (userId) => {
 };
 
 
-//get company pickup options
-const getInAppOrderingSettings = async (companyId) => {
-  const company = await User.findById(companyId).select("companyDetails.inAppOrderingSettings");
-  return company?.companyDetails?.inAppOrderingSettings || [];
-};
 
 module.exports = {
   createUser,
@@ -252,7 +247,6 @@ module.exports = {
   updateUserInterests,
   getUserInterestsByUserId,
   getUserInterestsIdsForRecommendation,
-  findUserByIdAndCheckExists,
-  getInAppOrderingSettings,
+findUserByIdAndCheckExists,
   findAppUserByIdWithProjection
 };

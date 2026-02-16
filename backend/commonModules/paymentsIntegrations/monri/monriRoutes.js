@@ -1,6 +1,7 @@
 const express = require("express");
 const {
-  redirectToMonri,
+  redirectToMonriWebPay,
+  redirectToMonriWalletPay,
   handleSuccess,
   handleCancel,
   createClientSecret,
@@ -11,7 +12,8 @@ const router = express.Router();
 //webpay
 router.get("/web-pay-session", createWebPaySession);
 
-router.get("/redirect", redirectToMonri);
+router.get("/redirect", redirectToMonriWebPay);
+router.get("/wallet-pay", redirectToMonriWalletPay);
 router.post("/payment-intent", createClientSecret);
 
 

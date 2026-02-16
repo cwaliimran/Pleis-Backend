@@ -10,6 +10,7 @@ const { getTotalEventCountByOrganizationId, getLatestEventByOrganization } = req
 const { getTotalTicketsPurchasedByOrganizationId } = require("../ticketing/ticketingsRepository");
 const { getTotalEngagementEventsByOrganizationId } = require("@appEngagement/engagementEventsRepository");
 const { getTotalClosingBalanceByOrganizationId } = require("../transactions/repositories/unifiedTransactionsRepository");
+const { default: mongoose } = require("mongoose");
 
 // Create
 const createOrganization = async (data) => {
@@ -184,6 +185,17 @@ const getOrganizationIdByCompanyOrganizer = async (companyOrganizer) => {
   return organizations;
 };
 
+//get company pickup options
+const getInAppOrderingSettings = async (companyOrganizer) => {
+  const orgSettings = await Organizations.findOne({
+    creator: companyOrganizer
+  })
+    .select("inAppOrderingSettings")
+    .lean();
+  return orgSettings?.inAppOrderingSettings || [];
+};
+
+
 module.exports = {
   createOrganization,
   getOrganizationsWithFilters,
@@ -200,5 +212,6 @@ module.exports = {
   getStaffIdsByOrganization,
   getOrgCompanyOrganizer,
   getOrganizationNotifications,
-  getOrganizationIdByCompanyOrganizer
+  getOrganizationIdByCompanyOrganizer,
+  getInAppOrderingSettings
 };

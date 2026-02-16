@@ -63,15 +63,15 @@ const createReservation = async (data) => {
     const Reservation = new Reservations(data);
     await Reservation.save();
     const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
-    await sendUserNotifications({
-      recipientIds: userIds,
-      title: `New Reservation Available`,
-      body: ` A new reservation has been created. Check it out!`,
-      data: { type: NotificationTypes.RESERVATION_UPDATE, reservationId: Reservation._id, objectType: "reservations" },
-      sender: Reservation.companyOrganizer,
-      objectId: Reservation._id,
-      image: null,
-    });
+    // await sendUserNotifications({
+    //   recipientIds: userIds,
+    //   title: `New Reservation Available`,
+    //   body: ` A new reservation has been created. Check it out!`,
+    //   data: { type: NotificationTypes.RESERVATION_UPDATE, reservationId: Reservation._id, objectType: "reservations" },
+    //   sender: Reservation.companyOrganizer,
+    //   objectId: Reservation._id,
+    //   image: null,
+    // });
     return Reservation;
   } catch (err) {
     throw err;

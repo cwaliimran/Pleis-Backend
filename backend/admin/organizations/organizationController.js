@@ -206,6 +206,7 @@ const updateOrganization = async (req, res) => {
     tags,
     description,
     title,
+    inAppOrderingSettings
   } = req.body);
 
   //Convert times to UTC minutes before saving
@@ -215,7 +216,8 @@ const updateOrganization = async (req, res) => {
   }
 
   try {
-    const updated = await organizationService.updateOrganization({ id, data, timezone});
+    
+    const updated = await organizationService.updateOrganization({ id, data, timezone });
 
     if (!updated) {
       return sendResponse({
