@@ -40,12 +40,12 @@ router.get("/", getTicketings);
  * @route PUT /ticketings/:id
  * @desc Update a ticketing (Admin only)
  */
-router.put("/:id", roleMiddleware(["admin"]), updateTicketing);
+router.put("/:id", roleMiddleware(["admin", "organizer"]), updateTicketing);
 
 /**
  * @route DELETE /ticketings/:id
  * @desc Soft delete a ticketing (Admin only)
  */
-router.delete("/:id", roleMiddleware(["admin"]), deleteTicketing);
+router.delete("/:id", roleMiddleware(["admin", "organizer"]), deleteTicketing);
 
 module.exports = router;

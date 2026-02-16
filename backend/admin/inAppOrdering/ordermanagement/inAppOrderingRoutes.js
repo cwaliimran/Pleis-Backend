@@ -19,10 +19,10 @@ router.use(auth);
 const OrdersRateLimiter = createRateLimiter("Orders");
 
 // router.post("/", roleMiddleware(["admin"]), OrdersRateLimiter, createOrders);
-router.get("/", roleMiddleware(["admin"]), OrdersRateLimiter, getOrders);
-router.put("/:id", roleMiddleware(["admin"]), updateOrders);
-router.put("/update/:organization", roleMiddleware(["admin"]), updateInAppOrders);
-router.get("/update", roleMiddleware(["admin"]), getInAppOrders);
+router.get("/", roleMiddleware(["admin","organizer"]), OrdersRateLimiter, getOrders);
+router.put("/:id", roleMiddleware(["admin","organizer"]), updateOrders);
+router.put("/update/:organization", roleMiddleware(["admin","organizer"]), updateInAppOrders);
+router.get("/update", roleMiddleware(["admin","organizer"]), getInAppOrders);
 
 
 

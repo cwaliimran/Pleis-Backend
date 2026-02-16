@@ -3,6 +3,7 @@ const { getEventIdsByOrganization } = require("../../admin/events/eventRepositor
 const { formatTicketing, formatEventTicketing } = require("./fomatter/formatTicketing");
 const ticketingRepo = require("./ticketingsRepository");
 
+
 const createTicketing = async (timezone, data) => {
 
   let ticketing = await ticketingRepo.createTicketing(data);
@@ -10,50 +11,40 @@ const createTicketing = async (timezone, data) => {
   return formatTicketing(timezone, ticketing);
 };
 
-const getTicketings = async ({ timezone, page, limit, keyword, status, date, eventId }) => {
-  const andConditions = [];
-
-  if (eventId) {
-    andConditions.push({ event: eventId });
-  }
-
-  if (date) {
-    andConditions.push({
-      createdAt: {
-        $gte: new Date(date),
-        $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
-      },
+const getTicketings = async ({
+  timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  date,
+  eventId,
+  companyOrganizer,
+  organizations,
+}) => {
+  try {
+    // Pass the parameters to the repository
+    const { ticketings, meta } = await ticketingRepo.getTicketings({
+      page,
+      limit,
+      keyword,
+      status,
+      date,
+      eventId,
+      companyOrganizer,
+      organizations,
+      timezone,
     });
+
+    // Format the ticketings data
+    const formattedTicketings = ticketings.map((item) => formatTicketing(timezone, item));
+
+    // Return the result with formatted ticketings and metadata
+    return { ticketings: formattedTicketings, meta };
+  } catch (error) {
+    console.error("Error in service:", error);
+    throw error;
   }
-
-  if (status) {
-    andConditions.push({ status });
-  } else {
-    andConditions.push({ status: { $ne: "deleted" } });
-  }
-
-  if (keyword) {
-    andConditions.push({
-      $or: [{ title: { $regex: keyword, $options: "i" } }],
-    });
-  }
-
-  const query = andConditions.length ? { $and: andConditions } : {};
-
-  const [ticketings, counts] = await Promise.all([
-    ticketingRepo.getTicketingsWithFilters(query, page, limit),
-    ticketingRepo.getCounts(query),
-  ]);
-
-  const formattedTicketings = ticketings.map((item) => formatTicketing(timezone, item));
-  const { totalFiltered, total, active, inactive } = counts;
-
-  const meta = {
-    ...generateMeta(page, limit, totalFiltered),
-    ticketingsCount: { total, active, inactive },
-  };
-
-  return { ticketings: formattedTicketings, meta };
 };
 
 const getTicketingsByEventId = async ({ timezone, eventId }) => {

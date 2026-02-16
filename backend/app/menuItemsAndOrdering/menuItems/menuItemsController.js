@@ -9,7 +9,7 @@ const {
 } = require("@utils/responseUtil");
 
 const menuItemsService = require("./menuItemsService");
-const { getInAppOrderingSettings } = require("../../usersManagement/usersRepository");
+const { getInAppOrderingSettings } = require("../../../admin/organizations/organizationRepository");
 
 
 const getMenuItems = async (req, res) => {
@@ -17,7 +17,7 @@ const getMenuItems = async (req, res) => {
     status = "active",
     organization
   } = req.query;
-  let {_id: userId} = req.user;
+  let { _id: userId } = req.user;
   try {
     const { organizationDetails, recommended, menu } = await menuItemsService.getMenuItems({
       userId,
@@ -122,7 +122,7 @@ const getPickupOptions = async (req, res) => {
   try {
 
     const pickupOptions = await getInAppOrderingSettings(id)
-  
+
     if (!pickupOptions) {
       return sendResponse({
         res,

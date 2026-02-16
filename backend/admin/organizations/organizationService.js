@@ -171,6 +171,7 @@ const updateOrganization = async ({ id, data, timezone }) => {
     tags,
     description,
     title,
+    inAppOrderingSettings
   } = data;
   await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
   const session = await mongoose.startSession();
@@ -227,6 +228,65 @@ const updateOrganization = async ({ id, data, timezone }) => {
     if (tags !== undefined) organization.tags = tags;
     if (description !== undefined) organization.otherInfo.description = description;
     if (title !== undefined) organization.basicInfo.name = title;
+
+    // update inAppOrderingSettings if provided
+    // ---------- UPDATE inAppOrderingSettings ----------
+    if (inAppOrderingSettings !== undefined) {
+      organization.inAppOrderingSettings = {
+        paymentMethods: {
+          instantPayment:
+            inAppOrderingSettings?.paymentMethods?.instantPayment ??
+            organization?.inAppOrderingSettings?.paymentMethods?.instantPayment ??
+            false,
+
+          payLater: {
+            allow:
+              inAppOrderingSettings?.paymentMethods?.payLater?.allow ??
+              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.allow ??
+              false,
+
+            enableOrderAcceptance:
+              inAppOrderingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ??
+              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ??
+              false,
+
+            chargeOnAcceptance:
+              inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ??
+              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ??
+              false,
+
+            chargeOnDelivery:
+              inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnDelivery ??
+              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnDelivery ??
+              false,
+          },
+
+          cashPayment:
+            inAppOrderingSettings?.paymentMethods?.cashPayment ??
+            organization?.inAppOrderingSettings?.paymentMethods?.cashPayment ??
+            false,
+        },
+
+        deliveryMethods: {
+          counterPickup:
+            inAppOrderingSettings?.deliveryMethods?.counterPickup ??
+            organization?.inAppOrderingSettings?.deliveryMethods?.counterPickup ??
+            true,
+
+          tableDelivery:
+            inAppOrderingSettings?.deliveryMethods?.tableDelivery ??
+            organization?.inAppOrderingSettings?.deliveryMethods?.tableDelivery ??
+            false,
+
+          toGo:
+            inAppOrderingSettings?.deliveryMethods?.toGo ??
+            organization?.inAppOrderingSettings?.deliveryMethods?.toGo ??
+            false,
+        },
+      };
+    }
+
+
 
     // ---------- VENUE HANDLING ----------
     if (venue !== undefined) {

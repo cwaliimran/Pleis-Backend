@@ -10,6 +10,7 @@ const { getTotalEventCountByOrganizationId, getLatestEventByOrganization } = req
 const { getTotalTicketsPurchasedByOrganizationId } = require("../ticketing/ticketingsRepository");
 const { getTotalEngagementEventsByOrganizationId } = require("@appEngagement/engagementEventsRepository");
 const { getTotalClosingBalanceByOrganizationId } = require("../transactions/repositories/unifiedTransactionsRepository");
+const { default: mongoose } = require("mongoose");
 
 // Create
 const createOrganization = async (data) => {
@@ -160,7 +161,7 @@ const getOrganizationIdsByCompanyOrganizer = async (companyOrganizer) => {
 
 //get organization names by company organizer
 const getOrganizationNamesByCompanyOrganizer = async (companyOrganizer) => {
-  const organizations = await Organizations.find({ creator: companyOrganizer }).select("basicInfo.name").lean();
+  const organizations = await Organizations.find({ creator: companyOrganizer, status: "active" }).select("basicInfo.name").lean();
   return organizations;
 };
 
@@ -171,6 +172,7 @@ const getMenuIdsByCompanyOrganizer = async (companyOrganizer) => {
   return menus.map(menu => menu._id);
 };
 const getOrgCompanyOrganizer = async (organizationId) => {
+  console.log("organizationId",organizationId );
   const org = await Organizations.findById(organizationId).select("creator").lean();
   return org ? org.creator : null;
 }
@@ -182,6 +184,17 @@ const getOrganizationIdByCompanyOrganizer = async (companyOrganizer) => {
   const organizations = await Organizations.find({ creator: companyOrganizer }).select("_id").lean();
   return organizations;
 };
+
+//get company pickup options
+const getInAppOrderingSettings = async (companyOrganizer) => {
+  const orgSettings = await Organizations.findOne({
+    creator: companyOrganizer
+  })
+    .select("inAppOrderingSettings")
+    .lean();
+  return orgSettings?.inAppOrderingSettings || [];
+};
+
 
 module.exports = {
   createOrganization,
@@ -199,5 +212,6 @@ module.exports = {
   getStaffIdsByOrganization,
   getOrgCompanyOrganizer,
   getOrganizationNotifications,
-  getOrganizationIdByCompanyOrganizer
+  getOrganizationIdByCompanyOrganizer,
+  getInAppOrderingSettings
 };

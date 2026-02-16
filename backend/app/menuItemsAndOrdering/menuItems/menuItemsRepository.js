@@ -62,7 +62,11 @@ const getRecommendedItems = async (menuItemId, limit = 10) => {
 // ----------------------
 // HYBRID RECOMMENDER (ORG-BASED)
 // ----------------------
-const getOrganizationHybridRecommendedItems = async (userId, organizationId, limit = 10) => {
+const getOrganizationHybridRecommendedItems = async (
+  userId,
+  organizationId,
+  limit = 10
+) => {
   // 1. Find active menu
   const menu = await Menus.findOne({
     organization: organizationId,
@@ -71,7 +75,7 @@ const getOrganizationHybridRecommendedItems = async (userId, organizationId, lim
 
   if (!menu) return [];
 
-  // 2. Fetch all active menu items for this organization
+  // 2. Fetch active menu items
   const menuItems = await MenuItems.find({
     menu: menu._id,
     status: "active"
@@ -79,14 +83,12 @@ const getOrganizationHybridRecommendedItems = async (userId, organizationId, lim
 
   if (!menuItems.length) return [];
 
-
-  // -------------------------------
-  // 3. PURCHASE HISTORY FREQUENCY
-  // -------------------------------
+  /* -------------------------------
+     PURCHASE HISTORY
+  ------------------------------- */
   const orders = await MenuOrders.find({ user: userId })
     .select("items")
     .lean();
-
 
   const frequencyMap = {};
 
@@ -98,40 +100,52 @@ const getOrganizationHybridRecommendedItems = async (userId, organizationId, lim
     }
   }
 
-  // -------------------------------
-  // 4. TEXT TOKENIZER
-  // -------------------------------
+  /* -------------------------------
+     TOKENIZER
+  ------------------------------- */
   const tokenize = (str) =>
     str.toLowerCase().split(/[\s,.-]+/).filter(Boolean);
 
-  // -------------------------------
-  // 5. BUILD SCORES FOR EACH ITEM
-  // -------------------------------
+  /* -------------------------------
+     BUILD SCORES
+  ------------------------------- */
   const results = menuItems.map((item) => {
-
     const words = tokenize(item.title);
 
-    // TEXT SCORE: match between items inside the same menu
     let textScore = 0;
     menuItems.forEach((other) => {
       if (other._id.toString() === item._id.toString()) return;
-      tokenize(other.title).forEach(w => {
+
+      tokenize(other.title).forEach((w) => {
         if (words.includes(w)) textScore++;
       });
     });
 
-    const purchaseScore = frequencyMap[item._id.toString()] || 0;
+    const purchaseScore =
+      frequencyMap[item._id.toString()] || 0;
 
     return {
       ...item,
-      _score: (purchaseScore * 2) + textScore
+      _score: purchaseScore * 2 + textScore
     };
   });
 
+  /* -------------------------------
+     FINAL SORT
+     upSellItem first
+  ------------------------------- */
   return results
-    .sort((a, b) => b._score - a._score)
+    .sort((a, b) => {
+      // upsell priority
+      if (a.upSellItem && !b.upSellItem) return -1;
+      if (!a.upSellItem && b.upSellItem) return 1;
+
+      // then score
+      return b._score - a._score;
+    })
     .slice(0, limit);
 };
+
 
 module.exports = {
   getMenuItemsWithFilters,

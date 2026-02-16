@@ -2,37 +2,52 @@
 const { generateMeta } = require("@utils/responseUtil");
 const categoryRepo = require("./menuItemCategoriesRepository");
 const { formatItemCategory } = require("../menuItems/formatter/formatMenuItems");
-const createCategory = async ({ image, title, status }) => {
-  let category = await categoryRepo.createCategory({ image, title, status });
+const createCategory = async ({ image, title, status,companyOrganizer }) => {
+  let category = await categoryRepo.createCategory({ image, title, status,companyOrganizer });
   return formatItemCategory(category);
 };
 
-const getCategories = async ({ page, limit, keyword, status, date }) => {
+const getCategories = async ({ page, limit, keyword, companyOrganizer, status, date }) => {
   const query = {};
+
+  // Handle 'status' filter
   if (status) {
     query.status = status;
   } else {
     query.status = { $ne: "deleted" };
   }
+
+  // Handle 'date' filter
   if (date) {
     query.createdAt = {
       $gte: new Date(date),
       $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
     };
   }
+
+  // Handle 'keyword' filter
   if (keyword) {
     query.title = { $regex: keyword, $options: "i" };
   }
 
+  // Handle 'companyOrganizer' filter - matching provided value or null
+  if (companyOrganizer) {
+    query.$or = [
+      { companyOrganizer },
+      { companyOrganizer: null } 
+    ];
+  }
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
+  // Fetch categories with various counts
   const [categories, totalFiltered, total, active, inactive] =
     await Promise.all([
       categoryRepo.getCategoriesWithFilters(
         query,
         skip,
         limit === 0 ? 0 : limit,
-        keyword
+        keyword,
+        companyOrganizer
       ),
       categoryRepo.countCategories(query),
       categoryRepo.countCategories({ status: { $ne: "deleted" } }),
@@ -42,15 +57,20 @@ const getCategories = async ({ page, limit, keyword, status, date }) => {
 
   let meta = generateMeta(page, limit, totalFiltered);
   meta.categoriesCount = { total, active, inactive };
+
+  // Format categories if needed
   let formattedCategories = categories?.map((cat) => formatItemCategory(cat));
+
   return {
     categories: formattedCategories,
     meta,
   };
 };
 
+
 const getPublicCategories = async ({ page, limit, keyword, date }) => {
-  const baseFilters = [{ status: "active" }];
+  const baseFilters = [{ status: "active" }]
+  console.log("enter", );
 
   if (date) {
     baseFilters.push({
@@ -90,6 +110,7 @@ const getPublicCategories = async ({ page, limit, keyword, date }) => {
     total: totalFiltered,
   };
   let formattedCategories = categories?.map((cat) => formatItemCategory(cat));
+  console.log("formattedCategories",formattedCategories );
   return {
     categories: formattedCategories,
     meta,

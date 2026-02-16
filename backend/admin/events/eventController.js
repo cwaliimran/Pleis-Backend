@@ -14,7 +14,6 @@ const ticketingService = require("../ticketing/ticketingsService");
 const { updateEventService } = require("./updateEventService");
 const { getNotificationsByEventIdService } = require("../notifications/notificationsService");
 const { getRatingsByEventIdService } = require("../reviews/reviewsService");
-
 const createEvent = async (req, res) => {
   let { timezone, _id: userId } = req.user;
 
@@ -271,6 +270,35 @@ const createEvent = async (req, res) => {
   }
 };
 
+
+// const updateEventsWithCompanyOrganizer = async () => {
+//   try {
+//     const events = await Events.find().select('_id basicInfo.organization');
+
+//     for (const event of events) {
+//       const organization = event.basicInfo.organization;
+
+//       const organizationData = await Organizations.findById(organization).select('creator');
+//       if (organizationData) {
+//         const companyOrganizer = organizationData.creator;
+
+//         // Update the event with companyOrganizer
+//         await Events.updateOne(
+//           { _id: event._id },
+//           { $set: { companyOrganizer } }
+//         );
+
+//         // Log the update for each event
+//         console.log(`Updated event _id: ${event._id} with companyOrganizer: ${companyOrganizer}`);
+//       }
+//     }
+
+//     return 'Events updated successfully';
+//   } catch (error) {
+//     console.error(error);
+//     throw new Error('Error updating events with company organizer');
+//   }
+// };
 
 
 
@@ -781,7 +809,41 @@ const getEventRatings = async (req, res) => {
     });
   }
 };
+const getEventbycompanyOrganizer = async (req, res) => {
+  let { companyOrganizer } = req.params;
+  if (!companyOrganizer) {
+    return res.status(400).json({ error: "company organizer ID is required" });
+  }
+  let { timezone } = req.user;
+  try {
+    companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
 
+    if (companyOrganizer) {
+      if (!validateParams(req, res, {
+        objectIdFields: ["companyOrganizer"],
+      })) return;
+    }
+
+    let { events } = await eventService.getEventbycompanyOrganizer({
+      companyOrganizer,
+      timezone,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "events_fetched_successfully",
+      data: events,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
 module.exports = {
   createEvent,
   getEvents,
@@ -795,5 +857,6 @@ module.exports = {
   getMinimalEventsInfo,
   getEventTicketings,
   getEventNotifications,
-  getEventRatings
+  getEventRatings,
+  getEventbycompanyOrganizer
 };
