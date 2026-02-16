@@ -121,22 +121,8 @@ const allowedOrigins = [
   "https://www.dev.pleis.com",
   "http://localhost:4003",
   "https://pleis.vercel.app",
-  "https://latex-industry-bridges-wines.trycloudflare.com",
-  "https://nelson-sponsor-santa-interact.trycloudflare.com",
-  "https://specification-medicine-exec-deaf.trycloudflare.com",
-  "https://willow-zealand-currency-fortune.trycloudflare.com",
-  "https://ebook-what-premiere-totals.trycloudflare.com",
-  "https://individual-travesti-hockey-cancel.trycloudflare.com",
-  "https://handy-floral-implementation-pumps.trycloudflare.com",
-  "https://protected-betty-allows-gale.trycloudflare.com",
-  "https://personnel-event-waves-alexander.trycloudflare.com",
-  "https://glow-task-hood-meditation.trycloudflare.com",
-  "https://detective-viruses-manufacture-arrives.trycloudflare.com",
-  "https://genome-exploring-browser-brown.trycloudflare.com",
-  "https://abraham-pipes-activity-polar.trycloudflare.com",
-  "https://actions-interactive-banana-telling.trycloudflare.com",
-  "http://192.168.13.71:4003",
-  "http://192.168.*.*:4003",];
+  "http://192.168.*.*:4003",
+];
 
 securityMiddleware(app, {
   allowedOrigins,

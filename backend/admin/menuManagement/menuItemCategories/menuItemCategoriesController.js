@@ -8,15 +8,16 @@ const {
 const categoriesService = require("./menuItemCategoriesService");
 
 const createCategory = async (req, res) => {
-  const { image, title, status = "active" ,companyOrganizer} = req.body;
+  let { image, title, status = "active" ,companyOrganizer} = req.body;
 
   if (!validateParams(req, res, {
     rawData: ["title"], enumFields: {
       status: ["active", "inactive", "deleted"],
     }
   })) return;
-
-
+  if(req.user.userType==="organizer"){
+    companyOrganizer=req.user._id
+  }
   try {
     const category = await categoriesService.createCategory({
       image,
@@ -44,34 +45,32 @@ const createCategory = async (req, res) => {
 
 const getCategories = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date } = req.query;
-
-  // Validate status value if provided
-  const allowedStatuses = ["active", "inactive", "deleted"];
-  if (status && !allowedStatuses.includes(status)) {
-    return sendResponse({
-      res,
-      statusCode: 400,
-      translationKey: "invalid_status_value",
-      error: "Status must be one of: active, inactive, deleted",
-    });
-  }
+  let { keyword, status = 'active', date, companyOrganizer } = req.query;
 
   try {
+    // Validate date format if provided
     if (date && !validateParams(req, res, {
       dateFields: {
         date: "YYYY-MM-DD",
       },
     })) return;
 
+    // If the user is an organizer, assign their ID to companyOrganizer
+    if (req.user.userType === "organizer") {
+      companyOrganizer = req.user._id;
+    }
+
+    // Call the categories service to fetch the categories
     const { categories, meta } = await categoriesService.getCategories({
       page,
       limit,
       keyword,
+      companyOrganizer,
       status,
       date,
     });
 
+    // Send the response with the fetched categories and meta information
     return sendResponse({
       res,
       statusCode: 200,
@@ -80,14 +79,17 @@ const getCategories = async (req, res) => {
       meta,
     });
   } catch (error) {
+    // Catch any errors and send an error response
     return sendResponse({
       res,
       statusCode: 500,
       translationKey: "internal_server",
-      error: error,
+      error: error.message,
     });
   }
 };
+
+
 
 const getPublicCategories = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);

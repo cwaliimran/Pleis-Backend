@@ -63,7 +63,7 @@ const createMenu = async (req, res) => {
 
 const getMenus = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "active", organizations, date, companyOrganizer } = req.query;
+  let { keyword, status , organizations, date, companyOrganizer } = req.query;
 
   try {
     // arse organizations if it’s a JSON string (e.g. '["id1","id2"]')

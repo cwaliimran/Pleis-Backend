@@ -438,6 +438,27 @@ const getEventTicketsAnalyticsService = async (id) => {
     ticketingStats
   };
 };
+const getEventbycompanyOrganizer = async ({ companyOrganizer, timezone }) => {
+  const query = {
+    status: "active"
+  };
+
+  if (companyOrganizer) {
+    query.companyOrganizer = companyOrganizer;
+  }
+  const [events] =
+    await Promise.all([
+      eventRepo.getEventbycompanyOrganizer(
+        query,
+      ),
+    ]);
+
+
+
+  return {
+    events,
+  };
+};
 
 
 module.exports = {
@@ -451,5 +472,6 @@ module.exports = {
   updateEventsWithVenueLocation,
   getMinimalEventsInfo,
   getEventAnalyticsService,
-  getEventTicketsAnalyticsService
+  getEventTicketsAnalyticsService,
+  getEventbycompanyOrganizer
 };

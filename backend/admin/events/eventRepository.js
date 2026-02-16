@@ -8,10 +8,13 @@ const { TicketingBookings } = require("@TicketingBookingsModel");
 const { getAllUsers } = require("../usersManagement/usersService");
 const { sendUserNotifications } = require("@notificationsUtil");
 const { NotificationTypes } = require("@NotificationsModel");
+const { getOrgCompanyOrganizer } = require("../organizations/organizationRepository");
 
 
 const createEvent = async (data, ticketingData) => {
   const session = await Events.startSession();
+  const companyOrganizer=await getOrgCompanyOrganizer(data.basicInfo.organization)
+  data.companyOrganizer=companyOrganizer
   const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
   session.startTransaction();
 
@@ -616,6 +619,26 @@ const getOrganizationIdByEventId = async (eventId) => {
     throw error;
   }
 };
+const getEventbycompanyOrganizer = async (query) => {
+  try {
+    const { status, companyOrganizer } = query;
+
+    if (!companyOrganizer) return 'Company organizer ID is required';
+
+    const event = await Events.find({
+      'companyOrganizer': companyOrganizer,
+      'status': status
+    })
+    .select('_id basicInfo.title')
+    .lean();
+
+    return event || 'No event found for this company organizer with the given status';
+  } catch (error) {
+    console.error(error);
+    throw new Error('Error retrieving event');
+  }
+};
+
 module.exports = {
   createEvent,
   getEventsWithFilters,
@@ -636,6 +659,7 @@ module.exports = {
   getScannedTicketProgress,
   getTotalEventCountByOrganizationId,
   getLatestEventByOrganization,
-  getOrganizationIdByEventId
+  getOrganizationIdByEventId,
+  getEventbycompanyOrganizer
 
 };

@@ -210,7 +210,7 @@ const getEvents = async ({ organization, creator }) => {
     query.creator = new mongoose.Types.ObjectId(creator);
   }
   const events = await Events.find(query)
-    .select("_id basicInfo.title")
+    .select("_id basicInfo.title schedule")
     .sort({ "basicInfo.title": 1 })
     .lean();
 
