@@ -7,45 +7,77 @@ function reservationsFormatter(item, timezone) {
 
   const cat = item.toObject ? item.toObject() : { ...item };
 
+  // ---- Main timingSlots ----
   if (cat.timingSlots?.dateTimeSlots) {
-    const dateTimeSlots = Array.isArray(cat.timingSlots.dateTimeSlots)
-      ? cat.timingSlots.dateTimeSlots
-      : [cat.timingSlots.dateTimeSlots]; // normalize to array
+    cat.timingSlots.dateTimeSlots =
+      formatDateTimeSlots(
+        cat.timingSlots.dateTimeSlots,
+        timezone
+      );
+  }
 
-    dateTimeSlots.forEach(slot => {
-      if (!slot.timeSlots) return;
+  // ---- Reservation changes timing ----
+  if (Array.isArray(cat.reservationChanges)) {
+    cat.reservationChanges = cat.reservationChanges.map(change => {
+      if (change.oldTiming?.dateTimeSlots) {
+        change.oldTiming.dateTimeSlots =
+          formatDateTimeSlots(
+            change.oldTiming.dateTimeSlots,
+            timezone
+          );
+      }
 
-      slot.date = moment(slot.date).format("YYYY-MM-DD");
-      // normalize timeSlots into array too
-      const timeSlots = Array.isArray(slot.timeSlots)
-        ? slot.timeSlots
-        : [slot.timeSlots];
+      if (change.newTiming?.dateTimeSlots) {
+        change.newTiming.dateTimeSlots =
+          formatDateTimeSlots(
+            change.newTiming.dateTimeSlots,
+            timezone
+          );
+      }
 
-      timeSlots.forEach(timeSlot => {
-        let startTime = timeSlot.startTime;
-        let endTime = timeSlot.endTime;
-
-        // if they come as "hh:mm A" convert to ISO
-        if (moment(startTime, "hh:mm A", true).isValid()) {
-          startTime = moment(startTime, "hh:mm A").toISOString();
-        }
-        if (moment(endTime, "hh:mm A", true).isValid()) {
-          endTime = moment(endTime, "hh:mm A").toISOString();
-        }
-
-
-        timeSlot.startTime = convertUtcToTimezoneAMPM(startTime, timezone);
-        timeSlot.endTime = convertUtcToTimezoneAMPM(endTime, timezone);
-      });
-
-      // write normalized back
-      slot.timeSlots = timeSlots;
+      return change;
     });
-
-    cat.timingSlots.dateTimeSlots = dateTimeSlots;
   }
 
   return cat;
+}
+function formatDateTimeSlots(dateTimeSlots, timezone) {
+  if (!dateTimeSlots) return dateTimeSlots;
+
+  const slots = Array.isArray(dateTimeSlots)
+    ? dateTimeSlots
+    : [dateTimeSlots];
+
+  slots.forEach(slot => {
+    if (!slot.timeSlots) return;
+
+    slot.date = moment(slot.date).format("YYYY-MM-DD");
+
+    const timeSlots = Array.isArray(slot.timeSlots)
+      ? slot.timeSlots
+      : [slot.timeSlots];
+
+    timeSlots.forEach(timeSlot => {
+      let { startTime, endTime } = timeSlot;
+
+      if (moment(startTime, "hh:mm A", true).isValid()) {
+        startTime = moment(startTime, "hh:mm A").toISOString();
+      }
+
+      if (moment(endTime, "hh:mm A", true).isValid()) {
+        endTime = moment(endTime, "hh:mm A").toISOString();
+      }
+
+      timeSlot.startTime =
+        convertUtcToTimezoneAMPM(startTime, timezone);
+      timeSlot.endTime =
+        convertUtcToTimezoneAMPM(endTime, timezone);
+    });
+
+    slot.timeSlots = timeSlots;
+  });
+
+  return slots;
 }
 
 function reservationsFormatterAdjustDates(item, timezone) {
@@ -53,119 +85,145 @@ function reservationsFormatterAdjustDates(item, timezone) {
 
   let cat;
   try {
-    cat = item.toObject ? item.toObject() : JSON.parse(JSON.stringify(item));
+    cat = item.toObject
+      ? item.toObject()
+      : JSON.parse(JSON.stringify(item));
   } catch {
     cat = { ...item };
   }
 
-  if (!cat.timingSlots || !cat.timingSlots.dateTimeSlots) {
-    return cat;
+  // ---- Main timing ----
+  if (cat.timingSlots?.dateTimeSlots) {
+    cat.timingSlots.dateTimeSlots =
+      formatDateTimeSlots(
+        cat.timingSlots.dateTimeSlots,
+        timezone
+      );
   }
 
-  const dateTimeSlots = Array.isArray(cat.timingSlots.dateTimeSlots)
-    ? cat.timingSlots.dateTimeSlots
-    : [cat.timingSlots.dateTimeSlots];
+  // ---- Reservation changes ----
+  if (Array.isArray(cat.reservationChanges)) {
+    cat.reservationChanges.forEach(change => {
+      if (change.oldTiming?.dateTimeSlots) {
+        change.oldTiming.dateTimeSlots =
+          formatDateTimeSlots(
+            change.oldTiming.dateTimeSlots,
+            timezone
+          );
+      }
 
-  dateTimeSlots.forEach(slot => {
-    // -----------------------------
-    // DATE NORMALIZATION
-    // -----------------------------
-    if (slot.date) {
-      slot.date = moment(slot.date).format("YYYY-MM-DD");
-    }
-
-    // -----------------------------
-    // TIME SLOTS NORMALIZATION
-    // -----------------------------
-    if (Array.isArray(slot.timeSlots)) {
-      slot.timeSlots.forEach(timeSlot => {
-        let { startTime, endTime } = timeSlot;
-
-        // Normalize startTime
-        if (startTime instanceof Date) {
-          startTime = startTime.toISOString();
-        } else if (typeof startTime === "string") {
-          if (moment(startTime, "hh:mm A", true).isValid()) {
-            startTime = moment(startTime, "hh:mm A").toISOString();
-          }
-        }
-
-        // Normalize endTime
-        if (endTime instanceof Date) {
-          endTime = endTime.toISOString();
-        } else if (typeof endTime === "string") {
-          if (moment(endTime, "hh:mm A", true).isValid()) {
-            endTime = moment(endTime, "hh:mm A").toISOString();
-          }
-        }
-
-        // Final timezone conversion (SAFE)
-        timeSlot.startTime = convertUtcToTimezoneAMPM(startTime, timezone);
-        timeSlot.endTime = convertUtcToTimezoneAMPM(endTime, timezone);
-      });
-    }
-  });
+      if (change.newTiming?.dateTimeSlots) {
+        change.newTiming.dateTimeSlots =
+          formatDateTimeSlots(
+            change.newTiming.dateTimeSlots,
+            timezone
+          );
+      }
+    });
+  }
 
   return cat;
 }
 
 
-
-
 const userReservationsFormatter = (item, timezone) => {
   if (!item) return null;
 
-  const cat = item.toObject ? item.toObject() : { ...item };
+  const cat = item.toObject
+    ? item.toObject()
+    : { ...item };
 
-  // ---------------------------
-  // 1. HANDLE eventStartDate  → eventDate + eventTime
-  // ---------------------------
+  // Normalize timing
+  if (cat.timingSlots?.dateTimeSlots) {
+    cat.timingSlots.dateTimeSlots =
+      formatDateTimeSlots(
+        cat.timingSlots.dateTimeSlots,
+        timezone
+      );
+  }
+
+  // Normalize reservation changes
+  if (Array.isArray(cat.reservationChanges)) {
+    cat.reservationChanges.forEach(change => {
+      if (change.oldTiming?.dateTimeSlots) {
+        change.oldTiming.dateTimeSlots =
+          formatDateTimeSlots(
+            change.oldTiming.dateTimeSlots,
+            timezone
+          );
+      }
+
+      if (change.newTiming?.dateTimeSlots) {
+        change.newTiming.dateTimeSlots =
+          formatDateTimeSlots(
+            change.newTiming.dateTimeSlots,
+            timezone
+          );
+      }
+    });
+  }
+
+  /* ---------------------------
+     Event start date
+  --------------------------- */
   if (cat.eventStartDate) {
-    const start = moment(cat.eventStartDate);   // original UTC datetime
+    const start = moment(cat.eventStartDate);
 
-    // Extract date
     cat.eventDate = start.format("YYYY-MM-DD");
+    cat.eventTime =
+      convertUtcToTimezoneAMPM(
+        start.toISOString(),
+        timezone
+      );
 
-    // Extract time in AM/PM converted to user's timezone
-    cat.eventTime = convertUtcToTimezoneAMPM(start.toISOString(), timezone);
     delete cat.eventStartDate;
   }
-  cat.profileIcon = getFullImageUrl(cat.profileIcon || "noimage.png");
-  cat.organizationCover = getFullImageUrl(cat.organizationCover || "noimage.png");
-  cat.organizationLogo = getFullImageUrl(cat.organizationLogo || "noimage.png");
-  // ---------------------------
-  // 2. HANDLE dateTimeSlots ARRAY
-  // ---------------------------
-  if (cat.timingSlots && cat.timingSlots.dateTimeSlots) {
-    const dateTimeSlot = cat.timingSlots.dateTimeSlots;
 
-    if (Array.isArray(dateTimeSlot) && dateTimeSlot.length === 1) {
-      const slot = dateTimeSlot[0];
+  /* ---------------------------
+     Images
+  --------------------------- */
+  cat.profileIcon =
+    getFullImageUrl(cat.profileIcon || "noimage.png");
 
-      cat.timingSlots.date = moment(slot.date).format("YYYY-MM-DD");
+  cat.organizationCover =
+    getFullImageUrl(cat.organizationCover || "noimage.png");
 
-      const start = slot.timeSlots?.[0]?.startTime;
-      const end = slot.timeSlots?.[0]?.endTime;
+  cat.organizationLogo =
+    getFullImageUrl(cat.organizationLogo || "noimage.png");
 
-      if (start) {
-        cat.timingSlots.startTime = convertUtcToTimezoneAMPM(start, timezone);
-      }
-      if (end) {
-        cat.timingSlots.endTime = convertUtcToTimezoneAMPM(end, timezone);
-      }
+  /* ---------------------------
+     Single slot flattening
+  --------------------------- */
+  if (
+    cat.timingSlots &&
+    Array.isArray(cat.timingSlots.dateTimeSlots) &&
+    cat.timingSlots.dateTimeSlots.length === 1
+  ) {
+    const slot = cat.timingSlots.dateTimeSlots[0];
 
-      delete cat.timingSlots.dateTimeSlots;
-    }
+    cat.timingSlots.date = slot.date;
+
+    const start = slot.timeSlots?.[0]?.startTime;
+    const end = slot.timeSlots?.[0]?.endTime;
+
+    if (start) cat.timingSlots.startTime = start;
+    if (end) cat.timingSlots.endTime = end;
+
+    delete cat.timingSlots.dateTimeSlots;
   }
 
-  //formt preOrderMenuItemsOrder 
-  if (cat.preOrderMenuItemsOrder) {
+  /* ---------------------------
+     Preorder images
+  --------------------------- */
+  if (cat.preOrderMenuItemsOrder?.items) {
     cat.preOrderMenuItemsOrder.items =
-      cat.preOrderMenuItemsOrder.items = cat.preOrderMenuItemsOrder.items.map(item => {
-        item.menuItemSnapShot.image = getFullImageUrl(item.menuItemSnapShot.image || "noimage.png");
-        return item;
+      cat.preOrderMenuItemsOrder.items.map(i => {
+        i.menuItemSnapShot.image =
+          getFullImageUrl(
+            i.menuItemSnapShot.image || "noimage.png"
+          );
+        return i;
       });
-
   }
 
   return { ...cat };

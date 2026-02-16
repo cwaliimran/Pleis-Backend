@@ -92,31 +92,68 @@ const findByIdAndUpdate = async (id, data) => {
 const getField = (tierKey) => `${tierKey}.entryPoints`;
 
 const getFirstTier = async (tierKey) => {
-  return Tiers.findOne()
-    .sort({ [getField(tierKey)]: 1 })
-    .select(`title image ${tierKey}.entryPoints ${tierKey}.retainPoints`);
+  const tiers = await getCachedActiveTiers(tierKey);
+  return tiers[0] || null;
 };
 
+
 const getNextTier = async (tierKey, currentPoints) => {
-  return Tiers.findOne({
-    [getField(tierKey)]: { $gt: currentPoints },
-    status: "active",
-  })
-    .sort({ [getField(tierKey)]: 1 });
+  const tiers = await getCachedActiveTiers(tierKey);
+
+  return (
+    tiers.find(
+      t => t[tierKey]?.entryPoints > currentPoints
+    ) || null
+  );
 };
 
 const getPreviousTier = async (tierKey, currentPoints) => {
-  return Tiers.findOne({
-    [getField(tierKey)]: { $lt: currentPoints }
-  })
-    .sort({ [getField(tierKey)]: -1 });
+  const tiers = await getCachedActiveTiers(tierKey);
+
+  let prev = null;
+
+  for (const tier of tiers) {
+    if (tier[tierKey]?.entryPoints < currentPoints)
+      prev = tier;
+    else break;
+  }
+
+  return prev;
 };
 
-const getPreviousTierByRetainPoints = async (tierKey, earned12Months) => {
-  return Tiers.findOne({
-    [`${tierKey}.retainPoints`]: { $lte: earned12Months }
-  })
-    .sort({ [`${tierKey}.retainPoints`]: -1 });
+
+const getPreviousTierByRetainPoints = async (
+  tierKey,
+  earned12Months
+) => {
+  const tiers = await getCachedActiveTiers(tierKey);
+
+  let result = null;
+
+  for (const tier of tiers) {
+    if (
+      tier[tierKey]?.retainPoints <=
+      earned12Months
+    ) {
+      result = tier;
+    }
+  }
+
+  return result;
+};
+
+const getCachedActiveTiers = async (tierKey) => {
+  const cacheKey = `${ACTIVE_TIERS_CACHE_KEY}:public:all:${tierKey}`;
+
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400,
+    fetchFn: async () => {
+      return Tiers.find({ status: "active" })
+        .sort({ [`${tierKey}.entryPoints`]: 1 })
+        .lean();
+    },
+  });
 };
 
 module.exports = {
@@ -132,5 +169,6 @@ module.exports = {
   deleteTierById,
   findByIdAndUpdate,
   getActiveTiersWithProjection,
-  getCounts
+  getCounts,
+  getCachedActiveTiers
 };

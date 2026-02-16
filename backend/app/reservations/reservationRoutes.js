@@ -2,11 +2,11 @@ const express = require("express");
 const {
   createReservation,
   getReservations,
-  updateReservation,
-  deleteReservation,
   getUserReservationDetails,
   getUserReservations,
-  transferReservation
+  transferReservation,
+  acceptReservationChange,
+  cancelReservation,
 } = require("./reservationController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -30,13 +30,13 @@ router.get("/", auth, getReservations);
 //get Reservation details
 router.get("/details/:id", apiRateLimiterDetails, getUserReservationDetails);
 
-// Update an existing Reservation
-router.put("/:id",auth, updateReservation);
-
-// Delete a Reservation
-router.delete("/:id",  auth,deleteReservation);
-
 // get all user reservations
 router.get("/all",auth,  getUserReservations);
+
+//reservation changes and refunds processing
+router.post("/:id/accept-change", auth, acceptReservationChange);
+router.post("/:id/cancel", auth, cancelReservation);
+// router.post("/:id/process-refund", auth, roleMiddleware("admin"), processRefund);
+
 
 module.exports = router;

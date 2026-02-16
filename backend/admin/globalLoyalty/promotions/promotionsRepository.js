@@ -296,7 +296,62 @@ const getActiveGlobalLoyaltyHappyHourPromotion = async ({
     { $project: { claimStats: 0 } },
   ]);
 
-  return promotion || null;
+  if (!promotion) return null;
+
+  const recurrence = promotion.recurringDetails;
+  if (!recurrence?.isEnabled) return promotion;
+
+  const nowDate = now;
+  const dayMap = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+  const todayKey = dayMap[nowDate.getDay()];
+
+  // weekly restriction
+  if (
+    recurrence.frequency === "weekly" &&
+    recurrence.daysOfWeek.length &&
+    !recurrence.daysOfWeek.includes(todayKey)
+  ) {
+    return null;
+  }
+
+  // recurrence end check
+  if (
+    recurrence.endDate &&
+    nowDate > recurrence.endDate
+  ) {
+    return null;
+  }
+
+  /* =============================
+     HAPPY HOUR TIME WINDOW
+  ============================= */
+
+  const start = promotion.startDate;
+  const end = promotion.endDate;
+
+  if (!start || !end) return promotion;
+
+  const startMinutes =
+    start.getUTCHours() * 60 + start.getUTCMinutes();
+
+  const endMinutes =
+    end.getUTCHours() * 60 + end.getUTCMinutes();
+
+  const currentMinutes =
+    nowDate.getUTCHours() * 60 + nowDate.getUTCMinutes();
+
+  // supports midnight crossing
+  const insideWindow =
+    startMinutes <= endMinutes
+      ? currentMinutes >= startMinutes &&
+      currentMinutes <= endMinutes
+      : currentMinutes >= startMinutes ||
+      currentMinutes <= endMinutes;
+
+  if (!insideWindow) return null;
+
+  return promotion;
+
 };
 
 

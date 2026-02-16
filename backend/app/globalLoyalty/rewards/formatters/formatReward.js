@@ -24,9 +24,10 @@ function formatReward(reward) {
 
   switch (obj.rewardType) {
     case "globalCustomReward":
-      obj.customReward.image = getFullImageUrl(obj.customReward?.image);
+      if (obj?.customReward) {
+        obj.customReward.image = getFullImageUrl(obj.customReward.image);
+      }
       break;
-
   }
 
   return obj;

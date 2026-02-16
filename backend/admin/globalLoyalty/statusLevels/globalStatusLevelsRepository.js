@@ -1,106 +1,171 @@
 // repositories/statusLevelRepository.js
 const GlobalStatusLevels = require("@GlobalStatusLevelsModel");
 const { cache, invalidate } = require("@redisCache");
-const ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY = "globalLLoyaltyStatusLevel:active";
+
+const ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY =
+  "globalLLoyaltyStatusLevel:active";
+
 const buildGlobalLoyaltyStatusLevelCacheKey = ({
-  scope = "public", // public | admin
+  scope = "public",
   skip = 0,
-  limit = 10
+  limit = 10,
 }) => {
   return `${ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
 };
-// Create statusLevel in a transaction and update organization
+
+/* ============================================================
+   Cached active levels (core loader)
+============================================================ */
+const getCachedActiveLevels = async () => {
+  const cacheKey =
+    `${ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY}:public:all`;
+
+  return cache({
+    namespace: cacheKey,
+    ttl: 86400,
+    fetchFn: async () => {
+      return GlobalStatusLevels.find({
+        status: { $ne: "deleted" },
+      })
+        .sort({ entryPoints: 1 })
+        .select("title image entryPoints retainPoints")
+        .lean();
+    },
+  });
+};
+
+/* ============================================================
+   CREATE
+============================================================ */
 const createStatusLevel = async (data) => {
-  try {
-    // Create statusLevel
-    const statusLevel = new GlobalStatusLevels(data);
-    await statusLevel.save();
-    await invalidate(ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY);
-    return statusLevel;
-  } catch (err) {
-    throw err;
-  }
+  const statusLevel = new GlobalStatusLevels(data);
+  await statusLevel.save();
+  await invalidate(ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY);
+  return statusLevel;
 };
 
-// Get first status level where entryPoints are minimum, only select _id
+/* ============================================================
+   FIRST LEVEL
+============================================================ */
 const getFirstStatusLevel = async () => {
-  return await GlobalStatusLevels.findOne().select("_id entryPoints retainPoints").sort({ entryPoints: 1 });
+  const levels = await getCachedActiveLevels();
+  return levels[0] || null;
 };
 
-//get next status level where entryPoints are higher than provided points
+/* ============================================================
+   NEXT LEVEL
+============================================================ */
 const getNextStatusLevel = async (points) => {
-  return await GlobalStatusLevels.findOne({ entryPoints: { $gt: points } }).select("image entryPoints retainPoints title").sort({ entryPoints: 1 });
+  const levels = await getCachedActiveLevels();
+
+  return (
+    levels.find(l => l.entryPoints > points) || null
+  );
 };
-//get previous status level
+
+/* ============================================================
+   PREVIOUS LEVEL
+============================================================ */
 const getPreviousStatusLevel = async (points) => {
-  return await GlobalStatusLevels.findOne({ entryPoints: { $lt: points } }).select("image entryPoints retainPoints title").sort({ entryPoints: -1 });
+  const levels = await getCachedActiveLevels();
+
+  let prev = null;
+
+  for (const lvl of levels) {
+    if (lvl.entryPoints < points) prev = lvl;
+    else break;
+  }
+
+  return prev;
 };
 
-
-// get all higher levels than current entry points
+/* ============================================================
+   ALL HIGHER LEVELS
+============================================================ */
 const getAllHigherLevels = async (currentEntryPoints) => {
-  return await GlobalStatusLevels.find({
-    entryPoints: { $gt: currentEntryPoints }
-  })
-    .sort({ entryPoints: 1 })   // ascending
-    .select("title image entryPoints retainPoints");
+  const levels = await getCachedActiveLevels();
+
+  return levels.filter(
+    lvl => lvl.entryPoints > currentEntryPoints
+  );
 };
 
+/* ============================================================
+   FALLBACK BY RETAIN POINTS
+============================================================ */
+const getPreviousStatusLevelByRetainPoints = async (
+  earned12Months
+) => {
+  const levels = await getCachedActiveLevels();
 
-// Find the correct fallback level based on 12-month earned points
-const getPreviousStatusLevelByRetainPoints = async (earned12Months) => {
-  return await GlobalStatusLevels.findOne({
-    retainPoints: { $lte: earned12Months }
-  })
-    .select("title image entryPoints retainPoints")
-    .sort({ retainPoints: -1 });  // pick highest eligible level
+  let result = null;
+
+  for (const lvl of levels) {
+    if (lvl.retainPoints <= earned12Months) {
+      result = lvl;
+    }
+  }
+
+  return result;
 };
 
-
-// Get all statusLevels with their assigned organization populated, sorted by createdAt descending
-const getStatusLevelsWithFilters = async (query = {}, skip = 0, limit = 10) => {
-    const cacheKey = buildGlobalLoyaltyStatusLevelCacheKey({
+/* ============================================================
+   ADMIN LIST (paginated)
+============================================================ */
+const getStatusLevelsWithFilters = async (
+  query = {},
+  skip = 0,
+  limit = 10
+) => {
+  const cacheKey = buildGlobalLoyaltyStatusLevelCacheKey({
     scope: "admin",
     skip,
     limit,
   });
+
   return cache({
     namespace: cacheKey,
-    ttl: 86400, // 1 day
- 
+    ttl: 86400,
     fetchFn: async () => {
- 
-  return GlobalStatusLevels.find(query)
-    .sort({ entryPoints: 1 }) // ascending: Blue → Black
-    .skip(skip)
-    .limit(limit);
-},
+      return GlobalStatusLevels.find(query)
+        .sort({ entryPoints: 1 })
+        .skip(skip)
+        .limit(limit);
+    },
   });
 };
 
-// Count by condition
-const countStatusLevels = async (query = {}) => {
-  return GlobalStatusLevels.countDocuments(query);
-};
+/* ============================================================
+   COUNTS & DIRECT ACCESS
+============================================================ */
+const countStatusLevels = async (query = {}) =>
+  GlobalStatusLevels.countDocuments(query);
 
-// Find by ID
-const findStatusLevelById = async (id) => {
-  return GlobalStatusLevels.findById(id);
-};
+const findStatusLevelById = async (id) =>
+  GlobalStatusLevels.findById(id);
 
-// Update and save
-const updateStatusLevelData = async (statusLevel, data) => {
+/* ============================================================
+   UPDATE
+============================================================ */
+const updateStatusLevelData = async (
+  statusLevel,
+  data
+) => {
   await invalidate(ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY);
   Object.assign(statusLevel, data);
   return await statusLevel.save();
 };
 
-//findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
   await invalidate(ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY);
-  return GlobalStatusLevels.findByIdAndUpdate(id, data, { new: true });
+  return GlobalStatusLevels.findByIdAndUpdate(id, data, {
+    new: true,
+  });
 };
 
+/* ============================================================
+   EXPORTS
+============================================================ */
 module.exports = {
   createStatusLevel,
   getStatusLevelsWithFilters,
@@ -112,5 +177,5 @@ module.exports = {
   getNextStatusLevel,
   getAllHigherLevels,
   getPreviousStatusLevelByRetainPoints,
-  getPreviousStatusLevel
+  getPreviousStatusLevel,
 };

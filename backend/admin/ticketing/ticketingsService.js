@@ -1,41 +1,81 @@
 const { generateMeta } = require("../../helperUtils/responseUtil");
-const { getEventIdsByOrganization } = require("../events/eventRepository");
+const { getEventIdsByOrganization, getOrganizationIdByEventId } = require("../events/eventRepository");
+const { getOrgCompanyOrganizer } = require("../organizations/organizationRepository");
 const { formatTicketing, formatEventTicketing } = require("./fomatter/formatTicketing");
 const ticketingRepo = require("./ticketingsRepository");
 const TicketingsModel = require("@TicketingsModel");
 
 const createTicketing = async (timezone, data) => {
-
+  data.organization=await getOrganizationIdByEventId(data.event)
+  data.companyOrganizer=await getOrgCompanyOrganizer(data.organization)
   let ticketing = await ticketingRepo.createTicketing(data);
   if (!ticketing) return null;
   return formatTicketing(timezone, ticketing);
 };
 
-const getTicketings = async ({ timezone, page, limit, keyword, status, date, eventId }) => {
+const mongoose = require("mongoose");
+
+const getTicketings = async ({
+  timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  date,
+  eventId,
+  organizations,
+  companyOrganizer,
+}) => {
   const andConditions = [];
 
-  if (eventId) {
-    andConditions.push({ event: eventId });
+  // 🔹 Event filter
+  if (eventId && mongoose.Types.ObjectId.isValid(eventId)) {
+    andConditions.push({ event: new mongoose.Types.ObjectId(eventId) });
   }
 
-  if (date) {
+  // 🔹 Organization filter (comma OR % separated)
+  if (organizations) {
+    const separator = organizations.includes("%") ? "%" : ",";
+    
+    const orgArray = organizations
+      .split(separator)
+      .map(id => id.trim())
+      .filter(id => mongoose.Types.ObjectId.isValid(id))
+      .map(id => new mongoose.Types.ObjectId(id));
+
+    if (orgArray.length > 0) {
+      andConditions.push({ organization: { $in: orgArray } });
+    }
+  }
+  // 🔹 If no organizations → filter by companyOrganizer
+  else if (companyOrganizer && mongoose.Types.ObjectId.isValid(companyOrganizer)) {
     andConditions.push({
-      createdAt: {
-        $gte: new Date(date),
-        $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
-      },
+      companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
     });
   }
 
+  // 🔹 Date filter
+  if (date) {
+    const start = new Date(date);
+    const end = new Date(date);
+    end.setDate(end.getDate() + 1);
+
+    andConditions.push({
+      createdAt: { $gte: start, $lt: end },
+    });
+  }
+
+  // 🔹 Status filter
   if (status) {
     andConditions.push({ status });
   } else {
     andConditions.push({ status: { $ne: "deleted" } });
   }
 
+  // 🔹 Keyword filter
   if (keyword) {
     andConditions.push({
-      $or: [{ title: { $regex: keyword, $options: "i" } }],
+      title: { $regex: keyword, $options: "i" },
     });
   }
 
@@ -46,7 +86,10 @@ const getTicketings = async ({ timezone, page, limit, keyword, status, date, eve
     ticketingRepo.getCounts(query),
   ]);
 
-  const formattedTicketings = ticketings.map((item) => formatTicketing(timezone, item));
+  const formattedTicketings = ticketings.map((item) =>
+    formatTicketing(timezone, item)
+  );
+
   const { totalFiltered, total, active, inactive } = counts;
 
   const meta = {
@@ -56,6 +99,7 @@ const getTicketings = async ({ timezone, page, limit, keyword, status, date, eve
 
   return { ticketings: formattedTicketings, meta };
 };
+
 
 const getTicketingsByEventId = async ({ timezone, eventId }) => {
 

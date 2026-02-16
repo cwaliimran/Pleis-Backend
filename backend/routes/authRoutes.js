@@ -3,6 +3,7 @@ const express = require("express");
 const {
   register,
   login,
+  loginTest,
   generateOtp,
   resetPassword,
   verifyOtp,
@@ -29,6 +30,7 @@ const router = express.Router();
 // Define rate limiters
 const signupRateLimiter = createRateLimiter("register", 15, 15); // 15 requests per 15 minutes
 const loginRateLimiter = createRateLimiter("login", 15, 15); // 15 requests per 15 minute
+const loginRateLimiterTest = createRateLimiter("loginTest", 15, 15); // 15 requests per 15 minute
 const generateOtpRateLimiter = createRateLimiter("forgotPassword", 15, 15); // 15 requests per 15 minutes
 const resendOtpRateLimiter = createRateLimiter("resendOtp", 15, 15); // 15 requests per 15 minutes
 const verifyOtpRateLimiter = createRateLimiter("verifyOtp", 15, 15); // 10 requests per 10 minutes
@@ -52,6 +54,9 @@ router.post("/check-email-exists", checkEmailExistsAndVerified);
 router.post("/check-userName-exists", checkUserNameExists);
 router.post("/register", signupRateLimiter, register);
 router.post("/login", loginRateLimiter, login);
+if (process.env.NODE_ENV || "dev") {
+  router.post("/login-test", loginRateLimiterTest, loginTest);
+}
 router.post("/forgot-password", generateOtpRateLimiter, (req, res, next) => {
   req.body.type = "email";
   req.body.purpose = "forgot_password";

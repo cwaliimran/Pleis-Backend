@@ -26,15 +26,15 @@ router.use(auth);
 // Create a rate limiter for Promo Codes
 const MenuRateLimiter = createRateLimiter("Menu");
 
-router.post("/sale", roleMiddleware(["admin"]), MenuRateLimiter, createSale);
-router.get("/", roleMiddleware(["admin"]), getSummary);
-router.get("/sale", roleMiddleware(["admin"]), getSaleItems);
-router.get("/menu-items", roleMiddleware(["admin"]), getMenuItems);
-router.get("/events", roleMiddleware(["admin"]), getEvents);
-router.get("/menu-item-categories", roleMiddleware(["admin"]), getMenuItemCategories);
+router.post("/sale", roleMiddleware(["admin","organizer"]), MenuRateLimiter, createSale);
+router.get("/", roleMiddleware(["admin","organizer"]), getSummary);
+router.get("/sale", roleMiddleware(["admin","organizer"]), getSaleItems);
+router.get("/menu-items", roleMiddleware(["admin","organizer"]), getMenuItems);
+router.get("/events", roleMiddleware(["admin","organizer"]), getEvents);
+router.get("/menu-item-categories", roleMiddleware(["admin","organizer"]), getMenuItemCategories);
 // Update an existing menuItem
-router.put("/limited-time", roleMiddleware(["admin"]), createLimitedTimeItem);
-router.post("/", roleMiddleware(["admin"]), createMenuItemFromPreset);
+router.put("/limited-time", roleMiddleware(["admin","organizer"]), createLimitedTimeItem);
+router.post("/", roleMiddleware(["admin","organizer"]), createMenuItemFromPreset);
 
 
 

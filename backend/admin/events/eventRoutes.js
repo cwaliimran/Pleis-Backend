@@ -11,6 +11,7 @@ const {
   getMinimalEventsInfo,
   getEventTicketings,
   getEventNotifications,
+  getEventbycompanyOrganizer,
   getEventRatings,
 } = require("./eventController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
@@ -32,6 +33,8 @@ router.get("/", apiRateLimiter, getEvents);
 
 //getMinimalEventsInfo
 router.get("/organization/:organization", apiRateLimiter, getMinimalEventsInfo);
+//getMinimalEventsInfo
+router.get("/companyOrganizer/:companyOrganizer", apiRateLimiter, getEventbycompanyOrganizer);
 
 //get event details
 router.get("/:id", getEventDetails);

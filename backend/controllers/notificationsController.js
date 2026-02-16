@@ -11,6 +11,8 @@ const { getFullImageUrl } = require("@utils/imageHelper");
 const Organizations = require("@OrganizationModel");
 const { default: mongoose } = require("mongoose");
 const { User } = require("@UserModel");
+const { Events } = require("@EventsModel");
+const { UserReservations } = require("@UserReservationsModel");
 
 const getNotifications = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
@@ -23,7 +25,7 @@ const getNotifications = async (req, res) => {
     if (keyword) query.type = { $regex: keyword, $options: "i" };
 
     /* ===============================
-       FETCH NOTIFICATIONS (NO POPULATE)
+       FETCH NOTIFICATIONS
     =============================== */
     const [notifications, total] = await Promise.all([
       NotificationExp.find(query)
@@ -46,30 +48,86 @@ const getNotifications = async (req, res) => {
         meta: generateMeta(page, limit, total),
       });
     }
- 
+
     /* ===============================
-       COLLECT IDS BY TYPE
+       COLLECT OBJECT IDS
     =============================== */
-    const userIds = [];
-    const orgIds = [];
+    const eventIds = [];
+    const userReservationIds = [];
+    const subjectIds = [];
 
     for (const n of notifications) {
-      if (!mongoose.Types.ObjectId.isValid(n.subjectId)) continue;
+      if (mongoose.Types.ObjectId.isValid(n.subjectId)) {
+        subjectIds.push(new mongoose.Types.ObjectId(n.subjectId));
+      }
 
-      if (n.objectType === "menuorders") {
-        orgIds.push(new mongoose.Types.ObjectId(n.subjectId));
-      } else {
-        userIds.push(new mongoose.Types.ObjectId(n.subjectId));
+      if (!mongoose.Types.ObjectId.isValid(n.objectId)) continue;
+
+      if (n.objectType === "events") {
+        eventIds.push(new mongoose.Types.ObjectId(n.objectId));
+      }
+
+      if (n.objectType === "userreservations") {
+        userReservationIds.push(new mongoose.Types.ObjectId(n.objectId));
       }
     }
 
     /* ===============================
+       FETCH EVENTS + USER RESERVATIONS
+    =============================== */
+    const [events, userReservations] = await Promise.all([
+      eventIds.length
+        ? Events.find({ _id: { $in: eventIds } })
+            .select("basicInfo.organization")
+            .lean()
+        : [],
+
+      userReservationIds.length
+        ? UserReservations.find({ _id: { $in: userReservationIds } })
+            .select("organizationId")
+            .lean()
+        : [],
+    ]);
+
+    /* ===============================
+       BUILD OBJECT → ORG MAP
+    =============================== */
+    const objectOrgMap = new Map();
+
+    events.forEach(e => {
+      if (e.basicInfo?.organization) {
+        objectOrgMap.set(
+          e._id.toString(),
+          e.basicInfo.organization.toString()
+        );
+      }
+    });
+
+    userReservations.forEach(r => {
+      if (r.organizationId) {
+        objectOrgMap.set(
+          r._id.toString(),
+          r.organizationId.toString()
+        );
+      }
+    });
+
+    /* ===============================
        FETCH ORGANIZATIONS
     =============================== */
-    const organizations = orgIds.length
-      ? await Organizations.find({ _id: { $in: orgIds } })
-        .select("basicInfo.name basicInfo.media.logo")
-        .lean()
+    const organizationIds = [
+      ...new Set([
+        ...objectOrgMap.values(),
+        ...subjectIds.map(id => id.toString())
+      ])
+    ]
+      .filter(id => mongoose.Types.ObjectId.isValid(id))
+      .map(id => new mongoose.Types.ObjectId(id));
+
+    const organizations = organizationIds.length
+      ? await Organizations.find({ _id: { $in: organizationIds } })
+          .select("basicInfo.name basicInfo.media.logo")
+          .lean()
       : [];
 
     const orgMap = new Map(
@@ -84,12 +142,12 @@ const getNotifications = async (req, res) => {
     );
 
     /* ===============================
-       FETCH USERS
+       FETCH USERS (SUBJECT FALLBACK)
     =============================== */
-    const users = userIds.length
-      ? await User.find({ _id: { $in: userIds } })
-        .select("companyDetails.loyaltySettings.title companyDetails.logo")
-        .lean()
+    const users = subjectIds.length
+      ? await User.find({ _id: { $in: subjectIds } })
+          .select("companyDetails.loyaltySettings.title companyDetails.logo")
+          .lean()
       : [];
 
     const userMap = new Map(
@@ -107,13 +165,17 @@ const getNotifications = async (req, res) => {
        FORMAT RESPONSE
     =============================== */
     const formatted = notifications.map(n => {
-      let subject = { _id: null, title: "", image: "" };
+      const subjectId = String(n.subjectId);
+      const objectId = String(n.objectId);
 
-      if (n.objectType === "menuorders") {
-        subject = orgMap.get(String(n.subjectId)) || subject;
-      } else {
-        subject = userMap.get(String(n.subjectId)) || subject;
-      }
+      const subjectOrg = orgMap.get(subjectId);
+      const subjectUser = userMap.get(subjectId);
+
+      const subject = subjectOrg ||
+        subjectUser || { _id: null, title: "", image: "" };
+
+      const orgId = objectOrgMap.get(objectId) || subjectId;
+      const org = orgMap.get(orgId);
 
       return {
         _id: n._id,
@@ -123,11 +185,21 @@ const getNotifications = async (req, res) => {
         title: n.title,
         body: n.body,
         isRead: n.isRead,
+
         subject: {
           _id: subject._id,
           title: subject.title,
           image: getFullImageUrl(subject.image),
         },
+
+        organization: org
+          ? {
+              _id: org._id,
+              title: org.title,
+              image: getFullImageUrl(org.image),
+            }
+          : null,
+
         image: getFullImageUrl(n.image),
         timeSince: moment(n.createdAt).tz(timezone).fromNow(),
         createdAt: n.createdAt,
@@ -151,7 +223,6 @@ const getNotifications = async (req, res) => {
     });
   }
 };
-
 
 
 

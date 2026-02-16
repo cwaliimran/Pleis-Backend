@@ -28,7 +28,6 @@ const getTopPicksOrganizationsWithFilters = async (
       }
     });
   } else {
-    // Global mode — no distance filtering
     pipeline.push({
       $match: { status: "active" }
     });
@@ -46,52 +45,128 @@ const getTopPicksOrganizationsWithFilters = async (
         as: "topPick"
       }
     },
-    { $unwind: "$topPick" },
+    { $unwind: "$topPick" }
+  );
 
-    /* ===============================
-       3️⃣ APPLY FILTERS
-       =============================== */
+  /* ===============================
+     3️⃣ APPLY FILTERS
+     =============================== */
+  pipeline.push({
+    $match: {
+      ...query,
+      "topPick.status": "active"
+    }
+  });
+
+  /* ===============================
+     4️⃣ SORT BY ORDER
+     =============================== */
+  pipeline.push({ $sort: { "topPick.order": 1 } });
+
+  /* ===============================
+     5️⃣ PAGINATION
+     =============================== */
+  pipeline.push(
+    { $skip: skip },
+    { $limit: limit }
+  );
+
+  /* ===============================
+     6️⃣ CREATOR POPULATION
+     =============================== */
+  pipeline.push(
     {
-      $match: {
-        ...query,
-        "topPick.status": "active"
+      $lookup: {
+        from: "users",
+        localField: "creator",
+        foreignField: "_id",
+        as: "creator",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              "companyDetails.logo": 1,
+              "companyDetails.loyaltySettings.title": 1
+            }
+          }
+        ]
       }
     },
-
-    /* ===============================
-       4️⃣ SORT BY ORDER
-       =============================== */
-    { $sort: { "topPick.order": 1 } },
-
-    /* ===============================
-       5️⃣ PAGINATION
-       =============================== */
-    { $skip: skip },
-    { $limit: limit },
-
-    /* ===============================
-       6️⃣ FINAL RESPONSE
-       =============================== */
     {
-      $project: {
-        topPick: 0,
-        __v: 0
+      $unwind: {
+        path: "$creator",
+        preserveNullAndEmptyArrays: true
       }
     }
   );
 
+  /* ===============================
+     7️⃣ PRIMARY VENUE
+     =============================== */
+  pipeline.push({
+    $lookup: {
+      from: "venues",
+      let: { orgId: "$_id" },
+      pipeline: [
+        {
+          $match: {
+            $expr: { $eq: ["$organization", "$$orgId"] },
+            isPrimary: true,
+            status: "active"
+          }
+        },
+        { $project: { venueType: 1 } }
+      ],
+      as: "primaryVenue"
+    }
+  });
+
+  /* ===============================
+     8️⃣ VENUE TYPE POPULATION
+     =============================== */
+  pipeline.push({
+    $lookup: {
+      from: "venuetypes",
+      localField: "primaryVenue.venueType",
+      foreignField: "_id",
+      as: "venueTypes",
+      pipeline: [
+        { $project: { _id: 1, title: 1 } }
+      ]
+    }
+  });
+
+  /* ===============================
+     9️⃣ FINAL RESPONSE
+     =============================== */
+  pipeline.push({
+    $project: {
+      _id: 1,
+      basicInfo: 1,
+      otherInfo: 1,
+      operatingHours: 1,
+      location: 1,
+      creator: 1,
+      venue: {
+        venueType: "$venueTypes"
+      },
+      ...(userLocation ? { distance: 1 } : {})
+    }
+  });
+
+
   return Organizations.aggregate(pipeline);
 };
+
 
 const getTopPicksOrganizationsWithFiltersHomeRepo = async (
   query,
   skip,
   limit,
-  userLocation,          // may be null
+  userLocation,
   radiusKm = 50,
   categoryObjectId = null
 ) => {
-
   const pipeline = [];
 
   /* ===============================
@@ -109,10 +184,7 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
       },
     });
   } else {
-    // GLOBAL MODE
-    pipeline.push({
-      $match: { status: "active" },
-    });
+    pipeline.push({ $match: { status: "active" } });
   }
 
   /* ===============================
@@ -128,10 +200,6 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
       },
     },
     { $unwind: "$topPick" },
-
-    /* ===============================
-       3️⃣ BASE FILTERS
-       =============================== */
     {
       $addFields: {
         topPickStatus: "$topPick.status",
@@ -156,69 +224,109 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
     });
   }
 
-  pipeline.push(
-    /* ===============================
-       4️⃣ SORT (ADMIN ORDER)
-       =============================== */
-    { $sort: { "topPick.order": 1 } },
+  /* ===============================
+     4️⃣ SORT
+     =============================== */
+  pipeline.push({ $sort: { "topPick.order": 1 } });
 
-    /* ===============================
-       5️⃣ PRIMARY VENUE (TITLE ONLY)
-       =============================== */
+  /* ===============================
+     5️⃣ CREATOR POPULATION
+     =============================== */
+  pipeline.push(
     {
       $lookup: {
-        from: "venues",
-        let: { orgId: "$_id" },
+        from: "users",
+        localField: "creator",
+        foreignField: "_id",
+        as: "creator",
         pipeline: [
           {
-            $match: {
-              $expr: { $eq: ["$organization", "$$orgId"] },
-              isPrimary: true,
-              status: "active",
+            $project: {
+              _id: 1,
+              "companyDetails.logo": 1,
+              "companyDetails.loyaltySettings.title": 1,
             },
           },
-          { $project: { _id: 0, title: 1 } },
         ],
-        as: "primaryVenue",
       },
     },
-
-    /* ===============================
-       6️⃣ TAGS (TITLE ONLY)
-       =============================== */
     {
-      $lookup: {
-        from: "tags",
-        localField: "otherInfo.tags",
-        foreignField: "_id",
-        as: "tags",
-        pipeline: [{ $project: { _id: 1, title: 1 } }],
-      },
-    },
-
-    /* ===============================
-       7️⃣ PAGINATION
-       =============================== */
-    { $skip: skip },
-    { $limit: limit },
-
-    /* ===============================
-       8️⃣ FINAL PROJECTION
-       =============================== */
-    {
-      $project: {
-        _id: 1,
-        distance: userLocation ? 1 : null,   // only meaningful in geo mode
-        "basicInfo.name": 1,
-        "basicInfo.media.cover": 1,
-        "otherInfo.description": 1,
-        tags: 1,
-        venue: {
-          title: { $ifNull: [{ $first: "$primaryVenue.title" }, null] },
-        },
+      $unwind: {
+        path: "$creator",
+        preserveNullAndEmptyArrays: true,
       },
     }
   );
+
+  /* ===============================
+     6️⃣ PRIMARY VENUE
+     =============================== */
+  pipeline.push({
+    $lookup: {
+      from: "venues",
+      let: { orgId: "$_id" },
+      pipeline: [
+        {
+          $match: {
+            $expr: { $eq: ["$organization", "$$orgId"] },
+            isPrimary: true,
+            status: "active",
+          },
+        },
+        { $project: { venueType: 1 } },
+      ],
+      as: "primaryVenue",
+    },
+  });
+
+  /* ===============================
+     7️⃣ VENUE TYPE POPULATION
+     =============================== */
+  pipeline.push({
+    $lookup: {
+      from: "venuetypes",
+      localField: "primaryVenue.venueType",
+      foreignField: "_id",
+      as: "venueTypes",
+      pipeline: [{ $project: { _id: 1, title: 1 } }],
+    },
+  });
+
+  /* ===============================
+     8️⃣ TAGS
+     =============================== */
+  pipeline.push({
+    $lookup: {
+      from: "tags",
+      localField: "otherInfo.tags",
+      foreignField: "_id",
+      as: "tags",
+      pipeline: [{ $project: { _id: 1, title: 1 } }],
+    },
+  });
+
+  /* ===============================
+     9️⃣ PAGINATION
+     =============================== */
+  pipeline.push({ $skip: skip }, { $limit: limit });
+
+  /* ===============================
+     🔟 FINAL RESPONSE
+     =============================== */
+  pipeline.push({
+    $project: {
+      _id: 1,
+      ...(userLocation ? { distance: 1 } : {}),
+      "basicInfo.name": 1,
+      "basicInfo.media.cover": 1,
+      "otherInfo.description": 1,
+      tags: 1,
+      creator: 1,
+      venue: {
+        venueType: "$venueTypes",
+      },
+    },
+  });
 
   return Organizations.aggregate(pipeline);
 };
