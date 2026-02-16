@@ -92,6 +92,11 @@ const eventSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    companyOrganizer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
 
     status: {
       type: String,
@@ -132,7 +137,7 @@ const eventSchema = new mongoose.Schema(
         default: 1,
       }
     },
-    
+
     preOrdersEnabled: {
       type: Boolean,
       default: false,

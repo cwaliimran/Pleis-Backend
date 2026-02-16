@@ -160,7 +160,7 @@ const getOrganizationIdsByCompanyOrganizer = async (companyOrganizer) => {
 
 //get organization names by company organizer
 const getOrganizationNamesByCompanyOrganizer = async (companyOrganizer) => {
-  const organizations = await Organizations.find({ creator: companyOrganizer }).select("basicInfo.name").lean();
+  const organizations = await Organizations.find({ creator: companyOrganizer, status: "active" }).select("basicInfo.name").lean();
   return organizations;
 };
 
@@ -171,6 +171,7 @@ const getMenuIdsByCompanyOrganizer = async (companyOrganizer) => {
   return menus.map(menu => menu._id);
 };
 const getOrgCompanyOrganizer = async (organizationId) => {
+  console.log("organizationId",organizationId );
   const org = await Organizations.findById(organizationId).select("creator").lean();
   return org ? org.creator : null;
 }

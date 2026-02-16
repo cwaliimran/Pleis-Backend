@@ -151,7 +151,7 @@ const createTicketing = async (req, res) => {
 
 const getTicketings = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, eventId } = req.query;
+  const { keyword, status, date, eventId,organizations } = req.query;
   const { timezone } = req.user;
 
   try {
@@ -163,6 +163,8 @@ const getTicketings = async (req, res) => {
       status,
       date,
       eventId,
+      organizations,
+      companyOrganizer:req.user._id
     });
 
     return sendResponse({

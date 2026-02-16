@@ -162,6 +162,7 @@ const getTicketings = async (req, res) => {
       status,
       date,
       eventId,
+      companyOrganizer:req.user._id
     });
 
     return sendResponse({
