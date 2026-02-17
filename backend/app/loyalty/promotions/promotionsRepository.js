@@ -143,6 +143,7 @@ const getPromotionsForDashboard = async ({
   =============================== */
   const promotions = await Promotion.find(matchQuery)
     .populate("tierLimit")
+    .populate("menuItem")
     .populate(
       "companyOrganizer",
       "companyDetails.loyaltySettings.title companyDetails.logo"

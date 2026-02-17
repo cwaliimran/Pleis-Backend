@@ -138,12 +138,13 @@ const scanQrController = async (req, res) => {
     }
     else if (type === "userReservation") {
       validateData.rawData.push("qrData.id");
-      if (
-        !validateParams(req, res, validateData)
-      ) return;
+      if (!validateParams(req, res, validateData)) return;
 
-      const userReservation = await getUserReservationDetailsService(id, timezone);
-      if (!userReservation) {
+      const reservationData =
+        await getUserReservationDetailsService(id, timezone);
+
+
+      if (!reservationData) {
         return sendResponse({
           res,
           statusCode: 404,
@@ -151,13 +152,51 @@ const scanQrController = async (req, res) => {
         });
       }
 
+      const companyWallet = await getUserCompanyWallet(reservationData.reservation.userId, reservationData.reservation.companyOrganizer)
+
+      let warnings = [];
+      const reservation = reservationData.reservation;
+
+      // ✅ organizer mismatch
+      if (
+        reservation.companyOrganizer?.toString() !==
+        companyOrganizer?.toString()
+      ) {
+        warnings.push({
+          warning: "Organizer mismatch for reservation",
+          warningCode: "organizer_mismatch",
+        });
+      }
+
+      if (reservation.status !== "checkedIn") {
+        warnings.push({
+          warning: `Reservation status is ${reservation.status}`,
+          warningCode: "invalid_reservation_status",
+        });
+      }
+
+      if (
+        reservation?.paymentDetails &&
+        reservation.paymentDetails.paymentStatus !== "paid"
+      ) {
+        warnings.push({
+          warning: "Reservation payment is not completed",
+          warningCode: "payment_not_completed",
+        });
+      }
+
       return sendResponse({
         res,
         statusCode: 200,
         translationKey: "qr_code_scanned_successfully",
-        data: userReservation,
+        data: {
+          ...reservationData,
+          warnings,
+          companyWallet
+        },
       });
-    } else if (type === "loyaltyReward") {
+    }
+    else if (type === "loyaltyReward") {
       validateData.rawData.push("qrData.id");
       if (
         !validateParams(req, res, validateData)

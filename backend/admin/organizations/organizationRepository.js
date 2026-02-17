@@ -6,7 +6,6 @@ const Menus = require("@MenusModel");
 const { getModelCounts } = require("@dbUtils/queryUtil");
 const { getPromotionsByCreator } = require("../loyalty/promotions/promotionsRepository");
 const { getNotificationByOrganizationId } = require("../notifications/notificationsRepository");
-const { getTotalEventCountByOrganizationId, getLatestEventByOrganization } = require("../events/eventRepository");
 const { getTotalTicketsPurchasedByOrganizationId } = require("../ticketing/ticketingsRepository");
 const { getTotalEngagementEventsByOrganizationId } = require("@appEngagement/engagementEventsRepository");
 const { getTotalClosingBalanceByOrganizationId } = require("../transactions/repositories/unifiedTransactionsRepository");
@@ -45,6 +44,11 @@ const findOrganizationById = async (id) => {
 
 const getOrganizationDetails = async (id) => {
   // Fetch organization, primary venue, and other related data concurrently
+
+  const {
+    getTotalEventCountByOrganizationId
+  } = require("../events/eventRepository");
+
   const [organization, primaryVenue, events, ticketsSold, views, revenue] = await Promise.all([
     Organizations.findById(id)
       .populate("otherInfo.tags")
@@ -172,7 +176,7 @@ const getMenuIdsByCompanyOrganizer = async (companyOrganizer) => {
   return menus.map(menu => menu._id);
 };
 const getOrgCompanyOrganizer = async (organizationId) => {
-  console.log("organizationId",organizationId );
+  console.log("organizationId", organizationId);
   const org = await Organizations.findById(organizationId).select("creator").lean();
   return org ? org.creator : null;
 }

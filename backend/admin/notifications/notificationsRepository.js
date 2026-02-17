@@ -285,84 +285,82 @@ const createNotifications = async (data) => {
 };
 
 
-const getNotificationss = async ({ isDelivered, sendTiming, timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
-  const cacheKey = buildGlobalNotificationsCacheKey({
-    scope: "admin",
-    skip,
-    limit,
-  });
-  return cache({
-    namespace: cacheKey,
-    ttl: 86400, // 1 day
- 
-    fetchFn: async () => {
+const getNotificationss = async ({
+  isDelivered,
+  sendTiming,
+  timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  date,
+  range,
+  today,
+  skip,
+  userId,
+}) => {
+
   const pipeline = [
     {
-      $match: {
-        ...(userId && { creator: new mongoose.Types.ObjectId(userId) }),
-      },
+      $match: {},
     },
   ];
 
-  if (range == "monthly") {
+  // ----- Range filters -----
+  if (range === "monthly") {
     const { start, end } = getStartAndEndOfMonth(today, timezone);
-
     pipeline.push({
-      $match: {
-        createdAt: { $gte: start, $lt: end },
-      },
+      $match: { createdAt: { $gte: start, $lt: end } },
     });
   }
 
-  if (range == "weekly") {
+  if (range === "weekly") {
     const { start, end } = getStartAndEndOfWeek(today, timezone);
-
     pipeline.push({
-      $match: {
-        createdAt: { $gte: start, $lt: end },
-      },
+      $match: { createdAt: { $gte: start, $lt: end } },
     });
   }
 
-  if (range == "today") {
+  if (range === "today") {
     const start = new Date(today);
     const end = new Date(new Date(today).setDate(start.getDate() + 1));
-
     pipeline.push({
-      $match: {
-        createdAt: { $gte: start, $lt: end },
-      },
+      $match: { createdAt: { $gte: start, $lt: end } },
     });
   }
 
-
+  // ----- Status -----
   if (status) {
     pipeline.push({ $match: { status } });
   } else {
     pipeline.push({ $match: { status: { $ne: "deleted" } } });
   }
+
+  // ----- Timing -----
   if (sendTiming) {
     pipeline.push({ $match: { sendTiming } });
   }
-  if (isDelivered) {
+
+  // ----- Delivery filter -----
+  if (isDelivered !== undefined) {
     if (isDelivered === "true") isDelivered = true;
     if (isDelivered === "false") isDelivered = false;
+
     if (typeof isDelivered === "boolean") {
-      pipeline.push({
-        $match: { isDelivered }
-      });
+      pipeline.push({ $match: { isDelivered } });
     }
   }
+
+  // ----- Date filter -----
   if (date) {
     const start = new Date(date);
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
     pipeline.push({
-      $match: {
-        createdAt: { $gte: start, $lt: end },
-      },
+      $match: { createdAt: { $gte: start, $lt: end } },
     });
   }
 
+  // ----- Keyword search -----
   if (keyword) {
     const keywordMatch = buildKeywordQueryFromModels(
       [{ schema: GlobalNotification.schema }],
@@ -374,7 +372,7 @@ const getNotificationss = async ({ isDelivered, sendTiming, timezone, page, limi
     }
   }
 
-  // Add organization and event title lookup if present
+  // ----- Lookups -----
   pipeline.push(
     {
       $lookup: {
@@ -386,11 +384,11 @@ const getNotificationss = async ({ isDelivered, sendTiming, timezone, page, limi
           {
             $project: {
               _id: 1,
-              "basicInfo.name": 1
-            }
-          }
-        ]
-      }
+              "basicInfo.name": 1,
+            },
+          },
+        ],
+      },
     },
     {
       $lookup: {
@@ -402,18 +400,17 @@ const getNotificationss = async ({ isDelivered, sendTiming, timezone, page, limi
           {
             $project: {
               _id: 1,
-              "basicInfo.title": 1
-            }
-          }
-        ]
-      }
+              "basicInfo.title": 1,
+            },
+          },
+        ],
+      },
     },
     {
-      // ✅ Convert arrays → single object
       $addFields: {
         organization: { $arrayElemAt: ["$organization", 0] },
-        event: { $arrayElemAt: ["$event", 0] }
-      }
+        event: { $arrayElemAt: ["$event", 0] },
+      },
     },
     {
       $project: {
@@ -437,14 +434,13 @@ const getNotificationss = async ({ isDelivered, sendTiming, timezone, page, limi
         event: 1,
         createdAt: 1,
         updatedAt: 1,
-      }
+      },
     }
   );
 
-
   pipeline.push({ $sort: { createdAt: -1 } });
 
-  // Apply pagination + counts using $facet
+  // ----- Facet -----
   pipeline.push({
     $facet: {
       data: [
@@ -455,11 +451,10 @@ const getNotificationss = async ({ isDelivered, sendTiming, timezone, page, limi
         {
           $group: {
             _id: null,
-            count: { $sum: { $ifNull: ["$estimated", 0] } }
-          }
-        }
+            count: { $sum: { $ifNull: ["$estimated", 0] } },
+          },
+        },
       ],
-
       totalFiltered: [{ $count: "count" }],
       totalScheduled: [
         { $match: { sendTiming: "schedule" } },
@@ -470,85 +465,60 @@ const getNotificationss = async ({ isDelivered, sendTiming, timezone, page, limi
         { $count: "count" },
       ],
       totalLocationFiltered: [
-        { $match: { "location.city": { $exists: true, $ne: null } } }, // Ensure city exists and is not null
+        { $match: { "location.city": { $exists: true, $ne: null } } },
         { $count: "count" },
       ],
       totalAgeFiltered: [
-        { $match: { ageRange: { $exists: true, $ne: [] } } }, // Ensure ageRange is not empty
+        { $match: { ageRange: { $exists: true, $ne: [] } } },
         { $count: "count" },
       ],
       totalInterestsFiltered: [
-        { $match: { interests: { $exists: true, $ne: [] } } }, // Ensure interests are not empty
+        { $match: { interests: { $exists: true, $ne: [] } } },
         { $count: "count" },
       ],
-      // Gender filter (non-array type)
       totalGenderFiltered: [
-        { $match: { gender: { $nin: [null, []] } } }, // Ensure gender is not an array or null
+        { $match: { gender: { $nin: [null, []] } } },
         { $count: "count" },
-      ],
-      grandTotalFiltered: [
-        {
-          $addFields: {
-            totalLocation: {
-              $ifNull: [{ $arrayElemAt: ["$totalLocationFiltered.count", 0] }, 0] // Use count directly
-            },
-            totalAge: {
-              $ifNull: [{ $arrayElemAt: ["$totalAgeFiltered.count", 0] }, 0] // Use count directly
-            },
-            totalInterests: {
-              $ifNull: [{ $arrayElemAt: ["$totalInterestsFiltered.count", 0] }, 0] // Use count directly
-            },
-            totalGender: {
-              $ifNull: [{ $arrayElemAt: ["$totalGenderFiltered.count", 0] }, 0] // Use count directly
-            },
-          },
-        },
-        {
-          $addFields: {
-            grandTotal: {
-              $sum: [
-                "$totalLocation",
-                "$totalAge",
-                "$totalInterests",
-                "$totalGender", // Correctly summing all filtered totals
-              ],
-            },
-          },
-        },
-        { $count: "grandTotal" },
       ],
     },
   });
 
-
+  // ----- Run aggregation -----
   const result = await GlobalNotification.aggregate(pipeline);
-
 
   let Notificationss = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
   const totalScheduled = result[0]?.totalScheduled[0]?.count || 0;
   const totalDelivered = result[0]?.totalDelivered[0]?.count || 0;
-  const totalLocationFiltered = result[0]?.totalLocationFiltered[0]?.count || 0;
-  const totalAgeFiltered = result[0]?.totalAgeFiltered[0]?.count || 0;
-  const totalInterestsFiltered = result[0]?.totalInterestsFiltered[0]?.count || 0;
+  const totalLocationFiltered =
+    result[0]?.totalLocationFiltered[0]?.count || 0;
+  const totalAgeFiltered =
+    result[0]?.totalAgeFiltered[0]?.count || 0;
+  const totalInterestsFiltered =
+    result[0]?.totalInterestsFiltered[0]?.count || 0;
+  const totalGenderFiltered =
+    result[0]?.totalGenderFiltered[0]?.count || 0;
   const totalReached = result[0]?.totalReached[0]?.count || 0;
 
-  const totalGenderFiltered = result[0]?.totalGenderFiltered[0]?.count || 0;
-  const grandTotalFiltered = totalInterestsFiltered + totalLocationFiltered + totalAgeFiltered + totalGenderFiltered;
+  const grandTotalFiltered =
+    totalInterestsFiltered +
+    totalLocationFiltered +
+    totalAgeFiltered +
+    totalGenderFiltered;
 
-  // Additional counts for meta (active/inactive/total by userId as creator)
+  // ----- Meta counts -----
   const [total, active, inactive] = await Promise.all([
     GlobalNotification.countDocuments({
-      ...(userId && { userId: userId }),
+      ...(userId && { userId }),
       status: { $ne: "deleted" },
     }),
     GlobalNotification.countDocuments({
       status: "active",
-      ...(userId && { userId: userId }),
+      ...(userId && { userId }),
     }),
     GlobalNotification.countDocuments({
       status: "inactive",
-      ...(userId && { userId: userId }),
+      ...(userId && { userId }),
     }),
   ]);
 
@@ -556,15 +526,14 @@ const getNotificationss = async ({ isDelivered, sendTiming, timezone, page, limi
   meta.NotificationssCount = { total, active, inactive };
   meta.scheduled = totalScheduled;
   meta.sent = totalDelivered;
-  meta.activeFilters = grandTotalFiltered; // Grand total of all filters combined
+  meta.activeFilters = grandTotalFiltered;
   meta.totalReached = totalReached;
-  const filteredNotifications = (result[0]?.data || []).map(notificationFormatter);
-  Notificationss = filteredNotifications;
+
+  Notificationss = Notificationss.map(notificationFormatter);
 
   return { Notificationss, meta };
-    },
-  });
 };
+
 
 
 

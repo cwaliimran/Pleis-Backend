@@ -274,7 +274,11 @@ const getOrders = async ({
 
 
 const findOrdersById = async (id) => {
-  return Orders.findById(id);
+  return Orders.findById(id)
+    .populate({
+      path: "organization",
+      select: "creator",
+    });
 };
 
 const findByIdAndUpdate = async (id, data) => {
