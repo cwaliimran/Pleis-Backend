@@ -358,9 +358,8 @@ const getVenueTitles = async (companyOrganizer) => {
     /* 5️⃣ Final output */
     {
       $project: {
-        _id: 0,
-        venueId: "$venues._id",
-        venueTitle: "$venues.title"
+        _id: 1,
+        title: "$venues.title"
       }
     }
   ]);

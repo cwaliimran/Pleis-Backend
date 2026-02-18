@@ -102,6 +102,13 @@ const unifiedTransactionSchema = new mongoose.Schema(
             pointsPerEuro: { type: Number, default: 0 },
         },
 
+        //TODO pointsBreakdown
+        /* 
+        We talked about this in meeting earlier today, we suggested to show in checkout seperate values for purchase points and active promotions
+        [5:26 PM]So it would be like
+        [5:26 PM]400 points
+        +400 happy hour
+        */
         // --------------------------------------------
         // BALANCE AFTER TRANSACTION
         // --------------------------------------------

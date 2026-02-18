@@ -5,6 +5,8 @@ const mongoose = require("mongoose");
 const Menus = require("@MenusModel");
 const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
 const { sendUserNotifications } = require("../../../controllers/communicationController");
+const { calculatePointsRepo } = require("../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
+const { createTransaction } = require("../../../app/userWalletService/transactions/services/unifiedTransactionsService");
 
 
 
@@ -64,7 +66,6 @@ const updateOrderDetailsService = async ({
   if (!order) {
     return { error: "Orders_not_found" };
   }
-
   /* ===============================
      🚫 Guards
   =============================== */
@@ -82,6 +83,15 @@ const updateOrderDetailsService = async ({
   ) {
     return { error: "Cant_change_paid_payment_status" };
   }
+
+  // ALREADY PAID
+  if (
+    order.paymentStatus === "paid" &&
+    data.paymentStatus === "paid"
+  ) {
+    return { error: "order_already_paid" };
+  }
+
 
   let statusChanged = false;
   let paymentChanged = false;
@@ -108,6 +118,52 @@ const updateOrderDetailsService = async ({
     if (data.paymentStatus === "paid" && !order.paidAt) {
       order.paidAt = new Date();
     }
+
+
+    /* ==========================
+           🎯 Loyalty Points
+        ========================== */
+    const totalPrice = order.totalPrice || 0;
+
+    if (totalPrice > 0) {
+      const pointsCalculation = await calculatePointsRepo(
+        order.user,
+        order.organization.creator,
+        totalPrice
+      );
+
+      const trx = await createTransaction(
+        {
+          user: order.user,
+          companyOrganizer: order.organization.creator,
+          organization: order.organization._id,
+          companyPoints: {
+            base: pointsCalculation.organizer.earnedPoints,
+            multiplier: 1,
+            total: pointsCalculation.organizer.earnedPoints,
+            pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
+          },
+          globalPoints: {
+            base: pointsCalculation.global.earnedPoints,
+            multiplier: 1,
+            total: pointsCalculation.global.earnedPoints,
+            pointsPerEuro: pointsCalculation.global.pointsPerEuro,
+          },
+          allowNegative: false,
+          type: "earn",
+          description: "Menu order payment",
+          entityId: order._id,
+          domainType: "menuorders",
+        },
+        null
+      );
+
+      if (!trx.success) {
+        throw new Error(trx.message || "failed_loyalty_update");
+      }
+
+    }
+
   }
 
   /* ===============================
@@ -194,23 +250,17 @@ const updateOrderDetailsService = async ({
 
 const updateInAppOrders = async (organization, isOrderingEnabled) => {
   try {
-    const result = await Menus.updateMany(
-      { organization: organization },
-      { $set: { isOrderingEnabled } }
+    return await Menus.updateMany(
+      { organization },
+      { $set: { isOrderingEnabled } },
+      { upsert: true }
     );
-
-    return {
-      matchedCount: result.matchedCount,
-      modifiedCount: result.modifiedCount,
-    }
   } catch (error) {
-
-    return ({
-      message: "Something went wrong",
-      error: error.message,
-    });
+    throw error;
   }
 };
+
+
 
 
 

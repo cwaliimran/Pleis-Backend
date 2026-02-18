@@ -768,6 +768,7 @@ const getUserReservationDetails = async (id) => {
           eventName: "$event.basicInfo.title",
           eventStartDate: "$event.schedule.startDateTime",
           userName: { $concat: ["$user.firstName", " ", "$user.lastName"] },
+          phoneNumber: "$user.phoneNumber",
           venueFullAddress: "$venue.location.fullAddress",
           reservationType: "$reservationDetails.reservationType",
 
@@ -787,6 +788,7 @@ const getUserReservationDetails = async (id) => {
           paymentDetails: 1,
           reservationSnapshot: 1,
           reservationChanges: 1,
+          partySize: 1,
           status: 1,
         }
       },

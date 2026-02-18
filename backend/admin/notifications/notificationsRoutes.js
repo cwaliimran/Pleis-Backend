@@ -18,7 +18,7 @@ router.use(auth);
 const NotificationsRateLimiter = createRateLimiter("Notificationss");
 router.post("/", roleMiddleware(["admin"]), NotificationsRateLimiter, createNotifications);
 router.get("/all", roleMiddleware(["admin"]), NotificationsRateLimiter, getNotificationss);
-router.get("/organizations", roleMiddleware(["admin"]), NotificationsRateLimiter, getOrganizations);
+router.get("/organizations", roleMiddleware(["admin", "organizer"]), NotificationsRateLimiter, getOrganizations);
 router.get("/events", roleMiddleware(["admin"]), NotificationsRateLimiter, getEvents);
 router.put("/:id", roleMiddleware(["admin"]), updateNotifications);
 router.delete("/:id", roleMiddleware(["admin"]), deleteNotifications);
