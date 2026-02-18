@@ -104,6 +104,10 @@ const getMenuItems = async (req, res) => {
     date,
     companyOrganizer
   } = req.query;
+  if(req.user.userType==="organizer")
+  {
+       companyOrganizer=req.user._id
+  }
   if(!companyOrganizer){
     return sendResponse({
       res,
