@@ -187,7 +187,7 @@ const getMenuItemDetails = async (req, res) => {
 };
 
 const updateMenuItem = async (req, res) => {
-  const { id } = req.params;
+  let { id } = req.params;
   let { timezone } = req.user;
   let {
     image,
@@ -309,6 +309,7 @@ const updateMenuItem = async (req, res) => {
 
 
     }
+     id = new mongoose.Types.ObjectId(id);
 
     const updated = await menuItemsService.updateMenuItem(id, data, timezone);
 

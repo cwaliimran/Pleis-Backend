@@ -39,7 +39,7 @@ const getOrders = async ({
   pickupFilter,
   orderStatus,
   activeorderStatus,
-  sortDirection = -1
+  sortDirection = 1
 }) => {
 
 

@@ -90,7 +90,8 @@ const getVenues = async ({
   keyword,
   status,
   date,
-  organization
+  organization,
+  CompanyOrganizer
 }) => {
   page = Number(page) || 1;
   limit = Number(limit);
@@ -111,6 +112,7 @@ const getVenues = async ({
     status,
     date,
     organization,
+    CompanyOrganizer,
     skip
   });
 

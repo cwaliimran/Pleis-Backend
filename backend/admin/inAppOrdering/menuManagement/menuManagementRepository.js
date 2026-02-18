@@ -280,6 +280,7 @@ const getMenuItemsSales = async ({
   categoryId,
   keyword,
   filter,
+  status,
   sortBy,
 }) => {
   if (!mongoose.Types.ObjectId.isValid(organization)) {
@@ -291,7 +292,11 @@ const getMenuItemsSales = async ({
 
   const basePipeline = [
     // 1️⃣ Active sales
-    { $match: { status: "active" } },
+    {
+  $match: {
+    status: status ? status : { $ne: "deleted" }, // Use provided status or exclude deleted ones
+  }
+},
 
     // 2️⃣ Unwind menuItems
     { $unwind: "$menuItems" },
@@ -392,6 +397,7 @@ const getMenuItemsSales = async ({
       status: { $first: "$status" },
       createdAt: { $first: "$createdAt" }, // ✅ ADD THIS
 
+      // Accumulate all menuItems
       menuItems: {
         $push: {
           _id: "$menuItem._id",
@@ -449,43 +455,42 @@ const getMenuItemsSales = async ({
   const data = rawData.map(sale => {
     const totalPriceBeforeDiscount = sale.menuItems.reduce((sum, item) => {
       const price =
-        (item.discountPrice!=0) && item.discountPrice !== undefined
+        (item.discountPrice !== null && item.discountPrice !== undefined && item.discountPrice !== 0)
           ? item.discountPrice
-          : item.basePrice || 0;
-
-
+          : item.basePrice || 0; // Fallback to basePrice if discountPrice is invalid
 
       return sum + price;
     }, 0);
 
 
 
-  let totalPrice = totalPriceBeforeDiscount;
+    let totalPrice = totalPriceBeforeDiscount;
 
-  if (sale.discountType === "fixed") {
-    totalPrice = sale.discountValue || 0;
-  }
+    if (sale.discountType === "fixed") {
+      totalPrice = sale.discountValue || 0;
+    }
 
-  if (sale.discountType === "percentage") {
-    totalPrice -=
-      (totalPriceBeforeDiscount * (sale.discountValue || 0)) / 100;
-  }
+    if (sale.discountType === "percentage") {
+      totalPrice -=
+        (totalPriceBeforeDiscount * (sale.discountValue || 0)) / 100;
+    }
 
-  totalPrice = Math.max(totalPrice, 0);
+    totalPrice = Math.max(totalPrice, 0);
 
-  // ✅ FORMAT IMAGES HERE
-  sale = formatSaleWithImages(sale);
+    // ✅ FORMAT IMAGES HERE
+    sale = formatSaleWithImages(sale);
+
+    return {
+      ...sale,
+      totalPriceBeforeDiscount,
+      totalPrice,
+    };
+  });
 
   return {
-    ...sale,
-    totalPriceBeforeDiscount,
-    totalPrice,
+    data,
+    meta: generateMeta(page, limit, totalCount),
   };
-});
-return {
-  data,
-  meta: generateMeta(page, limit, totalCount),
-};
 };
 
 
@@ -501,14 +506,15 @@ const getSummary = async ({
   eventId,
   keyword,
   filter,
+  status,
   sortBy,
 }) => {
   let basePipeline = [
-    {
-      $match: {
-        status: "active",
-      }
-    }
+{
+  $match: {
+    status: status ? status : { $ne: "deleted" }, // Use provided status or exclude deleted ones
+  }
+}
   ];
 
   // Match by organization in the MenuItems collection using $lookup
@@ -760,8 +766,23 @@ const getSummary = async ({
 };
 
 
+const findSaleByIdAndUpdate = async (id) => {
+  const updatedSale = await MenuItemsSale.findByIdAndUpdate(
+    id, // Find by ID
+    { status: 'deleted' }, // Update the status to 'deleted'
+    { new: true } // Return the updated document
+  );
 
+  // If the sale isn't found, return an error
+  if (!updatedSale) {
+    return { error: "Sale not found" };
+  }
 
+  return updatedSale;
+};
+const findSaleById = async (id) => {
+  return MenuItemsSale.findById(id);
+};
 module.exports = {
   getMenuItems,
   findMenuById,
@@ -770,6 +791,8 @@ module.exports = {
   getEvents,
   createSale,
   getSummary,
-  getMenuItemsSales
+  getMenuItemsSales,
+  findSaleById,
+  findSaleByIdAndUpdate
 
 };

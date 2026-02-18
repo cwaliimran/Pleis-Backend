@@ -12,6 +12,7 @@ const MenuItems = require("@MenuItemsModel");
 const Tiers = require("@TiersModel");
 const { getFullImageUrl } = require("@utils/imageHelper");
 const { formatMenuItem } = require("./formatters/bundleFormatter");
+const { getOrganizationIdByCompanyOrganizer } = require("../../admin/organizations/organizationRepository");
 
 const getBundlesCount = async (query) => {
   return getModelCounts({ model: Bundle, filterQuery: query });
@@ -95,23 +96,36 @@ const getVenues = async ({
   limit = 10,
   keyword,
   status,
+  CompanyOrganizer,
   date
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const andConditions = [];
+  if(!organization)
+  {
+    organization= await getOrganizationIdByCompanyOrganizer(CompanyOrganizer)
+  }
 
   // ✅ Organization filter (comma or % separated)
-  if (organization) {
-    const organizationIds = organization
+if (organization) {
+  let organizationIds;
+
+  // If organization is a string, split it into an array of ObjectIds
+  if (typeof organization === 'string') {
+    organizationIds = organization
       .split(/[,%]/)
       .filter(Boolean)
       .map(id => new mongoose.Types.ObjectId(id));
-
-    andConditions.push({
-      organization: { $in: organizationIds }
-    });
+  } else if (Array.isArray(organization)) {
+    // If organization is already an array of ObjectIds, just use it
+    organizationIds = organization.map(item => new mongoose.Types.ObjectId(item._id));
   }
+
+  andConditions.push({
+    organization: { $in: organizationIds }
+  });
+}
 
   // ✅ Status filter
   if (status) {
