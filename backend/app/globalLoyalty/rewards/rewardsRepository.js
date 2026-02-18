@@ -44,13 +44,19 @@ const getGlobalRewards = async (category, keyword) => {
     .populate("tierLimit", "-backgroundImage")
     .populate("category", "title image")
     .populate("menuItem", "title image")
+    .populate("event", "basicInfo schedule")
+    .populate("ticket")
     .sort({ createdAt: -1 })
     .lean();
 };
 
 
-const claimReward = async (userId, rewardId) => {
-  return createGlobalRewardOrderService(userId, rewardId);
+const claimReward = async (userId, rewardId,
+    protectionUserDetails,
+    timezone) => {
+  return createGlobalRewardOrderService(userId, rewardId,
+    protectionUserDetails,
+    timezone);
 };
 
 module.exports = {

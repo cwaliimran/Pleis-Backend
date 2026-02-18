@@ -112,7 +112,9 @@ const createReservation = async (data, session) => {
   data.amount = reservationTotalWithTax;
 
   /* ---------- Confirmation flow ---------- */
-  if (reservationBase.needsConfirmation) {
+  if (reservationBase.conditionType === "noCondition") {
+    data.status = "confirmed";
+  } else if (reservationBase.needsConfirmation) {
     data.status = "needsConfirmation";
   } else {
     if (

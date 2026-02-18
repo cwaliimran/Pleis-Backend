@@ -1,6 +1,7 @@
 const { getFullImageUrl } = require("../../../../helperUtils/imageHelper");
+const { formatEventSchedule } = require("../../../events/formatter/eventFormatter");
 
-function formatReward(reward) {
+function formatReward(reward, timezone) {
     const obj = { ...reward };
 
     // Safely handle company logo (checking existence of all necessary properties)
@@ -61,6 +62,12 @@ function formatReward(reward) {
         case "ticketReward":
             delete obj.menuItem;  // Remove menuItem if it's a ticketReward
             delete obj.customReward;  // Remove customReward if it's a ticketReward
+            if (obj?.event?.basicInfo?.media?.name) {
+                obj.event.basicInfo.media.name = getFullImageUrl(obj.event.basicInfo?.media.name);
+            }
+            if (obj?.event?.schedule) {
+                obj.event.schedule = formatEventSchedule(obj.event.schedule, timezone);
+            }
             break;
     }
 

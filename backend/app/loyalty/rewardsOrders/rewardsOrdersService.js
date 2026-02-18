@@ -8,8 +8,8 @@ const rewardRepo = require("./rewardsOrdersRepository");
 
 
 // Claim reward service (create reward order)
-const createRewardOrderService = async (userId, rewardId) => {
-  return rewardRepo.createRewardOrder({ userId, rewardId });
+const createRewardOrderService = async (userId, rewardId, protectionUserDetails, timezone) => {
+  return rewardRepo.createRewardOrder({ userId, rewardId, protectionUserDetails, timezone });
 };
 
 // Get user reward orders

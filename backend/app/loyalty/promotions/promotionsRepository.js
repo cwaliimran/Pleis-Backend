@@ -485,6 +485,23 @@ const getPromotions = async ({
     },
   });
 
+  //populate menu item
+  pipeline.push({
+    $lookup: {
+      from: "menuitems",
+      localField: "menuItem",
+      foreignField: "_id",
+      as: "menuItem",
+    },
+  });
+
+  pipeline.push({
+    $unwind: {
+      path: "$menuItem",
+      preserveNullAndEmptyArrays: true,
+    },
+  });
+
   pipeline.push({ $sort: { createdAt: -1 } });
 
   pipeline.push({

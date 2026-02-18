@@ -232,14 +232,14 @@ const updateOrderDetailsService = async ({
 
   if (paymentChanged && order.paymentStatus === "paid") {
     sendUserNotifications({
-      recipientIds: [order.organization.toString()],
+      recipientIds: [order.user.toString()],
       title: "Order Paid",
       body: `Order ${order.orderNumber} has been paid`,
       data: {
         type: NotificationTypes.ORDER_UPDATE,
         objectType: "menuorders",
       },
-      sender: order.user,
+      sender: order.organization,
       objectId: order._id,
     });
   }

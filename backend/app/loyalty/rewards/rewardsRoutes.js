@@ -1,7 +1,7 @@
 const express = require("express");
 const {
   getRewards,
-  getRewardDetails,
+  // getRewardDetails,
   claimReward,
   getJoinedClubsRewards
 } = require("./rewardsController");

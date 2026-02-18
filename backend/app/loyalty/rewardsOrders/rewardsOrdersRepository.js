@@ -5,9 +5,10 @@ const { createTransaction } = require("../../userWalletService/transactions/serv
 const { getModelCounts } = require("@dbUtils/queryUtil");
 const { sendUserNotifications } = require("@notificationsUtil");
 const { NotificationTypes } = require("@NotificationsModel");
+const { createTicketingBookingService } = require("../../bookings/ticketings/ticketingBookingService");
 
 // Create reward order (claim)
-const createRewardOrder = async ({ userId, rewardId }) => {
+const createRewardOrder = async ({ userId, rewardId, protectionUserDetails, timezone }) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -35,49 +36,105 @@ const createRewardOrder = async ({ userId, rewardId }) => {
         throw new Error("reward_claim_limit_reached");
       }
     }
+    let orderDoc = null;
+    let trx = null;
 
-    // Create order
-    const [orderDoc] = await RewardsOrders.create(
-      [
+    //if reward type is ticket then create a ticket otherwise create a normal reward order
+    if (reward.rewardType === "ticketReward") {
+      //create a ticket
+      let ticketData = {
+        ticketId: reward.ticket,
+        timeSlot: reward.timeslot || null,
+        protectionUserDetails: {
+          firstName: protectionUserDetails?.firstName || "",
+          surName: protectionUserDetails?.surName || "",
+          dob: protectionUserDetails?.dob || "",
+          pid: protectionUserDetails?.pid || "",
+        },
+      }
+      result = await createTicketingBookingService(
         {
           user: userId,
-          sourceId: reward._id,
-          sourceType: "rewards",
-          snapshot: reward,
-          pointsUsed: reward.minPointsRequiredToClaim || 0,
+          ticketings: [ticketData],
+          bookingReference: "ticketReward",
+          meta: {
+            reward: reward._id,
+            type: "rewards"
+          }
+        },
+        timezone,
+        session
+      );
+      orderDoc = result;
+
+
+      // Deduct wallet points
+      const trx = await createTransaction(
+        {
+          user: userId,
           companyOrganizer: reward.companyOrganizer,
+          type: "redeem",
+          domainType: "ticketingorders",
+          entityId: orderDoc._id,
+          companyPoints: {
+            base: reward.minPointsRequiredToClaim || 0,
+            total: -(reward.minPointsRequiredToClaim || 0),
+          },
+          allowNegative: false,
+          description: `Claimed reward ${reward.title}`,
         },
-      ],
-      { session }
-    );
+        session
+      );
 
-    // Deduct wallet points
-    const trx = await createTransaction(
-      {
-        user: userId,
-        companyOrganizer: reward.companyOrganizer,
-        type: "redeem",
-        domainType: "loyaltyrewardsorders",
-        entityId: orderDoc._id,
-        companyPoints: {
-          base: reward.minPointsRequiredToClaim || 0,
-          total: -(reward.minPointsRequiredToClaim || 0),
+      if (!trx.success) {
+        throw new Error(trx.message || "transaction_failed");
+      }
+
+    } else {
+      // Create order
+      [orderDoc] = await RewardsOrders.create(
+        [
+          {
+            user: userId,
+            sourceId: reward._id,
+            sourceType: "rewards",
+            snapshot: reward,
+            pointsUsed: reward.minPointsRequiredToClaim || 0,
+            companyOrganizer: reward.companyOrganizer,
+          },
+        ],
+        { session }
+      );
+
+
+
+      // Deduct wallet points
+      const trx = await createTransaction(
+        {
+          user: userId,
+          companyOrganizer: reward.companyOrganizer,
+          type: "redeem",
+          domainType: "loyaltyrewardsorders",
+          entityId: orderDoc._id,
+          companyPoints: {
+            base: reward.minPointsRequiredToClaim || 0,
+            total: -(reward.minPointsRequiredToClaim || 0),
+          },
+          allowNegative: false,
+          description: `Claimed reward ${reward.title}`,
         },
-        allowNegative: false,
-        description: `Claimed reward ${reward.title}`,
-      },
-      session
-    );
+        session
+      );
 
-    if (!trx.success) {
-      throw new Error(trx.message || "transaction_failed");
+      if (!trx.success) {
+        throw new Error(trx.message || "transaction_failed");
+      }
     }
-
     await session.commitTransaction();
     session.endSession();
 
     /* SEND NOTIFICATION IN BACKGROUND */
-    await sendUserNotifications({
+    sendUserNotifications({
       recipientIds: [userId.toString()],
       title: `Claimed reward ${reward.title}`,
       body: `You have successfully claimed the reward ${reward.title} using ${reward.minPointsRequiredToClaim || 0} points.`,
@@ -88,12 +145,15 @@ const createRewardOrder = async ({ userId, rewardId }) => {
 
     });
 
-    return { success: true, order: orderDoc, transactions: trx.transactions };
+    return { success: true, order: orderDoc, transactions: trx?.transactions };
   } catch (err) {
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     session.endSession();
     return { success: false, message: err.message };
   }
+
 };
 
 
