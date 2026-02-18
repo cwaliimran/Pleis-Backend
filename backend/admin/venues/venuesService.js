@@ -300,20 +300,93 @@ const getVenueDetails = async (id, select = []) => {
 
 
 
-const getVenueTitles = async (companyOrganizer) => {
-  const creatorId = companyOrganizer?.companyOrganizer;
+const getVenueTitles = async ({companyOrganizer, organization}) => {
+  let organizationObjectId;
+console.log("organization",companyOrganizer );
+  // If organization is provided, use it directly
+  if (organization) {
+    if (!mongoose.Types.ObjectId.isValid(organization)) {
+      throw new Error("Invalid organization ID");
+    }
+    organizationObjectId = new mongoose.Types.ObjectId(organization);
+  }
+  // If organization is not provided, use companyOrganizer
+  else if (companyOrganizer) {
+    const creatorId = companyOrganizer;
 
-  if (!mongoose.Types.ObjectId.isValid(creatorId)) {
-    throw new Error("Invalid companyOrganizer");
+    if (!mongoose.Types.ObjectId.isValid(creatorId)) {
+      throw new Error("Invalid companyOrganizer");
+    }
+
+    const creatorObjectId = new mongoose.Types.ObjectId(creatorId);
+    
+    // Use the companyOrganizer as the organization reference
+    const data = await Organizations.aggregate([
+      /* 1️⃣ Match creator organizations */
+      {
+        $match: {
+          creator: creatorObjectId,
+          status: "active"
+        }
+      },
+
+      /* 2️⃣ Lookup venues */
+      {
+        $lookup: {
+          from: "venues",
+          let: { orgId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$organization", "$$orgId"] },
+                    { $eq: ["$status", "active"] }
+                  ]
+                }
+              }
+            },
+            {
+              $project: {
+                _id: 1,
+                title: 1
+              }
+            }
+          ],
+          as: "venues"
+        }
+      },
+
+      /* 3️⃣ Remove orgs with no venues (optional but faster output) */
+      {
+        $match: {
+          "venues.0": { $exists: true }
+        }
+      },
+
+      /* 4️⃣ Flatten */
+      { $unwind: "$venues" },
+
+      /* 5️⃣ Final output */
+      {
+        $project: {
+          _id: "$venues._id",
+          title: "$venues.title"
+        }
+      }
+    ]);
+
+    return data;
+  } else {
+    throw new Error("No valid organization or companyOrganizer provided");
   }
 
-  const creatorObjectId = new mongoose.Types.ObjectId(creatorId);
-
+  // If organization is passed directly
   const data = await Organizations.aggregate([
-    /* 1️⃣ Match creator organizations */
+    /* 1️⃣ Match organization */
     {
       $match: {
-        creator: creatorObjectId,
+        _id: organizationObjectId,
         status: "active"
       }
     },
@@ -358,7 +431,7 @@ const getVenueTitles = async (companyOrganizer) => {
     /* 5️⃣ Final output */
     {
       $project: {
-        _id: 1,
+        _id: "$venues._id",
         title: "$venues.title"
       }
     }
@@ -366,6 +439,7 @@ const getVenueTitles = async (companyOrganizer) => {
 
   return data;
 };
+
 
 
 

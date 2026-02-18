@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const {
   sendResponse,
   parsePaginationParams,
@@ -279,9 +280,8 @@ const getUnassignedVenues = async (req, res) => {
 const getVenueTitles = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
    
-  const { keyword, status = "active", pinned, date, companyOrganizer } = req.query;
+  let { keyword, status = "active", pinned, date, companyOrganizer,organization } = req.query;
   const { _id: userId } = req.user._id;
-
   try {
    
     if (date && !validateParams(req, res, {
@@ -289,15 +289,16 @@ const getVenueTitles = async (req, res) => {
         date: "YYYY-MM-DD",
       },
     })) return;
-    if (!companyOrganizer) {
+    if (!companyOrganizer && !organization) {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "company_organizer_required",
+        translationKey: "either_company_organizer_or_organization_isrequired",
       });
     }
     const data  = await venuesService.getVenueTitles({
       companyOrganizer,
+      organization
     });
 
     return sendResponse({

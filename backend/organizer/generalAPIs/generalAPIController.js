@@ -89,16 +89,9 @@ if(!companyOrganizer){
 const getVenues = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let { keyword, status, date ,organization} = req.query;
-  if(!organization){
-  organization=req.user._id;
-  }
-if(!organization){
-  return sendResponse({
-    res,
-    statusCode: 400,
-    translationKey: "organization_id_required",
-  });
-}
+
+ const CompanyOrganizer=req.user._id;
+
   try {
 
     if (date && !validateParams(req, res, {
@@ -114,7 +107,8 @@ if(!organization){
       keyword,
       status,
       date,
-      organization
+      organization,
+      CompanyOrganizer
     });
 
     return sendResponse({
