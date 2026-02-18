@@ -114,21 +114,10 @@ const updateOrders = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-
-
-
-
 const updateInAppOrders = async (req, res) => {
   const { organization } = req.params;
-  const {
-    isOrderingEnabled
-  } = req.body;
+  let { isOrderingEnabled } = req.body;
+
   if (
     !validateParams(req, res, {
       pathParams: ["organization"],
@@ -136,30 +125,24 @@ const updateInAppOrders = async (req, res) => {
     })
   ) return;
 
-  try {
-    const { matchedCount,
-      modifiedCount } = await Orderservice.updateInAppOrders(organization, isOrderingEnabled);
+  // normalize boolean
+  isOrderingEnabled =
+    isOrderingEnabled === true || isOrderingEnabled === "true";
 
-    if (!modifiedCount) {
-      return sendResponse({
-        res,
-        statusCode: 404,
-        translationKey: "order_not_found",
-      });
-    }
-    if (isOrderingEnabled == "true" || isOrderingEnabled == true) {
-      return sendResponse({
-        res,
-        statusCode: 200,
-        translationKey: `in_app_ordering_${isOrderingEnabled ? "enabled" : "disabled"}`,
-      });
-    } else {
-      return sendResponse({
-        res,
-        statusCode: 200,
-        translationKey: "in_app_ordering_disabled",
-      });
-    }
+  try {
+    await Orderservice.updateInAppOrders(
+      organization,
+      isOrderingEnabled
+    );
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      data: isOrderingEnabled,
+      translationKey: `in_app_ordering_${isOrderingEnabled ? "enabled" : "disabled"
+        }`,
+    });
+
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
     return sendResponse({
@@ -170,6 +153,7 @@ const updateInAppOrders = async (req, res) => {
     });
   }
 };
+
 
 
 const getInAppOrders = async (req, res) => {

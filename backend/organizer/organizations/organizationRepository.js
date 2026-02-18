@@ -3,6 +3,7 @@ const Venues = require("@VenuesModel");
 const Organizations = require("@OrganizationModel");
 
 const { getModelCounts } = require("@dbUtils/queryUtil");
+const { User } = require("../../models/UserModel");
 
 // Create
 const createOrganization = async (data) => {
@@ -32,26 +33,6 @@ const getOrganizationCounts = async (query) => {
 const findOrganizationById = async (id) => {
   return Organizations.findById(id);
 };
-
-
-const getOrganizationDetails = async (id) => {
-  const [organization, primaryVenue] = await Promise.all([
-    Organizations.findById(id)
-      .populate("otherInfo.tags")
-      .populate("otherInfo.categories"),
-    Venues.findOne({
-      organization: id,
-      isPrimary: true
-    }).populate("venueType")
-  ]);
-  if (!organization) return null;
-
-  // Attach primaryVenue (formatted) or null inside organization
-  const orgObj = organization.toObject ? organization.toObject() : organization;
-  orgObj.venue = primaryVenue ? primaryVenue.formatResponse() : null;
-  return orgObj;
-};
-
 
 // Delete
 const deleteOrganizationById = async (organization) => {
@@ -95,6 +76,5 @@ module.exports = {
   findOrganizationById,
   deleteOrganizationById,
   findByIdAndUpdate,
-  getOrganizationDetails,
   getOrganizationsAsStaff
 };

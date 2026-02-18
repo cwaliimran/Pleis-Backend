@@ -290,21 +290,25 @@ const updateOrganization = async ({ id, data, timezone }) => {
 
     // ---------- VENUE HANDLING ----------
     if (venue !== undefined) {
+      const existingVenue = await Venues.findById(venue).session(session);
+      if (!existingVenue) {
+        throw new Error("Venue not found");
+      }
+
+      // Step 1: remove previous primary
       await Venues.updateMany(
-        { organization: organization._id, isPrimary: true },
-        { isPrimary: false },
+        { organization: organization._id },
+        { $set: { isPrimary: false } },
         { session }
       );
 
-      const existingVenue = await Venues.findById(venue).session(session);
-      if (existingVenue) {
-        if (!existingVenue.organization || String(existingVenue.organization) !== String(organization._id)) {
-          existingVenue.organization = organization._id;
-        }
-        existingVenue.isPrimary = true;
-        await existingVenue.save({ session });
-      }
+      // Step 2: set new primary
+      existingVenue.organization = organization._id;
+      existingVenue.isPrimary = true;
+
+      await existingVenue.save({ session });
     }
+
 
     // ---------- SAVE ORGANIZATION ----------
     await organization.save({ session });

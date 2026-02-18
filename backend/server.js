@@ -121,6 +121,7 @@ const allowedOrigins = [
   "https://www.dev.pleis.com",
   "http://localhost:4003",
   "https://pleis.vercel.app",
+  "https://you-tuner-prospect-champagne.trycloudflare.com",
   "http://192.168.*.*:4003",
 ];
 

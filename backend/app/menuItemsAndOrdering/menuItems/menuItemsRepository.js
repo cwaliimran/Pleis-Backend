@@ -70,7 +70,8 @@ const getOrganizationHybridRecommendedItems = async (
   // 1. Find active menu
   const menu = await Menus.findOne({
     organization: organizationId,
-    status: "active"
+    status: "active",
+    isOrderingEnabled: true
   }).select("_id");
 
   if (!menu) return [];

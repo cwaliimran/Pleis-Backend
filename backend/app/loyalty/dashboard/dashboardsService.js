@@ -28,7 +28,8 @@ const getDashboard = async ({ timezone, userId }) => {
     getSuggestedRewardsForDashboard({
       userId,
       page: 1,
-      limit: 10
+      limit: 10,
+      timezone
     }),
     getLoyaltyDashboardChallenges({
       userId,
@@ -175,7 +176,8 @@ const getLoyaltyDashboardChallenges = async ({
 const getSuggestedRewardsForDashboard = async ({
   userId,
   page = 1,
-  limit = 10
+  limit = 10,
+  timezone
 }) => {
   const now = new Date();
   const skip = (page - 1) * limit;
@@ -202,7 +204,8 @@ const getSuggestedRewardsForDashboard = async ({
     clubIds,
     now,
     skip,
-    limit
+    limit,
+    timezone
   })
 
   if (!rewards.length) {
@@ -251,7 +254,7 @@ const getSuggestedRewardsForDashboard = async ({
         wallet.tierKey || "essential"
       );
 
-    const formattedReward = formatReward(rewardByTierKey);
+    const formattedReward = formatReward(rewardByTierKey, timezone);
 
     const userPoints = wallet.points ?? 0;
     const userTierEntry = wallet?.level?.entryPoints ?? 0;

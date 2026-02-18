@@ -217,20 +217,33 @@ const updateOrganization = async ({ id, data }) => {
 
   /* ================= ORGANIZATION UPDATE ================= */
 
-  if (basicInfo) {
-    organization.basicInfo = {
-      ...organization.basicInfo,
-      ...basicInfo,
-      media: {
-        ...organization.basicInfo?.media,
-        ...(basicInfo.media || {}),
-      },
-      socialLinks: {
-        ...organization.basicInfo?.socialLinks,
-        ...(basicInfo.socialLinks || {}),
-      },
+if (basicInfo) {
+  organization.basicInfo = organization.basicInfo || {};
+
+  // shallow fields
+  Object.entries(basicInfo).forEach(([key, value]) => {
+    if (value !== undefined && key !== "media" && key !== "socialLinks") {
+      organization.basicInfo[key] = value;
+    }
+  });
+
+  // media merge
+  if (basicInfo.media) {
+    organization.basicInfo.media = {
+      ...(organization.basicInfo.media || {}),
+      ...basicInfo.media,
     };
   }
+
+  // social links merge
+  if (basicInfo.socialLinks) {
+    organization.basicInfo.socialLinks = {
+      ...(organization.basicInfo.socialLinks || {}),
+      ...basicInfo.socialLinks,
+    };
+  }
+}
+
 
   if (otherInfo) {
     organization.otherInfo = {
@@ -324,11 +337,6 @@ const findOrganizationById = async (id) => {
   return formatOrganization(org);
 };
 
-const getOrganizationDetails = async (id) => {
-  let org = await organizationRepo.getOrganizationDetails(id);
-  return formatOrganization(org);
-};
-
 const getOrganizationsAsStaff = async (id) => {
   return await organizationRepo.getOrganizationsAsStaff(id);
 };
@@ -408,6 +416,5 @@ module.exports = {
   getPublicOrganizations,
   checkOrganizationExists,
   getOrganizationsAsStaff,
-  getOrganizationDetails,
   getAllOrganizations
 };

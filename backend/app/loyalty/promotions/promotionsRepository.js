@@ -143,6 +143,7 @@ const getPromotionsForDashboard = async ({
   =============================== */
   const promotions = await Promotion.find(matchQuery)
     .populate("tierLimit")
+    .populate("menuItem")
     .populate(
       "companyOrganizer",
       "companyDetails.loyaltySettings.title companyDetails.logo"
@@ -480,6 +481,23 @@ const getPromotions = async ({
   pipeline.push({
     $unwind: {
       path: "$reward",
+      preserveNullAndEmptyArrays: true,
+    },
+  });
+
+  //populate menu item
+  pipeline.push({
+    $lookup: {
+      from: "menuitems",
+      localField: "menuItem",
+      foreignField: "_id",
+      as: "menuItem",
+    },
+  });
+
+  pipeline.push({
+    $unwind: {
+      path: "$menuItem",
       preserveNullAndEmptyArrays: true,
     },
   });

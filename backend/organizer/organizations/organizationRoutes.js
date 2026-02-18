@@ -4,13 +4,13 @@ const {
   getOrganizations,
   updateOrganization,
   deleteOrganization,
-  getOrganizationDetails,
   getOrganizationsAsStaff,
   getAllOrganizations
 } = require("./organizationController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
 const roleMiddleware = require("../../middlewares/roleMiddleware");
+const { getOrganizationNotifications, getOrganizationDetails } = require("../../admin/organizations/organizationController");
 
 const router = express.Router();
 
@@ -38,5 +38,8 @@ router.put("/:id", roleMiddleware(["organizer", "admin", "manager", "staff"]), u
 
 // Delete a organization
 router.delete("/:id", deleteOrganization);
+
+router.get("/:id/notifications", getOrganizationNotifications);
+
 
 module.exports = router;

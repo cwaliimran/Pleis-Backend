@@ -31,4 +31,5 @@ router.use("/bundles", require("../bundles/bundleRoutes"));
 router.use("/general", require("../generalAPIs/generalAPIRoutes"));
 router.use("/in-app-ordering", require("../../admin/inAppOrdering/inAppOrderingRoutes"));
 router.use("/transactions", require("../../admin/transactions/routes/unifiedTransactionsRoutes"));
+router.use("/notifications", require("../../admin/notifications/notificationsRoutes"))
 module.exports = router;

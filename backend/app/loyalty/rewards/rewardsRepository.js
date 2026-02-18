@@ -22,6 +22,8 @@ const getRewardsByCompanyOrganizer = async ({ companyOrganizer }) => {
 
   return Reward.find(query)
     .populate("menuItem", "title image")
+    .populate("event", "basicInfo schedule")
+    .populate("ticket")
     .populate("companyOrganizer", "companyDetails.logo companyDetails.loyaltySettings.title")
     .populate({ path: "tierLimit" })
     .sort({ createdAt: -1 })
@@ -41,8 +43,8 @@ const countRewardsByCompanyOrganizer = async ({ companyOrganizer, status }) => {
   return Reward.countDocuments(query);
 };
 
-const claimReward = async (userId, rewardId) => {
-  const result = await createRewardOrderService(userId, rewardId);
+const claimReward = async (userId, rewardId, protectionUserDetails, timezone) => {
+  const result = await createRewardOrderService(userId, rewardId, protectionUserDetails, timezone);
   return result;
 };
 
@@ -56,6 +58,7 @@ const getRewardsForDashboardPaged = async ({
   skip,
   limit,
   keyword = "",
+  timezone
 }) => {
   const query = {
     companyOrganizer: { $in: clubIds },
@@ -80,6 +83,8 @@ const getRewardsForDashboardPaged = async ({
   return Reward.find(query)
     .populate("tierLimit")
     .populate("menuItem", "title image")
+    .populate("event", "basicInfo schedule")
+    .populate("ticket")
     .populate(
       "companyOrganizer",
       "companyDetails.loyaltySettings.title companyDetails.logo"

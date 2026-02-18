@@ -134,6 +134,7 @@ function formatEventTicketing(timezone, item) {
         _id: obj._id,
         title: obj.title,
         amount: obj.price,
+        timingSlots: obj.timingSlots,
     };
 }
 
