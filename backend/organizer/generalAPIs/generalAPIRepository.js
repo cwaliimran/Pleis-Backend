@@ -12,6 +12,7 @@ const MenuItems = require("@MenuItemsModel");
 const Tiers = require("@TiersModel");
 const { getFullImageUrl } = require("@utils/imageHelper");
 const { formatMenuItem } = require("./formatters/bundleFormatter");
+const mongoose = require("mongoose");
 const { getOrganizationIdByCompanyOrganizer } = require("../../admin/organizations/organizationRepository");
 
 const getBundlesCount = async (query) => {

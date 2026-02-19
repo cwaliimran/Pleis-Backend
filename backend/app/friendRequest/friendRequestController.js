@@ -20,10 +20,10 @@ const getFriends = async (req, res) => {
       timezone,
       page,
       limit,
-      keyword,            
+      keyword,
       userId,
     });
-const formateUser= menuItemOrderFormatter(users, timezone);
+    const formateUser = menuItemOrderFormatter(users, timezone);
     return sendResponse({
       res,
       statusCode: 200,
@@ -96,7 +96,7 @@ const createFriendRequest = async (req, res) => {
 };
 const getFriendRequests = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "pending", date,} = req.query;
+  let { keyword, status = "pending", date, } = req.query;
   try {
 
     const userId = req.user._id;
@@ -110,7 +110,7 @@ const getFriendRequests = async (req, res) => {
       userId,
       date,
     });
-const formateUser= menuItemOrderFormatter(requests, timezone);
+    const formateUser = menuItemOrderFormatter(requests, timezone);
     return sendResponse({
       res,
       statusCode: 200,
@@ -129,11 +129,11 @@ const formateUser= menuItemOrderFormatter(requests, timezone);
   }
 };
 const updateFriendRequests = async (req, res) => {
-  const { id } = req.params;   
+  const { id } = req.params;
 
-  let {  status = "accept", } = req.body;
+  let { status = "accept", } = req.body;
   try {
-      const validActions = ["accept", "reject", "cancel"];
+    const validActions = ["accept", "reject", "cancel"];
     if (!validActions.includes(status)) {
       return sendResponse({
         res,
@@ -143,13 +143,13 @@ const updateFriendRequests = async (req, res) => {
       });
     }
 
- if (
-    !validateParams(req, res, {
-      pathParams: ["id"],
-      objectIdFields: ["id"],
-    })
-  )
-    return;
+    if (
+      !validateParams(req, res, {
+        pathParams: ["id"],
+        objectIdFields: ["id"],
+      })
+    )
+      return;
     const userId = req.user._id;
 
     const { requests, meta } = await friendRequestService.updateFriendRequests({
@@ -183,7 +183,7 @@ const unfriend = async (req, res) => {
     })
   )
     return;
-const userId = req.user._id;
+  const userId = req.user._id;
   try {
     const deleted = await friendRequestService.unfriend(id, userId);
     if (!deleted) {
@@ -211,7 +211,7 @@ const userId = req.user._id;
 };
 const getSentFriendRequests = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "pending", date,} = req.query;
+  let { keyword, status = "pending", date, } = req.query;
   try {
 
     const userId = req.user._id;
@@ -225,7 +225,7 @@ const getSentFriendRequests = async (req, res) => {
       userId,
       date,
     });
-const formateUser= menuItemOrderFormatter(requests, timezone);
+    const formateUser = menuItemOrderFormatter(requests, timezone);
     return sendResponse({
       res,
       statusCode: 200,
@@ -246,7 +246,7 @@ const formateUser= menuItemOrderFormatter(requests, timezone);
 
 const seeFriends = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "accept", date,} = req.query;
+  let { keyword, status = "accept", date, } = req.query;
   try {
 
     const userId = req.user._id;
@@ -260,7 +260,7 @@ const seeFriends = async (req, res) => {
       userId,
       date,
     });
-const formateUser= menuItemOrderFormatter(requests, timezone);
+    const formateUser = menuItemOrderFormatter(requests, timezone);
     return sendResponse({
       res,
       statusCode: 200,
@@ -279,11 +279,11 @@ const formateUser= menuItemOrderFormatter(requests, timezone);
   }
 };
 module.exports = {
-getFriends,
-createFriendRequest,
-getFriendRequests,
-updateFriendRequests,
-unfriend,
-getSentFriendRequests,
-seeFriends
+  getFriends,
+  createFriendRequest,
+  getFriendRequests,
+  updateFriendRequests,
+  unfriend,
+  getSentFriendRequests,
+  seeFriends
 };

@@ -175,6 +175,20 @@ const getMenuIdsByCompanyOrganizer = async (companyOrganizer) => {
   const menus = await Menus.find({ organization: { $in: organizationIds } }).select("_id").lean();
   return menus.map(menu => menu._id);
 };
+const getMenuIdsByOrganization = async (organization) => {
+  // Split the organization input by commas or % and convert to ObjectId
+  const organizationIds = organization
+    .split(/[,%]/) // supports both "," and "%"
+    .filter(Boolean) // Remove any empty strings
+    .map(id => new mongoose.Types.ObjectId(id)); // Convert strings to ObjectIds
+
+  // Query Menus where organization is in the list of organizationIds
+  const menus = await Menus.find({ organization: { $in: organizationIds } }).select("_id").lean();
+
+  // Return the menu IDs
+  return menus.map(menu => menu._id);
+};
+
 const getOrgCompanyOrganizer = async (organizationId) => {
 
   const org = await Organizations.findById(organizationId).select("creator").lean();
@@ -217,5 +231,6 @@ module.exports = {
   getOrgCompanyOrganizer,
   getOrganizationNotifications,
   getOrganizationIdByCompanyOrganizer,
-  getInAppOrderingSettings
+  getInAppOrderingSettings,
+  getMenuIdsByOrganization
 };
