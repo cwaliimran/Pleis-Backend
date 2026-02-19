@@ -1,7 +1,7 @@
 // services/highlightService.js
 
 const highlightRepo = require("./highlightRepository");
-const eventRepository = require("../events/eventRepository");
+const eventRepository = require("../../admin/events/eventRepository");
 const organizationRepo = require("../organizations/organizationRepository");
 const { Highlights } = require("@HighlightsModel");
 const { formatPublicHighlightResponse } = require("./formatters/formatPublicHighlightResponse");

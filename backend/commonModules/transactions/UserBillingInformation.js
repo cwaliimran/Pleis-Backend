@@ -16,10 +16,18 @@ const userBillinginformationSchema = new mongoose.Schema(
             type: String,
             required: true,
             lowercase: true,
-           trim: true,
+            trim: true,
         },
-
-
+        firstName: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+        lastName: {
+            type: String,
+            required: true,
+            trim: true,
+        },
 
         // --------------------------------------------
         // BILLING ADDRESS

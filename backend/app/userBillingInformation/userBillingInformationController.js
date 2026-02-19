@@ -17,13 +17,17 @@ const createUserBillingInformation = async (req, res) => {
   try {
     const {
       email,
+      firstName,
+      lastName,
       billingAddress,
+      status = "active",
+
     } = req.body;
     /* ================= BASIC REQUIRED FIELDS ================= */
 
     if (
       !validateParams(req, res, {
-        rawData: ["email", "billingAddress"], // Ensure all required fields are provided
+        rawData: ["email", "firstName", "lastName", "billingAddress"], // Ensure all required fields are provided
       })
     ) return;
 
@@ -77,13 +81,15 @@ const createUserBillingInformation = async (req, res) => {
     const data = {
       user: req.user._id, // Ensure user is an ObjectId
       email: email.trim().toLowerCase(), // Trim and lowercase the email
+      firstName: firstName.trim(), // Trim the first name
+      lastName: lastName.trim(), // Trim the last name
       billingAddress: {
         address: billingAddress.address.trim(),
         city: billingAddress.city.trim(),
         postalCode: billingAddress.postalCode.trim(),
         country: billingAddress.country.trim(),
       },
-      status: "active", // Default to "active" if no status provided
+      status: status.trim().toLowerCase(), // Ensure status is lowercase
     };
 
     /* ================= CREATE USER BILLING INFORMATION ================= */
@@ -160,6 +166,9 @@ const updateUserBillingInformation = async (req, res) => {
   let {
     email,
     billingAddress,
+    status,
+    firstName,
+    lastName,
   } = req.body;
 
   if (!id) {
@@ -174,6 +183,15 @@ const updateUserBillingInformation = async (req, res) => {
   const data = {};
   if (email !== undefined) {
     data.email = email.trim().toLowerCase(); // Ensure email is lowercase
+  }
+  if (firstName !== undefined) {
+    data.firstName = firstName.trim();
+  }
+  if (lastName !== undefined) {
+    data.lastName = lastName.trim();
+  }
+  if (status !== undefined) {
+    data.status = status.trim().toLowerCase(); // Ensure status is lowercase
   }
   if (billingAddress !== undefined) {
     if (typeof billingAddress !== "object" || billingAddress === null) {

@@ -2,7 +2,7 @@ const Organizations = require("@OrganizationModel");
 const Tags = require("@TagsModel");
 
 const { generateMeta } = require("@utils/responseUtil");
-const { getNearbyEventsWithAdvanceFilters } = require("../../events/eventService");
+const { getNearbyEventsWithAdvanceFilters } = require("../../../admin/events/eventService");
 const mongoose = require("mongoose");
 const { User } = require("@UserModel")
 

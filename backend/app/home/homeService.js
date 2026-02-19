@@ -1,7 +1,7 @@
 const { getPublicHighlights } = require("../highlights/highlightService");
 const { sendResponse } = require("../../helperUtils/responseUtil");
 const { getCustomCategories } = require("../customCategories/customCategoriesService");
-const { getForYouEventsService, thisWeekEvents } = require("../events/eventService");
+const { getForYouEventsService, thisWeekEvents } = require("../../admin/events/eventService");
 const { getPublicCategories } = require("../publicCategories/categoriesService");
 const { getPopularEventsForHomeService } = require("../popularEvents/popularEventsService");
 

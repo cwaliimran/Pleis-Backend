@@ -18,8 +18,7 @@ const getUserBillingInformations = async ({ timezone, page, limit, keyword, stat
 };
 const updateUserBillingInformation = async (id, data) => {
   const userBillingInformation = await UserBillingInformationRepo.findUserBillingInformationById(id);
-  
-  console.log("id, data", id, data); // Debugging output
+
   
   if (!userBillingInformation) {
     return { error: "UserBillingInformation_not_found" };
@@ -31,6 +30,8 @@ const updateUserBillingInformation = async (id, data) => {
     "email",
     "billingAddress", // billingAddress will be updated as an object
     "status",
+    "firstName",
+    "lastName",
   ];
 
   /* ================= APPLY UPDATE FIELDS ================= */
