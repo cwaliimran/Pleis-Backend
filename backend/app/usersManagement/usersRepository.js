@@ -247,6 +247,6 @@ module.exports = {
   updateUserInterests,
   getUserInterestsByUserId,
   getUserInterestsIdsForRecommendation,
-findUserByIdAndCheckExists,
+  findUserByIdAndCheckExists,
   findAppUserByIdWithProjection
 };

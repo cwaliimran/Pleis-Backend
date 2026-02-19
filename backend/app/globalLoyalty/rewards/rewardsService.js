@@ -6,7 +6,7 @@ const { getUserWallet } = require("../../userWalletService/global/walletManageme
 const { normalizeRewardClaimMeta } = require("../../loyalty/rewards/formatters/normalizeRewardClaimMeta");
 
 
- const getGlobalRewardsService = async ({ userId, category, keyword }) => {
+const getGlobalRewardsService = async ({ userId, category, keyword, timezone }) => {
   const [rewards, userWallet] = await Promise.all([
     rewardRepo.getGlobalRewards(category, keyword),
     getUserWallet(userId)
@@ -15,7 +15,7 @@ const { normalizeRewardClaimMeta } = require("../../loyalty/rewards/formatters/n
   const userPoints = userWallet?.global?.points ?? 0;
   const userTierEntry = userWallet?.global?.level?.entryPoints ?? 0;
 
-  const formatted = rewards.map(r => formatReward(r));
+  const formatted = rewards.map(r => formatReward(r, timezone));
 
   const claimResults =
     await checkClaimLimitForGlobalRewards(userId, rewards);
@@ -48,11 +48,13 @@ const { normalizeRewardClaimMeta } = require("../../loyalty/rewards/formatters/n
   });
 
   return { rewards: normalized };
-}; 
+};
 
 
-const claimGlobalRewardService = async (userId, rewardId) => {
-  return rewardRepo.claimReward(userId, rewardId);
+const claimGlobalRewardService = async (userId, rewardId,
+    protectionUserDetails,
+    timezone) => {
+  return rewardRepo.claimReward(userId, rewardId, protectionUserDetails, timezone);
 };
 
 module.exports = {

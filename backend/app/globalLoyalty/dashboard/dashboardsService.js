@@ -14,7 +14,7 @@ const getDashboard = async ({ timezone, userId }) => {
     getUserWallet(userId),
     getCategories({ page: 1, limit: 10 }),
     getGlobalLoyaltyChallenges({ userId, timezone, page: 1, limit: 10, skip: 0 }),
-    getGlobalRewardsService({ userId }),
+    getGlobalRewardsService({ userId, timezone }),
     getGlobalPromotionsService({ userId, page: 1, limit: 10, skip: 0, timezone }),
     getRecentTransactionsForDashboard({ limit: 4, user: userId, walletType: "globalWallet" }),
   ]);

@@ -4,7 +4,7 @@ const mapsRepo = require("./mapsRepository");
 const moment = require("moment-timezone");
 const mongoose = require("mongoose");
 const { Events } = require("../../commonModules/events/Event");
-const { transformOperatingHoursToLocal, isOrganizationOpenNow } = require("../../shared/commonSchemas/operatingHours");
+const { transformOperatingHoursToLocal, isOrganizationOpenNow, getUtcMinutesAndLocalWeekdayKey } = require("../../shared/commonSchemas/operatingHours");
 const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
 const { formatEventResponse } = require("../events/formatter/eventFormatter");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
@@ -333,7 +333,9 @@ const getPlaces = async (queryData = {}) => {
       advanceFilters = {}
     } = queryData;
 
+    //TODO topRated, trending
     const {
+      time = "all", // openNow, topRated, trending
       categories = [],
       venueTypes = [],
       tags = [],
@@ -427,11 +429,99 @@ const getPlaces = async (queryData = {}) => {
       .filter(mongoose.Types.ObjectId.isValid)
       .map(id => new mongoose.Types.ObjectId(id));
 
+    const { utcMinutes, localWeekdayKey } =
+      getUtcMinutesAndLocalWeekdayKey(timezone);
+
+
     //
     // PIPELINE
     //
     const pipeline = [
       { $match: finalMatch },
+      {
+        $addFields: {
+          todayHours: {
+            $getField: {
+              field: localWeekdayKey,
+              input: "$operatingHours"
+            }
+          }
+        }
+      },
+      {
+        $addFields: {
+          isOpenNow: {
+            $let: {
+              vars: {
+                from: "$todayHours.from",
+                to: "$todayHours.to",
+                isOpen: "$todayHours.isOpen",
+                breakFrom: "$todayHours.break.from",
+                breakTo: "$todayHours.break.to",
+                now: utcMinutes
+              },
+              in: {
+                $cond: [
+                  {
+                    $and: [
+                      { $eq: ["$$isOpen", true] },
+                      { $ne: ["$$from", null] },
+                      { $ne: ["$$to", null] }
+                    ]
+                  },
+                  {
+                    $let: {
+                      vars: {
+                        inRange: {
+                          $cond: [
+                            { $lte: ["$$from", "$$to"] }, // normal day
+                            {
+                              $and: [
+                                { $gte: ["$$now", "$$from"] },
+                                { $lte: ["$$now", "$$to"] }
+                              ]
+                            },
+                            {
+                              // overnight shift
+                              $or: [
+                                { $gte: ["$$now", "$$from"] },
+                                { $lte: ["$$now", "$$to"] }
+                              ]
+                            }
+                          ]
+                        },
+                        inBreak: {
+                          $and: [
+                            { $ne: ["$$breakFrom", null] },
+                            { $ne: ["$$breakTo", null] },
+                            { $gte: ["$$now", "$$breakFrom"] },
+                            { $lte: ["$$now", "$$breakTo"] }
+                          ]
+                        }
+                      },
+                      in: {
+                        $and: [
+                          "$$inRange",
+                          { $not: ["$$inBreak"] }
+                        ]
+                      }
+                    }
+                  },
+                  false
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          todayHours: 0
+        }
+      },
+      ...(time === "openNow"
+        ? [{ $match: { isOpenNow: true } }]
+        : []),
 
       //
       // JOIN VENUES
@@ -593,12 +683,6 @@ const getPlaces = async (queryData = {}) => {
       enriched = items.map(i => {
         // Format organization using shared formatter
         const formattedOrg = formatOrganization(i);
-
-        //add openNow check
-        formattedOrg.isOpenNow = isOrganizationOpenNow(
-          formattedOrg.operatingHours,
-          timezone
-        );
 
         //format hours
         if (formattedOrg?.operatingHours) {

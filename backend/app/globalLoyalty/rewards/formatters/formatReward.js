@@ -1,6 +1,7 @@
 const { getFullImageUrl } = require("../../../../helperUtils/imageHelper");
+const { formatEventSchedule } = require("../../../events/formatter/eventFormatter");
 
-function formatReward(reward) {
+function formatReward(reward, timezone) {
   const obj = { ...reward };
 
   if (obj?.tierLimit?.image) {
@@ -26,6 +27,14 @@ function formatReward(reward) {
     case "globalCustomReward":
       if (obj?.customReward) {
         obj.customReward.image = getFullImageUrl(obj.customReward.image);
+      }
+      break;
+    case "globalTicketReward":
+      if (obj?.event?.basicInfo?.media?.name) {
+        obj.event.basicInfo.media.name = getFullImageUrl(obj.event.basicInfo?.media.name);
+      }
+      if (obj?.event?.schedule) {
+        obj.event.schedule = formatEventSchedule(obj.event.schedule, timezone);
       }
       break;
   }

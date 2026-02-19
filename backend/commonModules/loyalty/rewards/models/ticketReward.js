@@ -7,7 +7,7 @@ const TicketReward = Reward.discriminator(
     {
       event: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Events",
+        ref: "Event",
         required: true,
       },
       ticket: {
