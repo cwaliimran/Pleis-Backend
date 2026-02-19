@@ -24,18 +24,25 @@ const getFriends = async ({
   ];
 
   // 2️⃣ Keyword search
-  if (keyword) {
-    const safeKeyword = escapeRegex(keyword);
-    pipeline.push({
-      $match: {
-        $or: [
-          { firstName: { $regex: safeKeyword, $options: "i" } },
-          { lastName: { $regex: safeKeyword, $options: "i" } },
-          { username: { $regex: safeKeyword, $options: "i" } },
-        ],
-      },
-    });
-  }
+if (keyword) {
+  const safeKeyword = escapeRegex(keyword);
+
+  pipeline.push({
+    $addFields: {
+      fullName: { $concat: ["$firstName", " ", "$lastName"] }, // Concatenate firstName and lastName
+    }
+  });
+
+  pipeline.push({
+    $match: {
+      $or: [
+        { fullName: { $regex: safeKeyword, $options: "i" } }, // Search in the concatenated fullName
+        { username: { $regex: safeKeyword, $options: "i" } },
+      ],
+    },
+  });
+}
+
 
   // 3️⃣ Lookup ONLY accepted friend requests
   pipeline.push({
@@ -77,13 +84,14 @@ const getFriends = async ({
       as: "friendRequest",
     },
   });
-
-  // 4️⃣ KEEP ONLY USERS WHO ARE FRIENDS
-  pipeline.push({
-    $match: {
-      $expr: { $gt: [{ $size: "$friendRequest" }, 0] },
-    },
-  });
+  if (!keyword) {
+    // 4️⃣ KEEP ONLY USERS WHO ARE FRIENDS
+    pipeline.push({
+      $match: {
+        $expr: { $gt: [{ $size: "$friendRequest" }, 0] },
+      },
+    });
+  }
 
   // 5️⃣ Projection
   pipeline.push({
@@ -110,7 +118,7 @@ const getFriends = async ({
   });
 
   const result = await User.aggregate(pipeline);
-
+console.log("result",result );
   return {
     users: result[0]?.data || [],
     meta: generateMeta(
