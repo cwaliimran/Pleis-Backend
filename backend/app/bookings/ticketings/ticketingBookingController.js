@@ -12,6 +12,7 @@ const { checkoutWithTicketsAndReservation } = require("./services/checkoutOrches
 const { validateReservationPayload } = require("../../reservations/validators/reservationValidation");
 const { attemptTicketingOrdersPayment } = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/paymentService");
 const { ticketingOrderFinalizerService } = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/ticketingOrderFinalizerService");
+const { default: mongoose } = require("mongoose");
 
 const createTicketingBooking = async (req, res) => {
   const session = await mongoose.startSession();

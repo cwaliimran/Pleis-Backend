@@ -1,7 +1,7 @@
 const { getPublicHighlights } = require("../highlights/highlightService");
 const { sendResponse } = require("../../helperUtils/responseUtil");
 const { getCustomCategories } = require("../customCategories/customCategoriesService");
-const { getForYouEventsService, thisWeekEvents } = require("../../admin/events/eventService");
+const { getForYouEventsService, thisWeekEvents } = require("../events/eventService");
 const { getPublicCategories } = require("../publicCategories/categoriesService");
 const { getPopularEventsForHomeService } = require("../popularEvents/popularEventsService");
 
@@ -351,11 +351,8 @@ const getHomeService = async ({ queryData }) => {
 
     return { status: true, data: feed };
   } catch (error) {
-    return sendResponse({
-      statusCode: 500,
-      translationKey: "internal_server",
-      error,
-    });
+    console.log("error===>", error)
+    return { status: false, data: error.message || "Error fetching home feed" };
   }
 };
 

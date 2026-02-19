@@ -68,6 +68,15 @@ engagementEventSchema.index(
   }
 );
 
+
+engagementEventSchema.index({
+  entityType: 1,
+  action: 1,
+  entityId: 1,
+  createdAt: -1
+});
+
+
 const EngagementEvents = mongoose.model(
   "EngagementEvents",
   engagementEventSchema

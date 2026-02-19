@@ -213,6 +213,7 @@ const updateOrganization = async ({ id, data }) => {
     numberOfOrganizations,
     totalSubscriptionAmount,
     userId, // 👈 MUST be passed to update subscription
+    inAppOrderingSettings
   } = data;
 
   /* ================= ORGANIZATION UPDATE ================= */
@@ -274,6 +275,64 @@ if (basicInfo) {
     organization.basicInfo = organization.basicInfo || {};
     organization.basicInfo.name = title;
   }
+
+
+    // ---------- UPDATE inAppOrderingSettings ----------
+    if (inAppOrderingSettings !== undefined) {
+      organization.inAppOrderingSettings = {
+        paymentMethods: {
+          instantPayment:
+            inAppOrderingSettings?.paymentMethods?.instantPayment ??
+            organization?.inAppOrderingSettings?.paymentMethods?.instantPayment ??
+            false,
+
+          payLater: {
+            allow:
+              inAppOrderingSettings?.paymentMethods?.payLater?.allow ??
+              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.allow ??
+              false,
+
+            enableOrderAcceptance:
+              inAppOrderingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ??
+              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ??
+              false,
+
+            chargeOnAcceptance:
+              inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ??
+              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ??
+              false,
+
+            chargeOnDelivery:
+              inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnDelivery ??
+              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnDelivery ??
+              false,
+          },
+
+          cashPayment:
+            inAppOrderingSettings?.paymentMethods?.cashPayment ??
+            organization?.inAppOrderingSettings?.paymentMethods?.cashPayment ??
+            false,
+        },
+
+        deliveryMethods: {
+          counterPickup:
+            inAppOrderingSettings?.deliveryMethods?.counterPickup ??
+            organization?.inAppOrderingSettings?.deliveryMethods?.counterPickup ??
+            true,
+
+          tableDelivery:
+            inAppOrderingSettings?.deliveryMethods?.tableDelivery ??
+            organization?.inAppOrderingSettings?.deliveryMethods?.tableDelivery ??
+            false,
+
+          toGo:
+            inAppOrderingSettings?.deliveryMethods?.toGo ??
+            organization?.inAppOrderingSettings?.deliveryMethods?.toGo ??
+            false,
+        },
+      };
+    }
+
 
   /* ================= PRIMARY VENUE ================= */
 

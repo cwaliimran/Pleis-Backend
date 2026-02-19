@@ -80,12 +80,14 @@ const calculatePointsRepo = async (
     global: {
       pointsPerEuro: globalPointsPerEuro,
       earnedPoints: globalEarnedPoints,
+      globalMultiplier,
       cashback,
     },
 
     organizer: {
       pointsPerEuro: organizerPointsPerEuro,
       earnedPoints: organizerEarnedPoints,
+      organizerMultiplier,
       cashback,
     },
   };

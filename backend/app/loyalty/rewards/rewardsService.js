@@ -17,9 +17,11 @@ const getRewardsByCompanyOrganizerService = async ({
   // 1️⃣ Fetch user wallet (points + tier)
   const wallet = await clubMemberRepo.getWallet(userId, companyOrganizer, null, { autoCreate: false });
 
-  const userPoints = wallet?.points ?? 0;
-  const userTierEntry = wallet?.level?.entryPoints ?? 0;
-  const tierKey = wallet?.tierKey || "essential";
+  const formattedWallet = formatUserWallet(wallet);
+
+  const userPoints = formattedWallet?.points ?? 0;
+  const userTierEntry = formattedWallet?.level?.entryPoints ?? 0;
+  const tierKey = formattedWallet?.tierKey || "essential";
 
   // 2️⃣ Fetch rewards
   const rewards = await rewardRepo.getRewardsByCompanyOrganizer({
