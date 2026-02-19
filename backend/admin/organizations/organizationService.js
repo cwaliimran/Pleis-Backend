@@ -229,7 +229,6 @@ const updateOrganization = async ({ id, data, timezone }) => {
     if (description !== undefined) organization.otherInfo.description = description;
     if (title !== undefined) organization.basicInfo.name = title;
 
-    // update inAppOrderingSettings if provided
     // ---------- UPDATE inAppOrderingSettings ----------
     if (inAppOrderingSettings !== undefined) {
       organization.inAppOrderingSettings = {

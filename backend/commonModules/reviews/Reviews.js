@@ -40,6 +40,11 @@ const reviewsSchema = new mongoose.Schema(
   }
 );
 
+reviewsSchema.index({ organization: 1, status: 1 });
+reviewsSchema.index({ organization: 1, rating: -1 });
+reviewsSchema.index({ createdAt: -1 }); 
+
+
 const Reviews = mongoose.model("Reviews", reviewsSchema);
 
 module.exports = Reviews;

@@ -148,4 +148,5 @@ module.exports = {
   transformOperatingHoursToUtc,
   transformOperatingHoursToLocal,
   isOrganizationOpenNow,
+  getUtcMinutesAndLocalWeekdayKey
 };

@@ -2,7 +2,7 @@ const Organizations = require("@OrganizationModel");
 const Tags = require("@TagsModel");
 
 const { generateMeta } = require("@utils/responseUtil");
-const { getNearbyEventsWithAdvanceFilters } = require("../../events/eventService");
+const { getNearbyEventsWithAdvanceFilters } = require("../../../admin/events/eventService");
 const mongoose = require("mongoose");
 const { User } = require("@UserModel")
 
@@ -28,11 +28,11 @@ async function searchOrganizations(ctx) {
     advanceFilters = {},
     timezone
   } = ctx;
-
   const {
     categories = [],
     tags = [],
     genre = [],
+    venueTypes = [],
     distanceFrom = 0,
     distanceTo = 0,
   } = advanceFilters;
@@ -53,6 +53,8 @@ async function searchOrganizations(ctx) {
 
   const categoryObjectIds = toObjectIds(categories);
   const tagObjectIds = toObjectIds(tags);
+  const venueTypeObjectIds = toObjectIds(venueTypes);
+
 
   //
   // TEXT SEARCH
@@ -118,11 +120,45 @@ async function searchOrganizations(ctx) {
       ]
       : [{ $match: filter }];
 
+
+      const venueTypeStages =
+  venueTypeObjectIds.length
+    ? [
+        {
+          $lookup: {
+            from: "venues",
+            let: { orgId: "$_id" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$organization", "$$orgId"]
+                  },
+                  status: "active",
+                  venueType: { $in: venueTypeObjectIds }
+                }
+              },
+              { $project: { _id: 1 } } // ultra light
+            ],
+            as: "matchedVenues"
+          }
+        },
+        {
+          $match: {
+            $expr: {
+              $gt: [{ $size: "$matchedVenues" }, 0]
+            }
+          }
+        }
+      ]
+    : [];
+
   //
   // MAIN PIPELINE
   //
   const pipeline = [
     ...geoStage,
+    ...venueTypeStages,
 
     //
     // SORT + PAGINATION
@@ -178,6 +214,7 @@ async function searchOrganizations(ctx) {
   //
   const countPipeline = [
     ...geoStage,
+    ...venueTypeStages,
     { $count: "total" }
   ];
 

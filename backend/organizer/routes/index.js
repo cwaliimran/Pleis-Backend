@@ -17,13 +17,14 @@ router.use("/marketing", require("../marketing/marketingRoutes"));
 router.use("/giveaways", require("../giveaways/giveawayRoutes"));
 router.use("/subscriptions", require("../subscriptions/subscriptionsRoutes"));
 router.use("/reviews", require("../reviews/reviewsRoutes"));
-router.use("/menu-management/items", require("../menuManagement/menuItems/menuItemsRoutes"));
+router.use("/menu-management/items", require("../../admin/menuManagement/menuItems/menuItemsRoutes"));
 router.use("/menu/categories", require("../../admin/menuManagement/menuItemCategories/menuItemCategoriesRoutes"));
 router.use("/menu", require("../menuManagement/menu/menusRoutes"));
+
 router.use("/qr-code", require("../qr/qrRoutes"));
 router.use("/highlights", require("../highlights/highlightRoutes"));
 router.use("/reservations", require("../../admin/reservation/reservationRoutes"));
-router.use("/events", require("../events/eventRoutes"));
+router.use("/events", require("../../admin/events/eventRoutes"));
 router.use("/venues", require("../venues/venuesRoutes"));
 router.use("/ticketing", require("../../admin/ticketing/ticketingsRoutes"));
 router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));

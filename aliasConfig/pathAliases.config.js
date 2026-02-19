@@ -83,4 +83,5 @@ module.exports = {
     "@SearchSuggestionModel": "backend/app/searchSuggestions/SearchSuggestion.js",
     "@OrganizationStaffAttendanceModel": "backend/commonModules/staff/OrganizationStaffAttendance.js",
     "@GlobalBasePromotionModel": "backend/commonModules/globalLoyalty/promotions/models/Promotion/basePromotion.js",
+    "@UserBillingInformationModel": "backend/commonModules/transactions/UserBillingInformation.js",
 };

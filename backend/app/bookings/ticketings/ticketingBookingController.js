@@ -12,6 +12,7 @@ const { checkoutWithTicketsAndReservation } = require("./services/checkoutOrches
 const { validateReservationPayload } = require("../../reservations/validators/reservationValidation");
 const { attemptTicketingOrdersPayment } = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/paymentService");
 const { ticketingOrderFinalizerService } = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/ticketingOrderFinalizerService");
+const { default: mongoose } = require("mongoose");
 
 const createTicketingBooking = async (req, res) => {
   const session = await mongoose.startSession();
@@ -19,7 +20,7 @@ const createTicketingBooking = async (req, res) => {
 
   try {
     const { timezone } = req.user;
-    const { ticketings, paymentDetails, reservation } = req.body;
+    const { ticketings, paymentDetails, reservation, userBillingInformation = null } = req.body;
 
     if (!validateTicketingPayload(req, res)) return;
 
@@ -38,6 +39,7 @@ const createTicketingBooking = async (req, res) => {
           ticketings,
           reservation: normalizedReservation,
           paymentDetails,
+          userBillingInformation,
         },
         session
       );
@@ -52,6 +54,7 @@ const createTicketingBooking = async (req, res) => {
           user: req.user._id,
           ticketings,
           paymentDetails,
+          userBillingInformation,
         },
         timezone,
         session

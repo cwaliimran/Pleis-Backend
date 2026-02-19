@@ -380,6 +380,7 @@ const getSaleItems = async ({ timezone,
   status,
   organization,
   date,filter,sortBy,categoryId,
+  
   range, }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
@@ -401,6 +402,68 @@ const getSaleItems = async ({ timezone,
     meta,
   };
 };
+const updateSaleItems = async (id, data) => {
+  const order = await MenuRepo.findSaleById(id);
+  if (!order) {
+    return { error: "Menu_not_found" };
+  }
+
+  // Update status
+  if (data.status !== undefined) {
+    order.status = data.status;
+  }
+    if (data.title !== undefined) {
+    order.title = data.title;
+  }
+
+
+  // Update discount type and value
+  if (data.discountType !== undefined) {
+    order.discountType = data.discountType;
+  }
+
+  if (data.discountValue !== undefined) {
+    order.discountValue = data.discountValue;
+  }
+
+  // Update menu items delivery status
+if (data.menuItems && Array.isArray(data.menuItems)) {
+  const deliveredIds = data.menuItems.map(id => new mongoose.Types.ObjectId(id));
+
+  // Ensure order.menuItems exists and is an array
+  if (Array.isArray(order.menuItems)) {
+    // Replace the current menuItems with the new ones
+    order.menuItems = deliveredIds;
+  } else {
+    return { error: "Order items not found or invalid" }; // Return an error if order.menuItems is not an array
+  }
+}
+
+
+  // Update date range
+  if (data.startDateTime !== undefined) {
+    order.startDateTime = new Date(data.startDateTime);
+  }
+
+  if (data.endDateTime !== undefined) {
+    order.endDateTime = new Date(data.endDateTime);
+  }
+
+  await order.save();
+  return order;
+};
+
+const deleteSaleItems = async (id) => {
+  const order_ = await MenuRepo.findSaleById(id);
+  if(order_)
+  {
+ const order =await MenuRepo.findSaleByIdAndUpdate(id)
+   return order;
+  }
+  else{
+  throw new Error("Sale item not found");  
+}
+};
 
 module.exports = {
   createSale,
@@ -415,6 +478,8 @@ module.exports = {
   createLimitedTimeItem,
   createMenuItemFromPreset,
   getSummary,
-  getSaleItems
+  getSaleItems,
+  updateSaleItems,
+  deleteSaleItems
 
 };

@@ -790,6 +790,7 @@ const getUserReservationDetails = async (id) => {
           paymentDetails: 1,
           reservationSnapshot: 1,
           reservationChanges: 1,
+          userBillingInformation: 1,
           partySize: 1,
           status: 1,
         }

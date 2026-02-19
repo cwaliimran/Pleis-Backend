@@ -8,6 +8,11 @@ const bundleSchema = new mongoose.Schema(
             required: true,
             index: true,
         },
+        companyOrganizer: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Users",
+            required: true,
+        }, 
         name: {
             type: String,
             required: true,

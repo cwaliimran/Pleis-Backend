@@ -1,6 +1,8 @@
 const { generateMeta } = require("../../helperUtils/responseUtil");
 const bundleRepo = require("./bundleRepository");
 const { formatBundle } = require("./formatters/bundleFormatter");
+const mongoose = require('mongoose');
+
 
 const createBundleService = async (data, timezone) => {
   let bundle = await bundleRepo.createBundle(data);
@@ -15,7 +17,8 @@ const getBundlesService = async ({
   status = "active",
   date,
   orderSort = "asc",
-  timezone = "UTC"
+  timezone = "UTC",
+  companyOrganizer
 }) => {
   const query = {};
 
@@ -34,6 +37,11 @@ const getBundlesService = async ({
     }
   }
 
+  // 🔹 Company Organizer filter (if organization is not provided)
+  if (!organization && companyOrganizer) {
+    query.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
+  }
+
   // 🔹 Date filter
   if (date) {
     query.createdAt = {
@@ -49,7 +57,6 @@ const getBundlesService = async ({
     query.$or = [
       { name: { $regex: regex } },
       { description: { $regex: regex } },
-
       {
         $expr: {
           $regexMatch: {
@@ -86,7 +93,7 @@ const getBundlesService = async ({
   // 🔹 Sorting
   const sort = { createdAt: orderSort === "desc" ? -1 : 1 };
 
-  // 🔹 Fetch data
+  // 🔹 Fetch data with condition on event based on companyOrganizer
   let [bundles, counts] = await Promise.all([
     bundleRepo.getBundles(query, skip, limit === 0 ? 0 : limit, sort),
     bundleRepo.getBundlesCount(query)
@@ -102,6 +109,7 @@ const getBundlesService = async ({
 
   return { bundles, meta };
 };
+
 
 const getBundleByIdService = async (id, timezone) => {
   let bundle = await bundleRepo.getBundleById(id);

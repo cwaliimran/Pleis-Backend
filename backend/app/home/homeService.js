@@ -351,11 +351,8 @@ const getHomeService = async ({ queryData }) => {
 
     return { status: true, data: feed };
   } catch (error) {
-    return sendResponse({
-      statusCode: 500,
-      translationKey: "internal_server",
-      error,
-    });
+    console.log("error===>", error)
+    return { status: false, data: error.message || "Error fetching home feed" };
   }
 };
 

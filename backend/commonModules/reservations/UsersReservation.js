@@ -215,6 +215,11 @@ const UserReservationsSchema = new mongoose.Schema(
       },
     ],
 
+    userBillingInformation: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "UserBillingInformation",
+      default: null,
+    },
   },
 
   {

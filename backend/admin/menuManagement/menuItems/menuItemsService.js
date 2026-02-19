@@ -7,7 +7,7 @@ const MenuItems = require("@MenuItemsModel");
 const Menus = require("@MenusModel");
 const Venues = require("@VenuesModel");
 const MenuItemCategories = require("@MenuItemCategoriesModel");
-const { getMenuIdsByCompanyOrganizer } = require("../../organizations/organizationRepository");
+const { getMenuIdsByCompanyOrganizer, getMenuIdsByOrganization } = require("../../organizations/organizationRepository");
 const { formatMenuItem, formatBundleMenuItem } = require("../menuItemCategories/formatter/formatItemCategories");
 const Organizations = require("@OrganizationModel");
 
@@ -27,12 +27,24 @@ const getMenuItems = async ({
   date,
   menu,
   timezone,
-  companyOrganizer
+  companyOrganizer,
+  organization
 }) => {
     const skip = limit === 0 ? 0 : (page - 1) * limit;
   let menuIds = [];
+  if(organization) {
+    menuIds = await getMenuIdsByOrganization(organization);
 
-  if (companyOrganizer) {
+    
+        if (!menuIds.length) {
+      return {
+        menuItems: [],
+        meta: generateMeta(page, limit, 0)
+      };
+    }
+  }
+
+  else if (companyOrganizer) {
     menuIds = await getMenuIdsByCompanyOrganizer(companyOrganizer);
 
     if (!menuIds.length) {

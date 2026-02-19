@@ -2,7 +2,7 @@ const orderService = require("./orderService");
 const { sendResponse, getReadableErrorMessage, validateParams, parsePaginationParams } = require("@utils/responseUtil");
 
 const placeOrder = async (req, res) => {
-  const { items, notes, paymentMethod, pickupType,
+  const { items, notes, paymentMethod = null, pickupType,
     tableNumber, } = req.body;
   try {
 

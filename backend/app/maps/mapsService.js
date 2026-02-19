@@ -4,7 +4,7 @@ const mapsRepo = require("./mapsRepository");
 const moment = require("moment-timezone");
 const mongoose = require("mongoose");
 const { Events } = require("../../commonModules/events/Event");
-const { transformOperatingHoursToLocal, isOrganizationOpenNow } = require("../../shared/commonSchemas/operatingHours");
+const { transformOperatingHoursToLocal, isOrganizationOpenNow, getUtcMinutesAndLocalWeekdayKey } = require("../../shared/commonSchemas/operatingHours");
 const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
 const { formatEventResponse } = require("../events/formatter/eventFormatter");
 const { Favorites } = require("../../commonModules/favorites/Favorite");
@@ -333,7 +333,9 @@ const getPlaces = async (queryData = {}) => {
       advanceFilters = {}
     } = queryData;
 
+    //TODO topRated, trending
     const {
+      time, // openNow, topRated, trending
       categories = [],
       venueTypes = [],
       tags = [],
@@ -343,6 +345,21 @@ const getPlaces = async (queryData = {}) => {
     } = advanceFilters;
 
     const skip = (page - 1) * limit;
+
+    let sortStage = { createdAt: sort === "asc" ? 1 : -1 };
+    if (time === "topRated") {
+      sortStage = {
+        avgRating: -1,
+        totalReviews: -1,
+        createdAt: -1,
+      };
+    } else if (time === "trending") {
+      sortStage = {
+        trendingScore: -1, // future field
+        createdAt: -1,
+      };
+    }
+
 
     //
     // BASE MATCH
@@ -427,11 +444,228 @@ const getPlaces = async (queryData = {}) => {
       .filter(mongoose.Types.ObjectId.isValid)
       .map(id => new mongoose.Types.ObjectId(id));
 
+    let utcMinutes = null;
+    let localWeekdayKey = null;
+
+    if (time === "openNow") {
+      ({ utcMinutes, localWeekdayKey } =
+        getUtcMinutesAndLocalWeekdayKey(timezone));
+    }
+
+    const openNowStages =
+      time === "openNow"
+        ? [
+          {
+            $addFields: {
+              todayHours: {
+                $getField: {
+                  field: localWeekdayKey,
+                  input: "$operatingHours"
+                }
+              }
+            }
+          },
+          {
+            $addFields: {
+              isOpenNow: {
+                $let: {
+                  vars: {
+                    from: "$todayHours.from",
+                    to: "$todayHours.to",
+                    isOpen: "$todayHours.isOpen",
+                    breakFrom: "$todayHours.break.from",
+                    breakTo: "$todayHours.break.to",
+                    now: utcMinutes
+                  },
+                  in: {
+                    $cond: [
+                      {
+                        $and: [
+                          { $eq: ["$$isOpen", true] },
+                          { $ne: ["$$from", null] },
+                          { $ne: ["$$to", null] }
+                        ]
+                      },
+                      {
+                        $let: {
+                          vars: {
+                            inRange: {
+                              $cond: [
+                                { $lte: ["$$from", "$$to"] },
+                                {
+                                  $and: [
+                                    { $gte: ["$$now", "$$from"] },
+                                    { $lte: ["$$now", "$$to"] }
+                                  ]
+                                },
+                                {
+                                  $or: [
+                                    { $gte: ["$$now", "$$from"] },
+                                    { $lte: ["$$now", "$$to"] }
+                                  ]
+                                }
+                              ]
+                            },
+                            inBreak: {
+                              $and: [
+                                { $ne: ["$$breakFrom", null] },
+                                { $ne: ["$$breakTo", null] },
+                                { $gte: ["$$now", "$$breakFrom"] },
+                                { $lte: ["$$now", "$$breakTo"] }
+                              ]
+                            }
+                          },
+                          in: {
+                            $and: [
+                              "$$inRange",
+                              { $not: ["$$inBreak"] }
+                            ]
+                          }
+                        }
+                      },
+                      false
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          { $project: { todayHours: 0 } },
+          { $match: { isOpenNow: true } }
+        ]
+        : [];
+
+
+    /* ===============================
+   ⭐ ratingStages HERE
+=============================== */
+    const ratingStages =
+      time === "topRated"
+        ? [
+          {
+            $lookup: {
+              from: "reviews",
+              let: { orgId: "$_id" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: { $eq: ["$organization", "$$orgId"] },
+                    status: "active"
+                  }
+                },
+                {
+                  $group: {
+                    _id: null,
+                    avgRating: { $avg: "$rating" },
+                    totalReviews: { $sum: 1 }
+                  }
+                }
+              ],
+              as: "ratingStats"
+            }
+          },
+          {
+            $addFields: {
+              avgRating: {
+                $ifNull: [{ $arrayElemAt: ["$ratingStats.avgRating", 0] }, 0]
+              },
+              totalReviews: {
+                $ifNull: [{ $arrayElemAt: ["$ratingStats.totalReviews", 0] }, 0]
+              }
+            }
+          },
+
+          // ⭐ FILTER TOP RATED
+          {
+            $match: {
+              avgRating: { $gte: 4.5 }
+            }
+          },
+
+          { $project: { ratingStats: 0 } }
+        ]
+        : [];
+
+
+    /* ===============================
+ 🔥 trendingStages
+=============================== */
+    const now = Date.now();
+    const last48h = new Date(now - 48 * 60 * 60 * 1000);
+    const last7d = new Date(now - 7 * 24 * 60 * 60 * 1000);
+
+    const trendingStages =
+      time === "trending"
+        ? [
+          {
+            $lookup: {
+              from: "engagementevents",
+              let: { orgId: "$_id" },
+              pipeline: [
+                {
+                  $match: {
+                    entityType: "organizations",
+                    action: "view",
+                    $expr: { $eq: ["$entityId", "$$orgId"] },
+                    createdAt: { $gte: last7d }
+                  }
+                },
+                {
+                  $group: {
+                    _id: null,
+                    views7d: { $sum: 1 },
+                    views48h: {
+                      $sum: {
+                        $cond: [{ $gte: ["$createdAt", last48h] }, 1, 0]
+                      }
+                    }
+                  }
+                }
+              ],
+              as: "engagementStats"
+            }
+          },
+          {
+            $addFields: {
+              views7d: { $ifNull: [{ $first: "$engagementStats.views7d" }, 0] },
+              views48h: { $ifNull: [{ $first: "$engagementStats.views48h" }, 0] }
+            }
+          },
+          {
+            $addFields: {
+              trendingScore: {
+                $round: [
+                  {
+                    $add: [
+                      { $multiply: [0.3, "$views48h"] },
+                      { $multiply: [0.7, "$views7d"] }
+                    ]
+                  },
+                  2
+                ]
+              }
+            }
+          },
+
+          // ⭐ FILTER TRENDING
+          {
+            $match: {
+              trendingScore: { $gt: 0 }
+            }
+          },
+
+          { $project: { engagementStats: 0 } }
+        ]
+        : [];
+
+
+
     //
     // PIPELINE
     //
     const pipeline = [
       { $match: finalMatch },
+      ...openNowStages,
 
       //
       // JOIN VENUES
@@ -517,8 +751,10 @@ const getPlaces = async (queryData = {}) => {
       },
 
       { $project: { populatedCategories: 0, populatedTags: 0 } },
+      ...(time === "topRated" ? ratingStages : []),
+      ...(time === "trending" ? trendingStages : []),
 
-      { $sort: { createdAt: sort === "asc" ? 1 : -1 } },
+      { $sort: sortStage },
       { $skip: skip },
       { $limit: limit }
     ];
@@ -530,7 +766,7 @@ const getPlaces = async (queryData = {}) => {
     //
     const countPipeline = [
       { $match: finalMatch },
-
+      ...openNowStages,
       {
         $lookup: {
           from: "venues",
@@ -570,7 +806,8 @@ const getPlaces = async (queryData = {}) => {
           }]
           : []
       ),
-
+      ...(time === "topRated" ? ratingStages : []),
+      ...(time === "trending" ? trendingStages : []),
       { $count: "total" }
     ];
 
@@ -593,12 +830,6 @@ const getPlaces = async (queryData = {}) => {
       enriched = items.map(i => {
         // Format organization using shared formatter
         const formattedOrg = formatOrganization(i);
-
-        //add openNow check
-        formattedOrg.isOpenNow = isOrganizationOpenNow(
-          formattedOrg.operatingHours,
-          timezone
-        );
 
         //format hours
         if (formattedOrg?.operatingHours) {
@@ -630,8 +861,6 @@ const getPlaces = async (queryData = {}) => {
 };
 
 
-
-
 const getAllData = async (queryData) => {
   try {
     const [eventsRes, placesRes] = await Promise.all([
@@ -659,8 +888,6 @@ const getAllData = async (queryData) => {
     throw new Error(`Failed to fetch combined data: ${error.message}`);
   }
 };
-
-
 
 module.exports = {
   getEvents,

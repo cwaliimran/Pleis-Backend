@@ -102,13 +102,10 @@ const unifiedTransactionSchema = new mongoose.Schema(
             pointsPerEuro: { type: Number, default: 0 },
         },
 
-        //TODO pointsBreakdown
-        /* 
-        We talked about this in meeting earlier today, we suggested to show in checkout seperate values for purchase points and active promotions
-        [5:26 PM]So it would be like
-        [5:26 PM]400 points
-        +400 happy hour
-        */
+        pointsBreakdown: {
+            type: Object,
+            default: {},
+        },
         // --------------------------------------------
         // BALANCE AFTER TRANSACTION
         // --------------------------------------------
@@ -141,9 +138,22 @@ unifiedTransactionSchema.index({ domainType: 1 });
 unifiedTransactionSchema.index({ entityId: 1 });
 unifiedTransactionSchema.index({ createdAt: -1 });
 
+unifiedTransactionSchema.index({
+    user: 1,
+    createdAt: -1
+});
+
+unifiedTransactionSchema.index({
+    user: 1,
+    createdAt: -1,
+    _id: -1
+});
+
+
 const UnifiedWalletTransactions = mongoose.model(
     "UnifiedWalletTransactions",
     unifiedTransactionSchema
 );
+
 
 module.exports = { UnifiedWalletTransactions };

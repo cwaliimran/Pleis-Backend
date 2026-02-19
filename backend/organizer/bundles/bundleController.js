@@ -104,11 +104,10 @@ const getBundles = async (req, res) => {
     const { page, limit } = parsePaginationParams(req);
     const { keyword, status, date, orderSort,organization } = req.query;
     let { timezone } = req.user;
-    if(!organization){
-      sendResponse({ res, statusCode: 400, translationKey: "organization_id_required" });
-      return;
-    }
-    const bundles = await getBundlesService({ page, limit, keyword, status, date, orderSort, timezone, organization });
+    companyOrganizer=req.user._id;
+
+
+    const bundles = await getBundlesService({ page, limit, keyword, status, date, orderSort, timezone, organization,companyOrganizer });
     return sendResponse({ res, statusCode: 200, translationKey: "bundles_fetched_successfully", data: bundles });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);

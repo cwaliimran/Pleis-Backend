@@ -102,8 +102,13 @@ const getMenuItems = async (req, res) => {
     startTime,
     endTime,
     date,
-    companyOrganizer
+    companyOrganizer,
+    organization
   } = req.query;
+  if(req.user.userType==="organizer")
+  {
+       companyOrganizer=req.user._id
+  }
   if(!companyOrganizer){
     return sendResponse({
       res,
@@ -128,6 +133,7 @@ const getMenuItems = async (req, res) => {
       timezone: req.user?.timezone,
       date,
       companyOrganizer,
+      organization
     });
 
     return sendResponse({
@@ -187,7 +193,7 @@ const getMenuItemDetails = async (req, res) => {
 };
 
 const updateMenuItem = async (req, res) => {
-  const { id } = req.params;
+  let { id } = req.params;
   let { timezone } = req.user;
   let {
     image,
@@ -309,6 +315,7 @@ const updateMenuItem = async (req, res) => {
 
 
     }
+     id = new mongoose.Types.ObjectId(id);
 
     const updated = await menuItemsService.updateMenuItem(id, data, timezone);
 
@@ -406,7 +413,7 @@ const getMenuItemsByMenuId = async (req, res) => {
 
 const getBundleMenuItems = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const {
+  let {
     keyword,
     status = "active",
     menu,
@@ -417,6 +424,9 @@ const getBundleMenuItems = async (req, res) => {
     date,
     companyOrganizer
   } = req.query;
+if(req.user.userType==="organizer")  {
+       companyOrganizer=req.user._id
+  }
   try {
     const { menuItems, meta } = await menuItemsService.getBundleMenuItems({
       page,
