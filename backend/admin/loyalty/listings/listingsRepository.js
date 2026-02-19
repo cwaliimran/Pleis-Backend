@@ -6,7 +6,7 @@ const mongoose = require("mongoose");
 
 const getOrganizerUsersWithFilters = async ({ skip = 0, limit = 10, keyword, userId }) => {
   const me = new mongoose.Types.ObjectId(userId);
-
+console.log("me",me );
   const pipeline = [
     {
       $match: {
@@ -123,6 +123,7 @@ const getOrganizerUsersWithFilters = async ({ skip = 0, limit = 10, keyword, use
   //--------------------------- EXECUTE ---------------------------
   const result = await User.aggregate(pipeline);
   const listings = result[0]?.data || [];
+
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   return { listings, totalFiltered };
