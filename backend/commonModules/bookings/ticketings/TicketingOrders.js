@@ -92,6 +92,11 @@ const ticketingOrderSchema = new mongoose.Schema(
             default: null,
         },
 
+        userBillingInformation: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "UserBillingInformation",
+            default: null,
+        },
     },
     { timestamps: true }
 );
