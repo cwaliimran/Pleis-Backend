@@ -139,13 +139,13 @@ const updateOrderDetailsService = async ({
           organization: order.organization._id,
           companyPoints: {
             base: pointsCalculation.organizer.earnedPoints,
-            multiplier: 1,
+            multiplier: pointsCalculation.organizer.organizerMultiplier || 1,
             total: pointsCalculation.organizer.earnedPoints,
             pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
           },
           globalPoints: {
             base: pointsCalculation.global.earnedPoints,
-            multiplier: 1,
+            multiplier: pointsCalculation.global.globalMultiplier || 1,
             total: pointsCalculation.global.earnedPoints,
             pointsPerEuro: pointsCalculation.global.pointsPerEuro,
           },

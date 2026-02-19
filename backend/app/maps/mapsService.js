@@ -347,7 +347,6 @@ const getPlaces = async (queryData = {}) => {
     const skip = (page - 1) * limit;
 
     let sortStage = { createdAt: sort === "asc" ? 1 : -1 };
-console.log("time==>",time)
     if (time === "topRated") {
       sortStage = {
         avgRating: -1,
@@ -575,9 +574,91 @@ console.log("time==>",time)
               }
             }
           },
+
+          // ⭐ FILTER TOP RATED
+          {
+            $match: {
+              avgRating: { $gte: 4.5 }
+            }
+          },
+
           { $project: { ratingStats: 0 } }
         ]
         : [];
+
+
+    /* ===============================
+ 🔥 trendingStages
+=============================== */
+    const now = Date.now();
+    const last48h = new Date(now - 48 * 60 * 60 * 1000);
+    const last7d = new Date(now - 7 * 24 * 60 * 60 * 1000);
+
+    const trendingStages =
+      time === "trending"
+        ? [
+          {
+            $lookup: {
+              from: "engagementevents",
+              let: { orgId: "$_id" },
+              pipeline: [
+                {
+                  $match: {
+                    entityType: "organizations",
+                    action: "view",
+                    $expr: { $eq: ["$entityId", "$$orgId"] },
+                    createdAt: { $gte: last7d }
+                  }
+                },
+                {
+                  $group: {
+                    _id: null,
+                    views7d: { $sum: 1 },
+                    views48h: {
+                      $sum: {
+                        $cond: [{ $gte: ["$createdAt", last48h] }, 1, 0]
+                      }
+                    }
+                  }
+                }
+              ],
+              as: "engagementStats"
+            }
+          },
+          {
+            $addFields: {
+              views7d: { $ifNull: [{ $first: "$engagementStats.views7d" }, 0] },
+              views48h: { $ifNull: [{ $first: "$engagementStats.views48h" }, 0] }
+            }
+          },
+          {
+            $addFields: {
+              trendingScore: {
+                $round: [
+                  {
+                    $add: [
+                      { $multiply: [0.3, "$views48h"] },
+                      { $multiply: [0.7, "$views7d"] }
+                    ]
+                  },
+                  2
+                ]
+              }
+            }
+          },
+
+          // ⭐ FILTER TRENDING
+          {
+            $match: {
+              trendingScore: { $gt: 0 }
+            }
+          },
+
+          { $project: { engagementStats: 0 } }
+        ]
+        : [];
+
+
 
     //
     // PIPELINE
@@ -670,7 +751,9 @@ console.log("time==>",time)
       },
 
       { $project: { populatedCategories: 0, populatedTags: 0 } },
-      ...ratingStages,
+      ...(time === "topRated" ? ratingStages : []),
+      ...(time === "trending" ? trendingStages : []),
+
       { $sort: sortStage },
       { $skip: skip },
       { $limit: limit }
@@ -683,7 +766,7 @@ console.log("time==>",time)
     //
     const countPipeline = [
       { $match: finalMatch },
-
+      ...openNowStages,
       {
         $lookup: {
           from: "venues",
@@ -723,7 +806,8 @@ console.log("time==>",time)
           }]
           : []
       ),
-
+      ...(time === "topRated" ? ratingStages : []),
+      ...(time === "trending" ? trendingStages : []),
       { $count: "total" }
     ];
 

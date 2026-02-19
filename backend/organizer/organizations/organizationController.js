@@ -249,6 +249,7 @@ const userId = req.user._id;
     pricingPlan,
     numberOfOrganizations,
     totalSubscriptionAmount,
+    inAppOrderingSettings
   } = req.body);
   data.userId = userId;
 

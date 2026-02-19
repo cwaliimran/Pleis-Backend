@@ -7,10 +7,6 @@ const {
 } = require("@utils/responseUtil");
 
 const rewardService = require("./rewardsService");
-const { getUserCompanyWallet } = require("../clubMembers/clubMembersService");
-const { formatRewardsByTierKey } = require("../../../commonModules/loyalty/rewards/utils/formatReward");
-
-const { REWARD_CLAIM_REASONS } = require("./formatters/rewardClaimReasons");
 
 const getRewards = async (req, res) => {
   const keyword = req.query.keyword || "";
