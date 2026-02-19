@@ -176,7 +176,7 @@ const getMenuIdsByCompanyOrganizer = async (companyOrganizer) => {
   return menus.map(menu => menu._id);
 };
 const getOrgCompanyOrganizer = async (organizationId) => {
-  console.log("organizationId", organizationId);
+
   const org = await Organizations.findById(organizationId).select("creator").lean();
   return org ? org.creator : null;
 }

@@ -20,6 +20,7 @@ router.use("/reviews", require("../reviews/reviewsRoutes"));
 router.use("/menu-management/items", require("../../admin/menuManagement/menuItems/menuItemsRoutes"));
 router.use("/menu/categories", require("../../admin/menuManagement/menuItemCategories/menuItemCategoriesRoutes"));
 router.use("/menu", require("../menuManagement/menu/menusRoutes"));
+
 router.use("/qr-code", require("../qr/qrRoutes"));
 router.use("/highlights", require("../highlights/highlightRoutes"));
 router.use("/reservations", require("../../admin/reservation/reservationRoutes"));

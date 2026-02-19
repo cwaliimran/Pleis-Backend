@@ -5,7 +5,7 @@ const {
   generateMeta,
   getReadableErrorMessage,
 } = require("../../helperUtils/responseUtil");
-const { updateEventsWithVenueLocation } = require("../events/eventService");
+const { updateEventsWithVenueLocation } = require("../../admin/events/eventService");
 
 const venuesService = require("./venuesService");
 
