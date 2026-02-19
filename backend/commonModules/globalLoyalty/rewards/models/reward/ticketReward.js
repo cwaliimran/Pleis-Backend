@@ -5,7 +5,7 @@ const GlobalTicketReward = GlobalReward.discriminator(
   "globalTicketReward",
   new mongoose.Schema(
     {
-      event: { type: mongoose.Schema.Types.ObjectId, ref: "Events", required: true },
+      event: { type: mongoose.Schema.Types.ObjectId, ref: "Event", required: true },
       ticket: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Ticketings",

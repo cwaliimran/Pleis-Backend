@@ -59,24 +59,61 @@ const getPublicHighlightsWithFilters = async (
         pipeline: [
           { $match: { $expr: { $eq: ["$_id", "$$eventId"] } } },
           { $match: { status: "active", ...eventTimeFilter } },
+
           ...(geoMode
             ? [{
-                $match: {
-                  "basicInfo.venueLocation": {
-                    $geoWithin: {
-                      $centerSphere: [
-                        userLocation.coordinates,
-                        radiusInMeters / 6378137
-                      ]
-                    }
+              $match: {
+                "basicInfo.venueLocation": {
+                  $geoWithin: {
+                    $centerSphere: [
+                      userLocation.coordinates,
+                      radiusInMeters / 6378137
+                    ]
                   }
                 }
-              }]
-            : [])
+              }
+            }]
+            : []),
+
+          /* ===============================
+             👇 POPULATE ORGANIZATION HERE
+          =============================== */
+          {
+            $lookup: {
+              from: "organizations",
+              localField: "basicInfo.organization",
+              foreignField: "_id",
+              pipeline: [
+                { $match: { status: "active" } },
+                {
+                  $project: {
+                    _id: 1,
+                    basicInfo: 1
+                  }
+                }
+              ],
+              as: "organizationResolved"
+            }
+          },
+
+          {
+            $addFields: {
+              "basicInfo.organization": {
+                $arrayElemAt: ["$organizationResolved", 0]
+              }
+            }
+          },
+
+          {
+            $project: {
+              organizationResolved: 0
+            }
+          }
         ],
         as: "eventResolved"
       }
     },
+
 
     /* ---------------- ORGANIZATION LOOKUP ---------------- */
     {
@@ -88,17 +125,17 @@ const getPublicHighlightsWithFilters = async (
           { $match: { status: "active" } },
           ...(geoMode
             ? [{
-                $match: {
-                  location: {
-                    $geoWithin: {
-                      $centerSphere: [
-                        userLocation.coordinates,
-                        radiusInMeters / 6378137
-                      ]
-                    }
+              $match: {
+                location: {
+                  $geoWithin: {
+                    $centerSphere: [
+                      userLocation.coordinates,
+                      radiusInMeters / 6378137
+                    ]
                   }
                 }
-              }]
+              }
+            }]
             : [])
         ],
         as: "orgResolved"

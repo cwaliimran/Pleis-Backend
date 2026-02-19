@@ -112,7 +112,9 @@ const createReservation = async (data, session) => {
   data.amount = reservationTotalWithTax;
 
   /* ---------- Confirmation flow ---------- */
-  if (reservationBase.needsConfirmation) {
+  if (reservationBase.conditionType === "noCondition") {
+    data.status = "confirmed";
+  } else if (reservationBase.needsConfirmation) {
     data.status = "needsConfirmation";
   } else {
     if (
@@ -768,6 +770,7 @@ const getUserReservationDetails = async (id) => {
           eventName: "$event.basicInfo.title",
           eventStartDate: "$event.schedule.startDateTime",
           userName: { $concat: ["$user.firstName", " ", "$user.lastName"] },
+          phoneNumber: "$user.phoneNumber",
           venueFullAddress: "$venue.location.fullAddress",
           reservationType: "$reservationDetails.reservationType",
 
@@ -787,6 +790,8 @@ const getUserReservationDetails = async (id) => {
           paymentDetails: 1,
           reservationSnapshot: 1,
           reservationChanges: 1,
+          userBillingInformation: 1,
+          partySize: 1,
           status: 1,
         }
       },

@@ -1,3 +1,4 @@
+const { getFullImageUrl } = require("@utils/imageHelper");
 const { convertUtcToTimezone } = require("@utils/responseUtil"); // assume you have this util
 
 const formatBundle = (bundle, options = {}) => {
@@ -32,7 +33,11 @@ const formatBundle = (bundle, options = {}) => {
   return obj;
 };
 
-
+const formatMenuItem = async (item) => {
+  // Update the image for each item
+  item.image = await getFullImageUrl(item.image);
+  return item; // Return the formatted item
+};
 
 function formatVenueType(item) {
     let obj = typeof item.toObject === "function" ? item.toObject() : item;
@@ -45,4 +50,4 @@ function formatVenueType(item) {
     return obj;
 }
 
-module.exports = { formatBundle };
+module.exports = { formatBundle,formatMenuItem };

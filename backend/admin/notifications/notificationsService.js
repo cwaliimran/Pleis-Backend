@@ -7,10 +7,10 @@ const createNotifications = async (data) => {
   let globalNotification = await NotificationsRepo.createNotifications(data);
   return globalNotification;
 };
-const getNotificationss = async ({ isDelivered, sendTiming, timezone, page, limit, keyword, status, userId, date, range }) => {
+const getNotificationss = async ({ isDelivered, sendTiming, timezone, page, limit, keyword, status, date, range }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { Notificationss, meta } = await NotificationsRepo.getNotificationss({ isDelivered, sendTiming, timezone, page, limit, keyword, status, userId, date, range, today, skip });
+  let { Notificationss, meta } = await NotificationsRepo.getNotificationss({ isDelivered, sendTiming, timezone, page, limit, keyword, status, date, range, today, skip });
 
   return {
     Notificationss,

@@ -2,8 +2,9 @@ const { generateMeta } = require("../../../helperUtils/responseUtil");
 const { formatGlobalLoyaltyRewardOrder } = require("./formatter/formatLoyaltyRewardOrders");
 const repo = require("./rewardsOrdersRepository");
 
-const createGlobalRewardOrderService = async (userId, rewardId) => {
-  return repo.createGlobalRewardOrder({ userId, rewardId });
+const createGlobalRewardOrderService = async (userId, rewardId, protectionUserDetails,
+  timezone,) => {
+  return repo.createGlobalRewardOrder({ userId, rewardId, protectionUserDetails, timezone });
 };
 const getUserOrdersService = async ({
   userId,

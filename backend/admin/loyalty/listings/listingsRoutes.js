@@ -11,6 +11,6 @@ router.use(auth);
 
 const apiRateLimiter = createRateLimiter("Listings");
 
-router.get("/", roleMiddleware(["admin"]), apiRateLimiter, getListings);
+router.get("/", roleMiddleware(["admin","organizer"]), apiRateLimiter, getListings);
 
 module.exports = router;

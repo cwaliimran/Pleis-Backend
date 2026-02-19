@@ -12,13 +12,16 @@ const { formatSingleRewardByTierKey } = require("../../../commonModules/loyalty/
 const getRewardsByCompanyOrganizerService = async ({
   companyOrganizer,
   userId,
+  timezone
 }) => {
   // 1️⃣ Fetch user wallet (points + tier)
   const wallet = await clubMemberRepo.getWallet(userId, companyOrganizer, null, { autoCreate: false });
 
-  const userPoints = wallet?.points ?? 0;
-  const userTierEntry = wallet?.level?.entryPoints ?? 0;
-  const tierKey = wallet?.tierKey || "essential";
+  const formattedWallet = formatUserWallet(wallet);
+
+  const userPoints = formattedWallet?.points ?? 0;
+  const userTierEntry = formattedWallet?.level?.entryPoints ?? 0;
+  const tierKey = formattedWallet?.tierKey || "essential";
 
   // 2️⃣ Fetch rewards
   const rewards = await rewardRepo.getRewardsByCompanyOrganizer({
@@ -32,7 +35,7 @@ const getRewardsByCompanyOrganizerService = async ({
   // 3️⃣ Apply tier-specific formatting BEFORE eligibility
   const formatted = rewards.map(item =>
     formatReward(
-      formatSingleRewardByTierKey(item, tierKey)
+      formatSingleRewardByTierKey(item, tierKey,), timezone
     )
   );
 
@@ -99,9 +102,9 @@ const groupRewardsBySortingType = (rewards) => {
   return Object.values(groups);
 };
 
-const claimRewardService = async (userId, rewardId) => {
+const claimRewardService = async (userId, rewardId, protectionUserDetails, timezone) => {
   // Logic to claim a reward for a user
-  const result = await rewardRepo.claimReward(userId, rewardId);
+  const result = await rewardRepo.claimReward(userId, rewardId, protectionUserDetails, timezone);
   return result;
 };
 
@@ -111,6 +114,7 @@ const getRewardsForUserJoinedClubs = async ({
   limit = 10,
   skip = 0,
   keyword = "",
+  timezone
 }) => {
   const now = new Date();
   /* ===============================
@@ -191,7 +195,7 @@ const getRewardsForUserJoinedClubs = async ({
       wallet.tierKey || "essential"
     );
 
-    const formattedReward = formatReward(rewardByTierKey);
+    const formattedReward = formatReward(rewardByTierKey, timezone);
 
     const claimedCount =
       claimedMap.get(String(formattedReward._id)) || 0;

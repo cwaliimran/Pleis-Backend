@@ -27,7 +27,8 @@ const createEvent = async ({ data, ticketingData }, timezone) => {
   return formatEventResponse(event, { timezone });
 };
 
-const getEvents = async ({ page, limit, keyword, status, creator, startDate, endDate, organization, timezone }) => {
+const getEvents = async ({ page, limit, keyword, status, creator, startDate, endDate, organization, companyOrganizer,timezone }) => {
+
   const query = {};
   // ALWAYS exclude templates events
   //templates event are only for internal use to generate occurrences
@@ -49,9 +50,26 @@ const getEvents = async ({ page, limit, keyword, status, creator, startDate, end
     query["recurringMeta.isTemplate"] = { $ne: true };
   }
 
-  if (organization) {
-    query["basicInfo.organization"] = new mongoose.Types.ObjectId(organization);
+if (organization) {
+  let organizationIds = [];
+
+  if (Array.isArray(organization)) {
+    organizationIds = organization;
+  } else if (typeof organization === "string") {
+    // Split by comma or space-separated values and remove any empty strings
+    organizationIds = organization.split(/[, %]+/).filter(Boolean);
   }
+
+  if (organizationIds.length > 0) {
+    query["basicInfo.organization"] = {
+      $in: organizationIds.map(id => new mongoose.Types.ObjectId(id)), // Convert IDs to ObjectIds
+    };
+  }
+}
+
+ if (!organization && companyOrganizer) {
+  query["companyOrganizer"] = new mongoose.Types.ObjectId(companyOrganizer); 
+}
 if (startDate) {
   const start = new Date(startDate);
   start.setUTCHours(0, 0, 0, 0);

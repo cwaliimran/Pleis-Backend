@@ -304,18 +304,15 @@ const createEvent = async (req, res) => {
 
 const getEvents = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "active", startDate, endDate, organization } = req.query;
+  let { keyword, status = "active", startDate, endDate, organization,companyOrganizer } = req.query;
   const { _id, timezone } = req.user;
+  if(req.user.userType === "organizer"){
+    companyOrganizer = req.user._id;
+  }
+
 
   try {
-    // ✅ Validate organization
-    if (organization) {
-      if (
-        !validateParams(req, res, {
-          objectIdFields: ["organization"],
-        })
-      ) return;
-    }
+
     if (startDate) {
 
 
@@ -350,6 +347,7 @@ const getEvents = async (req, res) => {
       startDate,
       endDate,
       organization,
+      companyOrganizer,
       timezone,
     });
 

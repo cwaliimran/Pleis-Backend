@@ -7,10 +7,9 @@ const {
   createMenuItemFromPreset,
   getSummary,
   updateMenu,
-  deleteMenu,
+  updateSaleItems,
   getSaleItems,
-  gettickets,
-  getWinners,
+  deleteSaleItems,
   createLimitedTimeItem
 } = require("./menuManagementController"); // Assuming you have a separate controller for promo codes
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
@@ -29,6 +28,8 @@ const MenuRateLimiter = createRateLimiter("Menu");
 router.post("/sale", roleMiddleware(["admin","organizer"]), MenuRateLimiter, createSale);
 router.get("/", roleMiddleware(["admin","organizer"]), getSummary);
 router.get("/sale", roleMiddleware(["admin","organizer"]), getSaleItems);
+router.put("/sale/:id", roleMiddleware(["admin","organizer"]), updateSaleItems);
+router.delete("/sale/:id", roleMiddleware(["admin","organizer"]), deleteSaleItems);
 router.get("/menu-items", roleMiddleware(["admin","organizer"]), getMenuItems);
 router.get("/events", roleMiddleware(["admin","organizer"]), getEvents);
 router.get("/menu-item-categories", roleMiddleware(["admin","organizer"]), getMenuItemCategories);

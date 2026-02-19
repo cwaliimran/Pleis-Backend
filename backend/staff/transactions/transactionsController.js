@@ -6,10 +6,13 @@ const menuItemRepo = require("../../admin/menuManagement/menuItems/menuItemsRepo
 const { sendResponse } = require("../../helperUtils/responseUtil");
 const { sendUserNotifications } = require("../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
+const { getUserCompanyWallet } = require("../../app/loyalty/clubMembers/clubMembersService");
 
 const applyPoints = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+
+  let committed = false;
 
   try {
     const {
@@ -20,7 +23,7 @@ const applyPoints = async (req, res) => {
       notes = ""
     } = req.body;
 
-    if (!items || !items.length) {
+    if (!items.length) {
       return sendResponse({
         res,
         statusCode: 400,
@@ -28,56 +31,61 @@ const applyPoints = async (req, res) => {
       });
     }
 
-    // 1️⃣ Fetch menu items (for snapshot + price)
+    /* ---------- FETCH MENU ITEMS ---------- */
     const itemIds = items.map(i => new mongoose.Types.ObjectId(i.menuItem));
 
-    const menuItems = await menuItemRepo.getMenuItemsWithFilters(
-      { _id: { $in: itemIds } }
-    );
+    const menuItems = await menuItemRepo.getMenuItemsWithFilters({
+      _id: { $in: itemIds }
+    });
 
     if (!menuItems.length) {
       throw new Error("invalid_items");
     }
 
+    /* ---------- BUILD ORDER ITEMS ---------- */
     let totalPrice = 0;
 
     const storedItems = items.map(i => {
-      const menuItem = menuItems.find(m => m._id.toString() === i.menuItem);
-      if (!menuItem) throw new Error(`Invalid menu item: ${i.menuItem}`);
+      const menuItem = menuItems.find(
+        m => m._id.toString() === i.menuItem
+      );
+
+      if (!menuItem) {
+        throw new Error(`Invalid menu item: ${i.menuItem}`);
+      }
 
       const price = menuItem.discountPrice || menuItem.basePrice;
       const finalPrice = price * i.quantity;
 
       totalPrice += finalPrice;
+      console.log(`MenuItem ${menuItem.name}: price ${price} x quantity ${i.quantity} = ${finalPrice}`);
 
       return {
         menuItem: menuItem._id,
         quantity: i.quantity,
         finalPrice,
-        menuItemSnapShot: JSON.parse(JSON.stringify(menuItem)),
+        menuItemSnapShot: menuItem.toObject(), // safer snapshot
       };
     });
 
-    // 2️⃣ Create record FIRST (inside session)
+    /* ---------- CREATE APPLY RECORD ---------- */
     const applyRecord = await ApplyPointsByStaff.create(
-      [
-        {
-          organization,
-          user,
-          items: storedItems,
-          totalPrice,
-          notes,
-          creator: req.user._id
-        }
-      ],
+      [{
+        organization,
+        user,
+        items: storedItems,
+        totalPrice,
+        notes,
+        creator: req.user._id
+      }],
       { session }
     ).then(r => r[0]);
 
-    // 3️⃣ Calculate loyalty points
+    /* ---------- CALCULATE POINTS ---------- */
     const pointsCalculation =
       await calculatePointsRepo(user, companyOrganizer, totalPrice);
 
-    // 4️⃣ Create wallet transaction
+    /* ---------- CREATE WALLET TRANSACTION ---------- */
     const trx = await createTransaction(
       {
         user,
@@ -108,12 +116,16 @@ const applyPoints = async (req, res) => {
       throw new Error(trx.message || "transaction_failed");
     }
 
+    /* ---------- COMMIT ---------- */
     await session.commitTransaction();
+    committed = true;
     session.endSession();
-    await sendUserNotifications({
+
+    /* ---------- SEND NOTIFICATION (OUTSIDE TX) ---------- */
+    sendUserNotifications({
       recipientIds: [user.toString()],
       title: "Points Applied",
-      body: `You earn ${trx.companyPoints.total + trx.globalPoints.total} points.`,
+      body: `You earn ${pointsCalculation.organizer.earnedPoints} company points and ${pointsCalculation.global.earnedPoints} global points.`,
       data: {
         type: NotificationTypes.POINTS_UPDATE,
         objectType: "ApplyPointsByStaff",
@@ -121,20 +133,28 @@ const applyPoints = async (req, res) => {
       image: "noimage",
       sender: companyOrganizer,
       objectId: applyRecord._id,
-    });
+    }).catch(err =>
+      console.error("Notification failed:", err.message)
+    );
 
+    let companyWallet = await getUserCompanyWallet(user, companyOrganizer)
+    /* ---------- RESPONSE ---------- */
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "points_applied_successfully",
       data: {
         applyRecord,
-        transaction: trx
+        transaction: trx,
+        companyWallet
       }
     });
 
   } catch (error) {
-    await session.abortTransaction();
+    if (!committed) {
+      await session.abortTransaction();
+    }
+
     session.endSession();
 
     return sendResponse({
@@ -145,6 +165,7 @@ const applyPoints = async (req, res) => {
     });
   }
 };
+
 
 
 const calculatePoints = async (req, res) => {

@@ -12,14 +12,19 @@ const { NotificationTypes } = require("@NotificationsModel");
 
 const calculatePoints = async (req, res) => {
   try {
-    const { _id: userId } = req.user;
-    const { companyOrganizer, totalSpending } = req.body;
+    let userId = null;
+    const { companyOrganizer, totalSpending, user } = req.body;
+    if (user) {
+      userId = user;
+    } else {
+      userId = req.user._id;
+    }
     const { pointsEarnings } = await service.calculatePoints({
       userId,
       companyOrganizer,
       totalSpending
     });
- 
+
     return sendResponse({
       res,
       statusCode: 200,

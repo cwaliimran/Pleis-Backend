@@ -7,10 +7,12 @@ const rewardService = require("./rewardsService");
 
 const getRewards = async (req, res) => {
   let { category, keyword } = req.query;
+  let { timezone } = req.user || {};
   const { rewards } = await rewardService.getGlobalRewardsService({
     userId: req.user._id,
     category,
     keyword,
+    timezone
   });
 
   sendResponse({
@@ -26,10 +28,17 @@ const claimReward = async (req, res) => {
     rawData: ["id"],
     objectIdFields: ["id"]
   })) return;
+  let { timezone } = req.user || {};
+  let {
+    id,
+    protectionUserDetails,
+  } = req.body;
 
   const result = await rewardService.claimGlobalRewardService(
     req.user._id,
-    req.body.id
+    id,
+    protectionUserDetails,
+    timezone
   );
 
   if (!result.success) {
@@ -39,10 +48,10 @@ const claimReward = async (req, res) => {
       translationKey: result.message || "reward_claim_failed",
     });
   }
-const orderResponse = {
-  ...result.order.toObject(),
-  publicId: result.transactions?.[0]?.publicId || null
-};
+  const orderResponse = {
+    result,
+    publicId: result.transactions?.[0]?.publicId || null
+  };
   sendResponse({
     res,
     statusCode: 200,

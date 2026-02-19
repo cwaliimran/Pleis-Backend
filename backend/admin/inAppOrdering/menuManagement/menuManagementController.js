@@ -20,6 +20,11 @@ const createSale = async (req, res) => {
     endDateTime,
     creator
   } = req.body;
+  if(req.user.userType==="organizer")
+  {   
+     creator=req.user._id
+  }
+  
 
   // Ensure that menuItems is an array and is not empty
   if (!Array.isArray(menuItems) || menuItems.length === 0) {
@@ -46,7 +51,6 @@ const createSale = async (req, res) => {
         "menuItems",
         "startDateTime",
         "endDateTime",
-        "creator",
       ],
     })
   ) return;
@@ -245,6 +249,10 @@ const getEvents = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let { keyword, status, date, range, organizer } = req.query;
   try {
+    if(req.user.userType==="organizer")
+    {
+      organizer=req.user._id
+    }
     if (!organizer) {
       return sendResponse({
         res,
@@ -609,6 +617,115 @@ const getSaleItems = async (req, res) => {
     });
   }
 };
+
+const updateSaleItems = async (req, res) => {
+  const { id } = req.params;
+  const {
+    status,
+    title,
+    discountType ,
+    discountValue ,
+    menuItems,
+    startDateTime,
+    endDateTime,
+  } = req.body;
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })
+  ) return;
+
+
+  let data = {
+    status,
+    title,
+    discountType ,
+    discountValue ,
+    menuItems,
+    startDateTime,
+    endDateTime,
+  };
+
+
+
+  try {
+    const updated = await Menuervice.updateSaleItems(id, data);
+    if (updated && updated.error) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: updated.error,
+      });
+    }
+
+    if (!updated) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "sale_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "sale_updated_successfully",
+      data: updated,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+const deleteSaleItems = async (req, res) => {
+  const { id } = req.params;
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })
+  ) return;
+
+  try {
+    const updated = await Menuervice.deleteSaleItems(id);
+    if (updated && updated.error) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: updated.error,
+      });
+    }
+
+    if (!updated) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "sale_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "sale_deleted_successfully",
+      data: updated,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 module.exports = {
   getMenuItems,
   getSaleItems,
@@ -618,5 +735,7 @@ module.exports = {
   createSale,
   createLimitedTimeItem,
   createMenuItemFromPreset,
-  getSummary
+  getSummary,
+  updateSaleItems,
+  deleteSaleItems
 };

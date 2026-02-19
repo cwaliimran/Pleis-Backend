@@ -60,7 +60,7 @@ const ticketingOrderSchema = new mongoose.Schema(
             paymentMethod: {
                 type: String,
                 enum: ["applePay", "card", "cash"],
-                required: true,
+                default: null,
             },
             paymentStatus: {
                 type: String,
@@ -86,7 +86,17 @@ const ticketingOrderSchema = new mongoose.Schema(
             default: "pendingPayment",
             index: true,
         },
+        //mixed type meta
+        meta: {
+            type: mongoose.Schema.Types.Mixed,
+            default: null,
+        },
 
+        userBillingInformation: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "UserBillingInformation",
+            default: null,
+        },
     },
     { timestamps: true }
 );

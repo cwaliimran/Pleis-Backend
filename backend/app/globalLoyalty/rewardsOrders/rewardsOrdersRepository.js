@@ -3,12 +3,18 @@ const GlobalReward = require("@GlobalLoyaltyReward");
 const { GlobalRewardsOrders } = require("@GlobalRewardsOrdersModel");
 const { createTransaction } =
   require("../../userWalletService/transactions/services/unifiedTransactionsService");
+const { createTicketingBookingService } = require("../../bookings/ticketings/ticketingBookingService");
 
 /**
  * CLAIM GLOBAL REWARD
  * Creates reward order + deducts global points atomically
  */
-const createGlobalRewardOrder = async ({ userId, rewardId }) => {
+const createGlobalRewardOrder = async ({
+  userId,
+  rewardId,
+  protectionUserDetails,
+  timezone,
+}) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -20,60 +26,130 @@ const createGlobalRewardOrder = async ({ userId, rewardId }) => {
     if (reward.endDate && reward.endDate < new Date())
       throw new Error("reward_expired");
 
-    // 1️⃣ Claim limit check
     const [limitCheck] =
       await checkClaimLimitForGlobalRewards(userId, [reward]);
 
     if (!limitCheck.available)
       throw new Error("reward_claim_limit_reached");
 
-    // 2️⃣ Create reward order (status = pending by schema)
-    const orderDocs = await GlobalRewardsOrders.create(
-      [
+    let orderPayload = null;
+    let trx = null;
+
+    /* ===============================
+       🎟 GLOBAL TICKET REWARD
+    =============================== */
+    if (reward.rewardType === "globalTicketReward") {
+      const ticketData = {
+        ticketId: reward.ticket,
+        timeSlot: reward.timeslot || null,
+        protectionUserDetails: {
+          firstName: protectionUserDetails?.firstName || "",
+          surName: protectionUserDetails?.surName || "",
+          dob: protectionUserDetails?.dob || "",
+          pid: protectionUserDetails?.pid || "",
+        },
+      };
+
+      const result = await createTicketingBookingService(
         {
           user: userId,
-          sourceType: "globalRewards",
-          sourceId: reward._id,
-          snapshot: reward,
-          pointsUsed: reward.minPointsRequiredToClaim || 0,
+          ticketings: [ticketData],
+          bookingReference: "ticketReward",
+          meta: {
+            reward: reward._id,
+            type: "globalrewards",
+          },
         },
-      ],
-      { session }
-    );
+        timezone,
+        session
+      );
 
-    const order = orderDocs[0];
+      // normalize structure
+      orderPayload = {
+        order: result.order,
+        tickets: result.tickets || [],
+      };
 
-    // 3️⃣ Deduct global wallet points
-    const trx = await createTransaction(
-      {
-        user: userId,
-        type: "redeem",
-        domainType: "globalrewardsorders",
-        entityId: order._id,
-        globalPoints: {
-          base: reward.minPointsRequiredToClaim || 0,
-          total: -(reward.minPointsRequiredToClaim || 0),
+      trx = await createTransaction(
+        {
+          user: userId,
+          type: "redeem",
+          domainType: "ticketingorders",
+          entityId: result.order._id,
+          globalPoints: {
+            base: reward.minPointsRequiredToClaim || 0,
+            total: -(reward.minPointsRequiredToClaim || 0),
+          },
+          allowNegative: false,
+          description: `Claimed global reward ${reward.title}`,
         },
-        allowNegative: false,
-        description: `Claimed global reward ${reward.title}`,
-      },
-      session
-    );
+        session
+      );
 
-    if (!trx?.success) {
-      throw new Error(trx?.message || "transaction_failed");
+      if (!trx.success) {
+        throw new Error(trx.message || "transaction_failed");
+      }
+
+    } else {
+      /* ===============================
+         🧾 NORMAL GLOBAL REWARD
+      =============================== */
+      const orderDocs = await GlobalRewardsOrders.create(
+        [
+          {
+            user: userId,
+            sourceType: "globalRewards",
+            sourceId: reward._id,
+            snapshot: reward,
+            pointsUsed: reward.minPointsRequiredToClaim || 0,
+          },
+        ],
+        { session }
+      );
+
+      const orderDoc = orderDocs[0];
+
+      orderPayload = {
+        order: orderDoc,
+        tickets: [],
+      };
+
+      trx = await createTransaction(
+        {
+          user: userId,
+          type: "redeem",
+          domainType: "globalrewardsorders",
+          entityId: orderDoc._id,
+          globalPoints: {
+            base: reward.minPointsRequiredToClaim || 0,
+            total: -(reward.minPointsRequiredToClaim || 0),
+          },
+          allowNegative: false,
+          description: `Claimed global reward ${reward.title}`,
+        },
+        session
+      );
+
+      if (!trx?.success) {
+        throw new Error(trx?.message || "transaction_failed");
+      }
     }
-    // 4️⃣ Commit
+
     await session.commitTransaction();
     session.endSession();
+
     return {
       success: true,
-      order,
-      transactions: trx.data,
+      order: orderPayload,
+      transactions: trx?.transactions || trx?.data,
     };
-
   } catch (err) {
-    await session.abortTransaction();
+    console.log("err", err);
+
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+
     session.endSession();
 
     return {
@@ -82,6 +158,7 @@ const createGlobalRewardOrder = async ({ userId, rewardId }) => {
     };
   }
 };
+
 
 /**
  * BATCH CLAIM LIMIT CHECK (GLOBAL)

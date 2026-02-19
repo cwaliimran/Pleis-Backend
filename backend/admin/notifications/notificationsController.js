@@ -129,7 +129,7 @@ const createNotifications = async (req, res) => {
       };
       radius = Number(location.radius) || 0;
     }
-   
+
     // Prepare the data object to be saved (only include provided fields)
     const data = {
       creator: userId,
@@ -196,11 +196,10 @@ const createNotifications = async (req, res) => {
 
 const getNotificationss = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range ,sendTiming,isDelivered} = req.query;
+  const { keyword, status = "active", date, range, sendTiming, isDelivered } = req.query;
   try {
 
 
-    const userId = req.user._id;
     const timezone = req.user.timezone;
     const { Notificationss, meta } = await NotificationsService.getNotificationss({
       timezone,
@@ -208,7 +207,6 @@ const getNotificationss = async (req, res) => {
       limit,
       keyword,
       status,
-      userId,
       date,
       range,
       sendTiming,
@@ -347,12 +345,6 @@ const deleteNotifications = async (req, res) => {
     });
   }
 };
-
-
-
-
-
-
 
 
 

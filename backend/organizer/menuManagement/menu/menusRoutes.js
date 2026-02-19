@@ -19,7 +19,7 @@ router.use(auth);
 // Create a rate limiter for Menus
 const apiRateLimiter = createRateLimiter("Menus");
 const apiRateLimiterDetails = createRateLimiter("Menus/:id");
-
+router.use("/items", require("../../../admin/menuManagement/menuItems/menuItemsRoutes"));
 // Create a new menu
 router.post("/", roleMiddleware(["admin", "organizer", "manager"]), createMenu);
 

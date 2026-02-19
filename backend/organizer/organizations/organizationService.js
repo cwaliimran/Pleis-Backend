@@ -213,24 +213,38 @@ const updateOrganization = async ({ id, data }) => {
     numberOfOrganizations,
     totalSubscriptionAmount,
     userId, // 👈 MUST be passed to update subscription
+    inAppOrderingSettings
   } = data;
 
   /* ================= ORGANIZATION UPDATE ================= */
 
-  if (basicInfo) {
-    organization.basicInfo = {
-      ...organization.basicInfo,
-      ...basicInfo,
-      media: {
-        ...organization.basicInfo?.media,
-        ...(basicInfo.media || {}),
-      },
-      socialLinks: {
-        ...organization.basicInfo?.socialLinks,
-        ...(basicInfo.socialLinks || {}),
-      },
+if (basicInfo) {
+  organization.basicInfo = organization.basicInfo || {};
+
+  // shallow fields
+  Object.entries(basicInfo).forEach(([key, value]) => {
+    if (value !== undefined && key !== "media" && key !== "socialLinks") {
+      organization.basicInfo[key] = value;
+    }
+  });
+
+  // media merge
+  if (basicInfo.media) {
+    organization.basicInfo.media = {
+      ...(organization.basicInfo.media || {}),
+      ...basicInfo.media,
     };
   }
+
+  // social links merge
+  if (basicInfo.socialLinks) {
+    organization.basicInfo.socialLinks = {
+      ...(organization.basicInfo.socialLinks || {}),
+      ...basicInfo.socialLinks,
+    };
+  }
+}
+
 
   if (otherInfo) {
     organization.otherInfo = {
@@ -261,6 +275,64 @@ const updateOrganization = async ({ id, data }) => {
     organization.basicInfo = organization.basicInfo || {};
     organization.basicInfo.name = title;
   }
+
+
+    // ---------- UPDATE inAppOrderingSettings ----------
+    if (inAppOrderingSettings !== undefined) {
+      organization.inAppOrderingSettings = {
+        paymentMethods: {
+          instantPayment:
+            inAppOrderingSettings?.paymentMethods?.instantPayment ??
+            organization?.inAppOrderingSettings?.paymentMethods?.instantPayment ??
+            false,
+
+          payLater: {
+            allow:
+              inAppOrderingSettings?.paymentMethods?.payLater?.allow ??
+              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.allow ??
+              false,
+
+            enableOrderAcceptance:
+              inAppOrderingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ??
+              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ??
+              false,
+
+            chargeOnAcceptance:
+              inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ??
+              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ??
+              false,
+
+            chargeOnDelivery:
+              inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnDelivery ??
+              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnDelivery ??
+              false,
+          },
+
+          cashPayment:
+            inAppOrderingSettings?.paymentMethods?.cashPayment ??
+            organization?.inAppOrderingSettings?.paymentMethods?.cashPayment ??
+            false,
+        },
+
+        deliveryMethods: {
+          counterPickup:
+            inAppOrderingSettings?.deliveryMethods?.counterPickup ??
+            organization?.inAppOrderingSettings?.deliveryMethods?.counterPickup ??
+            true,
+
+          tableDelivery:
+            inAppOrderingSettings?.deliveryMethods?.tableDelivery ??
+            organization?.inAppOrderingSettings?.deliveryMethods?.tableDelivery ??
+            false,
+
+          toGo:
+            inAppOrderingSettings?.deliveryMethods?.toGo ??
+            organization?.inAppOrderingSettings?.deliveryMethods?.toGo ??
+            false,
+        },
+      };
+    }
+
 
   /* ================= PRIMARY VENUE ================= */
 
@@ -321,11 +393,6 @@ const checkOrganizationExists = async (id) => {
 
 const findOrganizationById = async (id) => {
   let org = await organizationRepo.findOrganizationById(id);
-  return formatOrganization(org);
-};
-
-const getOrganizationDetails = async (id) => {
-  let org = await organizationRepo.getOrganizationDetails(id);
   return formatOrganization(org);
 };
 
@@ -408,6 +475,5 @@ module.exports = {
   getPublicOrganizations,
   checkOrganizationExists,
   getOrganizationsAsStaff,
-  getOrganizationDetails,
   getAllOrganizations
 };

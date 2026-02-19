@@ -12,6 +12,9 @@ function formatTransactionItem(item) {
     if (obj?.user?.profileIcon) {
       obj.user.profileIcon = getFullImageUrl(obj.user.profileIcon);
     }
+    if (obj?.companyOrganizer?.logo) {
+      obj.companyOrganizer.logo = getFullImageUrl(obj.companyOrganizer.logo);
+    }
 
     return obj;
 }

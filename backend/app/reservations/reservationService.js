@@ -68,12 +68,9 @@ const getUserReservations = async ({ timezone, page, limit, keyword, userId, dat
 
 
 const getUserReservationDetailsService = async (id, timezone) => {
-
   try {
     // Fetch the reservation by id
     let reservation = await ReservationRepo.getUserReservationDetails(id);
-    console.log("reservation==>", reservation)
-
     // Check if the reservation exists
     if (!reservation) {
 

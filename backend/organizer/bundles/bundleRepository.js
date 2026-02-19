@@ -1,7 +1,10 @@
 const { Bundle } = require("@BundleModel");
 const { getModelCounts } = require("@dbUtils/queryUtil");
 
+const { getOrgCompanyOrganizer } = require("../../admin/organizations/organizationRepository");
+
 const createBundle = async (data) => {
+  data.companyOrganizer=await getOrgCompanyOrganizer(data.organization);
   const bundle = new Bundle(data);
   return bundle.save();
 };

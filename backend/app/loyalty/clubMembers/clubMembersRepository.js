@@ -383,7 +383,6 @@ const getWallet = async (
     wallet = wallet.toObject();
     wallet.nextTier = nextTier || null;
   }
-
   return wallet;
 };
 

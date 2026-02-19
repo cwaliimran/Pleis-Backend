@@ -10,6 +10,10 @@ const MenuItemCategories = require("@MenuItemCategoriesModel");
 const Menus = require("@MenusModel");
 const MenuItems = require("@MenuItemsModel");
 const Tiers = require("@TiersModel");
+const { getFullImageUrl } = require("@utils/imageHelper");
+const { formatMenuItem } = require("./formatters/bundleFormatter");
+const mongoose = require("mongoose");
+const { getOrganizationIdByCompanyOrganizer } = require("../../admin/organizations/organizationRepository");
 
 const getBundlesCount = async (query) => {
   return getModelCounts({ model: Bundle, filterQuery: query });
@@ -93,23 +97,36 @@ const getVenues = async ({
   limit = 10,
   keyword,
   status,
+  CompanyOrganizer,
   date
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const andConditions = [];
+  if(!organization)
+  {
+    organization= await getOrganizationIdByCompanyOrganizer(CompanyOrganizer)
+  }
 
   // ✅ Organization filter (comma or % separated)
-  if (organization) {
-    const organizationIds = organization
+if (organization) {
+  let organizationIds;
+
+  // If organization is a string, split it into an array of ObjectIds
+  if (typeof organization === 'string') {
+    organizationIds = organization
       .split(/[,%]/)
       .filter(Boolean)
       .map(id => new mongoose.Types.ObjectId(id));
-
-    andConditions.push({
-      organization: { $in: organizationIds }
-    });
+  } else if (Array.isArray(organization)) {
+    // If organization is already an array of ObjectIds, just use it
+    organizationIds = organization.map(item => new mongoose.Types.ObjectId(item._id));
   }
+
+  andConditions.push({
+    organization: { $in: organizationIds }
+  });
+}
 
   // ✅ Status filter
   if (status) {
@@ -234,37 +251,38 @@ const getmenuItemCategories = async ({ companyOrganizer }) => {
     itemCategories: itemCategories
   };
 };
-const getmenuItem = async ({     creator,
-    menu }) => {
+const getmenuItem = async ({ creator, menu }) => {
   const query = {
     status: { $ne: "deleted" }
   };
-    if (menu) {
+  if (menu) {
     const menuIds = menu
       .split(/[,%]/)
       .filter(Boolean)
       .map(id => new mongoose.Types.ObjectId(id));
     query["menu"] = { $in: menuIds };
-  }
-  else if (creator) {
+  } else if (creator) {
     query.creator = new mongoose.Types.ObjectId(creator);
   }
+
   const itemCategories = await MenuItems.find(query)
-    .select("_id title type")
+    .select("_id title type image description")
     .sort({ title: 1 })
     .lean();
 
+  // Use map to format each item
+  const formattedItems = await Promise.all(itemCategories.map(formatMenuItem));
   return {
-    itemCategories: itemCategories
+    itemCategories: formattedItems
   };
-}
-const getTiers = async ({   
+};
+const getTiers = async ({
   creator }) => {
   const query = {
     status: { $ne: "deleted" }
   };
 
-  const tiers= await Tiers.find(query)
+  const tiers = await Tiers.find(query)
     .select("_id title bonusPointsPerEuro")
     .sort({ title: 1 })
     .lean();
@@ -273,12 +291,12 @@ const getTiers = async ({
     tiers: tiers
   };
 }
-const getmenu = async ({   organization,
+const getmenu = async ({ organization,
   creator }) => {
   const query = {
     status: { $ne: "deleted" }
   };
-    if (organization) {
+  if (organization) {
     const organizationIds = organization
       .split(/[,%]/)
       .filter(Boolean)
@@ -292,7 +310,7 @@ const getmenu = async ({   organization,
   // if (companyOrganizer) {
   //   query.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
   // }
-  const menu= await Menus.find(query)
+  const menu = await Menus.find(query)
     .select("_id title")
     .sort({ title: 1 })
     .lean();
@@ -302,7 +320,7 @@ const getmenu = async ({   organization,
   };
 }
 module.exports = {
-getTiers,
+  getTiers,
   getBundlesCount,
   getVenueTypesWithFilters,
   getOrganizations,

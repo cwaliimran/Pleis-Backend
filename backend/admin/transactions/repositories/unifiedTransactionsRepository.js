@@ -98,7 +98,7 @@ const createTransaction = async ({
 
     await checkPromotionGlobal(userId, session)
     //TODO call via cron job
-  // checkDemotionGlobal(userId).catch(() => { });
+    // checkDemotionGlobal(userId).catch(() => { });
 
     createdTransactions.push(trx);
   }
@@ -142,15 +142,58 @@ const getTransactionsWithFilters = async ({
   skip = 0,
   limit = 10
 }) => {
-  const pipeline = [];
 
-  /* ---------------- BASE MATCH ---------------- */
+  /* =====================================================
+     🔵 STAGE 1 — FETCH IDS ONLY (FAST)
+  ===================================================== */
+
+  const idPipeline = [];
+
   if (Object.keys(match).length) {
-    pipeline.push({ $match: match });
+    idPipeline.push({ $match: match });
   }
 
-  /* ---------------- LOOKUPS ---------------- */
-  pipeline.push(
+  // keyword filtering (ONLY if indexed fields)
+  const keywordMatch = buildKeywordMatch(keyword);
+  if (keywordMatch) {
+    idPipeline.push({ $match: keywordMatch });
+  }
+
+  idPipeline.push(
+    { $sort: { createdAt: -1, _id: -1 } },
+    { $skip: skip }
+  );
+
+  if (limit > 0) {
+    idPipeline.push({ $limit: limit });
+  }
+
+  idPipeline.push({ $project: { _id: 1 } });
+
+  const ids = await UnifiedWalletTransactions.aggregate(idPipeline);
+
+  if (!ids.length) return [];
+
+  const txIds = ids.map(i => i._id);
+
+  /* =====================================================
+     🔵 STAGE 2 — FETCH FULL DOCS + LOOKUPS
+  ===================================================== */
+
+  const pipeline = [
+    {
+      $match: {
+        _id: { $in: txIds }
+      }
+    },
+
+    /* maintain order */
+    {
+      $addFields: {
+        __order: { $indexOfArray: [txIds, "$_id"] }
+      }
+    },
+
     {
       $lookup: {
         from: "users",
@@ -174,79 +217,68 @@ const getTransactionsWithFilters = async ({
         foreignField: "_id",
         as: "organization"
       }
-    }
-  );
+    },
 
-  /* ---------------- FLATTEN ---------------- */
-  pipeline.push({
-    $addFields: {
-      user: { $arrayElemAt: ["$user", 0] },
-      companyOrganizer: { $arrayElemAt: ["$companyOrganizer", 0] },
-      organization: { $arrayElemAt: ["$organization", 0] }
-    }
-  });
+    {
+      $addFields: {
+        user: { $arrayElemAt: ["$user", 0] },
+        companyOrganizer: { $arrayElemAt: ["$companyOrganizer", 0] },
+        organization: { $arrayElemAt: ["$organization", 0] }
+      }
+    },
 
-  /* ---------------- KEYWORD SEARCH ---------------- */
-  const keywordMatch = buildKeywordMatch(keyword);
-  if (keywordMatch) {
-    pipeline.push({ $match: keywordMatch });
-  }
+    {
+      $project: {
+        batchId: 1,
+        walletType: 1,
+        type: 1,
+        domainType: 1,
+        entityId: 1,
+        points: 1,
+        closingBalance: 1,
+        description: 1,
+        publicId: 1,
+        createdAt: 1,
+        updatedAt: 1,
 
-  /* ---------------- SORT + PAGINATION ---------------- */
-  pipeline.push(
-    { $sort: { createdAt: -1 } },
-    { $skip: skip }
-  );
+        __order: 1,
 
-  if (limit > 0) {
-    pipeline.push({ $limit: limit });
-  }
+        user: {
+          _id: "$user._id",
+          firstName: "$user.firstName",
+          lastName: "$user.lastName",
+          email: "$user.email",
+          profileIcon: "$user.profileIcon"
+        },
 
-  /* ---------------- MINIMAL PROJECTION ---------------- */
-  pipeline.push({
-    $project: {
-      batchId: 1,
-      walletType: 1,
-      type: 1,
-      domainType: 1,
-      entityId: 1,
-      points: 1,
-      closingBalance: 1,
-      description: 1,
-      publicId: 1,
-      createdAt: 1,
-      updatedAt: 1,
+        companyOrganizer: {
+          _id: "$companyOrganizer._id",
+          logo: "$companyOrganizer.companyDetails.logo",
+          title: "$companyOrganizer.companyDetails.loyaltySettings.title"
+        },
 
-      user: {
-        _id: "$user._id",
-        firstName: "$user.firstName",
-        lastName: "$user.lastName",
-        email: "$user.email",
-        profileIcon: "$user.profileIcon"
-      },
-
-      companyOrganizer: "$companyOrganizer._id",
-
-      organization: {
-        _id: "$organization._id",
-        basicInfo: {
-          name: "$organization.basicInfo.name",
-          media: {
-            logo: "$organization.basicInfo.media.logo"
+        organization: {
+          _id: "$organization._id",
+          basicInfo: {
+            name: "$organization.basicInfo.name",
+            media: {
+              logo: "$organization.basicInfo.media.logo"
+            }
           }
         }
       }
-    }
+    },
+
+    { $sort: { __order: 1 } }
+  ];
+
+  const txList = await UnifiedWalletTransactions.aggregate(pipeline, {
+    allowDiskUse: true
   });
 
-  /* ---------------- RUN AGGREGATION ---------------- */
-  const txList = await UnifiedWalletTransactions.aggregate(pipeline);
-
-  if (!txList.length) return [];
-
   /* =====================================================
-     🔥 RESTORE TICKETING BOOKINGS (LIKE OLD CODE)
-     ===================================================== */
+     🔵 RESTORE TICKETING BOOKINGS
+  ===================================================== */
 
   const orderIds = txList
     .filter(t => t.domainType === "ticketingorders" && t.entityId)
@@ -277,45 +309,12 @@ const getTransactionsWithFilters = async ({
 };
 
 const countTransactions = async ({ match = {}, keyword }) => {
+
   const pipeline = [];
 
   if (Object.keys(match).length) {
     pipeline.push({ $match: match });
   }
-
-  pipeline.push(
-    {
-      $lookup: {
-        from: "users",
-        localField: "user",
-        foreignField: "_id",
-        as: "user"
-      }
-    },
-    {
-      $lookup: {
-        from: "users",
-        localField: "companyOrganizer",
-        foreignField: "_id",
-        as: "companyOrganizer"
-      }
-    },
-    {
-      $lookup: {
-        from: "organizations",
-        localField: "organization",
-        foreignField: "_id",
-        as: "organization"
-      }
-    },
-    {
-      $addFields: {
-        user: { $arrayElemAt: ["$user", 0] },
-        companyOrganizer: { $arrayElemAt: ["$companyOrganizer", 0] },
-        organization: { $arrayElemAt: ["$organization", 0] }
-      }
-    }
-  );
 
   const keywordMatch = buildKeywordMatch(keyword);
   if (keywordMatch) {
@@ -324,9 +323,12 @@ const countTransactions = async ({ match = {}, keyword }) => {
 
   pipeline.push({ $count: "total" });
 
-  const res = await UnifiedWalletTransactions.aggregate(pipeline);
+  const res = await UnifiedWalletTransactions.aggregate(pipeline, {
+    allowDiskUse: true
+  });
   return res[0]?.total || 0;
 };
+
 
 
 const findTransactionById = (id) => {
@@ -363,7 +365,7 @@ const getTotalClosingBalanceByOrganizationId = async (organizationId) => {
     return result.length > 0 ? result[0].totalClosingBalance : 0;
   } catch (error) {
 
-    return 0; 
+    return 0;
   }
 };
 

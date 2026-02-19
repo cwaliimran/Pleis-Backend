@@ -13,8 +13,14 @@ const { getOrgCompanyOrganizer } = require("../organizations/organizationReposit
 
 const createEvent = async (data, ticketingData) => {
   const session = await Events.startSession();
-  const companyOrganizer=await getOrgCompanyOrganizer(data.basicInfo.organization)
-  data.companyOrganizer=companyOrganizer
+
+
+  const companyOrganizer = await getOrgCompanyOrganizer(data.basicInfo.organization)
+  data.companyOrganizer = companyOrganizer
+if (ticketingData) {
+  ticketingData.companyOrganizer = companyOrganizer
+  ticketingData.organization = data.basicInfo.organization
+}
   const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
   session.startTransaction();
 
@@ -33,6 +39,7 @@ const createEvent = async (data, ticketingData) => {
     let event = new Events(data);
     event = await event.save({ session });
 
+
     if (ticketingData) {
       if (data.recurringMeta?.isTemplate) {
         ticketingData.recurringMeta = {
@@ -50,7 +57,7 @@ const createEvent = async (data, ticketingData) => {
 
     await session.commitTransaction();
     session.endSession();
-    await sendUserNotifications({
+     sendUserNotifications({
       recipientIds: userIds,
       title: `A new event ${event.basicInfo.title} has been created.`,
       body: `A new event ${event.basicInfo.title} is now available in the system.`,
@@ -594,7 +601,7 @@ const getLatestEventByOrganization = async (organizations) => {
     }
     return latestEvents;
   } catch (error) {
-   
+
     throw new Error('Error fetching latest event');
   }
 };
@@ -629,8 +636,8 @@ const getEventbycompanyOrganizer = async (query) => {
       'companyOrganizer': companyOrganizer,
       'status': status
     })
-    .select('_id basicInfo.title')
-    .lean();
+      .select('_id basicInfo.title')
+      .lean();
 
     return event || 'No event found for this company organizer with the given status';
   } catch (error) {

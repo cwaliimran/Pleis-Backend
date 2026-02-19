@@ -7,23 +7,20 @@ const {
 } = require("@utils/responseUtil");
 
 const rewardService = require("./rewardsService");
-const { getUserCompanyWallet } = require("../clubMembers/clubMembersService");
-const { formatRewardsByTierKey } = require("../../../commonModules/loyalty/rewards/utils/formatReward");
-
-const { REWARD_CLAIM_REASONS } = require("./formatters/rewardClaimReasons");
 
 const getRewards = async (req, res) => {
   const keyword = req.query.keyword || "";
 
   try {
     const userId = req.user._id;
+    const timezone = req.user?.timezone || "UTC";
     const companyOrganizer = req.params.companyOrganizer;
 
     const { rewards } =
       await rewardService.getRewardsByCompanyOrganizerService({
         userId,
         companyOrganizer,
-        timezone: req.user?.timezone,
+        timezone,
         keyword,
       });
 
@@ -68,13 +65,14 @@ const getRewards = async (req, res) => {
 }; */
 
 const claimReward = async (req, res) => {
-  const { id } = req.body;
+  const { id, protectionUserDetails } = req.body; //protectionUserDetails only if ticket reward requirs protection details
   if (!validateParams(req, res, { rawData: ["id"], objectIdFields: ["id"] })) return;
   try {
     const rewardId = id;
     const userId = req.user._id;
+    const timezone = req.user?.timezone;
 
-    const result = await rewardService.claimRewardService(userId, rewardId);
+    const result = await rewardService.claimRewardService(userId, rewardId, protectionUserDetails, timezone);
 
     if (!result.success) {
       return sendResponse({
@@ -101,14 +99,15 @@ const getJoinedClubsRewards = async (req, res) => {
     const { page, limit, skip } = parsePaginationParams(req);
     const { keyword } = req.query;
     const userId = req.user._id;
-
+    const timezone = req.user?.timezone || "UTC";
     const result =
       await rewardService.getRewardsForUserJoinedClubs({
         userId,
         page,
         limit,
         skip,
-        keyword
+        keyword,
+        timezone
       });
 
     return sendResponse({
