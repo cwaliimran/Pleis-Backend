@@ -51,12 +51,16 @@ if (organization) {
     query["schedule.endDateTime"] = { $lte: new Date(endDate) };
   }
 
-  if (keyword) {
-    query.$or = [
-      { title: { $regex: keyword, $options: "i" } },
-      { description: { $regex: keyword, $options: "i" } },
-    ];
-  }
+if (keyword) {
+  query.$or = [
+    { "basicInfo.title": { $regex: keyword, $options: "i" } }, // Filter by event title
+    { "basicInfo.description": { $regex: keyword, $options: "i" } }, // Filter by event description
+    { "basicInfo.organization.basicInfo.name": { $regex: keyword, $options: "i" } }, // Filter by organization name
+    { "venue.title": { $regex: keyword, $options: "i" } }, // Filter by venue title
+  ];
+}
+
+
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
