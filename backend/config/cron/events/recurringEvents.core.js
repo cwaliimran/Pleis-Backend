@@ -217,6 +217,7 @@ const createOccurrence = async (template, startDate, index) => {
       recurringDetails: template.schedule.recurringDetails,
     },
     creator: template.creator,
+    companyOrganizer: template.companyOrganizer,
     status: "active",
     recurringMeta: {
       parentEvent: template._id,

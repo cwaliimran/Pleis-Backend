@@ -23,7 +23,7 @@ router.use("/menu", require("../menuManagement/menu/menusRoutes"));
 router.use("/qr-code", require("../qr/qrRoutes"));
 router.use("/highlights", require("../highlights/highlightRoutes"));
 router.use("/reservations", require("../../admin/reservation/reservationRoutes"));
-router.use("/events", require("../events/eventRoutes"));
+router.use("/events", require("../../admin/events/eventRoutes"));
 router.use("/venues", require("../venues/venuesRoutes"));
 router.use("/ticketing", require("../../admin/ticketing/ticketingsRoutes"));
 router.use("/promo-codes", require("../promoCode/promoCodeRoutes"));
