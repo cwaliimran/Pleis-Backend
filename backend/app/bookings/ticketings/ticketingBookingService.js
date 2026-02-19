@@ -145,7 +145,7 @@ const createTicketingBookingService = async (
       paymentId,
       paymentStatus,
     },
-
+    userBillingInformation: data.userBillingInformation || null,
     status: orderStatus,
 
     bookingReference: data.bookingReference || null,

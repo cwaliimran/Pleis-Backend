@@ -335,7 +335,7 @@ const getPlaces = async (queryData = {}) => {
 
     //TODO topRated, trending
     const {
-      time = "all", // openNow, topRated, trending
+      time, // openNow, topRated, trending
       categories = [],
       venueTypes = [],
       tags = [],
@@ -345,6 +345,22 @@ const getPlaces = async (queryData = {}) => {
     } = advanceFilters;
 
     const skip = (page - 1) * limit;
+
+    let sortStage = { createdAt: sort === "asc" ? 1 : -1 };
+console.log("time==>",time)
+    if (time === "topRated") {
+      sortStage = {
+        avgRating: -1,
+        totalReviews: -1,
+        createdAt: -1,
+      };
+    } else if (time === "trending") {
+      sortStage = {
+        trendingScore: -1, // future field
+        createdAt: -1,
+      };
+    }
+
 
     //
     // BASE MATCH
@@ -429,99 +445,146 @@ const getPlaces = async (queryData = {}) => {
       .filter(mongoose.Types.ObjectId.isValid)
       .map(id => new mongoose.Types.ObjectId(id));
 
-    const { utcMinutes, localWeekdayKey } =
-      getUtcMinutesAndLocalWeekdayKey(timezone);
+    let utcMinutes = null;
+    let localWeekdayKey = null;
 
+    if (time === "openNow") {
+      ({ utcMinutes, localWeekdayKey } =
+        getUtcMinutesAndLocalWeekdayKey(timezone));
+    }
+
+    const openNowStages =
+      time === "openNow"
+        ? [
+          {
+            $addFields: {
+              todayHours: {
+                $getField: {
+                  field: localWeekdayKey,
+                  input: "$operatingHours"
+                }
+              }
+            }
+          },
+          {
+            $addFields: {
+              isOpenNow: {
+                $let: {
+                  vars: {
+                    from: "$todayHours.from",
+                    to: "$todayHours.to",
+                    isOpen: "$todayHours.isOpen",
+                    breakFrom: "$todayHours.break.from",
+                    breakTo: "$todayHours.break.to",
+                    now: utcMinutes
+                  },
+                  in: {
+                    $cond: [
+                      {
+                        $and: [
+                          { $eq: ["$$isOpen", true] },
+                          { $ne: ["$$from", null] },
+                          { $ne: ["$$to", null] }
+                        ]
+                      },
+                      {
+                        $let: {
+                          vars: {
+                            inRange: {
+                              $cond: [
+                                { $lte: ["$$from", "$$to"] },
+                                {
+                                  $and: [
+                                    { $gte: ["$$now", "$$from"] },
+                                    { $lte: ["$$now", "$$to"] }
+                                  ]
+                                },
+                                {
+                                  $or: [
+                                    { $gte: ["$$now", "$$from"] },
+                                    { $lte: ["$$now", "$$to"] }
+                                  ]
+                                }
+                              ]
+                            },
+                            inBreak: {
+                              $and: [
+                                { $ne: ["$$breakFrom", null] },
+                                { $ne: ["$$breakTo", null] },
+                                { $gte: ["$$now", "$$breakFrom"] },
+                                { $lte: ["$$now", "$$breakTo"] }
+                              ]
+                            }
+                          },
+                          in: {
+                            $and: [
+                              "$$inRange",
+                              { $not: ["$$inBreak"] }
+                            ]
+                          }
+                        }
+                      },
+                      false
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          { $project: { todayHours: 0 } },
+          { $match: { isOpenNow: true } }
+        ]
+        : [];
+
+
+    /* ===============================
+   ⭐ ratingStages HERE
+=============================== */
+    const ratingStages =
+      time === "topRated"
+        ? [
+          {
+            $lookup: {
+              from: "reviews",
+              let: { orgId: "$_id" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: { $eq: ["$organization", "$$orgId"] },
+                    status: "active"
+                  }
+                },
+                {
+                  $group: {
+                    _id: null,
+                    avgRating: { $avg: "$rating" },
+                    totalReviews: { $sum: 1 }
+                  }
+                }
+              ],
+              as: "ratingStats"
+            }
+          },
+          {
+            $addFields: {
+              avgRating: {
+                $ifNull: [{ $arrayElemAt: ["$ratingStats.avgRating", 0] }, 0]
+              },
+              totalReviews: {
+                $ifNull: [{ $arrayElemAt: ["$ratingStats.totalReviews", 0] }, 0]
+              }
+            }
+          },
+          { $project: { ratingStats: 0 } }
+        ]
+        : [];
 
     //
     // PIPELINE
     //
     const pipeline = [
       { $match: finalMatch },
-      {
-        $addFields: {
-          todayHours: {
-            $getField: {
-              field: localWeekdayKey,
-              input: "$operatingHours"
-            }
-          }
-        }
-      },
-      {
-        $addFields: {
-          isOpenNow: {
-            $let: {
-              vars: {
-                from: "$todayHours.from",
-                to: "$todayHours.to",
-                isOpen: "$todayHours.isOpen",
-                breakFrom: "$todayHours.break.from",
-                breakTo: "$todayHours.break.to",
-                now: utcMinutes
-              },
-              in: {
-                $cond: [
-                  {
-                    $and: [
-                      { $eq: ["$$isOpen", true] },
-                      { $ne: ["$$from", null] },
-                      { $ne: ["$$to", null] }
-                    ]
-                  },
-                  {
-                    $let: {
-                      vars: {
-                        inRange: {
-                          $cond: [
-                            { $lte: ["$$from", "$$to"] }, // normal day
-                            {
-                              $and: [
-                                { $gte: ["$$now", "$$from"] },
-                                { $lte: ["$$now", "$$to"] }
-                              ]
-                            },
-                            {
-                              // overnight shift
-                              $or: [
-                                { $gte: ["$$now", "$$from"] },
-                                { $lte: ["$$now", "$$to"] }
-                              ]
-                            }
-                          ]
-                        },
-                        inBreak: {
-                          $and: [
-                            { $ne: ["$$breakFrom", null] },
-                            { $ne: ["$$breakTo", null] },
-                            { $gte: ["$$now", "$$breakFrom"] },
-                            { $lte: ["$$now", "$$breakTo"] }
-                          ]
-                        }
-                      },
-                      in: {
-                        $and: [
-                          "$$inRange",
-                          { $not: ["$$inBreak"] }
-                        ]
-                      }
-                    }
-                  },
-                  false
-                ]
-              }
-            }
-          }
-        }
-      },
-      {
-        $project: {
-          todayHours: 0
-        }
-      },
-      ...(time === "openNow"
-        ? [{ $match: { isOpenNow: true } }]
-        : []),
+      ...openNowStages,
 
       //
       // JOIN VENUES
@@ -607,8 +670,8 @@ const getPlaces = async (queryData = {}) => {
       },
 
       { $project: { populatedCategories: 0, populatedTags: 0 } },
-
-      { $sort: { createdAt: sort === "asc" ? 1 : -1 } },
+      ...ratingStages,
+      { $sort: sortStage },
       { $skip: skip },
       { $limit: limit }
     ];
@@ -714,8 +777,6 @@ const getPlaces = async (queryData = {}) => {
 };
 
 
-
-
 const getAllData = async (queryData) => {
   try {
     const [eventsRes, placesRes] = await Promise.all([
@@ -743,8 +804,6 @@ const getAllData = async (queryData) => {
     throw new Error(`Failed to fetch combined data: ${error.message}`);
   }
 };
-
-
 
 module.exports = {
   getEvents,

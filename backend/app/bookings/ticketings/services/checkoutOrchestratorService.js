@@ -9,14 +9,15 @@ const checkoutWithTicketsAndReservation = async ({
   ticketings,
   reservation,
   paymentDetails,
-  session, 
-}) => {
+  userBillingInformation,
+}, session) => {
   const { order, tickets } =
     await createTicketingBookingService(
       {
         user: user._id,
         ticketings,
         paymentDetails,
+        userBillingInformation,
       },
       timezone,
       session
@@ -28,6 +29,7 @@ const checkoutWithTicketsAndReservation = async ({
         ...reservation,
         userId: user._id,
         paymentDetails,
+        userBillingInformation,
         ticketingOrderRef: order._id,
         ticketingBookingRefs: tickets.map(t => t._id),
       },

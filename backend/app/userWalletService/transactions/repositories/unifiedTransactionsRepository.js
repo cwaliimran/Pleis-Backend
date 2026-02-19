@@ -95,7 +95,7 @@ const createTransaction = async (data, session) => {
     createdTransactions.push(trx[0]);
   }
 
-  if (companyPoints && companyPoints.total !== 0) {
+  if (companyPoints && companyPoints.total > 0) {
     resolveChallengeByTaskTypeService({
       userId,
       companyOrganizer,

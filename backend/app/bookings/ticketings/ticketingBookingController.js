@@ -19,7 +19,7 @@ const createTicketingBooking = async (req, res) => {
 
   try {
     const { timezone } = req.user;
-    const { ticketings, paymentDetails, reservation } = req.body;
+    const { ticketings, paymentDetails, reservation, userBillingInformation = null } = req.body;
 
     if (!validateTicketingPayload(req, res)) return;
 
@@ -38,6 +38,7 @@ const createTicketingBooking = async (req, res) => {
           ticketings,
           reservation: normalizedReservation,
           paymentDetails,
+          userBillingInformation,
         },
         session
       );
@@ -52,6 +53,7 @@ const createTicketingBooking = async (req, res) => {
           user: req.user._id,
           ticketings,
           paymentDetails,
+          userBillingInformation,
         },
         timezone,
         session

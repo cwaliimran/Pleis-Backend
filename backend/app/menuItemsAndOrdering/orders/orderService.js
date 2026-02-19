@@ -157,6 +157,7 @@ const placePreOrderMenuItemsWithReservation = async ({
   notes,
   reservation,
   paymentMethod,
+  userBillingInformation,
   session
 }) => {
 
@@ -199,6 +200,7 @@ const placePreOrderMenuItemsWithReservation = async ({
     totalPrice,
     notes,
     paymentMethod,
+    userBillingInformation,
     status: "pending",
     orderType: "preorder",
     reservation,
