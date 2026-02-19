@@ -229,34 +229,49 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
      =============================== */
   pipeline.push({ $sort: { "topPick.order": 1 } });
 
-  /* ===============================
-     5️⃣ CREATOR POPULATION
-     =============================== */
-  pipeline.push(
-    {
-      $lookup: {
-        from: "users",
-        localField: "creator",
-        foreignField: "_id",
-        as: "creator",
-        pipeline: [
-          {
-            $project: {
-              _id: 1,
-              "companyDetails.logo": 1,
-              "companyDetails.loyaltySettings.title": 1,
-            },
-          },
-        ],
-      },
-    },
-    {
-      $unwind: {
-        path: "$creator",
-        preserveNullAndEmptyArrays: true,
-      },
+ /* ===============================
+   5️⃣ CREATOR POPULATION (FIXED)
+=============================== */
+pipeline.push(
+  {
+    $lookup: {
+      from: "users",
+      let: { creatorId: "$creator" },
+      pipeline: [
+        {
+          $match: {
+            $expr: { $eq: ["$_id", "$$creatorId"] }
+          }
+        },
+        {
+          $project: {
+            _id: 1,
+            "companyDetails.logo": 1,
+            "companyDetails.loyaltySettings.title": 1
+          }
+        }
+      ],
+      as: "creator"
     }
-  );
+  },
+  {
+    $addFields: {
+      creator: {
+        $ifNull: [
+          { $arrayElemAt: ["$creator", 0] },
+          {
+            _id: null,
+            companyDetails: {
+              logo: null,
+              loyaltySettings: { title: null }
+            }
+          }
+        ]
+      }
+    }
+  }
+);
+
 
   /* ===============================
      6️⃣ PRIMARY VENUE
@@ -318,7 +333,7 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
       _id: 1,
       ...(userLocation ? { distance: 1 } : {}),
       "basicInfo.name": 1,
-      "basicInfo.media.cover": 1,
+      "basicInfo.media": 1,
       "otherInfo.description": 1,
       tags: 1,
       creator: 1,

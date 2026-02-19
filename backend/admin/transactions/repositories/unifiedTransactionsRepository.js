@@ -225,7 +225,11 @@ const getTransactionsWithFilters = async ({
         profileIcon: "$user.profileIcon"
       },
 
-      companyOrganizer: "$companyOrganizer._id",
+      companyOrganizer: {
+        _id: "$companyOrganizer._id",
+        logo: "$companyOrganizer.companyDetails.logo",
+        title: "$companyOrganizer.companyDetails.loyaltySettings.title"
+      },
 
       organization: {
         _id: "$organization._id",
