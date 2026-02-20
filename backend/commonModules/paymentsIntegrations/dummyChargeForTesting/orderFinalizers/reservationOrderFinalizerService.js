@@ -2,32 +2,46 @@ const mongoose = require("mongoose");
 const { UserReservations } = require("@UserReservationsModel");
 const MenuOrders = require("@OrdersModel");
 const { calculatePointsRepo } = require("../../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
-const { createTransaction } = require("../../../../app/userWalletService/transactions/services/unifiedTransactionsService");
-const { resolveChallengeByTaskTypeService } = require("../../../../app/loyalty/challengesOrders/challengeOrdersService");
+const { createTransactionService } = require("../../../../app/userWalletService/transactions/services/unifiedTransactionsService");
+const { handleLoyaltyEarningConsequences } = require("./handleLoyaltyEarningConsequences");
 
-/**
- * Reservation Order Finalizer
- * - Source of truth: UserReservations
- * - Resolves linked MenuOrders (preOrderMenuItemsOrder)
- */
 const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   const session = await mongoose.startSession();
-  session.startTransaction();
+
+  let committed = false;
+  let userReservation = null;
+  let menuOrder = null;
+  let companyPoints = null;
+  let globalPoints = null;
 
   try {
-    const userReservation = await UserReservations
+    session.startTransaction();
+
+    if (result.status === "pending") {
+      await session.commitTransaction();
+      return;
+    }
+
+    userReservation = await UserReservations
       .findById(reservationId)
       .populate("preOrderMenuItemsOrder")
       .session(session);
 
     if (!userReservation) throw new Error("reservation_not_found");
 
-    const menuOrder = userReservation.preOrderMenuItemsOrder;
+    // idempotency guard
+    if (userReservation.status !== "pendingPayment") {
+      await session.commitTransaction();
+      return;
+    }
+
+    menuOrder = userReservation.preOrderMenuItemsOrder;
 
     // ==========================
     // ✅ PAYMENT SUCCESS
     // ==========================
     if (result.status === "paid") {
+
       await UserReservations.updateOne(
         { _id: reservationId },
         {
@@ -41,13 +55,12 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
         { session }
       );
 
-      // 🔗 Resolve preorder menu order
       if (menuOrder) {
         await MenuOrders.updateOne(
           { _id: menuOrder._id },
           {
             $set: {
-              status: "confirmed", // or keep "preorder" if you prefer
+              status: "confirmed",
               paymentStatus: "paid",
               paidAt: new Date(),
               transactionId: result.paymentId,
@@ -57,35 +70,41 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
         );
       }
 
-      //create transaction and give loyalty points to user
-      //totalPrice including menu items + reservation amount
       const totalPrice = userReservation.amount || 0;
 
       let bonusPoints =
         userReservation?.reservationSnapshot?.bonusPoints ?? 0;
 
       const pointsCalculation =
-        await calculatePointsRepo(userReservation.userId, userReservation.companyOrganizer, totalPrice);
+        await calculatePointsRepo(
+          userReservation.userId,
+          userReservation.companyOrganizer,
+          totalPrice
+        );
 
-      const trx = await createTransaction(
+      companyPoints = {
+        base: pointsCalculation.organizer.earnedPoints,
+        multiplier: pointsCalculation.organizer.organizerMultiplier || 1,
+        total: (pointsCalculation.organizer.earnedPoints + bonusPoints),
+        pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
+        bonusPoints
+      };
+
+      globalPoints = {
+        base: pointsCalculation.global.earnedPoints,
+        multiplier: pointsCalculation.global.globalMultiplier || 1,
+        total: (pointsCalculation.global.earnedPoints + bonusPoints),
+        pointsPerEuro: pointsCalculation.global.pointsPerEuro,
+        bonusPoints
+      };
+
+      const trx = await createTransactionService(
         {
           user: userReservation.userId,
           companyOrganizer: userReservation.companyOrganizer,
           organization: userReservation.organizationId,
-          companyPoints: {
-            base: pointsCalculation.organizer.earnedPoints,
-            multiplier: 1,
-            total: (pointsCalculation.organizer.earnedPoints + bonusPoints),
-            pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
-            bonusPoints: bonusPoints,
-          },
-          globalPoints: {
-            base: pointsCalculation.global.earnedPoints,
-            multiplier: 1,
-            total: (pointsCalculation.global.earnedPoints + bonusPoints),
-            pointsPerEuro: pointsCalculation.global.pointsPerEuro,
-            bonusPoints: bonusPoints,
-          },
+          companyPoints,
+          globalPoints,
           allowNegative: false,
           type: "earn",
           description: "",
@@ -98,29 +117,13 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
       if (!trx.success) {
         throw new Error(trx.message || "failed_loyalty_update");
       }
-
-      if (menuOrder) {
-        var items = menuOrder.items.map(i => i.menuItem);
-
-        if (items.length > 0) {
-          try {
-            await resolveChallengeByTaskTypeService({
-              userId: userReservation.userId,
-              companyOrganizer: userReservation.companyOrganizer,
-              taskType: "buyMenuItem",
-              items: items
-            });
-          } catch (err) {
-
-          }
-        }
-      }
     }
 
     // ==========================
     // ❌ PAYMENT FAILED
     // ==========================
     if (result.status === "failed") {
+
       await UserReservations.updateOne(
         { _id: reservationId },
         {
@@ -147,12 +150,32 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
     }
 
     await session.commitTransaction();
+    committed = true;
+
   } catch (err) {
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     throw err;
   } finally {
     session.endSession();
   }
+
+  // =====================================================
+  // 🚀 POST-COMMIT SIDE EFFECTS
+  // =====================================================
+  if (committed) {
+
+    handleLoyaltyEarningConsequences({
+      userId: userReservation.userId,
+      companyOrganizer: userReservation.companyOrganizer,
+      companyPoints,
+      globalPoints,
+      menuOrder: menuOrder
+    });
+
+  }
 };
+
 
 module.exports = { reservationOrderFinalizerService };

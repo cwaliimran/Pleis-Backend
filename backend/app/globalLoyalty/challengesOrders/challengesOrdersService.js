@@ -7,7 +7,7 @@ const ordersRepo =
  * Resolve global challenge progress
  * (entry point from events / actions)
  */
-const resolveGlobalChallengeByTaskType = async ({
+const resolveGlobalChallengeByTaskTypeService = async ({
   userId,
   taskType,
   value = 1
@@ -111,5 +111,5 @@ const resolveGlobalChallengeByTaskType = async ({
 
 
 module.exports = {
-  resolveGlobalChallengeByTaskType
+  resolveGlobalChallengeByTaskTypeService
 };

@@ -18,9 +18,6 @@ router.use(auth);
 const rl = createRateLimiter("UnifiedTransactions");
 const rlDetails = createRateLimiter("UnifiedTransactions/:id");
 
-// Create a transaction (allowed roles: admin, organizer, staff, manager, user)
-router.post("/", roleMiddleware(["admin", "organizer", "staff", "manager", "user"]), createTransaction);
-
 // List with pagination
 router.get("/", rl, getTransactions);
 router.get("/download", rl, downloadTransactions);

@@ -1,7 +1,8 @@
 const mongoose = require("mongoose");
 const { TicketingBookings } = require("@TicketingBookingsModel");
 const { calculatePointsRepo } = require("../../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
-const { createTransaction } = require("../../../../app/userWalletService/transactions/services/unifiedTransactionsService");
+const { createTransactionService } = require("../../../../app/userWalletService/transactions/services/unifiedTransactionsService");
+const { handleLoyaltyEarningConsequences } = require("./handleLoyaltyEarningConsequences");
 
 const ticketingTransferFinalizerService = async ({
   bookingId,
@@ -33,7 +34,7 @@ const ticketingTransferFinalizerService = async ({
       console.log("[TicketTransferFinalizer] booking not found");
       throw new Error("ticketing_booking_not_found");
     }
-
+    let globalPoints = null;
     console.log(
       "[TicketTransferFinalizer] booking loaded, current owner:",
       booking.user.toString()
@@ -97,9 +98,9 @@ const ticketingTransferFinalizerService = async ({
           amount
         );
 
-        const globalPoints = {
+        globalPoints = {
           base: pointsCalculation.global.earnedPoints,
-          multiplier: 1,
+          multiplier: pointsCalculation.global.globalMultiplier || 1,
           total: pointsCalculation.global.earnedPoints,
           pointsPerEuro: pointsCalculation.global.pointsPerEuro,
         };
@@ -125,7 +126,7 @@ const ticketingTransferFinalizerService = async ({
             "[TicketTransferFinalizer] issuing global points transaction"
           );
 
-          const trx = await createTransaction(trxData, session);
+          const trx = await createTransactionService(trxData, session);
 
           if (!trx.success) {
             console.log(
@@ -158,6 +159,16 @@ const ticketingTransferFinalizerService = async ({
 
     await session.commitTransaction();
     console.log("[TicketTransferFinalizer] transaction committed");
+
+    if (globalPoints && globalPoints?.total > 0) {
+      handleLoyaltyEarningConsequences({
+        userId,
+        globalPoints,
+      });
+
+    }
+
+
   } catch (err) {
     console.error("[TicketTransferFinalizer] error:", err.message);
 

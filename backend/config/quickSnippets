@@ -1,0 +1,15 @@
+  // const { resolveChallengeByTaskTypeService } = require("../../../loyalty/challengesOrders/challengeOrdersService");
+  if (
+    companyPoints &&
+    companyPoints.total > 0 &&
+    !options.skipChallenges
+  ) {
+    await resolveChallengeByTaskTypeService({
+      userId,
+      companyOrganizer,
+      taskType: "earnPoints",
+      value: companyPoints.total
+    });
+  }
+
+  //Also do for Global Challenge resolver
