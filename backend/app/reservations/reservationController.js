@@ -8,6 +8,7 @@ const {
   convertTimezoneToUtcDateOnly,
   convertToUtcDateOnly,
 } = require("../../helperUtils/responseUtil");
+const mongoose = require('mongoose');
 const reservationService = require("./reservationService");
 const { validateReservationPayload } = require("./validators/reservationValidation");
 

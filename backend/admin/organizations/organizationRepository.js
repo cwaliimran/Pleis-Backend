@@ -213,6 +213,15 @@ const getInAppOrderingSettings = async (companyOrganizer) => {
   return orgSettings?.inAppOrderingSettings || [];
 };
 
+const getLogoByOrganization = async (organizationId) => {
+  const orgSettings = await Organizations.findOne({ _id: organizationId })
+    .select("basicInfo.media.logo")
+    .lean();
+
+  // Return the logo URL
+  return orgSettings.basicInfo.media.logo;
+};
+
 
 module.exports = {
   createOrganization,
@@ -232,5 +241,6 @@ module.exports = {
   getOrganizationNotifications,
   getOrganizationIdByCompanyOrganizer,
   getInAppOrderingSettings,
-  getMenuIdsByOrganization
+  getMenuIdsByOrganization,
+  getLogoByOrganization
 };

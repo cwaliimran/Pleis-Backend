@@ -38,6 +38,7 @@ function reservationsFormatter(item, timezone) {
       return change;
     });
   }
+  console.log("Formatted Reservation Data:", JSON.stringify(cat, null, 2));
 
   return cat;
 }

@@ -21,7 +21,7 @@ const {
 const { placePreOrderMenuItemsWithReservation } = require("../menuItemsAndOrdering/orders/orderService");
 const { sendUserNotifications } = require("../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
-const { getStaffIdsByOrganization } = require("../../admin/organizations/organizationRepository");
+const { getStaffIdsByOrganization, getLogoByOrganization } = require("../../admin/organizations/organizationRepository");
 const createReservation = async (data, session) => {
   if (!session) throw new Error("session_required");
 
@@ -187,7 +187,7 @@ const createReservation = async (data, session) => {
     await getStaffIdsByOrganization(
       userReservation.organizationId
     );
-
+const organizationImage =await getLogoByOrganization(userReservation.organizationId);
   await sendUserNotifications({
     recipientIds: staffIds,
     title: "A New Reservation Created",
@@ -196,7 +196,7 @@ const createReservation = async (data, session) => {
       type: NotificationTypes.RESERVATION_UPDATE,
       objectType: "userreservations",
     },
-    image: "noimage",
+    image: organizationImage,
     sender: userId,
     objectId: userReservation.reservationId,
   });
