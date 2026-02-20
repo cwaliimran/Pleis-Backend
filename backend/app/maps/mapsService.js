@@ -633,7 +633,7 @@ const getPlaces = async (queryData = {}) => {
           },
           {
             $addFields: {
-              trendingScore: {
+              trendingScore: { 
                 $round: [
                   {
                     $add: [

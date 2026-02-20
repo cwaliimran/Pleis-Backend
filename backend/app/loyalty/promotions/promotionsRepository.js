@@ -13,7 +13,7 @@ const { formatUserWallet } = require("../clubMembers/formatters/formatUserWallet
 const { generateMeta } = require("@utils/responseUtil");
 const formatPromotion = require("./formatters/formatPromotion");
 const { normalizePromotionClaimMeta } = require("./formatters/normalizePromotionClaimMeta");
-const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
+const { createTransactionService } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
 
 
 // Count
@@ -751,7 +751,7 @@ const claimPromotion = async (promotionId, userId) => {
 
   //create transaction
 
-  await createTransaction(
+  await createTransactionService(
     {
       user: userId,
       companyOrganizer: promotion.companyOrganizer._id,

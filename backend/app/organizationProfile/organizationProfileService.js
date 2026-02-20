@@ -172,7 +172,7 @@ const getOrganizationMenu = async (organizationId, timezone) => {
   const formatted = result.map(menu => ({
     ...menu,
     items: menu.items.map(item => formatMenuItem(item, timezone)),
-  }));
+  })).filter(menu => menu.items && menu.items.length > 0);
   return formatted || [];
 };
 

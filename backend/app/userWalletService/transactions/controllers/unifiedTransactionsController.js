@@ -8,7 +8,7 @@ const {
 const unifiedService = require("../services/unifiedTransactionsService");
 const { getTransactionsService } = require("../../../../admin/transactions/services/unifiedTransactionsService");
 
-const createTransaction = async (req, res) => {
+/* const createTransaction = async (req, res) => {
     const {
         user,
         companyOrganizer = null,
@@ -32,7 +32,7 @@ const createTransaction = async (req, res) => {
     }
 
     try {
-        const result = await unifiedService.createTransaction({
+        const result = await unifiedService.createTransactionService({
             user,
             companyOrganizer,
             organization,
@@ -67,7 +67,7 @@ const createTransaction = async (req, res) => {
        
         return sendResponse({ res, statusCode: err.statusCode ?? 400, translationKey: err.message });
     }
-};
+}; */
 
 const getTransactions = async (req, res) => {
     const { page, limit } = parsePaginationParams(req);
@@ -132,7 +132,6 @@ const deleteTransaction = async (req, res) => {
 };
 
 module.exports = {
-    createTransaction,
     getTransactions,
     getTransactionDetails,
     updateTransaction,

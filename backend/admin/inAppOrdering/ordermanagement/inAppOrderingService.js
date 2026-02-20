@@ -6,7 +6,8 @@ const Menus = require("@MenusModel");
 const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { calculatePointsRepo } = require("../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
-const { createTransaction } = require("../../../app/userWalletService/transactions/services/unifiedTransactionsService");
+const { createTransactionService } = require("../../../app/userWalletService/transactions/services/unifiedTransactionsService");
+const { handleLoyaltyEarningConsequences } = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/handleLoyaltyEarningConsequences");
 
 
 
@@ -132,23 +133,26 @@ const updateOrderDetailsService = async ({
         totalPrice
       );
 
-      const trx = await createTransaction(
+      let companyPoints = {
+        base: pointsCalculation.organizer.earnedPoints,
+        multiplier: pointsCalculation.organizer.organizerMultiplier || 1,
+        total: pointsCalculation.organizer.earnedPoints,
+        pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
+      };
+      let globalPoints = {
+        base: pointsCalculation.global.earnedPoints,
+        multiplier: pointsCalculation.global.globalMultiplier || 1,
+        total: pointsCalculation.global.earnedPoints,
+        pointsPerEuro: pointsCalculation.global.pointsPerEuro,
+      };
+
+      const trx = await createTransactionService(
         {
           user: order.user,
           companyOrganizer: order.organization.creator,
           organization: order.organization._id,
-          companyPoints: {
-            base: pointsCalculation.organizer.earnedPoints,
-            multiplier: pointsCalculation.organizer.organizerMultiplier || 1,
-            total: pointsCalculation.organizer.earnedPoints,
-            pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
-          },
-          globalPoints: {
-            base: pointsCalculation.global.earnedPoints,
-            multiplier: pointsCalculation.global.globalMultiplier || 1,
-            total: pointsCalculation.global.earnedPoints,
-            pointsPerEuro: pointsCalculation.global.pointsPerEuro,
-          },
+          companyPoints,
+          globalPoints,
           allowNegative: false,
           type: "earn",
           description: "Menu order payment",
@@ -161,6 +165,15 @@ const updateOrderDetailsService = async ({
       if (!trx.success) {
         throw new Error(trx.message || "failed_loyalty_update");
       }
+
+      handleLoyaltyEarningConsequences({
+        userId: order.user,
+        companyOrganizer: order.organization.creator,
+        companyPoints: companyPoints,
+        globalPoints: globalPoints,
+        menuOrder: order
+      });
+
 
     }
 

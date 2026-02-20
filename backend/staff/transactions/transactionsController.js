@@ -1,12 +1,13 @@
 const mongoose = require("mongoose");
 const ApplyPointsByStaff = require("@ApplyPointsByStaffModel");
 const { calculatePointsRepo } = require("../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
-const { createTransaction } = require("../../app/userWalletService/transactions/services/unifiedTransactionsService");
+const { createTransactionService } = require("../../app/userWalletService/transactions/services/unifiedTransactionsService");
 const menuItemRepo = require("../../admin/menuManagement/menuItems/menuItemsRepository");
 const { sendResponse } = require("../../helperUtils/responseUtil");
 const { sendUserNotifications } = require("../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 const { getUserCompanyWallet } = require("../../app/loyalty/clubMembers/clubMembersService");
+const { handleLoyaltyEarningConsequences } = require("../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/handleLoyaltyEarningConsequences");
 
 const applyPoints = async (req, res) => {
   const session = await mongoose.startSession();
@@ -85,24 +86,29 @@ const applyPoints = async (req, res) => {
     const pointsCalculation =
       await calculatePointsRepo(user, companyOrganizer, totalPrice);
 
+
+    let companyPoints = {
+      base: pointsCalculation.organizer.earnedPoints,
+      multiplier: pointsCalculation.organizer.organizerMultiplier || 1,
+      total: pointsCalculation.organizer.earnedPoints,
+      pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
+    }
+
+    let globalPoints = {
+      base: pointsCalculation.global.earnedPoints,
+      multiplier: pointsCalculation.global.globalMultiplier || 1,
+      total: pointsCalculation.global.earnedPoints,
+      pointsPerEuro: pointsCalculation.global.pointsPerEuro,
+    }
+
     /* ---------- CREATE WALLET TRANSACTION ---------- */
-    const trx = await createTransaction(
+    const trx = await createTransactionService(
       {
         user,
         companyOrganizer,
         organization,
-        companyPoints: {
-          base: pointsCalculation.organizer.earnedPoints,
-          multiplier: 1,
-          total: pointsCalculation.organizer.earnedPoints,
-          pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
-        },
-        globalPoints: {
-          base: pointsCalculation.global.earnedPoints,
-          multiplier: 1,
-          total: pointsCalculation.global.earnedPoints,
-          pointsPerEuro: pointsCalculation.global.pointsPerEuro,
-        },
+        companyPoints,
+        globalPoints,
         allowNegative: false,
         type: "earn",
         description: "Points applied manually by staff",
@@ -121,6 +127,16 @@ const applyPoints = async (req, res) => {
     committed = true;
     session.endSession();
 
+
+    handleLoyaltyEarningConsequences({
+      userId: user,
+      companyOrganizer: companyOrganizer,
+      companyPoints: companyPoints,
+      globalPoints: globalPoints,
+      menuOrder: menuItems
+    });
+
+
     /* ---------- SEND NOTIFICATION (OUTSIDE TX) ---------- */
     sendUserNotifications({
       recipientIds: [user.toString()],
@@ -136,6 +152,8 @@ const applyPoints = async (req, res) => {
     }).catch(err =>
       console.error("Notification failed:", err.message)
     );
+
+
 
     let companyWallet = await getUserCompanyWallet(user, companyOrganizer)
     /* ---------- RESPONSE ---------- */

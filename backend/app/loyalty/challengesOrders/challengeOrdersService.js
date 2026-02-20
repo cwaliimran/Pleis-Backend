@@ -325,7 +325,7 @@ const finalizeChallengeCompletion = async (order) => {
 
   if (!lockedOrder) return;
 
-  const { createTransaction } = require(
+  const { createTransactionService } = require(
     "../../userWalletService/transactions/services/unifiedTransactionsService"
   );
 
@@ -334,7 +334,7 @@ const finalizeChallengeCompletion = async (order) => {
     challenge.reward?.rewardType === "points" &&
     challenge.reward?.rewardValue > 0
   ) {
-    await createTransaction(
+    await createTransactionService(
       {
         user: lockedOrder.user,
         companyOrganizer: challenge.companyOrganizer,
@@ -347,7 +347,10 @@ const finalizeChallengeCompletion = async (order) => {
         },
         description: `Challenge reward ${challenge.title}`
       },
-      null
+      null,
+      {
+        skipChallenges: true
+      }
     );
   } else {
     await RewardsOrders.create({

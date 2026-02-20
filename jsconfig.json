@@ -96,7 +96,7 @@
         "backend/commonModules/reservations/UsersReservation.js"
       ],
       "@OrdersModel": [
-        "backend/commonModules/menuItemsAndOrders/orders.js"
+        "backend/commonModules/menuItemsAndOrders/Orders.js"
       ],
       "@ClubMembersModel": [
         "backend/commonModules/loyalty/clubMembers/ClubMembers.js"

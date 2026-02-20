@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const GlobalReward = require("@GlobalLoyaltyReward");
 const { GlobalRewardsOrders } = require("@GlobalRewardsOrdersModel");
-const { createTransaction } =
+const { createTransactionService } =
   require("../../userWalletService/transactions/services/unifiedTransactionsService");
 const { createTicketingBookingService } = require("../../bookings/ticketings/ticketingBookingService");
 
@@ -70,7 +70,7 @@ const createGlobalRewardOrder = async ({
         tickets: result.tickets || [],
       };
 
-      trx = await createTransaction(
+      trx = await createTransactionService(
         {
           user: userId,
           type: "redeem",
@@ -114,7 +114,7 @@ const createGlobalRewardOrder = async ({
         tickets: [],
       };
 
-      trx = await createTransaction(
+      trx = await createTransactionService(
         {
           user: userId,
           type: "redeem",
