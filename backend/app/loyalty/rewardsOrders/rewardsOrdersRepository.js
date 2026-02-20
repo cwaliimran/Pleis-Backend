@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const Reward = require("@RewardModel");
 const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
-const { createTransaction } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
+const { createTransactionService } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
 const { getModelCounts } = require("@dbUtils/queryUtil");
 const { sendUserNotifications } = require("@notificationsUtil");
 const { NotificationTypes } = require("@NotificationsModel");
@@ -69,7 +69,7 @@ const createRewardOrder = async ({ userId, rewardId, protectionUserDetails, time
 
 
       // Deduct wallet points
-      const trx = await createTransaction(
+      const trx = await createTransactionService(
         {
           user: userId,
           companyOrganizer: reward.companyOrganizer,
@@ -109,7 +109,7 @@ const createRewardOrder = async ({ userId, rewardId, protectionUserDetails, time
 
 
       // Deduct wallet points
-      const trx = await createTransaction(
+      const trx = await createTransactionService(
         {
           user: userId,
           companyOrganizer: reward.companyOrganizer,

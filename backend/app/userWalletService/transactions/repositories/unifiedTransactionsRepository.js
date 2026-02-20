@@ -1,12 +1,8 @@
 // repositories/unifiedTransactionsRepository.js
 const { UnifiedWalletTransactions } = require("@UnifiedWalletTransactionsModel"); // new model
-const { updatePoints, checkPromotion } = require("../../../loyalty/clubMembers/clubMembersRepository"); // company loyalty wallet ops
-const { UserGlobalWallet } = require("@UserGlobalWalletModel");
-const { updateGlobalPoints, createUserWallet, getUserWallet, checkPromotionGlobal } = require("../../global/walletManagement/userWalletRepository");
-
+const { updateUserCompanyPointsRepo, checkLoyaltyTierPromotion, getClosingBalance } = require("../../../loyalty/clubMembers/clubMembersRepository"); // company loyalty wallet ops
+const { updateGlobalPoints, checkPromotionGlobal } = require("../../global/walletManagement/userWalletRepository");
 const { nanoid } = require("nanoid");
-const { resolveChallengeByTaskTypeService } = require("../../../loyalty/challengesOrders/challengeOrdersService");
-let batchId = null;
 
 const createTransaction = async (data, session) => {
   const {
@@ -29,15 +25,9 @@ const createTransaction = async (data, session) => {
 
   // 1) COMPANY POINTS
   if (companyPoints && companyPoints.total !== 0) {
-    const walletUpdate = await updatePoints({
-      userId,
-      companyOrganizer,
-      points: companyPoints,
-      allowNegative,
-      session
-    });
 
-    if (!walletUpdate.success) return walletUpdate;
+    const walletBalance = await getClosingBalance(userId, companyOrganizer, session);
+    let closingBalance = walletBalance + companyPoints.total;
 
     const trx = await UnifiedWalletTransactions.create(
       [{
@@ -50,14 +40,21 @@ const createTransaction = async (data, session) => {
         domainType,
         entityId,
         points: companyPoints,
-        closingBalance: walletUpdate.newBalance,
+        closingBalance,
         description
       }],
       { session }
     );
 
-    await checkPromotion(userId, companyOrganizer, session);
-    //TODO demotion call via cron job
+      const walletUpdate = await updateUserCompanyPointsRepo({
+        userId,
+        companyOrganizer,
+        points: companyPoints,
+        allowNegative: false,
+        session
+      });
+    
+    //TODO demotion call via cron job in a separate function that checks for all users and organizers and sends notification if they are demoted
     // await checkDemotion(userId, companyOrganizer, session);
 
     createdTransactions.push(trx[0]);
@@ -91,96 +88,141 @@ const createTransaction = async (data, session) => {
       { session }
     );
 
-    await checkPromotionGlobal(userId, session)
+    //TODO
+    //todo check global demotion via cron job in a separate function that checks for all users and sends notification if they are demoted
+    // await checkDemotionGlobal(userId, session);
     createdTransactions.push(trx[0]);
-  }
-
-  if (companyPoints && companyPoints.total > 0) {
-    resolveChallengeByTaskTypeService({
-      userId,
-      companyOrganizer,
-      taskType: "earnPoints",
-      value: companyPoints.total
-    });
   }
 
   return { success: true, transactions: createdTransactions };
 };
 
 
+const getTransactionsWithFilters = async (
+  query = {},
+  skip = 0,
+  limit = 10
+) => {
 
+  /* ================================================
+     STAGE 1 — FETCH IDS ONLY (FAST + INDEXED)
+  ================================================= */
 
+  const idPipeline = [];
 
-/**
- * Find transactions with filters + pagination
- */
-const getTransactionsWithFilters = async (query = {}, skip = 0, limit = 10) => {
-  return UnifiedWalletTransactions.aggregate([
-    { $match: query },
+  if (Object.keys(query).length) {
+    idPipeline.push({ $match: query });
+  }
 
-    // --- ORGANIZATION LOOKUP (with projection) ---
+  idPipeline.push(
+    { $sort: { createdAt: -1, _id: -1 } },
+    { $skip: skip }
+  );
+
+  if (limit > 0) {
+    idPipeline.push({ $limit: limit });
+  }
+
+  idPipeline.push({ $project: { _id: 1 } });
+
+  const ids = await UnifiedWalletTransactions.aggregate(idPipeline);
+
+  if (!ids.length) return [];
+
+  const txIds = ids.map(d => d._id);
+
+  /* ================================================
+     STAGE 2 — FETCH FULL DOCS + LOOKUPS
+  ================================================= */
+
+  const pipeline = [
+    { $match: { _id: { $in: txIds } } },
+
+    // preserve order
+    {
+      $addFields: {
+        __order: { $indexOfArray: [txIds, "$_id"] }
+      }
+    },
+
+    // ORGANIZATION
     {
       $lookup: {
         from: "organizations",
-        let: { orgId: "$organization" },
-        pipeline: [
-          { $match: { $expr: { $eq: ["$_id", "$$orgId"] } } },
-          {
-            $project: {
-              _id: 1,
-              "basicInfo.name": 1,
-              "basicInfo.media.logo": 1,
-              "basicInfo.media.cover": 1
-            }
-          }
-        ],
+        localField: "organization",
+        foreignField: "_id",
         as: "organization"
       }
     },
-    { $unwind: { path: "$organization", preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        organization: { $arrayElemAt: ["$organization", 0] }
+      }
+    },
 
-    // --- COMPANY ORGANIZER (only when organization is null/missing) ---
+    // COMPANY ORGANIZER
     {
       $lookup: {
         from: "users",
-        let: {
-          organizerId: "$companyOrganizer",
-          org: "$organization"
-        },
-        pipeline: [
-          {
-            $match: {
-              $expr: {
-                $and: [
-                  { $eq: ["$_id", "$$organizerId"] },
-                  { $eq: [{ $ifNull: ["$$org", null] }, null] }
-                ]
-              }
-            }
-          },
-          {
-            $project: {
-              "companyDetails.logo": 1,
-              "companyDetails.loyaltySettings.title": 1
-            }
-          }
-        ],
+        localField: "companyOrganizer",
+        foreignField: "_id",
         as: "companyOrganizer"
       }
     },
-    { $unwind: { path: "$companyOrganizer", preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        companyOrganizer: { $arrayElemAt: ["$companyOrganizer", 0] }
+      }
+    },
 
-    { $sort: { createdAt: -1 } },
-    { $skip: skip },
-    { $limit: limit }
-  ]);
+    {
+      $project: {
+        batchId: 1,
+        walletType: 1,
+        type: 1,
+        domainType: 1,
+        entityId: 1,
+        points: 1,
+        closingBalance: 1,
+        description: 1,
+        publicId: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        __order: 1,
+
+        companyOrganizer: {
+          _id: "$companyOrganizer._id",
+          logo: "$companyOrganizer.companyDetails.logo",
+          title: "$companyOrganizer.companyDetails.loyaltySettings.title"
+        },
+
+        organization: {
+          _id: "$organization._id",
+          basicInfo: {
+            name: "$organization.basicInfo.name",
+            media: {
+              logo: "$organization.basicInfo.media.logo"
+            }
+          }
+        }
+      }
+    },
+
+    { $sort: { __order: 1 } }
+  ];
+
+  return UnifiedWalletTransactions.aggregate(pipeline, {
+    allowDiskUse: true
+  });
 };
 
 
 
-const countTransactions = (query = {}) => {
+
+const countTransactions = async (query = {}) => {
   return UnifiedWalletTransactions.countDocuments(query);
 };
+
 
 const findTransactionById = (id) => {
   return UnifiedWalletTransactions.findById(id)

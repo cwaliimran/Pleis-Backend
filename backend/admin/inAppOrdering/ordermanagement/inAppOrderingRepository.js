@@ -60,6 +60,8 @@ const getOrders = async ({
     // For postorders, include both completed and cancelled orders, with at least one item marked as delivered
     statusFilter = {
       status: { $in: ["completed", "cancelled"] },
+      paymentStatus: { $in: ["paid"] },
+
       // Ensure that at least one item has been delivered for completed orders
       $or: [
         {
@@ -107,7 +109,8 @@ const getOrders = async ({
     } else if (activeorderStatus === "completed") {
       statusFilter = {
         status: "completed",
-        items: { $elemMatch: { isdelivered: false } }
+        items: { $elemMatch: { isdelivered: false } },
+        paymentStatus: { $in: ["pending","failed"] },
       };
     }
   }

@@ -156,7 +156,7 @@ if (organization) {
   // ✅ Fetch venues
   const [venues, total] = await Promise.all([
     Venues.find(query)
-      .select("_id title")
+      .select("_id title location")
       .skip(skip)
       .limit(limit === 0 ? 0 : limit)
       .sort({ createdAt: -1 })
@@ -167,7 +167,8 @@ if (organization) {
 
   const venues_ = venues.map(venue => ({
     _id: venue._id,
-    title: venue.title
+    title: venue.title,
+    location: venue.location
   }))
 
   return {

@@ -4,33 +4,39 @@ const {
   calculatePointsRepo,
 } = require("../../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
 const {
-  createTransaction,
+  createTransactionService,
 } = require("../../../../app/userWalletService/transactions/services/unifiedTransactionsService");
-const {
-  resolveChallengeByTaskTypeService,
-} = require("../../../../app/loyalty/challengesOrders/challengeOrdersService");
+
 const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
 const { menuItemOrderFormatter } = require("../../../../app/menuItemsAndOrdering/orders/formatter/menuItemOrderFormatter");
 const { findAppUserByIdWithProjectionService } = require("../../../../app/usersManagement/usersService");
 
-/**
- * Menu Order Payment Finalizer
- *
- * Source of truth: MenuOrders
- * Triggered by: payment webhook / reconciliation
- */
+const { handleLoyaltyEarningConsequences } = require("./handleLoyaltyEarningConsequences");
+
 const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
   const session = await mongoose.startSession();
-  session.startTransaction();
+
+  let committed = false;
+  let menuOrder = null;
+  let companyOrganizer = null;
+  let companyPoints = null;
+  let globalPoints = null;
 
   try {
+    session.startTransaction();
+
+    if (result.status === "pending") {
+      await session.commitTransaction();
+      return;
+    }
+
     /* ==========================
        1️⃣ Load Menu Order
     ========================== */
-    const menuOrder = await MenuOrders.findById(menuOrderId)
+    menuOrder = await MenuOrders.findById(menuOrderId)
       .populate({
         path: "organization",
-        select: "creator", // required for loyalty
+        select: "creator",
       })
       .session(session);
 
@@ -38,21 +44,21 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       throw new Error("menu_order_not_found");
     }
 
-    const companyOrganizer = menuOrder.organization?.creator;
-
     /* ==========================
        ⛔ Idempotency Guard
     ========================== */
-    // if (menuOrder.paymentStatus === "paid") {
-    //   await session.commitTransaction();
-    //   return;
-    // }
+    if (menuOrder.paymentStatus === "paid") {
+      await session.commitTransaction();
+      return;
+    }
+
+    companyOrganizer = menuOrder.organization?.creator;
 
     /* ==========================
        ✅ PAYMENT SUCCESS
     ========================== */
     if (result.status === "paid") {
-      // ---- Update Menu Order ----
+
       menuOrder.status = "confirmed";
       menuOrder.paymentStatus = "paid";
       menuOrder.paidAt = new Date();
@@ -60,9 +66,6 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
 
       await menuOrder.save({ session });
 
-      /* ==========================
-         🎯 Loyalty Points
-      ========================== */
       const totalPrice = menuOrder.totalPrice || 0;
 
       if (totalPrice > 0) {
@@ -72,23 +75,27 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
           totalPrice
         );
 
-        const trx = await createTransaction(
+        companyPoints = {
+          base: pointsCalculation.organizer.earnedPoints,
+          multiplier: pointsCalculation.organizer.organizerMultiplier || 1,
+          total: pointsCalculation.organizer.earnedPoints,
+          pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
+        };
+
+        globalPoints = {
+          base: pointsCalculation.global.earnedPoints,
+          multiplier: pointsCalculation.global.globalMultiplier || 1,
+          total: pointsCalculation.global.earnedPoints,
+          pointsPerEuro: pointsCalculation.global.pointsPerEuro,
+        };
+
+        const trx = await createTransactionService(
           {
             user: menuOrder.user,
             companyOrganizer,
             organization: menuOrder.organization._id,
-            companyPoints: {
-              base: pointsCalculation.organizer.earnedPoints,
-              multiplier: 1,
-              total: pointsCalculation.organizer.earnedPoints,
-              pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
-            },
-            globalPoints: {
-              base: pointsCalculation.global.earnedPoints,
-              multiplier: 1,
-              total: pointsCalculation.global.earnedPoints,
-              pointsPerEuro: pointsCalculation.global.pointsPerEuro,
-            },
+            companyPoints,
+            globalPoints,
             allowNegative: false,
             type: "earn",
             description: "Menu order payment",
@@ -102,40 +109,6 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
           throw new Error(trx.message || "failed_loyalty_update");
         }
       }
-
-      /* ==========================
-     🏆 Challenges
-  ========================== */
-      const items =
-        menuOrder.items?.map(i => ({
-          menuItem: i.menuItem,
-          quantity: i.quantity,
-        })) || [];
-
-      if (items.length) {
-        resolveChallengeByTaskTypeService({
-          userId: menuOrder.user,
-          companyOrganizer,
-          taskType: "buyMenuItem",
-          items,
-        }).catch(err => {
-        
-        });
-
-      }
-
-      let userDetails = await findAppUserByIdWithProjectionService(menuOrder.user, { profileIcon: 1, firstName: 1, lastName: 1, profileIcon: 1, email: 1, username: 1, timezone: 1 });
-      let formattedOrder = menuItemOrderFormatter(menuOrder, userDetails.timezone);
-      formattedOrder.user = userDetails;
-      formattedOrder.organization = menuOrder.organization._id;
-      emitOrderEvent({
-        io: global.io,
-        eventName: "NEW_ORDER",
-        orderId: menuOrder._id,
-        organizationId: menuOrder.organization._id,
-        data: formattedOrder,
-      });
-
     }
 
     /* ==========================
@@ -145,26 +118,68 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       menuOrder.status = "cancelled";
       menuOrder.paymentStatus = "failed";
       await menuOrder.save({ session });
-
-      // emitOrderEvent({
-      //   io: global.io,
-      //   eventName: "ORDER_UPDATE",
-      //   orderId: menuOrder._id,
-      //   organizationId: menuOrder.organization._id,
-      //   data: {
-      //     status: menuOrder.status,
-      //     paymentStatus: menuOrder.paymentStatus,
-      //   },
-      // });
     }
 
     await session.commitTransaction();
+    committed = true;
+
   } catch (err) {
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     throw err;
   } finally {
     session.endSession();
   }
+
+  /* =====================================================
+     🚀 POST-COMMIT SIDE EFFECTS (OUTSIDE TRANSACTION)
+  ===================================================== */
+  if (committed && result.status === "paid") {
+
+    handleLoyaltyEarningConsequences({
+      userId: menuOrder.user,
+      companyOrganizer,
+      companyPoints,
+      globalPoints,
+      menuOrder
+    });
+
+    // 🔔 Emit Order Event
+    findAppUserByIdWithProjectionService(
+      menuOrder.user,
+      {
+        profileIcon: 1,
+        firstName: 1,
+        lastName: 1,
+        email: 1,
+        username: 1,
+        timezone: 1,
+      }
+    )
+      .then(userDetails => {
+        let formattedOrder = menuItemOrderFormatter(
+          menuOrder,
+          userDetails.timezone
+        );
+
+        formattedOrder.user = userDetails;
+        formattedOrder.organization = menuOrder.organization._id;
+
+        emitOrderEvent({
+          io: global.io,
+          eventName: "NEW_ORDER",
+          orderId: menuOrder._id,
+          organizationId: menuOrder.organization._id,
+          data: formattedOrder,
+        });
+      })
+      .catch(err =>
+        console.error("Order emit failed:", err)
+      );
+  }
 };
+
+
 
 module.exports = { menuOrderFinalizerService };

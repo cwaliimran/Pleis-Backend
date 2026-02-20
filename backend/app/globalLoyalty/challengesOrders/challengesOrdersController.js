@@ -15,7 +15,7 @@ const resolveGlobalChallenge = async (req, res) => {
     const { taskType, value } = req.body;
 
     const result =
-      await service.resolveGlobalChallengeByTaskType({
+      await service.resolveGlobalChallengeByTaskTypeService({
         userId,
         taskType,
         value

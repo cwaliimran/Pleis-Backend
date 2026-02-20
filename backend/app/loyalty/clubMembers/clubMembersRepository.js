@@ -49,11 +49,21 @@ const getCompanyLoyaltyProfile = async (companyOrganizer) => {
 // ==========================================================
 // ENSURE CLUB MEMBER WALLET EXISTS
 // ==========================================================
-const ensureClubMemberWallet = async (userId, companyOrganizer, session) => {
+const ensureClubMemberWallet = async (
+  userId,
+  companyOrganizer,
+  session = null
+) => {
   const { tierKey, pointValuePercentage } =
     await getCompanyLoyaltyInfo(companyOrganizer);
 
   const defaultTier = await TierRepo.getFirstTier(tierKey);
+
+  const options = {
+    new: true,
+    upsert: true,
+    ...(session ? { session } : {})
+  };
 
   const member = await ClubMembers.findOneAndUpdate(
     { user: userId, companyOrganizer },
@@ -70,15 +80,12 @@ const ensureClubMemberWallet = async (userId, companyOrganizer, session) => {
         lastEvaluated: Date.now(),
       }
     },
-    {
-      new: true,
-      upsert: true,
-      session
-    }
+    options
   );
 
   return member;
 };
+
 
 
 
@@ -114,7 +121,7 @@ const getEarnedPointsLast12Months = async (userId, companyOrganizer, session) =>
 // ==========================================================
 // PROMOTION LOGIC
 // ==========================================================
-const checkPromotion = async (
+const checkLoyaltyTierPromotion = async (
   userId,
   companyOrganizer,
   session = null
@@ -308,35 +315,68 @@ const checkDemotion = async (
 // ==========================================================
 // UPDATE COMPANY LOYALTY POINTS — WALLET ONLY (NO TRANSACTIONS HERE)
 // ==========================================================
-const updatePoints = async ({
+const updateUserCompanyPointsRepo = async ({
   userId,
   companyOrganizer,
   points,
   allowNegative = false,
-  session
+  session = null
 }) => {
   try {
-    // const { tierKey } = await getCompanyLoyaltyInfo(companyOrganizer);
-
-    let member = await ensureClubMemberWallet(userId, companyOrganizer, session);
-
     const delta = points.total;
-    const newBalance = member.points + delta;
 
-    if (!allowNegative && newBalance < 0) {
-      return { success: false, message: "Insufficient company loyalty points." };
+    // Ensure wallet exists (uses session if provided)
+    await ensureClubMemberWallet(userId, companyOrganizer, session);
+
+    const query = {
+      user: userId,
+      companyOrganizer
+    };
+
+    // Prevent negative balance atomically
+    if (!allowNegative && delta < 0) {
+      query.points = { $gte: Math.abs(delta) };
     }
 
-    member.points = newBalance;
-    if (delta > 0) member.lifetimePoints += delta;
+    const update = {
+      $inc: {
+        points: delta,
+      }
+    };
 
-    await member.save({ session });
+    if (delta > 0) {
+      update.$inc.lifetimePoints = delta;
+    }
 
-    return { success: true, newBalance };
+    const updated = await ClubMembers.findOneAndUpdate(
+      query,
+      update,
+      {
+        new: true,
+        ...(session ? { session } : {})
+      }
+    );
+
+    if (!updated) {
+      return {
+        success: false,
+        message: "Insufficient company loyalty points."
+      };
+    }
+
+    return {
+      success: true,
+      newBalance: updated.points
+    };
+
   } catch (err) {
-    return { success: false, message: err.message };
+    return {
+      success: false,
+      message: err.message
+    };
   }
 };
+
 
 
 
@@ -439,10 +479,14 @@ const findClubMemberById = async (id) => {
   return ClubMembers.findById(id).populate("user companyOrganizer level");
 };
 
+
 const getUserJoinedClubs = async (userId) => {
-  return ClubMembers.find({ user: userId, status: { $ne: "left" } })
-    .select("companyOrganizer");
+  return ClubMembers.distinct("companyOrganizer", {
+    user: new mongoose.Types.ObjectId(userId),
+    status: "active"
+  });
 };
+
 
 const getUserJoinedClubsWithPoints = async ({ page = 1, limit = 10, skip, userId, keyword }) => {
 
@@ -708,11 +752,28 @@ const getClubMembersForUsers = async ({ userIds, companyOrganizers }) => {
     .lean();
 };
 
+//get closing balance
+const getClosingBalance = async (user, companyOrganizer, session) => {
+  try {
+    const objectId = new mongoose.Types.ObjectId(companyOrganizer);
+    const result = await ClubMembers.findOne({ companyOrganizer: objectId, user: user }).select("points").lean();
+    if (result) {
+      return result.points || 0;
+    } else {
+      //ensure wallet exists
+      const member = await ensureClubMemberWallet(user, companyOrganizer, session);
+      return member.points || 0;
+    }
+  } catch (err) {
+    throw err;
+  }
+};
+
 
 module.exports = {
   joinClub,
   leaveClub,
-  updatePoints,
+  updateUserCompanyPointsRepo,
   getWallet,
   getWalletsBulk,
   isClubMember,
@@ -727,6 +788,7 @@ module.exports = {
   getUserJoinedClubsWithPointsUsingFacet,
   getClubMemberUserIdsByCompanyOrganizer,
   getClubMembersForUsers,
-  checkPromotion,
-  checkDemotion
+  checkLoyaltyTierPromotion,
+  checkDemotion,
+  getClosingBalance,
 };

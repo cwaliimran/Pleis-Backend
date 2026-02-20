@@ -27,13 +27,11 @@ const unifiedTransactionSchema = new mongoose.Schema(
         publicId: {
             type: String,
             unique: true,
-            index: true,
             default: () => nanoid(),
         },
 
         batchId: {
             type: String,
-            index: true,
             required: true      // Important: always included
         },
 
@@ -128,26 +126,31 @@ const unifiedTransactionSchema = new mongoose.Schema(
         timestamps: true,
     }
 );
+// 🔐 Unique identifiers
+unifiedTransactionSchema.index({ batchId: 1 });
 
-// Useful indexes for speed
-unifiedTransactionSchema.index({ user: 1 });
-unifiedTransactionSchema.index({ walletType: 1 });
+// 🔎 Main earning query (12-month earned query)
+unifiedTransactionSchema.index({
+  user: 1,
+  walletType: 1,
+  type: 1,
+  createdAt: -1
+});
+
+// 📜 User transaction history
+unifiedTransactionSchema.index({
+  user: 1,
+  createdAt: -1,
+  _id: -1
+});
+
+// 🎯 Organization & filters
 unifiedTransactionSchema.index({ organization: 1 });
 unifiedTransactionSchema.index({ companyOrganizer: 1 });
 unifiedTransactionSchema.index({ domainType: 1 });
 unifiedTransactionSchema.index({ entityId: 1 });
-unifiedTransactionSchema.index({ createdAt: -1 });
 
-unifiedTransactionSchema.index({
-    user: 1,
-    createdAt: -1
-});
 
-unifiedTransactionSchema.index({
-    user: 1,
-    createdAt: -1,
-    _id: -1
-});
 
 
 const UnifiedWalletTransactions = mongoose.model(
