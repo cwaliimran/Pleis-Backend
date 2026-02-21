@@ -1,6 +1,6 @@
 // repositories/unifiedTransactionsRepository.js
 const { UnifiedWalletTransactions } = require("@UnifiedWalletTransactionsModel"); // new model
-const { updatePoints, checkPromotion, checkDemotion } = require("../../../app/loyalty/clubMembers/clubMembersRepository");
+const { updateUserCompanyPointsRepo, checkLoyaltyTierPromotion, checkDemotion } = require("../../../app/loyalty/clubMembers/clubMembersRepository");
 const { updateGlobalPoints, checkPromotionGlobal } = require("../../../app/userWalletService/global/walletManagement/userWalletRepository");
 const { TicketingBookings } = require("@TicketingBookingsModel");
 
@@ -8,104 +8,6 @@ const mongoose = require("mongoose");
 
 const { nanoid } = require("nanoid");
 let batchId = null;
-
-const createTransaction = async ({
-  user,
-  companyOrganizer = null,
-  organization = null,
-
-  // unified inputs
-  companyPoints = null,
-  globalPoints = null,
-
-  type = "earn",
-  domainType,
-  entityId = null,
-
-  allowNegative = false,
-  description = ""
-}) => {
-  const batchId = nanoid();
-  if (!user) throw new Error("User is required");
-
-  const userId = typeof user === "string" ? user : (user._id || user.id);
-  const createdTransactions = [];
-
-  /* =====================================================
-     1) COMPANY LOYALTY TRANSACTION
-     ===================================================== */
-  if (companyPoints && companyPoints.total !== 0) {
-
-    const wallet = await updatePoints({
-      userId,
-      companyOrganizer,
-      points: companyPoints,       // CONSISTENT NOW
-      allowNegative
-    });
-
-
-    const closingBalance =
-      wallet?.company?.points ??
-      wallet?.closingBalance ??
-      wallet?.points ??
-      0;
-
-    const trx = await UnifiedWalletTransactions.create({
-      user: userId,
-      companyOrganizer,
-      organization,
-      walletType: "companyLoyalty",
-      batchId,
-      type,
-      domainType,
-      entityId,
-      points: companyPoints,
-      closingBalance,
-      description
-    });
-    await checkPromotion(userId, companyOrganizer, session);
-    //TODO demotion call via cron job
-    // await checkDemotion(userId, companyOrganizer, session);
-
-    createdTransactions.push(trx);
-  }
-
-  /* =====================================================
-     2) GLOBAL WALLET TRANSACTION
-     ===================================================== */
-  if (globalPoints && globalPoints.total !== 0) {
-
-    // update wallet first
-    const walletUpdate = await updateGlobalPoints({
-      user: userId,
-      points: globalPoints,
-      allowNegative
-    });
-
-    const trx = await UnifiedWalletTransactions.create({
-      user: userId,
-      companyOrganizer,
-      organization,
-      walletType: "globalWallet",
-      batchId,
-      type,
-      domainType,
-      entityId,
-      points: globalPoints,
-      closingBalance: walletUpdate.newBalance,
-      description
-    });
-
-    await checkPromotionGlobal(userId, session)
-    //TODO call via cron job
-    // checkDemotionGlobal(userId).catch(() => { });
-
-    createdTransactions.push(trx);
-  }
-
-  return createdTransactions;
-};
-
 
 const buildKeywordMatch = (keyword) => {
   if (!keyword?.trim()) return null;
@@ -371,7 +273,6 @@ const getTotalClosingBalanceByOrganizationId = async (organizationId) => {
 
 
 module.exports = {
-  createTransaction,
   getTransactionsWithFilters,
   countTransactions,
   findTransactionById,

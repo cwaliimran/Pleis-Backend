@@ -4,34 +4,6 @@ const { generateMeta } = require("@utils/responseUtil");
 const unifiedRepo = require("../repositories/unifiedTransactionsRepository");
 const { formatTransactionItem } = require("../repositories/../formatter/formatTransactionItems");
 const { formatEnum, formatDate } = require("./formator/transactionCsvFormatter");
-/**
- * Create a unified transaction (repository updates appropriate wallet)
- */
-const createTransaction = async (data) => {
-  // Validate essential fields here (defensive)
-  const {
-    user,
-    companyOrganizer,
-    organization,
-    type,
-    domainType,
-    entityId,
-    companyPoints,
-    globalPoints,
-    allowNegative,
-    description
-  } = data;
-  if (!user) throw new Error("User is required");
-  if (!domainType) throw new Error("domainType required");
-  // if (!points || points.base === undefined || points.total === undefined) throw new Error("Invalid points payload");
-  if (companyPoints === null && globalPoints === null) {
-    throw new Error("At least one of companyPoints or globalPoints must be provided");
-  }
-
-  const result = await unifiedRepo.createTransaction(data);
-  // return formatted transaction (or full result including walletView)
-  return result;
-};
 
 /**
  * List transactions with filters and pagination
@@ -231,7 +203,6 @@ const downloadTransactionsAsCSV = async ({
   }
 };
 module.exports = {
-  createTransaction,
   getTransactionsService,
   getTransactionDetails,
   updateTransaction,

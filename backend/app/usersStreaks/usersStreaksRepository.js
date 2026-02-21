@@ -105,7 +105,7 @@ const createUsersStreak = async (data) => {
 
   await userStreak.save();
 
-  resolveChallengeByTaskTypeService({
+  await resolveChallengeByTaskTypeService({
     userId,
     companyOrganizer,
     taskType: "visit",

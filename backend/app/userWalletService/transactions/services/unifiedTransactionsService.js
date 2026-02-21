@@ -7,7 +7,7 @@ const { formatTransactionItem } = require("../repositories/../formatter/formatTr
 /**
  * Create a unified transaction (repository updates appropriate wallet)
  */
-const createTransaction = async (data, session) => {
+const createTransactionService = async (data, session) => {
     // Validate essential fields here (defensive)
     const {
         user,
@@ -133,7 +133,7 @@ const deleteTransaction = async (id) => {
 };
 
 module.exports = {
-    createTransaction,
+    createTransactionService,
     getTransactions,
     getRecentTransactionsForDashboard,
     getTransactionDetails,

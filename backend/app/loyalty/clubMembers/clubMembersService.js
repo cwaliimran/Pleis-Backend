@@ -66,7 +66,7 @@ const getUserCompanyWallet = async (userId, companyOrganizer) => {
 
 // 🔥 NEW: Update Points & auto promotion/demotion
 const updateUserCompanyPoints = async (payload) => {
-  let wallet = await clubMemberRepo.updatePoints(payload);
+  let wallet = await clubMemberRepo.updateUserCompanyPointsRepo(payload);
   return formatUserWallet(wallet);
 };
 

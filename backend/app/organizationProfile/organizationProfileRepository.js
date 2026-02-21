@@ -24,7 +24,7 @@ const findOrganizationById = async (userId, organizationId) => {
       .populate("otherInfo.categories")
       .populate("otherInfo.tags")
       .populate("creator", "companyDetails.logo companyDetails.loyaltySettings.title")
-      ,
+    ,
     Favorites.exists({ user: userId, targetType: "organization", targetId: organizationId }),
     Venues.findOne({
       organization: organizationId,
@@ -56,14 +56,14 @@ const findOrganizationById = async (userId, organizationId) => {
       org,
       isFavorite,
       orgVenue: cleanOrgVenue,
-    
+
     };
   } else {
     return {
       org,
       isFavorite,
       orgVenue: null,
-     
+
     };
   }
 };
@@ -531,9 +531,15 @@ const findOrganizationWithSelectFilter = async (organizationId, selectFields) =>
 };
 
 //get suggested loyalty clubs
-const getSuggestedLoyaltyClubsForUser = async ({ page = 1, limit = 10, userId, keyword }) => {
-  const joinedClubs = await getUserJoinedClubs(userId);
-  const joinedClubIds = joinedClubs.map(club => club.companyOrganizer.toString());
+const getSuggestedLoyaltyClubsForUser = async ({
+  page = 1,
+  limit = 10,
+  userId,
+  keyword
+}) => {
+
+  const joinedClubIds = await getUserJoinedClubs(userId);
+
   const filter = {
     _id: { $nin: joinedClubIds },
     "accountState.status": "active",
@@ -541,20 +547,26 @@ const getSuggestedLoyaltyClubsForUser = async ({ page = 1, limit = 10, userId, k
   };
 
   if (keyword) {
-    filter["companyDetails.loyaltySettings.title"] = { $regex: keyword, $options: "i" };
+    filter["companyDetails.loyaltySettings.title"] = {
+      $regex: keyword,
+      $options: "i"
+    };
   }
 
-  let [result, count] = await Promise.all([
-    User.find(filter).select("companyDetails.logo companyDetails.loyaltySettings.title").lean()
+  const [result, count] = await Promise.all([
+    User.find(filter)
+      .select("companyDetails.logo companyDetails.loyaltySettings.title")
       .skip((page - 1) * limit)
-      .limit(limit).lean(),
+      .limit(limit)
+      .lean(),
     User.countDocuments(filter)
   ]);
 
-  let meta = generateMeta(page, limit, count || 0);
+  const meta = generateMeta(page, limit, count || 0);
 
   return { result, meta };
 };
+
 //get suggested loyalty clubs for home api
 const getSuggestedLoyaltyClubsForHome = async ({
   page = 1,
@@ -1177,7 +1189,7 @@ const getTrendingOrganizationsForHomeRepo = async ({
 
   const now = Date.now();
   const last48h = new Date(now - 48 * 60 * 60 * 1000);
-  const last7d  = new Date(now - 7 * 24 * 60 * 60 * 1000);
+  const last7d = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
   const categoryObjectId = category
     ? new mongoose.Types.ObjectId(category)
@@ -1253,7 +1265,7 @@ const getTrendingOrganizationsForHomeRepo = async ({
        =============================== */
     {
       $addFields: {
-        views7d:  { $ifNull: [{ $first: "$engagementStats.views7d" }, 0] },
+        views7d: { $ifNull: [{ $first: "$engagementStats.views7d" }, 0] },
         views48h: { $ifNull: [{ $first: "$engagementStats.views48h" }, 0] }
       }
     },

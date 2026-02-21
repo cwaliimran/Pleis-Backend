@@ -4,8 +4,8 @@ const { TicketingBookings } = require("@TicketingBookingsModel");
 const { UserReservations } = require("@UserReservationsModel");
 const MenuOrders = require("@OrdersModel");
 const { calculatePointsRepo } = require("../../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
-const { createTransaction } = require("../../../../app/userWalletService/transactions/services/unifiedTransactionsService");
-const { resolveChallengeByTaskTypeService } = require("../../../../app/loyalty/challengesOrders/challengeOrdersService");
+const { createTransactionService } = require("../../../../app/userWalletService/transactions/services/unifiedTransactionsService");
+const { handleLoyaltyEarningConsequences } = require("./handleLoyaltyEarningConsequences");
 
 /**
  * Ticketing Order Finalizer
@@ -16,46 +16,60 @@ const { resolveChallengeByTaskTypeService } = require("../../../../app/loyalty/c
 const ticketingOrderFinalizerService = async ({ orderId, result }) => {
   const session = await mongoose.startSession();
 
+  let committed = false;
+  let order = null;
+  let menuOrder = null;
+  let companyPoints = null;
+  let globalPoints = null;
+
   try {
     session.startTransaction();
 
-    const order = await TicketingOrders.findById(orderId).session(session);
-    if (!order) throw new Error("order_not_found");
-
-    // 🛑 Idempotency guard (CRITICAL)
-    // if (order.status !== "pendingPayment") {
-    //   await session.commitTransaction();
-    //   return;
-    // }
-
-    // ⏳ Gateway still pending → do nothing
+    // ⛔ Ignore "pending" gateway status
     if (result.status === "pending") {
       await session.commitTransaction();
       return;
     }
 
+    // =====================================================
+    // 🔐 ATOMIC IDEMPOTENT STATE TRANSITION (CRITICAL FIX)
+    // =====================================================
+    order = await TicketingOrders.findOneAndUpdate(
+      {
+        _id: orderId,
+        status: "pendingPayment", // ensures only one webhook wins
+      },
+      {
+        $set: {
+          status: result.status === "paid" ? "paid" : "cancelled",
+          "paymentDetails.paymentStatus": result.status,
+          "paymentDetails.paymentId": result.paymentId || null,
+        },
+      },
+      {
+        new: true,
+        session,
+      }
+    );
+
+    // If null → already processed by another webhook
+    if (!order) {
+      await session.commitTransaction();
+      return;
+    }
+
+    // Fetch related reservation
     const userReservation = await UserReservations
       .findOne({ ticketingOrderRef: orderId })
       .populate("preOrderMenuItemsOrder")
       .session(session);
 
-    const menuOrder = userReservation?.preOrderMenuItemsOrder || null;
+    menuOrder = userReservation?.preOrderMenuItemsOrder || null;
 
-    // ==========================
+    // =====================================================
     // ✅ PAYMENT SUCCESS
-    // ==========================
+    // =====================================================
     if (result.status === "paid") {
-      await TicketingOrders.updateOne(
-        { _id: orderId },
-        {
-          $set: {
-            status: "paid",
-            "paymentDetails.paymentStatus": "paid",
-            "paymentDetails.paymentId": result.paymentId,
-          },
-        },
-        { session }
-      );
 
       await TicketingBookings.updateMany(
         { order: orderId },
@@ -93,26 +107,26 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
         );
       }
 
-      /* 
-      when everything is successful, give points to user
-      Loyalty points */
-      const pointsCalculation =
-        await calculatePointsRepo(order.user, order.companyOrganizer, order.orderPricing.total);
+      // 🎯 Calculate loyalty points
+      const pointsCalculation = await calculatePointsRepo(
+        order.user,
+        order.companyOrganizer,
+        order.orderPricing.total
+      );
 
-      const globalPoints = {
+      globalPoints = {
         base: pointsCalculation.global.earnedPoints,
-        multiplier: 1,
+        multiplier: pointsCalculation.global.globalMultiplier || 1,
         total: pointsCalculation.global.earnedPoints,
         pointsPerEuro: pointsCalculation.global.pointsPerEuro,
       };
 
-      const companyPoints = {
+      companyPoints = {
         base: pointsCalculation.organizer.earnedPoints,
-        multiplier: 1,
+        multiplier: pointsCalculation.organizer.organizerMultiplier || 1,
         total: pointsCalculation.organizer.earnedPoints,
         pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
       };
-
 
       const trxData = {
         user: order.user,
@@ -127,42 +141,18 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
         domainType: "ticketingorders",
       };
 
-      const trx = await createTransaction(trxData, session);
+      const trx = await createTransactionService(trxData, session);
 
-      if (!trx.success) throw new Error(trx.message || "wallet_update_failed");
-
-      if (menuOrder) {
-        var items = menuOrder.items.map(i => i.menuItem);
-        if (items.length > 0) {
-          try {
-            await resolveChallengeByTaskTypeService({
-              userId: userReservation.userId,
-              companyOrganizer: userReservation.companyOrganizer,
-              taskType: "buyMenuItem",
-              items: items
-            });
-          } catch (err) {
-
-          }
-        }
+      if (!trx.success) {
+        console.error("Transaction creation failed:", trx);
+        throw new Error(trx.message || "wallet_update_failed");
       }
-
     }
 
-    // ==========================
+    // =====================================================
     // ❌ PAYMENT FAILED
-    // ==========================
+    // =====================================================
     if (result.status === "failed") {
-      await TicketingOrders.updateOne(
-        { _id: orderId },
-        {
-          $set: {
-            status: "cancelled",
-            "paymentDetails.paymentStatus": "failed",
-          },
-        },
-        { session }
-      );
 
       await TicketingBookings.updateMany(
         { order: orderId },
@@ -170,9 +160,9 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
         { session }
       );
 
-      if (reservation) {
+      if (userReservation) {
         await UserReservations.updateOne(
-          { _id: reservation._id },
+          { _id: userReservation._id },
           {
             $set: {
               status: "cancelled",
@@ -198,8 +188,9 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
     }
 
     await session.commitTransaction();
+    committed = true;
+
   } catch (err) {
-    // ✅ Abort only if still active
     if (session.inTransaction()) {
       await session.abortTransaction();
     }
@@ -207,6 +198,22 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
   } finally {
     session.endSession();
   }
+  // =====================================================
+  // 🚀 POST-COMMIT SIDE EFFECTS (OUTSIDE TRANSACTION)
+  // =====================================================
+  if (committed) {
+
+    handleLoyaltyEarningConsequences({
+      userId: order.user,
+      companyOrganizer: order.companyOrganizer,
+      companyPoints,
+      globalPoints,
+      menuOrder: order
+    });
+
+  }
+
 };
+
 
 module.exports = { ticketingOrderFinalizerService };

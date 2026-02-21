@@ -349,7 +349,8 @@ console.log("organization",companyOrganizer );
             {
               $project: {
                 _id: 1,
-                title: 1
+                title: 1,
+                location: 1
               }
             }
           ],
@@ -371,7 +372,8 @@ console.log("organization",companyOrganizer );
       {
         $project: {
           _id: "$venues._id",
-          title: "$venues.title"
+          title: "$venues.title",
+          location: "$venues.location"
         }
       }
     ]);
@@ -410,7 +412,8 @@ console.log("organization",companyOrganizer );
           {
             $project: {
               _id: 1,
-              title: 1
+              title: 1,
+              location: 1
             }
           }
         ],
@@ -432,7 +435,8 @@ console.log("organization",companyOrganizer );
     {
       $project: {
         _id: "$venues._id",
-        title: "$venues.title"
+        title: "$venues.title",
+        location: "$venues.location"
       }
     }
   ]);

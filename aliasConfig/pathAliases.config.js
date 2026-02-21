@@ -30,7 +30,7 @@ module.exports = {
     "@TicketingsModel": "backend/commonModules/ticketing/TicketingsModel.js",
     "@ReservationsModel": "backend/commonModules/reservations/Reservation.js",
     "@UserReservationsModel": "backend/commonModules/reservations/UsersReservation.js",
-    "@OrdersModel": "backend/commonModules/menuItemsAndOrders/orders.js",
+    "@OrdersModel": "backend/commonModules/menuItemsAndOrders/Orders.js",
     "@ClubMembersModel": "backend/commonModules/loyalty/clubMembers/ClubMembers.js",
     "@UserModel": "backend/models/UserModel.js",
     "@CustomCategoriesModel": "backend/admin/customCategories/CustomCategories.js",
