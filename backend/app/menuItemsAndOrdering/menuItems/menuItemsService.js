@@ -4,6 +4,7 @@ const { getFullImageUrl } = require("@utils/imageHelper");
 const { formatMenuItem } = require("./formatter/formatMenuItems");
 const MenuItemCategories = require("@MenuItemCategoriesModel");
 const { findOrganizationWithSelectFilter } = require("../../organizationProfile/organizationProfileRepository");
+const { default: mongoose } = require("mongoose");
 
 const getMenuItems = async ({ userId, timezone, organization }) => {
   // 1️⃣ Get menu ID for the organization
@@ -14,11 +15,14 @@ const getMenuItems = async ({ userId, timezone, organization }) => {
 
   // 2️⃣ Fetch all active menu items for this menu
   const menuItems = await menuItemRepo.getMenuItemsWithFilters({
-    menu: menuId._id,
+    menu: new mongoose.Types.ObjectId(menuId._id),
     status: "active",
+    availabilityType: null, // only items without specific availability
+    isAvailableInStock: true,
   });
 
   if (!menuItems.length) return { recommended: [], menu: [] };
+
 
   // 3️⃣ Collect all category IDs used
   const categoryIds = [...new Set(menuItems.map(item => item.category.toString()))];
