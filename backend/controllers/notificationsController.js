@@ -5,8 +5,6 @@ const {
 } = require("../helperUtils/responseUtil");
 const moment = require("moment-timezone");
 const { NotificationExp } = require("../models/Notifications");
-const { fetchEventDetails } = require("./notificationHelper/EventDetails");
-const formatImage = require("./notificationHelper/formatImage");
 const { getFullImageUrl } = require("@utils/imageHelper");
 const Organizations = require("@OrganizationModel");
 const { default: mongoose } = require("mongoose");

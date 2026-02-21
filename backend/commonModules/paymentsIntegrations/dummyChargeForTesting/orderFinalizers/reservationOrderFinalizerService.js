@@ -4,6 +4,9 @@ const MenuOrders = require("@OrdersModel");
 const { calculatePointsRepo } = require("../../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
 const { createTransactionService } = require("../../../../app/userWalletService/transactions/services/unifiedTransactionsService");
 const { handleLoyaltyEarningConsequences } = require("./handleLoyaltyEarningConsequences");
+const { sendReservationNotification } = require("../../../../controllers/notificationHelper/reservationNotificationService");
+const { sendMenuOrderNotification } = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
+const { fireAndForget } = require("../../../../helperUtils/responseUtil");
 
 const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   const session = await mongoose.startSession();
@@ -164,17 +167,84 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   // =====================================================
   // 🚀 POST-COMMIT SIDE EFFECTS
   // =====================================================
-  if (committed) {
+  if (committed && userReservation) {
 
-    handleLoyaltyEarningConsequences({
-      userId: userReservation.userId,
-      companyOrganizer: userReservation.companyOrganizer,
-      companyPoints,
-      globalPoints,
-      menuOrder: menuOrder
-    });
+    /**
+     * =====================================================
+     * 🎯 Loyalty Side Effects (Only on Paid)
+     * =====================================================
+     */
+    if (result.status === "paid") {
+      try {
+        handleLoyaltyEarningConsequences({
+          userId: userReservation.userId,
+          companyOrganizer: userReservation.companyOrganizer,
+          companyPoints,
+          globalPoints,
+          menuOrder: menuOrder
+        });
+      } catch (err) {
+        console.error("[LOYALTY] Reservation side effect failed:", err);
+      }
+    }
+
+
+    /**
+     * =====================================================
+     * 🔔 Reservation Notifications
+     * =====================================================
+     */
+    if (result.status === "paid") {
+      fireAndForget(
+        sendReservationNotification({
+          reservationId: userReservation._id,
+          action: "RESERVATION_CONFIRMED",
+        }),
+        "RESERVATION_CONFIRMED_NOTIFICATION"
+      );
+    }
+
+    if (result.status === "failed") {
+      fireAndForget(
+        sendReservationNotification({
+          reservationId: userReservation._id,
+          action: "RESERVATION_CANCELLED",
+        }),
+        "RESERVATION_CANCELLED_NOTIFICATION"
+      );
+    }
+
+
+    /**
+     * =====================================================
+     * 🟡 If Reservation Has Pre-Order Menu
+     * =====================================================
+     */
+    if (menuOrder) {
+
+      if (result.status === "paid") {
+        fireAndForget(
+          sendMenuOrderNotification({
+            orderId: menuOrder._id,
+            action: "MENU_ORDER_CONFIRMED",
+          }),
+          "RESERVATION_MENU_CONFIRMED_NOTIFICATION"
+        );
+      }
+
+      if (result.status === "failed") {
+        fireAndForget(
+          sendMenuOrderNotification({
+            orderId: menuOrder._id,
+            action: "MENU_ORDER_CANCELLED",
+          }),
+          "RESERVATION_MENU_CANCELLED_NOTIFICATION"
+        );
+      }
+    }
 
   }
+
 };
 
 

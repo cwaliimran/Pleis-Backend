@@ -805,6 +805,11 @@ const getEndDate = (pricingPlan, startDate = new Date()) => {
 };
 
 
+   const fireAndForget = (promise, label) => {
+        promise.catch((err) =>
+          console.error(`[${label}] failed:`, err)
+        );
+      };
 
 module.exports = {
   sendResponse,
@@ -826,5 +831,6 @@ module.exports = {
   convertTimezoneToUtcDateOnly,
   getCurrentUtcDateOnly,
   convertToUtcDateOnly,
-  getEndDate
+  getEndDate,
+  fireAndForget,
 };
