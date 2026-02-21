@@ -10,6 +10,7 @@ const {
 } = require("./payments/reconcilePendingUserReservationPayments");
 
 const { runRecurringEventsCron } = require("./events/recurringEvents.core");
+const { runEventReminderCron } = require("./events/eventReminder.cron");
 const { runRecurringPromotionsCron } = require("../../admin/loyalty/promotions/utils/recurringPromotion.core");
 const { runRecurringGlobalPromotionsCron } = require("../../admin/globalLoyalty/promotions/utils/recurringPromotion.core");
 
@@ -51,6 +52,27 @@ const startCrons = () => {
       console.log("✅ Midnight recurring cron completed");
     } catch (err) {
       console.error("❌ Midnight recurring cron failed:", err);
+    } finally {
+      await releaseLock(lockKey, lock);
+    }
+  });
+
+
+
+  ///* ======================================================
+  //   🕛 CRON 3: Event reminders (every minute)
+  //   ====================================================== */
+    // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
+  cron.schedule("* * * * *", async () => {
+    const lockKey = "cron:event-reminders";
+    const lock = await acquireLock(lockKey, 50);
+
+    if (!lock) return;
+
+    try {
+      await runEventReminderCron();
+    } catch (err) {
+      console.error("Reminder cron error:", err);
     } finally {
       await releaseLock(lockKey, lock);
     }

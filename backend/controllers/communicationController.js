@@ -135,6 +135,16 @@ const sendUserNotifications = async ({
   saveNotification = true, // send false if you don't want to save notification in db
   image = null, // optional image url
 }) => {
+  console.log("payload", {
+    recipientIds,
+    title,
+    body,
+    data,
+    sender,
+    objectId,
+    saveNotification,
+    image
+  });
 
   setImmediate(async () => {
     try {
@@ -142,6 +152,8 @@ const sendUserNotifications = async ({
       const recipientDevices = await Devices.find({
         userId: { $in: recipientIds },
       }).select("userId devices");
+
+
 
       // Check if recipientDevices exist
       if (recipientDevices && recipientDevices.length > 0) {

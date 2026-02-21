@@ -128,6 +128,12 @@ ticketingBookingSchema.index({
     "checkInHistory.scanKey": 1
 });
 
+ticketingBookingSchema.index({
+  "ticket.snapshot.event": 1,
+  status: 1,
+});
+
+
 const TicketingBookings = mongoose.model("TicketingBookings", ticketingBookingSchema);
 
 module.exports = { TicketingBookings };

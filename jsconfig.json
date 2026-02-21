@@ -50,6 +50,9 @@
       "@EventsModel": [
         "backend/commonModules/events/Event.js"
       ],
+      "@EventNotificationLogsModel": [
+        "backend/commonModules/events/EventNotificationLogs.js"
+      ],
       "@MenusModel": [
         "backend/commonModules/menuManagement/menu/Menus.js"
       ],
