@@ -30,7 +30,7 @@ const findMenuItemById = async (id) => {
 };
 
 const getMenuIdByOrganization = async (organizationId) => {
-  return await Menus.findOne({ organization: organizationId, status: "active", isOrderingEnabled: true }).select("_id");
+  return await Menus.findOne({ organization: new mongoose.Types.ObjectId(organizationId), status: "active", isOrderingEnabled: true }).select("_id").sort({ createdAt: -1 });
 }
 
 // Recommended items
@@ -47,6 +47,8 @@ const getRecommendedItems = async (menuItemId, limit = 10) => {
     menu: menuItem.menu,
     status: "active",
     category: menuItem.category,
+    availabilityType: null, // only items without specific availability
+    isAvailableInStock: true,
     // Use case-insensitive partial match for type
     type: { $regex: menuItem.type, $options: "i" },
   };
@@ -79,7 +81,9 @@ const getOrganizationHybridRecommendedItems = async (
   // 2. Fetch active menu items
   const menuItems = await MenuItems.find({
     menu: menu._id,
-    status: "active"
+    status: "active",
+    availabilityType: null, // only items without specific availability
+    isAvailableInStock: true,
   }).lean();
 
   if (!menuItems.length) return [];

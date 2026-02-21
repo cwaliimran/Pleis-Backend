@@ -58,6 +58,23 @@ const challengeOrderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+challengeOrderSchema.index(
+  { user: 1, challenge: 1, status: 1 }
+);
+
+challengeOrderSchema.index(
+  { user: 1, status: 1, createdAt: -1 }
+);
+
+challengeOrderSchema.index(
+  { challenge: 1, status: 1 }
+);
+
+challengeOrderSchema.index(
+  { user: 1, challenge: 1, rewardClaimed: 1 }
+);
+
+
 const LoyaltyChallengesOrders = mongoose.model("LoyaltyChallengesOrder", challengeOrderSchema);
 
 module.exports = { LoyaltyChallengesOrders };
