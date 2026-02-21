@@ -129,60 +129,58 @@ const getMenus = async ({ page, limit, keyword, status, date, organizations, com
 
 
 const updateMenu = async (id, data) => {
-  const session = await mongoose.startSession(); // Start a session
-  session.startTransaction(); // Begin the transaction
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
-    const menu = await menuRepo.findMenuById(id);
-    if (!menu) return null;
+    const menu = await Menus.findById(id).session(session);
+    if (!menu) throw new Error("menu_not_found");
 
     const allowedFields = [
       "title",
       "description",
       "organization",
       "status",
-      'isOrderingEnabled'
+      "isOrderingEnabled",
     ];
-    const updateData = {};
 
-    // Populate updateData with allowed fields from data
+    const updateData = {};
     for (const key of allowedFields) {
       if (data[key] !== undefined) {
         updateData[key] = data[key];
       }
     }
 
-    // If there's nothing to update, return the original menu
     if (Object.keys(updateData).length === 0) {
-      return menu; // nothing to update
+      await session.commitTransaction();
+      return menu;
     }
-    // Only deactivate old menus if status is being updated to "active"
-    if (data.status === "active" && data.organization) {
-      // Update all menus in the same organization (except the current one) to 'inactive'
+
+    // ✅ If activating → deactivate others
+    if (updateData.status === "active") {
+      const orgId = new mongoose.Types.ObjectId(menu.organization);
+      const menuId = new mongoose.Types.ObjectId(menu._id);
+
       await Menus.updateMany(
-        { 
-          organization: data.organization, 
-          status: { $ne: "deleted" }, 
-          _id: { $ne: id } // Exclude the current menu from being updated
+        {
+          organization: orgId,
+          status: { $ne: "deleted" },
+          _id: { $ne: menuId },
         },
         { $set: { status: "inactive" } },
         { session }
       );
     }
 
-    // Apply the updates to the current menu
     Object.assign(menu, updateData);
-    await menu.save({ session }); // Save the menu within the transaction
+    await menu.save({ session });
 
-    // Commit the transaction if all operations were successful
     await session.commitTransaction();
     return menu;
   } catch (error) {
-    // If an error occurs, abort the transaction
     await session.abortTransaction();
-    throw error; // Re-throw the error so it can be handled by the caller
+    throw error;
   } finally {
-    // End the session
     session.endSession();
   }
 };
