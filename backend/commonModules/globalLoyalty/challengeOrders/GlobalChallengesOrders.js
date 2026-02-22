@@ -74,6 +74,12 @@ const GlobalChallengeOrderSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+
+    milestonesSent: { // for notifications progress milestones
+      type: [Number],
+      default: []
+    },
+
   },
   {
     timestamps: true,
@@ -111,5 +117,5 @@ const GlobalChallengesOrders = mongoose.model("GlobalChallengeOrder", GlobalChal
 
 
 module.exports = {
-    GlobalChallengesOrders
+  GlobalChallengesOrders
 };

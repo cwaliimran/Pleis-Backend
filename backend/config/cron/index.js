@@ -13,6 +13,8 @@ const { runRecurringEventsCron } = require("./events/recurringEvents.core");
 const { runEventReminderCron } = require("./events/eventReminder.cron");
 const { runRecurringPromotionsCron } = require("../../admin/loyalty/promotions/utils/recurringPromotion.core");
 const { runRecurringGlobalPromotionsCron } = require("../../admin/globalLoyalty/promotions/utils/recurringPromotion.core");
+const { runLoyaltyChallengeExpiringSoonCron } = require("./loyalty/challenges/challengeExpiringSoonCron");
+const { runGlobalChallengeExpiringSoonCron } = require("./globalLoyalty/challenges/globalChallengeExpiringSoonCron");
 
 const startCrons = () => {
   /* ======================================================
@@ -62,7 +64,7 @@ const startCrons = () => {
   ///* ======================================================
   //   🕛 CRON 3: Event reminders (every minute)
   //   ====================================================== */
-    // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
+  // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
   cron.schedule("* * * * *", async () => {
     const lockKey = "cron:event-reminders";
     const lock = await acquireLock(lockKey, 50);
@@ -77,6 +79,50 @@ const startCrons = () => {
       await releaseLock(lockKey, lock);
     }
   });
+
+
+  /* ======================================================
+     ⏳ CRON 4: Challenge expiring soon reminders (every hour)
+     ====================================================== */
+    cron.schedule("0 * * * *", async () => {
+    const lockKey = "cron:challenge-expiring-soon";
+    const lock = await acquireLock(lockKey, 50);
+
+    if (!lock) return;
+
+    try {
+      await runLoyaltyChallengeExpiringSoonCron();
+    } catch (err) {
+      console.error("Challenge expiring soon cron error:", err);
+    } finally {
+      await releaseLock(lockKey, lock);
+    }
+  });
+
+
+  /* ======================================================
+     ⏳ CRON 5: Global Challenge expiring soon reminders (every hour)
+     ====================================================== */
+  cron.schedule("0 * * * *", async () => {
+  const lockKey = "cron:global-challenge-expiring-soon";
+  const lock = await acquireLock(lockKey, 50);
+
+  if (!lock) return;
+
+  try {
+    await runGlobalChallengeExpiringSoonCron();
+  } catch (err) {
+    console.error("Global Challenge expiring soon cron error:", err);
+  } finally {
+    await releaseLock(lockKey, lock);
+  }
+});
+
+
+
+
+
+
 };
 
 module.exports = { startCrons };

@@ -45,6 +45,16 @@ const NotificationTypes = {
   RESERVATION_TIMING_CHANGED: "reservationTimingChanged",
   RESERVATION_CHECKED_IN: "reservationCheckedIn",
   RESERVATION_COMPLETED: "reservationCompleted",
+  CHALLENGE_STARTED: "challengeStarted",
+  CHALLENGE_COMPLETED: "challengeCompleted",
+  CHALLENGE_PROGRESS_MILESTONE: "challengeProgressMilestone",
+  CHALLENGE_REWARD_UNLOCKED: "challengeRewardUnlocked",
+  CHALLENGE_EXPIRING_SOON: "challengeExpiringSoon",
+  GLOBAL_CHALLENGE_STARTED: "globalChallengeStarted",
+  GLOBAL_CHALLENGE_PROGRESS_MILESTONE: "globalChallengeProgressMilestone",
+  GLOBAL_CHALLENGE_COMPLETED: "globalChallengeCompleted",
+
+
 };
 
 // Define the NotificationSchema
@@ -79,6 +89,11 @@ const NotificationSchema = new mongoose.Schema({
   body: {
     type: String,
     required: true,
+  },
+  // flexible metadata
+  meta: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {},
   },
   isRead: {
     type: Boolean,

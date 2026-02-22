@@ -53,6 +53,10 @@ const challengeOrderSchema = new mongoose.Schema(
       type: String,
       enum: ["in-progress", "completed", "expired"],
       default: "in-progress",
+    },
+    milestonesSent: { //for notifications progress milestones
+      type: [Number],
+      default: []
     }
   },
   { timestamps: true }

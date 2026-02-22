@@ -227,6 +227,12 @@ const UserReservationsSchema = new mongoose.Schema(
   }
 );
 
+UserReservationsSchema.index({
+  status: 1,
+  userId: 1,
+  "timingSlots.dateTimeSlots.timeSlots.startTime": 1,
+});
+
 
 const UserReservations = mongoose.model("UserReservations", UserReservationsSchema);
 

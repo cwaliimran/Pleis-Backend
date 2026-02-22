@@ -49,11 +49,18 @@ const findActiveGlobalOrder = async ({ userId, challengeId }) => {
 };
 
 const markGlobalOrderCompleted = async (orderId) => {
-  return GlobalChallengesOrders.findByIdAndUpdate(orderId, {
-    status: "completed",
-    rewardClaimed: true,
-    rewardClaimedAt: new Date()
-  });
+  return GlobalChallengesOrders.findOneAndUpdate(
+    {
+      _id: orderId,
+      rewardClaimed: { $ne: true }
+    },
+    {
+      status: "completed",
+      rewardClaimed: true,
+      rewardClaimedAt: new Date()
+    },
+    { new: true }
+  );
 };
 
 
