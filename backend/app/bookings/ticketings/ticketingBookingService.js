@@ -89,7 +89,7 @@ const createTicketingBookingService = async (
   let isRewardBooking = false;
   if (
     data.bookingReference &&
-    data.bookingReference === "ticketReward"
+    data.bookingReference === "ticketReward" || data.bookingReference === "globalChallengeReward"
   ) {
     isRewardBooking = true;
   }

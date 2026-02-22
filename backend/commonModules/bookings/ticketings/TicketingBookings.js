@@ -7,7 +7,6 @@ const ticketingBookingSchema = new mongoose.Schema(
     {
         ticketBookingId: {
             type: String,
-            unique: true,
             index: true,
             default: () => `TBK-${generateTicketId()}`, //TBK for Ticketing Booking 
         },

@@ -7,7 +7,9 @@ const { findBestActiveChallengeByTaskType } = require("../challenges/challengesR
 const { Challenge } = require("../../../commonModules/loyalty/challenges/models/Challenge");
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
-
+  const { createTransactionService } = require(
+    "../../userWalletService/transactions/services/unifiedTransactionsService"
+  );
 
 /**
  * Unified challenge progress service.
@@ -507,9 +509,6 @@ const finalizeChallengeCompletion = async (order) => {
 
   if (!lockedOrder) return;
 
-  const { createTransactionService } = require(
-    "../../userWalletService/transactions/services/unifiedTransactionsService"
-  );
 
   if (
     challenge.reward?.rewardType === "points" &&

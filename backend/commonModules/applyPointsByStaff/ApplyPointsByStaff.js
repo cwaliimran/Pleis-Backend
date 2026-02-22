@@ -14,7 +14,6 @@ const ApplyPointsByStaffSchema = new mongoose.Schema(
     {
         orderNumber: {
             type: String,
-            unique: true,
             index: true,
             default: () => `ORD-${generateOrderId()}`,
         },
