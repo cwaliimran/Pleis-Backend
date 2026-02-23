@@ -13,7 +13,6 @@ const GlobalChallengeOrderSchema = new mongoose.Schema(
   {
     bookingId: {
       type: String,
-      unique: true,
       index: true,
       default: () => `GCH-${generateBookingId()}`,
     },
@@ -74,6 +73,29 @@ const GlobalChallengeOrderSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+
+    milestonesSent: { // for notifications progress milestones
+      type: [Number],
+      default: []
+    },
+
+    // Ticket reward reference (if rewardType === specialTicket)
+    rewardTicketOrder: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TicketingOrder",
+      default: null,
+      index: true
+    },
+
+    // Ticket processing state (for retry & monitoring)
+    ticketStatus: {
+      type: String,
+      enum: ["pending", "issued", "failed"],
+      default: null,
+      index: true
+    },
+
+
   },
   {
     timestamps: true,
@@ -83,33 +105,29 @@ const GlobalChallengeOrderSchema = new mongoose.Schema(
 /* ============================
    Indexes
 ============================ */
-
-// One active order per user per challenge
-GlobalChallengeOrderSchema.index({
-  user: 1,
-  challenge: 1,
-  status: 1,
-});
-
-// Fast dashboard lookup
-GlobalChallengeOrderSchema.index({
-  user: 1,
-  status: 1,
-});
-
-/* ============================
-   Hooks
-============================ */
-GlobalChallengeOrderSchema.pre("save", function (next) {
-  if (this.progress.current >= this.progress.target) {
-    this.status = "completed";
+// Unique active protection + sorted lookup
+GlobalChallengeOrderSchema.index(
+  { user: 1, challenge: 1, status: 1, createdAt: -1 },
+  {
+    unique: true,
+    partialFilterExpression: { status: "in-progress" }
   }
-  next();
-});
+);
+
+// Completed counting
+GlobalChallengeOrderSchema.index(
+  { user: 1, status: 1, challenge: 1 }
+);
+
+// Dashboard
+GlobalChallengeOrderSchema.index(
+  { user: 1, status: 1 }
+);
+
 
 const GlobalChallengesOrders = mongoose.model("GlobalChallengeOrder", GlobalChallengeOrderSchema);
 
 
 module.exports = {
-    GlobalChallengesOrders
+  GlobalChallengesOrders
 };

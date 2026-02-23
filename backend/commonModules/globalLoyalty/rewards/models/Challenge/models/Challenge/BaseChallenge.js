@@ -65,4 +65,10 @@ baseGlobalChallengeeSchema.methods.toJSON = function () {
   return obj;
 };
 
+baseGlobalChallengeeSchema.index({
+  status: 1,
+  endDate: 1,
+  taskType: 1
+});
+
 module.exports = mongoose.model("GlobalChallenge", baseGlobalChallengeeSchema);

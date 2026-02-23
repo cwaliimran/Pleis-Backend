@@ -6,6 +6,10 @@ const MenuOrders = require("@OrdersModel");
 const { calculatePointsRepo } = require("../../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
 const { createTransactionService } = require("../../../../app/userWalletService/transactions/services/unifiedTransactionsService");
 const { handleLoyaltyEarningConsequences } = require("./handleLoyaltyEarningConsequences");
+const { sendEventNotification } = require("../../../../controllers/notificationHelper/eventNotificationService");
+const { sendMenuOrderNotification } = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
+const { sendReservationNotification } = require("../../../../controllers/notificationHelper/reservationNotificationService");
+const { fireAndForget } = require("../../../../helperUtils/responseUtil");
 
 /**
  * Ticketing Order Finalizer
@@ -19,6 +23,7 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
   let committed = false;
   let order = null;
   let menuOrder = null;
+  let userReservation = null;
   let companyPoints = null;
   let globalPoints = null;
 
@@ -59,7 +64,7 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
     }
 
     // Fetch related reservation
-    const userReservation = await UserReservations
+    userReservation = await UserReservations
       .findOne({ ticketingOrderRef: orderId })
       .populate("preOrderMenuItemsOrder")
       .session(session);
@@ -201,17 +206,126 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
   // =====================================================
   // 🚀 POST-COMMIT SIDE EFFECTS (OUTSIDE TRANSACTION)
   // =====================================================
-  if (committed) {
+  if (committed && order) {
 
-    handleLoyaltyEarningConsequences({
-      userId: order.user,
-      companyOrganizer: order.companyOrganizer,
-      companyPoints,
-      globalPoints,
-      menuOrder: order
-    });
+    /**
+     * =====================================================
+     * 🎯 Loyalty Side Effects (Non-blocking)
+     * =====================================================
+     */
+    try {
+      handleLoyaltyEarningConsequences({
+        userId: order.user,
+        companyOrganizer: order.companyOrganizer,
+        companyPoints,
+        globalPoints,
+        menuOrder: order
+      });
+    } catch (err) {
+      console.error("[LOYALTY] Side effect failed:", err);
+    }
+
+
+    /**
+     * =====================================================
+     * 🔔 Event Notifications (Fire & Forget)
+     * =====================================================
+     */
+
+    // Only if this order is linked to an event
+    if (order.event) {
+
+      // PAYMENT SUCCESS
+      if (order.status === "paid") {
+        fireAndForget(
+          sendEventNotification({
+            eventId: order.event,
+            action: "TICKET_CONFIRMED",
+            userIds: [order.user],
+            context: {
+              ticketsPurchased: order.ticketsPurchased,
+            },
+          }),
+          "TICKET_CONFIRMED_NOTIFICATION"
+        );
+      }
+
+      // PAYMENT FAILED / CANCELLED
+      if (order.status === "cancelled") {
+        fireAndForget(
+          sendEventNotification({
+            eventId: order.event,
+            action: "TICKET_CANCELLED",
+            userIds: [order.user],
+          }),
+          "TICKET_CANCELLED_NOTIFICATION"
+        );
+      }
+    }
+
+
+    /**
+    * =====================================================
+    * 🟢 Reservation Notifications
+    * =====================================================
+    */
+    if (userReservation) {
+
+      if (result.status === "paid") {
+        fireAndForget(
+          sendReservationNotification({
+            reservationId: userReservation._id,
+            action: "RESERVATION_CONFIRMED",
+          }),
+          "RESERVATION_CONFIRMED_NOTIFICATION"
+        );
+      }
+
+      if (result.status === "failed") {
+        fireAndForget(
+          sendReservationNotification({
+            reservationId: userReservation._id,
+            action: "RESERVATION_CANCELLED",
+          }),
+          "RESERVATION_CANCELLED_NOTIFICATION"
+        );
+      }
+    }
+
+
+
+
+    /**
+  * =====================================================
+  * 🟡 Menu Order Notifications
+  * =====================================================
+  */
+    if (menuOrder) {
+
+      if (result.status === "paid") {
+        fireAndForget(
+          sendMenuOrderNotification({
+            orderId: menuOrder._id,
+            action: "MENU_ORDER_CONFIRMED",
+          }),
+          "MENU_ORDER_CONFIRMED_NOTIFICATION"
+        );
+      }
+
+      if (result.status === "failed") {
+        fireAndForget(
+          sendMenuOrderNotification({
+            orderId: menuOrder._id,
+            action: "MENU_ORDER_CANCELLED",
+          }),
+          "MENU_ORDER_CANCELLED_NOTIFICATION"
+        );
+      }
+    }
+
 
   }
+
 
 };
 

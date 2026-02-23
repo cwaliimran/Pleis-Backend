@@ -16,6 +16,7 @@ const NotificationTypes = {
   RESERVATION_UPDATE: "reservationUpdate",
   REFERRAL_UPDATE: "referralUpdate",
   TICKET_UPDATE: "ticketUpdate",
+  TICKET_CONFIRMED: "ticketConfirmed",
   FRIEND_REQUEST: "friendRequest",
   POINTS_UPDATE: "pointsUpdate",
   REWARD_CLAIMED: "rewardClaimed",
@@ -28,6 +29,33 @@ const NotificationTypes = {
   REWARD_REDEEMED: "rewardRedeemed",
   LEVEL_PROMOTED: "levelPromoted",
   LEVEL_DEMOTED: "levelDemomoted",
+  MENU_ORDER_CONFIRMED: "menuOrderConfirmed",
+  MENU_ORDER_CANCELLED: "menuOrderCancelled",
+  MENU_ORDER_SENT: "menuOrderSent",
+  MENU_ORDER_COMPLETED: "menuOrderCompleted",
+  TICKET_CANCELLED: "ticketCancelled",
+  EVENT_CANCELLED: "eventCancelled",
+  EVENT_RESCHEDULED: "eventRescheduled",
+  EVENT_STARTING_24H: "eventStarting24h",
+  EVENT_STARTING_2H: "eventStarting2h",
+  EVENT_STARTED: "eventStarted",
+  RESERVATION_CONFIRMED: "reservationConfirmed",
+  RESERVATION_CANCELLED: "reservationCancelled",
+  RESERVATION_REJECTED: "reservationRejected",
+  RESERVATION_TIMING_CHANGED: "reservationTimingChanged",
+  RESERVATION_CHECKED_IN: "reservationCheckedIn",
+  RESERVATION_COMPLETED: "reservationCompleted",
+  CHALLENGE_STARTED: "challengeStarted",
+  CHALLENGE_COMPLETED: "challengeCompleted",
+  CHALLENGE_PROGRESS_MILESTONE: "challengeProgressMilestone",
+  CHALLENGE_REWARD_UNLOCKED: "challengeRewardUnlocked",
+  CHALLENGE_EXPIRING_SOON: "challengeExpiringSoon",
+  GLOBAL_CHALLENGE_STARTED: "globalChallengeStarted",
+  GLOBAL_CHALLENGE_PROGRESS_MILESTONE: "globalChallengeProgressMilestone",
+  GLOBAL_CHALLENGE_COMPLETED: "globalChallengeCompleted",
+  GLOBAL_CHALLENGE_BATCH_UPDATE: "globalChallengeBatchUpdate",
+
+
 };
 
 // Define the NotificationSchema
@@ -62,6 +90,11 @@ const NotificationSchema = new mongoose.Schema({
   body: {
     type: String,
     required: true,
+  },
+  // flexible metadata
+  meta: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {},
   },
   isRead: {
     type: Boolean,

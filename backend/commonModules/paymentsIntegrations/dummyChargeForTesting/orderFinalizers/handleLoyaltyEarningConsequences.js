@@ -36,8 +36,11 @@ const handleLoyaltyEarningConsequences = ({
   // 🎯 Buy Menu Item Challenge
   if (menuOrder?.items?.length) {
     const items = menuOrder.items
-      .filter(i => i?.menuItem)
-      .map(i => i.menuItem);
+      .filter(i => i?.menuItem && i?.quantity > 0)
+      .map(i => ({
+        menuItem: i.menuItem,
+        quantity: i.quantity
+      }));
 
     if (items.length) {
       resolveChallengeByTaskTypeService({
@@ -75,11 +78,11 @@ const handleLoyaltyEarningConsequences = ({
   if (globalPoints?.total > 0) {
     resolveGlobalChallengeByTaskTypeService({
       userId,
-      taskType: "earnPoints",
+      taskType: "globalEarnPoints",
       value: globalPoints.total,
     })
       .then(() => {
-        console.log(`[GLOBAL CHALLENGE] earnPoints resolved for user ${userId}`);
+        console.log(`[GLOBAL CHALLENGE] globalEarnPoints resolved for user ${userId}`);
       })
       .catch(err =>
         console.error("[GLOBAL CHALLENGE] Global earn challenge failed:", err)

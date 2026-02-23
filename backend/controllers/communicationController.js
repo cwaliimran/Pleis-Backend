@@ -132,9 +132,20 @@ const sendUserNotifications = async ({
   data = {},
   sender = null, // Optional: sender ID
   objectId = null, // Optional: object ID
+  meta = {},
   saveNotification = true, // send false if you don't want to save notification in db
   image = null, // optional image url
 }) => {
+  console.log("payload", {
+    recipientIds,
+    title,
+    body,
+    data,
+    sender,
+    objectId,
+    saveNotification,
+    image
+  });
 
   setImmediate(async () => {
     try {
@@ -142,6 +153,8 @@ const sendUserNotifications = async ({
       const recipientDevices = await Devices.find({
         userId: { $in: recipientIds },
       }).select("userId devices");
+
+
 
       // Check if recipientDevices exist
       if (recipientDevices && recipientDevices.length > 0) {
@@ -177,7 +190,20 @@ const sendUserNotifications = async ({
 
           //apply .toString to all values in data object
           const dataWithStringValues = Object.fromEntries(
-            Object.entries(data).map(([key, value]) => [key, value.toString()])
+            Object.entries({
+              ...data,
+              meta: meta || {}
+            }).map(([key, value]) => {
+              if (value === undefined || value === null) {
+                return [key, ""];
+              }
+
+              if (typeof value === "object") {
+                return [key, JSON.stringify(value)];
+              }
+
+              return [key, value.toString()];
+            })
           );
 
           // Send notifications without awaiting
@@ -187,7 +213,7 @@ const sendUserNotifications = async ({
             data: {
               ...dataWithStringValues, // Additional data payload
               subjectId: sender ? sender.toString() : null, // Convert subjectId to plain text
-              objectId: objectId ? objectId.toString(): null, // Ensure objectId is also plain text
+              objectId: objectId ? objectId.toString() : null, // Ensure objectId is also plain text
             },
             image
           });
@@ -215,6 +241,7 @@ const sendUserNotifications = async ({
           image,
           title,
           body,
+          meta,
         }));
         // Save all notifications in a batch to the database
         await NotificationExp.insertMany(notificationsToSave);
@@ -244,11 +271,25 @@ const sendNotification = async (recipients, payload) => {
 
   // Add a random string as notificationId to payload.data
   const notificationId = Math.floor(1000000000 + Math.random() * 9000000000).toString();
-  payload.data = {
-    ...payload.data,
-    notificationId: notificationId,
-    image: getFullImageUrl(payload.image) || "",
-  };
+
+
+  // Ensure all data values are strings (FCM requirement)
+  payload.data = Object.fromEntries(
+    Object.entries({
+      ...payload.data,
+      notificationId: notificationId,
+      image: getFullImageUrl(payload.image) || "",
+    }).map(([key, value]) => [
+      key,
+      value === undefined || value === null
+        ? ""
+        : typeof value === "object"
+          ? JSON.stringify(value)
+          : String(value)
+    ])
+  );
+
+
 
   // Notification payload for Android
   const androidPayload = {
@@ -310,6 +351,18 @@ const sendNotification = async (recipients, payload) => {
     responses.forEach((response) => {
       result.responses = result.responses.concat(response.responses);
     });
+
+    result.responses.forEach((r, index) => {
+      if (!r.success) {
+        //payload
+        console.error(`❌ FCM Error at index ${index}`);
+        console.error("Code:", r.error?.code);
+        console.error("Message:", r.error?.message);
+        console.error("Stack:", r.error?.stack);
+        console.error("Full Error:", r.error);
+      }
+    });
+
     return result;
   } catch (error) {
     console.error("Error sending notifications:", error);
