@@ -421,7 +421,7 @@ const getEventsTicketingsWithFilters = async (query) => {
     model: TicketingsModel,
     query,
     options: {
-      //select: { title: 1, price: 1, status: 1, event: 1},
+      select: { title: 1, price: 1, status: 1, event: 1,timingSlots: 1,fastTrackEntry: 1 },
     },
   });
 };
