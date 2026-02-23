@@ -103,6 +103,7 @@ function formatEventTicketing(timezone, item) {
                 ...dateBlock,
                 date: formattedDate,
                 timeSlots: formattedTimeSlots,
+
             };
         });
     }
@@ -135,6 +136,7 @@ function formatEventTicketing(timezone, item) {
         title: obj.title,
         amount: obj.price,
         timingSlots: obj.timingSlots,
+        fastTrackEntry: obj.fastTrackEntry,
     };
 }
 
