@@ -323,13 +323,25 @@ const resolveGenericTaskTypeService = async ({
 
   let remaining = value;
 
+  console.log("[GENERIC_CHALLENGE] 🚀 Started", {
+    userId,
+    companyOrganizer,
+    taskType,
+    value
+  });
+
   // 1️⃣ Fetch eligible challenges (easiest first)
   const challenges = await repo.findEligibleChallengesByTaskType({
     companyOrganizer,
     taskType
   });
 
+  console.log("[GENERIC_CHALLENGE] 🔎 Eligible Challenges", {
+    count: challenges.length
+  });
+
   if (!challenges.length) {
+    console.log("[GENERIC_CHALLENGE] ❌ No active challenge found");
     return { success: false, message: "no_active_challenge_found" };
   }
 
@@ -337,22 +349,45 @@ const resolveGenericTaskTypeService = async ({
 
     if (remaining <= 0) break;
 
+    console.log("[GENERIC_CHALLENGE] 🏁 Evaluating Challenge", {
+      challengeId: challenge._id,
+      title: challenge.title
+    });
+
     // 2️⃣ Always try to get active order first
     let order = await repo.startOrGetChallengeOrder({
       userId,
       challenge
     });
 
-    if (!order) continue;
+    console.log("[GENERIC_CHALLENGE] 🆕 startOrGetChallengeOrder Result", {
+      challengeId: challenge._id,
+      orderId: order?._id
+    });
+
+    if (!order) {
+      console.log("[GENERIC_CHALLENGE] ⚠️ No order could be started or fetched", {
+        challengeId: challenge._id
+      });
+      continue;
+    }
 
     // 3️⃣ If this is a brand new cycle, THEN check claim limit
     if (order.progress.current === 0) {
       const canStart = await repo.canStartNewCycle(userId, challenge);
+      console.log("[GENERIC_CHALLENGE] 🔄 Can start new cycle?", {
+        challengeId: challenge._id,
+        canStart
+      });
       if (!canStart) continue;
     }
 
     // 🔔 Send STARTED if first cycle
     if (order.progress.current === 0) {
+      console.log("[GENERIC_CHALLENGE] 🔔 Sending CHALLENGE_STARTED Notification", {
+        challengeId: challenge._id,
+        userId
+      });
       await sendUserNotifications({
         recipientIds: [userId.toString()],
         title: challenge.title,
@@ -371,15 +406,32 @@ const resolveGenericTaskTypeService = async ({
 
       const previousCurrent = order.progress.current;
 
+      console.log("[GENERIC_CHALLENGE] ➕ Incrementing Progress", {
+        orderId: order._id,
+        previousCurrent,
+        remaining
+      });
+
       const result =
         await repo.incrementChallengeProgressWithOverflow({
           orderId: order._id,
           value: remaining
         });
 
-      if (!result) break;
+      if (!result) {
+        console.log("[GENERIC_CHALLENGE] ⚠️ Progress increment failed", {
+          orderId: order._id
+        });
+        break;
+      }
 
-      const { order: updated, applied, remaining: newRemaining } = result;
+      const { order: updated, remaining: newRemaining } = result;
+
+      console.log("[GENERIC_CHALLENGE] 📈 Progress Update Result", {
+        challengeId: challenge._id,
+        updatedProgress: updated?.progress,
+        remaining: newRemaining
+      });
 
       remaining = newRemaining;
 
@@ -395,16 +447,31 @@ const resolveGenericTaskTypeService = async ({
       // ✅ Completion
       if (updated.progress.current >= updated.progress.target) {
 
+        console.log("[GENERIC_CHALLENGE] ✅ Challenge Completed Triggered", {
+          challengeId: challenge._id,
+          current: updated.progress.current,
+          target: updated.progress.target
+        });
+
         await finalizeChallengeCompletion(updated);
 
         // Check if another cycle allowed
         const allowed = await repo.canStartNewCycle(userId, challenge);
+        console.log("[GENERIC_CHALLENGE] 🔄 Can start another cycle after completion?", {
+          challengeId: challenge._id,
+          allowed
+        });
         if (!allowed) break;
 
         // Start next cycle
         order = await repo.startOrGetChallengeOrder({
           userId,
           challenge
+        });
+
+        console.log("[GENERIC_CHALLENGE] 🆕 Started new cycle order", {
+          challengeId: challenge._id,
+          orderId: order?._id
         });
 
         if (!order) break;
@@ -415,6 +482,11 @@ const resolveGenericTaskTypeService = async ({
       break; // still in progress, no more cycles
     }
   }
+
+  console.log("[GENERIC_CHALLENGE] 🎉 Completed Execution", {
+    userId,
+    taskType
+  });
 
   return { success: true };
 };
@@ -452,6 +524,7 @@ const finalizeChallengeCompletion = async (order) => {
     // =====================================================
     // 🎟 SPECIAL TICKET REWARD
     // =====================================================
+
     if (
       challenge.reward?.rewardType === "specialTicket" &&
       challenge.reward?.specialTicket?.ticket
@@ -529,19 +602,82 @@ const finalizeChallengeCompletion = async (order) => {
             }
           );
         }
-      }
-    }
 
-    // Persist ticket result
-    if (ticketStatus !== null) {
-      await LoyaltyChallengesOrders.updateOne(
-        { _id: lockedOrder._id },
-        {
-          rewardTicketOrder: ticketOrderId,
-          ticketStatus
-        },
-        { session }
-      );
+      }
+
+      // Persist ticket result
+      if (ticketStatus !== null) {
+        await LoyaltyChallengesOrders.updateOne(
+          { _id: lockedOrder._id },
+          {
+            rewardTicketOrder: ticketOrderId,
+            ticketStatus
+          },
+        );
+      }
+
+
+      // =====================================================
+      // 🔐 PROTECTION DETAILS NOTIFICATION
+      // =====================================================
+      if (ticketStatus === "issued" && protectionRequired) {
+
+        let protectionMessage = "";
+
+        if (protectionType === "nameSurname") {
+          protectionMessage =
+            "Please enter the attendee's name and surname to activate your ticket.";
+        }
+
+        if (protectionType === "nameSurnamePid") {
+          protectionMessage =
+            "Please enter the attendee's name, surname, and PID to activate your ticket.";
+        }
+
+        sendUserNotifications({
+          recipientIds: [lockedOrder.user.toString()],
+          title: "Additional Ticket Details Required",
+          body: protectionMessage,
+          data: {
+            type: NotificationTypes.TICKET_PROTECTION_REQUIRED,
+            objectType: "ticketingorders",
+            challengeOrderId: lockedOrder._id,
+            ticketOrderId
+          },
+          sender: challenge.companyOrganizer,
+          objectId: ticketOrderId
+        });
+      }
+
+    } else if (challenge.reward?.rewardType === "points") {
+
+      console.log("[LOYALTY] Processing points reward", JSON.stringify(challenge, null, 2));
+      // =====================================================
+      // 💎 POINTS REWARD
+      // =====================================================
+
+      const points = challenge.reward.rewardValue || 0;
+
+      if (points > 0) {
+        await createTransactionService(
+          {
+            user: lockedOrder.user,
+            companyOrganizer: challenge.companyOrganizer,
+            companyPoints: {
+              base: points,
+              multiplier: 1,
+              total: points,
+              pointsPerEuro: 1
+            },
+            allowNegative: false,
+            type: "earn",
+            description: `Points awarded for completing challenge: ${challenge.title}`,
+            entityId: lockedOrder._id,
+            domainType: "loyaltychallengesorders"
+          },
+          session
+        );
+      }
     }
 
     await session.commitTransaction();
@@ -550,7 +686,7 @@ const finalizeChallengeCompletion = async (order) => {
     // =====================================================
     // 🔔 COMPLETION NOTIFICATION
     // =====================================================
-    await sendUserNotifications({
+    sendUserNotifications({
       recipientIds: [lockedOrder.user.toString()],
       title: challenge.title,
       body: "Congratulations! Your challenge has been completed.",
@@ -562,37 +698,6 @@ const finalizeChallengeCompletion = async (order) => {
       objectId: lockedOrder._id
     });
 
-    // =====================================================
-    // 🔐 PROTECTION DETAILS NOTIFICATION
-    // =====================================================
-    if (ticketStatus === "issued" && protectionRequired) {
-
-      let protectionMessage = "";
-
-      if (protectionType === "nameSurname") {
-        protectionMessage =
-          "Please enter the attendee's name and surname to activate your ticket.";
-      }
-
-      if (protectionType === "nameSurnamePid") {
-        protectionMessage =
-          "Please enter the attendee's name, surname, and PID to activate your ticket.";
-      }
-
-      await sendUserNotifications({
-        recipientIds: [lockedOrder.user.toString()],
-        title: "Additional Ticket Details Required",
-        body: protectionMessage,
-        data: {
-          type: NotificationTypes.TICKET_PROTECTION_REQUIRED,
-          objectType: "ticketingorders",
-          challengeOrderId: lockedOrder._id,
-          ticketOrderId
-        },
-        sender: challenge.companyOrganizer,
-        objectId: ticketOrderId
-      });
-    }
 
     return { success: true };
 

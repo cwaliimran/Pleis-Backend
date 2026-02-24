@@ -14,6 +14,8 @@ const { sendMenuOrderNotification } = require("../../../../controllers/notificat
 const { fireAndForget } = require("../../../../helperUtils/responseUtil");
 
 const { handleLoyaltyEarningConsequences } = require("./handleLoyaltyEarningConsequences");
+const { menuOrderConfirmationEmailTemplate } = require("../../../../helperUtils/emailTemplates");
+const { sendEmailViaMailgun } = require("../../../../helperUtils/emailUtil");
 
 const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
   const session = await mongoose.startSession();
@@ -67,6 +69,25 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       menuOrder.transactionId = result.paymentId || null;
 
       await menuOrder.save({ session });
+
+
+      const populatedOrder = await MenuOrders.findById(menuOrder._id)
+        .populate("organization", "basicInfo.name")
+        .populate("user", "firstName lastName email timezone")
+        .lean();
+
+      const mBody = menuOrderConfirmationEmailTemplate({
+        userName: populatedOrder.user.firstName + " " + populatedOrder.user.lastName,
+        order: populatedOrder,
+        organizationName: populatedOrder.organization?.basicInfo?.name || "Restaurant",
+        currency: "EUR",
+      });
+
+      await sendEmailViaMailgun(
+        "cwaliimrandev@gmail.com",//menuOrder.user.email,
+        "Your order has been confirmed",
+        mBody
+      );
 
       const totalPrice = menuOrder.totalPrice || 0;
 
