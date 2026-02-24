@@ -170,6 +170,7 @@ const resolveGlobalChallengeByTaskTypeService = async ({
                           ticketId,
                           timeSlot:
                             challenge.reward.specialTicket.timeSlot || null,
+                          isFastTrack: challenge.reward.specialTicket.isFastTrack || false,
                           protectionUserDetails: {
                             firstName: "n/a",
                             surName: "n/a",
@@ -178,17 +179,16 @@ const resolveGlobalChallengeByTaskTypeService = async ({
                           },
                         },
                       ],
-                      bookingReference: "globalChallengeReward",
+                      bookingReference: "globalchallengeorders",
                       meta: {
-                        challenge: challenge._id,
-                        type: "globalChallenge",
+                        id: order._id,
+                        type: "globalchallengeorders",
                       },
                     },
                     timezone,
                     session
                   );
 
-                  console.log("bookingResult==>",bookingResult)
                 if (bookingResult?._id) {
                   ticketOrderId = bookingResult._id;
                   ticketStatus = "issued";

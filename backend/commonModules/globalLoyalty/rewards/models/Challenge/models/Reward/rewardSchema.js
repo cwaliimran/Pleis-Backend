@@ -34,7 +34,10 @@ const globalrewardSchema = new mongoose.Schema(
         type: String,
         default: null,
       },
-
+      isFastTrack: {
+        type: Boolean,
+        default: false,
+      },
     },
     // custom reward
     customReward: {

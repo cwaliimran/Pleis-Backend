@@ -88,7 +88,14 @@ const createAdmin = async (req, res) => {
     await user.save();
 
     //deviceId and deviceToken store in db
-    createOrSkipDevice(user._id, deviceId, deviceType);
+    if (
+      typeof deviceId === "string" &&
+      deviceId.trim() &&
+      deviceId !== "test" &&
+      typeof deviceType === "string"
+    ) {
+      createOrSkipDevice(user._id, deviceId.trim(), deviceType);
+    }
 
     return sendResponse({
       res,
@@ -323,8 +330,18 @@ const login = async (req, res) => {
     // Format the user response using the utility function
     const response = formatUserResponse(userObject, token, [], ["resetToken", "organizations"]);
 
-    // Save device information (not part of the transaction)
-    createOrSkipDevice(userObject._id, deviceId, deviceType);
+    //deviceId and deviceToken store in db
+    if (
+      typeof deviceId === "string" &&
+      deviceId.trim() &&
+      deviceId !== "test" &&
+      typeof deviceType === "string"
+    ) {
+      // Save device information (not part of the transaction)
+      createOrSkipDevice(userObject._id, deviceId, deviceType);
+    }else{
+      console.warn("FCM Token information not saved due to invalid input");
+    }
 
     // Send successful response with token and user data
     return sendResponse({
@@ -1148,8 +1165,16 @@ const socialAuth = async (req, res) => {
 
       const response = formatUserResponse(userObject, token);
 
-      // Save device information
-      createOrSkipDevice(existingUser._id, deviceId, deviceType);
+      if (
+        typeof deviceId === "string" &&
+        deviceId.trim() &&
+        deviceId !== "test" &&
+        typeof deviceType === "string"
+      ) {
+        // Save device information
+        createOrSkipDevice(existingUser._id, deviceId, deviceType);
+      }
+
 
       await session.commitTransaction();
       session.endSession();
@@ -1183,8 +1208,16 @@ const socialAuth = async (req, res) => {
       const jUser = newUser.toJSON();
       const response = formatUserResponse(jUser, token);
 
-      // Save device information
-      createOrSkipDevice(newUser._id, deviceId, deviceType);
+      if (
+        typeof deviceId === "string" &&
+        deviceId.trim() &&
+        deviceId !== "test" &&
+        typeof deviceType === "string"
+      ) {
+        // Save device information
+        createOrSkipDevice(newUser._id, deviceId, deviceType);
+      }
+
 
       await session.commitTransaction();
       session.endSession();
