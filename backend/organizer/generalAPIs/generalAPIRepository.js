@@ -225,7 +225,7 @@ const getEvents = async ({ organization, creator }) => {
   }
 
   else if (creator) {
-    query.creator = new mongoose.Types.ObjectId(creator);
+    query.companyOrganizer = new mongoose.Types.ObjectId(creator);
   }
   const events = await Events.find(query)
     .select("_id basicInfo.title schedule")
