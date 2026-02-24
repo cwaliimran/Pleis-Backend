@@ -86,13 +86,14 @@ const createTicketingBookingService = async (
     isFreeOrder = true;
   }
 
-  let isRewardBooking = false;
-  if (
-    data.bookingReference &&
-    data.bookingReference === "ticketReward" || data.bookingReference === "globalChallengeReward"
-  ) {
-    isRewardBooking = true;
-  }
+  const BOOKING_ORDERS_REFS = new Set([
+    "rewards", //loyalty rewards have direct reference to reward in booking
+    "globalrewards", //rewards are direct reference
+    "globalchallengeorders", //global loyalty challenges have progress and so thats why they goes in orders
+    "loyaltychallengesorders", //loyalty challenges have progress and so thats why they goes in orders
+  ]);
+
+  const isRewardOrChallengeBooking = BOOKING_ORDERS_REFS.has(data.bookingReference);
 
   /* ---------- PAYMENT STATE ---------- */
   let paymentMethod = null;
@@ -101,9 +102,9 @@ const createTicketingBookingService = async (
   let paymentStatus = null;
   let orderStatus = null;
 
-  if (isRewardBooking) {
+  if (isRewardOrChallengeBooking) {
     paymentMethod = null;
-    paymentId = "REWARD_ORDER";
+    paymentId = data.bookingReference;
     paymentStatus = "paid";
     orderStatus = "paid";
   } else if (isFreeOrder) {
@@ -153,7 +154,7 @@ const createTicketingBookingService = async (
   };
 
   /* Lock only payable orders */
-  if (!isRewardBooking && !isFreeOrder) {
+  if (!isRewardOrChallengeBooking && !isFreeOrder) {
     orderPayload.lockUntil = new Date(
       Date.now() + 10 * 60 * 1000
     );
@@ -167,7 +168,7 @@ const createTicketingBookingService = async (
   /* ---------- Ticket status ---------- */
   let ticketStatus;
 
-  if (isRewardBooking || isFreeOrder) {
+  if (isRewardOrChallengeBooking || isFreeOrder) {
     ticketStatus = "valid";
   } else {
     ticketStatus = "pending";

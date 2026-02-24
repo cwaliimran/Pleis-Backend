@@ -15,6 +15,10 @@ const GlobalTicketReward = GlobalReward.discriminator(
         type: String,
         default: null,
       },
+      isFastTrack: {
+        type: Boolean,
+        default: false,
+      },
     },
     { _id: false } // Optional, use this if you don't want _id in subdocuments
   )

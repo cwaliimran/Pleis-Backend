@@ -19,6 +19,10 @@ const GlobalClaimPromotion = GlobalBasePromotion.discriminator(
         type: String,
         default: null,
       },
+      isFastTrack: {
+        type: Boolean,
+        default: false,
+      },
       claimPoints: { type: Number, required: true },
     },
     { _id: false }
