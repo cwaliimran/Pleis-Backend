@@ -3,7 +3,7 @@ const TicketingsModel = require("@TicketingsModel");
 const { TicketingBookings } = require("@TicketingBookingsModel");
 const { default: mongoose } = require("mongoose");
 const { TicketingOrders } = require("@TicketingOrdersModel");
-
+const { formatEventTicketing } = require("../../admin/ticketing/fomatter/formatTicketing");
 // Create
 const createTicketing = async (data) => {
   const ticketing = new TicketingsModel(data);
@@ -721,7 +721,8 @@ const getActiveTicketingByEventId = async ({
   page = 1, 
   limit = 10, 
   status = "active", 
-  keyword = ""
+  keyword = "",
+  timezone
 }) => {
 
   try {
@@ -740,16 +741,12 @@ const getActiveTicketingByEventId = async ({
     }
 
     // Query for ticketings with pagination and filters
-    const ticketings = await TicketingsModel.find(filter)
+    let  ticketings = await TicketingsModel.find(filter)
       .skip(skip)
       .limit(limit)
-      .select("title event _id"); // Select only the title, event, and _id fields
+  ticketings = ticketings.map((item) => formatEventTicketing(timezone, item));
 
-    // Return the ticketing information (name and ID)
-    return ticketings.map(ticket => ({
-      title: ticket.title,   // Ticket name
-      _id: ticket._id.toString()  // Ticket ID as a string
-    }));
+    return ticketings;
   } catch (error) {
     throw new Error("Unable to fetch active ticketings.");
   }

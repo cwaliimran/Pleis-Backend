@@ -406,6 +406,7 @@ const getTiers = async (req, res) => {
 const getTickting = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date,event } = req.query;
+
   if(!event){
     return sendResponse({
       res,
@@ -430,6 +431,7 @@ const getTickting = async (req, res) => {
       status,
       date,
       event,
+      timezone:req.user.timezone,
       creator:req.user._id
     });
 
