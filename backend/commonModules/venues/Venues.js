@@ -67,16 +67,6 @@ venuesSchema.methods.formatResponse = function (venueData) {
 
 venuesSchema.index({ organization: 1 });
 
-venuesSchema.index(
-  { organization: 1, isPrimary: 1 },
-  {
-    unique: true,
-    partialFilterExpression: {
-      isPrimary: true,
-      organization: { $type: "objectId" }
-    }
-  }
-);
 
 const Venues = mongoose.model("Venues", venuesSchema);
 
