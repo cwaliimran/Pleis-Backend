@@ -388,5 +388,6 @@ module.exports = {
   getOrganizationsAsStaff,
   getOrganizationDetails,
   getOrganizationNotifications,
-  getOrganizationNamesByCompanyOrganizer
+  getOrganizationNamesByCompanyOrganizer,
+  ACTIVE_ORGANIZATIONS_CACHE_KEY
 };
