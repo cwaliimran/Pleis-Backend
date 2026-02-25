@@ -7,8 +7,13 @@ const { findBestActiveChallengeByTaskType } = require("../challenges/challengesR
 const { Challenge } = require("../../../commonModules/loyalty/challenges/models/Challenge");
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
+const { createTransactionService } = require(
+  "../../userWalletService/transactions/services/unifiedTransactionsService"
+);
+const TicketingsModel = require("@TicketingsModel"); // adjust path if needed
 
-
+const mongoose = require("mongoose");
+const { createTicketingBookingService } = require("../../bookings/ticketings/ticketingBookingService");
 
 /**
  * Unified challenge progress service.
@@ -23,7 +28,7 @@ const updateChallengeProgressByTaskTypeService = async ({
   taskType,
   value = 1
 }) => {
-  // 1️⃣ Find best challenge
+
   const challenge =
     await findBestActiveChallengeByTaskType({
       companyOrganizer,
@@ -34,7 +39,12 @@ const updateChallengeProgressByTaskTypeService = async ({
     return { success: false, message: "no_active_challenge_found" };
   }
 
-  // 2️⃣ Get or create order (with claim limit enforced)
+  const existingOrder = await LoyaltyChallengesOrders.findOne({
+    user: userId,
+    challenge: challenge._id,
+    status: "in-progress"
+  }).lean();
+
   let order = await repo.startOrGetChallengeOrder({
     userId,
     challenge
@@ -44,20 +54,43 @@ const updateChallengeProgressByTaskTypeService = async ({
     return { success: false, message: "challenge_claim_limit_reached" };
   }
 
-  // 3️⃣ Increment progress
-  order = await repo.incrementChallengeProgress({
+  if (!existingOrder) {
+    await sendUserNotifications({
+      recipientIds: [userId.toString()],
+      title: challenge.title,
+      body: "Your challenge has started. Good luck!",
+      data: {
+        type: NotificationTypes.CHALLENGE_STARTED,
+        objectType: "challengesorders"
+      },
+      sender: companyOrganizer,
+      objectId: order._id
+    });
+  }
+
+  const previousCurrent = order.progress.current;
+
+  const updated = await repo.incrementChallengeProgress({
     userId,
     challengeId: challenge._id,
     value
   });
 
-  if (!order) {
+  if (!updated) {
     return { success: false, message: "challenge_progress_not_found" };
   }
 
-  return { success: true, order };
-};
+  // 🔥 Milestone handler
+  await handleChallengeMilestones({
+    previousCurrent,
+    updatedOrder: updated,
+    challenge,
+    userId,
+    companyOrganizer
+  });
 
+  return { success: true, order: updated };
+};
 
 
 // Get user challenge orders with pagination + filters
@@ -88,7 +121,6 @@ const getUserChallengeOrdersService = async ({
   const meta = generateMeta(page, limit, counts.totalFiltered);
   meta.challengeOrderCounts = counts;
 
-  // Format orders
   const formattedOrders = orders.map(order => {
     const formatted = formatChallenge(order);
     return formatted;
@@ -101,13 +133,7 @@ const getUserChallengeOrdersService = async ({
 
 /**
  * Resolve challenge dynamically by taskType
- * - Reuse active order
- * - Otherwise find easiest eligible challenge
- * - Enforce claim limits
  */
-
-//TODO only "referUsers" type implementation in remaining when
-
 const resolveChallengeByTaskTypeService = async ({
   userId,
   companyOrganizer,
@@ -115,7 +141,6 @@ const resolveChallengeByTaskTypeService = async ({
   value = 1,
   items = []
 }) => {
-  // BUY MENU ITEM → specialized logic (already working)
   if (taskType === "buyMenuItem") {
     return resolveBuyMenuItemChallengeService({
       userId,
@@ -124,7 +149,6 @@ const resolveChallengeByTaskTypeService = async ({
     });
   }
 
-  // ALL OTHER TYPES → simple generic resolver
   return resolveGenericTaskTypeService({
     userId,
     companyOrganizer,
@@ -133,14 +157,19 @@ const resolveChallengeByTaskTypeService = async ({
   });
 };
 
+
 const resolveBuyMenuItemChallengeService = async ({
   userId,
   companyOrganizer,
   items = []
 }) => {
-  let challenge_id = null;
-  let reward_id = null;
-  let challenge_title = null;
+
+  console.log("[BUY_MENU_CHALLENGE] 🚀 Started", {
+    userId,
+    companyOrganizer,
+    itemsCount: items.length
+  });
+  console.log("[BUY_MENU_CHALLENGE] 📦 Raw Items", items);
 
   const qtyMap = new Map();
 
@@ -153,14 +182,21 @@ const resolveBuyMenuItemChallengeService = async ({
     );
   }
 
+  console.log("[BUY_MENU_CHALLENGE] 🧮 Aggregated Quantities", {
+    aggregatedItems: Array.from(qtyMap.entries())
+  });
+
   if (!qtyMap.size) {
+    console.log("[BUY_MENU_CHALLENGE] ❌ No applicable menu items");
     return { success: false, message: "menu_item_not_applicable" };
   }
 
-  let appliedAnything = false;
-
   for (const [menuItemId, incomingQty] of qtyMap.entries()) {
-    let remaining = incomingQty;
+
+    console.log("[BUY_MENU_CHALLENGE] 🔎 Processing Menu Item", {
+      menuItemId,
+      incomingQty
+    });
 
     const challenges = await Challenge.find({
       companyOrganizer,
@@ -169,79 +205,115 @@ const resolveBuyMenuItemChallengeService = async ({
       status: "active"
     }).sort({ taskValue: 1, createdAt: 1 });
 
+    console.log("[BUY_MENU_CHALLENGE] 🎯 Found Challenges", {
+      count: challenges.length,
+      menuItemId
+    });
+
     for (const challenge of challenges) {
-      if (remaining <= 0) break;
 
-      let target = challenge.taskValue;
-      if (!target) {
-        const match = challenge.title.match(/\d+/);
-        target = match ? Number(match[0]) : 1;
-      }
-
-      challenge_id = challenge._id;
-      reward_id = challenge.reward._id;
-      challenge_title = challenge.title;
-
-      let completedCycles = await LoyaltyChallengesOrders.countDocuments({
-        user: userId,
-        challenge: challenge._id,
-        status: "completed"
+      console.log("[BUY_MENU_CHALLENGE] 🏁 Evaluating Challenge", {
+        challengeId: challenge._id,
+        title: challenge.title
       });
 
-      const maxCycles = challenge.claimLimit || Infinity;
+      const existingOrder = await LoyaltyChallengesOrders.findOne({
+        user: userId,
+        challenge: challenge._id,
+        status: "in-progress"
+      }).lean();
 
-      while (remaining > 0 && completedCycles < maxCycles) {
-        let order = await LoyaltyChallengesOrders.findOne({
-          user: userId,
-          challenge: challenge._id,
-          status: "in-progress"
+      console.log("[BUY_MENU_CHALLENGE] 📦 Existing Order Check", {
+        challengeId: challenge._id,
+        hasExistingOrder: Boolean(existingOrder)
+      });
+
+      let order = await repo.startOrGetChallengeOrder({
+        userId,
+        challenge
+      });
+
+      console.log("[BUY_MENU_CHALLENGE] 🆕 startOrGetChallengeOrder Result", {
+        challengeId: challenge._id,
+        orderId: order?._id
+      });
+
+      if (!existingOrder) {
+        console.log("[BUY_MENU_CHALLENGE] 🔔 Sending CHALLENGE_STARTED Notification", {
+          challengeId: challenge._id,
+          userId
         });
 
-        if (!order) {
-          order = await LoyaltyChallengesOrders.create({
-            user: userId,
-            challenge: challenge._id,
-            companyOrganizer,
-            challengeSnapshot: challenge.toObject(),
-            progress: { current: 0, target },
-            status: "in-progress"
-          });
-        }
+        await sendUserNotifications({
+          recipientIds: [userId.toString()],
+          title: challenge.title,
+          body: "Your challenge has started. Good luck!",
+          data: {
+            type: NotificationTypes.CHALLENGE_STARTED,
+            objectType: "loyaltychallengesorders"
+          },
+          sender: companyOrganizer,
+          objectId: order._id
+        });
+      }
 
-        const capacity = target - order.progress.current;
-        const applied = Math.min(remaining, capacity);
+      const previousCurrent = order.progress.current;
 
-        order.progress.current += applied;
-        remaining -= applied;
+      const updated = await repo.incrementChallengeProgress({
+        userId,
+        challengeId: challenge._id,
+        value: incomingQty
+      });
 
-        appliedAnything = true;
+      if (!updated) continue;
 
-        await order.save();
+      // 🔥 Milestone handler
+      await handleChallengeMilestones({
+        previousCurrent,
+        updatedOrder: updated,
+        challenge,
+        userId,
+        companyOrganizer
+      });
 
-        if (order.progress.current >= target) {
-          await finalizeChallengeCompletion(order);
-          completedCycles++;
-        }
+      console.log("[BUY_MENU_CHALLENGE] 📈 Progress Update Result", {
+        challengeId: challenge._id,
+        updatedProgress: updated?.progress
+      });
+
+      if (!updated) {
+        console.log("[BUY_MENU_CHALLENGE] ⚠️ Progress Update Failed", {
+          challengeId: challenge._id
+        });
+        continue;
+      }
+
+      if (updated.progress.current >= updated.progress.target) {
+        console.log("[BUY_MENU_CHALLENGE] ✅ Challenge Completed Triggered", {
+          challengeId: challenge._id,
+          current: updated.progress.current,
+          target: updated.progress.target
+        });
+
+        await finalizeChallengeCompletion(updated);
+      } else {
+        console.log("[BUY_MENU_CHALLENGE] ⏳ Challenge Still In Progress", {
+          challengeId: challenge._id,
+          current: updated.progress.current,
+          target: updated.progress.target
+        });
       }
     }
   }
 
-  if (!appliedAnything) {
-    return { success: false, message: "menu_item_not_applicable" };
-  }
+  console.log("[BUY_MENU_CHALLENGE] 🎉 Completed Execution", {
+    userId
+  });
 
   return { success: true, message: "challenge_progress_updated" };
 };
 
-
-
-/**
- * Simple resolver for visit / referUsers / earnPoints
- * ✔ Uses existing active order if present
- * ✔ Otherwise starts next eligible challenge
- * ✔ No carry-forward
- * ✔ No overflow logic
- */
+// GENERIC RESOLVER (UNCHANGED LOGIC)
 const resolveGenericTaskTypeService = async ({
   userId,
   companyOrganizer,
@@ -249,139 +321,470 @@ const resolveGenericTaskTypeService = async ({
   value = 1
 }) => {
 
-  // 1️⃣ Find active in-progress order
-  let order = await repo.findActiveOrderByTaskType({
+  let remaining = value;
+
+  console.log("[GENERIC_CHALLENGE] 🚀 Started", {
     userId,
+    companyOrganizer,
+    taskType,
+    value
+  });
+
+  // 1️⃣ Fetch eligible challenges (easiest first)
+  const challenges = await repo.findEligibleChallengesByTaskType({
     companyOrganizer,
     taskType
   });
 
-  let challenge;
-
-  // 2️⃣ If no active order, find next eligible challenge
-  if (!order) {
-    const challenges = await repo.findEligibleChallengesByTaskType({
-      companyOrganizer,
-      taskType
-    });
-
-    for (const ch of challenges) {
-      const canStart = await repo.canStartNewCycle(userId, ch);
-      if (!canStart) continue;
-
-      order = await repo.startOrGetChallengeOrder({
-        userId,
-        challenge: ch
-      });
-
-      challenge = ch;
-
-      break;
-    }
-
-    if (!order) {
-      return { success: false, message: "no_active_challenge_found" };
-    }
-  } else {
-    challenge = order.challengeSnapshot;
-  }
-
-  // 3️⃣ Increment progress (simple add, capped in repo)
-  const updated = await repo.incrementChallengeProgress({
-    userId,
-    challengeId: order.challenge,
-    value
+  console.log("[GENERIC_CHALLENGE] 🔎 Eligible Challenges", {
+    count: challenges.length
   });
 
-  if (!updated) {
-    return { success: false, message: "challenge_progress_not_found" };
+  if (!challenges.length) {
+    console.log("[GENERIC_CHALLENGE] ❌ No active challenge found");
+    return { success: false, message: "no_active_challenge_found" };
   }
 
-  // 4️⃣ Complete if target reached
-  if (updated.progress.current >= updated.progress.target) {
-    await finalizeChallengeCompletion(updated);
-  }
+  for (const challenge of challenges) {
 
-  return { success: true, order: updated };
-};
+    if (remaining <= 0) break;
 
-
-const finalizeChallengeCompletion = async (order) => {
-  const challenge = order.challengeSnapshot;
-
-  // Atomic guard: finalize only if not already claimed
-  const lockedOrder = await LoyaltyChallengesOrders.findOneAndUpdate(
-    {
-      _id: order._id,
-      rewardClaimed: false
-    },
-    {
-      status: "completed",
-      rewardClaimed: true,
-      rewardClaimedAt: new Date()
-    },
-    { new: true }
-  );
-
-  if (!lockedOrder) return;
-
-  const { createTransactionService } = require(
-    "../../userWalletService/transactions/services/unifiedTransactionsService"
-  );
-
-  // Issue reward
-  if (
-    challenge.reward?.rewardType === "points" &&
-    challenge.reward?.rewardValue > 0
-  ) {
-    await createTransactionService(
-      {
-        user: lockedOrder.user,
-        companyOrganizer: challenge.companyOrganizer,
-        type: "earn",
-        domainType: "loyaltychallengesorders",
-        entityId: lockedOrder._id,
-        companyPoints: {
-          base: challenge.reward.rewardValue,
-          total: challenge.reward.rewardValue
-        },
-        description: `Challenge reward ${challenge.title}`
-      },
-      null,
-      {
-        skipChallenges: true
-      }
-    );
-  } else {
-    await RewardsOrders.create({
-      user: lockedOrder.user,
-      sourceType: "loyaltychallengesorders",
-      sourceId: lockedOrder._id,
-      snapshot: challenge,
-      companyOrganizer: challenge.companyOrganizer
+    console.log("[GENERIC_CHALLENGE] 🏁 Evaluating Challenge", {
+      challengeId: challenge._id,
+      title: challenge.title
     });
+
+    // 2️⃣ Always try to get active order first
+    let order = await repo.startOrGetChallengeOrder({
+      userId,
+      challenge
+    });
+
+    console.log("[GENERIC_CHALLENGE] 🆕 startOrGetChallengeOrder Result", {
+      challengeId: challenge._id,
+      orderId: order?._id
+    });
+
+    if (!order) {
+      console.log("[GENERIC_CHALLENGE] ⚠️ No order could be started or fetched", {
+        challengeId: challenge._id
+      });
+      continue;
+    }
+
+    // 3️⃣ If this is a brand new cycle, THEN check claim limit
+    if (order.progress.current === 0) {
+      const canStart = await repo.canStartNewCycle(userId, challenge);
+      console.log("[GENERIC_CHALLENGE] 🔄 Can start new cycle?", {
+        challengeId: challenge._id,
+        canStart
+      });
+      if (!canStart) continue;
+    }
+
+    // 🔔 Send STARTED if first cycle
+    if (order.progress.current === 0) {
+      console.log("[GENERIC_CHALLENGE] 🔔 Sending CHALLENGE_STARTED Notification", {
+        challengeId: challenge._id,
+        userId
+      });
+      await sendUserNotifications({
+        recipientIds: [userId.toString()],
+        title: challenge.title,
+        body: "Your challenge has started. Good luck!",
+        data: {
+          type: NotificationTypes.CHALLENGE_STARTED,
+          objectType: "challengesorders"
+        },
+        sender: companyOrganizer,
+        objectId: order._id
+      });
+    }
+
+    // 4️⃣ Apply overflow logic (multi-cycle)
+    while (remaining > 0) {
+
+      const previousCurrent = order.progress.current;
+
+      console.log("[GENERIC_CHALLENGE] ➕ Incrementing Progress", {
+        orderId: order._id,
+        previousCurrent,
+        remaining
+      });
+
+      const result =
+        await repo.incrementChallengeProgressWithOverflow({
+          orderId: order._id,
+          value: remaining
+        });
+
+      if (!result) {
+        console.log("[GENERIC_CHALLENGE] ⚠️ Progress increment failed", {
+          orderId: order._id
+        });
+        break;
+      }
+
+      const { order: updated, remaining: newRemaining } = result;
+
+      console.log("[GENERIC_CHALLENGE] 📈 Progress Update Result", {
+        challengeId: challenge._id,
+        updatedProgress: updated?.progress,
+        remaining: newRemaining
+      });
+
+      remaining = newRemaining;
+
+      // 🔥 Milestones
+      await handleChallengeMilestones({
+        previousCurrent,
+        updatedOrder: updated,
+        challenge,
+        userId,
+        companyOrganizer
+      });
+
+      // ✅ Completion
+      if (updated.progress.current >= updated.progress.target) {
+
+        console.log("[GENERIC_CHALLENGE] ✅ Challenge Completed Triggered", {
+          challengeId: challenge._id,
+          current: updated.progress.current,
+          target: updated.progress.target
+        });
+
+        await finalizeChallengeCompletion(updated);
+
+        // Check if another cycle allowed
+        const allowed = await repo.canStartNewCycle(userId, challenge);
+        console.log("[GENERIC_CHALLENGE] 🔄 Can start another cycle after completion?", {
+          challengeId: challenge._id,
+          allowed
+        });
+        if (!allowed) break;
+
+        // Start next cycle
+        order = await repo.startOrGetChallengeOrder({
+          userId,
+          challenge
+        });
+
+        console.log("[GENERIC_CHALLENGE] 🆕 Started new cycle order", {
+          challengeId: challenge._id,
+          orderId: order?._id
+        });
+
+        if (!order) break;
+
+        continue; // apply remaining to next cycle
+      }
+
+      break; // still in progress, no more cycles
+    }
   }
 
-  // Notify user
-  await sendUserNotifications({
-    recipientIds: [lockedOrder.user.toString()],
-    title: challenge.title,
-    body: "Congratulations! Your challenge has been completed.",
-    data: {
-      type: NotificationTypes.CHALLENGE_UPDATE,
-      objectType: "group"
-    },
-    sender: lockedOrder.user,
-    objectId: challenge._id
+  console.log("[GENERIC_CHALLENGE] 🎉 Completed Execution", {
+    userId,
+    taskType
   });
 
   return { success: true };
 };
 
 
+const finalizeChallengeCompletion = async (order) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const challenge = order.challengeSnapshot;
+
+    // 🔒 Lock order atomically
+    const lockedOrder = await LoyaltyChallengesOrders.findOneAndUpdate(
+      { _id: order._id, rewardClaimed: false },
+      {
+        status: "completed",
+        rewardClaimed: true,
+        rewardClaimedAt: new Date()
+      },
+      { new: true, session }
+    );
+
+    if (!lockedOrder) {
+      await session.abortTransaction();
+      session.endSession();
+      return;
+    }
+
+    let ticketOrderId = null;
+    let ticketStatus = null;
+    let protectionRequired = false;
+    let protectionType = null;
+
+    // =====================================================
+    // 🎟 SPECIAL TICKET REWARD
+    // =====================================================
+
+    if (
+      challenge.reward?.rewardType === "specialTicket" &&
+      challenge.reward?.specialTicket?.ticket
+    ) {
+      ticketStatus = "failed";
+
+      const rawTicket =
+        challenge.reward.specialTicket.ticket;
+
+      let ticketId = null;
+
+      if (mongoose.Types.ObjectId.isValid(rawTicket)) {
+        ticketId = rawTicket;
+      } else if (
+        typeof rawTicket === "object" &&
+        mongoose.Types.ObjectId.isValid(rawTicket._id)
+      ) {
+        ticketId = rawTicket._id;
+      }
+
+      if (ticketId) {
+        try {
+          // 🔎 Fetch ticket inside same session
+          const ticketDoc = await TicketingsModel.findById(
+            ticketId,
+            null,
+            { session }
+          ).lean();
+
+          if (ticketDoc && ticketDoc.resaleProtection !== "none") {
+            protectionRequired = true;
+            protectionType = ticketDoc.resaleProtection;
+          }
+
+          const bookingResult =
+            await createTicketingBookingService(
+              {
+                user: lockedOrder.user,
+                ticketings: [
+                  {
+                    ticketId,
+                    timeSlot:
+                      challenge.reward.specialTicket.timeSlot || null,
+                    isFastTrack:
+                      challenge.reward.specialTicket.isFastTrack || false,
+                    protectionUserDetails: {
+                      firstName: "n/a",
+                      surName: "n/a",
+                      dob: "n/a",
+                      pid: "n/a"
+                    }
+                  }
+                ],
+                bookingReference: "loyaltychallengesorders",
+                meta: {
+                  id: challenge._id,
+                  type: "loyaltychallengesorders"
+                }
+              },
+              "UTC",
+              session
+            );
+
+          if (bookingResult?._id) {
+            ticketOrderId = bookingResult._id;
+            ticketStatus = "issued";
+          }
+
+        } catch (err) {
+          console.error(
+            "[LOYALTY] Ticket creation failed",
+            {
+              challengeId: challenge._id,
+              error: err.message
+            }
+          );
+        }
+
+      }
+
+      // Persist ticket result
+      if (ticketStatus !== null) {
+        await LoyaltyChallengesOrders.updateOne(
+          { _id: lockedOrder._id },
+          {
+            rewardTicketOrder: ticketOrderId,
+            ticketStatus
+          },
+        );
+      }
 
 
+      // =====================================================
+      // 🔐 PROTECTION DETAILS NOTIFICATION
+      // =====================================================
+      if (ticketStatus === "issued" && protectionRequired) {
 
+        let protectionMessage = "";
+
+        if (protectionType === "nameSurname") {
+          protectionMessage =
+            "Please enter the attendee's name and surname to activate your ticket.";
+        }
+
+        if (protectionType === "nameSurnamePid") {
+          protectionMessage =
+            "Please enter the attendee's name, surname, and PID to activate your ticket.";
+        }
+
+        sendUserNotifications({
+          recipientIds: [lockedOrder.user.toString()],
+          title: "Additional Ticket Details Required",
+          body: protectionMessage,
+          data: {
+            type: NotificationTypes.TICKET_PROTECTION_REQUIRED,
+            objectType: "ticketingorders",
+            challengeOrderId: lockedOrder._id,
+            ticketOrderId
+          },
+          sender: challenge.companyOrganizer,
+          objectId: ticketOrderId
+        });
+      }
+
+    } else if (challenge.reward?.rewardType === "points") {
+
+      console.log("[LOYALTY] Processing points reward", JSON.stringify(challenge, null, 2));
+      // =====================================================
+      // 💎 POINTS REWARD
+      // =====================================================
+
+      const points = challenge.reward.rewardValue || 0;
+
+      if (points > 0) {
+        await createTransactionService(
+          {
+            user: lockedOrder.user,
+            companyOrganizer: challenge.companyOrganizer,
+            companyPoints: {
+              base: points,
+              multiplier: 1,
+              total: points,
+              pointsPerEuro: 1
+            },
+            allowNegative: false,
+            type: "earn",
+            description: `Points awarded for completing challenge: ${challenge.title}`,
+            entityId: lockedOrder._id,
+            domainType: "loyaltychallengesorders"
+          },
+          session
+        );
+      }
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    // =====================================================
+    // 🔔 COMPLETION NOTIFICATION
+    // =====================================================
+    sendUserNotifications({
+      recipientIds: [lockedOrder.user.toString()],
+      title: challenge.title,
+      body: "Congratulations! Your challenge has been completed.",
+      data: {
+        type: NotificationTypes.CHALLENGE_COMPLETED,
+        objectType: "challengesorders"
+      },
+      sender: challenge.companyOrganizer,
+      objectId: lockedOrder._id
+    });
+
+
+    return { success: true };
+
+  } catch (err) {
+
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+
+    session.endSession();
+
+    console.error("[LOYALTY] Completion transaction failed", err);
+
+    return {
+      success: false,
+      message: err.message
+    };
+  }
+};
+
+/**
+ * ==========================================
+ * Challenge Milestone Notification Utility
+ * ==========================================
+ *
+ * Rules:
+ * - Only send if milestone is crossed in this update
+ * - Do NOT send if challenge completed in same update
+ * - Atomic protection via milestonesSent
+ */
+const handleChallengeMilestones = async ({
+  previousCurrent = 0,
+  updatedOrder,
+  challenge,
+  userId,
+  companyOrganizer
+}) => {
+
+  const target = updatedOrder.progress.target;
+
+  const previousPercentage = Math.floor(
+    (previousCurrent / target) * 100
+  );
+
+  const currentPercentage = Math.floor(
+    (updatedOrder.progress.current / target) * 100
+  );
+
+  const isCompleted =
+    updatedOrder.progress.current >= target;
+
+  const milestoneTargets = [50, 80];
+
+  for (const milestone of milestoneTargets) {
+
+    const crossedMilestone =
+      previousPercentage < milestone &&
+      currentPercentage >= milestone;
+
+    // 🚫 Do NOT send milestone if completed in same update
+    if (!crossedMilestone || isCompleted) continue;
+
+    const milestoneUpdate =
+      await LoyaltyChallengesOrders.findOneAndUpdate(
+        {
+          _id: updatedOrder._id,
+          milestonesSent: { $ne: milestone }
+        },
+        { $addToSet: { milestonesSent: milestone } }
+      );
+
+    if (milestoneUpdate) {
+      await sendUserNotifications({
+        recipientIds: [userId.toString()],
+        title: challenge.title,
+        body: `You're ${milestone}% done! Keep going.`,
+        data: {
+          type: NotificationTypes.CHALLENGE_PROGRESS_MILESTONE,
+          objectType: "challengesorders",
+          percentage: milestone
+        },
+        sender: companyOrganizer,
+        objectId: updatedOrder._id
+      });
+    }
+  }
+};
 module.exports = {
   resolveChallengeByTaskTypeService,
   updateChallengeProgressByTaskTypeService,

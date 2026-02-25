@@ -10,28 +10,36 @@ const rewardSchema = new mongoose.Schema(
     },
     rewardValue: { type: Number, default: 0 },
     specialTicket: {
-          companyOrganizer: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            default: null,
-          },
-          organization: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Organizations",
-            default: null,
-          },
-          event: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Event",
-            default: null,
-          },
-    
-          ticket: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Ticketings",
-            default: null,
-          },
-        },
+      companyOrganizer: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+      },
+      organization: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Organizations",
+        default: null,
+      },
+      event: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Event",
+        default: null,
+      },
+
+      ticket: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Ticketings",
+        default: null,
+      },
+      timeSlot: {
+        type: String,
+        default: null,
+      },
+      isFastTrack: {
+        type: Boolean,
+        default: false,
+      },
+    },
 
     // menu item reward
     rewardMenuItem: {

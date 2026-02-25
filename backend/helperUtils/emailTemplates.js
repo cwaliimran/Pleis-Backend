@@ -534,6 +534,146 @@ const stripeEmailTemplate = ({ name, link }) => `
   </html>
 `;
 
+const menuOrderConfirmationEmailTemplate = ({
+  userName,
+  order,
+  organizationName,
+  currency = "EUR",
+}) => {
+
+  const currentYear = new Date().getFullYear();
+
+  const formatPrice = (amount) =>
+    `${currency} ${Number(amount || 0).toFixed(2)}`;
+
+  const itemsRows = order.items
+    .map((item) => {
+      const title = item.menuItemSnapShot?.title || "Item";
+      const quantity = item.quantity || 1;
+      const finalPrice = item.finalPrice || 0;
+
+      return `
+        <tr>
+          <td style="padding:12px 0;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td width="40"><strong>${quantity} ×</strong></td>
+                <td>${title}</td>
+                <td align="right"><strong>${formatPrice(finalPrice)}</strong></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  return `
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="UTF-8" />
+    </head>
+    <body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;color:#333;">
+      
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td align="center">
+
+            <!-- Main Wrapper -->
+            <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;margin:20px auto;border-radius:8px;overflow:hidden;">
+              
+              <!-- Header -->
+              <tr>
+                <td align="center" style="background:#1B1A1D;color:#ffffff;padding:20px;">
+                  <h2 style="margin:0;">Order Confirmed</h2>
+                </td>
+              </tr>
+
+              <!-- Greeting -->
+              <tr>
+                <td style="padding:20px;">
+                  <p>Hello ${userName || "Customer"},</p>
+                  <p>Your order from <strong>${organizationName}</strong> has been confirmed.</p>
+                </td>
+              </tr>
+
+              <!-- Order Details Box -->
+              <tr>
+                <td style="padding:0 20px 20px 20px;">
+                  <table width="100%" cellpadding="10" cellspacing="0" style="border:1px solid #eeeeee;border-radius:6px;">
+                    <tr>
+                      <td width="40%" bgcolor="#f7f7f7"><strong>Order Number</strong></td>
+                      <td>${order.orderNumber}</td>
+                    </tr>
+                    <tr>
+                      <td bgcolor="#f7f7f7"><strong>Order Date</strong></td>
+                      <td>${new Date(order.createdAt).toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                      <td bgcolor="#f7f7f7"><strong>Pickup Type</strong></td>
+                      <td>${order.pickupType}</td>
+                    </tr>
+                    ${order.pickupType === "tableService"
+      ? `
+                    <tr>
+                      <td bgcolor="#f7f7f7"><strong>Table Number</strong></td>
+                      <td>${order.tableNumber}</td>
+                    </tr>
+                    `
+      : ""
+    }
+                  </table>
+                </td>
+              </tr>
+
+              <!-- Ordered Items -->
+              <tr>
+                <td style="padding:0 20px;">
+                  <h3 style="margin-bottom:10px;">Ordered Items</h3>
+                </td>
+              </tr>
+
+              <tr>
+                <td style="padding:0 20px;">
+                  <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eeeeee;">
+                    ${itemsRows}
+                  </table>
+                </td>
+              </tr>
+
+              <!-- Total -->
+              <tr>
+                <td style="padding:20px;">
+                  <table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eeeeee;padding-top:10px;">
+                    <tr>
+                      <td align="left"><strong>Order Total</strong></td>
+                      <td align="right" style="font-size:18px;">
+                        <strong>${formatPrice(order.totalPrice)}</strong>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td align="center" style="padding:20px;color:#888;font-size:12px;">
+                  &copy; ${currentYear} ${APP_NAME}. All rights reserved.
+                </td>
+              </tr>
+
+            </table>
+
+          </td>
+        </tr>
+      </table>
+
+    </body>
+  </html>
+  `;
+};
+
 // Export both functions
 module.exports = {
   registrationViaLinkEmailTemplate,
@@ -543,5 +683,6 @@ module.exports = {
   accountStatusEmailTemplate,
   stripeEmailTemplate,
   otpEmailTemplate,
-  OTP_PURPOSE_CONFIG
+  OTP_PURPOSE_CONFIG,
+  menuOrderConfirmationEmailTemplate
 };

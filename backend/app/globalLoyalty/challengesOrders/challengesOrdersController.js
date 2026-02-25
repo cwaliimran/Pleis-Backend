@@ -12,13 +12,15 @@ const service = require("./challengesOrdersService");
 const resolveGlobalChallenge = async (req, res) => {
   try {
     const userId = req.user._id;
+    const { timezone } = req.user;
     const { taskType, value } = req.body;
 
     const result =
       await service.resolveGlobalChallengeByTaskTypeService({
         userId,
         taskType,
-        value
+        value,
+        timezone
       });
 
     return sendResponse({

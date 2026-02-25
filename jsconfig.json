@@ -50,6 +50,9 @@
       "@EventsModel": [
         "backend/commonModules/events/Event.js"
       ],
+      "@EventNotificationLogsModel": [
+        "backend/commonModules/events/EventNotificationLogs.js"
+      ],
       "@MenusModel": [
         "backend/commonModules/menuManagement/menu/Menus.js"
       ],
@@ -94,6 +97,9 @@
       ],
       "@UserReservationsModel": [
         "backend/commonModules/reservations/UsersReservation.js"
+      ],
+      "@ReservationNotificationLogsModel": [
+        "backend/commonModules/reservations/ReservationNotificationLogs.js"
       ],
       "@OrdersModel": [
         "backend/commonModules/menuItemsAndOrders/Orders.js"
@@ -179,8 +185,14 @@
       "@LoyaltyChallengesOrdersModel": [
         "backend/commonModules/loyalty/challenges/orders/LoyaltyChallengesOrders.js"
       ],
+      "@LoyaltyChallengeNotificationLogsModel": [
+        "backend/commonModules/loyalty/challenges/orders/LoyaltyChallengeNotificationLogs.js"
+      ],
       "@GlobalChallengesOrdersModel": [
         "backend/commonModules/globalLoyalty/challengeOrders/GlobalChallengesOrders.js"
+      ],
+      "@GlobalChallengeNotificationLogsModel": [
+        "backend/commonModules/globalLoyalty/challengeOrders/GlobalChallengeNotificationLogs.js"
       ],
       "@GiveawayModel": [
         "backend/commonModules/giveaways/Giveaways.js"

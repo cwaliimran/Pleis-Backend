@@ -1,5 +1,6 @@
 const express = require("express");
 const {
+  checkoutUsersStreak,
   createUsersStreak,
   getUsersStreaks,
   updateUsersStreak,
@@ -17,6 +18,7 @@ router.use(auth);
 const apiRateLimiter = createRateLimiter("UsersStreaks");
 // Create a new usersStreak
 router.post("/", apiRateLimiter, roleMiddleware(["user"]), createUsersStreak);
+router.post("/user", apiRateLimiter, roleMiddleware(["user"]), checkoutUsersStreak);
 
 // Get all usersStreaks with pagination
 router.get("/", getUserMaxStreak);

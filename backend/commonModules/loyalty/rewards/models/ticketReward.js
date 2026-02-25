@@ -19,6 +19,10 @@ const TicketReward = Reward.discriminator(
         type: String,
         default: null,
       },
+      isFastTrack: {
+        type: Boolean,
+        default: false,
+      },
     },
     { _id: false }
   )

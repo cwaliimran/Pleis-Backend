@@ -109,8 +109,18 @@ const getOrders = async ({
     } else if (activeorderStatus === "completed") {
       statusFilter = {
         status: "completed",
-        items: { $elemMatch: { isdelivered: false } },
-        paymentStatus: { $in: ["pending","failed"] },
+        $or: [
+          // 1️⃣ If any item is NOT delivered → include order
+          { items: { $elemMatch: { isdelivered: false } } },
+
+          // 2️⃣ If ALL items delivered → then check payment
+          {
+            $and: [
+              { items: { $not: { $elemMatch: { isdelivered: false } } } },
+              { paymentStatus: { $in: ["pending", "failed"] } }
+            ]
+          }
+        ]
       };
     }
   }

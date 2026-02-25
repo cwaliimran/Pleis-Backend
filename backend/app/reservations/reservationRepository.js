@@ -84,7 +84,7 @@ const createReservation = async (data, session) => {
   switch (reservationBase.conditionType) {
     case "fixedPrice":
       totalReservationAmount =
-        baseAmount * Number(partySize || 1);
+        baseAmount * Number(1);
       break;
 
     case "prepayOption":

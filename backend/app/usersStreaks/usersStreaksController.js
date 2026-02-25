@@ -201,7 +201,35 @@ const deleteUsersStreak = async (req, res) => {
   }
 };
 
+const checkoutUsersStreak = async (req, res) => {
+  const user = req.user._id;
+  const { companyOrganizer, organization } = req.body;
+
+  if (!validateParams(req, res, { rawData: ["companyOrganizer", "organization"], objectIdFields: ["companyOrganizer", "organization"] })) return;
+
+  try {
+    const userStreak = await usersUsersStreaksService.checkoutUsersStreak({ user, companyOrganizer, organization });
+
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "users_usersStreak_checked_out_successfully",
+      data: userStreak,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
 module.exports = {
+  checkoutUsersStreak,
   createUsersStreak,
   getUserMaxStreak,
   getPublicUsersStreaks,

@@ -10,14 +10,18 @@ const GlobalClaimPromotion = GlobalBasePromotion.discriminator(
         ref: "GlobalReward",
         required: true,
       },
-      ticket: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Ticketings",
-        required: true,
-      },
+      // ticket: {
+      //   type: mongoose.Schema.Types.ObjectId,
+      //   ref: "Ticketings",
+      //   required: true,
+      // },
       timeSlot: {
         type: String,
         default: null,
+      },
+      isFastTrack: {
+        type: Boolean,
+        default: false,
       },
       claimPoints: { type: Number, required: true },
     },
