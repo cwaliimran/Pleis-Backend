@@ -11,11 +11,12 @@ let batchId = null;
 
 const buildKeywordMatch = (keyword) => {
   if (!keyword?.trim()) return null;
+
   const regex = new RegExp(keyword, "i");
 
   return {
     $or: [
-      // ---- Transaction ----
+      // Transaction
       { description: regex },
       { batchId: regex },
       { publicId: regex },
@@ -23,16 +24,17 @@ const buildKeywordMatch = (keyword) => {
       { walletType: regex },
       { type: regex },
 
-      // ---- User ----
+      // User
       { "user.firstName": regex },
       { "user.lastName": regex },
       { "user.email": regex },
 
-      // ---- Organizer ----
+      // Organizer
       { "companyOrganizer.firstName": regex },
       { "companyOrganizer.lastName": regex },
+      { "companyOrganizer.companyDetails.loyaltySettings.title": regex },
 
-      // ---- Organization ----
+      // Organization
       { "organization.basicInfo.name": regex }
     ]
   };
@@ -46,56 +48,137 @@ const getTransactionsWithFilters = async ({
 }) => {
 
   /* =====================================================
-     🔵 STAGE 1 — FETCH IDS ONLY (FAST)
+     🔵 CASE A — NO KEYWORD (FAST TWO-STAGE)
   ===================================================== */
 
-  const idPipeline = [];
+  if (!keyword?.trim()) {
 
-  if (Object.keys(match).length) {
-    idPipeline.push({ $match: match });
+    const idPipeline = [];
+
+    if (Object.keys(match).length) {
+      idPipeline.push({ $match: match });
+    }
+
+    idPipeline.push(
+      { $sort: { createdAt: -1, _id: -1 } },
+      { $skip: skip }
+    );
+
+    if (limit > 0) {
+      idPipeline.push({ $limit: limit });
+    }
+
+    idPipeline.push({ $project: { _id: 1 } });
+
+    const ids = await UnifiedWalletTransactions.aggregate(idPipeline);
+    if (!ids.length) return [];
+
+    const txIds = ids.map(i => i._id);
+
+    const pipeline = [
+      { $match: { _id: { $in: txIds } } },
+      {
+        $addFields: {
+          __order: { $indexOfArray: [txIds, "$_id"] }
+        }
+      },
+
+      // Lookups
+      {
+        $lookup: {
+          from: "users",
+          localField: "user",
+          foreignField: "_id",
+          as: "user"
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "companyOrganizer",
+          foreignField: "_id",
+          as: "companyOrganizer"
+        }
+      },
+      {
+        $lookup: {
+          from: "organizations",
+          localField: "organization",
+          foreignField: "_id",
+          as: "organization"
+        }
+      },
+      {
+        $addFields: {
+          user: { $arrayElemAt: ["$user", 0] },
+          companyOrganizer: { $arrayElemAt: ["$companyOrganizer", 0] },
+          organization: { $arrayElemAt: ["$organization", 0] }
+        }
+      },
+
+      {
+        $project: {
+          batchId: 1,
+          walletType: 1,
+          type: 1,
+          domainType: 1,
+          entityId: 1,
+          points: 1,
+          closingBalance: 1,
+          description: 1,
+          publicId: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          __order: 1,
+
+          user: {
+            _id: "$user._id",
+            firstName: "$user.firstName",
+            lastName: "$user.lastName",
+            email: "$user.email",
+            profileIcon: "$user.profileIcon"
+          },
+
+          companyOrganizer: {
+            _id: "$companyOrganizer._id",
+            logo: "$companyOrganizer.companyDetails.logo",
+            title: "$companyOrganizer.companyDetails.loyaltySettings.title"
+          },
+
+          organization: {
+            _id: "$organization._id",
+            basicInfo: {
+              name: "$organization.basicInfo.name",
+              media: {
+                logo: "$organization.basicInfo.media.logo"
+              }
+            }
+          }
+        }
+      },
+
+      { $sort: { __order: 1 } }
+    ];
+
+    const txList = await UnifiedWalletTransactions.aggregate(pipeline, {
+      allowDiskUse: true
+    });
+
+    return await attachBookings(txList);
   }
-
-  // keyword filtering (ONLY if indexed fields)
-  const keywordMatch = buildKeywordMatch(keyword);
-  if (keywordMatch) {
-    idPipeline.push({ $match: keywordMatch });
-  }
-
-  idPipeline.push(
-    { $sort: { createdAt: -1, _id: -1 } },
-    { $skip: skip }
-  );
-
-  if (limit > 0) {
-    idPipeline.push({ $limit: limit });
-  }
-
-  idPipeline.push({ $project: { _id: 1 } });
-
-  const ids = await UnifiedWalletTransactions.aggregate(idPipeline);
-
-  if (!ids.length) return [];
-
-  const txIds = ids.map(i => i._id);
 
   /* =====================================================
-     🔵 STAGE 2 — FETCH FULL DOCS + LOOKUPS
+     🔎 CASE B — KEYWORD SEARCH (LOOKUP FIRST)
   ===================================================== */
 
-  const pipeline = [
-    {
-      $match: {
-        _id: { $in: txIds }
-      }
-    },
+  const regexMatch = buildKeywordMatch(keyword);
+  const pipeline = [];
 
-    /* maintain order */
-    {
-      $addFields: {
-        __order: { $indexOfArray: [txIds, "$_id"] }
-      }
-    },
+  if (Object.keys(match).length) {
+    pipeline.push({ $match: match });
+  }
 
+  pipeline.push(
     {
       $lookup: {
         from: "users",
@@ -120,7 +203,6 @@ const getTransactionsWithFilters = async ({
         as: "organization"
       }
     },
-
     {
       $addFields: {
         user: { $arrayElemAt: ["$user", 0] },
@@ -128,59 +210,63 @@ const getTransactionsWithFilters = async ({
         organization: { $arrayElemAt: ["$organization", 0] }
       }
     },
+    { $match: regexMatch },
+    { $sort: { createdAt: -1, _id: -1 } },
+    { $skip: skip }
+  );
 
-    {
-      $project: {
-        batchId: 1,
-        walletType: 1,
-        type: 1,
-        domainType: 1,
-        entityId: 1,
-        points: 1,
-        closingBalance: 1,
-        description: 1,
-        publicId: 1,
-        createdAt: 1,
-        updatedAt: 1,
+  if (limit > 0) {
+    pipeline.push({ $limit: limit });
+  }
 
-        __order: 1,
+  pipeline.push({
+    $project: {
+      batchId: 1,
+      walletType: 1,
+      type: 1,
+      domainType: 1,
+      entityId: 1,
+      points: 1,
+      closingBalance: 1,
+      description: 1,
+      publicId: 1,
+      createdAt: 1,
+      updatedAt: 1,
 
-        user: {
-          _id: "$user._id",
-          firstName: "$user.firstName",
-          lastName: "$user.lastName",
-          email: "$user.email",
-          profileIcon: "$user.profileIcon"
-        },
+      user: {
+        _id: "$user._id",
+        firstName: "$user.firstName",
+        lastName: "$user.lastName",
+        email: "$user.email",
+        profileIcon: "$user.profileIcon"
+      },
 
-        companyOrganizer: {
-          _id: "$companyOrganizer._id",
-          logo: "$companyOrganizer.companyDetails.logo",
-          title: "$companyOrganizer.companyDetails.loyaltySettings.title"
-        },
+      companyOrganizer: {
+        _id: "$companyOrganizer._id",
+        logo: "$companyOrganizer.companyDetails.logo",
+        title: "$companyOrganizer.companyDetails.loyaltySettings.title"
+      },
 
-        organization: {
-          _id: "$organization._id",
-          basicInfo: {
-            name: "$organization.basicInfo.name",
-            media: {
-              logo: "$organization.basicInfo.media.logo"
-            }
+      organization: {
+        _id: "$organization._id",
+        basicInfo: {
+          name: "$organization.basicInfo.name",
+          media: {
+            logo: "$organization.basicInfo.media.logo"
           }
         }
       }
-    },
-
-    { $sort: { __order: 1 } }
-  ];
+    }
+  });
 
   const txList = await UnifiedWalletTransactions.aggregate(pipeline, {
     allowDiskUse: true
   });
 
-  /* =====================================================
-     🔵 RESTORE TICKETING BOOKINGS
-  ===================================================== */
+  return await attachBookings(txList);
+};
+
+const attachBookings = async (txList) => {
 
   const orderIds = txList
     .filter(t => t.domainType === "ticketingorders" && t.entityId)
@@ -195,6 +281,7 @@ const getTransactionsWithFilters = async ({
   }).lean();
 
   const bookingMap = {};
+
   for (const bk of bookings) {
     const oid = bk.order.toString();
     if (!bookingMap[oid]) bookingMap[oid] = [];
@@ -212,22 +299,57 @@ const getTransactionsWithFilters = async ({
 
 const countTransactions = async ({ match = {}, keyword }) => {
 
+  if (!keyword?.trim()) {
+    return UnifiedWalletTransactions.countDocuments(match);
+  }
+
+  const regexMatch = buildKeywordMatch(keyword);
   const pipeline = [];
 
   if (Object.keys(match).length) {
     pipeline.push({ $match: match });
   }
 
-  const keywordMatch = buildKeywordMatch(keyword);
-  if (keywordMatch) {
-    pipeline.push({ $match: keywordMatch });
-  }
-
-  pipeline.push({ $count: "total" });
+  pipeline.push(
+    {
+      $lookup: {
+        from: "users",
+        localField: "user",
+        foreignField: "_id",
+        as: "user"
+      }
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "companyOrganizer",
+        foreignField: "_id",
+        as: "companyOrganizer"
+      }
+    },
+    {
+      $lookup: {
+        from: "organizations",
+        localField: "organization",
+        foreignField: "_id",
+        as: "organization"
+      }
+    },
+    {
+      $addFields: {
+        user: { $arrayElemAt: ["$user", 0] },
+        companyOrganizer: { $arrayElemAt: ["$companyOrganizer", 0] },
+        organization: { $arrayElemAt: ["$organization", 0] }
+      }
+    },
+    { $match: regexMatch },
+    { $count: "total" }
+  );
 
   const res = await UnifiedWalletTransactions.aggregate(pipeline, {
     allowDiskUse: true
   });
+
   return res[0]?.total || 0;
 };
 

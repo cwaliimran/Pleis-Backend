@@ -48,6 +48,8 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
 };
 const updateReservation = async (id, data) => {
   const Reservation = await ReservationRepo.findReservationById(id);
+  console.log("data",data );
+   console.log("Reservation",Reservation );
   if (!Reservation) {
     return { error: "Reservation_not_found" };
   }
