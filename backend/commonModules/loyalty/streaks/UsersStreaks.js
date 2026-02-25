@@ -28,5 +28,7 @@ usersStreaksSchema.index(
   { unique: true }
 );
 
-const Streaks = mongoose.model("UsersStreaks", usersStreaksSchema);
-module.exports = Streaks;
+usersStreaksSchema.index({ user: 1, lastVisitAt: 1 });
+
+const UsersStreaks = mongoose.model("UsersStreaks", usersStreaksSchema);
+module.exports = UsersStreaks;

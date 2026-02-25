@@ -10,6 +10,10 @@ const { sendEventNotification } = require("../../../../controllers/notificationH
 const { sendMenuOrderNotification } = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
 const { sendReservationNotification } = require("../../../../controllers/notificationHelper/reservationNotificationService");
 const { fireAndForget } = require("../../../../helperUtils/responseUtil");
+const { findAppUserByIdWithProjectionService } = require("../../../../app/usersManagement/usersService");
+const { generateQRCode } = require("../../../../helperUtils/qrGenerator");
+const { ticketConfirmationEmailTemplate, ticketFailedEmailTemplate } = require("../../../../helperUtils/emailTemplates/ticketingEmailTemplates");
+const { sendEmailViaMailgun } = require("../../../../helperUtils/emailUtil");
 
 /**
  * Ticketing Order Finalizer
@@ -152,6 +156,82 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
         console.error("Transaction creation failed:", trx);
         throw new Error(trx.message || "wallet_update_failed");
       }
+
+
+      /* try {
+        // =====================================================
+        // 📧 TICKET CONFIRMATION EMAIL
+        // =====================================================
+
+        const userDetails =
+          await findAppUserByIdWithProjectionService(
+            order.user,
+            { email: 1, timezone: 1, username: 1 }
+          );
+
+        const bookings = await TicketingBookings
+          .find({ order: order._id })
+          .populate("organization")
+          .lean();
+
+        if (!bookings?.length) return;
+
+        // 🔹 Extract eventId from snapshot (ObjectId)
+        const eventId = bookings[0]?.ticket?.snapshot?.event;
+
+        let event = null;
+
+        if (eventId) {
+          event = await mongoose
+            .model("Event")
+            .findById(eventId)
+            .select("basicInfo schedule")
+            .lean();
+        }
+
+        const formattedTickets = [];
+
+        for (const booking of bookings) {
+
+          const qrPayload = {
+            v: 1,
+            type: "ticket",
+            ticketBookingId: booking.ticketBookingId,
+            orderId: order._id,
+            userId: booking.user,
+            organizationId: booking.organization?._id,
+            companyOrganizerId: booking.companyOrganizer,
+            eventId: eventId,
+          };
+
+          const qrCode = await generateQRCode(qrPayload);
+
+          formattedTickets.push({
+            ticketBookingId: booking.ticketBookingId,
+            qrCode,
+          });
+        }
+
+        const html = ticketConfirmationEmailTemplate({
+          userName: userDetails.username,
+          organizationName: bookings[0]?.organization?.basicInfo?.name,
+          eventTitle: event?.basicInfo?.title || "",
+          eventDate: event?.schedule?.startDateTime || "",
+          eventTime: "",
+          venue: event?.basicInfo?.venueLocation?.address || "",
+          tickets: formattedTickets,
+          orderPricing: order.orderPricing,
+        });
+
+        await sendEmailViaMailgun(
+          "cwaliimrandev@gmail.com", // replace with userDetails.email in prod
+          "Your tickets are confirmed",
+          html
+        );
+
+      } catch (err) {
+        console.error("[EMAIL] Ticket confirmation email failed:", err);
+      } */
     }
 
     // =====================================================
@@ -190,6 +270,37 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
           { session }
         );
       }
+
+     /*  try {
+        const userDetails =
+          await findAppUserByIdWithProjectionService(
+            order.user,
+            { email: 1, timezone: 1, username: 1 }
+          );
+
+        const bookings = await TicketingBookings
+          .find({ order: order._id })
+          .lean();
+
+        const event = bookings[0]?.ticket?.snapshot?.event;
+
+        const html = ticketFailedEmailTemplate({
+          userName: userDetails.username,
+          eventTitle: event?.basicInfo?.title,
+          orderPricing: order.orderPricing,
+        });
+
+        await sendEmailViaMailgun(
+          "cwaliimrandev@gmail.com",//userDetails.email,
+          "Ticket payment failed",
+          html
+        );
+
+      } catch (err) {
+        console.error("[EMAIL] Ticket failed email error:", err);
+      } */
+
+
     }
 
     await session.commitTransaction();

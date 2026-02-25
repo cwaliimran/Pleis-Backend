@@ -137,6 +137,17 @@ const getUserMaxStreak = async (userId) => {
   return result?.[0]?.maxStreak ?? 0;
 };
 
+const checkoutUsersStreak = async (data) => {
+
+  try {
+    const userStreak = await usersStreakRepo.checkoutUsersStreak(data);
+
+    return userStreak;
+  } catch (error) {
+    throw error;
+  }
+};
+
 
 module.exports = {
   createUsersStreak,
@@ -144,5 +155,6 @@ module.exports = {
   updateUsersStreak,
   deleteUsersStreak,
   getPublicUsersUsersStreaks,
-  getUserMaxStreak
+  getUserMaxStreak,
+  checkoutUsersStreak
 };

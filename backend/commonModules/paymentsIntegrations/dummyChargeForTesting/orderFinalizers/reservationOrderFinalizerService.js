@@ -7,6 +7,11 @@ const { handleLoyaltyEarningConsequences } = require("./handleLoyaltyEarningCons
 const { sendReservationNotification } = require("../../../../controllers/notificationHelper/reservationNotificationService");
 const { sendMenuOrderNotification } = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
 const { fireAndForget } = require("../../../../helperUtils/responseUtil");
+const { getUserReservationDetails } = require("../../../../app/reservations/reservationRepository");
+const { userReservationsFormatter } = require("../../../../app/reservations/formaters/reservationFormetter");
+const { reservationConfirmationEmailTemplate, reservationCancelledEmailTemplate } = require("../../../../helperUtils/emailTemplates/userReservationsTemplates");
+const { sendEmailViaMailgun } = require("../../../../helperUtils/emailUtil");
+const { findAppUserByIdWithProjectionService } = require("../../../../app/usersManagement/usersService");
 
 const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   const session = await mongoose.startSession();
@@ -18,9 +23,11 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   let globalPoints = null;
 
   try {
+    console.log("[reservationOrderFinalizerService] Starting transaction for reservation:", reservationId);
     session.startTransaction();
 
     if (result.status === "pending") {
+      console.log("[reservationOrderFinalizerService] Payment status is pending, nothing to finalize.");
       await session.commitTransaction();
       return;
     }
@@ -30,10 +37,14 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
       .populate("preOrderMenuItemsOrder")
       .session(session);
 
-    if (!userReservation) throw new Error("reservation_not_found");
+    if (!userReservation) {
+      console.error("[reservationOrderFinalizerService] Reservation not found:", reservationId);
+      throw new Error("reservation_not_found");
+    }
 
     // idempotency guard
     if (userReservation.status !== "pendingPayment") {
+      console.log("[reservationOrderFinalizerService] Reservation status is not pendingPayment, skipping:", userReservation.status);
       await session.commitTransaction();
       return;
     }
@@ -44,6 +55,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
     // ✅ PAYMENT SUCCESS
     // ==========================
     if (result.status === "paid") {
+      console.log("[reservationOrderFinalizerService] Payment succeeded, updating reservation and menu order.");
 
       await UserReservations.updateOne(
         { _id: reservationId },
@@ -59,6 +71,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
       );
 
       if (menuOrder) {
+        console.log("[reservationOrderFinalizerService] Updating menu order status to confirmed.");
         await MenuOrders.updateOne(
           { _id: menuOrder._id },
           {
@@ -73,11 +86,47 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
         );
       }
 
+      try {
+        console.log("[reservationOrderFinalizerService] Fetching reservation details for email.");
+        const reservationDetails =
+          await getUserReservationDetails(
+            userReservation._id
+          );
+
+        let userDetails = await findAppUserByIdWithProjectionService(userReservation.userId, { timezone: 1, email: 1, username: 1 });
+
+        const formatted =
+          userReservationsFormatter(
+            reservationDetails,
+            userDetails.timezone || "UTC"
+          );
+
+        const html =
+          reservationConfirmationEmailTemplate({
+            userName: formatted.userName,
+            reservation: formatted,
+            organizationName: formatted.organizationName,
+            currency: "EUR"
+          });
+
+        console.log("[reservationOrderFinalizerService] Sending reservation confirmation email to:", userDetails.email);
+
+        sendEmailViaMailgun(
+          userDetails.email,
+          "Your reservation is confirmed",
+          html
+        );
+
+      } catch (err) {
+        console.error("[reservationOrderFinalizerService] Reservation confirmation email failed:", err);
+      }
+
       const totalPrice = userReservation.amount || 0;
 
       let bonusPoints =
         userReservation?.reservationSnapshot?.bonusPoints ?? 0;
 
+      console.log("[reservationOrderFinalizerService] Calculating loyalty points.");
       const pointsCalculation =
         await calculatePointsRepo(
           userReservation.userId,
@@ -101,6 +150,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
         bonusPoints
       };
 
+      console.log("[reservationOrderFinalizerService] Creating loyalty transaction.");
       const trx = await createTransactionService(
         {
           user: userReservation.userId,
@@ -118,6 +168,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
       );
 
       if (!trx.success) {
+        console.error("[reservationOrderFinalizerService] Loyalty transaction failed:", trx.message);
         throw new Error(trx.message || "failed_loyalty_update");
       }
     }
@@ -126,6 +177,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
     // ❌ PAYMENT FAILED
     // ==========================
     if (result.status === "failed") {
+      console.log("[reservationOrderFinalizerService] Payment failed, updating reservation and menu order.");
 
       await UserReservations.updateOne(
         { _id: reservationId },
@@ -139,6 +191,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
       );
 
       if (menuOrder) {
+        console.log("[reservationOrderFinalizerService] Updating menu order status to cancelled.");
         await MenuOrders.updateOne(
           { _id: menuOrder._id },
           {
@@ -153,21 +206,53 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
     }
 
     await session.commitTransaction();
+
+
+    const reservationDetails =
+      await getUserReservationDetails(
+        userReservation._id
+      );
+
+    let userDetails = await findAppUserByIdWithProjectionService(userReservation.userId, { timezone: 1, email: 1, username: 1 });
+
+    const formatted =
+      userReservationsFormatter(
+        reservationDetails,
+        userDetails.timezone || "UTC"
+      );
+
+    const html =
+      reservationCancelledEmailTemplate({
+        userName: formatted.userName,
+        reservation: formatted,
+        organizationName: formatted.organizationName
+      });
+
+    await sendEmailViaMailgun(
+      userDetails.email,
+      "Reservation payment failed",
+      html
+    );
+
     committed = true;
+    console.log("[reservationOrderFinalizerService] Transaction committed.");
 
   } catch (err) {
     if (session.inTransaction()) {
+      console.error("[reservationOrderFinalizerService] Error occurred, aborting transaction:", err);
       await session.abortTransaction();
     }
     throw err;
   } finally {
     session.endSession();
+    console.log("[reservationOrderFinalizerService] Session ended.");
   }
 
   // =====================================================
   // 🚀 POST-COMMIT SIDE EFFECTS
   // =====================================================
   if (committed && userReservation) {
+    console.log("[reservationOrderFinalizerService] Running post-commit side effects.");
 
     /**
      * =====================================================
@@ -176,6 +261,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
      */
     if (result.status === "paid") {
       try {
+        console.log("[reservationOrderFinalizerService] Handling loyalty earning consequences.");
         handleLoyaltyEarningConsequences({
           userId: userReservation.userId,
           companyOrganizer: userReservation.companyOrganizer,
@@ -188,13 +274,13 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
       }
     }
 
-
     /**
      * =====================================================
      * 🔔 Reservation Notifications
      * =====================================================
      */
     if (result.status === "paid") {
+      console.log("[reservationOrderFinalizerService] Sending reservation confirmed notification.");
       fireAndForget(
         sendReservationNotification({
           reservationId: userReservation._id,
@@ -205,6 +291,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
     }
 
     if (result.status === "failed") {
+      console.log("[reservationOrderFinalizerService] Sending reservation cancelled notification.");
       fireAndForget(
         sendReservationNotification({
           reservationId: userReservation._id,
@@ -214,15 +301,14 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
       );
     }
 
-
     /**
      * =====================================================
      * 🟡 If Reservation Has Pre-Order Menu
      * =====================================================
      */
     if (menuOrder) {
-
       if (result.status === "paid") {
+        console.log("[reservationOrderFinalizerService] Sending menu order confirmed notification.");
         fireAndForget(
           sendMenuOrderNotification({
             orderId: menuOrder._id,
@@ -233,6 +319,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
       }
 
       if (result.status === "failed") {
+        console.log("[reservationOrderFinalizerService] Sending menu order cancelled notification.");
         fireAndForget(
           sendMenuOrderNotification({
             orderId: menuOrder._id,
@@ -242,9 +329,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
         );
       }
     }
-
   }
-
 };
 
 

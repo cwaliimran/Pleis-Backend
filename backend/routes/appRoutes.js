@@ -38,6 +38,7 @@ router.use("/menu/items", require("../app/menuItemsAndOrdering/menuItems/menuIte
 router.use("/menu/orders", require("../app/menuItemsAndOrdering/orders/orderRoutes"));
 //users streaks
 router.use("/checkin", require("../app/usersStreaks/usersStreaksRoutes"));
+router.use("/checkout", require("../app/usersStreaks/usersStreaksRoutes"));
 
 
 
