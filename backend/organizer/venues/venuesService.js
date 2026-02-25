@@ -11,6 +11,7 @@ const createVenue = async (data) => {
   return await venueRepo.createVenue(data);
 };
 const mongoose = require("mongoose");
+const { ACTIVE_ORGANIZATIONS_CACHE_KEY } = require("../../admin/organizations/organizationService");
 
 const getVenues = async ({
   page,
@@ -175,9 +176,6 @@ const getVenues = async ({
   };
 };
 
-module.exports = { getVenues };
-
-
 
 //get venues for menu options dropdown where organization is not assigned yet
 
@@ -185,9 +183,9 @@ const getUnassignedVenues = async (userId) => {
   return await venueRepo.getUnassignedVenues(userId);
 };
 
-
 const updateVenue = async (id, data) => {
   let venue = await venueRepo.findVenueById(id);
+  await invalidate(ACTIVE_VENUES_CACHE_KEY);
   if (!venue) return null;
 
   const allowedFields = [
@@ -201,7 +199,6 @@ const updateVenue = async (id, data) => {
     "status",
     "pinned",
   ];
-
   const updateData = {};
   for (const key of allowedFields) {
     if (data[key] !== undefined) {
@@ -209,16 +206,24 @@ const updateVenue = async (id, data) => {
     }
   }
 
-  if (!Object.keys(updateData).length) {
-    return venue;
+  if (Object.keys(updateData).length === 0) {
+    return venue; // nothing to update
   }
 
-  // Step 1: Apply updates
+  // Handle organization change and primary logic
+  let organizationChanged = false;
+
+  if (updateData.organization && String(updateData.organization) !== String(venue.organization)) {
+    organizationChanged = true;
+  }
+
+  // Step 1: Update venue fields
   Object.assign(venue, updateData);
   await venue.save();
 
-  // Step 2: Enforce single primary ONLY for the CURRENT organization
-  if (updateData.isPrimary === true) {
+  // Step 2: If isPrimary = true
+  if (updateData.isPrimary) {
+    // Ensure only one primary per organization
     await Venues.updateMany(
       {
         organization: venue.organization,
@@ -229,9 +234,33 @@ const updateVenue = async (id, data) => {
     );
   }
 
-  return await getVenueDetails(venue._id);
-};
+  // Step 3: If organization changed and isPrimary = true, double-check previous organization
+  if (organizationChanged && updateData.isPrimary) {
+    // Just to make sure previous org doesn't keep old primary (edge case)
+    await Venues.updateMany(
+      {
+        organization: data.organization, // old org
+        isPrimary: true
+      },
+      { $set: { isPrimary: false } }
+    );
+  }
 
+
+  // Update organization location if both changed
+  if (updateData.organization) {
+    await Organizations.updateOne(
+      { _id: updateData.organization },
+      { $set: { location: updateData.location } }
+    );
+
+    await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
+  }
+
+  //get updated venue with venueDetails
+  venue = await getVenueDetails(venue._id);
+  return venue;
+};
 
 
 
