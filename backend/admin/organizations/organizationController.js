@@ -194,7 +194,7 @@ const updateOrganization = async (req, res) => {
   )
     return;
 
-  let data = ({
+  let data = {
     basicInfo,
     otherInfo,
     operatingHours,
@@ -207,7 +207,7 @@ const updateOrganization = async (req, res) => {
     description,
     title,
     inAppOrderingSettings
-  } = req.body);
+  } = req.body;
 
   //Convert times to UTC minutes before saving
   if (operatingHours) {
