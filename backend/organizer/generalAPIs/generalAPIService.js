@@ -5,6 +5,7 @@ const Organizations = require("@OrganizationModel");
 const Venues = require("@VenuesModel");
 const { getActiveTicketingByEventId } = require("../../admin/ticketing/ticketingsRepository");
 const { getRewards } = require("../../admin/loyalty/rewards/rewardsRepository");
+const { formatEventTicketing } = require("../../admin/ticketing/fomatter/formatTicketing");
 
 
 const getOrganizations = async ({
@@ -356,28 +357,31 @@ const getTickting = async ({
   limit,
   keyword,
   status,
-  event
+  event,
+  timezone
 }) => {
   page = Number(page) || 1;
   limit = Number(limit);
-  if (limit) {
-    limit += 1;
-  }
 
-  if (Number.isNaN(limit) || limit < 0) {
+  // If limit is not a valid number or less than 0, set it to 10
+  if (isNaN(limit) || limit <= 0) {
     limit = 10;
   }
 
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const skip = (page - 1) * limit;
 
-  let ticktings = await getActiveTicketingByEventId({
+  let ticketings = await getActiveTicketingByEventId({
     page,
     limit,
     keyword,
     status,
-    event
+    event,
+    timezone
   });
-  return ticktings;
+
+
+
+  return ticketings;
 };
 const getLoyaltyRewards = async ({
   page,
