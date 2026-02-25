@@ -133,7 +133,7 @@ const ticketingsSchema = new mongoose.Schema(
     status: { //publishingOptions
       type: String,
       //active/instant , inactive/manual
-      enum: ["active", "inactive", "deleted"],
+      enum: ["active", "inactive", "deleted", "scheduled"],
       default: "active",
     },
     scheduledPublishAt: {
