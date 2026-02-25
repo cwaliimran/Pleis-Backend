@@ -84,7 +84,7 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       });
 
       await sendEmailViaMailgun(
-        "cwaliimrandev@gmail.com",//menuOrder.user.email,
+        menuOrder.user.email,
         "Your order has been confirmed",
         mBody
       );
