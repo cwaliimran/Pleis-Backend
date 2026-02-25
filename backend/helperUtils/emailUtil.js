@@ -14,19 +14,20 @@ const sendEmailViaMailgun = async (emails, subject, body, config = {}) => {
       attachments = [],
       isHtml = true,
     } = config;
-    
-
 
     const data = await mg.messages.create(process.env.MAILGUN_DOMAIN, {
       from: fromEmail,
-      to: emails, // Array of email strings
-      subject: subject,
-      ...(isHtml ? { html: body } : { text: body })
+      to: emails,
+      subject,
+      ...(isHtml ? { html: body } : { text: body }),
     });
-    return data;
+
+    return { success: true, data };
+
   } catch (error) {
-    console.error("Error sending email via Mailgun:", error);
-    throw error;
+    console.error("Mailgun error:", error.message);
+    // ❗ DO NOT THROW
+    return { success: false, error };
   }
 };
 

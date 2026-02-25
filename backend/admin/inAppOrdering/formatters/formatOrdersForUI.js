@@ -118,7 +118,6 @@ const filterOrders = ({
   const status = orderStatus.toLowerCase().trim();
   const activeSub = activeorderStatus.toLowerCase().trim();
   const pickup = pickupFilter.trim();
-
   return orders.filter(order => {
     // 🚫 Cancelled orders ONLY appear in past
     if (order.status === "cancelled") {
@@ -141,7 +140,9 @@ const filterOrders = ({
       }
 
       if (activeSub === "completed") {
+    
         return (
+          
           order.status === "completed" &&
           (!allItemsDelivered(order) || !isPaid(order))
         );

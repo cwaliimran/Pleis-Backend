@@ -1,7 +1,16 @@
 const mongoose = require("mongoose");
+const { customAlphabet } = require("nanoid");
+const generateShortId = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 6);
 
 const UserReservationsSchema = new mongoose.Schema(
   {
+
+    bookingId: {
+      type: String,
+      index: true,
+      default: () => `RSV-${generateShortId()}`, //RSV for Reservation Booking 
+    },
+
     userId: { // the user who made the reservation if null then it's a walk-in reservation booked by staff
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -226,6 +235,12 @@ const UserReservationsSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+UserReservationsSchema.index({
+  status: 1,
+  userId: 1,
+  "timingSlots.dateTimeSlots.timeSlots.startTime": 1,
+});
 
 
 const UserReservations = mongoose.model("UserReservations", UserReservationsSchema);

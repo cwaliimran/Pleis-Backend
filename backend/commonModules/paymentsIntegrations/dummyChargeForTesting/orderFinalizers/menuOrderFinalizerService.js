@@ -10,8 +10,12 @@ const {
 const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
 const { menuItemOrderFormatter } = require("../../../../app/menuItemsAndOrdering/orders/formatter/menuItemOrderFormatter");
 const { findAppUserByIdWithProjectionService } = require("../../../../app/usersManagement/usersService");
+const { sendMenuOrderNotification } = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
+const { fireAndForget } = require("../../../../helperUtils/responseUtil");
 
 const { handleLoyaltyEarningConsequences } = require("./handleLoyaltyEarningConsequences");
+const { menuOrderConfirmationEmailTemplate } = require("../../../../helperUtils/emailTemplates");
+const { sendEmailViaMailgun } = require("../../../../helperUtils/emailUtil");
 
 const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
   const session = await mongoose.startSession();
@@ -65,6 +69,25 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       menuOrder.transactionId = result.paymentId || null;
 
       await menuOrder.save({ session });
+
+
+      const populatedOrder = await MenuOrders.findById(menuOrder._id)
+        .populate("organization", "basicInfo.name")
+        .populate("user", "firstName lastName email timezone")
+        .lean();
+
+      const mBody = menuOrderConfirmationEmailTemplate({
+        userName: populatedOrder.user.firstName + " " + populatedOrder.user.lastName,
+        order: populatedOrder,
+        organizationName: populatedOrder.organization?.basicInfo?.name || "Restaurant",
+        currency: "EUR",
+      });
+
+      await sendEmailViaMailgun(
+        menuOrder.user.email,
+        "Your order has been confirmed",
+        mBody
+      );
 
       const totalPrice = menuOrder.totalPrice || 0;
 
@@ -133,51 +156,96 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
   }
 
   /* =====================================================
-     🚀 POST-COMMIT SIDE EFFECTS (OUTSIDE TRANSACTION)
-  ===================================================== */
-  if (committed && result.status === "paid") {
+   🚀 POST-COMMIT SIDE EFFECTS (OUTSIDE TRANSACTION)
+===================================================== */
+  if (committed && menuOrder) {
 
-    handleLoyaltyEarningConsequences({
-      userId: menuOrder.user,
-      companyOrganizer,
-      companyPoints,
-      globalPoints,
-      menuOrder
-    });
-
-    // 🔔 Emit Order Event
-    findAppUserByIdWithProjectionService(
-      menuOrder.user,
-      {
-        profileIcon: 1,
-        firstName: 1,
-        lastName: 1,
-        email: 1,
-        username: 1,
-        timezone: 1,
-      }
-    )
-      .then(userDetails => {
-        let formattedOrder = menuItemOrderFormatter(
-          menuOrder,
-          userDetails.timezone
-        );
-
-        formattedOrder.user = userDetails;
-        formattedOrder.organization = menuOrder.organization._id;
-
-        emitOrderEvent({
-          io: global.io,
-          eventName: "NEW_ORDER",
-          orderId: menuOrder._id,
-          organizationId: menuOrder.organization._id,
-          data: formattedOrder,
+    /**
+     * =====================================================
+     * 🎯 Loyalty Side Effects
+     * =====================================================
+     */
+    if (result.status === "paid") {
+      try {
+        handleLoyaltyEarningConsequences({
+          userId: menuOrder.user,
+          companyOrganizer,
+          companyPoints,
+          globalPoints,
+          menuOrder
         });
-      })
-      .catch(err =>
-        console.error("Order emit failed:", err)
+      } catch (err) {
+        console.error("[LOYALTY] Menu side effect failed:", err);
+      }
+    }
+
+
+    /**
+     * =====================================================
+     * 🔔 Menu Order Notifications (Fire & Forget)
+     * =====================================================
+     */
+    if (result.status === "paid") {
+      fireAndForget(
+        sendMenuOrderNotification({
+          orderId: menuOrder._id,
+          action: "MENU_ORDER_CONFIRMED",
+        }),
+        "MENU_ORDER_CONFIRMED_NOTIFICATION"
       );
+    }
+
+    if (result.status === "failed") {
+      fireAndForget(
+        sendMenuOrderNotification({
+          orderId: menuOrder._id,
+          action: "MENU_ORDER_CANCELLED",
+        }),
+        "MENU_ORDER_CANCELLED_NOTIFICATION"
+      );
+    }
+
+
+    /**
+     * =====================================================
+     * 📡 Real-Time Socket Emit (Only on Success)
+     * =====================================================
+     */
+    if (result.status === "paid") {
+      findAppUserByIdWithProjectionService(
+        menuOrder.user,
+        {
+          profileIcon: 1,
+          firstName: 1,
+          lastName: 1,
+          email: 1,
+          username: 1,
+          timezone: 1,
+        }
+      )
+        .then(userDetails => {
+          let formattedOrder = menuItemOrderFormatter(
+            menuOrder,
+            userDetails.timezone
+          );
+
+          formattedOrder.user = userDetails;
+          formattedOrder.organization = menuOrder.organization._id;
+
+          emitOrderEvent({
+            io: global.io,
+            eventName: "NEW_ORDER",
+            orderId: menuOrder._id,
+            organizationId: menuOrder.organization._id,
+            data: formattedOrder,
+          });
+        })
+        .catch(err =>
+          console.error("Order emit failed:", err)
+        );
+    }
   }
+
 };
 
 

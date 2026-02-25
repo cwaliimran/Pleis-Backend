@@ -30,6 +30,14 @@ const globalrewardSchema = new mongoose.Schema(
         ref: "Ticketings",
         default: null,
       },
+      timeSlot: {
+        type: String,
+        default: null,
+      },
+      isFastTrack: {
+        type: Boolean,
+        default: false,
+      },
     },
     // custom reward
     customReward: {

@@ -169,6 +169,9 @@ eventSchema.index(
   { unique: true, sparse: true }
 );
 
+//for cron job to notify users
+eventSchema.index({ "schedule.startDateTime": 1, status: 1 });
+
 
 
 const Events = mongoose.model("Event", eventSchema);

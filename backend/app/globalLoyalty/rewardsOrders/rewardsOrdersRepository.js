@@ -42,6 +42,7 @@ const createGlobalRewardOrder = async ({
       const ticketData = {
         ticketId: reward.ticket,
         timeSlot: reward.timeslot || null,
+        isFastTrack: reward.isFastTrack || false,
         protectionUserDetails: {
           firstName: protectionUserDetails?.firstName || "",
           surName: protectionUserDetails?.surName || "",
@@ -54,9 +55,9 @@ const createGlobalRewardOrder = async ({
         {
           user: userId,
           ticketings: [ticketData],
-          bookingReference: "ticketReward",
+          bookingReference: "globalrewards",
           meta: {
-            reward: reward._id,
+            id: reward._id,
             type: "globalrewards",
           },
         },

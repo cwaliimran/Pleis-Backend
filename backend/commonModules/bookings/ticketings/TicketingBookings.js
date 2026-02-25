@@ -7,7 +7,6 @@ const ticketingBookingSchema = new mongoose.Schema(
     {
         ticketBookingId: {
             type: String,
-            unique: true,
             index: true,
             default: () => `TBK-${generateTicketId()}`, //TBK for Ticketing Booking 
         },
@@ -127,6 +126,12 @@ ticketingBookingSchema.index({
 ticketingBookingSchema.index({
     "checkInHistory.scanKey": 1
 });
+
+ticketingBookingSchema.index({
+  "ticket.snapshot.event": 1,
+  status: 1,
+});
+
 
 const TicketingBookings = mongoose.model("TicketingBookings", ticketingBookingSchema);
 

@@ -45,6 +45,7 @@ const createRewardOrder = async ({ userId, rewardId, protectionUserDetails, time
       let ticketData = {
         ticketId: reward.ticket,
         timeSlot: reward.timeslot || null,
+        isFastTrack: reward.isFastTrack || false,
         protectionUserDetails: {
           firstName: protectionUserDetails?.firstName || "",
           surName: protectionUserDetails?.surName || "",
@@ -56,10 +57,10 @@ const createRewardOrder = async ({ userId, rewardId, protectionUserDetails, time
         {
           user: userId,
           ticketings: [ticketData],
-          bookingReference: "ticketReward",
+          bookingReference: "rewards",
           meta: {
-            reward: reward._id,
-            type: "rewards"
+            id: reward._id,
+            type: "rewards",
           }
         },
         timezone,

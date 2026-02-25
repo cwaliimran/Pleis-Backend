@@ -11,7 +11,7 @@ const globalRewardSchema = new mongoose.Schema(
     description: { type: String, default: "" },
     rewardType: {
       type: String,
-     enum: ["globalCustomReward", "globalTicketReward"],
+      enum: ["globalCustomReward", "globalTicketReward"],
       required: true,
     },
     category: {

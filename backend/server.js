@@ -46,6 +46,9 @@ require("module-alias/register");
  */
 const { i18nConfig } = require("./config/i18nConfig");
 const { securityMiddleware } = require("./middlewares/security");
+const { initTextModeration } = require("./services/moderation/textModeration");
+const { textModerationMiddleware } = require("./services/moderation/textModeration");
+
 const { sendResponse } = require("./helperUtils/responseUtil");
 
 const connectToDB = require("./helperUtils/server-setup");
@@ -121,7 +124,7 @@ const allowedOrigins = [
   "https://www.dev.pleis.com",
   "http://localhost:4003",
   "https://pleis.vercel.app",
-  "https://you-tuner-prospect-champagne.trycloudflare.com",
+  "https://amsterdam-distribution-gravity-sandwich.trycloudflare.com",
   "http://192.168.*.*:4003",
 ];
 
@@ -149,6 +152,7 @@ if (process.env.NODE_ENV !== "prod") {
 }
 
 app.use(express.json());
+app.use(textModerationMiddleware);
 
 /**
  * =======================================================
@@ -225,6 +229,7 @@ server.listen(PORT, () => {
 (async () => {
   try {
     await connectToDB();
+    await initTextModeration();
     getRedisClient();
     startCrons();
 

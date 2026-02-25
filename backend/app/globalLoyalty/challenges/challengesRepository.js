@@ -12,7 +12,7 @@ const getActiveGlobalChallenges = async ({ now, keyword }) => {
 
   if (keyword) {
     query.$or = [
-      { name: { $regex: keyword, $options: "i" } },
+      { title: { $regex: keyword, $options: "i" } },
       { description: { $regex: keyword, $options: "i" } }
     ];
   }
