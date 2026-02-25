@@ -11,7 +11,9 @@ const { updateTicketingService } = require("./updateTicketingService");
 
 const createTicketing = async (req, res) => {
   let data = req.body;
-  data.status = "active"
+    if (!data.status) {
+    data.status = "active";
+  }
   const { timezone } = req.user;
 
   // ==============================
