@@ -250,7 +250,7 @@ const updateVenue = async (id, data) => {
 
 
   // Update organization location if both changed
-  if (updateData.organization && updateData.location) {
+  if (updateData.organization) {
     await Organizations.updateOne(
       { _id: updateData.organization },
       { $set: { location: updateData.location } }
