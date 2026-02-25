@@ -66,9 +66,6 @@ const ReservationsSchema = new mongoose.Schema(
 
     customText: {
       type: String,
-      required: function () {
-        return this.conditionType === "customText";
-      },
       trim: true,
     },
 
@@ -87,9 +84,6 @@ const ReservationsSchema = new mongoose.Schema(
 
     customText: {
       type: String,
-      required: function () {
-        return this.conditionType === "customText";
-      },
       trim: true,
     },
 

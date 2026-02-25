@@ -8,6 +8,7 @@ const Venues = require("@VenuesModel");
 const mongoose = require("mongoose");
 const venueRepo = require("./venuesRepository");
 const { cache, invalidate } = require("@redisCache");
+const { ACTIVE_ORGANIZATIONS_CACHE_KEY } = require("../organizations/organizationService");
 const ACTIVE_VENUES_CACHE_KEY = "venues:active";
 const buildVenuesCacheKey = ({
   scope = "admin", // public | admin
@@ -35,7 +36,7 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
   if (userId) filters.push(`userId=${userId}`);
   if (organization) filters.push(`organization=${organization}`);
   if (pinned !== undefined) filters.push(`pinned=${pinned}`);
-  
+
 
   // Concatenate filters to the cache key if they are applied
   if (filters.length > 0) {
@@ -180,11 +181,11 @@ const getUnassignedVenues = async (userId) => {
   return await venueRepo.getUnassignedVenues(userId);
 };
 
-
 const updateVenue = async (id, data) => {
   let venue = await venueRepo.findVenueById(id);
-  await invalidate(ACTIVE_VENUES_CACHE_KEY);
   if (!venue) return null;
+
+  await invalidate(ACTIVE_VENUES_CACHE_KEY);
 
   const allowedFields = [
     "title",
@@ -197,6 +198,7 @@ const updateVenue = async (id, data) => {
     "status",
     "pinned",
   ];
+
   const updateData = {};
   for (const key of allowedFields) {
     if (data[key] !== undefined) {
@@ -205,50 +207,40 @@ const updateVenue = async (id, data) => {
   }
 
   if (Object.keys(updateData).length === 0) {
-    return venue; // nothing to update
+    return venue;
   }
 
-  // Handle organization change and primary logic
-  let organizationChanged = false;
+  const oldOrganization = venue.organization?.toString();
 
-  if (updateData.organization && String(updateData.organization) !== String(venue.organization)) {
-    organizationChanged = true;
-  }
-
-  // Step 1: Update venue fields
+  // Apply updates
   Object.assign(venue, updateData);
   await venue.save();
 
-  // Step 2: If isPrimary = true
-  if (updateData.isPrimary) {
-    // Ensure only one primary per organization
+  // Handle primary logic
+  if (updateData.isPrimary === true) {
     await Venues.updateMany(
       {
         organization: venue.organization,
         _id: { $ne: venue._id },
-        isPrimary: true
+        isPrimary: true,
       },
       { $set: { isPrimary: false } }
     );
   }
 
-  // Step 3: If organization changed and isPrimary = true, double-check previous organization
-  if (organizationChanged && updateData.isPrimary) {
-    // Just to make sure previous org doesn't keep old primary (edge case)
-    await Venues.updateMany(
-      {
-        organization: data.organization, // old org
-        isPrimary: true
-      },
-      { $set: { isPrimary: false } }
+  // Update organization location if both changed
+  if (updateData.organization && updateData.location) {
+    await Organizations.updateOne(
+      { _id: updateData.organization },
+      { $set: { location: updateData.location } }
     );
+
+    await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
   }
 
-  //get updated venue with venueDetails
   venue = await getVenueDetails(venue._id);
   return venue;
 };
-
 
 const deleteVenue = async (id) => {
   const updated = await venueRepo.findByIdAndUpdate(id, {
@@ -299,10 +291,9 @@ const getVenueDetails = async (id, select = []) => {
 
 
 
-
-const getVenueTitles = async ({companyOrganizer, organization}) => {
+const getVenueTitles = async ({ companyOrganizer, organization }) => {
   let organizationObjectId;
-console.log("organization",companyOrganizer );
+  console.log("organization", companyOrganizer);
   // If organization is provided, use it directly
   if (organization) {
     if (!mongoose.Types.ObjectId.isValid(organization)) {
@@ -319,7 +310,7 @@ console.log("organization",companyOrganizer );
     }
 
     const creatorObjectId = new mongoose.Types.ObjectId(creatorId);
-    
+
     // Use the companyOrganizer as the organization reference
     const data = await Organizations.aggregate([
       /* 1️⃣ Match creator organizations */
