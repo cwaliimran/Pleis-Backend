@@ -1,6 +1,8 @@
 // repositories/venueRepository.js
 const Venues = require("@VenuesModel");
 const mongoose = require("mongoose");
+const Organizations = require("@OrganizationModel");
+const { ACTIVE_ORGANIZATIONS_CACHE_KEY } = require("../../admin/organizations/organizationService");
 
 // Create venue in a transaction and update organization
 const createVenue = async (data) => {
@@ -23,6 +25,17 @@ const createVenue = async (data) => {
 
     await session.commitTransaction();
     session.endSession();
+
+    // Update organization location if both changed
+    if (data.organization) {
+      await Organizations.updateOne(
+        { _id: data.organization },
+        { $set: { location: data.location } }
+      );
+
+      await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
+    }
+
     return venue;
   } catch (err) {
     await session.abortTransaction();
