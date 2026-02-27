@@ -310,6 +310,7 @@ const updateUser = async (req, res, options = {}) => {
 
         // update loyaltySettings if provided
         loyaltySettings: {
+          isEnabled: companyDetails.loyaltySettings?.isEnabled ?? user.companyDetails?.loyaltySettings?.isEnabled ?? false,
           title: companyDetails.loyaltySettings?.title ?? user.companyDetails?.loyaltySettings?.title ?? "",
           model: companyDetails.loyaltySettings?.model ?? user.companyDetails?.loyaltySettings?.model ?? "essential",
           pointValuePercentage: companyDetails.loyaltySettings?.pointValuePercentage ?? user.companyDetails?.loyaltySettings?.pointValuePercentage ?? 0,
