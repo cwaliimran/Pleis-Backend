@@ -9,7 +9,7 @@ const PROD_ORIGINS = [
   "https://www.dev.pleis.com",
   "http://localhost:4003",
   "https://pleis.vercel.app",
-  "https://requiring-cgi-fog-reason.trycloudflare.com"
+  "https://washing-eastern-suspected-heavy.trycloudflare.com"
 ];
 
 module.exports = {

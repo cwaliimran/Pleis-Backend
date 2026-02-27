@@ -1,29 +1,28 @@
-
 const {
   sendResponse,
   parsePaginationParams,
   validateParams,
   getReadableErrorMessage,
-  convertTimezoneToUtc,
 } = require("../../../helperUtils/responseUtil");
+
 const formatLoyaltyListing = require("./formatter/formatLoyaltyListing");
 const LoyaltyReferralService = require("./loyaltyReferralService");
 
+
+/* =========================================================
+   SETTINGS (Singleton Per Company)
+========================================================= */
+
 const createLoyaltyReferral = async (req, res) => {
-  let {
+  const {
     userPoints,
     referrerPoints,
     minimumPurchases,
-    status,
-
-
     referralLimit,
-    companyOrganizer
+    status,
+    companyOrganizer,
   } = req.body;
 
-  const timezone = req.user.timezone;
-
-  // Required fields validation
   if (
     !validateParams(req, res, {
       rawData: [
@@ -31,47 +30,38 @@ const createLoyaltyReferral = async (req, res) => {
         "referrerPoints",
         "minimumPurchases",
         "referralLimit",
-        "companyOrganizer"
+        "companyOrganizer",
       ],
     })
   ) return;
 
- 
-
-  // Prepare data for creation
-  let data = {
-    companyOrganizer: companyOrganizer,
+  const data = {
+    companyOrganizer,
     userPoints,
     referrerPoints,
-    type:"loyalty",
     minimumPurchases,
     referralLimit,
     status: status || "inactive",
+    type: "loyalty",
   };
 
   try {
-    const LoyaltyReferral = await LoyaltyReferralService.createLoyaltyReferral(data);
-
-    if (!LoyaltyReferral) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "loyalty_referral_creation_failed",
-      });
-    }
+    const result =
+      await LoyaltyReferralService.createLoyaltyReferral(data);
 
     return sendResponse({
       res,
-      statusCode: 201,
-      translationKey: "loyalty_referral_created_successfully",
-      data: LoyaltyReferral,
+      statusCode: 200, // upsert → 200 instead of 201
+      translationKey: "loyalty_referral_saved_successfully",
+      data: result,
     });
 
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
+
     return sendResponse({
       res,
-      statusCode: readableError.statusCode,
+      statusCode: readableError.statusCode || 500,
       translationKey: readableError.message,
       error,
     });
@@ -80,45 +70,39 @@ const createLoyaltyReferral = async (req, res) => {
 
 
 const getLoyaltyReferrals = async (req, res) => {
-  const { page, limit } = parsePaginationParams(req);
-  let { keyword, status , date, range,type="loyalty", companyOrganizer} = req.query;
-  if(!companyOrganizer){
+  let { companyOrganizer } = req.query;
+
+  if (!companyOrganizer) {
     companyOrganizer = req.user._id;
   }
 
-  try {
-    if (!companyOrganizer) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "companyOrganizer_parameter_missing",
-      });
-    }
-    const timezone = req.user.timezone;
-    const { LoyaltyReferral, meta } = await LoyaltyReferralService.getLoyaltyReferrals({
-        timezone,
-      page,
-      limit,
-      keyword,
-      status,
-      companyOrganizer,
-      date,
-      range,
-      type
+  if (!companyOrganizer) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "companyOrganizer_parameter_missing",
     });
+  }
+
+  try {
+    const result =
+      await LoyaltyReferralService.getLoyaltyReferrals({
+        companyOrganizer,
+      });
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "loyalty_referrals_fetched_successfully",
-      data: LoyaltyReferral,
-      meta,
+      translationKey: "loyalty_referral_fetched_successfully",
+      data: result, // single object (or null)
     });
+
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
+
     return sendResponse({
       res,
-      statusCode: readableError.statusCode,
+      statusCode: readableError.statusCode || 500,
       translationKey: readableError.message,
       error,
     });
@@ -128,37 +112,36 @@ const getLoyaltyReferrals = async (req, res) => {
 
 const updateLoyaltyReferral = async (req, res) => {
   const { id } = req.params;
-let {
-  userPoints,
-  minimumPurchases,
-  referralLimit,
-  referrerPoints,
-  status,
-} = req.body;
-const companyOrganizer = req.user._id;
-const timezone = req.user.timezone;
 
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
       objectIdFields: ["id"],
     })
-  )
-    return;
+  ) return;
 
-  let data = {
-    id,
+  const {
     userPoints,
+    minimumPurchases,
     referralLimit,
     referrerPoints,
-    companyOrganizer,
-  minimumPurchases,
-  status,
+    status,
+  } = req.body;
+
+  const data = {
+    id,
+    userPoints,
+    minimumPurchases,
+    referralLimit,
+    referrerPoints,
+    status,
   };
 
   try {
-    const updated = await LoyaltyReferralService.updateLoyaltyReferral(data);
-    if (updated && updated.error) {
+    const updated =
+      await LoyaltyReferralService.updateLoyaltyReferral(data);
+
+    if (updated?.error) {
       return sendResponse({
         res,
         statusCode: 400,
@@ -170,26 +153,29 @@ const timezone = req.user.timezone;
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "update_loyalty_referral_not_found",
+        translationKey: "loyalty_referral_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "update_loyalty_referral_updated_successfully",
+      translationKey: "loyalty_referral_updated_successfully",
       data: updated,
     });
+
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
+
     return sendResponse({
       res,
-      statusCode: readableError.statusCode,
+      statusCode: readableError.statusCode || 500,
       translationKey: readableError.message,
       error,
     });
   }
 };
+
 
 const deleteLoyaltyReferral = async (req, res) => {
   const { id } = req.params;
@@ -199,11 +185,12 @@ const deleteLoyaltyReferral = async (req, res) => {
       pathParams: ["id"],
       objectIdFields: ["id"],
     })
-  )
-    return;
+  ) return;
 
   try {
-    const deleted = await LoyaltyReferralService.deleteLoyaltyReferral(id);
+    const deleted =
+      await LoyaltyReferralService.deleteLoyaltyReferral(id);
+
     if (!deleted) {
       return sendResponse({
         res,
@@ -217,11 +204,13 @@ const deleteLoyaltyReferral = async (req, res) => {
       statusCode: 200,
       translationKey: "loyalty_referral_deleted_successfully",
     });
+
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
+
     return sendResponse({
       res,
-      statusCode: readableError.statusCode,
+      statusCode: readableError.statusCode || 500,
       translationKey: readableError.message,
       error,
     });
@@ -230,104 +219,101 @@ const deleteLoyaltyReferral = async (req, res) => {
 
 
 
-
-
+/* =========================================================
+   USER REFERRAL RECORDS (Pagination Preserved)
+========================================================= */
 
 const getUserLoyaltyReferrals = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status , date,type="loyalty", companyOrganizer} = req.query;
-  if(!companyOrganizer){
+
+  let { keyword, status, date, type = "loyalty", companyOrganizer } = req.query;
+
+  if (!companyOrganizer) {
     companyOrganizer = req.user._id;
   }
+
+  if (!companyOrganizer) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "companyOrganizer_parameter_missing",
+    });
+  }
+
   try {
-    if (!companyOrganizer) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "companyOrganizer_parameter_missing",
-      });
-    }
     const userId = req.user._id;
     const timezone = req.user.timezone;
-    const { LoyaltyReferral, meta } = await LoyaltyReferralService.getUserLoyaltyReferrals({
+
+    const { LoyaltyReferral, meta } =
+      await LoyaltyReferralService.getUserLoyaltyReferrals({
         timezone,
-      page,
-      limit,
-      keyword,
-      status,
-      userId,
-      date,
-      companyOrganizer,
-      type
-    });
+        page,
+        limit,
+        keyword,
+        status,
+        userId,
+        date,
+        companyOrganizer,
+        type,
+      });
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "loyalty_referrals_fetched_successfully",
-      data: LoyaltyReferral.map(item => formatLoyaltyListing(item))
-      ,
+      data: LoyaltyReferral.map(item =>
+        formatLoyaltyListing(item)
+      ),
       meta,
     });
+
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
+
     return sendResponse({
       res,
-      statusCode: readableError.statusCode,
+      statusCode: readableError.statusCode || 500,
       translationKey: readableError.message,
       error,
     });
   }
 };
-
-
-
 
 
 
 const resetUserReferralLimits = async (req, res) => {
-const limit = 0;
-
+  const limit = 0;
 
   try {
-    const LoyaltyReferral = await LoyaltyReferralService.resetUserReferralLimits(limit);
-
-    if (!LoyaltyReferral) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "loyalty_referral_reset_failed",
-      });
-    }
+    const result =
+      await LoyaltyReferralService.resetUserReferralLimits(limit);
 
     return sendResponse({
       res,
-      statusCode: 201,
+      statusCode: 200,
       translationKey: "loyalty_referral_reset_successfully",
-      data: LoyaltyReferral,
+      data: result,
     });
 
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
+
     return sendResponse({
       res,
-      statusCode: readableError.statusCode,
+      statusCode: readableError.statusCode || 500,
       translationKey: readableError.message,
       error,
     });
   }
 };
+
+
 
 module.exports = {
   createLoyaltyReferral,
   getLoyaltyReferrals,
   updateLoyaltyReferral,
-  // deleteReservation,
   deleteLoyaltyReferral,
-  // getReservationDetails,
-  // getUserReservations,
-  // updateUserReservationStatus,
-  // updateUserReservation,
-  getUserLoyaltyReferrals,
-  resetUserReferralLimits
+  getUserLoyaltyReferrals,   // pagination preserved
+  resetUserReferralLimits,
 };

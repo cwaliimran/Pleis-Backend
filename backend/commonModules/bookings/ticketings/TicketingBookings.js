@@ -128,8 +128,8 @@ ticketingBookingSchema.index({
 });
 
 ticketingBookingSchema.index({
-  "ticket.snapshot.event": 1,
-  status: 1,
+    "ticket.snapshot.event": 1,
+    status: 1,
 });
 
 

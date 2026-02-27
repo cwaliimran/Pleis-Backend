@@ -276,6 +276,12 @@ const transferTicketingBookingService = async (bookingId, newUserId, timezone, u
   return { success: true, message: "ticketing_booking_transferred_successfully" };
 };
 
+const updateTicketingBookingProtectionDetailsService = async (bookingId, protectionUserDetails, timezone) => {
+  const booking = await ticketingBookingRepo.updateTicketingBookingProtectionDetails(bookingId, protectionUserDetails);
+  if (!booking) return null;
+  return true;
+};
+
 
 module.exports = {
   createTicketingBookingService,
@@ -284,4 +290,5 @@ module.exports = {
   updateTicketingBookingService,
   deleteTicketingBookingService,
   transferTicketingBookingService,
+  updateTicketingBookingProtectionDetailsService
 };

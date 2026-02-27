@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { nanoid } = require('nanoid');
 
-const globalReferralSchema = new mongoose.Schema(
+const globalReferralSettingsSchema = new mongoose.Schema(
   {
     publicId: {
       type: String,
@@ -39,24 +39,14 @@ const globalReferralSchema = new mongoose.Schema(
       required: true,
     },
 
-
-
     status: {
       type: String,
       enum: ["active", "inactive", "deleted"],
       default: "inactive",
     },
 
-    type: {
-      type: String,
-      enum: ["global", "company", "organizer", "user"],
-      required: true,
-    },
-
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("GlobalReferral", globalReferralSchema);
+module.exports = mongoose.model("GlobalReferralSettings", globalReferralSettingsSchema);

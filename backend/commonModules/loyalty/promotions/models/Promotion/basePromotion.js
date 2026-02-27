@@ -69,7 +69,6 @@ basePromotionsSchema.index(
     "recurringMeta.parentPromotion": 1,
     // startDate: 1,
   },
-  { unique: true, sparse: true }
 );
 
 

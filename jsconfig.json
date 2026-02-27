@@ -122,7 +122,7 @@
       "@StreakRulesModel": [
         "backend/commonModules/loyalty/streaks/StreakRules.js"
       ],
-      "@GlobalReferralModel": [
+      "@GlobalReferralSettingsModel": [
         "backend/commonModules/globalReferral/GlobalReferralSettings.js"
       ],
       "@ReferredRecordModel": [

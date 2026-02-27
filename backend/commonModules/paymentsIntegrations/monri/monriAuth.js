@@ -20,17 +20,7 @@ function buildAuthorizationHeader({ body }) {
 
   const authorization = `WP3-v2 ${authToken} ${timestamp} ${digest}`;
 
-  // DEBUG (remove later)
-  console.log("===== MONRI DOC-CORRECT AUTH =====");
-  console.log("merchantKey:", merchantKey);
-  console.log("authToken:", authToken);
-  console.log("timestamp:", timestamp);
-  console.log("body:", body);
-  console.log("rawForDigest:", rawForDigest);
-  console.log("digest:", digest);
-  console.log("authorization:", authorization);
-  console.log("=================================");
-
+  
   return authorization;
 }
 

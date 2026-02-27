@@ -268,6 +268,17 @@ const createManyTicketBookings = async (ticketingBookings, session = null) => {
 };
 
 
+const updateTicketingBookingProtectionDetails = async (id, protectionUserDetails) => {
+  return TicketingBookings.findByIdAndUpdate(
+    id,
+    { $set: { "ticket.protectionUserDetails": protectionUserDetails } },
+    {
+      new: true,            // return updated document
+      runValidators: true,  // enforce schema validation
+    }
+  );
+};
+
 module.exports = {
   createTicketingBooking,
   getTicketingBookings,
@@ -278,4 +289,5 @@ module.exports = {
   getTicketingBookingsCount,
   createManyTicketBookings,
   getTicketingBookingForTransfer,
+  updateTicketingBookingProtectionDetails
 };
