@@ -22,7 +22,7 @@ const referredRecordSchema = new mongoose.Schema(
     },
 
     referrerUserName: {
-      type: String,  
+      type: String,
       required: true,
     },
 
@@ -41,7 +41,7 @@ const referredRecordSchema = new mongoose.Schema(
       type: Boolean,
       default: false,  // Default to false (will be set to true if purchases >= 3)
     },
-        expiryDate: {
+    expiryDate: {
       type: Date,
       required: true, // Expiry date must be provided
     },
