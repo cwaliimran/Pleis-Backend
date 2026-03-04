@@ -1,21 +1,29 @@
 const { default: mongoose } = require("mongoose");
-const { processPaymentWebhook } = require("../services/paymentWebhookService");
+const { processPaymentWebhook, getOrdersTransactionsService } = require("../services/paymentWebhookService");
 const { verifyMonriSignature } = require("../utils/monriSignature");
+const { parsePaginationParams, sendResponse, getReadableErrorMessage, validateParams } = require("../../../../helperUtils/responseUtil");
 
 const monriWebhookController = async (req, res) => {
   try {
     // verifyMonriSignature(req);
 
-    const event = req.body;
+    let { _id: userId } = req.user
+
+
+    const bodyData = req.body;
+    bodyData.user = userId;
+
+    if (
+      !validateParams(req, res, {
+        rawData: ["transaction.metadata.companyOrganizer", "transaction.metadata.organization", "transaction.orderNumber"],
+        objectIdFields: ["transaction.metadata.companyOrganizer", "transaction.metadata.organization", "transaction.orderNumber"],
+      })
+    ) return;
+
 
     const result = await processPaymentWebhook({
       provider: "monri",
-      eventId: event.transaction.id,
-      orderType: event.transaction.metadata.type, // "ticketingbookings", "userreservations", "menuorders", "tickettransfer"
-      orderId: event.transaction.orderNumber || new mongoose.Types.ObjectId(),
-      paymentStatus: event.transaction.status,
-      paymentId: event.transaction.id,
-      payload: event,
+      payload: bodyData,
     });
 
     // ✅ Always return 200, but with clarity
@@ -36,4 +44,18 @@ const monriWebhookController = async (req, res) => {
 };
 
 
-module.exports = { monriWebhookController };
+const getOrdersTransactions = async (req, res) => {
+  try {
+    const { page, limit } = parsePaginationParams(req);
+    const { keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, } = req.query;
+    const ticketingBookings = await getOrdersTransactionsService({ page, limit, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, });
+    return sendResponse({ res, statusCode: 200, translationKey: "transactions_fetched_successfully", data: ticketingBookings });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({ res, statusCode: readableError.statusCode, translationKey: readableError.message, error });
+  }
+};
+
+
+
+module.exports = { monriWebhookController, getOrdersTransactions };

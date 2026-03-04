@@ -546,6 +546,7 @@ const deleteUser = async (id) => {
     "accountState.status": "deleted",
   });
   if (!updated) return null;
+  userCache.del(id.toString());
   return true;
 };
 

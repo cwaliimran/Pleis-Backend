@@ -11,7 +11,7 @@ const { getUpdatesByEventIdService } = require("../updates/updatesService");
 const { getLatestEventTransactions } = require("../transactions/repositories/unifiedTransactionsRepository");
 const { formatEventOrder } = require("./formatter/formatEventOrder");
 const { countEngagementService } = require("../../commonModules/appEngagement/engagementEventsService");
-const { getEngagementCountsByEntity, getWeeklyEngagementStats } = require("../../commonModules/appEngagement/engagementEventsRepository");
+const { getEngagementCountsByEntity, getWeeklyEngagementStats, getEventsViewsStats } = require("../../commonModules/appEngagement/engagementEventsRepository");
 const { getEventAudienceAnalytics } = require("../../staff/events/eventRepository");
 
 const createEvent = async ({ data, ticketingData }, timezone) => {
@@ -27,11 +27,22 @@ const createEvent = async ({ data, ticketingData }, timezone) => {
   return formatEventResponse(event, { timezone });
 };
 
-const getEvents = async ({ page, limit, keyword, status, creator, startDate, endDate, organization, companyOrganizer,timezone }) => {
+const getEvents = async ({
+  page,
+  limit,
+  keyword,
+  status,
+  creator,
+  startDate,
+  endDate,
+  organization,
+  companyOrganizer,
+  timezone
+}) => {
 
   const query = {};
-  // ALWAYS exclude templates events
-  //templates event are only for internal use to generate occurrences
+
+  // Always exclude template events
   query.$and = [
     {
       $or: [
@@ -41,54 +52,47 @@ const getEvents = async ({ page, limit, keyword, status, creator, startDate, end
     },
   ];
 
-  // if (creator) query.creator = creator;
   if (status) {
     query.status = status;
   } else {
     query.status = { $ne: "deleted" };
-    //remove template events from normal listing
     query["recurringMeta.isTemplate"] = { $ne: true };
   }
 
-if (organization) {
-  let organizationIds = [];
+  if (organization) {
+    let organizationIds = [];
 
-  if (Array.isArray(organization)) {
-    organizationIds = organization;
-  } else if (typeof organization === "string") {
-    // Split by comma or space-separated values and remove any empty strings
-    organizationIds = organization.split(/[, %]+/).filter(Boolean);
+    if (Array.isArray(organization)) {
+      organizationIds = organization;
+    } else if (typeof organization === "string") {
+      organizationIds = organization.split(/[, %]+/).filter(Boolean);
+    }
+
+    if (organizationIds.length > 0) {
+      query["basicInfo.organization"] = {
+        $in: organizationIds.map(
+          id => new mongoose.Types.ObjectId(id)
+        ),
+      };
+    }
   }
 
-  if (organizationIds.length > 0) {
-    query["basicInfo.organization"] = {
-      $in: organizationIds.map(id => new mongoose.Types.ObjectId(id)), // Convert IDs to ObjectIds
-    };
+  if (!organization && companyOrganizer) {
+    query["companyOrganizer"] =
+      new mongoose.Types.ObjectId(companyOrganizer);
   }
-}
 
- if (!organization && companyOrganizer) {
-  query["companyOrganizer"] = new mongoose.Types.ObjectId(companyOrganizer); 
-}
-if (startDate) {
-  const start = new Date(startDate);
-  start.setUTCHours(0, 0, 0, 0);
+  if (startDate) {
+    const start = new Date(startDate);
+    start.setUTCHours(0, 0, 0, 0);
+    query["schedule.startDateTime"] = { $gte: start };
+  }
 
-
-  query["schedule.startDateTime"] = { $gte: start };
-}
-
-if (endDate) {
-  const end = new Date(endDate);
-  end.setUTCHours(23, 59, 59, 999);
-
-
-  query["schedule.endDateTime"] = { $lte: end };
-}
-
-
-
-
+  if (endDate) {
+    const end = new Date(endDate);
+    end.setUTCHours(23, 59, 59, 999);
+    query["schedule.endDateTime"] = { $lte: end };
+  }
 
   if (keyword) {
     query.$or = [
@@ -99,20 +103,71 @@ if (endDate) {
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const [events, eventsCounts] =
-    await Promise.all([
-      eventRepo.getEventsWithFilters(
-        query,
-        skip,
-        limit === 0 ? 0 : limit
-      ),
-      eventRepo.getEventsCounts(query),
-    ]);
+  const [events, eventsCounts] = await Promise.all([
+    eventRepo.getEventsWithFilters(
+      query,
+      skip,
+      limit === 0 ? 0 : limit
+    ),
+    eventRepo.getEventsCounts(query),
+  ]);
 
-  let { totalFiltered = 0, total = 0, active = 0, inactive = 0 } = eventsCounts || {};
+  let {
+    totalFiltered = 0,
+    total = 0,
+    active = 0,
+    inactive = 0,
+  } = eventsCounts || {};
 
-  let formattedEvents = events.map(event => formatEventResponse(event, { timezone }));
+  // Format events
+  let formattedEvents = events.map(event =>
+    formatEventResponse(event, { timezone })
+  );
 
+  /* =========================================================
+     🔥 FETCH TICKET STATS
+  ========================================================= */
+
+  const eventIds = events.map(e => e._id);
+
+  const [ticketStats, viewStats] = await Promise.all([
+    eventRepo.getEventsTicketStats(eventIds),
+    getEventsViewsStats(eventIds)
+  ]);
+
+  // Convert to maps
+  const ticketMap = new Map(
+    ticketStats.map(item => [
+      item.event.toString(),
+      {
+        totalTickets: item.totalTickets,
+        totalRevenue: item.totalRevenue
+      }
+    ])
+  );
+
+  const viewMap = new Map(
+    viewStats.map(item => [
+      item.event.toString(),
+      item.totalViews
+    ])
+  );
+
+  // Attach to formatted events
+  formattedEvents = formattedEvents.map(event => {
+    const ticket = ticketMap.get(event._id.toString());
+    const views = viewMap.get(event._id.toString());
+
+    return {
+      ...event,
+      meta: {
+        ...event.meta,
+        totalTickets: ticket?.totalTickets || 0,
+        totalRevenue: ticket?.totalRevenue || 0,
+        totalViews: views || 0
+      }
+    };
+  });
 
   return {
     events: formattedEvents,

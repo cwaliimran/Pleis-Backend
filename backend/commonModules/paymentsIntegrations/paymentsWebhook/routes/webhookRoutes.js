@@ -1,16 +1,13 @@
 const express = require("express");
 const router = express.Router();
 
-const { monriWebhookController } =
+const { monriWebhookController, getOrdersTransactions } =
   require("../controllers/monriWebhookController");
-// const { stripeWebhookController } =
-//   require("../controllers/stripeWebhookController");
+const auth = require("../../../../middlewares/authMiddleware");
 
-router.post("/payments/monri", express.json({ type: "*/*" }), monriWebhookController);
-// router.post(
-//   "payments/stripe",
-//   express.raw({ type: "application/json" }),
-//   stripeWebhookController
-// );
+router.post("/payments/monri", auth, express.json({ type: "*/*" }), monriWebhookController);
+
+//get all transactions
+router.get("/orders-transactions", auth, getOrdersTransactions)
 
 module.exports = router;

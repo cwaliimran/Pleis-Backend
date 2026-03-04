@@ -189,11 +189,19 @@ const getMenuIdsByOrganization = async (organization) => {
   return menus.map(menu => menu._id);
 };
 
-const getOrgCompanyOrganizer = async (organizationId) => {
+const getOrgCompanyOrganizer = async (organizationId, session = null) => {
+  const query = Organizations
+    .findById(organizationId)
+    .select("creator");
 
-  const org = await Organizations.findById(organizationId).select("creator").lean();
+  if (session) {
+    query.session(session);
+  }
+
+  const org = await query.lean();
+
   return org ? org.creator : null;
-}
+};
 const getOrganizationNotifications = async (id) => {
   const notifications = await getNotificationByOrganizationId(id);
   return notifications;

@@ -72,7 +72,7 @@ const ticketingTransferFinalizerService = async ({
         fromUser: userId,
         toUser: newUserId,
         transferDate: new Date(),
-        paymentId: result.paymentId || null,
+        transactionId: result.transactionId || null,
       });
 
       await booking.save({ session });

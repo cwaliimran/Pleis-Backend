@@ -66,7 +66,7 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       menuOrder.status = "confirmed";
       menuOrder.paymentStatus = "paid";
       menuOrder.paidAt = new Date();
-      menuOrder.transactionId = result.paymentId || null;
+      menuOrder.transactionId = result.transactionId || null;
 
       await menuOrder.save({ session });
 

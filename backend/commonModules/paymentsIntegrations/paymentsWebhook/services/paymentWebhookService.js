@@ -1,26 +1,26 @@
-const { saveIfNotProcessed } = require("../repositories/webhookRepository");
+const webhookRepository = require("../repositories/webhookRepository");
+const { Types, default: mongoose } = require("mongoose");
 
 const { ticketingOrderFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/ticketingOrderFinalizerService");
 const { reservationOrderFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/reservationOrderFinalizerService");
 const { menuOrderFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/menuOrderFinalizerService");
 const { ticketingTransferFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/ticketingTransferFinalizerService");
+const { generateMeta } = require("../../../../helperUtils/responseUtil");
 
 const processPaymentWebhook = async ({
   provider,
-  eventId,
-  orderType,
-  orderId,
-  paymentStatus,
-  paymentId,
   payload,
 }) => {
-  const event = await saveIfNotProcessed({
+  const event = await webhookRepository.saveIfNotProcessed({
     provider,
-    eventId,
-    orderType,
-    orderId,
-    paymentStatus,
-    paymentId,
+    orderNumber: payload.transaction.orderNumber,
+    orderType: payload.transaction.metadata.type,
+    user: payload.user,
+    companyOrganizer: payload.transaction.metadata.companyOrganizer,
+    organization: payload.transaction.metadata.organization,
+    transactionId: payload.transaction.id,
+    paymentStatus: payload.transaction.status,
+    amount: payload.transaction.amount,
     payload,
   });
 
@@ -31,10 +31,11 @@ const processPaymentWebhook = async ({
       reason: "duplicate event",
     };
   }
-
+  let orderType = payload.transaction.metadata.type;
+  let orderId = payload.transaction.orderNumber;
   const result = {
-    status: paymentStatus,
-    paymentId,
+    status: payload.transaction.status,
+    transactionId: payload.transaction.id,
   };
 
   if (orderType === "ticketingbookings") {
@@ -65,4 +66,61 @@ const processPaymentWebhook = async ({
 };
 
 
-module.exports = { processPaymentWebhook };
+const getOrdersTransactionsService = async ({
+  page = 1,
+  limit = 10,
+  keyword,
+  status,
+  date,
+  startDate,
+  endDate,
+  companyOrganizer,
+  organization,
+  orderType
+}) => {
+
+  const match = {};
+
+  if (companyOrganizer) match.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
+  if (organization) match.organization = new mongoose.Types.ObjectId(organization);
+  if (status) match.paymentStatus = status;
+  if (orderType) match.orderType = orderType;
+
+  if (startDate || endDate || date) {
+    match.createdAt = {};
+    if (startDate) match.createdAt.$gte = new Date(startDate);
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      match.createdAt.$lte = end;
+    }
+    if (date) {
+      match.createdAt.$gte = new Date(date);
+      match.createdAt.$lt = new Date(new Date(date).setDate(new Date(date).getDate() + 1));
+    }
+    if (!Object.keys(match.createdAt).length) delete match.createdAt;
+  }
+
+  const skip = (page - 1) * limit;
+
+  console.log("match==>",match)
+
+  const [transactions, totalFiltered] = await Promise.all([
+    webhookRepository.getOrdersTransactions({ match, keyword, skip, limit }),
+    webhookRepository.countOrdersTransactions({ match, keyword })
+  ]);
+
+  return {
+    transactions,
+    meta: {
+      currentPage: page,
+      totalPages: Math.ceil(totalFiltered / limit),
+      totalRecords: totalFiltered,
+      limit
+    }
+  };
+};
+
+
+
+module.exports = { processPaymentWebhook, getOrdersTransactionsService };

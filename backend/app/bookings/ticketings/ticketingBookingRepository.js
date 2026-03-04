@@ -279,6 +279,7 @@ const updateTicketingBookingProtectionDetails = async (id, protectionUserDetails
   );
 };
 
+
 module.exports = {
   createTicketingBooking,
   getTicketingBookings,

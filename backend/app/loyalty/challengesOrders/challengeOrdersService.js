@@ -1,7 +1,6 @@
 const repo = require("./challengeOrdersRepository");
 const { generateMeta } = require("@utils/responseUtil");
 const { formatChallenge } = require("./formatters/formatChallenge");
-const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
 const { LoyaltyChallengesOrders } = require("@LoyaltyChallengesOrdersModel");
 const { findBestActiveChallengeByTaskType } = require("../challenges/challengesRepository");
 const { Challenge } = require("../../../commonModules/loyalty/challenges/models/Challenge");

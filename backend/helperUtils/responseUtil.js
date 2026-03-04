@@ -93,7 +93,7 @@ const sendResponse = ({
         // If the error is a primitive value (string, boolean, number, etc.)
         response.error = error;
       }
-      
+
     }
   }
   // Send the response with the appropriate status code
@@ -135,7 +135,7 @@ const parsePaginationParams = (req) => {
 const generateMeta = (page, limit, total) => {
 
   return {
-   
+
     currentPage: page,
     totalPages: Math.ceil(total / limit),
     totalRecords: total,
@@ -198,6 +198,7 @@ const validateParams = (req, res, options = {}) => {
     enumFields = {}, // Field for enum validations
     minLengthFields = {}, // Field for minimum length validations
     locationFields = {}, // Field for location validations
+    notEqualFields = [], // Fields shout not be same/equal
   } = options;
 
   // Validate query parameters
@@ -466,6 +467,44 @@ const validateParams = (req, res, options = {}) => {
     }
   }
 
+  // Validate groups of fields that must NOT be equal
+  for (const group of notEqualFields) {
+
+    if (!Array.isArray(group) || group.length < 2) continue;
+
+    const values = [];
+    const fieldMap = {};
+
+    // Extract values
+    for (const field of group) {
+      const value =
+        extractNestedFields(req.body, field) ??
+        extractNestedFields(req.params, field) ??
+        extractNestedFields(req.query, field);
+
+      if (value !== undefined && value !== null) {
+        const normalized = String(value);
+        values.push(normalized);
+        fieldMap[normalized] = field;
+      }
+    }
+
+    // Check duplicates
+    const seen = new Set();
+
+    for (const val of values) {
+      if (seen.has(val)) {
+        sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "fields_must_not_be_equal",
+          values: { fields: group.join(", ") },
+        });
+        return false;
+      }
+      seen.add(val);
+    }
+  }
   return true;
 };
 
@@ -656,7 +695,7 @@ const getStartAndEndOfDay = (date, timezone) => {
 
   return { start, end };
 };
-  
+
 
 
 const getStartAndEndOfWeek = (date, timezone) => {
@@ -805,11 +844,11 @@ const getEndDate = (pricingPlan, startDate = new Date()) => {
 };
 
 
-   const fireAndForget = (promise, label) => {
-        promise.catch((err) =>
-          console.error(`[${label}] failed:`, err)
-        );
-      };
+const fireAndForget = (promise, label) => {
+  promise.catch((err) =>
+    console.error(`[${label}] failed:`, err)
+  );
+};
 
 module.exports = {
   sendResponse,

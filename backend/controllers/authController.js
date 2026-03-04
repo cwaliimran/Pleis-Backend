@@ -310,7 +310,7 @@ const login = async (req, res) => {
     }
 
     if (
-      user.accountState.status === "suspended"
+      user.accountState.status === "suspended" || user.accountState.status === "deleted"
     ) {
       return sendResponse({
         res,

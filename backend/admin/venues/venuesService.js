@@ -10,13 +10,12 @@ const venueRepo = require("./venuesRepository");
 const { cache, invalidate } = require("@redisCache");
 const { ACTIVE_ORGANIZATIONS_CACHE_KEY } = require("../organizations/organizationService");
 
-const ACTIVE_VENUES_CACHE_KEY = "venues:active";
 const buildVenuesCacheKey = ({
   scope = "admin", // public | admin
   skip = 0,
   limit = 10
 }) => {
-  return `${ACTIVE_VENUES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+  return `${venueRepo.ACTIVE_VENUES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
 }
 const createVenue = async (data) => {
   return await venueRepo.createVenue(data);
@@ -187,7 +186,7 @@ const getUnassignedVenues = async (userId) => {
 
 const updateVenue = async (id, data) => {
   let venue = await venueRepo.findVenueById(id);
-  await invalidate(ACTIVE_VENUES_CACHE_KEY);
+  await invalidate(venueRepo.ACTIVE_VENUES_CACHE_KEY);
   if (!venue) return null;
 
   const allowedFields = [

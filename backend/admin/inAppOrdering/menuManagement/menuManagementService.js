@@ -4,6 +4,7 @@ const { NotificationTypes } = require("@NotificationsModel");
 const MenuItems = require("@MenuItemsModel");
 const PresetModel = require("@PresetsModel");
 const createSale = async (data) => {
+const mongoose = require("mongoose");
 
   let Menu = await MenuRepo.createSale(data);
   return Menu;
@@ -31,12 +32,12 @@ const getMenuItems = async ({ timezone,
     skip,
   });
 
+
   return {
     MenuItems,
     meta
   };
 };
-const mongoose = require("mongoose");
 
 const updateMenu = async (id, data) => {
   const order = await MenuRepo.findMenuById(id);

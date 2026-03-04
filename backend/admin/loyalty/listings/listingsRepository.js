@@ -12,6 +12,7 @@ const getOrganizerUsersWithFilters = async ({ skip = 0, limit = 10, keyword, use
         "accountState.userType": "organizer",
         "verificationStatus.email": "verified",
         "accountState.status": "active",
+        "companyDetails.loyaltySettings.isEnabled": true,
       },
     },
   ];

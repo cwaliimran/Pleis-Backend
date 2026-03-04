@@ -1,4 +1,5 @@
 const { getFullImageUrl } = require("../../../helperUtils/imageHelper");
+const { convertDateFormat } = require("../../../helperUtils/responseUtil");
 
 /**
  * Pure formatter for Update objects (safe for doc or plain object)
@@ -9,6 +10,8 @@ function formatUpdate(Update) {
   // Handle both Mongoose doc and plain object
   const cat = Update.toObject ? Update.toObject() : { ...Update };
 
+  cat.startTime = convertDateFormat(cat.startTime, "hh:mm A")
+  cat.endTime = convertDateFormat(cat.endTime, "hh:mm A")
   return {
     ...cat,
     image: getFullImageUrl(cat.image || "noimage.png"),
@@ -30,9 +33,9 @@ function formatMenuItemSale(sale) {
     ...s,
     menuItems: Array.isArray(s.menuItems)
       ? s.menuItems.map(item => ({
-          ...item,
-          image: getFullImageUrl(item.image || "noimage.png"),
-        }))
+        ...item,
+        image: getFullImageUrl(item.image || "noimage.png"),
+      }))
       : [],
   };
 }
