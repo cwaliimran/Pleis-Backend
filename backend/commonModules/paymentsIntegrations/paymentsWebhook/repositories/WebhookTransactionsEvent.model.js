@@ -17,6 +17,7 @@ const webhookEventSchema = new mongoose.Schema(
 
     amount: {
       type: String,
+      default: 0,
     },
     orderNumber: {
       type: mongoose.Schema.Types.ObjectId,
@@ -39,6 +40,11 @@ const webhookEventSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+
+    userOrders: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Order",
+    }],
 
     paymentStatus: {
       type: String,

@@ -33,12 +33,29 @@ function extractStrings(obj, results = []) {
 }
 
 function textModerationMiddleware(req, res, next) {
-  // ✅ Only apply to write operations
+
+  /**
+   * 🚫 Skip moderation for excluded routes
+   */
+  const excludedRoutes = [
+    "/api/v1/app/payments/cards",
+    "/api/v1/webhooks"
+  ];
+
+  if (excludedRoutes.some(route => req.originalUrl.startsWith(route))) {
+    return next();
+  }
+
+  /**
+   * Only apply to write operations
+   */
   if (!["POST", "PUT", "PATCH"].includes(req.method)) {
     return next();
   }
 
-  // ✅ Safety guard (in case init wasn’t awaited)
+  /**
+   * Safety guard
+   */
   if (!filter) {
     return next();
   }
