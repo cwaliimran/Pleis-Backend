@@ -49,7 +49,7 @@ const createFriendRequest = async (req, res) => {
   } = req.body;
 
   const userId = req.user._id;
-  const timezone = req.user.timezone;
+  req.body.userId = userId;
 
   // Validate required fields
   if (
@@ -57,6 +57,9 @@ const createFriendRequest = async (req, res) => {
       rawData: [
         "friendUserId",
       ],
+      notEqualFields: [
+        ["userId", "friendUserId"]
+      ]
     })
   )
     return;

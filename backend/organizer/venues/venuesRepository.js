@@ -3,44 +3,50 @@ const Venues = require("@VenuesModel");
 const mongoose = require("mongoose");
 const Organizations = require("@OrganizationModel");
 const { ACTIVE_ORGANIZATIONS_CACHE_KEY } = require("../../admin/organizations/organizationService");
+const { cache, invalidate } = require("@redisCache");
 
 // Create venue in a transaction and update organization
 const createVenue = async (data) => {
   const session = await mongoose.startSession();
-  session.startTransaction();
+
   try {
+    let venue;
+
+    await session.withTransaction(async () => {
+
+      if (data.organization) {
+        await Venues.updateMany(
+          { organization: data.organization, isPrimary: true },
+          { isPrimary: false },
+          { session }
+        );
+
+        data.isPrimary = true;
+      }
+
+      venue = await Venues.create([data], { session })
+        .then(res => res[0]);
+
+      // 🔒 Keep this INSIDE transaction for atomicity
+      if (data.organization) {
+        await Organizations.updateOne(
+          { _id: data.organization },
+          { $set: { location: data.location } },
+          { session }
+        );
+      }
+
+    });
+
+    // 🚀 Outside transaction (non-DB side effects only)
     if (data.organization) {
-      // Make all venues ifPrimary to falseEventsModel
-      await Venues.updateMany(
-        { organization: data.organization, isPrimary: true },
-        { isPrimary: false },
-        { session }
-      );
-      // Assign isPrimary true to the new venue
-      data.isPrimary = true;
-    }
-    // Create venue
-    const venue = new Venues(data);
-    await venue.save({ session });
-
-    await session.commitTransaction();
-    session.endSession();
-
-    // Update organization location if both changed
-    if (data.organization) {
-      await Organizations.updateOne(
-        { _id: data.organization },
-        { $set: { location: data.location } }
-      );
-
       await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
     }
 
     return venue;
-  } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
-    throw err;
+
+  } finally {
+    await session.endSession();
   }
 };
 

@@ -6,12 +6,14 @@ const Organizations = require("@OrganizationModel");
 const { formatVenue } = require("./formatter/formatVenue");
 const Venues = require("@VenuesModel");
 const venueRepo = require("./venuesRepository");
+const { cache, invalidate } = require("@redisCache");
 
 const createVenue = async (data) => {
   return await venueRepo.createVenue(data);
 };
 const mongoose = require("mongoose");
 const { ACTIVE_ORGANIZATIONS_CACHE_KEY } = require("../../admin/organizations/organizationService");
+const { ACTIVE_VENUES_CACHE_KEY } = require("../../admin/venues/venuesRepository");
 
 const getVenues = async ({
   page,

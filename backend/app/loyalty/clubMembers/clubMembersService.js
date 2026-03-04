@@ -8,6 +8,7 @@ const { getRecentTransactionsForDashboard } = require("../../userWalletService/t
 const { getEligibleChallengesForLoyaltyPage } = require("../challenges/challengesService");
 const { generateMeta } = require("../../../helperUtils/responseUtil");
 const { logEngagementService } = require("@appEngagement/engagementEventsService");
+const { findLoyaltyReferralSettingsByCompanyOrganizer } = require("../../../admin/loyalty/referral/loyaltyReferralRepository");
 
 // Count members
 const countClubMembers = async (filters = {}) => {
@@ -78,6 +79,7 @@ const getCompanyProfileWithLoyaltyInfo = async (
   const [
     profile,
     userCompanyWallet,
+    referralsSetting,
     rewardsResponse,
     challenges,
     promotions,
@@ -85,7 +87,7 @@ const getCompanyProfileWithLoyaltyInfo = async (
   ] = await Promise.all([
     clubMemberRepo.getCompanyLoyaltyProfile(companyOrganizer),
     clubMemberRepo.getWallet(userId, companyOrganizer, null),
-
+    findLoyaltyReferralSettingsByCompanyOrganizer(companyOrganizer),
     // ✅ rewards already tiered + normalized inside service
     getRewardsByCompanyOrganizerService({
       companyOrganizer,
@@ -130,7 +132,7 @@ const getCompanyProfileWithLoyaltyInfo = async (
   return {
     profile: formattedLoyaltyProfile,
     userCompanyWallet: formatUserWallet(userCompanyWallet),
-
+    referralsSetting: referralsSetting || null,
     // ✅ NO tier formatting, NO eligibility logic here
     rewards: rewardsResponse?.rewards || [],
 

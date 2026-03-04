@@ -18,15 +18,15 @@ exports.redirectToMonriWebPay = async (req, res) => {
   try {
     // --- REQUIRED PAYMENT DATA ---
 
-    let orderNumber = crypto.randomUUID();
     const currency = "EUR";
-    const amount = 500;
+    const { amount, orderType, orderNumber } = req.query
 
     // --- PERSIST TRANSACTION (so we can track it) ---
     await monriRepository.createTransaction({
       orderNumber: orderNumber,
       amount,
       currency,
+      orderType,
       status: "pending",
     });
 
@@ -75,15 +75,15 @@ exports.redirectToMonriWebPay = async (req, res) => {
 
 exports.redirectToMonriWalletPay = async (req, res) => {
   try {
-    const amount = 500;
     const currency = "EUR";
-    const orderNumber = crypto.randomUUID();
+    const { amount, orderType, orderNumber } = req.query
 
     // Save transaction
     await monriRepository.createTransaction({
       orderNumber,
       amount,
       currency,
+      orderType,
       status: "pending",
     });
 
@@ -362,12 +362,12 @@ exports.createWebPaySession = async (req, res) => {
   try {
     // --- REQUIRED PAYMENT DATA ---
     const currency = "EUR";
-    const amount = 500;
-    let orderNumber = crypto.randomUUID();
+    const { amount, orderType, orderNumber } = req.query
     let monriOrder = await monriRepository.createTransaction({
       orderNumber: orderNumber,
       amount: amount,
       currency,
+      orderType,
       status: "pending",
     });
 

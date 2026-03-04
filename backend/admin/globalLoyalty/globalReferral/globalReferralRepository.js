@@ -1,5 +1,5 @@
 // repositories/ReservationRepository.js
-const GlobalReferral = require("@GlobalReferralModel");
+const GlobalReferralSettings = require("@GlobalReferralSettingsModel");
 const { UserReservations } = require("@UserReservationsModel");
 const { User } = require("../../../models/UserModel");
 const Event = require("@EventsModel");
@@ -26,157 +26,68 @@ const {
   getStartAndEndOfWeek,
 } = require("../../../helperUtils/responseUtil");
 const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
-const createGlobalReferral = async (data) => {
-  try {
-    const { type, status } = data;
-    if (type === "global" && status === "active") {
-      const existing = await GlobalReferral.findOne({
-        type: "global",
-        status: "active",
-      });
 
-      if (existing) {
-        const err = new Error("ACTIVE_GLOBAL_REFERRAL_EXISTS");
-        err.statusCode = 400;
-        throw err;
-      }
+
+const upsertGlobalReferral = async (data) => {
+  const allowedFields = [
+    "userPoints",
+    "minimumPurchases",
+    "status",
+    "referralLimit",
+    "referrerPoints",
+  ];
+
+  const updateData = {};
+  for (const key of allowedFields) {
+    if (data[key] !== undefined) {
+      updateData[key] = data[key];
     }
-
-    // Create and save
-    const globalReferral = await GlobalReferral.create(data);
-    await invalidate(ACTIVE_GLOBAL_REFERRAL_CACHE_KEY);
-    return globalReferral;
-
-  } catch (err) {
-    throw err;
   }
+
+  const globalReferral = await GlobalReferralSettings.findOneAndUpdate(
+    {},                     // no filter → singleton
+    { $set: updateData },
+    {
+      new: true,
+      upsert: true,         // create if not exists
+      setDefaultsOnInsert: true,
+    }
+  );
+
+  await invalidate(ACTIVE_GLOBAL_REFERRAL_CACHE_KEY);
+
+  return globalReferral;
 };
 
+const getGlobalReferral = async () => {
+    await invalidate(ACTIVE_GLOBAL_REFERRAL_CACHE_KEY);
 
-const getGlobalReferrals = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip, type }) => {
-  const cacheKey = buildGlobalReferralCacheKey({
-    scope: "admin",
-    skip,
-    limit,
-  });
   return cache({
-    namespace: cacheKey,
-    ttl: 86400, // 1 day
+    namespace: ACTIVE_GLOBAL_REFERRAL_CACHE_KEY,
+    ttl: 86400,
 
     fetchFn: async () => {
+      const doc = await GlobalReferralSettings
+        .findOne({})
+        .lean();
 
-      const pipeline = [
-        {
-          $match: {
-            ...(userId && { creator: new mongoose.Types.ObjectId(userId) }), // Match by userId if provided
-            ...(type && { type: type }), // Match by type if provided (e.g., "global", "company", etc.)
-          }
-        }
-      ];
-      if (range == "monthly") {
-        const { start, end } = getStartAndEndOfMonth(today, timezone);
-
-        pipeline.push({
-          $match: {
-            createdAt: { $gte: start, $lt: end }
-          }
-        });
-      }
-      if (range == "weekly") {
-        const { start, end } = getStartAndEndOfWeek(today, timezone);
-
-        pipeline.push({
-          $match: {
-            createdAt: { $gte: start, $lt: end }
-          }
-        });
-      }
-      if (range == "today") {
-        const start = new Date(today);
-        const end = new Date(new Date(today).setDate(start.getDate() + 1));
-
-        pipeline.push({
-          $match: {
-            createdAt: { $gte: start, $lt: end }
-          }
-        });
-      }
-      // Apply filters
-      if (status) {
-        pipeline.push({ $match: { status } });
-      } else {
-        pipeline.push({ $match: { status: { $ne: "deleted" } } });
-      }
-
-      if (date) {
-        const start = new Date(date);
-        const end = new Date(new Date(date).setDate(start.getDate() + 1));
-        pipeline.push({
-          $match: {
-            createdAt: { $gte: start, $lt: end }
-          }
-        });
-      }
-
-      if (keyword) {
-        const keywordMatch = buildKeywordQueryFromModels(
-          [
-            { schema: GlobalReferral.schema }
-          ],
-          keyword
-        );
-
-        if (Object.keys(keywordMatch).length) {
-          pipeline.push({ $match: keywordMatch });
-        }
-      }
-
-      pipeline.push({ $sort: { createdAt: -1 } });
-
-      // Apply pagination + counts using $facet
-      pipeline.push({
-        $facet: {
-          data: [
-            { $skip: skip },
-            ...(limit === 0 ? [] : [{ $limit: limit }])
-          ],
-          totalFiltered: [{ $count: "count" }]
-        }
-      });
-
-      const result = await GlobalReferral.aggregate(pipeline);
-
-
-      let globalReferral = result[0]?.data || [];
-      const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
-
-
-      // Additional counts for meta (active/inactive/total by userId as creator)
-      const [total, active, inactive] = await Promise.all([
-        GlobalReferral.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "deleted" } }),
-        GlobalReferral.countDocuments({ status: "active", ...(userId && { userId: userId }) }),
-        GlobalReferral.countDocuments({ status: "inactive", ...(userId && { userId: userId }) })
-      ]);
-
-      const meta = generateMeta(page, limit, totalFiltered);
-      meta.globalReferralCount = { total, active, inactive };
-
-
-      return { globalReferral, meta }
+      return doc || null;
     },
   });
 };
 
+const getGlobalReferralSettings = async () => {
+  return cache({
+    namespace: ACTIVE_GLOBAL_REFERRAL_CACHE_KEY,
+    ttl: 86400,
 
-
-
-const findByIdAndUpdate = async (id, data) => {
-  await invalidate(ACTIVE_GLOBAL_REFERRAL_CACHE_KEY);
-  return GlobalReferral.findByIdAndUpdate(id, data, { new: true });
-};
-
-const findGlobalReferralsById = async (id) => {
-  return GlobalReferral.findById(id);
+    fetchFn: async () => {
+      return await GlobalReferralSettings
+        .findOne({})
+        .select("userPoints referrerPoints minimumPurchases referralLimit")
+        .lean();
+    },
+  });
 };
 
 
@@ -278,7 +189,7 @@ const getUserGlobalReferrals = async ({
         .select("firstName lastName _id remainingReferrals");
 
       // Fetch global referral data for the given userId
-      const globalReferrals = await GlobalReferral.find({
+      const globalReferrals = await GlobalReferralSettings.find({
         creator: userId,
         type: "global"
       }).lean();
@@ -345,7 +256,7 @@ const getUserGlobalReferrals = async ({
 
 const findGlobalReferrals = async (filter = {}) => {
   try {
-    return await GlobalReferral.find(filter);
+    return await GlobalReferralSettings.find(filter);
   } catch (err) {
     throw err;
   }
@@ -384,10 +295,10 @@ const resetUserReferralLimits = async (limit) => {
 
 
 module.exports = {
-  createGlobalReferral,
-  findGlobalReferralsById,
-  getGlobalReferrals,
-  findByIdAndUpdate,
+  upsertGlobalReferral,
+  getGlobalReferral,
+  findGlobalReferrals,
   getUserGlobalReferrals,
-  resetUserReferralLimits
+  resetUserReferralLimits,
+  getGlobalReferralSettingsRepository: getGlobalReferralSettings,
 };

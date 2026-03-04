@@ -35,10 +35,7 @@ const findById = async ({
       path: "companyOrganizer",
       select: "companyDetails.loyaltySettings.title companyDetails.logo",
     })
-    .populate({
-      path: "reward",
-      select: "title description image rewardType points ticket event menuItem",
-    })
+    .populate("reward")
     .lean();
 
   if (!promotion) return null;
@@ -77,6 +74,7 @@ const getPromotionsByCompanyOrganizer = async ({
     })
     .populate("menuItem")
     .populate("tierLimit")
+    .populate("reward")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
@@ -148,6 +146,7 @@ const getPromotionsForDashboard = async ({
       "companyOrganizer",
       "companyDetails.loyaltySettings.title companyDetails.logo"
     )
+    .populate("reward")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit)
@@ -639,8 +638,8 @@ const getActiveLoyaltyHappyHourPromotion = async ({
 
   if (recurrence?.isEnabled) {
     const dayMap = [
-      "sun","mon","tue","wed",
-      "thu","fri","sat"
+      "sun", "mon", "tue", "wed",
+      "thu", "fri", "sat"
     ];
 
     const todayKey = dayMap[now.getDay()];
@@ -686,9 +685,9 @@ const getActiveLoyaltyHappyHourPromotion = async ({
   const insideWindow =
     startMinutes <= endMinutes
       ? currentMinutes >= startMinutes &&
-        currentMinutes <= endMinutes
+      currentMinutes <= endMinutes
       : currentMinutes >= startMinutes ||
-        currentMinutes <= endMinutes;
+      currentMinutes <= endMinutes;
 
   if (!insideWindow) return null;
 
@@ -708,6 +707,7 @@ const claimPromotion = async (promotionId, userId) => {
       select:
         "companyDetails.loyaltySettings.title companyDetails.logo",
     })
+    .populate("reward")
     .lean();
 
   if (!promotion) {

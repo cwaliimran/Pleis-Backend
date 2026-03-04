@@ -168,12 +168,12 @@ const scanQrController = async (req, res) => {
         });
       }
 
-      if (reservation.status !== "checkedIn") {
-        warnings.push({
-          warning: `Reservation status is ${reservation.status}`,
-          warningCode: "invalid_reservation_status",
-        });
-      }
+      // if (reservation.status !== "checkedIn") {
+      //   warnings.push({
+      //     warning: `Reservation status is ${reservation.status}`,
+      //     warningCode: "invalid_reservation_status",
+      //   });
+      // }
 
       if (
         reservation?.paymentDetails &&
@@ -198,11 +198,12 @@ const scanQrController = async (req, res) => {
     }
     else if (type === "loyaltyReward") {
       validateData.rawData.push("qrData.id");
-      if (
-        !validateParams(req, res, validateData)
-      ) return;
 
-      const loyaltyRewardOrder = await getLoyaltyRewardOrderDetailsService(id)
+      if (!validateParams(req, res, validateData)) return;
+
+      const loyaltyRewardOrder =
+        await getLoyaltyRewardOrderDetailsService(id);
+
       if (!loyaltyRewardOrder) {
         return sendResponse({
           res,
@@ -211,12 +212,49 @@ const scanQrController = async (req, res) => {
         });
       }
 
+      let warnings = [];
+
+      /* =========================
+         🔹 ORGANIZER MISMATCH
+      ========================== */
+      if (
+        loyaltyRewardOrder.companyOrganizer?._id?.toString() !==
+        companyOrganizer?.toString()
+      ) {
+        warnings.push({
+          warning: "Organizer mismatch for reward order",
+          warningCode: "organizer_mismatch",
+        });
+      }
+
+      /* =========================
+         🔹 ALREADY COMPLETED / REDEEMED
+      ========================== */
+      if (
+        loyaltyRewardOrder.status === "completed"
+      ) {
+        warnings.push({
+          warning: `Reward already ${loyaltyRewardOrder.status}`,
+          warningCode: "reward_already_processed",
+        });
+      }
+      if (
+        loyaltyRewardOrder.status === "expired"
+      ) {
+        warnings.push({
+          warning: `Reward already ${loyaltyRewardOrder.status}`,
+          warningCode: "reward_expired",
+        });
+      }
 
       return sendResponse({
         res,
         statusCode: 200,
         translationKey: "qr_code_scanned_successfully",
-        data: loyaltyRewardOrder
+        data: {
+          loyaltyRewardOrder,
+          warnings,
+        },
       });
     }
   } catch (error) {

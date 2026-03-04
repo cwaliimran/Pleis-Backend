@@ -122,7 +122,7 @@
       "@StreakRulesModel": [
         "backend/commonModules/loyalty/streaks/StreakRules.js"
       ],
-      "@GlobalReferralModel": [
+      "@GlobalReferralSettingsModel": [
         "backend/commonModules/globalReferral/GlobalReferralSettings.js"
       ],
       "@ReferredRecordModel": [
@@ -152,11 +152,8 @@
       "@GlobalChallengeModel": [
         "backend/commonModules/globalLoyalty/rewards/models/Challenge/models/Challenge/BaseChallenge.js"
       ],
-      "@GlobalStreaksModel": [
-        "backend/commonModules/globalLoyalty/streaks/Streaks.js"
-      ],
-      "@GlobalUsersStreaksModel": [
-        "backend/commonModules/globalLoyalty/streaks/UsersStreaks.js"
+      "@UsersGlobalStreaksModel": [
+        "backend/commonModules/globalLoyalty/streaks/UsersGlobalStreaks.js"
       ],
       "@ThirdPartyModel": [
         "backend/commonModules/globalLoyalty/thirdParty/ThirdParty.js"

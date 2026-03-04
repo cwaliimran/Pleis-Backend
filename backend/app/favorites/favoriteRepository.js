@@ -2,6 +2,7 @@ const { Favorites } = require("../../commonModules/favorites/Favorite");
 const { getWithFilters } = require('@dbUtils/queryUtil');
 const { getMinTicketPricesByEventIds } = require("../ticketing/ticketingsRepository");
 const { Events } = require("@EventsModel");
+const mongoose = require("mongoose");
 const EngagementEvents = require("@EngagementEventsModel");
 /**
  * Toggle favorite for a user and target

@@ -21,7 +21,7 @@ const attemptTicketingOrdersPayment = async (orderId) => {
   if (order.paymentDetails.paymentStatus !== "pending") {
     return {
       status: order.paymentDetails.paymentStatus, // paid | failed | refunded
-      paymentId: order.paymentDetails.paymentId || null,
+      transactionId: order.paymentDetails.transactionId || null,
     };
   }
 
@@ -34,7 +34,7 @@ const attemptTicketingOrdersPayment = async (orderId) => {
   if (result.success) {
     return {
       status: "paid",
-      paymentId: result.paymentId,
+      transactionId: result.transactionId,
     };
   }
 
@@ -61,7 +61,7 @@ const attemptUserReservationOrderPayment = async (reservationId) => {
   if (reservation.paymentDetails.paymentStatus !== "pending") {
     return {
       status: reservation.paymentDetails.paymentStatus, // paid | failed | refunded
-      paymentId: reservation.paymentDetails.paymentId || null,
+      transactionId: reservation.paymentDetails.transactionId || null,
     };
   }
 
@@ -73,7 +73,7 @@ const attemptUserReservationOrderPayment = async (reservationId) => {
   if (amount === 0) {
     return {
       status: "paid",
-      paymentId: "FREE_RESERVATION",
+      transactionId: "FREE_RESERVATION",
     };
   }
 
@@ -86,7 +86,7 @@ const attemptUserReservationOrderPayment = async (reservationId) => {
   if (result.success) {
     return {
       status: "paid",
-      paymentId: result.paymentId,
+      transactionId: result.transactionId,
     };
   }
 

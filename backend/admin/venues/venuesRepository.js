@@ -3,6 +3,8 @@ const Venues = require("@VenuesModel");
 const mongoose = require("mongoose");
 const { cache, invalidate } = require("@redisCache");
 const { getOrgCompanyOrganizer } = require("../organizations/organizationRepository");
+const Organizations = require("../../commonModules/organizations/Organization");
+const { ACTIVE_ORGANIZATIONS_CACHE_KEY } = require("../organizations/organizationService");
 const ACTIVE_VENUES_CACHE_KEY = "venues:active";
 const buildVenuesCacheKey = ({
   scope = "admin", // public | admin
@@ -34,8 +36,25 @@ const createVenue = async (data) => {
     const venue = new Venues(data);
     await venue.save({ session });
 
+    // 🔒 Keep this INSIDE transaction for atomicity
+    if (data.organization) {
+      await Organizations.updateOne(
+        { _id: data.organization },
+        { $set: { location: data.location } },
+        { session }
+      );
+    }
+
+    // 🚀 Outside transaction (non-DB side effects only)
+    if (data.organization) {
+      await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
+    }
+
+
     await session.commitTransaction();
     session.endSession();
+
+
     return venue;
   } catch (err) {
     await session.abortTransaction();
@@ -133,4 +152,5 @@ module.exports = {
   updateVenueData,
   deleteVenueById,
   findByIdAndUpdate,
+  ACTIVE_VENUES_CACHE_KEY
 };

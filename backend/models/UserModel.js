@@ -223,6 +223,7 @@ const userSchema = new mongoose.Schema(
           "active",
           "cancelled",
           "expired",
+          "suspended",
           "deleted",
         ],
         default: "pending",

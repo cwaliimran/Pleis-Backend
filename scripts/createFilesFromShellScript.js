@@ -10,7 +10,7 @@ const path = require("path");
 
 /* 🔧 CHANGE THIS ONLY */
 const BASE_DIR =
-  "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend/commonModules/paymentsIntegrations/paymentsWebhook";
+  "/Users/s/Deskt";
 
 /* ============================
    Helpers

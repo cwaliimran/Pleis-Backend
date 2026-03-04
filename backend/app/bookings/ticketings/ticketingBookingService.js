@@ -7,6 +7,7 @@ const {
 } = require("../../../admin/ticketing/ticketingsRepository");
 const { TicketingOrders } = require("@TicketingOrdersModel");
 const { resolveTimeSensitivePricing } = require("./utils/timeSensitivePricing");
+const { Types } = require("mongoose");
 
 
 const createTicketingBookingService = async (
@@ -98,18 +99,18 @@ const createTicketingBookingService = async (
   /* ---------- PAYMENT STATE ---------- */
   let paymentMethod = null;
   let cardId = null;
-  let paymentId = null;
+  let transactionId = null;
   let paymentStatus = null;
   let orderStatus = null;
 
   if (isRewardOrChallengeBooking) {
     paymentMethod = null;
-    paymentId = data.bookingReference;
+    transactionId = data.bookingReference;
     paymentStatus = "paid";
     orderStatus = "paid";
   } else if (isFreeOrder) {
     paymentMethod = null;
-    paymentId = "FREE_ORDER";
+    transactionId = "FREE_ORDER";
     paymentStatus = "paid";
     orderStatus = "paid";
   } else {
@@ -143,7 +144,7 @@ const createTicketingBookingService = async (
     paymentDetails: {
       paymentMethod,
       cardId,
-      paymentId,
+      transactionId,
       paymentStatus,
     },
     userBillingInformation: data.userBillingInformation || null,
@@ -204,9 +205,23 @@ const createTicketingBookingService = async (
 
 
 
-const getTicketingBookingsService = async ({ page = 1, limit = 10, keyword, status = "valid", date, orderSort = "asc", timezone = "UTC", userId }) => {
-  const query = { status: { $in: ["valid", "used"] } };
+const getTicketingBookingsService = async ({ page = 1, limit = 10, keyword, status = null, date, orderSort = "asc", timezone = "UTC", userId, companyOrganizer, organization }) => {
+  let query = {};
+  if (status) {
+    query.status = { status: status }
+  } else {
+    query.status = { $in: ["valid", "used", "cancelled"] }
+  }
   if (userId) query.user = userId;
+
+  //for admin
+  if (companyOrganizer) {
+    query.companyOrganizer = companyOrganizer;
+  }
+
+  if (organization) {
+    query.organization = organization;
+  }
 
   if (date) {
     query.createdAt = {
@@ -215,13 +230,46 @@ const getTicketingBookingsService = async ({ page = 1, limit = 10, keyword, stat
     };
   }
 
-  if (keyword) {
-    query.$or = [
-      { name: { $regex: keyword, $options: "i" } },
-      { description: { $regex: keyword, $options: "i" } }
-    ];
-  }
 
+  if (keyword) {
+    const regex = new RegExp(keyword, "i");
+
+    const searchableFields = [
+      // Booking root fields
+      "ticketBookingId",
+      "status",
+      "pricingPhase",
+
+      // Protection details
+      "ticket.protectionUserDetails.firstName",
+      "ticket.protectionUserDetails.surName",
+      "ticket.protectionUserDetails.pid",
+
+      // Snapshot Ticket fields
+      "ticket.snapshot.title",
+      "ticket.snapshot.status",
+      "ticket.snapshot.resaleProtection",
+
+      // Optional useful fields
+      "ticket.snapshot.requiresReservation.type",
+    ];
+
+    query.$or = searchableFields.map(field => ({
+      [field]: regex
+    }));
+
+    // ObjectId safe search
+    if (Types.ObjectId.isValid(keyword)) {
+      query.$or.push(
+        { order: keyword },
+        { user: keyword },
+        { organization: keyword },
+        { "ticket.snapshot.event": keyword },
+        { "ticket.snapshot.organization": keyword },
+        { "ticket.snapshot.companyOrganizer": keyword }
+      );
+    }
+  }
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const sort = { createdAt: orderSort === "desc" ? -1 : 1 };
 
@@ -276,6 +324,12 @@ const transferTicketingBookingService = async (bookingId, newUserId, timezone, u
   return { success: true, message: "ticketing_booking_transferred_successfully" };
 };
 
+const updateTicketingBookingProtectionDetailsService = async (bookingId, protectionUserDetails, timezone) => {
+  const booking = await ticketingBookingRepo.updateTicketingBookingProtectionDetails(bookingId, protectionUserDetails);
+  if (!booking) return null;
+  return true;
+};
+
 
 module.exports = {
   createTicketingBookingService,
@@ -284,4 +338,5 @@ module.exports = {
   updateTicketingBookingService,
   deleteTicketingBookingService,
   transferTicketingBookingService,
+  updateTicketingBookingProtectionDetailsService
 };

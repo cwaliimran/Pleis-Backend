@@ -4,14 +4,13 @@ const { createTicketingBookingService,
   getTicketingBookingByIdService,
   updateTicketingBookingService,
   transferTicketingBookingService,
+  updateTicketingBookingProtectionDetailsService,
   deleteTicketingBookingService, } = require("./ticketingBookingService");
 
 const { NotificationTypes } = require("@NotificationsModel");
 const { validateTicketingPayload } = require("./validators/ticketingValidation");
 const { checkoutWithTicketsAndReservation } = require("./services/checkoutOrchestratorService");
 const { validateReservationPayload } = require("../../reservations/validators/reservationValidation");
-const { attemptTicketingOrdersPayment } = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/paymentService");
-const { ticketingOrderFinalizerService } = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/ticketingOrderFinalizerService");
 const { default: mongoose } = require("mongoose");
 
 const createTicketingBooking = async (req, res) => {
@@ -177,4 +176,25 @@ const transferTicketingBooking = async (req, res) => {
   }
 };
 
-module.exports = { createTicketingBooking, transferTicketingBooking, getTicketingBookings, getTicketingBookingById, updateTicketingBooking, deleteTicketingBooking };
+const updateTicketingBookingProtectionDetails = async (req, res) => {
+  try {
+    const { timezone } = req.user;
+    const { protectionUserDetails } = req.body;
+    const { id } = req.params
+
+    // ==============================
+    // STEP 1: PREPARE VALIDATION DATA
+    // ==============================
+    const validateData = {
+      objectIdFields: ["id"],
+    };
+    if (!validateParams(req, res, validateData)) return;
+    const ticketingBooking = await updateTicketingBookingProtectionDetailsService(id, protectionUserDetails, timezone);
+    return sendResponse({ res, statusCode: 200, translationKey: "ticketing_booking_protection_details_updated_successfully" });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({ res, statusCode: readableError.statusCode, translationKey: readableError.message, error });
+  }
+};
+
+module.exports = { createTicketingBooking, transferTicketingBooking, getTicketingBookings, getTicketingBookingById, updateTicketingBooking, deleteTicketingBooking, updateTicketingBookingProtectionDetails };

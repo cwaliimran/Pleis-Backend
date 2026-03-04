@@ -42,7 +42,7 @@ const UserReservationsSchema = new mongoose.Schema(
 
     amount: {
       type: Number,
-      min: [0, "Price must be positive"],
+      default: 0,
     },
     priceBreakDown: {
       type: Object,
@@ -120,7 +120,7 @@ const UserReservationsSchema = new mongoose.Schema(
 
     paymentDetails: {
       cardId: { type: String, default: null },
-      paymentId: { type: String, default: null }, // gateway ref
+      transactionId: { type: String, default: null }, // gateway ref
       paymentMethod: {
         type: String,
         enum: ["applePay", "card"],

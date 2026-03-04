@@ -24,24 +24,24 @@ const getFriends = async ({
   ];
 
   // 2️⃣ Keyword search
-if (keyword) {
-  const safeKeyword = escapeRegex(keyword);
+  if (keyword) {
+    const safeKeyword = escapeRegex(keyword);
 
-  pipeline.push({
-    $addFields: {
-      fullName: { $concat: ["$firstName", " ", "$lastName"] }, // Concatenate firstName and lastName
-    }
-  });
+    pipeline.push({
+      $addFields: {
+        fullName: { $concat: ["$firstName", " ", "$lastName"] }, // Concatenate firstName and lastName
+      }
+    });
 
-  pipeline.push({
-    $match: {
-      $or: [
-        { fullName: { $regex: safeKeyword, $options: "i" } }, // Search in the concatenated fullName
-        { username: { $regex: safeKeyword, $options: "i" } },
-      ],
-    },
-  });
-}
+    pipeline.push({
+      $match: {
+        $or: [
+          { fullName: { $regex: safeKeyword, $options: "i" } }, // Search in the concatenated fullName
+          { username: { $regex: safeKeyword, $options: "i" } },
+        ],
+      },
+    });
+  }
 
 
   // 3️⃣ Lookup ONLY accepted friend requests
@@ -118,7 +118,7 @@ if (keyword) {
   });
 
   const result = await User.aggregate(pipeline);
-console.log("result",result );
+  console.log("result", result);
   return {
     users: result[0]?.data || [],
     meta: generateMeta(
@@ -133,6 +133,9 @@ const createFriendRequest = async (data) => {
   try {
     const { userId, friendUserId, notes } = data;
 
+    if (String(userId) === String(friendUserId)) {
+      throw new Error("Cannot send friend request to yourself");
+    }
     const friendRequest = new FriendRequest({
       sender: { id: userId },
       receiver: { id: friendUserId },
