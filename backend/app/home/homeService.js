@@ -20,6 +20,7 @@ const { getLoyaltyAndGlobalLoyaltyPromotions } = require("./promotions/promotion
 const { getOrganizationsWithReservationsForHomeService } = require("../reservations/reservationService");
 
 const { pushIfValid } = require("./utils/feedPushRules");
+const { getGlobalReferralSettingsRepository } = require("../../admin/globalLoyalty/globalReferral/globalReferralRepository");
 
 const getHomeService = async ({ queryData }) => {
   const { userId, userLocation, radiusKm = 50, timezone, category } = queryData;
@@ -39,6 +40,7 @@ const getHomeService = async ({ queryData }) => {
     const promises = {
       categoriesRes: getPublicCategories({}),
       bannersRes: getBannerControlsService({ page: 1, limit: 10 }),
+      getGlobalReferralSettingsRes: getGlobalReferralSettingsRepository(),
 
       popularEventsRes: getPopularEventsForHomeService({
         limit: 10,
@@ -179,6 +181,7 @@ const getHomeService = async ({ queryData }) => {
      */
     const categories = results.categoriesRes?.categories || [];
     const banners = results.bannersRes?.bannerControls || [];
+    const getGlobalReferralSettings = results.getGlobalReferralSettingsRes || null;
     const popularEvents = results.popularEventsRes?.data || [];
     const highlights = results.highlightsRes?.highlights || [];
     const customCategories = results.customCategoriesRes?.customCategories || [];
@@ -349,6 +352,11 @@ const getHomeService = async ({ queryData }) => {
       }, frequencyMap);
     }
 
+    feed.push({
+      key: "globalReferral",
+      title: "Global Referral",
+      data: getGlobalReferralSettings,
+    });
     return { status: true, data: feed };
   } catch (error) {
     console.log("error===>", error)

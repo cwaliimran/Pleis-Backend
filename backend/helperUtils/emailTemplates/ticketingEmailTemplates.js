@@ -17,51 +17,45 @@ const ticketConfirmationEmailTemplate = ({
     `${currency}${Number(amount || 0).toFixed(2)}`;
 
   const ticketCards = tickets.map(ticket => `
-    <tr>
-      <td align="center" style="padding:30px 0;">
-        <table width="480" cellpadding="0" cellspacing="0"
-          style="background:#ffffff;border-radius:20px;padding:25px;text-align:center;">
+  <tr>
+    <td align="center" style="padding:30px 0;">
+      <table width="480" cellpadding="0" cellspacing="0"
+        style="background:#ffffff;border-radius:20px;padding:25px;text-align:center;color:#000000;">
 
-          <tr>
-            <td style="font-size:18px;font-weight:bold;">
-              ${organizationName}
-            </td>
-          </tr>
+        <tr>
+          <td style="font-size:18px;font-weight:bold;">
+            ${organizationName}
+          </td>
+        </tr>
 
-          <tr>
-            <td style="padding-top:8px;font-size:16px;">
-              ${eventTitle}
-            </td>
-          </tr>
+        <tr>
+          <td style="padding-top:8px;font-size:16px;">
+            ${eventTitle}
+          </td>
+        </tr>
 
-          <tr>
-            <td style="padding-top:6px;">
-              ${eventDate} • ${eventTime}
-            </td>
-          </tr>
+        <tr>
+          <td style="padding-top:6px;">
+            ${eventDate} ${eventTime ? `• ${eventTime}` : ""}
+          </td>
+        </tr>
 
-          <tr>
-            <td style="padding-top:4px;font-size:13px;color:#777;">
-              ${venue}
-            </td>
-          </tr>
+        <tr>
+          <td style="padding-top:4px;font-size:13px;color:#777;">
+            ${venue}
+          </td>
+        </tr>
 
-          <tr>
-            <td style="padding:20px;">
-              <img src="${ticket.qrCode}" width="220" height="220"/>
-            </td>
-          </tr>
+        <tr>
+          <td style="padding-top:20px;font-weight:bold;font-size:16px;">
+            Ticket ID: ${ticket.ticketBookingId}
+          </td>
+        </tr>
 
-          <tr>
-            <td style="font-weight:bold;">
-              ${ticket.ticketBookingId}
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  `).join("");
+      </table>
+    </td>
+  </tr>
+`).join("");
 
   return `
   <!DOCTYPE html>

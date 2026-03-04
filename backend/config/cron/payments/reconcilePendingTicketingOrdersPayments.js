@@ -11,7 +11,6 @@ const reconcilePendingTicketingOrdersPayments = async () => {
   // console.log("🔄 Reconciling", orders.length, "pending orders...");
   for (const order of orders) {
     const result = await attemptTicketingOrdersPayment(order._id);
-    console.log("result.status==>",result.status)
     await ticketingOrderFinalizerService({ orderId: order._id, result });
   }
 };

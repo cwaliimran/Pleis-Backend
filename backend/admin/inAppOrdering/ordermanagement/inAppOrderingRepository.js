@@ -126,11 +126,10 @@ const getOrders = async ({
   }
   else if (orderStatus === 'preorder') {
     statusFilter = {
-      status: 'preorder',
+      status: 'pending',
       orderType: 'preorder'
     };
   }
-
   let keywordMatch = {};
   if (keyword && keyword.trim()) {
     keywordMatch =

@@ -63,7 +63,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
           $set: {
             status: "confirmed",
             "paymentDetails.paymentStatus": "paid",
-            "paymentDetails.paymentId": result.paymentId,
+            "paymentDetails.transactionId": result.transactionId,
             paidAt: new Date(),
           },
         },
@@ -79,7 +79,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
               status: "confirmed",
               paymentStatus: "paid",
               paidAt: new Date(),
-              transactionId: result.paymentId,
+              transactionId: result.transactionId,
             },
           },
           { session }

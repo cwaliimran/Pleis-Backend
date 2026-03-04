@@ -1,15 +1,14 @@
 const express = require("express");
+
 const {
   createLoyaltyReferral,
   getLoyaltyReferrals,
   updateLoyaltyReferral,
   deleteLoyaltyReferral,
-  getLoyaltyReferralDetails,
   getUserLoyaltyReferrals,
-  updateUserLoyaltyReferralStatus,
-  updateUserLoyaltyReferral,
-  resetUserReferralLimits
+  resetUserReferralLimits,
 } = require("./loyaltyReferralController");
+
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
 const roleMiddleware = require("../../../middlewares/roleMiddleware");
@@ -18,16 +17,58 @@ const router = express.Router();
 
 router.use(auth);
 
-// Create a rate limiter for LoyaltyReferrals
+// Rate limiters
 const apiRateLimiter = createRateLimiter("LoyaltyReferrals");
-const apiRateLimiterDetails = createRateLimiter("LoyaltyReferrals/:id");
+
+/* =========================================================
+   SETTINGS (Singleton Per Company)
+========================================================= */
+
+// Create OR Update (Upsert)
+router.post(
+  "/",
+  roleMiddleware(["admin", "organizer"]),
+  createLoyaltyReferral
+);
+
+// Get Settings (Single Object)
+router.get(
+  "/",
+  roleMiddleware(["admin", "organizer"]),
+  getLoyaltyReferrals
+);
+
+// Update Settings
+router.put(
+  "/:id",
+  roleMiddleware(["admin", "organizer"]),
+  updateLoyaltyReferral
+);
+
+// Soft Delete
+router.delete(
+  "/:id",
+  roleMiddleware(["admin", "organizer"]),
+  deleteLoyaltyReferral
+);
+
+// Reset User Referral Limits
+router.get(
+  "/reset",
+  roleMiddleware(["admin", "organizer"]),
+  resetUserReferralLimits
+);
 
 
-router.post("/", auth,roleMiddleware(["admin","organizer"]), createLoyaltyReferral);
-router.get("/reset", roleMiddleware(["admin","organizer"]), resetUserReferralLimits);
-router.get("/user", roleMiddleware(["admin","organizer"]),apiRateLimiter, getUserLoyaltyReferrals);
-router.get("/", roleMiddleware(["admin","organizer"]),apiRateLimiter, getLoyaltyReferrals);
-router.put("/:id", roleMiddleware(["admin","organizer"]), updateLoyaltyReferral);
-router.delete("/:id", roleMiddleware(["admin","organizer"]), deleteLoyaltyReferral);
+/* =========================================================
+   USER REFERRAL RECORDS (Pagination Preserved)
+========================================================= */
+
+router.get(
+  "/user",
+  roleMiddleware(["admin", "organizer"]),
+  apiRateLimiter,
+  getUserLoyaltyReferrals
+);
 
 module.exports = router;

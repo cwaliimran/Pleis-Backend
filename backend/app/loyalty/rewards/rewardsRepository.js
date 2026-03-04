@@ -14,6 +14,7 @@ const getRewardsByCompanyOrganizer = async ({ companyOrganizer }) => {
   const query = {
     companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
     status: "active",
+    isPromotionOnly: false, // Exclude promotion-only rewards
     $or: [
       { endDate: null },
       { endDate: { $gt: now } }
@@ -28,19 +29,6 @@ const getRewardsByCompanyOrganizer = async ({ companyOrganizer }) => {
     .populate({ path: "tierLimit" })
     .sort({ createdAt: -1 })
     .lean();
-};
-
-
-// Count rewards by organizer
-const countRewardsByCompanyOrganizer = async ({ companyOrganizer, status }) => {
-  const query = {
-    companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
-  };
-
-  if (status) query.status = status;
-  else query.status = { $ne: "deleted" };
-
-  return Reward.countDocuments(query);
 };
 
 const claimReward = async (userId, rewardId, protectionUserDetails, timezone) => {
@@ -63,6 +51,7 @@ const getRewardsForDashboardPaged = async ({
   const query = {
     companyOrganizer: { $in: clubIds },
     status: "active",
+    isPromotionOnly: false, // Exclude promotion-only rewards
     $or: [
       { endDate: null },
       { endDate: { $gt: now } },
@@ -100,6 +89,7 @@ const countDashboardRewards = async ({ clubIds, now, keyword = "" }) => {
   const query = {
     companyOrganizer: { $in: clubIds },
     status: "active",
+    isPromotionOnly: false, // Exclude promotion-only rewards
     $or: [
       { endDate: null },
       { endDate: { $gt: now } }
@@ -124,7 +114,6 @@ const countDashboardRewards = async ({ clubIds, now, keyword = "" }) => {
 
 module.exports = {
   getRewardsByCompanyOrganizer,
-  countRewardsByCompanyOrganizer,
   claimReward,
   getRewardsForDashboardPaged,
   countDashboardRewards

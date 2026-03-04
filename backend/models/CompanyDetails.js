@@ -68,6 +68,10 @@ const CompanySchema = new mongoose.Schema(
     default: [],
 
     loyaltySettings: {
+      isEnabled: {
+        type: Boolean,
+        default: false,
+      },
       title: {
         type: String,
         default: "",

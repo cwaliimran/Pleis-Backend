@@ -224,13 +224,13 @@ const cancelReservation = async (id, userId) => {
   // ---- Refund if paid ----
   if (
     reservation.paymentDetails?.paymentStatus === "paid" &&
-    reservation.paymentDetails?.paymentId
+    reservation.paymentDetails?.transactionId
   ) {
     try {
       //TODO refund payment
       // call refund service
       // await refundViaMonri({
-      //   transactionId: reservation.paymentDetails.paymentId,
+      //   transactionId: reservation.paymentDetails.transactionId,
       //   amount: reservation.amount,
       //   currency: "EUR",
       // });

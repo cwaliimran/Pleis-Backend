@@ -48,8 +48,6 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
 };
 const updateReservation = async (id, data) => {
   const Reservation = await ReservationRepo.findReservationById(id);
-  console.log("data",data );
-   console.log("Reservation",Reservation );
   if (!Reservation) {
     return { error: "Reservation_not_found" };
   }
@@ -57,26 +55,57 @@ const updateReservation = async (id, data) => {
   // -----------------------------
   // VALIDATIONS
   // -----------------------------
-  if (data.conditionType) {
-    if (Reservation.conditionType !== data.conditionType) {
-      if (data.conditionType === "minimumSpendOnLocation") {
-        if (!data.amount && !data.customText) {
-          return { error: "amount_or_customText_is_required_when_conditionType_changes_to_minimumSpendOnLocation." };
-        }
-        else if (!data.amount) {
-          return { error: "amount_is_required_when_conditionType_changes_and_is_not_minimumSpendOnLocation." };
-        }
+if (data.conditionType) {
+
+  // Utility for null/undefined check
+  const isNil = (v) => v === null || v === undefined;
+
+  // Optional normalization (prevents "" issues from frontend)
+  if (data.amount === "") data.amount = null;
+  if (data.customText === "") data.customText = null;
+
+  const amountMissing = isNil(data.amount);
+  const customTextMissing = !data.customText;
+
+  // Condition type changed
+  if (Reservation.conditionType !== data.conditionType) {
+
+    if (data.conditionType === "minimumSpendOnLocation") {
+
+      if (amountMissing && customTextMissing) {
+        return {
+          error: "amount_or_customText_is_required_when_conditionType_changes_to_minimumSpendOnLocation."
+        };
+      }
+
+      if (amountMissing) {
+        return {
+          error: "amount_is_required_when_conditionType_changes_and_is_not_minimumSpendOnLocation."
+        };
       }
     }
-
-    if (data.conditionType === "ticketRequirement" && !data.ticketType) {
-      return { error: "ticket_type_is_required_when_conditionType_is_ticketRequirement." };
-    }
-
-    if (data.conditionType === "customText" && !data.customText) {
-      return { error: "custom_text_is_required_when_conditionType_is_customText." };
-    }
   }
+
+  // Ticket requirement validation
+  if (
+    data.conditionType === "ticketRequirement" &&
+    !data.ticketType
+  ) {
+    return {
+      error: "ticket_type_is_required_when_conditionType_is_ticketRequirement."
+    };
+  }
+
+  // Custom text validation
+  if (
+    data.conditionType === "customText" &&
+    !data.customText
+  ) {
+    return {
+      error: "custom_text_is_required_when_conditionType_is_customText."
+    };
+  }
+}
 
   // -----------------------------
   // ALLOWED FIELDS

@@ -294,6 +294,51 @@ const getTotalEngagementEventsByOrganizationId = async (organizationId) => {
     return 0; // Return 0 if there was an error
   }
 };
+/**
+ * Get total views count per event
+ * @param {Array<string|ObjectId>} eventIds
+ * @param {Date|null} since (optional time filter)
+ * @returns {Array<{ event: ObjectId, totalViews: number }>}
+ */
+const getEventsViewsStats = async (eventIds = [], since = null) => {
+  if (!Array.isArray(eventIds) || eventIds.length === 0) {
+    return [];
+  }
+
+  const objectIds = eventIds.map(
+    id => new mongoose.Types.ObjectId(id)
+  );
+
+  const matchStage = {
+    entityType: "events",
+    action: "view",
+    entityId: { $in: objectIds }
+  };
+
+  if (since) {
+    matchStage.createdAt = { $gte: since };
+  }
+
+  const results = await EngagementEvents.aggregate([
+    { $match: matchStage },
+    {
+      $group: {
+        _id: "$entityId",
+        totalViews: { $sum: 1 }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        event: "$_id",
+        totalViews: 1
+      }
+    }
+  ]);
+
+  return results;
+};
+
 
 module.exports = {
   logEngagement,
@@ -302,5 +347,6 @@ module.exports = {
   deleteEngagementsBefore,
   getEngagementCountsByEntity,
   getWeeklyEngagementStats,
-  getTotalEngagementEventsByOrganizationId
+  getTotalEngagementEventsByOrganizationId,
+  getEventsViewsStats
 };

@@ -1,8 +1,7 @@
 const express = require("express");
 const {
-  createGlobalReferral,
+  saveGlobalReferral,
   getGlobalReferrals,
-  updateGlobalReferral,
   deleteGlobalReferral,
   getGlobalReferralDetails,
   getUserGlobalReferrals,
@@ -23,7 +22,7 @@ const apiRateLimiter = createRateLimiter("GlobalReferrals");
 const apiRateLimiterDetails = createRateLimiter("GlobalReferrals/:id");
 
 // Create a new GlobalReferral
-router.post("/", auth,roleMiddleware(["admin"]), createGlobalReferral);
+router.post("/", auth,roleMiddleware(["admin"]), saveGlobalReferral);
 
 // Delete a GlobalReferral
 router.get("/reset", roleMiddleware(["admin"]), resetUserReferralLimits);
@@ -44,7 +43,7 @@ router.get("/", roleMiddleware(["admin"]),apiRateLimiter, getGlobalReferrals);
 // // router.get("/:id", apiRateLimiterDetails, getGlobalReferralDetails);
 
 // Update an existing GlobalReferral
-router.put("/:id", roleMiddleware(["admin"]), updateGlobalReferral);
+router.put("/:id", roleMiddleware(["admin"]), saveGlobalReferral);
 // // cancel user GlobalReferral
 // router.put("/updateStatus/:id/:value", roleMiddleware(["admin"]), updateUserGlobalReferralStatus);
 

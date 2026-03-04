@@ -5,7 +5,7 @@ const {
 
 
 } = require("../../helperUtils/responseUtil");
-const {GlobalReferral} = require("@GlobalReferralModel");
+const GlobalReferral = require("@GlobalReferralSettingsModel");
 const {
 
   getGlobalReferrals,
@@ -43,13 +43,13 @@ const BASE_WEB_URL = process.env.API_BASE_URL;
 function getModelByType(type) {
     switch (type) {
         case "global":
-            return GlobalReferral;
+            return GlobalReferralSettings;
         case "company":
-            return GlobalReferral;
+            return GlobalReferralSettings;
         case "organizer":
-            return GlobalReferral;
+            return GlobalReferralSettings;
                     case "user":
-            return GlobalReferral;
+            return GlobalReferralSettings;
         default:
             return null;
     }
@@ -187,7 +187,7 @@ router.use(auth);
 // const apiRateLimiter = createRateLimiter("GlobalReferrals");
 // const apiRateLimiterDetails = createRateLimiter("GlobalReferrals/:id");
 
-// // Create a new GlobalReferral
+// // Create a new GlobalReferralSettings
 // router.post("/", auth,roleMiddleware(["admin"]), createGlobalReferral);
 
 // Get all GlobalReferrals with pagination
@@ -197,19 +197,19 @@ router.get("/",  getGlobalReferrals);
 // router.get("/users",roleMiddleware(["admin"]), apiRateLimiter, getUserGlobalReferrals);
 
 
-// // //get GlobalReferral details
+// // //get GlobalReferralSettings details
 // // router.get("/:id", apiRateLimiterDetails, getGlobalReferralDetails);
 
-// // Update an existing GlobalReferral
-// router.put("/:id", roleMiddleware(["admin"]), updateGlobalReferral);
-// // cancel user GlobalReferral
+// // Update an existing GlobalReferralSettings
+// router.put("/:id", roleMiddleware(["admin"]), updateGlobalReferralSettings);
+// // cancel user GlobalReferralSettings
 // router.put("/updateStatus/:id/:value", roleMiddleware(["admin"]), updateUserGlobalReferralStatus);
 
 // // update user GlobalReferral
 // router.put("/:userId/:id", roleMiddleware(["admin"]), updateUserGlobalReferral);
 
 
-// // Delete a GlobalReferral
-// router.delete("/:id", roleMiddleware(["admin"]), deleteGlobalReferral);
+// // Delete a GlobalReferralSettings
+// router.delete("/:id", roleMiddleware(["admin"]), deleteGlobalReferralSettings);
 
 module.exports = router;
