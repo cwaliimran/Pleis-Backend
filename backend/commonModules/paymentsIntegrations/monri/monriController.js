@@ -76,7 +76,9 @@ exports.redirectToMonriWebPay = async (req, res) => {
 exports.redirectToMonriWalletPay = async (req, res) => {
   try {
     const currency = "EUR";
-    const { amount, orderType, orderNumber } = req.query
+    let { amount, orderType, orderNumber } = req.query;
+
+    amount = Number(amount);
 
     // Save transaction
     await monriRepository.createTransaction({
@@ -126,8 +128,24 @@ body {
   font-family: sans-serif;
   padding: 20px;
 }
-#apple-pay, #google-pay {
+
+h3 {
+  margin-bottom: 20px;
+}
+
+#card {
+  margin-bottom: 25px;
+}
+
+#apple-pay,
+#google-pay {
   margin-top: 15px;
+}
+
+button {
+  margin-top: 15px;
+  padding: 10px 16px;
+  font-size: 16px;
 }
 </style>
 </head>
@@ -136,44 +154,93 @@ body {
 
 <h3>Select payment method</h3>
 
+<div id="card"></div>
+<button id="payBtn">Pay with Card</button>
+
 <div id="apple-pay"></div>
 <div id="google-pay"></div>
 
 <script>
-const monri = Monri("${process.env.MONRI_AUTH_TOKEN}");
+
+const monri = Monri("${process.env.MONRI_AUTH_TOKEN}", {
+  environment: "test"
+});
 
 const components = monri.components({
   clientSecret: "${clientSecret}"
 });
 
-const transactionData = {
-  ch_full_name: "Test User",
-  address: "Street 1",
-  city: "Zagreb",
-  zip: "10000",
-  phone: "+385991234567",
-  country: "HR",
-  email: "test@test.com",
-  orderInfo: "Mobile payment",
-  language: "en"
+/* -----------------------
+   CARD PAYMENT
+----------------------- */
+
+const card = components.create("card");
+card.mount("card");
+
+document.getElementById("payBtn").onclick = async function() {
+
+  try {
+
+    const result = await card.tokenize();
+
+    if(result.status === "success") {
+
+      window.location.href =
+        "${process.env.SUCCESS_URL}?order_number=${orderNumber}";
+
+    } else {
+
+      alert("Payment failed");
+
+    }
+
+  } catch(e) {
+    alert("Payment error");
+  }
 };
+
+
+/* -----------------------
+   APPLE PAY
+----------------------- */
 
 const applePay = components.create("apple-pay", {
   trx_token: "${trxToken}",
   environment: "test",
-  transaction: transactionData
+  transaction: {
+    ch_full_name: "Test User",
+    address: "Street 1",
+    city: "Zagreb",
+    zip: "10000",
+    phone: "+385991234567",
+    country: "HR",
+    email: "test@test.com",
+    orderInfo: "Mobile payment",
+    language: "en"
+  }
 });
 
 applePay.mount("apple-pay");
 
+
+/* -----------------------
+   GOOGLE PAY
+----------------------- */
+
 const googlePay = components.create("google-pay", {
   trx_token: "${trxToken}",
-  environment: "test"
+  environment: "test",
+  countryCode: "HR",
+  currencyCode: "EUR"
 });
 
 googlePay.mount("google-pay");
 
-// Redirect back so RN WebView detects success
+
+/* -----------------------
+   SUCCESS EVENTS
+----------------------- */
+
 applePay.on("paymentSuccess", function(result) {
   window.location.href =
     "${process.env.SUCCESS_URL}?order_number=${orderNumber}";
@@ -184,6 +251,11 @@ googlePay.on("paymentSuccess", function(result) {
     "${process.env.SUCCESS_URL}?order_number=${orderNumber}";
 });
 
+
+/* -----------------------
+   ERROR EVENTS
+----------------------- */
+
 applePay.on("paymentError", function() {
   window.location.href = "${process.env.CANCEL_URL}";
 });
@@ -191,13 +263,14 @@ applePay.on("paymentError", function() {
 googlePay.on("paymentError", function() {
   window.location.href = "${process.env.CANCEL_URL}";
 });
+
 </script>
 
 </body>
 </html>
 `);
   } catch (err) {
-    console.error("Wallet pay init failed:", err);
+    console.error("Wallet pay init failed:", err.response?.data || err);
     res.status(500).send("Payment init failed");
   }
 };
