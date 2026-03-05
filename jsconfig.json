@@ -152,9 +152,6 @@
       "@GlobalChallengeModel": [
         "backend/commonModules/globalLoyalty/rewards/models/Challenge/models/Challenge/BaseChallenge.js"
       ],
-      "@UsersGlobalStreaksModel": [
-        "backend/commonModules/globalLoyalty/streaks/UsersGlobalStreaks.js"
-      ],
       "@ThirdPartyModel": [
         "backend/commonModules/globalLoyalty/thirdParty/ThirdParty.js"
       ],
@@ -239,8 +236,14 @@
       "@ApplyPointsByStaffModel": [
         "backend/commonModules/applyPointsByStaff/ApplyPointsByStaff.js"
       ],
-      "@UserBadgesModel": [
-        "backend/commonModules/badgeCategories/UserBadages.js"
+      "@UserGlobalBadgesModel": [
+        "backend/commonModules/badgeCategories/UserGlobalBadages.js"
+      ],
+      "@UsersGlobalStreaksLogsModel": [
+        "backend/commonModules/userGlobalStreaksProgress/UsersGlobalStreaksLogs.js"
+      ],
+      "@UsersGlobalStreaksProgressModel": [
+        "backend/commonModules/userGlobalStreaksProgress/UsersGlobalStreaksProgress.js"
       ],
       "@UserInterests": [
         "backend/models/UserInterests.js"
