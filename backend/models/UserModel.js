@@ -604,7 +604,6 @@ userSchema.methods.generateEmailVerificationToken = function (
     used: false,
   };
   const verificationLink = createVerificationLink(rawToken);
-
   return {
     verificationLink,
     rawToken,
