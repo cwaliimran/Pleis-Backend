@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
 const unifiedRepo = require("../repositories/unifiedTransactionsRepository");
 const { formatTransactionItem } = require("../repositories/../formatter/formatTransactionItems"); // adjust path
+const triggerGlobalStreak = require("../../../../services/globalStreaksAndBadgesService/triggerGlobalStreak");
 
 /**
  * Create a unified transaction (repository updates appropriate wallet)
@@ -29,6 +30,10 @@ const createTransactionService = async (data, session) => {
     }
 
     const result = await unifiedRepo.createTransaction(data, session);
+
+    if (globalPoints && globalPoints.total !== 0) {
+        await triggerGlobalStreak(data.user, ["streak"]);
+    }
 
     // Always return a clean status object
     if (!result || result.success === false) {
