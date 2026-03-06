@@ -403,7 +403,7 @@ const updateTicketing = async (req, res) => {
       lastMinute.startDate = convertTimezoneToUtc(
         lastMinute.startDate,
         timezone,
-        "YYYY-MM-DD"
+        "YYYY-MM-DD hh:mm A"
       );
     }
   }

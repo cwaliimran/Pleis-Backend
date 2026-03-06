@@ -88,4 +88,6 @@ module.exports = {
     "@OrganizationStaffAttendanceModel": "backend/commonModules/staff/OrganizationStaffAttendance.js",
     "@GlobalBasePromotionModel": "backend/commonModules/globalLoyalty/promotions/models/Promotion/basePromotion.js",
     "@UserBillingInformationModel": "backend/commonModules/transactions/UserBillingInformation.js",
+    "@triggerGlobalStreak": "backend/services/globalStreaksAndBadgesService/triggerGlobalStreak.js",
+    "@manageBadgeHistory": "backend/commonModules/badgeCategories/manageHistory/",
 };

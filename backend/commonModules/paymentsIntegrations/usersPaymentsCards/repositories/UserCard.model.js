@@ -12,7 +12,6 @@ const userCardSchema = new mongoose.Schema(
     panToken: {
       type: String,
       required: true,
-      unique: true
     },
 
     maskedPan: {

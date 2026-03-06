@@ -54,6 +54,7 @@ const NotificationTypes = {
   GLOBAL_CHALLENGE_PROGRESS_MILESTONE: "globalChallengeProgressMilestone",
   GLOBAL_CHALLENGE_COMPLETED: "globalChallengeCompleted",
   GLOBAL_CHALLENGE_BATCH_UPDATE: "globalChallengeBatchUpdate",
+  GLOBAL_BADGE_EARNED: "globalBadgeEarned",
 
 
 };

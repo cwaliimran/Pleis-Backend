@@ -103,7 +103,6 @@ const getOrdersTransactionsService = async ({
 
   const skip = (page - 1) * limit;
 
-  console.log("match==>",match)
 
   const [transactions, totalFiltered] = await Promise.all([
     webhookRepository.getOrdersTransactions({ match, keyword, skip, limit }),

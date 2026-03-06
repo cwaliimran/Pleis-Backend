@@ -355,17 +355,17 @@ const sendNotification = async (recipients, payload) => {
     result.responses.forEach((r, index) => {
       if (!r.success) {
         //payload
-        console.error(`❌ FCM Error at index ${index}`);
-        console.error("Code:", r.error?.code);
-        console.error("Message:", r.error?.message);
-        console.error("Stack:", r.error?.stack);
-        console.error("Full Error:", r.error);
+        // console.error(`❌ FCM Error at index ${index}`);
+        // console.error("Code:", r.error?.code);
+        // console.error("Message:", r.error?.message);
+        // console.error("Stack:", r.error?.stack);
+        // console.error("Full Error:", r.error);
       }
     });
 
     return result;
   } catch (error) {
-    console.error("Error sending notifications:", error);
+    // console.error("Error sending notifications:", error);
     throw error;
   }
 };
