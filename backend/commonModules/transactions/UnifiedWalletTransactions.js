@@ -69,6 +69,7 @@ const unifiedTransactionSchema = new mongoose.Schema(
                 "applypointsbystaffs",
                 "promotionorders",
                 "userstreaks",
+                "userglobalbadges", // for global badges
                 "event",
                 "menuItem",
                 "challenge",

@@ -765,7 +765,7 @@ const verifyEmailViaLink = async (req, res) => {
   await user.save();
 
 return res.redirect(
-  `${process.env.EMAIL_VERIFICATION_REDIRECT_URL || "http://localhost:3000/"}?userId=${user._id}&accountState=${user.accountState.status}`
+  `${process.env.EMAIL_VERIFICATION_REDIRECT_URL}?verification=success`
 );
 };
 

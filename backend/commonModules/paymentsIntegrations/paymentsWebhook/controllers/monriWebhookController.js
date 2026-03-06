@@ -15,8 +15,9 @@ const monriWebhookController = async (req, res) => {
 
     if (
       !validateParams(req, res, {
-        rawData: ["transaction.metadata.companyOrganizer", "transaction.metadata.organization", "transaction.orderNumber"],
+        rawData: ["transaction.metadata.companyOrganizer", "transaction.metadata.organization", "transaction.orderNumber", "transaction.metadata.type"],
         objectIdFields: ["transaction.metadata.companyOrganizer", "transaction.metadata.organization", "transaction.orderNumber"],
+        enumFields: { "transaction.metadata.type": ["ticketingbookings", "userreservations", "menuorders", "tickettransfer"] },
       })
     ) return;
 
