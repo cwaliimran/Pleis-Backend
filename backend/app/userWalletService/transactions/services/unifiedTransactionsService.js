@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
 const unifiedRepo = require("../repositories/unifiedTransactionsRepository");
 const { formatTransactionItem } = require("../repositories/../formatter/formatTransactionItems"); // adjust path
+const triggerGlobalStreak = require("@triggerGlobalStreak");
 
 /**
  * Create a unified transaction (repository updates appropriate wallet)
@@ -24,11 +25,22 @@ const createTransactionService = async (data, session) => {
     if (!user) throw new Error("User is required");
     if (!domainType) throw new Error("domainType required");
     // if (!points || points.base === undefined || points.total === undefined) throw new Error("Invalid points payload");
-    if (companyPoints === null || globalPoints === null) {
+    if (!companyPoints && !globalPoints) {
         throw new Error("At least one of companyPoints or globalPoints must be provided");
     }
 
     const result = await unifiedRepo.createTransaction(data, session);
+
+    if (globalPoints && globalPoints.total !== 0) {
+        /* 
+        Spending Badges
+        Total spending milestones
+        Example: “Spend €100 on Pleis” → +300 points
+        */
+        if (type === "redeem") {
+            triggerGlobalStreak(data.user, ["spending"]);
+        }
+    }
 
     // Always return a clean status object
     if (!result || result.success === false) {
@@ -79,27 +91,27 @@ const getTransactions = async ({ page = 1, limit = 10, user, walletType, domainT
 };
 
 const getRecentTransactionsForDashboard = async ({
-  user,
-  walletType,
-  domainType,
-  companyOrganizer,
-  limit = 4
+    user,
+    walletType,
+    domainType,
+    companyOrganizer,
+    limit = 4
 }) => {
-  const query = {};
+    const query = {};
 
-  if (user) query.user = new mongoose.Types.ObjectId(user);
-  if (walletType) query.walletType = walletType;
-  if (domainType) query.domainType = domainType;
-  if (companyOrganizer)
-    query.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
+    if (user) query.user = new mongoose.Types.ObjectId(user);
+    if (walletType) query.walletType = walletType;
+    if (domainType) query.domainType = domainType;
+    if (companyOrganizer)
+        query.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
 
-  const items = await unifiedRepo.getTransactionsWithFilters(
-    query,
-    0,
-    limit
-  );
+    const items = await unifiedRepo.getTransactionsWithFilters(
+        query,
+        0,
+        limit
+    );
 
-  return items.map(i => formatTransactionItem(i));
+    return items.map(i => formatTransactionItem(i));
 };
 
 

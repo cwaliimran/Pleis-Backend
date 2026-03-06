@@ -82,12 +82,12 @@ const formatUserResponse = (
   }
 
   // Include OTP info in dev only
-  if ((process.env.NODE_ENV === "dev" || process.env.NODE_ENV === "prod" || process.env.NODE_ENV === "localhost") && userObject.otpInfo && userObject.otpInfo.emailOtp.otp !== "") {
+  if ((process.env.NODE_ENV === "dev" || process.env.NODE_ENV === "mobileapps" || process.env.NODE_ENV === "localhost") && userObject.otpInfo && userObject.otpInfo.emailOtp.otp !== "") {
     response.otpInfo = userObject.otpInfo;
   }
 
   // Include email verification info in dev only
-  if ((process.env.NODE_ENV === "dev" || process.env.NODE_ENV === "prod" || process.env.NODE_ENV === "localhost") && userObject.emailVerificationLink) {
+  if ((process.env.NODE_ENV === "dev" || process.env.NODE_ENV === "mobileapps" || process.env.NODE_ENV === "localhost") && userObject.emailVerificationLink) {
     response.emailVerification = createVerificationLink(userObject.emailVerificationLink);
   }
 

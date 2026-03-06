@@ -16,6 +16,7 @@ const { fireAndForget } = require("../../../../helperUtils/responseUtil");
 const { handleLoyaltyEarningConsequences } = require("./handleLoyaltyEarningConsequences");
 const { menuOrderConfirmationEmailTemplate } = require("../../../../helperUtils/emailTemplates");
 const { sendEmailViaMailgun } = require("../../../../helperUtils/emailUtil");
+const triggerBadgeEngine = require("@triggerGlobalStreak");
 
 const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
   const session = await mongoose.startSession();
@@ -146,6 +147,7 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
     await session.commitTransaction();
     committed = true;
 
+
   } catch (err) {
     if (session.inTransaction()) {
       await session.abortTransaction();
@@ -159,6 +161,18 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
    🚀 POST-COMMIT SIDE EFFECTS (OUTSIDE TRANSACTION)
 ===================================================== */
   if (committed && menuOrder) {
+
+
+    if (menuOrder.totalPrice && menuOrder.totalPrice > 0) {
+      fireAndForget(
+        triggerBadgeEngine(menuOrder.user, {
+          category: "singlePurchase",
+          amount: menuOrder.totalPrice,
+        }),
+        "TRIGGER_BADGE_ENGINE"
+      );
+    }
+
 
     /**
      * =====================================================

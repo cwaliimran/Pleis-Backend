@@ -14,6 +14,7 @@ const { findAppUserByIdWithProjectionService } = require("../../../../app/usersM
 const { generateQRCode } = require("../../../../helperUtils/qrGenerator");
 const { ticketConfirmationEmailTemplate, ticketFailedEmailTemplate } = require("../../../../helperUtils/emailTemplates/ticketingEmailTemplates");
 const { sendEmailViaMailgun } = require("../../../../helperUtils/emailUtil");
+const triggerBadgeEngine = require("@triggerGlobalStreak");
 
 /**
  * Ticketing Order Finalizer
@@ -23,7 +24,7 @@ const { sendEmailViaMailgun } = require("../../../../helperUtils/emailUtil");
  */
 const ticketingOrderFinalizerService = async ({ orderId, result }) => {
   const session = await mongoose.startSession();
-console.log("result---->", result)
+  console.log("result---->", result)
   let committed = false;
   let order = null;
   let menuOrder = null;
@@ -345,6 +346,16 @@ console.log("result---->", result)
   // 🚀 POST-COMMIT SIDE EFFECTS (OUTSIDE TRANSACTION)
   // =====================================================
   if (committed && order) {
+
+    if (order.orderPricing?.total && order.orderPricing.total > 0) {
+      fireAndForget(
+        triggerBadgeEngine(order.user, {
+          category: "singlePurchase",
+          amount: order.orderPricing.total,
+        }),
+        "TRIGGER_BADGE_ENGINE"
+      );
+    }
 
     /**
      * =====================================================
