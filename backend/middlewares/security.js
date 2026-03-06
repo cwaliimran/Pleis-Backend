@@ -5,7 +5,7 @@ const hpp = require("hpp");
 const cors = require("cors");
 const compression = require("compression");
 const express = require("express");
-
+const { isDev, connectSrc } = require("../config/origins");
 const securityMiddleware = (app, options = {}) => {
   const {
     allowedOrigins = [], // CORS allowed origins
@@ -24,23 +24,14 @@ const securityMiddleware = (app, options = {}) => {
           scriptSrc: ["'self'", "'unsafe-inline'"],
           styleSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", "data:"],
-          connectSrc: [
-          "'self'",
-          "https://pleis.com",
-          "https://www.pleis.com",
-          "https://dev.pleis.com",
-          "https://www.dev.pleis.com",
-          "http://localhost:4003",
-          "https://pleis.vercel.app",
-          "http://192.168.*.*:4003"
-        ],
+          connectSrc,
         },
       },
       referrerPolicy: { policy: "no-referrer" },
       crossOriginEmbedderPolicy: true,
       crossOriginOpenerPolicy: { policy: "same-origin" },
       crossOriginResourcePolicy: { policy: "same-origin" },
-      hsts: { maxAge: 31536000, includeSubDomains: true }, // 1 year
+      hsts: { maxAge: 31536000, includeSubDomains: true },
     })
   );
 
@@ -66,12 +57,22 @@ const securityMiddleware = (app, options = {}) => {
   app.use(express.urlencoded({ extended: true, limit: maxRequestSize }));
 
   // CORS
+  // CORS
+  const isDev =
+    process.env.NODE_ENV === "dev" ||
+    process.env.NODE_ENV === "mobileapps";
   const corsOptions = {
     origin: function (origin, callback) {
-      // If Origin is undefined, assume same-origin (browser-to-same-server)
       if (!origin) return callback(null, true);
 
-      if (allowedOrigins.includes(origin)) return callback(null, true);
+      if (isDev) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
       return callback(new Error("CORS Forbidden"), false);
     },
     credentials: true,
@@ -79,12 +80,9 @@ const securityMiddleware = (app, options = {}) => {
     allowedHeaders: ["Content-Type", "Authorization", "x-admin-access-token"],
   };
 
-
-
   app.use(cors(corsOptions));
-  app.options('*', cors(corsOptions), (req, res) => {
-    res.sendStatus(200);
-  });
+  app.options("*", cors(corsOptions));
+
   // Optional JSON error for CORS
   app.use((err, req, res, next) => {
     if (err && err.message === "CORS Forbidden") {

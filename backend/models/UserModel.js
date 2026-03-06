@@ -223,6 +223,7 @@ const userSchema = new mongoose.Schema(
           "active",
           "cancelled",
           "expired",
+          "suspended",
           "deleted",
         ],
         default: "pending",
@@ -603,7 +604,6 @@ userSchema.methods.generateEmailVerificationToken = function (
     used: false,
   };
   const verificationLink = createVerificationLink(rawToken);
-
   return {
     verificationLink,
     rawToken,

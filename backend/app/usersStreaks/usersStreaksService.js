@@ -4,8 +4,25 @@ const usersStreakRepo = require("./usersStreaksRepository");
 const { formatUsersStreaks } = require("./formatters/usersStreaksFormatter");
 const { default: mongoose } = require("mongoose");
 const UserStreaks = require("@UsersStreaksModel");
-const createUsersStreak = async ({ user, companyOrganizer, organization}) => {
-  return await usersStreakRepo.createUsersStreak({ user, companyOrganizer, organization });
+const Venues = require("@VenuesModel");
+
+const triggerBadgeEngine = require("@triggerGlobalStreak");
+const createUsersStreak = async ({ user, companyOrganizer, organization }) => {
+  let streak = await usersStreakRepo.createUsersStreak({ user, companyOrganizer, organization });
+  if (streak) {
+
+    //get organization venueId for badge triggering
+    let venueId = await Venues.findOne({ organization: organization, isPrimary: true }).select("_id").lean();
+    venueId = venueId ? venueId._id : null;
+    if (venueId) {
+      triggerBadgeEngine(user, {
+        category: "repeatVisit",
+        venueId: venueId,
+        organizationId: organization
+      });
+    }
+  }
+  return streak;
 };
 
 const getUsersUsersStreaks = async ({ companyOrganizer, page, limit, keyword, status, date, orderSort = "asc" }) => {

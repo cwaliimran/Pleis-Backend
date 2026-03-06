@@ -646,6 +646,50 @@ const getEventbycompanyOrganizer = async (query) => {
   }
 };
 
+
+/**
+ * Get total tickets + total revenue per event
+ * @param {Array<string|ObjectId>} eventIds
+ * @returns {Array<{ event: ObjectId, totalTickets: number, totalRevenue: number }>}
+ */
+const getEventsTicketStats = async (eventIds = []) => {
+  if (!Array.isArray(eventIds) || eventIds.length === 0) {
+    return [];
+  }
+
+  const objectIds = eventIds.map(
+    (id) => new mongoose.Types.ObjectId(id)
+  );
+
+  const results = await TicketingOrders.aggregate([
+    {
+      $match: {
+        event: { $in: objectIds },
+        purpose: "eventTicketPurchase",
+        status: { $in: ["paid", "completed"] },
+        "paymentDetails.paymentStatus": "paid",
+      },
+    },
+    {
+      $group: {
+        _id: "$event",
+        totalTickets: { $sum: "$ticketsPurchased" },
+        totalRevenue: { $sum: "$orderPricing.total" },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        event: "$_id",
+        totalTickets: 1,
+        totalRevenue: 1,
+      },
+    },
+  ]);
+
+  return results;
+};
+
 module.exports = {
   createEvent,
   getEventsWithFilters,
@@ -667,6 +711,7 @@ module.exports = {
   getTotalEventCountByOrganizationId,
   getLatestEventByOrganization,
   getOrganizationIdByEventId,
-  getEventbycompanyOrganizer
+  getEventbycompanyOrganizer,
+  getEventsTicketStats
 
 };

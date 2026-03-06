@@ -6,6 +6,7 @@ const {
   deleteTicketing,
   getTicketingDetails,
   getOrganizationTicketings,
+  
 } = require("./ticketingsController");
 
 const auth = require("../../middlewares/authMiddleware");
@@ -26,6 +27,8 @@ router.post("/", roleMiddleware(["admin", "organizer", "manager"]), createTicket
 //getTicketingDetails
 router.get("/organization/:id", getOrganizationTicketings);
 
+
+
 //getTicketingDetails
 router.get("/:id", getTicketingDetails);
 
@@ -35,6 +38,7 @@ router.get("/:id", getTicketingDetails);
  * @access Authenticated
  */
 router.get("/", getTicketings);
+
 
 /**
  * @route PUT /ticketings/:id

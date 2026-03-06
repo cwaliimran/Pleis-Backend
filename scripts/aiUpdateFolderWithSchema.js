@@ -119,7 +119,7 @@ const ticketingBookingSchema = new mongoose.Schema(
             currency: { type: String, default: "€" },
         },
 
-        paymentId: { type: String, default: null },
+        transactionId: { type: String, default: null },
     },
     { timestamps: true }
 );

@@ -104,22 +104,6 @@ const eventSchema = new mongoose.Schema(
       default: "active",
     },
 
-    meta: {
-      revenue: {
-        type: Number,
-        default: 0,
-      },
-      attendeesCount: {
-        type: Number,
-        default: 0,
-      },
-      region: {
-        type: String,
-        trim: true,
-        default: "",
-      },
-    },
-
     recurringMeta: {  // only for recurring events
       isTemplate: {
         type: Boolean,

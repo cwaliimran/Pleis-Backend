@@ -34,6 +34,12 @@ const globalRewardSchema = new mongoose.Schema(
       enum: ["active", "inactive", "completed", "deleted"],
       default: "active",
     },
+    
+    //if enabled reward will not show in app loyalty of rewards, but it will be tied to promotions and show in promotions section only
+    isPromotionOnly: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true, discriminatorKey: "rewardType" }
 );

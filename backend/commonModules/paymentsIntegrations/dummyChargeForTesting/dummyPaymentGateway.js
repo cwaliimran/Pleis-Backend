@@ -7,7 +7,7 @@ const fakeCharge = async ({ orderId, amount }) => {
   if (outcome === "success") {
     return {
       success: true,
-      paymentId: `PAY_${Date.now()}`,
+      transactionId: `PAY_${Date.now()}`,
     };
   }
 

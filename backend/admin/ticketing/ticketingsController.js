@@ -1,3 +1,4 @@
+const { getTicketingBookingsService } = require("../../app/bookings/ticketings/ticketingBookingService");
 const {
   sendResponse,
   parsePaginationParams,
@@ -11,7 +12,7 @@ const { updateTicketingService } = require("./updateTicketingService");
 
 const createTicketing = async (req, res) => {
   let data = req.body;
-    if (!data.status) {
+  if (!data.status) {
     data.status = "active";
   }
   const { timezone } = req.user;
@@ -153,7 +154,7 @@ const createTicketing = async (req, res) => {
 
 const getTicketings = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, eventId,organizations } = req.query;
+  const { keyword, status, date, eventId, organizations } = req.query;
   const { timezone } = req.user;
 
   try {
@@ -166,7 +167,7 @@ const getTicketings = async (req, res) => {
       date,
       eventId,
       organizations,
-      companyOrganizer:req.user._id
+      companyOrganizer: req.user._id
     });
 
     return sendResponse({
@@ -402,7 +403,7 @@ const updateTicketing = async (req, res) => {
       lastMinute.startDate = convertTimezoneToUtc(
         lastMinute.startDate,
         timezone,
-        "YYYY-MM-DD"
+        "YYYY-MM-DD hh:mm A"
       );
     }
   }
@@ -471,6 +472,8 @@ const deleteTicketing = async (req, res) => {
     });
   }
 };
+
+
 
 module.exports = {
   createTicketing,

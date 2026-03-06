@@ -83,6 +83,7 @@ const webhooksRoutes =
  */
 const swaggerUi = require("swagger-ui-express");
 const swaggerFile = require("../swagger/swagger_output.json");
+const { allowedOrigins } = require("./config/origins");
 
 /**
  * =======================================================
@@ -117,17 +118,6 @@ app.get("/health", (req, res) => {
  * Security
  * =======================================================
  */
-const allowedOrigins = [
-  "https://pleis.com",
-  "https://www.pleis.com",
-  "https://dev.pleis.com",
-  "https://www.dev.pleis.com",
-  "http://localhost:4003",
-  "https://pleis.vercel.app",
-  "https://amsterdam-distribution-gravity-sandwich.trycloudflare.com",
-  "http://192.168.*.*:4003",
-];
-
 securityMiddleware(app, {
   allowedOrigins,
   adminIPWhitelist: [],
@@ -135,6 +125,7 @@ securityMiddleware(app, {
   rateLimitWindow: 15 * 60 * 1000,
   rateLimitMax: 200,
 });
+
 
 /**
  * =======================================================

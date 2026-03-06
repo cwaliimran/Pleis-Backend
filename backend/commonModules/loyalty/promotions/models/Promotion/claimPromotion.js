@@ -7,7 +7,7 @@ const ClaimPromotion = Promotion.discriminator(
     {
       reward: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Rewards",
+        ref: "Reward",
         required: true,
       },
       claimPoints: { type: Number, required: true },

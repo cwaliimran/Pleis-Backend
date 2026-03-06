@@ -6,6 +6,7 @@ const {
   updateTicketingBooking,
   transferTicketingBooking,
   deleteTicketingBooking,
+  updateTicketingBookingProtectionDetails,
 } = require("./ticketingBookingController");
 const auth = require("../../../middlewares/authMiddleware");
 
@@ -17,7 +18,7 @@ router.post("/transfer", transferTicketingBooking); //transfer booking ownership
 router.post("/", createTicketingBooking);
 router.get("/", getTicketingBookings);
 router.get("/:id", getTicketingBookingById);
-// router.put("/:id", updateTicketingBooking);
+router.put("/:id/protection-details", updateTicketingBookingProtectionDetails); //update protection details of a booking
 // router.delete("/:id", deleteTicketingBooking);
 
 module.exports = router;

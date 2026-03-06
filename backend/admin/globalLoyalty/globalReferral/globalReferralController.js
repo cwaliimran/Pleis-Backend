@@ -10,170 +10,83 @@ const {
 const formatLoyaltyListing = require("./formatter/formatLoyaltyListing");
 const globalReferralService = require("./globalReferralService");
 
-const createGlobalReferral = async (req, res) => {
-  let {
+const saveGlobalReferral = async (req, res) => {
+  const {
     userPoints,
     referrerPoints,
     minimumPurchases,
+    referralLimit,
+    status,
   } = req.body;
 
-  const userId = req.user._id;
-  const timezone = req.user.timezone;
-
-  // Required fields validation
   if (
     !validateParams(req, res, {
-      rawData: [
-        "userPoints",
-        "referrerPoints",
-        "minimumPurchases",
-      ],
+      rawData: ["userPoints", "referrerPoints", "minimumPurchases"],
     })
   ) return;
 
-
-
-  // Prepare data for creation
-  let data = {
-    creator: userId,
-    userPoints,
-    referrerPoints,
-    type:"global",
-    minimumPurchases,
-    status:"inactive",
-  };
-
   try {
-    const GlobalReferral = await globalReferralService.createGlobalReferral(data);
-
-    if (!GlobalReferral) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "global_referral_creation_failed",
-      });
-    }
-
-    return sendResponse({
-      res,
-      statusCode: 201,
-      translationKey: "global_referral_created_successfully",
-      data: GlobalReferral,
-    });
-
-  } catch (error) {
-    const readableError = getReadableErrorMessage(error);
-    return sendResponse({
-      res,
-      statusCode: readableError.statusCode,
-      translationKey: readableError.message,
-      error,
-    });
-  }
-};
-
-
-const getGlobalReferrals = async (req, res) => {
-  const { page, limit } = parsePaginationParams(req);
-  const { keyword, status , date, range,type="global" } = req.query;
-  try {
-    const userId = req.user._id;
-    const timezone = req.user.timezone;
-    const { globalReferral, meta } = await globalReferralService.getGlobalReferrals({
-        timezone,
-      page,
-      limit,
-      keyword,
+    const data = {
+      userPoints,
+      referrerPoints,
+      minimumPurchases,
+      referralLimit,
       status,
-      userId,
-      date,
-      range,
-      type
-    });
+    };
+
+    const globalReferral =
+      await globalReferralService.saveGlobalReferral(data);
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "global_referrals_fetched_successfully",
+      translationKey: "global_referral_saved_successfully",
       data: globalReferral,
-      meta,
     });
+
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
+
     return sendResponse({
       res,
-      statusCode: readableError.statusCode,
+      statusCode: readableError.statusCode || 500,
       translationKey: readableError.message,
       error,
     });
   }
 };
 
-
-const updateGlobalReferral = async (req, res) => {
-  const { id, creater } = req.params;
-let {
-  userPoints,
-  minimumPurchases,
-  referralLimit,
-  referrerPoints,
-  status,
-} = req.body;
-const userId = req.user._id;
-const timezone = req.user.timezone;
-
-  if (
-    !validateParams(req, res, {
-      pathParams: ["id"],
-      objectIdFields: ["id"],
-    })
-  )
-    return;
-
-  let data = {
-    id,
-    userPoints,
-    referralLimit,
-    referrerPoints,
-    userId,
-  minimumPurchases,
-  status,
-  };
-
+const getGlobalReferrals = async (req, res) => {
   try {
-    const updated = await globalReferralService.updateGlobalReferral(data);
-    if (updated && updated.error) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: updated.error,
-      });
-    }
+    const globalReferral =
+      await globalReferralService.getGlobalReferrals();
 
-    if (!updated) {
+    if (!globalReferral) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "update_global_referral_not_found",
+        translationKey: "global_referral_not_found",
       });
     }
-
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "update_global_referral_updated_successfully",
-      data: updated,
+      translationKey: "global_referral_fetched_successfully",
+      data: globalReferral,
     });
+
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
+
     return sendResponse({
       res,
-      statusCode: readableError.statusCode,
+      statusCode: readableError.statusCode || 500,
       translationKey: readableError.message,
       error,
     });
   }
 };
+
 
 const deleteGlobalReferral = async (req, res) => {
   const { id } = req.params;
@@ -213,18 +126,14 @@ const deleteGlobalReferral = async (req, res) => {
 };
 
 
-
-
-
-
 const getUserGlobalReferrals = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range,type="global" } = req.query;
+  const { keyword, status = "active", date, range, type = "global" } = req.query;
   try {
     const userId = req.user._id;
     const timezone = req.user.timezone;
     const { globalReferral, meta } = await globalReferralService.getUserGlobalReferrals({
-        timezone,
+      timezone,
       page,
       limit,
       keyword,
@@ -260,7 +169,7 @@ const getUserGlobalReferrals = async (req, res) => {
 
 
 const resetUserReferralLimits = async (req, res) => {
-const limit = 0;
+  const limit = 0;
 
 
   try {
@@ -293,15 +202,9 @@ const limit = 0;
 };
 
 module.exports = {
-  createGlobalReferral,
+  saveGlobalReferral,
   getGlobalReferrals,
-  updateGlobalReferral,
-  // deleteReservation,
   deleteGlobalReferral,
-  // getReservationDetails,
-  // getUserReservations,
-  // updateUserReservationStatus,
-  // updateUserReservation,
   getUserGlobalReferrals,
   resetUserReferralLimits
 };

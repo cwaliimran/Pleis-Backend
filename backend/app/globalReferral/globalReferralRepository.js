@@ -1,5 +1,5 @@
 // repositories/ReservationRepository.js
-const GlobalReferral = require("@GlobalReferralModel");
+const GlobalReferralSettings = require("@GlobalReferralSettingsModel");
 const { ReferredRecord } = require("@ReferredRecordModel");
 const mongoose = require("mongoose");
 const { User } = require("../../models/UserModel");
@@ -15,7 +15,7 @@ const { sendUserNotifications } = require("../../controllers/communicationContro
 const createGlobalReferral = async (data) => {
   try {
 
-    const globalReferral = new GlobalReferral(data);
+    const globalReferral = new GlobalReferralSettings(data);
     await globalReferral.save();
     return globalReferral;
   } catch (err) {
@@ -148,7 +148,7 @@ const getGlobalReferrals = async ({ timezone, page, limit, keyword, status, user
   if (keyword) {
     const keywordMatch = buildKeywordQueryFromModels(
       [
-        { schema: GlobalReferral.schema }
+        { schema: ReferredRecord.schema }
       ],
       keyword
     );
@@ -171,7 +171,7 @@ const getGlobalReferrals = async ({ timezone, page, limit, keyword, status, user
     }
   });
 
-  const result = await GlobalReferral.aggregate(pipeline);
+  const result = await ReferredRecord.aggregate(pipeline);
 
 
   let globalReferral = result[0]?.data || [];
@@ -180,9 +180,9 @@ const getGlobalReferrals = async ({ timezone, page, limit, keyword, status, user
 
   // Additional counts for meta (active/inactive/total by userId as creator)
   const [total, active, inactive] = await Promise.all([
-    GlobalReferral.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "deleted" } }),
-    GlobalReferral.countDocuments({ status: "active", ...(userId && { userId: userId }) }),
-    GlobalReferral.countDocuments({ status: "inactive", ...(userId && { userId: userId }) })
+    ReferredRecord.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "deleted" } }),
+    ReferredRecord.countDocuments({ status: "active", ...(userId && { userId: userId }) }),
+    ReferredRecord.countDocuments({ status: "inactive", ...(userId && { userId: userId }) })
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
@@ -198,7 +198,7 @@ const createUserReferradrecord = async (data) => {
     const { username, userIp, userId } = data;
 
     // 1️⃣ Get active referral settings
-    const referralSettings = await GlobalReferral.findOne({ status: "active" });
+    const referralSettings = await GlobalReferralSettings.findOne({ status: "active" });
     if (!referralSettings) {
       throw new Error("Referral settings not configured.");
     }
@@ -284,7 +284,7 @@ const createUserReferradrecord = async (data) => {
     });
     await sendUserNotifications({
       recipientIds: [referrer._id.toString()],
-      title: "Some one Joined PLEIS through your Referral",
+      title: "Someone Joined PLEIS through your Referral",
       body: `Congratulations! someone has joined PLEIS using your referral.`,
       data: {
         type: NotificationTypes.REFERRAL_UPDATE,

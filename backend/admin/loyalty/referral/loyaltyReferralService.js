@@ -3,36 +3,37 @@ const { getCurrentDateInTimezone } = require("../../../helperUtils/responseUtil"
 const LoyaltyReferralRepo = require("./loyaltyReferralRepository");
 
 
+/* =========================================================
+   SETTINGS (Singleton Per companyOrganizer)
+========================================================= */
+
+/**
+ * Create OR Update (Upsert)
+ */
 const createLoyaltyReferral = async (data) => {
-  let LoyaltyReferral = await LoyaltyReferralRepo.createLoyaltyReferral(data);
-  return LoyaltyReferral;
+  return await LoyaltyReferralRepo.createLoyaltyReferral(data);
 };
 
-// Populate venue data for reservations (updated for new schema)
-const getLoyaltyReferrals = async ({ timezone, page, limit, keyword, status, companyOrganizer, date, range, type }) => {
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
-  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { LoyaltyReferral, meta } = await LoyaltyReferralRepo.getLoyaltyReferrals({ timezone, page, limit, keyword, status, companyOrganizer, date, range, today, skip, type });
-  return {
-    LoyaltyReferral,
-    meta
-  };
+
+/**
+ * Get Settings (Single Object, No Meta, No Pagination)
+ */
+const getLoyaltyReferrals = async ({ companyOrganizer }) => {
+  return await LoyaltyReferralRepo.getLoyaltyReferrals({ companyOrganizer });
 };
 
+
+/**
+ * Update Settings (Scoped Per Company)
+ */
 const updateLoyaltyReferral = async (data) => {
 
-  const LoyaltyReferral = await LoyaltyReferralRepo.findLoyaltyReferralsById(data.id);
+  const existing = await LoyaltyReferralRepo.findLoyaltyReferralsById(data.id);
 
-  if (!LoyaltyReferral) {
+  if (!existing) {
     return { error: "LoyaltyReferral_not_found" };
   }
 
-  // Authorization
-  if (String(data.userId) !== String(LoyaltyReferral.creator)) {
-    throw new Error("You are not an admin or IDs mismatch");
-  }
-
-  // Allowed fields
   const allowedFields = [
     "userPoints",
     "minimumPurchases",
@@ -41,65 +42,92 @@ const updateLoyaltyReferral = async (data) => {
     "status",
   ];
 
-
-
-  // Build update data
   const updateData = {};
   for (const key of allowedFields) {
-    if (data[key] !== undefined) updateData[key] = data[key];
+    if (data[key] !== undefined) {
+      updateData[key] = data[key];
+    }
   }
 
-  // ----------------------------------------------------
-  // STATUS LOGIC
-  // ----------------------------------------------------
-
-  // Case 1: Record is ALREADY ACTIVE & user sends ACTIVE again
-  // → DO NOT throw error, DO NOT update anything
-  if (updateData.status === "active" && LoyaltyReferral.status === "active") {
-    delete updateData.status;
-  }
-
-
-
-  // If nothing to update
   if (Object.keys(updateData).length === 0) {
-    return LoyaltyReferral;
+    return existing;
   }
 
-  // Save updates
-  Object.assign(LoyaltyReferral, updateData);
-  await LoyaltyReferral.save();
-
-  return LoyaltyReferral;
+  return await LoyaltyReferralRepo.findByIdAndUpdate(data.id, updateData);
 };
 
 
-
+/**
+ * Soft Delete (Just mark deleted)
+ */
 const deleteLoyaltyReferral = async (id) => {
 
   const updated = await LoyaltyReferralRepo.findByIdAndUpdate(id, {
     status: "deleted",
   });
+
   if (!updated) return null;
+
   return true;
 };
 
 
 
-const getUserLoyaltyReferrals = async ({ timezone, page, limit, keyword, status, userId, date, companyOrganizer, type }) => {
+
+
+/* =========================================================
+   USER REFERRAL RECORDS (Pagination Preserved)
+========================================================= */
+
+const getUserLoyaltyReferrals = async ({
+  timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  userId,
+  date,
+  companyOrganizer,
+  type,
+}) => {
+
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { LoyaltyReferral, meta } = await LoyaltyReferralRepo.getUserLoyaltyReferrals({ timezone, page, limit, keyword, status, userId, date, companyOrganizer, today, skip, type });
+
+  const today = getCurrentDateInTimezone({
+    timezone,
+    isDateOnly: true,
+  });
+
+  const { LoyaltyReferral, meta } =
+    await LoyaltyReferralRepo.getUserLoyaltyReferrals({
+      timezone,
+      page,
+      limit,
+      keyword,
+      status,
+      userId,
+      date,
+      companyOrganizer,
+      today,
+      skip,
+      type,
+    });
+
   return {
     LoyaltyReferral,
-    meta
+    meta,
   };
 };
-const resetUserReferralLimits
-  = async (limit) => {
-    let LoyaltyReferral = await LoyaltyReferralRepo.resetUserReferralLimits(limit);
-    return LoyaltyReferral;
-  };
+
+
+/**
+ * Reset referral limits for all users
+ */
+const resetUserReferralLimits = async (limit) => {
+  return await LoyaltyReferralRepo.resetUserReferralLimits(limit);
+};
+
+
 
 module.exports = {
   createLoyaltyReferral,

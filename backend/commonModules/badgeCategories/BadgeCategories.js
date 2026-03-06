@@ -1,4 +1,3 @@
-// models/Badge.js
 const mongoose = require("mongoose");
 
 const CATEGORY_CONDITION_MAP = {
@@ -12,65 +11,81 @@ const CATEGORY_CONDITION_MAP = {
 };
 
 const BadgeCategoriesSchema = new mongoose.Schema(
-  {
-    title: {
+{
+  title: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+
+  description: {
+    type: String,
+    trim: true,
+    default: "",
+  },
+
+  icon: {
+    type: String,
+    default: null,
+  },
+
+  category: {
+    type: String,
+    enum: Object.keys(CATEGORY_CONDITION_MAP),
+    required: true,
+    index: true
+  },
+
+  condition: {
+    type: {
       type: String,
+      enum: ["count", "amount", "rank", "streakDays"],
       required: true,
-      trim: true,
     },
 
-    description: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-
-    icon: {
-      type: String,
-      default: null,
-    },
-
-    category: {
-      type: String,
-      enum: Object.keys(CATEGORY_CONDITION_MAP),
-      required: true,
-      index: true,
-    },
-
-    condition: {
-      type: {
-        type: String,
-        enum: ["count", "amount", "rank", "streakDays"],
-        required: true,
-      },
-
-      value: {
-        type: Number,
-        required: true,
-        min: 1,
-      },
-    },
-
-    points: {
+    value: {
       type: Number,
       required: true,
-      min: 0,
-    },
-
-    status: {
-      type: String,
-      enum: ["active", "inactive","deleted"],
-      default: "active",
+      min: 1,
     },
   },
-  {
-    timestamps: true,
-  }
+
+  points: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+
+  status: {
+    type: String,
+    enum: ["active", "inactive", "deleted"],
+    default: "active",
+    index: true
+  },
+},
+{
+  timestamps: true,
+}
 );
 
-/* ================= STRICT CATEGORY → CONDITION VALIDATION ================= */
+/* =====================================================
+   🔎 BADGE EVALUATION INDEX (IMPORTANT)
+   Speeds up badge lookup during evaluation
+===================================================== */
+
+BadgeCategoriesSchema.index({
+  category: 1,
+  "condition.type": 1,
+  "condition.value": 1,
+  status: 1
+});
+
+/* =====================================================
+   VALIDATION
+===================================================== */
 
 BadgeCategoriesSchema.pre("validate", function (next) {
+
   const allowedConditions = CATEGORY_CONDITION_MAP[this.category];
 
   if (!allowedConditions) {

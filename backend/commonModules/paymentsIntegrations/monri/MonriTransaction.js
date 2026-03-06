@@ -2,7 +2,12 @@ const mongoose = require("mongoose");
 
 const monriTransactionSchema = new mongoose.Schema(
   {
-    orderNumber: { type: String, required: true, unique: true },
+    orderNumber: { type: String, required: true },
+    orderType: {
+      type: String,
+      enum: ["ticketingbookings", "userreservations", "menuorders", "tickettransfer"],
+      required: true,
+    },
     amount: { type: Number, required: true },
     currency: { type: String, default: "EUR" },
 

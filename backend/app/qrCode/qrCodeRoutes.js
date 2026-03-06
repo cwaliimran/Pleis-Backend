@@ -5,7 +5,7 @@ const {
 
 
 } = require("../../helperUtils/responseUtil");
-const {GlobalReferral} = require("@GlobalReferralModel");
+const GlobalReferralSettings = require("@GlobalReferralSettingsModel");
 
 
 const auth = require("../../middlewares/authMiddleware");
@@ -21,13 +21,13 @@ const BASE_WEB_URL = process.env.API_BASE_URL;
 function getModelByType(type) {
     switch (type) {
         case "global":
-            return GlobalReferral;
+            return  GlobalReferralSettings;
         case "company":
-            return GlobalReferral;
+            return GlobalReferralSettings;
         case "organizer":
-            return GlobalReferral;
+            return GlobalReferralSettings;
                     case "user":
-            return GlobalReferral;
+            return GlobalReferralSettings;
         default:
             return null;
     }

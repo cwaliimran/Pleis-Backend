@@ -1,11 +1,7 @@
-const { User } = require('@UserModel');
-const { buildKeywordQueryFromModels } = require('@utils/dbUtils/queryUtil');
-const { generateMeta } = require('@utils/responseUtil');
 // const  Badges  = require('@BadgesModel');
 const mongoose = require("mongoose");
-const { escapeRegex } = require("./formater/helper");
 const BadgeCategoriesModel = require("@BadgeCategoriesModel");
-const UserBadges = require("@UserBadgesModel");
+const UserGlobalBadgesModel = require("@UserGlobalBadgesModel");
 const { getFullImageUrl } = require('@utils/imageHelper');
 const { sendUserNotifications } = require('@notificationsUtil');
 const { NotificationTypes } = require('@NotificationsModel');
@@ -13,7 +9,7 @@ const { getUserMaxStreak } = require('../usersStreaks/usersStreaksService');
 
 const addUserBadges = async (data) => {
   try {
-    const existingBadge = await UserBadges.findOne({
+    const existingBadge = await UserGlobalBadgesModel.findOne({
       user: data.userId,
       badgeCategory: data.badageId
     });
@@ -21,7 +17,7 @@ const addUserBadges = async (data) => {
     if (existingBadge) {
       return existingBadge;
     }
-    const userBadge = await UserBadges.create({
+    const userBadge = await UserGlobalBadgesModel.create({
       user: data.userId,
       badgeCategory: data.badageId
     });
@@ -50,7 +46,7 @@ const getBadgess = async ({ page = 1, limit = 10, keyword, status, userId }) => 
 
 
   /* ===================== 2️⃣ USER BADGES (PIPELINE + LOOKUP) ===================== */
-  const userBadges = await UserBadges.aggregate([
+  const userBadges = await UserGlobalBadgesModel.aggregate([
     {
       $match: {
         user: new mongoose.Types.ObjectId(userId)

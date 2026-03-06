@@ -122,7 +122,7 @@
       "@StreakRulesModel": [
         "backend/commonModules/loyalty/streaks/StreakRules.js"
       ],
-      "@GlobalReferralModel": [
+      "@GlobalReferralSettingsModel": [
         "backend/commonModules/globalReferral/GlobalReferralSettings.js"
       ],
       "@ReferredRecordModel": [
@@ -151,12 +151,6 @@
       ],
       "@GlobalChallengeModel": [
         "backend/commonModules/globalLoyalty/rewards/models/Challenge/models/Challenge/BaseChallenge.js"
-      ],
-      "@GlobalStreaksModel": [
-        "backend/commonModules/globalLoyalty/streaks/Streaks.js"
-      ],
-      "@GlobalUsersStreaksModel": [
-        "backend/commonModules/globalLoyalty/streaks/UsersStreaks.js"
       ],
       "@ThirdPartyModel": [
         "backend/commonModules/globalLoyalty/thirdParty/ThirdParty.js"
@@ -242,8 +236,14 @@
       "@ApplyPointsByStaffModel": [
         "backend/commonModules/applyPointsByStaff/ApplyPointsByStaff.js"
       ],
-      "@UserBadgesModel": [
-        "backend/commonModules/badgeCategories/UserBadages.js"
+      "@UserGlobalBadgesModel": [
+        "backend/commonModules/badgeCategories/UserGlobalBadages.js"
+      ],
+      "@UsersGlobalStreaksLogsModel": [
+        "backend/commonModules/userGlobalStreaksProgress/UsersGlobalStreaksLogs.js"
+      ],
+      "@UsersGlobalStreaksProgressModel": [
+        "backend/commonModules/userGlobalStreaksProgress/UsersGlobalStreaksProgress.js"
       ],
       "@UserInterests": [
         "backend/models/UserInterests.js"
@@ -262,6 +262,12 @@
       ],
       "@UserBillingInformationModel": [
         "backend/commonModules/transactions/UserBillingInformation.js"
+      ],
+      "@triggerGlobalStreak": [
+        "backend/services/globalStreaksAndBadgesService/triggerGlobalStreak.js"
+      ],
+      "@manageBadgeHistory/*": [
+        "backend/commonModules/badgeCategories/manageHistory//*"
       ]
     }
   },

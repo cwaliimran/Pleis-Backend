@@ -310,7 +310,7 @@ const login = async (req, res) => {
     }
 
     if (
-      user.accountState.status === "suspended"
+      user.accountState.status === "suspended" || user.accountState.status === "deleted"
     ) {
       return sendResponse({
         res,
@@ -764,9 +764,9 @@ const verifyEmailViaLink = async (req, res) => {
   user.emailVerification.otpRequestCount = 0;
   await user.save();
 
-  return res.redirect(
-    process.env.EMAIL_VERIFICATION_REDIRECT_URL || "http://localhost:3000/"
-  );
+return res.redirect(
+  `${process.env.EMAIL_VERIFICATION_REDIRECT_URL}?verification=success`
+);
 };
 
 const resendEmailVerificationLink = async (req, res) => {

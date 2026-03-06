@@ -12,7 +12,7 @@ const { userReservationsFormatter } = require("../../../../app/reservations/form
 const { reservationConfirmationEmailTemplate, reservationCancelledEmailTemplate } = require("../../../../helperUtils/emailTemplates/userReservationsTemplates");
 const { sendEmailViaMailgun } = require("../../../../helperUtils/emailUtil");
 const { findAppUserByIdWithProjectionService } = require("../../../../app/usersManagement/usersService");
-
+const triggerBadgeEngine = require("@triggerGlobalStreak");
 const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   const session = await mongoose.startSession();
 
@@ -63,7 +63,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
           $set: {
             status: "confirmed",
             "paymentDetails.paymentStatus": "paid",
-            "paymentDetails.paymentId": result.paymentId,
+            "paymentDetails.transactionId": result.transactionId,
             paidAt: new Date(),
           },
         },
@@ -79,7 +79,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
               status: "confirmed",
               paymentStatus: "paid",
               paidAt: new Date(),
-              transactionId: result.paymentId,
+              transactionId: result.transactionId,
             },
           },
           { session }
@@ -207,32 +207,35 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
 
     await session.commitTransaction();
 
+    if (result.status === "failed") {
+      const reservationDetails =
+        await getUserReservationDetails(userReservation._id);
 
-    const reservationDetails =
-      await getUserReservationDetails(
-        userReservation._id
+      let userDetails =
+        await findAppUserByIdWithProjectionService(
+          userReservation.userId,
+          { timezone: 1, email: 1, username: 1 }
+        );
+
+      const formatted =
+        userReservationsFormatter(
+          reservationDetails,
+          userDetails.timezone || "UTC"
+        );
+
+      const html =
+        reservationCancelledEmailTemplate({
+          userName: formatted.userName,
+          reservation: formatted,
+          organizationName: formatted.organizationName
+        });
+
+      await sendEmailViaMailgun(
+        userDetails.email,
+        "Reservation payment failed",
+        html
       );
-
-    let userDetails = await findAppUserByIdWithProjectionService(userReservation.userId, { timezone: 1, email: 1, username: 1 });
-
-    const formatted =
-      userReservationsFormatter(
-        reservationDetails,
-        userDetails.timezone || "UTC"
-      );
-
-    const html =
-      reservationCancelledEmailTemplate({
-        userName: formatted.userName,
-        reservation: formatted,
-        organizationName: formatted.organizationName
-      });
-
-    await sendEmailViaMailgun(
-      userDetails.email,
-      "Reservation payment failed",
-      html
-    );
+    }
 
     committed = true;
     console.log("[reservationOrderFinalizerService] Transaction committed.");
@@ -253,6 +256,18 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   // =====================================================
   if (committed && userReservation) {
     console.log("[reservationOrderFinalizerService] Running post-commit side effects.");
+
+
+    if (userReservation.amount && userReservation.amount > 0) {
+      fireAndForget(
+        triggerBadgeEngine(userReservation.userId, {
+          category: "singlePurchase",
+          amount: userReservation.amount,
+        }),
+        "TRIGGER_BADGE_ENGINE"
+      );
+    }
+
 
     /**
      * =====================================================

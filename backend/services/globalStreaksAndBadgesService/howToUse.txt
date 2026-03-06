@@ -1,0 +1,147 @@
+# Badge Engine – Minimal Usage
+
+Import the badge engine:
+
+```javascript
+const { triggerBadgeEngine } = require("path/to/badgeEngineService");
+```
+
+---
+
+# 1. Global Streak
+
+Call on **any valid transaction**.
+
+```javascript
+await triggerBadgeEngine(userId);
+```
+
+Example:
+
+```javascript
+await orderService.createOrder(order);
+
+await triggerBadgeEngine(userId);
+```
+
+---
+
+# 2. Spending Badge
+
+Call when user **spends money**.
+
+```javascript
+await triggerBadgeEngine(userId, {
+  category: "spending",
+  amount: order.totalAmount
+});
+```
+
+---
+
+# 3. Single Purchase Badge
+
+Call when user **makes a purchase**.
+
+```javascript
+await triggerBadgeEngine(userId, {
+  category: "singlePurchase",
+  amount: order.totalAmount
+});
+```
+
+---
+
+# 4. Repeat Visit Badge
+
+Call when user **checks in to a venue**.
+
+```javascript
+await triggerBadgeEngine(userId, {
+  category: "repeatVisit",
+  venueId: venueId,
+  organizationId: organizationId
+});
+```
+
+---
+
+# 5. Venue Explorer Badge
+
+❗ **Do not call manually**
+
+Automatically triggered when `repeatVisit` is called.
+
+---
+
+# 6. Referral Badge
+
+Call when a **new referred user registers**.
+
+```javascript
+await triggerBadgeEngine(referrerUserId, {
+  category: "referral",
+  referredUserId: newUserId
+});
+```
+
+---
+
+# 7. Top Spender Badge
+
+❗ **Do not call manually**
+
+Awarded automatically by monthly cron.
+
+---
+
+# Example Order Flow
+
+```javascript
+await orderService.createOrder(order);
+
+await triggerBadgeEngine(userId); // streak
+
+await triggerBadgeEngine(userId, {
+  category: "spending",
+  amount: order.total
+});
+
+await triggerBadgeEngine(userId, {
+  category: "singlePurchase",
+  amount: order.total
+});
+
+await triggerBadgeEngine(userId, {
+  category: "repeatVisit",
+  venueId: order.venueId,
+  organizationId: order.organizationId
+});
+```
+
+---
+
+# Summary
+
+Single entry point:
+
+```javascript
+triggerBadgeEngine(userId, payload);
+```
+
+Payload categories:
+
+```
+spending
+singlePurchase
+repeatVisit
+referral
+```
+
+Handled automatically:
+
+```
+streak
+venueExplorer
+topSpender
+```
