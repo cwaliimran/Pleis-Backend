@@ -15,7 +15,7 @@ const {
   getStartAndEndOfMonth,
   getStartAndEndOfWeek,
 } = require("@utils/responseUtil");
-const {User} = require("@UsersModel");
+const { User } = require("@UsersModel");
 const createSubscription = async (data) => {
   let Subscription = await SubscriptionRepo.createSubscription(data);
   return Subscription;
@@ -50,10 +50,10 @@ const deleteSubscription = async (id) => {
     const deleted = await SubscriptionRepo.findByIdAndDelete(id);
 
     if (!deleted) {
-      return null;  
+      return null;
     }
 
-    return true; 
+    return true;
   } catch (err) {
     throw err;
   }
@@ -79,8 +79,14 @@ const isPricingPlanChanged = (oldPlan, newPlan) =>
 
 
 const updateSubscription = async (data) => {
+
   const user = await User.findById(data.userId);
   if (!user) return { error: "user_not_found" };
+  const isFreeSubscription =
+    user.activeSubscription &&
+    user.activeSubscription.subscriptionTypes?.length === 1 &&
+    user.activeSubscription.subscriptionTypes[0] === "free" &&
+    user.activeSubscription.endDate === null;
 
 
   const now = new Date();
@@ -91,54 +97,52 @@ const updateSubscription = async (data) => {
     numberOfOrganizations,
     totalSubscriptionAmount,
   } = data;
-
   // --------------------------------------------------
   // 🆕 FIRST-TIME SUBSCRIPTION
   // --------------------------------------------------
-// 🆕 FIRST-TIME SUBSCRIPTION
-if (!user.activeSubscription) {
+  // 🆕 FIRST-TIME SUBSCRIPTION
+  if (!user.activeSubscription || isFreeSubscription) {
+    if (
+      !subscriptionTypes ||
+      !pricingPlan ||
+      !numberOfOrganizations ||
+      totalSubscriptionAmount == null
+    ) {
+      return { error: "missing_required_subscription_fields" };
+    }
 
-  if (
-    !subscriptionTypes ||
-    !pricingPlan ||
-    !numberOfOrganizations ||
-    totalSubscriptionAmount == null
-  ) {
-    return { error: "missing_required_subscription_fields" };
+    const startDate = new Date();
+    let endDate = null;
+
+    if (pricingPlan === "monthly") {
+      endDate = new Date(startDate);
+      endDate.setMonth(endDate.getMonth() + 1);
+    }
+
+    if (pricingPlan === "yearly") {
+      endDate = new Date(startDate);
+      endDate.setFullYear(endDate.getFullYear() + 1);
+      console.log("eend", endDate);
+    }
+
+    user.activeSubscription = {
+      subscriptionTypes,
+      pricingPlan,
+      numberOfOrganizations,
+      totalSubscriptionAmount,
+      status: "active",
+      startDate,
+      endDate,
+    };
+    await user.save();
+
+    return {
+      success: true,
+      created: "active",
+      startDate,
+      endDate,
+    };
   }
-
-  const startDate = new Date();
-  let endDate = null;
-
-  if (pricingPlan === "monthly") {
-    endDate = new Date(startDate);
-    endDate.setMonth(endDate.getMonth() + 1);
-  }
-
-  if (pricingPlan === "yearly") {
-    endDate = new Date(startDate);
-    endDate.setFullYear(endDate.getFullYear() + 1);
-  }
-
-  user.activeSubscription = {
-    subscriptionTypes,
-    pricingPlan,
-    numberOfOrganizations,
-    totalSubscriptionAmount,
-    status: "active",
-    startDate,
-    endDate, // ✅ ALWAYS SET HERE
-  };
-
-  await user.save();
-
-  return {
-    success: true,
-    created: "active",
-    startDate,
-    endDate,
-  };
-}
 
 
   // --------------------------------------------------
@@ -221,9 +225,9 @@ if (!user.activeSubscription) {
 };
 
 
-  module.exports = {
-    getUserSubscriptions,
-    deleteSubscription,
-    updateSubscription,
-    getavailableSubscriptions,
-  };
+module.exports = {
+  getUserSubscriptions,
+  deleteSubscription,
+  updateSubscription,
+  getavailableSubscriptions,
+};
