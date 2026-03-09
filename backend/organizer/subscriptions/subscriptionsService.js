@@ -81,6 +81,7 @@ const isPricingPlanChanged = (oldPlan, newPlan) =>
 const updateSubscription = async (data) => {
   const user = await User.findById(data.userId);
   if (!user) return { error: "user_not_found" };
+  console.log("user", data.userId);
 
 
   const now = new Date();
@@ -91,13 +92,13 @@ const updateSubscription = async (data) => {
     numberOfOrganizations,
     totalSubscriptionAmount,
   } = data;
-
   // --------------------------------------------------
   // 🆕 FIRST-TIME SUBSCRIPTION
   // --------------------------------------------------
 // 🆕 FIRST-TIME SUBSCRIPTION
+console.log("user.activeSubscription",user.activeSubscription );
 if (!user.activeSubscription) {
-
+console.log("enter ", );
   if (
     !subscriptionTypes ||
     !pricingPlan ||
@@ -118,6 +119,7 @@ if (!user.activeSubscription) {
   if (pricingPlan === "yearly") {
     endDate = new Date(startDate);
     endDate.setFullYear(endDate.getFullYear() + 1);
+    console.log("eend",endDate );
   }
 
   user.activeSubscription = {
@@ -127,9 +129,8 @@ if (!user.activeSubscription) {
     totalSubscriptionAmount,
     status: "active",
     startDate,
-    endDate, // ✅ ALWAYS SET HERE
+    endDate, 
   };
-
   await user.save();
 
   return {
