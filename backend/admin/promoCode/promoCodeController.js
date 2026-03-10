@@ -24,6 +24,7 @@ const createPromoCode = async (req, res) => {
     maxCountPerUser,
     expiryDate,
     maxUsage,
+    companyOrganizer,
   } = req.body;
 
   const userId = req.user._id;
@@ -47,7 +48,7 @@ const createPromoCode = async (req, res) => {
     timezone,
   );
   let data = {
-    companyOrganizer: userId,
+    companyOrganizer: companyOrganizer|| userId,
     title,
     promoCode,
     description,
@@ -85,9 +86,8 @@ const createPromoCode = async (req, res) => {
 };
 const getPromoCodes = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range } = req.query;
+  const { keyword, status = "active", date, range ,companyOrganizer} = req.query;
   try {
-
 
     const userId = req.user._id;
     const timezone = req.user.timezone;
@@ -99,7 +99,8 @@ const getPromoCodes = async (req, res) => {
       status,
       userId,
       date,
-      range
+      range,
+      companyOrganizer
     });
 
     return sendResponse({

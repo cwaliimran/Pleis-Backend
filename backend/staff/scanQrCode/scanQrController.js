@@ -8,6 +8,7 @@ const { getLoyaltyRewardOrderDetailsService } = require("../../app/loyalty/rewar
 const scanQrController = async (req, res) => {
   try {
     const { timezone } = req.user;
+
     const { qrData } = req.body;
     const { publicId, user, companyOrganizer, type = "loyaltyCard", id } = qrData;
 
@@ -83,7 +84,7 @@ const scanQrController = async (req, res) => {
 
       const { id, organization } = qrData;
 
-      let eventTicket = await getTicketingBookingByIdService(id);
+      let eventTicket = await getTicketingBookingByIdService(id,timezone);
       if (!eventTicket) {
         return sendResponse({
           res,
