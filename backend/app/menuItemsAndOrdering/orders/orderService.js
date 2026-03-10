@@ -220,8 +220,8 @@ const addMoreItemsToOrder = async ({ orderId, items }) => {
   let order = await orderRepo.getOrderById(orderId);
   if (!order) throw new Error("Order not found");
   if (order.status === "cancelled") throw new Error("Cannot add items to a cancelled order");
-  // if paymentMethod is not payLater, cannot add more items
-  if (order.paymentMethod !== "payLater") throw new Error("Cannot add items to this order");
+  // if paymentMethod is not cash, cannot add more items
+  if (order.paymentMethod !== "cash") throw new Error("Cannot add items to this order");
 
   // Fetch all menu items being added
   const itemIds = items.map(i => new mongoose.Types.ObjectId(i.menuItem));
@@ -249,20 +249,18 @@ const addMoreItemsToOrder = async ({ orderId, items }) => {
   });
 
   // Update order with new items and total price
-  order.items = order.items.concat(newOrderItems);
-  order.totalPrice += additionalTotalPrice;
-
-  // Save updated order
-  let updatedOrder = await order.save();
+  let updatedOrder = await orderRepo.addItemsToOrder(orderId, newOrderItems, additionalTotalPrice);
   let formattedOrder = menuItemOrderFormatter(updatedOrder);
-  await sendUserNotifications({
-    recipientIds: [userId.toString()],
-    title: "Order Placed Successfully",
-    body: `Your Order Has been updated :  and is now being ${order.status} and will be ready soon. The total amount is ${order.totalPrice} EUR`,
-    data: { type: NotificationTypes.ORDER_UPDATE, objectType: "group" },
-    sender: userId,
-    objectId: order._id,
-  });
+  
+  // const userId = order.user;
+  // await sendUserNotifications({
+  //   recipientIds: [userId.toString()],
+  //   title: "Order Updated",
+  //   body: `Your Order Has been updated and is now being ${updatedOrder.status}. The total amount is ${updatedOrder.totalPrice} EUR`,
+  //   data: { type: NotificationTypes.ORDER_UPDATE, objectType: "menuorders" },
+  //   sender: userId,
+  //   objectId: order._id,
+  // });
 
 
   return { order: formattedOrder };

@@ -93,7 +93,7 @@ const getOrderById = async (id) => {
 
 const getOrdersByUser = async (userId, page, limit, query = {}) => {
   query.status = { $ne: "pendingPayment" }; // Exclude pendingPayment orders
-  return Orders.find({ user: userId, ...query }).select("orderNumber createdAt status").populate("organization", "basicInfo.name basicInfo.media.logo")
+  return Orders.find({ user: userId, ...query }).select("orderNumber createdAt status paymentMethod paymentStatus").populate("organization", "basicInfo.name basicInfo.media.logo")
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit);
@@ -113,6 +113,17 @@ const getCounts = async (query) => {
 
 const updateOrderStatus = async (orderId, status) => {
   return Orders.findByIdAndUpdate(orderId, { status }, { new: true });
+};
+
+const addItemsToOrder = async (orderId, newItems, additionalTotalPrice) => {
+  return Orders.findByIdAndUpdate(
+    orderId,
+    {
+      $push: { items: { $each: newItems } },
+      $inc: { totalPrice: additionalTotalPrice }
+    },
+    { new: true }
+  );
 };
 
 const deleteOrder = async (orderId) => {
@@ -137,7 +148,7 @@ const getTotalOrderPriceByUser = async (userId) => {
 
     return totalAmount;
   } catch (error) {
- 
+
     throw error;
   }
 };
@@ -146,6 +157,7 @@ module.exports = {
   getOrderById,
   getOrdersByUser,
   updateOrderStatus,
+  addItemsToOrder,
   deleteOrder,
   getCounts,
   getTotalOrderPriceByUser
