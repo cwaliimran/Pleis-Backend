@@ -5,7 +5,7 @@ const formatTicketingBooking = (item, options = {}) => {
   if (!item) return null;
 
   let obj = typeof item.toObject === "function" ? item.toObject() : item;
-
+console.log("options",options );
   const { timezone = "UTC" } = options;
    if (obj.organization?.basicInfo?.media?.logo) {
       const logoName = obj.organization.basicInfo.media.logo;
