@@ -38,6 +38,7 @@ const updateSubscription = async (req, res) => {
     const updatePayload = {};
     updatePayload.userId = req.user._id;
 
+
     // ---- subscriptionTypes ----
     if (subscriptionTypes !== undefined) {
       if (
@@ -118,7 +119,6 @@ const updateSubscription = async (req, res) => {
         translationKey: "no_valid_fields_to_update",
       });
     }
-
     /* ================= UPDATE ================= */
 
     const updated = await SubscriptionService.updateSubscription(updatePayload);

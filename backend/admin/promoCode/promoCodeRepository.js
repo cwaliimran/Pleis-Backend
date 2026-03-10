@@ -31,12 +31,12 @@ const createPromoCode = async (data) => {
 
 
 
-const getPromoCodes = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
+const getPromoCodes = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip,companyOrganizer }) => {
 
   const pipeline = [
     {
       $match: {
-        ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
+        ...(companyOrganizer && { companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer) }),
 
       }
     }
@@ -111,6 +111,7 @@ const getPromoCodes = async ({ timezone, page, limit, keyword, status, userId, d
       totalFiltered: [{ $count: "count" }]
     }
   });
+
 
   const result = await PromoCode.aggregate(pipeline);
 
