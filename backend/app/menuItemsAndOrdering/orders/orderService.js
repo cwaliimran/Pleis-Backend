@@ -9,6 +9,8 @@ const Organizations = require("@OrganizationModel");
 const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
 const { findAppUserByIdWithProjectionService } = require("../../usersManagement/usersService");
 const { getCheckedInStaffForOrganization } = require("../../../staff/organizations/organizationRepository");
+const { usePromoCode } = require("../../promoCode/promoCodeRepository");
+const { getOrgCompanyOrganizer } = require("../../organizationProfile/organizationProfileRepository");
 
 const getStaffIdsByOrganization = async (organizationId) => {
   if (!mongoose.Types.ObjectId.isValid(organizationId)) {
@@ -33,7 +35,6 @@ const getStaffIdsByOrganization = async (organizationId) => {
   return staffIds;
 };
 // 1️⃣ Place an order
-
 const placeOrder = async ({
   userId,
   timezone,
@@ -42,6 +43,7 @@ const placeOrder = async ({
   paymentMethod,
   pickupType,
   tableNumber,
+  promoCode
 }) => {
   if (!items || !items.length) throw new Error("Cart is empty");
 
@@ -59,6 +61,9 @@ const placeOrder = async ({
     // Determine organization
     const organizationId =
       await menuItemRepo.getOrganizationIdByMenuItemId(menuItems[0].menu);
+    const companyOrganizer = await getOrgCompanyOrganizer(organizationId);
+    console.log("Company Organizer:", companyOrganizer);
+
 
     let totalPrice = 0;
 
@@ -79,6 +84,27 @@ const placeOrder = async ({
       };
     });
 
+    const itemsTotal = totalPrice;
+    let promoResult = null;
+
+    if (promoCode) {
+      promoResult = await usePromoCode(
+        {
+          promoCode,
+          userId,
+          companyOrganizer,
+          amount: totalPrice,
+        },
+        session
+      );
+
+      if (promoResult.error) {
+        throw new Error(promoResult.error);
+      }
+
+      totalPrice = promoResult.finalAmount;
+    }
+
 
     // 3️⃣ Create order document inside session
     let orderData = {
@@ -86,6 +112,13 @@ const placeOrder = async ({
       organization: organizationId,
       items: orderItems,
       totalPrice,
+      priceBreakdown: {
+        itemsTotal,
+        tax: 0,
+        discount: promoCode ? (promoResult.discount || 0) : 0,
+        finalTotal: totalPrice,
+        promoCode: promoCode || null,
+      },
       notes,
       paymentMethod,
       pickupType,
@@ -251,7 +284,7 @@ const addMoreItemsToOrder = async ({ orderId, items }) => {
   // Update order with new items and total price
   let updatedOrder = await orderRepo.addItemsToOrder(orderId, newOrderItems, additionalTotalPrice);
   let formattedOrder = menuItemOrderFormatter(updatedOrder);
-  
+
   // const userId = order.user;
   // await sendUserNotifications({
   //   recipientIds: [userId.toString()],

@@ -1,174 +1,219 @@
 const mongoose = require("mongoose");
 
-// Define discount types
+// Discount Types
 const DiscountType = {
   PERCENTAGE: "percentage",
   FIXED_AMOUNT: "amount",
 };
 
-// Define the PromoCode schema
 const promoCodeSchema = new mongoose.Schema(
   {
     promoCode: {
       type: String,
-      unique: true, // Ensure the promo code is unique across all users
-      required: true, // Admin will provide the promo code
+      required: true,
+      trim: true,
+      uppercase: true,
     },
+
     title: {
       type: String,
       required: true,
       trim: true,
+      minlength: 2,
+      maxlength: 120,
     },
+
     description: {
       type: String,
       required: true,
       trim: true,
+      maxlength: 500,
     },
+
     discountType: {
       type: String,
       enum: Object.values(DiscountType),
       required: true,
     },
+
     discountValue: {
       type: Number,
       required: true,
-      min: 0, // Discount value must be non-negative
+      min: 0.01,
       validate: {
         validator: function (value) {
-          // Validate that discount value is less than 100 if the discount type is 'percentage'
-          if (this.discountType === DiscountType.PERCENTAGE && value >= 100) {
-            return false;  // Invalid if percentage is 100 or more
+          if (this.discountType === DiscountType.PERCENTAGE) {
+            return value > 0 && value < 100;
           }
-          return true;  // No restriction for 'fixed_amount'
+          return value >= 0;
         },
-        message: 'If discount type is percentage, the discount value must be less than 100.',
+        message:
+          "Percentage discount must be greater than 0 and less than 100.",
       },
     },
+
     maxDiscountCap: {
       type: Number,
-      default: 0, // No cap by default
+      default: 0,
       min: 0,
+      validate: {
+        validator: function (value) {
+          if (this.discountType === DiscountType.PERCENTAGE) {
+            return value >= 0;
+          }
+          return true;
+        },
+      },
     },
+
     expiryDate: {
       type: Date,
       required: true,
+      validate: {
+        validator: function (value) {
+          return value > new Date();
+        },
+        message: "Expiry date must be in the future.",
+      },
     },
+
     companyOrganizer: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // The admin or user who created the promo code
+      ref: "User",
       required: true,
+      index: true,
     },
+
     maxUsage: {
       type: Number,
       required: true,
-      min: 1, // At least one usage
+      min: 1,
     },
+
     usedCount: {
       type: Number,
       default: 0,
-      min: 0, // Track how many times the promo code has been used globally
+      min: 0,
     },
+
     maxCountPerUser: {
       type: Number,
       default: 1,
-      min: 1, // At least one usage per user
+      min: 1,
     },
+
     usersUsed: {
       type: Map,
-      of: Object, // Each userId will be the key, and the value will be an object with `count`
-      default: {}, // Default to an empty object
+      of: {
+        count: {
+          type: Number,
+          min: 1,
+          default: 1,
+        },
+      },
+      default: {},
     },
-status: {
-  type: String,
-  enum: ["active", "inactive", "canceled", "deleted"], // Added "inactive" status
-  default: "active", // Default status is "active"
-},
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-    updatedAt: {
-      type: Date,
-      default: Date.now,
+
+    status: {
+      type: String,
+      enum: ["active", "inactive", "canceled", "deleted"],
+      default: "active",
+      index: true,
     },
   },
   {
-    timestamps: true, // Automatically add createdAt and updatedAt
+    timestamps: true,
   }
 );
 
-// Middleware to update `updatedAt` field before saving
-promoCodeSchema.pre("save", function (next) {
-  this.updatedAt = Date.now();
-  next();
-});
 
-// Method to check if a promo code is still valid
-promoCodeSchema.methods.isValid = function () {
-  const now = new Date();
-  return this.status === "active" && now < this.expiryDate && this.usedCount < this.maxUsage;
+// ------------------------------------------------
+// INDEXES
+// ------------------------------------------------
+
+// Ensure unique promo per organizer
+promoCodeSchema.index(
+  { promoCode: 1, companyOrganizer: 1 },
+  { unique: true }
+);
+
+
+// ------------------------------------------------
+// HELPER METHODS
+// ------------------------------------------------
+
+promoCodeSchema.methods.isExpired = function () {
+  return new Date() > this.expiryDate;
 };
 
-// Method to apply the promo code to a given amount (using discountValue for both percentage and fixed amount)
-promoCodeSchema.methods.applyDiscount = function (amount, userId) {
-  // Check if the user has already used the promo code within the allowed usage limit
-  const userUsage = this.usersUsed.get(userId); // Retrieve the user's usage object by userId
+promoCodeSchema.methods.isUsageAvailable = function () {
+  return this.usedCount < this.maxUsage;
+};
+
+promoCodeSchema.methods.canUserUse = function (userId) {
+  const userKey = userId.toString();
+  const userUsage = this.usersUsed.get(userKey);
 
   if (userUsage && userUsage.count >= this.maxCountPerUser) {
-    return { error: "You have exceeded the maximum usage for this promo code." };
+    return false;
   }
 
+  return true;
+};
+
+promoCodeSchema.methods.isValid = function () {
+  if (this.status !== "active") return false;
+  if (this.isExpired()) return false;
+  if (!this.isUsageAvailable()) return false;
+
+  return true;
+};
+
+
+// ------------------------------------------------
+// DISCOUNT CALCULATION
+// ------------------------------------------------
+
+promoCodeSchema.methods.applyDiscount = function (amount, userId) {
   if (!this.isValid()) {
     return { error: "Promo code is invalid or expired." };
+  }
+
+  if (!this.canUserUse(userId)) {
+    return { error: "You have exceeded the maximum usage for this promo code." };
   }
 
   let discount = 0;
 
   if (this.discountType === DiscountType.PERCENTAGE) {
-    // Apply percentage discount
     discount = (this.discountValue / 100) * amount;
+
     if (this.maxDiscountCap > 0 && discount > this.maxDiscountCap) {
-      discount = this.maxDiscountCap; // Cap the discount if needed
+      discount = this.maxDiscountCap;
     }
-  } else if (this.discountType === DiscountType.FIXED_AMOUNT) {
-    // Apply fixed amount discount
+  }
+
+  if (this.discountType === DiscountType.FIXED_AMOUNT) {
     discount = this.discountValue;
   }
 
+  const finalAmount = Math.max(amount - discount, 0);
+
   return {
     discount,
-    finalAmount: amount - discount,
+    finalAmount,
   };
 };
 
-// Method to increment the used count for the promo code and track user usage
-promoCodeSchema.methods.incrementUsage = async function (userId) {
-  if (this.usedCount < this.maxUsage) {
-    this.usedCount += 1;
 
-    const userUsage = this.usersUsed.get(userId);
+// ------------------------------------------------
+// USAGE INCREMENT
+// ------------------------------------------------
 
-    if (userUsage) {
-      // increment
-      const newCount = userUsage.count + 1;
-      this.usersUsed.set(userId, { count: newCount }); // ✔ overwrite the object
-    } else {
-      // first time usage
-      this.usersUsed.set(userId, { count: 1 }); // ✔ set first usage
-    }
-
-    await this.save();
-    return userUsage;
-  }
-  return userUsage;
-};
-
-
-// Method to ensure a user can only create a unique promo code (no duplication across users)
 promoCodeSchema.methods.incrementUsage = async function (userId) {
   const userKey = userId.toString();
 
-  if (this.usedCount >= this.maxUsage) {
+  if (!this.isUsageAvailable()) {
     return null;
   }
 
@@ -177,9 +222,13 @@ promoCodeSchema.methods.incrementUsage = async function (userId) {
   const userUsage = this.usersUsed.get(userKey);
 
   if (userUsage) {
-    this.usersUsed.set(userKey, { count: userUsage.count + 1 });
+    this.usersUsed.set(userKey, {
+      count: userUsage.count + 1,
+    });
   } else {
-    this.usersUsed.set(userKey, { count: 1 });
+    this.usersUsed.set(userKey, {
+      count: 1,
+    });
   }
 
   await this.save();
@@ -187,6 +236,10 @@ promoCodeSchema.methods.incrementUsage = async function (userId) {
   return this.usersUsed.get(userKey);
 };
 
+
+// ------------------------------------------------
+// MODEL
+// ------------------------------------------------
 
 const PromoCode = mongoose.model("PromoCode", promoCodeSchema);
 

@@ -21,6 +21,7 @@ const { getOrganizationsWithReservationsForHomeService } = require("../reservati
 
 const { pushIfValid } = require("./utils/feedPushRules");
 const { getGlobalReferralSettingsRepository } = require("../../admin/globalLoyalty/globalReferral/globalReferralRepository");
+const { getAppSettings } = require("../appSettings/appSettingsController");
 
 const getHomeService = async ({ queryData }) => {
   const { userId, userLocation, radiusKm = 50, timezone, category } = queryData;
@@ -356,6 +357,11 @@ const getHomeService = async ({ queryData }) => {
       key: "globalReferral",
       title: "Global Referral",
       data: getGlobalReferralSettings,
+    });
+    feed.push({
+      key: "configs",
+      title: "Configs",
+      data: getAppSettings(),
     });
     return { status: true, data: feed };
   } catch (error) {
