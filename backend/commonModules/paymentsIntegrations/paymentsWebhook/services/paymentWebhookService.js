@@ -120,6 +120,16 @@ const getOrdersTransactionsService = async ({
   };
 };
 
+const getOrdersTransactionDetailsService = async ({ id }) => {
+  if (!Types.ObjectId.isValid(id)) {
+    throw new Error("invalid_transaction_id");
+  }
+  const transactionDetails = await webhookRepository.getOrdersTransactionDetails({ id });
+  if (!transactionDetails) {
+    throw new Error("transaction_not_found");
+  }
+  return transactionDetails;
+};
 
 
-module.exports = { processPaymentWebhook, getOrdersTransactionsService };
+module.exports = { processPaymentWebhook, getOrdersTransactionsService, getOrdersTransactionDetailsService };

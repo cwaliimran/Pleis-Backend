@@ -10,7 +10,7 @@ const menuItemssaleSchema = new mongoose.Schema(
     discountType: {
       type: String,
       enum: ["percentage", "fixed"],
-        default: "fixed",
+      default: "fixed",
     },
     discountValue: {
       type: Number,
@@ -29,7 +29,7 @@ const menuItemssaleSchema = new mongoose.Schema(
     endDateTime: {
       type: Date,
       default: null,
-        required: true,
+      required: true,
     },
     creator: {
       type: mongoose.Schema.Types.ObjectId,
@@ -46,6 +46,14 @@ const menuItemssaleSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+menuItemssaleSchema.index({
+  menuItems: 1,
+  startDateTime: 1,
+  endDateTime: 1,
+  status: 1
+})
+
 const MenuItemsSale = mongoose.models.MenuItemsSale || mongoose.model("MenuItemsSale", menuItemssaleSchema);
 
 module.exports = MenuItemsSale;
