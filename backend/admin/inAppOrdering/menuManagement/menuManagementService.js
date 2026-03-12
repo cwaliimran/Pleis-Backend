@@ -3,6 +3,7 @@ const MenuRepo = require("./menuManagementRepository");
 const { NotificationTypes } = require("@NotificationsModel");
 const MenuItems = require("@MenuItemsModel");
 const PresetModel = require("@PresetsModel");
+const { default: mongoose } = require("mongoose");
 const createSale = async (data) => {
 const mongoose = require("mongoose");
 

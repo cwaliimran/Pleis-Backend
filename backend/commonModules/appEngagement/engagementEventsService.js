@@ -1,3 +1,4 @@
+const { pushBuffer } = require("@redisCache");
 const engagementRepo = require("./engagementEventsRepository");
 
 /**
@@ -10,13 +11,25 @@ const logEngagementService = async ({
   action,
   userId
 }) => {
-  return engagementRepo.logEngagement({
+
+  const payload = {
     entityType,
     entityId,
     action,
-    userId
-  });
+    userId,
+    createdAt: new Date()
+  };
+
+  try {
+    // Push into Redis buffer
+    await pushBuffer("engagement", payload);
+    return true;
+  } catch (err) {
+    // Fallback → direct Mongo insert
+    return engagementRepo.logEngagement(payload);
+  }
 };
+
 
 /**
  * Get trending entities (48h / 7d handled upstream)

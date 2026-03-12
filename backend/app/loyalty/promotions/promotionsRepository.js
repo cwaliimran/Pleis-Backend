@@ -771,6 +771,36 @@ const claimPromotion = async (promotionId, userId) => {
 };
 
 
+const getActiveMenuItemPromotions = async ({
+  menuItemIds,
+  userId,
+  timezone,
+  now = new Date()
+}) => {
+
+  const promotions = await Promotion.find({
+    promotionType: "buyMenuItemPromotion",
+    menuItem: { $in: menuItemIds },
+    status: "active",
+    startDate: { $lte: now },
+    endDate: { $gte: now },
+  })
+    .populate("tierLimit")
+    .populate("reward")
+    .lean();
+
+  if (!promotions.length) return [];
+
+  const formatted = await applyPromotionEligibility({
+    promotions,
+    userId,
+    timezone,
+    now,
+  });
+
+  return formatted;
+};
+
 module.exports = {
   count,
   findById,
@@ -779,7 +809,8 @@ module.exports = {
   getPromotionsForHome,
   getPromotions,
   getActiveLoyaltyHappyHourPromotion,
-  claimPromotion
+  claimPromotion,
+  getActiveMenuItemPromotions,
 
 };
 

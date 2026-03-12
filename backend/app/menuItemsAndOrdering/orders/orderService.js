@@ -11,6 +11,7 @@ const { findAppUserByIdWithProjectionService } = require("../../usersManagement/
 const { getCheckedInStaffForOrganization } = require("../../../staff/organizations/organizationRepository");
 const { usePromoCode } = require("../../promoCode/promoCodeRepository");
 const { getOrgCompanyOrganizer } = require("../../organizationProfile/organizationProfileRepository");
+const { calculateItemPrice } = require("./formatter/calculateItemPrice");
 
 const getStaffIdsByOrganization = async (organizationId) => {
   if (!mongoose.Types.ObjectId.isValid(organizationId)) {
@@ -54,7 +55,9 @@ const placeOrder = async ({
     // 1️⃣ Fetch menu items
     const itemIds = items.map(i => new mongoose.Types.ObjectId(i.menuItem));
     const menuItems = await menuItemRepo
-      .getMenuItemsWithFilters({ _id: { $in: itemIds } });
+      .getMenuItemsWithFilters({
+        query: { _id: { $in: itemIds } }
+      });
 
     if (!menuItems.length) throw new Error("Invalid items in cart");
 
@@ -65,26 +68,40 @@ const placeOrder = async ({
     console.log("Company Organizer:", companyOrganizer);
 
 
-    let totalPrice = 0;
 
     // 2️⃣ Prepare order items w/snapshot
+    let totalPrice = 0;
+    let totalSaleDiscount = 0;
+    let itemsTotal = 0;
+
     const orderItems = items.map(i => {
       const menuItem = menuItems.find(m => m._id.toString() === i.menuItem);
       if (!menuItem) throw new Error(`Invalid menu item: ${i.menuItem}`);
 
-      const price = menuItem.discountPrice || menuItem.basePrice;
-      const finalPrice = price * i.quantity;
+      const priceInfo = calculateItemPrice(menuItem);
+
+      const unitPrice = priceInfo.originalPrice;
+      const unitFinalPrice = priceInfo.finalPrice;
+      const saleDiscountPerUnit = priceInfo.saleDiscount;
+
+      const finalPrice = unitFinalPrice * i.quantity;
+      const saleDiscountTotal = saleDiscountPerUnit * i.quantity;
+
+      itemsTotal += unitPrice * i.quantity;
+      totalSaleDiscount += saleDiscountTotal;
       totalPrice += finalPrice;
 
       return {
         menuItem: menuItem._id,
         quantity: i.quantity,
+        unitPrice,
+        unitFinalPrice,
+        saleDiscountPerUnit,
         finalPrice,
         menuItemSnapShot: JSON.parse(JSON.stringify(menuItem)),
       };
     });
 
-    const itemsTotal = totalPrice;
     let promoResult = null;
 
     if (promoCode) {
@@ -114,8 +131,9 @@ const placeOrder = async ({
       totalPrice,
       priceBreakdown: {
         itemsTotal,
+        saleDiscount: totalSaleDiscount,
+        promoDiscount: promoCode ? (promoResult.discount || 0) : 0,
         tax: 0,
-        discount: promoCode ? (promoResult.discount || 0) : 0,
         finalTotal: totalPrice,
         promoCode: promoCode || null,
       },
@@ -200,7 +218,9 @@ const placePreOrderMenuItemsWithReservation = async ({
   const itemIds = items.map(i => new mongoose.Types.ObjectId(i.menuItem));
 
   const menuItems = await menuItemRepo.getMenuItemsWithFilters(
-    { _id: { $in: itemIds } }
+    {
+      query: { _id: { $in: itemIds } }
+    }
   );
 
   if (!menuItems.length) throw new Error("Invalid items in cart");
@@ -214,13 +234,16 @@ const placePreOrderMenuItemsWithReservation = async ({
     const menuItem = menuItems.find(m => m._id.toString() === i.menuItem);
     if (!menuItem) throw new Error(`Invalid menu item: ${i.menuItem}`);
 
-    const price = menuItem.discountPrice || menuItem.basePrice;
-    const finalPrice = price * i.quantity;
+    const priceInfo = calculateItemPrice(menuItem);
+    const finalPrice = priceInfo.finalPrice * i.quantity;
     totalPrice += finalPrice;
 
     return {
       menuItem: menuItem._id,
       quantity: i.quantity,
+      unitPrice: priceInfo.originalPrice,
+      unitFinalPrice: priceInfo.finalPrice,
+      saleDiscountPerUnit: priceInfo.saleDiscount,
       finalPrice,
       menuItemSnapShot: JSON.parse(JSON.stringify(menuItem)),
     };
@@ -245,59 +268,77 @@ const placePreOrderMenuItemsWithReservation = async ({
 };
 
 
-
 const addMoreItemsToOrder = async ({ orderId, items }) => {
   if (!items || !items.length) throw new Error("No items to add");
 
-  // Fetch the existing order
-  let order = await orderRepo.getOrderById(orderId);
+  // 1️⃣ Fetch existing order
+  const order = await orderRepo.getOrderById(orderId);
   if (!order) throw new Error("Order not found");
-  if (order.status === "cancelled") throw new Error("Cannot add items to a cancelled order");
-  // if paymentMethod is not cash, cannot add more items
-  if (order.paymentMethod !== "cash") throw new Error("Cannot add items to this order");
 
-  // Fetch all menu items being added
+  if (order.status === "cancelled")
+    throw new Error("Cannot add items to a cancelled order");
+
+  if (order.paymentMethod !== "cash")
+    throw new Error("Cannot add items to this order");
+
+  // 2️⃣ Fetch menu items
   const itemIds = items.map(i => new mongoose.Types.ObjectId(i.menuItem));
-  const menuItems = await menuItemRepo.getMenuItemsWithFilters({ _id: { $in: itemIds } });
+  const menuItems = await menuItemRepo.getMenuItemsWithFilters(
+    { query: { _id: { $in: itemIds } } });
 
   if (!menuItems.length) throw new Error("Invalid items to add");
 
-  let additionalTotalPrice = 0;
+  let additionalFinalPrice = 0;
+  let additionalItemsTotal = 0;
+  let additionalSaleDiscount = 0;
 
-  // Prepare new order items with snapshot inside the item object
+  // 3️⃣ Prepare items
   const newOrderItems = items.map(i => {
     const menuItem = menuItems.find(m => m._id.toString() === i.menuItem);
     if (!menuItem) throw new Error(`Invalid menu item: ${i.menuItem}`);
 
-    const price = menuItem.discountPrice || menuItem.basePrice;
-    const finalPrice = price * i.quantity;
-    additionalTotalPrice += finalPrice;
+    const priceInfo = calculateItemPrice(menuItem);
+
+    const unitPrice = priceInfo.originalPrice;
+    const unitFinalPrice = priceInfo.finalPrice;
+    const saleDiscountPerUnit = priceInfo.saleDiscount;
+
+    const finalPrice = unitFinalPrice * i.quantity;
+
+    additionalItemsTotal += unitPrice * i.quantity;
+    additionalSaleDiscount += saleDiscountPerUnit * i.quantity;
+    additionalFinalPrice += finalPrice;
 
     return {
       menuItem: menuItem._id,
       quantity: i.quantity,
+      unitPrice,
+      unitFinalPrice,
+      saleDiscountPerUnit,
       finalPrice,
-      menuItemSnapShot: JSON.parse(JSON.stringify(menuItem)), // snapshot inside item
+      menuItemSnapShot: JSON.parse(JSON.stringify(menuItem)),
     };
   });
 
-  // Update order with new items and total price
-  let updatedOrder = await orderRepo.addItemsToOrder(orderId, newOrderItems, additionalTotalPrice);
-  let formattedOrder = menuItemOrderFormatter(updatedOrder);
+  // 4️⃣ Recalculate breakdown
+  const newItemsTotal = order.priceBreakdown.itemsTotal + additionalItemsTotal;
+  const newSaleDiscount = order.priceBreakdown.saleDiscount + additionalSaleDiscount;
+  const newFinalTotal = order.totalPrice + additionalFinalPrice;
 
-  // const userId = order.user;
-  // await sendUserNotifications({
-  //   recipientIds: [userId.toString()],
-  //   title: "Order Updated",
-  //   body: `Your Order Has been updated and is now being ${updatedOrder.status}. The total amount is ${updatedOrder.totalPrice} EUR`,
-  //   data: { type: NotificationTypes.ORDER_UPDATE, objectType: "menuorders" },
-  //   sender: userId,
-  //   objectId: order._id,
-  // });
+  // 5️⃣ Update order
+  const updatedOrder = await orderRepo.updateOrderWithItems(orderId, {
+    newItems: newOrderItems,
+    additionalFinalPrice,
+    newItemsTotal,
+    newSaleDiscount,
+    newFinalTotal
+  });
 
+  const formattedOrder = menuItemOrderFormatter(updatedOrder);
 
   return { order: formattedOrder };
 };
+
 
 // 2️⃣ Get order by ID
 const getOrderDetails = async (orderId) => {

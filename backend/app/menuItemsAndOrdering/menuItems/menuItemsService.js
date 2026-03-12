@@ -5,6 +5,7 @@ const { formatMenuItem } = require("./formatter/formatMenuItems");
 const MenuItemCategories = require("@MenuItemCategoriesModel");
 const { findOrganizationWithSelectFilter } = require("../../organizationProfile/organizationProfileRepository");
 const { default: mongoose } = require("mongoose");
+const { calculateItemPrice } = require("../orders/formatter/calculateItemPrice");
 
 const getMenuItems = async ({ userId, timezone, organization }) => {
   // 1️⃣ Get menu ID for the organization
@@ -15,10 +16,12 @@ const getMenuItems = async ({ userId, timezone, organization }) => {
 
   // 2️⃣ Fetch all active menu items for this menu
   const menuItems = await menuItemRepo.getMenuItemsWithFilters({
-    menu: new mongoose.Types.ObjectId(menuId._id),
-    status: "active",
-    availabilityType: null, // only items without specific availability
-    isAvailableInStock: true,
+    query: {
+      menu: new mongoose.Types.ObjectId(menuId._id),
+      status: "active",
+      availabilityType: null, // only items without specific availability
+      isAvailableInStock: true,
+    }, userId, timezone
   });
 
   if (!menuItems.length) return { recommended: [], menu: [] };
@@ -47,7 +50,7 @@ const getMenuItems = async ({ userId, timezone, organization }) => {
     if (!grouped[categoryName]) grouped[categoryName] = {};
     if (!grouped[categoryName][type]) grouped[categoryName][type] = [];
 
-    grouped[categoryName][type].push(applySale(formatMenuItem(item, timezone)));
+    grouped[categoryName][type].push(applyMenuItemsSale(formatMenuItem(item, timezone)));
   });
 
   // 6️⃣ Convert to desired response structure
@@ -65,35 +68,19 @@ const getMenuItems = async ({ userId, timezone, organization }) => {
     organizationDetails.basicInfo.media.logo = getFullImageUrl(organizationDetails.basicInfo.media.logo);
   }
 
-  let formattedRecommended = recommended?.map(item => applySale(formatMenuItem(item, timezone))) || [];
+  let formattedRecommended = recommended?.map(item => applyMenuItemsSale(formatMenuItem(item, timezone))) || [];
 
   return { organizationDetails, recommended: formattedRecommended, menu };
 };
 
-const applySale = (item) => {
-  if (!item.saleDiscountValue) return item;
-
-  const originalPrice = item.discountPrice && item.discountPrice > 0
-    ? item.discountPrice
-    : item.basePrice;
-
-  let salePrice = originalPrice;
-
-  if (item.saleDiscountType === "percentage") {
-    salePrice = originalPrice - (originalPrice * item.saleDiscountValue / 100);
-  }
-
-  if (item.saleDiscountType === "fixed") {
-    salePrice = originalPrice - item.saleDiscountValue;
-  }
-
-  salePrice = Math.max(salePrice, 0);
+const applyMenuItemsSale = (item) => {
+  const priceInfo = calculateItemPrice(item);
 
   return {
     ...item,
-    originalPrice,
-    salePrice,
-    hasSale: true
+    originalPrice: priceInfo.originalPrice,
+    salePrice: priceInfo.finalPrice,
+    hasSale: priceInfo.saleDiscount > 0
   };
 };
 
@@ -104,8 +91,8 @@ const getMenuItemDetails = async (id) => {
   ]);
   if (!menuItem) return null;
   //format menu item and recommended items
-  const formattedMenuItem = applySale(formatMenuItem(menuItem));
-  const formattedRecommended = getRecommendedItems.map(item => applySale(formatMenuItem(item)));
+  const formattedMenuItem = applyMenuItemsSale(formatMenuItem(menuItem));
+  const formattedRecommended = getRecommendedItems.map(item => applyMenuItemsSale(formatMenuItem(item)));
 
   return { menuItem: formattedMenuItem, recommended: formattedRecommended };
 };
@@ -116,7 +103,7 @@ const getHybridRecommendedItems = async ({ userId, organization }) => {
     organization,
     10
   );
-  let formatted = recommended.map(item => applySale(formatMenuItem(item)));
+  let formatted = recommended.map(item => applyMenuItemsSale(formatMenuItem(item)));
   return { recommended: formatted };
 };
 
@@ -124,5 +111,6 @@ const getHybridRecommendedItems = async ({ userId, organization }) => {
 module.exports = {
   getMenuItems,
   getMenuItemDetails,
-  getHybridRecommendedItems
+  getHybridRecommendedItems,
+  applyMenuItemsSale
 };
