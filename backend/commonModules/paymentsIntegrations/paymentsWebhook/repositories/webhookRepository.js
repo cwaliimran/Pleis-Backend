@@ -317,9 +317,46 @@ const countOrdersTransactions = async ({ match = {}, keyword }) => {
   return res[0]?.total || 0;
 };
 
+const getOrdersTransactionDetails = async ({ id }) => {
+  const transactionDetails = await WebhookEvent.findById(id)
+    .populate("organization", "basicInfo")
+    .populate("companyOrganizer", "firstName lastName username email profileIcon")
+    .populate("user", "firstName lastName username email profileIcon")
+    .lean();
+  if (!transactionDetails) {
+    throw new Error("transaction_not_found");
+  }
+
+  // Fetch the actual order data based on orderType and orderNumber
+  let orderData = null;
+  if (transactionDetails.orderType && transactionDetails.orderNumber) {
+    const modelMap = {
+      ticketingbookings: "TicketingBookings",
+      menuorders: "MenuOrders",
+      userreservations: "UserReservations",
+      tickettransfer: "TicketingBookings"
+    };
+
+    const modelName = modelMap[transactionDetails.orderType.toLowerCase()];
+    if (modelName) {
+      try {
+        const Model = mongoose.model(modelName);
+        orderData = await Model.findById(transactionDetails.orderNumber).lean();
+      } catch (err) {
+        // Model not found or order not found - continue without order data
+      }
+    }
+  }
+
+  return {
+    ...transactionDetails,
+    orderData,
+  };
+};
 
 module.exports = {
   saveIfNotProcessed,
   getOrdersTransactions,
-  countOrdersTransactions
+  countOrdersTransactions,
+  getOrdersTransactionDetails
 };

@@ -39,7 +39,7 @@ const getOrganizationProfile = async (queryData) => {
       findOrganizationById(userId, organizationId),
       getOrganizationEvents({ organizationId, filter, timezone, userLocation: queryData.userLocation, userId }), // Filter for "upcoming" or "past"
       getOrganizationReservationsService({ organizationId, timezone }),
-      getOrganizationMenu(organizationId, timezone),
+      getOrganizationMenu(organizationId, userId, timezone),
       getOrganizationReviews(organizationId), // Get reviews with reviewer names
       getSimilarOrganizations(organizationId, timezone)
     ]);
@@ -167,16 +167,29 @@ const getOrganizationEvents = async (queryData) => {
 };
 
 
-const getOrganizationMenu = async (organizationId, timezone) => {
-  let result = await getOrganizationMenuWithItems(organizationId);
-  const formatted = result.map(menu => ({
-    ...menu,
-    items: menu.items.map(item => formatMenuItem(item, timezone)),
-  })).filter(menu => menu.items && menu.items.length > 0);
+const getOrganizationMenu = async (organizationId, userId, timezone) => {
+  const result = await getOrganizationMenuWithItems({
+    organizationId,
+    userId,
+    timezone,
+  });
+
+  const formatted = result
+    .map(menu => ({
+      ...menu,
+      items: menu.items.map(item =>
+        applyMenuItemsSale(
+          formatMenuItem(item, timezone)
+        )
+      ),
+    }))
+    .filter(menu => menu.items && menu.items.length > 0);
+
   return formatted || [];
 };
 
 const { getFullImageUrl } = require("../../helperUtils/imageHelper"); // Import getFullImageUrl
+const { applyMenuItemsSale } = require("../menuItemsAndOrdering/menuItems/menuItemsService");
 
 const getOrganizationReviews = async (organizationId, page = 1, limit = 10) => {
   const skip = (page - 1) * limit;

@@ -261,7 +261,6 @@ const updateMenuItem = async (id, data, timezone) => {
     "type",
     "category",
     "basePrice",
-    "discountPrice",
     "taxPercent",
     "menu",
     "startTime",

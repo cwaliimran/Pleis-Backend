@@ -42,13 +42,6 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
       throw new Error("reservation_not_found");
     }
 
-    // idempotency guard
-    if (userReservation.status !== "pendingPayment") {
-      console.log("[reservationOrderFinalizerService] Reservation status is not pendingPayment, skipping:", userReservation.status);
-      await session.commitTransaction();
-      return;
-    }
-
     menuOrder = userReservation.preOrderMenuItemsOrder;
 
     // ==========================

@@ -55,7 +55,7 @@ const applyPoints = async (req, res) => {
         throw new Error(`Invalid menu item: ${i.menuItem}`);
       }
 
-      const price = menuItem.discountPrice || menuItem.basePrice;
+      const price = menuItem.basePrice || 0; // fallback to 0 if basePrice is missing
       const finalPrice = price * i.quantity;
 
       totalPrice += finalPrice;

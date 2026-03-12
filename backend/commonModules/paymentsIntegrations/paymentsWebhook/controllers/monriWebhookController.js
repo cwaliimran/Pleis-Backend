@@ -1,5 +1,5 @@
 const { default: mongoose } = require("mongoose");
-const { processPaymentWebhook, getOrdersTransactionsService } = require("../services/paymentWebhookService");
+const { processPaymentWebhook, getOrdersTransactionsService, getOrdersTransactionDetailsService } = require("../services/paymentWebhookService");
 const { verifyMonriSignature } = require("../utils/monriSignature");
 const { parsePaginationParams, sendResponse, getReadableErrorMessage, validateParams } = require("../../../../helperUtils/responseUtil");
 
@@ -57,6 +57,23 @@ const getOrdersTransactions = async (req, res) => {
   }
 };
 
+const getOrdersTransactionDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return sendResponse({ res, statusCode: 400, translationKey: "invalid_transaction_id" });
+    }
+    const transactionDetails = await getOrdersTransactionDetailsService({ id });
+    if (!transactionDetails) {
+      return sendResponse({ res, statusCode: 404, translationKey: "transaction_not_found" });
+    }
+    return sendResponse({ res, statusCode: 200, translationKey: "transaction_details_fetched_successfully", data: transactionDetails });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({ res, statusCode: readableError.statusCode, translationKey: readableError.message, error });
+  }
+};
 
 
-module.exports = { monriWebhookController, getOrdersTransactions };
+
+module.exports = { monriWebhookController, getOrdersTransactions, getOrdersTransactionDetails };
