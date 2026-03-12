@@ -5,7 +5,7 @@
   "main": "backend/server.js",
   "scripts": {
     "dev": "cross-env NODE_ENV=dev nodemon backend/server.js",
-    "prod": "cross-env NODE_ENV=prod nodemon backend/server.js",
+    "prod": "cross-env NODE_ENV=prod backend/server.js",
     "mobileapps": "cross-env NODE_ENV=mobileapps node backend/server.js",
     "pm2:dev:start": "pm2 start backend/config/ecosystem.config.js --env dev",
     "pm2:dev:reload": "pm2 reload pleis-backend --update-env",
@@ -150,7 +150,6 @@
     "nanoid": "^5.1.6",
     "node-cache": "^5.1.2",
     "node-cron": "^4.2.1",
-    "nodemon": "^3.1.7",
     "openai": "^5.23.1",
     "qrcode": "^1.5.4",
     "sharp": "^0.33.5",
@@ -165,6 +164,7 @@
     "cross-env": "^10.1.0",
     "mocha": "^11.7.1",
     "socket.io-client": "^4.8.0",
-    "supertest": "^7.1.1"
+    "supertest": "^7.1.1",
+    "nodemon": "^3.1.7"
   }
 }

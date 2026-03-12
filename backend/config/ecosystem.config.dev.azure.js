@@ -6,17 +6,24 @@ module.exports = {
       script: "backend/server.js",
 
       /**
-       * MUST be fork mode on Azure App Service
+       * Azure App Service requires fork mode
+       * Cluster mode causes port conflicts
        */
       exec_mode: "fork",
       instances: 1,
 
       /**
-       * Restart safety
+       * Restart protection
        */
       autorestart: true,
       max_restarts: 10,
       restart_delay: 3000,
+
+      /**
+       * Startup / shutdown safety
+       */
+      listen_timeout: 10000,
+      kill_timeout: 5000,
 
       /**
        * Memory protection
@@ -24,15 +31,21 @@ module.exports = {
       max_memory_restart: "1024M",
 
       /**
+       * Increase Node heap size
+       */
+      node_args: "--max-old-space-size=1024",
+
+      /**
        * Logging
-       * Azure captures stdout/stderr automatically
+       * Azure collects stdout/stderr automatically
        */
       output: "/dev/stdout",
       error: "/dev/stderr",
+      merge_logs: true,
+      time: true,
 
       /**
-       * Environment
-       * Azure injects PORT automatically
+       * Environment variables
        */
       env: {
         NODE_ENV: "dev",
