@@ -3,10 +3,17 @@ const MenuItems = require("@MenuItemsModel");
 const Menus = require("@MenusModel");
 const mongoose = require("mongoose");
 const MenuOrders = require("@OrdersModel");
+const { buildMenuItemsSaleLookup } = require("../../../app/menuItemsAndOrdering/menuItems/menuItemsRepository");
 
 const getMenuItemsWithFilters = async (query = {}) => {
-  return MenuItems.find(query)
-    .sort({ createdAt: -1 })
+  return MenuItems.aggregate([
+    { $match: query },
+
+    // reuse shared sale lookup logic
+    ...buildMenuItemsSaleLookup(),
+
+    { $sort: { createdAt: -1 } }
+  ]);
 };
 
 const getOrganizationIdByMenuItemId = async (menuId) => {

@@ -1,0 +1,10 @@
+
+const TAX_RATE_BOOKING = 0.06;
+const TAX_RATE_RESERVATION = 0.06;
+
+
+
+module.exports = {
+    TAX_RATE_BOOKING,
+    TAX_RATE_RESERVATION,
+};

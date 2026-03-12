@@ -59,7 +59,6 @@ const getMenuItems = async ({
         _id: 1,
         title: 1,
         basePrice: 1,
-        discountPrice: 1,
         taxPercent: 1
       }
     },
@@ -247,7 +246,6 @@ const fetchMenuItems = async (organization) => {
           _id: 1,
           title: 1,
           basePrice: 1,
-          discountPrice: 1,
           taxPercent: 1,
           image: 1,
           category: 1,
@@ -405,7 +403,6 @@ const getMenuItemsSales = async ({
           image: "$menuItem.image",
           description: "$menuItem.description",
           basePrice: "$menuItem.basePrice",
-          discountPrice: "$menuItem.discountPrice",
           taxPercent: "$menuItem.taxPercent",
           availabilityType: "$menuItem.availabilityType",
           isLimitedTimeOffer: "$menuItem.isLimitedTimeOffer",
@@ -454,10 +451,7 @@ const getMenuItemsSales = async ({
   // 9️⃣ Apply final pricing INSIDE each sale object
   const data = rawData.map(sale => {
     const totalPriceBeforeDiscount = sale.menuItems.reduce((sum, item) => {
-      const price =
-        (item.discountPrice !== null && item.discountPrice !== undefined && item.discountPrice !== 0)
-          ? item.discountPrice
-          : item.basePrice || 0; // Fallback to basePrice if discountPrice is invalid
+      const price = item.basePrice || 0;
 
       return sum + price;
     }, 0);
@@ -614,7 +608,6 @@ const getSummary = async ({
               description: 1,
               category: 1,
               basePrice: 1,
-              discountPrice: 1,
               taxPercent: 1,
               startTime: 1,
               endTime: 1,
@@ -683,7 +676,6 @@ const getSummary = async ({
               description: 1,
               category: 1,
               basePrice: 1,
-              discountPrice: 1,
               taxPercent: 1,
               startTime: 1,
               endTime: 1,

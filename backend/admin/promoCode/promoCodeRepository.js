@@ -31,7 +31,7 @@ const createPromoCode = async (data) => {
 
 
 
-const getPromoCodes = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip,companyOrganizer }) => {
+const getPromoCodes = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip, companyOrganizer }) => {
 
   const pipeline = [
     {
@@ -128,21 +128,6 @@ const getPromoCodes = async ({ timezone, page, limit, keyword, status, userId, d
   const meta = generateMeta(page, limit, totalFiltered);
   meta.promoCodesCount = { total, active, inactive };
 
-
-  //   reservations = reservations.map(item => {
-  //     const formatted = reservationsFormatter(item);
-  //     if (formatted.conditionType == "noCondition"||formatted.conditionType=="ticketRequirement"||formatted.conditionType=="customText"||formatted.conditionType=="ticketRequirement") {
-  //       delete formatted.amount;
-  //       if(formatted.conditionType == "noCondition")
-  //       {
-  //       delete formatted.ticketType;
-  //       }
-  //     }
-  //     else{
-  //             delete formatted.ticketType;
-  //     }
-  //     return formatted;
-  //   });
   return { promoCodes, meta }
 }
 

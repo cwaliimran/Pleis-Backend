@@ -1,5 +1,5 @@
 const cron = require("node-cron");
-const { acquireLock, releaseLock } = require("../redis/redisCache");
+const { acquireLock, releaseLock } = require("@redisCache");
 
 const {
   reconcilePendingTicketingOrdersPayments,
@@ -15,6 +15,7 @@ const { runRecurringPromotionsCron } = require("../../admin/loyalty/promotions/u
 const { runRecurringGlobalPromotionsCron } = require("../../admin/globalLoyalty/promotions/utils/recurringPromotion.core");
 const { runLoyaltyChallengeExpiringSoonCron } = require("./loyalty/challenges/challengeExpiringSoonCron");
 const { runGlobalChallengeExpiringSoonCron } = require("./globalLoyalty/challenges/globalChallengeExpiringSoonCron");
+const { flushEngagementBuffer } = require("./engagement/flushEngagementBuffer");
 
 const startCrons = () => {
   /* ======================================================
@@ -84,7 +85,7 @@ const startCrons = () => {
   /* ======================================================
      ⏳ CRON 4: Challenge expiring soon reminders (every hour)
      ====================================================== */
-    cron.schedule("0 * * * *", async () => {
+  cron.schedule("0 * * * *", async () => {
     const lockKey = "cron:challenge-expiring-soon";
     const lock = await acquireLock(lockKey, 50);
 
@@ -104,21 +105,36 @@ const startCrons = () => {
      ⏳ CRON 5: Global Challenge expiring soon reminders (every hour)
      ====================================================== */
   cron.schedule("0 * * * *", async () => {
-  const lockKey = "cron:global-challenge-expiring-soon";
-  const lock = await acquireLock(lockKey, 50);
+    const lockKey = "cron:global-challenge-expiring-soon";
+    const lock = await acquireLock(lockKey, 50);
 
-  if (!lock) return;
+    if (!lock) return;
 
-  try {
-    await runGlobalChallengeExpiringSoonCron();
-  } catch (err) {
-    console.error("Global Challenge expiring soon cron error:", err);
-  } finally {
-    await releaseLock(lockKey, lock);
-  }
-});
+    try {
+      await runGlobalChallengeExpiringSoonCron();
+    } catch (err) {
+      console.error("Global Challenge expiring soon cron error:", err);
+    } finally {
+      await releaseLock(lockKey, lock);
+    }
+  });
 
+  // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
+  cron.schedule("*/10 * * * *", async () => {
+    const lockKey = "cron:engagement-buffer-flush";
+    const lock = await acquireLock(lockKey, 120);
 
+    if (!lock) return;
+
+    try {
+      await flushEngagementBuffer();
+      console.log("📊 Engagement buffer flushed");
+    } catch (err) {
+      console.error("❌ Engagement flush cron failed:", err);
+    } finally {
+      await releaseLock(lockKey, lock);
+    }
+  });
 
 
 

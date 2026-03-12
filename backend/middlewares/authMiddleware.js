@@ -89,6 +89,12 @@ const auth = async (req, res, next) => {
     req.token = token;
     req.user = user;
 
+    // Override timezone with client-sent header if provided
+    const clientTimezone = req.header("X-Timezone");
+    if (clientTimezone) {
+      req.user = { ...req.user, timezone: clientTimezone };
+    }
+
     next(); // Move to the next middleware/route handler
   } catch (error) {
     return sendResponse({

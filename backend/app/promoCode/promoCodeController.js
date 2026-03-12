@@ -20,7 +20,6 @@ const usePromoCode = async (req, res) => {
   } = req.body;
 
   const userId = req.user._id;
-  const timezone = req.user.timezone;
 
   if (
     !validateParams(req, res, {
@@ -67,10 +66,10 @@ const validatePromoCode = async (req, res) => {
   let {
     promoCode,
     companyOrganizer,
+    amount,
   } = req.body;
 
   const userId = req.user._id;
-  const timezone = req.user.timezone;
 
   if (
     !validateParams(req, res, {
@@ -84,6 +83,7 @@ const validatePromoCode = async (req, res) => {
     companyOrganizer,
     userId,
     promoCode,
+    amount,
   };
   try {
     const PromoCode = await promoCodeService.validatePromoCode(data);
@@ -92,14 +92,14 @@ const validatePromoCode = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: `PromoCode_validate_failed_${PromoCode.error}`,
+        translationKey: PromoCode.error,
       });
     }
     else {
       return sendResponse({
         res,
-        statusCode: 201,
-        translationKey: "PromoCode_validate_successfully",
+        statusCode: 200,
+        translationKey: "promo_code_validated_successfully",
         data: PromoCode,
       });
     }

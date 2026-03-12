@@ -126,6 +126,26 @@ const addItemsToOrder = async (orderId, newItems, additionalTotalPrice) => {
   );
 };
 
+const updateOrderWithItems = async (
+  orderId,
+  { newItems, additionalFinalPrice, newItemsTotal, newSaleDiscount, newFinalTotal }
+) => {
+  return Orders.findByIdAndUpdate(
+    orderId,
+    {
+      $push: { items: { $each: newItems } },
+      $inc: { totalPrice: additionalFinalPrice },
+      $set: {
+        "priceBreakdown.itemsTotal": newItemsTotal,
+        "priceBreakdown.saleDiscount": newSaleDiscount,
+        "priceBreakdown.finalTotal": newFinalTotal
+      }
+    },
+    { new: true }
+  );
+};
+
+
 const deleteOrder = async (orderId) => {
   return Orders.findByIdAndDelete(orderId);
 };
@@ -160,5 +180,6 @@ module.exports = {
   addItemsToOrder,
   deleteOrder,
   getCounts,
-  getTotalOrderPriceByUser
+  getTotalOrderPriceByUser,
+  updateOrderWithItems
 };

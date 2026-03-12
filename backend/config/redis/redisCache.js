@@ -22,7 +22,7 @@ async function setJson(key, value, ttl = null) {
     const buf = zlib.gzipSync(Buffer.from(JSON.stringify(value)));
     if (ttl) await redis.set(key, buf, "EX", ttl);
     else await redis.set(key, buf);
-  } catch (_) {}
+  } catch (_) { }
 }
 
 /**
@@ -63,7 +63,7 @@ async function releaseLock(key, token) {
     const lk = `lock:${key}`;
     const val = await redis.get(lk);
     if (val === token) await redis.del(lk);
-  } catch (_) {}
+  } catch (_) { }
 }
 
 /**
@@ -81,7 +81,7 @@ async function cache({ namespace, params = {}, ttl = 60, fetchFn }) {
 
   try {
     existing = await getJson(key);
-  } catch {}
+  } catch { }
 
   if (existing) {
     console.log(`🟢 CACHE HIT -> ${key}`);
@@ -111,7 +111,7 @@ async function cache({ namespace, params = {}, ttl = 60, fetchFn }) {
     try {
       await setJson(key, fresh, ttl === null ? null : ttl);
       console.log(`🧩 STORED -> ${key}`);
-    } catch {}
+    } catch { }
 
     return fresh;
   } finally {
@@ -143,10 +143,40 @@ async function invalidate(prefix) {
   }
 }
 
+/**
+ * ENGAGEMENT BUFFER
+ */
+
+async function pushBuffer(key, value) {
+  if (!isRedisUp()) return;
+
+  try {
+    await redis.rpush(`buffer:${key}`, JSON.stringify(value));
+  } catch (_) { }
+}
+
+async function popBufferBatch(key, limit = 500) {
+  if (!isRedisUp()) return [];
+
+  const items = [];
+
+  try {
+    for (let i = 0; i < limit; i++) {
+      const item = await redis.lpop(`buffer:${key}`);
+      if (!item) break;
+      items.push(JSON.parse(item));
+    }
+  } catch (_) { }
+
+  return items;
+}
+
 module.exports = {
   cache,
   invalidate,
   buildKey,
   acquireLock,
   releaseLock,
+  pushBuffer,
+  popBufferBatch,
 };

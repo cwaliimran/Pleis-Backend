@@ -46,10 +46,7 @@ const ticketingOrderSchema = new mongoose.Schema(
         },
 
         orderPricing: {
-            subtotal: { type: Number, default: 0 },
-            taxAmount: { type: Number, default: 0 },
-            total: { type: Number, default: 0 },
-            currency: { type: String, default: "€" },
+            type: Object,
         },
 
         ticketsPurchased: { type: Number, default: 0 },

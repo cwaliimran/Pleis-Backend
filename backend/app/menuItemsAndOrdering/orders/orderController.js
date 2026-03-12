@@ -3,7 +3,7 @@ const { sendResponse, getReadableErrorMessage, validateParams, parsePaginationPa
 
 const placeOrder = async (req, res) => {
   const { items, notes, paymentMethod = null, pickupType,
-    tableNumber, } = req.body;
+    tableNumber, promoCode } = req.body;
   try {
 
     let validateData = {
@@ -33,6 +33,7 @@ const placeOrder = async (req, res) => {
       paymentMethod,
       pickupType,
       tableNumber,
+      promoCode
     });
 
 
