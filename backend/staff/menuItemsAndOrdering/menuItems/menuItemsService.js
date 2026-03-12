@@ -2,6 +2,7 @@
 const menuItemRepo = require("./menuItemsRepository");
 const { formatMenuItem } = require("./formatter/formatMenuItems");
 const MenuItemCategories = require("@MenuItemCategoriesModel");
+const { applyMenuItemsSale } = require("../../../app/menuItemsAndOrdering/menuItems/menuItemsService");
 
 const getMenuItems = async ({ timezone, organization }) => {
   const menuId = await menuItemRepo.getMenuIdByOrganization(organization);
@@ -84,7 +85,9 @@ function formatMenuGrouping(menuItems, timezone, categoryMap = {}) {
     if (!grouped[categoryName]) grouped[categoryName] = {};
     if (!grouped[categoryName][type]) grouped[categoryName][type] = [];
 
-    grouped[categoryName][type].push(formatMenuItem(item, timezone));
+    grouped[categoryName][type].push(
+      applyMenuItemsSale(formatMenuItem(item, timezone))
+    );
   });
 
   return Object.entries(grouped).map(([categoryName, typesObj]) => ({
@@ -103,7 +106,9 @@ const getMenuItemDetails = async (id) => {
   ]);
   if (!menuItem) return null;
   //format menu item and recommended items
-  const formattedMenuItem = formatMenuItem(menuItem);
+  const formattedMenuItem = applyMenuItemsSale(
+    formatMenuItem(menuItem, timezone)
+  );
 
   return { menuItem: formattedMenuItem };
 };
@@ -151,7 +156,6 @@ const updateMenuItem = async (id, data, timezone) => {
     "type",
     "category",
     "basePrice",
-    "discountPrice",
     "taxPercent",
     "menu",
     "startTime",

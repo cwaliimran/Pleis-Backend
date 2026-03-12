@@ -3,10 +3,112 @@ const MenuItems = require("@MenuItemsModel");
 const Menus = require("@MenusModel");
 const mongoose = require("mongoose");
 const MenuOrders = require("@OrdersModel");
+const { getActiveMenuItemPromotions } = require("../../loyalty/promotions/promotionsRepository");
 
-const getMenuItemsWithFilters = async (query = {}) => {
-  return MenuItems.find(query)
-    .sort({ createdAt: -1 })
+const getMenuItemsWithFilters = async ({
+  query = {},
+  userId = null,
+  timezone = null
+}) => {
+
+  const menuItems = await MenuItems.aggregate([
+    { $match: query },
+    ...buildMenuItemsSaleLookup(),
+    { $sort: { createdAt: -1 } }
+  ]);
+
+  if (!menuItems.length) return [];
+
+  /* --------------------------------
+     If no user → skip promotion logic
+  -------------------------------- */
+
+  if (!userId) {
+    return menuItems;
+  }
+
+  /* --------------------------------
+     Collect menu item ids
+  -------------------------------- */
+
+  const menuItemIds = menuItems.map(item => item._id);
+
+  /* --------------------------------
+     Fetch promotions
+  -------------------------------- */
+
+  const promotions = await getActiveMenuItemPromotions({
+    menuItemIds,
+    userId,
+    timezone
+  });
+
+  /* --------------------------------
+     Map promotions by menuItemId
+  -------------------------------- */
+
+  const promotionMap = new Map();
+
+  promotions.forEach(promo => {
+    if (!promo.menuItem) return;
+
+    promotionMap.set(
+      promo.menuItem._id.toString(),
+      promo
+    );
+  });
+
+  /* --------------------------------
+     Attach promotion to menu items
+  -------------------------------- */
+
+  return menuItems.map(item => ({
+    ...item,
+    promotion: promotionMap.get(item._id.toString()) || null
+  }));
+};
+const buildMenuItemsSaleLookup = () => {
+  const now = new Date();
+
+  return [
+    {
+      $lookup: {
+        from: "menuitemssales",
+        let: { menuItemId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              status: "active",
+              startDateTime: { $lte: now },
+              endDateTime: { $gte: now }
+            }
+          },
+          {
+            $match: {
+              $expr: {
+                $in: ["$$menuItemId", "$menuItems"]
+              }
+            }
+          },
+          { $sort: { discountValue: -1 } },
+          { $limit: 1 }
+        ],
+        as: "sale"
+      }
+    },
+    {
+      $unwind: {
+        path: "$sale",
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $addFields: {
+        saleDiscountType: "$sale.discountType",
+        saleDiscountValue: "$sale.discountValue"
+      }
+    }
+  ];
 };
 
 const getOrganizationIdByMenuItemId = async (menuId) => {
@@ -26,7 +128,12 @@ const countMenuItems = async (query = {}) => {
 
 // Find by ID
 const findMenuItemById = async (id) => {
-  return MenuItems.findById(id);
+  const result = await MenuItems.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(id) } },
+    ...buildMenuItemsSaleLookup()
+  ]);
+
+  return result[0] || null;
 };
 
 const getMenuIdByOrganization = async (organizationId) => {
@@ -37,28 +144,25 @@ const getMenuIdByOrganization = async (organizationId) => {
 // Fetch item and its category/type, then get similar items
 
 const getRecommendedItems = async (menuItemId, limit = 10) => {
-  // Find the original item
   const menuItem = await MenuItems.findById(menuItemId).lean();
   if (!menuItem) throw new Error("Menu item not found");
 
-  // Build query to find similar items
-  const query = {
-    _id: { $ne: new mongoose.Types.ObjectId(menuItemId) }, // exclude the current item
-    menu: menuItem.menu,
-    status: "active",
-    category: menuItem.category,
-    availabilityType: null, // only items without specific availability
-    isAvailableInStock: true,
-    // Use case-insensitive partial match for type
-    type: { $regex: menuItem.type, $options: "i" },
-  };
-
-  // Fetch recommended items (sorted by latest)
-  const recommended = await MenuItems.find(query)
-    .sort({ createdAt: -1 })
-    .limit(limit);
-
-  return recommended;
+  return MenuItems.aggregate([
+    {
+      $match: {
+        _id: { $ne: new mongoose.Types.ObjectId(menuItemId) },
+        menu: menuItem.menu,
+        status: "active",
+        category: menuItem.category,
+        availabilityType: null,
+        isAvailableInStock: true,
+        type: { $regex: menuItem.type, $options: "i" }
+      }
+    },
+    ...buildMenuItemsSaleLookup(),
+    { $sort: { createdAt: -1 } },
+    { $limit: limit }
+  ]);
 };
 
 // ----------------------
@@ -79,12 +183,17 @@ const getOrganizationHybridRecommendedItems = async (
   if (!menu) return [];
 
   // 2. Fetch active menu items
-  const menuItems = await MenuItems.find({
-    menu: menu._id,
-    status: "active",
-    availabilityType: null, // only items without specific availability
-    isAvailableInStock: true,
-  }).lean();
+  const menuItems = await MenuItems.aggregate([
+    {
+      $match: {
+        menu: menu._id,
+        status: "active",
+        availabilityType: null,
+        isAvailableInStock: true
+      }
+    },
+    ...buildMenuItemsSaleLookup()
+  ]);
 
   if (!menuItems.length) return [];
 
@@ -159,6 +268,7 @@ module.exports = {
   getMenuIdByOrganization,
   getRecommendedItems,
   getOrganizationHybridRecommendedItems,
-  getOrganizationIdByMenuItemId
+  getOrganizationIdByMenuItemId,
+  buildMenuItemsSaleLookup
 
 };

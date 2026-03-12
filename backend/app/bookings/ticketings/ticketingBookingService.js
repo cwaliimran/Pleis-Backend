@@ -8,6 +8,8 @@ const {
 const { TicketingOrders } = require("@TicketingOrdersModel");
 const { resolveTimeSensitivePricing } = require("./utils/timeSensitivePricing");
 const { Types } = require("mongoose");
+const { TAX_RATE_BOOKING } = require("../../../config/CONSTANTS");
+const { usePromoCode } = require("../../promoCode/promoCodeRepository");
 
 
 const createTicketingBookingService = async (
@@ -19,13 +21,14 @@ const createTicketingBookingService = async (
     throw new Error("session_required");
   }
 
-  const TAX_RATE = 0.06;
-
   /* 1️⃣ Validate tickets */
   const validationResult =
     await validateTicketsAndQuantity(data.ticketings);
+
   if (!validationResult.valid) {
-    const error = new Error(validationResult.errors[0]?.message || "ticket_validation_failed");
+    const error = new Error(
+      validationResult.errors[0]?.message || "ticket_validation_failed"
+    );
     error.details = validationResult.errors;
     throw error;
   }
@@ -76,27 +79,53 @@ const createTicketingBookingService = async (
   let taxAmount = 0;
 
   if (sumOfPrices > 0) {
-    taxAmount = sumOfPrices * TAX_RATE;
+    taxAmount = sumOfPrices * TAX_RATE_BOOKING;
   }
 
-  const totalWithTax = sumOfPrices + taxAmount;
+  let totalWithTax = sumOfPrices + taxAmount;
+
+  /* ---------- PROMO CODE ---------- */
+
+  let promoResult = null;
+
+  if (data.promoCode) {
+
+    promoResult = await usePromoCode(
+      {
+        promoCode: data.promoCode,
+        userId: data.user,
+        companyOrganizer,
+        amount: totalWithTax,
+      },
+      session
+    );
+
+    if (promoResult.error) {
+      throw new Error(promoResult.error);
+    }
+
+    totalWithTax = promoResult.finalAmount;
+  }
 
   /* ---------- ORDER TYPE FLAGS ---------- */
+
   let isFreeOrder = false;
   if (totalWithTax === 0) {
     isFreeOrder = true;
   }
 
   const BOOKING_ORDERS_REFS = new Set([
-    "rewards", //loyalty rewards have direct reference to reward in booking
-    "globalrewards", //rewards are direct reference
-    "globalchallengeorders", //global loyalty challenges have progress and so thats why they goes in orders
-    "loyaltychallengesorders", //loyalty challenges have progress and so thats why they goes in orders
+    "rewards",
+    "globalrewards",
+    "globalchallengeorders",
+    "loyaltychallengesorders",
   ]);
 
-  const isRewardOrChallengeBooking = BOOKING_ORDERS_REFS.has(data.bookingReference);
+  const isRewardOrChallengeBooking =
+    BOOKING_ORDERS_REFS.has(data.bookingReference);
 
   /* ---------- PAYMENT STATE ---------- */
+
   let paymentMethod = null;
   let cardId = null;
   let transactionId = null;
@@ -124,7 +153,8 @@ const createTicketingBookingService = async (
     orderStatus = "pendingPayment";
   }
 
-  /* 4️⃣ Create order */
+  /* ---------- CREATE ORDER ---------- */
+
   const orderPayload = {
     user: data.user,
     organization: organizationId,
@@ -135,8 +165,10 @@ const createTicketingBookingService = async (
     orderPricing: {
       subtotal: sumOfPrices,
       taxAmount,
+      discount: promoResult ? promoResult.discount : 0,
       total: totalWithTax,
       currency: "€",
+      promoCode: data.promoCode || null,
     },
 
     ticketsPurchased: data.ticketings.length,
@@ -147,7 +179,9 @@ const createTicketingBookingService = async (
       transactionId,
       paymentStatus,
     },
+
     userBillingInformation: data.userBillingInformation || null,
+
     status: orderStatus,
 
     bookingReference: data.bookingReference || null,
@@ -155,6 +189,7 @@ const createTicketingBookingService = async (
   };
 
   /* Lock only payable orders */
+
   if (!isRewardOrChallengeBooking && !isFreeOrder) {
     orderPayload.lockUntil = new Date(
       Date.now() + 10 * 60 * 1000
@@ -167,6 +202,7 @@ const createTicketingBookingService = async (
   );
 
   /* ---------- Ticket status ---------- */
+
   let ticketStatus;
 
   if (isRewardOrChallengeBooking || isFreeOrder) {
@@ -176,6 +212,7 @@ const createTicketingBookingService = async (
   }
 
   /* 5️⃣ Create bookings */
+
   const ticketDocs = resolvedTicketData.map(r => ({
     order: order._id,
     user: data.user,

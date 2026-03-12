@@ -77,7 +77,7 @@ const securityMiddleware = (app, options = {}) => {
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-admin-access-token"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-admin-access-token", "X-Timezone"],
   };
 
   app.use(cors(corsOptions));

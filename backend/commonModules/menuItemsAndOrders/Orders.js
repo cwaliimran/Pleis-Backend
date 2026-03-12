@@ -21,6 +21,17 @@ const OrdersSchema = new mongoose.Schema(
         user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
         items: [OrderItemSchema],
         totalPrice: { type: Number, required: true },
+        priceBreakdown: {
+            type: Object,
+            default: null, 
+            // Example structure:
+            // {
+            //   itemsTotal: 20,
+            //   tax: 1.5,
+            //   discount: 2,
+            //   finalTotal: 19.5
+            // }
+        },
         status: {
             type: String,
             enum: ["pendingPayment", "pending", "confirmed", "sent", "completed", "cancelled", "preorder"],

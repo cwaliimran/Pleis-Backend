@@ -237,6 +237,7 @@ const login = async (req, res) => {
       return;
     }
     let populateFields = [];
+    
 
     const user = await User.findByCredentials(
       email,

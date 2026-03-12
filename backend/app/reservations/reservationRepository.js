@@ -22,6 +22,11 @@ const { placePreOrderMenuItemsWithReservation } = require("../menuItemsAndOrderi
 const { sendUserNotifications } = require("../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 const { getStaffIdsByOrganization, getLogoByOrganization } = require("../../admin/organizations/organizationRepository");
+const { createTransactionService } = require("../userWalletService/transactions/services/unifiedTransactionsService");
+const { TAX_RATE_RESERVATION } = require("../../config/CONSTANTS");
+const { usePromoCode } = require("../promoCode/promoCodeRepository");
+
+
 const createReservation = async (data, session) => {
   if (!session) throw new Error("session_required");
 
@@ -34,11 +39,11 @@ const createReservation = async (data, session) => {
     firstName,
     lastName,
     phoneNumber,
+    promoCode
   } = data;
 
-  const TAX_RATE = 0.06;
-
   /* ---------- Capacity check ---------- */
+
   const capacityCheck = await validateReservationCapacity({
     reservationId,
     session,
@@ -47,7 +52,11 @@ const createReservation = async (data, session) => {
   if (!capacityCheck.valid) {
     return { success: false, error: capacityCheck.error };
   }
+
+  /* ---------- Resolve user ---------- */
+
   let userData;
+
   if (userId) {
     userData = await User.findById(
       userId,
@@ -56,6 +65,7 @@ const createReservation = async (data, session) => {
     ).lean();
 
     if (!userData) throw new Error("User not found");
+
   } else {
     userData = { firstName, lastName, phoneNumber };
   }
@@ -64,27 +74,29 @@ const createReservation = async (data, session) => {
   data.lastName = userData.lastName || "";
   data.phoneNumber = userData.phoneNumber || "";
 
-
   /* ---------- Reservation base ---------- */
+
   const reservationBase = await Reservations
     .findById(reservationId)
     .session(session)
     .lean();
 
-  if (!reservationBase)
+  if (!reservationBase) {
     throw new Error("Reservation not found");
+  }
 
   data.reservationSnapshot = reservationBase;
 
   const baseAmount = Number(reservationBase.amount ?? 0);
 
-  /* ---------- Pricing ---------- */
+  /* ---------- Reservation Pricing ---------- */
+
   let totalReservationAmount = 0;
 
   switch (reservationBase.conditionType) {
+
     case "fixedPrice":
-      totalReservationAmount =
-        baseAmount * Number(1);
+      totalReservationAmount = baseAmount;
       break;
 
     case "prepayOption":
@@ -98,47 +110,86 @@ const createReservation = async (data, session) => {
       totalReservationAmount = 0;
   }
 
-  /* ---------- Reservation tax ---------- */
+  /* ---------- Reservation Tax ---------- */
+
   let reservationTax = 0;
 
   if (totalReservationAmount > 0) {
-    reservationTax =
-      totalReservationAmount * TAX_RATE;
+    reservationTax = totalReservationAmount * TAX_RATE_RESERVATION;
   }
 
   const reservationTotalWithTax =
     totalReservationAmount + reservationTax;
 
-  data.amount = reservationTotalWithTax;
+  /* ---------- PROMO CODE ---------- */
+
+  let finalReservationAmount = reservationTotalWithTax;
+  let promoResult = null;
+
+  if (promoCode && reservationTotalWithTax > 0) {
+
+    promoResult = await usePromoCode(
+      {
+        promoCode,
+        userId,
+        companyOrganizer: reservationBase.companyOrganizer,
+        amount: reservationTotalWithTax,
+      },
+      session
+    );
+
+    if (promoResult.error) {
+      throw new Error(promoResult.error);
+    }
+
+    finalReservationAmount = promoResult.finalAmount;
+  }
+
+  data.amount = finalReservationAmount;
 
   /* ---------- Confirmation flow ---------- */
-  if (reservationBase.conditionType === "noCondition") {
+
+  if (
+    reservationBase.conditionType === "noCondition" ||
+    reservationBase.conditionType === "minimumSpendOnLocation"
+  ) {
+
     data.status = "confirmed";
+
   } else if (reservationBase.needsConfirmation) {
+
     data.status = "needsConfirmation";
-  } else {
-    if (
-      reservationTotalWithTax > 0 &&
-      ["card", "applePay"].includes(
-        data?.paymentDetails?.paymentMethod
-      )
-    ) {
+
+  } else if (finalReservationAmount > 0) {
+
+    if (["card", "applePay"].includes(
+      data?.paymentDetails?.paymentMethod
+    )) {
+
       data.lockUntil = new Date(
         Date.now() + 10 * 60 * 1000
       );
+
       data.status = "pendingPayment";
+
     } else {
-      //throw error payment method is required
       throw new Error("Payment method is required");
     }
+
+  } else {
+    data.status = "confirmed";
   }
 
   /* ---------- Save reservation ---------- */
+
   const userReservation = new UserReservations(data);
+
   await userReservation.save({ session });
 
-  /* ---------- Preorder handling ---------- */
+  /* ---------- Pre-order Menu Items ---------- */
+
   if (preOrderMenuItems?.items?.length) {
+
     const order =
       await placePreOrderMenuItemsWithReservation({
         userId,
@@ -151,25 +202,85 @@ const createReservation = async (data, session) => {
       });
 
     const totalPrice =
-      reservationTotalWithTax + order.totalPrice;
+      finalReservationAmount + order.totalPrice;
 
-    userReservation.preOrderMenuItemsOrder =
-      order._id;
+    userReservation.preOrderMenuItemsOrder = order._id;
 
     userReservation.amount = totalPrice;
 
     userReservation.priceBreakDown = {
       reservationAmount: totalReservationAmount,
       reservationTax,
+      promoDiscount: promoResult ? promoResult.discount : 0,
+      reservationFinalAmount: finalReservationAmount,
       preOrderMenuItemsAmount: order.totalPrice,
+      promoCode: promoCode || null
+    };
+
+    await userReservation.save({ session });
+
+  } else {
+
+    userReservation.priceBreakDown = {
+      reservationAmount: totalReservationAmount,
+      reservationTax,
+      promoDiscount: promoResult ? promoResult.discount : 0,
+      reservationFinalAmount: finalReservationAmount,
+      promoCode: promoCode || null
     };
 
     await userReservation.save({ session });
   }
 
+  /* ---------- Loyalty points ---------- */
+
+  if (
+    data.status === "confirmed" &&
+    reservationBase.bonusPoints > 0
+  ) {
+
+    let companyPoints = {
+      base: reservationBase.bonusPoints,
+      multiplier: 1,
+      total: reservationBase.bonusPoints,
+      pointsPerEuro: 10,
+      bonusPoints: reservationBase.bonusPoints
+    };
+
+    let globalPoints = {
+      base: reservationBase.bonusPoints,
+      multiplier: 1,
+      total: reservationBase.bonusPoints,
+      pointsPerEuro: 10,
+      bonusPoints: reservationBase.bonusPoints
+    };
+
+    const trx = await createTransactionService(
+      {
+        user: userReservation.userId,
+        companyOrganizer: userReservation.companyOrganizer,
+        organization: userReservation.organizationId,
+        companyPoints,
+        globalPoints,
+        allowNegative: false,
+        type: "earn",
+        description: "",
+        entityId: userReservation._id,
+        domainType: "userreservations",
+      },
+      session
+    );
+
+    if (!trx.success) {
+      throw new Error(trx.message || "failed_loyalty_update");
+    }
+  }
+
   /* ---------- Notifications ---------- */
+
   if (userReservation.userId) {
-    await sendUserNotifications({
+
+    sendUserNotifications({
       recipientIds: [userReservation.userId.toString()],
       title: "Reservation Created",
       body: `Your reservation has been created successfully.`,
@@ -187,7 +298,12 @@ const createReservation = async (data, session) => {
     await getStaffIdsByOrganization(
       userReservation.organizationId
     );
-const organizationImage =await getLogoByOrganization(userReservation.organizationId);
+
+  const organizationImage =
+    await getLogoByOrganization(
+      userReservation.organizationId
+    );
+
   await sendUserNotifications({
     recipientIds: staffIds,
     title: "A New Reservation Created",
@@ -206,7 +322,6 @@ const organizationImage =await getLogoByOrganization(userReservation.organizatio
     reservation: userReservation,
   };
 };
-
 
 
 const validateReservationCapacity = async ({

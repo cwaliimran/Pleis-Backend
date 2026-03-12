@@ -47,7 +47,7 @@ function formatBundleMenuItem(item, timezone) {
   return {
     _id: obj._id,
     title: obj.title,
-    price: obj.basePrice || obj.discountPrice || 0, // choose price
+    price: obj.basePrice|| 0, // choose price
   };
 }
 

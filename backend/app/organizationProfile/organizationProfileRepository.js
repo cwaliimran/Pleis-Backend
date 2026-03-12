@@ -11,6 +11,7 @@ const { getUserJoinedClubs, getClubMembersCounts } = require("../loyalty/clubMem
 const { User } = require("@UserModel");
 const { generateMeta } = require("../../helperUtils/responseUtil");
 const { getUserInterestsIdsForRecommendation } = require("../usersManagement/usersRepository");
+const { buildMenuItemsSaleLookup, getMenuItemsWithFilters } = require("../menuItemsAndOrdering/menuItems/menuItemsRepository");
 
 
 
@@ -160,61 +161,40 @@ const countEventsByOrganization = async (organizationId, now) => {
  * @param {string|ObjectId} organizationId
  * @returns {Promise<Array>} Array of menus with items
  */
-const getOrganizationMenuWithItems = async (organizationId) => {
+const getOrganizationMenuWithItems = async ({
+  organizationId,
+  userId = null,
+  timezone = null,
+  limit = 10
+}) => {
   if (!organizationId) return [];
 
-  const orgObjId = new mongoose.Types.ObjectId(organizationId);
+  const menu = await Menus.findOne({
+    organization: organizationId,
+    status: "active",
+    isOrderingEnabled: true
+  }).select("_id title description status");
 
-  const result = await Menus.aggregate([
-    {
-      $match: {
-        organization: orgObjId,
-        status: "active",
-        isOrderingEnabled: true,
-      },
-    },
-    {
-      $lookup: {
-        from: "menuitems",
-        let: { menuId: "$_id" },
-        pipeline: [
-          {
-            $match: {
-              $expr: { $eq: ["$menu", "$$menuId"] },
-              status: "active",
-            },
-          },
-          { $sort: { createdAt: -1 } },
-          { $limit: 10 },
-          {
-            $project: {
-              title: 1,
-              image: 1,
-              description: 1,
-              type: 1,
-              basePrice: 1,
-              discountPrice: 1,
-              taxPercent: 1,
-            },
-          },
-        ],
-        as: "items",
-      },
-    },
-    {
-      $project: {
-        title: 1,
-        description: 1,
-        status: 1,
-        items: 1,
-      },
-    },
-    { $sort: { createdAt: -1 } },
-  ]);
+  if (!menu) return [];
 
-  return result;
+  const items = await getMenuItemsWithFilters({
+    query: {
+      menu: menu._id,
+      status: "active"
+    },
+    userId,
+    timezone
+  });
+
+  return [
+    {
+      title: menu.title,
+      description: menu.description,
+      status: menu.status,
+      items: items.slice(0, limit)
+    }
+  ];
 };
-
 
 /**
  * Find similar organizations based on shared tags or categories.

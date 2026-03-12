@@ -10,6 +10,7 @@ const checkoutWithTicketsAndReservation = async ({
   reservation,
   paymentDetails,
   userBillingInformation,
+  promoCode,
 }, session) => {
   const { order, tickets } =
     await createTicketingBookingService(
@@ -18,6 +19,7 @@ const checkoutWithTicketsAndReservation = async ({
         ticketings,
         paymentDetails,
         userBillingInformation,
+        promoCode,
       },
       timezone,
       session

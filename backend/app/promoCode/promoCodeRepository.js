@@ -1,168 +1,201 @@
-const { NotificationTypes } = require('@NotificationsModel');
-const { PromoCode } = require('@PromoCodeModel'); // Adjust path to your PromoCode model
-const { sendUserNotifications } = require('../../controllers/communicationController');
-const { getFullImageUrl } = require('@utils/imageHelper');
+const { PromoCode } = require("@PromoCodeModel");
 
-const usePromoCode = async (data) => {
+
+// ==============================
+// APPLY PROMO CODE
+// ==============================
+
+const usePromoCode = async (data, session = null) => {
   try {
     const { promoCode, userId, companyOrganizer, amount } = data;
 
+    const normalizedCode = promoCode.trim().toUpperCase();
 
-    const foundPromoCode = await PromoCode.findOne({ promoCode, companyOrganizer });
+    const foundPromoCode = await PromoCode.findOne(
+      {
+        promoCode: normalizedCode,
+        companyOrganizer,
+      },
+      null,
+      { session }
+    );
 
     if (!foundPromoCode) {
       return { error: "Promo code not found for the given organizer." };
     }
 
-    // Check if the promo code is active
+    // status check
     if (foundPromoCode.status !== "active") {
       return { error: "Promo code is not active." };
     }
 
-    // Check if the promo code has expired
-    const now = new Date();
-    if (now > foundPromoCode.expiryDate) {
-      await sendUserNotifications({
-        recipientIds: [userId.toString()],
-        title: "Promo Code Expired",
-        body: `The promo code: ${promoCode} has expired.`,
-        data: {
-          type: NotificationTypes.PROMO_UPDATE,
-          objectType: "PromoCode",
-        },
-        image: (foundPromoCode.image) || "noimage",
-        sender: userId,
-        objectId: foundPromoCode._id,
-      });
+    // expiry check
+    if (new Date() > foundPromoCode.expiryDate) {
       return { error: "Promo code has expired." };
     }
 
-    // Check if the user has exceeded the allowed usage limit for this promo code
-    const userUsage = foundPromoCode.usersUsed.get(userId); // Retrieve the user's usage object by userId
+    // global usage check
+    if (foundPromoCode.usedCount >= foundPromoCode.maxUsage) {
+      return { error: "Promo code usage limit reached." };
+    }
 
+    const userKey = userId.toString();
+    const userUsage = foundPromoCode.usersUsed.get(userKey);
+
+    // user usage check
     if (userUsage && userUsage.count >= foundPromoCode.maxCountPerUser) {
-      await sendUserNotifications({
-        recipientIds: [userId.toString()],
-        title: "Promo Code Usage Exceeded",
-        body: `You have exceeded the maximum usage for the promo code: ${promoCode}.`,
-        data: {
-          type: NotificationTypes.PROMO_UPDATE,
-          objectType: "PromoCode",
-        },
-        image: (foundPromoCode.image) || "noimage",
-        sender: userId,
-        objectId: foundPromoCode._id,
+      return {
+        error: "You have exceeded the maximum usage for this promo code.",
+      };
+    }
+
+    // -------------------------
+    // Calculate Discount
+    // -------------------------
+
+    let discount = 0;
+
+    if (foundPromoCode.discountType === "percentage") {
+      discount = (foundPromoCode.discountValue / 100) * amount;
+
+      if (
+        foundPromoCode.maxDiscountCap > 0 &&
+        discount > foundPromoCode.maxDiscountCap
+      ) {
+        discount = foundPromoCode.maxDiscountCap;
+      }
+    }
+
+    if (foundPromoCode.discountType === "amount") {
+      discount = foundPromoCode.discountValue;
+
+      if (
+        foundPromoCode.maxDiscountCap > 0 &&
+        discount > foundPromoCode.maxDiscountCap
+      ) {
+        discount = foundPromoCode.maxDiscountCap;
+      }
+    }
+
+    //if final amount is negative, return error
+    if (amount - discount < 0) {
+      return {
+        error: "Discount exceeds the total amount. Please adjust your order.",
+      };
+    }
+    const finalAmount = Math.max(amount - discount, 0);
+    
+
+    // -------------------------
+    // Increment Usage
+    // -------------------------
+
+    foundPromoCode.usedCount += 1;
+
+    if (userUsage) {
+      foundPromoCode.usersUsed.set(userKey, {
+        count: userUsage.count + 1,
       });
-      return { error: "You have exceeded the maximum usage for this promo code." };
+    } else {
+      foundPromoCode.usersUsed.set(userKey, {
+        count: 1,
+      });
     }
 
-    // Proceed to apply the discount (if valid)
-    const discountResponse = foundPromoCode.applyDiscount(amount, userId);
+    await foundPromoCode.save({ session });
 
-    // If there's an error applying the discount, return it
-    if (discountResponse.error) {
-      return discountResponse;
-    }
-
-    // Increment the usage count for the user and the promo code
-    const incremented = await foundPromoCode.incrementUsage(userId);
-
-
-    if (!incremented) {
-      return { error: "Unable to increment usage for this promo code." };
-    }
-
-    // Return the successful response with the discount details
-    await sendUserNotifications({
-      recipientIds: [userId.toString()],
-      title: "Promo Code Applied Successfully",
-      body: `You have successfully applied the promo code: ${promoCode}.`,
-      data: {
-        type: NotificationTypes.PROMO_UPDATE,
-        objectType: "PromoCode",
-      },
-      image: (foundPromoCode.image) || "noimage",
-      sender: userId,
-      objectId: foundPromoCode._id,
-    });
     return {
-      message: "Promo code applied successfully",
-      discount: foundPromoCode.discountValue,
+      success: true,
+      discount,
+      finalAmount,
       maxDiscountCap: foundPromoCode.maxDiscountCap,
       discountType: foundPromoCode.discountType,
-
-
     };
+
   } catch (err) {
-   
     throw err;
   }
 };
+
+
+// ==============================
+// VALIDATE PROMO CODE
+// ==============================
+
 const validatePromoCode = async (data) => {
   try {
-    const { promoCode, userId, companyOrganizer } = data;
+    const { promoCode, userId, companyOrganizer, amount } = data;
 
-
-    const foundPromoCode = await PromoCode.findOne({ promoCode, companyOrganizer });
-
+    const foundPromoCode = await PromoCode.findOne({
+      promoCode,
+      companyOrganizer,
+    });
     if (!foundPromoCode) {
       return { error: "Promo code not found for the given organizer." };
     }
 
-    // Check if the promo code is active
     if (foundPromoCode.status !== "active") {
       return { error: "Promo code is not active." };
     }
 
-    // Check if the promo code has expired
-    const now = new Date();
-    if (now > foundPromoCode.expiryDate) {
-      await sendUserNotifications({
-        recipientIds: [userId.toString()],
-        title: "Promo Code Expired",
-        body: `The promo code: ${promoCode} has expired.`,
-        data: {
-          type: NotificationTypes.PROMO_UPDATE,
-          objectType: "PromoCode",
-        },
-        image: (foundPromoCode.image) || "noimage",
-        sender: userId,
-        objectId: foundPromoCode._id,
-      });
+    if (new Date() > foundPromoCode.expiryDate) {
       return { error: "Promo code has expired." };
     }
 
-    // Check if the user has exceeded the allowed usage limit for this promo code
-    const userUsage = foundPromoCode.usersUsed.get(userId); // Retrieve the user's usage object by userId
-
-    if (userUsage && userUsage.count >= foundPromoCode.maxCountPerUser) {
-      await sendUserNotifications({
-        recipientIds: [userId.toString()],
-        title: "Promo Code Usage Exceeded",
-        body: `You have exceeded the maximum usage for the promo code: ${promoCode}.`,
-        data: {
-          type: NotificationTypes.PROMO_UPDATE,
-          objectType: "PromoCode",
-        },
-        image: (foundPromoCode.image) || "noimage",
-        sender: userId,
-        objectId: foundPromoCode._id,
-      });
-      return { error: "You have exceeded the maximum usage for this promo code." };
+    if (foundPromoCode.usedCount >= foundPromoCode.maxUsage) {
+      return { error: "Promo code usage limit reached." };
     }
 
+    const userKey = userId.toString();
+    const userUsage = foundPromoCode.usersUsed.get(userKey);
+
+    if (userUsage && userUsage.count >= foundPromoCode.maxCountPerUser) {
+      return {
+        error: "You have already used this promo code the maximum number of times.",
+      };
+    }
+
+    // preview discount only
+    let discount = 0;
+
+    if (foundPromoCode.discountType === "percentage") {
+      discount = (foundPromoCode.discountValue / 100) * (amount || 0);
+
+      if (
+        foundPromoCode.maxDiscountCap > 0 &&
+        discount > foundPromoCode.maxDiscountCap
+      ) {
+        discount = foundPromoCode.maxDiscountCap;
+      }
+    }
+
+    if (foundPromoCode.discountType === "amount") {
+      discount = foundPromoCode.discountValue;
+
+      if (
+        foundPromoCode.maxDiscountCap > 0 &&
+        discount > foundPromoCode.maxDiscountCap
+      ) {
+        discount = foundPromoCode.maxDiscountCap;
+      }
+    }
+
+    const finalAmount = Math.max((amount || 0) - discount, 0);
+
     return {
-      discount: foundPromoCode.discountValue,
+      valid: true,
+      discount,
+      finalAmount,
       maxDiscountCap: foundPromoCode.maxDiscountCap,
       discountType: foundPromoCode.discountType,
     };
   } catch (err) {
-
     throw err;
   }
 };
+
 
 module.exports = {
   usePromoCode,
-  validatePromoCode
+  validatePromoCode,
 };
