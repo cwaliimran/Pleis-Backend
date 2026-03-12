@@ -8,20 +8,23 @@ on:
 
 env:
   NODE_VERSION: 22.x
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+      # 0. Force Node.js 24 for actions
+      - name: Force Node.js 24 for actions
+        run: echo "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true" >> $GITHUB_ENV
+
       # 1. Checkout repository
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       # 2. Setup Node.js
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.4.0
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -55,6 +58,10 @@ jobs:
     needs: build
 
     steps:
+      # 0. Force Node.js 24 for actions
+      - name: Force Node.js 24 for actions
+        run: echo "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true" >> $GITHUB_ENV
+
       # 1. Download artifact
       - name: Download artifact
         uses: actions/download-artifact@v4
