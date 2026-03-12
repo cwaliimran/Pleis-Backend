@@ -10,65 +10,33 @@ env:
   NODE_VERSION: 22.x
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
-      # 0. Force Node.js 24 for actions
-      - name: Force Node.js 24 for actions
-        run: echo "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true" >> $GITHUB_ENV
-
-      # 1. Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4.2.2
 
-      # 2. Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4.4.0
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
-      # 3. Install dependencies
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --omit=dev
 
-      # 4. Clean unnecessary files before packaging
-      - name: Remove unnecessary files
-        run: |
-          rm -rf .git
-          rm -rf node_modules
-          rm -rf tests
-          rm -rf docs
-          rm -rf *.log
-
-      # 5. Create deployment package
       - name: Create deployment zip
         run: |
-          zip -r node-app.zip . -x "*.git*" "node_modules/*"
+          zip -r node-app.zip . \
+            -x "*.git*" \
+            -x "node_modules/*" \
+            -x "tests/*" \
+            -x "docs/*" \
+            -x "*.log"
 
-      # 6. Upload deployment artifact
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: node-app
-          path: node-app.zip
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-      # 0. Force Node.js 24 for actions
-      - name: Force Node.js 24 for actions
-        run: echo "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true" >> $GITHUB_ENV
-
-      # 1. Download artifact
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: node-app
-
-      # 2. Deploy to Azure Web App
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         env:
