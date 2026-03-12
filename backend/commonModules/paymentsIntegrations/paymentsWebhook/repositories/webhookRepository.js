@@ -333,7 +333,7 @@ const getOrdersTransactionDetails = async ({ id }) => {
     const modelMap = {
       ticketingbookings: "TicketingBookings",
       menuorders: "MenuOrders",
-      reservations: "Reservations",
+      userreservations: "UserReservations",
       tickettransfer: "TicketingBookings"
     };
 
