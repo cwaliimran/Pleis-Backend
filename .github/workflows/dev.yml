@@ -1,76 +1,72 @@
 name: Deploy Node.js API to Azure Web App - Pleis-backend-dev
 
 on:
-push:
-branches:
-- dev
-workflow_dispatch:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
 
 env:
-NODE_VERSION: 22.x
-FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  NODE_VERSION: 22.x
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-build:
-runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-latest
 
+    steps:
+      # 1. Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-steps:
-  # 1. Checkout repository
-  - name: Checkout code
-    uses: actions/checkout@v4
+      # 2. Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
-  # 2. Setup Node.js
-  - name: Setup Node.js
-    uses: actions/setup-node@v4
-    with:
-      node-version: ${{ env.NODE_VERSION }}
+      # 3. Install dependencies
+      - name: Install dependencies
+        run: npm ci
 
-  # 3. Install dependencies
-  - name: Install dependencies
-    run: npm ci
+      # 4. Clean unnecessary files before packaging
+      - name: Remove unnecessary files
+        run: |
+          rm -rf .git
+          rm -rf node_modules
+          rm -rf tests
+          rm -rf docs
+          rm -rf *.log
 
-  # 4. Clean unnecessary files before packaging
-  - name: Remove unnecessary files
-    run: |
-      rm -rf .git
-      rm -rf node_modules
-      rm -rf tests
-      rm -rf docs
-      rm -rf *.log
+      # 5. Create deployment package
+      - name: Create deployment zip
+        run: |
+          zip -r node-app.zip . -x "*.git*" "node_modules/*"
 
-  # 5. Create deployment package
-  - name: Create deployment zip
-    run: |
-      zip -r node-app.zip . -x "*.git*" "node_modules/*"
+      # 6. Upload deployment artifact
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-app
+          path: node-app.zip
 
-  # 6. Upload deployment artifact
-  - name: Upload artifact
-    uses: actions/upload-artifact@v4
-    with:
-      name: node-app
-      path: node-app.zip
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
 
+    steps:
+      # 1. Download artifact
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: node-app
 
-deploy:
-runs-on: ubuntu-latest
-needs: build
-
-
-steps:
-  # 1. Download artifact
-  - name: Download artifact
-    uses: actions/download-artifact@v4
-    with:
-      name: node-app
-
-  # 2. Deploy to Azure Web App
-  - name: Deploy to Azure Web App
-    uses: azure/webapps-deploy@v3
-    env:
-      SCM_DO_BUILD_DURING_DEPLOYMENT: true
-    with:
-      app-name: Pleis-backend-dev
-      publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_8DE223AF70D74AE6A51EEF16D991C7F0 }}
-      package: node-app.zip
-
+      # 2. Deploy to Azure Web App
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        env:
+          SCM_DO_BUILD_DURING_DEPLOYMENT: true
+        with:
+          app-name: Pleis-backend-dev
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_8DE223AF70D74AE6A51EEF16D991C7F0 }}
+          package: node-app.zip
