@@ -23,7 +23,7 @@ const OrdersSchema = new mongoose.Schema(
         totalPrice: { type: Number, required: true },
         priceBreakdown: {
             type: Object,
-            default: null, 
+            default: null,
             // Example structure:
             // {
             //   itemsTotal: 20,
