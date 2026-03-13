@@ -127,13 +127,32 @@ const countMenuItems = async (query = {}) => {
 };
 
 // Find by ID
-const findMenuItemById = async (id) => {
+const findMenuItemById = async (id, userId = null, timezone = null) => {
   const result = await MenuItems.aggregate([
     { $match: { _id: new mongoose.Types.ObjectId(id) } },
     ...buildMenuItemsSaleLookup()
   ]);
 
-  return result[0] || null;
+  const item = result[0] || null;
+  if (!item) return null;
+
+  if (!userId) return item;
+
+  const promotions = await getActiveMenuItemPromotions({
+    menuItemIds: [item._id],
+    userId,
+    timezone
+  });
+
+  const promotion =
+    promotions.find(
+      (p) => p.menuItem && p.menuItem._id.toString() === item._id.toString()
+    ) || null;
+
+  return {
+    ...item,
+    promotion
+  };
 };
 
 const getMenuIdByOrganization = async (organizationId) => {
@@ -143,11 +162,16 @@ const getMenuIdByOrganization = async (organizationId) => {
 // Recommended items
 // Fetch item and its category/type, then get similar items
 
-const getRecommendedItems = async (menuItemId, limit = 10) => {
+const getRecommendedItems = async (
+  menuItemId,
+  userId = null,
+  timezone = null,
+  limit = 10
+) => {
   const menuItem = await MenuItems.findById(menuItemId).lean();
   if (!menuItem) throw new Error("Menu item not found");
 
-  return MenuItems.aggregate([
+  const items = await MenuItems.aggregate([
     {
       $match: {
         _id: { $ne: new mongoose.Types.ObjectId(menuItemId) },
@@ -163,6 +187,28 @@ const getRecommendedItems = async (menuItemId, limit = 10) => {
     { $sort: { createdAt: -1 } },
     { $limit: limit }
   ]);
+
+  if (!items.length || !userId) return items;
+
+  const menuItemIds = items.map((item) => item._id);
+
+  const promotions = await getActiveMenuItemPromotions({
+    menuItemIds,
+    userId,
+    timezone
+  });
+
+  const promotionMap = new Map();
+
+  promotions.forEach((promo) => {
+    if (!promo.menuItem) return;
+    promotionMap.set(promo.menuItem._id.toString(), promo);
+  });
+
+  return items.map((item) => ({
+    ...item,
+    promotion: promotionMap.get(item._id.toString()) || null
+  }));
 };
 
 // ----------------------
@@ -170,6 +216,7 @@ const getRecommendedItems = async (menuItemId, limit = 10) => {
 // ----------------------
 const getOrganizationHybridRecommendedItems = async (
   userId,
+  timezone,
   organizationId,
   limit = 10
 ) => {
@@ -200,6 +247,7 @@ const getOrganizationHybridRecommendedItems = async (
   /* -------------------------------
      PURCHASE HISTORY
   ------------------------------- */
+
   const orders = await MenuOrders.find({ user: userId })
     .select("items")
     .lean();
@@ -217,16 +265,19 @@ const getOrganizationHybridRecommendedItems = async (
   /* -------------------------------
      TOKENIZER
   ------------------------------- */
+
   const tokenize = (str) =>
     str.toLowerCase().split(/[\s,.-]+/).filter(Boolean);
 
   /* -------------------------------
      BUILD SCORES
   ------------------------------- */
+
   const results = menuItems.map((item) => {
     const words = tokenize(item.title);
 
     let textScore = 0;
+
     menuItems.forEach((other) => {
       if (other._id.toString() === item._id.toString()) return;
 
@@ -245,19 +296,50 @@ const getOrganizationHybridRecommendedItems = async (
   });
 
   /* -------------------------------
-     FINAL SORT
-     upSellItem first
+     SORT
   ------------------------------- */
-  return results
+
+  const sortedItems = results
     .sort((a, b) => {
-      // upsell priority
       if (a.upSellItem && !b.upSellItem) return -1;
       if (!a.upSellItem && b.upSellItem) return 1;
-
-      // then score
       return b._score - a._score;
     })
     .slice(0, limit);
+
+  /* -------------------------------
+     PROMOTIONS
+  ------------------------------- */
+
+  if (!userId) return sortedItems;
+
+  const menuItemIds = sortedItems.map(item => item._id);
+
+  const promotions = await getActiveMenuItemPromotions({
+    menuItemIds,
+    userId,
+    timezone
+  });
+
+  const promotionMap = new Map();
+
+  promotions.forEach(promo => {
+    if (!promo.menuItem) return;
+
+    promotionMap.set(
+      promo.menuItem._id.toString(),
+      promo
+    );
+  });
+
+  /* -------------------------------
+     ATTACH PROMOTIONS
+  ------------------------------- */
+
+  return sortedItems.map(item => ({
+    ...item,
+    promotion: promotionMap.get(item._id.toString()) || null
+  }));
 };
 
 
