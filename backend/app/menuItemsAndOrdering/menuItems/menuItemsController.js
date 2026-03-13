@@ -47,9 +47,11 @@ const getRecommendedMenuItems = async (req, res) => {
   const {
     organization
   } = req.query;
+  let { _id: userId, timezone } = req.user;
   try {
     const { recommended } = await menuItemsService.getHybridRecommendedItems({
-      userId: req.user?._id,
+      userId,
+      timezone,
       organization,
     });
 
@@ -72,6 +74,7 @@ const getRecommendedMenuItems = async (req, res) => {
 
 const getMenuItemDetails = async (req, res) => {
   const { id } = req.params;
+  const { _id: userId, timezone } = req.user;
 
   if (
     !validateParams(req, res, {
@@ -82,7 +85,7 @@ const getMenuItemDetails = async (req, res) => {
     return;
 
   try {
-    const { menuItem, recommended } = await menuItemsService.getMenuItemDetails(id);
+    const { menuItem, recommended } = await menuItemsService.getMenuItemDetails(id, userId, timezone);
     if (!menuItem) {
       return sendResponse({
         res,
