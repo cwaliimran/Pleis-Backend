@@ -125,6 +125,7 @@ const getOrdersTransactionDetailsService = async ({ id }) => {
     throw new Error("invalid_transaction_id");
   }
   const transactionDetails = await webhookRepository.getOrdersTransactionDetails({ id });
+  
   if (!transactionDetails) {
     throw new Error("transaction_not_found");
   }
