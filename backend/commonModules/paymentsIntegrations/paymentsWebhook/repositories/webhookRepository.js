@@ -1,3 +1,4 @@
+const { formatImages } = require("../formator/formateWebhook");
 const WebhookEvent = require("./WebhookTransactionsEvent.model");
 const mongoose = require("mongoose");
 
@@ -323,34 +324,150 @@ const getOrdersTransactionDetails = async ({ id }) => {
     .populate("companyOrganizer", "firstName lastName username email profileIcon")
     .populate("user", "firstName lastName username email profileIcon")
     .lean();
+console.log("transactionDetails",transactionDetails );
   if (!transactionDetails) {
     throw new Error("transaction_not_found");
   }
 
-  // Fetch the actual order data based on orderType and orderNumber
   let orderData = null;
+
   if (transactionDetails.orderType && transactionDetails.orderNumber) {
     const modelMap = {
-      ticketingbookings: "TicketingBookings",
+      ticketingbookings: "TicketingOrder",
       menuorders: "MenuOrders",
       userreservations: "UserReservations",
       tickettransfer: "TicketingBookings"
     };
 
     const modelName = modelMap[transactionDetails.orderType.toLowerCase()];
+
     if (modelName) {
       try {
         const Model = mongoose.model(modelName);
-        orderData = await Model.findById(transactionDetails.orderNumber).lean();
+        console.log("Model", modelName);
+
+
+        if (modelName === 'MenuOrders') {
+          try {
+            orderData = await Model.findById(transactionDetails.orderNumber)
+              .lean();
+            for (let i = 0; i < orderData.items.length; i++) {
+              const item = orderData.items[i];
+              if (item.menuItemSnapShot) {
+                const [category, menu,event] = await Promise.all([
+                  mongoose.model('MenuItemCategories').findById(item.menuItemSnapShot.category).lean(),
+                  mongoose.model('Menus').findById(item.menuItemSnapShot.menu).lean()
+                ]);
+                item.menuItemSnapShot.category = category;
+                item.menuItemSnapShot.menu = menu;
+              }
+            }
+          } catch (err) {
+            console.error("Error fetching order data:", err);
+          }
+        }
+       else if (modelName === 'TicketingOrder') {
+          try {
+            orderData = await Model.findById(transactionDetails.orderNumber)
+            .populate('event')
+              .lean();
+          } catch (err) {
+            console.error("Error fetching order data:", err);
+          }
+        }
+        else if (modelName === 'TicketingBookings') {
+          try {
+            orderData = await Model.aggregate([
+              { $match: { _id: new mongoose.Types.ObjectId(transactionDetails.orderNumber) } },
+              {
+                $lookup: {
+                  from: 'ticketingorders',
+                  localField: 'order',
+                  foreignField: '_id',
+                  as: 'order'
+                }
+              },
+              { $unwind: { path: '$order', preserveNullAndEmptyArrays: true } },
+              {
+                $lookup: {
+                  from: 'ticketings',
+                  localField: 'ticket.ticketId',
+                  foreignField: '_id',
+                  as: 'ticket.ticketId'
+                }
+              },
+              { $unwind: { path: '$ticket.ticketId', preserveNullAndEmptyArrays: true } },
+              {
+                $lookup: {
+                  from: 'userreservations',
+                  localField: 'reservationRef',
+                  foreignField: '_id',
+                  as: 'reservationRef'
+                }
+              },
+              { $unwind: { path: '$reservationRef', preserveNullAndEmptyArrays: true } },
+              {
+                $lookup: {
+                  from: 'events',
+                  localField: 'order.event',
+                  foreignField: '_id',
+                  as: 'order.event'
+                }
+              },
+              { $unwind: { path: '$order.event', preserveNullAndEmptyArrays: true } },
+              { $limit: 1 }
+            ]).exec();
+
+            if (!orderData || orderData.length === 0) {
+            } else {
+              const result = orderData[0];
+              for (let i = 0; i < result.transferHistory.length; i++) {
+                const transfer = result.transferHistory[i];
+                const promises = [];
+
+                if (transfer.fromUser) {
+                  const fromUserPromise = mongoose.model('User').findById(transfer.fromUser)
+                    .select('firstName lastName username')
+                    .lean()
+                    .then(fromUser => {
+                      result.transferHistory[i].fromUser = fromUser || null;
+                    });
+                  promises.push(fromUserPromise);
+                }
+
+                if (transfer.toUser) {
+                  const toUserPromise = mongoose.model('User').findById(transfer.toUser)
+                    .select('firstName lastName username')
+                    .lean()
+                    .then(toUser => {
+                      result.transferHistory[i].toUser = toUser || null;
+                    });
+                  promises.push(toUserPromise);
+                }
+                await Promise.all(promises);
+              }
+
+            }
+          } catch (err) {
+            console.error("Error fetching order data:", err);
+          }
+        }
+        else {
+          orderData = await Model.findById(transactionDetails.orderNumber).lean();
+        }
       } catch (err) {
-        // Model not found or order not found - continue without order data
+        console.error("Error handling the model:", err);
       }
     }
   }
-
+  const completeData = {
+    ...transactionDetails,
+    orderData
+  };
+  const formattedData = formatImages(completeData);
   return {
     ...transactionDetails,
-    orderData,
+    orderData: formattedData.orderData,
   };
 };
 
