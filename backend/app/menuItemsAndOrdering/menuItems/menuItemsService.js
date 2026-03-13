@@ -84,10 +84,10 @@ const applyMenuItemsSale = (item) => {
   };
 };
 
-const getMenuItemDetails = async (id) => {
+const getMenuItemDetails = async (id, userId = null, timezone = null) => {
   const [menuItem, getRecommendedItems] = await Promise.all([
-    menuItemRepo.findMenuItemById(id),
-    menuItemRepo.getRecommendedItems(id, 10)
+    menuItemRepo.findMenuItemById(id, userId, timezone),
+    menuItemRepo.getRecommendedItems(id, userId, timezone, 10)
   ]);
   if (!menuItem) return null;
   //format menu item and recommended items
@@ -97,9 +97,10 @@ const getMenuItemDetails = async (id) => {
   return { menuItem: formattedMenuItem, recommended: formattedRecommended };
 };
 
-const getHybridRecommendedItems = async ({ userId, organization }) => {
+const getHybridRecommendedItems = async ({ userId, timezone, organization }) => {
   const recommended = await menuItemRepo.getOrganizationHybridRecommendedItems(
     userId,
+    timezone,
     organization,
     10
   );
