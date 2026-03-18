@@ -31,10 +31,9 @@ const getStreaks = async ({ companyOrganizer, page, limit, keyword, status, date
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const sort = { order: orderSort === "desc" ? -1 : 1 };
 
   let [streaks, getStreaksCounts] = await Promise.all([
-    streakRepo.getStreaksWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
+    streakRepo.getStreaksWithFilters(query, skip, limit === 0 ? 0 : limit),
     streakRepo.getStreaksCounts(query),
   ]);
 

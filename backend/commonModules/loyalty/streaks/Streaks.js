@@ -27,7 +27,10 @@ const streaksSchema = new mongoose.Schema(
   }
 );
 
-streaksSchema.index({ companyOrganizer: 1, visits: 1 }, { unique: true });
+streaksSchema.index(
+  { companyOrganizer: 1, visits: 1 },
+  { unique: true, partialFilterExpression: { status: "active" } }
+);
 
 const Streaks = mongoose.model("Streaks", streaksSchema);
 

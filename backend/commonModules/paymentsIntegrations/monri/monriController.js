@@ -435,7 +435,9 @@ exports.createWebPaySession = async (req, res) => {
   try {
     // --- REQUIRED PAYMENT DATA ---
     const currency = "EUR";
-    const { amount, orderType, orderNumber } = req.query
+    // paymentMethod: 'card', 'apple-pay', or 'google-pay'
+    const { amount, orderType, orderNumber, paymentMethod } = req.query
+    
     let monriOrder = await monriRepository.createTransaction({
       orderNumber: orderNumber,
       amount: amount,
@@ -450,7 +452,8 @@ exports.createWebPaySession = async (req, res) => {
       currency,
     });
 
-    res.json({
+    // Build response with optional payment methods
+    const response = {
       authenticity_token: process.env.MONRI_AUTH_TOKEN,
       transaction_type: "purchase",
       order_number: orderNumber,
@@ -461,7 +464,15 @@ exports.createWebPaySession = async (req, res) => {
       success_url_override: process.env.SUCCESS_URL,
       cancel_url_override: process.env.CANCEL_URL,
       digest,
-    });
+    };
+
+    // Set payment method from query param
+    // Valid values: 'card', 'apple-pay', 'google-pay'
+    if (paymentMethod) {
+      response.supported_payment_methods = paymentMethod;
+    }
+
+    res.json(response);
   } catch (err) {
     res.status(500).json({ message: "Init failed", error: err });
   }

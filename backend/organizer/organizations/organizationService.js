@@ -404,9 +404,12 @@ const getAllOrganizations = async ({ page, limit, keyword, status, creator, date
   // Initialize the query object
   const query = {};
 
-  // Match organizations where creator field matches the provided creator
+  // Match organizations where user is creator OR staff member
   if (creator) {
-    query.creator =new mongoose.Types.ObjectId(creator); // Convert creator to ObjectId
+    query.$or = [
+      { creator: new mongoose.Types.ObjectId(creator) },
+      { "staff.user": new mongoose.Types.ObjectId(creator) }
+    ];
   }
 
   // Apply status filter, if provided

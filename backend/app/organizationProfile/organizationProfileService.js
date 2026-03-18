@@ -35,13 +35,14 @@ const getOrganizationProfile = async (queryData) => {
     }).catch(console.error);
 
 
-    const [orgProfile, orgEvents, reservations, menu, reviews, similarOrganizations] = await Promise.all([
+    const [orgProfile, orgEvents, reservations, menu, reviews, similarOrganizations, userOrganizationStreak] = await Promise.all([
       findOrganizationById(userId, organizationId),
       getOrganizationEvents({ organizationId, filter, timezone, userLocation: queryData.userLocation, userId }), // Filter for "upcoming" or "past"
       getOrganizationReservationsService({ organizationId, timezone }),
       getOrganizationMenu(organizationId, userId, timezone),
       getOrganizationReviews(organizationId), // Get reviews with reviewer names
-      getSimilarOrganizations(organizationId, timezone)
+      getSimilarOrganizations(organizationId, timezone),
+      getUserOrganizationStreak(userId, organizationId)
     ]);
     if (!orgProfile.org) {
       throw new Error("Organization not found");
@@ -83,7 +84,9 @@ const getOrganizationProfile = async (queryData) => {
           reservations,
           menu,
           reviews,
-          similarOrganizations
+          similarOrganizations,
+          userOrganizationStreak
+
         }
       }
     };
@@ -190,6 +193,7 @@ const getOrganizationMenu = async (organizationId, userId, timezone) => {
 
 const { getFullImageUrl } = require("../../helperUtils/imageHelper"); // Import getFullImageUrl
 const { applyMenuItemsSale } = require("../menuItemsAndOrdering/menuItems/menuItemsService");
+const { getUserOrganizationStreak } = require("../usersStreaks/usersStreaksRepository");
 
 const getOrganizationReviews = async (organizationId, page = 1, limit = 10) => {
   const skip = (page - 1) * limit;
