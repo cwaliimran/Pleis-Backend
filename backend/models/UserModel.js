@@ -56,6 +56,10 @@ const subscriptionSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  basePrice: {
+    type: Number,
+    default: 0,
+  },
   startDate: {
     type: Date,
     default: Date.now,
@@ -328,6 +332,7 @@ const userSchema = new mongoose.Schema(
         pricingPlan: PricingPlanType.MONTHLY,
         numberOfOrganizations: 1,
         totalSubscriptionAmount: 0,
+        basePrice: 0,
         status: "active",
         startDate: Date.now(),
         endDate: null
@@ -340,6 +345,7 @@ const userSchema = new mongoose.Schema(
         pricingPlan: PricingPlanType.MONTHLY,
         numberOfOrganizations: 1,
         totalSubscriptionAmount: 0,
+        basePrice: 0,
         status: "active",
         startDate: Date.now(),
         endDate: null
@@ -479,7 +485,8 @@ userSchema.statics.findByCredentials = async (
   timezone,
   populateFields = []
 ) => {
-  let query = User.findOne({ email: email, "accountState.userType": userType });
+
+  let query = User.findOne({ email: email.toLowerCase().trim()});
 
   // Populate specified fields
   populateFields.forEach((field) => {

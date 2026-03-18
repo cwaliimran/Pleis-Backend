@@ -96,6 +96,7 @@ const updateSubscription = async (data) => {
     pricingPlan,
     numberOfOrganizations,
     totalSubscriptionAmount,
+    basePrice
   } = data;
   // --------------------------------------------------
   // 🆕 FIRST-TIME SUBSCRIPTION
@@ -124,12 +125,12 @@ const updateSubscription = async (data) => {
       endDate.setFullYear(endDate.getFullYear() + 1);
       console.log("eend", endDate);
     }
-
     user.activeSubscription = {
       subscriptionTypes,
       pricingPlan,
       numberOfOrganizations,
       totalSubscriptionAmount,
+      basePrice,
       status: "active",
       startDate,
       endDate,
@@ -156,6 +157,7 @@ const updateSubscription = async (data) => {
     numberOfOrganizations:
       numberOfOrganizations ?? active.numberOfOrganizations,
     totalSubscriptionAmount,
+    basePrice: basePrice ?? active.basePrice,
   };
 
   const increasedTypes =
@@ -224,10 +226,19 @@ const updateSubscription = async (data) => {
   return { success: true, message: "no_changes_detected" };
 };
 
-
+const getSubscriptionSettings = async () => {
+  let subscriptionSettings = await SubscriptionRepo.getSubscriptionSettings();
+  return subscriptionSettings;
+};
+const getUserSubscription = async (userId) => {
+  return await SubscriptionRepo.findById(userId);
+}
 module.exports = {
   getUserSubscriptions,
   deleteSubscription,
   updateSubscription,
   getavailableSubscriptions,
+  getSubscriptionSettings,
+  getUserSubscription
+
 };

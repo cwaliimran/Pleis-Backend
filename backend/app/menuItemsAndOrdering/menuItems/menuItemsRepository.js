@@ -178,8 +178,7 @@ const getRecommendedItems = async (
         menu: menuItem.menu,
         status: "active",
         category: menuItem.category,
-        availabilityType: null,
-        isAvailableInStock: true,
+        isAvailableInStock: { $ne: false },
         type: { $regex: menuItem.type, $options: "i" }
       }
     },
@@ -235,8 +234,7 @@ const getOrganizationHybridRecommendedItems = async (
       $match: {
         menu: menu._id,
         status: "active",
-        availabilityType: null,
-        isAvailableInStock: true
+        isAvailableInStock: { $ne: false }
       }
     },
     ...buildMenuItemsSaleLookup()

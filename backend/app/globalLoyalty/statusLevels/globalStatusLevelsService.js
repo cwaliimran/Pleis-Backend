@@ -3,7 +3,7 @@ const statusLevelRepo = require("./globalStatusLevelsRepository");
 
 const getStatusLevels = async () => {
   // No filters applied
-  const query = { status: { $ne: "deleted" } };
+  const query = { status: { $eq: "active" } };
 
   // Fetch via repository
   let statusLevels = await statusLevelRepo.getStatusLevels(query);
