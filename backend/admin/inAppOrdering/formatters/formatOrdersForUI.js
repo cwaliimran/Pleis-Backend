@@ -136,15 +136,17 @@ const filterOrders = ({
         );
       }
       if (activeSub === "inprogress") {
-        return ["confirmed", "sent"].includes(order.status);
+        return (
+          (!allItemsDelivered(order) && ["confirmed", "sent"].includes(order.status))
+        );
       }
 
       if (activeSub === "completed") {
-    
+
         return (
-          
+
           order.status === "completed" &&
-          (!allItemsDelivered(order) || !isPaid(order))
+          (allItemsDelivered(order) || !isPaid(order))
         );
       }
 

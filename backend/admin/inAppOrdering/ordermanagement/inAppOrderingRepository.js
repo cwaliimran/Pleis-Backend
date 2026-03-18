@@ -105,15 +105,15 @@ const getOrders = async ({
       }
     }
     else if (activeorderStatus === "inProgress") {
-      statusFilter = { status: { $in: ["confirmed", "sent"] } };
+      statusFilter = {
+   
+           items: { $elemMatch: { isdelivered: false } }
+
+      };
     } else if (activeorderStatus === "completed") {
       statusFilter = {
         status: "completed",
         $or: [
-          // 1️⃣ If any item is NOT delivered → include order
-          { items: { $elemMatch: { isdelivered: false } } },
-
-          // 2️⃣ If ALL items delivered → then check payment
           {
             $and: [
               { items: { $not: { $elemMatch: { isdelivered: false } } } },

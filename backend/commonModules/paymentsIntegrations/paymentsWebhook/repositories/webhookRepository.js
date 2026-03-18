@@ -324,7 +324,6 @@ const getOrdersTransactionDetails = async ({ id }) => {
     .populate("companyOrganizer", "firstName lastName username email profileIcon")
     .populate("user", "firstName lastName username email profileIcon")
     .lean();
-console.log("transactionDetails",transactionDetails );
   if (!transactionDetails) {
     throw new Error("transaction_not_found");
   }
@@ -344,32 +343,34 @@ console.log("transactionDetails",transactionDetails );
     if (modelName) {
       try {
         const Model = mongoose.model(modelName);
-        console.log("Model", modelName);
-
-
         if (modelName === 'MenuOrders') {
           try {
             orderData = await Model.findById(transactionDetails.orderNumber)
               .lean();
             for (let i = 0; i < orderData.items.length; i++) {
               const item = orderData.items[i];
+
               if (item.menuItemSnapShot) {
-                const [category, menu,event] = await Promise.all([
+                const [category, menu, event] = await Promise.all([
                   mongoose.model('MenuItemCategories').findById(item.menuItemSnapShot.category).lean(),
-                  mongoose.model('Menus').findById(item.menuItemSnapShot.menu).lean()
+                  mongoose.model('Menus').findById(item.menuItemSnapShot.menu).lean(),
+                  mongoose.model('Event').findById(item.menuItemSnapShot.event).lean(),
                 ]);
+
                 item.menuItemSnapShot.category = category;
                 item.menuItemSnapShot.menu = menu;
+                item.menuItemSnapShot.event = event;
+
               }
             }
           } catch (err) {
             console.error("Error fetching order data:", err);
           }
         }
-       else if (modelName === 'TicketingOrder') {
+        else if (modelName === 'TicketingOrder') {
           try {
             orderData = await Model.findById(transactionDetails.orderNumber)
-            .populate('event')
+              .populate('event')
               .lean();
           } catch (err) {
             console.error("Error fetching order data:", err);
