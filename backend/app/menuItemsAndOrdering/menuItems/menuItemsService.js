@@ -13,15 +13,15 @@ const getMenuItems = async ({ userId, timezone, organization }) => {
   if (!menuId) {
     return { recommended: [], menu: [] };
   }
-
   // 2️⃣ Fetch all active menu items for this menu
   const menuItems = await menuItemRepo.getMenuItemsWithFilters({
     query: {
       menu: new mongoose.Types.ObjectId(menuId._id),
       status: "active",
-      availabilityType: null, // only items without specific availability
-      isAvailableInStock: true,
-    }, userId, timezone
+      isAvailableInStock: { $ne: false }
+    },
+    userId,
+    timezone
   });
 
   if (!menuItems.length) return { recommended: [], menu: [] };
@@ -33,7 +33,7 @@ const getMenuItems = async ({ userId, timezone, organization }) => {
   // 4️⃣ Fetch category names in batch
   const [categories, recommended] = await Promise.all([
     MenuItemCategories.find({ _id: { $in: categoryIds } }).select("_id title").lean(),
-    menuItemRepo.getOrganizationHybridRecommendedItems(userId, organization)
+    menuItemRepo.getOrganizationHybridRecommendedItems(userId, timezone, organization)
   ]);
   const categoryMap = categories.reduce((acc, cat) => {
     acc[cat._id.toString()] = cat.title;

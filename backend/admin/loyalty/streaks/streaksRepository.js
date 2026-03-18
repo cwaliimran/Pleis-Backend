@@ -10,6 +10,7 @@ const createStreak = async (data) => {
     const existingStreak = await Streaks.findOne({
       companyOrganizer: data.companyOrganizer,
       visits: data.visits,
+      status: "active",
     });
 
     if (existingStreak) {
@@ -34,15 +35,14 @@ const createStreak = async (data) => {
   }
 };
 
-// Get all with filters, sorted by 'order' ascending and then 'createdAt' descending
+// Get all with filters, sorted by 'visits' ascending and then 'createdAt' descending
 const getStreaksWithFilters = async (
   filter,
   skip,
   limit,
-  sort = { order: 1 },
   selectFields = null
 ) => {
-  const query = Streaks.find(filter).sort(sort);
+  const query = Streaks.find(filter).sort({ visits: 1 });
 
   if (selectFields) query.select(selectFields); // apply select dynamically
   if (limit > 0) query.skip(skip).limit(limit);
