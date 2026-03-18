@@ -174,6 +174,7 @@ const getOrganizationMenuWithItems = async ({
     status: "active",
     isOrderingEnabled: true
   }).select("_id title description status");
+  
 
   if (!menu) return [];
 
