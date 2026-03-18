@@ -247,6 +247,7 @@ const getUserSubscriptions = async ({
         numberOfOrganizations: "$activeSubscription.numberOfOrganizations",
         totalSubscriptionAmount: "$activeSubscription.totalSubscriptionAmount",
         startDate: "$activeSubscription.startDate",
+        basePrice: "$activeSubscription.basePrice",
         
         endDate: "$activeSubscription.endDate",
         subscriptionStatus: {
@@ -379,6 +380,7 @@ const inactiveSubscription =
         monthlyPrice,
         startDate: user.startDate,
         endDate: user.endDate,
+        basePrice: user.basePrice,
         status: user.activeSubscriptionStatus,
         orderingCommission: user.activeSubscription?.orderingCommission || 0,
         ticketingCommission: user.activeSubscription?.ticketingCommission || 0,
@@ -571,9 +573,11 @@ const findByIdAndDelete = async (userId) => {
   }
 };
 const findById = async (userId) => {
-    return  await User.findById(userId).select('subscription');
+    return  await User.findById(userId).select('activeSubscription');
 };
-
+const getSubscriptionSettings = async () => {
+  return await SubscriptionSettings.findOne();
+}
 
 
 module.exports = {
@@ -590,5 +594,6 @@ module.exports = {
   findUserById,
   getavailableSubscriptions,
   findByIdAndDelete,
-  findById
+  findById,
+  getSubscriptionSettings
 };

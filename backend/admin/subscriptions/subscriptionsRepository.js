@@ -731,5 +731,6 @@ module.exports = {
   findByIdAndDelete,
   findById,
   findUserInactiveSubscriptionById,
-  findUserInactiveSubscriptionByIdcomplete
+  findUserInactiveSubscriptionByIdcomplete,
+
 };

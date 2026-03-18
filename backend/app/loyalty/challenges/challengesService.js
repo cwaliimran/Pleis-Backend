@@ -26,7 +26,9 @@ const getEligibleChallengesForLoyaltyPage = async ({
   userCompanyWallet = formatUserWallet(userCompanyWallet);
 
   const tierKey = userCompanyWallet?.tierKey || "essential";
+  console.log("tierKey",tierKey );
   const userTierEntry = userCompanyWallet?.level?.entryPoints ?? 0;
+  console.log("userTierEntry",userTierEntry );
 
   // 2️⃣ Active orders (IMPORTANT: use snapshot)
   const activeOrders = await LoyaltyChallengesOrders.find({
@@ -53,16 +55,15 @@ const getEligibleChallengesForLoyaltyPage = async ({
     .populate("reward.rewardMenuItem")
     .populate("reward.specialTicket.ticket")
     .lean();
+   
   // 4️⃣ Apply tier formatting (CRITICAL)
   activeChallenges = formatChallengesByTierKey(activeChallenges, tierKey);
-
   // 5️⃣ Claim limit eligibility
   const claimResults =
     await checkClaimLimitForLoyaltyChallenges(userId, activeChallenges);
   const claimMap = new Map(
     claimResults.map(r => [String(r.challengeId), r.available])
   );
-
   // 6️⃣ Build final list
   const eligible = [];
 
@@ -92,7 +93,7 @@ const getEligibleChallengesForLoyaltyPage = async ({
         : null
     });
   }
-
+console.log("eligible",eligible );
   // 7️⃣ Sort: active → progress → effort
   eligible.sort((a, b) => {
     if (a.isActive && !b.isActive) return -1;
