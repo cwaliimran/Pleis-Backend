@@ -107,8 +107,6 @@ const deleteStreak = async (id) => {
     status: "deleted",
   });
   if (!updated) return null;
-  await streakRepo.normalizeOrders();
-
   return true;
 };
 

@@ -88,6 +88,11 @@ const updateChallengeProgressByTaskTypeService = async ({
     companyOrganizer
   });
 
+  // ✅ Check for completion when progress reaches target
+  if (updated.progress.current >= updated.progress.target && updated.status === "in-progress") {
+    await finalizeChallengeCompletion(updated);
+  }
+
   return { success: true, order: updated };
 };
 
@@ -287,7 +292,7 @@ const resolveBuyMenuItemChallengeService = async ({
         continue;
       }
 
-      if (updated.progress.current >= updated.progress.target) {
+      if (updated.progress.current >= updated.progress.target && updated.status === "in-progress") {
         console.log("[BUY_MENU_CHALLENGE] ✅ Challenge Completed Triggered", {
           challengeId: challenge._id,
           current: updated.progress.current,
@@ -444,7 +449,7 @@ const resolveGenericTaskTypeService = async ({
       });
 
       // ✅ Completion
-      if (updated.progress.current >= updated.progress.target) {
+      if (updated.progress.current >= updated.progress.target && updated.status === "in-progress") {
 
         console.log("[GENERIC_CHALLENGE] ✅ Challenge Completed Triggered", {
           challengeId: challenge._id,
