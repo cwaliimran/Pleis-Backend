@@ -276,6 +276,11 @@ const checkoutUsersStreak = async (data) => {
   }
 };
 
+//get user streaks by organization
+const getUserOrganizationStreak = async (userId, organization) => {
+  return UsersStreaks.findOne({ user: userId, organization }).sort({ streak: -1 }).limit(1);
+};
+
 module.exports = {
   createUsersStreak,
   getUsersStreaksWithFilters,
@@ -285,5 +290,6 @@ module.exports = {
   deleteUsersStreakById,
   findByIdAndUpdate,
   getUsersStreaksCounts,
-  checkoutUsersStreak
+  checkoutUsersStreak,
+  getUserOrganizationStreak
 };

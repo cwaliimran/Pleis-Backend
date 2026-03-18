@@ -485,7 +485,8 @@ userSchema.statics.findByCredentials = async (
   timezone,
   populateFields = []
 ) => {
-  let query = User.findOne({ email: email, "accountState.userType": userType });
+
+  let query = User.findOne({ email: email.toLowerCase().trim()});
 
   // Populate specified fields
   populateFields.forEach((field) => {
