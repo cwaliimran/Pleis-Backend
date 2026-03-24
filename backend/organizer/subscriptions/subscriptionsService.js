@@ -62,20 +62,6 @@ const deleteSubscription = async (id) => {
 
 
 
-const isIncreaseInTypes = (oldTypes, newTypes) =>
-  newTypes.length > oldTypes.length;
-
-const isDecreaseInTypes = (oldTypes, newTypes) =>
-  newTypes.length < oldTypes.length;
-
-const isIncreaseInOrgs = (oldNum, newNum) =>
-  newNum > oldNum;
-
-const isDecreaseInOrgs = (oldNum, newNum) =>
-  newNum < oldNum;
-
-const isPricingPlanChanged = (oldPlan, newPlan) =>
-  oldPlan !== newPlan;
 
 
 const updateSubscription = async (data) => {
@@ -87,119 +73,105 @@ const updateSubscription = async (data) => {
     user.activeSubscription.subscriptionTypes?.length === 1 &&
     user.activeSubscription.subscriptionTypes[0] === "free" &&
     user.activeSubscription.endDate === null;
-
-
   const now = new Date();
+
 
   const {
     subscriptionTypes,
     pricingPlan,
     numberOfOrganizations,
     totalSubscriptionAmount,
-    basePrice
+    basePrice,
+    direction
   } = data;
   // --------------------------------------------------
   // 🆕 FIRST-TIME SUBSCRIPTION
   // --------------------------------------------------
   // 🆕 FIRST-TIME SUBSCRIPTION
-  if (!user.activeSubscription || isFreeSubscription) {
-    if (
-      !subscriptionTypes ||
-      !pricingPlan ||
-      !numberOfOrganizations ||
-      totalSubscriptionAmount == null
-    ) {
-      return { error: "missing_required_subscription_fields" };
+  if (direction === "new") {
+    if (!user.activeSubscription || isFreeSubscription) {
+      if (
+        !subscriptionTypes ||
+        !pricingPlan ||
+        !numberOfOrganizations ||
+        totalSubscriptionAmount == null
+      ) {
+        return { error: "missing_required_subscription_fields" };
+      }
+
+      const startDate = new Date();
+      let endDate = null;
+
+      if (pricingPlan === "monthly") {
+        endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + 1);
+      }
+
+      if (pricingPlan === "yearly") {
+        endDate = new Date(startDate);
+        endDate.setFullYear(endDate.getFullYear() + 1);
+      }
+      user.activeSubscription = {
+        subscriptionTypes,
+        pricingPlan,
+        numberOfOrganizations,
+        totalSubscriptionAmount,
+        basePrice,
+        status: "active",
+        startDate,
+        endDate,
+      };
+      user.inActiveSubscription = {
+        subscriptionTypes,
+        pricingPlan,
+        numberOfOrganizations,
+        totalSubscriptionAmount,
+        basePrice,
+        status: "active",
+        startDate,
+        endDate,
+      };
+      await user.save();
+
+      return {
+        user, message: "subscription_created_for_first_time"
+      };
     }
-
-    const startDate = new Date();
-    let endDate = null;
-
-    if (pricingPlan === "monthly") {
-      endDate = new Date(startDate);
-      endDate.setMonth(endDate.getMonth() + 1);
-    }
-
-    if (pricingPlan === "yearly") {
-      endDate = new Date(startDate);
-      endDate.setFullYear(endDate.getFullYear() + 1);
-      console.log("eend", endDate);
-    }
-    user.activeSubscription = {
-      subscriptionTypes,
-      pricingPlan,
-      numberOfOrganizations,
-      totalSubscriptionAmount,
-      basePrice,
-      status: "active",
-      startDate,
-      endDate,
-    };
-    await user.save();
-
-    return {
-      success: true,
-      created: "active",
-      startDate,
-      endDate,
-    };
   }
-
 
   // --------------------------------------------------
   // EXISTING SUBSCRIPTION LOGIC
   // --------------------------------------------------
   const active = user.activeSubscription;
-
-  const incoming = {
-    subscriptionTypes: subscriptionTypes ?? active.subscriptionTypes,
-    pricingPlan: pricingPlan ?? active.pricingPlan,
-    numberOfOrganizations:
-      numberOfOrganizations ?? active.numberOfOrganizations,
-    totalSubscriptionAmount,
-    basePrice: basePrice ?? active.basePrice,
-  };
-
-  const increasedTypes =
-    incoming.subscriptionTypes.length > active.subscriptionTypes.length;
-
-  const decreasedTypes =
-    incoming.subscriptionTypes.length < active.subscriptionTypes.length;
-
-  const increasedOrgs =
-    incoming.numberOfOrganizations > active.numberOfOrganizations;
-
-  const decreasedOrgs =
-    incoming.numberOfOrganizations < active.numberOfOrganizations;
-
-  const pricingChanged =
-    incoming.pricingPlan !== active.pricingPlan;
-
-  const isUpgrade = increasedTypes || increasedOrgs;
-  const isDowngrade = decreasedTypes || decreasedOrgs || pricingChanged;
-
-  if ((isUpgrade || isDowngrade) && totalSubscriptionAmount == null) {
-    return { error: "total_amount_required" };
-  }
+  const inactive = user.inActiveSubscription;
 
   // --------------------------------------------------
   // 🔼 UPGRADE → ACTIVE
   // --------------------------------------------------
-  if (isUpgrade) {
-    active.subscriptionTypes = incoming.subscriptionTypes;
-    active.numberOfOrganizations = incoming.numberOfOrganizations;
+  if (direction === "Increase") {
+    active.subscriptionTypes = subscriptionTypes;
+    active.numberOfOrganizations = numberOfOrganizations;
     active.totalSubscriptionAmount = totalSubscriptionAmount;
+    active.basePrice = basePrice;
     active.status = "active";
     active.startDate = now;
-
-    if (pricingChanged) {
-      active.pricingPlan = incoming.pricingPlan;
-
+    if (totalSubscriptionAmount) {
+      active.pricingPlan = pricingPlan;
       const end = new Date(now);
-      if (incoming.pricingPlan === "monthly") end.setMonth(end.getMonth() + 1);
-      if (incoming.pricingPlan === "yearly") end.setFullYear(end.getFullYear() + 1);
+      if (pricingPlan === "monthly") end.setMonth(end.getMonth() + 1);
+      if (pricingPlan === "yearly") end.setFullYear(end.getFullYear() + 1);
       active.endDate = end;
     }
+    user.inActiveSubscription = {
+      subscriptionTypes: subscriptionTypes,
+      pricingPlan: pricingPlan,
+      basePrice: basePrice,
+      numberOfOrganizations: numberOfOrganizations,
+      totalSubscriptionAmount: totalSubscriptionAmount,
+      status: "inactive",
+      startDate: now,
+      endDate: null,
+    };
 
     await user.save();
     return { success: true, updated: "active" };
@@ -208,11 +180,12 @@ const updateSubscription = async (data) => {
   // --------------------------------------------------
   // 🔽 DOWNGRADE → INACTIVE
   // --------------------------------------------------
-  if (isDowngrade) {
+  if (direction === "Decrease") {
     user.inActiveSubscription = {
-      subscriptionTypes: incoming.subscriptionTypes,
-      pricingPlan: incoming.pricingPlan,
-      numberOfOrganizations: incoming.numberOfOrganizations,
+      subscriptionTypes: subscriptionTypes,
+      pricingPlan: pricingPlan,
+      basePrice,
+      numberOfOrganizations: numberOfOrganizations,
       totalSubscriptionAmount,
       status: "inactive",
       startDate: now,
