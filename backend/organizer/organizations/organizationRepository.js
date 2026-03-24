@@ -4,6 +4,7 @@ const Organizations = require("@OrganizationModel");
 
 const { getModelCounts } = require("@dbUtils/queryUtil");
 const { User } = require("../../models/UserModel");
+const mongoose = require("mongoose");
 
 // Create
 const createOrganization = async (data) => {
@@ -65,7 +66,21 @@ const getOrganizationsAsStaff = async (userId) => {
     };
   });
 };
+const countActiveOrganizationsByCreator = async (creatorId) => {
+  try {
+    const count = await mongoose
+      .model('Organizations')
+      .countDocuments({
+        creator: creatorId,
+        status: "active"
+      });
 
+    return count;
+  } catch (error) {
+    console.error('Error counting active organizations:', error);
+    throw error;
+  }
+};
 //get user organizations
 
 module.exports = {
@@ -76,5 +91,6 @@ module.exports = {
   findOrganizationById,
   deleteOrganizationById,
   findByIdAndUpdate,
-  getOrganizationsAsStaff
+  getOrganizationsAsStaff,
+  countActiveOrganizationsByCreator
 };

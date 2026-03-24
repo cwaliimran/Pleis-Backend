@@ -6,6 +6,7 @@ const { UserInterests } = require("@UserInterests");
 const SearchSuggestion = require("@SearchSuggestionModel");
 const { UnifiedWalletTransactions } = require("@UnifiedWalletTransactionsModel");
 const mongoose = require("mongoose");
+const { getEarnTransactions } = require("../transactions/repositories/unifiedTransactionsRepository");
 
 
 
@@ -96,12 +97,14 @@ const getUserSingleMetric = async ({ match, range }) => {
   return result[0]?.count || 0;
 };
 // ---------------- EVENTS ----------------
-const getEventStats = async ({ dateFilter, timezone }) => {
+const getEventStats = async ({ dateFilter, timezone, status }) => {
   const ranges = getDateRanges({ dateFilter, timezone });
 
-  const baseMatch = {
-    status: { $ne: "deleted" },
-  };
+const baseMatch = {
+  ...(status === "active"
+    ? { status: "active" }
+    : { status: { $ne: "deleted" } })
+};
 
   const withRange = (extra, range) => ({
     ...baseMatch,
@@ -396,7 +399,7 @@ const getRawSearchStats = async () => {
 
 
 const getRawTopPerformingOrganizers = async () => {
-return UnifiedWalletTransactions.aggregate([
+  return UnifiedWalletTransactions.aggregate([
     /* --------------------------------
        1️⃣ FILTER RELEVANT TRANSACTIONS
     -------------------------------- */
@@ -522,10 +525,10 @@ const getAverageRevenuePerUserStats = async ({ dateFilter, timezone }) => {
     }),
     ranges
       ? User.countDocuments({
-          "accountState.userType": "user",
-          "accountState.status": "active",
-          createdAt: { $gte: ranges.prevStart, $lt: ranges.prevEnd },
-        })
+        "accountState.userType": "user",
+        "accountState.status": "active",
+        createdAt: { $gte: ranges.prevStart, $lt: ranges.prevEnd },
+      })
       : 0,
   ]);
 
@@ -542,6 +545,111 @@ const getAverageRevenuePerUserStats = async ({ dateFilter, timezone }) => {
   };
 };
 
+const getTotalTrendSales = async () => {
+  const currentYear = new Date().getFullYear();
+  const previousYear = currentYear - 1;
+
+  const transsections = await UnifiedWalletTransactions.aggregate([
+    {
+      $match: {
+        type: "earn",
+        $expr: {
+          $in: [{ $year: "$createdAt" }, [currentYear, previousYear]]
+        }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          year: { $year: "$createdAt" },
+          month: { $month: "$createdAt" }
+        },
+        totalPoints: { $sum: "$points.total" }
+      }
+    },
+    {
+      $group: {
+        _id: "$_id.year",
+        months: {
+          $push: {
+            month: "$_id.month",
+            totalPoints: "$totalPoints"
+          }
+        }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        year: "$_id",
+        months: 1
+      }
+    },
+    {
+      $sort: { year: -1 }
+    }
+  ]);
+  return transsections;
+};
+
+const getTotalTrendRevenue = async () => {
+  const currentYear = new Date().getFullYear();
+  const previousYear = currentYear - 1;
+
+  const REVENUE_PERCENT = 0.06; // e.g. 6%
+
+  const transactions = await UnifiedWalletTransactions.aggregate([
+    {
+      $match: {
+        type: "earn",
+        $expr: {
+          $in: [{ $year: "$createdAt" }, [currentYear, previousYear]]
+        }
+      }
+    },
+    {
+      $project: {
+        year: { $year: "$createdAt" },
+        month: { $month: "$createdAt" },
+        revenue: {
+          $multiply: ["$points.total", REVENUE_PERCENT] 
+        }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          year: "$year",
+          month: "$month"
+        },
+        totalPoints: { $sum: "$revenue" } 
+      }
+    },
+    {
+      $group: {
+        _id: "$_id.year",
+        months: {
+          $push: {
+            month: "$_id.month",
+            totalPoints: "$totalPoints"
+          }
+        }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        year: "$_id",
+        months: 1
+      }
+    },
+    {
+      $sort: { year: -1 }
+    }
+  ]);
+
+  return transactions;
+};
 
 module.exports = {
   getOrganizerPerformanceByMonth,
@@ -557,5 +665,7 @@ module.exports = {
   getRawSearchStats,
   getRawTopPerformingOrganizers,
   getEventsOverTimeRaw,
-  getAverageRevenuePerUserStats
+  getAverageRevenuePerUserStats,
+  getTotalTrendSales,
+  getTotalTrendRevenue
 };

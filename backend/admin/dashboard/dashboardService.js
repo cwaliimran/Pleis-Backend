@@ -8,14 +8,16 @@ const { buildInterestPerCategory } = require("./utils/buildInterestPerCategory")
 const { buildSearchVolumeByMonth } = require("./utils/buildSearchVolumeByMonth");
 const { buildTopPerformingOrganizers } = require("./utils/buildTopPerformingOrganizers");
 const { buildEventsOverTime } = require("./utils/buildEventsOverTime");
+const { buildTotalTrend } = require("./utils/buildTotalSalesTrends");
 
 /**
  * DASHBOARD – Load all cards at once
  */
 const getDashboard = async ({ dateFilter, timezone }) => {
   // ✅ Parallel stats fetch
-  const [users, events, ticketsSold, averageTicketPrice, averageRevenuePerUser, organizersPerformanceComparison, usersDashboardAnalytics, interestPerCategory, topSearchesAnalytics, topPerformingOrganizers, eventsOverTime] = await Promise.all([
+  const [users, activeEvents,allEvents, ticketsSold, averageTicketPrice, averageRevenuePerUser, organizersPerformanceComparison, usersDashboardAnalytics, interestPerCategory, topSearchesAnalytics, topPerformingOrganizers, eventsOverTime, trends] = await Promise.all([
     dashboardRepo.getUserStats({ dateFilter, timezone }),
+    dashboardRepo.getEventStats({ dateFilter, timezone, status: "active" }),
     dashboardRepo.getEventStats({ dateFilter, timezone }),
     dashboardRepo.getTicketsSoldStats({ dateFilter, timezone }),
     dashboardRepo.getAverageTicketPriceStats({ dateFilter, timezone }),
@@ -25,7 +27,8 @@ const getDashboard = async ({ dateFilter, timezone }) => {
     getInterestPerCategoryService(),
     getTopSearchesAnalytics(),
     getTopPerformingOrganizers(),
-    getEventsOverTimeService()
+    getEventsOverTimeService(),
+    getTrends(),
   ]);
 
 
@@ -67,12 +70,22 @@ const getDashboard = async ({ dateFilter, timezone }) => {
       {
         key: "totalEvents",
         title: DASHBOARD_KEYS.totalEvents.title,
-        value: events.totalEventsCurrent || 0,
+        value: allEvents.totalEventsCurrent || 0,
         growth: calculateGrowth(
-          events.totalEventsCurrent,
-          events.totalEventsPrevious
+          allEvents.totalEventsCurrent,
+          allEvents.totalEventsPrevious
         ),
         ...withSubFilters("totalEvents"),
+      },
+      {
+        key: "activeEvents",
+        title: DASHBOARD_KEYS.activeEvents.title,
+        value: activeEvents.totalEventsCurrent || 0,
+        growth: calculateGrowth(
+          activeEvents.totalEventsCurrent,
+          activeEvents.totalEventsPrevious
+        ),
+        ...withSubFilters("activeEvents"),
       },
 
       // ---------------- TICKETS SOLD ----------------
@@ -115,7 +128,8 @@ const getDashboard = async ({ dateFilter, timezone }) => {
     interestPerCategory,
     topSearchesAnalytics,
     topPerformingOrganizers,
-    organizerActivityOverTime: eventsOverTime
+    organizerActivityOverTime: eventsOverTime,
+    trends: trends
 
   }
 };
@@ -175,6 +189,16 @@ const getDashboardStats = async ({ dateFilter, timezone }) => {
         ),
         ...withSubFilters("totalEvents"),
       },
+      {
+        key: "activeEvents",
+        title: DASHBOARD_KEYS.activeEvents.title,
+        value: events.activeEventsCurrent || 0,
+        growth: calculateGrowth(
+          events.activeEventsCurrent,
+          events.activeEventsPrevious
+        ),
+        ...withSubFilters("activeEvents"),
+      },
 
       // ---------------- TICKETS SOLD ----------------
       {
@@ -209,6 +233,11 @@ const getDashboardStats = async ({ dateFilter, timezone }) => {
         ),
         ...withSubFilters("averageRevenuePerUser"),
       },
+      {
+        key: "totalSalesTrends",
+        title: "Total Sales Trends",
+        value: null,
+      }
 
     ],
   }
@@ -357,6 +386,14 @@ const getInterestPerCategoryService = async () => {
   const rows = await dashboardRepo.getRawInterestData();
   return buildInterestPerCategory(rows);
 };
+const getTrends = async () => {
+  const [salesRows, revenueRows] = await Promise.all([
+    dashboardRepo.getTotalTrendSales(),
+    dashboardRepo.getTotalTrendRevenue()
+  ]);
+
+  return buildTotalTrend(salesRows, revenueRows);
+};
 
 const getTopSearchesAnalytics = async () => {
   const rows = await dashboardRepo.getRawSearchStats();
@@ -378,4 +415,5 @@ module.exports = {
   getDashboard,
   getDashboardValue,
   getDashboardStats,
+  getTrends,
 };
