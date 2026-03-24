@@ -32,6 +32,13 @@ const DASHBOARD_KEYS = {
         title: "Total Events",
         subFilters: [
             { key: "all", label: "All" },
+            { key: "completed", label: "Completed" },
+        ],
+    },
+    activeEvents: {
+        title: "Active Events",
+        subFilters: [
+            { key: "all", label: "All" },
             { key: "active", label: "Active" },
             { key: "completed", label: "Completed" },
         ],

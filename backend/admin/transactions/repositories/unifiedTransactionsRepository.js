@@ -393,7 +393,6 @@ const getTotalClosingBalanceByOrganizationId = async (organizationId) => {
   }
 };
 
-
 module.exports = {
   getTransactionsWithFilters,
   countTransactions,
@@ -402,5 +401,5 @@ module.exports = {
   findByIdAndUpdate,
   deleteTransactionById,
   findTransactionsByUserId,
-  getTotalClosingBalanceByOrganizationId
+  getTotalClosingBalanceByOrganizationId,
 };
