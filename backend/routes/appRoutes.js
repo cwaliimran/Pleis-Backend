@@ -28,6 +28,7 @@ router.use("/loyalty/challenges", require("../app/loyalty/challenges/challengesR
 router.use("/loyalty/promotions", require("../app/loyalty/promotions/promotionsRoutes"));
 router.use("/loyalty/club", require("../app/loyalty/clubMembers/clubMembersRoutes"));
 router.use("/loyalty/rewards", require("../app/loyalty/rewards/rewardsRoutes"));
+router.use("/loyalty/streaks-rules", require("../app/loyalty/streakRules/streakRulesRoutes"));
 router.use("/loyalty/rewards-orders", require("../app/loyalty/rewardsOrders/rewardsOrdersRoutes"));
 router.use("/loyalty/challenges-orders", require("../app/loyalty/challengesOrders/challengesOrdersRoutes"));
 

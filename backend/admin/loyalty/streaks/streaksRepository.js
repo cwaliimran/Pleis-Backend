@@ -49,6 +49,13 @@ const getStreaksWithFilters = async (
 
   return query.exec();
 };
+const getActiveStreaksByOrganizer = async (companyOrganizer) => {
+  const query = Streaks.find({
+    companyOrganizer,
+    status: "active"
+  });
+  return query.exec();
+};
 
 // Count by condition
 const countStreaks = async (query = {}) => {
@@ -91,4 +98,5 @@ module.exports = {
   deleteStreakById,
   findByIdAndUpdate,
   getStreaksCounts,
+  getActiveStreaksByOrganizer
 };

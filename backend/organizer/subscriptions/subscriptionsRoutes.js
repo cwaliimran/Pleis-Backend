@@ -4,7 +4,8 @@ const {
   getSubscriptions,
   updateSubscription,
   deleteSubscription,
-  getUserSubscriptions
+  getUserSubscriptions,
+  resetSubscriptions
 
 } = require("./subscriptionsController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
@@ -24,9 +25,11 @@ const apiRateLimiterDetails = createRateLimiter("Subscriptions/:id");
 // Get all Subscriptions with pagination
 router.get("/", roleMiddleware(["organizer"]),apiRateLimiter, getSubscriptions);
 router.get("/user", roleMiddleware(["organizer"]),apiRateLimiter, getUserSubscriptions);
+router.get("/reset", roleMiddleware(["organizer"]),apiRateLimiter, resetSubscriptions);
 
 router.put("/", roleMiddleware(["organizer"]),   updateSubscription,
 )
 router.delete("/:id", roleMiddleware(["organizer"]), deleteSubscription);
+
 
 module.exports = router;

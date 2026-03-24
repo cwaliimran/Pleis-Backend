@@ -5,6 +5,7 @@ const {
   validateParams,
   getReadableErrorMessage,
 } = require("../../helperUtils/responseUtil");
+const { countOrganizations, countActiveOrganizationsByCreator } = require("../organizations/organizationRepository");
 const SubscriptionService = require("./subscriptionsService");
 // Allowed modules
 const ALLOWED_MODULES = ["ordering", "loyalty", "reservations", "analytics"];
@@ -294,7 +295,14 @@ const updateSubscription = async (req, res) => {
       totalSubscriptionAmount,
     } = req.body;
 
-
+    const totalOrganizations = await countActiveOrganizationsByCreator(req.user._id);
+    if (numberOfOrganizations !== undefined && numberOfOrganizations < totalOrganizations) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: `number_Of_Organizations_cannot_be_less_than_current_active_organizations_count_${totalOrganizations}`,
+      });
+    }
     const result = await calculateSubscriptionPrice(req.user._id, req.body);
     if (result.error) {
       return sendResponse({
@@ -304,7 +312,6 @@ const updateSubscription = async (req, res) => {
       });
     }
     /* ================= CONSTANTS ================= */
-    console.log("result", result);
     const basePrice = result.basePrice;
     const direction = result.direction;
     const ALLOWED_SUBSCRIPTION_TYPES = [
@@ -370,7 +377,7 @@ const updateSubscription = async (req, res) => {
         return sendResponse({
           res,
           statusCode: 400,
-          translationKey: "numberOfOrganizations_must_be_positive_integer",
+          translationKey: "number_Of_Organizations_must_be_positive_integer",
         });
       }
 
@@ -420,14 +427,14 @@ const updateSubscription = async (req, res) => {
         translationKey: updated.error,
       });
     }
-if (updated.updated === "inactive") {
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "subscription_updated_successfully_it_will_reflect_after_current_subscription_end",
-      data: updated,
-    });
-  }
+    if (updated.updated === "inactive") {
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "subscription_updated_successfully_it_will_reflect_after_current_subscription_end",
+        data: updated,
+      });
+    }
     return sendResponse({
       res,
       statusCode: 200,
@@ -583,10 +590,45 @@ const getUserSubscriptions = async (req, res) => {
     });
   }
 };
+const resetSubscriptions = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let { userId } = req.query;
+  try {
+    if (!userId) {
+      userId = req.user._id;
+    }
+    const subscriptions = await SubscriptionService.resetSubscriptions({
+      userId
+    });
+
+    if (subscriptions.error) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: subscriptions.error,
+      });
+    }
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "Subscriptions_reset_successfully",
+      data: subscriptions,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 
 module.exports = {
   getSubscriptions,
   updateSubscription,
   deleteSubscription,
   getUserSubscriptions,
+  resetSubscriptions
 };

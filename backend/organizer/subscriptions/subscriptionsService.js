@@ -206,12 +206,58 @@ const getSubscriptionSettings = async () => {
 const getUserSubscription = async (userId) => {
   return await SubscriptionRepo.findById(userId);
 }
+const resetSubscriptions = async ({ userId }) => {
+ 
+  const user = await User.findById(userId);
+  const pricingPlan = "monthly";
+
+      const startDate = new Date();
+      let endDate = null;
+
+      if (pricingPlan === "monthly") {
+        endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + 1);
+      }
+
+      if (pricingPlan === "yearly") {
+        endDate = new Date(startDate);
+        endDate.setFullYear(endDate.getFullYear() + 1);
+      }
+      user.activeSubscription = {
+        subscriptionTypes: [
+        "free"
+    ],
+        pricingPlan: "monthly",
+        numberOfOrganizations: 1,
+        totalSubscriptionAmount: 0,
+        basePrice: 0,
+        status: "active",
+        startDate,
+        endDate: null,
+      };
+      user.inActiveSubscription = {
+        subscriptionTypes: [
+        "free"
+    ],
+        pricingPlan: "monthly",
+        numberOfOrganizations: 1,
+        totalSubscriptionAmount: 0,
+        basePrice: 0,
+        status: "active",
+        startDate,
+        endDate: null,
+      };
+      await user.save();
+
+      return user.activeSubscription
+    }
 module.exports = {
   getUserSubscriptions,
   deleteSubscription,
   updateSubscription,
   getavailableSubscriptions,
   getSubscriptionSettings,
-  getUserSubscription
+  getUserSubscription,
+  resetSubscriptions
 
 };

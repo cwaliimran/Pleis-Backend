@@ -90,6 +90,7 @@ const { allowedOrigins } = require("./config/origins");
  * Express App
  * =======================================================
  */
+
 const app = express();
 app.set("trust proxy", 1);
 
