@@ -9,29 +9,97 @@ const { buildSearchVolumeByMonth } = require("./utils/buildSearchVolumeByMonth")
 const { buildTopPerformingOrganizers } = require("./utils/buildTopPerformingOrganizers");
 const { buildEventsOverTime } = require("./utils/buildEventsOverTime");
 const { buildTotalTrend } = require("./utils/buildTotalSalesTrends");
+const { buildMostViewedEvents } = require("./utils/buildMostViewedEvents");
+const { buildFollowersOverTime } = require("./utils/buildFollowersOverTime");
+const { buildTopEvents } = require("./utils/buildTopEvents");
 
 /**
  * DASHBOARD – Load all cards at once
  */
-const getDashboard = async ({ dateFilter, timezone }) => {
-  // ✅ Parallel stats fetch
-  const [users, activeEvents,allEvents, ticketsSold, averageTicketPrice, averageRevenuePerUser, organizersPerformanceComparison, usersDashboardAnalytics, interestPerCategory, topSearchesAnalytics, topPerformingOrganizers, eventsOverTime, trends] = await Promise.all([
-    dashboardRepo.getUserStats({ dateFilter, timezone }),
-    dashboardRepo.getEventStats({ dateFilter, timezone, status: "active" }),
-    dashboardRepo.getEventStats({ dateFilter, timezone }),
-    dashboardRepo.getTicketsSoldStats({ dateFilter, timezone }),
-    dashboardRepo.getAverageTicketPriceStats({ dateFilter, timezone }),
-    dashboardRepo.getAverageRevenuePerUserStats({ dateFilter, timezone }),
-    getOrganizerPerformanceComparisonService({ timezone }),
+const getDashboard = async ({ dateFilter, timezone, companyOrganizer }) => {
+  const promises = [
+    dashboardRepo.getUserStats({ dateFilter, timezone, companyOrganizer }),
+    dashboardRepo.getEventStats({ dateFilter, timezone, status: "active", companyOrganizer }),
+    dashboardRepo.getEventStats({ dateFilter, timezone, companyOrganizer }),
+    dashboardRepo.getTicketsSoldStats({ dateFilter, timezone, companyOrganizer }),
+    dashboardRepo.getAverageTicketPriceStats({ dateFilter, timezone, companyOrganizer }),
+    dashboardRepo.getAverageRevenuePerUserStats({ dateFilter, timezone, companyOrganizer }),
+    dashboardRepo.getTotalRevenueStats({ dateFilter, timezone, companyOrganizer }),
+    getOrganizerPerformanceComparisonService({ timezone,companyOrganizer }),
     getUsersDashboardAnalytics(),
-    getInterestPerCategoryService(),
+    getInterestPerCategoryService(companyOrganizer),
     getTopSearchesAnalytics(),
     getTopPerformingOrganizers(),
-    getEventsOverTimeService(),
-    getTrends(),
-  ]);
+    getEventsOverTimeService(companyOrganizer),
+    getTrends(companyOrganizer),
+    dashboardRepo.getTotalMobilePaymentsStats({ dateFilter, timezone }),
+  ];
+  if (companyOrganizer) {
+    promises.push(
+      dashboardRepo.getOrganizationsStats({ dateFilter, timezone, companyOrganizer })
+    );
+  }
+  if (companyOrganizer) {
+    promises.push(
+      dashboardRepo.getClubMembersStats({ dateFilter, timezone, companyOrganizer })
+    );
+  }
+  if (companyOrganizer) {
+    promises.push(
+      dashboardRepo.getReservationsStats({ dateFilter, timezone, companyOrganizer })
+    );
+  }
+  if (companyOrganizer) {
+    promises.push(
+      dashboardRepo.getBookedReservationsStats({ dateFilter, timezone, companyOrganizer })
 
+    );
+  }
+  if (companyOrganizer) {
+    promises.push(
+      getOrganizerUsersDashboardAnalytics(companyOrganizer)
+    );
+  }
+  if (companyOrganizer) {
+    promises.push(
+      getTopViewedEvents(companyOrganizer)
+    );
+  }
+  if (companyOrganizer) {
+    promises.push(
+      getFollowersOverTimeRaw(companyOrganizer)
+    );
+  }
+  if (companyOrganizer) {
+    promises.push(
+      getRawTopPerformingEvents(companyOrganizer)
+    );
+  }
 
+  const [
+    users,
+    activeEvents,
+    allEvents,
+    ticketsSold,
+    averageTicketPrice,
+    averageRevenuePerUser,
+    totalRevenue,
+    organizersPerformanceComparison,
+    usersDashboardAnalytics,
+    interestPerCategory,
+    topSearchesAnalytics,
+    topPerformingOrganizers,
+    eventsOverTime,
+    trends,
+    totalMobilePayments,
+    organizations,
+    clubMembers,
+    reservations,
+    bookedReservations,
+    usersDashboardAnalyticsOrganizer,
+    topViewedEvents,
+    followersOverTime,    topPerformingEvents
+  ] = await Promise.all(promises);
   return {
     stats: [
       // ---------------- USERS ----------------
@@ -45,7 +113,17 @@ const getDashboard = async ({ dateFilter, timezone }) => {
         ),
         ...withSubFilters("totalUsers"),
       },
-      {
+      !companyOrganizer && {
+        key: "activeUsers",
+        title: DASHBOARD_KEYS.activeUsers.title,
+        value: users.activeUsersCurrent || 0,
+        growth: calculateGrowth(
+          users.activeUsersCurrent,
+          users.activeUsersPrevious
+        ),
+        ...withSubFilters("activeUsers"),
+      },
+      !companyOrganizer && {
         key: "totalOrganizers",
         title: DASHBOARD_KEYS.totalOrganizers.title,
         value: users.organizersCurrent || 0,
@@ -55,15 +133,55 @@ const getDashboard = async ({ dateFilter, timezone }) => {
         ),
         ...withSubFilters("totalOrganizers"),
       },
-      {
-        key: "activeUsers",
-        title: DASHBOARD_KEYS.activeUsers.title,
-        value: users.activeUsersCurrent || 0,
+      companyOrganizer && {
+        key: "totalOrganizations",
+        title: DASHBOARD_KEYS.totalOrganizations.title,
+        value: organizations.totalOrganizationsCurrent || 0,
         growth: calculateGrowth(
-          users.activeUsersCurrent,
-          users.activeUsersPrevious
+          organizations.totalOrganizationsCurrent,
+          organizations.totalOrganizationsPrevious
         ),
-        ...withSubFilters("activeUsers"),
+        ...withSubFilters("totalOrganizations"),
+      },
+      companyOrganizer && {
+        key: "totalClubMembers",
+        title: DASHBOARD_KEYS.totalClubMembers.title,
+        value: clubMembers.totalClubMembersCurrent || 0,
+        growth: calculateGrowth(
+          clubMembers.totalClubMembersCurrent,
+          clubMembers.totalClubMembersPrevious
+        ),
+        ...withSubFilters("totalClubMembers"),
+      },
+      companyOrganizer && {
+        key: "activeClubMembers",
+        title: DASHBOARD_KEYS.activeClubMembers.title,
+        value: clubMembers.activeClubMembersCurrent || 0,
+        growth: calculateGrowth(
+          clubMembers.activeClubMembersCurrent,
+          clubMembers.activeClubMembersPrevious
+        ),
+        ...withSubFilters("activeClubMembers"),
+      },
+      companyOrganizer && {
+        key: "totalReservations",
+        title: DASHBOARD_KEYS.totalReservations.title,
+        value: reservations.totalReservationsCurrent || 0,
+        growth: calculateGrowth(
+          reservations.totalReservationsCurrent,
+          reservations.totalReservationsPrevious
+        ),
+        ...withSubFilters("totalReservations"),
+      },
+      companyOrganizer && {
+        key: "bookedReservations",
+        title: DASHBOARD_KEYS.bookedReservations.title,
+        value: bookedReservations.totalBookedReservationsCurrent || 0,
+        growth: calculateGrowth(
+          bookedReservations.totalBookedReservationsCurrent,
+          bookedReservations.totalBookedReservationsPrevious
+        ),
+        ...withSubFilters("bookedReservations"),
       },
 
       // ---------------- EVENTS ----------------
@@ -121,14 +239,42 @@ const getDashboard = async ({ dateFilter, timezone }) => {
         ),
         ...withSubFilters("averageRevenuePerUser"),
       },
+      {
+        key: "totalRevenue",
+        title: DASHBOARD_KEYS.totalRevenue.title,
+        value: totalRevenue.totalRevenueCurrent || 0,
+        growth: calculateGrowth(
+          totalRevenue.totalRevenueCurrent,
+          totalRevenue.totalRevenuePrevious
+        ),
+        ...withSubFilters("totalRevenue"),
+      },
+      !companyOrganizer && {
+        key: "totalMobilePayments",
+        title: DASHBOARD_KEYS.totalMobilePayments.title,
+        value: totalMobilePayments.totalPaymentsCurrent || 0,
+        growth: calculateGrowth(
+          totalMobilePayments.totalPaymentsCurrent,
+          totalMobilePayments.totalPaymentsPrevious
+        ),
+        ...withSubFilters("totalMobilePayments"),
+      },
 
-    ],
-    organizersPerformanceComparison,
-    usersDashboardAnalytics,
+
+    ].filter(Boolean),
+    ...(!companyOrganizer && { organizersPerformanceComparison }),
+    ...(companyOrganizer && { eventPerformanceComparision:organizersPerformanceComparison }),
+    ...(!companyOrganizer && { usersDashboardAnalytics }),
+    ...(companyOrganizer && { usersDashboardAnalyticsOrganizer }),
     interestPerCategory,
-    topSearchesAnalytics,
-    topPerformingOrganizers,
-    organizerActivityOverTime: eventsOverTime,
+    ...(!companyOrganizer && { topSearchesAnalytics }),
+    ...(!companyOrganizer && { topPerformingOrganizers }),
+    ...(!companyOrganizer && { organizerActivityOverTime: eventsOverTime, }),
+    ...(companyOrganizer && { eventViewsOverTime: eventsOverTime, }),
+    ...(companyOrganizer && { topViewedEvents }),
+    ...(companyOrganizer && { followersOverTime }),
+    ...(companyOrganizer && { topPerformingEvents }),
+
     trends: trends
 
   }
@@ -234,6 +380,16 @@ const getDashboardStats = async ({ dateFilter, timezone }) => {
         ...withSubFilters("averageRevenuePerUser"),
       },
       {
+        key: "totalMobilePayments",
+        title: DASHBOARD_KEYS.totalMobilePayments.title,
+        value: totalMobilePayments.totalPaymentsCurrent || 0,
+        growth: calculateGrowth(
+          totalMobilePayments.totalPaymentsCurrent,
+          totalMobilePayments.totalPaymentsPrevious
+        ),
+        ...withSubFilters("totalMobilePayments"),
+      },
+      {
         key: "totalSalesTrends",
         title: "Total Sales Trends",
         value: null,
@@ -335,14 +491,15 @@ const getOrganizerPerformanceComparisonService = async ({
   organizationId,
   timezone,
   year,
+  companyOrganizer
 }) => {
   const raw = await dashboardRepo.getOrganizerPerformanceByMonth({
     organizerId,
     organizationId,
     timezone,
     year,
+    companyOrganizer
   });
-
   const monthMap = {
     1: "January",
     2: "February",
@@ -380,16 +537,29 @@ const getUsersDashboardAnalytics = async (year = new Date().getFullYear()) => {
   let users = await dashboardRepo.getUsersForDashboardAnalytics(year);
   return buildUserDashboardAnalytics(users);
 };
+const getOrganizerUsersDashboardAnalytics = async (companyOrganizer, year = new Date().getFullYear()) => {
+  let users = await dashboardRepo.getOrganizerUsersForDashboardAnalytics(companyOrganizer, year);
+  return buildUserDashboardAnalytics(users);
+};
+
+const getInterestPerCategoryService = async (companyOrganizer) => {
+  let rows;
+  if (!companyOrganizer) {
+    rows = await dashboardRepo.getRawInterestData();
+  }
+  if (companyOrganizer) {
+    const year = new Date().getFullYear();
+    users = await dashboardRepo.getOrganizerUsersForDashboardAnalytics(companyOrganizer, year);
+    rows = await dashboardRepo.getRawInterestDataByOrganizer(users);
+  }
 
 
-const getInterestPerCategoryService = async () => {
-  const rows = await dashboardRepo.getRawInterestData();
   return buildInterestPerCategory(rows);
 };
-const getTrends = async () => {
+const getTrends = async (companyOrganizer) => {
   const [salesRows, revenueRows] = await Promise.all([
-    dashboardRepo.getTotalTrendSales(),
-    dashboardRepo.getTotalTrendRevenue()
+    dashboardRepo.getTotalTrendSales(companyOrganizer),
+    dashboardRepo.getTotalTrendRevenue(companyOrganizer)
   ]);
 
   return buildTotalTrend(salesRows, revenueRows);
@@ -405,10 +575,32 @@ const getTopPerformingOrganizers = async () => {
   return buildTopPerformingOrganizers(rows);
 }
 
-const getEventsOverTimeService = async () => {
-  const rows = await dashboardRepo.getEventsOverTimeRaw();
+const getEventsOverTimeService = async (companyOrganizer) => {
+  let rows;
+  if (!companyOrganizer) {
+    rows = await dashboardRepo.getEventsOverTimeRaw();
+  }
+  if (companyOrganizer) {
+    rows = await dashboardRepo.getEventsViewsOverTimeService(companyOrganizer);
+  }
   return buildEventsOverTime(rows);
 }
+const getTopViewedEvents = async (companyOrganizer) => {
+  let rows;
+  if (companyOrganizer) {
+    rows = await dashboardRepo.getTopViewedEvents(companyOrganizer);
+  }
+  return buildMostViewedEvents(rows);
+}
+    const getFollowersOverTimeRaw = async (companyOrganizer) => {
+      const rows = await dashboardRepo.getFollowersOverTimeRaw(companyOrganizer);
+      return buildFollowersOverTime(rows);
+    }
+const getRawTopPerformingEvents = async (companyOrganizer) => {
+  const rows = await dashboardRepo.getRawTopPerformingEvents(companyOrganizer);
+  return buildTopEvents(rows);
+}
+
 
 module.exports = {
   getOrganizerPerformanceComparisonService,

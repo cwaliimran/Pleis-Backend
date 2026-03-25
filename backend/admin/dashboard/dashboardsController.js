@@ -13,6 +13,10 @@ const { DASHBOARD_KEYS } = require("./utils/dashboardKeyMap");
 const getDashboard = async (req, res) => {
   const { dateFilter = "all" } = req.query;
   let { timezone } = req.user || "UTC";
+  let companyOrganizer;
+  if(req.user.userType==="organizer"){
+    companyOrganizer = req.user._id;
+  }
 
   try {
 
@@ -25,6 +29,7 @@ const getDashboard = async (req, res) => {
     const dashboard = await dashboardService.getDashboard({
       dateFilter,
       timezone,
+      companyOrganizer,
     });
 
     return sendResponse({

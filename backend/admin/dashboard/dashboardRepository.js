@@ -7,78 +7,260 @@ const SearchSuggestion = require("@SearchSuggestionModel");
 const { UnifiedWalletTransactions } = require("@UnifiedWalletTransactionsModel");
 const mongoose = require("mongoose");
 const { getEarnTransactions } = require("../transactions/repositories/unifiedTransactionsRepository");
+const MonriTransaction = require("../../commonModules/paymentsIntegrations/monri/MonriTransaction");
+const { ClubMembers } = require("@ClubMembersModel");
+const Organizations = require("@OrganizationModel");
+const { UserReservations } = require("@UserReservationsModel");
+const Reservations = require("@ReservationsModel");
+const EngagementEvents = require("@appEngagement/EngagementEvents");
 
 
-
-// ---------------- USERS ----------------
-const getUserStats = async ({ dateFilter, timezone }) => {
-  const ranges = getDateRanges({ dateFilter, timezone });
-
+const getClubMembersStats = async ({ companyOrganizer, dateFilter, timezone }) => {
+    const ranges = getDateRanges({ dateFilter, timezone });
   const baseMatch = {
-    "accountState.status": { $ne: "deleted" },
+    companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
   };
 
-  const withRange = (extra, range) => ({
-    ...baseMatch,
-    ...extra,
-    ...(range ? { createdAt: range } : {}),
-  });
+  const getCount = async (Model, baseMatch, extra, range) => {
+    const finalMatch = {
+      ...baseMatch,
+      ...extra,
+      ...(range && { createdAt: range }),
+    };
+
+    return Model.countDocuments(finalMatch);
+  };
 
   return {
-    totalUsersCurrent: await User.countDocuments(
-      withRange(
-        { "accountState.userType": "user" },
-        ranges && { $gte: ranges.start, $lt: ranges.end }
-      )
+    totalClubMembersCurrent: await getCount(
+      ClubMembers,
+      baseMatch,
+      {},
+      ranges && { $gte: ranges.start, $lt: ranges.end }
     ),
 
-    totalUsersPrevious: ranges
-      ? await User.countDocuments(
-        withRange(
+    totalClubMembersPrevious: ranges
+      ? await getCount(
+          ClubMembers,
+          baseMatch,
+          {},
+          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+        )
+      : 0,
+
+    activeClubMembersCurrent: await getCount(
+      ClubMembers,
+      baseMatch,
+      { status: "active" },
+      ranges && { $gte: ranges.start, $lt: ranges.end }
+    ),
+
+    activeClubMembersPrevious: ranges
+      ? await getCount(
+          ClubMembers,
+          baseMatch,
+          { status: "active" },
+          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+        )
+      : 0,
+
+    inactiveClubMembersCurrent: await getCount(
+      ClubMembers,
+      baseMatch,
+      { status: "inactive" },
+      ranges && { $gte: ranges.start, $lt: ranges.end }
+    ),
+
+    inactiveClubMembersPrevious: ranges
+      ? await getCount(
+          ClubMembers,
+          baseMatch,
+          { status: "inactive" },
+          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+        )
+      : 0,
+
+    bannedClubMembersCurrent: await getCount(
+      ClubMembers,
+      baseMatch,
+      { status: "banned" },
+      ranges && { $gte: ranges.start, $lt: ranges.end }
+    ),
+
+    bannedClubMembersPrevious: ranges
+      ? await getCount(
+          ClubMembers,
+          baseMatch,
+          { status: "banned" },
+          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+        )
+      : 0,
+
+    leftClubMembersCurrent: await getCount(
+      ClubMembers,
+      baseMatch,
+      { status: "left" },
+      ranges && { $gte: ranges.start, $lt: ranges.end }
+    ),
+
+    leftClubMembersPrevious: ranges
+      ? await getCount(
+          ClubMembers,
+          baseMatch,
+          { status: "left" },
+          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+        )
+      : 0,
+  };
+};
+// ---------------- USERS ----------------
+const getUserStats = async ({ dateFilter, timezone, companyOrganizer }) => {
+  const ranges = getDateRanges({ dateFilter, timezone });
+
+  const getCount = async (Model, baseMatch, extra, range) => {
+    const finalMatch = {
+      ...baseMatch,
+      ...extra,
+      ...(range && { createdAt: range }),
+    };
+
+    return Model.countDocuments(finalMatch);
+  };
+
+  // =========================
+  // 🚀 GLOBAL USERS (NO ORGANIZER)
+  // =========================
+  if (!companyOrganizer) {
+    const baseMatch = {
+      "accountState.status": { $ne: "deleted" },
+    };
+
+    return {
+      totalUsersCurrent: await getCount(
+        User,
+        baseMatch,
+        { "accountState.userType": "user" },
+        ranges && { $gte: ranges.start, $lt: ranges.end }
+      ),
+
+      totalUsersPrevious: ranges
+        ? await getCount(
+          User,
+          baseMatch,
           { "accountState.userType": "user" },
           { $gte: ranges.prevStart, $lt: ranges.prevEnd }
         )
-      )
-      : 0,
+        : 0,
 
-    organizersCurrent: await User.countDocuments(
-      withRange(
+      organizersCurrent: await getCount(
+        User,
+        baseMatch,
         { "accountState.userType": "organizer" },
         ranges && { $gte: ranges.start, $lt: ranges.end }
-      )
-    ),
+      ),
 
-    organizersPrevious: ranges
-      ? await User.countDocuments(
-        withRange(
+      organizersPrevious: ranges
+        ? await getCount(
+          User,
+          baseMatch,
           { "accountState.userType": "organizer" },
           { $gte: ranges.prevStart, $lt: ranges.prevEnd }
         )
-      )
-      : 0,
+        : 0,
 
-    activeUsersCurrent: await User.countDocuments(
-      withRange(
+      activeUsersCurrent: await getCount(
+        User,
+        baseMatch,
         {
           "accountState.userType": "user",
           "accountState.status": "active",
         },
         ranges && { $gte: ranges.start, $lt: ranges.end }
-      )
-    ),
+      ),
 
-    activeUsersPrevious: ranges
-      ? await User.countDocuments(
-        withRange(
+      activeUsersPrevious: ranges
+        ? await getCount(
+          User,
+          baseMatch,
           {
             "accountState.userType": "user",
             "accountState.status": "active",
           },
           { $gte: ranges.prevStart, $lt: ranges.prevEnd }
         )
-      )
-      : 0,
+        : 0,
+    };
+  }
+if (companyOrganizer) {
+
+  const baseMatch = {
+    creator: new mongoose.Types.ObjectId(companyOrganizer),
+    status: { $ne: "deleted" },
   };
+
+  const getStaffCount = async (extraMatch = {}, range) => {
+    const result = await Organizations.aggregate([
+      {
+        $match: {
+          ...baseMatch,
+          ...(range && { createdAt: range }),
+        },
+      },
+      {
+        $unwind: "$staff",
+      },
+      {
+        $match: {
+          ...extraMatch, // optional filters later
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    return result[0]?.count || 0;
+  };
+
+  return {
+    totalUsersCurrent: await getStaffCount(
+      {},
+      ranges && { $gte: ranges.start, $lt: ranges.end }
+    ),
+
+    totalUsersPrevious: ranges
+      ? await getStaffCount({}, {
+          $gte: ranges.prevStart,
+          $lt: ranges.prevEnd,
+        })
+      : 0,
+
+    // NOTE: You DON'T have status in staff → so these will be same unless you join Users
+    activeUsersCurrent: await getStaffCount(
+      {},
+      ranges && { $gte: ranges.start, $lt: ranges.end }
+    ),
+
+    activeUsersPrevious: ranges
+      ? await getStaffCount({}, {
+          $gte: ranges.prevStart,
+          $lt: ranges.prevEnd,
+        })
+      : 0,
+
+    inactiveUsersCurrent: 0,
+    inactiveUsersPrevious: 0,
+
+    bannedUsersCurrent: 0,
+    bannedUsersPrevious: 0,
+
+    leftUsersCurrent: 0,
+    leftUsersPrevious: 0,
+  };
+}
 };
 
 const getUserSingleMetric = async ({ match, range }) => {
@@ -97,14 +279,17 @@ const getUserSingleMetric = async ({ match, range }) => {
   return result[0]?.count || 0;
 };
 // ---------------- EVENTS ----------------
-const getEventStats = async ({ dateFilter, timezone, status }) => {
+const getEventStats = async ({ dateFilter, timezone, status, companyOrganizer }) => {
   const ranges = getDateRanges({ dateFilter, timezone });
 
-const baseMatch = {
-  ...(status === "active"
-    ? { status: "active" }
-    : { status: { $ne: "deleted" } })
-};
+  const baseMatch = {
+    ...(status === "active"
+      ? { status: "active" }
+      : { status: { $ne: "deleted" } }),
+    ...(companyOrganizer && {
+      companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer)
+    })
+  };
 
   const withRange = (extra, range) => ({
     ...baseMatch,
@@ -156,11 +341,14 @@ const getEventSingleMetric = async ({ match, range }) => {
 
 // ---------------- SINGLE METRICS ----------------
 
-const getTicketsSoldStats = async ({ dateFilter, timezone }) => {
+const getTicketsSoldStats = async ({ dateFilter, timezone, companyOrganizer }) => {
   const ranges = getDateRanges({ dateFilter, timezone });
 
   const baseMatch = {
     purpose: "eventTicketPurchase",
+    ...(companyOrganizer && {
+      companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer)
+    })
   };
 
   const countTickets = async (range) => {
@@ -204,11 +392,14 @@ const getTicketSingleMetric = async ({ match, range }) => {
 };
 
 
-const getAverageTicketPriceStats = async ({ dateFilter, timezone }) => {
+const getAverageTicketPriceStats = async ({ dateFilter, timezone, companyOrganizer }) => {
   const ranges = getDateRanges({ dateFilter, timezone });
 
   const baseMatch = {
     purpose: "eventTicketPurchase",
+    ...(companyOrganizer && {
+      companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer)
+    }),
     // status: { $in: ["confirmed", "completed"] },
     // "paymentDetails.paymentStatus": "completed",
     ticketsPurchased: { $gt: 0 },
@@ -267,6 +458,7 @@ const getOrganizerPerformanceByMonth = async ({
   organizationId,
   timezone = "UTC",
   year = new Date().getFullYear(),
+  companyOrganizer
 }) => {
   const match = {
     purpose: "eventTicketPurchase",
@@ -283,6 +475,9 @@ const getOrganizerPerformanceByMonth = async ({
 
   if (organizationId) {
     match.organization = new mongoose.Types.ObjectId(organizationId);
+  }
+  if (companyOrganizer) {
+    match.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
   }
 
   const rows = await TicketingOrders.aggregate([
@@ -331,7 +526,65 @@ const getUsersForDashboardAnalytics = async (year = new Date().getFullYear()) =>
 
   return users;
 };
+const getOrganizerUsersForDashboardAnalytics = async (
+  companyOrganizer,
+  year = new Date().getFullYear()
+) => {
+  const start = new Date(`${year}-01-01T00:00:00.000Z`);
+  const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
 
+  const users = await ClubMembers.aggregate([
+    // 1️⃣ Match club members for this organizer
+    {
+      $match: {
+        companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
+      },
+    },
+
+    // 2️⃣ Get unique users (optional but safe)
+    {
+      $group: {
+        _id: "$user",
+      },
+    },
+
+    // 3️⃣ Join with Users collection
+    {
+      $lookup: {
+        from: "users",
+        localField: "_id",
+        foreignField: "_id",
+        as: "user",
+      },
+    },
+
+    // 4️⃣ Flatten user
+    {
+      $unwind: "$user",
+    },
+
+    // 5️⃣ Apply filters
+    {
+      $match: {
+        "user.accountState.status": "active",
+        "user.createdAt": { $gte: start, $lt: end },
+      },
+    },
+
+    // 6️⃣ Return required fields
+    {
+      $project: {
+        _id: "$user._id",
+        gender: "$user.gender",
+        dob: "$user.dob",
+        timezone: "$user.timezone",
+        createdAt: "$user.createdAt",
+      },
+    },
+  ]);
+
+  return users;
+};
 
 
 const getRawInterestData = async () => {
@@ -378,7 +631,60 @@ const getRawInterestData = async () => {
     }
   ]);
 };
+const getRawInterestDataByOrganizer = async (usersList = []) => {
+  // extract only IDs
+  const userIds = usersList.map(u => new mongoose.Types.ObjectId(u._id));
 
+  return UserInterests.aggregate([
+    // ✅ Filter only provided users FIRST (important for performance)
+    {
+      $match: {
+        user: { $in: userIds },
+      }
+    },
+
+    // Join user (gender only)
+    {
+      $lookup: {
+        from: "users",
+        localField: "user",
+        foreignField: "_id",
+        as: "user"
+      }
+    },
+    { $unwind: "$user" },
+
+    // Only active users
+    {
+      $match: {
+        "user.accountState.status": "active"
+      }
+    },
+
+    // Explode categories
+    { $unwind: "$categories" },
+
+    // Join category title
+    {
+      $lookup: {
+        from: "categories",
+        localField: "categories",
+        foreignField: "_id",
+        as: "category"
+      }
+    },
+    { $unwind: "$category" },
+
+    // Final output
+    {
+      $project: {
+        categoryId: "$category._id",
+        categoryTitle: "$category.title",
+        gender: "$user.gender"
+      }
+    }
+  ]);
+};
 
 const getRawSearchStats = async () => {
   let year = new Date().getFullYear()
@@ -486,7 +792,7 @@ const getEventsOverTimeRaw = async () => {
   ]);
 };
 
-const getAverageRevenuePerUserStats = async ({ dateFilter, timezone }) => {
+const getAverageRevenuePerUserStats = async ({ dateFilter, timezone, companyOrganizer }) => {
   const ranges = getDateRanges({ dateFilter, timezone });
 
   const getRevenue = async (range) => {
@@ -494,6 +800,7 @@ const getAverageRevenuePerUserStats = async ({ dateFilter, timezone }) => {
       {
         $match: {
           purpose: "eventTicketPurchase",
+          ...(companyOrganizer && { companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer) }),
           ...(range && { createdAt: range }),
         },
       },
@@ -545,7 +852,7 @@ const getAverageRevenuePerUserStats = async ({ dateFilter, timezone }) => {
   };
 };
 
-const getTotalTrendSales = async () => {
+const getTotalTrendSales = async (companyOrganizer) => {
   const currentYear = new Date().getFullYear();
   const previousYear = currentYear - 1;
 
@@ -553,6 +860,7 @@ const getTotalTrendSales = async () => {
     {
       $match: {
         type: "earn",
+        ...(companyOrganizer && { companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer) }),
         $expr: {
           $in: [{ $year: "$createdAt" }, [currentYear, previousYear]]
         }
@@ -592,7 +900,7 @@ const getTotalTrendSales = async () => {
   return transsections;
 };
 
-const getTotalTrendRevenue = async () => {
+const getTotalTrendRevenue = async (companyOrganizer) => {
   const currentYear = new Date().getFullYear();
   const previousYear = currentYear - 1;
 
@@ -602,6 +910,7 @@ const getTotalTrendRevenue = async () => {
     {
       $match: {
         type: "earn",
+        ...(companyOrganizer && { companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer) }),
         $expr: {
           $in: [{ $year: "$createdAt" }, [currentYear, previousYear]]
         }
@@ -612,7 +921,7 @@ const getTotalTrendRevenue = async () => {
         year: { $year: "$createdAt" },
         month: { $month: "$createdAt" },
         revenue: {
-          $multiply: ["$points.total", REVENUE_PERCENT] 
+          $multiply: ["$points.total", REVENUE_PERCENT]
         }
       }
     },
@@ -622,7 +931,7 @@ const getTotalTrendRevenue = async () => {
           year: "$year",
           month: "$month"
         },
-        totalPoints: { $sum: "$revenue" } 
+        totalPoints: { $sum: "$revenue" }
       }
     },
     {
@@ -650,7 +959,528 @@ const getTotalTrendRevenue = async () => {
 
   return transactions;
 };
+const getTotalRevenueStats = async ({ dateFilter, timezone, companyOrganizer }) => {
+  const ranges = getDateRanges({ dateFilter, timezone });
 
+  const REVENUE_PERCENT = 0.06; //  change this (e.g. 6%)
+
+  const getRevenue = async (range) => {
+    const result = await UnifiedWalletTransactions.aggregate([
+      {
+        $match: {
+          type: "earn",
+          ...(range && { createdAt: range }),
+          ...(companyOrganizer && { companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer) }),
+
+        },
+      },
+      {
+        $project: {
+          revenue: {
+            $multiply: ["$points.total", REVENUE_PERCENT]
+          }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: "$revenue" }
+        }
+      }
+    ]);
+
+    return result[0]?.totalRevenue || 0;
+  };
+
+  const [totalRevenueCurrent, totalRevenuePrevious] = await Promise.all([
+    getRevenue(ranges && { $gte: ranges.start, $lt: ranges.end }),
+    ranges
+      ? getRevenue({ $gte: ranges.prevStart, $lt: ranges.prevEnd })
+      : 0,
+  ]);
+
+  return {
+    totalRevenueCurrent: Number(totalRevenueCurrent.toFixed(2)),
+    totalRevenuePrevious: Number(totalRevenuePrevious.toFixed(2)),
+  };
+};
+const getTotalMobilePaymentsStats = async ({ dateFilter, timezone, }) => {
+  const ranges = getDateRanges({ dateFilter, timezone });
+
+  const getPayments = async (range) => {
+    const result = await MonriTransaction.aggregate([
+      {
+        $match: {
+          // status: "paid",
+          ...(range && { createdAt: range }),
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalPayments: { $sum: "$amount" }
+        }
+      }
+    ]);
+
+    return result[0]?.totalPayments || 0;
+  };
+
+  const [totalPaymentsCurrent, totalPaymentsPrevious] = await Promise.all([
+    getPayments(ranges && { $gte: ranges.start, $lt: ranges.end }),
+    ranges
+      ? getPayments({ $gte: ranges.prevStart, $lt: ranges.prevEnd })
+      : 0,
+  ]);
+
+  return {
+    totalPaymentsCurrent: Number(totalPaymentsCurrent.toFixed(2)),
+    totalPaymentsPrevious: Number(totalPaymentsPrevious.toFixed(2)),
+  };
+};
+const getOrganizationsStats = async ({ dateFilter, timezone, companyOrganizer }) => {
+  const ranges = getDateRanges({ dateFilter, timezone });
+  const getOrganizations = async (range) => {
+    const result = await Organizations.aggregate([
+      {
+        $match: {
+          status: { $ne: "deleted" },
+          ...(companyOrganizer && {
+            creator: new mongoose.Types.ObjectId(companyOrganizer),
+          }),
+          ...(range && { createdAt: range }),
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalOrganizations: { $sum: 1 },
+        },
+      },
+    ]);
+
+    return result[0]?.totalOrganizations || 0;
+  };
+
+  const [totalOrganizationsCurrent, totalOrganizationsPrevious] = await Promise.all([
+    getOrganizations(ranges && { $gte: ranges.start, $lt: ranges.end }),
+    ranges
+      ? getOrganizations({ $gte: ranges.prevStart, $lt: ranges.prevEnd })
+      : 0,
+  ]);
+
+  return {
+    totalOrganizationsCurrent,
+    totalOrganizationsPrevious,
+  };
+};
+const getReservationsStats = async ({ companyOrganizer, dateFilter, timezone }) => {
+  const ranges = getDateRanges({ dateFilter, timezone });
+
+  const baseMatch = {
+    companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
+  };
+
+  const getCount = async (Model, baseMatch, extra, range) => {
+    const finalMatch = {
+      ...baseMatch,
+      ...extra,
+      ...(range && { createdAt: range }),
+    };
+
+    return Model.countDocuments(finalMatch);
+  };
+
+  return {
+    // Total Reservations
+    totalReservationsCurrent: await getCount(
+      Reservations,
+      baseMatch,
+      {},
+      ranges && { $gte: ranges.start, $lt: ranges.end }
+    ),
+
+    totalReservationsPrevious: ranges
+      ? await getCount(
+          Reservations,
+          baseMatch,
+          {},
+          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+        )
+      : 0,
+
+    // Active Reservations
+    activeReservationsCurrent: await getCount(
+      Reservations,
+      baseMatch,
+      { status: "active" },
+      ranges && { $gte: ranges.start, $lt: ranges.end }
+    ),
+
+    activeReservationsPrevious: ranges
+      ? await getCount(
+          Reservations,
+          baseMatch,
+          { status: "active" },
+          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+        )
+      : 0,
+
+    // Inactive Reservations
+    inactiveReservationsCurrent: await getCount(
+      Reservations,
+      baseMatch,
+      { status: "inactive" },
+      ranges && { $gte: ranges.start, $lt: ranges.end }
+    ),
+
+    inactiveReservationsPrevious: ranges
+      ? await getCount(
+          Reservations,
+          baseMatch,
+          { status: "inactive" },
+          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+        )
+      : 0,
+
+    // Deleted Reservations
+    deletedReservationsCurrent: await getCount(
+      Reservations,
+      baseMatch,
+      { status: "deleted" },
+      ranges && { $gte: ranges.start, $lt: ranges.end }
+    ),
+
+    deletedReservationsPrevious: ranges
+      ? await getCount(
+          Reservations,
+          baseMatch,
+          { status: "deleted" },
+          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+        )
+      : 0,
+  };
+};
+const getBookedReservationsStats = async ({ companyOrganizer, dateFilter, timezone }) => {
+  const ranges = getDateRanges({ dateFilter, timezone });
+
+  const baseMatch = {
+    companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
+  };
+
+  const getCount = async (Model, baseMatch, extra, range) => {
+    const finalMatch = {
+      ...baseMatch,
+      ...extra,
+      ...(range && { createdAt: range }),
+    };
+
+    return Model.countDocuments(finalMatch);
+  };
+
+  return {
+    // Total Booked Reservations
+    totalBookedReservationsCurrent: await getCount(
+      UserReservations,
+      baseMatch,
+      {},
+      ranges && { $gte: ranges.start, $lt: ranges.end }
+    ),
+
+    totalBookedReservationsPrevious: ranges
+      ? await getCount(
+          UserReservations,
+          baseMatch,
+          {},
+          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+        )
+      : 0,
+
+    // Confirmed
+    confirmedReservationsCurrent: await getCount(
+      UserReservations,
+      baseMatch,
+      { status: "confirmed" },
+      ranges && { $gte: ranges.start, $lt: ranges.end }
+    ),
+
+    confirmedReservationsPrevious: ranges
+      ? await getCount(
+          UserReservations,
+          baseMatch,
+          { status: "confirmed" },
+          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+        )
+      : 0,
+
+    // Completed
+    completedReservationsCurrent: await getCount(
+      UserReservations,
+      baseMatch,
+      { status: "completed" },
+      ranges && { $gte: ranges.start, $lt: ranges.end }
+    ),
+
+    completedReservationsPrevious: ranges
+      ? await getCount(
+          UserReservations,
+          baseMatch,
+          { status: "completed" },
+          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+        )
+      : 0,
+
+    // Cancelled
+    cancelledReservationsCurrent: await getCount(
+      UserReservations,
+      baseMatch,
+      { status: "cancelled" },
+      ranges && { $gte: ranges.start, $lt: ranges.end }
+    ),
+
+    cancelledReservationsPrevious: ranges
+      ? await getCount(
+          UserReservations,
+          baseMatch,
+          { status: "cancelled" },
+          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+        )
+      : 0,
+
+    // Pending Payment
+    pendingPaymentReservationsCurrent: await getCount(
+      UserReservations,
+      baseMatch,
+      { status: "pendingPayment" },
+      ranges && { $gte: ranges.start, $lt: ranges.end }
+    ),
+
+    pendingPaymentReservationsPrevious: ranges
+      ? await getCount(
+          UserReservations,
+          baseMatch,
+          { status: "pendingPayment" },
+          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+        )
+      : 0,
+
+    // Checked In
+    checkedInReservationsCurrent: await getCount(
+      UserReservations,
+      baseMatch,
+      { status: "checkedIn" },
+      ranges && { $gte: ranges.start, $lt: ranges.end }
+    ),
+
+    checkedInReservationsPrevious: ranges
+      ? await getCount(
+          UserReservations,
+          baseMatch,
+          { status: "checkedIn" },
+          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+        )
+      : 0,
+  };
+};
+const getEventsViewsOverTimeService = async (companyOrganizer) => {
+  const year = new Date().getFullYear();
+
+  const start = new Date(`${year}-01-01T00:00:00.000Z`);
+  const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+
+  return EngagementEvents.aggregate([
+    // 1️⃣ Match only event views in date range
+    {
+      $match: {
+        entityType: "events",
+        action: "view",
+        createdAt: { $gte: start, $lt: end },
+      },
+    },
+
+    // 2️⃣ Join with Events to filter by organizer
+    {
+      $lookup: {
+        from: "events",
+        localField: "entityId",
+        foreignField: "_id",
+        as: "event",
+      },
+    },
+
+    // 3️⃣ Flatten event
+    {
+      $unwind: "$event",
+    },
+
+    // 4️⃣ Filter by companyOrganizer
+    {
+      $match: {
+        "event.companyOrganizer": new mongoose.Types.ObjectId(companyOrganizer),
+        "event.status": { $ne: "deleted" },
+      },
+    },
+
+    // 5️⃣ Extract month
+    {
+      $project: {
+        month: { $month: "$createdAt" },
+      },
+    },
+
+    // 6️⃣ Group by month
+    {
+      $group: {
+        _id: "$month",
+        events: { $sum: 1 }, // count of views
+      },
+    },
+
+    // 7️⃣ Optional: sort months
+    {
+      $sort: { _id: 1 },
+    },
+  ]);
+};
+const getTopViewedEvents = async (companyOrganizer) => {
+  const year = new Date().getFullYear();
+
+  const start = new Date(`${year}-01-01T00:00:00.000Z`);
+  const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+
+  return EngagementEvents.aggregate([
+    {
+      $match: {
+        entityType: "events",
+        action: "view",
+        createdAt: { $gte: start, $lt: end },
+      },
+    },
+    {
+      $lookup: {
+        from: "events",
+        localField: "entityId",
+        foreignField: "_id",
+        as: "event",
+      },
+    },
+    { $unwind: "$event" },
+
+    // 4️⃣ Filter by organizer
+    {
+      $match: {
+        "event.companyOrganizer": new mongoose.Types.ObjectId(companyOrganizer),
+        "event.status": { $ne: "deleted" },
+      },
+    },
+    {
+      $group: {
+        _id: "$event._id",
+        totalViews: { $sum: 1 },
+        title: { $first: "$event.basicInfo.title" }, // optional
+      },
+    },
+    {
+      $sort: { totalViews: -1 },
+    },
+    {
+      $limit: 6,
+    },
+    {
+      $project: {
+        _id: 0,
+        eventId: "$_id",
+        title: 1,
+        totalViews: 1,
+      },
+    },
+  ]);
+};
+
+const getFollowersOverTimeRaw = async (companyOrganizer) => {
+  const year = new Date().getFullYear();
+
+  const start = new Date(`${year}-01-01T00:00:00.000Z`);
+  const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+
+  return ClubMembers.aggregate([
+    // 1️⃣ Match organizer + date range
+    {
+      $match: {
+        companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
+        createdAt: { $gte: start, $lt: end },
+      },
+    },
+
+    // 2️⃣ Extract month
+    {
+      $project: {
+        month: { $month: "$createdAt" },
+      },
+    },
+
+    // 3️⃣ Group by month (followers count)
+    {
+      $group: {
+        _id: "$month",
+        followers: { $sum: 1 },
+      },
+    },
+
+    // 4️⃣ Sort by month
+    {
+      $sort: { _id: 1 },
+    },
+  ]);
+};
+const getRawTopPerformingEvents = async (companyOrganizer) => {
+  return TicketingOrders.aggregate([
+    /* --------------------------------
+       1️⃣ FILTER RELEVANT TRANSACTIONS
+    -------------------------------- */
+    {
+      $match: {
+        purpose: "eventTicketPurchase",
+        companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer)
+      }
+    },
+
+    {
+      $group: {
+        _id: "$event",
+        revenue: { $sum: "$orderPricing.subtotal" },
+        transactions: { $sum: 1 },
+      }
+    },
+
+
+    /* --------------------------------
+       4️⃣ JOIN ORGANIZER USER (ONCE)
+    -------------------------------- */
+    {
+      $lookup: {
+        from: "events",
+        localField: "_id",
+        foreignField: "_id",
+        as: "event"
+      }
+    },
+    { $unwind: "$event" },
+
+    /* --------------------------------
+       5️⃣ PROJECT ONLY REQUIRED FIELDS
+    -------------------------------- */
+    {
+      $project: {
+        revenue: 1,
+        transactions: 1,
+        uniqueUsers: 1,
+        eventName: "$event.basicInfo.title",
+        eventLogo: "$event.basicInfo.media.name"
+      }
+    }
+  ]);
+};
 module.exports = {
   getOrganizerPerformanceByMonth,
   getUserStats,
@@ -667,5 +1497,18 @@ module.exports = {
   getEventsOverTimeRaw,
   getAverageRevenuePerUserStats,
   getTotalTrendSales,
-  getTotalTrendRevenue
+  getTotalTrendRevenue,
+  getTotalRevenueStats,
+  getTotalMobilePaymentsStats,
+  getOrganizationsStats,
+  getClubMembersStats,
+  getReservationsStats,
+  getBookedReservationsStats,
+  getOrganizerUsersForDashboardAnalytics,
+  getRawInterestDataByOrganizer,
+  getEventsViewsOverTimeService,
+  getTopViewedEvents,
+  getFollowersOverTimeRaw,
+  getRawTopPerformingEvents
+
 };

@@ -67,6 +67,7 @@ const deleteSubscription = async (id) => {
 const updateSubscription = async (data) => {
 
   const user = await User.findById(data.userId);
+  const subscriptionSetting = await SubscriptionRepo.getSubscriptionSettings();
   if (!user) return { error: "user_not_found" };
   const isFreeSubscription =
     user.activeSubscription &&
@@ -120,6 +121,9 @@ const updateSubscription = async (data) => {
         status: "active",
         startDate,
         endDate,
+        orderingCommission: subscriptionSetting.commissions.orderingCommission,
+        ticketingCommission: subscriptionSetting.commissions.ticketingCommission,
+        reservationCommission: subscriptionSetting.commissions.reservationCommission,
       };
       user.inActiveSubscription = {
         subscriptionTypes,
@@ -130,6 +134,9 @@ const updateSubscription = async (data) => {
         status: "active",
         startDate,
         endDate,
+        orderingCommission: subscriptionSetting.commissions.orderingCommission,
+        ticketingCommission: subscriptionSetting.commissions.ticketingCommission,
+        reservationCommission: subscriptionSetting.commissions.reservationCommission,
       };
       await user.save();
 
@@ -161,6 +168,9 @@ const updateSubscription = async (data) => {
       if (pricingPlan === "monthly") end.setMonth(end.getMonth() + 1);
       if (pricingPlan === "yearly") end.setFullYear(end.getFullYear() + 1);
       active.endDate = end;
+      active.orderingCommission = subscriptionSetting.commissions.orderingCommission;
+      active.ticketingCommission = subscriptionSetting.commissions.ticketingCommission;
+      active.reservationCommission = subscriptionSetting.commissions.reservationCommission;
     }
     user.inActiveSubscription = {
       subscriptionTypes: subscriptionTypes,
@@ -171,6 +181,9 @@ const updateSubscription = async (data) => {
       status: "inactive",
       startDate: now,
       endDate: null,
+      orderingCommission: subscriptionSetting.commissions.orderingCommission,
+      ticketingCommission: subscriptionSetting.commissions.ticketingCommission,
+      reservationCommission: subscriptionSetting.commissions.reservationCommission,
     };
 
     await user.save();
@@ -190,6 +203,9 @@ const updateSubscription = async (data) => {
       status: "inactive",
       startDate: now,
       endDate: null,
+      orderingCommission: subscriptionSetting.commissions.orderingCommission,
+      ticketingCommission: subscriptionSetting.commissions.ticketingCommission,
+      reservationCommission: subscriptionSetting.commissions.reservationCommission,
     };
 
     await user.save();
@@ -207,50 +223,51 @@ const getUserSubscription = async (userId) => {
   return await SubscriptionRepo.findById(userId);
 }
 const resetSubscriptions = async ({ userId }) => {
- 
+
   const user = await User.findById(userId);
+
   const pricingPlan = "monthly";
 
-      const startDate = new Date();
-      let endDate = null;
+  const startDate = new Date();
+  let endDate = null;
 
-      if (pricingPlan === "monthly") {
-        endDate = new Date(startDate);
-        endDate.setMonth(endDate.getMonth() + 1);
-      }
+  if (pricingPlan === "monthly") {
+    endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + 1);
+  }
 
-      if (pricingPlan === "yearly") {
-        endDate = new Date(startDate);
-        endDate.setFullYear(endDate.getFullYear() + 1);
-      }
-      user.activeSubscription = {
-        subscriptionTypes: [
-        "free"
+  if (pricingPlan === "yearly") {
+    endDate = new Date(startDate);
+    endDate.setFullYear(endDate.getFullYear() + 1);
+  }
+  user.activeSubscription = {
+    subscriptionTypes: [
+      "free"
     ],
-        pricingPlan: "monthly",
-        numberOfOrganizations: 1,
-        totalSubscriptionAmount: 0,
-        basePrice: 0,
-        status: "active",
-        startDate,
-        endDate: null,
-      };
-      user.inActiveSubscription = {
-        subscriptionTypes: [
-        "free"
+    pricingPlan: "monthly",
+    numberOfOrganizations: 1,
+    totalSubscriptionAmount: 0,
+    basePrice: 0,
+    status: "active",
+    startDate,
+    endDate: null,
+  };
+  user.inActiveSubscription = {
+    subscriptionTypes: [
+      "free"
     ],
-        pricingPlan: "monthly",
-        numberOfOrganizations: 1,
-        totalSubscriptionAmount: 0,
-        basePrice: 0,
-        status: "active",
-        startDate,
-        endDate: null,
-      };
-      await user.save();
+    pricingPlan: "monthly",
+    numberOfOrganizations: 1,
+    totalSubscriptionAmount: 0,
+    basePrice: 0,
+    status: "active",
+    startDate,
+    endDate: null,
+  };
+  await user.save();
 
-      return user.activeSubscription
-    }
+  return user.activeSubscription
+}
 module.exports = {
   getUserSubscriptions,
   deleteSubscription,
