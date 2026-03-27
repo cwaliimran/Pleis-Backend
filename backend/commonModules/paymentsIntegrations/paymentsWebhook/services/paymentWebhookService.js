@@ -76,7 +76,10 @@ const getOrdersTransactionsService = async ({
   endDate,
   companyOrganizer,
   organization,
-  orderType
+  orderType,
+  startAmount,
+  endAmount,
+  paymentMethod
 }) => {
 
   const match = {};
@@ -100,12 +103,38 @@ const getOrdersTransactionsService = async ({
     }
     if (!Object.keys(match.createdAt).length) delete match.createdAt;
   }
+  if (
+    startAmount !== undefined && startAmount !== null && startAmount !== "" ||
+    endAmount !== undefined && endAmount !== null && endAmount !== ""
+  ) {
+    match.$expr = {};
+    const conditions = [];
+
+    if (startAmount !== undefined && startAmount !== null && startAmount !== "") {
+      conditions.push({
+        $gte: [{ $toDouble: "$amount" }, Number(startAmount)],
+      });
+    }
+
+    if (endAmount !== undefined && endAmount !== null && endAmount !== "") {
+      conditions.push({
+        $lte: [{ $toDouble: "$amount" }, Number(endAmount)],
+      });
+    }
+
+    if (conditions.length === 1) {
+      match.$expr = conditions[0];
+    } else {
+      match.$expr = { $and: conditions };
+    }
+  }
+
 
   const skip = (page - 1) * limit;
 
 
   const [transactions, totalFiltered] = await Promise.all([
-    webhookRepository.getOrdersTransactions({ match, keyword, skip, limit }),
+    webhookRepository.getOrdersTransactions({ match, keyword, skip, limit, paymentMethod }),
     webhookRepository.countOrdersTransactions({ match, keyword })
   ]);
 
@@ -125,7 +154,7 @@ const getOrdersTransactionDetailsService = async ({ id }) => {
     throw new Error("invalid_transaction_id");
   }
   const transactionDetails = await webhookRepository.getOrdersTransactionDetails({ id });
-  
+
   if (!transactionDetails) {
     throw new Error("transaction_not_found");
   }

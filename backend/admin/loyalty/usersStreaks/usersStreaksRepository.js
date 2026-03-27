@@ -58,6 +58,9 @@ const findByIdAndUpdate = async (id, data) => {
   return UsersStreaks.findByIdAndUpdate(id, data, { new: true }).populate('user').populate('companyOrganizer');
 };
 
+const getUSerStreaskBuOrganizerAndUser = async (companyOrganizer, user) => {
+  return UsersStreaks.find({ companyOrganizer, user }).select('visits').lean().exec();
+};
 module.exports = {
   createUsersStreak,
   getUsersStreaksWithFilters,
@@ -67,4 +70,5 @@ module.exports = {
   deleteUsersStreakById,
   findByIdAndUpdate,
   getUsersStreaksCounts,
+  getUSerStreaskBuOrganizerAndUser
 };

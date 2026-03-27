@@ -3,7 +3,7 @@ const {
   parsePaginationParams,
   validateParams,
   generateMeta,
-} = require("../../helperUtils/responseUtil");
+} = require("../../../helperUtils/responseUtil");
 
 const dashboardService = require("./dashboardService");
 const { DASHBOARD_KEYS } = require("./utils/dashboardKeyMap");
