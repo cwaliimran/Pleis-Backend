@@ -13,6 +13,7 @@ const Organizations = require("@OrganizationModel");
 const EngagementEvents = require("@appEngagement/EngagementEvents");
 const { UserGlobalWallet } = require("@UserGlobalWalletModel");
 const { GlobalRewardsOrders } = require("@GlobalRewardsOrdersModel");
+const Orders = require("@OrdersModel");
 
 
 
@@ -327,7 +328,8 @@ const getGlobalWalletStats = async ({ dateFilter, timezone, companyOrganizer }) 
 
   const getPointsSum = async (extra = {}, range) => {
     const result = await UnifiedWalletTransactions.aggregate([
-      { $match: buildMatch(extra, range) },
+      { $match: buildMatch(extra, range)
+      } ,
       {
         $group: {
           _id: null,
@@ -401,6 +403,32 @@ const getGlobalWalletPointsOverTimeRaw = async () => {
       $group: {
         _id: "$month",
         points: { $sum: "$points" }
+      }
+    },
+  ]);
+};
+const getGlobalWalletSpendingOverTimeRaw = async () => {
+  const year = new Date().getFullYear();
+  const start = new Date(`${year}-01-01T00:00:00.000Z`);
+  const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+
+  return UnifiedWalletTransactions.aggregate([
+    {
+      $match: {
+        walletType: "globalWallet",
+        createdAt: { $gte: start, $lt: end }
+      }
+    },
+    {
+      $project: {
+        month: { $month: "$createdAt" },
+        values: "$closingBalance"
+      }
+    },
+    {
+      $group: {
+        _id: "$month",
+        values: { $sum: "$values" }
       }
     },
   ]);
@@ -531,6 +559,279 @@ const getGlobalRewardsUsageStats = async () => {
     limitReward: []
   };
 };
+
+
+
+
+const getTopOrderedMenuItems = async (match = {}) => {
+  try {
+    const data = await Orders.aggregate([
+      {
+        $match: {
+          ...match,
+        },
+      },
+      {
+        $unwind: "$items",
+      },
+      {
+        $group: {
+          _id: "$items.menuItem",
+          quantity: { $sum: "$items.quantity" },
+        },
+      },
+      {
+        $lookup: {
+          from: "menuitems",
+          localField: "_id",
+          foreignField: "_id",
+          as: "menuItem",
+        },
+      },
+      {
+        $unwind: {
+          path: "$menuItem",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          menuItemName: "$menuItem.title",
+          quantity: 1,
+        },
+      },
+      {
+        $sort: { quantity: -1 },
+      },
+      { $limit: 7 },
+    ]);
+
+    return data;
+  } catch (error) {
+    console.error("Error getting top ordered menu items:", error);
+    throw error;
+  }
+};
+
+module.exports = {
+  getTopOrderedMenuItems,
+};
+
+
+
+const getUsersPointsSummary = async (match = {}) => {
+  try {
+    const data = await UnifiedWalletTransactions.aggregate([
+      {
+        $match: {
+          ...match,
+          walletType: "globalWallet"
+        },
+      },
+
+      {
+        $group: {
+          _id: "$user",
+          totalPoints: { $sum: { $ifNull: ["$points.total", 0] } },
+          totalTransactions: { $sum: 1 },
+        },
+      },
+
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          pipeline: [
+            {
+              $project: {
+                firstName: 1,
+                lastName: 1,
+                profileIcon: 1,
+              },
+            },
+          ],
+          as: "user",
+        },
+      },
+      {
+        $unwind: {
+          path: "$user",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      {
+        $lookup: {
+          from: "userglobalwallets",
+          localField: "_id",
+          foreignField: "user",
+          as: "globalWallet",
+        },
+      },
+      {
+        $unwind: {
+          path: "$globalWallet",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      {
+        $lookup: {
+          from: "globalstatuslevels",
+          localField: "globalWallet.global.level",
+          foreignField: "_id",
+          as: "level",
+        },
+      },
+      {
+        $unwind: {
+          path: "$level",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      {
+        $project: {
+          _id: 0,
+          userId: "$_id",
+          totalPoints: 1,
+          totalTransactions: 1,
+          user: 1,
+          globalWallet: {
+            lifetimePoints: "$globalWallet.global.lifetimePoints",
+          },
+          level: {
+            _id: "$level._id",
+            name: "$level.title",
+          },
+        },
+      },
+    ]);
+
+    const mostEngagedMembers = [...data]
+      .sort((a, b) => b.totalTransactions - a.totalTransactions)
+      .slice(0, 7);
+
+    const highestPointsMembers = [...data]
+      .sort((a, b) => b.totalPoints - a.totalPoints)
+      .slice(0, 7);
+
+    return {
+      mostEngagedMembers,
+      highestPointsMembers,
+    };
+  } catch (error) {
+    console.error("Error getting users points summary:", error);
+    throw error;
+  }
+};
+
+
+
+const getGlobalWalletSpendingByGenderOverTimeRaw = async () => {
+  const year = new Date().getFullYear();
+  const start = new Date(`${year}-01-01T00:00:00.000Z`);
+  const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+
+  return UnifiedWalletTransactions.aggregate([
+    {
+      $match: {
+        walletType: "globalWallet",
+        createdAt: { $gte: start, $lt: end }
+      }
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "user",
+        foreignField: "_id",
+        as: "user"
+      }
+    },
+    {
+      $unwind: {
+        path: "$user",
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $project: {
+        month: { $month: "$createdAt" },
+        values: "$closingBalance",
+        gender: "$user.gender"
+      }
+    },
+    {
+      $group: {
+        _id: {
+          month: "$month",
+          gender: "$gender"
+        },
+        values: { $sum: "$values" }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        month: "$_id.month",
+        gender: "$_id.gender",
+        values: 1
+      }
+    },
+    {
+      $sort: { month: 1 }
+    }
+  ]);
+};
+
+const getTotalPriceByPaymentStatus = async (match = {}) => {
+  try {
+    const paymentStatuses = ["pending", "paid", "failed"];
+
+    const data = await Orders.aggregate([
+      {
+        $match: {
+          ...match,
+        },
+      },
+      {
+        $group: {
+          _id: "$paymentStatus",
+          totalPrice: { $sum: { $ifNull: ["$totalPrice", 0] } },
+          totalOrders: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          paymentStatus: "$_id",
+          totalPrice: { $round: ["$totalPrice", 0] },
+          totalOrders: 1,
+        },
+      },
+    ]);
+
+    const dataMap = {};
+    for (const item of data) {
+      dataMap[item.paymentStatus] = item;
+    }
+
+    return paymentStatuses.map((paymentStatus) => ({
+      paymentStatus,
+      totalPrice: dataMap[paymentStatus]?.totalPrice || 0,
+      totalOrders: dataMap[paymentStatus]?.totalOrders || 0,
+    }));
+  } catch (error) {
+    console.error("Error getting total price by payment status:", error);
+    throw error;
+  }
+};
+
+module.exports = {
+  getTotalPriceByPaymentStatus,
+};
 module.exports = {
   getOrganizerPerformanceByMonth,
   getUserStats,
@@ -543,6 +844,11 @@ module.exports = {
   getRawGlobalLoyaltyPointsDistributed,
   getNewUsersForDashboardAnalytics,
   getUsersPerGlobalLevel,
-  getGlobalRewardsUsageStats
+  getGlobalRewardsUsageStats,
+  getTopOrderedMenuItems,
+  getUsersPointsSummary,
+  getGlobalWalletSpendingOverTimeRaw,
+  getGlobalWalletSpendingByGenderOverTimeRaw,
+  getTotalPriceByPaymentStatus
 
 };

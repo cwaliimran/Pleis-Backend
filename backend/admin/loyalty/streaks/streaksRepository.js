@@ -87,8 +87,13 @@ const deleteStreakById = async (streak) => {
 const findByIdAndUpdate = async (id, data) => {
   return Streaks.findByIdAndUpdate(id, data, { new: true });
 };
-
-
+const StreakRulesByCompanyOrganizerGroupByAllPoints = async (companyOrganizer, userId) => {
+  const streakRules = await Streaks.find({
+    companyOrganizer,
+    status: "active",
+  });
+  return streakRules;
+};
 module.exports = {
   createStreak,
   getStreaksWithFilters,
@@ -98,5 +103,8 @@ module.exports = {
   deleteStreakById,
   findByIdAndUpdate,
   getStreaksCounts,
-  getActiveStreaksByOrganizer
+  getActiveStreaksByOrganizer,
+  StreakRulesByCompanyOrganizerGroupByAllPoints
+
+
 };

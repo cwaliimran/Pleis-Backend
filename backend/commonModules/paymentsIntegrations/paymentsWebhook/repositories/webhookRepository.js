@@ -70,49 +70,129 @@ const buildKeywordMatch = (keyword) => {
 /* =========================================================
    📦 GET TRANSACTIONS (WITH FILTERS + PAGINATION)
 ========================================================= */
+const getOrderPaymentMethod = async (transactionDetails = {}) => {
+  let paymentMethod = null;
+
+  if (!transactionDetails.orderType || !transactionDetails.orderNumber) {
+    return paymentMethod;
+  }
+
+  const modelMap = {
+    ticketingbookings: "TicketingBookings",
+    menuorders: "MenuOrders",
+    userreservations: "UserReservations",
+    tickettransfer: "TicketingBookings",
+    ticketingorder: "TicketingOrder",
+    ticketingorders: "TicketingOrder",
+  };
+
+  const modelName = modelMap[transactionDetails.orderType.toLowerCase()];
+
+  if (!modelName) return paymentMethod;
+
+  try {
+    const Model = mongoose.model(modelName);
+
+    if (modelName === "MenuOrders") {
+      const orderData = await Model.findById(transactionDetails.orderNumber)
+        .select("paymentMethod paymentType paymentOption")
+        .lean();
+
+      paymentMethod =
+        orderData?.paymentMethod ||
+        orderData?.paymentType ||
+        orderData?.paymentOption ||
+        null;
+    } else if (modelName === "TicketingOrder") {
+      const orderData = await Model.findById(transactionDetails.orderNumber)
+        .select("paymentMethod paymentType paymentOption")
+        .lean();
+
+      paymentMethod =
+        orderData?.paymentMethod ||
+        orderData?.paymentType ||
+        orderData?.paymentOption ||
+        null;
+    } else if (modelName === "TicketingBookings") {
+      const orderData = await Model.aggregate([
+        {
+          $match: {
+            _id: new mongoose.Types.ObjectId(transactionDetails.orderNumber),
+          },
+        },
+        {
+          $lookup: {
+            from: "ticketingorders",
+            localField: "order",
+            foreignField: "_id",
+            as: "order",
+          },
+        },
+        {
+          $unwind: {
+            path: "$order",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $project: {
+            paymentMethod: "$order.paymentMethod",
+            paymentType: "$order.paymentType",
+            paymentOption: "$order.paymentOption",
+          },
+        },
+        { $limit: 1 },
+      ]).exec();
+
+      paymentMethod =
+        orderData?.[0]?.paymentMethod ||
+        orderData?.[0]?.paymentType ||
+        orderData?.[0]?.paymentOption ||
+        null;
+    } else if (modelName === "UserReservations") {
+      const orderData = await Model.findById(transactionDetails.orderNumber)
+        .select("paymentMethod paymentType paymentOption")
+        .lean();
+
+      paymentMethod =
+        orderData?.paymentMethod ||
+        orderData?.paymentType ||
+        orderData?.paymentOption ||
+        null;
+    } else {
+      const orderData = await Model.findById(transactionDetails.orderNumber)
+        .select("paymentMethod paymentType paymentOption")
+        .lean();
+
+      paymentMethod =
+        orderData?.paymentMethod ||
+        orderData?.paymentType ||
+        orderData?.paymentOption ||
+        null;
+    }
+  } catch (err) {
+    console.error("Error fetching payment method:", err);
+  }
+
+  return paymentMethod;
+};
 
 const getOrdersTransactions = async ({
   match = {},
   keyword,
+  paymentMethod,
   skip = 0,
   limit = 10
 }) => {
-
-  /* =====================================================
-     🔵 CASE A — NO KEYWORD (FAST TWO-STAGE)
-  ===================================================== */
-
   if (!keyword?.trim()) {
-
-    const idPipeline = [];
+    const pipeline = [];
 
     if (Object.keys(match).length) {
-      idPipeline.push({ $match: match });
+      pipeline.push({ $match: match });
     }
 
-    idPipeline.push(
+    pipeline.push(
       { $sort: { createdAt: -1, _id: -1 } },
-      { $skip: skip }
-    );
-
-    if (limit > 0) idPipeline.push({ $limit: limit });
-
-    idPipeline.push({ $project: { _id: 1 } });
-
-    const ids = await WebhookEvent.aggregate(idPipeline);
-    if (!ids.length) return [];
-
-    const txIds = ids.map(i => i._id);
-
-    const pipeline = [
-      { $match: { _id: { $in: txIds } } },
-      {
-        $addFields: {
-          __order: { $indexOfArray: [txIds, "$_id"] }
-        }
-      },
-
-      // Organization lookup
       {
         $lookup: {
           from: "organizations",
@@ -121,8 +201,6 @@ const getOrdersTransactions = async ({
           as: "organization"
         }
       },
-
-      // User lookup (REQUIRED)
       {
         $lookup: {
           from: "users",
@@ -131,14 +209,12 @@ const getOrdersTransactions = async ({
           as: "user"
         }
       },
-
       {
         $addFields: {
           organization: { $arrayElemAt: ["$organization", 0] },
           user: { $arrayElemAt: ["$user", 0] }
         }
       },
-
       {
         $project: {
           provider: 1,
@@ -150,7 +226,6 @@ const getOrdersTransactions = async ({
           payload: 1,
           createdAt: 1,
           updatedAt: 1,
-          __order: 1,
 
           organization: {
             _id: "$organization._id",
@@ -165,100 +240,39 @@ const getOrdersTransactions = async ({
             email: "$user.email"
           }
         }
-      },
-
-      { $sort: { __order: 1 } }
-    ];
-
-    return WebhookEvent.aggregate(pipeline, { allowDiskUse: true });
-  }
-
-  /* =====================================================
-     🔎 CASE B — KEYWORD SEARCH (LOOKUP FIRST)
-  ===================================================== */
-
-  const regexMatch = buildKeywordMatch(keyword);
-  const pipeline = [];
-
-  if (Object.keys(match).length) {
-    pipeline.push({ $match: match });
-  }
-
-  pipeline.push(
-    // Organization
-    {
-      $lookup: {
-        from: "organizations",
-        localField: "organization",
-        foreignField: "_id",
-        as: "organization"
       }
-    },
+    );
 
-    // CompanyOrganizer (SEARCH ONLY)
-    {
-      $lookup: {
-        from: "users",
-        localField: "companyOrganizer",
-        foreignField: "_id",
-        as: "companyOrganizer"
-      }
-    },
+    const transactions = await WebhookEvent.aggregate(pipeline, { allowDiskUse: true });
 
-    // User
-    {
-      $lookup: {
-        from: "users",
-        localField: "user",
-        foreignField: "_id",
-        as: "user"
-      }
-    },
+    const updatedTransactions = await Promise.all(
+      transactions.map(async (transaction) => {
+        const paymentMethodValue = await getOrderPaymentMethod({
+          orderType: transaction.orderType,
+          orderNumber: transaction.orderNumber,
+        });
 
-    {
-      $addFields: {
-        organization: { $arrayElemAt: ["$organization", 0] },
-        companyOrganizer: { $arrayElemAt: ["$companyOrganizer", 0] },
-        user: { $arrayElemAt: ["$user", 0] }
-      }
-    },
+        return {
+          ...transaction,
+          paymentMethod: paymentMethodValue,
+        };
+      })
+    );
 
-    { $match: regexMatch },
-    { $sort: { createdAt: -1, _id: -1 } },
-    { $skip: skip }
-  );
+    let filteredTransactions = updatedTransactions;
 
-  if (limit > 0) pipeline.push({ $limit: limit });
-
-  pipeline.push({
-    $project: {
-      provider: 1,
-      orderType: 1,
-      orderNumber: 1,
-      paymentStatus: 1,
-      transactionId: 1,
-      createdAt: 1,
-      updatedAt: 1,
-
-      organization: {
-        _id: "$organization._id",
-        name: "$organization.basicInfo.name",
-        logo: "$organization.basicInfo.media.logo"
-      },
-
-      // ❌ companyOrganizer NOT returned
-
-      user: {
-        _id: "$user._id",
-        username: "$user.username",
-        firstName: "$user.firstName",
-        lastName: "$user.lastName",
-        email: "$user.email"
-      }
+    if (paymentMethod && paymentMethod.trim()) {
+      filteredTransactions = filteredTransactions.filter(
+        (transaction) =>
+          transaction.paymentMethod &&
+          transaction.paymentMethod.toLowerCase() === paymentMethod.toLowerCase()
+      );
     }
-  });
 
-  return WebhookEvent.aggregate(pipeline, { allowDiskUse: true });
+    return limit > 0
+      ? filteredTransactions.slice(skip, skip + limit)
+      : filteredTransactions.slice(skip);
+  }
 };
 
 /* =========================================================

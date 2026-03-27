@@ -8,6 +8,8 @@ const { buildGlobalLoyaltyPointsOverTime } = require("./utils/buildGlobalLoyalty
 const { buildGlobalLoyaltyPointsPertWalletType } = require("./utils/buildGlobalLoyaltyPointsPertWalletType ");
 const { buildGlobalLevelAnalytics } = require("./utils/buildGlobalLevelAnalytics");
 const { buildGlobalLoyaltyProducts } = require("./utils/buildGlobalLoyaltyProducts");
+const { buildGlobalLoyaltySpendingOverTime } = require("./utils/buildGlobalLoyaltySpendingOverTime");
+const { buildGlobalLoyaltySpendingByGender } = require("./utils/buildGlobalLoyaltySpendingByGender");
 
 /**
  * DASHBOARD – Load all cards at once
@@ -17,12 +19,17 @@ const getDashboard = async ({ dateFilter, timezone, companyOrganizer }) => {
     dashboardRepo.getUserStats({ dateFilter, timezone, companyOrganizer }),
     getUsersDashboardAnalytics(),
     getNewUsersDashboardAnalytics(),
-
     dashboardRepo.getGlobalWalletStats({ dateFilter, timezone, companyOrganizer }),
     getGlobalWalletPointsOverTimeRaw(companyOrganizer),
     getRawGlobalLoyaltyPointsDistributed(),
     getUsersPerGlobalLevel(),
-    getGlobalRewardsUsageStats()
+    getGlobalRewardsUsageStats(),
+    dashboardRepo.getTopOrderedMenuItems(),
+    dashboardRepo.getUsersPointsSummary(),
+    getGlobalWalletSpendingOverTimeRaw(),
+    getGlobalWalletSpendingByGenderOverTimeRaw(),
+    dashboardRepo.getTotalPriceByPaymentStatus(),
+
 
   ];
 
@@ -35,7 +42,11 @@ const getDashboard = async ({ dateFilter, timezone, companyOrganizer }) => {
     globalLoyaltyPointsDistributed,// used
     usersPerGlobalLevel, // used
     globalRewardsUsageStats,// used
-    
+    topOrderedMenuItems, // used
+    usersPointsSummary, // used
+    globalWalletSpendingOverTime, // used
+    globalWalletSpendingByGenderOverTime, // used
+    totalPriceByPaymentStatus
   ] = await Promise.all(promises);
   const membersActivity = await getUserStatusAnalytics(
     users.allActiveUsersCurrent,
@@ -94,6 +105,12 @@ const getDashboard = async ({ dateFilter, timezone, companyOrganizer }) => {
     globalLoyaltyPointsDistributed,
     usersPerGlobalLevel,
     globalRewardsUsageStats,
+    topOrderedMenuItems,
+    usersPointsSummary,
+    globalWalletSpendingOverTime,
+    globalWalletSpendingByGenderOverTime,
+    totalPriceByPaymentStatus
+
   }
 };
 const getDashboardStats = async ({ dateFilter, timezone }) => {
@@ -297,6 +314,11 @@ const getDashboardStats = async ({ dateFilter, timezone }) => {
 
 
 
+const getGlobalWalletSpendingByGenderOverTimeRaw = async (year = new Date().getFullYear()) => {
+  let users = await dashboardRepo.getGlobalWalletSpendingByGenderOverTimeRaw(year);
+  return buildGlobalLoyaltySpendingByGender(users);
+
+};
 const getUsersDashboardAnalytics = async (year = new Date().getFullYear()) => {
   let users = await dashboardRepo.getUsersForDashboardAnalytics(year);
   return buildUserDashboardAnalytics(users);
@@ -322,6 +344,10 @@ const getUserStatusAnalytics = async (allActiveUsersCurrent, allInactiveUsersCur
 const getGlobalWalletPointsOverTimeRaw = async (companyOrganizer) => {
   const rows = await dashboardRepo.getGlobalWalletPointsOverTimeRaw(companyOrganizer);
   return buildGlobalLoyaltyPointsOverTime(rows);
+}
+const getGlobalWalletSpendingOverTimeRaw = async (companyOrganizer) => {
+  const rows = await dashboardRepo.getGlobalWalletSpendingOverTimeRaw(companyOrganizer);
+  return buildGlobalLoyaltySpendingOverTime(rows);
 }
 const getRawGlobalLoyaltyPointsDistributed = async () => {
   const rows = await dashboardRepo.getRawGlobalLoyaltyPointsDistributed();
