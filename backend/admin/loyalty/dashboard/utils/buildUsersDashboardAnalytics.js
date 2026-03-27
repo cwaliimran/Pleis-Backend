@@ -2,11 +2,6 @@
    CONSTANTS
 ------------------------------------------ */
 
-const months = [
-  "Jan","Feb","Mar","Apr","May","Jun",
-  "Jul","Aug","Sep","Oct","Nov","Dec"
-];
-
 const ALL_REGIONS = [
   "Asia",
   "Europe",
@@ -29,8 +24,9 @@ const timezoneToRegion = (tz = "") => {
     tz.startsWith("US/") ||
     tz.startsWith("Canada/")
   ) return "Americas";
-  if (tz.startsWith("Australia/") || tz.startsWith("Pacific/"))
+  if (tz.startsWith("Australia/") || tz.startsWith("Pacific/")) {
     return "Oceania";
+  }
 
   return "Other";
 };
@@ -58,9 +54,6 @@ const buildUserDashboardAnalytics = (users = []) => {
     Other: 0
   };
 
-  const userGrowth = Array(12).fill(0);
-
-  // Ensure ALL regions always exist
   const regionStats = {};
   ALL_REGIONS.forEach(region => {
     regionStats[region] = {
@@ -75,12 +68,6 @@ const buildUserDashboardAnalytics = (users = []) => {
   ---------------------------------- */
 
   for (const u of users) {
-    /* -------- Growth -------- */
-    if (u.createdAt) {
-      const m = new Date(u.createdAt).getMonth();
-      if (m >= 0 && m < 12) userGrowth[m]++;
-    }
-
     /* -------- Gender Normalization -------- */
     const gender =
       u.gender === "Male" || u.gender === "Female" || u.gender === "Other"
@@ -112,11 +99,7 @@ const buildUserDashboardAnalytics = (users = []) => {
 
     if (gender === "Male") regionStats[region].males++;
     else if (gender === "Female") regionStats[region].females++;
-    else if (gender === "Other") regionStats[region].others++;
-    else {
-      // Unknown gender still counts toward region presence
-      regionStats[region].others++;
-    }
+    else regionStats[region].others++;
   }
 
   /* ----------------------------------
@@ -127,13 +110,11 @@ const buildUserDashboardAnalytics = (users = []) => {
     genderCount.Male + genderCount.Female + genderCount.Other || 1;
 
   return {
-    /* -------- Age Demographics -------- */
     ageDemographics: Object.entries(ageBuckets).map(([ageGroup, total]) => ({
       ageGroup,
       total
     })),
 
-    /* -------- Gender Analytics -------- */
     genderAnalytics: [
       {
         name: "Males",
@@ -152,18 +133,11 @@ const buildUserDashboardAnalytics = (users = []) => {
       }
     ],
 
-    /* -------- Region Overview -------- */
     regionOverview: ALL_REGIONS.map(region => ({
       region,
       males: regionStats[region].males,
       females: regionStats[region].females,
       others: regionStats[region].others
-    })),
-
-    /* -------- User Growth -------- */
-    userGrowth: months.map((month, index) => ({
-      month,
-      total: userGrowth[index]
     }))
   };
 };

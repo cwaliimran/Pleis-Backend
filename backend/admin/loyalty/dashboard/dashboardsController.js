@@ -1,18 +1,26 @@
+const { default: mongoose } = require("mongoose");
 const {
   sendResponse,
   parsePaginationParams,
   validateParams,
   generateMeta,
-} = require("@utils/responseUtil");
+} = require("../../../helperUtils/responseUtil");
 
 const dashboardService = require("./dashboardService");
+const { DASHBOARD_KEYS } = require("./utils/dashboardKeyMap");
 
 
 
 const getDashboard = async (req, res) => {
-  const { dateFilter = "all", companyOrganizer } = req.query;
+  let { dateFilter = "all", companyOrganizer } = req.query;
   let { timezone } = req.user || "UTC";
-
+  if (!companyOrganizer) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "company_organizer_required",
+    });
+  }
   try {
 
     if (dateFilter && !validateParams(req, res, {
@@ -22,9 +30,9 @@ const getDashboard = async (req, res) => {
     })) return;
 
     const dashboard = await dashboardService.getDashboard({
-      companyOrganizer,
       dateFilter,
       timezone,
+      companyOrganizer,
     });
 
     return sendResponse({
@@ -43,8 +51,53 @@ const getDashboard = async (req, res) => {
   }
 };
 
+
+
+const getDashboardValue = async (req, res) => {
+  const {
+    key,
+    subFilter = "all",
+    dateFilter = "all",
+  } = req.query;
+
+  const timezone = req.user?.timezone || "UTC";
+
+  // 1. Validate key
+  if (!DASHBOARD_KEYS[key]) {
+    return res.status(400).json({
+      message: "Invalid dashboard key",
+    });
+  }
+
+  // 2. Validate subFilter (THIS IS WHERE IT IS USED)
+  const isValidSubFilter = DASHBOARD_KEYS[key].subFilters.some(
+    (f) => f.key === subFilter
+  );
+
+  if (!isValidSubFilter) {
+    return res.status(400).json({
+      message: "Invalid sub filter for given key",
+    });
+  }
+
+  // 3. Fetch calculated value
+  const result = await dashboardService.getDashboardValue({
+    key,
+    subFilter,
+    dateFilter,
+    timezone,
+  });
+
+  return sendResponse({
+    res,
+    statusCode: 200,
+    translationKey: "dashboard_value_fetched_successfully",
+    data: result,
+  });
+};
+
 const getDashboardStats = async (req, res) => {
-  const { dateFilter = "all", companyOrganizer } = req.query;
+  const { dateFilter = "all" } = req.query;
   let { timezone } = req.user || "UTC";
 
   try {
@@ -56,7 +109,6 @@ const getDashboardStats = async (req, res) => {
     })) return;
 
     const dashboard = await dashboardService.getDashboardStats({
-      companyOrganizer,
       dateFilter,
       timezone,
     });
@@ -79,5 +131,6 @@ const getDashboardStats = async (req, res) => {
 
 module.exports = {
   getDashboard,
+  getDashboardValue,
   getDashboardStats,
 };
