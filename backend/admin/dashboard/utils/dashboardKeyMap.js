@@ -18,7 +18,50 @@ const DASHBOARD_KEYS = {
             { key: "suspended", label: "Suspended" },
         ],
     },
-
+    totalOrganizations: {
+        title: "Total Organizations",
+        subFilters: [
+            { key: "all", label: "All" },
+            { key: "active", label: "Active" },
+            { key: "inactive", label: "inactive" },
+        ],
+    },
+    totalReservations: {
+        title: "Total Reservations",
+        subFilters: [
+            { key: "all", label: "All" },
+            { key: "pending", label: "Pending" },
+            { key: "confirmed", label: "Confirmed" },
+            { key: "cancelled", label: "Cancelled" },
+            { key: "completed", label: "Completed" },
+        ],
+    },
+    bookedReservations: {
+        title: "Booked Reservations",
+        subFilters: [
+            { key: "all", label: "All" },
+            { key: "pending", label: "Pending" },
+            { key: "confirmed", label: "Confirmed" },
+            { key: "cancelled", label: "Cancelled" },
+            { key: "completed", label: "Completed" },
+        ],
+    },
+    totalClubMembers: {
+        title: "Total Club Members",
+        subFilters: [
+            { key: "all", label: "All" },
+            { key: "active", label: "Active" },
+            { key: "inactive", label: "Inactive" },
+        ],
+    },
+    activeClubMembers: {
+        title: "Active Club Members",
+        subFilters: [   
+            { key: "all", label: "All" },
+            { key: "active", label: "Active" },
+            { key: "inactive", label: "Inactive" },
+        ],
+    },
     activeUsers: {
         title: "Active Users",
         subFilters: [
@@ -35,6 +78,8 @@ const DASHBOARD_KEYS = {
             { key: "completed", label: "Completed" },
         ],
     },
+
+
     activeEvents: {
         title: "Active Events",
         subFilters: [
@@ -58,6 +103,14 @@ const DASHBOARD_KEYS = {
     },
     averageRevenuePerUser: {
         title: "Avg Revenue per User",
+        subFilters: [],
+    },
+    totalRevenue: {
+        title: "Total Revenue",
+        subFilters: [],
+    },
+    totalMobilePayments: {
+        title: "Total Mobile Payments",
         subFilters: [],
     },
 };

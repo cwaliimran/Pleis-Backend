@@ -48,8 +48,9 @@ const monriWebhookController = async (req, res) => {
 const getOrdersTransactions = async (req, res) => {
   try {
     const { page, limit } = parsePaginationParams(req);
-    const { keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, } = req.query;
-    const ticketingBookings = await getOrdersTransactionsService({ page, limit, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, });
+    const { keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate,startAmount,endAmount,paymentMethod
+     } = req.query;
+    const ticketingBookings = await getOrdersTransactionsService({ page, limit, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, startAmount, endAmount, paymentMethod });
     return sendResponse({ res, statusCode: 200, translationKey: "transactions_fetched_successfully", data: ticketingBookings });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
