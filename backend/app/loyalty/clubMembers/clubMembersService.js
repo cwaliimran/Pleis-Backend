@@ -9,6 +9,8 @@ const { getEligibleChallengesForLoyaltyPage } = require("../challenges/challenge
 const { generateMeta } = require("../../../helperUtils/responseUtil");
 const { logEngagementService } = require("@appEngagement/engagementEventsService");
 const { findLoyaltyReferralSettingsByCompanyOrganizer } = require("../../../admin/loyalty/referral/loyaltyReferralRepository");
+const { getStreakRules } = require("../streakRules/streakRulesController");
+const { getStreakRulesByCompanyOrganizer, getStreakRulesByCompanyOrganizerGroupByAllPoints } = require("../streakRules/streakRulesRepository");
 
 // Count members
 const countClubMembers = async (filters = {}) => {
@@ -76,7 +78,9 @@ const getCompanyProfileWithLoyaltyInfo = async (
   userId,
   companyOrganizer
 ) => {
+
   const [
+    streakRules,
     profile,
     userCompanyWallet,
     referralsSetting,
@@ -85,6 +89,7 @@ const getCompanyProfileWithLoyaltyInfo = async (
     promotions,
     transactions,
   ] = await Promise.all([
+    getStreakRulesByCompanyOrganizerGroupByAllPoints(companyOrganizer, userId),
     clubMemberRepo.getCompanyLoyaltyProfile(companyOrganizer),
     clubMemberRepo.getWallet(userId, companyOrganizer, null),
     findLoyaltyReferralSettingsByCompanyOrganizer(companyOrganizer),
@@ -93,6 +98,7 @@ const getCompanyProfileWithLoyaltyInfo = async (
       companyOrganizer,
       userId,
     }),
+    
 
     getEligibleChallengesForLoyaltyPage({
       page: 1,
@@ -142,6 +148,7 @@ const getCompanyProfileWithLoyaltyInfo = async (
       meta: promotions.meta,
     },
     transactions,
+     streakRules
   };
 };
 
