@@ -1,4 +1,3 @@
-const { default: mongoose } = require("mongoose");
 const {
   sendResponse,
   parsePaginationParams,
@@ -6,22 +5,22 @@ const {
   generateMeta,
 } = require("../../../helperUtils/responseUtil");
 
-const dashboardService = require("./dashboardService");
-const { DASHBOARD_KEYS } = require("./utils/dashboardKeyMap");
+const ReferralAnalyticsService = require("./referralAnalyticsService");
+const { ReferralAnalytics_KEYS } = require("./utils/referralAnalyticsKeyMap");
 
 
 
-const getDashboard = async (req, res) => {
+const getReferralAnalytics = async (req, res) => {
   let { dateFilter = "all", companyOrganizer } = req.query;
   let { timezone } = req.user || "UTC";
-  if(req.user.userType === "organizer"){
+  if (req.user.userType === "organizer") {
     companyOrganizer = req.user._id;
   }
   if (!companyOrganizer) {
     return sendResponse({
       res,
       statusCode: 400,
-      translationKey: "company_organizer_required",
+      translationKey: "companyOrganizer_required",
     });
   }
   try {
@@ -32,7 +31,7 @@ const getDashboard = async (req, res) => {
       },
     })) return;
 
-    const dashboard = await dashboardService.getDashboard({
+    const ReferralAnalytics = await ReferralAnalyticsService.getReferralAnalytics({
       dateFilter,
       timezone,
       companyOrganizer,
@@ -41,8 +40,8 @@ const getDashboard = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "dashboard_fetched_successfully",
-      data: dashboard,
+      translationKey: "ReferralAnalytics_fetched_successfully",
+      data: ReferralAnalytics,
     });
   } catch (error) {
     return sendResponse({
@@ -56,7 +55,7 @@ const getDashboard = async (req, res) => {
 
 
 
-const getDashboardValue = async (req, res) => {
+const getReferralAnalyticsValue = async (req, res) => {
   const {
     key,
     subFilter = "all",
@@ -66,14 +65,14 @@ const getDashboardValue = async (req, res) => {
   const timezone = req.user?.timezone || "UTC";
 
   // 1. Validate key
-  if (!DASHBOARD_KEYS[key]) {
+  if (!ReferralAnalytics_KEYS[key]) {
     return res.status(400).json({
-      message: "Invalid dashboard key",
+      message: "Invalid ReferralAnalytics key",
     });
   }
 
   // 2. Validate subFilter (THIS IS WHERE IT IS USED)
-  const isValidSubFilter = DASHBOARD_KEYS[key].subFilters.some(
+  const isValidSubFilter = ReferralAnalytics_KEYS[key].subFilters.some(
     (f) => f.key === subFilter
   );
 
@@ -84,7 +83,7 @@ const getDashboardValue = async (req, res) => {
   }
 
   // 3. Fetch calculated value
-  const result = await dashboardService.getDashboardValue({
+  const result = await ReferralAnalyticsService.getReferralAnalyticsValue({
     key,
     subFilter,
     dateFilter,
@@ -94,12 +93,12 @@ const getDashboardValue = async (req, res) => {
   return sendResponse({
     res,
     statusCode: 200,
-    translationKey: "dashboard_value_fetched_successfully",
+    translationKey: "ReferralAnalytics_value_fetched_successfully",
     data: result,
   });
 };
 
-const getDashboardStats = async (req, res) => {
+const getReferralAnalyticsStats = async (req, res) => {
   const { dateFilter = "all" } = req.query;
   let { timezone } = req.user || "UTC";
 
@@ -111,7 +110,7 @@ const getDashboardStats = async (req, res) => {
       },
     })) return;
 
-    const dashboard = await dashboardService.getDashboardStats({
+    const ReferralAnalytics = await ReferralAnalyticsService.getReferralAnalyticsStats({
       dateFilter,
       timezone,
     });
@@ -119,8 +118,8 @@ const getDashboardStats = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "dashboard_stats_fetched_successfully",
-      data: dashboard,
+      translationKey: "ReferralAnalytics_stats_fetched_successfully",
+      data: ReferralAnalytics,
     });
   } catch (error) {
     return sendResponse({
@@ -133,7 +132,7 @@ const getDashboardStats = async (req, res) => {
 };
 
 module.exports = {
-  getDashboard,
-  getDashboardValue,
-  getDashboardStats,
+  getReferralAnalytics,
+  getReferralAnalyticsValue,
+  getReferralAnalyticsStats,
 };

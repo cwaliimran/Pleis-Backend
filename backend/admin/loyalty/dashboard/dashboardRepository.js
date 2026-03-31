@@ -14,6 +14,7 @@ const EngagementEvents = require("@appEngagement/EngagementEvents");
 const { UserGlobalWallet } = require("@UserGlobalWalletModel");
 const { GlobalRewardsOrders } = require("@GlobalRewardsOrdersModel");
 const Orders = require("@OrdersModel");
+const { buildUsersPointsSummary } = require("./utils/buildUsersPointsSummary");
 
 const getClubMemberUserIds = async (companyOrganizer) => {
   try {
@@ -462,15 +463,17 @@ const getGlobalWalletPointsOverTimeRaw = async () => {
     },
   ]);
 };
-const getGlobalWalletSpendingOverTimeRaw = async () => {
+const getGlobalWalletSpendingOverTimeRaw = async (companyOrganizer) => {
   const year = new Date().getFullYear();
   const start = new Date(`${year}-01-01T00:00:00.000Z`);
   const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+  const companyOrganizerId = new mongoose.Types.ObjectId(companyOrganizer);
 
   return UnifiedWalletTransactions.aggregate([
     {
       $match: {
         walletType: "companyLoyalty",
+        companyOrganizer: companyOrganizerId,
         createdAt: { $gte: start, $lt: end }
       }
     },
@@ -488,11 +491,13 @@ const getGlobalWalletSpendingOverTimeRaw = async () => {
     },
   ]);
 };
-const getRawGlobalLoyaltyPointsDistributed = async () => {
+const getRawGlobalLoyaltyPointsDistributed = async (companyOrganizer
+) => {
   return UnifiedWalletTransactions.aggregate([
     {
       $match: {
-        walletType: "companyLoyalty"
+        walletType: "companyLoyalty",
+        companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer)
       }
     },
     {
@@ -507,11 +512,12 @@ const getRawGlobalLoyaltyPointsDistributed = async () => {
     }
   ]);
 };
-const getUsersPerGlobalLevel = async () => {
+const getUsersPerGlobalLevel = async (clubmembersUserIds) => {
   return UserGlobalWallet.aggregate([
     {
       $match: {
-        "global.level": { $ne: null }
+        "global.level": { $ne: null },
+        user: { $in: clubmembersUserIds }
       }
     },
     {
@@ -546,8 +552,13 @@ const getUsersPerGlobalLevel = async () => {
     }
   ]);
 };
-const getGlobalRewardsUsageStats = async () => {
+const getGlobalRewardsUsageStats = async (clubmembersUserIds) => {
   const result = await GlobalRewardsOrders.aggregate([
+    {
+      $match: {
+        user: { $in: clubmembersUserIds }
+      }
+    },
     {
       $lookup: {
         from: "globalrewards",
@@ -618,12 +629,12 @@ const getGlobalRewardsUsageStats = async () => {
 
 
 
-const getTopOrderedMenuItems = async (match = {}) => {
+const getTopOrderedMenuItems = async (clubmembersUserIds) => {
   try {
     const data = await Orders.aggregate([
       {
         $match: {
-          ...match,
+          user: { $in: clubmembersUserIds },
         },
       },
       {
@@ -675,12 +686,12 @@ module.exports = {
 
 
 
-const getUsersPointsSummary = async (match = {}) => {
+const getUsersPointsSummary = async (companyOrganizer) => {
   try {
     const data = await UnifiedWalletTransactions.aggregate([
       {
         $match: {
-          ...match,
+          companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
           walletType: "companyLoyalty"
         },
       },
@@ -773,10 +784,10 @@ const getUsersPointsSummary = async (match = {}) => {
       .sort((a, b) => b.totalPoints - a.totalPoints)
       .slice(0, 7);
 
-    return {
+    return buildUsersPointsSummary({
       mostEngagedMembers,
       highestPointsMembers,
-    };
+    });
   } catch (error) {
     console.error("Error getting users points summary:", error);
     throw error;
@@ -785,15 +796,18 @@ const getUsersPointsSummary = async (match = {}) => {
 
 
 
-const getGlobalWalletSpendingByGenderOverTimeRaw = async () => {
+const getGlobalWalletSpendingByGenderOverTimeRaw = async (companyOrganizer) => {
   const year = new Date().getFullYear();
   const start = new Date(`${year}-01-01T00:00:00.000Z`);
   const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+  const companyOrganizerId = new mongoose.Types.ObjectId(companyOrganizer);
+
 
   return UnifiedWalletTransactions.aggregate([
     {
       $match: {
         walletType: "companyLoyalty",
+        companyOrganizer: companyOrganizerId,
         createdAt: { $gte: start, $lt: end }
       }
     },
@@ -841,14 +855,14 @@ const getGlobalWalletSpendingByGenderOverTimeRaw = async () => {
   ]);
 };
 
-const getTotalPriceByPaymentStatus = async (match = {}) => {
+const getTotalPriceByPaymentStatus = async (clubmembersUserIds) => {
   try {
     const paymentStatuses = ["pending", "paid", "failed"];
 
     const data = await Orders.aggregate([
       {
         $match: {
-          ...match,
+          user: { $in: clubmembersUserIds }
         },
       },
       {

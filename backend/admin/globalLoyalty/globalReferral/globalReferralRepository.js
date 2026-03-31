@@ -121,37 +121,32 @@ const getUserGlobalReferrals = async ({
     skip,
     limit,
   });
+
   return cache({
     namespace: cacheKey,
-    ttl: 86400, // 1 day
+    ttl: 86400,
 
     fetchFn: async () => {
       const pipeline = [
         {
           $match: {
-            ...(type && { type: type }), // Match by type if provided (e.g., "global", "company", etc.)
-            ...(userId && { userId: { $ne: null } }) // Only include records with a valid userId
+            ...(type && { type }),
+            ...(userId && { userId: { $ne: null } })
           }
         }
       ];
 
-      // Handle date filtering
       if (date) {
         const start = new Date(date);
         const end = new Date(new Date(date).setDate(start.getDate() + 1));
+
         pipeline.push({
-          $match: {
-            createdAt: { $gte: start, $lt: end }
-          }
+          $match: { createdAt: { $gte: start, $lt: end } }
         });
       }
 
-
-
-      // Sorting by createdAt in descending order
       pipeline.push({ $sort: { createdAt: -1 } });
 
-      // Apply pagination and counts using $facet
       pipeline.push({
         $facet: {
           data: [
@@ -162,54 +157,64 @@ const getUserGlobalReferrals = async ({
         }
       });
 
-
       const result = await ReferredRecord.aggregate(pipeline);
 
       let globalReferral = result[0]?.data || [];
-
       const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-      // Additional counts for meta (active/inactive/total by userId as creator)
+      // =========================
+      // 🔥 COUNTS
+      // =========================
       const [total, active, inactive] = await Promise.all([
-        ReferredRecord.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "deleted" } }),
-        ReferredRecord.countDocuments({ status: "active", ...(userId && { userId: userId }) }),
-        ReferredRecord.countDocuments({ status: "inactive", ...(userId && { userId: userId }) })
+        ReferredRecord.countDocuments({ ...(userId && { userId }), status: { $ne: "deleted" } }),
+        ReferredRecord.countDocuments({ status: "active", ...(userId && { userId }) }),
+        ReferredRecord.countDocuments({ status: "inactive", ...(userId && { userId }) })
       ]);
 
-      // Fetching the user names from the Users table
+      // =========================
+      // 🔥 USERS
+      // =========================
+      const userIds = globalReferral
+        .map(r => r.userId)
+        .filter(Boolean)
+        .map(id => id.toString());
+
+      const referrerIds = globalReferral
+        .map(r => r.referrerUserId)
+        .filter(Boolean)
+        .map(id => id.toString());
+
       const userNames = await User.find({
-        _id: { $in: [...new Set(globalReferral.map(record => record.userId.toString()))] }
-      })
-        .select("firstName lastName _id");
+        _id: { $in: [...new Set(userIds)] }
+      }).select("firstName lastName _id");
 
-      // Fetching the referrer user names from the Users table
       const referrerNames = await User.find({
-        _id: { $in: [...new Set(globalReferral.map(record => record.referrerUserId.toString()))] }
-      })
-        .select("firstName lastName _id remainingReferrals");
+        _id: { $in: [...new Set(referrerIds)] }
+      }).select("firstName lastName _id remainingReferrals");
 
-      // Fetch global referral data for the given userId
       const globalReferrals = await GlobalReferralSettings.find({
         creator: userId,
         type: "global"
       }).lean();
 
-      // Create a map to count how many times each referrerUserId appears
       const referrerCountMap = globalReferral.reduce((acc, record) => {
+        if (!record.referrerUserId) return acc;
         const key = record.referrerUserId.toString();
         acc[key] = (acc[key] || 0) + 1;
         return acc;
       }, {});
 
-      // Use it
+      // =========================
+      // 🔥 MAIN MAPPING
+      // =========================
       globalReferral = await Promise.all(
         globalReferral.map(record => {
           const userName = userNames.find(
-            user => user._id.toString() === record.userId.toString()
+            user => user._id.toString() === record.userId?.toString()
           );
 
           const referrerUser = referrerNames.find(
-            user => user._id.toString() === record.referrerUserId.toString()
+            user => user._id.toString() === record.referrerUserId?.toString()
           );
 
           const referrerUserName = referrerUser
@@ -217,8 +222,11 @@ const getUserGlobalReferrals = async ({
             : "";
 
           const referralLimit = globalReferrals?.[0]?.referralLimit ?? 0;
-
           const remainingReferrals = referrerUser?.remainingReferrals ?? 0;
+
+          // 🔥 NEW STATUS LOGIC
+          const computedStatus =
+            record.userId && record.referrerUserId ? "joined" : "pending";
 
           return getUserImage(record.userId).then(profileIcon => ({
             ...record,
@@ -229,12 +237,18 @@ const getUserGlobalReferrals = async ({
             remainingReferrals,
             referralLimit,
             referrerCount:
-              referrerCountMap[record.referrerUserId.toString()] || 0,
+              record.referrerUserId
+                ? referrerCountMap[record.referrerUserId.toString()] || 0
+                : 0,
+
+            status: computedStatus // 🔥 override status
           }));
         })
       );
 
-
+      // =========================
+      // 🔥 KEYWORD FILTER
+      // =========================
       if (keyword) {
         const regex = new RegExp(keyword, "i");
 
@@ -245,6 +259,25 @@ const getUserGlobalReferrals = async ({
         );
       }
 
+      // =========================
+      // 🔥 FALLBACK (NO DATA)
+      // =========================
+      if (!globalReferral.length) {
+        globalReferral = Array.from({ length: 2 }).map(() => ({
+          userId: null,
+          referrerUserId: null,
+          firstName: "N/A",
+          lastName: "N/A",
+          profileIcon: "",
+          referrerUserName: "N/A",
+          remainingReferrals: 0,
+          referralLimit: 0,
+          referrerCount: 0,
+          status: "pending",
+          createdAt: null,
+        }));
+      }
+
       const meta = generateMeta(page, limit, totalFiltered);
       meta.globalReferralCount = { total, active, inactive };
 
@@ -252,7 +285,6 @@ const getUserGlobalReferrals = async ({
     },
   });
 };
-
 
 const findGlobalReferrals = async (filter = {}) => {
   try {

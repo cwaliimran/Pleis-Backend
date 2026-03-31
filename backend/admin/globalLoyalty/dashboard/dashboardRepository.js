@@ -14,6 +14,7 @@ const EngagementEvents = require("@appEngagement/EngagementEvents");
 const { UserGlobalWallet } = require("@UserGlobalWalletModel");
 const { GlobalRewardsOrders } = require("@GlobalRewardsOrdersModel");
 const Orders = require("@OrdersModel");
+const { buildUsersPointsSummary } = require("./utils/buildUsersPointsSummary");
 
 
 
@@ -718,10 +719,10 @@ const getUsersPointsSummary = async (match = {}) => {
       .sort((a, b) => b.totalPoints - a.totalPoints)
       .slice(0, 7);
 
-    return {
+    return buildUsersPointsSummary({
       mostEngagedMembers,
       highestPointsMembers,
-    };
+    });
   } catch (error) {
     console.error("Error getting users points summary:", error);
     throw error;

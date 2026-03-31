@@ -22,14 +22,14 @@ const getDashboard = async ({ dateFilter, timezone, companyOrganizer }) => {
     getNewUsersDashboardAnalytics(clubmembersUserIds),
     dashboardRepo.getGlobalWalletStats({ dateFilter, timezone, companyOrganizer }),
     getGlobalWalletPointsOverTimeRaw(companyOrganizer),
-    getRawGlobalLoyaltyPointsDistributed(),
-    getUsersPerGlobalLevel(),
-    getGlobalRewardsUsageStats(),
-    dashboardRepo.getTopOrderedMenuItems(),
-    dashboardRepo.getUsersPointsSummary(),
-    getGlobalWalletSpendingOverTimeRaw(),
-    getGlobalWalletSpendingByGenderOverTimeRaw(),
-    dashboardRepo.getTotalPriceByPaymentStatus(),
+    getRawGlobalLoyaltyPointsDistributed(companyOrganizer),
+    getUsersPerGlobalLevel(clubmembersUserIds),
+    getGlobalRewardsUsageStats(clubmembersUserIds),
+    dashboardRepo.getTopOrderedMenuItems(clubmembersUserIds),
+    dashboardRepo.getUsersPointsSummary(companyOrganizer),
+    getGlobalWalletSpendingOverTimeRaw(companyOrganizer),
+    getGlobalWalletSpendingByGenderOverTimeRaw(companyOrganizer),
+    dashboardRepo.getTotalPriceByPaymentStatus(clubmembersUserIds),
   ];
 
   const [
@@ -313,8 +313,8 @@ const getDashboardStats = async ({ dateFilter, timezone }) => {
 
 
 
-const getGlobalWalletSpendingByGenderOverTimeRaw = async (year = new Date().getFullYear()) => {
-  let users = await dashboardRepo.getGlobalWalletSpendingByGenderOverTimeRaw(year);
+const getGlobalWalletSpendingByGenderOverTimeRaw = async (companyOrganizer, year = new Date().getFullYear()) => {
+  let users = await dashboardRepo.getGlobalWalletSpendingByGenderOverTimeRaw(companyOrganizer, year);
   return buildGlobalLoyaltySpendingByGender(users);
 
 };
@@ -348,17 +348,17 @@ const getGlobalWalletSpendingOverTimeRaw = async (companyOrganizer) => {
   const rows = await dashboardRepo.getGlobalWalletSpendingOverTimeRaw(companyOrganizer);
   return buildGlobalLoyaltySpendingOverTime(rows);
 }
-const getRawGlobalLoyaltyPointsDistributed = async () => {
-  const rows = await dashboardRepo.getRawGlobalLoyaltyPointsDistributed();
+const getRawGlobalLoyaltyPointsDistributed = async (companyOrganizer) => {
+  const rows = await dashboardRepo.getRawGlobalLoyaltyPointsDistributed(companyOrganizer);
   return buildGlobalLoyaltyPointsPertWalletType(rows);
 };
 
-const getUsersPerGlobalLevel = async () => {
-  const rows = await dashboardRepo.getUsersPerGlobalLevel();
+const getUsersPerGlobalLevel = async (clubmembersUserIds) => {
+  const rows = await dashboardRepo.getUsersPerGlobalLevel(clubmembersUserIds);
   return buildGlobalLevelAnalytics(rows);
 };
-const getGlobalRewardsUsageStats = async () => {
-  const rows = await dashboardRepo.getGlobalRewardsUsageStats();
+const getGlobalRewardsUsageStats = async (clubmembersUserIds) => {
+  const rows = await dashboardRepo.getGlobalRewardsUsageStats(clubmembersUserIds);
   return buildGlobalLoyaltyProducts(rows);
 };
 
