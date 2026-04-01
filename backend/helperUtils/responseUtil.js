@@ -135,11 +135,10 @@ const parsePaginationParams = (req) => {
 const generateMeta = (page, limit, total) => {
 
   return {
-
-    currentPage: page,
-    totalPages: Math.ceil(total / limit),
-    totalRecords: total,
-    limit: limit,
+    currentPage: Number(page), // Ensuring it's a number
+    totalPages: Math.ceil(total / limit), // Calculating total pages
+    totalRecords: Number(total), // Ensuring total records is a number
+    limit: Number(limit), // Ensuring the limit is a number
   };
 };
 const validateObjectIdsArr = (res, ids, fieldNames) => {

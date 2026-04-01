@@ -16,4 +16,5 @@ router.use("/users-streaks", require("../loyalty/usersStreaks/usersStreaksRoutes
 router.use("/club-members", require("../loyalty/clubMembers/clubMembersRoutes"));
 router.use("/points-calculator", require("./clubMembers/loyaltyPointsCalculatorRoutes"));
 router.use("/referral", require("../loyalty/referral/loyaltyReferralRoutes"));
+router.use("/referral-analytics", require("./referralAnalytics/referralAnalyticsRoutes"));
 module.exports = router;

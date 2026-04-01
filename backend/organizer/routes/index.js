@@ -33,4 +33,5 @@ router.use("/general", require("../generalAPIs/generalAPIRoutes"));
 router.use("/in-app-ordering", require("../../admin/inAppOrdering/inAppOrderingRoutes"));
 router.use("/transactions", require("../../admin/transactions/routes/unifiedTransactionsRoutes"));
 router.use("/notifications", require("../../admin/notifications/notificationsRoutes"))
+router.use("/reservations-analytics", require("../../admin/reservation/reservationAnalytics/reservationAnalyticsRoutes"));
 module.exports = router;
