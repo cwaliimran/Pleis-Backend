@@ -55,57 +55,57 @@ const updateReservation = async (id, data) => {
   // -----------------------------
   // VALIDATIONS
   // -----------------------------
-if (data.conditionType) {
+  if (data.conditionType) {
 
-  // Utility for null/undefined check
-  const isNil = (v) => v === null || v === undefined;
+    // Utility for null/undefined check
+    const isNil = (v) => v === null || v === undefined;
 
-  // Optional normalization (prevents "" issues from frontend)
-  if (data.amount === "") data.amount = null;
-  if (data.customText === "") data.customText = null;
+    // Optional normalization (prevents "" issues from frontend)
+    if (data.amount === "") data.amount = null;
+    if (data.customText === "") data.customText = null;
 
-  const amountMissing = isNil(data.amount);
-  const customTextMissing = !data.customText;
+    const amountMissing = isNil(data.amount);
+    const customTextMissing = !data.customText;
 
-  // Condition type changed
-  if (Reservation.conditionType !== data.conditionType) {
+    // Condition type changed
+    if (Reservation.conditionType !== data.conditionType) {
 
-    if (data.conditionType === "minimumSpendOnLocation") {
+      if (data.conditionType === "minimumSpendOnLocation") {
 
-      if (amountMissing && customTextMissing) {
-        return {
-          error: "amount_or_customText_is_required_when_conditionType_changes_to_minimumSpendOnLocation."
-        };
-      }
+        if (amountMissing && customTextMissing) {
+          return {
+            error: "amount_or_customText_is_required_when_conditionType_changes_to_minimumSpendOnLocation."
+          };
+        }
 
-      if (amountMissing) {
-        return {
-          error: "amount_is_required_when_conditionType_changes_and_is_not_minimumSpendOnLocation."
-        };
+        if (amountMissing) {
+          return {
+            error: "amount_is_required_when_conditionType_changes_and_is_not_minimumSpendOnLocation."
+          };
+        }
       }
     }
-  }
 
-  // Ticket requirement validation
-  if (
-    data.conditionType === "ticketRequirement" &&
-    !data.ticketType
-  ) {
-    return {
-      error: "ticket_type_is_required_when_conditionType_is_ticketRequirement."
-    };
-  }
+    // Ticket requirement validation
+    if (
+      data.conditionType === "ticketRequirement" &&
+      !data.ticketType
+    ) {
+      return {
+        error: "ticket_type_is_required_when_conditionType_is_ticketRequirement."
+      };
+    }
 
-  // Custom text validation
-  if (
-    data.conditionType === "customText" &&
-    !data.customText
-  ) {
-    return {
-      error: "custom_text_is_required_when_conditionType_is_customText."
-    };
+    // Custom text validation
+    if (
+      data.conditionType === "customText" &&
+      !data.customText
+    ) {
+      return {
+        error: "custom_text_is_required_when_conditionType_is_customText."
+      };
+    }
   }
-}
 
   // -----------------------------
   // ALLOWED FIELDS
@@ -197,14 +197,27 @@ const getUserReservations = async ({ timezone, page, limit, keyword, status, use
   };
 };
 
-const updateUserReservationStatus = async (id, value) => {
-  const updated = await UserReservations.findByIdAndUpdate(id, {
-    status: value,
+const updateUserReservationStatus = async (
+  id,
+  value,
+  changedBy,
+) => {
+  const reservation = await UserReservations.findById(id);
+  if (!reservation) return null;
+  reservation.status = value;
+  reservation.reservationChanges.push({
+    changedBy: changedBy
+      ? new mongoose.Types.ObjectId(changedBy)
+      : null,
+    action: "accepted",
+    newStatus: value,
+    createdAt: new Date(),
   });
-  if (!updated) return null;
+
+  await reservation.save();
+
   return true;
 };
-
 
 
 const updateUserReservation = async (data) => {

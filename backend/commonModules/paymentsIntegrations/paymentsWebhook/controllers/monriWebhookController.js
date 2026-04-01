@@ -50,6 +50,7 @@ const getOrdersTransactions = async (req, res) => {
     const { page, limit } = parsePaginationParams(req);
     const { keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate,startAmount,endAmount,paymentMethod
      } = req.query;
+  
     const ticketingBookings = await getOrdersTransactionsService({ page, limit, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, startAmount, endAmount, paymentMethod });
     return sendResponse({ res, statusCode: 200, translationKey: "transactions_fetched_successfully", data: ticketingBookings });
   } catch (error) {
