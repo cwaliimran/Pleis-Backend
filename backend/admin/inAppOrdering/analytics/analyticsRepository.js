@@ -30,7 +30,6 @@ const MenuItemCategories = require("@MenuItemCategoriesModel");
 
 
 
-
 const orderStatsRaw = async ({ organizations, dateFilter, timezone }) => {
   const ranges = getDateRanges({ dateFilter, timezone }); // Get the date ranges for 
   const baseMatch = {

@@ -1,3 +1,4 @@
+const convertToMongoArray = require("@utils/convertToMongoArray");
 const {
   sendResponse,
   parsePaginationParams,
@@ -11,12 +12,15 @@ const { ReservationAnalytics_KEYS } = require("./utils/reservationAnalyticsKeyMa
 
 
 const getReservationAnalytics = async (req, res) => {
-  let { dateFilter = "all", companyOrganizer } = req.query;
+  let { dateFilter = "all", companyOrganizer,organizations } = req.query;
   let { timezone } = req.user || "UTC";
   if (req.user.userType === "organizer") {
     companyOrganizer = req.user._id;
+    if(organizations){
+      organizations = await convertToMongoArray(organizations);
+      companyOrganizer=undefined;
   }
-
+}
   try {
 
     if (dateFilter && !validateParams(req, res, {
@@ -29,6 +33,7 @@ const getReservationAnalytics = async (req, res) => {
       dateFilter,
       timezone,
       companyOrganizer,
+      organizations
     });
 
     return sendResponse({
@@ -47,10 +52,14 @@ const getReservationAnalytics = async (req, res) => {
   }
 };
   const getReservationTransactions = async (req, res) => {
-    let { page=1, limit=5, companyOrganizer } = req.query;
+    let { page=1, limit=5, companyOrganizer,organizations } = req.query;
     let { timezone } = req.user || "UTC";
     if (req.user.userType === "organizer") {
       companyOrganizer = req.user._id;
+      if(organizations){
+        organizations = await convertToMongoArray(organizations);
+        companyOrganizer=undefined;
+      }
     }
   limit = parseInt(limit);
     try {
@@ -59,6 +68,7 @@ const getReservationAnalytics = async (req, res) => {
         limit,
         timezone,
         companyOrganizer,
+        organizations
       });
 
       return sendResponse({
@@ -159,10 +169,14 @@ const getReservationAnalyticsStats = async (req, res) => {
 
 
   const getReservationChnageLogs = async (req, res) => {
-    let { page=1, limit=5, companyOrganizer } = req.query;
+    let { page=1, limit=5, companyOrganizer, organizations } = req.query;
     let { timezone } = req.user || "UTC";
     if (req.user.userType === "organizer") {
       companyOrganizer = req.user._id;
+      if(organizations){
+        organizations = await convertToMongoArray(organizations);
+        companyOrganizer=undefined;
+      }
     }
   limit = parseInt(limit);
     try {
@@ -171,6 +185,7 @@ const getReservationAnalyticsStats = async (req, res) => {
         limit,
         timezone,
         companyOrganizer,
+        organizations
       });
 
       return sendResponse({

@@ -29,11 +29,15 @@ const { buildUserChangeLogs } = require("./utils/buildUserChangeLogs");
 
 
 // ---------------- USERS ----------------
-const getReservationsStats = async ({ companyOrganizer }) => {
+const getReservationsStats = async ({ companyOrganizer, organizations }) => {
   try {
     const organizerMatch = companyOrganizer
       ? { companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer) }
       : {};
+
+    if (organizations && organizations.length > 0) {
+      organizerMatch.organizationId = { $in: organizations.map(id => new mongoose.Types.ObjectId(id)) };
+    }
 
     // =========================
     // 1. RESERVATIONS (CONFIG)
@@ -76,7 +80,6 @@ const getReservationsStats = async ({ companyOrganizer }) => {
         },
       },
     ]);
-
     const reservationsStats = {
       totalReservations: reservationsAgg[0]?.totalReservations || 0,
       expiredReservations: reservationsAgg[0]?.expiredReservations || 0,
@@ -332,34 +335,38 @@ const getOrganizerPerformanceByMonth = async ({
 
 
 
-const getReservationsOverTimeRaw = async (companyOrganizer) => {
-  const year = new Date().getFullYear();
-  const start = new Date(`${year}-01-01T00:00:00.000Z`);
-  const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
-  return UserReservations.aggregate([
-    {
-      $match: {
-        ...(companyOrganizer && {
-          companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
-        }),
-        createdAt: { $gte: start, $lt: end },
+const getReservationsOverTimeRaw = async (companyOrganizer, organizations) => {
+  try {
+    const year = new Date().getFullYear();
+    const start = new Date(`${year}-01-01T00:00:00.000Z`);
+    const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+    return await UserReservations.aggregate([
+      {
+        $match: {
+          ...(companyOrganizer && { companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer) }),
+          ...(organizations && { organizationId: { $in: organizations } }),  // Directly using the ObjectId array
+          createdAt: { $gte: start, $lt: end },
+        },
       },
-    },
-    {
-      $project: {
-        month: { $month: "$createdAt" },
+      {
+        $project: {
+          month: { $month: "$createdAt" },
+        },
       },
-    },
-    {
-      $group: {
-        _id: "$month",
-        totalReservations: { $sum: 1 },
+      {
+        $group: {
+          _id: "$month",  // Grouping by month
+          totalReservations: { $sum: 1 },  // Counting reservations per month
+        },
       },
-    },
-    {
-      $sort: { _id: 1 }, // Jan → Dec
-    },
-  ]);
+      {
+        $sort: { _id: 1 },  // Sorting by month (Jan → Dec)
+      },
+    ]);
+  } catch (error) {
+    console.error('Error fetching reservations over time:', error);
+    throw new Error('Failed to fetch reservations over time');
+  }
 };
 
 const getRawGlobalLoyaltyPointsDistributed = async () => {
@@ -396,7 +403,7 @@ const getRawGlobalLoyaltyPointsDistributed = async () => {
 
 
 
-const getRevenueOverTimeRaw = async (companyOrganizer) => {
+const getRevenueOverTimeRaw = async (companyOrganizer, organizations) => {
   const year = new Date().getFullYear();
   const start = new Date(`${year}-01-01T00:00:00.000Z`);
   const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
@@ -407,6 +414,7 @@ const getRevenueOverTimeRaw = async (companyOrganizer) => {
         ...(companyOrganizer && {
           companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
         }),
+        ...(organizations && { organizationId: { $in: organizations } }),  // Directly using the ObjectId array
         createdAt: { $gte: start, $lt: end },
       },
     },
@@ -441,7 +449,7 @@ const getRevenueOverTimeRaw = async (companyOrganizer) => {
     },
   ]);
 };
-const getReservationTypeStatsRaw = async (companyOrganizer) => {
+const getReservationTypeStatsRaw = async (companyOrganizer, organizations) => {
   const year = new Date().getFullYear();
   const start = new Date(`${year}-01-01T00:00:00.000Z`);
   const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
@@ -452,6 +460,7 @@ const getReservationTypeStatsRaw = async (companyOrganizer) => {
         ...(companyOrganizer && {
           companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
         }),
+        ...(organizations && { organizationId: { $in: organizations } }),  // Directly using the ObjectId array
         createdAt: { $gte: start, $lt: end },
       },
     },
@@ -517,7 +526,7 @@ const getReservationTypeStatsRaw = async (companyOrganizer) => {
 
 
 
-const getReservationsByHourRaw = async (companyOrganizer) => {
+const getReservationsByHourRaw = async (companyOrganizer, organizations) => {
   const year = new Date().getFullYear();
   const start = new Date(`${year}-01-01T00:00:00.000Z`);
   const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
@@ -528,6 +537,7 @@ const getReservationsByHourRaw = async (companyOrganizer) => {
         ...(companyOrganizer && {
           companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
         }),
+        ...(organizations && { organizationId: { $in: organizations } }),  // Directly using the ObjectId array
         createdAt: { $gte: start, $lt: end },
       },
     },
@@ -572,7 +582,7 @@ const getReservationsByHourRaw = async (companyOrganizer) => {
 };
 
 
-const getUserLevelStatsRaw = async (companyOrganizer) => {
+const getUserLevelStatsRaw = async (companyOrganizer, organizations) => {
   const result = await UserReservations.aggregate([
     {
       $match: {
@@ -580,6 +590,7 @@ const getUserLevelStatsRaw = async (companyOrganizer) => {
         ...(companyOrganizer && {
           companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
         }),
+        ...(organizations && { organizationId: { $in: organizations } }),  // Directly using the ObjectId array
       },
     },
 
@@ -682,8 +693,9 @@ const getUserLevelStatsRaw = async (companyOrganizer) => {
 
 const getUserReservationPaymentsQA = async ({
   companyOrganizer,
+  organizations,
   page = 1,
-  limit = 20,
+  limit = 5,
 }) => {
   const skip = (page - 1) * limit;
 
@@ -692,6 +704,7 @@ const getUserReservationPaymentsQA = async ({
     ...(companyOrganizer && {
       companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
     }),
+    ...(organizations && { organization: { $in: organizations } }),  // Directly using the ObjectId array
   };
 
   // 🔥 total count
@@ -816,16 +829,17 @@ const getUserReservationPaymentsQA = async ({
           ticketType: "$reservation.reservationSnapshot.ticketType",
           timemingSlots: "$reservation.timingSlots",
         },
-        
+
       },
     },
   ]);
+
 
   const formatedData = buildUserReservationPaymentsQA(data);
   const meta = generateMeta(page, limit, totalFiltered);
 
   return {
-    data:formatedData,
+    data: formatedData,
     meta,
   };
 };
@@ -833,6 +847,7 @@ const getUserReservationChangeLogs = async ({
   companyOrganizer,
   page = 1,
   limit = 20,
+  organizations
 }) => {
   const skip = (page - 1) * limit;
 
@@ -841,6 +856,8 @@ const getUserReservationChangeLogs = async ({
     ...(companyOrganizer && {
       companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
     }),
+    ...(organizations && { organization: { $in: organizations } }),  // Directly using the ObjectId array 
+    
   };
 
   // 🔥 total count
@@ -940,7 +957,7 @@ const getUserReservationChangeLogs = async ({
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
-const formated =await buildUserChangeLogs(data);
+  const formated = await buildUserChangeLogs(data);
   return {
     data: formated,
     meta,

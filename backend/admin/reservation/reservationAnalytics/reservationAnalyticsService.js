@@ -10,15 +10,15 @@ const { buildReservationsByHour } = require("./utils/buildReservationsByHour");
 /**
  * ReservationAnalytics – Load all cards at once
  */
-const getReservationAnalytics = async ({ dateFilter, timezone, companyOrganizer }) => {
+const getReservationAnalytics = async ({ dateFilter, timezone, companyOrganizer, organizations }) => {
   const promises = [
-    ReservationAnalyticsRepo.getReservationsStats({ dateFilter, timezone, companyOrganizer }),
-    getReservationsOverTimeRaw(companyOrganizer
+    ReservationAnalyticsRepo.getReservationsStats({ dateFilter, timezone, companyOrganizer,organizations }),
+    getReservationsOverTimeRaw(companyOrganizer,organizations
     ),
-    getRevenueOverTimeRaw(companyOrganizer),
-    ReservationAnalyticsRepo.getReservationTypeStatsRaw(companyOrganizer),
-    getReservationsByHourRaw(companyOrganizer),
-    ReservationAnalyticsRepo.getUserLevelStatsRaw(companyOrganizer),
+    getRevenueOverTimeRaw(companyOrganizer,organizations),
+    ReservationAnalyticsRepo.getReservationTypeStatsRaw(companyOrganizer, organizations),
+    getReservationsByHourRaw(companyOrganizer, organizations),
+    ReservationAnalyticsRepo.getUserLevelStatsRaw(companyOrganizer, organizations),
   ];
   const [
     reservations, // used
@@ -332,25 +332,25 @@ const getGlobalWalletPointsOverTimeRaw = async (companyOrganizer) => {
   const rows = await ReservationAnalyticsRepo.getGlobalWalletPointsOverTimeRaw(companyOrganizer);
   return buildGlobalLoyaltyPointsOverTime(rows);
 }
-const getRevenueOverTimeRaw = async (companyOrganizer) => {
-  const rows = await ReservationAnalyticsRepo.getRevenueOverTimeRaw(companyOrganizer);
+const getRevenueOverTimeRaw = async (companyOrganizer, organizations) => {
+  const rows = await ReservationAnalyticsRepo.getRevenueOverTimeRaw(companyOrganizer, organizations);
   return buildRevenueOverTime(rows);
 }
 
-const getReservationsOverTimeRaw = async (companyOrganizer) => {
-  const rows = await ReservationAnalyticsRepo.getReservationsOverTimeRaw(companyOrganizer);
+const getReservationsOverTimeRaw = async (companyOrganizer, organizations) => {
+  const rows = await ReservationAnalyticsRepo.getReservationsOverTimeRaw(companyOrganizer, organizations);
   return buildReservationsOverTime(rows);
 };
-const getReservationsByHourRaw = async (companyOrganizer) => {
-  const rows = await ReservationAnalyticsRepo.getReservationsByHourRaw(companyOrganizer);
+const getReservationsByHourRaw = async (companyOrganizer, organizations) => {
+  const rows = await ReservationAnalyticsRepo.getReservationsByHourRaw(companyOrganizer, organizations);
   return buildReservationsByHour(rows);
 };
-  const getReservationTransactions = async ({ page, limit, timezone, companyOrganizer }) => {
-    const {data, meta} = await ReservationAnalyticsRepo.getUserReservationPaymentsQA({ page, limit, timezone, companyOrganizer });
+  const getReservationTransactions = async ({ page, limit, timezone, companyOrganizer, organizations }) => {
+    const {data, meta} = await ReservationAnalyticsRepo.getUserReservationPaymentsQA({ page, limit, timezone, companyOrganizer, organizations });
     return { data, meta };
   };
-    const getReservationChnageLogs = async ({ page, limit, timezone, companyOrganizer }) => {
-    const {data, meta} = await ReservationAnalyticsRepo.getUserReservationChangeLogs({ page, limit, companyOrganizer });
+    const getReservationChnageLogs = async ({ page, limit, timezone, companyOrganizer, organizations }) => {
+    const {data, meta} = await ReservationAnalyticsRepo.getUserReservationChangeLogs({ page, limit, companyOrganizer, organizations });
     return { data, meta };
   };
 

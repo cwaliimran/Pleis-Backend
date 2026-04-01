@@ -14,8 +14,8 @@ const { buildGlobalLoyaltySpendingByGender } = require("./utils/buildGlobalLoyal
 /**
  * DASHBOARD – Load all cards at once
  */
-const getDashboard = async ({ dateFilter, timezone, companyOrganizer }) => {
-  const clubmembersUserIds = await dashboardRepo.getClubMemberUserIds(companyOrganizer);
+const getDashboard = async ({ dateFilter, timezone, companyOrganizer,organizations }) => {
+  const clubmembersUserIds = await dashboardRepo.getClubMemberUserIds(companyOrganizer,organizations);
   const promises = [
     dashboardRepo.getUserStats({ dateFilter, timezone, clubmembersUserIds }),
     getUsersDashboardAnalytics(clubmembersUserIds),

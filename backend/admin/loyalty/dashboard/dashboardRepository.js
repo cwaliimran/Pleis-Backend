@@ -437,7 +437,7 @@ const getGlobalWalletStats = async ({ dateFilter, timezone, companyOrganizer }) 
 };
 
 
-const getGlobalWalletPointsOverTimeRaw = async () => {
+const getGlobalWalletPointsOverTimeRaw = async (companyOrganizer) => {
   const year = new Date().getFullYear();
   const start = new Date(`${year}-01-01T00:00:00.000Z`);
   const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
@@ -446,6 +446,7 @@ const getGlobalWalletPointsOverTimeRaw = async () => {
     {
       $match: {
         walletType: "companyLoyalty",
+        ...(companyOrganizer && { companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer) }),
         createdAt: { $gte: start, $lt: end }
       }
     },

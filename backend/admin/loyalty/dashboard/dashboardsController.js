@@ -8,15 +8,19 @@ const {
 
 const dashboardService = require("./dashboardService");
 const { DASHBOARD_KEYS } = require("./utils/dashboardKeyMap");
+const convertToMongoArray = require("@utils/convertToMongoArray");
 
 
 
 const getDashboard = async (req, res) => {
-  let { dateFilter = "all", companyOrganizer } = req.query;
+  let { dateFilter = "all", companyOrganizer,organizations } = req.query;
   let { timezone } = req.user || "UTC";
   if(req.user.userType === "organizer"){
     companyOrganizer = req.user._id;
+    if(organizations){
+   organizations = await convertToMongoArray(organizations);
   }
+}
   if (!companyOrganizer) {
     return sendResponse({
       res,
@@ -36,6 +40,7 @@ const getDashboard = async (req, res) => {
       dateFilter,
       timezone,
       companyOrganizer,
+      organizations
     });
 
     return sendResponse({

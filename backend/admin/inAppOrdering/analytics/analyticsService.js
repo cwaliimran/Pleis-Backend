@@ -1,5 +1,5 @@
 const AnalyticsRepo = require("./analyticsRepository");
-const { calculateGrowth } = require("./utils/AnalyticsDate.utils");
+const { calculateGrowth } = require("./utils/analyticsDate.utils");
 const { Analytics_KEYS, withSubFilters } = require("./utils/analyticsKeyMap");
 const { buildUserStatusAnalytics } = require("./utils/buildUserStatusAnalytics");
 const { buildReservationsOverTime } = require("./utils/buildReservationsOverTime");
@@ -11,11 +11,9 @@ const { getOrganizationIdsByCompanyOrganizer } = require("../../../admin/organiz
 /**
  * Analytics – Load all cards at once
  */
-const getAnalytics = async ({ dateFilter, timezone, companyOrganizer }) => {
-  let organizations=undefined;
+const getAnalytics = async ({ dateFilter, timezone, companyOrganizer, organizations }) => {
   if(companyOrganizer){
    organizations = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
-  console.log("organizations", organizations);
   }
   const promises = [
     AnalyticsRepo.orderStatsRaw({ dateFilter, timezone, organizations }),
@@ -347,16 +345,14 @@ const getReservationsByHourRaw = async (organizations) => {
   const rows = await AnalyticsRepo.getReservationsByHourRaw(organizations);
   return buildReservationsByHour(rows);
 };
-const getReservationTransactions = async ({ page, limit, timezone, companyOrganizer }) => {
-    let organizations=undefined;
+const getReservationTransactions = async ({ page, limit, timezone, companyOrganizer, organizations }) => {
     if(companyOrganizer){
    organizations = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
   }
   const { data, meta } = await AnalyticsRepo.getUserReservationPaymentsQA({ page, limit, timezone, organizations });
   return { data, meta };
 };
-const getReservationChnageLogs = async ({ page, limit, timezone, companyOrganizer }) => {
-  let organizations=undefined;
+const getReservationChnageLogs = async ({ page, limit, timezone, companyOrganizer, organizations }) => {
     if(companyOrganizer){
    organizations = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
   }
