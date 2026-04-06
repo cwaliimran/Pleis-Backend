@@ -10,10 +10,12 @@ router.use("/challenges", require("../loyalty/challenges/challengesRoutes"));
 router.use("/promotions", require("../loyalty/promotions/promotionsRoutes"));
 router.use("/rewards", require("../loyalty/rewards/rewardsRoutes"));
 router.use("/club-collaborations", require("../loyalty/clubCollaborations/clubCollaborationsRoutes"));
+
 router.use("/streaks", require("../loyalty/streaks/streaksRoutes"));
 //users streaks
 router.use("/users-streaks", require("../loyalty/usersStreaks/usersStreaksRoutes"));
 router.use("/club-members", require("../loyalty/clubMembers/clubMembersRoutes"));
+router.use("/club-members-analytics", require("../loyalty/analytics/analyticsRoutes"));
 router.use("/points-calculator", require("./clubMembers/loyaltyPointsCalculatorRoutes"));
 router.use("/referral", require("../loyalty/referral/loyaltyReferralRoutes"));
 router.use("/referral-analytics", require("./referralAnalytics/referralAnalyticsRoutes"));

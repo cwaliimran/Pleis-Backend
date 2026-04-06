@@ -8,6 +8,7 @@ const mongoose = require('mongoose');
  * @returns {Promise} - A promise resolving to an array of MongoDB ObjectIds.
  */
 const convertToMongoArray = async (idsString) => {
+
   // Split the string by commas or '%' and trim spaces
   const idsArray = idsString.split(/,|\%/).map(id => id.trim());
 

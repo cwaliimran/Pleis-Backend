@@ -359,8 +359,7 @@ const getReservationChnageLogs = async ({ page, limit, timezone, companyOrganize
   const { data, meta } = await AnalyticsRepo.getUserReservationChangeLogs({ page, limit, timezone, organizations });
   return { data, meta };
 };
-const getMenuItemSalesData = async ({ page, limit, timezone, companyOrganizer }) => {
-  let organizations=undefined;
+const getMenuItemSalesData = async ({ page, limit, timezone, companyOrganizer, organizations }) => {
     if(companyOrganizer){
    organizations = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
   }

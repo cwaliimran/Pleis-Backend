@@ -1,6 +1,10 @@
 const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const NotificationsRepo = require("./notificationsRepository");
 const { formatGlobalNotification } = require("./formatter/formatGlobalNotification");
+const { DASHBOARD_KEYS } = require("./helper/dashboardKeyMap");
+const { calculateGrowth } = require("../dashboard/utils/dashboardDate.utils");
+const { withSubFilters } = require("../events/analytics/utils/analyticsKeyMap");
+const { buildCTRverTime } = require("./helper/buildCTRverTime");
 
 
 const createNotifications = async (data) => {
@@ -142,7 +146,57 @@ const getNotificationsByEventIdService = async (eventId, limit, page) => {
   };
 };
 
+const getDashboard = async ({ dateFilter, timezone, notification }) => {
+  const promises = [
+    NotificationsRepo.getUserStats({ dateFilter, timezone, notification }),
+    getCTROverTimeRaw(notification),
 
+  ];
+
+
+  const [
+    stats,
+    ctrOverTime
+
+  ] = await Promise.all(promises);
+  return {
+    stats: [
+      // ---------------- USERS ----------------
+      {
+        key: "totalNotificationsSend",
+        title: DASHBOARD_KEYS.totalNotificationsSend.title,
+        value: stats.totalNotificationSent || 0,
+      },
+      {
+        key: "totalUsersDelivered",
+        title: DASHBOARD_KEYS.totalUsersDelivered.title,
+        value: stats.totalUsersDelivered || 0,
+      },
+      {
+        key: "totalUsersRead",
+        title: DASHBOARD_KEYS.totalUsersRead.title,
+        value: stats.totalUsersRead || 0,
+      },
+      {
+        key: "percentageUsersRead",
+        title: DASHBOARD_KEYS.percentageUsersRead.title,
+        value: stats.percentageUsersRead || 0,
+      },
+
+
+
+    ].filter(Boolean),
+    ctrOverTime
+
+  }
+};
+
+
+const getCTROverTimeRaw = async (notification) => {
+  const rawData = await NotificationsRepo.getEventsOverTimeRaw(notification);
+  console.log("rawData",rawData );
+  return buildCTRverTime(rawData);
+}
 module.exports = {
   createNotifications,
   getNotificationss,
@@ -151,5 +205,6 @@ module.exports = {
   getOrganizations,
   getEvents,
   gettags,
-  getNotificationsByEventIdService
+  getNotificationsByEventIdService,
+  getDashboard
 };

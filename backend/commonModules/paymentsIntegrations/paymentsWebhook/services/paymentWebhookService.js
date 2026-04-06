@@ -6,6 +6,8 @@ const { reservationOrderFinalizerService } = require("../../dummyChargeForTestin
 const { menuOrderFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/menuOrderFinalizerService");
 const { ticketingTransferFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/ticketingTransferFinalizerService");
 const { generateMeta } = require("../../../../helperUtils/responseUtil");
+const { DASHBOARD_KEYS, TRANSSECTION_KEYS, withSubFilters } = require("../utils/transsectionKeyMap");
+const { calculateGrowth } = require("../utils/transsectionDate.utils");
 
 const processPaymentWebhook = async ({
   provider,
@@ -85,7 +87,7 @@ const getOrdersTransactionsService = async ({
   const match = {};
 
   if (companyOrganizer) match.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
-  if (organization) match.organization = new mongoose.Types.ObjectId(organization);
+  if (organization) match.organization ={ $in: organization};
   if (status) match.paymentStatus = status;
   if (orderType) match.orderType = orderType;
 
@@ -161,5 +163,75 @@ const getOrdersTransactionDetailsService = async ({ id }) => {
   return transactionDetails;
 };
 
+const getTransactionStatsService = async ({ dateFilter, timezone, companyOrganizer, organizations }) => {
+ const stats = await webhookRepository.getTransactionStats({ dateFilter, timezone, companyOrganizer, organizations });
+  return {
+     stats: [
+       // ---------------- USERS ----------------
+       {    // used 
+         key: "totalTransactions",
+         title: TRANSSECTION_KEYS.totalTransactions.title,
+         value: stats.totalTransactionsCurrent || 0,
+         growth: calculateGrowth(
+           stats.totalTransactionsCurrent,
+           stats.totalTransactionsPrevious
+         ),
+         ...withSubFilters("totalTransactions"),
+       },
+       {
+         key: "totalAmount",
+         title: TRANSSECTION_KEYS.totalAmount.title,
+         value: stats.totalAmountCurrent || 0,
+          growth: calculateGrowth(
+           stats.totalAmountCurrent,
+           stats.totalAmountPrevious
+         ),
+         ...withSubFilters("totalAmount"),
+       },
+        // {  // used
+        //  key: "totalUsers",
+        //  title: TRANSSECTION_KEYS.totalUsers.title,
+        //   value: stats.totalUsersCurrent || 0,
+        //   growth: calculateGrowth(
+        //    stats.totalUsersCurrent,
+        //    stats.totalUsersPrevious
+        //   ),
+        //   ...withSubFilters("totalUsers"),
+        // },
 
-module.exports = { processPaymentWebhook, getOrdersTransactionsService, getOrdersTransactionDetailsService };
+       {
+         key: "totalCommission",  // used 
+         title: TRANSSECTION_KEYS.totalCommission.title,
+         value: stats.totalCommissionCurrent || 0,
+         growth: calculateGrowth(
+           stats.totalCommissionCurrent,
+           stats.totalCommissionPrevious
+         ),
+         ...withSubFilters("totalCommission"),
+       },
+       {
+         key: "serviceFee",  // used 
+         title: TRANSSECTION_KEYS.serviceFee.title,
+         value: stats.serviceFeeCurrent || 0,
+         growth: calculateGrowth(
+           stats.serviceFeeCurrent,
+           stats.serviceFeePrevious
+         ),
+         ...withSubFilters("serviceFee"),
+       },
+       {
+         key: "organizerPayout",  // used 
+         title: TRANSSECTION_KEYS.organizerPayout.title,
+         value: stats.totalOrganizerPayoutCurrent || 0,
+         growth: calculateGrowth(
+           stats.totalOrganizerPayoutCurrent,
+           stats.totalOrganizerPayoutPrevious
+         ),
+         ...withSubFilters("organizerPayout"),
+       },
+ 
+     ].filter(Boolean)
+  };
+};
+
+module.exports = { processPaymentWebhook, getOrdersTransactionsService, getOrdersTransactionDetailsService, getTransactionStatsService };
