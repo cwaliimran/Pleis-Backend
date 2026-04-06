@@ -133,6 +133,7 @@ const getUserStats = async ({ dateFilter, timezone, companyOrganizer }) => {
   if (!companyOrganizer) {
     const baseMatch = {
       "accountState.status": { $ne: "deleted" },
+       "verificationStatus.email": "verified",
     };
 
     return {

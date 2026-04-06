@@ -38,7 +38,6 @@ const getClubMemberUserIds = async (companyOrganizer) => {
 // ---------------- USERS ----------------
 const getUserStats = async ({ dateFilter, timezone, clubmembersUserIds = [] }) => {
   const ranges = getDateRanges({ dateFilter, timezone });
-
   // guard
   if (!clubmembersUserIds.length) {
     return {
@@ -71,7 +70,6 @@ const getUserStats = async ({ dateFilter, timezone, clubmembersUserIds = [] }) =
     _id: { $in: clubmembersUserIds }, // ✅ use passed ids
     "accountState.status": { $ne: "deleted" },
   };
-
   return {
     totalUsersCurrent: await getCount(
       User,

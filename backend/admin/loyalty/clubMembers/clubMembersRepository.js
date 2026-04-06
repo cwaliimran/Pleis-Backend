@@ -200,8 +200,26 @@ const getUserJoinedClubs = async (userId) => {
 };
 
 
-const giftPoints = async (query = {}) => {
-  return ClubMembers.giftPoints(query);
+const giftPoints = async (companyOrganizer, user, points, notes ) => {
+  try {
+    // Find the club member
+    console.log("userID", user);
+    console.log("companyOrganizer", companyOrganizer);
+    const clubMember = await ClubMembers.findOne({ user, companyOrganizer });
+
+    if (!clubMember) {
+      throw new Error("Club member not found");
+    }
+    clubMember.points += points;
+
+    // Save the updated club member
+    await clubMember.save();
+
+    return clubMember;
+  } catch (error) {
+    console.error("Error gifting points:", error);
+    throw new Error("Failed to gift points");
+  }
 };
 const getUserJoinedClubsall = async (userId) => {
   return ClubMembers.aggregate([

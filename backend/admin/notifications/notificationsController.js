@@ -462,6 +462,52 @@ const gettags = async (req, res) => {
     });
   }
 };
+
+
+
+const notificationsAnalytics = async (req, res) => {
+  const { dateFilter = "all",notification } = req.query;
+  let { timezone } = req.user || "UTC";
+if(!notification){
+  return sendResponse({
+    res,
+    statusCode: 400,
+    translationKey: "notification_id_required",
+  });
+}
+
+
+  try {
+
+    if (dateFilter && !validateParams(req, res, {
+      enumFields: {
+        dateFilter: ["all", "today", "thisWeek", "thisMonth"],
+      },
+    })) return;
+
+    const dashboard = await NotificationsService.getDashboard({
+      dateFilter,
+      timezone,
+      notification,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "dashboard_fetched_successfully",
+      data: dashboard,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+
+
 module.exports = {
   createNotifications,
   getNotificationss,
@@ -469,6 +515,7 @@ module.exports = {
   deleteNotifications,
   getOrganizations,
   getEvents,
-  gettags
+  gettags,
+  notificationsAnalytics
 
 };

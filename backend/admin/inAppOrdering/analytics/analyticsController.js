@@ -1,3 +1,4 @@
+const convertToMongoArray = require("@utils/convertToMongoArray");
 const {
   sendResponse,
   parsePaginationParams,
@@ -213,11 +214,15 @@ const getAnalyticsStats = async (req, res) => {
 
 
   const getMenuItemSalesData = async (req, res) => {
-    let { page=1, limit=10, companyOrganizer } = req.query;
+    let { page=1, limit=10, companyOrganizer,organizations } = req.query;
     let { timezone } = req.user || "UTC";
     if (req.user.userType === "organizer") {
       companyOrganizer = req.user._id;
+      if(organizations){
+        organizations = await convertToMongoArray(organizations);
+        companyOrganizer=undefined;
     }
+  }
   limit = parseInt(limit);
     try {
       const {data, meta} = await AnalyticsService.getMenuItemSalesData({
@@ -225,6 +230,7 @@ const getAnalyticsStats = async (req, res) => {
         limit,
         timezone,
         companyOrganizer,
+        organizations,
       });
 
       return sendResponse({

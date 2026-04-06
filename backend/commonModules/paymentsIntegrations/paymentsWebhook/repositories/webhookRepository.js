@@ -1,4 +1,5 @@
 const { formatImages } = require("../formator/formateWebhook");
+const { getDateRanges } = require("../utils/transsectionDate.utils");
 const WebhookEvent = require("./WebhookTransactionsEvent.model");
 const mongoose = require("mongoose");
 
@@ -486,9 +487,153 @@ const getOrdersTransactionDetails = async ({ id }) => {
   };
 };
 
+
+
+
+
+
+
+
+
+
+const TRANSACTION_SERVICE_FEE = 2.5;  // Example constant service fee
+
+const getCount = async (Model, baseMatch, extra, range) => {
+  const finalMatch = {
+    ...baseMatch,
+    ...extra,
+    ...(range && { createdAt: range }),  // Apply date range if provided
+  };
+  return Model.countDocuments(finalMatch);
+};
+
+const getTotalAmount = async (Model, baseMatch, extra, range) => {
+  const finalMatch = { ...baseMatch, ...extra, ...(range && { createdAt: range }) };
+  const result = await Model.aggregate([
+    { $match: finalMatch },
+    { $group: { _id: null, totalAmount: { $sum: { $toDouble: "$amount" } } } },
+  ]);
+  return result[0] ? result[0].totalAmount : 0;
+};
+
+// Helper function to get the total commission (6% of amount)
+const getTotalCommission = async (Model, baseMatch, extra, range) => {
+  const finalMatch = { ...baseMatch, ...extra, ...(range && { createdAt: range }) };
+  const result = await Model.aggregate([
+    { $match: finalMatch },
+    { $group: { _id: null, totalCommission: { $sum: { $multiply: [{ $toDouble: "$amount" }, 0.06] } } } },
+  ]);
+  return result[0] ? result[0].totalCommission : 0;
+};
+
+const getUniqueUsers = async (Model, baseMatch, extra, range) => {
+  const finalMatch = { ...baseMatch, ...extra, ...(range && { createdAt: range }) };
+  const result = await Model.aggregate([
+    { $match: finalMatch },
+    { $group: { _id: "$user" } },  // Group by user ID to get unique users
+    { $count: "uniqueUsers" },  // Count the unique users
+  ]);
+  return result[0] ? result[0].uniqueUsers : 0;
+};
+
+const getTransactionStats = async ({ dateFilter, timezone, companyOrganizer, organizations = [] }) => {
+  const ranges = getDateRanges({ dateFilter, timezone });
+
+
+if (organizations.length === 0) {
+  organizations=undefined
+}
+
+  // Base match for aggregation
+  const baseMatch = {
+    ...companyOrganizer && { companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer) },
+    ...organizations && { organization: { $in: organizations } },
+  };
+
+  // =========================
+  // CURRENT PERIOD STATS
+  // =========================
+  const currentStats = {
+    totalTransactionsCurrent: await getCount(WebhookEvent, baseMatch, {}, ranges && { $gte: ranges.start, $lt: ranges.end }),
+    totalAmountCurrent: await getTotalAmount(WebhookEvent, baseMatch, { amount: { $ne: 0 } }, ranges && { $gte: ranges.start, $lt: ranges.end }),
+    totalCommissionCurrent: await getTotalCommission(WebhookEvent, baseMatch, { amount: { $ne: 0 } }, ranges && { $gte: ranges.start, $lt: ranges.end }),
+    totalUsersCurrent: await getUniqueUsers(WebhookEvent, baseMatch, {}, ranges && { $gte: ranges.start, $lt: ranges.end }),
+  };
+  const totalAmountCurrent = currentStats.totalAmountCurrent; // Explicitly define this variable
+  const totalCommissionCurrent = currentStats.totalCommissionCurrent; // Explicitly define this variable
+
+  currentStats.totalOrganizerPayoutCurrent = parseFloat((
+    (totalAmountCurrent || 0) - (totalCommissionCurrent || 0)
+  ).toFixed(2));
+
+  // =========================
+  // PREVIOUS PERIOD STATS
+  // =========================
+  const previousStats = {
+    totalTransactionsPrevious: ranges
+      ? await getCount(WebhookEvent, baseMatch, {}, { $gte: ranges.prevStart, $lt: ranges.prevEnd })
+      : 0,
+    totalAmountPrevious: ranges
+      ? await getTotalAmount(WebhookEvent, baseMatch, { amount: { $ne: 0 } }, { $gte: ranges.prevStart, $lt: ranges.prevEnd })
+      : 0,
+    totalCommissionPrevious: ranges
+      ? await getTotalCommission(WebhookEvent, baseMatch, { amount: { $ne: 0 } }, { $gte: ranges.prevStart, $lt: ranges.prevEnd })
+      : 0,
+    totalUsersPrevious: ranges
+      ? await getUniqueUsers(WebhookEvent, baseMatch, {}, { $gte: ranges.prevStart, $lt: ranges.prevEnd })
+      : 0,
+  };
+  const totalAmountPrevious = previousStats.totalAmountPrevious;
+  const totalCommissionPrevious = previousStats.totalCommissionPrevious;
+
+  previousStats.totalOrganizerPayoutPrevious = parseFloat((
+    (totalAmountPrevious || 0) - (totalCommissionPrevious || 0)
+  ).toFixed(2));
+
+  // =========================
+  // DERIVED METRICS
+  // =========================
+  const currentTransactionStats = {
+    totalTransactionsCurrent: parseInt(currentStats.totalTransactionsCurrent || 0, 10),
+    totalAmountCurrent: parseFloat((currentStats.totalAmountCurrent || 0).toFixed(2)),
+    totalCommissionCurrent: parseFloat((currentStats.totalCommissionCurrent || 0).toFixed(2)),
+    serviceFeeCurrent: parseFloat((currentStats.totalCommissionCurrent || 0).toFixed(2)),
+    organizerPayoutCurrent: parseFloat(
+      (currentStats.totalAmountCurrent - currentStats.totalCommissionCurrent - TRANSACTION_SERVICE_FEE).toFixed(2)
+    ),
+    totalUsersCurrent: parseInt(currentStats.totalUsersCurrent || 0, 10),
+    totalOrganizerPayoutCurrent: parseFloat(currentStats.totalOrganizerPayoutCurrent.toFixed(2)),
+  };
+
+  const previousTransactionStats = {
+    totalTransactionsPrevious: parseInt(previousStats.totalTransactionsPrevious || 0, 10),
+    totalAmountPrevious: parseFloat((previousStats.totalAmountPrevious || 0).toFixed(2)),
+    totalCommissionPrevious: parseFloat((previousStats.totalCommissionPrevious || 0).toFixed(2)),
+    serviceFeePrevious: parseFloat((previousStats.totalCommissionPrevious || 0).toFixed(2)),
+    organizerPayoutPrevious: parseFloat(
+      (previousStats.totalAmountPrevious - previousStats.totalCommissionPrevious - TRANSACTION_SERVICE_FEE).toFixed(2)
+    ),
+    totalUsersPrevious: parseInt(previousStats.totalUsersPrevious || 0, 10),
+    totalOrganizerPayoutPrevious: parseFloat(previousStats.totalOrganizerPayoutPrevious.toFixed(2)),
+
+  };
+
+  // =========================
+  // FINAL RESPONSE
+  // =========================
+  return {
+    ...currentTransactionStats,
+    ...previousTransactionStats,
+  };
+};
+
+
+
+
 module.exports = {
   saveIfNotProcessed,
   getOrdersTransactions,
   countOrdersTransactions,
-  getOrdersTransactionDetails
+  getOrdersTransactionDetails,
+  getTransactionStats
 };

@@ -12,7 +12,10 @@ const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
 const roleMiddleware = require("../../../middlewares/roleMiddleware");
 
+
 const router = express.Router();
+router.get("/download", downloadTransactions);
+
 router.use(auth);
 
 const rl = createRateLimiter("UnifiedTransactions");
@@ -20,7 +23,6 @@ const rlDetails = createRateLimiter("UnifiedTransactions/:id");
 
 // List with pagination
 router.get("/", rl, getTransactions);
-router.get("/download", rl, downloadTransactions);
 
 // Get details
 router.get("/:id", rlDetails, getTransactionDetails);

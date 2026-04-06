@@ -33,9 +33,8 @@ const getMembers = async (page,
   return { members: formattedMembers, meta };
 };
 // giftPoints
-const giftPoints = async (userId, points, companyOrganizer, notes) => {
-  return true;
-  // return await clubMemberRepo.giftPoints(userId, points, companyOrganizer, notes);
+const giftPoints = async (companyOrganizer, user, points, notes ) => {
+  return await clubMemberRepo.giftPoints(companyOrganizer, user, points, notes );
 };
 
 const isClubMember = async (userId, companyOrganizer) => {
