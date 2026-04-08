@@ -7,6 +7,14 @@ const { TicketingBookings } = require("@TicketingBookingsModel");
 const mongoose = require("mongoose");
 
 const { nanoid } = require("nanoid");
+const { TicketingOrders } = require("@TicketingOrdersModel");
+
+const Orders = require("@OrdersModel");
+const { LoyaltyChallengesOrders } = require("@LoyaltyChallengesOrdersModel");
+const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
+const { UserReservations } = require("@UserReservationsModel");
+const { PromotionsOrders } = require("../../../commonModules/loyalty/promotions/models/Promotion");
+const WebhookTransactionsEventModel = require("../../../commonModules/paymentsIntegrations/paymentsWebhook/repositories/WebhookTransactionsEvent.model");
 let batchId = null;
 
 const buildKeywordMatch = (keyword) => {
@@ -44,7 +52,9 @@ const getTransactionsWithFilters = async ({
   match = {},
   keyword,
   skip = 0,
-  limit = 10
+  limit = 10,
+  referral
+
 }) => {
 
   /* =====================================================
@@ -163,8 +173,9 @@ const getTransactionsWithFilters = async ({
     const txList = await UnifiedWalletTransactions.aggregate(pipeline, {
       allowDiskUse: true
     });
-
-    return await attachBookings(txList);
+const result = await attachBookings(txList);
+console.log("result",result );
+    return result;
   }
 
   /* =====================================================
@@ -177,6 +188,8 @@ const getTransactionsWithFilters = async ({
   if (Object.keys(match).length) {
     pipeline.push({ $match: match });
   }
+
+
 
   pipeline.push(
     {
@@ -267,34 +280,109 @@ const getTransactionsWithFilters = async ({
 };
 
 const attachBookings = async (txList) => {
+  // Define domain types
+  const domainTypes = [
+    "ticketingorders", "menuorders", "ticketingbookings", "loyaltyrewardsorders",
+    "loyaltychallengesorders", "globalrewardsorders", "userreservations", "promotionorders"
+  ];
 
-  const orderIds = txList
-    .filter(t => t.domainType === "ticketingorders" && t.entityId)
-    .map(t => new mongoose.Types.ObjectId(t.entityId));
+  // Filter and group entityIds by domain type
+  const domainQueries = domainTypes.reduce((acc, domain) => {
+    const entityIds = txList
+      .filter(t => t.domainType === domain && t.entityId)  // Ensure entityId exists
+      .map(t => new mongoose.Types.ObjectId(t.entityId));
+    if (entityIds.length) acc[domain] = entityIds;
+    return acc;
+  }, {});
 
-  if (!orderIds.length) {
-    return txList.map(tx => ({ ...tx, ticketingBookings: [] }));
+  // If no domain has entityIds, return the original list with empty bookings
+  if (Object.keys(domainQueries).length === 0) {
+    return txList.map(tx => ({ ...tx, bookings: [] }));
   }
 
-  const bookings = await TicketingBookings.find({
-    order: { $in: orderIds }
-  }).lean();
+  // Perform lookup for each domain type dynamically
+  const bookingsResult = await Promise.all(
+    Object.entries(domainQueries).map(async ([domain, entityIds]) => {
+      const bookings = await getBookingsForDomain(domain, entityIds);
+      return { domain, bookings };
+    })
+  );
 
-  const bookingMap = {};
+  // Create a mapping of bookings by domain and orderId
+  const bookingMap = bookingsResult.reduce((map, { domain, bookings }) => {
+    map[domain] = bookings.reduce((orderMap, booking) => {
+      const oid = booking._id.toString();
+      if (!orderMap[oid]) orderMap[oid] = [];
+      orderMap[oid].push(booking);
+      return orderMap;
+    }, {});
+    return map;
+  }, {});
 
-  for (const bk of bookings) {
-    const oid = bk.order.toString();
-    if (!bookingMap[oid]) bookingMap[oid] = [];
-    bookingMap[oid].push(bk);
+  // Map bookings to each transaction based on domain type
+  return txList.map(tx => {
+    const domain = tx.domainType;
+    const bookings = bookingMap[domain] || {};
+
+    // Log the entityId to check if it's missing
+    if (!tx.entityId) {
+      console.log(`Skipping transaction due to missing entityId:`, tx);
+      return { ...tx, bookings: [] };  // Skip if entityId is missing
+    }
+
+    // Ensure entityId is valid before using .toString()
+    const entityIdStr = tx.entityId ? tx.entityId.toString() : null;
+    
+    // Debug: log entityId value
+    console.log(`Processing transaction for domain: ${domain} with entityId: ${entityIdStr}`);
+console.log("tx",tx );
+    // Return the updated transaction with the bookings
+    return {
+      ...tx,
+      bookings: bookings[entityIdStr] || []  // Assign bookings if available
+    };
+  });
+};
+
+// Helper function to fetch bookings for each domain
+const getBookingsForDomain = async (domain, orderIds) => {
+  try {
+    console.log(`Fetching bookings for domain: ${domain} with orderIds:`, orderIds);
+    
+    let bookings = [];
+    switch (domain) {
+      case "ticketingorders":
+        console.log("enter ticketingorders", );
+        bookings = await TicketingOrders.find({ _id: { $in: orderIds } }).lean();
+        break;
+      case "menuorders":
+        console.log("enter manuoser", );
+        bookings = await Orders.find({ _id: { $in: orderIds } }).lean();
+        break;
+      case "ticketingbookings":
+        bookings = await TicketingBookings.find({ _id: { $in: orderIds } }).lean();
+        break;
+      case "loyaltyrewardsorders":
+        bookings = await RewardsOrders.find({ _id: { $in: orderIds } }).lean();
+        break;
+      case "loyaltychallengesorders":
+        bookings = await LoyaltyChallengesOrders.find({ _id: { $in: orderIds } }).lean();
+        break;
+      case "userreservations":
+        bookings = await UserReservations.find({ _id: { $in: orderIds } }).lean();
+        break;
+      case "promotionorders":
+        bookings = await PromotionsOrders.find({ _id: { $in: orderIds } }).lean();
+        break;
+      default:
+        bookings = [];
+    }
+
+    return bookings;
+  } catch (error) {
+    console.error(`Error fetching bookings for ${domain}:`, error);
+    return [];
   }
-
-  return txList.map(tx => ({
-    ...tx,
-    ticketingBookings:
-      tx.domainType === "ticketingorders"
-        ? bookingMap[tx.entityId?.toString()] || []
-        : []
-  }));
 };
 
 const countTransactions = async ({ match = {}, keyword }) => {
@@ -382,13 +470,15 @@ const findTransactionsByUserId = async (userId) => {
 const getTotalClosingBalanceByOrganizationId = async (organizationId) => {
   try {
     const objectId = new mongoose.Types.ObjectId(organizationId);
-    const result = await UnifiedWalletTransactions.aggregate([
+    const result = await WebhookTransactionsEventModel.aggregate([
       { $match: { organization: objectId } },
-      { $group: { _id: null, totalClosingBalance: { $sum: "$closingBalance" } } }
+      { $project: { amount: { $toDouble: "$amount" } } }, 
+      { $group: { _id: null, totalAmount: { $sum: "$amount" } } }
     ]);
-    return result.length > 0 ? result[0].totalClosingBalance : 0;
+  
+    return result.length > 0 ? result[0].totalAmount : 0;
   } catch (error) {
-
+    console.error("Error fetching total closing balance:", error);
     return 0;
   }
 };

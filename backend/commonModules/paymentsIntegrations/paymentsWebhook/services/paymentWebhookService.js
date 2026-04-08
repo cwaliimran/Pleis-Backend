@@ -5,8 +5,10 @@ const { ticketingOrderFinalizerService } = require("../../dummyChargeForTesting/
 const { reservationOrderFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/reservationOrderFinalizerService");
 const { menuOrderFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/menuOrderFinalizerService");
 const { ticketingTransferFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/ticketingTransferFinalizerService");
-const { generateMeta } = require("../../../../helperUtils/responseUtil");
-
+const { generateMeta, convertTimezoneToUtc } = require("../../../../helperUtils/responseUtil");
+const { DASHBOARD_KEYS, TRANSSECTION_KEYS, withSubFilters } = require("../utils/transsectionKeyMap");
+const { calculateGrowth } = require("../utils/transsectionDate.utils");
+const moment = require("moment");
 const processPaymentWebhook = async ({
   provider,
   payload,
@@ -79,15 +81,43 @@ const getOrdersTransactionsService = async ({
   orderType,
   startAmount,
   endAmount,
-  paymentMethod
+  paymentMethod,
+  globalStatusLevel,
+  event,
+  transfered,
+  refunded,
+  validationStatus,
+  paymentStatus,
+  resStartDate, resEndDate,
+  resDate,
+  resStartTime,
+  resEndTime,
+  timezone,
+  futureRes,
+  pastRes,
+  minimalSpendRes,
+  prePay,
+  ticketRequiredRes,
+  cancelledRes,
+  noShowRes
+
 }) => {
 
   const match = {};
 
   if (companyOrganizer) match.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
-  if (organization) match.organization = new mongoose.Types.ObjectId(organization);
+  if (organization) match.organization = { $in: organization };
   if (status) match.paymentStatus = status;
   if (orderType) match.orderType = orderType;
+  if (paymentMethod) match.paymentMethod = paymentMethod;
+  if (paymentStatus) match.paymentStatus = paymentStatus;
+  if (validationStatus) match.validationStatus = validationStatus;
+  if (minimalSpendRes) {
+    match.$expr = {
+      $gte: [{ $toDouble: "$amount" }, Number(minimalSpendRes)]
+    }
+  }
+
 
   if (startDate || endDate || date) {
     match.createdAt = {};
@@ -130,22 +160,45 @@ const getOrdersTransactionsService = async ({
   }
 
 
-  const skip = (page - 1) * limit;
+  const skip = (page - 1) * limit; ``
+  let resStartTimeUtc, resEndTimeUtc;
+  if (resDate) {
+    if (resStartTime) {
+      // Convert the start date + time to UTC using the existing convertTimezoneToUtc function
+      console.log("resStartTime", resStartTime);
+      console.log("resEndTime", resEndTime);
+
+      resStartTimeUtc = convertTimezoneToUtc(
+        `${resDate} ${resStartTime}`,
+        timezone,
+        "YYYY-MM-DD hh:mm",
+        "YYYY-MM-DDTHH:mm:ss.SSSZ" // Ensure UTC format with 'Z'
+      );
+      resStartTimeUtc = new Date(resStartTimeUtc.replace("+00:00", "Z"));
+    }
+
+    if (resEndTime) {
+      // Convert the end date + time to UTC using the existing convertTimezoneToUtc function
+      resEndTimeUtc = convertTimezoneToUtc(
+        `${resDate} ${resEndTime}`,
+        timezone,
+        "YYYY-MM-DD hh:mm",
+        "YYYY-MM-DDTHH:mm:ss.SSSZ" // Ensure UTC format with 'Z'
+      );
+      resEndTimeUtc = new Date(resEndTimeUtc.replace("+00:00", "Z"));
+    }
+  }
+  // Now you can use resStartTimeUtc and resEndTimeUtc for comparison in MongoDB
 
 
   const [transactions, totalFiltered] = await Promise.all([
-    webhookRepository.getOrdersTransactions({ match, keyword, skip, limit, paymentMethod }),
-    webhookRepository.countOrdersTransactions({ match, keyword })
+    webhookRepository.getOrdersTransactions({ match, keyword, skip, limit, paymentMethod, globalStatusLevel, event, transfered, refunded, validationStatus, orderType, resStartDate, resEndDate, resDate, resStartTimeUtc, resEndTimeUtc, futureRes, pastRes,prePay, ticketRequiredRes, cancelledRes,noShowRes }),
+    webhookRepository.countOrdersTransactions({ match, keyword, paymentMethod, globalStatusLevel, event, transfered, refunded, validationStatus })
   ]);
-
+  const meta = generateMeta(page, limit, totalFiltered);
   return {
     transactions,
-    meta: {
-      currentPage: page,
-      totalPages: Math.ceil(totalFiltered / limit),
-      totalRecords: totalFiltered,
-      limit
-    }
+    meta
   };
 };
 
@@ -161,5 +214,75 @@ const getOrdersTransactionDetailsService = async ({ id }) => {
   return transactionDetails;
 };
 
+const getTransactionStatsService = async ({ dateFilter, timezone, companyOrganizer, organizations }) => {
+  const stats = await webhookRepository.getTransactionStats({ dateFilter, timezone, companyOrganizer, organizations });
+  return {
+    stats: [
+      // ---------------- USERS ----------------
+      {    // used 
+        key: "totalTransactions",
+        title: TRANSSECTION_KEYS.totalTransactions.title,
+        value: stats.totalTransactionsCurrent || 0,
+        growth: calculateGrowth(
+          stats.totalTransactionsCurrent,
+          stats.totalTransactionsPrevious
+        ),
+        ...withSubFilters("totalTransactions"),
+      },
+      {
+        key: "totalAmount",
+        title: TRANSSECTION_KEYS.totalAmount.title,
+        value: stats.totalAmountCurrent || 0,
+        growth: calculateGrowth(
+          stats.totalAmountCurrent,
+          stats.totalAmountPrevious
+        ),
+        ...withSubFilters("totalAmount"),
+      },
+      // {  // used
+      //  key: "totalUsers",
+      //  title: TRANSSECTION_KEYS.totalUsers.title,
+      //   value: stats.totalUsersCurrent || 0,
+      //   growth: calculateGrowth(
+      //    stats.totalUsersCurrent,
+      //    stats.totalUsersPrevious
+      //   ),
+      //   ...withSubFilters("totalUsers"),
+      // },
 
-module.exports = { processPaymentWebhook, getOrdersTransactionsService, getOrdersTransactionDetailsService };
+      {
+        key: "totalCommission",  // used 
+        title: TRANSSECTION_KEYS.totalCommission.title,
+        value: stats.totalCommissionCurrent || 0,
+        growth: calculateGrowth(
+          stats.totalCommissionCurrent,
+          stats.totalCommissionPrevious
+        ),
+        ...withSubFilters("totalCommission"),
+      },
+      {
+        key: "serviceFee",  // used 
+        title: TRANSSECTION_KEYS.serviceFee.title,
+        value: stats.serviceFeeCurrent || 0,
+        growth: calculateGrowth(
+          stats.serviceFeeCurrent,
+          stats.serviceFeePrevious
+        ),
+        ...withSubFilters("serviceFee"),
+      },
+      {
+        key: "organizerPayout",  // used 
+        title: TRANSSECTION_KEYS.organizerPayout.title,
+        value: stats.totalOrganizerPayoutCurrent || 0,
+        growth: calculateGrowth(
+          stats.totalOrganizerPayoutCurrent,
+          stats.totalOrganizerPayoutPrevious
+        ),
+        ...withSubFilters("organizerPayout"),
+      },
+
+    ].filter(Boolean)
+  };
+};
+
+module.exports = { processPaymentWebhook, getOrdersTransactionsService, getOrdersTransactionDetailsService, getTransactionStatsService };

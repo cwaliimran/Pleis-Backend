@@ -174,20 +174,18 @@ const getReservationsStats = async ({ companyOrganizer, organizations }) => {
     const userAgg = userReservationsAgg[0] || {};
 
     const userReservationsStats = {
-      totalConfirmedReservations: userAgg.totalConfirmedReservations || 0,
-      totalRevenue: userAgg.totalRevenue || 0,
-      totalPrepayReservations: userAgg.totalPrepayReservations || 0,
+      totalConfirmedReservations:(userAgg.totalConfirmedReservations || 0).toFixed(2),
+      totalRevenue: (userAgg.totalRevenue || 0).toFixed(2),
+      totalPrepayReservations: (userAgg.totalPrepayReservations || 0).toFixed(2),
 
-      averageGroupSize: (userAgg.avgGroupSize || 0).toFixed(2),
-      totalCapacityReserved: userAgg.totalPartySize || 0,
+      averageGroupSize:(userAgg.avgGroupSize || 0).toFixed(2),
+      totalCapacityReserved: (userAgg.totalPartySize || 0).toFixed(2),
 
-      averageReservationValue: Math.round(
-        userAgg.averageReservationValue || 0
-      ),
+      averageReservationValue: (userAgg.averageReservationValue || 0).toFixed(2),
 
-      reservationConversionRate: Math.round(
+      reservationConversionRate: (
         userAgg.reservationConversionRate || 0
-      ),
+      ).toFixed(2),
     };
 
     // =========================

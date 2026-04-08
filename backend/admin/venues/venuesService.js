@@ -316,8 +316,6 @@ const getVenueDetails = async (id, select = []) => {
 
 const getVenueTitles = async ({ companyOrganizer, organization }) => {
   let organizationObjectId;
-  console.log("organization", companyOrganizer);
-  // If organization is provided, use it directly
   if (organization) {
     if (!mongoose.Types.ObjectId.isValid(organization)) {
       throw new Error("Invalid organization ID");

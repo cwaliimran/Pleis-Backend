@@ -20,6 +20,8 @@ router.use("/pinned-content", require("../pinnedContent/pinnedContentRoutes"));
 router.use("/banners", require("../bannerControl/bannerControlsRoutes"));
 router.use("/users", require("../usersManagement/usersRoutes"));
 router.use("/events", require("../events/eventRoutes"));
+router.use("/events-analytics", require("../events/analytics/analyticsRoutes"));
+
 
 //menu management
 router.use("/menu", require("../menuManagement/menuManagementRoutes"));
@@ -27,6 +29,7 @@ router.use("/notifications/", require("../notifications/notificationsRoutes"));
 
 //organizations
 router.use("/organizations", require("../organizations/organizationRoutes.js"));
+router.use("/organizations-analytics", require("../../admin/organizations/analytics/analyticsRoutes"));
 //ticketings
 router.use("/ticketing", require("../ticketing/ticketingsRoutes"));
 

@@ -11,6 +11,7 @@ router.use("/categories", require("../categories/categoriesRoutes"));
 router.use("/venue-types", require("../venueTypes/venueTypesRoutes"));
 router.use("/tiers", require("../tiers/tiersRoutes"));
 router.use("/organizations", require("../organizations/organizationRoutes"));
+router.use("/organizations-analytics", require("../../admin/organizations/analytics/analyticsRoutes"));
 router.use("/users", require("../../admin/usersManagement/usersRoutes"));
 router.use("/updates", require("../updates/updatesRoutes"));
 router.use("/marketing", require("../marketing/marketingRoutes"));
@@ -20,6 +21,7 @@ router.use("/reviews", require("../reviews/reviewsRoutes"));
 router.use("/menu-management/items", require("../../admin/menuManagement/menuItems/menuItemsRoutes"));
 router.use("/menu/categories", require("../../admin/menuManagement/menuItemCategories/menuItemCategoriesRoutes"));
 router.use("/menu", require("../menuManagement/menu/menusRoutes"));
+router.use("/events-analytics", require("../../admin/events/analytics/analyticsRoutes"));
 
 router.use("/qr-code", require("../qr/qrRoutes"));
 router.use("/highlights", require("../highlights/highlightRoutes"));

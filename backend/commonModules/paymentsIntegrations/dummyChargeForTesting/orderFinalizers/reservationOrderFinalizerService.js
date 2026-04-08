@@ -23,7 +23,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   let globalPoints = null;
 
   try {
-    console.log("[reservationOrderFinalizerService] Starting transaction for reservation:", reservationId);
+
     session.startTransaction();
 
     if (result.status === "pending") {

@@ -14,6 +14,7 @@ const convertToMongoArray = require("@utils/convertToMongoArray");
 
 const getDashboard = async (req, res) => {
   let { dateFilter = "all", companyOrganizer,organizations } = req.query;
+  dateFilter = dateFilter.trim();
   let { timezone } = req.user || "UTC";
   if(req.user.userType === "organizer"){
     companyOrganizer = req.user._id;

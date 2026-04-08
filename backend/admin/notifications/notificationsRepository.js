@@ -8,6 +8,7 @@ const {
   GlobalNotificationhome
 } = require("../../commonModules/notifications");
 const Tags = require("@TagsModel");
+const { NotificationExp } = require("@NotificationsModel");
 const Organizations = require("@OrganizationModel");
 const { Events } = require("@EventsModel");
 const { User } = require("@UserModel");
@@ -23,8 +24,8 @@ const buildGlobalNotificationsCacheKey = ({
 }) => {
   return `${ACTIVE_GLOBAL_NOTIFICATIONS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
 };
- 
- 
+
+
 // Decide which discriminator model to use
 const getModelByTaskType = (taskType) => {
   switch (taskType) {
@@ -161,124 +162,66 @@ const createNotifications = async (data) => {
   try {
     await invalidate(ACTIVE_GLOBAL_NOTIFICATIONS_CACHE_KEY);
 
-    const result = await getFilteredUserIdsCombined({
+    let usersResult = await getFilteredUserIdsCombined({
       ageRange: data.ageRange || null,
       gender: data.gender || null,
       interests: data.interests || [],
       center: data.center || null,
       radius: data.radius ?? 0,
     });
+
+    // 🔥 fallback (no filters)
     if (!data.ageRange && !data.gender && !data.interests && !data.center && !data.radius) {
       const allUserIds = await getAllUserIds();
-      result.userIds = allUserIds;
+      usersResult.userIds = allUserIds;
     }
+
+    const userIds = usersResult.userIds || [];
 
     const notificationSystemType =
       data.organizationId
         ? NotificationTypes.ORGANIZATION_DETAILS
         : data.eventId
-          ? NotificationTypes.EVENT_DETAILS
-          : NotificationTypes.HOME;
+        ? NotificationTypes.EVENT_DETAILS
+        : NotificationTypes.HOME;
 
+    const Model = getModelByTaskType(data.destinationType);
 
     let globalNotification = null;
 
-    /* ===============================
-       HOME NOTIFICATION
-    =============================== */
-    if (data.destinationType === "homeNotification") {
-      if (data.sendTiming === "immediately") {
-        await sendUserNotifications({
-          recipientIds: result.userIds,
-          title: data.title,
-          body: `You received a new message: ${data.description}`,
-          data: {
-            type: notificationSystemType,
-            objectType: "GlobalNotification",
-          },
-          sender: data.creator,
-          objectId: data.eventId || data.organizationId || data.creator,
-        });
+    // ===============================
+    // COMMON LOGIC
+    // ===============================
 
-        data.isDelivered = true;
-        data.estimated = result.userIds.length;
-        data.delivered = result.userIds.length;
+    data.estimated = userIds.length;
 
-        const Model = getModelByTaskType(data.destinationType);
-        globalNotification = new Model(data);
-        await globalNotification.save();
-      }
-      if (data.sendTiming === "schedule") {
-        data.estimated = result.userIds.length;
-        const Model = getModelByTaskType(data.destinationType);
-        globalNotification = new Model(data);
-        await globalNotification.save();
-      }
+    if (data.sendTiming === "immediately") {
+      data.isDelivered = true;
+      data.delivered = userIds.length;
     }
 
-    /* ===============================
-       ORGANIZATION NOTIFICATION
-    =============================== */
-    else if (data.destinationType === "organizationNotification") {
-      if (data.sendTiming === "immediately") {
-        await sendUserNotifications({
-          recipientIds: result.userIds,
-          title: data.title,
-          body: `You received a new message: ${data.description}`,
-          data: {
-            type: notificationSystemType,
-            objectType: "GlobalNotification",
-          },
-          sender: data.creator,
-          objectId: data.organizationId,
-        });
-        data.isDelivered = true;
-        data.estimated = result.userIds.length;
-        data.delivered = result.userIds.length;
-        const Model = getModelByTaskType(data.destinationType);
-        globalNotification = new Model(data);
-        await globalNotification.save();
-      }
-      if (data.sendTiming === "schedule") {
-        data.estimated = result.userIds.length;
-        const Model = getModelByTaskType(data.destinationType);
-        globalNotification = new Model(data);
-        await globalNotification.save();
-      }
+    globalNotification = new Model(data);
+    const savedNotification = await globalNotification.save();
+
+    // ===============================
+    // SEND NOTIFICATION (ONLY IF IMMEDIATE)
+    // ===============================
+    if (data.sendTiming === "immediately") {
+      await sendUserNotifications({
+        recipientIds: userIds,
+        title: data.title,
+        body: `You received a new message: ${data.description}`,
+        data: {
+          type: notificationSystemType,
+          objectType: "GlobalNotification",
+        },
+        sender: data.creator,
+        objectId: savedNotification._id,
+      });
     }
 
-    /* ===============================
-       EVENT NOTIFICATION
-    =============================== */
-    else if (data.destinationType === "eventNotification") {
-      if (data.sendTiming === "immediately") {
-        await sendUserNotifications({
-          recipientIds: result.userIds,
-          title: data.title,
-          body: `You received a new message: ${data.description}`,
-          data: {
-            type: notificationSystemType,
-            objectType: "GlobalNotification",
-          },
-          sender: data.creator,
-          objectId: data.eventId,
-        });
-        data.isDelivered = true;
-        data.estimated = result.userIds.length;
-        data.delivered = result.userIds.length;
-        const Model = getModelByTaskType(data.destinationType);
-        globalNotification = new Model(data);
-        await globalNotification.save();
-      }
-      if (data.sendTiming === "schedule") {
-        data.estimated = result.userIds.length;
-        const Model = getModelByTaskType(data.destinationType);
-        globalNotification = new Model(data);
-        await globalNotification.save();
-      }
-    }
+    return savedNotification;
 
-    return globalNotification;
   } catch (err) {
     throw err;
   }
@@ -679,7 +622,7 @@ const getNotificationsByEventId = async (eventId, page = 1, limit = 10) => {
     },
     {
       $lookup: {
-        from: "tags", 
+        from: "tags",
         localField: "interests",
         foreignField: "_id",
         pipeline: [
@@ -731,11 +674,126 @@ const getNotificationByOrganizationId = async (organizationId) => {
     const notification = await GlobalNotification.find({ organizationId: objectId });
     return notification || null;
   } catch (error) {
-   
+
     return null;
   }
 };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const getUserStats = async ({ notification }) => {
+  const getCount = async (Model, baseMatch, extra = {}) => {
+    const finalMatch = {
+      ...baseMatch,
+      ...extra,
+    };
+    return Model.countDocuments(finalMatch);
+  };
+
+  // Base match for notifications
+  const baseMatch = {
+    objectType: "GlobalNotification",
+    objectId: new mongoose.Types.ObjectId(notification),
+  };
+
+  const globalNotificationData = await GlobalNotification.findOne({
+    _id: new mongoose.Types.ObjectId(notification),
+  });
+
+  // Get counts for total users and users who read the notification
+  const [ totalUsers, totalUsersRead ] = await Promise.all([
+    getCount(NotificationExp, baseMatch),
+    getCount(NotificationExp, baseMatch, { isRead: true }),
+  ]);
+
+  const percentageUsersRead =parseFloat( totalUsers > 0 ? (totalUsersRead / totalUsers) * 100 : 0);
+  return {
+    totalUsersRead: totalUsersRead,
+    percentageUsersRead: parseFloat(percentageUsersRead.toFixed(2)), 
+    totalNotificationSent: globalNotificationData?.estimated || 0,
+    totalUsersDelivered: globalNotificationData?.delivered || 0,
+  };
+};
+
+const getEventsOverTimeRaw = async (notification) => {
+  let year = new Date().getFullYear();
+  const start = new Date(`${year}-01-01T00:00:00.000Z`);
+  const end = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+
+  const result = await NotificationExp.aggregate([
+    {
+      $match: {
+        objectType: "GlobalNotification",
+        objectId: new mongoose.Types.ObjectId(notification),
+        createdAt: { $gte: start, $lt: end },
+      },
+    },
+
+    // 🔥 Calculate Month
+    {
+      $project: {
+        month: { $month: "$createdAt" },
+        isRead: 1,
+      },
+    },
+
+    // 🔥 Group by month
+    {
+      $group: {
+        _id: "$month",
+        totalNotifications: { $sum: 1 },  // Total notifications sent (impressions)
+        totalClicks: {
+          $sum: {
+            $cond: [{ $eq: ["$isRead", true] }, 1, 0],  // Clicks where isRead = true
+          },
+        },
+      },
+    },
+
+    // 🔥 Calculate CTR (percentage)
+    {
+      $project: {
+        _id: 0,
+        month: "$_id",
+        CTR: {
+          $cond: [
+            { $eq: ["$totalNotifications", 0] },
+            0,  // If no notifications, CTR is 0%
+            { $multiply: [{ $divide: ["$totalClicks", "$totalNotifications"] }, 100] },  // Calculate CTR percentage
+          ],
+        },
+      },
+    },
+  ]);
+
+  return result.map(item => ({
+    month: item.month,
+    CTR: parseFloat(item.CTR.toFixed(2)),
+  }));
+};
 module.exports = {
   createNotifications,
   getNotificationss,
@@ -745,6 +803,8 @@ module.exports = {
   getEvents,
   gettags,
   getNotificationsByEventId,
-  getNotificationByOrganizationId
+  getNotificationByOrganizationId,
+  getUserStats,
+  getEventsOverTimeRaw,
 
 };

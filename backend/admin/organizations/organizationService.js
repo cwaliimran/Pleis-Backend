@@ -108,7 +108,7 @@ const getOrganizationsByAdmin = async ({ companyOrganizer, page, limit, keyword,
       ),
       organizationRepo.getOrganizationCounts(query),
     ]);
-
+console.log("organizations",organizations );
   const { totalFiltered, total, active, inactive } = counts;
   let meta = generateMeta(page, limit, totalFiltered);
   meta.tagsCount = { total, active, inactive };
@@ -171,7 +171,8 @@ const updateOrganization = async ({ id, data, timezone }) => {
     tags,
     description,
     title,
-    inAppOrderingSettings
+    inAppOrderingSettings,
+    companyDetails
   } = data;
   await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
   const session = await mongoose.startSession();
@@ -228,6 +229,7 @@ const updateOrganization = async ({ id, data, timezone }) => {
     if (tags !== undefined) organization.tags = tags;
     if (description !== undefined) organization.otherInfo.description = description;
     if (title !== undefined) organization.basicInfo.name = title;
+    if (companyDetails !== undefined) organization.creator = companyDetails.creator;
 
     // ---------- UPDATE inAppOrderingSettings ----------
     if (inAppOrderingSettings !== undefined) {

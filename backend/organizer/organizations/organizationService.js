@@ -6,7 +6,7 @@ const organizationRepo = require("./organizationRepository");
 const { generateMeta } = require("../../helperUtils/responseUtil");
 const mongoose = require("mongoose");
 const { formatOrganization } = require("./formatter/formatOrganization");
-
+const { User } = require("@UsersModel");
 const createOrganization = async ({ data }) => {
   let org = await organizationRepo.createOrganization(data);
   return formatOrganization(org);
@@ -192,6 +192,8 @@ const updateUserSubscription = async ({
 const updateOrganization = async ({ id, data }) => {
   const organization = await organizationRepo.findOrganizationById(id);
 
+
+
   if (!organization) return null;
 
   const {
@@ -218,32 +220,32 @@ const updateOrganization = async ({ id, data }) => {
 
   /* ================= ORGANIZATION UPDATE ================= */
 
-if (basicInfo) {
-  organization.basicInfo = organization.basicInfo || {};
+  if (basicInfo) {
+    organization.basicInfo = organization.basicInfo || {};
 
-  // shallow fields
-  Object.entries(basicInfo).forEach(([key, value]) => {
-    if (value !== undefined && key !== "media" && key !== "socialLinks") {
-      organization.basicInfo[key] = value;
+    // shallow fields
+    Object.entries(basicInfo).forEach(([key, value]) => {
+      if (value !== undefined && key !== "media" && key !== "socialLinks") {
+        organization.basicInfo[key] = value;
+      }
+    });
+
+    // media merge
+    if (basicInfo.media) {
+      organization.basicInfo.media = {
+        ...(organization.basicInfo.media || {}),
+        ...basicInfo.media,
+      };
     }
-  });
 
-  // media merge
-  if (basicInfo.media) {
-    organization.basicInfo.media = {
-      ...(organization.basicInfo.media || {}),
-      ...basicInfo.media,
-    };
+    // social links merge
+    if (basicInfo.socialLinks) {
+      organization.basicInfo.socialLinks = {
+        ...(organization.basicInfo.socialLinks || {}),
+        ...basicInfo.socialLinks,
+      };
+    }
   }
-
-  // social links merge
-  if (basicInfo.socialLinks) {
-    organization.basicInfo.socialLinks = {
-      ...(organization.basicInfo.socialLinks || {}),
-      ...basicInfo.socialLinks,
-    };
-  }
-}
 
 
   if (otherInfo) {
@@ -277,61 +279,61 @@ if (basicInfo) {
   }
 
 
-    // ---------- UPDATE inAppOrderingSettings ----------
-    if (inAppOrderingSettings !== undefined) {
-      organization.inAppOrderingSettings = {
-        paymentMethods: {
-          instantPayment:
-            inAppOrderingSettings?.paymentMethods?.instantPayment ??
-            organization?.inAppOrderingSettings?.paymentMethods?.instantPayment ??
+  // ---------- UPDATE inAppOrderingSettings ----------
+  if (inAppOrderingSettings !== undefined) {
+    organization.inAppOrderingSettings = {
+      paymentMethods: {
+        instantPayment:
+          inAppOrderingSettings?.paymentMethods?.instantPayment ??
+          organization?.inAppOrderingSettings?.paymentMethods?.instantPayment ??
+          false,
+
+        payLater: {
+          allow:
+            inAppOrderingSettings?.paymentMethods?.payLater?.allow ??
+            organization?.inAppOrderingSettings?.paymentMethods?.payLater?.allow ??
             false,
 
-          payLater: {
-            allow:
-              inAppOrderingSettings?.paymentMethods?.payLater?.allow ??
-              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.allow ??
-              false,
+          enableOrderAcceptance:
+            inAppOrderingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ??
+            organization?.inAppOrderingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ??
+            false,
 
-            enableOrderAcceptance:
-              inAppOrderingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ??
-              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.enableOrderAcceptance ??
-              false,
+          chargeOnAcceptance:
+            inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ??
+            organization?.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ??
+            false,
 
-            chargeOnAcceptance:
-              inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ??
-              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnAcceptance ??
-              false,
-
-            chargeOnDelivery:
-              inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnDelivery ??
-              organization?.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnDelivery ??
-              false,
-          },
-
-          cashPayment:
-            inAppOrderingSettings?.paymentMethods?.cashPayment ??
-            organization?.inAppOrderingSettings?.paymentMethods?.cashPayment ??
+          chargeOnDelivery:
+            inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnDelivery ??
+            organization?.inAppOrderingSettings?.paymentMethods?.payLater?.chargeOnDelivery ??
             false,
         },
 
-        deliveryMethods: {
-          counterPickup:
-            inAppOrderingSettings?.deliveryMethods?.counterPickup ??
-            organization?.inAppOrderingSettings?.deliveryMethods?.counterPickup ??
-            true,
+        cashPayment:
+          inAppOrderingSettings?.paymentMethods?.cashPayment ??
+          organization?.inAppOrderingSettings?.paymentMethods?.cashPayment ??
+          false,
+      },
 
-          tableDelivery:
-            inAppOrderingSettings?.deliveryMethods?.tableDelivery ??
-            organization?.inAppOrderingSettings?.deliveryMethods?.tableDelivery ??
-            false,
+      deliveryMethods: {
+        counterPickup:
+          inAppOrderingSettings?.deliveryMethods?.counterPickup ??
+          organization?.inAppOrderingSettings?.deliveryMethods?.counterPickup ??
+          true,
 
-          toGo:
-            inAppOrderingSettings?.deliveryMethods?.toGo ??
-            organization?.inAppOrderingSettings?.deliveryMethods?.toGo ??
-            false,
-        },
-      };
-    }
+        tableDelivery:
+          inAppOrderingSettings?.deliveryMethods?.tableDelivery ??
+          organization?.inAppOrderingSettings?.deliveryMethods?.tableDelivery ??
+          false,
+
+        toGo:
+          inAppOrderingSettings?.deliveryMethods?.toGo ??
+          organization?.inAppOrderingSettings?.deliveryMethods?.toGo ??
+          false,
+      },
+    };
+  }
 
 
   /* ================= PRIMARY VENUE ================= */
@@ -353,7 +355,14 @@ if (basicInfo) {
   await organization.save();
 
   /* ================= SUBSCRIPTION UPDATE ================= */
+  const user = await User.findById(userId);
+  console.log("data.companyDetails.name", data.companyDetails.name);
+  if (data.companyDetails) {
+    if (data.companyDetails.name) {
+      user.companyDetails.name = data.companyDetails.name;
+    }
 
+  }
   if (
     userId &&
     (subscriptionTypes ||
@@ -361,7 +370,7 @@ if (basicInfo) {
       numberOfOrganizations !== undefined ||
       totalSubscriptionAmount !== undefined)
   ) {
-    const user = await User.findById(userId);
+
     if (user) {
       await updateUserSubscription({
         user,
@@ -372,7 +381,7 @@ if (basicInfo) {
       });
     }
   }
-
+    await user.save();
   return formatOrganization(organization);
 };
 

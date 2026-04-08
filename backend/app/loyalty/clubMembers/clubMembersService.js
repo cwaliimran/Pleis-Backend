@@ -46,7 +46,7 @@ const getUserJoinedClubs = async (userId) => {
   return clubMemberRepo.getUserJoinedClubs(userId);
 };
 
-const getUserJoinedClubsWithPoints = async ({ page, limit, skip, userId, keyword }) => {
+const getUserJoinedClubsWithPoints = async ({ page, limit, userId, keyword }) => {
   const { data, total } =
     await clubMemberRepo.getUserJoinedClubsWithPointsUsingFacet({
       page,
@@ -54,7 +54,6 @@ const getUserJoinedClubsWithPoints = async ({ page, limit, skip, userId, keyword
       userId,
       keyword,
     });
-
   return {
     data: formatUserWallets(data),
     meta: generateMeta(page, limit, total),

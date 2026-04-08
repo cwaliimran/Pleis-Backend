@@ -21,7 +21,7 @@ const getTransactionsService = async ({
   endDate,
   keyword,
   user,
-  date
+  date, startPoints, endPoints, ballance, referral, purchaseBased, streakBased, challengeBased,promotionBased
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
@@ -44,6 +44,18 @@ const getTransactionsService = async ({
 
   if (companyOrganizer) match.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
   if (entityId) match.entityId = entityId;
+  if (purchaseBased) {
+    match.domainType = { $in: ["menuorders", "ticketingorders", "userreservations"] };
+  }
+  if (streakBased) {
+    match.domainType = { $in: ["userstreaks"] };
+  }
+  if (challengeBased) {
+    match.domainType = { $in: ["loyaltychallengesorders","challenge"] };
+  }
+  if (promotionBased) {
+    match.domainType = { $in: ["promotionorders"] };
+  }
   if (user) match.user = new mongoose.Types.ObjectId(user);
   if (startDate || endDate || date) {
     match.createdAt = {};
@@ -59,12 +71,23 @@ const getTransactionsService = async ({
     }
     if (!Object.keys(match.createdAt).length) delete match.createdAt;
   }
+  if (startPoints || endPoints) {
+    match["points.total"] = {};
+
+    if (startPoints) match["points.total"].$gte = Number(startPoints);
+    if (endPoints) match["points.total"].$lte = Number(endPoints);
+  }
+
+  if (ballance) {
+    match.closingBalance = {};
+    if (ballance) match.closingBalance.$eq = Number(ballance);
+  }
+
 
   const [items, total] = await Promise.all([
-    unifiedRepo.getTransactionsWithFilters({ match, keyword, skip, limit }),
+    unifiedRepo.getTransactionsWithFilters({ match, keyword, skip, limit, referral }),
     unifiedRepo.countTransactions({ match, keyword })
   ]);
-
   return {
     items: items.map(formatTransactionItem),
     meta: generateMeta(page, limit, total)
@@ -178,27 +201,27 @@ const downloadTransactionsAsCSV = async ({
       throw new Error("No transactions found");
     }
 
-     const csvData = items.map(tx => ({
+    const csvData = items.map(tx => ({
       userName: tx.user
         ? `${tx.user.firstName || ""} ${tx.user.lastName || ""}`.trim()
         : "",
       userEmail: tx.user?.email || "",
       organizationName: tx.organization?.basicInfo?.name || "",
-      walletType: formatEnum(tx.walletType),  
-      type: formatEnum(tx.type),             
-      domainType: formatEnum(tx.domainType),   
+      walletType: formatEnum(tx.walletType),
+      type: formatEnum(tx.type),
+      domainType: formatEnum(tx.domainType),
       pointsBase: tx.points?.base || 0,
       pointsTotal: tx.points?.total || 0,
       closingBalance: tx.closingBalance,
       description: tx.description,
       publicId: tx.publicId,
-      createdAt: formatDate(tx.createdAt),     
+      createdAt: formatDate(tx.createdAt),
     }));
 
     const parser = new Parser({ fields });
     return parser.parse(csvData);
   } catch (error) {
-  
+
     throw error;
   }
 };

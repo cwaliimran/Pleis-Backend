@@ -206,9 +206,10 @@ const updateOrganization = async (req, res) => {
     tags,
     description,
     title,
-    inAppOrderingSettings
+    inAppOrderingSettings,
+    companyDetails
   } = req.body;
-
+console.log("companyDetails",companyDetails );
   //Convert times to UTC minutes before saving
   if (operatingHours) {
     operatingHours = transformOperatingHoursToUtc(operatingHours, timezone);
