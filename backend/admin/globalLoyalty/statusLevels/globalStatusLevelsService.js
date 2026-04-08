@@ -10,9 +10,12 @@ const ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY = "globalLLoyaltyStatusLevel:
 const buildGlobalLoyaltyStatusLevelCacheKey = ({
   scope = "public", // public | admin
   skip = 0,
-  limit = 10
+  limit = 10,
+  keyword = "",
+  status = "",
+  date = ""
 }) => {
-  return `${ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+  return `${ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:keyword=${keyword}:status=${status}:date=${date}`;
 };
 const createStatusLevel = async (data) => {
   const allowedFields = [
@@ -40,6 +43,10 @@ const getStatusLevels = async ({ page, limit, keyword, status, userId, date }) =
     scope: "admin",
     skip,
     limit,
+    keyword,
+    status,
+    date
+
   });
   return cache({
     namespace: cacheKey,

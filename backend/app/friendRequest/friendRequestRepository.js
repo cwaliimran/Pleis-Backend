@@ -22,23 +22,15 @@ const getFriends = async ({
       },
     },
   ];
-
+  console.log("keyword", keyword);
   // 2️⃣ Keyword search
   if (keyword) {
     const safeKeyword = escapeRegex(keyword);
 
     pipeline.push({
-      $addFields: {
-        fullName: { $concat: ["$firstName", " ", "$lastName"] }, // Concatenate firstName and lastName
-      }
-    });
-
-    pipeline.push({
       $match: {
-        $or: [
-          { fullName: { $regex: safeKeyword, $options: "i" } }, // Search in the concatenated fullName
-          { username: { $regex: safeKeyword, $options: "i" } },
-        ],
+        username: safeKeyword,
+
       },
     });
   }
@@ -99,6 +91,7 @@ const getFriends = async ({
       firstName: 1,
       lastName: 1,
       username: 1,
+      username: 1,
       phoneNumber: 1,
       profileIcon: 1,
     },
@@ -150,7 +143,7 @@ const createFriendRequest = async (data) => {
     throw err;
   }
 };
-const getFriendRequests = async ({ page, limit, userId, status }) => {
+const getFriendRequests = async ({ page = 1, limit = 10, userId, status }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const me = new mongoose.Types.ObjectId(userId);
@@ -397,11 +390,11 @@ const seeFriends = async ({ page, limit, userId, status }) => {
     {
       $lookup: {
         from: "users",
-        let: { receiverId: "$receiver.id" },
+       let: { otherId: { $cond: { if: { $eq: ["$sender.id", me] }, then: "$receiver.id", else: "$sender.id" } } }, 
         pipeline: [
           {
             $match: {
-              $expr: { $eq: ["$_id", "$$receiverId"] }
+              $expr: { $eq: ["$_id", "$$otherId"] }
             }
           },
           {
@@ -441,9 +434,10 @@ const seeFriends = async ({ page, limit, userId, status }) => {
       }
     }
   ];
-
-  const result = await FriendRequest.aggregate(pipeline);
-
+  const [result, friendrtequests] = await Promise.all([
+    FriendRequest.aggregate(pipeline),
+    getFriendRequests({ page, limit, userId, status: "pending" })
+  ]);
   const requests = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
@@ -453,7 +447,8 @@ const seeFriends = async ({ page, limit, userId, status }) => {
       page,
       limit,
       totalRecords: totalFiltered,
-      totalPages: limit === 0 ? 1 : Math.ceil(totalFiltered / limit)
+      totalPages: limit === 0 ? 1 : Math.ceil(totalFiltered / limit),
+      friendRequests: friendrtequests.meta.totalRecords
     }
   };
 };

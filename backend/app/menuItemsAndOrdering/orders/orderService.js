@@ -65,7 +65,6 @@ const placeOrder = async ({
     const organizationId =
       await menuItemRepo.getOrganizationIdByMenuItemId(menuItems[0].menu);
     const companyOrganizer = await getOrgCompanyOrganizer(organizationId);
-    console.log("Company Organizer:", companyOrganizer);
 
 
 

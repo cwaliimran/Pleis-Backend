@@ -9,17 +9,24 @@ const {
 const venuetypesService = require("./venueTypesService");
 
 const createVenueType = async (req, res) => {
-  const { image, title, status = "active" } = req.body;
+  const { image, title, status = "active", categories } = req.body;
 
-  if (!validateParams(req, res, { rawData: ["title"] })) return;
+  if (!validateParams(req, res, { rawData: ["title", "categories"] })) return;
 
   try {
     const venuetype = await venuetypesService.createVenueType({
       image,
       title,
       status: "active",
+      categories
     });
-
+    if (categories.length < 1 || categories.length > 2) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "venue_type_category_count_invalid",
+      });
+    }
     return sendResponse({
       res,
       statusCode: 201,
@@ -113,7 +120,7 @@ const getPublicVenueTypes = async (req, res) => {
 
 const updateVenueType = async (req, res) => {
   const { id } = req.params;
-  const { image, title, status } = req.body;
+  const { image, title, status, categories } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -128,7 +135,15 @@ const updateVenueType = async (req, res) => {
       image,
       title,
       status,
+      categories
     });
+    if (categories.length < 1 || categories.length > 2) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "venue_type_category_count_invalid",
+      });
+    }
 
     if (!updated) {
       return sendResponse({

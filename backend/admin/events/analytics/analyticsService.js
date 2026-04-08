@@ -17,7 +17,7 @@ const { buildViewOverTime } = require("./utils/buildViewOverTime");
  */
 const getAnalytics = async ({ dateFilter, timezone, companyOrganizer, event }) => {
   const users = await getUserIdsForOrganization(event);
-  console.log("users",users );
+
   const promises = [
     getByTimeRaw(users, event, dateFilter, timezone), // used
     getEventByTimeRaw(users, event, dateFilter, timezone), // used
@@ -317,7 +317,6 @@ const getRawInterestDataByOrganizer = async (users) => {
 
 const getEventViewsByTimeRaw = async (users, event, dateFilter, timezone) => {
   const rows = await AnalyticsRepo.getEventViewsByTimeRaw(users, event, dateFilter, timezone);
-  console.log("rows",rows );
   return buildViewOverTime(rows);
 };
 

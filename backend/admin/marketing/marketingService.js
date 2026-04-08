@@ -1,9 +1,9 @@
 const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
 const MarketingRepo = require("./marketingRepository");
 const { generateMeta } = require("@utils/responseUtil");
-const 
-Marketing
-= require("@Marketing");
+const
+  Marketing
+    = require("@Marketing");
 
 const createMarketing = async (data) => {
   let Marketing = await MarketingRepo.createMarketing(data);
@@ -24,13 +24,20 @@ const getMarketings = async ({ page, limit, keyword, status, date, timezone }) =
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
     query.createdAt = { $gte: start, $lt: end };
   }
-  if (keyword) {
-    Object.assign(query, buildKeywordQueryFromModels([{ schema: Marketing.schema }], keyword));
-  }
 
   // Get Marketings with population
-  const Marketings = await MarketingRepo.getMarketingsWithFilters(query, skip, limit);
+  let Marketings = await MarketingRepo.getMarketingsWithFilters(query, skip, limit);
+  // Apply keyword filter AFTER populate
+  if (keyword) {
+    const regex = new RegExp(keyword, "i");
 
+    Marketings = Marketings.filter(m =>
+      regex.test(m.title) ||
+      regex.test(m.description) ||
+      regex.test(m.userId?.firstName) ||
+      regex.test(m.userId?.lastName)
+    );
+  }
   // Get counts
   const [total, active, inactive, totalFiltered] = await Promise.all([
     Marketing.countDocuments({ status: { $ne: "deleted" } }),

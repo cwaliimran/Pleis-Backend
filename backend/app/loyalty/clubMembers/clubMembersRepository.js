@@ -622,16 +622,27 @@ const getUserJoinedClubsWithPointsUsingFacet = async ({
       : []),
 
     /* ===============================
-       FACET (COUNT + DATA)
+       ADD TEMPORARY FIELD FOR CREATED_AT SORTING
+    =============================== */
+    {
+      $addFields: {
+        sortByCreatedAt: {
+          $cond: { if: { $eq: ["$points", 0] }, then: "$createdAt", else: "$$REMOVE" },
+        },
+      },
+    },
+
+    /* ===============================
+       SORTING, PAGINATION AND COUNT
     =============================== */
     {
       $facet: {
         data: [
-          { $sort: { points: -1 } },
-          { $skip: skip },
-          { $limit: limit },
+          { $sort: { points: -1, sortByCreatedAt: 1 } }, // Sort by points descending, and by createdAt if points is 0
+          { $skip: skip },  // Skip based on calculated page number
+          { $limit: limit }, // Limit results per page
         ],
-        meta: [{ $count: "total" }],
+        meta: [{ $count: "total" }], // Count the total number of records
       },
     },
   ];
@@ -640,7 +651,7 @@ const getUserJoinedClubsWithPointsUsingFacet = async ({
 
   return {
     data: result.data,
-    total: result.meta[0]?.total ?? 0,
+    total: result.meta[0]?.total ?? 0, // Return the total count
   };
 };
 

@@ -70,7 +70,6 @@ const getCategories = async ({ page, limit, keyword, companyOrganizer, status, d
 
 const getPublicCategories = async ({ page, limit, keyword, date }) => {
   const baseFilters = [{ status: "active" }]
-  console.log("enter", );
 
   if (date) {
     baseFilters.push({
@@ -110,7 +109,6 @@ const getPublicCategories = async ({ page, limit, keyword, date }) => {
     total: totalFiltered,
   };
   let formattedCategories = categories?.map((cat) => formatItemCategory(cat));
-  console.log("formattedCategories",formattedCategories );
   return {
     categories: formattedCategories,
     meta,

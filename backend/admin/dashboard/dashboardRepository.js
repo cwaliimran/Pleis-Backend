@@ -16,7 +16,7 @@ const EngagementEvents = require("@appEngagement/EngagementEvents");
 
 
 const getClubMembersStats = async ({ companyOrganizer, dateFilter, timezone }) => {
-    const ranges = getDateRanges({ dateFilter, timezone });
+  const ranges = getDateRanges({ dateFilter, timezone });
   const baseMatch = {
     companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
   };
@@ -41,11 +41,11 @@ const getClubMembersStats = async ({ companyOrganizer, dateFilter, timezone }) =
 
     totalClubMembersPrevious: ranges
       ? await getCount(
-          ClubMembers,
-          baseMatch,
-          {},
-          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
-        )
+        ClubMembers,
+        baseMatch,
+        {},
+        { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+      )
       : 0,
 
     activeClubMembersCurrent: await getCount(
@@ -57,11 +57,11 @@ const getClubMembersStats = async ({ companyOrganizer, dateFilter, timezone }) =
 
     activeClubMembersPrevious: ranges
       ? await getCount(
-          ClubMembers,
-          baseMatch,
-          { status: "active" },
-          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
-        )
+        ClubMembers,
+        baseMatch,
+        { status: "active" },
+        { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+      )
       : 0,
 
     inactiveClubMembersCurrent: await getCount(
@@ -73,11 +73,11 @@ const getClubMembersStats = async ({ companyOrganizer, dateFilter, timezone }) =
 
     inactiveClubMembersPrevious: ranges
       ? await getCount(
-          ClubMembers,
-          baseMatch,
-          { status: "inactive" },
-          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
-        )
+        ClubMembers,
+        baseMatch,
+        { status: "inactive" },
+        { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+      )
       : 0,
 
     bannedClubMembersCurrent: await getCount(
@@ -89,11 +89,11 @@ const getClubMembersStats = async ({ companyOrganizer, dateFilter, timezone }) =
 
     bannedClubMembersPrevious: ranges
       ? await getCount(
-          ClubMembers,
-          baseMatch,
-          { status: "banned" },
-          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
-        )
+        ClubMembers,
+        baseMatch,
+        { status: "banned" },
+        { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+      )
       : 0,
 
     leftClubMembersCurrent: await getCount(
@@ -105,11 +105,11 @@ const getClubMembersStats = async ({ companyOrganizer, dateFilter, timezone }) =
 
     leftClubMembersPrevious: ranges
       ? await getCount(
-          ClubMembers,
-          baseMatch,
-          { status: "left" },
-          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
-        )
+        ClubMembers,
+        baseMatch,
+        { status: "left" },
+        { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+      )
       : 0,
   };
 };
@@ -133,7 +133,7 @@ const getUserStats = async ({ dateFilter, timezone, companyOrganizer }) => {
   if (!companyOrganizer) {
     const baseMatch = {
       "accountState.status": { $ne: "deleted" },
-       "verificationStatus.email": "verified",
+      "verificationStatus.email": "verified",
     };
 
     return {
@@ -192,76 +192,76 @@ const getUserStats = async ({ dateFilter, timezone, companyOrganizer }) => {
         : 0,
     };
   }
-if (companyOrganizer) {
+  if (companyOrganizer) {
 
-  const baseMatch = {
-    creator: new mongoose.Types.ObjectId(companyOrganizer),
-    status: { $ne: "deleted" },
-  };
+    const baseMatch = {
+      creator: new mongoose.Types.ObjectId(companyOrganizer),
+      status: { $ne: "deleted" },
+    };
 
-  const getStaffCount = async (extraMatch = {}, range) => {
-    const result = await Organizations.aggregate([
-      {
-        $match: {
-          ...baseMatch,
-          ...(range && { createdAt: range }),
+    const getStaffCount = async (extraMatch = {}, range) => {
+      const result = await Organizations.aggregate([
+        {
+          $match: {
+            ...baseMatch,
+            ...(range && { createdAt: range }),
+          },
         },
-      },
-      {
-        $unwind: "$staff",
-      },
-      {
-        $match: {
-          ...extraMatch, // optional filters later
+        {
+          $unwind: "$staff",
         },
-      },
-      {
-        $group: {
-          _id: null,
-          count: { $sum: 1 },
+        {
+          $match: {
+            ...extraMatch, // optional filters later
+          },
         },
-      },
-    ]);
+        {
+          $group: {
+            _id: null,
+            count: { $sum: 1 },
+          },
+        },
+      ]);
 
-    return result[0]?.count || 0;
-  };
+      return result[0]?.count || 0;
+    };
 
-  return {
-    totalUsersCurrent: await getStaffCount(
-      {},
-      ranges && { $gte: ranges.start, $lt: ranges.end }
-    ),
+    return {
+      totalUsersCurrent: await getStaffCount(
+        {},
+        ranges && { $gte: ranges.start, $lt: ranges.end }
+      ),
 
-    totalUsersPrevious: ranges
-      ? await getStaffCount({}, {
+      totalUsersPrevious: ranges
+        ? await getStaffCount({}, {
           $gte: ranges.prevStart,
           $lt: ranges.prevEnd,
         })
-      : 0,
+        : 0,
 
-    // NOTE: You DON'T have status in staff → so these will be same unless you join Users
-    activeUsersCurrent: await getStaffCount(
-      {},
-      ranges && { $gte: ranges.start, $lt: ranges.end }
-    ),
+      // NOTE: You DON'T have status in staff → so these will be same unless you join Users
+      activeUsersCurrent: await getStaffCount(
+        {},
+        ranges && { $gte: ranges.start, $lt: ranges.end }
+      ),
 
-    activeUsersPrevious: ranges
-      ? await getStaffCount({}, {
+      activeUsersPrevious: ranges
+        ? await getStaffCount({}, {
           $gte: ranges.prevStart,
           $lt: ranges.prevEnd,
         })
-      : 0,
+        : 0,
 
-    inactiveUsersCurrent: 0,
-    inactiveUsersPrevious: 0,
+      inactiveUsersCurrent: 0,
+      inactiveUsersPrevious: 0,
 
-    bannedUsersCurrent: 0,
-    bannedUsersPrevious: 0,
+      bannedUsersCurrent: 0,
+      bannedUsersPrevious: 0,
 
-    leftUsersCurrent: 0,
-    leftUsersPrevious: 0,
-  };
-}
+      leftUsersCurrent: 0,
+      leftUsersPrevious: 0,
+    };
+  }
 };
 
 const getUserSingleMetric = async ({ match, range }) => {
@@ -287,6 +287,12 @@ const getEventStats = async ({ dateFilter, timezone, status, companyOrganizer })
     ...(status === "active"
       ? { status: "active" }
       : { status: { $ne: "deleted" } }),
+
+    $or: [
+      { "recurringMeta.isTemplate": false },
+      { "recurringMeta.isTemplate": { $exists: false } }
+    ],
+
     ...(companyOrganizer && {
       companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer)
     })
@@ -1103,11 +1109,11 @@ const getReservationsStats = async ({ companyOrganizer, dateFilter, timezone }) 
 
     totalReservationsPrevious: ranges
       ? await getCount(
-          Reservations,
-          baseMatch,
-          {},
-          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
-        )
+        Reservations,
+        baseMatch,
+        {},
+        { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+      )
       : 0,
 
     // Active Reservations
@@ -1120,11 +1126,11 @@ const getReservationsStats = async ({ companyOrganizer, dateFilter, timezone }) 
 
     activeReservationsPrevious: ranges
       ? await getCount(
-          Reservations,
-          baseMatch,
-          { status: "active" },
-          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
-        )
+        Reservations,
+        baseMatch,
+        { status: "active" },
+        { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+      )
       : 0,
 
     // Inactive Reservations
@@ -1137,11 +1143,11 @@ const getReservationsStats = async ({ companyOrganizer, dateFilter, timezone }) 
 
     inactiveReservationsPrevious: ranges
       ? await getCount(
-          Reservations,
-          baseMatch,
-          { status: "inactive" },
-          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
-        )
+        Reservations,
+        baseMatch,
+        { status: "inactive" },
+        { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+      )
       : 0,
 
     // Deleted Reservations
@@ -1154,11 +1160,11 @@ const getReservationsStats = async ({ companyOrganizer, dateFilter, timezone }) 
 
     deletedReservationsPrevious: ranges
       ? await getCount(
-          Reservations,
-          baseMatch,
-          { status: "deleted" },
-          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
-        )
+        Reservations,
+        baseMatch,
+        { status: "deleted" },
+        { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+      )
       : 0,
   };
 };
@@ -1190,11 +1196,11 @@ const getBookedReservationsStats = async ({ companyOrganizer, dateFilter, timezo
 
     totalBookedReservationsPrevious: ranges
       ? await getCount(
-          UserReservations,
-          baseMatch,
-          {},
-          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
-        )
+        UserReservations,
+        baseMatch,
+        {},
+        { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+      )
       : 0,
 
     // Confirmed
@@ -1207,11 +1213,11 @@ const getBookedReservationsStats = async ({ companyOrganizer, dateFilter, timezo
 
     confirmedReservationsPrevious: ranges
       ? await getCount(
-          UserReservations,
-          baseMatch,
-          { status: "confirmed" },
-          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
-        )
+        UserReservations,
+        baseMatch,
+        { status: "confirmed" },
+        { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+      )
       : 0,
 
     // Completed
@@ -1224,11 +1230,11 @@ const getBookedReservationsStats = async ({ companyOrganizer, dateFilter, timezo
 
     completedReservationsPrevious: ranges
       ? await getCount(
-          UserReservations,
-          baseMatch,
-          { status: "completed" },
-          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
-        )
+        UserReservations,
+        baseMatch,
+        { status: "completed" },
+        { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+      )
       : 0,
 
     // Cancelled
@@ -1241,11 +1247,11 @@ const getBookedReservationsStats = async ({ companyOrganizer, dateFilter, timezo
 
     cancelledReservationsPrevious: ranges
       ? await getCount(
-          UserReservations,
-          baseMatch,
-          { status: "cancelled" },
-          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
-        )
+        UserReservations,
+        baseMatch,
+        { status: "cancelled" },
+        { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+      )
       : 0,
 
     // Pending Payment
@@ -1258,11 +1264,11 @@ const getBookedReservationsStats = async ({ companyOrganizer, dateFilter, timezo
 
     pendingPaymentReservationsPrevious: ranges
       ? await getCount(
-          UserReservations,
-          baseMatch,
-          { status: "pendingPayment" },
-          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
-        )
+        UserReservations,
+        baseMatch,
+        { status: "pendingPayment" },
+        { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+      )
       : 0,
 
     // Checked In
@@ -1275,11 +1281,11 @@ const getBookedReservationsStats = async ({ companyOrganizer, dateFilter, timezo
 
     checkedInReservationsPrevious: ranges
       ? await getCount(
-          UserReservations,
-          baseMatch,
-          { status: "checkedIn" },
-          { $gte: ranges.prevStart, $lt: ranges.prevEnd }
-        )
+        UserReservations,
+        baseMatch,
+        { status: "checkedIn" },
+        { $gte: ranges.prevStart, $lt: ranges.prevEnd }
+      )
       : 0,
   };
 };

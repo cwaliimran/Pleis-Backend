@@ -24,7 +24,6 @@ const triggerBadgeEngine = require("@triggerGlobalStreak");
  */
 const ticketingOrderFinalizerService = async ({ orderId, result }) => {
   const session = await mongoose.startSession();
-  console.log("result---->", result)
   let committed = false;
   let order = null;
   let menuOrder = null;

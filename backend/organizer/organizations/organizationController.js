@@ -85,7 +85,7 @@ const getOrganizations = async (req, res) => {
       limit,
       keyword,
       status,
-      creator: _id,
+      creator: req.user._id,
       date,
     });
 
@@ -236,6 +236,7 @@ const userId = req.user._id;
   let data = ({
     basicInfo,
     otherInfo,
+    companyDetails,
     operatingHours,
     status,
     venue,

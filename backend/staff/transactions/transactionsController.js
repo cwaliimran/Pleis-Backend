@@ -59,7 +59,7 @@ const applyPoints = async (req, res) => {
       const finalPrice = price * i.quantity;
 
       totalPrice += finalPrice;
-      console.log(`MenuItem ${menuItem.name}: price ${price} x quantity ${i.quantity} = ${finalPrice}`);
+
 
       return {
         menuItem: menuItem._id,

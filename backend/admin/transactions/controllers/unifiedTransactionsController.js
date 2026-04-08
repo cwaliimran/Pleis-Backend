@@ -10,14 +10,14 @@ const unifiedService = require("../services/unifiedTransactionsService");
 const getTransactions = async (req, res) => {
     const { page, limit } = parsePaginationParams(req);
     let {
-        walletType, domainType, type, organization, companyOrganizer, entityId, startDate, date, endDate, keyword, user,
+        walletType, domainType, type, organization, companyOrganizer, entityId, startDate, date, endDate, keyword, user, startPoints, endPoints, ballance,referral,purchaseBased,streakBased,challengeBased,promotionBased
     } = req.query;
     if (req.user.userType === "organizer") {
         companyOrganizer = req.user._id;
     }
     try {
         const { items, meta } = await unifiedService.getTransactionsService({
-            page, limit, walletType, domainType, type, organization, companyOrganizer, entityId, startDate, date, endDate, keyword, user
+            page, limit, walletType, domainType, type, organization, companyOrganizer, entityId, startDate, date, endDate, keyword, user, startPoints, endPoints, ballance,referral,purchaseBased,streakBased,challengeBased,promotionBased
         });
         return sendResponse({ res, statusCode: 200, translationKey: "wallet_transactions_fetched", data: items, meta });
     } catch (error) {

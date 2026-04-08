@@ -129,11 +129,12 @@ const globalFilters = async (req, res) => {
   try {
     const { _id: userId, timezone } = req.user || {};
     let { latitude = 0, longitude = 0, radiusKm = 50 } = req.query;
+    let { categories:categoriesFilter = [] } = req.body || {};
     const center = {
       type: "Point",
       coordinates: [Number(longitude), Number(latitude)]
     };
-    const filters = await getGlobalFiltersService(userId, timezone, center, radiusKm);
+    const filters = await getGlobalFiltersService(userId, timezone, center, radiusKm, categoriesFilter);
     return sendResponse({
       res,
       statusCode: 200,

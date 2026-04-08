@@ -64,11 +64,11 @@ const leaveClub = async (req, res) => {
 
 const getUserJoinedClubsWithPoints = async (req, res) => {
   const userId = req.user._id;
-  const { page, limit, skip } = parsePaginationParams(req);
+  const { page, limit } = parsePaginationParams(req);
   const { keyword } = req.query;
 
   try {
-    const { data, meta } = await clubService.getUserJoinedClubsWithPoints({ page, limit, skip, userId, keyword });
+    const { data, meta } = await clubService.getUserJoinedClubsWithPoints({ page, limit, userId, keyword });
 
     return sendResponse({
       res,

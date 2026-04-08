@@ -111,11 +111,11 @@ function formatResultItem(key, item, timezone) {
 }
 
 
-async function getGlobalFiltersService(userId, timezone, center, radiusKm) {
+async function getGlobalFiltersService(userId, timezone, center, radiusKm, categoriesFilter) {
   let [popularSearches, categories, venueTypes, tags, genres] = await Promise.all([
     getTrendingSearchesService({ center, radiusKm }),
     getPublicCategories(),
-    getPublicVenueTypes({}),
+    getPublicVenueTypes({categoriesFilter}),
     getActiveTagsService(),
     getActiveTagsTypes()
   ]);

@@ -161,7 +161,6 @@ const getByTimeRaw = async (companyOrganizer, user) => {
 };
 const getSpendingOverByTimeRaw = async (companyOrganizer, user) => {
   const rows = await AnalyticsRepo.getSpendingOverByTimeRaw(companyOrganizer, user);
-  console.log("rows", rows);
 
   return buildSpendOverTime(rows);
 };
