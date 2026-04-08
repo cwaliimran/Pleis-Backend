@@ -9,9 +9,12 @@ const ACTIVE_BADGE_CATEGORIES_CACHE_KEY = "badgeCategories:active";
 const buildBadgeCategoriesCacheKey = ({
   scope = "public", // public | admin
   skip = 0,
-  limit = 10
+  limit = 10,
+  keyword = "",
+  status = "",
+  date = ""
 }) => {
-  return `${ACTIVE_BADGE_CATEGORIES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+  return `${ACTIVE_BADGE_CATEGORIES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:keyword=${keyword}:status=${status}:date=${date}`;
 };
 const createBadgeCategories = async (data) => {
   try {
@@ -31,6 +34,9 @@ const getBadgeCategoriess = async ({ timezone,page, limit, keyword, status, user
     scope: "admin",
     skip,
     limit,
+    keyword,
+    status,
+    date
   });
   return cache({
     namespace: cacheKey,

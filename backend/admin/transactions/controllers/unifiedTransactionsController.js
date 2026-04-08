@@ -9,13 +9,15 @@ const unifiedService = require("../services/unifiedTransactionsService");
 
 const getTransactions = async (req, res) => {
     const { page, limit } = parsePaginationParams(req);
-    const {
-        walletType, domainType, type, organization, companyOrganizer, entityId, startDate, date, endDate, keyword, user,
+    let {
+        walletType, domainType, type, organization, companyOrganizer, entityId, startDate, date, endDate, keyword, user, startPoints, endPoints, ballance,referral,purchaseBased,streakBased,challengeBased,promotionBased
     } = req.query;
-
+    if (req.user.userType === "organizer") {
+        companyOrganizer = req.user._id;
+    }
     try {
         const { items, meta } = await unifiedService.getTransactionsService({
-            page, limit, walletType, domainType, type, organization, companyOrganizer, entityId, startDate, date, endDate, keyword, user
+            page, limit, walletType, domainType, type, organization, companyOrganizer, entityId, startDate, date, endDate, keyword, user, startPoints, endPoints, ballance,referral,purchaseBased,streakBased,challengeBased,promotionBased
         });
         return sendResponse({ res, statusCode: 200, translationKey: "wallet_transactions_fetched", data: items, meta });
     } catch (error) {
@@ -55,31 +57,31 @@ const updateTransaction = async (req, res) => {
 };
 
 const downloadTransactions = async (req, res) => {
-  const { organization, companyOrganizer, startDate, endDate } = req.query;
+    const { organization, companyOrganizer, startDate, endDate } = req.query;
 
-  try {
-    const csvString = await unifiedService.downloadTransactionsAsCSV({
-      organization,
-      companyOrganizer,
-      startDate,
-      endDate,
-    });
+    try {
+        const csvString = await unifiedService.downloadTransactionsAsCSV({
+            organization,
+            companyOrganizer,
+            startDate,
+            endDate,
+        });
 
-    res.setHeader("Content-Type", "text/csv");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=transactions_${Date.now()}.csv`
-    );
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader(
+            "Content-Disposition",
+            `attachment; filename=transactions_${Date.now()}.csv`
+        );
 
-    return res.send(csvString); // ✅ RAW RESPONSE
-  } catch (error) {
-    const err = getReadableErrorMessage(error);
-    return sendResponse({
-      res,
-      statusCode: err.statusCode ?? 500,
-      translationKey: err.message,
-    });
-  }
+        return res.send(csvString); // ✅ RAW RESPONSE
+    } catch (error) {
+        const err = getReadableErrorMessage(error);
+        return sendResponse({
+            res,
+            statusCode: err.statusCode ?? 500,
+            translationKey: err.message,
+        });
+    }
 };
 
 

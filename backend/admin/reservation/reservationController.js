@@ -546,7 +546,7 @@ const getUserReservations = async (req, res) => {
 
 const updateUserReservationStatus = async (req, res) => {
   const { id, value } = req.params;
-
+const changedBy = req.user._id;
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
@@ -560,7 +560,7 @@ const updateUserReservationStatus = async (req, res) => {
     return;
 
   try {
-    const deleted = await reservationService.updateUserReservationStatus(id, value);
+    const deleted = await reservationService.updateUserReservationStatus(id, value, changedBy);
     if (!deleted) {
       return sendResponse({
         res,

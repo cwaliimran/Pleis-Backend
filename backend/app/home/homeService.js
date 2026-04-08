@@ -365,7 +365,7 @@ const getHomeService = async ({ queryData }) => {
     });
     return { status: true, data: feed };
   } catch (error) {
-    console.log("error===>", error)
+
     return { status: false, data: error.message || "Error fetching home feed" };
   }
 };

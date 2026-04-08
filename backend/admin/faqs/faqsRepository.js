@@ -8,9 +8,13 @@ const ACTIVE_ADMIN_SETTINGS_CACHE_KEY = "adminSettings:active";
 const buildAdminSettingsCacheKey = ({
   scope = "public", // public | admin
   skip = 0,
-  limit = 10
+  limit = 10,
+  date,
+  status,
+  keyword,
+  userId
 }) => {
-  return `${ACTIVE_ADMIN_SETTINGS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+  return `${ACTIVE_ADMIN_SETTINGS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:date=${date}:status=${status}:keyword=${keyword}:userId=${userId}`;
 };
 const invalidateAdminSettingsScope = async (scope) => {
   await invalidate(`${ACTIVE_ADMIN_SETTINGS_CACHE_KEY}:${scope}`);
@@ -47,6 +51,10 @@ const getFaqss = async ({ timezone, page, limit, keyword, status, userId, date, 
     scope: "faqs",
     skip,
     limit,
+    date,
+    status,
+    keyword,
+    userId
   });
   return cache({
     namespace: cacheKey,

@@ -285,6 +285,7 @@ const getTotalEngagementEventsByOrganizationId = async (organizationId) => {
     // Count the number of documents where entityType is "organization" and entityId matches the organizationId
     const eventCount = await EngagementEvents.countDocuments({
       entityType: "organizations",
+      action: "view", // You can change this to count different actions if needed
       entityId: objectId
     });
 
@@ -339,11 +340,70 @@ const getEventsViewsStats = async (eventIds = [], since = null) => {
   return results;
 };
 
+const getUserIdsForOrganization = async (eventId) => {
+  try {
+    const users = await EngagementEvents.aggregate([
+      {
+        $match: {
+          entityType: "events",
+          entityId: new mongoose.Types.ObjectId(eventId) // Match the organizationId
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          userIds: { $addToSet: "$userId" } // Collect unique userIds in an array
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          userIds: 1 // Return only the userIds array
+        }
+      }
+    ]);
 
+    return users.length > 0 ? users[0].userIds : []; // Return the user IDs array or an empty array if no users
+  } catch (err) {
+    console.error("Error fetching user IDs:", err);
+    return [];
+  }
+};
+const getUserIdsForOrganizationOrganizaerView = async (organization) => {
+  try {
+    const users = await EngagementEvents.aggregate([
+      {
+        $match: {
+          entityType: "organizations",
+          entityId: new mongoose.Types.ObjectId(organization) // Match the organizationId
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          userIds: { $addToSet: "$userId" } // Collect unique userIds in an array
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          userIds: 1 // Return only the userIds array
+        }
+      }
+    ]);
+
+    return users.length > 0 ? users[0].userIds : []; // Return the user IDs array or an empty array if no users
+  } catch (err) {
+    console.error("Error fetching user IDs:", err);
+    return [];
+  }
+};
 module.exports = {
   logEngagement,
+  getUserIdsForOrganization,
   countEngagementsByEntity,
   getTrendingEntities,
+  getUserIdsForOrganizationOrganizaerView,
   deleteEngagementsBefore,
   getEngagementCountsByEntity,
   getWeeklyEngagementStats,

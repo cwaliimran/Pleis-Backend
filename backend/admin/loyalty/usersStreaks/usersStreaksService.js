@@ -8,15 +8,21 @@ const createUsersStreak = async ({ user, companyOrganizer, visits = 0, points = 
   return await usersStreakRepo.createUsersStreak({ user, companyOrganizer, visits, points });
 };
 
-const getUsersStreaks = async ({ companyOrganizer, page, limit, keyword, status, date, orderSort = "asc" }) => {
+const getUsersStreaks = async ({
+  companyOrganizer,
+  page,
+  limit,
+  keyword,
+  status,
+  date,
+  orderSort = "asc"
+}) => {
+
   const query = {
     companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer)
   };
 
-  //Filter by status
-  // query.status = status ? status : { $ne: "deleted" };
-
-  //Date filter (format: yyyy-mm-dd)
+  // Date filter
   if (date) {
     query.createdAt = {
       $gte: new Date(date),
@@ -24,13 +30,7 @@ const getUsersStreaks = async ({ companyOrganizer, page, limit, keyword, status,
     };
   }
 
-  //Keyword search
-  if (keyword) {
-    query.$or = [{ title: { $regex: keyword, $options: "i" } }];
-  }
-
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-
   const sort = { order: orderSort === "desc" ? -1 : 1 };
 
   let [UsersStreaks, getUsersStreaksCounts] = await Promise.all([
@@ -38,11 +38,29 @@ const getUsersStreaks = async ({ companyOrganizer, page, limit, keyword, status,
     usersStreakRepo.getUsersStreaksCounts(query),
   ]);
 
-  const { totalFiltered, total, active, inactive } = getUsersStreaksCounts;
-  const meta = generateMeta(page, limit, totalFiltered);
-  meta.UsersStreaksCount = { total, active, inactive };
-
   UsersStreaks = formatUsersStreaks(UsersStreaks);
+
+  // ✅ Apply keyword filter AFTER populate
+  if (keyword) {
+    const lowerKeyword = keyword.toLowerCase();
+
+    UsersStreaks = UsersStreaks.filter(item => {
+      const user = item.user || {};
+
+      return (
+        user.firstName?.toLowerCase().includes(lowerKeyword) ||
+        user.lastName?.toLowerCase().includes(lowerKeyword) ||
+        user.username?.toLowerCase().includes(lowerKeyword) ||
+        user.email?.toLowerCase().includes(lowerKeyword)
+      );
+    });
+  }
+
+  // ✅ Recalculate counts after filter
+  const totalFiltered = UsersStreaks.length;
+
+  const meta = generateMeta(page, limit, totalFiltered);
+  meta.UsersStreaksCount = getUsersStreaksCounts;
 
   return { UsersStreaks, meta };
 };

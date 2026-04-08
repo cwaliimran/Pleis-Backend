@@ -1,7 +1,8 @@
 const { default: mongoose } = require("mongoose");
-const { processPaymentWebhook, getOrdersTransactionsService, getOrdersTransactionDetailsService } = require("../services/paymentWebhookService");
+const { processPaymentWebhook, getOrdersTransactionsService, getOrdersTransactionDetailsService, getTransactionStatsService } = require("../services/paymentWebhookService");
 const { verifyMonriSignature } = require("../utils/monriSignature");
 const { parsePaginationParams, sendResponse, getReadableErrorMessage, validateParams } = require("../../../../helperUtils/responseUtil");
+const convertToMongoArray = require("@utils/convertToMongoArray");
 
 const monriWebhookController = async (req, res) => {
   try {
@@ -48,9 +49,19 @@ const monriWebhookController = async (req, res) => {
 const getOrdersTransactions = async (req, res) => {
   try {
     const { page, limit } = parsePaginationParams(req);
-    const { keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate,startAmount,endAmount,paymentMethod
-     } = req.query;
-    const ticketingBookings = await getOrdersTransactionsService({ page, limit, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, startAmount, endAmount, paymentMethod });
+    let { event, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, startAmount, endAmount, paymentMethod, globalStatusLevel, transfered, refunded, validationStatus, paymentStatus, resStartDate, resEndDate,resDate,resStartTime,resEndTime,futureRes,pastRes,paidRes,minimalSpendRes,prePay,ticketRequiredRes,cancelledRes,noShowRes
+    } = req.query;
+
+    if (organization && organization.trim() !== "") {
+      // If organization is a non-empty string, convert it to ObjectId array
+      organization = await convertToMongoArray(organization);
+    } else {
+      // If organization is empty, set it to undefined or an empty array
+      organization = undefined;
+    }
+    const timezone = req.user?.timezone || "UTC";
+
+    const ticketingBookings = await getOrdersTransactionsService({ event, page, limit, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, startAmount, endAmount, paymentMethod, globalStatusLevel, transfered, refunded, validationStatus, paymentStatus, resStartDate, resEndDate,resDate,resStartTime,resEndTime, timezone,futureRes,pastRes,paidRes,minimalSpendRes,prePay,ticketRequiredRes,cancelledRes,noShowRes });
     return sendResponse({ res, statusCode: 200, translationKey: "transactions_fetched_successfully", data: ticketingBookings });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -74,7 +85,48 @@ const getOrdersTransactionDetails = async (req, res) => {
     return sendResponse({ res, statusCode: readableError.statusCode, translationKey: readableError.message, error });
   }
 };
+const getTransactionStats = async (req, res) => {
+  let { dateFilter = "all", companyOrganizer, organizations } = req.query;
+  dateFilter = dateFilter.trim();
+  let { timezone } = req.user || "UTC";
+  if (req.user.userType === "organizer") {
+    companyOrganizer = req.user._id;
+    if (organizations) {
+      organizations = await convertToMongoArray(organizations);
+      companyOrganizer = undefined;
+    }
+  }
+
+  try {
+
+    if (dateFilter && !validateParams(req, res, {
+      enumFields: {
+        dateFilter: ["all", "today", "thisWeek", "thisMonth"],
+      },
+    })) return;
+
+    const dashboard = await getTransactionStatsService({
+      dateFilter,
+      timezone,
+      companyOrganizer,
+      organizations
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "transaction_stats_fetched_successfully",
+      data: dashboard,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
 
 
-
-module.exports = { monriWebhookController, getOrdersTransactions, getOrdersTransactionDetails };
+module.exports = { monriWebhookController, getOrdersTransactions, getOrdersTransactionDetails, getTransactionStats };

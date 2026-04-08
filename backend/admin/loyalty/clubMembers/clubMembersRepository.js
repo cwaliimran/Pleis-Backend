@@ -9,6 +9,10 @@ const { User } = require("@UserModel");
 const countClubMembers = async (query = {}) => {
   return ClubMembers.countDocuments(query);
 };
+const countClubMembersOfOrganization = async (companyOrganizer) => {
+  const companyOrganizerId = new mongoose.Types.ObjectId(companyOrganizer);
+  return ClubMembers.countDocuments({ companyOrganizer: companyOrganizerId });
+};
 
 // Find by ID with population
 const findClubMemberById = async (id) => {
@@ -200,8 +204,23 @@ const getUserJoinedClubs = async (userId) => {
 };
 
 
-const giftPoints = async (query = {}) => {
-  return ClubMembers.giftPoints(query);
+const giftPoints = async (companyOrganizer, user, points, notes ) => {
+  try {
+    const clubMember = await ClubMembers.findOne({ user, companyOrganizer });
+
+    if (!clubMember) {
+      throw new Error("Club member not found");
+    }
+    clubMember.points += points;
+
+    // Save the updated club member
+    await clubMember.save();
+
+    return clubMember;
+  } catch (error) {
+    console.error("Error gifting points:", error);
+    throw new Error("Failed to gift points");
+  }
 };
 const getUserJoinedClubsall = async (userId) => {
   return ClubMembers.aggregate([
@@ -291,5 +310,6 @@ module.exports = {
   getUserJoinedClubs,
   giftPoints,
   getCompanyLoyaltyInfo,
-  getUserJoinedClubsall
+  getUserJoinedClubsall,
+  countClubMembersOfOrganization
 };

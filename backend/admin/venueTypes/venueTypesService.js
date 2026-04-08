@@ -1,10 +1,11 @@
 // services/venuetypeService.js
+const { default: mongoose } = require("mongoose");
 const { generateMeta } = require("../../helperUtils/responseUtil");
 const { formatVenueType } = require("./fomatter/formatVenueType");
 const venuetypeRepo = require("./venueTypesRepository");
 
-const createVenueType = async ({ image, title, status }) => {
-  return await venuetypeRepo.createVenueType({ image, title, status });
+const createVenueType = async ({ image, title, status, categories }) => {
+  return await venuetypeRepo.createVenueType({ image, title, status, categories });
 };
 const getVenueTypes = async ({ page, limit, keyword, status, date }) => {
   const andConditions = [];
@@ -38,7 +39,10 @@ const getVenueTypes = async ({ page, limit, keyword, status, date }) => {
       venuetypeRepo.getVenueTypesWithFilters(
         query,
         page,
-        limit
+        limit,
+        status,
+        date,
+        keyword
       ),
       venuetypeRepo.getCounts(query),
     ]);
@@ -55,7 +59,7 @@ const getVenueTypes = async ({ page, limit, keyword, status, date }) => {
   };
 };
 
-const getPublicVenueTypes = async ({ page=1, limit, keyword, date }) => {
+const getPublicVenueTypes = async ({ page = 1, limit, keyword, date, categoriesFilter = [] }) => {
   const baseFilters = [{ status: "active" }];
   //if date is available then match createdAt with date current date format is yyyy-mm-dd
   if (date) {
@@ -78,18 +82,22 @@ const getPublicVenueTypes = async ({ page=1, limit, keyword, date }) => {
 
   const baseQuery = baseFilters.length ? { $and: baseFilters } : {};
 
+  if (categoriesFilter.length > 0) {
+    categoriesFilter = categoriesFilter.map(id => new mongoose.Types.ObjectId(id));
+    baseQuery.categories = { $in: categoriesFilter };
+  }
 
   const [venueTypes, totalFiltered] =
     await Promise.all([
       page === 1
         ? venuetypeRepo.getVenueTypesWithFilters(baseQuery, page,
-          limit)
+          limit, status, date, keyword, categoriesFilter)
         : [],
 
       venuetypeRepo.countVenueTypes(baseQuery),
     ]);
 
-    const formattedVenueTypes = venueTypes.map(item => formatVenueType(item));
+  const formattedVenueTypes = venueTypes.map(item => formatVenueType(item));
 
   let meta = generateMeta(page, limit, totalFiltered);
 
@@ -105,6 +113,7 @@ const updateVenueType = async (id, data) => {
     ...(data.title !== undefined && { title: data.title }),
     ...(data.image !== undefined && { image: data.image }),
     ...(data.status !== undefined && { status: data.status }),
+    ...(data.categories !== undefined && { categories: data.categories }),
   };
 
   if (Object.keys(updateData).length === 0) {

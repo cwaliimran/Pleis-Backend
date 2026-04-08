@@ -135,11 +135,10 @@ const parsePaginationParams = (req) => {
 const generateMeta = (page, limit, total) => {
 
   return {
-
-    currentPage: page,
-    totalPages: Math.ceil(total / limit),
-    totalRecords: total,
-    limit: limit,
+    currentPage: Number(page), // Ensuring it's a number
+    totalPages: Math.ceil(total / limit), // Calculating total pages
+    totalRecords: Number(total), // Ensuring total records is a number
+    limit: Number(limit), // Ensuring the limit is a number
   };
 };
 const validateObjectIdsArr = (res, ids, fieldNames) => {
@@ -639,7 +638,9 @@ const convertToUtcDateOnly = (date, timezone, inputFormat = "YYYY-MM-DD") => {
   // Format the date in the given timezone without changing the time zone
   return momentDate.format("YYYY-MM-DD[T]HH:mm:ss.SSS[+00:00]");  // Return the formatted date
 };
-
+const extractTime = (datetime) => {
+  return moment.utc(datetime).format("HH:mm");
+};
 const convertTimezoneToUtcDateOnly = (
   date,
   timezone,
@@ -870,6 +871,7 @@ module.exports = {
   convertTimezoneToUtcDateOnly,
   getCurrentUtcDateOnly,
   convertToUtcDateOnly,
+  extractTime,
   getEndDate,
   fireAndForget,
 };

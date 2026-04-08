@@ -27,5 +27,6 @@ router.use("/club-members", require("../globalLoyalty/clubMembers/clubMembersRou
 //transactions
 router.use("/referrals", require("../globalLoyalty/globalReferral/globalReferralRoutes"));
 router.use("/dashboard", require("../globalLoyalty/dashboard/dashboardsRoutes"));
+router.use("/referral-analytics", require("../globalLoyalty/referralAnalytics/referralAnalyticsRoutes"));
 
 module.exports = router;
