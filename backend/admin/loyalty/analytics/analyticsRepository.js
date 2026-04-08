@@ -617,8 +617,6 @@ const getTopMenuOrdersFromWallet = async ({
   page = 1,
   limit = 10,
 }) => {
-  console.log("user", user);
-  console.log("companyOrganizer", companyOrganizer);
   try {
     const skip = (page - 1) * limit;
 

@@ -10,9 +10,13 @@ const ACTIVE_TIERS_CACHE_KEY = "tiers:active";
 const buildTiersCacheKey = ({
   scope = "public", // public | admin
   skip = 0,
-  limit = 10
+  limit = 10,
+  keyword = "",
+  status = "",
+  date = "",
+
 }) => {
-  return `${ACTIVE_TIERS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+  return `${ACTIVE_TIERS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:keyword=${keyword}:status=${status}:date=${date}`;
 };
 const createTier = async (data) => {
   let tier = await tierRepo.createTier(data);
@@ -28,6 +32,9 @@ const getTiers = async ({ page, limit, keyword, status, date }) => {
     scope: "admin",
     skip,
     limit,
+    keyword,
+    status,
+    date
   });
 
   return cache({

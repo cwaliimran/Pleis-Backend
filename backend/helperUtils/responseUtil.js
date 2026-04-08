@@ -638,7 +638,9 @@ const convertToUtcDateOnly = (date, timezone, inputFormat = "YYYY-MM-DD") => {
   // Format the date in the given timezone without changing the time zone
   return momentDate.format("YYYY-MM-DD[T]HH:mm:ss.SSS[+00:00]");  // Return the formatted date
 };
-
+const extractTime = (datetime) => {
+  return moment.utc(datetime).format("HH:mm");
+};
 const convertTimezoneToUtcDateOnly = (
   date,
   timezone,
@@ -869,6 +871,7 @@ module.exports = {
   convertTimezoneToUtcDateOnly,
   getCurrentUtcDateOnly,
   convertToUtcDateOnly,
+  extractTime,
   getEndDate,
   fireAndForget,
 };

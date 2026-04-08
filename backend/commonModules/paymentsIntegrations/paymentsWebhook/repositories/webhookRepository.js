@@ -1,3 +1,4 @@
+const { extractTime } = require("@utils/responseUtil");
 const { formatImages } = require("../formator/formateWebhook");
 const { getDateRanges } = require("../utils/transsectionDate.utils");
 const WebhookEvent = require("./WebhookTransactionsEvent.model");
@@ -183,116 +184,514 @@ const getOrdersTransactions = async ({
   keyword,
   paymentMethod,
   skip = 0,
-  limit = 10
+  limit = 10,
+  globalStatusLevel,
+  transfered,
+  refunded,
+  validationStatus,
+  orderType, resStartDate, resEndDate,
+  resDate,
+  resStartTimeUtc,
+  resEndTimeUtc, futureRes, pastRes, prePay,
+  ticketRequiredRes,
+  cancelledRes,
+  noShowRes
 }) => {
-  if (!keyword?.trim()) {
-    const pipeline = [];
+  const pipeline = [];
 
-    if (Object.keys(match).length) {
-      pipeline.push({ $match: match });
-    }
+  // Base match
+  if (Object.keys(match).length) {
+    pipeline.push({ $match: match });
+  }
 
+  // Lookups FIRST (so we can search inside them)
+  pipeline.push(
+    {
+      $lookup: {
+        from: "organizations",
+        localField: "organization",
+        foreignField: "_id",
+        as: "organization"
+      }
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "user",
+        foreignField: "_id",
+        as: "user"
+      }
+    },
+    {
+      $addFields: {
+        organization: { $arrayElemAt: ["$organization", 0] },
+        user: { $arrayElemAt: ["$user", 0] }
+      }
+    },
+    {
+      $lookup: {
+        from: "userglobalwallets",
+        localField: "user._id",
+        foreignField: "user",
+        as: "wallet",
+      },
+    },
+    { $unwind: { path: "$wallet", preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: "globalstatuslevels",
+        localField: "wallet.global.level",
+        foreignField: "_id",
+        as: "level",
+      },
+    },
+    { $unwind: { path: "$level", preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: "ticketingorders",
+        localField: "orderNumber",
+        foreignField: "_id",
+        as: "ticketingorders"
+      }
+    },
+    { $unwind: { path: "$ticketingorders", preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: "events",
+        localField: "ticketingorders.event",
+        foreignField: "_id",
+        pipeline: [
+          { $project: { name: "$basicInfo.title" } }
+        ],
+        as: "event"
+      }
+    },
+    { $unwind: { path: "$event", preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: "ticketingbookings",
+        localField: "orderNumber",
+        foreignField: "order",
+        pipeline: [
+          { $project: { type: "$ticket.snapshot.title" } }
+        ],
+        as: "ticketType"
+      }
+    },
+    { $unwind: { path: "$ticketType", preserveNullAndEmptyArrays: true } }
+  );
+  // Conditionally add ticketingbookings lookup if 'transfered' is true and 'transferHistory' is not empty
+  if (transfered) {
+
+
+    // Add the lookup for ticketingbookings with transferHistory check
     pipeline.push(
-      { $sort: { createdAt: -1, _id: -1 } },
       {
         $lookup: {
-          from: "organizations",
-          localField: "organization",
+          from: "ticketingbookings",
+          localField: "orderNumber",
+          foreignField: "order",
+          pipeline: [
+            { $project: { type: "$ticket.snapshot.title", transferHistory: 1 } }, // Include transferHistory for filtering
+          ],
+          as: "ticketType"
+        }
+      },
+      {
+        $unwind: {
+          path: "$ticketType",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $match: {
+          "ticketType.transferHistory": { $ne: [] } // Ensure that transferHistory is not empty
+        }
+      }
+    );
+  }
+  if (refunded) {
+
+    // Add the lookup for ticketingbookings with transferHistory check
+    pipeline.push(
+      {
+        $lookup: {
+          from: "ticketingorders",
+          localField: "orderNumber",
           foreignField: "_id",
-          as: "organization"
+          pipeline: [
+            { $project: { paymentStatus: "$paymentDetails.paymentStatus" } }, // Include `paymentStatus` for filtering
+          ],
+          as: "ticketType"
+        }
+      },
+      {
+        $unwind: {
+          path: "$ticketType",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $match: {
+          "ticketType.paymentStatus": "refunded" // Ensure that paymentStatus is refunded
+        }
+      }
+    );
+  }
+  if (orderType === "userreservations") {
+    pipeline.push(
+      {
+        $lookup: {
+          from: "userreservations",
+          localField: "orderNumber",
+          foreignField: "_id",
+          as: "userreservations"
+        }
+      },
+      {
+        $unwind: {
+          path: "$userreservations",
+          preserveNullAndEmptyArrays: true
         }
       },
       {
         $lookup: {
-          from: "users",
-          localField: "user",
+          from: "events",
+          localField: "userreservations.reservationSnapshot.optionalEventId",
           foreignField: "_id",
-          as: "user"
+          pipeline: [
+            { $project: { name: "$basicInfo.title" } }
+          ],
+          as: "events"
         }
       },
       {
-        $addFields: {
-          organization: { $arrayElemAt: ["$organization", 0] },
-          user: { $arrayElemAt: ["$user", 0] }
-        }
-      },
-      {
-        $project: {
-          provider: 1,
-          orderType: 1,
-          orderNumber: 1,
-          paymentStatus: 1,
-          transactionId: 1,
-          amount: 1,
-          payload: 1,
-          createdAt: 1,
-          updatedAt: 1,
-
-          organization: {
-            _id: "$organization._id",
-            name: "$organization.basicInfo.name"
-          },
-
-          user: {
-            _id: "$user._id",
-            username: "$user.username",
-            firstName: "$user.firstName",
-            lastName: "$user.lastName",
-            email: "$user.email"
-          }
+        $unwind: {
+          path: "$events",
+          preserveNullAndEmptyArrays: true
         }
       }
     );
 
-    const transactions = await WebhookEvent.aggregate(pipeline, { allowDiskUse: true });
-
-    const updatedTransactions = await Promise.all(
-      transactions.map(async (transaction) => {
-        const paymentMethodValue = await getOrderPaymentMethod({
-          orderType: transaction.orderType,
-          orderNumber: transaction.orderNumber,
-        });
-
-        return {
-          ...transaction,
-          paymentMethod: paymentMethodValue,
-        };
-      })
-    );
-
-    let filteredTransactions = updatedTransactions;
-
-    if (paymentMethod && paymentMethod.trim()) {
-      filteredTransactions = filteredTransactions.filter(
-        (transaction) =>
-          transaction.paymentMethod &&
-          transaction.paymentMethod.toLowerCase() === paymentMethod.toLowerCase()
-      );
+    // Handle resStartDate and resEndDate
+    if (resStartDate) {
+      // Convert the start date to UTC and set the time to the start of the day
+      const startDate = new Date(resStartDate + "T00:00:00.000Z"); // Ensure UTC by adding 'Z' (UTC) to the date string
+      pipeline.push({
+        $match: {
+          "userreservations.reservationSnapshot.timingSlots.dateTimeSlots.date": {
+            $gte: startDate // Use $gte to match records greater than or equal to the start date
+          }
+        }
+      });
     }
 
-    return limit > 0
-      ? filteredTransactions.slice(skip, skip + limit)
-      : filteredTransactions.slice(skip);
+    if (resEndDate) {
+      // Convert the end date to UTC and set the time to the end of the day
+      const endDate = new Date(resEndDate + "T23:59:59.999Z"); // Ensure UTC by adding 'Z' (UTC) to the date string
+      pipeline.push({
+        $match: {
+          "userreservations.reservationSnapshot.timingSlots.dateTimeSlots.date": {
+            $lte: endDate // Use $lte to match records less than or equal to the end date
+          }
+        }
+      });
+    }
+    if (resDate) {
+      const startOfDay = new Date(resDate + "T00:00:00.000Z");
+      const endOfDay = new Date(resDate + "T23:59:59.999Z");
+      pipeline.push({
+        $match: {
+          "userreservations.reservationSnapshot.timingSlots.dateTimeSlots.date": {
+            $gte: startOfDay,
+            $lte: endOfDay
+          }
+        }
+      });
+    }
+    if (resStartTimeUtc) {
+      pipeline.push({
+        $match: {
+          "userreservations.reservationSnapshot.timingSlots.dateTimeSlots.timeSlots.startTime": {
+            $gte: resStartTimeUtc // Compare the converted UTC start time
+          }
+        }
+      });
+    }
+    if (resEndTimeUtc) {
+      pipeline.push({
+        $match: {
+          "userreservations.reservationSnapshot.timingSlots.dateTimeSlots.timeSlots.startTime": {
+            $lte: resEndTimeUtc // Compare the converted UTC end time
+          }
+        }
+      });
+    }
+    if (futureRes) {
+      pipeline.push({
+        $match: {
+          "userreservations.reservationSnapshot.timingSlots.dateTimeSlots.date": {
+            $gte: new Date() // Match records with a date greater than or equal to the current date
+          }
+        }
+      });
+    }
+    if (pastRes) {
+      pipeline.push({
+        $match: {
+          "userreservations.reservationSnapshot.timingSlots.dateTimeSlots.date": {
+            $lte: new Date() // Match records with a date less than or equal to the current date
+          }
+        }
+      });
+    }
+    if (prePay) {
+      pipeline.push({
+        $match: {
+          "userreservations.reservationSnapshot.timingSlots.dateTimeSlots.date": {
+            $gte: new Date() // Match records with a date greater than or equal to the current date
+          },
+          "paymentStatus": "paid"
+        }
+      });
+    }
+    if (ticketRequiredRes) {
+      pipeline.push({
+        $match: {
+          "userreservations.reservationSnapshot.optionalEventId": {
+            $ne: null
+          },
+        }
+      });
+    }
+    if (cancelledRes) {
+      pipeline.push({
+        $match: {
+          "userreservations.status": "cancelled"
+        }
+      });
+    }
+    if (noShowRes) {
+      pipeline.push({
+        $match: {
+          "userreservations.reservationSnapshot.timingSlots.enabled": false, // Match false values for enabled
+        }
+      });
+    }
   }
+
+  if (validationStatus === "scanned") {
+    pipeline.push(
+      {
+        $lookup: {
+          from: "ticketingbookings",
+          localField: "orderNumber",
+          foreignField: "order",
+          pipeline: [
+            { $project: { type: "$ticket.snapshot.title", checkInHistory: 1 } }, // Include checkInHistory   for filtering
+          ],
+          as: "ticketType"
+        }
+      },
+      {
+        $unwind: {
+          path: "$ticketType",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $match: {
+          "ticketType.checkInHistory": { $ne: [] } // Ensure that checkInHistory is not empty
+        }
+      }
+    );
+  }
+  if (validationStatus === "not-scanned") {
+
+    // Add the lookup for ticketingbookings with checkInHistory check
+    pipeline.push(
+      {
+        $lookup: {
+          from: "ticketingbookings",
+          localField: "orderNumber",
+          foreignField: "order",
+          pipeline: [
+            { $project: { type: "$ticket.snapshot.title", checkInHistory: 1 } }, // Include checkInHistory   for filtering
+          ],
+          as: "ticketType"
+        }
+      },
+      {
+        $unwind: {
+          path: "$ticketType",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $match: {
+          "ticketType.checkInHistory": { $eq: [] } // Ensure that checkInHistory is empty
+        }
+      }
+    );
+  }
+  // 🔥 KEYWORD FILTER (MAIN ADDITION)
+  if (keyword && keyword.trim()) {
+    const regex = new RegExp(keyword, "i");
+
+    pipeline.push({
+      $match: {
+        $or: [
+          { orderNumber: regex },
+          { transactionId: regex },
+          { amount: { $regex: keyword, $options: "i" } }, // if string
+          { "user.firstName": { $regex: regex } },
+          { "user.lastName": { $regex: regex } },
+          { "user.username": { $regex: regex } },
+          { "user.email": { $regex: regex } },
+          { "organization.basicInfo.name": { $regex: regex } },
+          { "userreservations.reservationSnapshot.reservationType": { $regex: regex } },
+          { "event.name": { $regex: regex } },
+          { "ticketType.type": { $regex: regex } },
+          // Full name search (firstName + lastName) using $concat outside $expr
+          {
+            $or: [
+              {
+                $expr: {
+                  $regexMatch: {
+                    input: { $concat: ["$user.firstName", " ", "$user.lastName"] },
+                    regex: regex
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    });
+  }
+  if (globalStatusLevel && globalStatusLevel.trim()) {
+    pipeline.push({
+      $match: {
+        "level.title": globalStatusLevel
+      }
+    });
+  }
+
+  if (orderType === "userreservations") {
+    pipeline.push(
+      {
+        $lookup: {
+          from: "menuorders",
+          localField: "orderNumber",
+          foreignField: "_id",
+          as: "menuorders"
+        }
+      },
+      {
+        $unwind: {
+          path: "$menuorders",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+    );
+  }
+  // Sorting
+  pipeline.push({ $sort: { createdAt: -1, _id: -1 } });
+
+  // Projection
+  pipeline.push({
+    $project: {
+      provider: 1,
+      orderType: 1,
+      orderNumber: 1,
+      paymentStatus: 1,
+      transactionId: 1,
+      ticketType: 1,
+      events: 1,
+      userreservations: 1,
+      menuorders: 1,
+      amount: 1,
+      payload: 1,
+      createdAt: 1,
+      event: 1,
+      updatedAt: 1,
+      userGlobal: {
+        level: {
+          _id: "$level._id",
+          title: "$level.title",
+          type: "$level.type",
+        },
+      },
+
+      organization: {
+        _id: "$organization._id",
+        name: "$organization.basicInfo.name"
+      },
+
+      user: {
+        _id: "$user._id",
+        username: "$user.username",
+        firstName: "$user.firstName",
+        lastName: "$user.lastName",
+        email: "$user.email"
+      }
+    }
+  });
+
+  // Pagination
+  if (skip) pipeline.push({ $skip: skip });
+  if (limit) pipeline.push({ $limit: limit });
+
+  // Execute
+  const transactions = await WebhookEvent.aggregate(pipeline, { allowDiskUse: true });
+
+  // Attach payment method
+  const updatedTransactions = await Promise.all(
+    transactions.map(async (transaction) => {
+      const paymentMethodValue = await getOrderPaymentMethod({
+        orderType: transaction.orderType,
+        orderNumber: transaction.orderNumber,
+      });
+
+      return {
+        ...transaction,
+        paymentMethod: paymentMethodValue,
+      };
+    })
+  );
+
+  // Filter by paymentMethod (post-process)
+  let filteredTransactions = updatedTransactions;
+
+  if (paymentMethod && paymentMethod.trim()) {
+    filteredTransactions = filteredTransactions.filter(
+      (transaction) =>
+        transaction.paymentMethod &&
+        transaction.paymentMethod.toLowerCase() === paymentMethod.toLowerCase()
+    );
+  }
+
+  return filteredTransactions;
 };
 
 /* =========================================================
    📊 COUNT FUNCTION
 ========================================================= */
 
-const countOrdersTransactions = async ({ match = {}, keyword }) => {
-
-  if (!keyword?.trim()) {
-    return WebhookEvent.countDocuments(match);
-  }
-
-  const regexMatch = buildKeywordMatch(keyword);
+const countOrdersTransactions = async ({
+  match = {},
+  keyword,
+  paymentMethod,
+  globalStatusLevel,
+  transfered,
+  refunded,
+  validationStatus
+}) => {
   const pipeline = [];
 
   if (Object.keys(match).length) {
     pipeline.push({ $match: match });
   }
-
   pipeline.push(
     {
       $lookup: {
@@ -321,24 +720,266 @@ const countOrdersTransactions = async ({ match = {}, keyword }) => {
     {
       $addFields: {
         organization: { $arrayElemAt: ["$organization", 0] },
-        companyOrganizer: { $arrayElemAt: ["$companyOrganizer", 0] },
         user: { $arrayElemAt: ["$user", 0] }
       }
     },
-    { $match: regexMatch },
-    { $count: "total" }
+    {
+      $lookup: {
+        from: "userglobalwallets",
+        localField: "user._id",
+        foreignField: "user",
+        as: "wallet"
+      }
+    },
+    { $unwind: { path: "$wallet", preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: "globalstatuslevels",
+        localField: "wallet.global.level",
+        foreignField: "_id",
+        as: "level"
+      }
+    },
+    { $unwind: { path: "$level", preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: "ticketingorders",
+        localField: "orderNumber",
+        foreignField: "_id",
+        as: "ticketingorders"
+      }
+    },
+    { $unwind: { path: "$ticketingorders", preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: "events",
+        localField: "ticketingorders.event",
+        foreignField: "_id",
+        pipeline: [
+          { $project: { name: "$basicInfo.title" } }
+        ],
+        as: "event"
+      }
+    },
+    { $unwind: { path: "$event", preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: "ticketingbookings",
+        localField: "orderNumber",
+        foreignField: "order",
+        pipeline: [
+          { $project: { type: "$ticket.snapshot.title" } }
+        ],
+        as: "ticketType"
+      }
+    },
+    { $unwind: { path: "$ticketType", preserveNullAndEmptyArrays: true } }
   );
 
+  // Conditionally add ticketingbookings lookup if 'transfered' is true and 'transferHistory' is not empty
+  if (transfered) {
+    pipeline.push(
+      {
+        $lookup: {
+          from: "ticketingbookings",
+          localField: "orderNumber",
+          foreignField: "order",
+          pipeline: [
+            { $match: { "transferHistory": { $ne: [] } } },  // Ensure transferHistory is not empty
+            { $project: { type: "$ticket.snapshot.title" } }
+          ],
+          as: "ticketType"
+        }
+      },
+      { $unwind: { path: "$ticketType", preserveNullAndEmptyArrays: true } }
+    );
+  }
+
+  // Conditionally add ticketingbookings lookup if 'refunded' is true and paymentStatus is 'refunded'
+  if (refunded) {
+    pipeline.push(
+      {
+        $lookup: {
+          from: "ticketingorders",
+          localField: "orderNumber",
+          foreignField: "_id",
+          pipeline: [
+            { $project: { paymentStatus: "$paymentDetails.paymentStatus" } }
+          ],
+          as: "ticketType"
+        }
+      },
+      { $unwind: { path: "$ticketType", preserveNullAndEmptyArrays: true } },
+      {
+        $match: {
+          "ticketType.paymentStatus": "refunded"  // Ensure that paymentStatus is refunded
+        }
+      }
+    );
+  }
+
+  // Conditionally filter by validation status 'scanned' - check if checkInHistory is not empty
+  if (validationStatus === "scanned") {
+    pipeline.push(
+      {
+        $lookup: {
+          from: "ticketingbookings",
+          localField: "orderNumber",
+          foreignField: "order",
+          pipeline: [
+            { $project: { type: "$ticket.snapshot.title", checkInHistory: 1 } }
+          ],
+          as: "ticketType"
+        }
+      },
+      { $unwind: { path: "$ticketType", preserveNullAndEmptyArrays: true } },
+      {
+        $match: {
+          "ticketType.checkInHistory": { $ne: [] }  // Ensure checkInHistory is not empty
+        }
+      }
+    );
+  }
+
+  // Conditionally filter by validation status 'not-scanned' - check if checkInHistory is empty
+  if (validationStatus === "not-scanned") {
+    pipeline.push(
+      {
+        $lookup: {
+          from: "ticketingbookings",
+          localField: "orderNumber",
+          foreignField: "order",
+          pipeline: [
+            { $project: { type: "$ticket.snapshot.title", checkInHistory: 1 } }
+          ],
+          as: "ticketType"
+        }
+      },
+      { $unwind: { path: "$ticketType", preserveNullAndEmptyArrays: true } },
+      {
+        $match: {
+          "ticketType.checkInHistory": { $eq: [] }  // Ensure checkInHistory is empty
+        }
+      }
+    );
+  }
+
+  if (keyword && keyword.trim()) {
+    const regex = new RegExp(keyword, "i");
+
+    pipeline.push({
+      $match: {
+        $or: [
+          { orderNumber: regex },
+          { transactionId: regex },
+          { amount: { $regex: keyword, $options: "i" } }, // if string
+          { "user.firstName": { $regex: regex } },
+          { "user.lastName": { $regex: regex } },
+          { "user.username": { $regex: regex } },
+          { "user.email": { $regex: regex } },
+          { "organization.basicInfo.name": { $regex: regex } },
+          { "event.name": { $regex: regex } },
+          { "ticketType.type": { $regex: regex } },
+          // Full name search (firstName + lastName) using $concat outside $expr
+          {
+            $or: [
+              {
+                $expr: {
+                  $regexMatch: {
+                    input: { $concat: ["$user.firstName", " ", "$user.lastName"] },
+                    regex: regex
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    });
+  }
+
+  // Filter by globalStatusLevel
+  if (globalStatusLevel && globalStatusLevel.trim()) {
+    pipeline.push({
+      $match: {
+        "level.title": globalStatusLevel
+      }
+    });
+  }
+  pipeline.push({ $count: "total" });
+
   const res = await WebhookEvent.aggregate(pipeline, { allowDiskUse: true });
+
   return res[0]?.total || 0;
 };
 
+
+
 const getOrdersTransactionDetails = async ({ id }) => {
-  const transactionDetails = await WebhookEvent.findById(id)
-    .populate("organization", "basicInfo")
-    .populate("companyOrganizer", "firstName lastName username email profileIcon")
-    .populate("user", "firstName lastName username email profileIcon")
-    .lean();
+  const [status, transactionDetails] = await Promise.all([
+
+    // 🔥 Aggregation (status)
+    WebhookEvent.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(id),
+        },
+      },
+
+      {
+        $lookup: {
+          from: "users",
+          localField: "user",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+
+      {
+        $lookup: {
+          from: "userglobalwallets",
+          localField: "user._id",
+          foreignField: "user",
+          as: "wallet",
+        },
+      },
+      { $unwind: { path: "$wallet", preserveNullAndEmptyArrays: true } },
+
+      {
+        $lookup: {
+          from: "globalstatuslevels",
+          localField: "wallet.global.level",
+          foreignField: "_id",
+          as: "level",
+        },
+      },
+      { $unwind: { path: "$level", preserveNullAndEmptyArrays: true } },
+
+      {
+        $project: {
+          userGlobal: {
+            points: "$wallet.global.points",
+            lifetimePoints: "$wallet.global.lifetimePoints",
+            level: {
+              _id: "$level._id",
+              title: "$level.title",
+              type: "$level.type",
+            },
+          },
+        },
+      },
+    ]),
+
+    // 🔥 Main transaction query
+    WebhookEvent.findById(id)
+      .populate("organization", "basicInfo")
+      .populate("companyOrganizer", "firstName lastName username email profileIcon")
+      .populate("user", "firstName lastName username email profileIcon")
+      .lean()
+
+  ]);
+
   if (!transactionDetails) {
     throw new Error("transaction_not_found");
   }
@@ -483,6 +1124,7 @@ const getOrdersTransactionDetails = async ({ id }) => {
   const formattedData = formatImages(completeData);
   return {
     ...transactionDetails,
+    userGlobal: status[0]?.userGlobal?.level || "no level",
     orderData: formattedData.orderData,
   };
 };
@@ -540,9 +1182,9 @@ const getTransactionStats = async ({ dateFilter, timezone, companyOrganizer, org
   const ranges = getDateRanges({ dateFilter, timezone });
 
 
-if (organizations.length === 0) {
-  organizations=undefined
-}
+  if (organizations.length === 0) {
+    organizations = undefined
+  }
 
   // Base match for aggregation
   const baseMatch = {

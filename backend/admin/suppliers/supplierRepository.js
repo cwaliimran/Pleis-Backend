@@ -5,9 +5,12 @@ const ACTIVE_SUPPLIERS_CACHE_KEY = "suppliers:active";
 const buildSuppliersCacheKey = ({
   scope = "public", // public | admin
   skip = 0,
-  limit = 10
+  limit = 10,
+  keyword = "",
+  status = "",
+  date = "",
 }) => {
-  return `${ACTIVE_SUPPLIERS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+  return `${ACTIVE_SUPPLIERS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:keyword=${keyword}:status=${status}:date=${date}`;
 };
  
 // Create
@@ -18,11 +21,14 @@ const createSupplier = async (data) => {
 };
 
 // Get all with filters
-const getSuppliersWithFilters = async (query, skip, limit) => {
+const getSuppliersWithFilters = async (query, skip, limit, keyword, status, date) => {
   const cacheKey = buildSuppliersCacheKey({
     scope: "admin",
     skip,
     limit,
+    keyword,
+    status,
+    date
   });
 
   return cache({

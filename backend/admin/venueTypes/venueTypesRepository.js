@@ -8,9 +8,13 @@ const ACTIVE_VENUE_TYPES_CACHE_KEY = "venueTypes:active";
 const buildVenueTypesCacheKey = ({
   scope = "public", // public | admin
   skip = 0,
-  limit = 10
+  limit = 10,
+  status,
+  date,
+  keyword,
+  categoriesFilter = []
 }) => {
-  return `${ACTIVE_VENUE_TYPES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+  return `${ACTIVE_VENUE_TYPES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:status=${status}:date=${date}:keyword=${keyword}:categoriesFilter=${categoriesFilter}`;
 };
 // Create
 const createVenueType = async (data) => {
@@ -20,11 +24,18 @@ const createVenueType = async (data) => {
 };
 
 // Get all with filters
-const getVenueTypesWithFilters = async (query, page, limit) => {
+const getVenueTypesWithFilters = async (query, page, limit, status, date, keyword, categoriesFilter = []) => {
+if (categoriesFilter.length > 0) {
+  categoriesFilter = categoriesFilter.map(id => new mongoose.Types.ObjectId(id)); // Convert string IDs to ObjectIds
+}
   const cacheKey = buildVenueTypesCacheKey({
     scope: "admin",
     skip: page,
     limit,
+    status,
+    date,
+    keyword,
+    categoriesFilter: categoriesFilter.length > 0 ? categoriesFilter.join(",") : "" 
   });
 
   return cache({
@@ -35,6 +46,12 @@ const getVenueTypesWithFilters = async (query, page, limit) => {
       return getWithFilters({
         model: VenueTypesModel,
         query,
+        populate: [
+          {
+            path: "categories",
+            select: "title",
+          },
+        ],
         options: { page, limit },
       });
     },

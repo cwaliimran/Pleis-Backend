@@ -13,7 +13,6 @@ const { getOrganizationIdByCompanyOrganizer } = require("../../admin/organizatio
 
 
 const getTicketingsWithFilters = async (query, page, limit) => {
-  console.log("Constructed query:", JSON.stringify(query, null, 2));
   return getWithFilters({
     model: TicketingsModel,
     query,
@@ -42,20 +41,19 @@ const getTicketings = async ({
   organizations,
 }) => {
   const skip = (page - 1) * limit; // Pagination calculation
-  console.log("Pagination Calculation:", { page, limit, skip });
+ 
 
   const andConditions = []; // Array to store the conditions for the query
 
   // Check if organizations are provided; if not, fetch them by companyOrganizer
   if (!organizations) {
-    console.log("Fetching organizations for companyOrganizer:", companyOrganizer);
-    organizations = await getOrganizationIdByCompanyOrganizer(companyOrganizer); // Assuming it's a promise
-    console.log("Fetched organizations:", organizations);
+
+    organizations = await getOrganizationIdByCompanyOrganizer(companyOrganizer); // 
 
     // If organizations are returned as objects, map them to an array of _id
     if (organizations && organizations.length > 0) {
       organizations = organizations.map(org => org._id);
-      console.log("Mapped organizations:", organizations);
+  
     }
   }
 
@@ -65,10 +63,10 @@ const getTicketings = async ({
     status: { $ne: "deleted" }, // Optional: Ensure the event is not deleted
   }).select('_id'); // Select only the event _id for the next query
 
-  console.log("Matched Events:", events);
+
 
   if (events.length === 0) {
-    console.log("No events found for the organizations.");
+  
     return { ticketings: [], meta: {} }; // Return empty if no events are matched
   }
 
@@ -80,7 +78,7 @@ const getTicketings = async ({
   // Filter by eventId if provided
   if (eventId) {
     andConditions.push({ event: eventId });
-    console.log("Filtering by eventId:", eventId);
+
   }
 
   // Filter by date (tickets created on the specified date)
@@ -91,16 +89,16 @@ const getTicketings = async ({
         $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)), // Next day's date
       },
     });
-    console.log("Filtering by date:", date);
+   
   }
 
   // Filter by status (if not provided, exclude "deleted" status by default)
   if (status) {
     andConditions.push({ status });
-    console.log("Filtering by status:", status);
+
   } else {
     andConditions.push({ status: { $ne: "deleted" } });
-    console.log("Excluding 'deleted' status");
+  
   }
 
   // Filter by keyword (case-insensitive search in title)
@@ -108,33 +106,31 @@ const getTicketings = async ({
     andConditions.push({
       $or: [{ title: { $regex: keyword, $options: "i" } }], // Case-insensitive regex search
     });
-    console.log("Filtering by keyword:", keyword);
+   
   }
 
   // Construct the query
   const query = andConditions.length ? { $and: andConditions } : {};
-  console.log("Constructed query:", JSON.stringify(query, null, 2));
+
 
   try {
-    // Step 3: Fetch ticketings with filters and pagination
-    console.log("Fetching ticketings with filters...");
+
     const [ticketings, counts] = await Promise.all([
       getTicketingsWithFilters(query, page, limit),
       getCounts(query),
     ]);
-    console.log("Ticketings Data:", ticketings);
+  
 
     // Prepare the metadata for pagination
     const { totalFiltered, total, active, inactive } = counts;
-    console.log("Ticketing counts:", counts);
+
 
     const meta = {
       ...generateMeta(page, limit, totalFiltered),
       ticketingsCount: { total, active, inactive },
     };
 
-    // Return ticketings and metadata
-    console.log("Returning ticketings and metadata...");
+
     return { ticketings, meta };
   } catch (error) {
     console.error("Error in repository:", error);

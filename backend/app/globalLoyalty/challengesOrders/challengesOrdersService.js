@@ -285,7 +285,7 @@ const resolveGlobalChallengeByTaskTypeService = async ({
 
     session.endSession();
 
-    console.error("[GLOBAL] Transaction failed", err);
+
 
     return {
       success: false,

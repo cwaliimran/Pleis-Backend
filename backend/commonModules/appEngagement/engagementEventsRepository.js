@@ -285,6 +285,7 @@ const getTotalEngagementEventsByOrganizationId = async (organizationId) => {
     // Count the number of documents where entityType is "organization" and entityId matches the organizationId
     const eventCount = await EngagementEvents.countDocuments({
       entityType: "organizations",
+      action: "view", // You can change this to count different actions if needed
       entityId: objectId
     });
 

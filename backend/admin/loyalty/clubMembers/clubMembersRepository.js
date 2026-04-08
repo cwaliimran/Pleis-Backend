@@ -9,6 +9,10 @@ const { User } = require("@UserModel");
 const countClubMembers = async (query = {}) => {
   return ClubMembers.countDocuments(query);
 };
+const countClubMembersOfOrganization = async (companyOrganizer) => {
+  const companyOrganizerId = new mongoose.Types.ObjectId(companyOrganizer);
+  return ClubMembers.countDocuments({ companyOrganizer: companyOrganizerId });
+};
 
 // Find by ID with population
 const findClubMemberById = async (id) => {
@@ -202,9 +206,6 @@ const getUserJoinedClubs = async (userId) => {
 
 const giftPoints = async (companyOrganizer, user, points, notes ) => {
   try {
-    // Find the club member
-    console.log("userID", user);
-    console.log("companyOrganizer", companyOrganizer);
     const clubMember = await ClubMembers.findOne({ user, companyOrganizer });
 
     if (!clubMember) {
@@ -309,5 +310,6 @@ module.exports = {
   getUserJoinedClubs,
   giftPoints,
   getCompanyLoyaltyInfo,
-  getUserJoinedClubsall
+  getUserJoinedClubsall,
+  countClubMembersOfOrganization
 };

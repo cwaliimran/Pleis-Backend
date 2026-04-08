@@ -7,7 +7,7 @@ const {
 } = require("../../../helperUtils/responseUtil");
 
 const AnalyticsService = require("./analyticsService");
-const { Analytics_KEYS } = require("./utils/AnalyticsKeyMap");
+const { Analytics_KEYS } = require("./utils/analyticsKeyMap");
 
 
 

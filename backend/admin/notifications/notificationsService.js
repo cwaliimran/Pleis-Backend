@@ -194,7 +194,6 @@ const getDashboard = async ({ dateFilter, timezone, notification }) => {
 
 const getCTROverTimeRaw = async (notification) => {
   const rawData = await NotificationsRepo.getEventsOverTimeRaw(notification);
-  console.log("rawData",rawData );
   return buildCTRverTime(rawData);
 }
 module.exports = {

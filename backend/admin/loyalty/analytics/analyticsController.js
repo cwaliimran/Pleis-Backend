@@ -14,7 +14,6 @@ const { Analytics_KEYS } = require("./utils/analyticsKeyMap");
 const getAnalytics = async (req, res) => {
   let { dateFilter = "all", user,companyOrganizer} = req.query;
   let { timezone } = req.user || "UTC";
-  console.log("req.user.userType",req.user.userType );
   if (req.user.userType === "organizer") {
     companyOrganizer = req.user._id;
   }
