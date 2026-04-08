@@ -55,17 +55,15 @@ const getCategoriesWithFilters = async (
  */
 const getPublicActiveCategories = async () => {
 
-  return cache({
-    namespace: "categories:public",
-    ttl: null,
-    fetchFn: async () => {
+
       return Categories.find({ status: "active" })
         .sort({ order: 1 })
         .select("title image")
         .lean();
-    },
-  });
-};
+    }
+
+    
+
 
 /**
  * ============================
