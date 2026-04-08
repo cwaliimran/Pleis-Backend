@@ -91,7 +91,7 @@ const getPublicVenueTypes = async ({ page = 1, limit, keyword, date, categoriesF
     await Promise.all([
       page === 1
         ? venuetypeRepo.getVenueTypesWithFilters(baseQuery, page,
-          limit, status, date, keyword, categoriesFilter)
+          limit)
         : [],
 
       venuetypeRepo.countVenueTypes(baseQuery),
