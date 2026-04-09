@@ -39,7 +39,8 @@ const createReservation = async (data, session) => {
     firstName,
     lastName,
     phoneNumber,
-    promoCode
+    promoCode,
+    paymentMethod,
   } = data;
 
   /* ---------- Capacity check ---------- */
@@ -162,7 +163,7 @@ const createReservation = async (data, session) => {
 
   } else if (finalReservationAmount > 0) {
 
-    if (["card", "applePay"].includes(
+    if (["card", "applePay","cash"].includes(
       data?.paymentDetails?.paymentMethod
     )) {
 

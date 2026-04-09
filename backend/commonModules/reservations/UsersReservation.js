@@ -123,7 +123,7 @@ const UserReservationsSchema = new mongoose.Schema(
       transactionId: { type: String, default: null }, // gateway ref
       paymentMethod: {
         type: String,
-        enum: ["applePay", "card"],
+        enum: ["applePay", "card","cash"],
         required: false,
       },
       paymentStatus: {
