@@ -1,5 +1,6 @@
 const { createReservationService } = require("../../app/reservations/reservationService");
 const { validateReservationPayload } = require("../../app/reservations/validators/reservationValidation");
+const mongoose = require("mongoose");
 const {
   sendResponse,
   parsePaginationParams,
@@ -16,12 +17,9 @@ const createReservation = async (req, res) => {
 
   try {
     session.startTransaction();
-
     const normalizedReservation =
       validateReservationPayload(req, res, req.body);
-
     if (!normalizedReservation) return;
-
     const result =
       await createReservationService(
         {
