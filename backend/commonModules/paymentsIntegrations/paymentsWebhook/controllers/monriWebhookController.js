@@ -49,7 +49,7 @@ const monriWebhookController = async (req, res) => {
 const getOrdersTransactions = async (req, res) => {
   try {
     const { page, limit } = parsePaginationParams(req);
-    let { event, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, startAmount, endAmount, paymentMethod, globalStatusLevel, transfered, refunded, validationStatus, paymentStatus, resStartDate, resEndDate,resDate,resStartTime,resEndTime,futureRes,pastRes,paidRes,minimalSpendRes,prePay,ticketRequiredRes,cancelledRes,noShowRes
+    let { event, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, startAmount, endAmount, paymentMethod, globalStatusLevel, transfered, refunded, validationStatus, paymentStatus, resStartDate, resEndDate,resDate,resStartTime,resEndTime,futureRes,pastRes,paidRes,minimalSpendRes,prePay,ticketRequiredRes,cancelledRes,noShowRes,orderStatus,deliveryMethod,category,menuSaleItme,promotionOrders,eventBasedOrder
     } = req.query;
 
     if (organization && organization.trim() !== "") {
@@ -61,7 +61,7 @@ const getOrdersTransactions = async (req, res) => {
     }
     const timezone = req.user?.timezone || "UTC";
 
-    const ticketingBookings = await getOrdersTransactionsService({ event, page, limit, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, startAmount, endAmount, paymentMethod, globalStatusLevel, transfered, refunded, validationStatus, paymentStatus, resStartDate, resEndDate,resDate,resStartTime,resEndTime, timezone,futureRes,pastRes,paidRes,minimalSpendRes,prePay,ticketRequiredRes,cancelledRes,noShowRes });
+    const ticketingBookings = await getOrdersTransactionsService({ event, page, limit, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, startAmount, endAmount, paymentMethod, globalStatusLevel, transfered, refunded, validationStatus, paymentStatus, resStartDate, resEndDate,resDate,resStartTime,resEndTime, timezone,futureRes,pastRes,paidRes,minimalSpendRes,prePay,ticketRequiredRes,cancelledRes,noShowRes,orderStatus,deliveryMethod,category,menuSaleItme,promotionOrders,eventBasedOrder });
     return sendResponse({ res, statusCode: 200, translationKey: "transactions_fetched_successfully", data: ticketingBookings });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);

@@ -275,6 +275,7 @@ const getUserReservations = async ({
   // } else {
   match.status = {
     $in: [
+      "pendingPayment",
       "needsConfirmation",
       "confirmed",
       "checkedIn",
@@ -437,7 +438,6 @@ const getUserReservations = async ({
   // 9️⃣ EXECUTION
   // -----------------------------
   const result = await UserReservations.aggregate(pipeline);
-
   const userReservations = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
   const meta = generateMeta(page, limit, totalFiltered);
@@ -445,14 +445,18 @@ const getUserReservations = async ({
   // -----------------------------
   // COLLECT IDS (DEDUPED)
   // -----------------------------
+
   const userIds = [
-    ...new Set(userReservations.map(r => r.userId.toString()))
+    ...new Set(
+      userReservations
+        .filter(r => r.userId) // remove null/undefined
+        .map(r => r.userId.toString())
+    )
   ].map(id => new mongoose.Types.ObjectId(id));
 
   const companyOrganizers = [
     ...new Set(userReservations.map(r => r.companyOrganizer.toString()))
   ].map(id => new mongoose.Types.ObjectId(id));
-
   // -----------------------------
   // FETCH ONCE (BULK)
   // -----------------------------
@@ -559,7 +563,7 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
 
   if (range == "monthly") {
 
-const { start, end } = getStartAndEndOfMonth(now, timezone);
+    const { start, end } = getStartAndEndOfMonth(now, timezone);
     // Update the pipeline to match events within the specified date range
     pipeline.push({
       $match: {

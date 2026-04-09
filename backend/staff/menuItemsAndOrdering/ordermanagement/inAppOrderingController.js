@@ -23,7 +23,6 @@ const getOrders = async (req, res) => {
         translationKey: "organization_is_required",
       });
     }
-
     const timezone = req.user.timezone;
     const { Orderss, meta } = await getOrdersService({
       timezone,
@@ -77,7 +76,8 @@ const updateOrders = async (req, res) => {
     status,
     paymentStatus,
     deliveredMenuItem,
-    deliveredall
+    deliveredall,
+    updatedBy: req.user._id
   };
   const staffId = req.user._id;
 

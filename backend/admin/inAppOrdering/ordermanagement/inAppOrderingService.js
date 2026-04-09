@@ -8,7 +8,7 @@ const { sendUserNotifications } = require("../../../controllers/communicationCon
 const { calculatePointsRepo } = require("../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
 const { createTransactionService } = require("../../../app/userWalletService/transactions/services/unifiedTransactionsService");
 const { handleLoyaltyEarningConsequences } = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/handleLoyaltyEarningConsequences");
-
+const webhookRepository = require("../../../commonModules/paymentsIntegrations/paymentsWebhook/repositories/webhookRepository");
 
 
 const getOrdersService = async ({
@@ -63,6 +63,7 @@ const updateOrderDetailsService = async ({
   data,
 }) => {
   const order = await OrdersRepo.findOrdersById(orderId);
+  const updateBy = data.updateBy;
 
   if (!order) {
     return { error: "Orders_not_found" };
@@ -92,7 +93,16 @@ const updateOrderDetailsService = async ({
   ) {
     return { error: "order_already_paid" };
   }
+  const updateHistory = {
+    updatedAt: new Date(),
+    updatedBy: updateBy,  // Assuming `updateBy` is the User ID
+    updateData: data,  // This would contain all the updated fields
+  };
 
+  order.updateHistory.push(updateHistory);
+  if (!order.updateHistory) {
+    order.updateHistory = [];  
+  }
 
   let statusChanged = false;
   let paymentChanged = false;
@@ -127,6 +137,19 @@ const updateOrderDetailsService = async ({
     const totalPrice = order.totalPrice || 0;
 
     if (totalPrice > 0) {
+
+
+      const saveTransaction = await webhookRepository.saveIfNotProcessed({
+        provider: "cash",
+        orderNumber: order._id,
+        orderType: "menuorders",
+        user: order.user,
+        companyOrganizer: order.organization.creator,
+        organization: order.organization._id,
+        paymentStatus: "paid",
+        amount: order.totalPrice,
+        payload: order,
+      });
       const pointsCalculation = await calculatePointsRepo(
         order.user,
         order.organization.creator,

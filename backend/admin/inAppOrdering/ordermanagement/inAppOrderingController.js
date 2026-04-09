@@ -74,7 +74,8 @@ const updateOrders = async (req, res) => {
     status,
     paymentStatus,
     deliveredMenuItem,
-    deliveredall
+    deliveredall,
+    updateBy: req.user._id
   };
 
 

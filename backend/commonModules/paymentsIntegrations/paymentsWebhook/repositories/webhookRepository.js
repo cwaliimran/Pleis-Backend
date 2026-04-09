@@ -195,9 +195,16 @@ const getOrdersTransactions = async ({
   resEndTimeUtc, futureRes, pastRes, prePay,
   ticketRequiredRes,
   cancelledRes,
-  noShowRes
+  noShowRes,
+  orderStatus,
+  deliveryMethod,
+  category,
+  menuSaleItme,
+  promotionOrders,
+  eventBasedOrder
 }) => {
   const pipeline = [];
+  console.log("category", category);
 
   // Base match
   if (Object.keys(match).length) {
@@ -535,6 +542,174 @@ const getOrdersTransactions = async ({
     );
   }
   // 🔥 KEYWORD FILTER (MAIN ADDITION)
+
+  if (globalStatusLevel && globalStatusLevel.trim()) {
+    pipeline.push({
+      $match: {
+        "level.title": globalStatusLevel
+      }
+    });
+  }
+
+  if (orderType === "menuorders") {
+    pipeline.push(
+      // Step 1: Lookup menuorders based on orderNumber
+      {
+        $lookup: {
+          from: "menuorders",
+          localField: "orderNumber",
+          foreignField: "_id",
+          as: "menuorders"
+        }
+      },
+      {
+        $unwind: {
+          path: "$menuorders",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: "userreservations",
+          localField: "menuorders.reservation",
+          foreignField: "_id",
+          as: "menuorders.UserReservation"
+        }
+      },
+      {
+        $unwind: {
+          path: "$menuorders.UserReservation",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "menuorders.updateHistory.updatedBy",
+          foreignField: "_id",
+          pipeline: [
+            { $project: { username: 1, firstName: 1, lastName: 1, email: 1, accountState: { userType: 1 } } }
+          ],
+          as: "updatedBy"
+        }
+      },
+      {
+        $unwind: {
+          path: "$updatedBy",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      // Add the lookup on users inside the updateHistory array
+      {
+        $addFields: {
+          "menuorders.updateHistory": {
+            $map: {
+              input: {
+                $cond: {
+                  if: { $isArray: "$menuorders.updateHistory" },  // Check if it's already an array
+                  then: "$menuorders.updateHistory",
+                  else: [{ // Convert single object to an array
+                    updatedAt: "$menuorders.updateHistory.updatedAt",
+                    updatedBy: "$menuorders.updateHistory.updatedBy",
+                    updateData: "$menuorders.updateHistory.updateData"
+                  }]
+                }
+              },
+              as: "history",
+              in: {
+                $mergeObjects: [
+                  "$$history",  // Original updateHistory object
+                  {
+                    updatedBy: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: {
+                              $cond: {
+                                if: { $isArray: "$updatedBy" },  // Ensure updatedBy is treated as an array
+                                then: "$updatedBy",
+                                else: ["$updatedBy"]  // Wrap in array if it's not an array
+                              }
+                            },
+                            as: "user",
+                            cond: { $eq: ["$$user._id", "$$history.updatedBy"] }
+                          }
+                        },
+                        0
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    );
+    if (orderStatus) {
+      pipeline.push({
+        $match: {
+          "menuorders.status": orderStatus
+        }
+      });
+    }
+    if (deliveryMethod) {
+      pipeline.push({
+        $match: {
+          "menuorders.pickupType": deliveryMethod
+        }
+      });
+    }
+    if (category) {
+      pipeline.push({
+        $match: {
+          "menuorders.items.menuItemSnapShot.category": category
+        }
+      });
+    }
+    if (menuSaleItme) {
+      pipeline.push({
+        $match: {
+          "menuorders.priceBreakdown.saleDiscount": { $gt: 0 }
+        }
+      });
+    }
+    if (promotionOrders === "true") {
+      pipeline.push({
+        $match: {
+          "menuorders.priceBreakdown.promoDiscount": { $gt: 0 }
+        }
+      });
+    }
+    if (promotionOrders === "false") {
+      pipeline.push({
+        $match: {
+          "menuorders.priceBreakdown.promoDiscount": { $lte: 0 }
+        }
+      });
+    }
+    if (eventBasedOrder) {
+      pipeline.push({
+        $match: {
+          "menuorders.items.menuItemSnapShot.event": { $ne: null }
+        }
+      });
+    }
+    if (resDate) {
+      const startOfDay = new Date(resDate + "T00:00:00.000Z");
+      const endOfDay = new Date(resDate + "T23:59:59.999Z");
+      pipeline.push({
+        $match: {
+          "menuorders.UserReservation.reservationSnapshot.timingSlots.dateTimeSlots.date": {
+            $gte: startOfDay,
+            $lte: endOfDay
+          }
+        }
+      });
+    }
+  }
+  // Sorting
+  pipeline.push({ $sort: { createdAt: -1, _id: -1 } });
   if (keyword && keyword.trim()) {
     const regex = new RegExp(keyword, "i");
 
@@ -552,13 +727,20 @@ const getOrdersTransactions = async ({
           { "userreservations.reservationSnapshot.reservationType": { $regex: regex } },
           { "event.name": { $regex: regex } },
           { "ticketType.type": { $regex: regex } },
-          // Full name search (firstName + lastName) using $concat outside $expr
+
+          {
+            "menuorders.items.menuItemSnapShot.title": {
+              $regex: regex
+            }
+          }, // Added for searching by menu item title
+
+          // Full name search (firstName + lastName) using $concat for the 'updatedBy' field
           {
             $or: [
               {
                 $expr: {
                   $regexMatch: {
-                    input: { $concat: ["$user.firstName", " ", "$user.lastName"] },
+                    input: { $concat: ["$updatedBy.firstName", " ", "$updatedBy.lastName"] }, // Check for full name in updatedBy
                     regex: regex
                   }
                 }
@@ -569,35 +751,6 @@ const getOrdersTransactions = async ({
       }
     });
   }
-  if (globalStatusLevel && globalStatusLevel.trim()) {
-    pipeline.push({
-      $match: {
-        "level.title": globalStatusLevel
-      }
-    });
-  }
-
-  if (orderType === "userreservations") {
-    pipeline.push(
-      {
-        $lookup: {
-          from: "menuorders",
-          localField: "orderNumber",
-          foreignField: "_id",
-          as: "menuorders"
-        }
-      },
-      {
-        $unwind: {
-          path: "$menuorders",
-          preserveNullAndEmptyArrays: true
-        }
-      },
-    );
-  }
-  // Sorting
-  pipeline.push({ $sort: { createdAt: -1, _id: -1 } });
-
   // Projection
   pipeline.push({
     $project: {
@@ -907,6 +1060,12 @@ const countOrdersTransactions = async ({
     });
   }
   pipeline.push({ $count: "total" });
+
+
+
+
+
+  
 
   const res = await WebhookEvent.aggregate(pipeline, { allowDiskUse: true });
 

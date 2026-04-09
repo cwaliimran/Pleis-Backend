@@ -84,6 +84,20 @@ const OrdersSchema = new mongoose.Schema(
             type: String,
             required: function () { return this.pickupType === "tableService"; },
         },
+        updateHistory: {
+            type: [
+                {
+                    updatedAt: { type: Date, default: Date.now },
+                    updatedBy: {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: "User",
+                        default: null
+                    },
+                    updateData: { type: Object, default: {} }
+                }
+            ],
+            default: []
+        },
     },
     { timestamps: true }
 );
