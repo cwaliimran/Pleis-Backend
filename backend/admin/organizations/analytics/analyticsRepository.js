@@ -150,16 +150,12 @@ const getOrganizerPerformanceByMonth = async ({
 
 
 
-const getByTimeRaw = async ( organization, dateFilter, timezone) => {
+const getByTimeRaw = async (organization, dateFilter, timezone) => {
   try {
     const matchFilter = {
       organization: new mongoose.Types.ObjectId(organization), // Match by organization ID
     };
 
-    // // If users are provided, filter by user as well
-    // if (users && users.length > 0) {
-    //   matchFilter.user = { $in: users };  // Match the users in the provided array
-    // }
 
     const ranges = getDateRanges({ dateFilter, timezone });
 
@@ -499,7 +495,7 @@ const getUserReservationChangeLogs = async ({
 const getViews = async (organization, dateFilter, timezone) => {
   try {
     const matchFilter = {
-      organization: new mongoose.Types.ObjectId(organization),
+      entityId: new mongoose.Types.ObjectId(organization),
     };
 
     const ranges = getDateRanges({ dateFilter, timezone });
@@ -508,13 +504,14 @@ const getViews = async (organization, dateFilter, timezone) => {
       matchFilter.createdAt = { $gte: ranges.start, $lt: ranges.end };
     }
 
+
     // Aggregate query with $lookup to join EngagementEvents with User collection
     const result = await EngagementEvents.aggregate([
       {
         $match: {
+          ...matchFilter,
           entityType: "organizations",
           action: "view",
-          entityId: new mongoose.Types.ObjectId(organization), // Match the organizationId
         },
       },
       {
@@ -575,15 +572,20 @@ const getViews = async (organization, dateFilter, timezone) => {
 
 
 
-const getRawInterestDataByOrganizer = async (users) => {
-
+const getRawInterestDataByOrganizer = async (users, dateFilter, timezone) => {
+  const matchFilter = {
+    user: { $in: users },
+  };
+  const ranges = getDateRanges({ dateFilter, timezone });
+  // Add date filter if ranges exist
+  if (ranges && ranges.start && ranges.end) {
+    matchFilter.createdAt = { $gte: ranges.start, $lt: ranges.end };
+  }
 
   return UserInterests.aggregate([
     // ✅ Filter only provided users FIRST (important for performance)
     {
-      $match: {
-        user: { $in: users },
-      }
+      $match: matchFilter
     },
 
     // Join user (gender only)
@@ -638,13 +640,13 @@ const getEventIdsByOrganization = async (organizationId) => {
   try {
     // Find all events for the given organizationId and return only the event publicId (_id)
     const events = await Events.find(
-      { "basicInfo.organization":new mongoose.Types.ObjectId(organizationId), status: "active" }, // Filter by organizationId and active status
+      { "basicInfo.organization": new mongoose.Types.ObjectId(organizationId), status: "active" }, // Filter by organizationId and active status
       { _id: 1 } // Only include the _id field (event ID)
     );
 
     // Extract the event IDs from the result
     const eventIds = events.map(event => event._id);
-    
+
     return eventIds;
   } catch (error) {
     console.error("Error fetching event IDs:", error);
@@ -700,13 +702,20 @@ const geViewsByTimeRaw = async (organization, dateFilter, timezone) => {
 
 
 
-const getRawTagsDataByOrganizer = async (users) => {
+const getRawTagsDataByOrganizer = async (users, dateFilter, timezone) => {
+  const matchFilter = {
+    user: { $in: users },
+  };
+  const ranges = getDateRanges({ dateFilter, timezone });
+
+  // If there are date ranges, apply them to the match filter
+  if (ranges && ranges.start && ranges.end) {
+    matchFilter.createdAt = { $gte: ranges.start, $lt: ranges.end };
+  }
   return UserInterests.aggregate([
     // ✅ Filter only provided users FIRST (important for performance)
     {
-      $match: {
-        user: { $in: users },  // Match only users in the provided array
-      },
+      $match: matchFilter
     },
 
     // Join user (gender only)

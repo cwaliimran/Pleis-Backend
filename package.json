@@ -4,8 +4,8 @@
   "description": "",
   "main": "backend/server.js",
   "scripts": {
-      "dev": "cross-env NODE_ENV=dev PORT=4012 nodemon backend/server.js",
-  "dev1": "cross-env NODE_ENV=dev PORT=4014 node backend/server.js",
+    "dev": "cross-env NODE_ENV=dev PORT=4012 nodemon backend/server.js",
+    "dev1": "cross-env NODE_ENV=dev PORT=4014 node backend/server.js",
     "prod": "cross-env NODE_ENV=prod node backend/server.js",
     "mobileapps": "cross-env NODE_ENV=mobileapps node backend/server.js",
     "pm2:dev:start": "pm2 start backend/config/ecosystem.config.js --env dev",
@@ -113,7 +113,8 @@
     "@GlobalBasePromotionModel": "backend/commonModules/globalLoyalty/promotions/models/Promotion/basePromotion.js",
     "@UserBillingInformationModel": "backend/commonModules/transactions/UserBillingInformation.js",
     "@triggerGlobalStreak": "backend/services/globalStreaksAndBadgesService/triggerGlobalStreak.js",
-    "@manageBadgeHistory": "backend/commonModules/badgeCategories/manageHistory/"
+    "@manageBadgeHistory": "backend/commonModules/badgeCategories/manageHistory/",
+    "@SubscriptionNotificationLogsModel": "backend/commonModules/subscriptions/SubScriptionNotificationLogs.js"
   },
   "keywords": [],
   "author": "",

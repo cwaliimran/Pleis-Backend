@@ -12,9 +12,19 @@ const { getTotalClosingBalanceByOrganizationId } = require("../transactions/repo
 const { default: mongoose } = require("mongoose");
 const { User } = require("@UsersModel");
 const { countClubMembersOfOrganization } = require("../loyalty/clubMembers/clubMembersRepository");
+const { getActiveSubscription } = require("../usersManagement/usersRepository");
 
 // Create
 const createOrganization = async (data) => {
+  const NoOrganizationCount = await Organizations.countDocuments({
+    creator: new mongoose.Types.ObjectId(data.creator),
+    status: "active"
+  });
+  const UsersOrganizationsLimit = await getActiveSubscription(data.creator)
+  console.log("NoOrganizationCount", NoOrganizationCount);
+  if (NoOrganizationCount >= UsersOrganizationsLimit) {
+    throw new Error("you_have_reached_the_maximum_number_of_organizations_allowed_for_your_subscription_plan_please_upgrade_your_subscription_to_create_more_organizations");
+  }
   const organization = new Organizations(data);
   return await organization.save();
 };
@@ -78,81 +88,81 @@ const getOrganizationsWithFilters = async (query, skip, limit) => {
         preserveNullAndEmptyArrays: true  // Preserve organizations without matching users
       }
     },
-{
-    $lookup: {
-      from: "engagementevents",  // Join with the EngagementEvents collection
-      localField: "_id",  // Match _id in Organizations with organization._id
-      foreignField: "entityId",  // Match the entityId in EngagementEvents
-      as: "viewCount",  // The result will be stored in a field named "viewCount"
-      pipeline: [
-        {
-          $match: {
-            entityType: "organizations",  // Only include engagement events of type "organizations"
-            action: "view"  // Only include "view" actions
+    {
+      $lookup: {
+        from: "engagementevents",  // Join with the EngagementEvents collection
+        localField: "_id",  // Match _id in Organizations with organization._id
+        foreignField: "entityId",  // Match the entityId in EngagementEvents
+        as: "viewCount",  // The result will be stored in a field named "viewCount"
+        pipeline: [
+          {
+            $match: {
+              entityType: "organizations",  // Only include engagement events of type "organizations"
+              action: "view"  // Only include "view" actions
+            }
+          },
+          {
+            $group: {
+              _id: "$entityId",  // Group by organization entityId
+              viewCount: { $sum: 1 }  // Count the number of views for each organization
+            }
           }
-        },
-        {
-          $group: {
-            _id: "$entityId",  // Group by organization entityId
-            viewCount: { $sum: 1 }  // Count the number of views for each organization
-          }
-        }
-      ]
-    }
-  },
-  {
-  $addFields: {
-    viewCount: {
-      $ifNull: [
-        { $arrayElemAt: ["$viewCount.viewCount", 0] },
-        0
-      ]
-    }
-  }
-},
-{
-  $lookup: {
-    from: "webhookevents",  // Join with the WebhookEvents collection
-    localField: "_id",  // Match _id in Organizations with organization._id
-    foreignField: "organization",  // Match the organization field in WebhookEvents
-    as: "revenueData",  // The result will be stored in a field named "revenueData"
-    pipeline: [
-      {
-        $match: {
-          organization: { $exists: true },  // Ensure that the organization field exists in WebhookEvents
-        }
-      },
-      {
-        $group: {
-          _id: "$organization",  // Group by organization entityId
-          totalRevenue: { $sum: { $toDouble: "$amount" } }  // Sum the revenue (amount) for each organization
+        ]
+      }
+    },
+    {
+      $addFields: {
+        viewCount: {
+          $ifNull: [
+            { $arrayElemAt: ["$viewCount.viewCount", 0] },
+            0
+          ]
         }
       }
-    ]
-  }
-},
-{
-  $unwind: {
-    path: "$revenueData",  // Unwind the "revenueData" array to access revenue per organization
-    preserveNullAndEmptyArrays: true  // Preserve organizations without matching events
-  }
-},
-{
-  $addFields: {
-    revenue: {
-      $ifNull: [
-        "$revenueData.totalRevenue",  // Get the totalRevenue from revenueData
-        0  // If no revenue data, default to 0
-      ]
-    }
-  }
-},
-{
-  $project: {
-    revenueData: 0  // Remove the 'revenueData' field from the final output
-  }
-},
-  
+    },
+    {
+      $lookup: {
+        from: "webhookevents",  // Join with the WebhookEvents collection
+        localField: "_id",  // Match _id in Organizations with organization._id
+        foreignField: "organization",  // Match the organization field in WebhookEvents
+        as: "revenueData",  // The result will be stored in a field named "revenueData"
+        pipeline: [
+          {
+            $match: {
+              organization: { $exists: true },  // Ensure that the organization field exists in WebhookEvents
+            }
+          },
+          {
+            $group: {
+              _id: "$organization",  // Group by organization entityId
+              totalRevenue: { $sum: { $toDouble: "$amount" } }  // Sum the revenue (amount) for each organization
+            }
+          }
+        ]
+      }
+    },
+    {
+      $unwind: {
+        path: "$revenueData",  // Unwind the "revenueData" array to access revenue per organization
+        preserveNullAndEmptyArrays: true  // Preserve organizations without matching events
+      }
+    },
+    {
+      $addFields: {
+        revenue: {
+          $ifNull: [
+            "$revenueData.totalRevenue",  // Get the totalRevenue from revenueData
+            0  // If no revenue data, default to 0
+          ]
+        }
+      }
+    },
+    {
+      $project: {
+        revenueData: 0  // Remove the 'revenueData' field from the final output
+      }
+    },
+
 
 
     {
@@ -191,7 +201,7 @@ const getOrganizationDetails = async (id) => {
     getTotalEventCountByOrganizationId
   } = require("../events/eventRepository");
   const companyOrganizer = await getOrgCompanyOrganizer(id);
-  console.log("companyOrganizer",companyOrganizer );
+  console.log("companyOrganizer", companyOrganizer);
 
   const [organization, primaryVenue, events, ticketsSold, views, revenue, clubMembersCount] = await Promise.all([
     Organizations.findById(id)

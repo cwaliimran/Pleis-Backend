@@ -19,8 +19,8 @@ const getAnalytics = async ({ dateFilter, timezone, companyOrganizer, organizati
   const promises = [
     getByTimeRaw( organization, dateFilter, timezone), // used
     getViews( organization, dateFilter, timezone), // used
-    getRawInterestDataByOrganizer(users),
-    getRawTagsDataByOrganizer(users),
+    getRawInterestDataByOrganizer(users,dateFilter, timezone),
+    getRawTagsDataByOrganizer(users,dateFilter, timezone),
     geViewsByTimeRaw( organization, dateFilter, timezone),
     getRepeatPurchasesByTimeRaw(organization, dateFilter, timezone),
     getUserStreaksByTimeRaw( organization, dateFilter, timezone),
@@ -209,8 +209,8 @@ const getViews = async (organization, dateFilter, timezone) => {
 };
 
 
-const getRawInterestDataByOrganizer = async (users) => {
-  const rows = await AnalyticsRepo.getRawInterestDataByOrganizer(users);
+const getRawInterestDataByOrganizer = async (users, dateFilter, timezone) => {
+  const rows = await AnalyticsRepo.getRawInterestDataByOrganizer(users, dateFilter, timezone);
 
   return buildInterestPerCategory(rows);
 };
@@ -219,9 +219,8 @@ const geViewsByTimeRaw = async ( organization, dateFilter, timezone) => {
   return buildOrganizationViewOverTime(rows);
 };
 
-const getRawTagsDataByOrganizer = async (users) => {
-
-  const rows = await AnalyticsRepo.getRawTagsDataByOrganizer(users);
+const getRawTagsDataByOrganizer = async (users, dateFilter, timezone) => {
+  const rows = await AnalyticsRepo.getRawTagsDataByOrganizer(users, dateFilter, timezone);
 
   return buildInterestPerTags(rows);
 };
