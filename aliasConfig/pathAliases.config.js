@@ -90,4 +90,5 @@ module.exports = {
     "@UserBillingInformationModel": "backend/commonModules/transactions/UserBillingInformation.js",
     "@triggerGlobalStreak": "backend/services/globalStreaksAndBadgesService/triggerGlobalStreak.js",
     "@manageBadgeHistory": "backend/commonModules/badgeCategories/manageHistory/",
+    "@SubscriptionNotificationLogsModel": "backend/commonModules/subscriptions/SubScriptionNotificationLogs.js",
 };

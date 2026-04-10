@@ -3,6 +3,7 @@
 const { User } = require("../../models/UserModel");
 
 const { UserInterests } = require("../../models/UserInterests");
+const { default: mongoose } = require("mongoose");
 
 // Create
 const createUser = async (data) => {
@@ -198,7 +199,12 @@ const getUserInterestsByUserId = async (userId) => {
 const getUserInterestsIdsForRecommendation = async (userId) => {
   return UserInterests.findOne({ user: userId })
 };
-
+const getActiveSubscription = async (userId) => {
+  console.log("userId", userId);
+  const user = await User.findById(new mongoose.Types.ObjectId(userId)).select("activeSubscription.numberOfOrganizations");
+  if (!user) return 0;
+  return user?.activeSubscription?.numberOfOrganizations || 0;
+}
 module.exports = {
   createUser,
   getUsersWithFilters,
@@ -212,5 +218,6 @@ module.exports = {
   updateUserInterests,
   getUserInterestsByUserId,
   getUserInterestsIdsForRecommendation,
-  getUserDetailsForQRRepo
+  getUserDetailsForQRRepo,
+  getActiveSubscription
 };
