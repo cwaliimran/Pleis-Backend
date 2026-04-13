@@ -4,7 +4,7 @@ const { createVerificationLink } = require("../models/UserModel");
 const { getFullImageUrl } = require("@utils/imageHelper");
 
 
-const formatUserResponse = (
+const  formatUserResponse = (
   userObject,
   token = null,
   includeFields = [],
@@ -39,6 +39,9 @@ const formatUserResponse = (
         email: userObject.verificationStatus?.email || "pending",
         phoneNumber: userObject.verificationStatus?.phoneNumber || "pending",
       },
+      userglobalwallets: userObject.userglobalwallets || [],
+      revenue: userObject.totalAmount || 0,
+
 
       ...(userObject.accountState?.reason && {
         reason: userObject.accountState.reason,

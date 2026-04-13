@@ -62,8 +62,6 @@ const sendSubscriptionNotification = async ({
             console.warn(`[NOTIFICATION] Unknown action: ${action}`);
             return;
         }
-console.log("action",action );
-        // Send User Notifications
         await sendUserNotifications({
             recipientIds: userIds,
             title: config.title(context),
@@ -73,7 +71,7 @@ console.log("action",action );
                 userId,
                 objectType: "users",
             },
-            sender: "system",
+            sender: null,
             objectId: userId,
             image: null,
         });
@@ -108,4 +106,4 @@ console.log("action",action );
     }
 };
 
-    module.exports = { sendSubscriptionNotification };
+module.exports = { sendSubscriptionNotification };

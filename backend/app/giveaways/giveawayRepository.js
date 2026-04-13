@@ -117,7 +117,7 @@ const createGiveaway = async (data) => {
     await sendUserNotifications({
       recipientIds: [update.user.toString()],
       title: "Successful Participate in giveaway",
-      body:`You have successfully participated in the giveaway.`,
+      body: `You have successfully participated in the giveaway.`,
       data: {
         type: NotificationTypes.GIVEAWAY_UPDATE,
         objectType: "Giveaway",
@@ -138,6 +138,7 @@ const createGiveaway = async (data) => {
 
 const getGiveaway = async ({ eventId, timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
   let totalParticipants = 10;
+
   const pipeline = [
     {
       $match: {
@@ -205,7 +206,22 @@ const getGiveaway = async ({ eventId, timezone, page, limit, keyword, status, us
       },
     },
     {
-      $unwind: { path: "$ticket", preserveNullAndEmptyArrays: true },  // Flatten the 'ticket' array
+      $lookup: {
+        from: "giveawayparticipants",  // Collection name for Ticketings
+        localField: "_id",  // field in Giveaway
+        foreignField: "giveaway",  // field in Ticketings collection
+        pipeline: [
+          {
+            $match: {
+              user: new mongoose.Types.ObjectId(userId)  // Filter participants for the given userId
+            }
+          }
+        ],
+        as: "participants",  // Alias for the joined data
+      },
+    },
+    {
+      $unwind: { path: "$participants", preserveNullAndEmptyArrays: true },  // Flatten the 'participants' array
     },
 
     // Step 8: Project only the fields we need
@@ -218,6 +234,13 @@ const getGiveaway = async ({ eventId, timezone, page, limit, keyword, status, us
         status: 1,
         giveawayStatus: 1,
         createdAt: 1,
+        userHasParticipated: {
+          $cond: {
+            if: { $ifNull: ["$participants", false] },  // Check if participants exists
+            then: true,  // User has participated
+            else: false  // User has not participated
+          }
+        }
       },
     },
 

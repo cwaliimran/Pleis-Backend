@@ -795,6 +795,75 @@ const subscriptionExpiredEmailTemplate = ({ username, title, message }) => `
   </body>
 </html>
 `;
+const subscriptionUpdatedEmailTemplate = ({ username, title, subscription }) => `
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      .email-container {
+        font-family: Arial, sans-serif;
+        line-height: 1.5;
+        color: #333;
+      }
+      .email-header {
+        background-color: #1B1A1D;
+        color: white;
+        text-align: center;
+        padding: 10px 0;
+      }
+      .email-header h2 {
+        color: white;
+        margin: 0;
+      }
+      .email-body {
+        margin: 20px;
+      }
+      .subscription-details {
+        margin-top: 20px;
+        background-color: #f7f7f7;
+        padding: 15px;
+        border-radius: 5px;
+      }
+      .subscription-details p {
+        margin: 5px 0;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 20px;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="email-header">
+        <h2>${title}</h2>
+      </div>
+      <div class="email-body">
+        <p>Hello ${username},</p>
+        <p>Your subscription has been activated/updated successfully. Here are the details:</p>
+        <div class="subscription-details">
+          <p><strong>Subscription Types:</strong> ${subscription.subscriptionTypes.join(", ")}</p>
+          <p><strong>Pricing Plan:</strong> ${subscription.pricingPlan}</p>
+          <p><strong>Number of Organizations:</strong> ${subscription.numberOfOrganizations}</p>
+          <p><strong>Total Subscription Amount:</strong> $${subscription.totalSubscriptionAmount.toFixed(2)}</p>
+          <p><strong>Start Date:</strong> ${new Date(subscription.startDate).toLocaleString()}</p>
+          <p><strong>End Date:</strong> ${new Date(subscription.endDate).toLocaleString()}</p>
+        </div>
+        <p>We are excited to have you continue with us!</p>
+        <p>If you need any assistance, feel free to reach out to our support team.</p>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>
+`;
+
+module.exports = {
+  subscriptionUpdatedEmailTemplate
+};
 // Export both functions
 module.exports = {
   registrationViaLinkEmailTemplate,
@@ -806,6 +875,7 @@ module.exports = {
   otpEmailTemplate,
   OTP_PURPOSE_CONFIG,
   menuOrderConfirmationEmailTemplate,
+  subscriptionUpdatedEmailTemplate,
   subscriptionExpiryEmailTemplate,
   subscriptionExpiredEmailTemplate
 };

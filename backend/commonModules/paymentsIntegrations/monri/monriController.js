@@ -444,6 +444,8 @@ exports.createWebPaySession = async (req, res) => {
       currency,
       orderType,
       status: "pending",
+      paymentMethod,
+
     });
 
     const digest = generateDigest({

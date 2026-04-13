@@ -466,10 +466,14 @@ const getOrganizerPerformanceByMonth = async ({
   timezone = "UTC",
   year = new Date().getFullYear(),
   companyOrganizer
+  
 }) => {
+  console.log("companyOrganizer",companyOrganizer);
+  console.log("organizerId",organizerId );
+  console.log("organizationId",organizationId );
   const match = {
     purpose: "eventTicketPurchase",
-    status: { $in: ["confirmed", "completed"] },
+    status: { $in: ["confirmed", "completed","paid"] },
     createdAt: {
       $gte: new Date(`${year}-01-01T00:00:00.000Z`),
       $lte: new Date(`${year}-12-31T23:59:59.999Z`),
