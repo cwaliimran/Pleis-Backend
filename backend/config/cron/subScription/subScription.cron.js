@@ -3,6 +3,7 @@ const SubscriptionNotificationLogs = require("@SubscriptionNotificationLogsModel
 
 const { User } = require("@UsersModel");
 const { sendSubscriptionNotification } = require("../../../controllers/notificationHelper/subscriptionNotificationService");
+const { activateInactiveSubscriptions } = require("./updateSubscription");
 
 const MINUTE_MS = 60 * 1000;
 
@@ -33,6 +34,7 @@ const runSubscriptionReminderCron = async () => {
 const processReminder = async (type, offsetMs, windowStart, windowEnd) => {
     const targetStartLower = new Date(windowStart.getTime() + offsetMs);
     const targetStartUpper = new Date(windowEnd.getTime() + offsetMs);
+
     const subScriptions = await User.find({
         "accountState.status": "active",
         "accountState.userType": "organizer",
@@ -73,6 +75,7 @@ const processReminder = async (type, offsetMs, windowStart, windowEnd) => {
         }
         if (type === "EXPIRED") {
             action = "SUBSCRIPTION_EXPIRED";
+            await activateInactiveSubscriptions(subScriptions);
         }
         sendSubscriptionNotification({
             userId: subscription._id,

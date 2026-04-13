@@ -67,6 +67,56 @@ const getUsersWithFilters = async (query, skip, limit) => {
         foreignField: "_id",
         as: "companyDetails.suppliers"
       }
+    },
+
+    // Lookup userglobalwallets
+    {
+      $lookup: {
+        from: "userglobalwallets",
+        localField: "_id",  // Match the user._id with userglobalwallets.user
+        foreignField: "user",
+        as: "userglobalwallets"
+      }
+    },
+    { $unwind: { path: "$userglobalwallets", preserveNullAndEmptyArrays: true } },  // Unwind userglobalwallets to access nested fields
+
+    {
+      $lookup: {
+        from: "globalstatuslevels",
+        localField: "userglobalwallets.global.level",  // Access the 'level' array inside 'userglobalwallets'
+        foreignField: "_id",
+        as: "userglobalwallets.global.level"
+      }
+    },
+    {
+      $addFields: {
+        // Convert 'level' array to an object by selecting the first element
+        "userglobalwallets.global.level": { $arrayElemAt: ["$userglobalwallets.global.level", 0] }
+      }
+    },
+    {
+      $lookup: {
+        from: "webhookevents",
+        localField: "_id",  // Match the user._id with webhookevents.user
+        foreignField: "companyOrganizer",  // Match the user's companyOrganizer with webhookevents
+        pipeline: [
+          { $project: { amount: 1 } }  // Select the relevant 'amount' field from webhookevents
+        ],
+        as: "webhookevents"
+      }
+    },
+
+    // Calculate the sum of the 'amount' for each user using $reduce
+    {
+      $addFields: {
+        totalAmount: {
+          $reduce: {
+            input: "$webhookevents",  // Use the 'webhookevents' array
+            initialValue: 0,  // Start the sum at 0
+            in: { $add: ["$$value", { $toDouble: "$$this.amount" }] }  // Add each 'amount' (convert to double if needed)
+          }
+        }
+      }
     }
   ]);
 

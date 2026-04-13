@@ -16,6 +16,8 @@ const {
   getStartAndEndOfWeek,
 } = require("@utils/responseUtil");
 const { User } = require("@UsersModel");
+const { subscriptionUpdatedEmailTemplate } = require("@utils/emailTemplates");
+const { sendEmailViaMailgun } = require("@utils/emailUtil");
 const createSubscription = async (data) => {
   let Subscription = await SubscriptionRepo.createSubscription(data);
   return Subscription;
@@ -75,6 +77,7 @@ const updateSubscription = async (data) => {
     user.activeSubscription.subscriptionTypes[0] === "free" &&
     user.activeSubscription.endDate === null;
   const now = new Date();
+  let mBody
 
 
   const {
@@ -83,23 +86,24 @@ const updateSubscription = async (data) => {
     numberOfOrganizations,
     totalSubscriptionAmount,
     basePrice,
-    direction
+    direction,
+    status
   } = data;
   // --------------------------------------------------
   // 🆕 FIRST-TIME SUBSCRIPTION
   // --------------------------------------------------
   // 🆕 FIRST-TIME SUBSCRIPTION
   if (direction === "new") {
-    if (!user.activeSubscription || isFreeSubscription) {
+    if (!user.activeSubscription || isFreeSubscription || user.activeSubscription.status === "inactive") {
       if (
         !subscriptionTypes ||
         !pricingPlan ||
         !numberOfOrganizations ||
+        !status ||
         totalSubscriptionAmount == null
       ) {
         return { error: "missing_required_subscription_fields" };
       }
-
       const startDate = new Date();
       let endDate = null;
 
@@ -118,7 +122,7 @@ const updateSubscription = async (data) => {
         numberOfOrganizations,
         totalSubscriptionAmount,
         basePrice,
-        status: "active",
+        status: status,
         startDate,
         endDate,
         orderingCommission: subscriptionSetting.commissions.orderingCommission,
@@ -131,7 +135,7 @@ const updateSubscription = async (data) => {
         numberOfOrganizations,
         totalSubscriptionAmount,
         basePrice,
-        status: "active",
+        status: status,
         startDate,
         endDate,
         orderingCommission: subscriptionSetting.commissions.orderingCommission,
@@ -139,6 +143,12 @@ const updateSubscription = async (data) => {
         reservationCommission: subscriptionSetting.commissions.reservationCommission,
       };
       await user.save();
+      mBody = subscriptionUpdatedEmailTemplate({
+        username: `${user.firstName} ${user.lastName}`,
+        title: "Subscription Success! Your Plan is Now Active",
+        subscription: user.activeSubscription,
+      });
+      await sendEmailViaMailgun([user.email], "Subscription Success! Your Plan is Now Active", mBody);
 
       return {
         user, message: "subscription_created_for_first_time"
@@ -187,6 +197,13 @@ const updateSubscription = async (data) => {
     };
 
     await user.save();
+    mBody = subscriptionUpdatedEmailTemplate({
+      username: `${user.firstName} ${user.lastName}`,
+      title: "Subscription Updated! Your Plan has been Upgraded",
+      subscription: user.activeSubscription,
+    });
+    await sendEmailViaMailgun([user.email], "Subscription Updated! Your Plan has been Upgraded", mBody);
+
     return { success: true, updated: "active" };
   }
 
@@ -209,10 +226,16 @@ const updateSubscription = async (data) => {
     };
 
     await user.save();
-    return { success: true, updated: "inactive" };
-  }
+    mBody = subscriptionUpdatedEmailTemplate({
+      username: `${user.firstName} ${user.lastName}`,
+      title: "We Noted Your Plan  It Will Apply After Your Current Subscription Ends",
+      subscription: user.inActiveSubscription,
+    });
+  await sendEmailViaMailgun([user.email], "We Noted Your Plan  It Will Apply After Your Current Subscription Ends", mBody);
+  return { success: true, updated: "inactive" };
+}
 
-  return { success: true, message: "no_changes_detected" };
+return { success: true, message: "no_changes_detected" };
 };
 
 const getSubscriptionSettings = async () => {

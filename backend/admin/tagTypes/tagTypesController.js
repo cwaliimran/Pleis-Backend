@@ -37,7 +37,7 @@ const createTagsType = async (req, res) => {
 
 const getTagsTypes = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date } = req.query;
+  const { keyword, status = "active", date } = req.query;
 
   try {
 

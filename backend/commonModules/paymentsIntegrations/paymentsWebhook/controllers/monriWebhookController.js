@@ -13,6 +13,7 @@ const monriWebhookController = async (req, res) => {
 
     const bodyData = req.body;
     bodyData.user = userId;
+    console.log("bodyData",bodyData );
 
     if (
       !validateParams(req, res, {
@@ -61,6 +62,7 @@ const getOrdersTransactions = async (req, res) => {
     }
     const timezone = req.user?.timezone || "UTC";
 
+
     const ticketingBookings = await getOrdersTransactionsService({ event, page, limit, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, startAmount, endAmount, paymentMethod, globalStatusLevel, transfered, refunded, validationStatus, paymentStatus, resStartDate, resEndDate,resDate,resStartTime,resEndTime, timezone,futureRes,pastRes,paidRes,minimalSpendRes,prePay,ticketRequiredRes,cancelledRes,noShowRes,orderStatus,deliveryMethod,category,menuSaleItme,promotionOrders,eventBasedOrder });
     return sendResponse({ res, statusCode: 200, translationKey: "transactions_fetched_successfully", data: ticketingBookings });
   } catch (error) {
@@ -92,13 +94,10 @@ const getTransactionStats = async (req, res) => {
   if (req.user.userType === "organizer") {
     companyOrganizer = req.user._id;
     if (organizations) {
-      organizations = await convertToMongoArray(organizations);
       companyOrganizer = undefined;
     }
   }
-
   try {
-
     if (dateFilter && !validateParams(req, res, {
       enumFields: {
         dateFilter: ["all", "today", "thisWeek", "thisMonth"],

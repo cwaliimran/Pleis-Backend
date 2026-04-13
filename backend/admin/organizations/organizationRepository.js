@@ -21,7 +21,6 @@ const createOrganization = async (data) => {
     status: "active"
   });
   const UsersOrganizationsLimit = await getActiveSubscription(data.creator)
-  console.log("NoOrganizationCount", NoOrganizationCount);
   if (NoOrganizationCount >= UsersOrganizationsLimit) {
     throw new Error("you_have_reached_the_maximum_number_of_organizations_allowed_for_your_subscription_plan_please_upgrade_your_subscription_to_create_more_organizations");
   }

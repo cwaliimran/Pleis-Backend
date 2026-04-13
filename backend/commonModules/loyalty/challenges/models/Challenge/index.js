@@ -1,4 +1,4 @@
-const Challenge = require("./BaseChallenge");
+const Challenge = require("./baseChallenge");
 const VisitChallenge = require("./visitChallenge");
 const EarnPointsChallenge = require("./earnPointsChallenge");
 const BuyMenuItemChallenge = require("./buyMenuItemChallenge");

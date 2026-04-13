@@ -14,6 +14,11 @@ const webhookEventSchema = new mongoose.Schema(
       enum: ["ticketingbookings", "userreservations", "menuorders", "tickettransfer"],
       required: true,
     },
+    paymentMethod: {
+      type: String,
+      enum: ["applePay", "card","cash"],
+      required: true,
+    },
 
     amount: {
       type: String,
