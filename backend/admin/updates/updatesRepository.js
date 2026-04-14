@@ -94,7 +94,18 @@ const createUpdates = async (data) => {
 };
 
 
-const getUpdatess = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
+const getUpdatess = async ({
+  timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  userId,
+  date,
+  range,
+  today,
+  skip
+}) => {
   const pipeline = [
     // Step 1: Match updates where the companyOrganizer matches the provided userId
     {
@@ -170,7 +181,30 @@ const getUpdatess = async ({ timezone, page, limit, keyword, status, userId, dat
     }
   });
 
-  // Step 6: Project the necessary fields (_id, title of the update, event title)
+  // Step 6: Lookup the organization details from the Organizations collection
+  pipeline.push({
+    $lookup: {
+      from: "organizations", // Organizations collection
+      localField: "eventDetails.basicInfo.organization", // Match the companyOrganizer field in Updates
+      foreignField: "_id", // Match the _id of the organization in Organizations collection
+      pipeline: [
+        {
+          $project: {
+            _id: 1,
+            "basicInfo.name": 1
+          }
+        }
+      ],
+      as: "organization" // Output the organization details in an array called organization
+    }
+  });
+  pipeline.push({
+    $unwind: {
+      path: "$organization",
+      preserveNullAndEmptyArrays: true // This will keep the document if there are no participants
+    }
+  });
+  // Step 7: Project the necessary fields (_id, title of the update, event title, organization)
   pipeline.push({
     $project: {
       _id: 1, // Include the _id field
@@ -181,15 +215,15 @@ const getUpdatess = async ({ timezone, page, limit, keyword, status, userId, dat
       title: 1, // Include the title field of the update
       creater: { $arrayElemAt: ["$eventDetails.creator", 0] },
       eventTitle: { $arrayElemAt: ["$eventDetails.basicInfo.title", 0] },
-      eventId: { $arrayElemAt: ["$eventDetails._id", 0] } // Extract the event title from the
-      //  eventDetails array
+      eventId: { $arrayElemAt: ["$eventDetails._id", 0] }, // Extract the event title from the eventDetails array
+      organization: 1
     }
   });
 
-  // Step 7: Sort by createdAt (descending)
+  // Step 8: Sort by createdAt (descending)
   pipeline.push({ $sort: { createdAt: -1 } });
 
-  // Step 8: Apply pagination and count using $facet
+  // Step 9: Apply pagination and count using $facet
   pipeline.push({
     $facet: {
       data: [
@@ -203,29 +237,29 @@ const getUpdatess = async ({ timezone, page, limit, keyword, status, userId, dat
   // Execute the aggregation pipeline
   const result = await Updates.aggregate(pipeline);
 
-  // Step 9: Check if the result is valid and contains data
+  // Step 10: Check if the result is valid and contains data
   if (!result || !result[0] || !result[0].data) {
     return { updates: [], meta: { totalFiltered: 0, updatesCount: { total: 0, active: 0, inactive: 0 } } };
   }
 
-  // Step 10: Handle the aggregation results
+  // Step 11: Handle the aggregation results
   let updates = result[0].data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-  // Step 11: Meta counts (active/inactive/total updates for the given userId)
+  // Step 12: Meta counts (active/inactive/total updates for the given userId)
   const [total, active, inactive] = await Promise.all([
     Updates.countDocuments({ creator: userId, status: { $ne: "deleted" } }), // Total updates for the user
     Updates.countDocuments({ creator: userId, status: "active" }), // Active updates for the user
     Updates.countDocuments({ creator: userId, status: "inactive" }) // Inactive updates for the user
   ]);
 
-  // Step 12: Generate meta information for pagination
+  // Step 13: Generate meta information for pagination
   const meta = generateMeta(page, limit, totalFiltered);
   meta.updatesCount = { total, active, inactive };
-  const formattedupdates = updates.map(event => formatUpdate(event));
-  return { updates: formattedupdates, meta };
-};
+  const formattedUpdates = updates.map(event => formatUpdate(event));
 
+  return { updates: formattedUpdates, meta };
+};
 
 const findUpdatesById = async (id) => {
   return Updates.findById(id);

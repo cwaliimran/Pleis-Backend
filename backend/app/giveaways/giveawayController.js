@@ -17,7 +17,6 @@ const Giveawayervice = require("./GiveawayService");
 const createGiveaway = async (req, res) => {
   let {
 giveaway
-
   } = req.body;
 
    giveaway = new mongoose.Types.ObjectId(giveaway)

@@ -3,6 +3,7 @@
 const { User } = require("../../models/UserModel");
 
 const { UserInterests } = require("../../models/UserInterests");
+const { default: mongoose } = require("mongoose");
 
 // Create
 const createUser = async (data) => {
@@ -65,6 +66,56 @@ const getUsersWithFilters = async (query, skip, limit) => {
         localField: "companyDetails.suppliers",
         foreignField: "_id",
         as: "companyDetails.suppliers"
+      }
+    },
+
+    // Lookup userglobalwallets
+    {
+      $lookup: {
+        from: "userglobalwallets",
+        localField: "_id",  // Match the user._id with userglobalwallets.user
+        foreignField: "user",
+        as: "userglobalwallets"
+      }
+    },
+    { $unwind: { path: "$userglobalwallets", preserveNullAndEmptyArrays: true } },  // Unwind userglobalwallets to access nested fields
+
+    {
+      $lookup: {
+        from: "globalstatuslevels",
+        localField: "userglobalwallets.global.level",  // Access the 'level' array inside 'userglobalwallets'
+        foreignField: "_id",
+        as: "userglobalwallets.global.level"
+      }
+    },
+    {
+      $addFields: {
+        // Convert 'level' array to an object by selecting the first element
+        "userglobalwallets.global.level": { $arrayElemAt: ["$userglobalwallets.global.level", 0] }
+      }
+    },
+    {
+      $lookup: {
+        from: "webhookevents",
+        localField: "_id",  // Match the user._id with webhookevents.user
+        foreignField: "companyOrganizer",  // Match the user's companyOrganizer with webhookevents
+        pipeline: [
+          { $project: { amount: 1 } }  // Select the relevant 'amount' field from webhookevents
+        ],
+        as: "webhookevents"
+      }
+    },
+
+    // Calculate the sum of the 'amount' for each user using $reduce
+    {
+      $addFields: {
+        totalAmount: {
+          $reduce: {
+            input: "$webhookevents",  // Use the 'webhookevents' array
+            initialValue: 0,  // Start the sum at 0
+            in: { $add: ["$$value", { $toDouble: "$$this.amount" }] }  // Add each 'amount' (convert to double if needed)
+          }
+        }
       }
     }
   ]);
@@ -198,7 +249,12 @@ const getUserInterestsByUserId = async (userId) => {
 const getUserInterestsIdsForRecommendation = async (userId) => {
   return UserInterests.findOne({ user: userId })
 };
-
+const getActiveSubscription = async (userId) => {
+  console.log("userId", userId);
+  const user = await User.findById(new mongoose.Types.ObjectId(userId)).select("activeSubscription.numberOfOrganizations");
+  if (!user) return 0;
+  return user?.activeSubscription?.numberOfOrganizations || 0;
+}
 module.exports = {
   createUser,
   getUsersWithFilters,
@@ -212,5 +268,6 @@ module.exports = {
   updateUserInterests,
   getUserInterestsByUserId,
   getUserInterestsIdsForRecommendation,
-  getUserDetailsForQRRepo
+  getUserDetailsForQRRepo,
+  getActiveSubscription
 };

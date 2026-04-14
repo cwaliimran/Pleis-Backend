@@ -36,6 +36,7 @@ const getTagsWithFilters = async (query, skip, limit) => {
  *  - active organizations
  */
 const getActiveTags = async (limit = 15) => {
+  await invalidate(ACTIVE_TAGS_CACHE_KEY);
   return cache({
     namespace: ACTIVE_TAGS_CACHE_KEY,
     ttl: 86400, // 1 day
@@ -114,11 +115,26 @@ const getActiveTags = async (limit = 15) => {
         },
 
         { $unwind: "$tag" },
+        {
+          $lookup: {
+            from: "tagtypes",
+            localField: "tag.type",
+            foreignField: "_id",
+            pipeline: [
+              { $project: { title: 1 } }
+            ],
+            as: "tag.type"
+          }
+        },
+
+        { $unwind: "$tag.type" },
 
         {
           $project: {
             _id: "$tag._id",
             title: "$tag.title",
+            
+            type: "$tag.type",
             // totalUsage: 1
           }
         },

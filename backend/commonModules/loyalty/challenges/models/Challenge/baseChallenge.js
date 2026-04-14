@@ -84,4 +84,6 @@ baseChallengeSchema.methods.toJSON = function () {
   return obj;
 };
 
-module.exports = mongoose.model("Challenge", baseChallengeSchema);
+const Challenge = mongoose.models.Challenge || mongoose.model('Challenge', baseChallengeSchema);
+
+module.exports = Challenge;
