@@ -358,7 +358,7 @@ const getUserSubscriptions = async ({
   }
   if (subscriptionTypes) {
     // Ensure subscriptionTypes is an array
-    const subscriptionTypesArray = Array.isArray(subscriptionTypes) ? subscriptionTypes : [subscriptionTypes]; qr
+    const subscriptionTypesArray = Array.isArray(subscriptionTypes) ? subscriptionTypes : [subscriptionTypes];
     // If 'free' is in the array, include only 'free' subscription types
     if (subscriptionTypesArray.includes("free")) {
       pipeline.push({

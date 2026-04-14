@@ -500,6 +500,7 @@ const getOrganizerPerformanceComparisonService = async ({
     year,
     companyOrganizer
   });
+
   const monthMap = {
     1: "January",
     2: "February",

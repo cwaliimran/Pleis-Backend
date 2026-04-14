@@ -136,6 +136,7 @@ const updatePreset = async (req, res) => {
     title,
     description,
     basePrice,
+    category,
     status = "active",
   } = req.body;
 
@@ -152,6 +153,7 @@ const updatePreset = async (req, res) => {
     title,
     description,
     basePrice,
+    category,
     status,
   };
 

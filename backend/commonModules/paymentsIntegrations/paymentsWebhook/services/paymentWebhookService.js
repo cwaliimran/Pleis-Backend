@@ -9,10 +9,15 @@ const { generateMeta, convertTimezoneToUtc } = require("../../../../helperUtils/
 const { DASHBOARD_KEYS, TRANSSECTION_KEYS, withSubFilters } = require("../utils/transsectionKeyMap");
 const { calculateGrowth } = require("../utils/transsectionDate.utils");
 const moment = require("moment");
+const { findByOrderNumber } = require("../../monri/monriRepository");
 const processPaymentWebhook = async ({
   provider,
   payload,
 }) => {
+
+  //get monri payment method by orderNumber
+  let monriPaymentMethod = await findByOrderNumber(payload.transaction.orderNumber);
+  let paymentMethod = monriPaymentMethod ? monriPaymentMethod.paymentMethod : null;
   const event = await webhookRepository.saveIfNotProcessed({
     provider,
     orderNumber: payload.transaction.orderNumber,
@@ -23,6 +28,7 @@ const processPaymentWebhook = async ({
     transactionId: payload.transaction.id,
     paymentStatus: payload.transaction.status,
     amount: payload.transaction.amount,
+    paymentMethod,
     payload,
   });
 
@@ -115,7 +121,7 @@ const getOrdersTransactionsService = async ({
   if (organization) match.organization = { $in: organization };
   if (status) match.paymentStatus = status;
   if (orderType) match.orderType = orderType;
-  if (paymentMethod) match.paymentMethod = paymentMethod;
+  if(paymentMethod) match.paymentMethod = paymentMethod;
   if (paymentStatus) match.paymentStatus = paymentStatus;
   if (validationStatus) match.validationStatus = validationStatus;
   if (minimalSpendRes) {

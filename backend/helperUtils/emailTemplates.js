@@ -673,7 +673,197 @@ const menuOrderConfirmationEmailTemplate = ({
   </html>
   `;
 };
+const subscriptionExpiryEmailTemplate = ({ username, expiryDate, title, message }) => `
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      .email-container {
+        font-family: Arial, sans-serif;
+        line-height: 1.5;
+        color: #333;
+      }
+      .email-header {
+        background-color: #1B1A1D;
+        color: white;
+        text-align: center;
+        padding: 10px 0;
+      }
+      .email-header h2 {
+        color: white;
+        margin: 0;
+      }
+      .email-body {
+        margin: 20px;
+      }
+      .expiry-warning {
+        display: inline-block;
+        padding: 15px 25px;
+        margin: 15px 0;
+        background-color: #FF6347;
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        border-radius: 5px;
+        text-align: center;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 20px;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="email-header">
+        <h2>${title}</h2>
+      </div>
+      <div class="email-body">
+        <p>Hello ${username},</p>
+        <p>${message}</p>
+        <div class="expiry-warning">Your subscription is expiring on ${expiryDate}!</div>
+        <p>Make sure to renew your subscription before the expiry date to avoid any interruptions in your service.</p>
+        <p>If you have any questions, feel free to contact our support team.</p>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>
+`;
+const subscriptionExpiredEmailTemplate = ({ username, title, message }) => `
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      .email-container {
+        font-family: Arial, sans-serif;
+        line-height: 1.5;
+        color: #333;
+      }
+      .email-header {
+        background-color: #1B1A1D;
+        color: white;
+        text-align: center;
+        padding: 10px 0;
+      }
+      .email-header h2 {
+        color: white;
+        margin: 0;
+      }
+      .email-body {
+        margin: 20px;
+      }
+      .expired-warning {
+        display: inline-block;
+        padding: 15px 25px;
+        margin: 15px 0;
+        background-color: #FF0000;
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+        letter-spacing: 4px;
+        border-radius: 5px;
+        text-align: center;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 20px;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="email-header">
+        <h2>${title}</h2>
+      </div>
+      <div class="email-body">
+        <p>Hello ${username},</p>
+        <p>${message}</p>
+        <div class="expired-warning">Your subscription has expired!</div>
+        <p>To continue enjoying our services, please renew your subscription as soon as possible.</p>
+        <p>If you need assistance or have any questions, feel free to contact our support team.</p>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>
+`;
+const subscriptionUpdatedEmailTemplate = ({ username, title, subscription }) => `
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      .email-container {
+        font-family: Arial, sans-serif;
+        line-height: 1.5;
+        color: #333;
+      }
+      .email-header {
+        background-color: #1B1A1D;
+        color: white;
+        text-align: center;
+        padding: 10px 0;
+      }
+      .email-header h2 {
+        color: white;
+        margin: 0;
+      }
+      .email-body {
+        margin: 20px;
+      }
+      .subscription-details {
+        margin-top: 20px;
+        background-color: #f7f7f7;
+        padding: 15px;
+        border-radius: 5px;
+      }
+      .subscription-details p {
+        margin: 5px 0;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 20px;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="email-header">
+        <h2>${title}</h2>
+      </div>
+      <div class="email-body">
+        <p>Hello ${username},</p>
+        <p>Your subscription has been activated/updated successfully. Here are the details:</p>
+        <div class="subscription-details">
+          <p><strong>Subscription Types:</strong> ${subscription.subscriptionTypes.join(", ")}</p>
+          <p><strong>Pricing Plan:</strong> ${subscription.pricingPlan}</p>
+          <p><strong>Number of Organizations:</strong> ${subscription.numberOfOrganizations}</p>
+          <p><strong>Total Subscription Amount:</strong> $${subscription.totalSubscriptionAmount.toFixed(2)}</p>
+          <p><strong>Start Date:</strong> ${new Date(subscription.startDate).toLocaleString()}</p>
+          <p><strong>End Date:</strong> ${new Date(subscription.endDate).toLocaleString()}</p>
+        </div>
+        <p>We are excited to have you continue with us!</p>
+        <p>If you need any assistance, feel free to reach out to our support team.</p>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>
+`;
 
+module.exports = {
+  subscriptionUpdatedEmailTemplate
+};
 // Export both functions
 module.exports = {
   registrationViaLinkEmailTemplate,
@@ -684,5 +874,8 @@ module.exports = {
   stripeEmailTemplate,
   otpEmailTemplate,
   OTP_PURPOSE_CONFIG,
-  menuOrderConfirmationEmailTemplate
+  menuOrderConfirmationEmailTemplate,
+  subscriptionUpdatedEmailTemplate,
+  subscriptionExpiryEmailTemplate,
+  subscriptionExpiredEmailTemplate
 };

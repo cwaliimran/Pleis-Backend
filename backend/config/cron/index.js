@@ -16,6 +16,9 @@ const { runRecurringGlobalPromotionsCron } = require("../../admin/globalLoyalty/
 const { runLoyaltyChallengeExpiringSoonCron } = require("./loyalty/challenges/challengeExpiringSoonCron");
 const { runGlobalChallengeExpiringSoonCron } = require("./globalLoyalty/challenges/globalChallengeExpiringSoonCron");
 const { flushEngagementBuffer } = require("./engagement/flushEngagementBuffer");
+const { PromoCodeExpireCron } = require("./promoCodeValidity/PromoCodeExpire.cron");
+const { runSubscriptionReminderCron } = require("./subScription/subScription.cron");
+const { giveAwaysExpireCron, giveAwaysExpireAndWinnerCron } = require("./giveAways/giveAwaysExpireAndWinnerCron.cron");
 
 const startCrons = () => {
   /* ======================================================
@@ -138,7 +141,68 @@ const startCrons = () => {
 
 
 
+  ///* ======================================================
+  //   🕛 CRON 6: Promo code expiry (every minute)
+  //   ====================================================== */
+  cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
+  // cron.schedule("0 * * * *", async () => { // run every 1 hour for production
+    const lockKey = "cron:promo-code-expiry";
+    const lock = await acquireLock(lockKey, 50);
 
+    if (!lock) return;
+
+    try {
+      await PromoCodeExpireCron();
+    } catch (err) {
+      console.error("Promo code expiry cron error:", err);
+    } finally {
+      await releaseLock(lockKey, lock);
+    }
+  });
+
+  ///* ======================================================
+  //   🕛 CRON 6: Promo code expiry (every minute)
+  //   ====================================================== */
+  // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
+  cron.schedule("0 * * * *", async () => { // run every 1 hour for production
+    const lockKey = "cron:subscription-reminder";
+    const lock = await acquireLock(lockKey, 50);
+
+    if (!lock) return;
+
+    try {
+      await runSubscriptionReminderCron();
+    } catch (err) {
+      console.error("Subscription reminder cron error:", err);
+    } finally {
+      await releaseLock(lockKey, lock);
+    }
+  });
+
+
+
+  
+  ///* ======================================================
+  //   🕛 CRON 7: Giveaways expiry (every minute)
+  //   ====================================================== */
+  // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
+  cron.schedule("0 * * * *", async () => { // run every 1 hour for production
+    const lockKey = "cron:giveaways-expiry";
+    const lock = await acquireLock(lockKey, 50);
+
+    if (!lock) return;
+
+    try {
+      await giveAwaysExpireAndWinnerCron();
+    } catch (err) {
+      console.error("Giveaways expiry cron error:", err);
+    } finally {
+      await releaseLock(lockKey, lock);
+    }
+  });
+
+
+  
 };
 
 module.exports = { startCrons };

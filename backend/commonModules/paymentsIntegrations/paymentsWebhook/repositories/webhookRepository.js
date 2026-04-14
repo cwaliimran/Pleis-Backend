@@ -80,16 +80,15 @@ const getOrderPaymentMethod = async (transactionDetails = {}) => {
   }
 
   const modelMap = {
-    ticketingbookings: "TicketingBookings",
+    ticketingbookings: "TicketingOrder",
     menuorders: "MenuOrders",
     userreservations: "UserReservations",
-    tickettransfer: "TicketingBookings",
+    tickettransfer: "TicketingOrder",
     ticketingorder: "TicketingOrder",
     ticketingorders: "TicketingOrder",
   };
 
   const modelName = modelMap[transactionDetails.orderType.toLowerCase()];
-
   if (!modelName) return paymentMethod;
 
   try {
@@ -107,13 +106,12 @@ const getOrderPaymentMethod = async (transactionDetails = {}) => {
         null;
     } else if (modelName === "TicketingOrder") {
       const orderData = await Model.findById(transactionDetails.orderNumber)
-        .select("paymentMethod paymentType paymentOption")
+        .select("paymentDetails")
         .lean();
-
       paymentMethod =
-        orderData?.paymentMethod ||
-        orderData?.paymentType ||
-        orderData?.paymentOption ||
+        orderData?.paymentDetails?.paymentMethod ||
+        orderData?.paymentDetails?.paymentType ||
+        orderData?.paymentDetails?.paymentOption ||
         null;
     } else if (modelName === "TicketingBookings") {
       const orderData = await Model.aggregate([
@@ -138,14 +136,13 @@ const getOrderPaymentMethod = async (transactionDetails = {}) => {
         },
         {
           $project: {
-            paymentMethod: "$order.paymentMethod",
-            paymentType: "$order.paymentType",
-            paymentOption: "$order.paymentOption",
+            paymentMethod: "$order.paymentDetails.paymentMethod",
+            paymentType: "$order.paymentDetails.paymentType",
+            paymentOption: "$order.paymentDetails.paymentOption",
           },
         },
         { $limit: 1 },
       ]).exec();
-
       paymentMethod =
         orderData?.[0]?.paymentMethod ||
         orderData?.[0]?.paymentType ||
@@ -153,13 +150,13 @@ const getOrderPaymentMethod = async (transactionDetails = {}) => {
         null;
     } else if (modelName === "UserReservations") {
       const orderData = await Model.findById(transactionDetails.orderNumber)
-        .select("paymentMethod paymentType paymentOption")
+        .select("paymentDetails")
         .lean();
 
       paymentMethod =
-        orderData?.paymentMethod ||
-        orderData?.paymentType ||
-        orderData?.paymentOption ||
+        orderData?.paymentDetails?.paymentMethod ||
+        orderData?.paymentDetails?.paymentType ||
+        orderData?.paymentDetails?.paymentOption ||
         null;
     } else {
       const orderData = await Model.findById(transactionDetails.orderNumber)
@@ -204,7 +201,7 @@ const getOrdersTransactions = async ({
   eventBasedOrder
 }) => {
   const pipeline = [];
-  console.log("category", category);
+
 
   // Base match
   if (Object.keys(match).length) {
@@ -232,7 +229,10 @@ const getOrdersTransactions = async ({
     {
       $addFields: {
         organization: { $arrayElemAt: ["$organization", 0] },
-        user: { $arrayElemAt: ["$user", 0] }
+        user: { $arrayElemAt: ["$user", 0] },
+        commission: {
+          $round: [{ $multiply: [{ $toDouble: "$amount" }, 0.06] }, 2]
+        }
       }
     },
     {
@@ -755,6 +755,7 @@ const getOrdersTransactions = async ({
   pipeline.push({
     $project: {
       provider: 1,
+      commission: 1,
       orderType: 1,
       orderNumber: 1,
       paymentStatus: 1,
@@ -1065,7 +1066,7 @@ const countOrdersTransactions = async ({
 
 
 
-  
+
 
   const res = await WebhookEvent.aggregate(pipeline, { allowDiskUse: true });
 

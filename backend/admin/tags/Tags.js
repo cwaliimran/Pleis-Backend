@@ -13,6 +13,7 @@ const tagsSchema = new mongoose.Schema(
       enum: ["active", "inactive", "deleted"],
       default: "active",
     },
+    
     type: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "TagTypes",
