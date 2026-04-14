@@ -18,7 +18,7 @@ const { runGlobalChallengeExpiringSoonCron } = require("./globalLoyalty/challeng
 const { flushEngagementBuffer } = require("./engagement/flushEngagementBuffer");
 const { PromoCodeExpireCron } = require("./promoCodeValidity/PromoCodeExpire.cron");
 const { runSubscriptionReminderCron } = require("./subScription/subScription.cron");
-const { giveAwaysExpireCron } = require("./giveAways/giveAwaysExpire.cron");
+const { giveAwaysExpireCron, giveAwaysExpireAndWinnerCron } = require("./giveAways/giveAwaysExpireAndWinnerCron.cron");
 
 const startCrons = () => {
   /* ======================================================
@@ -193,7 +193,7 @@ const startCrons = () => {
     if (!lock) return;
 
     try {
-      await giveAwaysExpireCron();
+      await giveAwaysExpireAndWinnerCron();
     } catch (err) {
       console.error("Giveaways expiry cron error:", err);
     } finally {
