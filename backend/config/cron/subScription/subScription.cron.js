@@ -2,7 +2,7 @@
 const SubscriptionNotificationLogs = require("@SubscriptionNotificationLogsModel");
 
 const { User } = require("@UsersModel");
-const { sendSubscriptionNotification } = require("../../../controllers/notificationHelper/subscriptionNotificationService");
+const { sendSubscriptionNotification } = require("../../../controllers/notificationHelper/giveawayWinnersNotificationService");
 const { activateInactiveSubscriptions } = require("./updateSubscription");
 
 const MINUTE_MS = 60 * 1000;
