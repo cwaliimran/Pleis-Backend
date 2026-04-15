@@ -520,7 +520,7 @@ const getSuggestedLoyaltyClubsForUser = async ({
 }) => {
 
   const joinedClubIds = await getUserJoinedClubs(userId);
-
+console.log("joinedClubIds",joinedClubIds );
   const filter = {
     _id: { $nin: joinedClubIds },
     "accountState.status": "active",
