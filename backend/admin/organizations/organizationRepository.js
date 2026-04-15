@@ -13,6 +13,7 @@ const { default: mongoose } = require("mongoose");
 const { User } = require("@UsersModel");
 const { countClubMembersOfOrganization } = require("../loyalty/clubMembers/clubMembersRepository");
 const { getActiveSubscription } = require("../usersManagement/usersRepository");
+const { getFullImageUrl } = require("@utils/imageHelper");
 
 // Create
 const createOrganization = async (data) => {
@@ -323,6 +324,17 @@ const getOrganizationNamesByCompanyOrganizer = async (companyOrganizer) => {
   const organizations = await Organizations.find({ creator: companyOrganizer, status: "active" }).select("basicInfo.name").lean();
   return organizations;
 };
+const getOrganizationByCompanyOrganizer = async (companyOrganizer) => {
+  const organizations = await Organizations.find({ creator: companyOrganizer, status: "active" }).select("basicInfo.name basicInfo.media.logo location").lean();
+  const formattedOrganizations = organizations.map(org => {
+    if (org.basicInfo?.media?.logo) {
+      const logoName = org.basicInfo.media.logo;
+      org.basicInfo.media.logo = getFullImageUrl(logoName);
+    }
+    return org;
+  });
+  return formattedOrganizations;
+};
 
 //getMenuIdsByCompanyOrganizer
 const getMenuIdsByCompanyOrganizer = async (companyOrganizer) => {
@@ -405,5 +417,6 @@ module.exports = {
   getOrganizationIdByCompanyOrganizer,
   getInAppOrderingSettings,
   getMenuIdsByOrganization,
-  getLogoByOrganization
+  getLogoByOrganization,
+  getOrganizationByCompanyOrganizer
 };
