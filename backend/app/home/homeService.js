@@ -38,8 +38,10 @@ const getHomeService = async ({ queryData }) => {
     /**
      * PROMISES
      */
+    let filter = {quickAction:true}
+
     const promises = {
-      categoriesRes: getPublicCategories({}),
+      categoriesRes: getPublicCategories(filter),
       bannersRes: getBannerControlsService({ page: 1, limit: 10 }),
       getGlobalReferralSettingsRes: getGlobalReferralSettingsRepository(),
 
