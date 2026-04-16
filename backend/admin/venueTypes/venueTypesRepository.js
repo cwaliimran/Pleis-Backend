@@ -51,6 +51,7 @@ await invalidate(ACTIVE_VENUE_TYPES_CACHE_KEY);
           {
             path: "categories",
             select: "title",
+            match: { status: "active" },
           },
         ],
         options: { page, limit },
