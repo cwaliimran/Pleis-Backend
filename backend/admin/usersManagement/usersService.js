@@ -178,6 +178,30 @@ const updateUser = async (req, res, options = {}) => {
       return { errorCode: 400, message: "url_not_accepted", field: "profileIcon" };
     }
 
+    if (userId && status === "suspended") {
+      await Organizations.updateMany(
+        {
+          creator: userId,  // Match the organization by creator (userId)
+          status: "active"   // Match only organizations with "active" status
+        },
+        {
+          $set: { status: "suspended" }, // Set the organization's status to "suspended"
+        }
+      );
+    }
+    if (userId && status === "active") {
+      await Organizations.updateMany(
+        {
+          creator: userId,  // Match the organization by creator (userId)
+          status: "suspended"   // Match only organizations with "suspended" status
+        },
+        {
+          $set: { status: "active" }, // Set the organization's status to "active"
+        }
+      );
+    }
+
+
     /*   // Check if email exists
       const existingUser = await User.findOne({ _id: { $ne: userId }, email: email.trim().toLowerCase() });
       if (existingUser && existingUser.verificationStatus.email === "verified") {
@@ -268,6 +292,7 @@ const updateUser = async (req, res, options = {}) => {
           await orgDoc.save({ session });
         }
       }
+
 
       // Update modules/featuresAccess in current organizations
       if (orgsToUpdate.length > 0 && Array.isArray(modules)) {

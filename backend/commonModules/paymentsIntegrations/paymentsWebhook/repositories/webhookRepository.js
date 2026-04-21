@@ -758,6 +758,7 @@ const getOrdersTransactions = async ({
       commission: 1,
       orderType: 1,
       orderNumber: 1,
+      paymentMethod:1,
       paymentStatus: 1,
       transactionId: 1,
       ticketType: 1,
@@ -799,33 +800,33 @@ const getOrdersTransactions = async ({
   // Execute
   const transactions = await WebhookEvent.aggregate(pipeline, { allowDiskUse: true });
 
-  // Attach payment method
-  const updatedTransactions = await Promise.all(
-    transactions.map(async (transaction) => {
-      const paymentMethodValue = await getOrderPaymentMethod({
-        orderType: transaction.orderType,
-        orderNumber: transaction.orderNumber,
-      });
+  // // Attach payment method
+  // const updatedTransactions = await Promise.all(
+  //   transactions.map(async (transaction) => {
+  //     const paymentMethodValue = await getOrderPaymentMethod({
+  //       orderType: transaction.orderType,
+  //       orderNumber: transaction.orderNumber,
+  //     });
 
-      return {
-        ...transaction,
-        paymentMethod: paymentMethodValue,
-      };
-    })
-  );
+  //     return {
+  //       ...transaction,
+  //       paymentMethod: paymentMethodValue,
+  //     };
+  //   })
+  // );
 
-  // Filter by paymentMethod (post-process)
-  let filteredTransactions = updatedTransactions;
+  // // Filter by paymentMethod (post-process)
+  // let filteredTransactions = updatedTransactions;
 
-  if (paymentMethod && paymentMethod.trim()) {
-    filteredTransactions = filteredTransactions.filter(
-      (transaction) =>
-        transaction.paymentMethod &&
-        transaction.paymentMethod.toLowerCase() === paymentMethod.toLowerCase()
-    );
-  }
+  // if (paymentMethod && paymentMethod.trim()) {
+  //   filteredTransactions = filteredTransactions.filter(
+  //     (transaction) =>
+  //       transaction.paymentMethod &&
+  //       transaction.paymentMethod.toLowerCase() === paymentMethod.toLowerCase()
+  //   );
+  // }
 
-  return filteredTransactions;
+  return transactions;
 };
 
 /* =========================================================
