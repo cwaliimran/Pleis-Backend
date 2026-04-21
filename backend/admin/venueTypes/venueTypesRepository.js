@@ -4,6 +4,7 @@ const { getWithFilters, getModelCounts } = require('@dbUtils/queryUtil');
 
 const VenueTypesModel = require("./VenueTypesModel");
 const { cache, invalidate } = require("@redisCache");
+const { default: mongoose } = require('mongoose');
 const ACTIVE_VENUE_TYPES_CACHE_KEY = "venueTypes:active";
 const buildVenueTypesCacheKey = ({
   scope = "public", // public | admin
@@ -50,7 +51,7 @@ await invalidate(ACTIVE_VENUE_TYPES_CACHE_KEY);
         populate: [
           {
             path: "categories",
-            select: "title",
+            select: "title order",
             match: { status: "active" },
           },
           
