@@ -89,10 +89,11 @@ const createGiveaway = async (data) => {
     await sendUserNotifications({
       recipientIds: userIds,
       title: update.title,
-      body: `A new giveaway is live join now : ${update._id}`,
-      data: { type: NotificationTypes.GIVEAWAY_UPDATE, objectType: "Giveaway", giveawayId: update._id },
+      body: `A new giveaway is live join now `,
+      data: { type: NotificationTypes.GIVEAWAY_UPDATE, objectType: "events", giveawayId: update.event },
       sender: update.creator,
-      objectId: update._id,
+      objectId: update.event,
+      image: "noimage.png",
     });
 
     return update;

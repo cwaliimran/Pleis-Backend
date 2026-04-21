@@ -27,7 +27,7 @@ const getCompanyLoyaltyProfile = async (companyOrganizer) => {
   const [companyDoc, totalMembers] = await Promise.all([
     User.findById(companyOrganizer)
       .select(
-        "companyDetails.loyaltySettings.title companyDetails.logo companyDetails.coverImage companyDetails.category companyDetails.description"
+        "companyDetails.loyaltySettings.title companyDetails.logo companyDetails.coverImage companyDetails.category companyDetails.description accountState.status"
       )
       .populate({
         path: "companyDetails.category",
@@ -36,7 +36,7 @@ const getCompanyLoyaltyProfile = async (companyOrganizer) => {
       .lean(),
     ClubMembers.countDocuments({ companyOrganizer, status: "active" })
   ]);
-
+companyDoc.companyDetails.accountState = companyDoc.accountState;
 
   if (!companyDoc) return null;
   companyDoc.companyDetails.totalMembers = totalMembers || 0;
