@@ -162,7 +162,8 @@ function mapIdsToTitles(ids = [], lookupList = []) {
     .filter(Boolean)                          // remove missing ones
     .map(item => ({
       _id: item._id,
-      title: item.title || item?.loyaltySettings?.title || ""
+      title: item.title || item?.loyaltySettings?.title || "",
+      order: item.order || 0
     }));
 }
 

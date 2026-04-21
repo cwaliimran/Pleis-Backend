@@ -54,10 +54,9 @@ const getCategoriesWithFilters = async (
  * ============================
  */
 const getPublicActiveCategories = async (filter = {}) => {
-  console.log("filter",filter );
       return Categories.find({ status: "active", ...filter })
         .sort({ order: 1 })
-        .select("title image")
+        .select("title image order")
         .lean();
     }
 
