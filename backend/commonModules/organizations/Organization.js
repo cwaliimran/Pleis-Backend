@@ -113,7 +113,7 @@ const organizationSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["active", "inactive", "blocked", "deleted"],
+      enum: ["active", "inactive", "blocked", "deleted","suspended"],
       default: "active",
     },
     location: {
