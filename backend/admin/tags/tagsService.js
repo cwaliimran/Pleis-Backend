@@ -25,11 +25,7 @@ const getTags = async ({ page, limit, keyword, type, status, date }) => {
     filters.push({ status: { $ne: "deleted" } });
   }
 
-  if (keyword) {
-    filters.push({
-      $or: [{ title: { $regex: keyword, $options: "i" } }],
-    });
-  }
+
 
   const query = filters.length ? { $and: filters } : {};
 
@@ -37,7 +33,7 @@ const getTags = async ({ page, limit, keyword, type, status, date }) => {
 
   // Fetch tags and related counts
   const [tags, totalFiltered, total, active, inactive] = await Promise.all([
-    tagRepo.getTagsWithFilters(query, skip, limit === 0 ? 0 : limit),
+    tagRepo.getTagsWithFilters(query, skip, limit === 0 ? 0 : limit,keyword),
     tagRepo.countTags(query),
     tagRepo.countTags({ status: { $ne: "deleted" } }),
     tagRepo.countTags({ status: "active" }),

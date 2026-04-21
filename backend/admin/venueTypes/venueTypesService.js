@@ -25,11 +25,6 @@ const getVenueTypes = async ({ page, limit, keyword, status, date }) => {
     andConditions.push({ status: { $ne: "deleted" } });
   }
 
-  if (keyword) {
-    andConditions.push({
-      $or: [{ title: { $regex: keyword, $options: "i" } }],
-    });
-  }
 
   const query = andConditions.length > 0 ? { $and: andConditions } : {};
 

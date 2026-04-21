@@ -53,9 +53,11 @@ await invalidate(ACTIVE_VENUE_TYPES_CACHE_KEY);
             select: "title",
             match: { status: "active" },
           },
+          
         ],
-        options: { page, limit },
+        options: { page, limit, sort: { order: 1 } },
       });
+      
     },
   });
 };

@@ -9,9 +9,10 @@ const { NotificationTypes } = require("@NotificationsModel");
 const createMenuItem = async (data) => {
   try {
     // Create menuItem
+    console.log("data",data );
     const menuItem = new MenuItems(data);
     await menuItem.save();
-    const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
+    // const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
     // await sendUserNotifications({
     //   recipientIds: userIds,
     //   title: `A new menu item "${menuItem.title}" has been created.`,
