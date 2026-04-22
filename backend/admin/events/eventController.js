@@ -842,6 +842,79 @@ const getEventbycompanyOrganizer = async (req, res) => {
     });
   }
 };
+
+const getEventsByVenueType = async (req, res) => {
+  let { venueTypeId } = req.params;
+  if (!venueTypeId) {
+    return res.status(400).json({ error: "Venue Type ID is required" });
+  }
+  let { timezone } = req.user;
+  try {
+    venueTypeId = new mongoose.Types.ObjectId(venueTypeId);
+
+    if (venueTypeId) {
+      if (!validateParams(req, res, {
+        objectIdFields: ["venueTypeId"],
+      })) return;
+    }
+
+    let { events } = await eventService.getEventsByVenueTypeService({
+      venueTypeId,
+      timezone,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "events_fetched_successfully",
+      data: events,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+
+const getEventsByTag = async (req, res) => {
+  let { tagId } = req.params;
+  if (!tagId) {
+    return res.status(400).json({ error: "Tag ID is required" });
+  }
+  let { timezone } = req.user;
+  try {
+    tagId = new mongoose.Types.ObjectId(tagId);
+
+    if (tagId) {
+      if (!validateParams(req, res, {
+        objectIdFields: ["tagId"],
+      })) return;
+    }
+
+    let { events } = await eventService.getEventsByTagService({
+      tagId,
+      timezone,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "events_fetched_successfully",
+      data: events,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+
 module.exports = {
   createEvent,
   getEvents,
@@ -856,5 +929,8 @@ module.exports = {
   getEventTicketings,
   getEventNotifications,
   getEventRatings,
-  getEventbycompanyOrganizer
+  getEventbycompanyOrganizer,
+  getEventsByVenueType,
+  getEventsByTag
+
 };

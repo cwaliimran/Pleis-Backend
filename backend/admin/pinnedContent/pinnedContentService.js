@@ -3,9 +3,10 @@ const { generateMeta } = require("../../helperUtils/responseUtil");
 const PinnedContent = require("./PinnedContent");
 const pinnedContentRepo = require("./pinnedContentRepository");
 const mongoose = require("mongoose");
+const { cache, invalidate } = require("@redisCache");
 
-const createPinnedContent = async ({ type, object, status }) => {
-  return await pinnedContentRepo.createPinnedContent({ type, object, status });
+const createPinnedContent = async ({ filterType, filter, contentType, status }) => {
+  return await pinnedContentRepo.createPinnedContent({ filterType, filter, contentType, status });
 };
 
 const getPinnedContent = async ({ page, limit, keyword, status, date, orderSort = "asc" }) => {
@@ -26,13 +27,11 @@ const getPinnedContent = async ({ page, limit, keyword, status, date, orderSort 
 
   const sort = { order: orderSort === "desc" ? -1 : 1 };
 
-  const [pinnedContent, getPinnedContentCounts] = await Promise.all([
-    pinnedContentRepo.getPinnedContentWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
-    pinnedContentRepo.getPinnedContentCounts(query),
+  const [pinnedContent] = await Promise.all([
+    pinnedContentRepo.getPinnedContentWithFilters(query, sort),
   ]);
-  const { totalFiltered, total, active, inactive } =  getPinnedContentCounts;
-  const meta = generateMeta(page, limit, totalFiltered);
-  meta.pinnedContentCount = { total, active, inactive };
+  const meta = generateMeta(page, limit, pinnedContent.length);
+  meta.pinnedContentCount = { total: pinnedContent.length, active: pinnedContent.filter(pc => pc.status === "active").length, inactive: pinnedContent.filter(pc => pc.status === "inactive").length };
 
   return { pinnedContent, meta };
 };
@@ -41,8 +40,9 @@ const updatePinnedContent = async (id, data) => {
   // Only update provided fields
   const updateData = {
     ...(data.status !== undefined && { status: data.status }),
-    ...(data.object !== undefined && { object: data.object }),
-    ...(data.type !== undefined && { type: data.type }),
+    ...(data.filterType !== undefined && { filterType: data.filterType }),
+    ...(data.filter !== undefined && { filter: data.filter }),
+    ...(data.contentType !== undefined && { contentType: data.contentType }),
   };
 
   if (Object.keys(updateData).length === 0) {
@@ -85,10 +85,12 @@ const reorderPinnedContent = async (movedId, previousOrder, newOrder) => {
     await PinnedContent.findByIdAndUpdate(movedId, { order: newOrder }, { session });
     await session.commitTransaction();
     session.endSession();
+    await invalidate("pinnedContent");
     return true;
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
+    
     throw err;
   }
 };

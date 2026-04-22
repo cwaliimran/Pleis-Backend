@@ -397,6 +397,409 @@ const getLogoByOrganization = async (organizationId) => {
   return orgSettings.basicInfo.media.logo;
 };
 
+const getOrganizationsByTag = async ({
+  tagId,
+  userLocation,
+  radiusKm,
+  page = 1,
+  limit = 10
+}) => {
+  const skip = (page - 1) * limit;
+
+  const tagObjectId = new mongoose.Types.ObjectId(tagId);
+
+  const geoQuery = {
+    status: "active",
+    "otherInfo.tags": { $in: [tagObjectId] }
+  };
+
+  const pipeline = [];
+
+  /* ===============================
+     1️⃣ GEO / NON-GEO BASE QUERY
+     =============================== */
+  if (userLocation) {
+    pipeline.push(
+      {
+        $geoNear: {
+          near: userLocation,
+          key: "location",
+          distanceField: "distance",
+          spherical: true,
+          query: geoQuery,
+          ...(radiusKm && { maxDistance: radiusKm * 1000 })
+        }
+      },
+      { $sort: { distance: 1 } }
+    );
+  } else {
+    pipeline.push(
+      { $match: geoQuery },
+      { $sort: { createdAt: -1 } }
+    );
+  }
+
+  /* ===============================
+     2️⃣ PAGINATION
+     =============================== */
+  pipeline.push(
+    { $skip: skip },
+    { $limit: limit }
+  );
+
+  /* ===============================
+     3️⃣ TAGS POPULATION (kept for consistency)
+     =============================== */
+  pipeline.push({
+    $lookup: {
+      from: "tags",
+      localField: "otherInfo.tags",
+      foreignField: "_id",
+      as: "tags",
+      pipeline: [{ $project: { _id: 1, title: 1 } }]
+    }
+  });
+
+  /* ===============================
+     4️⃣ PRIMARY VENUE + VENUE TYPES
+     =============================== */
+  pipeline.push({
+    $lookup: {
+      from: "venues",
+      let: { orgId: "$_id" },
+      pipeline: [
+        {
+          $match: {
+            $expr: { $eq: ["$organization", "$$orgId"] },
+            isPrimary: true,
+            status: "active"
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            venueType: 1
+          }
+        }
+      ],
+      as: "primaryVenue"
+    }
+  });
+
+  pipeline.push({
+    $lookup: {
+      from: "venuetypes",
+      localField: "primaryVenue.venueType",
+      foreignField: "_id",
+      as: "venueTypes",
+      pipeline: [{ $project: { _id: 1, title: 1 } }]
+    }
+  });
+
+  /* ===============================
+     5️⃣ FINAL SHAPE (UNIFIED OUTPUT)
+     =============================== */
+  pipeline.push({
+    $project: {
+      _id: 1,
+
+      "basicInfo.name": 1,
+      "basicInfo.media": 1,
+
+      operatingHours: 1,
+      distance: userLocation ? 1 : null,
+
+      tags: 1,
+
+      venue: {
+        venueType: "$venueTypes"
+      }
+    }
+  });
+
+  const organizations = await Organizations.aggregate(pipeline);
+
+  return { organizations };
+};
+
+const getOrganizationsByVenueType = async ({
+  venueTypeId,
+  userLocation,
+  radiusKm,
+  page = 1,
+  limit = 10
+}) => {
+  const skip = (page - 1) * limit;
+
+  const venueTypeObjectId = new mongoose.Types.ObjectId(venueTypeId);
+
+  /* ===============================
+     1️⃣ GET ORGANIZATION IDS FROM VENUES
+     =============================== */
+  const venueMatch = {
+    status: "active",
+    venueType: { $in: [venueTypeObjectId] }
+  };
+
+  const venuePipeline = [
+    { $match: venueMatch },
+    {
+      $group: {
+        _id: "$organization"
+      }
+    }
+  ];
+
+  const venueAgg = await Venues.aggregate(venuePipeline);
+
+  const organizationIds = venueAgg
+    .map(v => v._id)
+    .filter(Boolean);
+
+  if (organizationIds.length === 0) {
+    return { organizations: [] };
+  }
+
+  /* ===============================
+     2️⃣ ORGANIZATION PIPELINE (MATCH YOUR NEARBY STYLE)
+     =============================== */
+
+  const geoQuery = {
+    status: "active",
+    _id: { $in: organizationIds }
+  };
+
+  const pipeline = [];
+
+  /* optional geo sorting */
+  if (userLocation) {
+    pipeline.push(
+      {
+        $geoNear: {
+          near: userLocation,
+          key: "location",
+          distanceField: "distance",
+          spherical: true,
+          query: geoQuery,
+          ...(radiusKm && { maxDistance: radiusKm * 1000 })
+        }
+      },
+      { $sort: { distance: 1 } }
+    );
+  } else {
+    pipeline.push(
+      { $match: geoQuery },
+      { $sort: { createdAt: -1 } }
+    );
+  }
+
+  /* ===============================
+     3️⃣ PAGINATION
+     =============================== */
+  pipeline.push(
+    { $skip: skip },
+    { $limit: limit }
+  );
+
+  /* ===============================
+     4️⃣ TAGS POPULATION (same as nearby)
+     =============================== */
+  pipeline.push({
+    $lookup: {
+      from: "tags",
+      localField: "otherInfo.tags",
+      foreignField: "_id",
+      as: "tags",
+      pipeline: [{ $project: { _id: 1, title: 1 } }]
+    }
+  });
+
+  /* ===============================
+     5️⃣ VENUE TYPE POPULATION (same pattern)
+     =============================== */
+  pipeline.push({
+    $lookup: {
+      from: "venues",
+      let: { orgId: "$_id" },
+      pipeline: [
+        {
+          $match: {
+            $expr: { $eq: ["$organization", "$$orgId"] },
+            isPrimary: true,
+            status: "active"
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            venueType: 1
+          }
+        }
+      ],
+      as: "primaryVenue"
+    }
+  });
+
+  pipeline.push({
+    $lookup: {
+      from: "venuetypes",
+      localField: "primaryVenue.venueType",
+      foreignField: "_id",
+      as: "venueTypes",
+      pipeline: [{ $project: { _id: 1, title: 1 } }]
+    }
+  });
+
+  /* ===============================
+     6️⃣ FINAL SHAPE (MATCH NEARBY OUTPUT STYLE)
+     =============================== */
+  pipeline.push({
+    $project: {
+      _id: 1,
+
+      "basicInfo.name": 1,
+      "basicInfo.media": 1,
+
+      operatingHours: 1,
+      distance: userLocation ? 1 : null,
+
+      tags: 1,
+
+      venue: {
+        venueType: "$venueTypes"
+      }
+    }
+  });
+
+  const organizations = await Organizations.aggregate(pipeline);
+
+  return { organizations };
+};
+
+const getOrganizationByCategory = async ({
+  categoryId,
+  userLocation,
+  radiusKm,
+  page = 1,
+  limit = 10
+}) => {
+  const skip = (page - 1) * limit;
+
+  const categoryObjectId = new mongoose.Types.ObjectId(categoryId);
+
+  const geoQuery = {
+    status: "active",
+    "otherInfo.categories": { $in: [categoryObjectId] }
+  };
+
+  const pipeline = [];
+
+  /* ===============================
+     1️⃣ GEO / NON-GEO BASE QUERY
+     =============================== */
+  if (userLocation) {
+    pipeline.push(
+      {
+        $geoNear: {
+          near: userLocation,
+          key: "location",
+          distanceField: "distance",
+          spherical: true,
+          query: geoQuery,
+          ...(radiusKm && { maxDistance: radiusKm * 1000 })
+        }
+      },
+      { $sort: { distance: 1 } }
+    );
+  } else {
+    pipeline.push(
+      { $match: geoQuery },
+      { $sort: { createdAt: -1 } }
+    );
+  }
+
+  /* ===============================
+     2️⃣ PAGINATION
+     =============================== */
+  pipeline.push(
+    { $skip: skip },
+    { $limit: limit }
+  );
+
+  /* ===============================
+     3️⃣ TAGS (same as other pipelines)
+     =============================== */
+  pipeline.push({
+    $lookup: {
+      from: "tags",
+      localField: "otherInfo.tags",
+      foreignField: "_id",
+      as: "tags",
+      pipeline: [{ $project: { _id: 1, title: 1 } }]
+    }
+  });
+
+  /* ===============================
+     4️⃣ PRIMARY VENUE + VENUE TYPES
+     =============================== */
+  pipeline.push({
+    $lookup: {
+      from: "venues",
+      let: { orgId: "$_id" },
+      pipeline: [
+        {
+          $match: {
+            $expr: { $eq: ["$organization", "$$orgId"] },
+            isPrimary: true,
+            status: "active"
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            venueType: 1
+          }
+        }
+      ],
+      as: "primaryVenue"
+    }
+  });
+
+  pipeline.push({
+    $lookup: {
+      from: "venuetypes",
+      localField: "primaryVenue.venueType",
+      foreignField: "_id",
+      as: "venueTypes",
+      pipeline: [{ $project: { _id: 1, title: 1 } }]
+    }
+  });
+
+  /* ===============================
+     5️⃣ FINAL SHAPE (MATCH ALL OTHER ORG APIs)
+     =============================== */
+  pipeline.push({
+    $project: {
+      _id: 1,
+
+      "basicInfo.name": 1,
+      "basicInfo.media": 1,
+
+      operatingHours: 1,
+      distance: userLocation ? 1 : null,
+
+      tags: 1,
+
+      venue: {
+        venueType: "$venueTypes"
+      }
+    }
+  });
+
+  const organizations = await Organizations.aggregate(pipeline);
+
+  return { organizations };
+};
 
 module.exports = {
   createOrganization,
@@ -418,5 +821,8 @@ module.exports = {
   getInAppOrderingSettings,
   getMenuIdsByOrganization,
   getLogoByOrganization,
-  getOrganizationByCompanyOrganizer
+  getOrganizationByCompanyOrganizer,
+  getOrganizationsByTag,
+  getOrganizationsByVenueType,
+  getOrganizationByCategory
 };
