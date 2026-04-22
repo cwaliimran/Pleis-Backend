@@ -343,7 +343,6 @@ const getPlaces = async (queryData = {}) => {
       distanceFrom = 0,
       distanceTo = 0,
     } = advanceFilters;
-
     const skip = (page - 1) * limit;
 
     let sortStage = { createdAt: sort === "asc" ? 1 : -1 };
@@ -392,7 +391,7 @@ const getPlaces = async (queryData = {}) => {
       .map(id => new mongoose.Types.ObjectId(id));
 
     if (tagObjIds.length) {
-      matchFilter["otherInfo.tags.id"] = { $in: tagObjIds };
+      matchFilter["otherInfo.tags"] = { $in: tagObjIds };
     }
 
     //
@@ -406,7 +405,7 @@ const getPlaces = async (queryData = {}) => {
 
       const genreTagIds = genreTags.map(t => t._id);
 
-      matchFilter["otherInfo.tags.id"] = {
+      matchFilter["otherInfo.tags"] = {
         $in: genreTagIds.length ? genreTagIds : []
       };
     }
@@ -734,7 +733,7 @@ const getPlaces = async (queryData = {}) => {
       {
         $lookup: {
           from: "tags",
-          localField: "otherInfo.tags.id",
+          localField: "otherInfo.tags",
           foreignField: "_id",
           pipeline: [
             { $project: { _id: 1, title: 1, type: 1 } }

@@ -43,7 +43,8 @@ const applyFrequencyFilter = (list = [], frequencyMap) => {
     const map = frequencyMap[entity.type];
     const current = map.get(entity.id) || 0;
 
-    if (current >= MAX_REPEAT) return false;
+    //same org/event can repeat up to MAX_REPEAT times across the entire feed
+    // if (current >= MAX_REPEAT) return false;
 
     map.set(entity.id, current + 1);
     return true;
@@ -57,15 +58,23 @@ const applyFrequencyFilter = (list = [], frequencyMap) => {
 const pushIfValid = (feed, section, frequencyMap) => {
   if (!section) return;
 
+  let items = [];
+
   if (Array.isArray(section.data)) {
-    section.data = applyFrequencyFilter(section.data, frequencyMap);
-    if (section.data.length < MIN_ITEMS) return;
+    items = section.data;
+  } else if (section.data) {
+    // normalize but keep output as array
+    items = [section.data];
   }
 
-  if (Array.isArray(section.objects)) {
-    section.objects = applyFrequencyFilter(section.objects, frequencyMap);
-    if (section.objects.length < MIN_ITEMS) return;
-  }
+  if (!items.length) return;
+
+  const filtered = applyFrequencyFilter(items, frequencyMap);
+
+  if (filtered.length < MIN_ITEMS) return;
+
+  // ✅ ALWAYS ARRAY (matches your existing home.json)
+  section.data = filtered;
 
   feed.push(section);
 };

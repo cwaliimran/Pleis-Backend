@@ -532,7 +532,27 @@ const getEventbycompanyOrganizer = async ({ companyOrganizer, timezone }) => {
     events,
   };
 };
+const getEventsByVenueTypeService = async ({ venueTypeId, timezone }) => {
+  const events = await eventRepo.getEventsByVenueType(venueTypeId);
+  //format events
+  const formattedEvents = events.map(event => formatEventResponse(event, { timezone }));
+  return { events: formattedEvents };
+};
 
+const getEventsByTagService = async ({ tagId, timezone }) => {
+  const events = await eventRepo.getEventsByTag(tagId);
+
+  //format events
+  const formattedEvents = events.map(event => formatEventResponse(event, { timezone }));
+  return { events: formattedEvents };
+};
+
+const getEventsByCategoryService = async ({ categoryId, timezone }) => {
+  const events = await eventRepo.getEventsByCategory(categoryId);
+  //format events
+  const formattedEvents = events.map(event => formatEventResponse(event, { timezone }));
+  return { events: formattedEvents };
+};
 
 module.exports = {
   createEvent,
@@ -546,5 +566,9 @@ module.exports = {
   getMinimalEventsInfo,
   getEventAnalyticsService,
   getEventTicketsAnalyticsService,
-  getEventbycompanyOrganizer
+  getEventbycompanyOrganizer,
+  getEventsByVenueTypeService,
+  getEventsByTagService,
+  getEventsByCategoryService
+
 };
