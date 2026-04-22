@@ -271,8 +271,6 @@ const getHomeService = async ({ queryData }) => {
     const pushCustomCategory = (flushAll = false) => {
       if (!customQueue.length) return;
 
-      const c = customQueue.shift();
-      if (!c?.objects?.length) return;
       if (flushAll) {
         while (customQueue.length) {
           const cat = customQueue.shift();
@@ -285,6 +283,9 @@ const getHomeService = async ({ queryData }) => {
           }
         }
       } else {
+        const c = customQueue.shift();
+        if (!c?.objects?.length) return;
+
         pushIfValid(feed, {
           key: "customCategory",
           title: c?.title,
@@ -296,26 +297,26 @@ const getHomeService = async ({ queryData }) => {
     const pushCustomCategoryByTags = (flushAll = false) => {
       if (!tagQueue.length) return;
 
-      const t = tagQueue.shift();
-      if (!t?.data?.length) return;
+      const pushOne = (tg) => {
+        if (!tg?.data?.length) return false;
+
+        pushIfValid(feed, {
+          key: "customCategoryByTags",
+          title: tg?.title,
+          objects: tg?.data,
+        }, frequencyMap);
+
+        return true;
+      };
 
       if (flushAll) {
         while (tagQueue.length) {
-          const tg = tagQueue.shift();
-          if (tg?.data?.length) {
-            pushIfValid(feed, {
-              key: "customCategoryByTags",
-              title: tg?.title,
-              objects: tg?.data,
-            }, frequencyMap);
-          }
+          pushOne(tagQueue.shift());
         }
       } else {
-        pushIfValid(feed, {
-          key: "customCategoryByTags",
-          title: t?.title,
-          objects: t?.data,
-        }, frequencyMap);
+        while (tagQueue.length) {
+          if (pushOne(tagQueue.shift())) break; // push first valid
+        }
       }
     };
 
@@ -430,9 +431,9 @@ const getHomeService = async ({ queryData }) => {
     pushPinned();
     pushCustomCategoryByTags();
     pushPinned();
-    pushCustomCategoryByTags();
+    pushCustomCategoryByTags(true);
     pushPinned();
-    pushCustomCategoryByTags();
+    pushCustomCategoryByTags(true);
 
     pushPinned(true);
 
