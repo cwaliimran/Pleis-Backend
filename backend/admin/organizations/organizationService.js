@@ -108,7 +108,6 @@ const getOrganizationsByAdmin = async ({ companyOrganizer, page, limit, keyword,
       ),
       organizationRepo.getOrganizationCounts(query),
     ]);
-console.log("organizations",organizations );
   const { totalFiltered, total, active, inactive } = counts;
   let meta = generateMeta(page, limit, totalFiltered);
   meta.tagsCount = { total, active, inactive };
@@ -378,6 +377,64 @@ const getOrganizationNotifications = async (id, timezone) => {
   let notifications = await organizationRepo.getOrganizationNotifications(id);
   return formatNotificationImage(notifications, [], timezone);
 };
+
+const getOrganizationsByTagService = async ({ tagId, timezone,
+  userLocation,
+  radiusKm,
+  page,
+  limit }) => {
+
+  let { organizations } = await organizationRepo.getOrganizationsByTag({
+    tagId,
+    userLocation,
+    radiusKm,
+    page,
+    limit
+  });
+  if (organizations) {
+    organizations = organizations.map(org => formatOrganization(org, [], timezone));
+  }
+
+  return { organizations };
+};
+
+const getOrganizationsByVenueTypeService = async ({
+  venueTypeId,
+  timezone,
+  userLocation,
+  radiusKm,
+  page,
+  limit
+}) => {
+  const result = await organizationRepo.getOrganizationsByVenueType({
+    venueTypeId,
+    userLocation,
+    radiusKm,
+    page,
+    limit
+  });
+
+  const formatted = result.organizations.map(org =>
+    formatOrganization(org, [], timezone)
+  );
+
+  return {
+    organizations: formatted
+  };
+};
+
+const getOrganizationByCategoryService = async ({ categoryId, timezone, userLocation,
+  radiusKm, page, limit }) => {
+
+  let { organizations } = await organizationRepo.getOrganizationByCategory({ categoryId, userLocation, radiusKm, page, limit });
+  if (organizations) {
+    organizations = organizations.map(org => formatOrganization(org, [], timezone));
+  }
+
+  return { organizations };
+};
+
+
 module.exports = {
   createOrganization,
   getOrganizations,
@@ -391,5 +448,8 @@ module.exports = {
   getOrganizationDetails,
   getOrganizationNotifications,
   getOrganizationNamesByCompanyOrganizer,
-  ACTIVE_ORGANIZATIONS_CACHE_KEY
+  ACTIVE_ORGANIZATIONS_CACHE_KEY,
+  getOrganizationsByTagService,
+  getOrganizationsByVenueTypeService,
+  getOrganizationByCategoryService
 };
