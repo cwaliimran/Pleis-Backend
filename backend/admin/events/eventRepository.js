@@ -9,6 +9,7 @@ const { getAllUsers } = require("../usersManagement/usersService");
 const { sendUserNotifications } = require("@notificationsUtil");
 const { NotificationTypes } = require("@NotificationsModel");
 const { getOrgCompanyOrganizer } = require("../organizations/organizationRepository");
+const Venues = require("../../commonModules/venues/Venues");
 
 
 const createEvent = async (data, ticketingData) => {
@@ -690,6 +691,95 @@ const getEventsTicketStats = async (eventIds = []) => {
   return results;
 };
 
+const getEventsByVenueType = async (venueTypeId) => {
+
+  // Step 1: Fetch venues by venueType
+  const venues = await Venues.find({
+    venueType: new mongoose.Types.ObjectId(venueTypeId),
+    status: "active",
+  }).select("_id");
+
+  const venueIds = venues.map(v => v._id);
+
+  // Edge case: no venues → no events
+  if (venueIds.length === 0) {
+    return [];
+  }
+
+  // Step 2: Query events directly
+  const query = {
+    "basicInfo.venue": { $in: venueIds },
+    status: "active",
+    "recurringMeta.isTemplate": { $ne: true }, // ✅ template filter
+  };
+
+  return Events.find(query)
+    .populate("basicInfo.venue", "title location floorPlan")
+    .populate("basicInfo.categories", "title image")
+    .populate("basicInfo.tags", "title")
+    .populate(
+      "basicInfo.organization",
+      "basicInfo.name basicInfo.media otherInfo.description"
+    )
+    .populate(
+      "basicInfo.partnerOrganization",
+      "basicInfo.name basicInfo.media otherInfo.description"
+    )
+    .sort({ "schedule.startDateTime": -1 }).limit(10);
+};
+
+
+const getEventsByTag = async (tagId) => {
+
+  // Step 2: Query events directly
+  const query = {
+    "basicInfo.tags": tagId,
+    status: "active",
+    "recurringMeta.isTemplate": { $ne: true },
+  };
+
+  return Events.find(query)
+    .populate("basicInfo.venue", "title location floorPlan")
+    .populate("basicInfo.categories", "title image")
+    .populate("basicInfo.tags", "title")
+    .populate(
+      "basicInfo.organization",
+      "basicInfo.name basicInfo.media otherInfo.description"
+    )
+    .populate(
+      "basicInfo.partnerOrganization",
+      "basicInfo.name basicInfo.media otherInfo.description"
+    )
+    .sort({ "schedule.startDateTime": -1 })
+    .limit(10);
+};
+
+
+const getEventsByCategory = async (categoryId) => {
+
+  // Step 2: Query events directly
+  const query = {
+    "basicInfo.categories": categoryId,
+    status: "active",
+    "recurringMeta.isTemplate": { $ne: true },
+  };
+
+  return Events.find(query)
+    .populate("basicInfo.venue", "title location floorPlan")
+    .populate("basicInfo.categories", "title image")
+    .populate("basicInfo.tags", "title")
+    .populate(
+      "basicInfo.organization",
+      "basicInfo.name basicInfo.media otherInfo.description"
+    )
+    .populate(
+      "basicInfo.partnerOrganization",
+      "basicInfo.name basicInfo.media otherInfo.description"
+    )
+    .sort({ "schedule.startDateTime": -1 })
+    .limit(10)
+};
+
 module.exports = {
   createEvent,
   getEventsWithFilters,
@@ -712,6 +802,9 @@ module.exports = {
   getLatestEventByOrganization,
   getOrganizationIdByEventId,
   getEventbycompanyOrganizer,
-  getEventsTicketStats
+  getEventsTicketStats,
+  getEventsByVenueType,
+  getEventsByTag,
+  getEventsByCategory,
 
 };

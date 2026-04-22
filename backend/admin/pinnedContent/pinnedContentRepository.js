@@ -1,4 +1,5 @@
 const PinnedContent = require("./PinnedContent");
+const { cache, invalidate } = require("@redisCache");
 
 // Create
 // Create pinnedContent and automatically assign next order
@@ -15,14 +16,20 @@ const createPinnedContent = async (data) => {
     order: nextOrder,
   });
 
-  return await pinnedContent.save();
+  const saved = await pinnedContent.save();
+  await invalidate("pinnedContent");
+  return saved;
 };
 
 // Get all with filters, sorted by 'order' ascending and then 'createdAt' descending
-const getPinnedContentWithFilters = async (filter, skip, limit, sort = { order: 1 }) => {
-  const query = PinnedContent.find(filter).sort(sort).populate('object');
-  if (limit > 0) query.skip(skip).limit(limit);
-  return query.exec();
+const getPinnedContentWithFilters = async (filter, sort = { order: 1 }) => {
+  return cache({
+    namespace: "pinnedContent:list",
+    params: { filter: JSON.stringify(filter), sort: JSON.stringify(sort) },
+    ttl: 3600, // 1 hour
+    fetchFn: () =>
+      PinnedContent.find(filter).sort(sort).populate({ path: "filter" }).exec(),
+  });
 };
 
 // Count by condition
@@ -75,28 +82,36 @@ const getPinnedContentCounts = async (filterQuery = {}) => {
 
 // Find by ID
 const findPinnedContentById = async (id) => {
-  return PinnedContent.findById(id).populate('object');
+  return PinnedContent.findById(id).populate('filter');
 };
 
 // Update and save
 const updatePinnedContentData = async (pinnedContent, data) => {
   Object.assign(pinnedContent, data);
-  return await pinnedContent.save();
+  const updated = await pinnedContent.save();
+  await invalidate("pinnedContent");
+  return updated;
 };
 
 // Delete
 const deletePinnedContentById = async (pinnedContent) => {
-  return await pinnedContent.deleteOne();
+  const result = await pinnedContent.deleteOne();
+  await invalidate("pinnedContent");
+  return result;
 };
 
 //findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
-  return PinnedContent.findByIdAndUpdate(id, data, { new: true }).populate('object');
+  const updated = await PinnedContent.findByIdAndUpdate(id, data, { new: true }).populate('filter');
+  await invalidate("pinnedContent");
+  return updated;
 };
 
 // Reorder helper — bulk update many
 const updateMany = async (filter, data) => {
-  return PinnedContent.updateMany(filter, data);
+  const result = await PinnedContent.updateMany(filter, data);
+  await invalidate("pinnedContent");
+  return result;
 };
 
 // Optional: Normalize all order fields sequentially (1..n)
@@ -109,6 +124,7 @@ const normalizeOrders = async () => {
     },
   }));
   if (ops.length) await PinnedContent.bulkWrite(ops);
+  await invalidate("pinnedContent");
   return true;
 };
 

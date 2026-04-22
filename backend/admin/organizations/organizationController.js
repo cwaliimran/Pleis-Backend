@@ -209,7 +209,7 @@ const updateOrganization = async (req, res) => {
     inAppOrderingSettings,
     companyDetails
   } = req.body;
-console.log("companyDetails",companyDetails );
+  console.log("companyDetails", companyDetails);
   //Convert times to UTC minutes before saving
   if (operatingHours) {
     operatingHours = transformOperatingHoursToUtc(operatingHours, timezone);
@@ -217,7 +217,7 @@ console.log("companyDetails",companyDetails );
   }
 
   try {
-    
+
     const updated = await organizationService.updateOrganization({ id, data, timezone });
 
     if (!updated) {
@@ -363,6 +363,64 @@ const getOrganizationNotifications = async (req, res) => {
   });
 };
 
+const getOrganizationsByTag = async (req, res) => {
+  const { tagId } = req.params;
+  let { timezone } = req.user;
+  try {
+    if (
+      !validateParams(req, res, {
+        pathParams: ["tagId"],
+        objectIdFields: ["tagId"],
+      })
+    ) return;
+
+    const organizations = await organizationService.getOrganizationsByTagService({ tagId, timezone });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "organizations_fetched_successfully",
+      data: organizations,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+
+const getOrganizationsByVenueType = async (req, res) => {
+  const { venueTypeId } = req.params;
+  let { timezone } = req.user;
+  try {
+    if (
+      !validateParams(req, res, {
+        pathParams: ["venueTypeId"],
+        objectIdFields: ["venueTypeId"],
+      })
+    ) return;
+
+    const organizations = await organizationService.getOrganizationsByVenueTypeService({ venueTypeId, timezone });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "organizations_fetched_successfully",
+      data: organizations,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+
 module.exports = {
   createOrganization,
   getOrganizations,
@@ -372,5 +430,7 @@ module.exports = {
   deleteOrganization,
   getOrganizationsAdmin,
   getOrganizationNamesByCompanyOrganizer,
-  getOrganizationNotifications
+  getOrganizationNotifications,
+  getOrganizationsByTag,
+  getOrganizationsByVenueType 
 };

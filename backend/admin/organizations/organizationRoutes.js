@@ -7,6 +7,8 @@ const {
   getOrganizationDetails,
   getOrganizationNotifications,
   getOrganizationNamesByCompanyOrganizer,
+  getOrganizationsByTag,
+  getOrganizationsByVenueType
 } = require("./organizationController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -37,5 +39,8 @@ router.delete("/:id", deleteOrganization);
 
 //getOrganizationNamesByCompanyOrganizer
 router.get("/names/by-company-organizer/:companyOrganizer", apiRateLimiter, getOrganizationNamesByCompanyOrganizer);
+
+router.get("/tag/:tagId", apiRateLimiter, getOrganizationsByTag);
+router.get("/venue-type/:venueTypeId", apiRateLimiter, getOrganizationsByVenueType);
 
 module.exports = router;

@@ -13,6 +13,8 @@ const {
   getEventNotifications,
   getEventbycompanyOrganizer,
   getEventRatings,
+  getEventsByVenueType,
+  getEventsByTag
 } = require("./eventController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -57,6 +59,10 @@ router.delete("/:id", deleteEvent);
 router.post("/:id/clone", roleMiddleware(["organizer", "admin", "manager"]), cloneEvent);
 
 router.get("/:id/ticketings", roleMiddleware(["organizer", "admin", "manager"]),apiRateLimiter, getEventTicketings);
+
+router.get("/venue-type/:venueTypeId", apiRateLimiter, getEventsByVenueType);
+
+router.get("/tag/:tagId", apiRateLimiter, getEventsByTag);
 
 
 module.exports = router;

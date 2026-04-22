@@ -26,7 +26,7 @@ const getCustomCategoriesWithFilters = async (timezone, filter, skip, limit) => 
 
   const pipeline = [
     { $match: filter },
-    { $sort: { createdAt: -1 } },
+    { $sort: { order: 1 } },
     ...(limit > 0 ? [{ $skip: skip }, { $limit: limit }] : []),
 
     // --- Lookup Users ---

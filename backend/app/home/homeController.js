@@ -63,6 +63,7 @@ const getHome = async (req, res) => {
     const { status, data } = await getHomeService({ queryData });
 
     if (status === false) {
+      console.log("Error fetching home==>", data)
       return sendResponse({
         res,
         statusCode: 500,
@@ -78,6 +79,7 @@ const getHome = async (req, res) => {
       data,
     });
   } catch (error) {
+    console.log("error==>",error)
     return sendResponse({
       res,
       statusCode: 500,

@@ -9,15 +9,15 @@ const {
 const pinnedContentService = require("./pinnedContentService");
 
 const createPinnedContent = async (req, res) => {
-  const { status = "active", type, object } = req.body;
+  const { status = "active", filterType, filter, contentType } = req.body;
 
-  if (!validateParams(req, res, { rawData: ["type", "object"], enumFields: { type: ["Categories", "Tags", "Venues"] } })) return;
+  if (!validateParams(req, res, { rawData: ["filterType", "filter", "contentType"], enumFields: { filterType: ["Categories", "Tags", "VenueTypes"], contentType: ["Event", "Organizations", "Categories"] } })) return;
 
   try {
 
     // Validate if the pinned content already exists
 
-    const existing = await pinnedContentService.countItemsByFilter({ object, status: { $ne: "deleted" } });
+    const existing = await pinnedContentService.countItemsByFilter({ filter, status: { $ne: "deleted" } });
     if (existing) {
       return sendResponse({
         res,
@@ -28,8 +28,9 @@ const createPinnedContent = async (req, res) => {
 
     const pinnedContent = await pinnedContentService.createPinnedContent({
       status,
-      type,
-      object,
+      filterType,
+      filter,
+      contentType,
     });
 
     return sendResponse({
@@ -69,16 +70,11 @@ const getPinnedContent = async (req, res) => {
       orderSort
     });
 
-    const populatedPinnedContent = await Promise.all(pinnedContent.map(async (content) => {
-      return await content.populate('object');
-    }));
-
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "pinned_content_fetched_successfully",
-      data: populatedPinnedContent,
-      meta
+      data: pinnedContent,
     });
   } catch (error) {
     return sendResponse({
@@ -92,7 +88,7 @@ const getPinnedContent = async (req, res) => {
 
 const updatePinnedContent = async (req, res) => {
   const { id } = req.params;
-  const { status, type, object } = req.body;
+  const { status, filterType, filter, contentType, content } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -105,8 +101,10 @@ const updatePinnedContent = async (req, res) => {
   try {
     const updated = await pinnedContentService.updatePinnedContent(id, {
       status,
-      type,
-      object,
+      filterType,
+      filter,
+      contentType,
+      content,
     });
 
     if (!updated) {

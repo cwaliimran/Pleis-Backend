@@ -4,6 +4,7 @@ const { getCustomCategories } = require("../customCategories/customCategoriesSer
 const { getForYouEventsService, thisWeekEvents } = require("../events/eventService");
 const { getPublicCategories } = require("../publicCategories/categoriesService");
 const { getPopularEventsForHomeService } = require("../popularEvents/popularEventsService");
+const { cache, invalidate } = require("@redisCache");
 
 const {
   getSuggestedLoyaltyClubsForHomeService,
@@ -22,6 +23,9 @@ const { getOrganizationsWithReservationsForHomeService } = require("../reservati
 const { pushIfValid } = require("./utils/feedPushRules");
 const { getGlobalReferralSettingsRepository } = require("../../admin/globalLoyalty/globalReferral/globalReferralRepository");
 const { getAppSettings } = require("../appSettings/appSettingsController");
+const { getPinnedContentWithFilters } = require("../../admin/pinnedContent/pinnedContentRepository");
+const { getEventsByVenueTypeService, getEventsByTagService, getEventsByCategoryService } = require("../../admin/events/eventService");
+const { getOrganizationsByVenueTypeService, getOrganizationsByTagService, getOrganizationByCategoryService } = require("../../admin/organizations/organizationService");
 
 const getHomeService = async ({ queryData }) => {
   const { userId, userLocation, radiusKm = 50, timezone, category } = queryData;
@@ -38,7 +42,7 @@ const getHomeService = async ({ queryData }) => {
     /**
      * PROMISES
      */
-    let filter = {quickAction:true}
+    let filter = { quickAction: true }
 
     const promises = {
       categoriesRes: getPublicCategories(filter),
@@ -172,6 +176,11 @@ const getHomeService = async ({ queryData }) => {
         userId,
         category,
       }),
+      pinnedContentRes: getPinnedContentForHome({
+        timezone,
+        userLocation,
+        radiusKm,
+      }),
     };
 
     const resultsArray = await Promise.all(Object.values(promises));
@@ -189,6 +198,130 @@ const getHomeService = async ({ queryData }) => {
     const highlights = results.highlightsRes?.highlights || [];
     const customCategories = results.customCategoriesRes?.customCategories || [];
     const tagGroups = results.getOrganizationsGroupedByTagsRes || [];
+    const pinnedContent = results.pinnedContentRes || [];
+    //save pinnedContent to a file in same folder of json file
+    // const fs = require('fs');
+    // fs.writeFileSync('./pinnedContent.json', JSON.stringify(pinnedContent, null, 2));
+
+    /**
+ * PINNED QUEUE
+ */
+    const pinnedQueue = [...pinnedContent];
+
+    const pushPinned = (flushAll = false) => {
+      if (!pinnedQueue.length) return;
+
+      const extractItems = (p) => {
+        const d = p?.data;
+
+        if (!d) return [];
+
+        // Case 1: direct array (Events, etc.)
+        if (Array.isArray(d)) return d;
+
+        // Case 2: wrapped arrays (Organizations, future types)
+        if (Array.isArray(d.events)) return d.events;
+        if (Array.isArray(d.organizations)) return d.organizations;
+
+        // Case 3: generic fallback (future-proof)
+        for (const key of Object.keys(d)) {
+          if (Array.isArray(d[key])) return d[key];
+        }
+
+        return [];
+      };
+
+      const process = (p) => {
+        const items = extractItems(p);
+
+        if (!items.length) return; // avoid empty pushes
+
+        pushIfValid(
+          feed,
+          {
+            key: "pinnedContent",
+            subKey: p?.contentType,
+            id: p?.pinnedId,
+            title: p?.filter?.title || "Pinned Content",
+            data: items,
+          },
+          frequencyMap
+        );
+      };
+
+      if (flushAll) {
+        while (pinnedQueue.length) {
+          process(pinnedQueue.shift());
+        }
+      } else {
+        process(pinnedQueue.shift());
+      }
+    };
+
+    /**
+     * HANDLE CUSTOM + TAG MIX
+     */
+    let customQueue = [...customCategories];
+    let tagQueue = [...tagGroups];
+    //shuffle tagQueue randomly
+    tagQueue.sort(() => Math.random() - 0.5);
+
+
+
+    const pushCustomCategory = (flushAll = false) => {
+      if (!customQueue.length) return;
+
+      const c = customQueue.shift();
+      if (!c?.objects?.length) return;
+      if (flushAll) {
+        while (customQueue.length) {
+          const cat = customQueue.shift();
+          if (cat?.objects?.length) {
+            pushIfValid(feed, {
+              key: "customCategory",
+              title: cat?.title,
+              objects: cat?.objects,
+            }, frequencyMap);
+          }
+        }
+      } else {
+        pushIfValid(feed, {
+          key: "customCategory",
+          title: c?.title,
+          objects: c?.objects,
+        }, frequencyMap);
+      }
+    };
+
+    const pushCustomCategoryByTags = (flushAll = false) => {
+      if (!tagQueue.length) return;
+
+      const t = tagQueue.shift();
+      if (!t?.data?.length) return;
+
+      if (flushAll) {
+        while (tagQueue.length) {
+          const tg = tagQueue.shift();
+          if (tg?.data?.length) {
+            pushIfValid(feed, {
+              key: "customCategoryByTags",
+              title: tg?.title,
+              objects: tg?.data,
+            }, frequencyMap);
+          }
+        }
+      } else {
+        pushIfValid(feed, {
+          key: "customCategoryByTags",
+          title: t?.title,
+          objects: t?.data,
+        }, frequencyMap);
+      }
+    };
+
+
+
+
 
     const feed = [];
 
@@ -231,6 +364,8 @@ const getHomeService = async ({ queryData }) => {
       data: results.getOrganizationsWithReservationsRes || [],
     }, frequencyMap);
 
+    pushCustomCategory();
+    pushPinned();
     /**
      * EVENTS
      */
@@ -252,6 +387,8 @@ const getHomeService = async ({ queryData }) => {
       data: results.thisWeekEventsRes?.data || [],
     }, frequencyMap);
 
+    pushCustomCategory();
+    pushPinned();
     /**
      * NEW / CLUBS / PROMOTIONS
      */
@@ -267,63 +404,18 @@ const getHomeService = async ({ queryData }) => {
       data: results.suggestedLoyaltyClubsRes || [],
     }, frequencyMap);
 
+
+
     pushIfValid(feed, {
       key: "promotions",
       title: "Promotions",
       data: results.loyaltyAndGlobalLoyaltyPromotions || [],
     }, frequencyMap);
 
-    /**
-     * HANDLE CUSTOM + TAG MIX
-     */
-    const customQueue = [...customCategories];
-    const tagQueue = [...tagGroups];
+    pushCustomCategory();
+    pushPinned();
 
-    if (customQueue.length) {
-      const c = customQueue.shift();
-      pushIfValid(feed, {
-        key: "customCategory",
-        title: c?.title,
-        objects: c?.objects,
-      }, frequencyMap);
-    }
 
-    let mixedCount = 0;
-
-    while (mixedCount < 3 && (customQueue.length || tagQueue.length)) {
-      let pushed = false;
-
-      if (customQueue.length) {
-        const c = customQueue.shift();
-        const before = feed.length;
-
-        pushIfValid(feed, {
-          key: "customCategory",
-          title: c?.title,
-          objects: c?.objects,
-        }, frequencyMap);
-
-        if (feed.length > before) {
-          mixedCount++;
-          pushed = true;
-        }
-      }
-
-      if (!pushed && tagQueue.length) {
-        const t = tagQueue.shift();
-        const before = feed.length;
-
-        pushIfValid(feed, {
-          key: "customCategoryByTags",
-          title: t?.title,
-          objects: t?.data,
-        }, frequencyMap);
-
-        if (feed.length > before) {
-          mixedCount++;
-        }
-      }
-    }
 
     /**
      * HIGHLIGHTS
@@ -334,26 +426,15 @@ const getHomeService = async ({ queryData }) => {
       data: highlights,
     }, frequencyMap);
 
-    /**
-     * REST OF CUSTOM + TAGS
-     */
-    while (customQueue.length) {
-      const c = customQueue.shift();
-      pushIfValid(feed, {
-        key: "customCategory",
-        title: c?.title,
-        objects: c?.objects,
-      }, frequencyMap);
-    }
+    pushCustomCategory();
+    pushPinned();
+    pushCustomCategoryByTags();
+    pushPinned();
+    pushCustomCategoryByTags();
+    pushPinned();
+    pushCustomCategoryByTags();
 
-    while (tagQueue.length) {
-      const t = tagQueue.shift();
-      pushIfValid(feed, {
-        key: "customCategoryByTags",
-        title: t?.title,
-        objects: t?.data,
-      }, frequencyMap);
-    }
+    pushPinned(true);
 
     feed.push({
       key: "globalReferral",
@@ -368,11 +449,113 @@ const getHomeService = async ({ queryData }) => {
     return { status: true, data: feed };
   } catch (error) {
 
-    return { status: false, data: error.message || "Error fetching home feed" };
+    return { status: false, data: error || "Error fetching home feed" };
   }
 };
 
+const getPinnedContentForHome = async ({ timezone, userLocation,
+  radiusKm, }) => {
+  const normalizedLocation = {
+    lat: userLocation?.lat ?? userLocation?.coordinates?.[1] ?? null,
+    lng: userLocation?.lng ?? userLocation?.coordinates?.[0] ?? null,
+  };
 
+  return cache({
+    namespace: "home:pinned-content",
+    params: {
+      timezone: timezone || "default",
+      radiusKm: Number(radiusKm) || 0,
+      lat: normalizedLocation.lat,
+      lng: normalizedLocation.lng,
+    },
+    ttl: 300,
+    fetchFn: async () => {
+      const pinnedContent = await getPinnedContentWithFilters(
+        { status: "active" },
+        { order: 1 }
+      );
+
+      const results = await Promise.all(
+        pinnedContent.map(async (item) => {
+          if (!item?.filter?._id) return null;
+
+          const handlerKey = `${item.filterType}:${item.contentType}`;
+          const handler = filterHandlers[handlerKey];
+
+          if (!handler) return null;
+
+          const id = item.filter._id.toString();
+
+          const response = await handler({
+            id,
+            timezone,
+            userLocation,
+            radiusKm,
+          });
+
+          // Normalize response shape between events/org services.
+          const data = response?.events ?? response ?? [];
+
+          return {
+            pinnedId: item._id,
+            filterType: item.filterType,
+            contentType: item.contentType,
+            filter: {
+              _id: item.filter._id,
+              title: item.filter.title,
+            },
+            data,
+          };
+        })
+      );
+
+      return results.filter(Boolean);
+    },
+  });
+};
+
+const filterHandlers = {
+  // EVENTS
+  "VenueTypes:Event": ({ id, timezone }) =>
+    getEventsByVenueTypeService({
+      venueTypeId: id,
+      timezone,
+    }),
+
+  "Tags:Event": ({ id, timezone }) =>
+    getEventsByTagService({
+      tagId: id,
+      timezone,
+    }),
+
+  "Categories:Event": ({ id, timezone }) =>
+    getEventsByCategoryService({
+      categoryId: id,
+      timezone,
+    }),
+
+  // ORGANIZATIONS (adjust similarly if needed)
+  "VenueTypes:Organizations": ({ id, timezone, userLocation,
+    radiusKm, }) =>
+    getOrganizationsByVenueTypeService({
+      venueTypeId: id, timezone, userLocation,
+      radiusKm,
+    }),
+
+  "Tags:Organizations": ({ id, timezone, userLocation,
+    radiusKm, }) =>
+    getOrganizationsByTagService({
+      tagId: id, timezone, userLocation,
+      radiusKm,
+    }),
+
+  "Categories:Organizations": ({ id, timezone, userLocation,
+    radiusKm, }) =>
+    getOrganizationByCategoryService({
+      categoryId: id, timezone, userLocation,
+      radiusKm,
+    }),
+};
 
 
 module.exports = {
