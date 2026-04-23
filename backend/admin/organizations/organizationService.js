@@ -434,6 +434,26 @@ const getOrganizationByCategoryService = async ({ categoryId, timezone, userLoca
   return { organizations };
 };
 
+const getOrganizationsBatch = async ({
+  orgTags,
+  orgCategories,
+  orgVenueTypes,
+  userLocation,
+  radiusKm,
+  timezone,
+}) => {
+  const { organizations } = await organizationRepo.getOrganizationsBatchRepo({
+    tagIds: [...orgTags],
+    categoryIds: [...orgCategories],
+    venueTypeIds: [...orgVenueTypes],
+    userLocation,
+    radiusKm,
+  });
+
+  return organizations.map(o =>
+    formatOrganization(o, [], timezone)
+  );
+};
 
 module.exports = {
   createOrganization,
@@ -451,5 +471,6 @@ module.exports = {
   ACTIVE_ORGANIZATIONS_CACHE_KEY,
   getOrganizationsByTagService,
   getOrganizationsByVenueTypeService,
-  getOrganizationByCategoryService
+  getOrganizationByCategoryService,
+  getOrganizationsBatch
 };

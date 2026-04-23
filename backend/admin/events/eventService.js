@@ -554,6 +554,23 @@ const getEventsByCategoryService = async ({ categoryId, timezone }) => {
   return { events: formattedEvents };
 };
 
+const getEventsBatch = async ({
+  eventTags,
+  eventCategories,
+  eventVenueTypes,
+  timezone,
+}) => {
+  const { events } = await eventRepo.getEventsBatchRepo({
+    tagIds: [...eventTags],
+    categoryIds: [...eventCategories],
+    venueTypeIds: [...eventVenueTypes],
+  });
+
+  return events.map(e =>
+    formatEventResponse(e, { timezone })
+  );
+};
+
 module.exports = {
   createEvent,
   getEvents,
@@ -569,6 +586,7 @@ module.exports = {
   getEventbycompanyOrganizer,
   getEventsByVenueTypeService,
   getEventsByTagService,
-  getEventsByCategoryService
+  getEventsByCategoryService,
+  getEventsBatch
 
 };

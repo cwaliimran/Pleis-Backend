@@ -10,7 +10,7 @@ const monriTransactionSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["applePay", "card","cash"],
+      enum: ["applePay", "googlePay", "card", "cash"],
       required: true,
     },
     amount: { type: Number, required: true },

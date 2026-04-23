@@ -4,6 +4,7 @@ const { buildAuthorizationHeader } = require("./monriAuth");
 
 const monriRepository = require("./monriRepository");
 const { verifyTransaction, createTransactionMonriOrder } = require("./monriService");
+const { UserBillingInformation } = require("../../transactions/UserBillingInformation");
 
 /**
  * digest = SHA512(key + order_number + amount + currency)
@@ -433,50 +434,192 @@ exports.createClientSecret = async (req, res) => {
 
 exports.createWebPaySession = async (req, res) => {
   try {
-    // --- REQUIRED PAYMENT DATA ---
+    const billing = await UserBillingInformation.findOne({
+      user: req.user._id,
+      status: "active",
+    });
+
     const currency = "EUR";
-    // paymentMethod: 'card', 'apple-pay', or 'google-pay'
-    const { amount, orderType, orderNumber, paymentMethod } = req.query
-    
-    let monriOrder = await monriRepository.createTransaction({
-      orderNumber: orderNumber,
-      amount: amount,
+    const { amount, orderType, orderNumber, paymentMethod } = req.query;
+
+    // Normalize query paymentMethod to DB enum value
+    const dbPaymentMethod =
+      paymentMethod === "apple-pay" ? "applePay" :
+      paymentMethod === "google-pay" ? "googlePay" :
+      "card";
+
+    // Build reusable billing fields
+    const billingAddress = billing?.billingAddress || {};
+    const fullName = `${billing?.firstName || ""} ${billing?.lastName || ""}`.trim() || "Guest User";
+    const country = billingAddress.country === "USA" ? "US" : (billingAddress.country || "");
+
+    const digest = generateDigest({ orderNumber, amount, currency });
+
+    // -----------------------------
+    // CARD — form POST (WebView redirect)
+    // -----------------------------
+    if (!paymentMethod || paymentMethod === "card") {
+      await monriRepository.createTransaction({
+        orderNumber,
+        amount: Number(amount),
+        currency,
+        orderType,
+        status: "pending",
+        paymentMethod: dbPaymentMethod,
+      });
+
+      return res.json({
+        authenticity_token: process.env.MONRI_AUTH_TOKEN,
+        transaction_type: "purchase",
+        order_number: orderNumber,
+        order_info: "App payment",
+        amount,
+        currency,
+        language: "en",
+        digest,
+        success_url_override: process.env.SUCCESS_URL,
+        cancel_url_override: process.env.CANCEL_URL,
+        supported_payment_methods: "card",
+        // Monri form ch_* customer fields
+        ch_full_name: fullName,
+        ch_address: billingAddress.address || "",
+        ch_city: billingAddress.city || "",
+        ch_zip: billingAddress.postalCode || "",
+        ch_country: country,
+        ch_email: billing?.email || "",
+        ch_phone: billing?.phone || "",
+      });
+    }
+
+    // -----------------------------
+    // APPLE PAY / GOOGLE PAY — Components
+    // Requires a real clientSecret + trx_token from Monri API
+    // -----------------------------
+    const payload = {
+      amount: Number(amount),
+      currency,
+      order_number: orderNumber,
+      transaction_type: "purchase",
+      order_info: "App payment",
+      scenario: "charge",
+    };
+
+    const body = JSON.stringify(payload);
+    const authorization = buildAuthorizationHeader({ body });
+
+    const monriApiResponse = await axios.post(
+      process.env.NODE_ENV === "prod"
+        ? "https://ipg.monri.com/v2/payment/new"
+        : "https://ipgtest.monri.com/v2/payment/new",
+      body,
+      {
+        headers: {
+          Authorization: authorization,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const clientSecret = monriApiResponse.data.client_secret;
+    const trx_token = monriApiResponse.data.id;
+
+    await monriRepository.createTransaction({
+      orderNumber,
+      amount: Number(amount),
       currency,
       orderType,
       status: "pending",
-      paymentMethod,
-
+      paymentMethod: dbPaymentMethod,
     });
 
-    const digest = generateDigest({
-      orderNumber: monriOrder.orderNumber,
-      amount,
-      currency,
-    });
+    const transaction = {
+      ch_full_name: fullName,
+      address: billingAddress.address || "",
+      city: billingAddress.city || "",
+      zip: billingAddress.postalCode || "",
+      phone: billing?.phone || "",
+      country,
+      email: billing?.email || "",
+      orderInfo: "App payment",
+      language: "en",
+    };
 
-    // Build response with optional payment methods
+    const environment = process.env.NODE_ENV === "prod" ? "prod" : "test";
+
     const response = {
       authenticity_token: process.env.MONRI_AUTH_TOKEN,
-      transaction_type: "purchase",
+      clientSecret,
+      trx_token,
       order_number: orderNumber,
-      order_info: "App payment",
       amount,
       currency,
-      language: "en",
-      success_url_override: process.env.SUCCESS_URL,
-      cancel_url_override: process.env.CANCEL_URL,
       digest,
     };
 
-    // Set payment method from query param
-    // Valid values: 'card', 'apple-pay', 'google-pay'
-    if (paymentMethod) {
-      response.supported_payment_methods = paymentMethod;
+    // -----------------------------
+    // APPLE PAY (Component)
+    // -----------------------------
+    if (paymentMethod === "apple-pay") {
+      response.locale = "en-US";
+      response.environment = environment;
+      // response.transaction = transaction;
+      // response.apple_pay = {
+      //   locale: "en-US",
+      //   // buttonStyle: "black",
+      //   // buttonType: "buy",
+      //   environment,
+      //   transaction,
+      // };
+      response.supported_payment_methods = "apple-pay";
+
+       // Monri form ch_* customer fields
+        response.ch_full_name = fullName;
+        response.ch_address = billingAddress.address || "";
+        response.ch_city = billingAddress.city || "";
+        response.ch_zip = billingAddress.postalCode || "";
+        response.ch_country = country;
+        response.ch_email = billing?.email || "";
+        response.ch_phone = billing?.phone || "";
     }
 
-    res.json(response);
+    // -----------------------------
+    // GOOGLE PAY (Component)
+    // -----------------------------
+    if (paymentMethod === "google-pay") {
+      response.countryCode = country || "US";
+      // response.currencyCode = currency;
+      response.environment = environment;
+      // response.transaction = transaction;
+      // response.google_pay = {
+      //   buttonLocale: "en",
+      //   // buttonStyle: "black",
+      //   // buttonType: "buy",
+      //   environment,
+      //   transaction,
+      // };
+      response.supported_payment_methods = "google-pay";
+
+        // Monri form ch_* customer fields
+        response.ch_full_name = fullName;
+        response.ch_address = billingAddress.address || "";
+        response.ch_city = billingAddress.city || "";
+        response.ch_zip = billingAddress.postalCode || "";
+        response.ch_country = country;
+        response.ch_email = billing?.email || "";
+        response.ch_phone = billing?.phone || "";
+    }
+
+    return res.json(response);
   } catch (err) {
-    res.status(500).json({ message: "Init failed", error: err });
+    console.error("❌ createWebPaySession failed:", err);
+
+    return res.status(500).json({
+      message: "Init failed",
+      error: {
+        message: err.message,
+        name: err.name,
+      },
+    });
   }
 };
 

@@ -140,7 +140,19 @@ async function attachAvailabilityToTicket(ticket) {
     status: { $in: ["valid", "used"] }
   });
 
-  t.remainingQuantity = Math.max(t.quantity - totalBooked, 0);
+  // For timing-slot tickets, capacity is sum of all slot quantities
+  // For regular tickets, capacity is the top-level quantity
+  const totalCapacity = (t.timingSlots?.enabled && Array.isArray(t.timingSlots?.dateTimeSlots))
+    ? t.timingSlots.dateTimeSlots.reduce(
+      (dateAcc, dateSlot) => dateAcc + (dateSlot.timeSlots || []).reduce(
+        (slotAcc, slot) => slotAcc + (slot.quantity || 0),
+        0
+      ),
+      0
+    )
+    : (t.quantity || 0);
+
+  t.remainingQuantity = Math.max(totalCapacity - totalBooked, 0);
 
   /* ---------------- SLOT AVAILABILITY ---------------- */
   if (t.timingSlots?.enabled && Array.isArray(t.timingSlots.dateTimeSlots)) {
@@ -164,7 +176,10 @@ async function attachAvailabilityToTicket(ticket) {
   if (t.fastTrackEntry?.enabled) {
     const fastTrackBooked = await TicketingBookings.countDocuments({
       "ticket.ticketId": t._id,
-      "ticket.snapshot.fastTrack": true,
+      $or: [
+        { isFastTrack: true },
+        { "ticket.snapshot.fastTrack": true },
+      ],
       status: { $in: ["valid", "used"] }
     });
 
