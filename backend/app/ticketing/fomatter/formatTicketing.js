@@ -70,6 +70,12 @@ function formatTicketing(timezone, item) {
       (sum, s) => sum + (s.remainingQuantity ?? s.quantity ?? 0),
       0
     );
+
+    // ⚠️ CAP by aggregate remaining from booking counts
+    if (typeof obj.remainingQuantity === "number") {
+      displayQuantity = Math.min(displayQuantity, obj.remainingQuantity);
+      soldOut = displayQuantity === 0;
+    }
   } else {
     const original = obj.quantity ?? 0;
     const remaining =
@@ -88,6 +94,8 @@ function formatTicketing(timezone, item) {
      SLOT LEVEL FORMATTING
   ========================== */
   if (obj.timingSlots?.dateTimeSlots?.length) {
+    const aggregateRemaining = typeof obj.remainingQuantity === "number" ? obj.remainingQuantity : 0;
+
     obj.timingSlots.dateTimeSlots = obj.timingSlots.dateTimeSlots.map(
       (dateBlock) => {
         const formattedDate = dateBlock.date
@@ -101,11 +109,14 @@ function formatTicketing(timezone, item) {
               ? slot.remainingQuantity
               : slotOriginal;
 
+          // ⚠️ If aggregate is exhausted, cap all slot quantities to 0
+          const displaySlotQuantity = aggregateRemaining === 0 ? 0 : slotRemaining;
+
           return {
             ...slot,
             originalQuantity: slotOriginal,
-            quantity: slotRemaining,
-            soldOut: slotRemaining === 0,
+            quantity: displaySlotQuantity,
+            soldOut: displaySlotQuantity === 0,
             startTime: slot.startTime
               ? convertUtcToTimezone(slot.startTime, timezone, "hh:mm A")
               : "",

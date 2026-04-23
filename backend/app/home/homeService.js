@@ -199,9 +199,6 @@ const getHomeService = async ({ queryData }) => {
     const customCategories = results.customCategoriesRes?.customCategories || [];
     const tagGroups = results.getOrganizationsGroupedByTagsRes || [];
     const pinnedContent = results.pinnedContentRes || [];
-    //save pinnedContent to a file in same folder of json file
-    // const fs = require('fs');
-    // fs.writeFileSync('./pinnedContent.json', JSON.stringify(pinnedContent, null, 2));
 
     /**
  * PINNED QUEUE
@@ -223,6 +220,7 @@ const getHomeService = async ({ queryData }) => {
         if (Array.isArray(d.events)) return d.events;
         if (Array.isArray(d.organizations)) return d.organizations;
 
+
         // Case 3: generic fallback (future-proof)
         for (const key of Object.keys(d)) {
           if (Array.isArray(d[key])) return d[key];
@@ -234,8 +232,6 @@ const getHomeService = async ({ queryData }) => {
       const process = (p) => {
         const items = extractItems(p);
 
-        if (!items.length) return; // avoid empty pushes
-
         pushIfValid(
           feed,
           {
@@ -245,7 +241,8 @@ const getHomeService = async ({ queryData }) => {
             title: p?.filter?.title || "Pinned Content",
             data: items,
           },
-          frequencyMap
+          frequencyMap,
+          { allowEmpty: true }
         );
       };
 
@@ -278,7 +275,7 @@ const getHomeService = async ({ queryData }) => {
             pushIfValid(feed, {
               key: "customCategory",
               title: cat?.title,
-              objects: cat?.objects,
+              data: cat?.objects,
             }, frequencyMap);
           }
         }
@@ -289,7 +286,7 @@ const getHomeService = async ({ queryData }) => {
         pushIfValid(feed, {
           key: "customCategory",
           title: c?.title,
-          objects: c?.objects,
+          data: c?.objects,
         }, frequencyMap);
       }
     };
@@ -303,16 +300,15 @@ const getHomeService = async ({ queryData }) => {
         pushIfValid(feed, {
           key: "customCategoryByTags",
           title: tg?.title,
-          objects: tg?.data,
+          data: tg?.data,
         }, frequencyMap);
 
         return true;
       };
 
       if (flushAll) {
-        while (tagQueue.length) {
-          pushOne(tagQueue.shift());
-        }
+        // Push first 3 then flush the rest to ensure some tag-based content appears early but still get variety
+        tagQueue.splice(0, 3).forEach(pushOne);
       } else {
         while (tagQueue.length) {
           if (pushOne(tagQueue.shift())) break; // push first valid
@@ -431,7 +427,7 @@ const getHomeService = async ({ queryData }) => {
     pushPinned();
     pushCustomCategoryByTags();
     pushPinned();
-    pushCustomCategoryByTags(true);
+    pushCustomCategoryByTags();
     pushPinned();
     pushCustomCategoryByTags(true);
 
@@ -469,7 +465,7 @@ const getPinnedContentForHome = async ({ timezone, userLocation,
       lat: normalizedLocation.lat,
       lng: normalizedLocation.lng,
     },
-    ttl: 300,
+    ttl: 3600, // 1 hour
     fetchFn: async () => {
       const pinnedContent = await getPinnedContentWithFilters(
         { status: "active" },
