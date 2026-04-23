@@ -801,6 +801,181 @@ const getOrganizationByCategory = async ({
   return { organizations };
 };
 
+const getOrganizationsBatchRepo = async ({
+  tagIds = [],
+  categoryIds = [],
+  venueTypeIds = [],
+  userLocation,
+  radiusKm,
+  limit = 50,
+}) => {
+  const tagObjectIds = tagIds.map(id => new mongoose.Types.ObjectId(id));
+  const categoryObjectIds = categoryIds.map(id => new mongoose.Types.ObjectId(id));
+  const venueTypeObjectIds = venueTypeIds.map(id => new mongoose.Types.ObjectId(id));
+
+  /* =====================================
+     1️⃣ BUILD BASE FILTER ($or)
+  ===================================== */
+  const orFilters = [];
+
+  if (tagObjectIds.length) {
+    orFilters.push({ "otherInfo.tags": { $in: tagObjectIds } });
+  }
+
+  if (categoryObjectIds.length) {
+    orFilters.push({ "otherInfo.categories": { $in: categoryObjectIds } });
+  }
+
+  /* =====================================
+     2️⃣ VENUE → ORG MAPPING (ONLY IF NEEDED)
+  ===================================== */
+  let venueOrgMap = new Map(); // orgId -> [venueTypeIds]
+
+  if (venueTypeObjectIds.length) {
+    const venueAgg = await Venues.aggregate([
+      {
+        $match: {
+          status: "active",
+          venueType: { $in: venueTypeObjectIds },
+        },
+      },
+      {
+        $group: {
+          _id: "$organization",
+          venueTypes: { $addToSet: "$venueType" },
+        },
+      },
+    ]);
+
+    for (const v of venueAgg) {
+      venueOrgMap.set(
+        v._id.toString(),
+        v.venueTypes.map(x => x.toString())
+      );
+    }
+
+    const orgIdsFromVenue = [...venueOrgMap.keys()].map(
+      id => new mongoose.Types.ObjectId(id)
+    );
+
+    if (orgIdsFromVenue.length) {
+      orFilters.push({ _id: { $in: orgIdsFromVenue } });
+    }
+  }
+
+  if (!orFilters.length) {
+    return { organizations: [] };
+  }
+
+  const baseQuery = {
+    status: "active",
+    $or: orFilters,
+  };
+
+  /* =====================================
+     3️⃣ MAIN PIPELINE (ONLY ONCE)
+  ===================================== */
+  const pipeline = [];
+
+  if (userLocation) {
+    pipeline.push({
+      $geoNear: {
+        near: userLocation,
+        key: "location",
+        distanceField: "distance",
+        spherical: true,
+        query: baseQuery,
+        ...(radiusKm && { maxDistance: radiusKm * 1000 }),
+      },
+    });
+  } else {
+    pipeline.push({ $match: baseQuery });
+  }
+
+  pipeline.push({ $limit: limit });
+
+  /* =====================================
+     4️⃣ LOOKUPS (UNCHANGED STRUCTURE)
+  ===================================== */
+  pipeline.push({
+    $lookup: {
+      from: "tags",
+      localField: "otherInfo.tags",
+      foreignField: "_id",
+      as: "tags",
+      pipeline: [{ $project: { _id: 1, title: 1 } }],
+    },
+  });
+
+  pipeline.push({
+    $lookup: {
+      from: "venues",
+      let: { orgId: "$_id" },
+      pipeline: [
+        {
+          $match: {
+            $expr: { $eq: ["$organization", "$$orgId"] },
+            isPrimary: true,
+            status: "active",
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            venueType: 1,
+          },
+        },
+      ],
+      as: "primaryVenue",
+    },
+  });
+
+  pipeline.push({
+    $lookup: {
+      from: "venuetypes",
+      localField: "primaryVenue.venueType",
+      foreignField: "_id",
+      as: "venueTypes",
+      pipeline: [{ $project: { _id: 1, title: 1 } }],
+    },
+  });
+
+  /* =====================================
+     5️⃣ FINAL SHAPE
+  ===================================== */
+  pipeline.push({
+    $project: {
+      _id: 1,
+      "basicInfo.name": 1,
+      "basicInfo.media": 1,
+      operatingHours: 1,
+      distance: userLocation ? 1 : null,
+      tags: 1,
+      "otherInfo.tags": 1,
+      "otherInfo.categories": 1,
+      venue: {
+        venueType: "$venueTypes",
+      },
+    },
+  });
+
+  const organizations = await Organizations.aggregate(pipeline);
+
+  /* =====================================
+     6️⃣ ATTACH VENUE TYPES (FROM PRE-AGG)
+  ===================================== */
+  if (venueOrgMap.size) {
+    for (const org of organizations) {
+      const vt = venueOrgMap.get(org._id.toString());
+      if (vt) {
+        org._matchedVenueTypes = vt; // used for mapping later
+      }
+    }
+  }
+
+  return { organizations };
+};
+
 module.exports = {
   createOrganization,
   getOrganizationsWithFilters,
@@ -824,5 +999,6 @@ module.exports = {
   getOrganizationByCompanyOrganizer,
   getOrganizationsByTag,
   getOrganizationsByVenueType,
-  getOrganizationByCategory
+  getOrganizationByCategory,
+  getOrganizationsBatchRepo
 };
