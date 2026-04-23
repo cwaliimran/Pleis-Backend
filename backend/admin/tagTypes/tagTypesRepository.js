@@ -5,10 +5,20 @@ const Organizations = require("@OrganizationModel");
 const { getWithFilters, getModelCounts } = require('@dbUtils/queryUtil');
 const { cache, invalidate } = require("@redisCache");
 const TagTypesModel = require("./TagTypesModel");
+
+const invalidateTagTypeRelatedCaches = async () => {
+  // genres list cache
+  await invalidate("tagsTypes");
+  // active genres cache used by global filters
+  await invalidate("tagsTypes:activeTypes");
+  // active tags cache depends on tag type status via lookup
+  await invalidate("tags:active");
+};
+
 // Create
 const createTagsType = async (data) => {
   const Tagstype = new TagTypesModel(data);
-  await invalidate("tagsTypes:activeTypes");
+  await invalidateTagTypeRelatedCaches();
   return await Tagstype.save();
 };
 
@@ -103,6 +113,19 @@ const getActiveTagTypes = async (limit = 15) => {
             from: "tagtypes",
             localField: "_id",
             foreignField: "_id",
+            pipeline: [
+              {
+                $match: {
+                  status: "active"
+                }
+              },
+              {
+                $project: {
+                  _id: 1,
+                  title: 1
+                }
+              }
+            ],
             as: "tagType"
           }
         },
@@ -143,18 +166,19 @@ const findTagsTypeById = async (id) => {
 // Update and save
 const updateTagsTypeData = async (Tagstype, data) => {
   Object.assign(Tagstype, data);
-  await invalidate("tagsTypes:activeTypes");
+  await invalidateTagTypeRelatedCaches();
   return await Tagstype.save();
 };
 
 // Delete
 const deleteTagsTypeById = async (Tagstype) => {
-  await invalidate("tagsTypes:activeTypes");
+  await invalidateTagTypeRelatedCaches();
   return await Tagstype.deleteOne();
 };
 
 //findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
+  await invalidateTagTypeRelatedCaches();
   return TagTypesModel.findByIdAndUpdate(id, data, { new: true });
 };
 

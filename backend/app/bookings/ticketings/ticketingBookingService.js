@@ -221,7 +221,13 @@ const createTicketingBookingService = async (
 
     ticket: {
       ticketId: r.input.ticketId,
-      snapshot: r.snapshot,
+      snapshot: {
+        ...r.snapshot,
+        // Ensure legacy compatibility for fast-track queries
+        fastTrack: r.isFastTrack,
+      },
+      // ⚠️ CRITICAL: Persist the selected time slot so availability queries work
+      timeSlot: r.input.timeSlot || null,
       protectionUserDetails:
         r.input.protectionUserDetails || {},
     },

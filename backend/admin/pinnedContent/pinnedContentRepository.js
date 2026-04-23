@@ -18,6 +18,8 @@ const createPinnedContent = async (data) => {
 
   const saved = await pinnedContent.save();
   await invalidate("pinnedContent");
+  await invalidate("home:pinned-content");
+
   return saved;
 };
 
@@ -90,6 +92,8 @@ const updatePinnedContentData = async (pinnedContent, data) => {
   Object.assign(pinnedContent, data);
   const updated = await pinnedContent.save();
   await invalidate("pinnedContent");
+  await invalidate("home:pinned-content");
+
   return updated;
 };
 
@@ -97,6 +101,8 @@ const updatePinnedContentData = async (pinnedContent, data) => {
 const deletePinnedContentById = async (pinnedContent) => {
   const result = await pinnedContent.deleteOne();
   await invalidate("pinnedContent");
+  await invalidate("home:pinned-content");
+
   return result;
 };
 
@@ -104,6 +110,8 @@ const deletePinnedContentById = async (pinnedContent) => {
 const findByIdAndUpdate = async (id, data) => {
   const updated = await PinnedContent.findByIdAndUpdate(id, data, { new: true }).populate('filter');
   await invalidate("pinnedContent");
+  await invalidate("home:pinned-content");
+
   return updated;
 };
 
@@ -111,6 +119,8 @@ const findByIdAndUpdate = async (id, data) => {
 const updateMany = async (filter, data) => {
   const result = await PinnedContent.updateMany(filter, data);
   await invalidate("pinnedContent");
+  await invalidate("home:pinned-content");
+
   return result;
 };
 
@@ -125,6 +135,8 @@ const normalizeOrders = async () => {
   }));
   if (ops.length) await PinnedContent.bulkWrite(ops);
   await invalidate("pinnedContent");
+  await invalidate("home:pinned-content");
+
   return true;
 };
 

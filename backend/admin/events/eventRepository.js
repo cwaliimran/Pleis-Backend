@@ -780,6 +780,100 @@ const getEventsByCategory = async (categoryId) => {
     .limit(10)
 };
 
+const getEventsBatchRepo = async ({
+  tagIds = [],
+  categoryIds = [],
+  venueTypeIds = [],
+  limit = 50,
+}) => {
+  const tagObjectIds = tagIds.map(id => new mongoose.Types.ObjectId(id));
+  const categoryObjectIds = categoryIds.map(id => new mongoose.Types.ObjectId(id));
+  const venueTypeObjectIds = venueTypeIds.map(id => new mongoose.Types.ObjectId(id));
+
+  /* =====================================
+     1️⃣ VENUE → VENUE IDS (ONLY IF NEEDED)
+  ===================================== */
+  let venueIds = [];
+  let venueTypeMap = new Map(); // venueId → venueTypeIds
+
+  if (venueTypeObjectIds.length) {
+    const venues = await Venues.find({
+      venueType: { $in: venueTypeObjectIds },
+      status: "active",
+    }).select("_id venueType");
+
+    venueIds = venues.map(v => v._id);
+
+    for (const v of venues) {
+      venueTypeMap.set(
+        v._id.toString(),
+        v.venueType.map(x => x.toString())
+      );
+    }
+  }
+
+  /* =====================================
+     2️⃣ BUILD $OR FILTER
+  ===================================== */
+  const orFilters = [];
+
+  if (tagObjectIds.length) {
+    orFilters.push({ "basicInfo.tags": { $in: tagObjectIds } });
+  }
+
+  if (categoryObjectIds.length) {
+    orFilters.push({ "basicInfo.categories": { $in: categoryObjectIds } });
+  }
+
+  if (venueIds.length) {
+    orFilters.push({ "basicInfo.venue": { $in: venueIds } });
+  }
+
+  if (!orFilters.length) {
+    return { events: [] };
+  }
+
+  /* =====================================
+     3️⃣ MAIN QUERY (ONE CALL)
+  ===================================== */
+  const events = await Events.find({
+    $or: orFilters,
+    status: "active",
+    "recurringMeta.isTemplate": { $ne: true },
+  })
+    .populate("basicInfo.venue", "title location floorPlan venueType")
+    .populate("basicInfo.categories", "title image")
+    .populate("basicInfo.tags", "title")
+    .populate(
+      "basicInfo.organization",
+      "basicInfo.name basicInfo.media otherInfo.description"
+    )
+    .populate(
+      "basicInfo.partnerOrganization",
+      "basicInfo.name basicInfo.media otherInfo.description"
+    )
+    .sort({ "schedule.startDateTime": -1 })
+    .limit(limit)
+    .lean();
+
+  /* =====================================
+     4️⃣ ATTACH VENUE TYPE MATCH INFO
+  ===================================== */
+  if (venueTypeMap.size) {
+    for (const event of events) {
+      const venueId = event?.basicInfo?.venue?._id?.toString();
+      if (!venueId) continue;
+
+      const vts = venueTypeMap.get(venueId);
+      if (vts) {
+        event._matchedVenueTypes = vts;
+      }
+    }
+  }
+
+  return { events };
+};
+
 module.exports = {
   createEvent,
   getEventsWithFilters,
@@ -806,5 +900,5 @@ module.exports = {
   getEventsByVenueType,
   getEventsByTag,
   getEventsByCategory,
-
+  getEventsBatchRepo
 };

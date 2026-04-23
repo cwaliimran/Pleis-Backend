@@ -24,8 +24,8 @@ const { pushIfValid } = require("./utils/feedPushRules");
 const { getGlobalReferralSettingsRepository } = require("../../admin/globalLoyalty/globalReferral/globalReferralRepository");
 const { getAppSettings } = require("../appSettings/appSettingsController");
 const { getPinnedContentWithFilters } = require("../../admin/pinnedContent/pinnedContentRepository");
-const { getEventsByVenueTypeService, getEventsByTagService, getEventsByCategoryService } = require("../../admin/events/eventService");
-const { getOrganizationsByVenueTypeService, getOrganizationsByTagService, getOrganizationByCategoryService } = require("../../admin/organizations/organizationService");
+const { getEventsByVenueTypeService, getEventsByTagService, getEventsByCategoryService, getEventsBatch } = require("../../admin/events/eventService");
+const { getOrganizationsByVenueTypeService, getOrganizationsByTagService, getOrganizationByCategoryService, getOrganizationsBatch  } = require("../../admin/organizations/organizationService");
 
 const getHomeService = async ({ queryData }) => {
   const { userId, userLocation, radiusKm = 50, timezone, category } = queryData;
@@ -199,9 +199,6 @@ const getHomeService = async ({ queryData }) => {
     const customCategories = results.customCategoriesRes?.customCategories || [];
     const tagGroups = results.getOrganizationsGroupedByTagsRes || [];
     const pinnedContent = results.pinnedContentRes || [];
-    //save pinnedContent to a file in same folder of json file
-    // const fs = require('fs');
-    // fs.writeFileSync('./pinnedContent.json', JSON.stringify(pinnedContent, null, 2));
 
     /**
  * PINNED QUEUE
@@ -223,6 +220,7 @@ const getHomeService = async ({ queryData }) => {
         if (Array.isArray(d.events)) return d.events;
         if (Array.isArray(d.organizations)) return d.organizations;
 
+
         // Case 3: generic fallback (future-proof)
         for (const key of Object.keys(d)) {
           if (Array.isArray(d[key])) return d[key];
@@ -234,8 +232,6 @@ const getHomeService = async ({ queryData }) => {
       const process = (p) => {
         const items = extractItems(p);
 
-        if (!items.length) return; // avoid empty pushes
-
         pushIfValid(
           feed,
           {
@@ -245,7 +241,8 @@ const getHomeService = async ({ queryData }) => {
             title: p?.filter?.title || "Pinned Content",
             data: items,
           },
-          frequencyMap
+          frequencyMap,
+          { allowEmpty: true }
         );
       };
 
@@ -278,7 +275,7 @@ const getHomeService = async ({ queryData }) => {
             pushIfValid(feed, {
               key: "customCategory",
               title: cat?.title,
-              objects: cat?.objects,
+              data: cat?.objects,
             }, frequencyMap);
           }
         }
@@ -289,7 +286,7 @@ const getHomeService = async ({ queryData }) => {
         pushIfValid(feed, {
           key: "customCategory",
           title: c?.title,
-          objects: c?.objects,
+          data: c?.objects,
         }, frequencyMap);
       }
     };
@@ -303,16 +300,15 @@ const getHomeService = async ({ queryData }) => {
         pushIfValid(feed, {
           key: "customCategoryByTags",
           title: tg?.title,
-          objects: tg?.data,
+          data: tg?.data,
         }, frequencyMap);
 
         return true;
       };
 
       if (flushAll) {
-        while (tagQueue.length) {
-          pushOne(tagQueue.shift());
-        }
+        // Push first 3 then flush the rest to ensure some tag-based content appears early but still get variety
+        tagQueue.splice(0, 3).forEach(pushOne);
       } else {
         while (tagQueue.length) {
           if (pushOne(tagQueue.shift())) break; // push first valid
@@ -431,7 +427,7 @@ const getHomeService = async ({ queryData }) => {
     pushPinned();
     pushCustomCategoryByTags();
     pushPinned();
-    pushCustomCategoryByTags(true);
+    pushCustomCategoryByTags();
     pushPinned();
     pushCustomCategoryByTags(true);
 
@@ -454,110 +450,207 @@ const getHomeService = async ({ queryData }) => {
   }
 };
 
-const getPinnedContentForHome = async ({ timezone, userLocation,
-  radiusKm, }) => {
+const round = (num) => (num != null ? Math.round(num * 100) / 100 : null);
+
+const getPinnedContentForHome = async ({
+  timezone,
+  userLocation,
+  radiusKm,
+}) => {
   const normalizedLocation = {
     lat: userLocation?.lat ?? userLocation?.coordinates?.[1] ?? null,
     lng: userLocation?.lng ?? userLocation?.coordinates?.[0] ?? null,
   };
 
   return cache({
-    namespace: "home:pinned-content",
+    namespace: "home:pinned-content", // bump version
     params: {
       timezone: timezone || "default",
       radiusKm: Number(radiusKm) || 0,
-      lat: normalizedLocation.lat,
-      lng: normalizedLocation.lng,
+      lat: round(normalizedLocation.lat), // 🔥 better cache hits
+      lng: round(normalizedLocation.lng),
     },
-    ttl: 300,
+    ttl: 3600,
     fetchFn: async () => {
       const pinnedContent = await getPinnedContentWithFilters(
         { status: "active" },
         { order: 1 }
       );
 
-      const results = await Promise.all(
-        pinnedContent.map(async (item) => {
-          if (!item?.filter?._id) return null;
+      if (!pinnedContent.length) return [];
 
-          const handlerKey = `${item.filterType}:${item.contentType}`;
-          const handler = filterHandlers[handlerKey];
+      /* =====================================
+         1️⃣ GROUP FILTER IDS
+      ===================================== */
+      const grouped = {
+        eventTags: new Set(),
+        eventCategories: new Set(),
+        eventVenueTypes: new Set(),
+        orgTags: new Set(),
+        orgCategories: new Set(),
+        orgVenueTypes: new Set(),
+      };
 
-          if (!handler) return null;
+      for (const item of pinnedContent) {
+        const id = item?.filter?._id?.toString();
+        if (!id) continue;
 
-          const id = item.filter._id.toString();
+        const key = `${item.filterType}:${item.contentType}`;
 
-          const response = await handler({
-            id,
-            timezone,
-            userLocation,
-            radiusKm,
-          });
+        if (key === "Tags:Event") grouped.eventTags.add(id);
+        if (key === "Categories:Event") grouped.eventCategories.add(id);
+        if (key === "VenueTypes:Event") grouped.eventVenueTypes.add(id);
 
-          // Normalize response shape between events/org services.
-          const data = response?.events ?? response ?? [];
+        if (key === "Tags:Organizations") grouped.orgTags.add(id);
+        if (key === "Categories:Organizations") grouped.orgCategories.add(id);
+        if (key === "VenueTypes:Organizations") grouped.orgVenueTypes.add(id);
+      }
 
-          return {
-            pinnedId: item._id,
-            filterType: item.filterType,
-            contentType: item.contentType,
-            filter: {
-              _id: item.filter._id,
-              title: item.filter.title,
-            },
-            data,
-          };
-        })
-      );
+      /* =====================================
+         2️⃣ BATCH FETCH (ONLY FEW CALLS)
+      ===================================== */
+      const [
+        events,
+        organizations,
+      ] = await Promise.all([
+        getEventsBatch({
+          ...grouped,
+          timezone,
+        }),
+        getOrganizationsBatch({
+          ...grouped,
+          timezone,
+          userLocation,
+          radiusKm,
+        }),
+      ]);
 
-      return results.filter(Boolean);
+      /* =====================================
+         3️⃣ BUILD LOOKUP MAPS
+      ===================================== */
+      const maps = buildMaps({ events, organizations });
+
+      /* =====================================
+         4️⃣ MAP BACK TO PINNED STRUCTURE
+      ===================================== */
+      const results = pinnedContent.map((item) => {
+        const id = item.filter._id.toString();
+        const key = `${item.filterType}:${item.contentType}`;
+
+        let data = [];
+
+        switch (key) {
+          case "Tags:Event":
+            data = maps.eventByTag.get(id) || [];
+            break;
+          case "Categories:Event":
+            data = maps.eventByCategory.get(id) || [];
+            break;
+          case "VenueTypes:Event":
+            data = maps.eventByVenueType.get(id) || [];
+            break;
+
+          case "Tags:Organizations":
+            data = maps.orgByTag.get(id) || [];
+            break;
+          case "Categories:Organizations":
+            data = maps.orgByCategory.get(id) || [];
+            break;
+          case "VenueTypes:Organizations":
+            data = maps.orgByVenueType.get(id) || [];
+            break;
+        }
+
+        return {
+          pinnedId: item._id,
+          filterType: item.filterType,
+          contentType: item.contentType,
+          filter: {
+            _id: item.filter._id,
+            title: item.filter.title,
+          },
+          data: data
+        };
+      });
+
+      return results;
     },
   });
 };
 
-const filterHandlers = {
-  // EVENTS
-  "VenueTypes:Event": ({ id, timezone }) =>
-    getEventsByVenueTypeService({
-      venueTypeId: id,
-      timezone,
-    }),
+const buildMaps = ({ events, organizations }) => {
+  const mapFactory = () => new Map();
 
-  "Tags:Event": ({ id, timezone }) =>
-    getEventsByTagService({
-      tagId: id,
-      timezone,
-    }),
+  const maps = {
+    eventByTag: mapFactory(),
+    eventByCategory: mapFactory(),
+    eventByVenueType: mapFactory(),
+    orgByTag: mapFactory(),
+    orgByCategory: mapFactory(),
+    orgByVenueType: mapFactory(),
+  };
 
-  "Categories:Event": ({ id, timezone }) =>
-    getEventsByCategoryService({
-      categoryId: id,
-      timezone,
-    }),
+  const toId = (value) => {
+    if (!value) return null;
+    if (typeof value === "string") return value;
+    if (typeof value === "object") {
+      if (value._id) return String(value._id);
+      if (value.id) return String(value.id);
+    }
+    return String(value);
+  };
 
-  // ORGANIZATIONS (adjust similarly if needed)
-  "VenueTypes:Organizations": ({ id, timezone, userLocation,
-    radiusKm, }) =>
-    getOrganizationsByVenueTypeService({
-      venueTypeId: id, timezone, userLocation,
-      radiusKm,
-    }),
+  const pushMany = (map, values, item) => {
+    if (!Array.isArray(values)) return;
+    values.forEach((v) => {
+      const id = toId(v);
+      if (id) push(map, id, item);
+    });
+  };
 
-  "Tags:Organizations": ({ id, timezone, userLocation,
-    radiusKm, }) =>
-    getOrganizationsByTagService({
-      tagId: id, timezone, userLocation,
-      radiusKm,
-    }),
+  /* EVENTS */
+  for (const e of events) {
+    pushMany(maps.eventByTag, e?.basicInfo?.tags, e);
+    pushMany(maps.eventByCategory, e?.basicInfo?.categories, e);
 
-  "Categories:Organizations": ({ id, timezone, userLocation,
-    radiusKm, }) =>
-    getOrganizationByCategoryService({
-      categoryId: id, timezone, userLocation,
-      radiusKm,
-    }),
+    // Venue type can come from batch matched ids or populated venue. Support both.
+    const matchedVenueTypes = Array.isArray(e?._matchedVenueTypes)
+      ? e._matchedVenueTypes
+      : [];
+
+    const venueTypesFromVenue = Array.isArray(e?.basicInfo?.venue?.venueType)
+      ? e.basicInfo.venue.venueType
+      : [];
+
+    pushMany(maps.eventByVenueType, matchedVenueTypes, e);
+    pushMany(maps.eventByVenueType, venueTypesFromVenue, e);
+  }
+
+  /* ORGS */
+  for (const o of organizations) {
+    pushMany(maps.orgByTag, o?.otherInfo?.tags, o);
+    pushMany(maps.orgByCategory, o?.otherInfo?.categories, o);
+
+    const matchedVenueTypes = Array.isArray(o?._matchedVenueTypes)
+      ? o._matchedVenueTypes
+      : [];
+
+    const venueTypesFromVenue = Array.isArray(o?.venue?.venueType)
+      ? o.venue.venueType
+      : [];
+
+    pushMany(maps.orgByVenueType, matchedVenueTypes, o);
+    pushMany(maps.orgByVenueType, venueTypesFromVenue, o);
+  }
+
+  return maps;
 };
 
+const push = (map, key, val) => {
+  const k = key.toString();
+  if (!map.has(k)) map.set(k, []);
+  map.get(k).push(val);
+};
 
 module.exports = {
   getHomeService,
