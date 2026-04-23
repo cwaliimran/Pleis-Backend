@@ -7,10 +7,11 @@ const {
   createClientSecret,
   createWebPaySession
 } = require("./monriController");
+const auth = require("../../../middlewares/authMiddleware");
 
 const router = express.Router();
 //webpay
-router.get("/web-pay-session", createWebPaySession);
+router.get("/web-pay-session", auth, createWebPaySession);
 
 router.get("/redirect", redirectToMonriWebPay);
 router.get("/wallet-pay", redirectToMonriWalletPay);
