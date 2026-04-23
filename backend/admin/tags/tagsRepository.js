@@ -50,7 +50,6 @@ const getTagsWithFilters = async (query, skip, limit, keyword) => {
  *  - active organizations
  */
 const getActiveTags = async (limit = 15) => {
-  await invalidate(ACTIVE_TAGS_CACHE_KEY);
   return cache({
     namespace: ACTIVE_TAGS_CACHE_KEY,
     ttl: 86400, // 1 day
@@ -124,6 +123,13 @@ const getActiveTags = async (limit = 15) => {
             from: "tags",
             localField: "_id",
             foreignField: "_id",
+            pipeline: [
+              {
+                $match: {
+                  status: "active"
+                }
+              }
+            ],
             as: "tag"
           }
         },
@@ -135,6 +141,11 @@ const getActiveTags = async (limit = 15) => {
             localField: "tag.type",
             foreignField: "_id",
             pipeline: [
+              {
+                $match: {
+                  status: "active"
+                }
+              },
               { $project: { title: 1 } }
             ],
             as: "tag.type"

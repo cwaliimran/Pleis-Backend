@@ -1,6 +1,7 @@
 
 const { getActiveTagsService } = require("../../../admin/tags/tagsService");
 const { getActiveTagsTypes } = require("../../../admin/tagTypes/tagTypesService");
+const TagTypesModel = require("../../../admin/tagTypes/TagTypesModel");
 const { getPublicVenueTypes } = require("../../../admin/venueTypes/venueTypesService");
 const { formatNearByOrganization } = require("../../../commonModules/organizations/formatter/formatOrganization");
 const { formatSuggestedClub } = require("../../loyalty/clubMembers/formatters/formatSuggestedClubs");
@@ -120,6 +121,26 @@ async function getGlobalFiltersService(userId, timezone, center, radiusKm, categ
     getActiveTagsTypes()
   ]);
 
+  // Final safety filter: only allow tags/genres whose tag-type is currently active.
+  const activeTagTypes = await TagTypesModel.find({ status: "active" })
+    .select("_id title")
+    .lean();
+
+  const activeTagTypeMap = new Map(
+    (activeTagTypes || []).map((x) => [String(x._id), { _id: x._id, title: x.title }])
+  );
+
+  const safeGenres = (genres?.tagTypes || []).filter((g) =>
+    activeTagTypeMap.has(String(g?._id))
+  );
+
+  const safeTags = (tags?.tags || [])
+    .filter((tag) => activeTagTypeMap.has(String(tag?.type?._id)))
+    .map((tag) => ({
+      ...tag,
+      type: activeTagTypeMap.get(String(tag.type._id)),
+    }));
+
   const formatted = {
     total: popularSearches.total,
     keywords: popularSearches.keywords || [],
@@ -136,12 +157,12 @@ async function getGlobalFiltersService(userId, timezone, center, radiusKm, categ
 
     tags: mapIdsToTitles(
       popularSearches.tags,
-      tags.tags
+      safeTags
     ),
 
     genre: mapIdsToTitles(
       popularSearches.genre,
-      genres.tagTypes
+      safeGenres
     )
   };
 
@@ -149,8 +170,8 @@ async function getGlobalFiltersService(userId, timezone, center, radiusKm, categ
     popularSearches: formatted,
     categories: categories.categories || [],
     venueTypes: venueTypes.venueTypes || [],
-    tags: tags.tags || [],
-    genres: genres.tagTypes || []
+    tags: safeTags,
+    genres: safeGenres
   };
 }
 
