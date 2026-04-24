@@ -21,26 +21,14 @@ const createTag = async (data) => {
 /**
  * ADMIN LISTING (no cache)
  */
-const getTagsWithFilters = async (query, skip, limit, keyword) => {
+const getTagsWithFilters = async (query, skip, limit) => {
   const tagsQuery = Tags.find(query)
     .populate("type", "title") // Populate the 'type' field with the 'title' field
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
 
-  const tags = await tagsQuery.exec();
-
-  // If keyword is provided, filter by both tag.title and type.title
-  if (keyword) {
-    const keywordRegex = new RegExp(keyword, 'i'); // Create a case-insensitive regex for keyword
-
-    return tags.filter(tag =>
-      (tag.title && keywordRegex.test(tag.title)) || // Check tag.title
-      (tag.type && tag.type.title && keywordRegex.test(tag.type.title)) // Check type.title if populated
-    );
-  }
-
-  return tags;
+  return tagsQuery.exec();
 };
 
 /**

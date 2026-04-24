@@ -25,6 +25,27 @@ const getTags = async ({ page, limit, keyword, type, status, date }) => {
     filters.push({ status: { $ne: "deleted" } });
   }
 
+  if (type) {
+    filters.push({ type });
+  }
+
+  if (keyword) {
+    const keywordRegex = new RegExp(keyword, "i");
+    const matchingTagTypes = await TagTypesModel.find({
+      title: { $regex: keywordRegex },
+      status: { $ne: "deleted" },
+    }).select("_id");
+
+    const matchingTypeIds = matchingTagTypes.map((tagType) => tagType._id);
+
+    filters.push({
+      $or: [
+        { title: { $regex: keywordRegex } },
+        ...(matchingTypeIds.length ? [{ type: { $in: matchingTypeIds } }] : []),
+      ],
+    });
+  }
+
 
 
   const query = filters.length ? { $and: filters } : {};
@@ -33,7 +54,7 @@ const getTags = async ({ page, limit, keyword, type, status, date }) => {
 
   // Fetch tags and related counts
   const [tags, totalFiltered, total, active, inactive] = await Promise.all([
-    tagRepo.getTagsWithFilters(query, skip, limit === 0 ? 0 : limit,keyword),
+    tagRepo.getTagsWithFilters(query, skip, limit === 0 ? 0 : limit),
     tagRepo.countTags(query),
     tagRepo.countTags({ status: { $ne: "deleted" } }),
     tagRepo.countTags({ status: "active" }),
