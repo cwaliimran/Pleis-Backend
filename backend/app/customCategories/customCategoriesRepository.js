@@ -50,7 +50,8 @@ const getCustomCategoriesWithFilters = async (
               profileIcon: 1,
               firstName: 1,
               lastName: 1,
-              "companyDetails.loyaltySettings.title": 1
+              "companyDetails.loyaltySettings.title": 1,
+              "companyDetails.logo": 1,
             }
           }
         ]
