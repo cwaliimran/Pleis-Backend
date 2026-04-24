@@ -74,26 +74,6 @@ async function searchOrganizations(ctx) {
   if (tagObjectIds.length)
     filter["otherInfo.tags"] = { $in: tagObjectIds };
 
-  //
-  // GENRE FILTER
-  //
-  if (genre.length) {
-    //make genre to new ObjectIds array
-    const genreObjectIds = genre.filter((id) => mongoose.Types.ObjectId.isValid(id))
-      .map((id) => new mongoose.Types.ObjectId(id));
-    const genreTags = await Tags.find({
-      status: "active",
-      _id: { $in: genreObjectIds }
-    }).select("_id");
-
-    const genreTagIds = genreTags.map(t => t._id);
-
-    if (!genreTagIds.length) {
-      filter["otherInfo.tags"] = { $in: [] };
-    } else {
-      filter["otherInfo.tags"] = { $in: genreTagIds };
-    }
-  }
 
   const distanceToMeters = distanceTo * 1000;
   const distanceFromMeters = distanceFrom * 1000;
