@@ -458,25 +458,14 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
       .map((id) => new mongoose.Types.ObjectId(id));
 
   const tagObjectIds = toObjectIds(tags);
-  let genreTagIds = [];
-
-  if (genre.length) {
-    const genreObjectIds = toObjectIds(genre);
-    const genreTags = await Tags.find({
-      status: "active",
-      _id: { $in: genreObjectIds },
-    }).select("_id");
-
-    genreTagIds = genreTags.map((t) => t._id);
-  }
+  
 
   let tagFilter = {};
 
-  if (genre.length && genreTagIds.length === 0) {
-    tagFilter = { "basicInfo.tags": { $in: [] } };
-  } else if (tagObjectIds.length || genreTagIds.length) {
+  
+    if (tagObjectIds.length) {
     tagFilter = {
-      "basicInfo.tags": { $all: [...tagObjectIds, ...genreTagIds] },
+      "basicInfo.tags": { $all: [...tagObjectIds] },
     };
   }
 
