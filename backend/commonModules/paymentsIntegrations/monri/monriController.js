@@ -6,6 +6,26 @@ const monriRepository = require("./monriRepository");
 const { verifyTransaction, createTransactionMonriOrder } = require("./monriService");
 const { UserBillingInformation } = require("../../transactions/UserBillingInformation");
 
+const FORCE_MONRI_TEST_ENV = true;
+
+function isMonriProduction() {
+  if (FORCE_MONRI_TEST_ENV) return false;
+
+  return ["prod", "production"].includes(
+    String(process.env.NODE_ENV || "").toLowerCase()
+  );
+}
+
+function getMonriBaseUrl() {
+  return isMonriProduction()
+    ? "https://ipg.monri.com"
+    : "https://ipgtest.monri.com";
+}
+
+function getMonriComponentsEnv() {
+  return isMonriProduction() ? "prod" : "test";
+}
+
 /**
  * digest = SHA512(key + order_number + amount + currency)
  */
@@ -47,7 +67,7 @@ exports.redirectToMonriWebPay = async (req, res) => {
   <body onload="document.forms[0].submit()">
     <p>Redirecting to secure payment...</p>
 
-    <form method="POST" action="https://ipgtest.monri.com/v2/form">
+    <form method="POST" action="${getMonriBaseUrl()}/v2/form">
       <input type="hidden" name="authenticity_token" value="${process.env.MONRI_AUTH_TOKEN}" />
       <input type="hidden" name="transaction_type" value="purchase" />
 
@@ -104,7 +124,7 @@ exports.redirectToMonriWalletPay = async (req, res) => {
     const authorization = buildAuthorizationHeader({ body });
 
     const response = await axios.post(
-      "https://ipgtest.monri.com/v2/payment/new",
+      `${getMonriBaseUrl()}/v2/payment/new`,
       body,
       {
         headers: {
@@ -122,7 +142,7 @@ exports.redirectToMonriWalletPay = async (req, res) => {
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<script src="https://ipgtest.monri.com/dist/components.js"></script>
+<script src="${getMonriBaseUrl()}/dist/components.js"></script>
 
 <style>
 body {
@@ -164,7 +184,7 @@ button {
 <script>
 
 const monri = Monri("${process.env.MONRI_AUTH_TOKEN}", {
-  environment: "test"
+  environment: "${getMonriComponentsEnv()}"
 });
 
 const components = monri.components({
@@ -207,7 +227,7 @@ document.getElementById("payBtn").onclick = async function() {
 
 const applePay = components.create("apple-pay", {
   trx_token: "${trxToken}",
-  environment: "test",
+  environment: "${getMonriComponentsEnv()}",
   transaction: {
     ch_full_name: "Test User",
     address: "Street 1",
@@ -230,7 +250,7 @@ applePay.mount("apple-pay");
 
 const googlePay = components.create("google-pay", {
   trx_token: "${trxToken}",
-  environment: "test",
+  environment: "${getMonriComponentsEnv()}",
   countryCode: "HR",
   currencyCode: "EUR"
 });
@@ -412,7 +432,7 @@ exports.createClientSecret = async (req, res) => {
     const authorization = buildAuthorizationHeader({ body });
 
     const response = await axios.post(
-      "https://ipgtest.monri.com/v2/payment/new",
+      `${getMonriBaseUrl()}/v2/payment/new`,
       body,
       {
         headers: {
@@ -508,9 +528,7 @@ exports.createWebPaySession = async (req, res) => {
     const authorization = buildAuthorizationHeader({ body });
 
     const monriApiResponse = await axios.post(
-      process.env.NODE_ENV === "prod"
-        ? "https://ipg.monri.com/v2/payment/new"
-        : "https://ipgtest.monri.com/v2/payment/new",
+      `${getMonriBaseUrl()}/v2/payment/new`,
       body,
       {
         headers: {
@@ -544,7 +562,7 @@ exports.createWebPaySession = async (req, res) => {
       language: "en",
     };
 
-    const environment = process.env.NODE_ENV === "prod" ? "prod" : "test";
+    const environment = getMonriComponentsEnv();
 
     const response = {
       authenticity_token: process.env.MONRI_AUTH_TOKEN,
@@ -636,7 +654,7 @@ async function refundViaMonri({
   };
 
   const response = await axios.post(
-    "https://ipgtest.monri.com/v2/payment/refund",
+    `${getMonriBaseUrl()}/v2/payment/refund`,
     payload,
     {
       headers: {
