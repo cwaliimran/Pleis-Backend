@@ -86,6 +86,7 @@ const reorderPinnedContent = async (movedId, previousOrder, newOrder) => {
     await session.commitTransaction();
     session.endSession();
     await invalidate("pinnedContent");
+    await invalidate("home:pinned-content");
     return true;
   } catch (err) {
     await session.abortTransaction();
