@@ -457,7 +457,7 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
       .filter((id) => mongoose.Types.ObjectId.isValid(id))
       .map((id) => new mongoose.Types.ObjectId(id));
 
-  const tagObjectIds = toObjectIds(tags);
+  const tagObjectIds = toObjectIds(genre);
   
 
   let tagFilter = {};
