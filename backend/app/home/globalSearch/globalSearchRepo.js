@@ -52,7 +52,7 @@ async function searchOrganizations(ctx) {
       .map((id) => new mongoose.Types.ObjectId(id));
 
   const categoryObjectIds = toObjectIds(categories);
-  const tagObjectIds = toObjectIds(tags);
+  const tagObjectIds = toObjectIds(genre);
   const venueTypeObjectIds = toObjectIds(venueTypes);
 
 
