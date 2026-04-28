@@ -311,16 +311,14 @@ const login = async (req, res) => {
       });
     }
 
-    if (user.accountState.userType !== "organizer") {
-      if (
-        user.accountState.status === "suspended" || user.accountState.status === "deleted"
-      ) {
-        return sendResponse({
-          res,
-          statusCode: 403,
-          translationKey: "your_account_2",
-        });
-      }
+    if (
+      user.accountState.status === "suspended" || user.accountState.status === "deleted"
+    ) {
+      return sendResponse({
+        res,
+        statusCode: 403,
+        translationKey: "your_account_2",
+      });
     }
 
     // Update the user's timezone
