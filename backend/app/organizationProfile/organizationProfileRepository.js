@@ -19,11 +19,11 @@ const { buildMenuItemsSaleLookup, getMenuItemsWithFilters } = require("../menuIt
  * Fetch one organization by ID (populated)
  */
 const findOrganizationById = async (userId, organizationId) => {
-  const [org, favorite, orgVenue] = await Promise.all([
+  let [org, favorite, orgVenue] = await Promise.all([
     Organizations.findById(organizationId)
       .populate("otherInfo.categories")
       .populate("otherInfo.tags")
-      .populate("creator", "companyDetails.logo companyDetails.loyaltySettings.title accountState.status")
+      .populate("creator", "companyDetails.status companyDetails.logo companyDetails.loyaltySettings.title accountState.status")
     ,
     Favorites.exists({ user: userId, targetType: "organization", targetId: organizationId }),
     Venues.findOne({
@@ -32,6 +32,12 @@ const findOrganizationById = async (userId, organizationId) => {
     }).select("title floorPlan venueType"),
 
   ]);
+
+  //assign companyDetails.status to accountState.status for easier handling in frontend
+  if (org && org.creator && org.creator.companyDetails) {
+    org.creator.accountState = org.creator.accountState || {};
+    org.creator.accountState.status = org.creator.companyDetails.status;
+  }
 
   // Check if the organization is a favorite
   let isFavorite = !!favorite;

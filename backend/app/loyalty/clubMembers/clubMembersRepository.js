@@ -27,7 +27,7 @@ const getCompanyLoyaltyProfile = async (companyOrganizer) => {
   const [companyDoc, totalMembers] = await Promise.all([
     User.findById(companyOrganizer)
       .select(
-        "companyDetails.loyaltySettings.title companyDetails.logo companyDetails.coverImage companyDetails.category companyDetails.description accountState.status"
+        "companyDetails.loyaltySettings.title companyDetails.logo companyDetails.coverImage companyDetails.category companyDetails.description accountState.status companyDetails.status"
       )
       .populate({
         path: "companyDetails.category",
@@ -36,7 +36,7 @@ const getCompanyLoyaltyProfile = async (companyOrganizer) => {
       .lean(),
     ClubMembers.countDocuments({ companyOrganizer, status: "active" })
   ]);
-companyDoc.companyDetails.accountState = companyDoc.accountState;
+  companyDoc.companyDetails.accountState = companyDoc.accountState;
 
   if (!companyDoc) return null;
   companyDoc.companyDetails.totalMembers = totalMembers || 0;
@@ -588,6 +588,7 @@ const getUserJoinedClubsWithPointsUsingFacet = async ({
             $project: {
               "companyDetails.loyaltySettings.title": 1,
               "companyDetails.logo": 1,
+              "companyDetails.status": 1,
             },
           },
         ],
@@ -648,6 +649,7 @@ const getUserJoinedClubsWithPointsUsingFacet = async ({
   ];
 
   const [result] = await ClubMembers.aggregate(pipeline);
+  console.log("result.data", result.data);
 
   return {
     data: result.data,
