@@ -238,7 +238,7 @@ const login = async (req, res) => {
       return;
     }
     let populateFields = [];
-    
+
 
     const user = await User.findByCredentials(
       email,
@@ -341,7 +341,7 @@ const login = async (req, res) => {
     ) {
       // Save device information (not part of the transaction)
       createOrSkipDevice(userObject._id, deviceId, deviceType);
-    }else{
+    } else {
       console.warn("FCM Token information not saved due to invalid input");
     }
 
@@ -772,9 +772,9 @@ const verifyEmailViaLink = async (req, res) => {
     await sendEmailViaMailgun(user.email, `Welcome to ${process.env.APP_NAME}`, mBody);
   }
 
-return res.redirect(
-  `${process.env.EMAIL_VERIFICATION_REDIRECT_URL}?verification=success`
-);
+  return res.redirect(
+    `${process.env.EMAIL_VERIFICATION_REDIRECT_URL}?verification=success`
+  );
 };
 
 const resendEmailVerificationLink = async (req, res) => {

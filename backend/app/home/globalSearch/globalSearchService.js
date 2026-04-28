@@ -17,7 +17,7 @@ const {
 const SEARCH_HANDLERS = {
   events: searchEvents,
   organizations: searchOrganizations,
-  loyaltyClubs: searchLoyaltyClubs
+  //loyaltyClubs: searchLoyaltyClubs
 };
 
 
