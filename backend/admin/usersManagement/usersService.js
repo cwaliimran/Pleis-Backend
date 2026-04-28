@@ -164,6 +164,7 @@ const updateUser = async (req, res, options = {}) => {
     subscriptions
   } = req.body;
 
+  
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -332,6 +333,7 @@ const updateUser = async (req, res, options = {}) => {
         representativeName: companyDetails.representativeName ?? user.companyDetails?.representativeName,
         location: companyDetails.location ?? user.companyDetails?.location,
         suppliers: companyDetails.suppliers ?? user.companyDetails?.suppliers,
+        status: companyDetails.status ?? user.companyDetails?.status ?? "active",
 
         // update loyaltySettings if provided
         loyaltySettings: {

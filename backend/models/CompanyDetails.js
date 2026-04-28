@@ -98,6 +98,14 @@ const CompanySchema = new mongoose.Schema(
       ],
     },
 
+    status: {
+      type: String,
+      enum: [
+        "active",
+        "suspended",
+      ],
+      default: "active",
+    },
   },
   {
     _id: false,
