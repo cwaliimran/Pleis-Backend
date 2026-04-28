@@ -861,9 +861,210 @@ const subscriptionUpdatedEmailTemplate = ({ username, title, subscription }) => 
 </html>
 `;
 
-module.exports = {
-  subscriptionUpdatedEmailTemplate
-};
+
+const organizerWelcomeEmailTemplate = (organizerName) => `
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      .email-container {
+        font-family: Arial, sans-serif;
+        line-height: 1.5;
+        color: #333;
+      }
+      .email-header {
+        background-color: #1B1A1D;
+        color: white;
+        text-align: center;
+        padding: 10px 0;
+      }
+      .email-header h2 {
+        color: white;
+        margin: 0;
+      }
+      .email-body {
+        margin: 20px;
+      }
+      .highlight-box {
+        display: inline-block;
+        padding: 15px 25px;
+        margin: 15px 0;
+        background-color: #f5a623;
+        color: white;
+        font-size: 18px;
+        font-weight: bold;
+        border-radius: 5px;
+        text-align: center;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 20px;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="email-header">
+        <h2>Welcome to ${APP_NAME}</h2>
+      </div>
+      <div class="email-body">
+        <p>Hello ${organizerName || "Organizer"},</p>
+
+        <p>Thank you for registering as an organizer on <strong>${APP_NAME}</strong>. We’re glad to have you!</p>
+
+        <p>Your application is currently under review by our team. We’ll verify your details and notify you once your account has been approved.</p>
+
+        <p>This usually takes <strong>1–2 business days</strong>. Once approved, you’ll be able to create events, manage tickets, and grow your audience.</p>
+
+        <p>If you have any questions in the meantime, feel free to reach out to our support team.</p>
+
+        <p>We’re looking forward to working with you!</p>
+      </div>
+      <div class="footer">
+        &copy; ${currentYear} ${APP_NAME}. All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>
+`;
+
+const viewAgainEmailTemplate = (userName, events = []) => `
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      .email-container {
+        font-family: Arial, sans-serif;
+        line-height: 1.5;
+        color: #333;
+      }
+      .email-header {
+        background-color: #1B1A1D;
+        color: white;
+        text-align: center;
+        padding: 10px 0;
+      }
+      .email-header h2 {
+        color: white;
+        margin: 0;
+      }
+      .email-body {
+        margin: 20px;
+      }
+      .event-card {
+        border: 1px solid #eee;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        overflow: hidden;
+      }
+      .event-image {
+        width: 100%;
+        height: 180px;
+        object-fit: cover;
+      }
+      .event-content {
+        padding: 15px;
+      }
+      .event-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 6px;
+      }
+      .event-meta {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 10px;
+      }
+      .cta-button {
+        display: inline-block;
+        padding: 10px 16px;
+        background-color: #1B1A1D;
+        color: #fff !important;
+        text-decoration: none;
+        border-radius: 5px;
+        font-size: 14px;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 12px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-bottom: 8px;
+        background: #ffe5e5;
+        color: #b30000;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 20px;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="email-header">
+        <h2>Events You Viewed Are Still Live</h2>
+      </div>
+
+      <div class="email-body">
+        <p>Hello ${userName || "there"},</p>
+
+        <p>Here are some events you checked out that are still active:</p>
+
+        ${
+          events.length
+            ? events.slice(0, 5).map(event => `
+              <div class="event-card">
+
+                ${
+                  event.basicInfo?.media
+                    ? `<img src="${event.basicInfo.media}" class="event-image" />`
+                    : ""
+                }
+
+                <div class="event-content">
+
+                  ${
+                    event.schedule?.isSoon
+                      ? `<div class="badge">Ending Soon</div>`
+                      : ""
+                  }
+
+                  <div class="event-title">
+                    ${event.basicInfo?.title || ""}
+                  </div>
+
+                  <div class="event-meta">
+                    ${event.schedule?.display || ""}
+                    ${
+                      event.basicInfo?.venue?.name
+                        ? ` • ${event.basicInfo.venue.name}`
+                        : ""
+                    }
+                  </div>
+
+                  <a href="${APP_URL}/events/${event.publicId}" class="cta-button">
+                    View Event
+                  </a>
+
+                </div>
+              </div>
+            `).join("")
+            : `<p>No events available right now. Explore more on ${APP_NAME}.</p>`
+        }
+
+        <p>Spots may be limited—don’t miss out.</p>
+      </div>
+
+      <div class="footer">
+        &copy; ${currentYear} ${APP_NAME}. All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>
+`;
+
 // Export both functions
 module.exports = {
   registrationViaLinkEmailTemplate,
@@ -877,5 +1078,8 @@ module.exports = {
   menuOrderConfirmationEmailTemplate,
   subscriptionUpdatedEmailTemplate,
   subscriptionExpiryEmailTemplate,
-  subscriptionExpiredEmailTemplate
+  subscriptionExpiredEmailTemplate,
+  organizerWelcomeEmailTemplate,
+  viewAgainEmailTemplate,
+  APP_NAME
 };
