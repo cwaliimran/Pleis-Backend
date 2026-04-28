@@ -91,7 +91,7 @@ const getOrganizationProfile = async (queryData) => {
       }
     };
   } catch (error) {
-    throw new Error(`Failed to fetch organization profile: ${error.message}`);
+    throw new Error(`Failed to fetch organization profile: ${error}`);
   }
 };
 

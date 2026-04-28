@@ -21,7 +21,6 @@ const { buildMenuItemsSaleLookup, getMenuItemsWithFilters } = require("../menuIt
 const findOrganizationById = async (userId, organizationId) => {
   const [org, favorite, orgVenue] = await Promise.all([
     Organizations.findById(organizationId)
-      .where({ status: "active" })
       .populate("otherInfo.categories")
       .populate("otherInfo.tags")
       .populate("creator", "companyDetails.logo companyDetails.loyaltySettings.title accountState.status")
