@@ -37,7 +37,8 @@ const getTagsWithFilters = async (query, skip, limit) => {
  *  - upcoming events
  *  - active organizations
  */
-const getActiveTags = async (limit = 15) => {
+const getActiveTags = async () => {
+  //invalidate ACTIVE_TAGS_CACHE_KEY
   return cache({
     namespace: ACTIVE_TAGS_CACHE_KEY,
     ttl: 86400, // 1 day
@@ -154,7 +155,6 @@ const getActiveTags = async (limit = 15) => {
 
         { $sort: { totalUsage: -1 } },
 
-        ...(limit ? [{ $limit: limit }] : [])
       ];
 
       const result = await Events.aggregate(eventTagsPipeline.concat(pipeline));
