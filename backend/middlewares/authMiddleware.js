@@ -64,15 +64,17 @@ const auth = async (req, res, next) => {
         });
       }
 
-      if (
-        user.accountState.status === "restricted" ||
-        user.accountState.status === "suspended"
-      ) {
-        return sendResponse({
-          res,
-          statusCode: 403,
-          translationKey: "your_account_2",
-        });
+      if (user.accountState.userType !== "organizer") {
+        if (
+          user.accountState.status === "restricted" ||
+          user.accountState.status === "suspended"
+        ) {
+          return sendResponse({
+            res,
+            statusCode: 403,
+            translationKey: "your_account_2",
+          });
+        }
       }
 
       // Immediately convert user to a plain object for modification
