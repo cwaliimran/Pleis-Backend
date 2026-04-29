@@ -175,7 +175,6 @@ const getTransactionsWithFilters = async ({
       allowDiskUse: true
     });
 const result = await attachBookings(txList);
-console.log("result",result );
     return result;
   }
 
@@ -334,9 +333,6 @@ const attachBookings = async (txList) => {
     // Ensure entityId is valid before using .toString()
     const entityIdStr = tx.entityId ? tx.entityId.toString() : null;
     
-    // Debug: log entityId value
-    console.log(`Processing transaction for domain: ${domain} with entityId: ${entityIdStr}`);
-console.log("tx",tx );
     // Return the updated transaction with the bookings
     return {
       ...tx,

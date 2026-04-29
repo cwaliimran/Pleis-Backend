@@ -13,7 +13,7 @@ const { formatEventOrder } = require("./formatter/formatEventOrder");
 const { countEngagementService } = require("../../commonModules/appEngagement/engagementEventsService");
 const { getEngagementCountsByEntity, getWeeklyEngagementStats, getEventsViewsStats } = require("../../commonModules/appEngagement/engagementEventsRepository");
 const { getEventAudienceAnalytics } = require("../../staff/events/eventRepository");
-
+const { nanoid } = require("nanoid");
 const createEvent = async ({ data, ticketingData }, timezone) => {
   let event = await eventRepo.createEvent(data, ticketingData);
   if (!event) return null;
@@ -459,6 +459,7 @@ const cloneEvent = async (id) => {
   const clonedData = JSON.parse(JSON.stringify(event));
   delete clonedData._id; // Remove the original ID
   clonedData.status = "inactive"; // Set status to inactive for the clone
+  clonedData.publicId = nanoid();
 
   return await eventRepo.createEvent(clonedData);
 };

@@ -28,7 +28,7 @@ const getTagsTypesWithFilters = async (query, page, limit) => {
     model: TagTypesModel,
     query,
     options: {
-      page, limit, select: {
+      page, limit, sort: { title: 1 }, select: {
         title: 1,
         _id: 1,
         createdAt: 1,

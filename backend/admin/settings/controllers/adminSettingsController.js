@@ -271,7 +271,7 @@ const updateAdminSettings = async (req, res) => {
   if (req.body.customer_terms_and_conditions) {
     updateData.customer_terms_and_conditions =
       req.body.customer_terms_and_conditions;
-    invalidations.push("customer_terms_and_conditions");
+    invalidations.push("customer_terms_conditions");
   }
 
   if (req.body.about_us) {
