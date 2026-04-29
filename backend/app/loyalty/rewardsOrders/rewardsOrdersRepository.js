@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Reward = require("@RewardModel");
 const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
+const { TicketingOrders } = require("@TicketingOrdersModel");
 const { createTransactionService } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
 const { getModelCounts } = require("@dbUtils/queryUtil");
 const { sendUserNotifications } = require("@notificationsUtil");
@@ -22,15 +23,32 @@ const createRewardOrder = async ({ userId, rewardId, protectionUserDetails, time
 
     // 🔒 HARD ENFORCEMENT
     if (reward.claimLimit > 0) {
-      const currentClaims = await RewardsOrders.countDocuments(
-        {
-          user: userId,
-          sourceType: "rewards",
-          sourceId: reward._id,
-          status: { $ne: "expired" },
-        },
-        { session }
-      );
+      let currentClaims = 0;
+
+      if (reward.rewardType === "ticketReward") {
+        currentClaims = await TicketingOrders.countDocuments(
+          {
+            user: userId,
+            status: { $ne: "cancelled" },
+            "meta.type": "rewards",
+            $or: [
+              { "meta.id": reward._id },
+              { "meta.id": String(reward._id) }
+            ]
+          },
+          { session }
+        );
+      } else {
+        currentClaims = await RewardsOrders.countDocuments(
+          {
+            user: userId,
+            sourceType: "rewards",
+            sourceId: reward._id,
+            status: { $ne: "expired" },
+          },
+          { session }
+        );
+      }
 
       if (currentClaims >= reward.claimLimit) {
         throw new Error("reward_claim_limit_reached");
@@ -171,29 +189,56 @@ async function checkClaimLimitForLoyaltyRewards(userId, rewards = []) {
   if (!userId) throw new Error("user_id_required");
 
   const rewardIds = rewards.map(r => new mongoose.Types.ObjectId(r._id));
+  const rewardIdStrings = rewardIds.map(id => String(id));
+  const userObjectId = new mongoose.Types.ObjectId(userId);
 
-  // 1️⃣ Aggregate user claim counts
-  const counts = await RewardsOrders.aggregate([
-    {
-      $match: {
-        user: new mongoose.Types.ObjectId(userId),
-        sourceType: "rewards",
-        sourceId: { $in: rewardIds },
-        status: { $ne: "expired" },
+  // 1️⃣ Aggregate user claim counts from rewards orders + ticketing orders
+  const [rewardOrderCounts, ticketOrderCounts] = await Promise.all([
+    RewardsOrders.aggregate([
+      {
+        $match: {
+          user: userObjectId,
+          sourceType: "rewards",
+          sourceId: { $in: rewardIds },
+          status: { $ne: "expired" },
+        },
       },
-    },
-    {
-      $group: {
-        _id: "$sourceId",
-        totalClaims: { $sum: 1 },
+      {
+        $group: {
+          _id: "$sourceId",
+          totalClaims: { $sum: 1 },
+        },
       },
-    },
+    ]),
+    TicketingOrders.aggregate([
+      {
+        $match: {
+          user: userObjectId,
+          status: { $ne: "cancelled" },
+          "meta.type": "rewards",
+          $or: [
+            { "meta.id": { $in: rewardIds } },
+            { "meta.id": { $in: rewardIdStrings } }
+          ]
+        }
+      },
+      {
+        $group: {
+          _id: { $toString: "$meta.id" },
+          totalClaims: { $sum: 1 }
+        }
+      }
+    ])
   ]);
 
   // rewardId → totalClaims
   const countMap = new Map();
-  for (const c of counts) {
+  for (const c of rewardOrderCounts) {
     countMap.set(String(c._id), c.totalClaims);
+  }
+  for (const c of ticketOrderCounts) {
+    const key = String(c._id);
+    countMap.set(key, (countMap.get(key) || 0) + c.totalClaims);
   }
 
   // 2️⃣ Build result per reward

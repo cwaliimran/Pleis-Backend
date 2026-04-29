@@ -356,7 +356,6 @@ const updateOrganization = async ({ id, data }) => {
 
   /* ================= SUBSCRIPTION UPDATE ================= */
   const user = await User.findById(userId);
-  console.log("data.companyDetails.name", data.companyDetails.name);
   if (data.companyDetails) {
     if (data.companyDetails.name) {
       user.companyDetails.name = data.companyDetails.name;

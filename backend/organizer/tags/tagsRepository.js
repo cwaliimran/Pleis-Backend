@@ -10,7 +10,7 @@ const createTag = async (data) => {
 // Get all with filters
 const getTagsWithFilters = async (query, skip, limit) => {
   return Tags.find(query)
-    .sort({ createdAt: -1 })
+    .sort({ title: 1 })
     .skip(skip)
     .limit(limit);
 };

@@ -37,7 +37,7 @@ const getSuppliersWithFilters = async (query, skip, limit, keyword, status, date
 
     fetchFn: async () => {
       return Supplier.find(query)
-        .sort({ createdAt: -1 })
+        .sort({ title: 1 })
         .skip(skip)
         .limit(limit);
     },

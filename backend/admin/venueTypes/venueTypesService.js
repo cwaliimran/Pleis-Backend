@@ -26,7 +26,15 @@ const getVenueTypes = async ({ page, limit, keyword, status, date }) => {
   }
 
 
-  const query = andConditions.length > 0 ? { $and: andConditions } : {};
+  let query = andConditions.length > 0 ? { $and: andConditions } : {};
+  //attach keyword filter if available
+  if (keyword) {
+    query.$or = [
+      { title: { $regex: keyword, $options: "i" } },
+      // Add more fields here if needed
+    ];
+  }
+
 
 
   const [venueTypes, counts] =

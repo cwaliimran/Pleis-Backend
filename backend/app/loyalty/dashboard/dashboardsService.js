@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const { getSuggestedLoyaltyClubs } = require("../../organizationProfile/organizationProfileService");
 const { getUserJoinedClubsWithPoints } = require("../clubMembers/clubMembersService");
 const clubMemberRepo = require("../clubMembers/clubMembersRepository");
@@ -9,10 +10,10 @@ const formatChallenge = require("../../../commonModules/loyalty/challenges/forma
 const { formatUserWallet } = require("../clubMembers/formatters/formatUserWallet");
 const { generateMeta } = require("../../../helperUtils/responseUtil");
 const rewardsRepo = require("../rewards/rewardsRepository");
-const { checkClaimLimitForLoyaltyRewards } = require("../rewardsOrders/rewardsOrdersRepository");
 const { formatSingleRewardByTierKey } = require("../../../commonModules/loyalty/rewards/utils/formatReward");
 const { formatReward } = require("../rewards/formatters/formatReward");
 const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
+const { TicketingOrders } = require("@TicketingOrdersModel");
 const { getPromotionsForDashboard } = require("../promotions/promotionsRepository");
 const { getUserWallet } = require("../../userWalletService/global/walletManagement/userWalletService");
 const { normalizeRewardClaimMeta } = require("../rewards/formatters/normalizeRewardClaimMeta");
@@ -206,46 +207,80 @@ const getSuggestedRewardsForDashboard = async ({
     skip,
     limit,
     timezone
-  })
+  });
 
   if (!rewards.length) {
     return { items: [] };
   }
 
+  const rewardObjectIds = rewards
+    .map(r => r?._id)
+    .filter(Boolean)
+    .map(id => new mongoose.Types.ObjectId(id));
+
+  const rewardIdStrings = rewardObjectIds.map(id => String(id));
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+
   // 4️⃣ Count how many times user already claimed each reward
-  const claimedCounts = await RewardsOrders.aggregate([
-    {
-      $match: {
-        user: userId,
-        sourceType: "rewards",
-        sourceId: { $in: rewards.map(r => r._id) }
+  const [rewardOrderClaims, ticketRewardClaims] = await Promise.all([
+    RewardsOrders.aggregate([
+      {
+        $match: {
+          user: userObjectId,
+          sourceType: "rewards",
+          sourceId: { $in: rewardObjectIds },
+          status: { $ne: "expired" }
+        }
+      },
+      {
+        $group: {
+          _id: "$sourceId",
+          total: { $sum: 1 }
+        }
       }
-    },
-    {
-      $group: {
-        _id: "$sourceId",
-        total: { $sum: 1 }
+    ]),
+    TicketingOrders.aggregate([
+      {
+        $match: {
+          user: userObjectId,
+          status: { $ne: "cancelled" },
+          "meta.type": "rewards",
+          $or: [
+            { "meta.id": { $in: rewardObjectIds } },
+            { "meta.id": { $in: rewardIdStrings } }
+          ]
+        }
+      },
+      {
+        $group: {
+          _id: { $toString: "$meta.id" },
+          total: { $sum: 1 }
+        }
       }
-    }
+    ])
   ]);
 
-  const claimedMap = new Map(
-    claimedCounts.map(c => [String(c._id), c.total])
-  );
+  const claimedMap = new Map();
 
-  // 5️⃣ Claim limit eligibility (existing logic)
-  const claimResults = await checkClaimLimitForLoyaltyRewards(userId, rewards);
-  const claimMap = new Map(
-    claimResults.map(r => [String(r.rewardId), r.available])
-  );
+  for (const c of rewardOrderClaims) {
+    const key = String(c._id);
+    claimedMap.set(key, (claimedMap.get(key) || 0) + c.total);
+  }
 
-  // 6️⃣ Eligibility + formatting
+  for (const c of ticketRewardClaims) {
+    const key = String(c._id);
+    claimedMap.set(key, (claimedMap.get(key) || 0) + c.total);
+  }
+
+  // 5️⃣ Eligibility + formatting
   const eligible = [];
 
   for (const reward of rewards) {
     const wallet =
       walletMap.get(String(reward.companyOrganizer._id));
     if (!wallet) continue;
+
+    const rewardId = String(reward._id);
 
     // Tier formatting
     const rewardByTierKey =
@@ -264,8 +299,7 @@ const getSuggestedRewardsForDashboard = async ({
     if (userTierEntry < requiredTierEntry) continue;
 
     // Claimed logic
-    const claimedCount =
-      claimedMap.get(String(formattedReward._id)) || 0;
+    const claimedCount = claimedMap.get(rewardId) || 0;
 
     eligible.push({
       ...formattedReward,
@@ -279,7 +313,7 @@ const getSuggestedRewardsForDashboard = async ({
 
   }
 
-  // 7️⃣ Sort (dashboard priority)
+  // 6️⃣ Sort (dashboard priority)
   eligible.sort((a, b) => {
     if (a.canClaim && !b.canClaim) return -1;
     if (!a.canClaim && b.canClaim) return 1;

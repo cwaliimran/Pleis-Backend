@@ -111,7 +111,6 @@ const getFriends = async ({
   });
 
   const result = await User.aggregate(pipeline);
-  console.log("result", result);
   return {
     users: result[0]?.data || [],
     meta: generateMeta(
