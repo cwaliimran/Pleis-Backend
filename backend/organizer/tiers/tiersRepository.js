@@ -16,7 +16,7 @@ const createTier = async (data) => {
 // Get all tiers with their assigned organization populated, sorted by createdAt descending
 const getTiersWithFilters = async (query = {}, skip = 0, limit = 10) => {
   return Tiers.find(query)
-    .sort({ createdAt: -1 })
+    .sort({ title: 1 })
     .skip(skip)
     .limit(limit);
 };

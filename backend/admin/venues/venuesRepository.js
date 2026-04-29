@@ -88,7 +88,7 @@ const getVenuesWithFilters = async (
         .populate({
           path: "venueType",
         })
-        .sort({ createdAt: -1 })
+        .sort({ title: 1 })
         .skip(skip)
         .limit(limit)
         .lean();
@@ -138,8 +138,9 @@ const getUnassignedVenues = async (userId) => {
   return await Venues.find({
     status: "active",
     organization: { $in: [null, undefined] },
-    creator: userId
-  });
+    creator: userId,
+    
+  }).sort({ title: 1 });
 };
 
 

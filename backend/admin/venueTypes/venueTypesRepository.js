@@ -56,7 +56,7 @@ await invalidate(ACTIVE_VENUE_TYPES_CACHE_KEY);
           },
           
         ],
-        options: { page, limit, sort: { order: 1 } },
+        options: { page, limit, sort: { title: 1 } },
       });
       
     },

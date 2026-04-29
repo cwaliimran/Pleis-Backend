@@ -454,6 +454,24 @@ const updateEvent = async (req, res) => {
         }
 
         if (!validateParams(req, res, validateData)) return;
+
+        //convert to utc 
+        if (recurringDetails.endType === "onDate") {
+          schedule.recurringDetails.endDate = convertTimezoneToUtc(
+            schedule.recurringDetails.endDate,
+            timezone,
+            "YYYY-MM-DD"
+          );
+        }
+        //convert startDateTime to utc
+        if (schedule.startDateTime) {
+          schedule.startDateTime = convertTimezoneToUtc(
+            schedule.startDateTime,
+            timezone,
+            "YYYY-MM-DD hh:mm A"
+          );
+        }
+
       } else {
         validateData.dateFields = {
           "schedule.startDateTime": "YYYY-MM-DD hh:mm A",
