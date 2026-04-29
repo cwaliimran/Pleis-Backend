@@ -22,20 +22,20 @@ if (ticketingData) {
   ticketingData.companyOrganizer = companyOrganizer
   ticketingData.organization = data.basicInfo.organization
 }
-  const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
+  // const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
   session.startTransaction();
 
   try {
-    const isAvailable = await isEventStartTimeAvailableForOrganization({
-      organizationId: data.basicInfo.organization,
-      startDateTime: data.schedule.startDateTime,
-    });
+    // const isAvailable = await isEventStartTimeAvailableForOrganization({
+    //   organizationId: data.basicInfo.organization,
+    //   startDateTime: data.schedule.startDateTime,
+    // });
 
-    if (!isAvailable) {
-      throw new Error(
-        "Another event already exists for this organization at the same start time"
-      );
-    }
+    // if (!isAvailable) {
+    //   throw new Error(
+    //     "Another event already exists for this organization at the same start time"
+    //   );
+    // }
 
     let event = new Events(data);
     event = await event.save({ session });
@@ -58,16 +58,16 @@ if (ticketingData) {
 
     await session.commitTransaction();
     session.endSession();
-     sendUserNotifications({
-      recipientIds: userIds,
-      title: `A new event ${event.basicInfo.title} has been created.`,
-      body: `A new event ${event.basicInfo.title} is now available in the system.`,
-      data: { type: NotificationTypes.EVENT_UPDATE, eventId: event._id, objectType: "events" },
-      sender: event.creator,
-      objectId: event._id,
-      image: event.basicInfo.media.type === 'image' ? event.basicInfo.media.name : null,
+    //  sendUserNotifications({
+    //   recipientIds: userIds,
+    //   title: `A new event ${event.basicInfo.title} has been created.`,
+    //   body: `A new event ${event.basicInfo.title} is now available in the system.`,
+    //   data: { type: NotificationTypes.EVENT_UPDATE, eventId: event._id, objectType: "events" },
+    //   sender: event.creator,
+    //   objectId: event._id,
+    //   image: event.basicInfo.media.type === 'image' ? event.basicInfo.media.name : null,
 
-    });
+    // });
     return event;
   } catch (err) {
     await session.abortTransaction();

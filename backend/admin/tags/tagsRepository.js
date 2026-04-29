@@ -24,7 +24,7 @@ const createTag = async (data) => {
 const getTagsWithFilters = async (query, skip, limit) => {
   const tagsQuery = Tags.find(query)
     .populate("type", "title") // Populate the 'type' field with the 'title' field
-    .sort({ createdAt: -1 })
+    .sort({ title: 1 })
     .skip(skip)
     .limit(limit);
 

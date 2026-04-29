@@ -16,6 +16,7 @@ const {
   OTP_PURPOSE_CONFIG,
   otpEmailTemplate,
   organizerWelcomeEmailTemplate,
+  APP_NAME,
 } = require("../helperUtils/emailTemplates");
 const { createOrSkipDevice, Devices } = require("../models/Devices");
 const validator = require("validator");
@@ -769,7 +770,7 @@ const verifyEmailViaLink = async (req, res) => {
   // Send welcome email to organizer only once, after email verification
   if (user.accountState?.userType === "organizer") {
     const mBody = organizerWelcomeEmailTemplate(user.firstName);
-    await sendEmailViaMailgun(user.email, `Welcome to ${process.env.APP_NAME}`, mBody);
+    await sendEmailViaMailgun(user.email, `Welcome to ${APP_NAME}`, mBody);
   }
 
   return res.redirect(
