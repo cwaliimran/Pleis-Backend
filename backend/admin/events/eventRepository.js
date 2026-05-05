@@ -118,8 +118,8 @@ const findEventById = async (id) => {
         select: "title",
       },
     })
-    .populate("basicInfo.categories", "title image otherInfo")
-    .populate("basicInfo.tags", "title otherInfo")
+    .populate({ path: "basicInfo.categories", select: "title image otherInfo", options: { sort: { title: 1 } } })
+    .populate({ path: "basicInfo.tags", select: "title otherInfo", options: { sort: { title: 1 } } })
     .populate({
       path: "basicInfo.organization",
       select:
