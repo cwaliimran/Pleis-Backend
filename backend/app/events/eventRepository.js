@@ -84,8 +84,8 @@ const countEvents = async (query = {}) => {
 const findEventById = async (id) => {
   return Events.findById(id)
     .populate("basicInfo.venue", "title location floorPlan")
-    .populate("basicInfo.categories", "title image otherInfo")
-    .populate("basicInfo.tags", "title otherInfo")
+    .populate({ path: "basicInfo.categories", select: "title image otherInfo", options: { sort: { title: 1 } } })
+    .populate({ path: "basicInfo.tags", select: "title otherInfo", options: { sort: { title: 1 } } })
     .populate({
       path: "basicInfo.organization",
       select: "basicInfo otherInfo operatingHours location",
@@ -93,10 +93,12 @@ const findEventById = async (id) => {
         {
           path: "otherInfo.categories",
           select: "title image otherInfo",
+          options: { sort: { title: 1 } },
         },
         {
           path: "otherInfo.tags",
           select: "title otherInfo",
+          options: { sort: { title: 1 } },
         },
       ],
     })

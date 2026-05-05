@@ -205,8 +205,8 @@ const getOrganizationDetails = async (id) => {
 
   const [organization, primaryVenue, events, ticketsSold, views, revenue, clubMembersCount] = await Promise.all([
     Organizations.findById(id)
-      .populate("otherInfo.tags")
-      .populate("otherInfo.categories")
+      .populate({ path: "otherInfo.tags", options: { sort: { title: 1 } } })
+      .populate({ path: "otherInfo.categories", options: { sort: { title: 1 } } })
       .populate({
         path: "creator",
         select: "firstName lastName email companyDetails",

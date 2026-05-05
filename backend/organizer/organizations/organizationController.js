@@ -333,7 +333,7 @@ const getOrganizationDetails = async (req, res) => {
     })
   )
     return;
-  const organization = await organizationService.getOrganizationDetails(id);
+  const organization = await organizationService.findOrganizationById(id);
   if (!organization) {
     return sendResponse({
       res,
