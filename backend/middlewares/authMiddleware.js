@@ -3,6 +3,7 @@ const { User } = require("../models/UserModel");
 const { sendResponse } = require("../helperUtils/responseUtil");
 const { i18nConfig } = require("../config/i18nConfig");
 const { userCache } = require("../config/nodeCache");
+const { getOrganizationsAsStaff } = require("../staff/organizations/organizationService");
 
 const hasField = (obj, path) => {
   return (
@@ -33,7 +34,8 @@ const auth = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded._id;
-
+    const originalUserId = decoded.originalUserId || null; // For impersonation
+    userCache.del(userId.toString()); // Invalidate cache to ensure fresh data on next request
     // Retrieve user from cache if available
     let user = userCache.get(userId);
 
@@ -54,7 +56,13 @@ const auth = async (req, res, next) => {
 
     if (!user || isMissingRequiredFields) {
       const selectFields = "firstName lastName profileIcon email timezone language location accountState";
-      user = await User.findById(userId).select(selectFields);
+      if (!originalUserId) {
+        user = await User.findById(userId).select(selectFields);
+
+      } else {
+        user = await User.findById(originalUserId).select(selectFields);
+
+      }
 
       if (!user) {
         return sendResponse({
@@ -80,8 +88,37 @@ const auth = async (req, res, next) => {
       user.userType = user.accountState.userType;
       delete user.accountState;
 
+      // if userType is manager then set companyOrganizer and organization Ids to request
+      if (user.userType === "manager") {
+        //companyOrganizer,organizations -> fetch from db
+        // Fetch organizations array
+        let organizations = await getOrganizationsAsStaff(userId);
+        console.log("organizations",organizations );
+        let organizationIds = organizations.map(org => org._id.toString());
+
+        if (!req.query.organizations) {
+          req.query.organizations = organizations;
+        }
+
+        if (!req.query.organizationsIds) {
+          req.query.organizationsIds = organizationIds;
+        }
+
+        //company organizer id
+        const companyOrganizerId = organizations.length > 0 ? organizations[0].creator.toString() : null;
+        req.query.companyOrganizerId = companyOrganizerId;
+        req.query.companyOrganizer = companyOrganizerId;
+        user.originalUserId = user._id; // Store original user ID for impersonation tracking
+        user._id = companyOrganizerId; // Override user ID with company organizer ID for manager role
+
+        user.userType = "organizer"; // Override userType to companyOrganizer for manager role
+
+      }
+
+
       // Update the cache with the modified user object
-      userCache.set(userId, user);
+      // userCache.set(userId, user);
+      userCache.del(userId.toString()); // Invalidate cache to ensure fresh data on next request
     }
 
     // Set the locale based on user's language

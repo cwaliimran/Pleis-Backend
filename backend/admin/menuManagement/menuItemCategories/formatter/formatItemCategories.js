@@ -14,8 +14,21 @@ function formatMenuItem(item, timezone) {
   if (!obj) return null;
 
   obj.image = getFullImageUrl(obj.image || "noimage.png");
-  obj.startTime=convertUtcToTimezone(obj.startTime,timezone,"hh:mm A");
-  obj.endTime=convertUtcToTimezone(obj.endTime,timezone,"hh:mm A");
+  if (obj.startTime) {
+    obj.startTime = convertUtcToTimezone(obj.startTime, timezone, "hh:mm A");
+  }
+
+  if (obj.endTime) {
+    obj.endTime = convertUtcToTimezone(obj.endTime, timezone, "hh:mm A");
+  }
+
+  if (obj.startDate) {
+    obj.startDate = convertUtcToTimezone(obj.startDate, timezone, "YYYY-MM-DD");
+  }
+
+  if (obj.endDate) {
+    obj.endDate = convertUtcToTimezone(obj.endDate, timezone, "YYYY-MM-DD");
+  }
 
   // ✅ SAFE MENU HANDLING
   if (obj.menuData) {

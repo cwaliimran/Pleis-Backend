@@ -92,9 +92,10 @@ const createRewardOrder = async ({ userId, rewardId, protectionUserDetails, time
         {
           user: userId,
           companyOrganizer: reward.companyOrganizer,
+          organization: orderDoc?.order?.organization || null,
           type: "redeem",
-          domainType: "ticketingorders",
-          entityId: orderDoc._id,
+          domainType: "loyaltyrewardsorders",
+          entityId: orderDoc?.order?._id,
           companyPoints: {
             base: reward.minPointsRequiredToClaim || 0,
             total: -(reward.minPointsRequiredToClaim || 0),

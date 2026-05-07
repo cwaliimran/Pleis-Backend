@@ -72,6 +72,7 @@ router.use("/faqs", require("../faqs/faqsRoutes"));
 router.use("/badge-categories", require("../badgeCategories/badgeCategoriesRoutes"));
 router.use("/reviews", require("../reviews/reviewsRoutes"));
 router.use("/support", require("../support/supportRoutes"));
+router.use("/feed-config", require("../feedConfig/feedConfigRoutes"));
 
 
 
