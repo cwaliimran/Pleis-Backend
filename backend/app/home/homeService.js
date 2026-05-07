@@ -25,7 +25,8 @@ const { getGlobalReferralSettingsRepository } = require("../../admin/globalLoyal
 const { getAppSettings } = require("../appSettings/appSettingsController");
 const { getPinnedContentWithFilters } = require("../../admin/pinnedContent/pinnedContentRepository");
 const { getEventsByVenueTypeService, getEventsByTagService, getEventsByCategoryService, getEventsBatch } = require("../../admin/events/eventService");
-const { getOrganizationsByVenueTypeService, getOrganizationsByTagService, getOrganizationByCategoryService, getOrganizationsBatch  } = require("../../admin/organizations/organizationService");
+const { getOrganizationsByVenueTypeService, getOrganizationsByTagService, getOrganizationByCategoryService, getOrganizationsBatch } = require("../../admin/organizations/organizationService");
+const { findOrCreateFeedConfig } = require("../../admin/feedConfig/feedConfigRepository");
 
 const getHomeService = async ({ queryData }) => {
   const { userId, userLocation, radiusKm = 50, timezone, category } = queryData;
@@ -42,10 +43,19 @@ const getHomeService = async ({ queryData }) => {
     /**
      * PROMISES
      */
-    let filter = { quickAction: true }
+
+    //fist check if getFeedConfig has quickAction enabled, if not then return empty array
+
+    const feedConfig = await findOrCreateFeedConfig();
+
+
 
     const promises = {
-      categoriesRes: getPublicCategories(filter),
+      ...(feedConfig?.quickAction && {
+        categoriesRes: getPublicCategories({
+          status: "active",
+        }),
+      }),
       bannersRes: getBannerControlsService({ page: 1, limit: 10 }),
       getGlobalReferralSettingsRes: getGlobalReferralSettingsRepository(),
 
@@ -191,7 +201,7 @@ const getHomeService = async ({ queryData }) => {
     /**
      * NORMALIZATION
      */
-    const categories = results.categoriesRes?.categories || [];
+    let categories = results.categoriesRes?.categories || [];
     const banners = results.bannersRes?.bannerControls || [];
     const getGlobalReferralSettings = results.getGlobalReferralSettingsRes || null;
     const popularEvents = results.popularEventsRes?.data || [];

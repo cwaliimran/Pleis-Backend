@@ -200,10 +200,10 @@ const deleteMenuItem = async (id) => {
   return true;
 };
 
-const getMenuItemDetails = async (id) => {
+const getMenuItemDetails = async (id, timezone) => {
   const menuItem = await menuItemRepo.findMenuItemById(id);
   if (!menuItem) return null;
-  return menuItem;
+  return formatMenuItem(menuItem, timezone);
 };
 
 

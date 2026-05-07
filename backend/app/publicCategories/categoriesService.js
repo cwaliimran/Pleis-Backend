@@ -4,6 +4,9 @@ const { formatCategories } = require("../../admin/categories/formatters/category
 const getPublicCategories = async (filter = {}) => {
   //only return selected fields
   let categories = await getPublicActiveCategories(filter);
+  if (!categories || categories.length === 0) {
+    return [];
+  }
   categories = formatCategories(categories);
 
   return { categories };

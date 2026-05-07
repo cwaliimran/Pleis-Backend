@@ -1,4 +1,4 @@
-const { getCurrentDateInTimezone } = require("@utils/responseUtil");
+const { getCurrentDateInTimezone, convertUtcToTimezone } = require("@utils/responseUtil");
 const MenuRepo = require("./menuManagementRepository");
 const { NotificationTypes } = require("@NotificationsModel");
 const MenuItems = require("@MenuItemsModel");
@@ -404,7 +404,7 @@ const getSaleItems = async ({ timezone,
     meta,
   };
 };
-const updateSaleItems = async (id, data) => {
+const updateSaleItems = async (id, data, timezone) => {
   const order = await MenuRepo.findSaleById(id);
   if (!order) {
     return { error: "Menu_not_found" };
@@ -442,17 +442,27 @@ if (data.menuItems && Array.isArray(data.menuItems)) {
 }
 
 
-  // Update date range
+  // Date values are already converted to UTC in controller.
   if (data.startDateTime !== undefined) {
-    order.startDateTime = new Date(data.startDateTime);
+    order.startDateTime = data.startDateTime;
   }
 
   if (data.endDateTime !== undefined) {
-    order.endDateTime = new Date(data.endDateTime);
+    order.endDateTime = data.endDateTime;
   }
 
   await order.save();
-  return order;
+  const updated = order.toObject();
+
+  if (updated.startDateTime) {
+    updated.startDateTime = convertUtcToTimezone(updated.startDateTime, timezone, "YYYY-MM-DD hh:mm A");
+  }
+
+  if (updated.endDateTime) {
+    updated.endDateTime = convertUtcToTimezone(updated.endDateTime, timezone, "YYYY-MM-DD hh:mm A");
+  }
+
+  return updated;
 };
 
 const deleteSaleItems = async (id) => {

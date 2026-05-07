@@ -48,20 +48,21 @@ const eventSchema = new mongoose.Schema(
         type: LocationSchema,
         default: {},
       },
-      categories: [
-        {
+      categories: {
+        type: [{
           type: mongoose.Schema.Types.ObjectId,
           ref: "Categories",
-          default: [],
-        },
-      ],
-      tags: [
-        {
+        }],
+        default: [],
+      },
+
+      tags: {
+        type: [{
           type: mongoose.Schema.Types.ObjectId,
           ref: "Tags",
-          default: [],
-        },
-      ],
+        }],
+        default: [],
+      },
       partnerOrganization: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Organizations",

@@ -1,5 +1,5 @@
 
-const { generateMeta } = require("@utils/responseUtil");
+const { generateMeta, convertUtcToTimezone } = require("@utils/responseUtil");
 const mongoose = require("mongoose");
 const Organizations = require("@OrganizationModel");
 const { UserReservations } = require("@UserReservationsModel");
@@ -271,6 +271,7 @@ const fetchMenuItems = async (organization) => {
   }
 };
 const getMenuItemsSales = async ({
+  timezone,
   page = 1,
   limit = 3,
   skip = 0,
@@ -473,6 +474,14 @@ const getMenuItemsSales = async ({
 
     // ✅ FORMAT IMAGES HERE
     sale = formatSaleWithImages(sale);
+
+    if (sale.startDateTime) {
+      sale.startDateTime = convertUtcToTimezone(sale.startDateTime, timezone, "YYYY-MM-DD hh:mm A");
+    }
+
+    if (sale.endDateTime) {
+      sale.endDateTime = convertUtcToTimezone(sale.endDateTime, timezone, "YYYY-MM-DD hh:mm A");
+    }
 
     return {
       ...sale,
