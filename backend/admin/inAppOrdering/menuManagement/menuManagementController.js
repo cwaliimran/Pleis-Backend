@@ -620,6 +620,7 @@ const getSaleItems = async (req, res) => {
 
 const updateSaleItems = async (req, res) => {
   const { id } = req.params;
+  const timezone = req.user?.timezone;
   const {
     status,
     title,
@@ -633,6 +634,10 @@ const updateSaleItems = async (req, res) => {
     !validateParams(req, res, {
       pathParams: ["id"],
       objectIdFields: ["id"],
+      dateFields: {
+        startDateTime: "YYYY-MM-DD hh:mm A",
+        endDateTime: "YYYY-MM-DD hh:mm A",
+      },
     })
   ) return;
 
@@ -647,10 +652,18 @@ const updateSaleItems = async (req, res) => {
     endDateTime,
   };
 
+  if (startDateTime !== undefined) {
+    data.startDateTime = convertTimezoneToUtc(startDateTime, timezone, "YYYY-MM-DD hh:mm A");
+  }
+
+  if (endDateTime !== undefined) {
+    data.endDateTime = convertTimezoneToUtc(endDateTime, timezone, "YYYY-MM-DD hh:mm A");
+  }
+
 
 
   try {
-    const updated = await Menuervice.updateSaleItems(id, data);
+    const updated = await Menuervice.updateSaleItems(id, data, timezone);
     if (updated && updated.error) {
       return sendResponse({
         res,

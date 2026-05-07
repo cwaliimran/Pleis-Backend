@@ -17,10 +17,6 @@ const categoriesSchema = new mongoose.Schema(
       enum: ["active", "inactive", "deleted"],
       default: "active",
     },
-    quickAction: {
-      type: Boolean,
-      default: true,
-    },
     order: {
       type: Number,
       default: 0,

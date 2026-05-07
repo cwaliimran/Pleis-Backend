@@ -205,8 +205,8 @@ const getOrganizationDetails = async (id) => {
 
   const [organization, primaryVenue, events, ticketsSold, views, revenue, clubMembersCount] = await Promise.all([
     Organizations.findById(id)
-      .populate("otherInfo.tags")
-      .populate("otherInfo.categories")
+      .populate({ path: "otherInfo.tags", options: { sort: { title: 1 } } })
+      .populate({ path: "otherInfo.categories", options: { sort: { title: 1 } } })
       .populate({
         path: "creator",
         select: "firstName lastName email companyDetails",
@@ -339,7 +339,7 @@ const getOrganizationByCompanyOrganizer = async (companyOrganizer) => {
 //getMenuIdsByCompanyOrganizer
 const getMenuIdsByCompanyOrganizer = async (companyOrganizer) => {
   const organizationIds = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
-  const menus = await Menus.find({ organization: { $in: organizationIds } }).select("_id").lean();
+  const menus = await Menus.find({ organization: { $in: organizationIds }, status: { $ne: "deleted" } }).select("_id").lean();
   return menus.map(menu => menu._id);
 };
 const getMenuIdsByOrganization = async (organization) => {
@@ -350,7 +350,7 @@ const getMenuIdsByOrganization = async (organization) => {
     .map(id => new mongoose.Types.ObjectId(id)); // Convert strings to ObjectIds
 
   // Query Menus where organization is in the list of organizationIds
-  const menus = await Menus.find({ organization: { $in: organizationIds } }).select("_id").lean();
+  const menus = await Menus.find({ organization: { $in: organizationIds }, status: { $ne: "deleted" } }).select("_id").lean();
 
   // Return the menu IDs
   return menus.map(menu => menu._id);

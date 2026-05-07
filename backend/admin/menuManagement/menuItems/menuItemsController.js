@@ -2,9 +2,7 @@ const {
   sendResponse,
   parsePaginationParams,
   validateParams,
-  generateMeta,
   getReadableErrorMessage,
-  convertDateFormat,
   convertTimezoneToUtc,
 } = require("@utils/responseUtil");
 
@@ -54,12 +52,12 @@ const createMenuItem = async (req, res) => {
     creator: req.user?._id,
   };
 
-  if (startTime && endTime) {
+  if (startTime) {
     data.startTime = convertTimezoneToUtc(startTime, timezone, "hh:mm A");
+  }
+
+  if (endTime) {
     data.endTime = convertTimezoneToUtc(endTime, timezone, "hh:mm A");
-
-
-
   }
 
   try {
@@ -103,6 +101,7 @@ const getMenuItems = async (req, res) => {
     companyOrganizer,
     organization
   } = req.query;
+  console.log("req.query",req.query );
   if(req.user.userType==="organizer")
   {
        companyOrganizer=req.user._id
@@ -164,7 +163,7 @@ const getMenuItemDetails = async (req, res) => {
     return;
 
   try {
-    const menuItem = await menuItemsService.getMenuItemDetails(id);
+    const menuItem = await menuItemsService.getMenuItemDetails(id, req.user?.timezone);
     if (!menuItem) {
       return sendResponse({
         res,
@@ -285,8 +284,11 @@ const updateMenuItem = async (req, res) => {
   };
 
   try {
-    if (startDate && endDate) {
+    if (startDate) {
       data.startDate = convertTimezoneToUtc(startDate, timezone, "YYYY-MM-DD");
+    }
+
+    if (endDate) {
       data.endDate = convertTimezoneToUtc(endDate, timezone, "YYYY-MM-DD");
     }
     const allowedAvailabilityTypes = ['preOrdersOnly', 'preOrdersEvent', 'preOrderExclusive'];
@@ -299,17 +301,12 @@ const updateMenuItem = async (req, res) => {
       });
     }
 
-    if (startTime && endTime) {
+    if (startTime) {
       data.startTime = convertTimezoneToUtc(startTime, req.user.timezone, "hh:mm A");
-      data.endTime = convertTimezoneToUtc(endTime, req.user.timezone, "hh:mm A");
-
-
     }
-    if (startDate && endDate) {
-      data.startDate = convertTimezoneToUtc(startDate, req.user.timezone, "hh:mm A");
-      data.endDate = convertTimezoneToUtc(endDate, req.user.timezone, "hh:mm A");
 
-
+    if (endTime) {
+      data.endTime = convertTimezoneToUtc(endTime, req.user.timezone, "hh:mm A");
     }
      id = new mongoose.Types.ObjectId(id);
 
@@ -389,7 +386,7 @@ const getMenuItemsByMenuId = async (req, res) => {
     return;
 
   try {
-    const menuItems = await menuItemsService.getMenuItemsByMenuId(menuId);
+    const menuItems = await menuItemsService.getMenuItemsByMenuId(menuId, req.user?.timezone);
     return sendResponse({
       res,
       statusCode: 200,

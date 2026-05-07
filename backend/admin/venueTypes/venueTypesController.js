@@ -46,7 +46,7 @@ const createVenueType = async (req, res) => {
 
 const getVenueTypes = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date } = req.query;
+  const { keyword, status, date, categories } = req.query;
 
   try {
 
@@ -62,7 +62,8 @@ const getVenueTypes = async (req, res) => {
       limit,
       keyword,
       status,
-      date
+      date,
+      categories
     });
 
     return sendResponse({
@@ -84,7 +85,7 @@ const getVenueTypes = async (req, res) => {
 
 const getPublicVenueTypes = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, date } = req.query;
+  const { keyword, date, categories } = req.query;
   try {
 
     if (date && !validateParams(req, res, {
@@ -98,7 +99,8 @@ const getPublicVenueTypes = async (req, res) => {
       page,
       limit,
       keyword,
-      date
+      date,
+      categories
     });
 
     return sendResponse({

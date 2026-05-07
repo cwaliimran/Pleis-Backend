@@ -7,6 +7,7 @@
  */
 
 const { Events } = require("@EventsModel");
+const { uniqueObjectIds } = require("../../helperUtils/responseUtil");
 
 const updateEventService = async (eventId, payload, mode = "single") => {
 
@@ -23,9 +24,24 @@ const updateEventService = async (eventId, payload, mode = "single") => {
   // SAFE FIELD APPLIER
   // -----------------------------
   const applyFields = (doc, data, skipSchedule = false) => {
-    if (data.basicInfo) {
-      doc.basicInfo = { ...doc.basicInfo, ...data.basicInfo };
+
+    doc.basicInfo = {
+      ...doc.basicInfo,
+      ...data.basicInfo,
+    };
+
+    if (data.basicInfo?.categories) {
+      doc.basicInfo.categories = uniqueObjectIds(
+        data.basicInfo.categories
+      );
     }
+
+    if (data.basicInfo?.tags) {
+      doc.basicInfo.tags = uniqueObjectIds(
+        data.basicInfo.tags
+      );
+    }
+
 
     if (!skipSchedule && data.schedule) {
       doc.schedule = { ...doc.schedule, ...data.schedule };
@@ -36,7 +52,7 @@ const updateEventService = async (eventId, payload, mode = "single") => {
 
     if (data.status !== undefined)
       doc.status = data.status;
-    if(data.feedbackEnabled !== undefined)
+    if (data.feedbackEnabled !== undefined)
       doc.feedbackEnabled = data.feedbackEnabled;
 
     // recurringDetails may change too
@@ -52,12 +68,12 @@ const updateEventService = async (eventId, payload, mode = "single") => {
   // NON-RECURRING OR SINGLE MODE
   // ================================================
   if (mode === "single" || !isChild) {
- 
+
 
     applyFields(event, payload);
     await event.save();
 
- 
+
     return event;
   }
 
@@ -65,7 +81,7 @@ const updateEventService = async (eventId, payload, mode = "single") => {
   // FUTURE MODE
   // ================================================
 
- 
+
 
   const parentId = event.recurringMeta.parentEvent;
   const template = await Events.findById(parentId);
@@ -80,7 +96,7 @@ const updateEventService = async (eventId, payload, mode = "single") => {
   // -------------------------------------------
   // STEP 1 — UPDATE THE CURRENT OCCURRENCE
   // -------------------------------------------
- 
+
 
   applyFields(event, payload);
 

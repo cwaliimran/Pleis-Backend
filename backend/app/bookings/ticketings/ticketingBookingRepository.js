@@ -143,6 +143,7 @@ const getTicketingBookingById = async (id) => {
               createdAt: 1,
               isFastTrack: 1,
               pricingPhase: 1,
+              meta: 1,
             },
           },
         ],
@@ -222,7 +223,32 @@ const getTicketingBookingById = async (id) => {
     { $project: { ticketEvent: 0 } },
   ]);
 
-  return result[0] || null;
+  let resultItem = result[0] || null;
+
+  if (resultItem) {
+    const orderMeta = resultItem.order?.meta;
+
+    switch (orderMeta?.type) {
+      case "rewards": {
+        // Only build ObjectId when valid to avoid runtime crashes.
+        if (mongoose.Types.ObjectId.isValid(orderMeta?.id)) {
+          const rewardDetails = await mongoose.connection.collection("rewards").findOne(
+            { _id: new mongoose.Types.ObjectId(orderMeta.id) },
+            { projection: { _id: 1, title: 1, minPointsRequiredToClaim: 1 } }
+          );
+          resultItem.order.rewardDetails = rewardDetails;
+        } else {
+          resultItem.order.rewardDetails = null;
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+
+  return resultItem;
 };
 
 

@@ -6,6 +6,7 @@ const {
   getReadableErrorMessage,
   convertTimezoneToUtc,
   isValidNanoid,
+  uniqueObjectIds,
 } = require("../../helperUtils/responseUtil");
 const { getVenueDetails } = require("../venues/venuesService");
 const mongoose = require('mongoose');
@@ -225,8 +226,13 @@ const createEvent = async (req, res) => {
       organization: basicInfo.organization,
       venue: basicInfo.venue,
       venueLocation: venueItem.location,
-      categories: Array.isArray(basicInfo.categories) ? basicInfo.categories : [],
-      tags: Array.isArray(basicInfo.tags) ? basicInfo.tags : [],
+      categories: Array.isArray(basicInfo.categories)
+        ? uniqueObjectIds(basicInfo.categories)
+        : [],
+
+      tags: Array.isArray(basicInfo.tags)
+        ? uniqueObjectIds(basicInfo.tags)
+        : [],
       partnerOrganization: basicInfo.partnerOrganization || null,
     },
     schedule: {
@@ -304,9 +310,9 @@ const createEvent = async (req, res) => {
 
 const getEvents = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "active", startDate, endDate, organization,companyOrganizer } = req.query;
+  let { keyword, status = "active", startDate, endDate, organization, companyOrganizer } = req.query;
   const { _id, timezone } = req.user;
-  if(req.user.userType === "organizer"){
+  if (req.user.userType === "organizer") {
     companyOrganizer = req.user._id;
   }
 

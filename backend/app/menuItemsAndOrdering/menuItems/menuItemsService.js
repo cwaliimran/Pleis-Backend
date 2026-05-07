@@ -3,26 +3,33 @@ const menuItemRepo = require("./menuItemsRepository");
 const { getFullImageUrl } = require("@utils/imageHelper");
 const { formatMenuItem } = require("./formatter/formatMenuItems");
 const MenuItemCategories = require("@MenuItemCategoriesModel");
-const { findOrganizationWithSelectFilter } = require("../../organizationProfile/organizationProfileRepository");
+const { findOrganizationWithSelectFilter, getOrganizationMenuWithItems } = require("../../organizationProfile/organizationProfileRepository");
 const { default: mongoose } = require("mongoose");
 const { calculateItemPrice } = require("../orders/formatter/calculateItemPrice");
 
 const getMenuItems = async ({ userId, timezone, organization }) => {
+  // const result = await getOrganizationMenuWithItems({ organizationId: organization, userId, timezone });
+  // console.log("result ", result);
   // 1️⃣ Get menu ID for the organization
   const menuId = await menuItemRepo.getMenuIdByOrganization(organization);
+console.log("menuId",menuId );
   if (!menuId) {
     return { recommended: [], menu: [] };
   }
   // 2️⃣ Fetch all active menu items for this menu
+
   const menuItems = await menuItemRepo.getMenuItemsWithFilters({
     query: {
-      menu: new mongoose.Types.ObjectId(menuId._id),
+      menu: {
+        $in: menuId.map(item => new mongoose.Types.ObjectId(item._id))
+      },
       status: "active",
       isAvailableInStock: { $ne: false }
     },
     userId,
     timezone
   });
+
 
   if (!menuItems.length) return { recommended: [], menu: [] };
 
@@ -61,6 +68,7 @@ const getMenuItems = async ({ userId, timezone, organization }) => {
       items,
     })),
   }));
+
 
   let organizationDetails = await findOrganizationWithSelectFilter(organization, "_id basicInfo.name basicInfo.media.logo");
 
