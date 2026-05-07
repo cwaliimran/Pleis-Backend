@@ -18,7 +18,6 @@ const createCategory = async (req, res) => {
       image,
       title,
       status: "active",
-      quickAction: true, // Set quickAction to true by default for new categories
     });
 
     return sendResponse({
@@ -114,7 +113,7 @@ const getPublicCategories = async (req, res) => {
 
 const updateCategory = async (req, res) => {
   const { id } = req.params;
-  const { title, status, image, quickAction } = req.body;
+  const { title, status, image } = req.body;
 
   if (
     !validateParams(req, res, {
@@ -129,7 +128,6 @@ const updateCategory = async (req, res) => {
       title,
       status,
       image,
-      quickAction,
     });
 
     if (!updated) {

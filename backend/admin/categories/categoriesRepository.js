@@ -54,11 +54,16 @@ const getCategoriesWithFilters = async (
  * ============================
  */
 const getPublicActiveCategories = async (filter = {}) => {
-      return Categories.find({ status: "active", ...filter })
+  return cache({
+    namespace: "categories:public",
+    ttl: null,
+    fetchFn: () =>
+      Categories.find({ status: "active", ...filter })
         .sort({ order: 1 })
         .select("title image order")
-        .lean();
-    }
+        .lean(),
+  });
+};
 
     
 

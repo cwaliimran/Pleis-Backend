@@ -344,16 +344,13 @@ const attachBookings = async (txList) => {
 // Helper function to fetch bookings for each domain
 const getBookingsForDomain = async (domain, orderIds) => {
   try {
-    console.log(`Fetching bookings for domain: ${domain} with orderIds:`, orderIds);
     
     let bookings = [];
     switch (domain) {
       case "ticketingorders":
-        console.log("enter ticketingorders", );
         bookings = await TicketingOrders.find({ _id: { $in: orderIds } }).lean();
         break;
       case "menuorders":
-        console.log("enter manuoser", );
         bookings = await Orders.find({ _id: { $in: orderIds } }).lean();
         break;
       case "ticketingbookings":
@@ -377,7 +374,6 @@ const getBookingsForDomain = async (domain, orderIds) => {
 
     return bookings;
   } catch (error) {
-    console.error(`Error fetching bookings for ${domain}:`, error);
     return [];
   }
 };

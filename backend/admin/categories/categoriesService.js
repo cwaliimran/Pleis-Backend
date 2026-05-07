@@ -6,8 +6,8 @@ const mongoose = require("mongoose");
 const { formatCategories } = require("./formatters/categoryFormatter");
 const { cache, invalidate } = require("@redisCache");
 
-const createCategory = async ({ image, title, status, quickAction }) => {
-  return await categoryRepo.createCategory({ image, title, status, quickAction });
+const createCategory = async ({ image, title, status }) => {
+  return await categoryRepo.createCategory({ image, title, status });
 };
 const getCategories = async ({ page, limit, keyword, status, date, orderSort = "asc" }) => {
   const query = {};
@@ -92,7 +92,6 @@ const updateCategory = async (id, data) => {
     ...(data.title !== undefined && { title: data.title }),
     ...(data.image !== undefined && { image: data.image }),
     ...(data.status !== undefined && { status: data.status }),
-    ...(data.quickAction !== undefined && { quickAction: data.quickAction }),
   };
 
   if (Object.keys(updateData).length === 0) {

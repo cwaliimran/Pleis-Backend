@@ -851,6 +851,10 @@ const fireAndForget = (promise, label) => {
   );
 };
 
+const uniqueObjectIds = (arr = []) => {
+  return [...new Set(arr.map(id => id.toString()))];
+};
+
 module.exports = {
   sendResponse,
   parsePaginationParams,
@@ -874,4 +878,5 @@ module.exports = {
   extractTime,
   getEndDate,
   fireAndForget,
+  uniqueObjectIds,
 };

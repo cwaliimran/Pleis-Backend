@@ -7,7 +7,7 @@ const venuetypeRepo = require("./venueTypesRepository");
 const createVenueType = async ({ image, title, status, categories }) => {
   return await venuetypeRepo.createVenueType({ image, title, status, categories });
 };
-const getVenueTypes = async ({ page, limit, keyword, status, date }) => {
+const getVenueTypes = async ({ page, limit, keyword, status, date, categories }) => {
   const andConditions = [];
   // if date is available then match createdAt with date current date format is yyyy-mm-dd
   if (date) {
@@ -25,6 +25,11 @@ const getVenueTypes = async ({ page, limit, keyword, status, date }) => {
     andConditions.push({ status: { $ne: "deleted" } });
   }
 
+  // if category filter is available then match categories with category filter
+  //sample category filter value is categories=catId1,catId2
+  if (categories) {
+    andConditions.push({ categories: { $in: categories.split(",").map(id => new mongoose.Types.ObjectId(id)) } });
+  }
 
   let query = andConditions.length > 0 ? { $and: andConditions } : {};
   //attach keyword filter if available
@@ -62,7 +67,7 @@ const getVenueTypes = async ({ page, limit, keyword, status, date }) => {
   };
 };
 
-const getPublicVenueTypes = async ({ page = 1, limit, keyword, date, categoriesFilter = [] }) => {
+const getPublicVenueTypes = async ({ page = 1, limit, keyword, date, categories = [] }) => {
   const baseFilters = [{ status: "active" }];
   //if date is available then match createdAt with date current date format is yyyy-mm-dd
   if (date) {
@@ -85,9 +90,9 @@ const getPublicVenueTypes = async ({ page = 1, limit, keyword, date, categoriesF
 
   const baseQuery = baseFilters.length ? { $and: baseFilters } : {};
 
-  if (categoriesFilter.length > 0) {
-    categoriesFilter = categoriesFilter.map(id => new mongoose.Types.ObjectId(id));
-    baseQuery.categories = { $in: categoriesFilter };
+  if (categories.length > 0) {
+    categories = categories.map(id => new mongoose.Types.ObjectId(id));
+    baseQuery.categories = { $in: categories };
   }
 
   const [venueTypes, totalFiltered] =

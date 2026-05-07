@@ -75,7 +75,7 @@ const createGlobalRewardOrder = async ({
         {
           user: userId,
           type: "redeem",
-          domainType: "ticketingorders",
+          domainType: "globalrewardsorders",
           entityId: result.order._id,
           globalPoints: {
             base: reward.minPointsRequiredToClaim || 0,

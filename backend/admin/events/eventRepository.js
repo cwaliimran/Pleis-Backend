@@ -18,10 +18,10 @@ const createEvent = async (data, ticketingData) => {
 
   const companyOrganizer = await getOrgCompanyOrganizer(data.basicInfo.organization)
   data.companyOrganizer = companyOrganizer
-if (ticketingData) {
-  ticketingData.companyOrganizer = companyOrganizer
-  ticketingData.organization = data.basicInfo.organization
-}
+  if (ticketingData) {
+    ticketingData.companyOrganizer = companyOrganizer
+    ticketingData.organization = data.basicInfo.organization
+  }
   // const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
   session.startTransaction();
 
@@ -874,6 +874,48 @@ const getEventsBatchRepo = async ({
   return { events };
 };
 
+const getActiveEventsCountForOrganizations = async (
+  organizationIds = []
+) => {
+  if (!Array.isArray(organizationIds) || organizationIds.length === 0) {
+    return [];
+  }
+
+  const objectIds = organizationIds.map(
+    (id) => new mongoose.Types.ObjectId(id)
+  );
+
+  return Events.aggregate([
+    {
+      $match: {
+        "basicInfo.organization": { $in: objectIds },
+        status: "active",
+        "recurringMeta.isTemplate": { $ne: true },
+
+        $or: [
+          {
+            "schedule.endDateTime": {
+              $gte: new Date(),
+            },
+          },
+          {
+            "schedule.endDateTime": null,
+            "schedule.startDateTime": {
+              $gte: new Date(),
+            },
+          },
+        ],
+      },
+    },
+    {
+      $group: {
+        _id: "$basicInfo.organization",
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+};
+
 module.exports = {
   createEvent,
   getEventsWithFilters,
@@ -900,5 +942,6 @@ module.exports = {
   getEventsByVenueType,
   getEventsByTag,
   getEventsByCategory,
-  getEventsBatchRepo
+  getEventsBatchRepo,
+  getActiveEventsCountForOrganizations
 };

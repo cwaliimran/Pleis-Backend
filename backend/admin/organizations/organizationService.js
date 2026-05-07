@@ -8,6 +8,7 @@ const { generateMeta } = require("../../helperUtils/responseUtil");
 const { formatOrganization, formatNotificationImage } = require("./formatter/formatOrganization");
 const { default: mongoose } = require("mongoose");
 const { invalidate } = require("@redisCache");
+const { getActiveEventsCountForOrganizations } = require("../events/eventRepository");
 const ACTIVE_ORGANIZATIONS_CACHE_KEY = "organizations:active";
 const createOrganization = async ({ data, timezone }) => {
   let org = await organizationRepo.createOrganization(data);
@@ -112,6 +113,25 @@ const getOrganizationsByAdmin = async ({ companyOrganizer, page, limit, keyword,
   let meta = generateMeta(page, limit, totalFiltered);
   meta.tagsCount = { total, active, inactive };
   organizations = organizations.map(org => formatOrganization(org, [], timezone));
+  //get active events count of each organization and add to organization object
+  const organizationIds = organizations.map(org => org._id);
+  const eventsCounts = await getActiveEventsCountForOrganizations(organizationIds);
+  const eventsCountMap = new Map(
+    eventsCounts.map(e => [
+      e._id.toString(),
+      e.count
+    ])
+  );
+
+  organizations = organizations.map(org => ({
+    ...org,
+
+    meta: {
+      ...(org.meta || {}),
+      activeEventsCount:
+        eventsCountMap.get(org._id.toString()) || 0,
+    },
+  }));
 
   return {
     organizations,
