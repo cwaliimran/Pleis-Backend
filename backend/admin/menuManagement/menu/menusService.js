@@ -5,7 +5,7 @@ const Organizations = require("@OrganizationModel");
 const Menus = require("@MenusModel");
 const menuRepo = require("./menusRepository");
 const mongoose = require("mongoose");
-const { getOrganizationIdsByCompanyOrganizer } = require("../../organizations/organizationRepository");
+const { getOrganizationIdsByCompanyOrganizer, getOrganizationByCompanyOrganizer } = require("../../organizations/organizationRepository");
 
 const createMenu = async (data) => {
   return await menuRepo.createMenu(data);
@@ -13,6 +13,8 @@ const createMenu = async (data) => {
 
 // Populate organization data for menus, but merge into "organization" field
 const getMenus = async ({ page, limit, keyword, status, date, organizations, companyOrganizer }) => {
+  const organizations_ = await getOrganizationByCompanyOrganizer(companyOrganizer);
+  console.log("organizations", organizations_);
   // 3️⃣ Pagination setup
   const skip = limit === 0 ? 0 : (page - 1) * limit;
       let organizationIds = [];

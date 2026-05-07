@@ -156,7 +156,7 @@ const findMenuItemById = async (id, userId = null, timezone = null) => {
 };
 
 const getMenuIdByOrganization = async (organizationId) => {
-  return await Menus.findOne({ organization: new mongoose.Types.ObjectId(organizationId), status: "active", isOrderingEnabled: true }).select("_id").sort({ createdAt: -1 });
+  return await Menus.find({ organization: new mongoose.Types.ObjectId(organizationId), status: "active", isOrderingEnabled: true }).select("_id").sort({ createdAt: -1 });
 }
 
 // Recommended items
