@@ -21,6 +21,7 @@ const scanQrController = async (req, res) => {
         "qrData.type": ["loyaltyCard", "loyaltyCardManual", "eventTicket", "userReservation", "loyaltyReward"],
       },
     };
+    const user_id = await User.findById(companyOrganizer);
 
 
     if (type === "loyaltyCard") {
@@ -84,7 +85,7 @@ const scanQrController = async (req, res) => {
 
       const { id, organization } = qrData;
 
-      let eventTicket = await getTicketingBookingByIdService(id,timezone);
+      let eventTicket = await getTicketingBookingByIdService(id, timezone);
       if (!eventTicket) {
         return sendResponse({
           res,
@@ -93,6 +94,12 @@ const scanQrController = async (req, res) => {
         });
       }
       let warnings = [];
+      if (user_id.companyDetails.status !== "active") {
+        warnings.push({
+          warning: "Company is not active",
+          warningCode: "company_inactive",
+        });
+      }
       //or organization mismatch
       if (eventTicket.organization._id.toString() !== organization.toString()) {
         warnings.push({
@@ -141,6 +148,7 @@ const scanQrController = async (req, res) => {
       validateData.rawData.push("qrData.id");
       if (!validateParams(req, res, validateData)) return;
 
+
       const reservationData =
         await getUserReservationDetailsService(id, timezone);
 
@@ -157,8 +165,14 @@ const scanQrController = async (req, res) => {
 
       let warnings = [];
       const reservation = reservationData.reservation;
+      if (user_id.companyDetails.status !== "active") {
+        warnings.push({
+          warning: "Company is not active",
+          warningCode: "company_inactive",
+        });
+      }
 
-      // ✅ organizer mismatch
+
       if (
         reservation.companyOrganizer?.toString() !==
         companyOrganizer?.toString()
@@ -205,6 +219,7 @@ const scanQrController = async (req, res) => {
       const loyaltyRewardOrder =
         await getLoyaltyRewardOrderDetailsService(id);
 
+
       if (!loyaltyRewardOrder) {
         return sendResponse({
           res,
@@ -225,6 +240,12 @@ const scanQrController = async (req, res) => {
         warnings.push({
           warning: "Organizer mismatch for reward order",
           warningCode: "organizer_mismatch",
+        });
+      }
+      if (user_id.companyDetails.status !== "active") {
+        warnings.push({
+          warning: "Company is not active",
+          warningCode: "company_inactive",
         });
       }
 

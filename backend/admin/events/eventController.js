@@ -476,7 +476,13 @@ const updateEvent = async (req, res) => {
             timezone,
             "YYYY-MM-DD hh:mm A"
           );
+          schedule.endDateTime = convertTimezoneToUtc(
+            schedule.endDateTime,
+            timezone,
+            "YYYY-MM-DD hh:mm A"
+          );
         }
+
 
       } else {
         validateData.dateFields = {
