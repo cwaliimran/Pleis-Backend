@@ -649,7 +649,7 @@ const getUserJoinedClubsWithPointsUsingFacet = async ({
   ];
 
   const [result] = await ClubMembers.aggregate(pipeline);
-  console.log("result.data", result.data);
+
 
   return {
     data: result.data,
@@ -669,10 +669,50 @@ const updateCompanyLoyaltySettings = async (companyOrganizer, tierKey, pointValu
 
 // clubMembersRepository.js
 const getFollowedClubIds = async (userId) => {
-  return ClubMembers.distinct("companyOrganizer", {
-    user: userId,
-    status: "active"
-  });
+  const result = await ClubMembers.aggregate([
+    {
+      $match: {
+        user: new mongoose.Types.ObjectId(userId), // Match the userId for club members
+        status: "active", // Ensure the club member's status is active
+      },
+    },
+    {
+      $lookup: {
+        from: "users", // Join with the 'users' collection to access the 'companyDetails' field
+        localField: "companyOrganizer", // Match the 'companyOrganizer' in ClubMembers with the '_id' in Users
+        foreignField: "_id", // Link to the '_id' in the Users collection
+        as: "companyOrganizerInfo", // The resulting matched data is stored in 'companyOrganizerInfo'
+      },
+    },
+    {
+      $unwind: "$companyOrganizerInfo", // Unwind to access individual elements of the array
+    },
+    {
+      $match: {
+        "companyOrganizerInfo.companyDetails.status": "active", // Ensure companyOrganizer's companyDetails.status is 'active'
+      },
+    },
+    {
+      $project: {
+        _id: 0, // Exclude the default _id of the ClubMembers document
+        companyOrganizer: 1, // Only return the companyOrganizer field
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        companyOrganizers: { $push: "$companyOrganizer" }, // Gather all companyOrganizer IDs into an array
+      },
+    },
+    {
+      $project: {
+        _id: 0, // Exclude the _id of the group
+        companyOrganizers: 1, // Return only the companyOrganizers array
+      },
+    },
+  ]);
+
+  return result[0]?.companyOrganizers || []; // Return the list of companyOrganizer IDs
 };
 
 

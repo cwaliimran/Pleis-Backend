@@ -28,7 +28,8 @@ const getVenueTypes = async ({ page, limit, keyword, status, date, categories })
   // if category filter is available then match categories with category filter
   //sample category filter value is categories=catId1,catId2
   if (categories) {
-    andConditions.push({ categories: { $in: categories.split(",").map(id => new mongoose.Types.ObjectId(id)) } });
+    const categoryIds = categories.split(",").map(id => new mongoose.Types.ObjectId(id));
+    andConditions.push({ categories: { $in: categoryIds } });
   }
 
   let query = andConditions.length > 0 ? { $and: andConditions } : {};
@@ -50,7 +51,8 @@ const getVenueTypes = async ({ page, limit, keyword, status, date, categories })
         limit,
         status,
         date,
-        keyword
+        keyword,
+        categories
       ),
       venuetypeRepo.getCounts(query),
     ]);
