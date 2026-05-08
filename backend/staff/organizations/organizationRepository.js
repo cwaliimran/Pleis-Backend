@@ -16,7 +16,7 @@ const getOrganizationsAsStaff = async (userId) => {
       $match: {
         $or: [
           { creator: userId },
-          { "staff.user": userId },
+          { status: "active", "staff.user": userId },
         ],
       },
     },
