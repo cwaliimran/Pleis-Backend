@@ -13,9 +13,10 @@ const buildVenueTypesCacheKey = ({
   status,
   date,
   keyword,
+  categories,
   categoriesFilter = []
 }) => {
-  return `${ACTIVE_VENUE_TYPES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:status=${status}:date=${date}:keyword=${keyword}`;
+  return `${ACTIVE_VENUE_TYPES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:status=${status}:date=${date}:keyword=${keyword}:categories=${categories}:categoriesFilter=${categoriesFilter}`;
 };
 // Create
 const createVenueType = async (data) => {
@@ -25,11 +26,11 @@ const createVenueType = async (data) => {
 };
 
 // Get all with filters
-const getVenueTypesWithFilters = async (query, page, limit, status, date, keyword, categoriesFilter = []) => {
-if (categoriesFilter.length > 0) {
-  categoriesFilter = categoriesFilter.map(id => new mongoose.Types.ObjectId(id)); // Convert string IDs to ObjectIds
-}
-await invalidate(ACTIVE_VENUE_TYPES_CACHE_KEY);
+const getVenueTypesWithFilters = async (query, page, limit, status, date, keyword, categories, categoriesFilter = []) => {
+  if (categoriesFilter.length > 0) {
+    categoriesFilter = categoriesFilter.map(id => new mongoose.Types.ObjectId(id)); // Convert string IDs to ObjectIds
+  }
+  await invalidate(ACTIVE_VENUE_TYPES_CACHE_KEY);
   const cacheKey = buildVenueTypesCacheKey({
     scope: "admin",
     skip: page,
@@ -37,9 +38,10 @@ await invalidate(ACTIVE_VENUE_TYPES_CACHE_KEY);
     status,
     date,
     keyword,
-    categoriesFilter: categoriesFilter.length > 0 ? categoriesFilter.join(",") : "" 
+    categories,
+    categoriesFilter: categoriesFilter.length > 0 ? categoriesFilter.join(",") : ""
   });
-
+console.log("query",query.categories );
   return cache({
     namespace: cacheKey,
     ttl: 86400, // 1 day
@@ -54,11 +56,11 @@ await invalidate(ACTIVE_VENUE_TYPES_CACHE_KEY);
             select: "title order",
             match: { status: "active" },
           },
-          
+
         ],
         options: { page, limit, sort: { title: 1 } },
       });
-      
+
     },
   });
 };
