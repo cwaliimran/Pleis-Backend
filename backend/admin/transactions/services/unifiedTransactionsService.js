@@ -21,7 +21,7 @@ const getTransactionsService = async ({
   endDate,
   keyword,
   user,
-  date, startPoints, endPoints, ballance, referral, purchaseBased, streakBased, challengeBased,promotionBased
+  date, startPoints, endPoints, ballance, referral, purchaseBased, streakBased, challengeBased, promotionBased
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
@@ -29,7 +29,10 @@ const getTransactionsService = async ({
 
   if (walletType) match.walletType = walletType;
   if (domainType) match.domainType = domainType;
-  if (type) match.type = type;
+  console.log("type", type);
+  if (type?.trim()) {
+    match.type = type.trim().toLowerCase();
+  }
   if (organization && organization !== "undefined" && organization !== "null") {
     const orgIds = organization.includes("%")
       ? organization.split("%")
@@ -51,7 +54,7 @@ const getTransactionsService = async ({
     match.domainType = { $in: ["userstreaks"] };
   }
   if (challengeBased) {
-    match.domainType = { $in: ["loyaltychallengesorders","challenge"] };
+    match.domainType = { $in: ["loyaltychallengesorders", "challenge"] };
   }
   if (promotionBased) {
     match.domainType = { $in: ["promotionorders"] };
@@ -83,7 +86,7 @@ const getTransactionsService = async ({
     if (ballance) match.closingBalance.$eq = Number(ballance);
   }
 
-
+console.log("match", match);
   const [items, total] = await Promise.all([
     unifiedRepo.getTransactionsWithFilters({ match, keyword, skip, limit, referral }),
     unifiedRepo.countTransactions({ match, keyword })

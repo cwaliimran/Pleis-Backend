@@ -225,7 +225,7 @@ const getUserSubscriptions = async ({
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const now = getCurrentDateInTimezone({ timezone });
- 
+
   /* ================================
      BASE MATCH (SINGLE USER)
   ================================= */
