@@ -255,23 +255,32 @@ const findByIdAndUpdate = async (id, data) => {
 
 const getOrganizationsAsStaff = async (userId) => {
   const organizations = await Organizations.find({
+    status: "active",
+
     $or: [
-      { creator: userId }, // Find organizations where the user is the creator
-      { "staff.user": userId } // Find organizations where the user is part of the staff
-    ]
+      { creator: userId },
+
+      {
+        staff: {
+          $elemMatch: {
+            user: userId,
+            status: "active",
+          },
+        },
+      },
+    ],
   })
-    .lean() // Ensure you get plain JavaScript objects
-    .populate("otherInfo.tags") // Populate tags under otherInfo
-    .populate("otherInfo.categories") // Populate categories under otherInfo
+    .lean()
+    .populate("otherInfo.tags")
+    .populate("otherInfo.categories")
     .populate({
-      path: "creator", // Populate the creator field
-      select: "firstName lastName email companyDetails", // Select specific fields for creator
+      path: "creator",
+      select: "firstName lastName email companyDetails",
       populate: {
-        path: "companyDetails.suppliers", // Populate suppliers within companyDetails
-        select: "title", // Select only the title field for suppliers
+        path: "companyDetails.suppliers",
+        select: "title",
       },
     });
-
 
 
 

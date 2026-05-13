@@ -503,6 +503,7 @@ const getMenuItemsSales = async ({
 const getSummary = async ({
   page,
   limit,
+  timezone,
   skip,
   organization, // Organization ID to match
   categoryId,
@@ -739,7 +740,7 @@ const getSummary = async ({
     const formattedMenuItems =
       paginationResult[0]?.menuItems?.map(item => formatUpdate(item)) || [];
     const formattedMenuItemSale =
-      MenuItemSale?.data?.map(sale => formatMenuItemSale(sale)) || [];
+      MenuItemSale?.data?.map(sale => formatMenuItemSale(sale,timezone)) || [];
     const allMenuItems =
       nonPaginationResult[0]?.menuItems?.map(item => formatUpdate(item)) || [];
 
