@@ -12,15 +12,18 @@ const { ReservationAnalytics_KEYS } = require("./utils/reservationAnalyticsKeyMa
 
 
 const getReservationAnalytics = async (req, res) => {
-  let { dateFilter = "all", companyOrganizer,organizations } = req.query;
+  let { dateFilter = "all", companyOrganizer, organizations } = req.query;
   let { timezone } = req.user || "UTC";
+
   if (req.user.userType === "organizer") {
     companyOrganizer = req.user._id;
-    if(organizations){
-      organizations = await convertToMongoArray(organizations);
-      companyOrganizer=undefined;
+    if (organizations) {
+      if (!Array.isArray(organizations)) {
+        organizations = await convertToMongoArray(organizations);
+      }
+      companyOrganizer = undefined;
+    }
   }
-}
   try {
 
     if (dateFilter && !validateParams(req, res, {
@@ -51,42 +54,44 @@ const getReservationAnalytics = async (req, res) => {
     });
   }
 };
-  const getReservationTransactions = async (req, res) => {
-    let { page=1, limit=5, companyOrganizer,organizations } = req.query;
-    let { timezone } = req.user || "UTC";
-    if (req.user.userType === "organizer") {
-      companyOrganizer = req.user._id;
-      if(organizations){
+const getReservationTransactions = async (req, res) => {
+  let { page = 1, limit = 5, companyOrganizer, organizations } = req.query;
+  let { timezone } = req.user || "UTC";
+  if (req.user.userType === "organizer") {
+    companyOrganizer = req.user._id;
+    if (organizations) {
+      if (!Array.isArray(organizations)) {
         organizations = await convertToMongoArray(organizations);
-        companyOrganizer=undefined;
       }
+      companyOrganizer = undefined;
     }
+  }
   limit = parseInt(limit);
-    try {
-      const {data, meta} = await ReservationAnalyticsService.getReservationTransactions({
-        page,
-        limit,
-        timezone,
-        companyOrganizer,
-        organizations
-      });
+  try {
+    const { data, meta } = await ReservationAnalyticsService.getReservationTransactions({
+      page,
+      limit,
+      timezone,
+      companyOrganizer,
+      organizations
+    });
 
-      return sendResponse({
-        res,
-        statusCode: 200,
-        translationKey: "ReservationAnalytics_fetched_successfully",
-        data,
-        meta
-      });
-    } catch (error) {
-      return sendResponse({
-        res,
-        statusCode: 500,
-        translationKey: "internal_server",
-        error,
-      });
-    }
-  };
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "ReservationAnalytics_fetched_successfully",
+      data,
+      meta
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
 const getReservationAnalyticsValue = async (req, res) => {
   const {
     key,
@@ -168,42 +173,44 @@ const getReservationAnalyticsStats = async (req, res) => {
 
 
 
-  const getReservationChnageLogs = async (req, res) => {
-    let { page=1, limit=5, companyOrganizer, organizations } = req.query;
-    let { timezone } = req.user || "UTC";
-    if (req.user.userType === "organizer") {
-      companyOrganizer = req.user._id;
-      if(organizations){
+const getReservationChnageLogs = async (req, res) => {
+  let { page = 1, limit = 5, companyOrganizer, organizations } = req.query;
+  let { timezone } = req.user || "UTC";
+  if (req.user.userType === "organizer") {
+    companyOrganizer = req.user._id;
+    if (organizations) {
+      if (!Array.isArray(organizations)) {
         organizations = await convertToMongoArray(organizations);
-        companyOrganizer=undefined;
       }
+      companyOrganizer = undefined;
     }
+  }
   limit = parseInt(limit);
-    try {
-      const {data, meta} = await ReservationAnalyticsService.getReservationChnageLogs({
-        page,
-        limit,
-        timezone,
-        companyOrganizer,
-        organizations
-      });
+  try {
+    const { data, meta } = await ReservationAnalyticsService.getReservationChnageLogs({
+      page,
+      limit,
+      timezone,
+      companyOrganizer,
+      organizations
+    });
 
-      return sendResponse({
-        res,
-        statusCode: 200,
-        translationKey: "ReservationAnalytics_fetched_successfully",
-        data,
-        meta
-      });
-    } catch (error) {
-      return sendResponse({
-        res,
-        statusCode: 500,
-        translationKey: "internal_server",
-        error,
-      });
-    }
-  };
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "ReservationAnalytics_fetched_successfully",
+      data,
+      meta
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
 
 module.exports = {
   getReservationAnalytics,

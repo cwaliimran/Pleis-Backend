@@ -30,13 +30,13 @@ const getMenuItems = async ({
   companyOrganizer,
   organization
 }) => {
-    const skip = limit === 0 ? 0 : (page - 1) * limit;
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
   let menuIds = [];
-  if(organization) {
+  if (organization) {
     menuIds = await getMenuIdsByOrganization(organization);
 
-    
-        if (!menuIds.length) {
+
+    if (!menuIds.length) {
       return {
         menuItems: [],
         meta: generateMeta(page, limit, 0)
@@ -92,7 +92,7 @@ const getMenuItems = async ({
       }
     },
     { $unwind: "$menu" },
-        {
+    {
       $lookup: {
         from: "menuitemcategories",
         localField: "category",
@@ -103,9 +103,9 @@ const getMenuItems = async ({
         as: "category"
       }
     },
-     { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
 
-    
+
     // ✅ FILTER AFTER LOOKUP
     ...(menu
       ? [{ $match: { "menu._id": new mongoose.Types.ObjectId(menu) } }]
@@ -141,8 +141,8 @@ const getMenuItems = async ({
   return {
     menuItems: data.map(item => formatMenuItem(item, timezone)),
     meta: generateMeta(page, limit, total)
-      };
-    };
+  };
+};
 
 
 

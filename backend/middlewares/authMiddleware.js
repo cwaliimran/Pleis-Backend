@@ -93,15 +93,19 @@ const auth = async (req, res, next) => {
         //companyOrganizer,organizations -> fetch from db
         // Fetch organizations array
         let organizations = await getOrganizationsAsStaff(userId);
-        console.log("organizations",organizations );
         let organizationIds = organizations.map(org => org._id.toString());
 
         if (!req.query.organizations) {
-          req.query.organizations = organizations;
+          req.query.organizations = organizationIds;
         }
+        if (!req.query.organization) {
+          req.query.organization = organizationIds;
+        }
+
 
         if (!req.query.organizationsIds) {
           req.query.organizationsIds = organizationIds;
+
         }
 
         //company organizer id

@@ -95,7 +95,7 @@ const fetchEvents = async ({
 };
 
 // ----------------------------------------------------
-// LOYALTY CLUBS
+// LoyaltyClubs
 // ----------------------------------------------------
 const fetchLoyaltyClubs = async ({
     userId,

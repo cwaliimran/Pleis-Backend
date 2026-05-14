@@ -100,6 +100,7 @@ const getOrganizerUsersWithFilters = async ({ skip = 0, limit = 10, keyword, use
       profileIcon: 1,
       "companyDetails.name": 1,
       "companyDetails.loyaltySettings.title": 1,
+      "companyDetails.status": 1,
       "companyDetails.loyaltySettings.model": 1,
       "companyDetails.loyaltySettings.pointValuePercentage": 1,
       collaborationStatus: 1

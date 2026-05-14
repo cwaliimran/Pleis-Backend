@@ -608,7 +608,7 @@ const getUserSubscriptions = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let { keyword, status = "active", date, range } = req.query;
   try {
-
+console.log(" req.user._id", req.user._id );
     const timezone = req.user.timezone;
     const { subscriptions, meta } = await SubscriptionService.getUserSubscriptions({
       timezone,

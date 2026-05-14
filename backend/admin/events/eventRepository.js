@@ -576,17 +576,29 @@ const getTotalEventCountByOrganizationId = async (organizationId) => {
   try {
     const objectId = new mongoose.Types.ObjectId(organizationId);
 
-    // Use aggregation to count events
+    const now = new Date();
+
+    // Count only active & non-expired events
     const result = await Events.aggregate([
-      { $match: { "basicInfo.organization": objectId } },
-      { $count: "totalEvents" } // Count the number of matching events
+      {
+        $match: {
+          "basicInfo.organization": objectId,
+          status: "active",
+
+          // event end date greater than now
+          "schedule.endDateTime": {
+            $gt: now,
+          },
+        },
+      },
+      {
+        $count: "totalEvents",
+      },
     ]);
 
-    // Return the total count, defaulting to 0 if no events are found
     return result.length > 0 ? result[0].totalEvents : 0;
   } catch (error) {
-
-    return 0; // Return 0 if there was an error
+    return 0;
   }
 };
 const getLatestEventByOrganization = async (organizations) => {

@@ -33,7 +33,7 @@ const getTicketings = async ({
     andConditions.push({ event: new mongoose.Types.ObjectId(eventId) });
   }
 
-  // 🔹 Organization filter (comma OR % separated)
+
   if (organizations) {
     const separator = organizations.includes("%") ? "%" : ",";
     

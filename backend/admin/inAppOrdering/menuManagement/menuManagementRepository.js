@@ -40,6 +40,9 @@ const getMenuItems = async ({
       $lookup: {
         from: "menus", // Reference to the 'menus' collection
         localField: "menu", // Field in MenuItems
+        pipeline: [
+          { $match: { status: "active" } } // Only active menus
+        ],
         foreignField: "_id", // Match the _id field in 'menus'
         as: "menuDetails" // The result of the lookup will be saved in menuDetails
       }
@@ -85,6 +88,9 @@ const getMenuItems = async ({
         from: "menus",
         localField: "menu",
         foreignField: "_id",
+        pipeline: [
+          { $match: { status: "active" } } // Only active menus
+        ],
         as: "menuDetails"
       }
     },
@@ -229,6 +235,10 @@ const fetchMenuItems = async (organization) => {
           from: "menus", // Reference to the 'menus' collection
           localField: "menu", // Field in MenuItems
           foreignField: "_id", // Match the _id field in 'menus'
+          pipeline: [
+            { $match: { status: "active" } } // Only active menus
+            
+          ],
           as: "menuDetails" // The result of the lookup will be saved in menuDetails
         }
       },
@@ -317,6 +327,10 @@ const getMenuItemsSales = async ({
         from: "menus",
         localField: "menuItem.menu",
         foreignField: "_id",
+        pipeline: [
+          { $match: { status: "active"} }
+        ],
+
         as: "menu",
       },
     },
@@ -328,6 +342,9 @@ const getMenuItemsSales = async ({
         from: "menuitemcategories",
         localField: "menuItem.category",
         foreignField: "_id",
+        pipeline: [
+          { $match: { status: status ? status : { $ne: "deleted" } } }
+        ],
         as: "category",
       },
     },
@@ -503,6 +520,7 @@ const getMenuItemsSales = async ({
 const getSummary = async ({
   page,
   limit,
+  timezone,
   skip,
   organization, // Organization ID to match
   categoryId,
@@ -527,10 +545,12 @@ const getSummary = async ({
       localField: "menu", // Field in MenuItems
       foreignField: "_id", // Match the _id field in 'menus'
       pipeline: [
+        { $match: { status: "active" } },
         {
           $project: {
             title: 1,
-            organization: 1
+            organization: 1,
+            status: 1
           }
         }
       ],
@@ -739,7 +759,7 @@ const getSummary = async ({
     const formattedMenuItems =
       paginationResult[0]?.menuItems?.map(item => formatUpdate(item)) || [];
     const formattedMenuItemSale =
-      MenuItemSale?.data?.map(sale => formatMenuItemSale(sale)) || [];
+      MenuItemSale?.data?.map(sale => formatMenuItemSale(sale,timezone)) || [];
     const allMenuItems =
       nonPaginationResult[0]?.menuItems?.map(item => formatUpdate(item)) || [];
 

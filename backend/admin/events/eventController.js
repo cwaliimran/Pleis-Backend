@@ -243,6 +243,7 @@ const createEvent = async (req, res) => {
     },
     preOrdersEnabled,
     creator: userId,
+    status: basicInfo.status || "active", // default to draft if not provided
   };
 
   // 🔑 IMPORTANT: mark this event as a TEMPLATE on the server

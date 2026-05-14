@@ -1,4 +1,5 @@
 // repositories/menuRepository.js
+const MenuItems = require("@MenuItemsModel");
 const Menus = require("@MenusModel");
 const mongoose = require("mongoose");
 
@@ -69,11 +70,11 @@ const createDuplicatedMenu = async (menuData, session = null) => {
 };
 
 const getMenuItemsByMenuId = async (menuId, session = null) => {
-  return await Menus.find({ menu: menuId }).session(session);
+  return await MenuItems.find({ menu: menuId }).session(session);
 };
 
 const createDuplicatedMenuItem = async (itemData, session = null) => {
-  const duplicatedItem = new Menus(itemData);
+  const duplicatedItem = new MenuItems(itemData);
   return await duplicatedItem.save({ session });
 };
 

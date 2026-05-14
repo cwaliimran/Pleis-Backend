@@ -13,7 +13,7 @@ const monriWebhookController = async (req, res) => {
 
     const bodyData = req.body;
     bodyData.user = userId;
-    console.log("bodyData",bodyData );
+    console.log("bodyData", bodyData);
 
     if (
       !validateParams(req, res, {
@@ -50,20 +50,27 @@ const monriWebhookController = async (req, res) => {
 const getOrdersTransactions = async (req, res) => {
   try {
     const { page, limit } = parsePaginationParams(req);
-    let { event, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, startAmount, endAmount, paymentMethod, globalStatusLevel, transfered, refunded, validationStatus, paymentStatus, resStartDate, resEndDate,resDate,resStartTime,resEndTime,futureRes,pastRes,paidRes,minimalSpendRes,prePay,ticketRequiredRes,cancelledRes,noShowRes,orderStatus,deliveryMethod,category,menuSaleItme,promotionOrders,eventBasedOrder
+    let { event, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, startAmount, endAmount, paymentMethod, globalStatusLevel, transfered, refunded, validationStatus, paymentStatus, resStartDate, resEndDate, resDate, resStartTime, resEndTime, futureRes, pastRes, paidRes, minimalSpendRes, prePay, ticketRequiredRes, cancelledRes, noShowRes, orderStatus, deliveryMethod, category, menuSaleItme, promotionOrders, eventBasedOrder
     } = req.query;
 
-    if (organization && organization.trim() !== "") {
+    if (organization) {
       // If organization is a non-empty string, convert it to ObjectId array
-      organization = await convertToMongoArray(organization);
+      if (!Array.isArray(organization)) {
+        organization = await convertToMongoArray(organization);
+      }
     } else {
       // If organization is empty, set it to undefined or an empty array
       organization = undefined;
     }
     const timezone = req.user?.timezone || "UTC";
+    if (!companyOrganizer) {
+      companyOrganizer = req.user._id;
+    }
+    if (organization) {
+      companyOrganizer = undefined; // If organization filter is applied, ignore companyOrganizer filter
+    }
 
-
-    const ticketingBookings = await getOrdersTransactionsService({ event, page, limit, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, startAmount, endAmount, paymentMethod, globalStatusLevel, transfered, refunded, validationStatus, paymentStatus, resStartDate, resEndDate,resDate,resStartTime,resEndTime, timezone,futureRes,pastRes,paidRes,minimalSpendRes,prePay,ticketRequiredRes,cancelledRes,noShowRes,orderStatus,deliveryMethod,category,menuSaleItme,promotionOrders,eventBasedOrder });
+    const ticketingBookings = await getOrdersTransactionsService({ event, page, limit, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, startAmount, endAmount, paymentMethod, globalStatusLevel, transfered, refunded, validationStatus, paymentStatus, resStartDate, resEndDate, resDate, resStartTime, resEndTime, timezone, futureRes, pastRes, paidRes, minimalSpendRes, prePay, ticketRequiredRes, cancelledRes, noShowRes, orderStatus, deliveryMethod, category, menuSaleItme, promotionOrders, eventBasedOrder });
     return sendResponse({ res, statusCode: 200, translationKey: "transactions_fetched_successfully", data: ticketingBookings });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);

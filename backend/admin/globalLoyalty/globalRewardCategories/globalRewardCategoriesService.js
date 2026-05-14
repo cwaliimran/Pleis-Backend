@@ -109,9 +109,9 @@ const getCategoriesTitleOnly = async ({ page, limit, keyword, status="active", d
   }
 
   // Filter by createID (user who created the category)
-  if (createID) {
-    query.createID =new  mongoose.Types.ObjectId(createID); // Ensure it's an ObjectId
-  }
+  // if (createID) {
+  //   query.createID =new  mongoose.Types.ObjectId(createID); // Ensure it's an ObjectId
+  // }
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 

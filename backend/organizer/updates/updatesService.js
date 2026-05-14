@@ -2,16 +2,17 @@ const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const UpdatesRepo = require("./updatesRepository");
 const { sendUserNotifications } = require("../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
+const { getOrganizationsAsStaff } = require("../organizations/organizationRepository");
 
 
 const createUpdates = async (data) => {
   let Updates = await UpdatesRepo.createUpdates(data);
   return Updates;
 };
-const getUpdatess = async ({organizations, timezone, page, limit, keyword, status, userId,  date, range }) => {
+const getUpdatess = async ({ organizations, timezone, page, limit, keyword, status, userId, date, range }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { updates, meta } = await UpdatesRepo.getUpdatess({ organizations, timezone, page, limit, keyword, status, userId,  date, range, today, skip });
+  let { updates, meta } = await UpdatesRepo.getUpdatess({ organizations, timezone, page, limit, keyword, status, userId, date, range, today, skip });
 
   return {
     updates,
@@ -28,13 +29,13 @@ const updateUpdates = async (id, data) => {
   // VALIDATIONS
   // -----------------------------
 
-  if(data.discountType){
-  if (Updates.discountType !== data.discountType) {
+  if (data.discountType) {
+    if (Updates.discountType !== data.discountType) {
       if (!data.discountValue) {
         return { error: "discountValue_is_required_when_discountType_changes" };
+      }
+    }
   }
-}
-}
 
   // -----------------------------
   // ALLOWED FIELDS
@@ -47,9 +48,9 @@ const updateUpdates = async (id, data) => {
     "status",
   ];
 
-if(data.expiryDate=="Invalid date"){
+  if (data.expiryDate == "Invalid date") {
     delete data.expiryDate;
-}
+  }
 
   // -----------------------------
   // APPLY UPDATE FIELDS
@@ -65,19 +66,19 @@ if(data.expiryDate=="Invalid date"){
     return Updates;
   }
 
-const userIds = await UpdatesRepo.getUserIdsForEvent(Updates.event);
+  const userIds = await UpdatesRepo.getUserIdsForEvent(Updates.event);
   Object.assign(Updates, updateData);
 
   await Updates.save();
 
-    await sendUserNotifications({
-            recipientIds: userIds, 
-            title: Updates.title,
-            body: `You received a new message: ${Updates.description}`,
-            data: { type: NotificationTypes.EVENT_UPDATE, objectType: "group" },
-            sender: Updates.companyOrganizer,
-            objectId: Updates.event,
-          });
+  await sendUserNotifications({
+    recipientIds: userIds,
+    title: Updates.title,
+    body: `You received a new message: ${Updates.description}`,
+    data: { type: NotificationTypes.EVENT_UPDATE, objectType: "group" },
+    sender: Updates.companyOrganizer,
+    objectId: Updates.event,
+  });
 
   return Updates;
 };
@@ -86,13 +87,13 @@ const userIds = await UpdatesRepo.getUserIdsForEvent(Updates.event);
 
 
 
-  const deleteUpdates = async (id) => {
-      const updated = await UpdatesRepo.findByIdAndUpdate(id, {
-        status: "deleted",
-      });
-      if (!updated) return null;
-      return true;
-    };
+const deleteUpdates = async (id) => {
+  const updated = await UpdatesRepo.findByIdAndUpdate(id, {
+    status: "deleted",
+  });
+  if (!updated) return null;
+  return true;
+};
 
 
 
@@ -108,10 +109,15 @@ const userIds = await UpdatesRepo.getUserIdsForEvent(Updates.event);
 
 
 
-const getevents = async ({ organizations,timezone, page, limit, keyword, status, userId,  date, range }) => {
+const getevents = async ({ organizations, timezone, page, limit, keyword, status, userId, date, range }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { events, meta } = await UpdatesRepo.getevents({ organizations,timezone, page, limit, keyword, status, userId,  date, range, today, skip });
+  let organizations_ = await getOrganizationsAsStaff(userId);
+  let organizationIds = organizations_.map(org => org._id.toString());
+  if (!organizations) {
+    organizations = organizationIds;
+  }
+  let { events, meta } = await UpdatesRepo.getevents({ organizations, timezone, page, limit, keyword, status, userId, date, range, today, skip });
 
   return {
     events,
