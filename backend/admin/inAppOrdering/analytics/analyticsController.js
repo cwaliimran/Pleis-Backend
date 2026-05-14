@@ -16,11 +16,13 @@ const getAnalytics = async (req, res) => {
   let { timezone } = req.user || "UTC";
   if (req.user.userType === "organizer") {
     companyOrganizer = req.user._id;
-    if(organizations){
-      organizations = await convertToMongoArray(organizations);
-      companyOrganizer=undefined;
+    if (organizations) {
+      if (!Array.isArray(organizations)) {
+        organizations = await convertToMongoArray(organizations);
+      }
+      companyOrganizer = undefined;
+    }
   }
-}
 
   try {
 
@@ -52,42 +54,44 @@ const getAnalytics = async (req, res) => {
     });
   }
 };
-  const getReservationTransactions = async (req, res) => {
-    let { page=1, limit=5, companyOrganizer, organizations } = req.query;
-    let { timezone } = req.user || "UTC";
-    if (req.user.userType === "organizer") {
-      companyOrganizer = req.user._id;
-      if(organizations){
+const getReservationTransactions = async (req, res) => {
+  let { page = 1, limit = 5, companyOrganizer, organizations } = req.query;
+  let { timezone } = req.user || "UTC";
+  if (req.user.userType === "organizer") {
+    companyOrganizer = req.user._id;
+    if (organizations) {
+      if (!Array.isArray(organizations)) {
         organizations = await convertToMongoArray(organizations);
-        companyOrganizer=undefined;
+      }
+      companyOrganizer = undefined;
     }
   }
   limit = parseInt(limit);
-    try {
-      const {data, meta} = await AnalyticsService.getReservationTransactions({
-        page,
-        limit,
-        timezone,
-        companyOrganizer,
-        organizations,
-      });
+  try {
+    const { data, meta } = await AnalyticsService.getReservationTransactions({
+      page,
+      limit,
+      timezone,
+      companyOrganizer,
+      organizations,
+    });
 
-      return sendResponse({
-        res,
-        statusCode: 200,
-        translationKey: "Analytics_fetched_successfully",
-        data,
-        meta
-      });
-    } catch (error) {
-      return sendResponse({
-        res,
-        statusCode: 500,
-        translationKey: "internal_server",
-        error,
-      });
-    }
-  };
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "Analytics_fetched_successfully",
+      data,
+      meta
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
 
 
 
@@ -174,86 +178,90 @@ const getAnalyticsStats = async (req, res) => {
 
 
 
-  const getReservationChnageLogs = async (req, res) => {
-    let { page=1, limit=10, companyOrganizer, organizations } = req.query;
-    let { timezone } = req.user || "UTC";
-    if (req.user.userType === "organizer") {
-      companyOrganizer = req.user._id;
-      if(organizations){
+const getReservationChnageLogs = async (req, res) => {
+  let { page = 1, limit = 10, companyOrganizer, organizations } = req.query;
+  let { timezone } = req.user || "UTC";
+  if (req.user.userType === "organizer") {
+    companyOrganizer = req.user._id;
+    if (organizations) {
+      if (!Array.isArray(organizations)) {
         organizations = await convertToMongoArray(organizations);
-        companyOrganizer=undefined;
+      }
+      companyOrganizer = undefined;
     }
   }
   limit = parseInt(limit);
-    try {
-      const {data, meta} = await AnalyticsService.getReservationChnageLogs({
-        page,
-        limit,
-        timezone,
-        companyOrganizer,
-        organizations,
-      });
+  try {
+    const { data, meta } = await AnalyticsService.getReservationChnageLogs({
+      page,
+      limit,
+      timezone,
+      companyOrganizer,
+      organizations,
+    });
 
-      return sendResponse({
-        res,
-        statusCode: 200,
-        translationKey: "Analytics_fetched_successfully",
-        data,
-        meta
-      });
-    } catch (error) {
-      return sendResponse({
-        res,
-        statusCode: 500,
-        translationKey: "internal_server",
-        error,
-      });
-    }
-  };
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "Analytics_fetched_successfully",
+      data,
+      meta
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
 
 
 
-  const getMenuItemSalesData = async (req, res) => {
-    let { page=1, limit=10, companyOrganizer,organizations } = req.query;
-    let { timezone } = req.user || "UTC";
-    if (req.user.userType === "organizer") {
-      companyOrganizer = req.user._id;
-      if(organizations){
+const getMenuItemSalesData = async (req, res) => {
+  let { page = 1, limit = 10, companyOrganizer, organizations } = req.query;
+  let { timezone } = req.user || "UTC";
+  if (req.user.userType === "organizer") {
+    companyOrganizer = req.user._id;
+    if (organizations) {
+      if (!Array.isArray(organizations)) {
         organizations = await convertToMongoArray(organizations);
-        companyOrganizer=undefined;
+      }
+      companyOrganizer = undefined;
     }
   }
   limit = parseInt(limit);
-    try {
-      const {data, meta} = await AnalyticsService.getMenuItemSalesData({
-        page,
-        limit,
-        timezone,
-        companyOrganizer,
-        organizations,
-      });
+  try {
+    const { data, meta } = await AnalyticsService.getMenuItemSalesData({
+      page,
+      limit,
+      timezone,
+      companyOrganizer,
+      organizations,
+    });
 
-      return sendResponse({
-        res,
-        statusCode: 200,
-        translationKey: "Analytics_fetched_successfully",
-        data,
-        meta
-      });
-    } catch (error) {
-      return sendResponse({
-        res,
-        statusCode: 500,
-        translationKey: "internal_server",
-        error,
-      });
-    }
-  };
-
-
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "Analytics_fetched_successfully",
+      data,
+      meta
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
 
 
-  
+
+
+
 module.exports = {
   getAnalytics,
   getAnalyticsValue,

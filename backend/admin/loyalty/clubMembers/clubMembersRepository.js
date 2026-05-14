@@ -87,7 +87,7 @@ const getMembers = async (
       }
     },
     { $unwind: { path: "$companyOrganizerData", preserveNullAndEmptyArrays: true } },
-        {
+    {
       $lookup: {
         from: "tiers",
         localField: "level",
@@ -204,12 +204,25 @@ const getUserJoinedClubs = async (userId) => {
 };
 
 
-const giftPoints = async (companyOrganizer, user, points, notes ) => {
+const giftPoints = async (companyOrganizer, user, points, notes) => {
   try {
+    const checkCompanyOrganizer = await User.findById(companyOrganizer);
+    if (checkCompanyOrganizer.companyDetails.status !== "active") {
+      // Instead of throwing an error, return an immediate response
+      return {
+        error: {
+          message: "company_organizer_is_not_active",
+        }
+      };
+    }
     const clubMember = await ClubMembers.findOne({ user, companyOrganizer });
 
     if (!clubMember) {
-      throw new Error("Club member not found");
+      return {
+        error: {
+          message: "club_member_not_found",
+        }
+      };
     }
     clubMember.points += points;
 

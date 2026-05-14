@@ -1,3 +1,5 @@
+
+const { getRewardById } = require("../../../app/loyalty/rewards/rewardsRepository");
 const {
   Promotion,
   BuyMenuItemPromotion,
@@ -27,9 +29,14 @@ const getModelBypromotionType = (promotionType) => {
 const create = async (data) => {
   try {
     const Model = getModelBypromotionType(data.promotionType);
+    const reward = await getRewardById(data.reward);
+    if (data.promotionType === "claimPromotion") {
+      if (data.claimLimit > reward.claimLimit) {
+        throw new Error("Promotion claim limit cannot exceed reward claim limit");
+      }
+    }
     const item = new Model(data);
     const saved = await item.save();
-
     return saved.toObject(); // Removes Mongoose internals
   } catch (err) {
     throw err;
@@ -110,7 +117,7 @@ const getWithFilters = async (query, skip = 0, limit = 20) => {
 
   const results = await Promotion.aggregate(pipeline).allowDiskUse(true);
   return results;
-    };
+};
 
 module.exports = {
   getWithFilters,

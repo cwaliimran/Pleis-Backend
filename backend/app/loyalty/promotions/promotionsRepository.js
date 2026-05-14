@@ -433,14 +433,17 @@ const getPromotions = async ({
       as: "companyOrganizer",
       pipeline: [
         {
+          $match: { "companyDetails.status": "active" }  // Match only active companyDetails
+        },
+        {
           $project: {
             _id: 1,
             "companyDetails.loyaltySettings.title": 1,
             "companyDetails.logo": 1,
-          },
-        },
-      ],
-    },
+          }
+        }
+      ]
+    }
   });
 
   pipeline.push({
@@ -449,6 +452,12 @@ const getPromotions = async ({
       preserveNullAndEmptyArrays: true,
     },
   });
+  pipeline.push({
+    $match: {
+      "companyOrganizer": { $ne: null }  // Ensure the companyOrganizer exists
+    }
+  });
+
 
 
   pipeline.push({
