@@ -38,7 +38,8 @@ const createTag = async (req, res) => {
 };
 
 const getTags = async (req, res) => {
-  const { page, limit } = parsePaginationParams(req);
+  let { page, limit } = parsePaginationParams(req);
+  if(req.query.limit >= 100) limit = 1000; // set a maximum limit to prevent abuse
   const { keyword, type, status, date } = req.query;
 
   try {

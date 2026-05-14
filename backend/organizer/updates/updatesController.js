@@ -217,7 +217,6 @@ const getevents = async (req, res) => {
   const { keyword, status = "active", date, range,organizations } = req.query;
   try {
 
-
     const userId = req.user._id;
     const timezone = req.user.timezone;
     const { events, meta } = await UpdatesService.getevents({

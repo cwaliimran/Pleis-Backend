@@ -653,6 +653,7 @@ const updateSaleItems = async (req, res) => {
   };
 
   if (startDateTime !== undefined) {
+    console.log("timezone",timezone );
     data.startDateTime = convertTimezoneToUtc(startDateTime, timezone, "YYYY-MM-DD hh:mm A");
   }
 
@@ -660,8 +661,8 @@ const updateSaleItems = async (req, res) => {
     data.endDateTime = convertTimezoneToUtc(endDateTime, timezone, "YYYY-MM-DD hh:mm A");
   }
 
-
-
+console.log("data.startDateTime", data.startDateTime  );
+console.log("data.endDateTime",data.endDateTime );
   try {
     const updated = await Menuervice.updateSaleItems(id, data, timezone);
     if (updated && updated.error) {

@@ -255,23 +255,32 @@ const findByIdAndUpdate = async (id, data) => {
 
 const getOrganizationsAsStaff = async (userId) => {
   const organizations = await Organizations.find({
+    status: "active",
+
     $or: [
-      { creator: userId }, // Find organizations where the user is the creator
-      { "staff.user": userId } // Find organizations where the user is part of the staff
-    ]
+      { creator: userId },
+
+      {
+        staff: {
+          $elemMatch: {
+            user: userId,
+            status: "active",
+          },
+        },
+      },
+    ],
   })
-    .lean() // Ensure you get plain JavaScript objects
-    .populate("otherInfo.tags") // Populate tags under otherInfo
-    .populate("otherInfo.categories") // Populate categories under otherInfo
+    .lean()
+    .populate("otherInfo.tags")
+    .populate("otherInfo.categories")
     .populate({
-      path: "creator", // Populate the creator field
-      select: "firstName lastName email companyDetails", // Select specific fields for creator
+      path: "creator",
+      select: "firstName lastName email companyDetails",
       populate: {
-        path: "companyDetails.suppliers", // Populate suppliers within companyDetails
-        select: "title", // Select only the title field for suppliers
+        path: "companyDetails.suppliers",
+        select: "title",
       },
     });
-
 
 
 
@@ -339,7 +348,8 @@ const getOrganizationByCompanyOrganizer = async (companyOrganizer) => {
 //getMenuIdsByCompanyOrganizer
 const getMenuIdsByCompanyOrganizer = async (companyOrganizer) => {
   const organizationIds = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
-  const menus = await Menus.find({ organization: { $in: organizationIds }, status: { $ne: "deleted" } }).select("_id").lean();
+  const menus = await Menus.find({ organization: { $in: organizationIds }, status: "active" }).select("_id").lean();
+  console.log("menus",menus );
   return menus.map(menu => menu._id);
 };
 const getMenuIdsByOrganization = async (organization) => {
@@ -350,7 +360,7 @@ const getMenuIdsByOrganization = async (organization) => {
     .map(id => new mongoose.Types.ObjectId(id)); // Convert strings to ObjectIds
 
   // Query Menus where organization is in the list of organizationIds
-  const menus = await Menus.find({ organization: { $in: organizationIds }, status: { $ne: "deleted" } }).select("_id").lean();
+  const menus = await Menus.find({ organization: { $in: organizationIds }, status: "active" }).select("_id").lean();
 
   // Return the menu IDs
   return menus.map(menu => menu._id);

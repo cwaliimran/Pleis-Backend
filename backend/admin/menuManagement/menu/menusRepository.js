@@ -2,6 +2,7 @@
 const Menus = require("@MenusModel");
 const { getOrganizationIdsByCompanyOrganizer } = require("../../organizations/organizationRepository");
 const { default: mongoose } = require("mongoose");
+const MenuItems = require("@MenuItemsModel");
 
 // Create menu in a transaction and update organization
 
@@ -101,11 +102,11 @@ const createDuplicatedMenu = async (menuData, session = null) => {
 };
 
 const getMenuItemsByMenuId = async (menuId, session = null) => {
-  return await Menus.find({ menu: menuId }).session(session);
+  return await MenuItems.find({ menu: menuId }).session(session);
 };
 
 const createDuplicatedMenuItem = async (itemData, session = null) => {
-  const duplicatedItem = new Menus(itemData);
+  const duplicatedItem = new MenuItems(itemData);
 
   return await duplicatedItem.save({ session });
 };

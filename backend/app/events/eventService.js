@@ -188,15 +188,12 @@ const thisWeekEvents = async ({
   const categoryFilter = category
     ? { "basicInfo.categories": { $in: [catObjId] } }
     : {};
-
   const now = getCurrentDateInTimezone({ timezone });
   const skip = Math.max(0, (page - 1) * limit);
-
   let { start, end } = getStartAndEndOfWeek(now, timezone);
-
   const dateFilter = {
     "schedule.startDateTime": { $lte: end },
-    "schedule.endDateTime": { $gte: start },
+    "schedule.endDateTime": { $gte: now  },
   };
 
   const pipeline = [];

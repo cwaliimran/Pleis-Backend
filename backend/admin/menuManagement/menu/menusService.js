@@ -13,9 +13,6 @@ const createMenu = async (data) => {
 
 // Populate organization data for menus, but merge into "organization" field
 const getMenus = async ({ page, limit, keyword, status, date, organizations, companyOrganizer }) => {
-  const organizations_ = await getOrganizationByCompanyOrganizer(companyOrganizer);
-  console.log("organizations", organizations_);
-  // 3️⃣ Pagination setup
   const skip = limit === 0 ? 0 : (page - 1) * limit;
       let organizationIds = [];
 
@@ -214,23 +211,32 @@ const duplicateMenuAndItems = async (menuId, organization) => {
     if (!menu) {
       throw new Error('Menu not found');
     }
-
     if (menu.organization.toString() === organization.toString()) {
       throw new Error('Old and new organization cannot be the same');
     }
-
     const duplicatedMenu = {
       ...menu.toObject(),
       _id: new mongoose.Types.ObjectId(),
       title: `${menu.title}`,
       organization: organization,
     };
-
     const savedDuplicatedMenu = await menuRepo.createDuplicatedMenu(duplicatedMenu, session);
+    if (savedDuplicatedMenu.status === "active") {
+      const orgId = new mongoose.Types.ObjectId(savedDuplicatedMenu.organization);
+      const menuId = new mongoose.Types.ObjectId(savedDuplicatedMenu._id);
+      await Menus.updateMany(
+        {
+          organization: orgId,
+          status: { $ne: "deleted" },
+          _id: { $ne: menuId },
+        },
+        { $set: { status: "inactive" } },
+        { session }
+      );
+    }
 
-    // Step 2: Duplicate the Menu Items
-    const menuItems = await menuRepo.getMenuItemsByMenuId(menu, session);
 
+    const menuItems = await menuRepo.getMenuItemsByMenuId(menuId, session);
     const duplicatedMenuItemsPromises = menuItems.map(item => {
       const duplicatedItem = {
         ...item.toObject(),

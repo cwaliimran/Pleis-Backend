@@ -13,7 +13,7 @@ const getCategories = async ({ page, limit, keyword, status, date, orderSort = "
   const query = {};
 
   //Filter by status
-  query.status = status ? status : { $ne: "deleted" };
+  query.status = status ? status : "active";
 
   //Date filter (format: yyyy-mm-dd)
   if (date) {
@@ -30,7 +30,7 @@ const getCategories = async ({ page, limit, keyword, status, date, orderSort = "
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const sort = { order: orderSort === "desc" ? -1 : 1 };
+  const sort = { title: orderSort === "desc" ? -1 : 1 };
 
   let [categories, totalFiltered, total, active, inactive] = await Promise.all([
     categoryRepo.getCategoriesWithFilters(query, skip, limit === 0 ? 0 : limit, sort),

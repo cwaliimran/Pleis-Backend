@@ -58,6 +58,13 @@ if(req.user.userType === "organizer"){
 
   try {
     const result = await clubMemberService.giftPoints(companyOrganizer, user, points, notes );
+    if(result.error){
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: result.error.message,
+      });
+    }
     return sendResponse({
       res,
       statusCode: 200,

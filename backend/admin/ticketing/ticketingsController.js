@@ -154,9 +154,17 @@ const createTicketing = async (req, res) => {
 
 const getTicketings = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, eventId, organizations } = req.query;
+  let { keyword, status, date, eventId, organizations } = req.query;
   const { timezone } = req.user;
-
+  console.log("organizations",organizations );
+  if (!organizations) {
+    if (req.query.organizationsIds) {
+      // Ensure that organizations is a comma-separated string
+      organizations = Array.isArray(req.query.organizationsIds)
+        ? req.query.organizationsIds.join(',')  // Join array elements by commas
+        : String(req.query.organizationsIds);  // If it's a single value, convert it to a string
+    }
+  }
   try {
     const { ticketings, meta } = await ticketingsService.getTicketings({
       timezone,

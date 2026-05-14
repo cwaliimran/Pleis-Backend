@@ -15,8 +15,8 @@ const createOrganization = async ({ data }) => {
 const getOrganizations = async ({ page, limit, keyword, status, creator, date }) => {
   const query = {};
   query.$or = [
-    { creator: creator },
-    { "staff.user": creator },
+    { creator:new mongoose.Types.ObjectId(creator) },
+    { "staff.user": new mongoose.Types.ObjectId(creator) },
   ];
   if (status) {
     query.status = status;
@@ -38,7 +38,6 @@ const getOrganizations = async ({ page, limit, keyword, status, creator, date })
   }
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-
   let [organizations, counts] =
     await Promise.all([
       organizationRepo.getOrganizationsWithFilters(
@@ -48,6 +47,7 @@ const getOrganizations = async ({ page, limit, keyword, status, creator, date })
       ),
       organizationRepo.getOrganizationCounts(query),
     ]);
+
 
   const totalFiltered = counts?.totalFiltered || 0;
   const total = counts?.total || 0;

@@ -1,5 +1,5 @@
 const { getFullImageUrl } = require("../../../helperUtils/imageHelper");
-const { convertDateFormat } = require("../../../helperUtils/responseUtil");
+const { convertDateFormat, convertUtcToTimezone } = require("../../../helperUtils/responseUtil");
 
 /**
  * Pure formatter for Update objects (safe for doc or plain object)
@@ -24,18 +24,38 @@ function formatUpdate(Update) {
 function formatCategories(categories = []) {
   return categories.map(formatUpdate);
 }
-function formatMenuItemSale(sale) {
+function formatMenuItemSale(sale,timezone) {
   if (!sale) return null;
 
   const s = sale.toObject ? sale.toObject() : { ...sale };
 
   return {
     ...s,
+
+    startDateTime: s.startDateTime
+      ? convertUtcToTimezone(
+          s.startDateTime,
+          timezone,
+          "YYYY-MM-DD hh:mm A",
+          "YYYY-MM-DD hh:mm A"
+        )
+      : null,
+
+    endDateTime: s.endDateTime
+      ? convertUtcToTimezone(
+          s.endDateTime,
+          timezone,
+          "YYYY-MM-DD hh:mm A",
+          "YYYY-MM-DD hh:mm A"
+          
+        )
+      : null,
+
     menuItems: Array.isArray(s.menuItems)
-      ? s.menuItems.map(item => ({
-        ...item,
-        image: getFullImageUrl(item.image || "noimage.png"),
-      }))
+      ? s.menuItems.map((item) => ({
+          ...item,
+          image: getFullImageUrl(item.image || "noimage.png"),
+        }))
       : [],
   };
 }

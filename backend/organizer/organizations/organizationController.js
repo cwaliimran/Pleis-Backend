@@ -68,11 +68,14 @@ const createOrganization = async (req, res) => {
 
 const getOrganizations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, date, status = "active", companyOrganizer } = req.query;
-
-  let { _id, timezone } = req.user;
+  let { keyword, date, status = "active", companyOrganizer } = req.query;
+  let creator = req.user._id;
+  if (req.user.originalUserId) {
+    companyOrganizer = req.user.originalUserId;
+  }
+  let { timezone } = req.user;
   if (companyOrganizer) {
-    _id = new mongoose.Types.ObjectId(companyOrganizer);
+    creator = new mongoose.Types.ObjectId(companyOrganizer);
   }
   try {
     if (date && !validateParams(req, res, {
@@ -85,10 +88,9 @@ const getOrganizations = async (req, res) => {
       limit,
       keyword,
       status,
-      creator: req.user._id,
+      creator,
       date,
     });
-
     // Transform to local time safely
     organizations = organizations.map((org) => {
       const orgObj = org.toObject ? org.toObject() : org;
@@ -232,7 +234,7 @@ const updateOrganization = async (req, res) => {
     })
   )
     return;
-const userId = req.user._id;
+  const userId = req.user._id;
   let data = ({
     basicInfo,
     otherInfo,
