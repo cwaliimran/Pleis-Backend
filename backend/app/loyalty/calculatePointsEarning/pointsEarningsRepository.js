@@ -1,3 +1,4 @@
+const { User } = require("@UsersModel");
 const { getActiveGlobalLoyaltyHappyHourPromotion } = require("../../../admin/globalLoyalty/promotions/promotionsRepository");
 const { getUserWallet } = require("../../userWalletService/global/walletManagement/userWalletService");
 const { getUserCompanyWallet } = require("../clubMembers/clubMembersService");
@@ -10,7 +11,11 @@ const calculatePointsRepo = async (
   totalSpending
 ) => {
   totalSpending = Number(totalSpending || 0);
-
+  let totalSpendingCompany = Number(totalSpending || 0);
+  const company = await User.findById(companyOrganizer);
+  if (company.companyDetails.status !== "active") {
+    totalSpendingCompany = 0;
+  }
   const [
     globalWallet,
     userCompanyWallet,
@@ -52,18 +57,20 @@ const calculatePointsRepo = async (
     10 + tierBonus + globalBonus;
 
   const organizerEarnedPoints = Math.round(
-    totalSpending *
-      organizerPointsPerEuro *
-      organizerMultiplier
+    totalSpendingCompany *
+    organizerPointsPerEuro *
+    organizerMultiplier
   );
+  console.log("totalSpendingCompany",totalSpendingCompany );
+  console.log("organizerEarnedPoints",organizerEarnedPoints );
 
   const globalPointsPerEuro =
     10 + globalBonus + tierBonus;
 
   const globalEarnedPoints = Math.round(
     totalSpending *
-      globalPointsPerEuro *
-      globalMultiplier
+    globalPointsPerEuro *
+    globalMultiplier
   );
 
   const cashbackPercent =
