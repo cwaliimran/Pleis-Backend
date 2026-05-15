@@ -87,6 +87,47 @@ const createMenuItem = async (req, res) => {
   }
 };
 
+//importMenuItems the frontend will pas menuItems as an array of menu items to be created. The service will validate each menu item and create them in bulk. If any menu item fails validation, the entire operation will fail and no menu items will be created. This ensures data integrity and consistency.
+const importMenuItems = async (req, res) => {
+  const { menu, companyOrganizer, presetItems } = req.body;
+  if (!validateParams(req, res, {
+    rawData: ["menu", "companyOrganizer", "presetItems"],
+    objectIdFields: ["menu", "companyOrganizer"],
+  }))
+    return;
+
+  let data = {
+    menu,
+    companyOrganizer,
+    presetItems
+  };
+
+  try {
+    const result = await menuItemsService.importMenuItems(data);
+    if (result.error) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: result.error,
+      });
+    }
+    return sendResponse({
+      res,
+      statusCode: 201,
+      translationKey: "menu_items_imported_successfully",
+      data: result,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  };
+}
+
 const getMenuItems = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let {
@@ -454,6 +495,7 @@ if(req.user.userType==="organizer")  {
 };
 module.exports = {
   createMenuItem,
+  importMenuItems,
   getMenuItems,
   updateMenuItem,
   deleteMenuItem,

@@ -217,6 +217,7 @@ const createNotifications = async (data) => {
         },
         sender: data.creator,
         objectId: savedNotification._id,
+        image: data.image || "",
       });
     }
 

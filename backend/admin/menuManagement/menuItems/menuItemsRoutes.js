@@ -1,12 +1,13 @@
 const express = require("express");
 const {
   createMenuItem,
+  importMenuItems,
   getMenuItems,
   updateMenuItem,
   deleteMenuItem,
   getMenuItemDetails,
   getMenuItemsByMenuId,
-  getBundleMenuItems
+  getBundleMenuItems,
 } = require("./menuItemsController");
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
@@ -20,6 +21,7 @@ router.use(auth);
 const apiRateLimiter = createRateLimiter("MenuItems");
 const apiRateLimiterDetails = createRateLimiter("MenuItems/:id");
 
+router.post("/import", roleMiddleware(["admin", "organizer", "staff", "manager"]), importMenuItems);
 // Create a new menuItem
 router.post("/", roleMiddleware(["admin", "organizer", "staff", "manager"]), createMenuItem);
 
