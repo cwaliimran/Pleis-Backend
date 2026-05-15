@@ -67,7 +67,7 @@ const getOrganizations = async ({ page, limit, keyword, status, creator, date, t
   };
 };
 
-const getOrganizationsByAdmin = async ({ companyOrganizer, page, limit, keyword, status, date, timezone }) => {
+const getOrganizationsByAdmin = async ({ companyOrganizer, page, limit, keyword, status, date, timezone, sortBy, sortOrder }) => {
   const query = {};
   if (companyOrganizer) {
     query.creator = new mongoose.Types.ObjectId(companyOrganizer);
@@ -105,7 +105,9 @@ const getOrganizationsByAdmin = async ({ companyOrganizer, page, limit, keyword,
       organizationRepo.getOrganizationsWithFilters(
         query,
         skip,
-        limit === 0 ? 0 : limit
+        limit === 0 ? 0 : limit,
+        sortBy,
+        sortOrder
       ),
       organizationRepo.getOrganizationCounts(query),
     ]);

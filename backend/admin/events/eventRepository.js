@@ -78,16 +78,177 @@ const createEvent = async (data, ticketingData) => {
 
 
 // Get all with filters
-const getEventsWithFilters = async (query, skip, limit) => {
-  return Events.find(query)
-    .populate("basicInfo.venue", "title location floorPlan")
-    .populate("basicInfo.categories", "title image")
-    .populate("basicInfo.tags", "title")
-    .populate("basicInfo.organization", "basicInfo.name basicInfo.media otherInfo.description")
-    .populate("basicInfo.partnerOrganization", "basicInfo.name basicInfo.media otherInfo.description")
-    .sort({ "schedule.startDateTime": -1 })
-    .skip(skip)
-    .limit(limit);
+// const getEventsWithFilters = async (query, skip, limit, sortBy, sortOrder) => {
+//   console.log("query",query );
+//   let sortField = "schedule.startDateTime";
+//   let sortDirection = -1;
+//   if (sortBy && sortOrder) {
+//     // Map logical sortBy to actual field
+//     switch (sortBy) {
+//       case "venueName":
+//         sortField = "basicInfo.venue.title";
+//         break;
+//       case "organizationName":
+//         sortField = "basicInfo.organization.basicInfo.name";
+//         break;
+//       case "eventName":
+//         sortField = "basicInfo.title"; // assuming your event name is in basicInfo.title
+//         break;
+//     }
+
+//     sortDirection = sortOrder === "asc" ? 1 : -1;
+//   }
+//   console.log("sortField",sortField );
+//   console.log("sortDirection", sortDirection);
+
+//   return Events.find(query)
+//     .populate("basicInfo.venue", "title location floorPlan")
+//     .populate("basicInfo.categories", "title image")
+//     .populate("basicInfo.tags", "title")
+//     .populate("basicInfo.organization", "basicInfo.name basicInfo.media otherInfo.description")
+//     .populate("basicInfo.partnerOrganization", "basicInfo.name basicInfo.media otherInfo.description")
+//     .sort({ [sortField]: sortDirection })
+//     .skip(skip)
+//     .limit(limit);
+// };
+
+
+const getEventsWithFilters = async (
+  queryMongo,
+  skip = 0,
+  limit = 10,
+  sortBy,
+  sortOrder
+) => {
+
+  // Helper to safely convert query to $and format for aggregation
+
+  const pipeline = [
+    { $match: queryMongo },
+
+    // Lookup venue
+    {
+      $lookup: {
+        from: "venues",
+        localField: "basicInfo.venue",
+        foreignField: "_id",
+        as: "venueData"
+      }
+    },
+    { $unwind: { path: "$venueData", preserveNullAndEmptyArrays: true } },
+
+    // Lookup organization
+    {
+      $lookup: {
+        from: "organizations",
+        localField: "basicInfo.organization",
+        foreignField: "_id",
+        as: "organizationData"
+      }
+    },
+    { $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true } },
+
+    // Lookup partner organization
+    {
+      $lookup: {
+        from: "organizations",
+        localField: "basicInfo.partnerOrganization",
+        foreignField: "_id",
+        as: "partnerOrganizationData"
+      }
+    },
+    { $unwind: { path: "$partnerOrganizationData", preserveNullAndEmptyArrays: true } },
+
+    // Lookup categories
+    {
+      $lookup: {
+        from: "categories",
+        localField: "basicInfo.categories",
+        foreignField: "_id",
+        as: "categoriesData"
+      }
+    },
+
+    // Lookup tags
+    {
+      $lookup: {
+        from: "tags",
+        localField: "basicInfo.tags",
+        foreignField: "_id",
+        as: "tagsData"
+      }
+    }
+  ];
+  // Determine sort direction
+  let sortDirection = sortOrder === "asc" ? 1 : -1;
+
+  if (sortBy === "organizationName") {
+    // Case-insensitive sort for organization name
+    pipeline.push({
+      $addFields: {
+        organizationNameForSort: {
+          $toLower: { $ifNull: ["$organizationData.basicInfo.name", ""] }
+        }
+      }
+    });
+
+    pipeline.push({
+      $sort: {
+        organizationNameForSort: sortDirection,
+        // Tie-breaker: lowercase event title
+        eventTitleForSort: 1
+      }
+    });
+
+  } else if (sortBy === "eventName") {
+    // Case-insensitive sort for event title
+    pipeline.push({
+      $addFields: {
+        eventTitleForSort: { $toLower: { $ifNull: ["$basicInfo.title", ""] } }
+      }
+    });
+
+    pipeline.push({ $sort: { eventTitleForSort: sortDirection } });
+
+  } else if (sortBy === "venueName") {
+    // Case-insensitive sort for venue title
+    pipeline.push({
+      $addFields: {
+        venueNameForSort: { $toLower: { $ifNull: ["$venueData.title", ""] } }
+      }
+    });
+
+    pipeline.push({ $sort: { venueNameForSort: sortDirection } });
+
+  } else {
+    // Default sort by schedule.startDateTime
+    pipeline.push({ $sort: { "schedule.startDateTime": sortDirection } });
+  }
+
+  // Pagination
+  pipeline.push({ $skip: skip });
+  if (limit > 0) pipeline.push({ $limit: limit });
+
+  // Execute aggregation
+  let events = await Events.aggregate(pipeline);
+
+  // Format results to match your current populate structure
+  events = events.map(event => {
+    return {
+      ...event,
+      basicInfo: {
+        ...event.basicInfo,
+        venue: event.venueData || null,
+        venueLocation: event.venueData?.location || null,
+        organization: event.organizationData || null,
+        partnerOrganization: event.partnerOrganizationData || null,
+        categories: event.categoriesData || [],
+        tags: event.tagsData || []
+      }
+    };
+  });
+
+  return events;
 };
 // Get all with filters
 const getMinimalEventsWithFilters = async (query) => {
@@ -845,13 +1006,38 @@ const getEventsBatchRepo = async ({
     return { events: [] };
   }
 
+  const now = new Date();
+
   /* =====================================
      3️⃣ MAIN QUERY (ONE CALL)
   ===================================== */
   const events = await Events.find({
-    $or: orFilters,
-    status: "active",
-    "recurringMeta.isTemplate": { $ne: true },
+    $and: [
+      {
+        $or: orFilters,
+      },
+
+      {
+        $or: [
+          {
+            "schedule.endDateTime": {
+              $gte: now,
+            },
+          },
+          {
+            "schedule.endDateTime": null,
+            "schedule.startDateTime": {
+              $gte: now,
+            },
+          },
+        ],
+      },
+
+      {
+        status: "active",
+        "recurringMeta.isTemplate": { $ne: true },
+      },
+    ],
   })
     .populate("basicInfo.venue", "title location floorPlan venueType")
     .populate("basicInfo.categories", "title image")
