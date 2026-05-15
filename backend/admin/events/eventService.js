@@ -27,6 +27,88 @@ const createEvent = async ({ data, ticketingData }, timezone) => {
   return formatEventResponse(event, { timezone });
 };
 
+
+const buildMongoQuery = ({
+  status,
+  organization,
+  companyOrganizer,
+  startDate,
+  endDate,
+  keyword
+}) => {
+  const andArray = [];
+
+  // Always exclude template events
+  andArray.push({
+    $or: [
+      { "recurringMeta.isTemplate": false },
+      { "recurringMeta.isTemplate": { $exists: false } }
+    ]
+  });
+
+  // Status filter
+  if (status) {
+    andArray.push({ status });
+  } else {
+    andArray.push({ status: { $ne: "deleted" } });
+    andArray.push({ "recurringMeta.isTemplate": { $ne: true } });
+  }
+
+  // Organization filter
+  if (organization) {
+    let organizationIds = [];
+    if (Array.isArray(organization)) {
+      organizationIds = organization;
+    } else if (typeof organization === "string") {
+      organizationIds = organization.split(/[, %]+/).filter(Boolean);
+    }
+
+    if (organizationIds.length > 0) {
+      andArray.push({
+        "basicInfo.organization": {
+          $in: organizationIds.map(id => new mongoose.Types.ObjectId(id))
+        }
+      });
+    }
+  }
+
+  // Company organizer filter (only if organization not provided)
+  if (!organization && companyOrganizer) {
+    andArray.push({
+      companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer)
+    });
+  }
+
+  // Start date filter
+  if (startDate) {
+    const start = new Date(startDate);
+    start.setUTCHours(0, 0, 0, 0);
+    andArray.push({ "schedule.startDateTime": { $gte: start } });
+  }
+
+  // End date filter
+  if (endDate) {
+    const end = new Date(endDate);
+    end.setUTCHours(23, 59, 59, 999);
+    andArray.push({ "schedule.endDateTime": { $lte: end } });
+  }
+
+  // Keyword search
+  if (keyword) {
+    andArray.push({
+      $or: [
+        { "basicInfo.title": { $regex: keyword, $options: "i" } },
+        { "basicInfo.description": { $regex: keyword, $options: "i" } }
+      ]
+    });
+  }
+
+  // Build final query for aggregation
+  if (andArray.length === 0) return {};
+  if (andArray.length === 1) return andArray[0]; // Single condition, no $and needed
+  return { $and: andArray }; // Multiple conditions
+};
+
 const getEvents = async ({
   page,
   limit,
@@ -37,10 +119,23 @@ const getEvents = async ({
   endDate,
   organization,
   companyOrganizer,
-  timezone
+  sortBy,
+  sortOrder,
+  timezone,
+
 }) => {
+  
+
 
   const query = {};
+  const queryMongo = buildMongoQuery({
+    status,
+    organization,
+    companyOrganizer,
+    startDate,
+    endDate,
+    keyword
+  });
 
   // Always exclude template events
   query.$and = [
@@ -105,9 +200,11 @@ const getEvents = async ({
 
   const [events, eventsCounts] = await Promise.all([
     eventRepo.getEventsWithFilters(
-      query,
+      queryMongo,
       skip,
-      limit === 0 ? 0 : limit
+      limit === 0 ? 0 : limit,
+      sortBy,
+      sortOrder
     ),
     eventRepo.getEventsCounts(query),
   ]);

@@ -311,7 +311,21 @@ const createEvent = async (req, res) => {
 
 const getEvents = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "active", startDate, endDate, organization, companyOrganizer } = req.query;
+  let { keyword, status = "active", startDate, endDate, organization, companyOrganizer, sortBy, sortOrder } = req.query;
+  const SORT_FIELDS = ["eventName", "venueName", "organizationName"];
+  const SORT_ORDERS = ["asc", "desc"];
+  if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+    const key = sortBy && !SORT_FIELDS.includes(sortBy)
+      ? "invalid_sort_by_field"
+      : "invalid_sort_order";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+
+  if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+    const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+      : "sort_by_required_when_sort_order_is_provided";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
   const { _id, timezone } = req.user;
   if (req.user.userType === "organizer") {
     companyOrganizer = req.user._id;
@@ -356,6 +370,8 @@ const getEvents = async (req, res) => {
       organization,
       companyOrganizer,
       timezone,
+      sortBy,
+      sortOrder,
     });
 
     return sendResponse({
