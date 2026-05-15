@@ -67,14 +67,16 @@ const importMenuItems = async (data) => {
   // fetch presets
   const presets = await Presets.find({
     _id: {
-      $in: filteredPresetIds,
+      $in: presetItems.map((id) => new mongoose.Types.ObjectId(id)),
     },
-    status: "active",
+    // status: "active",
   });
 
   if (!presets.length) {
     return [];
   }
+
+
 
   // map preset -> menu item shape
   const menuItemsData = presets.map((preset) => ({
@@ -113,15 +115,28 @@ const importMenuItems = async (data) => {
     parentPreset: preset._id,
   }));
 
-  // bulk insert
-  const insertedItems = await MenuItems.insertMany(
-    menuItemsData,
-    {
-      ordered: false,
-    }
-  );
 
-  return insertedItems;
+
+  try {
+    const insertedItems = await MenuItems.insertMany(
+      menuItemsData,
+      {
+        ordered: true, // stop on first error
+      }
+    );
+
+    return insertedItems;
+
+  } catch (error) {
+    console.log(
+      "IMPORT ERROR",
+      JSON.stringify(error, null, 2)
+    );
+
+    throw error;
+  }
+
+
 };
 
 

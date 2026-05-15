@@ -115,7 +115,7 @@ const importMenuItems = async (req, res) => {
       res,
       statusCode: 201,
       translationKey: "menu_items_imported_successfully",
-      data: result.menuItems,
+      data: result,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
