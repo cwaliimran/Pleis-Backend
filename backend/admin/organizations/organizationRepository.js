@@ -30,7 +30,7 @@ const createOrganization = async (data) => {
 };
 
 // Get all with filters
-const getOrganizationsWithFilters = async (query, skip, limit) => {
+const getOrganizationsWithFilters = async (query, skip, limit, sortBy, sortOrder) => {
   const matchQuery = { ...query };
 
   // Set the match query for companyOrganizer if provided
@@ -172,6 +172,36 @@ const getOrganizationsWithFilters = async (query, skip, limit) => {
       $limit: limit  // Limit the number of organizations based on the page size
     }
   ];
+  if (sortBy && sortOrder) {
+    if (sortBy === "organizationName") {
+      pipeline.push({
+        $addFields: {
+          organizationNameSort: {
+            $toLower: { $ifNull: ["$basicInfo.name", ""] }
+          }
+        }
+      });
+      pipeline.push({
+        $sort: { organizationNameSort: sortOrder === "asc" ? 1 : -1 }
+      });
+    }
+    else if (sortBy === "organizerName") {
+      pipeline.push({
+        $addFields: {
+          organizerNameSort: {
+            $toLower: { $ifNull: ["$creator.firstName", ""] }
+          }
+        }
+      });
+      pipeline.push({
+        $sort: { organizerNameSort: sortOrder === "asc" ? 1 : -1 }
+      });
+    } else {
+      pipeline.push({
+        $sort: { [sortBy]: sortOrder === "asc" ? 1 : -1 }
+      });
+    }
+  }
 
   // Perform the aggregation query
   const results = await Organizations.aggregate(pipeline);
@@ -349,7 +379,7 @@ const getOrganizationByCompanyOrganizer = async (companyOrganizer) => {
 const getMenuIdsByCompanyOrganizer = async (companyOrganizer) => {
   const organizationIds = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
   const menus = await Menus.find({ organization: { $in: organizationIds }, status: "active" }).select("_id").lean();
-  console.log("menus",menus );
+  console.log("menus", menus);
   return menus.map(menu => menu._id);
 };
 const getMenuIdsByOrganization = async (organization) => {
