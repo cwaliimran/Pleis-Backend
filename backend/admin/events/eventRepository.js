@@ -1006,13 +1006,38 @@ const getEventsBatchRepo = async ({
     return { events: [] };
   }
 
+  const now = new Date();
+
   /* =====================================
      3️⃣ MAIN QUERY (ONE CALL)
   ===================================== */
   const events = await Events.find({
-    $or: orFilters,
-    status: "active",
-    "recurringMeta.isTemplate": { $ne: true },
+    $and: [
+      {
+        $or: orFilters,
+      },
+
+      {
+        $or: [
+          {
+            "schedule.endDateTime": {
+              $gte: now,
+            },
+          },
+          {
+            "schedule.endDateTime": null,
+            "schedule.startDateTime": {
+              $gte: now,
+            },
+          },
+        ],
+      },
+
+      {
+        status: "active",
+        "recurringMeta.isTemplate": { $ne: true },
+      },
+    ],
   })
     .populate("basicInfo.venue", "title location floorPlan venueType")
     .populate("basicInfo.categories", "title image")

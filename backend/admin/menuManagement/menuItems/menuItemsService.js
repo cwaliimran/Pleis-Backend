@@ -10,6 +10,7 @@ const MenuItemCategories = require("@MenuItemCategoriesModel");
 const { getMenuIdsByCompanyOrganizer, getMenuIdsByOrganization } = require("../../organizations/organizationRepository");
 const { formatMenuItem, formatBundleMenuItem } = require("../menuItemCategories/formatter/formatItemCategories");
 const Organizations = require("@OrganizationModel");
+const Presets = require("@PresetsModel");
 
 
 const createMenuItem = async (data, timezone) => {
@@ -17,6 +18,112 @@ const createMenuItem = async (data, timezone) => {
   let obj = formatMenuItem(doc, timezone);
   return obj;
 };
+
+
+
+const importMenuItems = async (data) => {
+  const {
+    menu,
+    companyOrganizer,
+    presetItems = [],
+  } = data;
+
+  // remove invalid / duplicate ids from request
+  const uniquePresetIds = [
+    ...new Set(
+      presetItems.map((id) => id.toString())
+    ),
+  ];
+
+  if (!uniquePresetIds.length) {
+    return [];
+  }
+
+
+  const alreadyImportedItems = await MenuItems.find({
+    menu,
+    parentPreset: {
+      $in: uniquePresetIds,
+    },
+    status: {
+      $ne: "deleted",
+    },
+  }).select("parentPreset");
+
+  const alreadyImportedPresetIds = new Set(
+    alreadyImportedItems.map((item) =>
+      item.parentPreset.toString()
+    )
+  );
+
+  const filteredPresetIds = uniquePresetIds.filter(
+    (id) => !alreadyImportedPresetIds.has(id)
+  );
+
+  if (!filteredPresetIds.length) {
+    return [];
+  }
+
+  // fetch presets
+  const presets = await Presets.find({
+    _id: {
+      $in: filteredPresetIds,
+    },
+    status: "active",
+  });
+
+  if (!presets.length) {
+    return [];
+  }
+
+  // map preset -> menu item shape
+  const menuItemsData = presets.map((preset) => ({
+    image: preset.image || "",
+    title: preset.title || "",
+    description: preset.description || "",
+    category: preset.category,
+    basePrice: Number(preset.basePrice || 0),
+
+    // menu item required fields
+    menu,
+    creator: companyOrganizer,
+
+    // optional defaults
+    type: "Default",
+    taxPercent: 0,
+
+    startTime: null,
+    endTime: null,
+
+    isLimitedTimeOffer: false,
+    isScheduled: false,
+
+    startDate: null,
+    endDate: null,
+
+    event: null,
+    availabilityType: null,
+
+    upSellItem: false,
+    isAvailableInStock: true,
+
+    status: "active",
+
+    // tracking imported preset
+    parentPreset: preset._id,
+  }));
+
+  // bulk insert
+  const insertedItems = await MenuItems.insertMany(
+    menuItemsData,
+    {
+      ordered: false,
+    }
+  );
+
+  return insertedItems;
+};
+
 
 // Populate menu data for menuItems
 const getMenuItems = async ({
@@ -382,6 +489,7 @@ const getBundleMenuItems = async ({ page, limit, keyword, status, date, menu, ti
 };
 module.exports = {
   createMenuItem,
+  importMenuItems,
   getMenuItems,
   updateMenuItem,
   getMenuItemDetails,
