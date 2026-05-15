@@ -73,7 +73,7 @@ const sendResponse = ({
   if (meta) {
     response.meta = meta;
   }
-  if (process.env.NODE_ENV === "dev" || process.env.NODE_ENV === "localhost") {
+  if (process.env.NODE_ENV === "dev" || process.env.NODE_ENV === "localhost" || process.env.NODE_ENV === "prod") {
     if (error !== null && error !== undefined) {
       if (error instanceof Error) {
         // Extract important properties from the Error object

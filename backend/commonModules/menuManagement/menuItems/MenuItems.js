@@ -8,7 +8,7 @@ const menuItemsSchema = new mongoose.Schema(
       default: "",
     },
     title: {
-      type: String, 
+      type: String,
       trim: true,
       required: true,
       default: "",
@@ -103,7 +103,11 @@ const menuItemsSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-
+    parentPreset: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Presets",
+      default: null,
+    },
   },
   {
     timestamps: true,

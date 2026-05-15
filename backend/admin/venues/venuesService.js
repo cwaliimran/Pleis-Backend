@@ -13,31 +13,32 @@ const { ACTIVE_ORGANIZATIONS_CACHE_KEY } = require("../organizations/organizatio
 const buildVenuesCacheKey = ({
   scope = "admin", // public | admin
   skip = 0,
-  limit = 10
+  limit = 10,
+  sortBy,
+  sortOrder
 }) => {
-  return `${venueRepo.ACTIVE_VENUES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+  return `${venueRepo.ACTIVE_VENUES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:sortBy=${sortBy}:sortOrder=${sortOrder}`;
 }
 const createVenue = async (data) => {
   return await venueRepo.createVenue(data);
 };
 
-const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, organization }) => {
+const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, organization, sortBy, sortOrder }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let cacheKey = buildVenuesCacheKey({
     scope: "admin",
     skip,
     limit,
+    sortBy,
+    sortOrder
   });
   const filters = [];
-
   if (keyword) filters.push(`keyword=${keyword}`);
   if (status) filters.push(`status=${status}`);
   if (date) filters.push(`date=${date}`);
   if (userId) filters.push(`userId=${userId}`);
   if (organization) filters.push(`organization=${organization}`);
   if (pinned !== undefined) filters.push(`pinned=${pinned}`);
-
-
   // Concatenate filters to the cache key if they are applied
   if (filters.length > 0) {
     cacheKey = `${cacheKey}:${filters.join(":")}`;
@@ -125,7 +126,26 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
         });
       }
 
-      pipeline.push({ $sort: { createdAt: -1 } });
+      // Map organizationName to nested field
+      if (sortBy && sortOrder) {
+        if (sortBy === "organizationName") {
+          pipeline.push({
+            $addFields: {
+              organizationNameSort: {
+                $toLower: { $ifNull: ["$organizationData.basicInfo.name", ""] }
+              }
+            }
+          });
+          pipeline.push({
+            $sort: { organizationNameSort: sortOrder === "asc" ? 1 : -1 }
+          });
+        } else {
+          pipeline.push({
+            $sort: { [sortBy]: sortOrder === "asc" ? 1 : -1 }
+          });
+        }
+      }
+
 
       // Apply pagination + counts using $facet
       pipeline.push({
@@ -155,7 +175,7 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
       const formattedVenues = venues.map(venue => {
         const venueDoc = new Venues(venue);
         const formattedVenue = venueDoc.formatResponse();
-
+        console.log("venue.organizationData", venue);
         if (venue.organizationData) {
           formattedVenue.organization = formatOrganization(venue.organizationData);
         }

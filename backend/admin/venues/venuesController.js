@@ -72,7 +72,7 @@ const createVenue = async (req, res) => {
 
 const getVenues = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", pinned, date, organization } = req.query;
+  const { keyword, status = "active", pinned, date, organization, sortBy, sortOrder } = req.query;
   const { _id: userId } = req.user._id;
   try {
     if (date && !validateParams(req, res, {
@@ -80,6 +80,21 @@ const getVenues = async (req, res) => {
         date: "YYYY-MM-DD",
       },
     })) return;
+    const SORT_FIELDS = ["title", "createdAt", "organizationName"];
+    const SORT_ORDERS = ["asc", "desc"];
+    if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+      const key = sortBy && !SORT_FIELDS.includes(sortBy)
+        ? "invalid_sort_by_field"
+        : "invalid_sort_order";
+      return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
+
+    if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+      const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+        : "sort_by_required_when_sort_order_is_provided";
+      return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
+
 
     const { venues, meta } = await venuesService.getVenues({
       page,
@@ -90,6 +105,8 @@ const getVenues = async (req, res) => {
       userId,
       date,
       organization,
+      sortBy,
+      sortOrder,
     });
 
     return sendResponse({
@@ -279,11 +296,11 @@ const getUnassignedVenues = async (req, res) => {
 };
 const getVenueTitles = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-   
-  let { keyword, status = "active", pinned, date, companyOrganizer,organization } = req.query;
+
+  let { keyword, status = "active", pinned, date, companyOrganizer, organization } = req.query;
   const { _id: userId } = req.user._id;
   try {
-   
+
     if (date && !validateParams(req, res, {
       dateFields: {
         date: "YYYY-MM-DD",
@@ -296,7 +313,7 @@ const getVenueTitles = async (req, res) => {
         translationKey: "either_company_organizer_or_organization_isrequired",
       });
     }
-    const data  = await venuesService.getVenueTitles({
+    const data = await venuesService.getVenueTitles({
       companyOrganizer,
       organization
     });

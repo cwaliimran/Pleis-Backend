@@ -135,6 +135,7 @@ const createNotifications = async (req, res) => {
       creator: userId,
       title,
       message,
+      description: message, // Assuming description is the same as message, adjust if needed
       image: image || "", // Default image to empty string if not provided
       center: center || null,
       radius: radius || 0,

@@ -110,7 +110,7 @@ const getOrganizations = async (req, res) => {
 
 const getOrganizationsAdmin = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, date, status = "active", companyOrganizer } = req.query;
+  const { keyword, date, status = "active", companyOrganizer, sortBy, sortOrder } = req.query;
   let { timezone } = req.user;
   try {
     if (date && !validateParams(req, res, {
@@ -118,6 +118,22 @@ const getOrganizationsAdmin = async (req, res) => {
         date: "YYYY-MM-DD",
       },
     })) return;
+    const SORT_FIELDS = ["organizerName", "createdAt", "organizationName"];
+    const SORT_ORDERS = ["asc", "desc"];
+    if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+      const key = sortBy && !SORT_FIELDS.includes(sortBy)
+        ? "invalid_sort_by_field"
+        : "invalid_sort_order";
+      return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
+
+    if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+      const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+        : "sort_by_required_when_sort_order_is_provided";
+      return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
+
+
     let { organizations, meta } = await organizationService.getOrganizationsByAdmin({
       companyOrganizer,
       page,
@@ -125,7 +141,9 @@ const getOrganizationsAdmin = async (req, res) => {
       keyword,
       status,
       date,
-      timezone
+      timezone,
+      sortBy,
+      sortOrder
     });
     return sendResponse({
       res,
@@ -432,5 +450,5 @@ module.exports = {
   getOrganizationNamesByCompanyOrganizer,
   getOrganizationNotifications,
   getOrganizationsByTag,
-  getOrganizationsByVenueType 
+  getOrganizationsByVenueType
 };

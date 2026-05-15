@@ -80,6 +80,7 @@ exports.redirectToMonriWebPay = async (req, res) => {
 
       <input type="hidden" name="success_url_override" value="${process.env.SUCCESS_URL}" />
       <input type="hidden" name="cancel_url_override" value="${process.env.CANCEL_URL}" />
+      <inputtype="hidden"name="ch_read_only"value="true"/>
 
       <input type="hidden" name="digest" value="${digest}" />
     </form>
@@ -237,7 +238,8 @@ const applePay = components.create("apple-pay", {
     country: "HR",
     email: "test@test.com",
     orderInfo: "Mobile payment",
-    language: "en"
+    language: "en",
+    ch_read_only: "true",
   }
 });
 
@@ -252,7 +254,8 @@ const googlePay = components.create("google-pay", {
   trx_token: "${trxToken}",
   environment: "${getMonriComponentsEnv()}",
   countryCode: "HR",
-  currencyCode: "EUR"
+  currencyCode: "EUR",
+  ch_read_only: "true",
 });
 
 googlePay.mount("google-pay");
