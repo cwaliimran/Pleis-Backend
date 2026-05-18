@@ -12,6 +12,7 @@ router.use("/languages", require("./languageRoutes"));
 // router.use("/util", require("./dbRoutes"));
 
 router.use("/dashboard", require("../admin/dashboard/dashboardsRoutes"));
+router.use("/manager-dashboard", require("../admin/dashboardManager/dashboardsRoutes"));
 
 //global routes
 router.use("/suppliers", require("../admin/suppliers/suppliersRoutes"));
