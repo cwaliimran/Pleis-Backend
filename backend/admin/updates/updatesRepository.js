@@ -104,7 +104,9 @@ const getUpdatess = async ({
   date,
   range,
   today,
-  skip
+  skip,
+  sortBy,
+  sortOrder
 }) => {
   const pipeline = [
     // Step 1: Match updates where the companyOrganizer matches the provided userId
@@ -221,7 +223,30 @@ const getUpdatess = async ({
   });
 
   // Step 8: Sort by createdAt (descending)
-  pipeline.push({ $sort: { createdAt: -1 } });
+  if (sortBy === "title") {
+    pipeline.push({
+      $addFields: {
+        titleSort: {
+          $toLower: {
+            $ifNull: ["$title", ""]
+          }
+        }
+      }
+    });
+
+    pipeline.push({
+      $sort: {
+        titleSort: sortOrder === "asc" ? 1 : -1,
+        _id: -1
+      }
+    });
+  } else {
+    pipeline.push({
+      $sort: {
+        createdAt: -1
+      }
+    });
+  }
 
   // Step 9: Apply pagination and count using $facet
   pipeline.push({

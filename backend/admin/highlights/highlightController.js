@@ -98,22 +98,38 @@ const createHighlight = async (req, res) => {
 
 const getHighlights = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date } = req.query;
+  const { keyword, status, date, sortBy, sortOrder } = req.query;
   let { _id, timezone } = req.user;
+  const SORT_FIELDS = ["title", "createdAt", "organizationName", "eventName"];
+  const SORT_ORDERS = ["asc", "desc"];
+  if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+    const key = sortBy && !SORT_FIELDS.includes(sortBy)
+      ? "invalid_sort_by_field"
+      : "invalid_sort_order";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+
+  if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+    const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+      : "sort_by_required_when_sort_order_is_provided";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
   try {
     if (date && !validateParams(req, res, {
       dateFields: {
         date: "YYYY-MM-DD",
       },
     })) return;
-    
+
     let { highlights, meta } = await highlightService.getHighlights({
       page,
       limit,
       keyword,
       status,
       creator: _id,
-      date
+      date,
+      sortBy,
+      sortOrder,
     });
 
 
