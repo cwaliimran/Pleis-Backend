@@ -163,14 +163,6 @@ const getOrganizationsWithFilters = async (query, skip, limit, sortBy, sortOrder
       }
     },
 
-
-
-    {
-      $skip: skip  // Skip the number of organizations based on the page number
-    },
-    {
-      $limit: limit  // Limit the number of organizations based on the page size
-    }
   ];
   if (sortBy && sortOrder) {
     if (sortBy === "organizationName") {
@@ -202,6 +194,14 @@ const getOrganizationsWithFilters = async (query, skip, limit, sortBy, sortOrder
       });
     }
   }
+  if (skip !== undefined && limit !== undefined) {
+    pipeline.push(
+      { $skip: skip },
+      { $limit: limit }
+    );
+  }
+
+
 
   // Perform the aggregation query
   const results = await Organizations.aggregate(pipeline);

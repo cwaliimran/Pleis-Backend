@@ -46,6 +46,16 @@ const getReviews = async (data) => {
     if (!data.organization || !Array.isArray(data.organization) || data.organization.length === 0) {
       data.organization = await getOrganizationIdsByOrganizerId(data.organizer);
     }
+    const sortDirection = data.sortOrder === "asc" ? 1 : -1;
+
+    let sortStage = { createdAt: -1 };
+
+    if (data.sortBy === "userName") {
+      sortStage = {
+        userNameSort: sortDirection,
+        _id: -1,
+      };
+    }
 
 
     // Convert organization IDs from string to ObjectId
@@ -79,6 +89,15 @@ const getReviews = async (data) => {
       },
       {
         $unwind: "$userDetails",  // Unwind userDetails array
+      },
+      {
+        $addFields: {
+          userNameSort: {
+            $toLower: {
+              $ifNull: ["$userDetails.firstName", ""]
+            }
+          }
+        }
       },
       {
         $lookup: {
@@ -118,6 +137,7 @@ const getReviews = async (data) => {
       {
         $facet: {
           reviews: [
+            { $sort: sortStage },
             { $skip: 0 }, // Skipping and limiting can be added for pagination if needed
             { $limit: 100 }, // You can adjust this as per your requirements
           ],
