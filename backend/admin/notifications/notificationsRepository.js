@@ -48,7 +48,17 @@ const getFilteredUserIdsCombined = async ({
   radius,
   limit = 500
 }) => {
-  const pipeline = [];
+  const pipeline = [
+    {
+      $match: {
+        "accountState.status": "active",
+        $or: [
+          { "verificationStatus.email": "verified" },
+          { "verificationStatus.phoneNumber": "verified" }
+        ]
+      }
+    }
+  ];
 
   /* ===================== AGE FILTER ===================== */
   if (Array.isArray(ageRange) && ageRange.length === 2) {
@@ -151,7 +161,18 @@ const getFilteredUserIdsCombined = async ({
 
 const getAllUserIds = async () => {
   try {
-    const users = await User.find({}, { _id: 1 }).lean();
+    const users = await User.find(
+      {
+        "accountState.status": "active",
+        
+        $or: [
+          { "verificationStatus.email": "verified" },
+          { "verificationStatus.phoneNumber": "verified" }
+        ]
+      },
+      { _id: 1 }
+    ).lean();
+
     return users.map(user => user._id.toString());
   } catch (err) {
     throw err;
@@ -177,13 +198,15 @@ const createNotifications = async (data) => {
     }
 
     const userIds = usersResult.userIds || [];
+    console.log("userIds", userIds.length);
+    return
 
     const notificationSystemType =
       data.organizationId
         ? NotificationTypes.ORGANIZATION_DETAILS
         : data.eventId
-        ? NotificationTypes.EVENT_DETAILS
-        : NotificationTypes.HOME;
+          ? NotificationTypes.EVENT_DETAILS
+          : NotificationTypes.HOME;
 
     const Model = getModelByTaskType(data.destinationType);
 
@@ -725,15 +748,15 @@ const getUserStats = async ({ notification }) => {
   });
 
   // Get counts for total users and users who read the notification
-  const [ totalUsers, totalUsersRead ] = await Promise.all([
+  const [totalUsers, totalUsersRead] = await Promise.all([
     getCount(NotificationExp, baseMatch),
     getCount(NotificationExp, baseMatch, { isRead: true }),
   ]);
 
-  const percentageUsersRead =parseFloat( totalUsers > 0 ? (totalUsersRead / totalUsers) * 100 : 0);
+  const percentageUsersRead = parseFloat(totalUsers > 0 ? (totalUsersRead / totalUsers) * 100 : 0);
   return {
     totalUsersRead: totalUsersRead,
-    percentageUsersRead: parseFloat(percentageUsersRead.toFixed(2)), 
+    percentageUsersRead: parseFloat(percentageUsersRead.toFixed(2)),
     totalNotificationSent: globalNotificationData?.estimated || 0,
     totalUsersDelivered: globalNotificationData?.delivered || 0,
   };

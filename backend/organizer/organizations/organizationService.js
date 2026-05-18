@@ -419,6 +419,7 @@ const getAllOrganizations = async ({ page, limit, keyword, status, creator, date
       { "staff.user": new mongoose.Types.ObjectId(creator) }
     ];
   }
+  console.log("status",status );
 
   // Apply status filter, if provided
   if (status) {

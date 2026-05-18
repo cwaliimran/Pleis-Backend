@@ -25,10 +25,12 @@ const updateEventService = async (eventId, payload, mode = "single") => {
   // -----------------------------
   const applyFields = (doc, data, skipSchedule = false) => {
 
-    doc.basicInfo = {
-      ...doc.basicInfo,
-      ...data.basicInfo,
-    };
+    if (data.basicInfo) {
+      doc.basicInfo = {
+        ...doc.basicInfo,
+        ...data.basicInfo,
+      };
+    }
 
     if (data.basicInfo?.categories) {
       doc.basicInfo.categories = uniqueObjectIds(
