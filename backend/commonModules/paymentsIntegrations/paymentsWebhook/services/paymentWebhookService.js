@@ -111,7 +111,9 @@ const getOrdersTransactionsService = async ({
   category,
   menuSaleItme,
   promotionOrders,
-  eventBasedOrder
+  eventBasedOrder,
+  sortBy,
+  sortOrder
 
 }) => {
 
@@ -121,7 +123,7 @@ const getOrdersTransactionsService = async ({
   if (organization) match.organization = { $in: organization };
   if (status) match.paymentStatus = status;
   if (orderType) match.orderType = orderType;
-  if(paymentMethod) match.paymentMethod = paymentMethod;
+  if (paymentMethod) match.paymentMethod = paymentMethod;
   if (paymentStatus) match.paymentStatus = paymentStatus;
   if (validationStatus) match.validationStatus = validationStatus;
   if (minimalSpendRes) {
@@ -204,8 +206,8 @@ const getOrdersTransactionsService = async ({
 
 
   const [transactions, totalFiltered] = await Promise.all([
-    webhookRepository.getOrdersTransactions({ match, keyword, skip, limit, globalStatusLevel, event, transfered, refunded, validationStatus, orderType, resStartDate, resEndDate, resDate, resStartTimeUtc, resEndTimeUtc, futureRes, pastRes, prePay, ticketRequiredRes, cancelledRes, noShowRes, orderStatus, deliveryMethod, category, menuSaleItme,promotionOrders,eventBasedOrder }),
-    webhookRepository.countOrdersTransactions({  match, keyword, globalStatusLevel, event, transfered, refunded, validationStatus, orderType, resStartDate, resEndDate, resDate, resStartTimeUtc, resEndTimeUtc, futureRes, pastRes, prePay, ticketRequiredRes, cancelledRes, noShowRes, orderStatus, deliveryMethod, category, menuSaleItme,promotionOrders,eventBasedOrder })
+    webhookRepository.getOrdersTransactions({ match, keyword, skip, limit, globalStatusLevel, event, transfered, refunded, validationStatus, orderType, resStartDate, resEndDate, resDate, resStartTimeUtc, resEndTimeUtc, futureRes, pastRes, prePay, ticketRequiredRes, cancelledRes, noShowRes, orderStatus, deliveryMethod, category, menuSaleItme, promotionOrders, eventBasedOrder, sortBy, sortOrder }),
+    webhookRepository.countOrdersTransactions({ match, keyword, globalStatusLevel, event, transfered, refunded, validationStatus, orderType, resStartDate, resEndDate, resDate, resStartTimeUtc, resEndTimeUtc, futureRes, pastRes, prePay, ticketRequiredRes, cancelledRes, noShowRes, orderStatus, deliveryMethod, category, menuSaleItme, promotionOrders, eventBasedOrder })
   ]);
   const meta = generateMeta(page, limit, totalFiltered);
   return {

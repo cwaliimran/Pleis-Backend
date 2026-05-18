@@ -12,8 +12,22 @@ const reviewService = require("./reviewsService");
 
 const getReviews = async (req, res) => {
   let {
-    companyOrganizer, keyword , page, limit, 
+    companyOrganizer, keyword, page, limit, sortBy, sortOrder
   } = req.query;
+  const SORT_FIELDS = ["userName"];
+  const SORT_ORDERS = ["asc", "desc"];
+  if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+    const key = sortBy && !SORT_FIELDS.includes(sortBy)
+      ? "invalid_sort_by_field"
+      : "invalid_sort_order";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+
+  if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+    const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+      : "sort_by_required_when_sort_order_is_provided";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
   if (!companyOrganizer) {
     return sendResponse({
       res,
@@ -37,7 +51,9 @@ const getReviews = async (req, res) => {
     organization: organizationArray,
     keyword,
     organizer,
-     page:page || 1, limit: limit || 10, 
+    page: page || 1, limit: limit || 10,
+    sortBy: sortBy || "createdAt",
+    sortOrder: sortOrder || "desc"
   };
 
   try {

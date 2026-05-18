@@ -63,15 +63,31 @@ const createMenu = async (req, res) => {
 
 const getMenus = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status , organizations, date, companyOrganizer } = req.query;
+  let { keyword, status, organizations, date, companyOrganizer, sortBy, sortOrder } = req.query;
 
   try {
+    const SORT_FIELDS = ["menuName", "createdAt", "organizationName","description"];
+    const SORT_ORDERS = ["asc", "desc"];
+    if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+      const key = sortBy && !SORT_FIELDS.includes(sortBy)
+        ? "invalid_sort_by_field"
+        : "invalid_sort_order";
+      return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
+
+    if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+      const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+        : "sort_by_required_when_sort_order_is_provided";
+      return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
+
+
     // arse organizations if it’s a JSON string (e.g. '["id1","id2"]')
     if (typeof organizations === "string") {
       try {
         organizations = JSON.parse(organizations);
       } catch (e) {
-     
+
       }
     }
 
@@ -88,6 +104,8 @@ const getMenus = async (req, res) => {
       organizations,
       companyOrganizer,
       date,
+      sortBy,
+      sortOrder
     });
 
     return sendResponse({
@@ -274,7 +292,6 @@ const duplicateMenuAndItems = async (req, res) => {
     });
   }
 }
-
 const getMenuNamesByCompanyOrganizer = async (req, res) => {
   const { companyOrganizer } = req.params;
 

@@ -12,7 +12,7 @@ const createHighlight = async ({ data }) => {
   return await highlightRepo.createHighlight(data);
 };
 
-const getHighlights = async ({ page, limit, keyword, status, creator, date }) => {
+const getHighlights = async ({ page, limit, keyword, status, creator, date, sortBy, sortOrder }) => {
   const query = {};
   // if (creator) query.creator = creator;
   if (status) {
@@ -48,7 +48,9 @@ const getHighlights = async ({ page, limit, keyword, status, creator, date }) =>
         query,
         keyword,
         skip,
-        limit === 0 ? 0 : limit
+        limit === 0 ? 0 : limit,
+        sortBy,
+        sortOrder
       ),
       highlightRepo.getHighlightsCounts(query),
     ]);
