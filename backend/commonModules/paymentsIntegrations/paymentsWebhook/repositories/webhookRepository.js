@@ -198,7 +198,8 @@ const getOrdersTransactions = async ({
   category,
   menuSaleItme,
   promotionOrders,
-  eventBasedOrder
+  eventBasedOrder,
+  sortBy, sortOrder
 }) => {
   const pipeline = [];
 
@@ -708,8 +709,7 @@ const getOrdersTransactions = async ({
       });
     }
   }
-  // Sorting
-  pipeline.push({ $sort: { createdAt: -1, _id: -1 } });
+
   if (keyword && keyword.trim()) {
     const regex = new RegExp(keyword, "i");
 
@@ -758,7 +758,7 @@ const getOrdersTransactions = async ({
       commission: 1,
       orderType: 1,
       orderNumber: 1,
-      paymentMethod:1,
+      paymentMethod: 1,
       paymentStatus: 1,
       transactionId: 1,
       ticketType: 1,
@@ -792,10 +792,27 @@ const getOrdersTransactions = async ({
       }
     }
   });
+  const sortDirection = sortOrder === "asc" ? 1 : -1;
 
+  const sortFields = {
+    userName: "user.firstName",
+    createdAt: "createdAt",
+    organizationName: "organization.name",
+  };
+
+  const sortField = sortFields[sortBy] || "createdAt";
+
+  pipeline.push({
+    $sort: {
+      [sortField]: sortDirection,
+      _id: -1,
+    },
+  });
   // Pagination
   if (skip) pipeline.push({ $skip: skip });
   if (limit) pipeline.push({ $limit: limit });
+  // Sorting
+
 
   // Execute
   const transactions = await WebhookEvent.aggregate(pipeline, { allowDiskUse: true });

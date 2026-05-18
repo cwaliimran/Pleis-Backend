@@ -265,13 +265,23 @@ const duplicateMenuAndItems = async (menuId, organization) => {
     if (!menu) {
       throw new Error('Menu not found');
     }
-    if (menu.organization.toString() === organization.toString()) {
-      throw new Error('Old and new organization cannot be the same');
-    }
+    // if (menu.organization.toString() === organization.toString()) {
+    //   throw new Error('Old and new organization cannot be the same');
+    // }
+    const now = new Date();
+
+    const formattedDate = now.toLocaleDateString("en-CA"); // 2026-05-18
+    const formattedTime = now.toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }).replace(/:/g, "-"); // 09-55-39
     const duplicatedMenu = {
       ...menu.toObject(),
       _id: new mongoose.Types.ObjectId(),
-      title: `${menu.title}`,
+      title: `${menu.title}-copy-${formattedDate}-${formattedTime}`,
+      status: "inactive",
       organization: organization,
     };
     const savedDuplicatedMenu = await menuRepo.createDuplicatedMenu(duplicatedMenu, session);
