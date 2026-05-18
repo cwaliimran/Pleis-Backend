@@ -101,9 +101,11 @@ const getTransactionStats = async (req, res) => {
   if (req.user.userType === "organizer") {
     companyOrganizer = req.user._id;
     if (organizations) {
+      organizations = await convertToMongoArray(organizations);
       companyOrganizer = undefined;
     }
   }
+  console.log("organizations",organizations );
   try {
     if (dateFilter && !validateParams(req, res, {
       enumFields: {

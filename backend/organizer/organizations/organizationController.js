@@ -403,12 +403,16 @@ const getAllOrganizations = async (req, res) => {
         date: "YYYY-MM-DD",
       },
     })) return;
+    let creator = _id;
+    if (req.user.originalUserId) {
+      creator = req.user.originalUserId;
+    }
     let { organizations, meta } = await organizationService.getAllOrganizations({
       page,
       limit,
       keyword,
       status,
-      creator: _id,
+      creator,
       date,
     });
 
