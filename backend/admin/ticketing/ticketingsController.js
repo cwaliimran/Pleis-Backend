@@ -154,9 +154,24 @@ const createTicketing = async (req, res) => {
 
 const getTicketings = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, eventId, organizations } = req.query;
+  let { keyword, status, date, eventId, organizations, sortBy, sortOrder } = req.query;
   const { timezone } = req.user;
-  console.log("organizations",organizations );
+  const SORT_FIELDS = ["title", "eventTitle", "quantity", "price", "createdAt", "taxPercentage"];
+  const SORT_ORDERS = ["asc", "desc"];
+  if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+    const key = sortBy && !SORT_FIELDS.includes(sortBy)
+      ? "invalid_sort_by_field"
+      : "invalid_sort_order";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+
+  if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+    const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+      : "sort_by_required_when_sort_order_is_provided";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+
+
   if (!organizations) {
     if (req.query.organizationsIds) {
       // Ensure that organizations is a comma-separated string
@@ -175,7 +190,9 @@ const getTicketings = async (req, res) => {
       date,
       eventId,
       organizations,
-      companyOrganizer: req.user._id
+      companyOrganizer: req.user._id,
+      sortBy,
+      sortOrder,
     });
 
     return sendResponse({
@@ -197,9 +214,24 @@ const getTicketings = async (req, res) => {
 
 const getOrganizationTicketings = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date } = req.query;
+  const { keyword, status, date, sortBy, sortOrder } = req.query;
   const { id: organization } = req.params;
   const { timezone } = req.user;
+  const SORT_FIELDS = ["title", "createdAt", "taxPercentage", "price", "quantity", "eventTitle"];
+  const SORT_ORDERS = ["asc", "desc"];
+  if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+    const key = sortBy && !SORT_FIELDS.includes(sortBy)
+      ? "invalid_sort_by_field"
+      : "invalid_sort_order";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+
+  if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+    const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+      : "sort_by_required_when_sort_order_is_provided";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+
 
   try {
     const { ticketings, meta } = await ticketingsService.getOrganizationTicketings({
@@ -210,6 +242,8 @@ const getOrganizationTicketings = async (req, res) => {
       status,
       date,
       organization,
+      sortBy,
+      sortOrder,
     });
 
     return sendResponse({

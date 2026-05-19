@@ -45,23 +45,103 @@ const create = async (data) => {
 
 
 // ---------------- LIST WITH FILTERS ----------------
+// const getWithFilters = async (
+//   query,
+//   skip = 0,
+//   limit = 20,
+//   keyword,
+//   sortBy,
+//   sortOrder
+// ) => {
+//   let cacheKey = buildGlobalLoyaltyPromotionsCacheKey({
+//     scope: "admin",
+//     skip,
+//     limit,
+//   });
+
+//   const filters = [];
+//   if (keyword) filters.push(`keyword=${keyword}`);
+//   if (query.status?.$ne) filters.push(`status=${query.status.$ne}`);
+//   if (query.createdAt?.$gte)
+//     filters.push(`createdAt=${query.createdAt.$gte}`);
+
+//   if (filters.length) {
+//     cacheKey += `:${filters.join(":")}`;
+//   }
+
+//   return cache({
+//     namespace: cacheKey,
+//     ttl: 86400,
+
+//     fetchFn: async () => {
+//       const pipeline = [
+//         { $match: query },
+//         { $sort: { createdAt: -1 } },
+//         { $skip: skip },
+//       ];
+
+//       if (limit > 0) pipeline.push({ $limit: limit });
+
+//       pipeline.push(
+//         {
+//           $lookup: {
+//             from: "globalrewards",
+//             localField: "reward",
+//             foreignField: "_id",
+//             as: "reward",
+//           },
+//         },
+//         {
+//           $lookup: {
+//             from: "menuitems",
+//             localField: "menuItem",
+//             foreignField: "_id",
+//             as: "menuItem",
+//           },
+//         },
+//         {
+//           $lookup: {
+//             from: "globalstatuslevels",
+//             localField: "tierLimit",
+//             foreignField: "_id",
+//             as: "tierLimit",
+//           },
+//         },
+//         {
+//           $addFields: {
+//             reward: { $arrayElemAt: ["$reward", 0] },
+//             menuItem: { $arrayElemAt: ["$menuItem", 0] },
+//             tierLimit: { $arrayElemAt: ["$tierLimit", 0] },
+//           },
+//         }
+//       );
+
+//       return GlobalBasePromotion.aggregate(pipeline).allowDiskUse(true);
+//     },
+//   });
+// };
 const getWithFilters = async (
   query,
   skip = 0,
   limit = 20,
-  keyword
+  keyword,
+  sortBy = "createdAt",
+  sortOrder = "desc"
 ) => {
   let cacheKey = buildGlobalLoyaltyPromotionsCacheKey({
     scope: "admin",
     skip,
     limit,
+    sortBy,
+    sortOrder,
   });
 
   const filters = [];
   if (keyword) filters.push(`keyword=${keyword}`);
   if (query.status?.$ne) filters.push(`status=${query.status.$ne}`);
-  if (query.createdAt?.$gte)
-    filters.push(`createdAt=${query.createdAt.$gte}`);
+  if (query.createdAt?.$gte) filters.push(`createdAt=${query.createdAt.$gte}`);
+  if (sortBy) filters.push(`sortBy=${sortBy}`);
+  if (sortOrder) filters.push(`sortOrder=${sortOrder}`);
 
   if (filters.length) {
     cacheKey += `:${filters.join(":")}`;
@@ -72,9 +152,30 @@ const getWithFilters = async (
     ttl: 86400,
 
     fetchFn: async () => {
+      const sortDirection = sortOrder === "asc" ? 1 : -1;
+
+      let sortStage = { createdAt: -1, _id: -1 };
+
+      if (sortBy === "title") {
+        sortStage = { titleSort: sortDirection, _id: -1 };
+      } else if (sortBy === "description") {
+        sortStage = { descriptionSort: sortDirection, _id: -1 };
+      } else if (sortBy === "promotionType") {
+        sortStage = { promotionTypeSort: sortDirection, _id: -1 };
+      } else if (sortBy === "createdAt") {
+        sortStage = { createdAt: sortDirection, _id: sortDirection };
+      }
+
       const pipeline = [
         { $match: query },
-        { $sort: { createdAt: -1 } },
+        {
+          $addFields: {
+            titleSort: { $toLower: { $ifNull: ["$title", ""] } },
+            descriptionSort: { $toLower: { $ifNull: ["$description", ""] } },
+            promotionTypeSort: { $toLower: { $ifNull: ["$promotionType", ""] } },
+          },
+        },
+        { $sort: sortStage },
         { $skip: skip },
       ];
 
@@ -111,6 +212,13 @@ const getWithFilters = async (
             menuItem: { $arrayElemAt: ["$menuItem", 0] },
             tierLimit: { $arrayElemAt: ["$tierLimit", 0] },
           },
+        },
+        {
+          $project: {
+            titleSort: 0,
+            descriptionSort: 0,
+            promotionTypeSort: 0,
+          },
         }
       );
 
@@ -118,7 +226,6 @@ const getWithFilters = async (
     },
   });
 };
-
 
 // ---------------- BASIC HELPERS ----------------
 const count = async (query = {}) =>

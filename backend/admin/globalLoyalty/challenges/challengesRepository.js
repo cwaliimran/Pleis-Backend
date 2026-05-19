@@ -10,9 +10,11 @@ const ACTIVE_GLOBAL_LOYALTY_CHALLENGES_CACHE_KEY = "globalLoyaltyChallenges:acti
 const buildGlobalLoyaltyChallengesCacheKey = ({
   scope = "public", // public | admin
   skip = 0,
-  limit = 10
+  limit = 10,
+  sortBy,
+  sortOrder
 }) => {
-  return `${ACTIVE_GLOBAL_LOYALTY_CHALLENGES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+  return `${ACTIVE_GLOBAL_LOYALTY_CHALLENGES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:sortBy=${sortBy}:sortOrder=${sortOrder}`;
 };
 // Decide which discriminator model to use
 const getModelByTaskType = (taskType) => {
@@ -35,7 +37,7 @@ const createChallenge = async (data) => {
   try {
     const Model = getModelByTaskType(data.taskType);
     const challenge = new Model(data);
-    
+
     await challenge.save();
     await invalidate(ACTIVE_GLOBAL_LOYALTY_CHALLENGES_CACHE_KEY);
     return challenge;
@@ -45,60 +47,141 @@ const createChallenge = async (data) => {
 };
 
 // Get challenges with population
-const getChallengesWithFilters = async (query = {}, skip = 0, limit = 10,date,status,keyword) => {
-    let cacheKey = buildGlobalLoyaltyChallengesCacheKey({
+// const getChallengesWithFilters = async (query = {}, skip = 0, limit = 10,date,status,keyword, sortBy, sortOrder) => {
+//     let cacheKey = buildGlobalLoyaltyChallengesCacheKey({
+//     scope: "admin",
+//     skip,
+//     limit,
+//     sortBy,
+//     sortOrder
+//   });
+//   const filters = [];
+//     if (keyword) filters.push(`keyword=${keyword}`);
+//   if (status) filters.push(`status=${status}`);
+//   if (date) filters.push(`date=${date}`);
+//   if (filters.length > 0) {
+//     cacheKey = `${cacheKey}:${filters.join(":")}`;
+//   }
+//   return cache({
+//     namespace: cacheKey,
+//     ttl: 86400, // 1 day
+
+//     fetchFn: async () => {
+//   return GlobalChallenge.find(query)
+//     // Task-related
+//     .populate("taskMenuItem")
+
+//     // Tier
+//     .populate({
+//       path: "tierLimit",
+//       select: "image title"
+//     })
+
+//     // 🎟️ Special Ticket Reward – nested population
+//     .populate({
+//       path: "reward.specialTicket.companyOrganizer",
+//       select: "companyDetails.name"
+//     })
+//     .populate({
+//       path: "reward.specialTicket.organization",
+//       select: "basicInfo.name"
+//     })
+//     .populate({
+//       path: "reward.specialTicket.ticket",
+//       select: "title"
+//     })
+//     .populate({
+//       path: "reward.specialTicket.event",
+//       select: "basicInfo.title"
+//     })
+
+//     .sort({ createdAt: -1 })
+//     .skip(skip)
+//     .limit(limit)
+//     .lean()
+//     .exec();
+//     },
+//   });
+// };
+
+const getChallengesWithFilters = async (
+  query = {},
+  skip = 0,
+  limit = 10,
+  date,
+  status,
+  keyword,
+  sortBy = "createdAt",
+  sortOrder = "desc"
+) => {
+  let cacheKey = buildGlobalLoyaltyChallengesCacheKey({
     scope: "admin",
     skip,
     limit,
+    sortBy,
+    sortOrder,
   });
+
   const filters = [];
-    if (keyword) filters.push(`keyword=${keyword}`);
+  if (keyword) filters.push(`keyword=${keyword}`);
   if (status) filters.push(`status=${status}`);
   if (date) filters.push(`date=${date}`);
+
   if (filters.length > 0) {
     cacheKey = `${cacheKey}:${filters.join(":")}`;
   }
+
   return cache({
     namespace: cacheKey,
-    ttl: 86400, // 1 day
- 
+    ttl: 86400,
+
     fetchFn: async () => {
-  return GlobalChallenge.find(query)
-    // Task-related
-    .populate("taskMenuItem")
+      const sortDirection = sortOrder === "asc" ? 1 : -1;
 
-    // Tier
-    .populate({
-      path: "tierLimit",
-      select: "image title"
-    })
+      let sort = { createdAt: -1, _id: -1 };
 
-    // 🎟️ Special Ticket Reward – nested population
-    .populate({
-      path: "reward.specialTicket.companyOrganizer",
-      select: "companyDetails.name"
-    })
-    .populate({
-      path: "reward.specialTicket.organization",
-      select: "basicInfo.name"
-    })
-    .populate({
-      path: "reward.specialTicket.ticket",
-      select: "title"
-    })
-    .populate({
-      path: "reward.specialTicket.event",
-      select: "basicInfo.title"
-    })
+      if (sortBy === "name") {
+        sort = { title: sortDirection, _id: -1 };
+      } else if (sortBy === "rewardType") {
+        sort = { "reward.rewardType": sortDirection, _id: -1 };
+      } else if (sortBy === "taskType") {
+        sort = { taskType: sortDirection, _id: -1 };
+      } else if (sortBy === "createdAt") {
+        sort = { createdAt: sortDirection, _id: sortDirection };
+      }
 
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit)
-    .lean()
-    .exec();
+      return GlobalChallenge.find(query)
+        .populate("taskMenuItem")
+        .populate({
+          path: "tierLimit",
+          select: "image title",
+        })
+        .populate({
+          path: "reward.specialTicket.companyOrganizer",
+          select: "companyDetails.name",
+        })
+        .populate({
+          path: "reward.specialTicket.organization",
+          select: "basicInfo.name",
+        })
+        .populate({
+          path: "reward.specialTicket.ticket",
+          select: "title",
+        })
+        .populate({
+          path: "reward.specialTicket.event",
+          select: "basicInfo.title",
+        })
+        .collation({ locale: "en", strength: 2 })
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .lean()
+        .exec();
     },
   });
 };
+
 
 // Count
 const countChallenges = async (query = {}) => {

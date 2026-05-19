@@ -13,8 +13,9 @@ const createOrganization = async (data) => {
 };
 
 // Get all with filters
-const getOrganizationsWithFilters = async (query, skip, limit) => {
+const getOrganizationsWithFilters = async (query, skip, limit, sortBy, sortOrder) => {
   const matchQuery = { ...query };
+  const sortDirection = sortOrder === "asc" ? 1 : -1;
 
   // Set the match query for companyOrganizer if provided
   if (query.companyOrganizer) {
@@ -146,15 +147,26 @@ const getOrganizationsWithFilters = async (query, skip, limit) => {
       }
     },
 
-
-
-    {
-      $skip: skip  // Skip the number of organizations based on the page number
-    },
-    {
-      $limit: limit  // Limit the number of organizations based on the page size
-    }
   ];
+  if (sortBy === "organizationName") {
+    pipeline.push({
+      $addFields: {
+        organizationNameSort: {
+          $toLower: { $ifNull: ["$basicInfo.name", ""] }
+        }
+      }
+    });
+    pipeline.push({
+      $sort: { organizationNameSort: sortDirection, _id: -1 }
+    });
+  } else if (sortBy === "createdAt") {
+    pipeline.push({
+      $sort: { createdAt: sortDirection, _id: sortDirection }
+    });
+  }
+  pipeline.push({ $skip: skip });
+  if (limit > 0) pipeline.push({ $limit: limit });
+
 
   // Perform the aggregation query
   const results = await Organizations.aggregate(pipeline);

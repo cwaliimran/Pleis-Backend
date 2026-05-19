@@ -12,6 +12,7 @@ const {
   searchOrganizations,
   searchLoyaltyClubs,
 } = require("./globalSearchRepo");
+const { getForYouOrganizationsForHomeService } = require("../../organizationProfile/organizationProfileService");
 
 
 const SEARCH_HANDLERS = {
@@ -24,68 +25,70 @@ const SEARCH_HANDLERS = {
 const globalSearchService = async (ctx) => {
   const { type } = ctx;
 
-  const selectedKeys =
-    type && type !== "all"
-      ? [type]
-      : Object.keys(SEARCH_HANDLERS);
 
-  const promises = selectedKeys.map(async (key) => {
-    const handler = SEARCH_HANDLERS[key];
+    const selectedKeys =
+      type && type !== "all"
+        ? [type]
+        : Object.keys(SEARCH_HANDLERS);
 
-    // Unknown type explicitly requested
-    if (!handler) {
-      if (type && type !== "all") {
-        throw new Error(`Unsupported search type: ${type}`);
+    const promises = selectedKeys.map(async (key) => {
+      const handler = SEARCH_HANDLERS[key];
+
+      // Unknown type explicitly requested
+      if (!handler) {
+        if (type && type !== "all") {
+          throw new Error(`Unsupported search type: ${type}`);
+        }
+
+        // When "all", just skip unknown keys silently
+        return null;
       }
 
-      // When "all", just skip unknown keys silently
-      return null;
-    }
+      const result = await handler(ctx);
 
-    const result = await handler(ctx);
-
-    return {
-      key,
-      title: mapTitle(key),
-      data: result.data.map(item =>
-        formatResultItem(key, item, ctx.timezone)
-      ),
-      meta: result.meta
-    };
-  });
-
-  const results = await Promise.all(promises);
-
-  // log search only if events/organizations returned something
-  const shouldLogSearch =
-    results.some(r =>
-      r &&
-      ["events", "organizations"].includes(r.key) &&
-      r.data &&
-      r.data.length > 0
-    );
-
-  if (shouldLogSearch) {
-    recordSearchService({
-      userId: ctx.userId,
-      keyword: ctx.keyword,
-      filters: {
-        categories: ctx.advanceFilters?.categories || [],
-        venueTypes: ctx.advanceFilters?.venueTypes || [],
-        tags: ctx.advanceFilters?.tags || [],
-        genre: ctx.advanceFilters?.genre || [],
-      },
-      location: ctx.longitude && ctx.latitude
-        ? { coordinates: [ctx.longitude, ctx.latitude] }
-        : null,
-      radiusKm: ctx.radiusKm || 50,
+      return {
+        key,
+        title: mapTitle(key),
+        data: result.data.map(item =>
+          formatResultItem(key, item, ctx.timezone)
+        ),
+        meta: result.meta
+      };
     });
 
-  }
+    const results = await Promise.all(promises);
+
+    // log search only if events/organizations returned something
+    const shouldLogSearch =
+      results.some(r =>
+        r &&
+        ["events", "organizations"].includes(r.key) &&
+        r.data &&
+        r.data.length > 0
+      );
+
+    if (shouldLogSearch) {
+      recordSearchService({
+        userId: ctx.userId,
+        keyword: ctx.keyword,
+        filters: {
+          categories: ctx.advanceFilters?.categories || [],
+          venueTypes: ctx.advanceFilters?.venueTypes || [],
+          tags: ctx.advanceFilters?.tags || [],
+          genre: ctx.advanceFilters?.genre || [],
+        },
+        location: ctx.longitude && ctx.latitude
+          ? { coordinates: [ctx.longitude, ctx.latitude] }
+          : null,
+        radiusKm: ctx.radiusKm || 50,
+      });
+
+    }
 
 
-  // remove null entries
-  return results.filter(Boolean);
+    // remove null entries
+    return results.filter(Boolean);
+  
 };
 
 
@@ -116,7 +119,7 @@ async function getGlobalFiltersService(userId, timezone, center, radiusKm, categ
   let [popularSearches, categories, venueTypes, tags, genres] = await Promise.all([
     getTrendingSearchesService({ center, radiusKm }),
     getPublicCategories(),
-    getPublicVenueTypes({categoriesFilter}),
+    getPublicVenueTypes({ categoriesFilter }),
     getActiveTagsService(),
     getActiveTagsTypes()
   ]);

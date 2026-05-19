@@ -44,79 +44,179 @@ const create = async (data) => {
 };
 
 
-const getWithFilters = async (query, skip = 0, limit = 20) => {
+// const getWithFilters = async (query, skip = 0, limit = 20) => {
 
-  // Build aggregation pipeline
+//   // Build aggregation pipeline
+//   const pipeline = [
+//     { $match: query },
+//     { $sort: { createdAt: -1 } },
+//     { $skip: skip },
+//   ];
+
+//   if (limit > 0) pipeline.push({ $limit: limit });
+
+//   // --- Lookup reward (for claimPromotion) ---
+//   pipeline.push({
+//     $lookup: {
+//       from: "rewards",
+//       localField: "reward",
+//       foreignField: "_id",
+//       as: "reward",
+//     },
+//   });
+
+//   // --- Lookup menuItem (for buyMenuItemPromotion and productSale) ---
+//   pipeline.push({
+//     $lookup: {
+//       from: "menuitems",
+//       localField: "menuItem",
+//       foreignField: "_id",
+//       as: "menuItem",
+//     },
+//   });
+
+//   // --- Lookup tierLimit (populate tier title and image) ---
+//   pipeline.push({
+//     $lookup: {
+//       from: "tiers",
+//       localField: "tierLimit",
+//       foreignField: "_id",
+//       as: "tierLimit",
+//       pipeline: [
+//         { $project: { _id: 1, title: 1, } }
+//       ]
+//     }
+//   });
+
+//   // --- Conditionally include the correct populated field based on promotionType ---
+//   pipeline.push({
+//     $addFields: {
+//       reward: {
+//         $cond: [
+//           { $eq: ["$promotionType", "claimPromotion"] },
+//           { $arrayElemAt: ["$reward", 0] },
+//           null,
+//         ],
+//       },
+//       menuItem: {
+//         $cond: [
+//           { $in: ["$promotionType", ["buyMenuItemPromotion", "productSale"]] },
+//           { $arrayElemAt: ["$menuItem", 0] },
+//           null,
+//         ],
+//       },
+//       tierLimit: {
+//         $cond: [
+//           { $ne: ["$tierLimit", []] },
+//           { $arrayElemAt: ["$tierLimit", 0] },
+//           null,
+//         ],
+//       },
+//     },
+//   });
+
+//   const results = await Promotion.aggregate(pipeline).allowDiskUse(true);
+//   return results;
+// };
+const getWithFilters = async (
+  query,
+  skip = 0,
+  limit = 20,
+  sortBy = "createdAt",
+  sortOrder = "desc"
+) => {
+  const sortDirection = sortOrder === "asc" ? 1 : -1;
+
+  let sortStage = { createdAt: -1, _id: -1 };
+
+  if (sortBy === "title") {
+    sortStage = { titleSort: sortDirection, _id: -1 };
+  } else if (sortBy === "description") {
+    sortStage = { descriptionSort: sortDirection, _id: -1 };
+  } else if (sortBy === "promotionType") {
+    sortStage = { promotionTypeSort: sortDirection, _id: -1 };
+  } else if (sortBy === "createdAt") {
+    sortStage = { createdAt: sortDirection, _id: sortDirection };
+  }
+
   const pipeline = [
     { $match: query },
-    { $sort: { createdAt: -1 } },
+
+    {
+      $addFields: {
+        titleSort: { $toLower: { $ifNull: ["$title", ""] } },
+        descriptionSort: { $toLower: { $ifNull: ["$description", ""] } },
+        promotionTypeSort: { $toLower: { $ifNull: ["$promotionType", ""] } },
+      },
+    },
+
+    { $sort: sortStage },
     { $skip: skip },
   ];
 
   if (limit > 0) pipeline.push({ $limit: limit });
 
-  // --- Lookup reward (for claimPromotion) ---
-  pipeline.push({
-    $lookup: {
-      from: "rewards",
-      localField: "reward",
-      foreignField: "_id",
-      as: "reward",
+  pipeline.push(
+    {
+      $lookup: {
+        from: "rewards",
+        localField: "reward",
+        foreignField: "_id",
+        as: "reward",
+      },
     },
-  });
-
-  // --- Lookup menuItem (for buyMenuItemPromotion and productSale) ---
-  pipeline.push({
-    $lookup: {
-      from: "menuitems",
-      localField: "menuItem",
-      foreignField: "_id",
-      as: "menuItem",
+    {
+      $lookup: {
+        from: "menuitems",
+        localField: "menuItem",
+        foreignField: "_id",
+        as: "menuItem",
+      },
     },
-  });
-
-  // --- Lookup tierLimit (populate tier title and image) ---
-  pipeline.push({
-    $lookup: {
-      from: "tiers",
-      localField: "tierLimit",
-      foreignField: "_id",
-      as: "tierLimit",
-      pipeline: [
-        { $project: { _id: 1, title: 1, } }
-      ]
+    {
+      $lookup: {
+        from: "tiers",
+        localField: "tierLimit",
+        foreignField: "_id",
+        as: "tierLimit",
+        pipeline: [{ $project: { _id: 1, title: 1 } }],
+      },
+    },
+    {
+      $addFields: {
+        reward: {
+          $cond: [
+            { $eq: ["$promotionType", "claimPromotion"] },
+            { $arrayElemAt: ["$reward", 0] },
+            null,
+          ],
+        },
+        menuItem: {
+          $cond: [
+            { $in: ["$promotionType", ["buyMenuItemPromotion", "productSale"]] },
+            { $arrayElemAt: ["$menuItem", 0] },
+            null,
+          ],
+        },
+        tierLimit: {
+          $cond: [
+            { $ne: ["$tierLimit", []] },
+            { $arrayElemAt: ["$tierLimit", 0] },
+            null,
+          ],
+        },
+      },
+    },
+    {
+      $project: {
+        titleSort: 0,
+        descriptionSort: 0,
+        promotionTypeSort: 0,
+      },
     }
-  });
+  );
 
-  // --- Conditionally include the correct populated field based on promotionType ---
-  pipeline.push({
-    $addFields: {
-      reward: {
-        $cond: [
-          { $eq: ["$promotionType", "claimPromotion"] },
-          { $arrayElemAt: ["$reward", 0] },
-          null,
-        ],
-      },
-      menuItem: {
-        $cond: [
-          { $in: ["$promotionType", ["buyMenuItemPromotion", "productSale"]] },
-          { $arrayElemAt: ["$menuItem", 0] },
-          null,
-        ],
-      },
-      tierLimit: {
-        $cond: [
-          { $ne: ["$tierLimit", []] },
-          { $arrayElemAt: ["$tierLimit", 0] },
-          null,
-        ],
-      },
-    },
-  });
-
-  const results = await Promotion.aggregate(pipeline).allowDiskUse(true);
-  return results;
+  return Promotion.aggregate(pipeline).allowDiskUse(true);
 };
 
 module.exports = {

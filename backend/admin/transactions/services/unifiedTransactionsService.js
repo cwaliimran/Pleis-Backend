@@ -21,7 +21,8 @@ const getTransactionsService = async ({
   endDate,
   keyword,
   user,
-  date, startPoints, endPoints, ballance, referral, purchaseBased, streakBased, challengeBased, promotionBased
+  date, startPoints, endPoints, ballance, referral, purchaseBased, streakBased, challengeBased, promotionBased,
+  sortBy, sortOrder
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
@@ -29,7 +30,7 @@ const getTransactionsService = async ({
 
   if (walletType) match.walletType = walletType;
   if (domainType) match.domainType = domainType;
-  console.log("type", type);
+
   if (type?.trim()) {
     match.type = type.trim().toLowerCase();
   }
@@ -86,9 +87,9 @@ const getTransactionsService = async ({
     if (ballance) match.closingBalance.$eq = Number(ballance);
   }
 
-console.log("match", match);
+
   const [items, total] = await Promise.all([
-    unifiedRepo.getTransactionsWithFilters({ match, keyword, skip, limit, referral }),
+    unifiedRepo.getTransactionsWithFilters({ match, keyword, skip, limit, referral, sortBy, sortOrder }),
     unifiedRepo.countTransactions({ match, keyword })
   ]);
   return {

@@ -7,7 +7,7 @@ const createTag = async ({ title, status, type }) => {
   return await tagRepo.createTag({ title, status, type });
 };
 
-const getTags = async ({ page, limit, keyword, type, status, date }) => {
+const getTags = async ({ page, limit, keyword, type, status, date, sortBy, sortOrder }) => {
   const filters = [];
 
   if (date) {
@@ -54,7 +54,7 @@ const getTags = async ({ page, limit, keyword, type, status, date }) => {
 
   // Fetch tags and related counts
   const [tags, totalFiltered, total, active, inactive] = await Promise.all([
-    tagRepo.getTagsWithFilters(query, skip, limit === 0 ? 0 : limit),
+    tagRepo.getTagsWithFilters(query, skip, limit === 0 ? 0 : limit, sortBy, sortOrder),
     tagRepo.countTags(query),
     tagRepo.countTags({ status: { $ne: "deleted" } }),
     tagRepo.countTags({ status: "active" }),

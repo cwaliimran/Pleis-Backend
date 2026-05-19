@@ -8,15 +8,15 @@ const {
 const categoriesService = require("./menuItemCategoriesService");
 
 const createCategory = async (req, res) => {
-  let { image, title, status = "active" ,companyOrganizer} = req.body;
+  let { image, title, status = "active", companyOrganizer } = req.body;
 
   if (!validateParams(req, res, {
     rawData: ["title"], enumFields: {
       status: ["active", "inactive", "deleted"],
     }
   })) return;
-  if(req.user.userType==="organizer"){
-    companyOrganizer=req.user._id
+  if (req.user.userType === "organizer") {
+    companyOrganizer = req.user._id
   }
   try {
     const category = await categoriesService.createCategory({
@@ -45,7 +45,23 @@ const createCategory = async (req, res) => {
 
 const getCategories = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = 'active', date, companyOrganizer } = req.query;
+  let { keyword, status = 'active', date, companyOrganizer, sortBy, sortOrder } = req.query;
+
+  const SORT_FIELDS = ["title", "createdAt"];
+  const SORT_ORDERS = ["asc", "desc"];
+  if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+    const key = sortBy && !SORT_FIELDS.includes(sortBy)
+      ? "invalid_sort_by_field"
+      : "invalid_sort_order";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+
+  if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+    const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+      : "sort_by_required_when_sort_order_is_provided";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+
 
   try {
     // Validate date format if provided
@@ -68,6 +84,8 @@ const getCategories = async (req, res) => {
       companyOrganizer,
       status,
       date,
+      sortBy,
+      sortOrder
     });
 
     // Send the response with the fetched categories and meta information

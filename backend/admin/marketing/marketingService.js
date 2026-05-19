@@ -10,7 +10,7 @@ const createMarketing = async (data) => {
   return Marketing;
 };
 
-const getMarketings = async ({ page, limit, keyword, status, date, timezone }) => {
+const getMarketings = async ({ page, limit, keyword, status, date, timezone, sortBy, sortOrder }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   // Build query object
@@ -26,7 +26,7 @@ const getMarketings = async ({ page, limit, keyword, status, date, timezone }) =
   }
 
   // Get Marketings with population
-  let Marketings = await MarketingRepo.getMarketingsWithFilters(query, skip, limit);
+  let Marketings = await MarketingRepo.getMarketingsWithFilters(query, skip, limit, sortBy, sortOrder);
   // Apply keyword filter AFTER populate
   if (keyword) {
     const regex = new RegExp(keyword, "i");

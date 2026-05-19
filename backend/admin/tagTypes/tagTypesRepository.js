@@ -23,12 +23,12 @@ const createTagsType = async (data) => {
 };
 
 // Get all with filters
-const getTagsTypesWithFilters = async (query, page, limit) => {
+const getTagsTypesWithFilters = async (query, page, limit, sortBy, sortOrder) => {
   return getWithFilters({
     model: TagTypesModel,
     query,
     options: {
-      page, limit, sort: { title: 1 }, select: {
+      page, limit, sort: { [sortBy]: sortOrder === "asc" ? 1 : -1 }, select: {
         title: 1,
         _id: 1,
         createdAt: 1,

@@ -9,7 +9,7 @@ const categoriesService = require("./globalRewardCategoriesService");
 
 const createCategory = async (req, res) => {
   const { image, title, status = "active" } = req.body;
-const createID = req.user._id;
+  const createID = req.user._id;
   if (!validateParams(req, res, {
     rawData: ["title"], enumFields: {
       status: ["active", "inactive", "deleted"],
@@ -44,9 +44,23 @@ const createID = req.user._id;
 
 const getCategories = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date } = req.query;
-const createID = req.user._id;
+  const { keyword, status, date, sortBy, sortOrder } = req.query;
+  const createID = req.user._id;
   // Validate status value if provided
+  const SORT_FIELDS = ["title", "createdAt"];
+  const SORT_ORDERS = ["asc", "desc"];
+  if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+    const key = sortBy && !SORT_FIELDS.includes(sortBy)
+      ? "invalid_sort_by_field"
+      : "invalid_sort_order";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+
+  if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+    const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+      : "sort_by_required_when_sort_order_is_provided";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
   const allowedStatuses = ["active", "inactive", "deleted"];
   if (status && !allowedStatuses.includes(status)) {
     return sendResponse({
@@ -70,6 +84,8 @@ const createID = req.user._id;
       keyword,
       status,
       date,
+      sortBy,
+      sortOrder,
     });
 
     return sendResponse({
@@ -177,7 +193,7 @@ const deleteCategory = async (req, res) => {
 const getCategoriesTitleOnly = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date } = req.query;
-const createID = req.user._id;
+  const createID = req.user._id;
   // Validate status value if provided
   const allowedStatuses = ["active", "inactive", "deleted"];
   if (status && !allowedStatuses.includes(status)) {

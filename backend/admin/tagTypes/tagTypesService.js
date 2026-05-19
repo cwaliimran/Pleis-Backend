@@ -5,7 +5,7 @@ const TagstypeRepo = require("./tagTypesRepository");
 const createTagsType = async ({ title, status }) => {
   return await TagstypeRepo.createTagsType({ title, status });
 };
-const getTagsTypes = async ({ page, limit, keyword, status, date }) => {
+const getTagsTypes = async ({ page, limit, keyword, status, date, sortBy, sortOrder }) => {
   const andConditions = [];
   // if date is available then match createdAt with date current date format is yyyy-mm-dd
   if (date) {
@@ -37,7 +37,9 @@ const getTagsTypes = async ({ page, limit, keyword, status, date }) => {
       TagstypeRepo.getTagsTypesWithFilters(
         query,
         page,
-        limit
+        limit,
+        sortBy,
+        sortOrder
       ),
       TagstypeRepo.getCounts(query),
     ]);

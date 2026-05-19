@@ -5,6 +5,22 @@ const { default: mongoose } = require("mongoose");
 const { getCurrentDateInTimezone } = require("../../../helperUtils/responseUtil");
 const { getMinTicketPricesByEventIds } = require("../../ticketing/ticketingsRepository");
 
+const toObjectIdArray = (val) => {
+  if (!val) return [];
+
+  const arr = Array.isArray(val) ? val : [val];
+
+  return arr
+    .filter(Boolean)
+    .map(id => {
+      try {
+        return new mongoose.Types.ObjectId(id);
+      } catch (e) {
+        return null;
+      }
+    })
+    .filter(Boolean);
+};
 /**
  * Personalized "For You" events based on interests + engagement signals
  */
@@ -16,43 +32,50 @@ const getForYouEventsAgainstInterests = async ({
   preferences = {},
   page = 1,
   limit = 20,
-  userId
+  userId,
+  ctx
 }) => {
   const now = getCurrentDateInTimezone({ timezone });
   const skip = Math.max((page - 1) * limit, 0);
 
-  const { categories = [], tags = [], venueTypes = [] } = preferences || {};
-  const catObjId = category ? new mongoose.Types.ObjectId(category) : null;
+  const advanceFilters = ctx?.advanceFilters || {};
 
-  const radiusInMeters = Math.max(radiusKm || 0, 0.1) * 1000;
+  const ctxCategories = (advanceFilters.categories || []).map(id => new mongoose.Types.ObjectId(id));
+  const ctxTags = (advanceFilters.tags || []).map(id => new mongoose.Types.ObjectId(id));
+  const ctxVenueTypes = (advanceFilters.venueTypes || []).map(id => new mongoose.Types.ObjectId(id));
 
-  const dateFilter = {
-    $or: [
-      { "schedule.endDateTime": { $gte: now } },
-      { "schedule.startDateTime": { $gte: now } },
-    ],
-  };
+  const prefCategories = (preferences.categories || []).map(id => new mongoose.Types.ObjectId(id));
+  const prefTags = (preferences.tags || []).map(id => new mongoose.Types.ObjectId(id));
+  const prefVenueTypes = (preferences.venueTypes || []).map(id => new mongoose.Types.ObjectId(id));
 
-  const hasInterests =
-    (categories?.length || tags?.length || venueTypes?.length) > 0;
+  const categoryObjectIds = toObjectIdArray(category);
+  const radiusInMeters = radiusKm * 1000;
 
   const baseQuery = {
     status: "active",
-    ...dateFilter,
-    ...(catObjId && {
-      "basicInfo.categories": { $in: [catObjId] }
-    })
+    $or: [
+      { "schedule.endDateTime": { $gte: now } },
+      { "schedule.startDateTime": { $gte: now } }
+    ],
+
   };
+  if (categoryObjectIds.length) {
+    baseQuery["basicInfo.categories"] = {
+      $in: categoryObjectIds
+    };
+  }
+
+  /* ===============================
+     CTX FILTER MERGE (STRICT)
+     =============================== */
+  if (ctx) {
+    if (ctxCategories.length) baseQuery["basicInfo.categories"] = { $in: ctxCategories };
+    if (ctxTags.length) baseQuery["basicInfo.tags"] = { $in: ctxTags };
+  }
 
   let pipeline = [];
 
-  /* ---------------- Base geo or normal match ---------------- */
-  if (!userLocation) {
-    pipeline.push(
-      { $match: baseQuery },
-      { $sort: { createdAt: -1 } }
-    );
-  } else {
+  if (userLocation) {
     pipeline.push({
       $geoNear: {
         near: userLocation,
@@ -63,9 +86,13 @@ const getForYouEventsAgainstInterests = async ({
         query: baseQuery
       }
     });
+  } else {
+    pipeline.push({ $match: baseQuery });
   }
 
-  /* ---------------- Engagement stats lookup ---------------- */
+  /* ===============================
+     ENGAGEMENT
+     =============================== */
   pipeline.push(
     {
       $lookup: {
@@ -106,8 +133,8 @@ const getForYouEventsAgainstInterests = async ({
                       cond: { $eq: ["$$s._id", "view"] }
                     }
                   },
-                  as: "f",
-                  in: "$$f.count"
+                  as: "v",
+                  in: "$$v.count"
                 }
               }
             },
@@ -126,8 +153,8 @@ const getForYouEventsAgainstInterests = async ({
                       cond: { $eq: ["$$s._id", "favorite"] }
                     }
                   },
-                  as: "f",
-                  in: "$$f.count"
+                  as: "v",
+                  in: "$$v.count"
                 }
               }
             },
@@ -138,129 +165,78 @@ const getForYouEventsAgainstInterests = async ({
     }
   );
 
-  /* ---------------- Interest scoring ---------------- */
-  if (hasInterests) {
-    pipeline.push(
-      {
-        $addFields: {
-          matchedTags: {
-            $setIntersection: [{ $ifNull: ["$basicInfo.tags", []] }, tags],
+  /* ===============================
+     INTEREST SCORE (CTX + PREFS MERGED)
+     =============================== */
+  const categories = ctxCategories.length ? ctxCategories : prefCategories;
+  const tags = ctxTags.length ? ctxTags : prefTags;
+  const venueTypes = ctxVenueTypes.length ? ctxVenueTypes : prefVenueTypes;
+
+  pipeline.push({
+    $addFields: {
+      matchScore: {
+        $add: [
+          {
+            $multiply: [
+              { $size: { $setIntersection: [{ $ifNull: ["$basicInfo.categories", []] }, categories] } },
+              1.2
+            ]
           },
-          matchedCategories: {
-            $setIntersection: [
-              { $ifNull: ["$basicInfo.categories", []] },
-              categories,
-            ],
+          {
+            $multiply: [
+              { $size: { $setIntersection: [{ $ifNull: ["$basicInfo.tags", []] }, tags] } },
+              1.0
+            ]
           },
-          matchedVenueTypes: {
-            $cond: [
-              { $gt: [venueTypes.length, 0] },
-              {
-                $setIntersection: [
-                  { $ifNull: ["$basicInfo.venueType", []] },
-                  venueTypes,
-                ],
-              },
-              [],
-            ],
+          {
+            $multiply: [
+              { $size: { $setIntersection: [{ $ifNull: ["$basicInfo.venueType", []] }, venueTypes] } },
+              1.0
+            ]
           },
-        },
-      },
-      {
-        $addFields: {
-          matchScore: {
-            $add: [
-              { $multiply: [{ $size: "$matchedTags" }, 1.0] },
-              { $multiply: [{ $size: "$matchedCategories" }, 1.2] },
-              { $multiply: [{ $size: "$matchedVenueTypes" }, 1.0] },
-              { $divide: ["$viewsCount", 100] },
-              { $divide: ["$favoritesCount", 50] },
-            ],
-          },
-        },
-      },
-      { $match: { matchScore: { $gt: 0 } } },
-      { $sort: { matchScore: -1, viewsCount: -1, createdAt: -1 } }
-    );
-  } else {
-    /* ---------------- Trending fallback ---------------- */
-    pipeline.push(
-      {
-        $addFields: {
-          trendingScore: {
-            $add: [
-              { $multiply: ["$viewsCount", 0.5] },
-              { $multiply: ["$favoritesCount", 1.5] },
-              { $multiply: [{ $ifNull: ["$meta.attendeesCount", 0] }, 1.0] },
-            ],
-          },
-        },
-      },
-      { $sort: { trendingScore: -1, createdAt: -1 } }
-    );
-  }
-
-  /* ---------------- Favorite flag ---------------- */
-  if (userId) {
-    pipeline.push(
-      {
-        $lookup: {
-          from: "favorites",
-          let: { eventId: "$_id" },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ["$targetId", "$$eventId"] },
-                    { $eq: ["$targetType", "event"] },
-                    { $eq: ["$user", new mongoose.Types.ObjectId(userId)] }
-                  ]
-                }
-              }
-            },
-            { $limit: 1 }
-          ],
-          as: "favoriteInfo"
-        }
-      },
-      {
-        $addFields: {
-          isFavorite: { $gt: [{ $size: "$favoriteInfo" }, 0] }
-        }
-      },
-      { $project: { favoriteInfo: 0 } }
-    );
-  }
-
-  pipeline.push(
-    { $skip: skip },
-    { $limit: limit },
-    ...getEventLookups()
-  );
-
-  const results = await Events.aggregate(pipeline).allowDiskUse(true);
-
-  const eventIds = results.map(ev => ev._id);
-  const ticketPriceMap = await getMinTicketPricesByEventIds(eventIds);
-
-  const formatted = results.map(event => {
-    const formattedEvent = formatRecentlyViewedEventResponse(event, {
-      userLocation,
-      timezone,
-    });
-
-    const minPrice = ticketPriceMap[event._id.toString()] || null;
-    formattedEvent.ticketInfo = minPrice
-      ? { price: `€${minPrice}` }
-      : null;
-
-    return formattedEvent;
+          { $divide: ["$viewsCount", 100] },
+          { $divide: ["$favoritesCount", 50] }
+        ]
+      }
+    }
   });
 
-  const meta = generateMeta(page, limit, formatted.length);
+  /* ===============================
+     SORT BASED ON SCORE
+     =============================== */
+  pipeline.push({ $sort: { matchScore: -1, createdAt: -1 } });
 
-  return { data: formatted, meta };
+  /* ===============================
+     PAGINATION WITH COUNT (IMPORTANT FIX)
+     =============================== */
+  const facetPipeline = [
+    {
+      $facet: {
+        data: [
+          { $skip: skip },
+          { $limit: limit },
+
+          ...getEventLookups()
+        ],
+
+        totalCount: [
+          { $count: "count" }
+        ]
+      }
+    }
+  ];
+
+  pipeline.push(...facetPipeline);
+
+  const result = await Events.aggregate(pipeline).allowDiskUse(true);
+
+  const data = result[0]?.data || [];
+  const totalCount = result[0]?.totalCount?.[0]?.count || 0;
+
+  return {
+    recommendedEvents: data,
+    totalCount
+  };
 };
 
 /* ---------- Shared lookups ---------- */

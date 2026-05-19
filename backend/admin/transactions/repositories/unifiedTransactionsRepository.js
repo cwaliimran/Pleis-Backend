@@ -15,6 +15,7 @@ const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
 const { UserReservations } = require("@UserReservationsModel");
 const { PromotionsOrders } = require("../../../commonModules/loyalty/promotions/models/Promotion");
 const WebhookTransactionsEventModel = require("../../../commonModules/paymentsIntegrations/paymentsWebhook/repositories/WebhookTransactionsEvent.model");
+const { sortBy } = require("lodash");
 let batchId = null;
 
 const buildKeywordMatch = (keyword) => {
@@ -48,19 +49,209 @@ const buildKeywordMatch = (keyword) => {
   };
 };
 
+
+
+const buildSortStages = (sortBy, sortOrder) => {
+  const sortDirection = sortOrder === "asc" ? 1 : -1;
+  if (sortBy === "userName") {
+    return [
+      {
+        $addFields: {
+          userNameSort: {
+            $toLower: {
+              $trim: {
+                input: {
+                  $concat: [
+                    { $ifNull: ["$user.firstName", ""] },
+                    " ",
+                    { $ifNull: ["$user.lastName", ""] }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      { $sort: { userNameSort: sortDirection, _id: -1 } }
+    ];
+  }
+
+  if (sortBy === "organizationName") {
+    return [
+      {
+        $addFields: {
+          organizationNameSort: {
+            $toLower: {
+              $ifNull: ["$organization.basicInfo.name", ""]
+            }
+          }
+        }
+      },
+      { $sort: { organizationNameSort: sortDirection, _id: -1 } }
+    ];
+  }
+
+  return [
+    {
+      $sort: {
+        createdAt: sortBy === "createdAt" ? sortDirection : -1,
+        _id: sortBy === "createdAt" ? sortDirection : -1
+      }
+    }
+  ];
+};
+
 const getTransactionsWithFilters = async ({
   match = {},
   keyword,
   skip = 0,
   limit = 10,
-  referral
+  referral,
+  sortBy,
+  sortOrder
 
 }) => {
+  console.log("sortBy", sortBy);
+  console.log("sortOrder", sortOrder);
 
   /* =====================================================
      🔵 CASE A — NO KEYWORD (FAST TWO-STAGE)
   ===================================================== */
+  const isLookupSort = ["userName", "organizationName"].includes(sortBy);
+  if (!keyword?.trim() && isLookupSort) {
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
 
+    const pipeline = [];
+
+    if (Object.keys(match).length) {
+      pipeline.push({ $match: match });
+    }
+
+    pipeline.push(
+      {
+        $lookup: {
+          from: "users",
+          localField: "user",
+          foreignField: "_id",
+          as: "user"
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "companyOrganizer",
+          foreignField: "_id",
+          as: "companyOrganizer"
+        }
+      },
+      {
+        $lookup: {
+          from: "organizations",
+          localField: "organization",
+          foreignField: "_id",
+          as: "organization"
+        }
+      },
+      {
+        $addFields: {
+          user: { $arrayElemAt: ["$user", 0] },
+          companyOrganizer: { $arrayElemAt: ["$companyOrganizer", 0] },
+          organization: { $arrayElemAt: ["$organization", 0] }
+        }
+      }
+    );
+
+    if (sortBy === "userName") {
+      pipeline.push(
+        {
+          $addFields: {
+            userNameSort: {
+              $toLower: {
+                $trim: {
+                  input: {
+                    $concat: [
+                      { $ifNull: ["$user.firstName", ""] },
+                      " ",
+                      { $ifNull: ["$user.lastName", ""] }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        { $sort: { userNameSort: sortDirection, _id: -1 } }
+      );
+    }
+
+    if (sortBy === "organizationName") {
+      pipeline.push(
+        {
+          $addFields: {
+            organizationNameSort: {
+              $toLower: {
+                $ifNull: ["$organization.basicInfo.name", ""]
+              }
+            }
+          }
+        },
+        { $sort: { organizationNameSort: sortDirection, _id: -1 } }
+      );
+    }
+
+    pipeline.push({ $skip: skip });
+
+    if (limit > 0) {
+      pipeline.push({ $limit: limit });
+    }
+
+    pipeline.push({
+      $project: {
+        batchId: 1,
+        walletType: 1,
+        type: 1,
+        domainType: 1,
+        entityId: 1,
+        points: 1,
+        closingBalance: 1,
+        description: 1,
+        publicId: 1,
+        createdAt: 1,
+        updatedAt: 1,
+
+        user: {
+          _id: "$user._id",
+          firstName: "$user.firstName",
+          lastName: "$user.lastName",
+          email: "$user.email",
+          profileIcon: "$user.profileIcon"
+        },
+
+        companyOrganizer: {
+          _id: "$companyOrganizer._id",
+          logo: "$companyOrganizer.companyDetails.logo",
+          title: "$companyOrganizer.companyDetails.loyaltySettings.title",
+          status: "$companyOrganizer.companyDetails.status"
+        },
+
+        organization: {
+          _id: "$organization._id",
+          basicInfo: {
+            name: "$organization.basicInfo.name",
+            media: {
+              logo: "$organization.basicInfo.media.logo"
+            }
+          }
+        }
+      }
+    });
+
+    const txList = await UnifiedWalletTransactions.aggregate(pipeline, {
+      allowDiskUse: true
+    });
+
+    return await attachBookings(txList);
+  }
   if (!keyword?.trim()) {
 
     const idPipeline = [];
@@ -167,16 +358,15 @@ const getTransactionsWithFilters = async ({
           }
         }
       },
-
-      { $sort: { __order: 1 } }
     ];
 
     const txList = await UnifiedWalletTransactions.aggregate(pipeline, {
       allowDiskUse: true
     });
-const result = await attachBookings(txList);
+    const result = await attachBookings(txList);
     return result;
   }
+
 
   /* =====================================================
      🔎 CASE B — KEYWORD SEARCH (LOOKUP FIRST)
@@ -224,7 +414,7 @@ const result = await attachBookings(txList);
       }
     },
     { $match: regexMatch },
-    { $sort: { createdAt: -1, _id: -1 } },
+    ...buildSortStages(sortBy, sortOrder),
     { $skip: skip }
   );
 
@@ -332,7 +522,7 @@ const attachBookings = async (txList) => {
 
     // Ensure entityId is valid before using .toString()
     const entityIdStr = tx.entityId ? tx.entityId.toString() : null;
-    
+
     // Return the updated transaction with the bookings
     return {
       ...tx,
@@ -344,7 +534,7 @@ const attachBookings = async (txList) => {
 // Helper function to fetch bookings for each domain
 const getBookingsForDomain = async (domain, orderIds) => {
   try {
-    
+
     let bookings = [];
     switch (domain) {
       case "ticketingorders":
@@ -465,10 +655,10 @@ const getTotalClosingBalanceByOrganizationId = async (organizationId) => {
     const objectId = new mongoose.Types.ObjectId(organizationId);
     const result = await WebhookTransactionsEventModel.aggregate([
       { $match: { organization: objectId } },
-      { $project: { amount: { $toDouble: "$amount" } } }, 
+      { $project: { amount: { $toDouble: "$amount" } } },
       { $group: { _id: null, totalAmount: { $sum: "$amount" } } }
     ]);
-  
+
     return result.length > 0 ? result[0].totalAmount : 0;
   } catch (error) {
     console.error("Error fetching total closing balance:", error);

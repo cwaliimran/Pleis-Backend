@@ -12,7 +12,7 @@ const createOrganization = async ({ data }) => {
   return formatOrganization(org);
 };
 
-const getOrganizations = async ({ page, limit, keyword, status, creator, date }) => {
+const getOrganizations = async ({ page, limit, keyword, status, creator, date, sortBy, sortOrder }) => {
   const query = {};
   query.$or = [
     { creator:new mongoose.Types.ObjectId(creator) },
@@ -43,7 +43,9 @@ const getOrganizations = async ({ page, limit, keyword, status, creator, date })
       organizationRepo.getOrganizationsWithFilters(
         query,
         skip,
-        limit === 0 ? 0 : limit
+        limit === 0 ? 0 : limit,
+        sortBy,
+        sortOrder
       ),
       organizationRepo.getOrganizationCounts(query),
     ]);
@@ -419,7 +421,7 @@ const getAllOrganizations = async ({ page, limit, keyword, status, creator, date
       { "staff.user": new mongoose.Types.ObjectId(creator) }
     ];
   }
-  console.log("status",status );
+
 
   // Apply status filter, if provided
   if (status) {

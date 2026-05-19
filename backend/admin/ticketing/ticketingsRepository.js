@@ -11,14 +11,61 @@ const createTicketing = async (data) => {
 };
 
 // Get all with filters (e.g. filter by eventId)
-const getTicketingsWithFilters = async (query, page, limit) => {
+// const getTicketingsWithFilters = async (query, page, limit, sortBy, sortOrder) => {
+//   if (!query.$and) query.$and = [];
+//   query.$and.push({
+//     $or: [
+//       { "recurringMeta.isTemplate": false },
+//     ]
+//   });
+
+
+//   return getWithFilters({
+//     model: TicketingsModel,
+//     query,
+//     populate: [
+//       {
+//         path: "event",
+//         select: "basicInfo.media basicInfo.title",
+//       },
+//     ],
+//     options: {
+//       sort: { createdAt: -1 },
+//       page,
+//       limit,
+//     },
+//   });
+// };
+const getTicketingsWithFilters = async (
+  query,
+  page,
+  limit,
+  sortBy = "createdAt",
+  sortOrder = "desc"
+) => {
   if (!query.$and) query.$and = [];
+
   query.$and.push({
-    $or: [
-      { "recurringMeta.isTemplate": false },
-    ]
+    $or: [{ "recurringMeta.isTemplate": false }],
   });
 
+  const sortDirection = sortOrder === "asc" ? 1 : -1;
+
+  let sort = { createdAt: -1, _id: -1 };
+
+  if (sortBy === "title") {
+    sort = { title: sortDirection, _id: -1 };
+  } else if (sortBy === "eventTitle") {
+    sort = { "event.basicInfo.title": sortDirection, _id: -1 };
+  } else if (sortBy === "quantity") {
+    sort = { quantity: sortDirection, _id: -1 };
+  } else if (sortBy === "price") {
+    sort = { price: sortDirection, _id: -1 };
+  } else if (sortBy === "taxPercentage") {
+    sort = { taxPercentage: sortDirection, _id: -1 };
+  } else if (sortBy === "createdAt") {
+    sort = { createdAt: sortDirection, _id: sortDirection };
+  }
 
   return getWithFilters({
     model: TicketingsModel,
@@ -30,7 +77,7 @@ const getTicketingsWithFilters = async (query, page, limit) => {
       },
     ],
     options: {
-      sort: { createdAt: -1 },
+      sort,
       page,
       limit,
     },
@@ -421,7 +468,7 @@ const getEventsTicketingsWithFilters = async (query) => {
     model: TicketingsModel,
     query,
     options: {
-      select: { title: 1, price: 1, status: 1, event: 1,timingSlots: 1,fastTrackEntry: 1 },
+      select: { title: 1, price: 1, status: 1, event: 1, timingSlots: 1, fastTrackEntry: 1 },
     },
   });
 };
@@ -481,28 +528,28 @@ const getPricingSalesStats = async ({ eventId, startDate, endDate }) => {
   let grandCount = 0;
   let grandAmount = 0;
 
-for (const b of rows) {
-  const phase = b.ticket.snapshot.pricing?.phase || "regular";
-  const price = b.ticket.snapshot.pricing?.unitPrice || 0;
-  const status = b.status;
+  for (const b of rows) {
+    const phase = b.ticket.snapshot.pricing?.phase || "regular";
+    const price = b.ticket.snapshot.pricing?.unitPrice || 0;
+    const status = b.status;
 
-  // phase must exist
-  if (!stats[phase]) continue;
+    // phase must exist
+    if (!stats[phase]) continue;
 
-  // 🚀 dynamic status guard (key line)
-  if (!stats[phase][status]) continue;
+    // 🚀 dynamic status guard (key line)
+    if (!stats[phase][status]) continue;
 
-  stats[phase][status].count += 1;
-  stats[phase][status].amount += price;
+    stats[phase][status].count += 1;
+    stats[phase][status].amount += price;
 
-  stats[phase].total.count += 1;
-  stats[phase].total.amount += price;
+    stats[phase].total.count += 1;
+    stats[phase].total.amount += price;
 
-  if (status !== "cancelled") {
-    grandCount += 1;
-    grandAmount += price;
+    if (status !== "cancelled") {
+      grandCount += 1;
+      grandAmount += price;
+    }
   }
-}
 
 
   return { stats, grandCount, grandAmount };
@@ -646,7 +693,7 @@ const getTicketTypeSalesStats = async ({
 const getTicketTypeCapacities = async (eventId) => {
   const tickets = await TicketingsModel.find({
     event: eventId,
-    status: {$ne: "deleted"}
+    status: { $ne: "deleted" }
   }).lean();
 
   const capacityMap = {};
@@ -688,7 +735,7 @@ const getTotalTicketsPurchasedByOrganizationId = async (organizationId) => {
     // If no results found, return 0, else return the total tickets
     return result.length > 0 ? result[0].totalTickets : 0;
   } catch (error) {
-  
+
     return 0; // Return 0 if there was an error
   }
 };
@@ -717,10 +764,10 @@ const getTotalPurchases = async (userId) => {
   }
 };
 const getActiveTicketingByEventId = async ({
-  event, 
-  page = 1, 
-  limit = 10, 
-  status = "active", 
+  event,
+  page = 1,
+  limit = 10,
+  status = "active",
   keyword = "",
   timezone
 }) => {
@@ -741,10 +788,10 @@ const getActiveTicketingByEventId = async ({
     }
 
     // Query for ticketings with pagination and filters
-    let  ticketings = await TicketingsModel.find(filter)
+    let ticketings = await TicketingsModel.find(filter)
       .skip(skip)
       .limit(limit)
-  ticketings = ticketings.map((item) => formatEventTicketing(timezone, item));
+    ticketings = ticketings.map((item) => formatEventTicketing(timezone, item));
 
     return ticketings;
   } catch (error) {

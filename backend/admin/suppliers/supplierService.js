@@ -6,7 +6,7 @@ const createSupplier = async ({ title, description, status }) => {
   return await supplierRepo.createSupplier({ title, description, status });
 };
 
-const getSuppliers = async ({ page, limit, keyword, status, date }) => {
+const getSuppliers = async ({ page, limit, keyword, status, date, sortBy, sortOrder }) => {
   const query = {};
   if (status) {
     query.status = status;
@@ -32,7 +32,7 @@ const getSuppliers = async ({ page, limit, keyword, status, date }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const [suppliers, totalFiltered, total, active, inactive] = await Promise.all([
-    supplierRepo.getSuppliersWithFilters(query, skip, limit === 0 ? 0 : limit,keyword, status, date ),
+    supplierRepo.getSuppliersWithFilters(query, skip, limit === 0 ? 0 : limit, keyword, status, date, sortBy, sortOrder),
     supplierRepo.countSuppliers(query),
     supplierRepo.countSuppliers({ status: { $ne: "deleted" } }),
     supplierRepo.countSuppliers({ status: "active" }),

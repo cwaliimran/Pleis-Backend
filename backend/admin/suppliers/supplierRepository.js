@@ -9,8 +9,10 @@ const buildSuppliersCacheKey = ({
   keyword = "",
   status = "",
   date = "",
+  sortBy = "createdAt",
+  sortOrder = "desc",
 }) => {
-  return `${ACTIVE_SUPPLIERS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:keyword=${keyword}:status=${status}:date=${date}`;
+  return `${ACTIVE_SUPPLIERS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:keyword=${keyword}:status=${status}:date=${date}:sortBy=${sortBy}:sortOrder=${sortOrder}`;
 };
  
 // Create
@@ -21,14 +23,16 @@ const createSupplier = async (data) => {
 };
 
 // Get all with filters
-const getSuppliersWithFilters = async (query, skip, limit, keyword, status, date) => {
+const getSuppliersWithFilters = async (query, skip, limit, keyword, status, date, sortBy="createdAt", sortOrder="desc") => {
   const cacheKey = buildSuppliersCacheKey({
     scope: "admin",
     skip,
     limit,
     keyword,
     status,
-    date
+    date,
+    sortBy,
+    sortOrder,
   });
 
   return cache({
@@ -37,7 +41,7 @@ const getSuppliersWithFilters = async (query, skip, limit, keyword, status, date
 
     fetchFn: async () => {
       return Supplier.find(query)
-        .sort({ title: 1 })
+        .sort({ [sortBy]: sortOrder === "asc" ? 1 : -1 })
         .skip(skip)
         .limit(limit);
     },

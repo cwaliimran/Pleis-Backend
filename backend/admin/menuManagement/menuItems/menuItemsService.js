@@ -150,7 +150,9 @@ const getMenuItems = async ({
   menu,
   timezone,
   companyOrganizer,
-  organization
+  organization,
+  sortBy,
+  sortOrder
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let menuIds = [];
@@ -243,8 +245,59 @@ const getMenuItems = async ({
       }]
       : []),
 
-    { $sort: { createdAt: -1 } },
 
+
+  ];
+  console.log("sortBy", sortBy, "sortOrder", sortOrder);
+  if (sortBy && sortOrder) {
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
+
+    if (["menuItemName", "description", "menuName"].includes(sortBy)) {
+      const sortFieldMap = {
+        menuItemName: "$title",
+        description: "$description",
+        menuName: "$menu.title",
+      };
+
+      pipeline.push({
+        $addFields: {
+          sortValue: {
+            $toLower: {
+              $ifNull: [sortFieldMap[sortBy], ""]
+            }
+          }
+        }
+      });
+
+      pipeline.push({
+        $sort: {
+          sortValue: sortDirection,
+          _id: -1
+        }
+      });
+    } else {
+      const sortFieldMap = {
+        price: "basePrice",
+        createdAt: "createdAt",
+      };
+
+      const sortField = sortFieldMap[sortBy] || "createdAt";
+
+      pipeline.push({
+        $sort: {
+          [sortField]: sortDirection,
+          _id: -1
+        }
+      });
+    }
+  } else {
+    pipeline.push({
+      $sort: {
+        createdAt: -1
+      }
+    });
+  }
+  pipeline.push(
     {
       $facet: {
         data: [
@@ -254,7 +307,7 @@ const getMenuItems = async ({
         total: [{ $count: "count" }]
       }
     }
-  ];
+  );
 
   const result = await MenuItems.aggregate(pipeline);
   const data = result[0]?.data || [];
