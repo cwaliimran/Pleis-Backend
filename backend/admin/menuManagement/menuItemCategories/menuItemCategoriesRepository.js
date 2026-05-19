@@ -5,11 +5,13 @@ const ACTIVE_MENU_ITEM_CATEGORIES_CACHE_KEY = "menuItemCategories:active";
 const buildMenuItemCategoriesCacheKey = ({
   scope = "admin", // public | admin
   skip = 0,
-  limit = 10
+  limit = 10,
+  sortBy,
+  sortOrder
 }) => {
-  return `${ACTIVE_MENU_ITEM_CATEGORIES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+  return `${ACTIVE_MENU_ITEM_CATEGORIES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}${sortBy ? `:sortBy=${sortBy}` : ""}${sortOrder ? `:sortOrder=${sortOrder}` : ""}`;
 };
- 
+
 // Create
 const createCategory = async (data) => {
   const category = new MenuItemCategories(data);
@@ -18,35 +20,48 @@ const createCategory = async (data) => {
 };
 
 // Get all with filters
-const getCategoriesWithFilters = async (query, skip, limit,keyword,companyOrganizer) => {
-   let cacheKey = buildMenuItemCategoriesCacheKey({
+const getCategoriesWithFilters = async (query, skip, limit, keyword, companyOrganizer, sortBy, sortOrder) => {
+  let cacheKey = buildMenuItemCategoriesCacheKey({
     scope: "admin",
     skip,
-    limit
+    limit,
+    sortBy,
+    sortOrder
   });
   const filters = [];
   if (keyword) filters.push(`keyword=${keyword}`);
   if (companyOrganizer) filters.push(`companyOrganizer=${companyOrganizer}`);
   if (query.status && query.status['$ne']) filters.push(`status=${query.status['$ne']}`);
+  if (sortBy) filters.push(`sortBy=${sortBy}`);
+
   if (query.createdAt && query.createdAt['$gte']) filters.push(`createdAt=${query.createdAt['$gte']}`);
-    if (filters.length > 0) {
+  if (filters.length > 0) {
     cacheKey = `${cacheKey}:${filters.join(":")}`;
   }
+
   return cache({
     namespace: cacheKey,
     ttl: 86400, // 1 day
 
     fetchFn: async () => {
-      const categories = await MenuItemCategories.find(query)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit);
+      const sortDirection = sortOrder === "asc" ? 1 : -1;
 
-      if (!categories) {
-        return [];
+      let sortObj = { createdAt: -1, _id: -1 };
+
+      if (sortBy === "title") {
+        sortObj = { title: sortDirection, _id: -1 };
+      } else if (sortBy === "createdAt") {
+        sortObj = { createdAt: sortDirection, _id: sortDirection };
       }
 
-      return categories;
+      const categories = await MenuItemCategories.find(query)
+        .collation({ locale: "en", strength: 2 })
+        .sort(sortObj)
+        .skip(skip)
+        .limit(limit === 0 ? undefined : limit)
+        .lean();
+
+      return categories || [];
     },
   });
 };

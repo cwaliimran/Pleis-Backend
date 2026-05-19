@@ -798,6 +798,7 @@ const getOrdersTransactions = async ({
     userName: "user.firstName",
     createdAt: "createdAt",
     organizationName: "organization.name",
+    email: "user.email",
   };
 
   const sortField = sortFields[sortBy] || "createdAt";

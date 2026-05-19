@@ -7,10 +7,10 @@ const createBadgeCategories = async (data) => {
   let badgeCategories = await BadgeCategoriesRepo.createBadgeCategories(data);
   return badgeCategories;
 };
-const getBadgeCategoriess = async ({ timezone, page, limit, keyword, status, userId,  date, range }) => {
+const getBadgeCategoriess = async ({ timezone, page, limit, keyword, status, userId,  date, range,sortBy,sortOrder }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { BadgeCategoriess, meta } = await BadgeCategoriesRepo.getBadgeCategoriess({ timezone, page, limit, keyword, status, userId,  date, range, today, skip });
+  let { BadgeCategoriess, meta } = await BadgeCategoriesRepo.getBadgeCategoriess({ timezone, page, limit, keyword, status, userId,  date, range, today, skip, sortBy, sortOrder });
 
   return {
     BadgeCategoriess,

@@ -52,7 +52,7 @@ const getOrdersTransactions = async (req, res) => {
     const { page, limit } = parsePaginationParams(req);
     let { event, keyword, status, date, orderType, companyOrganizer, organization, startDate, endDate, startAmount, endAmount, paymentMethod, globalStatusLevel, transfered, refunded, validationStatus, paymentStatus, resStartDate, resEndDate, resDate, resStartTime, resEndTime, futureRes, pastRes, paidRes, minimalSpendRes, prePay, ticketRequiredRes, cancelledRes, noShowRes, orderStatus, deliveryMethod, category, menuSaleItme, promotionOrders, eventBasedOrder, sortBy, sortOrder
     } = req.query;
-    const SORT_FIELDS = ["userName", "createdAt", "organizationName"];
+    const SORT_FIELDS = ["userName", "createdAt", "organizationName","email"];
     const SORT_ORDERS = ["asc", "desc"];
     if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
       const key = sortBy && !SORT_FIELDS.includes(sortBy)

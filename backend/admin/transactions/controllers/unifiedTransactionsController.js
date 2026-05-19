@@ -10,14 +10,31 @@ const unifiedService = require("../services/unifiedTransactionsService");
 const getTransactions = async (req, res) => {
     const { page, limit } = parsePaginationParams(req);
     let {
-        walletType, domainType, type, organization, companyOrganizer, entityId, startDate, date, endDate, keyword, user, startPoints, endPoints, ballance,referral,purchaseBased,streakBased,challengeBased,promotionBased
+        walletType, domainType, type, organization, companyOrganizer, entityId, startDate, date, endDate, keyword, user, startPoints, endPoints, ballance, referral, purchaseBased, streakBased, challengeBased, promotionBased, sortBy, sortOrder
+
+
     } = req.query;
+    const SORT_FIELDS = ["userName", "createdAt", "organizationName"];
+    const SORT_ORDERS = ["asc", "desc"];
+    if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+        const key = sortBy && !SORT_FIELDS.includes(sortBy)
+            ? "invalid_sort_by_field"
+            : "invalid_sort_order";
+        return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
+
+    if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+        const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+            : "sort_by_required_when_sort_order_is_provided";
+        return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
+
     if (req.user.userType === "organizer") {
         companyOrganizer = req.user._id;
     }
     try {
         const { items, meta } = await unifiedService.getTransactionsService({
-            page, limit, walletType, domainType, type, organization, companyOrganizer, entityId, startDate, date, endDate, keyword, user, startPoints, endPoints, ballance,referral,purchaseBased,streakBased,challengeBased,promotionBased
+            page, limit, walletType, domainType, type, organization, companyOrganizer, entityId, startDate, date, endDate, keyword, user, startPoints, endPoints, ballance, referral, purchaseBased, streakBased, challengeBased, promotionBased, sortBy, sortOrder
         });
         return sendResponse({ res, statusCode: 200, translationKey: "wallet_transactions_fetched", data: items, meta });
     } catch (error) {

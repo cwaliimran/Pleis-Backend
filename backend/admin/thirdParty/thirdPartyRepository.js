@@ -101,7 +101,7 @@ const findByIdAndUpdate = async (id, data) => {
 
 
 
-const getThirdpartys = async ({ timezone, page, limit, keyword, status, createrId, date, skip }) => {
+const getThirdpartys = async ({ timezone, page, limit, keyword, status, createrId, date, skip, sortBy, sortOrder }) => {
   const now = getCurrentDateInTimezone({ timezone });
 
   const pipeline = [
@@ -228,8 +228,14 @@ const getThirdpartys = async ({ timezone, page, limit, keyword, status, createrI
   });
 
 
-  // Sort by newest
-  pipeline.push({ $sort: { createdAt: -1 } });
+  // Sort by newest or custom sort
+  if (sortBy && sortOrder) {
+    const sortField = sortBy === "title" ? "title" : "globalrewardcategories.title";
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
+    pipeline.push({ $sort: { [sortField]: sortDirection } });
+  } else {
+    pipeline.push({ $sort: { createdAt: -1 } });
+  }
 
   // Pagination facet
   pipeline.push({

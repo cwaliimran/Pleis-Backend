@@ -7,7 +7,7 @@ const createCategory = async ({ image, title, status,companyOrganizer }) => {
   return formatItemCategory(category);
 };
 
-const getCategories = async ({ page, limit, keyword, companyOrganizer, status, date }) => {
+const getCategories = async ({ page, limit, keyword, companyOrganizer, status, date, sortBy, sortOrder }) => {
   const query = {};
 
   // Handle 'status' filter
@@ -24,6 +24,7 @@ const getCategories = async ({ page, limit, keyword, companyOrganizer, status, d
       $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
     };
   }
+
 
   // Handle 'keyword' filter
   if (keyword) {
@@ -47,7 +48,9 @@ const getCategories = async ({ page, limit, keyword, companyOrganizer, status, d
         skip,
         limit === 0 ? 0 : limit,
         keyword,
-        companyOrganizer
+        companyOrganizer,
+        sortBy,
+        sortOrder
       ),
       categoryRepo.countCategories(query),
       categoryRepo.countCategories({ status: { $ne: "deleted" } }),

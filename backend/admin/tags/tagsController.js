@@ -39,10 +39,24 @@ const createTag = async (req, res) => {
 
 const getTags = async (req, res) => {
   let { page, limit } = parsePaginationParams(req);
-  if(req.query.limit >= 100) limit = 1000; // set a maximum limit to prevent abuse
-  const { keyword, type, status, date } = req.query;
+  if (req.query.limit >= 100) limit = 1000; // set a maximum limit to prevent abuse
+  const { keyword, type, status, date, sortBy, sortOrder } = req.query;
 
   try {
+    const SORT_FIELDS = ["title", "createdAt","tagTitle"];
+    const SORT_ORDERS = ["asc", "desc"];
+    if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+      const key = sortBy && !SORT_FIELDS.includes(sortBy)
+        ? "invalid_sort_by_field"
+        : "invalid_sort_order";
+      return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
+
+    if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+      const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+        : "sort_by_required_when_sort_order_is_provided";
+      return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
 
     if (date && !validateParams(req, res, {
       dateFields: {
@@ -56,7 +70,9 @@ const getTags = async (req, res) => {
       keyword,
       type,
       status,
-      date
+      date,
+      sortBy,
+      sortOrder,
     });
 
     return sendResponse({

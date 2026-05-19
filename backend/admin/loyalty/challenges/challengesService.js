@@ -10,7 +10,7 @@ const createChallenge = async (data) => {
   return formatChallenge(challenge.toObject());
 };
 
-const getChallenges = async ({ companyOrganizer, page, limit, keyword, status, date, timezone }) => {
+const getChallenges = async ({ companyOrganizer, page, limit, keyword, status, date, timezone, sortBy, sortOrder }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   // Build query object
@@ -29,7 +29,7 @@ const getChallenges = async ({ companyOrganizer, page, limit, keyword, status, d
   }
 
   // Get challenges with population
-  const challenges = await challengeRepo.getChallengesWithFilters(query, skip, limit);
+  const challenges = await challengeRepo.getChallengesWithFilters(query, skip, limit, sortBy, sortOrder);
 
   // Get counts
   const [total, active, inactive, totalFiltered] = await Promise.all([

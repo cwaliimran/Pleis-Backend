@@ -15,7 +15,7 @@ const create = async (data, timezone) => {
 
   return formatPromotion(promotion, timezone);
 };
-const get = async ({ companyOrganizer, page, limit, keyword, status, date, timezone }) => {
+const get = async ({ companyOrganizer, page, limit, keyword, status, date, timezone, sortBy, sortOrder }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const query = {};
@@ -50,7 +50,7 @@ const get = async ({ companyOrganizer, page, limit, keyword, status, date, timez
     Object.assign(query, keywordMatch);
   }
 
-  const records = await repository.getWithFilters(query, skip, limit);
+  const records = await repository.getWithFilters(query, skip, limit,sortBy, sortOrder);
 
   // ✅ COUNTS MUST ALSO EXCLUDE TEMPLATES
   const baseCountFilter = {

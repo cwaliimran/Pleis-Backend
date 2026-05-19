@@ -12,9 +12,11 @@ const ACTIVE_MENU_PRESETS_CACHE_KEY = "menuPresets:active";
 const buildMenuPresetsCacheKey = ({
   scope = "admin", // public | admin
   skip = 0,
-  limit = 10
+  limit = 10,
+  sortBy,
+  sortOrder
 }) => {
-  return `${ACTIVE_MENU_PRESETS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}`;
+  return `${ACTIVE_MENU_PRESETS_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:sortBy=${sortBy}:sortOrder=${sortOrder}`;
 };
 const createPreset = async (data) => {
   let preset = await presetRepo.createPreset(data);
@@ -30,6 +32,8 @@ const getPresets = async ({
   status,
   userId,
   date,
+  sortBy,
+  sortOrder
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
@@ -37,6 +41,8 @@ const getPresets = async ({
     scope: "admin",
     skip,
     limit,
+    sortBy,
+    sortOrder
   });
   // Add filters to the cache key dynamically
   const filters = [];
@@ -88,7 +94,47 @@ const getPresets = async ({
         pipeline.push({ $match: keywordMatch });
       }
 
-      pipeline.push({ $sort: { createdAt: -1 } });
+      if (sortBy && sortOrder) {
+        const sortDirection = sortOrder === "asc" ? 1 : -1;
+
+        if (["name", "description"].includes(sortBy)) {
+          const sortFieldMap = {
+            name: "$title",
+            description: "$description",
+          };
+
+          pipeline.push({
+            $addFields: {
+              sortValue: {
+                $toLower: {
+                  $ifNull: [sortFieldMap[sortBy], ""],
+                },
+              },
+            },
+          });
+
+          pipeline.push({
+            $sort: {
+              sortValue: sortDirection,
+              _id: sortDirection,
+            },
+          });
+        } else if (sortBy === "createdAt") {
+          pipeline.push({
+            $sort: {
+              createdAt: sortDirection,
+              _id: sortDirection,
+            },
+          });
+        }
+      } else {
+        pipeline.push({
+          $sort: {
+            createdAt: -1,
+            _id: -1,
+          },
+        });
+      }
 
       pipeline.push({
         $lookup: {

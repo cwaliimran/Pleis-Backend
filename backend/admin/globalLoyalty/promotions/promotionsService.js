@@ -15,7 +15,7 @@ const create = async (data, timezone) => {
   return formatPromotion(promotion, timezone);
 };
 
-const get = async ({ page, limit, keyword, status, date, timezone }) => {
+const get = async ({ page, limit, keyword, status, date, timezone, sortBy, sortOrder }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const query = {
@@ -44,7 +44,7 @@ const get = async ({ page, limit, keyword, status, date, timezone }) => {
   }
 
   // Use repository function to get promotions with population
-  const records = await repository.getWithFilters(query, skip, limit, keyword);
+  const records = await repository.getWithFilters(query, skip, limit, keyword, sortBy, sortOrder);
 
 
 
