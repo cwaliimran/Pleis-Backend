@@ -11,7 +11,10 @@ const UsersStreaksService = require("./usersStreaksService");
 const createUsersStreak = async (req, res) => {
   const { visits = 0, points = 0, status = "active" } = req.body;
 
+
   if (!validateParams(req, res, { rawData: ["points", "visits", "companyOrganizer"] })) return;
+
+
 
   try {
     const usersStreak = await UsersStreaksService.createUsersStreak({
@@ -19,6 +22,7 @@ const createUsersStreak = async (req, res) => {
       points,
       companyOrganizer,
       status,
+
     });
 
     return sendResponse({
@@ -40,9 +44,23 @@ const createUsersStreak = async (req, res) => {
 
 const getUsersStreaks = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, orderSort } = req.query;
+  const { keyword, status, date, sortBy, sortOrder } = req.query;
 
   try {
+    const SORT_FIELDS = ["userName", "userFirstName"];
+    const SORT_ORDERS = ["asc", "desc"];
+    if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+      const key = sortBy && !SORT_FIELDS.includes(sortBy)
+        ? "invalid_sort_by_field"
+        : "invalid_sort_order";
+      return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
+
+    if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+      const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+        : "sort_by_required_when_sort_order_is_provided";
+      return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
 
 
     if (date && !validateParams(req, res, {
@@ -58,7 +76,8 @@ const getUsersStreaks = async (req, res) => {
       keyword,
       status,
       date,
-      orderSort
+      sortBy,
+      sortOrder
     });
 
     return sendResponse({

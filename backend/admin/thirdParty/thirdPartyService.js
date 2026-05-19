@@ -22,9 +22,9 @@ const createThirdparty = async (data) => {
 };
 
 // Populate venue data for Thirdpartys (updated for new schema)
-const getThirdpartys = async ({ timezone, page, limit, keyword, status, createrId,  date,  }) => {
+const getThirdpartys = async ({ timezone, page, limit, keyword, status, createrId,  date, sortBy, sortOrder }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-  let { Thirdpartys, meta } = await ThirdpartyRepo.getThirdpartys({ timezone, page, limit, keyword, status, createrId,  date , skip });
+  let { Thirdpartys, meta } = await ThirdpartyRepo.getThirdpartys({ timezone, page, limit, keyword, status, createrId,  date , skip, sortBy, sortOrder });
 
   return {
     Thirdpartys,

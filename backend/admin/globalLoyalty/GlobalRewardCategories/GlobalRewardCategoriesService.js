@@ -8,7 +8,7 @@ const createCategory = async ({ image, title, status,createID }) => {
   return formatGlobalRewardCategory(category);
 };
 
-const getCategories = async ({ page, limit, keyword, status, date, createID }) => {
+const getCategories = async ({ page, limit, keyword, status, date, createID, sortBy, sortOrder }) => {
   const query = {};
 
   // Filter by status
@@ -40,7 +40,7 @@ const getCategories = async ({ page, limit, keyword, status, date, createID }) =
 
   const [categories, counts] =
     await Promise.all([
-      categoryRepo.getCategoriesWithFilters(query, skip, limit === 0 ? 0 : limit,),
+      categoryRepo.getCategoriesWithFilters(query, skip, limit === 0 ? 0 : limit,sortBy, sortOrder),
       categoryRepo.getCounts(query),
     ]);
 

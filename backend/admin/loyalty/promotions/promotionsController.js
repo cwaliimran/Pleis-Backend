@@ -12,7 +12,7 @@ const create = async (req, res) => {
   let { timezone } = req.user;
   let recurringDetails = req.body?.recurringDetails || {};
   const isRecurringEnabled = !!recurringDetails.isEnabled;
-  if(!req.body.companyOrganizer){
+  if (!req.body.companyOrganizer) {
     req.body.companyOrganizer = req.user?._id;
   }
 
@@ -141,8 +141,22 @@ const create = async (req, res) => {
 
 const get = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, companyOrganizer } = req.query;
-if(!companyOrganizer){
+  let { keyword, status, date, companyOrganizer, sortBy, sortOrder } = req.query;
+  const SORT_FIELDS = ["title", "description", "promotionType"];
+  const SORT_ORDERS = ["asc", "desc"];
+  if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+    const key = sortBy && !SORT_FIELDS.includes(sortBy)
+      ? "invalid_sort_by_field"
+      : "invalid_sort_order";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+
+  if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+    const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+      : "sort_by_required_when_sort_order_is_provided";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+  if (!companyOrganizer) {
     companyOrganizer = req.user?._id;
   }
   try {
@@ -163,6 +177,8 @@ if(!companyOrganizer){
       status,
       date,
       timezone: req.user?.timezone,
+      sortBy,
+      sortOrder,
     });
     return sendResponse({
       res,
@@ -329,7 +345,7 @@ const update = async (req, res) => {
 
 
 const deleteItem = async (req, res) => {
-    const { scope = "single" } = req.query; // single | future
+  const { scope = "single" } = req.query; // single | future
 
   if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
   try {

@@ -5,11 +5,10 @@ const { User } = require("@UsersModel");
 const { formatUpdate } = require("./helper/helper");
 
 
-const getSupportRequest = async ({ timezone, page, limit, keyword, status, userId, date, skip }) => {
+const getSupportRequest = async ({ timezone, page, limit, keyword, status, userId, date, skip, sortBy="createdAt", sortOrder="desc" }) => {
 
+  const sortDirection = sortOrder === "asc" ? 1 : -1;
   const pipeline = [];
-
-  // Apply filters
 
   // Status filter
   if (status) {
@@ -33,10 +32,10 @@ const getSupportRequest = async ({ timezone, page, limit, keyword, status, userI
   pipeline.push({
     $lookup: {
       from: 'users',
-      localField: 'user', // Reference field in the SupportRequest collection
-      foreignField: '_id', // Match the field in the User collection
+      localField: 'user', 
+      foreignField: '_id',
       pipeline: [
-        { $project: { firstName: 1, lastName: 1, username: 1, email: 1, profileIcon: 1 } } // Project the necessary fields
+        { $project: { firstName: 1, lastName: 1, username: 1, email: 1, profileIcon: 1 } }
       ],
       as: 'user',
     },
@@ -45,27 +44,46 @@ const getSupportRequest = async ({ timezone, page, limit, keyword, status, userI
   pipeline.push({
     $unwind: {
       path: '$user',
-      preserveNullAndEmptyArrays: true, // Keep the support request even if no user is found
+      preserveNullAndEmptyArrays: true,
     },
   });
+
+  // Keyword search
   if (keyword) {
     pipeline.push({
       $match: {
         $or: [
-            { subject: { $regex: keyword, $options: 'i' } },  // Match keyword in the subject
-          { message: { $regex: keyword, $options: 'i' } },  // Match keyword in the message
-
-          { 'user.firstName': { $regex: keyword, $options: 'i' } },  // Match keyword in user's first name
-          { 'user.lastName': { $regex: keyword, $options: 'i' } },   // Match keyword in user's last name
+          { subject: { $regex: keyword, $options: 'i' } },
+          { message: { $regex: keyword, $options: 'i' } },
+          { 'user.firstName': { $regex: keyword, $options: 'i' } },
+          { 'user.lastName': { $regex: keyword, $options: 'i' } },
         ],
       },
     });
   }
 
-  // Sort by createdAt in descending order
-  pipeline.push({ $sort: { createdAt: -1 } });
+  // --- Add userName sort field if requested ---
+  if (sortBy === "userName") {
+    pipeline.push({
+      $addFields: {
+        userNameSort: {
+          $toLower: {
+            $concat: [
+              { $ifNull: ["$user.firstName", ""] },
+              " ",
+              { $ifNull: ["$user.lastName", ""] }
+            ]
+          }
+        }
+      }
+    });
+    pipeline.push({ $sort: { userNameSort: sortDirection, _id: -1 } });
+  } else {
+    // Default sort
+    pipeline.push({ $sort: { createdAt: sortDirection, _id: -1 } });
+  }
 
-  // Apply pagination and counts using $facet
+  // Pagination and counting
   pipeline.push({
     $facet: {
       data: [
@@ -76,24 +94,23 @@ const getSupportRequest = async ({ timezone, page, limit, keyword, status, userI
     }
   });
 
-  // Run the aggregation pipeline
+  // Execute aggregation
   const result = await SupportRequest.aggregate(pipeline);
 
   let supportRequests = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-  // Additional counts for meta (active/inactive/total by userId as creator)
   const [total, active, inactive] = await Promise.all([
     SupportRequest.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "deleted" } }),
     SupportRequest.countDocuments({ status: "active", ...(userId && { userId: userId }) }),
     SupportRequest.countDocuments({ status: "inactive", ...(userId && { userId: userId }) })
   ]);
 
-  // Generate pagination meta information
   const meta = generateMeta(page, limit, totalFiltered);
   meta.supportRequestsCount = { total, active, inactive };
-const formattedSupportRequests = supportRequests.map(formatUpdate);
-  // Return the response
+
+  const formattedSupportRequests = supportRequests.map(formatUpdate);
+
   return { supportRequests: formattedSupportRequests, meta };
 };
 module.exports = {

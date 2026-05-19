@@ -21,6 +21,8 @@ const getVenues = async ({
   keyword,
   status,
   pinned,
+  sortBy,
+  sortOrder,
   userId,
   date,
   organization
@@ -30,17 +32,22 @@ const getVenues = async ({
   // 🔹 Normalize organization param → array of ObjectIds
   // 🔹 Normalize organization param → array of ObjectIds
   let organizationIds;
-
-  if (organization) {
+  if (Array.isArray(organization)) {
+    // Already an array of IDs
+    organizationIds = organization
+      .filter(id => mongoose.Types.ObjectId.isValid(id))
+      .map(id => new mongoose.Types.ObjectId(id));
+  } else if (typeof organization === "string") {
+    // If a comma-separated string
     organizationIds = organization
       .split(",")
       .map(id => id.trim())
       .filter(id => mongoose.Types.ObjectId.isValid(id))
       .map(id => new mongoose.Types.ObjectId(id));
+  }
 
-    if (!organizationIds.length) {
-      organizationIds = undefined;
-    }
+  if (!organizationIds?.length) {
+    organizationIds = undefined;
   }
 
 
@@ -129,9 +136,22 @@ const getVenues = async ({
       }
     });
   }
+  if (sortBy === "title") {
+    pipeline.push({
+      $addFields: { sortField: { $toLower: { $ifNull: ["$title", ""] } } }
+    });
+  } else if (sortBy === "organizationName") {
+    pipeline.push({
+      $addFields: {
+        sortField: { $toLower: { $ifNull: ["$organizationData.basicInfo.name", ""] } }
+      }
+    });
+  } else if (sortBy === "createdAt") {
+    pipeline.push({ $addFields: { sortField: "$createdAt" } });
+  }
 
-  // 8️⃣ Sorting
-  pipeline.push({ $sort: { createdAt: -1 } });
+  pipeline.push({ $sort: { sortField: sortOrder === "asc" ? 1 : -1, _id: -1 } });
+
 
   // 9️⃣ Pagination + count
   pipeline.push({

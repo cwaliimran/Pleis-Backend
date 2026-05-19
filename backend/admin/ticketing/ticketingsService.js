@@ -25,6 +25,8 @@ const getTicketings = async ({
   eventId,
   organizations,
   companyOrganizer,
+  sortBy,
+  sortOrder
 }) => {
   const andConditions = [];
 
@@ -82,7 +84,7 @@ const getTicketings = async ({
   const query = andConditions.length ? { $and: andConditions } : {};
 
   const [ticketings, counts] = await Promise.all([
-    ticketingRepo.getTicketingsWithFilters(query, page, limit),
+    ticketingRepo.getTicketingsWithFilters(query, page, limit, sortBy, sortOrder),
     ticketingRepo.getCounts(query),
   ]);
 
@@ -295,13 +297,12 @@ const deleteTicketing = async (ticketId, scope = "single") => {
 };
 
 
-const getOrganizationTicketings = async ({ timezone, page, limit, keyword, status, date, organization }) => {
+const getOrganizationTicketings = async ({ timezone, page, limit, keyword, status, date, organization, sortBy, sortOrder }) => {
 
   const organizationEvents = await getEventIdsByOrganization(organization);
   const eventIds = organizationEvents.map(event => event._id);
   const andConditions = [];
   andConditions.push({ event: { $in: eventIds } });
-
   if (date) {
     andConditions.push({
       createdAt: {
@@ -325,7 +326,7 @@ const getOrganizationTicketings = async ({ timezone, page, limit, keyword, statu
 
   const query = andConditions.length ? { $and: andConditions } : {};
   const [ticketings, counts] = await Promise.all([
-    ticketingRepo.getTicketingsWithFilters(query, page, limit),
+    ticketingRepo.getTicketingsWithFilters(query, page, limit, sortBy, sortOrder),
     ticketingRepo.getCounts(query),
   ]);
   const formattedTicketings = ticketings.map((item) => formatTicketing(timezone, item));

@@ -68,8 +68,23 @@ const createOrganization = async (req, res) => {
 
 const getOrganizations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, date, status = "active", companyOrganizer } = req.query;
+  let { keyword, date, status = "active", companyOrganizer,sortBy,sortOrder } = req.query;
   let creator = req.user._id;
+  const SORT_FIELDS = [ "createdAt", "organizationName"];
+  const SORT_ORDERS = ["asc", "desc"];
+  if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+    const key = sortBy && !SORT_FIELDS.includes(sortBy)
+      ? "invalid_sort_by_field"
+      : "invalid_sort_order";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+
+  if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+    const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+      : "sort_by_required_when_sort_order_is_provided";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+
   if (req.user.originalUserId) {
     companyOrganizer = req.user.originalUserId;
   }
@@ -90,6 +105,8 @@ const getOrganizations = async (req, res) => {
       status,
       creator,
       date,
+      sortBy,
+      sortOrder
     });
     // Transform to local time safely
     organizations = organizations.map((org) => {

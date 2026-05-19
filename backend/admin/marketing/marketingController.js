@@ -23,7 +23,7 @@ const createMarketing = async (req, res) => {
   try {
     // Get the userId from the authenticated user
     const userId = req.user._id;
-    
+
     // Add the userId to the request body before saving
     req.body.userId = userId;
 
@@ -56,8 +56,22 @@ const getMarketings = async (req, res) => {
     return getUserMarketings(req, res);
   }
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date } = req.query;
+  const { keyword, status, date, sortBy, sortOrder } = req.query;
   try {
+    const SORT_FIELDS = ["userName", "title"];
+    const SORT_ORDERS = ["asc", "desc"];
+    if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+      const key = sortBy && !SORT_FIELDS.includes(sortBy)
+        ? "invalid_sort_by_field"
+        : "invalid_sort_order";
+      return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
+
+    if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+      const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+        : "sort_by_required_when_sort_order_is_provided";
+      return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
 
 
     const { Marketings, meta } = await MarketingService.getMarketings({
@@ -67,6 +81,8 @@ const getMarketings = async (req, res) => {
       status,
       date,
       timezone: req.user?.timezone,
+      sortBy,
+      sortOrder,
     });
     return sendResponse({
       res,
@@ -148,7 +164,7 @@ const getUserMarketings = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date } = req.query;
   try {
-const userId = req.user._id;
+    const userId = req.user._id;
 
     const { Marketings, meta } = await MarketingService.getUserMarketings({
       page,

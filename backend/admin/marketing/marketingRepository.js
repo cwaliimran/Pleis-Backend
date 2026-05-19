@@ -1,12 +1,12 @@
-const 
-Marketing
-= require("@Marketing");
+const
+  Marketing
+    = require("@Marketing");
 
 // Decide which discriminator model to use
 const getModelByTaskType = () => {
 
-      return Marketing; // fallback
-  }
+  return Marketing; // fallback
+}
 
 // Create Marketing
 const createMarketing = async (data) => {
@@ -21,22 +21,71 @@ const createMarketing = async (data) => {
 };
 
 // Get Marketings with population
-const getMarketingsWithFilters = async (query = {}, skip = 0, limit = 10) => {
+const getMarketingsWithFilters = async (
+  query = {},
+  skip = 0,
+  limit = 10,
+  sortBy = "createdAt",
+  sortOrder = "desc"
+) => {
   try {
-    // Apply the query to filter by userId and any other filters passed in the query
-    const marketingData = await Marketing.find(query)
-      .populate("userId", "firstName lastName profileIcon")  // Populate user details (name and profileIcon)
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
 
-      .sort({ createdAt: -1 })  // Sort by creation date in descending order
-      .skip(skip)  // Pagination: skip the results based on the page
-      .limit(limit)  // Limit the number of results based on the `limit`
-      .lean()  // Return plain JavaScript objects (not Mongoose documents)
-      .exec();  // Execute the query
+    const pipeline = [
+      { $match: query },
 
-    return marketingData;  // Return the fetched marketing data
+      // Lookup user
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+          pipeline: [
+            { $project: { firstName: 1, lastName: 1, profileIcon: 1 } }
+          ]
+        }
+      },
+      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } }
+    ];
+
+    // Add a lowercase sort field for userName
+    if (sortBy === "userName") {
+      pipeline.push({
+        $addFields: {
+          userNameSort: {
+            $toLower: {
+              $concat: [
+                { $ifNull: ["$user.firstName", ""] },
+                " ",
+                { $ifNull: ["$user.lastName", ""] }
+              ]
+            }
+          }
+        }
+      });
+      pipeline.push({ $sort: { userNameSort: sortDirection, _id: -1 } });
+    } else if (sortBy === "title") {
+      pipeline.push({
+        $addFields: { titleSort: { $toLower: { $ifNull: ["$title", ""] } } }
+      });
+      pipeline.push({ $sort: { titleSort: sortDirection, _id: -1 } });
+    } else {
+      pipeline.push({ $sort: { createdAt: sortDirection, _id: sortDirection } });
+    }
+
+    // Pagination
+    pipeline.push({ $skip: skip });
+    if (limit > 0) pipeline.push({ $limit: limit });
+
+    // Remove temporary sort fields
+    pipeline.push({ $project: { userNameSort: 0, titleSort: 0 } });
+
+    const marketingData = await Marketing.aggregate(pipeline).allowDiskUse(true);
+
+    return marketingData;
   } catch (error) {
-
-    throw new Error("Failed to fetch marketing campaigns");  // Handle error appropriately
+    throw new Error("Failed to fetch marketing campaigns");
   }
 };
 

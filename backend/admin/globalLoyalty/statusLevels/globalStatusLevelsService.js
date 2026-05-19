@@ -13,9 +13,11 @@ const buildGlobalLoyaltyStatusLevelCacheKey = ({
   limit = 10,
   keyword = "",
   status = "",
-  date = ""
+  date = "",
+  sortBy = "createdAt",
+  sortOrder = "desc"
 }) => {
-  return `${ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:keyword=${keyword}:status=${status}:date=${date}`;
+  return `${ACTIVE_GLOBAL_LOYALTY_STATUS_LEVEL_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:keyword=${keyword}:status=${status}:date=${date}:sortBy=${sortBy}:sortOrder=${sortOrder}`;
 };
 const createStatusLevel = async (data) => {
   const allowedFields = [
@@ -37,7 +39,7 @@ const createStatusLevel = async (data) => {
 };
 
 // Populate venue data for statusLevels (updated for new schema)
-const getStatusLevels = async ({ page, limit, keyword, status, userId, date }) => {
+const getStatusLevels = async ({ page, limit, keyword, status, userId, date, sortBy = "createdAt", sortOrder = "desc" }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const cacheKey = buildGlobalLoyaltyStatusLevelCacheKey({
     scope: "admin",
@@ -45,8 +47,9 @@ const getStatusLevels = async ({ page, limit, keyword, status, userId, date }) =
     limit,
     keyword,
     status,
-    date
-
+    date,
+    sortBy,
+    sortOrder
   });
   return cache({
     namespace: cacheKey,
@@ -90,7 +93,7 @@ const getStatusLevels = async ({ page, limit, keyword, status, userId, date }) =
     pipeline.push({ $match: keywordMatch });
   }
 
-  pipeline.push({ $sort: { entryPoints: 1 } });
+  pipeline.push({ $sort: { [sortBy]: sortOrder === "asc" ? 1 : -1 } });
 
   // Apply pagination + counts using $facet
   pipeline.push({

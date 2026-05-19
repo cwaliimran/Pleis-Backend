@@ -35,36 +35,57 @@ const createChallenge = async (data) => {
 };
 
 // Get challenges with population
-const getChallengesWithFilters = async (query = {}, skip = 0, limit = 10) => {
+const getChallengesWithFilters = async (
+  query = {},
+  skip = 0,
+  limit = 10,
+  sortBy = "createdAt",
+  sortOrder = "desc"
+) => {
+  const sortDirection = sortOrder === "asc" ? 1 : -1;
+
+  let sort = { createdAt: -1, _id: -1 };
+
+  if (sortBy === "name") {
+    sort = { title: sortDirection, _id: -1 };
+  } else if (sortBy === "rewardType") {
+    sort = { "reward.rewardType": sortDirection, _id: -1 };
+  } else if (sortBy === "taskType") {
+    sort = { taskType: sortDirection, _id: -1 };
+  } else if (sortBy === "createdAt") {
+    sort = { createdAt: sortDirection, _id: sortDirection };
+  }
+
   return Challenge.find(query)
-    // Task-related
     .populate("taskMenuItem")
 
-    // Tier
     .populate({
       path: "tierLimit",
-      select: "image title"
+      select: "image title",
     })
 
-    // 🎟️ Special Ticket Reward – nested population
     .populate({
       path: "reward.specialTicket.companyOrganizer",
-      select: "companyDetails.name"
-    })
-    .populate({
-      path: "reward.specialTicket.organization",
-      select: "basicInfo.name"
-    })
-    .populate({
-      path: "reward.specialTicket.ticket",
-      select: "title"
-    })
-    .populate({
-      path: "reward.specialTicket.event",
-      select: "basicInfo.title"
+      select: "companyDetails.name",
     })
 
-    .sort({ createdAt: -1 })
+    .populate({
+      path: "reward.specialTicket.organization",
+      select: "basicInfo.name",
+    })
+
+    .populate({
+      path: "reward.specialTicket.ticket",
+      select: "title",
+    })
+
+    .populate({
+      path: "reward.specialTicket.event",
+      select: "basicInfo.title",
+    })
+
+    .collation({ locale: "en", strength: 2 })
+    .sort(sort)
     .skip(skip)
     .limit(limit)
     .lean()

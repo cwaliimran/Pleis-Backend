@@ -9,9 +9,16 @@ const createCategory = async (data) => {
 };
 
 // Get all with filters
-const getCategoriesWithFilters = async (query, skip, limit) => {
+const getCategoriesWithFilters = async (query, skip, limit, sortBy, sortOrder) => {
+  const sortOptions = {};
+  if (sortBy && sortOrder) {
+    sortOptions[sortBy] = sortOrder === "asc" ? 1 : -1;
+  } else {
+    sortOptions.createdAt = -1; // Default sort
+  }
+
   return GlobalRewardCategories.find(query)
-    .sort({ createdAt: -1 })
+    .sort(sortOptions)
     .skip(skip)
     .limit(limit);
 };
