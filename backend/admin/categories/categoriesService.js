@@ -9,7 +9,7 @@ const { cache, invalidate } = require("@redisCache");
 const createCategory = async ({ image, title, status }) => {
   return await categoryRepo.createCategory({ image, title, status });
 };
-const getCategories = async ({ page, limit, keyword, status, date, orderSort = "asc" }) => {
+const getCategories = async ({ page, limit, keyword, status, date, sortBy = "createdAt", sortOrder = "asc" }) => {
   const query = {};
 
   //Filter by status
@@ -30,7 +30,7 @@ const getCategories = async ({ page, limit, keyword, status, date, orderSort = "
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
-  const sort = { title: orderSort === "desc" ? -1 : 1 };
+  const sort = { [sortBy]: sortOrder === "desc" ? -1 : 1 };
 
   let [categories, totalFiltered, total, active, inactive] = await Promise.all([
     categoryRepo.getCategoriesWithFilters(query, skip, limit === 0 ? 0 : limit, sort),

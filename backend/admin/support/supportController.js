@@ -50,7 +50,7 @@ const createSupportRequest = async (req, res) => {
 
 const getSupportRequest = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, orderSort } = req.query;
+  const { keyword, status, date, sortBy, sortOrder } = req.query;
   const timezone = req.user.timezone || 'UTC';
   try {
     if (date && !validateParams(req, res, {
@@ -58,6 +58,20 @@ const getSupportRequest = async (req, res) => {
         date: "YYYY-MM-DD",
       },
     })) return;
+    const SORT_FIELDS = ["userName"];
+    const SORT_ORDERS = ["asc", "desc"];
+    if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+      const key = sortBy && !SORT_FIELDS.includes(sortBy)
+        ? "invalid_sort_by_field"
+        : "invalid_sort_order";
+      return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
+
+    if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+      const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+        : "sort_by_required_when_sort_order_is_provided";
+      return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
 
     const { supportRequests, meta } = await supportService.getSupportRequest({
       page,
@@ -65,8 +79,9 @@ const getSupportRequest = async (req, res) => {
       keyword,
       status,
       date,
-      orderSort,
-      timezone
+      timezone,
+      sortBy,
+      sortOrder
     });
 
     return sendResponse({

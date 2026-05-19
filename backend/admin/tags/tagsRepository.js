@@ -21,16 +21,64 @@ const createTag = async (data) => {
 /**
  * ADMIN LISTING (no cache)
  */
-const getTagsWithFilters = async (query, skip, limit) => {
-  const tagsQuery = Tags.find(query)
-    .populate("type", "title") // Populate the 'type' field with the 'title' field
-    .sort({ title: 1 })
-    .skip(skip)
-    .limit(limit);
+const getTagsWithFilters = async (
+  query,
+  skip = 0,
+  limit = 20,
+  sortBy = "createdAt",
+  sortOrder = "desc"
+) => {
+  const sortDirection = sortOrder === "asc" ? 1 : -1;
 
-  return tagsQuery.exec();
+  const pipeline = [{ $match: query }];
+
+
+
+
+
+  // Populate 'type' field
+  pipeline.push({
+    $lookup: {
+      from: "tagtypes", // Collection name
+      localField: "type",
+      foreignField: "_id",
+      as: "type",
+      pipeline: [{ $project: { _id: 1, title: 1 } }],
+    },
+  });
+
+  pipeline.push({
+    $unwind: { path: "$type", preserveNullAndEmptyArrays: true },
+  });
+
+  if (sortBy === "title") {
+    pipeline.push({
+      $addFields: {
+        titleSort: { $toLower: { $ifNull: ["$title", ""] } },
+      },
+    });
+    pipeline.push({ $sort: { titleSort: sortDirection, _id: -1 } });
+  } else if (sortBy === "typeTitle") {
+    pipeline.push({
+      $addFields: {
+        typeTitleSort: {
+          $toLower: {
+            $ifNull: ["$type.title", ""] // empty string if type is null
+          }
+        }
+      }
+    });
+    pipeline.push({
+      $sort: { typeTitleSort: sortDirection, _id: -1 }
+    });
+  } else {
+    pipeline.push({ $sort: { createdAt: sortDirection, _id: -1 } });
+  }
+  pipeline.push({ $skip: skip });
+  if (limit > 0) pipeline.push({ $limit: limit });
+
+  return Tags.aggregate(pipeline);
 };
-
 /**
  * PUBLIC — ACTIVE TAGS (CACHED)
  * Sorted by most used across:

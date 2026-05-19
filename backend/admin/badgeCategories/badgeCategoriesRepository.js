@@ -12,9 +12,11 @@ const buildBadgeCategoriesCacheKey = ({
   limit = 10,
   keyword = "",
   status = "",
-  date = ""
+  date = "",
+  sortBy = "",
+  sortOrder = ""
 }) => {
-  return `${ACTIVE_BADGE_CATEGORIES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:keyword=${keyword}:status=${status}:date=${date}`;
+  return `${ACTIVE_BADGE_CATEGORIES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:keyword=${keyword}:status=${status}:date=${date}:sortBy=${sortBy}:sortOrder=${sortOrder}`;
 };
 const createBadgeCategories = async (data) => {
   try {
@@ -29,14 +31,16 @@ const createBadgeCategories = async (data) => {
 
 
 
-const getBadgeCategoriess = async ({ timezone,page, limit, keyword, status, userId, date, range,today,skip }) => {
+const getBadgeCategoriess = async ({ timezone,page, limit, keyword, status, userId, date, range,today,skip, sortBy, sortOrder }) => {
   const cacheKey = buildBadgeCategoriesCacheKey({
     scope: "admin",
     skip,
     limit,
     keyword,
     status,
-    date
+    date,
+    sortBy,
+    sortOrder
   });
   return cache({
     namespace: cacheKey,
@@ -75,7 +79,13 @@ if (keyword) {
   }
 }
 
-  pipeline.push({ $sort: { createdAt: -1 } });
+  if (sortBy && sortOrder) {
+    const sortField = sortBy === "title" ? "title" : "description";
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
+    pipeline.push({ $sort: { [sortField]: sortDirection } });
+  } else {
+    pipeline.push({ $sort: { createdAt: -1 } });
+  }
 
   // Apply pagination + counts using $facet
   pipeline.push({

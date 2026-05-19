@@ -1,7 +1,7 @@
 // services/usersStreakService.js
 const { generateMeta } = require("../../../helperUtils/responseUtil");
 const usersStreakRepo = require("./usersStreaksRepository");
-const { formatUsersStreaks } = require("./formatters/UsersStreaksFormatter");
+const { formatUsersStreaks } = require("./formatters/usersStreaksFormatter");
 const { default: mongoose } = require("mongoose");
 
 const createUsersStreak = async ({ user, companyOrganizer, visits = 0, points = 0 }) => {
@@ -15,7 +15,9 @@ const getUsersStreaks = async ({
   keyword,
   status,
   date,
-  orderSort = "asc"
+  orderSort = "asc",
+  sortBy,
+  sortOrder
 }) => {
 
   const query = {
@@ -31,10 +33,9 @@ const getUsersStreaks = async ({
   }
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-  const sort = { order: orderSort === "desc" ? -1 : 1 };
 
   let [UsersStreaks, getUsersStreaksCounts] = await Promise.all([
-    usersStreakRepo.getUsersStreaksWithFilters(query, skip, limit === 0 ? 0 : limit, sort),
+    usersStreakRepo.getUsersStreaksWithFilters(query, skip, limit === 0 ? 0 : limit,sortBy, sortOrder),
     usersStreakRepo.getUsersStreaksCounts(query),
   ]);
 

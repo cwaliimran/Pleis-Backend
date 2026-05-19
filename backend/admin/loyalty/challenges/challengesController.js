@@ -12,7 +12,7 @@ const createChallenge = async (req, res) => {
 
   //"visit", "earnPoints", "buyMenuItem", "referUsers"
   const taskType = req.body.taskType;
-  if(!req.body.companyOrganizer){
+  if (!req.body.companyOrganizer) {
     req.body.companyOrganizer = req.user?._id;
   }
 
@@ -78,8 +78,22 @@ const createChallenge = async (req, res) => {
 
 const getChallenges = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, companyOrganizer } = req.query;
-  if(!companyOrganizer){
+  let { keyword, status, date, companyOrganizer, sortBy, sortOrder } = req.query;
+  const SORT_FIELDS = ["name", "rewardType", "taskType"];
+  const SORT_ORDERS = ["asc", "desc"];
+  if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+    const key = sortBy && !SORT_FIELDS.includes(sortBy)
+      ? "invalid_sort_by_field"
+      : "invalid_sort_order";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+
+  if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+    const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+      : "sort_by_required_when_sort_order_is_provided";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+  if (!companyOrganizer) {
     companyOrganizer = req.user?._id;
   }
   try {
@@ -100,6 +114,8 @@ const getChallenges = async (req, res) => {
       status,
       date,
       timezone: req.user?.timezone,
+      sortBy,
+      sortOrder,
     });
     return sendResponse({
       res,
@@ -137,7 +153,7 @@ const updateChallenge = async (req, res) => {
   if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
   try {
     const updated = await challengeService.updateChallenge(req.params.id, req.body);
- 
+
     if (!updated) {
       return sendResponse({ res, statusCode: 404, translationKey: "challenge_not_found" });
     }

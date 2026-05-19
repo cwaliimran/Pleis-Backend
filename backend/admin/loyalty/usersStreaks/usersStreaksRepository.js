@@ -10,22 +10,115 @@ const createUsersStreak = async (data) => {
 };
 
 // Get all with filters, sorted by 'order' ascending and then 'createdAt' descending
+// const getUsersStreaksWithFilters = async (
+//   filter,
+//   skip,
+//   limit,
+//   sortBy = "createdAt",
+//   sortOrder = "asc",
+//   selectFields = null
+// ) => {
+//   const sort = { [sortBy]: sortOrder === "desc" ? -1 : 1 };
+//   const query = UsersStreaks.find(filter).populate({
+//     path: 'user',
+//     select: 'username firstName lastName email profileIcon',
+//   }).sort(sort).lean();
+
+//   if (selectFields) query.select(selectFields); // apply select dynamically
+//   if (limit > 0) query.skip(skip).limit(limit);
+
+//   return query.exec();
+// };
 const getUsersStreaksWithFilters = async (
   filter,
   skip,
   limit,
-  sort = { createdAt: -1 },
+  sortBy = "createdAt",
+  sortOrder = "asc",
   selectFields = null
 ) => {
-  const query = UsersStreaks.find(filter).populate({
-    path: 'user',
-    select: 'username firstName lastName email profileIcon',
-  }).sort(sort).lean();
+  const sortDirection = sortOrder === "desc" ? -1 : 1;
 
-  if (selectFields) query.select(selectFields); // apply select dynamically
-  if (limit > 0) query.skip(skip).limit(limit);
+  const pipeline = [
+    { $match: filter },
 
-  return query.exec();
+    {
+      $lookup: {
+        from: "users",
+        localField: "user",
+        foreignField: "_id",
+        as: "user",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              firstName: 1,
+              lastName: 1,
+              email: 1,
+              profileIcon: 1
+            }
+          }
+        ]
+      }
+    },
+    {
+      $unwind: {
+        path: "$user",
+        preserveNullAndEmptyArrays: true
+      }
+    }
+  ];
+
+  if (sortBy === "userName") {
+    pipeline.push(
+      {
+        $addFields: {
+          userNameSort: {
+            $toLower: {
+              $ifNull: ["$user.username", ""]
+            }
+          }
+        }
+      },
+      {
+        $sort: {
+          userNameSort: sortDirection,
+          _id: -1
+        }
+      }
+    );
+  } else if (sortBy === "userFirstName") {
+    pipeline.push(
+      {
+        $addFields: {
+          userFirstNameSort: {
+            $toLower: {
+              $ifNull: ["$user.firstName", ""]
+            }
+          }
+        }
+      },
+      {
+        $sort: {
+          userFirstNameSort: sortDirection,
+          _id: -1
+        }
+      }
+    );
+  } else {
+    pipeline.push({
+      $sort: {
+        createdAt: sortDirection,
+        _id: sortDirection
+      }
+    });
+  }
+
+  if (limit > 0) {
+    pipeline.push({ $skip: skip }, { $limit: limit });
+  }
+
+  return UsersStreaks.aggregate(pipeline);
 };
 
 // Count by condition

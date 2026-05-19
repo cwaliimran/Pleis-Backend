@@ -12,7 +12,7 @@ const createMenu = async (data) => {
 };
 
 // Populate organization data for menus, but merge into "organization" field
-const getMenus = async ({ page, limit, keyword, status, date, organizations, companyOrganizer, sortby, sortOrder }) => {
+const getMenus = async ({ page, limit, keyword, status, date, organizations, companyOrganizer, sortBy, sortOrder }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let organizationIds = [];
 
@@ -85,17 +85,81 @@ const getMenus = async ({ page, limit, keyword, status, date, organizations, com
   if (Object.keys(keywordMatch).length > 0) {
     pipeline.push({ $match: keywordMatch });
   }
-  if (sortOrder && sortby) {
-    if (sortBy === "userName") {
-      sortStage = {
-        userNameSort: sortDirection,
-        _id: -1,
-      };
+  console.log("sortOrder", sortOrder);
+  console.log("sortBy", sortBy);
+  if (sortBy && sortOrder) {
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
+
+    if (sortBy === "menuName") {
+      pipeline.push({
+        $addFields: {
+          menuNameSort: {
+            $toLower: { $ifNull: ["$title", ""] }
+          }
+        }
+      });
+
+      pipeline.push({
+        $sort: {
+          menuNameSort: sortDirection,
+          _id: sortDirection
+        }
+      });
+
+    } else if (sortBy === "organizationName") {
+      pipeline.push({
+        $addFields: {
+          organizationNameSort: {
+            $toLower: {
+              $ifNull: ["$organizationData.basicInfo.name", ""]
+            }
+          }
+        }
+      });
+
+      pipeline.push({
+        $sort: {
+          organizationNameSort: sortDirection,
+          _id: sortDirection
+        }
+      });
+
+    } else if (sortBy === "description") {
+      pipeline.push({
+        $addFields: {
+          descriptionSort: {
+            $toLower: { $ifNull: ["$description", ""] }
+          }
+        }
+      });
+
+      pipeline.push({
+        $sort: {
+          descriptionSort: sortDirection,
+          _id: sortDirection
+        }
+      });
+
+    } else if (sortBy === "createdAt") {
+      pipeline.push({
+        $sort: {
+          createdAt: sortDirection,
+          _id: sortDirection
+        }
+      });
+
+    } else {
+      pipeline.push({
+        $sort: {
+          createdAt: -1,
+          _id: -1
+        }
+      });
     }
   }
 
   // Sort, merge, clean
-  pipeline.push({ $sort: { createdAt: -1 } });
+
   pipeline.push(
     { $addFields: { organization: "$organizationData" } },
     { $project: { organizationData: 0 } }

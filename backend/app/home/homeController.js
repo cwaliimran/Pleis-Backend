@@ -2,10 +2,14 @@ const { default: mongoose } = require("mongoose");
 const {
   sendResponse,
   validateParams,
-  parsePaginationParams
+  parsePaginationParams,
+  generateMeta
 } = require("../../helperUtils/responseUtil");
 const { getHomeService } = require("./homeService");
 const { globalSearchService, getGlobalFiltersService } = require("./globalSearch/globalSearchService");
+const { getForYouOrganizationsForHomeService, getNearbyOrganizationsService, getTrendingOrganizationsForHomeService, getNewlyListedOrganizationsService, getSuggestedLoyaltyClubsForHomeService } = require("../organizationProfile/organizationProfileService");
+const { getTopPicksOrganizationsForHomeService } = require("../topPicksOrganizations/topPicksOrganizationsService");
+const { getForYouEventsService, thisWeekEvents } = require("../events/eventService");
 
 const getHome = async (req, res) => {
 
@@ -79,7 +83,7 @@ const getHome = async (req, res) => {
       data,
     });
   } catch (error) {
-    console.log("error==>",error)
+    console.log("error==>", error)
     return sendResponse({
       res,
       statusCode: 500,
@@ -90,12 +94,15 @@ const getHome = async (req, res) => {
 };
 
 const globalSearch = async (req, res) => {
-  const { latitude, longitude, keyword, type } = req.query;
-  const { page, limit } = parsePaginationParams(req);
+  //filterKey is used to filter data when user requests from search section in home screen, it can have values like events, organizations, giveaways, etc. which will be used in service layer to filter data accordingly.
+  //filterKey is actually represents a section
+  const { latitude, longitude, keyword, type, filterKey } = req.query;
+  const { page, limit, skip } = parsePaginationParams(req);
   let { timezone, _id: userId } = req.user || {};
   let { sort = "desc" } = req.body || {};
   const ctx = {
     keyword,
+    filterKey,
     latitude: parseFloat(latitude),
     longitude: parseFloat(longitude),
     page,
@@ -108,14 +115,222 @@ const globalSearch = async (req, res) => {
   };
 
   try {
-    const sections = await globalSearchService(ctx);
 
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "search_results_fetched",
-      data: sections,
-    });
+    if (filterKey) {
+
+      if (filterKey === "forYouOrganizations") {
+        const { userId, timezone, latitude, longitude, advanceFilters } = ctx;
+        const { organizations, totalCount } = await getForYouOrganizationsForHomeService({
+          category: advanceFilters?.categories,
+          userLocation: latitude && longitude ? {
+            type: "Point",
+            coordinates: [longitude, latitude]
+          } : null,
+          radiusKm: ctx.radiusKm || 50,
+          timezone,
+          page,
+          limit,
+          skip,
+          userId,
+          ctx
+        });
+
+        return sendResponse({
+          res,
+          statusCode: 200,
+          translationKey: "search_results_fetched",
+          data: organizations,
+          meta: generateMeta(page, limit, totalCount)
+        });
+      }
+
+      if (filterKey === "nearYouOrganizations") {
+        const { userId, timezone, latitude, longitude, advanceFilters } = ctx;
+        const { organizations, totalCount } = await getNearbyOrganizationsService({
+          category: advanceFilters?.categories,
+          userLocation: latitude && longitude ? {
+            type: "Point",
+            coordinates: [longitude, latitude]
+          } : null,
+          radiusKm: ctx.radiusKm || 50,
+          timezone,
+          page,
+          limit,
+          skip,
+          userId,
+          ctx
+        });
+
+        return sendResponse({
+          res,
+          statusCode: 200,
+          translationKey: "search_results_fetched",
+          data: organizations,
+          meta: generateMeta(page, limit, totalCount)
+        });
+      }
+      if (filterKey === "topPicks") { //topPicks is a section in home screen which shows top picks organizations based on user's interest and location
+        const { userId, timezone, latitude, longitude, advanceFilters } = ctx;
+        const { topPicksOrganizations, totalCount } = await getTopPicksOrganizationsForHomeService({
+          category: advanceFilters?.categories,
+          userLocation: latitude && longitude ? {
+            type: "Point",
+            coordinates: [longitude, latitude]
+          } : null,
+          radiusKm: ctx.radiusKm || 50,
+          timezone,
+          page,
+          limit,
+          skip,
+          userId,
+          ctx
+        });
+
+        return sendResponse({
+          res,
+          statusCode: 200,
+          translationKey: "search_results_fetched",
+          data: topPicksOrganizations,
+          meta: generateMeta(page, limit, totalCount)
+        });
+      }
+      if (filterKey === "trendingOrganizations") {
+        const { userId, timezone, latitude, longitude, advanceFilters } = ctx;
+        const { organizations, totalCount } = await getTrendingOrganizationsForHomeService({
+          category: advanceFilters?.categories,
+          userLocation: latitude && longitude ? {
+            type: "Point",
+            coordinates: [longitude, latitude]
+          } : null,
+          radiusKm: ctx.radiusKm || 50,
+          timezone,
+          page,
+          limit,
+          skip,
+          userId,
+          ctx
+        });
+
+        return sendResponse({
+          res,
+          statusCode: 200,
+          translationKey: "search_results_fetched",
+          data: organizations,
+          meta: generateMeta(page, limit, totalCount)
+        });
+      }
+      if (filterKey === "forYouEvents") {
+        const { userId, timezone, latitude, longitude, advanceFilters } = ctx;
+        const { recommendedEvents, totalCount } = await getForYouEventsService({
+          category: advanceFilters?.categories,
+          userLocation: latitude && longitude ? {
+            type: "Point",
+            coordinates: [longitude, latitude]
+          } : null,
+          radiusKm: ctx.radiusKm || 50,
+          timezone,
+          page,
+          limit,
+          skip,
+          userId,
+          ctx
+        });
+
+        return sendResponse({
+          res,
+          statusCode: 200,
+          translationKey: "search_results_fetched",
+          data: recommendedEvents,
+          meta: generateMeta(page, limit, totalCount)
+        });
+      }
+      if (filterKey === "thisWeekEvents") {
+        const { userId, timezone, latitude, longitude, advanceFilters } = ctx;
+        const { data, totalCount } = await thisWeekEvents({
+          category: advanceFilters?.categories,
+          userLocation: latitude && longitude ? {
+            type: "Point",
+            coordinates: [longitude, latitude]
+          } : null,
+          radiusKm: ctx.radiusKm || 50,
+          timezone,
+          page,
+          limit,
+          skip,
+          userId,
+          ctx
+        });
+
+        return sendResponse({
+          res,
+          statusCode: 200,
+          translationKey: "search_results_fetched",
+          data,
+          meta: generateMeta(page, limit, totalCount)
+        });
+      }
+      if (filterKey === "newlyListedOrganizations") {
+        const { userId, timezone, latitude, longitude, advanceFilters } = ctx;
+        const { organizations, totalCount } = await getNewlyListedOrganizationsService({
+          category: advanceFilters?.categories,
+          userLocation: latitude && longitude ? {
+            type: "Point",
+            coordinates: [longitude, latitude]
+          } : null,
+          radiusKm: ctx.radiusKm || 50,
+          timezone,
+          page,
+          limit,
+          skip,
+          userId,
+          ctx
+        });
+
+        return sendResponse({
+          res,
+          statusCode: 200,
+          translationKey: "search_results_fetched",
+          data: organizations,
+          meta: generateMeta(page, limit, totalCount)
+        });
+      }
+      if (filterKey === "loyaltyClubs") {
+        const { userId, timezone, latitude, longitude, advanceFilters } = ctx;
+        const { loyaltyClubs, totalCount } = await getSuggestedLoyaltyClubsForHomeService({
+          userLocation: latitude && longitude ? {
+            type: "Point",
+            coordinates: [longitude, latitude]
+          } : null,
+          radiusKm: ctx.radiusKm || 50,
+          timezone,
+          page,
+          limit,
+          skip,
+          userId,
+          ctx
+        });
+
+        return sendResponse({
+          res,
+          statusCode: 200,
+          translationKey: "search_results_fetched",
+          data: loyaltyClubs,
+          meta: generateMeta(page, limit, totalCount)
+        });
+      }
+
+
+    } else {
+      const sections = await globalSearchService(ctx);
+
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "search_results_fetched",
+        data: sections,
+      });
+    }
+
   } catch (err) {
     return sendResponse({
       res,
@@ -131,7 +346,7 @@ const globalFilters = async (req, res) => {
   try {
     const { _id: userId, timezone } = req.user || {};
     let { latitude = 0, longitude = 0, radiusKm = 50 } = req.query;
-    let { categories:categoriesFilter = [] } = req.body || {};
+    let { categories: categoriesFilter = [] } = req.body || {};
     const center = {
       type: "Point",
       coordinates: [Number(longitude), Number(latitude)]

@@ -7,7 +7,7 @@ const venuetypeRepo = require("./venueTypesRepository");
 const createVenueType = async ({ image, title, status, categories }) => {
   return await venuetypeRepo.createVenueType({ image, title, status, categories });
 };
-const getVenueTypes = async ({ page, limit, keyword, status, date, categories }) => {
+const getVenueTypes = async ({ page, limit, keyword, status, date, categories, sortBy, sortOrder }) => {
   const andConditions = [];
   // if date is available then match createdAt with date current date format is yyyy-mm-dd
   if (date) {
@@ -52,7 +52,9 @@ const getVenueTypes = async ({ page, limit, keyword, status, date, categories })
         status,
         date,
         keyword,
-        categories
+        categories,
+        sortBy,
+        sortOrder
       ),
       venuetypeRepo.getCounts(query),
     ]);

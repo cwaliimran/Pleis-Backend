@@ -179,7 +179,7 @@ const getOrganizationMenuWithItems = async ({
     status: "active",
     isOrderingEnabled: true
   }).select("_id title description status");
-  
+
 
   if (!menu) return [];
 
@@ -372,59 +372,147 @@ const getNearbyOrganizations = async ({
   timezone,
   page,
   limit,
-  userId
+  skip,
+  userId,
+  ctx
 }) => {
-  const skip = (page - 1) * limit;
 
-  let categoryObjectId = null;
-  if (category) {
-    categoryObjectId = new mongoose.Types.ObjectId(category);
+
+  /* =====================================================
+     ADVANCE FILTERS
+     ===================================================== */
+
+  const advanceFilters = ctx?.advanceFilters || {};
+
+  const filterCategories = (advanceFilters.categories || [])
+    .filter(Boolean)
+    .map(id => new mongoose.Types.ObjectId(id));
+
+  const filterTags = (advanceFilters.tags || [])
+    .filter(Boolean)
+    .map(id => new mongoose.Types.ObjectId(id));
+
+  const filterVenueTypes = (advanceFilters.venueTypes || [])
+    .filter(Boolean)
+    .map(id => new mongoose.Types.ObjectId(id));
+
+  const distanceFrom = Number(
+    advanceFilters.distanceFrom || 0
+  );
+
+  const distanceTo = Number(
+    advanceFilters.distanceTo || radiusKm
+  );
+
+  let sortDirection = 1
+  if (ctx?.sort === "desc") {
+    sortDirection = -1;
   }
 
+  /* =====================================================
+     CATEGORY
+     ===================================================== */
+
+  let categoryObjectId = [];
+
+  if (category) {
+
+    const categoryIds = Array.isArray(category)
+      ? category
+      : [category];
+
+    categoryObjectId = categoryIds
+      .filter(Boolean)
+      .map(
+        id => new mongoose.Types.ObjectId(id)
+      );
+  }
+
+  /* =====================================================
+     GEO QUERY
+     ===================================================== */
+
   const geoQuery = {
-    status: "active",
-    ...(categoryObjectId && {
-      "otherInfo.categories": { $in: [categoryObjectId] }
-    })
+    status: "active"
   };
+
+  // existing category behavior
+  if (!ctx && categoryObjectId.length) {
+    geoQuery["otherInfo.categories"] = {
+      $in: categoryObjectId
+    };
+  }
+
+  // ctx category filters
+  if (ctx && filterCategories.length) {
+    geoQuery["otherInfo.categories"] = {
+      $in: filterCategories
+    };
+  }
+
+  // ctx tag filters
+  if (ctx && filterTags.length) {
+    geoQuery["otherInfo.tags"] = {
+      $in: filterTags
+    };
+  }
 
   const pipeline = [];
 
-  /* ===============================
-     1️⃣ CONDITIONAL GEO
-     =============================== */
+  /* =====================================================
+     GEO
+     ===================================================== */
+
   if (userLocation) {
+
+    const geoNearStage = {
+      near: userLocation,
+      key: "location",
+      distanceField: "distance",
+      spherical: true,
+      maxDistance: (
+        ctx
+          ? distanceTo
+          : radiusKm
+      ) * 1000,
+      query: geoQuery
+    };
+
+    if (ctx && distanceFrom > 0) {
+      geoNearStage.minDistance =
+        distanceFrom * 1000;
+    }
+
     pipeline.push(
       {
-        $geoNear: {
-          near: userLocation,
-          key: "location",
-          distanceField: "distance",
-          spherical: true,
-          maxDistance: radiusKm * 1000,
-          query: geoQuery
-        }
+        $geoNear: geoNearStage
       },
-      { $sort: { distance: 1 } }
+      {
+        $sort: {
+          distance: sortDirection
+        }
+      }
     );
+
   } else {
+
     pipeline.push(
-      { $match: geoQuery },
-      { $sort: { createdAt: -1 } }
+      {
+        $match: geoQuery
+      },
+      {
+        $sort: {
+          createdAt: sortDirection
+        }
+      }
     );
+
   }
 
   /* ===============================
-     2️⃣ PAGINATION
+     PRIMARY VENUE → POPULATE venueType
      =============================== */
-  pipeline.push(
-    { $skip: skip },
-    { $limit: limit }
-  );
 
-  /* ===============================
-     3️⃣ PRIMARY VENUE → POPULATE venueType
-     =============================== */
   pipeline.push(
     {
       $lookup: {
@@ -433,7 +521,12 @@ const getNearbyOrganizations = async ({
         pipeline: [
           {
             $match: {
-              $expr: { $eq: ["$organization", "$$orgId"] },
+              $expr: {
+                $eq: [
+                  "$organization",
+                  "$$orgId"
+                ]
+              },
               isPrimary: true,
               status: "active"
             }
@@ -449,7 +542,6 @@ const getNearbyOrganizations = async ({
       }
     },
 
-    // Populate venueType documents
     {
       $lookup: {
         from: "venuetypes",
@@ -457,51 +549,122 @@ const getNearbyOrganizations = async ({
         foreignField: "_id",
         as: "venueTypes",
         pipeline: [
-          { $project: { _id: 1, title: 1 } }
+          {
+            $project: {
+              _id: 1,
+              title: 1
+            }
+          }
         ]
       }
     }
   );
 
+  /* =====================================================
+     VENUE TYPE FILTER
+     ===================================================== */
+
+  if (
+    ctx &&
+    filterVenueTypes.length
+  ) {
+    pipeline.push({
+      $match: {
+        "venueTypes._id": {
+          $in: filterVenueTypes
+        }
+      }
+    });
+  }
+
   /* ===============================
-     4️⃣ TAGS
+     TAGS
      =============================== */
+
   pipeline.push({
     $lookup: {
       from: "tags",
       localField: "otherInfo.tags",
       foreignField: "_id",
       as: "tags",
-      pipeline: [{ $project: { _id: 1, title: 1 } }]
+      pipeline: [
+        {
+          $project: {
+            _id: 1,
+            title: 1
+          }
+        }
+      ]
     }
   });
 
   /* ===============================
-     5️⃣ FINAL SHAPE
+     TOTAL COUNT
      =============================== */
+
+  const countPipeline = [...pipeline];
+
+  countPipeline.push({
+    $count: "totalCount"
+  });
+
+  /* ===============================
+     PAGINATION
+     =============================== */
+
   pipeline.push(
     {
-      $project: {
-        _id: 1,
-
-        "basicInfo.name": 1,
-        "basicInfo.media": 1,
-
-        operatingHours: 1,
-        distance: userLocation ? 1 : null,
-
-        tags: 1,
-
-        venue: {
-          venueType: "$venueTypes"
-        }
-      }
+      $skip: skip
+    },
+    {
+      $limit: limit
     }
   );
 
-  const organizations = await Organizations.aggregate(pipeline);
+  /* ===============================
+     FINAL SHAPE
+     =============================== */
 
-  return { organizations };
+  pipeline.push({
+    $project: {
+      _id: 1,
+
+      "basicInfo.name": 1,
+      "basicInfo.media": 1,
+      otherInfo: 1,
+      location: 1,
+
+      operatingHours: 1,
+
+      distance: userLocation
+        ? 1
+        : null,
+
+      tags: 1,
+
+      venue: {
+        venueType: "$venueTypes"
+      }
+    }
+  });
+
+  const [
+    organizations,
+    countResult
+  ] = await Promise.all([
+    Organizations.aggregate(pipeline),
+    ctx
+      ? Organizations.aggregate(countPipeline)
+      : Promise.resolve([])
+  ]);
+
+  return {
+    organizations,
+    totalCount:
+      ctx && countResult[0]
+        ? countResult[0].totalCount
+        : 0
+  };
 };
 
 
@@ -556,6 +719,7 @@ const getSuggestedLoyaltyClubsForUser = async ({
 const getSuggestedLoyaltyClubsForHome = async ({
   page = 1,
   limit = 10,
+  skip = 0,
   userId,
   userLocation,
   radiusKm = 50
@@ -564,40 +728,37 @@ const getSuggestedLoyaltyClubsForHome = async ({
   const joinedClubs = await getUserJoinedClubs(userId);
   const joinedClubIds = joinedClubs.map(c => c.companyOrganizer);
 
-  /**
-   * 🔥 STEP 1: resolve company organizers
-   * - geo filtered when userLocation is Point
-   * - global when userLocation === null
-   */
   const nearbyCompanyIds = await getCompanyOrganizersWithinRadius({
     userLocation,
     radiusKm
   });
 
-  // If global + nothing exists — still bail out early
-  if (!nearbyCompanyIds.length) return [];
+  if (!nearbyCompanyIds.length) {
+    return {
+      data: [],
+      totalCount: 0
+    };
+  }
 
-  const skip = (page - 1) * limit;
-
-  return User.aggregate([
-    /* ===============================
-       BASE FILTER (geo-aware results)
-       =============================== */
-    {
-      $match: {
-        _id: {
-          $in: nearbyCompanyIds,
-          $nin: joinedClubIds
-        },
-        "accountState.status": "active",
-        "accountState.userType": "organizer",
-        "companyDetails.loyaltySettings.title": { $exists: true, $ne: "" }
-      }
+  /* ===============================
+     BASE MATCH (REUSED FOR COUNT)
+     =============================== */
+  const baseMatch = {
+    _id: {
+      $in: nearbyCompanyIds,
+      $nin: joinedClubIds
     },
+    "accountState.status": "active",
+    "accountState.userType": "organizer",
+    "companyDetails.loyaltySettings.title": { $exists: true, $ne: "" }
+  };
 
-    /* ===============================
-       MEMBERS
-       =============================== */
+  /* ===============================
+     MAIN PIPELINE
+     =============================== */
+  const pipeline = [
+    { $match: baseMatch },
+
     {
       $lookup: {
         from: "clubmembers",
@@ -616,9 +777,6 @@ const getSuggestedLoyaltyClubsForHome = async ({
       }
     },
 
-    /* ===============================
-       ORGANIZATIONS (relevance)
-       =============================== */
     {
       $lookup: {
         from: "organizations",
@@ -633,15 +791,13 @@ const getSuggestedLoyaltyClubsForHome = async ({
         organizationsCount: { $size: "$orgs" }
       }
     },
+
     {
       $match: {
         organizationsCount: { $gt: 0 }
       }
     },
 
-    /* ===============================
-       POPULARITY
-       =============================== */
     {
       $lookup: {
         from: "engagementevents",
@@ -669,9 +825,6 @@ const getSuggestedLoyaltyClubsForHome = async ({
       }
     },
 
-    /* ===============================
-       SCORING
-       =============================== */
     {
       $addFields: {
         membersScore: { $round: [{ $log10: { $add: ["$membersCount", 1] } }, 2] },
@@ -694,15 +847,21 @@ const getSuggestedLoyaltyClubsForHome = async ({
           ]
         }
       }
-    },
+    }
+  ];
 
+  /* ===============================
+     COUNT PIPELINE (BEFORE PAGINATION)
+     =============================== */
+  const countPipeline = [...pipeline, { $count: "totalCount" }];
+
+  /* ===============================
+     PAGINATION + FINAL SHAPE
+     =============================== */
+  pipeline.push(
     { $sort: { finalScore: -1 } },
     { $skip: skip },
     { $limit: limit },
-
-    /* ===============================
-       FINAL RESPONSE
-       =============================== */
     {
       $project: {
         _id: 1,
@@ -718,7 +877,17 @@ const getSuggestedLoyaltyClubsForHome = async ({
         }
       }
     }
+  );
+
+  const [data, countResult] = await Promise.all([
+    User.aggregate(pipeline),
+    User.aggregate(countPipeline)
   ]);
+
+  return {
+    data,
+    totalCount: countResult[0]?.totalCount || 0
+  };
 };
 
 
@@ -876,42 +1045,148 @@ const getForYouOrganizationsForHomeRepo = async ({
   userLocation,
   radiusKm = 50,
   page = 1,
-  limit = 10,
+  limit = 50,
   skip = 0,
   userId,
-  timezone
+  timezone,
+  ctx
 }) => {
+
+  /* =====================================================
+     ADVANCE FILTERS
+     ONLY APPLIED WHEN CTX EXISTS
+     ===================================================== */
+
+  const advanceFilters = ctx?.advanceFilters || {};
+
+  const filterCategories = (advanceFilters.categories || [])
+    .filter(Boolean)
+    .map(id => new mongoose.Types.ObjectId(id));
+
+  const filterTags = (advanceFilters.tags || [])
+    .filter(Boolean)
+    .map(id => new mongoose.Types.ObjectId(id));
+
+  // const filterGenres = (advanceFilters.genre || [])
+  //   .filter(Boolean)
+  //   .map(id => new mongoose.Types.ObjectId(id));
+
+  const filterVenueTypes = (advanceFilters.venueTypes || [])
+    .filter(Boolean)
+    .map(id => new mongoose.Types.ObjectId(id));
+
+  const distanceFrom = Number(
+    advanceFilters.distanceFrom || 0
+  );
+
+  const distanceTo = Number(
+    advanceFilters.distanceTo || radiusKm
+  );
+
+  const sortDirection =
+    ctx?.sort === "asc" ? 1 : -1;
+
+  /* =====================================================
+     EXISTING RECOMMENDATION FUNCTIONALITY
+     ===================================================== */
+
+  let userCategories = [];
+  let userTags = [];
+
+  let geoQuery = {
+    status: "active"
+  };
+
+
+  /* =====================================================
+   ALWAYS LOAD USER PREFERENCES
+   ===================================================== */
+
   const userPreferences =
     await getUserInterestsIdsForRecommendation(userId);
 
-  const userCategories = userPreferences?.categories || [];
-  const userTags = userPreferences?.tags || [];
+  userCategories =
+    (userPreferences?.categories || []).map(
+      id => new mongoose.Types.ObjectId(id)
+    );
 
-  const geoQuery = {
-    status: "active",
-    ...(category && {
-      "otherInfo.categories": {
-        $in: [new mongoose.Types.ObjectId(category)]
-      }
-    })
-  };
+  userTags =
+    (userPreferences?.tags || []).map(
+      id => new mongoose.Types.ObjectId(id)
+    );
+
+  /* =====================================================
+     DEFAULT CATEGORY FLOW
+     ===================================================== */
+
+  if (!ctx && category) {
+    geoQuery["otherInfo.categories"] = {
+      $in: [
+        new mongoose.Types.ObjectId(category)
+      ]
+    };
+  }
+
+  /* =====================================================
+     CTX STRICT FILTERS
+     ===================================================== */
+
+  if (ctx) {
+
+    // strict category filtering
+    if (filterCategories.length) {
+      geoQuery["otherInfo.categories"] = {
+        $in: filterCategories
+      };
+    }
+
+    // strict tags filtering
+    if (filterTags.length) {
+      geoQuery["otherInfo.tags"] = {
+        $in: filterTags
+      };
+    }
+  }
+
+
 
   const pipeline = [];
 
-  /* ---------- GEO ---------- */
+  /* =====================================================
+     GEO
+     ===================================================== */
+
   if (userLocation) {
+
+    const geoNearStage = {
+      near: userLocation,
+      key: "location",
+      distanceField: "distance",
+      spherical: true,
+      maxDistance: (
+        ctx
+          ? distanceTo
+          : radiusKm
+      ) * 1000,
+      query: geoQuery
+    };
+
+    // only apply minDistance when ctx exists
+    if (ctx && distanceFrom > 0) {
+      geoNearStage.minDistance =
+        distanceFrom * 1000;
+    }
+
     pipeline.push({
-      $geoNear: {
-        near: userLocation,
-        key: "location",
-        distanceField: "distance",
-        spherical: true,
-        maxDistance: radiusKm * 1000,
-        query: geoQuery
-      }
+      $geoNear: geoNearStage
     });
+
   } else {
-    pipeline.push({ $match: geoQuery });
+
+    pipeline.push({
+      $match: geoQuery
+    });
+
   }
 
   pipeline.push({
@@ -919,11 +1194,103 @@ const getForYouOrganizationsForHomeRepo = async ({
       basicInfo: 1,
       otherInfo: 1,
       operatingHours: 1,
-      distance: 1
+      distance: 1,
+      location: 1
     }
   });
 
-  /* ---------- INTEREST MATCH ---------- */
+  /* =====================================================
+     PRIMARY VENUE
+     ===================================================== */
+
+  pipeline.push(
+    {
+      $lookup: {
+        from: "venues",
+        let: { orgId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $eq: [
+                  "$organization",
+                  "$$orgId"
+                ]
+              },
+              isPrimary: true,
+              status: "active"
+            }
+          },
+          {
+            $project: {
+              venueType: 1
+            }
+          }
+        ],
+        as: "primaryVenue"
+      }
+    },
+    {
+      $lookup: {
+        from: "venuetypes",
+        localField: "primaryVenue.venueType",
+        foreignField: "_id",
+        as: "venueTypes",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              title: 1
+            }
+          }
+        ]
+      }
+    }
+  );
+
+  /* =====================================================
+     VENUE TYPE FILTER
+     ONLY IN CTX MODE
+     ===================================================== */
+
+  if (
+    ctx &&
+    filterVenueTypes.length
+  ) {
+    pipeline.push({
+      $match: {
+        "venueTypes._id": {
+          $in: filterVenueTypes
+        }
+      }
+    });
+  }
+
+  /* =====================================================
+     TAGS LOOKUP
+     ===================================================== */
+
+  pipeline.push({
+    $lookup: {
+      from: "tags",
+      localField: "otherInfo.tags",
+      foreignField: "_id",
+      as: "tags",
+      pipeline: [
+        {
+          $project: {
+            _id: 1,
+            title: 1
+          }
+        }
+      ]
+    }
+  });
+
+  /* =====================================================
+     INTEREST MATCH
+     ===================================================== */
+
   pipeline.push({
     $addFields: {
       matchedCategories: {
@@ -945,7 +1312,10 @@ const getForYouOrganizationsForHomeRepo = async ({
     }
   });
 
-  /* ---------- RELEVANCE ---------- */
+  /* =====================================================
+     RELEVANCE SCORE
+     ===================================================== */
+
   pipeline.push({
     $addFields: {
       relevanceScore: {
@@ -955,7 +1325,12 @@ const getForYouOrganizationsForHomeRepo = async ({
               0.6,
               {
                 $cond: [
-                  { $gt: [userCategories.length, 0] },
+                  {
+                    $gt: [
+                      userCategories.length,
+                      0
+                    ]
+                  },
                   {
                     $divide: [
                       "$matchedCategories",
@@ -972,7 +1347,12 @@ const getForYouOrganizationsForHomeRepo = async ({
               0.4,
               {
                 $cond: [
-                  { $gt: [userTags.length, 0] },
+                  {
+                    $gt: [
+                      userTags.length,
+                      0
+                    ]
+                  },
                   {
                     $divide: [
                       "$matchedTags",
@@ -989,12 +1369,10 @@ const getForYouOrganizationsForHomeRepo = async ({
     }
   });
 
-  pipeline.push(
-    { $sort: { relevanceScore: -1 } },
-    { $limit: limit * 5 }
-  );
+  /* =====================================================
+     ENGAGEMENT
+     ===================================================== */
 
-  /* ---------- ENGAGEMENT ---------- */
   pipeline.push(
     {
       $lookup: {
@@ -1004,13 +1382,20 @@ const getForYouOrganizationsForHomeRepo = async ({
           {
             $match: {
               entityType: "organizations",
-              $expr: { $eq: ["$entityId", "$$orgId"] }
+              $expr: {
+                $eq: [
+                  "$entityId",
+                  "$$orgId"
+                ]
+              }
             }
           },
           {
             $group: {
               _id: "$action",
-              count: { $sum: 1 }
+              count: {
+                $sum: 1
+              }
             }
           }
         ],
@@ -1026,9 +1411,15 @@ const getForYouOrganizationsForHomeRepo = async ({
                 $map: {
                   input: {
                     $filter: {
-                      input: "$engagementStats",
+                      input:
+                        "$engagementStats",
                       as: "s",
-                      cond: { $eq: ["$$s._id", "view"] }
+                      cond: {
+                        $eq: [
+                          "$$s._id",
+                          "view"
+                        ]
+                      }
                     }
                   },
                   as: "v",
@@ -1046,9 +1437,15 @@ const getForYouOrganizationsForHomeRepo = async ({
                 $map: {
                   input: {
                     $filter: {
-                      input: "$engagementStats",
+                      input:
+                        "$engagementStats",
                       as: "s",
-                      cond: { $eq: ["$$s._id", "favorite"] }
+                      cond: {
+                        $eq: [
+                          "$$s._id",
+                          "favorite"
+                        ]
+                      }
                     }
                   },
                   as: "v",
@@ -1063,41 +1460,303 @@ const getForYouOrganizationsForHomeRepo = async ({
     }
   );
 
+  /* =====================================================
+     POPULARITY SCORE
+     ===================================================== */
+
   pipeline.push({
     $addFields: {
       popularityScore: {
         $add: [
-          { $multiply: [0.6, { $ln: { $add: [1, "$favoritesCount"] } }] },
-          { $multiply: [0.4, { $ln: { $add: [1, "$viewsCount"] } }] }
+          {
+            $multiply: [
+              0.6,
+              {
+                $ln: {
+                  $add: [
+                    1,
+                    "$favoritesCount"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            $multiply: [
+              0.4,
+              {
+                $ln: {
+                  $add: [
+                    1,
+                    "$viewsCount"
+                  ]
+                }
+              }
+            ]
+          }
         ]
       }
     }
   });
 
+  /* =====================================================
+     FINAL SCORE
+     ===================================================== */
+
+  pipeline.push({
+    $addFields: {
+      finalScore: {
+        $round: [
+          {
+            $add: [
+              {
+                $multiply: [
+                  0.7,
+                  "$relevanceScore"
+                ]
+              },
+              {
+                $multiply: [
+                  0.3,
+                  "$popularityScore"
+                ]
+              }
+            ]
+          },
+          2
+        ]
+      }
+    }
+  });
+
+  /* =====================================================
+     SORT + PAGINATION
+     ===================================================== */
+
+  //let countPipleLine without skip and limit
+  const countPipeline = [...pipeline];
+  countPipeline.push({
+    $count: "totalCount"
+  });
+
+
   pipeline.push(
     {
+      $sort: {
+        finalScore: sortDirection
+      }
+    },
+    {
+      $skip: skip
+    },
+    {
+      $limit: limit
+    }
+  );
+
+  /* =====================================================
+     FINAL SHAPE
+     ===================================================== */
+
+  pipeline.push({
+    $project: {
+      _id: 1,
+      distance: userLocation ? 1 : null,
+      basicInfo: 1,
+      otherInfo: 1,
+      location: 1,
+      operatingHours: 1,
+      tags: 1,
+      venue: {
+        venueType: "$venueTypes"
+      },
+      finalScore: 1
+    }
+  });
+
+  //total count without limit and skip (for pagination meta)
+  if (ctx) {
+    const countResult = await Organizations.aggregate(countPipeline);
+    ctx.totalCount = countResult[0] ? countResult[0].totalCount : 0;
+  }
+  return {
+    organizations: await Organizations.aggregate(pipeline),
+    totalCount: ctx?.totalCount || 0
+  }
+};
+
+
+
+
+const getTrendingOrganizationsForHomeRepo = async ({
+  userLocation,
+  radiusKm = 50,
+  category = null,
+  limit = 10,
+  skip = 0,
+  ctx
+}) => {
+
+  /* =====================================================
+     ADVANCE FILTERS (CTX ONLY)
+     ===================================================== */
+
+  const advanceFilters = ctx?.advanceFilters || {};
+
+  const filterCategories = (advanceFilters.categories || [])
+    .filter(Boolean)
+    .map(id => new mongoose.Types.ObjectId(id));
+
+  const filterTags = (advanceFilters.tags || [])
+    .filter(Boolean)
+    .map(id => new mongoose.Types.ObjectId(id));
+
+  const filterVenueTypes = (advanceFilters.venueTypes || [])
+    .filter(Boolean)
+    .map(id => new mongoose.Types.ObjectId(id));
+
+  /* =====================================================
+     CATEGORY MERGE
+     ===================================================== */
+
+  let categoryObjectIds = [];
+
+  if (category) {
+    const arr = Array.isArray(category)
+      ? category
+      : [category];
+
+    categoryObjectIds = arr
+      .filter(Boolean)
+      .map(id => new mongoose.Types.ObjectId(id));
+  }
+
+  const finalCategories =
+    ctx && filterCategories.length
+      ? filterCategories
+      : categoryObjectIds;
+
+  /* =====================================================
+     TIME WINDOWS
+     ===================================================== */
+
+  const now = Date.now();
+  const last48h = new Date(now - 48 * 60 * 60 * 1000);
+  const last7d = new Date(now - 7 * 24 * 60 * 60 * 1000);
+
+  const pipeline = [];
+
+  /* =====================================================
+     BASE QUERY
+     ===================================================== */
+
+  const baseQuery = {
+    status: "active"
+  };
+
+  if (finalCategories.length) {
+    baseQuery["otherInfo.categories"] = {
+      $in: finalCategories
+    };
+  }
+
+  /* =====================================================
+     GEO / MATCH
+     ===================================================== */
+
+  if (userLocation) {
+    pipeline.push({
+      $geoNear: {
+        near: userLocation,
+        key: "location",
+        distanceField: "distance",
+        spherical: true,
+        maxDistance: radiusKm * 1000,
+        query: baseQuery
+      }
+    });
+  } else {
+    pipeline.push({
+      $match: baseQuery
+    });
+  }
+
+  /* =====================================================
+     ENGAGEMENT SCORE
+     ===================================================== */
+
+  pipeline.push(
+    {
+      $lookup: {
+        from: "engagementevents",
+        let: { orgId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              entityType: "organizations",
+              action: "view",
+              $expr: {
+                $eq: ["$entityId", "$$orgId"]
+              },
+              createdAt: { $gte: last7d }
+            }
+          },
+          {
+            $group: {
+              _id: null,
+              views7d: { $sum: 1 },
+              views48h: {
+                $sum: {
+                  $cond: [
+                    { $gte: ["$createdAt", last48h] },
+                    1,
+                    0
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        as: "engagementStats"
+      }
+    },
+    {
       $addFields: {
-        finalScore: {
+        views7d: {
+          $ifNull: [
+            { $first: "$engagementStats.views7d" },
+            0
+          ]
+        },
+        views48h: {
+          $ifNull: [
+            { $first: "$engagementStats.views48h" },
+            0
+          ]
+        }
+      }
+    },
+    {
+      $addFields: {
+        trendingScore: {
           $round: [
             {
               $add: [
-                { $multiply: [0.7, "$relevanceScore"] },
-                { $multiply: [0.3, "$popularityScore"] }
+                { $multiply: [0.3, "$views48h"] },
+                { $multiply: [0.7, "$views7d"] }
               ]
             },
             2
           ]
         }
       }
-    },
-    { $sort: { finalScore: -1 } },
-    { $skip: skip },
-    { $limit: limit }
+    }
   );
 
-  /* ===============================
-     PRIMARY VENUE → VENUE TYPE
-     =============================== */
+  /* =====================================================
+     VENUE + TYPE
+     ===================================================== */
+
   pipeline.push(
     {
       $lookup: {
@@ -1106,7 +1765,9 @@ const getForYouOrganizationsForHomeRepo = async ({
         pipeline: [
           {
             $match: {
-              $expr: { $eq: ["$organization", "$$orgId"] },
+              $expr: {
+                $eq: ["$organization", "$$orgId"]
+              },
               isPrimary: true,
               status: "active"
             }
@@ -1129,9 +1790,24 @@ const getForYouOrganizationsForHomeRepo = async ({
     }
   );
 
-  /* ===============================
-     TAGS
-     =============================== */
+  /* =====================================================
+     VENUE TYPE FILTER (CTX ONLY)
+     ===================================================== */
+
+  if (ctx && filterVenueTypes.length) {
+    pipeline.push({
+      $match: {
+        "venueTypes._id": {
+          $in: filterVenueTypes
+        }
+      }
+    });
+  }
+
+  /* =====================================================
+     TAGS + CTX FILTER
+     ===================================================== */
+
   pipeline.push({
     $lookup: {
       from: "tags",
@@ -1144,225 +1820,73 @@ const getForYouOrganizationsForHomeRepo = async ({
     }
   });
 
-  /* ---------- FINAL SHAPE ---------- */
-  pipeline.push({
-    $project: {
-      _id: 1,
-      distance: userLocation ? 1 : null,
-      basicInfo: 1,
-      operatingHours: 1,
-      tags: 1,
-      venue: {
-        venueType: "$venueTypes"
-      },
-      finalScore: 1
-    }
-  });
-
-  return Organizations.aggregate(pipeline);
-};
-
-
-
-
-const getTrendingOrganizationsForHomeRepo = async ({
-  userLocation,
-  radiusKm = 50,
-  category = null,
-  limit = 10
-}) => {
-
-  const now = Date.now();
-  const last48h = new Date(now - 48 * 60 * 60 * 1000);
-  const last7d = new Date(now - 7 * 24 * 60 * 60 * 1000);
-
-  const categoryObjectId = category
-    ? new mongoose.Types.ObjectId(category)
-    : null;
-
-  const pipeline = [];
-
-  /* ===============================
-     1️⃣ CONDITIONAL GEO
-     =============================== */
-  if (userLocation) {
-    pipeline.push({
-      $geoNear: {
-        near: userLocation,
-        key: "location",
-        distanceField: "distance",
-        spherical: true,
-        maxDistance: radiusKm * 1000,
-        query: {
-          status: "active",
-          ...(categoryObjectId && {
-            "otherInfo.categories": { $in: [categoryObjectId] }
-          })
-        }
-      }
-    });
-  } else {
+  if (ctx && filterTags.length) {
     pipeline.push({
       $match: {
-        status: "active",
-        ...(categoryObjectId && {
-          "otherInfo.categories": { $in: [categoryObjectId] }
-        })
+        "otherInfo.tags": {
+          $in: filterTags
+        }
       }
     });
   }
 
-  /* ===============================
-     2️⃣ ENGAGEMENT (LAST 7 DAYS)
-     =============================== */
-  pipeline.push(
-    {
-      $lookup: {
-        from: "engagementevents",
-        let: { orgId: "$_id" },
-        pipeline: [
-          {
-            $match: {
-              entityType: "organizations",
-              action: "view",
-              $expr: { $eq: ["$entityId", "$$orgId"] },
-              createdAt: { $gte: last7d }
-            }
-          },
-          {
-            $group: {
-              _id: null,
-              views7d: { $sum: 1 },
-              views48h: {
-                $sum: {
-                  $cond: [{ $gte: ["$createdAt", last48h] }, 1, 0]
-                }
-              }
-            }
-          }
-        ],
-        as: "engagementStats"
-      }
-    },
+  /* =====================================================
+     COUNT PIPELINE (BEFORE PAGINATION)
+     ===================================================== */
 
-    /* ===============================
-       3️⃣ FLATTEN STATS
-       =============================== */
-    {
-      $addFields: {
-        views7d: { $ifNull: [{ $first: "$engagementStats.views7d" }, 0] },
-        views48h: { $ifNull: [{ $first: "$engagementStats.views48h" }, 0] }
-      }
-    },
+  const countPipeline = [...pipeline];
 
-    /* ===============================
-       4️⃣ TRENDING SCORE
-       =============================== */
-    {
-      $addFields: {
-        trendingScore: {
-          $round: [
-            {
-              $add: [
-                { $multiply: [0.3, "$views48h"] },
-                { $multiply: [0.7, "$views7d"] }
-              ]
-            },
-            2
-          ]
-        }
-      }
-    }
-  );
-
-  /* ===============================
-     5️⃣ PRIMARY VENUE → VENUE TYPE
-     =============================== */
-  pipeline.push(
-    {
-      $lookup: {
-        from: "venues",
-        let: { orgId: "$_id" },
-        pipeline: [
-          {
-            $match: {
-              $expr: { $eq: ["$organization", "$$orgId"] },
-              isPrimary: true,
-              status: "active"
-            }
-          },
-          {
-            $project: {
-              _id: 0,
-              venueType: 1
-            }
-          }
-        ],
-        as: "primaryVenue"
-      }
-    },
-
-    // populate venueType documents
-    {
-      $lookup: {
-        from: "venuetypes",
-        localField: "primaryVenue.venueType",
-        foreignField: "_id",
-        as: "venueTypes",
-        pipeline: [
-          { $project: { _id: 1, title: 1 } }
-        ]
-      }
-    }
-  );
-
-  /* ===============================
-     6️⃣ TAGS
-     =============================== */
-  pipeline.push({
-    $lookup: {
-      from: "tags",
-      localField: "otherInfo.tags",
-      foreignField: "_id",
-      as: "tags",
-      pipeline: [{ $project: { _id: 1, title: 1 } }]
-    }
+  countPipeline.push({
+    $count: "totalCount"
   });
 
-  /* ===============================
-     7️⃣ SORT & LIMIT
-     =============================== */
+  /* =====================================================
+     SORT + PAGINATION
+     ===================================================== */
+
   pipeline.push(
     { $sort: { trendingScore: -1 } },
+    { $skip: skip },
     { $limit: limit }
   );
 
-  /* ===============================
-     8️⃣ FINAL SHAPE
-     =============================== */
+  /* =====================================================
+     FINAL SHAPE
+     ===================================================== */
+
   pipeline.push({
     $project: {
       _id: 1,
       distance: userLocation ? 1 : null,
       "basicInfo.name": 1,
       "basicInfo.media": 1,
-      "otherInfo.description": 1,
+      "otherInfo": 1,
+      "location": 1,
       operatingHours: 1,
       tags: 1,
-
-      venue: {
-        venueType: "$venueTypes"
-      },
-
       views48h: 1,
       views7d: 1,
-      trendingScore: 1
+      trendingScore: 1,
+      venue: {
+        venueType: "$venueTypes"
+      }
     }
   });
 
-  return Organizations.aggregate(pipeline);
-};
+  /* =====================================================
+     EXECUTION
+     ===================================================== */
 
+  const [organizations, countResult] = await Promise.all([
+    Organizations.aggregate(pipeline),
+    Organizations.aggregate(countPipeline)
+  ]);
+
+  return {
+    organizations,
+    totalCount: countResult[0]?.totalCount || 0
+  };
+};
 
 const getNewlyListedOrganizationsRepo = async ({
   category,
@@ -1370,22 +1894,71 @@ const getNewlyListedOrganizationsRepo = async ({
   radiusKm = 50,
   page = 1,
   limit = 10,
-  skip = 0
+  skip = 0,
+  ctx
 }) => {
 
-  const geoQuery = { status: "active" };
+  /* =====================================================
+     ADVANCE FILTERS (CTX ONLY)
+     ===================================================== */
+
+  const advanceFilters = ctx?.advanceFilters || {};
+
+  const filterCategories = (advanceFilters.categories || [])
+    .filter(Boolean)
+    .map(id => new mongoose.Types.ObjectId(id));
+
+  const filterTags = (advanceFilters.tags || [])
+    .filter(Boolean)
+    .map(id => new mongoose.Types.ObjectId(id));
+
+  const filterVenueTypes = (advanceFilters.venueTypes || [])
+    .filter(Boolean)
+    .map(id => new mongoose.Types.ObjectId(id));
+
+  /* =====================================================
+     CATEGORY MERGE (CTX vs INPUT)
+     ===================================================== */
+
+  let categoryObjectIds = [];
 
   if (category) {
-    geoQuery["otherInfo.categories"] = {
-      $in: [new mongoose.Types.ObjectId(category)]
+    const arr = Array.isArray(category) ? category : [category];
+
+    categoryObjectIds = arr
+      .filter(Boolean)
+      .map(id => new mongoose.Types.ObjectId(id));
+  }
+
+  const finalCategories =
+    ctx && filterCategories.length
+      ? filterCategories
+      : categoryObjectIds;
+
+  /* =====================================================
+     BASE QUERY
+     ===================================================== */
+
+  const baseQuery = {
+    status: "active"
+  };
+
+  if (finalCategories.length) {
+    baseQuery["otherInfo.categories"] = {
+      $in: finalCategories
     };
   }
+
+  /* =====================================================
+     PIPELINE
+     ===================================================== */
 
   const pipeline = [];
 
   /* ===============================
-     1️⃣ CONDITIONAL GEO
+     GEO / MATCH
      =============================== */
+
   if (userLocation) {
     pipeline.push({
       $geoNear: {
@@ -1394,16 +1967,19 @@ const getNewlyListedOrganizationsRepo = async ({
         distanceField: "distance",
         spherical: true,
         maxDistance: radiusKm * 1000,
-        query: geoQuery
+        query: baseQuery
       }
     });
   } else {
-    pipeline.push({ $match: geoQuery });
+    pipeline.push({
+      $match: baseQuery
+    });
   }
 
   /* ===============================
-     2️⃣ AGE (DAYS)
+     AGE (RECENCY)
      =============================== */
+
   pipeline.push({
     $addFields: {
       ageDays: {
@@ -1416,8 +1992,9 @@ const getNewlyListedOrganizationsRepo = async ({
   });
 
   /* ===============================
-     3️⃣ POPULARITY
+     ENGAGEMENT
      =============================== */
+
   pipeline.push(
     {
       $lookup: {
@@ -1449,8 +2026,9 @@ const getNewlyListedOrganizationsRepo = async ({
   );
 
   /* ===============================
-     4️⃣ SCORES + ORDERING
+     SCORES
      =============================== */
+
   pipeline.push(
     {
       $addFields: {
@@ -1465,7 +2043,14 @@ const getNewlyListedOrganizationsRepo = async ({
           ]
         },
         popularityScore: {
-          $round: [{ $ln: { $add: [1, "$popularityCount"] } }, 2]
+          $round: [
+            {
+              $ln: {
+                $add: [1, "$popularityCount"]
+              }
+            },
+            2
+          ]
         }
       }
     },
@@ -1483,17 +2068,14 @@ const getNewlyListedOrganizationsRepo = async ({
           ]
         }
       }
-    },
-    { $sort: { finalScore: -1 } },
-    { $skip: skip },
-    { $limit: limit }
+    }
   );
 
   /* ===============================
-     5️⃣ VENUE + VENUE TYPE + TAGS
+     VENUE + TYPE
      =============================== */
+
   pipeline.push(
-    // primary venue
     {
       $lookup: {
         from: "venues",
@@ -1516,8 +2098,6 @@ const getNewlyListedOrganizationsRepo = async ({
         as: "primaryVenue"
       }
     },
-
-    // populate venueType docs
     {
       $lookup: {
         from: "venuetypes",
@@ -1528,47 +2108,109 @@ const getNewlyListedOrganizationsRepo = async ({
           { $project: { _id: 1, title: 1 } }
         ]
       }
-    },
-
-    // tags
-    {
-      $lookup: {
-        from: "tags",
-        localField: "otherInfo.tags",
-        foreignField: "_id",
-        as: "tags",
-        pipeline: [{ $project: { _id: 1, title: 1 } }]
-      }
-    },
-
-    // final projection
-    {
-      $project: {
-        _id: 1,
-        createdAt: 1,
-        distance: userLocation ? 1 : null,
-        "basicInfo.name": 1,
-        "basicInfo.media": 1,
-        "otherInfo.description": 1,
-        operatingHours: 1,
-        tags: 1,
-
-        venue: {
-          venueType: "$venueTypes"
-        },
-
-        explain: {
-          ageDays: { $round: ["$ageDays", 1] },
-          popularityCount: "$popularityCount",
-          recencyScore: "$recencyScore",
-          popularityScore: "$popularityScore",
-          finalScore: "$finalScore"
-        }
-      }
     }
   );
 
-  return Organizations.aggregate(pipeline);
+  /* ===============================
+     TAGS (CTX FILTER)
+     =============================== */
+
+  pipeline.push({
+    $lookup: {
+      from: "tags",
+      localField: "otherInfo.tags",
+      foreignField: "_id",
+      as: "tags",
+      pipeline: [
+        { $project: { _id: 1, title: 1 } }
+      ]
+    }
+  });
+
+  if (ctx && filterTags.length) {
+    pipeline.push({
+      $match: {
+        "otherInfo.tags": {
+          $in: filterTags
+        }
+      }
+    });
+  }
+
+  /* ===============================
+     VENUE TYPE FILTER (CTX ONLY)
+     =============================== */
+
+  if (ctx && filterVenueTypes.length) {
+    pipeline.push({
+      $match: {
+        "venueTypes._id": {
+          $in: filterVenueTypes
+        }
+      }
+    });
+  }
+
+  /* ===============================
+     COUNT PIPELINE (BEFORE PAGINATION)
+     =============================== */
+
+  const countPipeline = [...pipeline];
+  countPipeline.push({ $count: "totalCount" });
+
+  /* ===============================
+     SORT + PAGINATION
+     =============================== */
+
+  pipeline.push(
+    { $sort: { finalScore: -1 } },
+    { $skip: skip },
+    { $limit: limit }
+  );
+
+  /* ===============================
+     FINAL SHAPE
+     =============================== */
+
+  pipeline.push({
+    $project: {
+      _id: 1,
+      createdAt: 1,
+      distance: userLocation ? 1 : null,
+      "basicInfo.name": 1,
+      "basicInfo.media": 1,
+      "otherInfo": 1,
+      "location": 1,
+      operatingHours: 1,
+      tags: 1,
+
+      venue: {
+        venueType: "$venueTypes"
+      },
+
+      explain: {
+        ageDays: { $round: ["$ageDays", 1] },
+        popularityCount: "$popularityCount",
+        recencyScore: "$recencyScore",
+        popularityScore: "$popularityScore",
+        finalScore: "$finalScore"
+      }
+    }
+  });
+
+  /* ===============================
+     EXECUTION
+     =============================== */
+
+  const [organizations, countResult] = await Promise.all([
+    Organizations.aggregate(pipeline),
+    Organizations.aggregate(countPipeline)
+  ]);
+
+  return {
+    organizations,
+    totalCount: countResult[0]?.totalCount || 0
+  };
 };
 
 

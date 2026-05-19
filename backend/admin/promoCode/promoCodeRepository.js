@@ -31,7 +31,7 @@ const createPromoCode = async (data) => {
 
 
 
-const getPromoCodes = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip, companyOrganizer }) => {
+const getPromoCodes = async ({ timezone, page, limit, keyword, status, userId, date, range, today, skip, companyOrganizer, sortBy, sortOrder }) => {
 
   const pipeline = [
     {
@@ -99,7 +99,13 @@ const getPromoCodes = async ({ timezone, page, limit, keyword, status, userId, d
     }
   }
 
-  pipeline.push({ $sort: { createdAt: -1 } });
+  if (sortBy && sortOrder) {
+    const sortField = sortBy === "title" ? "title" : sortBy === "promoCode" ? "promoCode" : sortBy === "description" ? "description" : "discountType";
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
+    pipeline.push({ $sort: { [sortField]: sortDirection } });
+  } else {
+    pipeline.push({ $sort: { createdAt: -1 } });
+  }
 
   // Apply pagination + counts using $facet
   pipeline.push({

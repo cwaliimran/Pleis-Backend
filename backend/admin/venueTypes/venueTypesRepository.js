@@ -14,9 +14,12 @@ const buildVenueTypesCacheKey = ({
   date,
   keyword,
   categories,
+  sortBy,
+  sortOrder,
   categoriesFilter = []
 }) => {
-  return `${ACTIVE_VENUE_TYPES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:status=${status}:date=${date}:keyword=${keyword}:categories=${categories}:categoriesFilter=${categoriesFilter}`;
+  return `${ACTIVE_VENUE_TYPES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:status=${status}:date=${date}:keyword=${keyword}:categories=${categories}:sortBy=${sortBy}:sortOrder=${sortOrder}:categoriesFilter=${categoriesFilter}`;
+
 };
 // Create
 const createVenueType = async (data) => {
@@ -26,11 +29,63 @@ const createVenueType = async (data) => {
 };
 
 // Get all with filters
-const getVenueTypesWithFilters = async (query, page, limit, status, date, keyword, categories, categoriesFilter = []) => {
+// const getVenueTypesWithFilters = async (query, page, limit, status, date, keyword, categories, sortBy, sortOrder, categoriesFilter = []) => {
+//   if (categoriesFilter.length > 0) {
+//     categoriesFilter = categoriesFilter.map(id => new mongoose.Types.ObjectId(id)); // Convert string IDs to ObjectIds
+//   }
+//   await invalidate(ACTIVE_VENUE_TYPES_CACHE_KEY);
+//   const cacheKey = buildVenueTypesCacheKey({
+//     scope: "admin",
+//     skip: page,
+//     limit,
+//     status,
+//     date,
+//     keyword,
+//     categories,
+//     sortBy,
+//     sortOrder,
+//     categoriesFilter: categoriesFilter.length > 0 ? categoriesFilter.join(",") : ""
+//   });
+//   return cache({
+//     namespace: cacheKey,
+//     ttl: 86400, // 1 day
+
+//     fetchFn: async () => {
+//       return getWithFilters({
+//         model: VenueTypesModel,
+//         query,
+//         populate: [
+//           {
+//             path: "categories",
+//             select: "title order",
+//             match: { status: "active" },
+//           },
+
+//         ],
+//         options: { page, limit, sort: { title: 1 } },
+//       });
+
+//     },
+//   });
+// };
+const getVenueTypesWithFilters = async (
+  query,
+  page = 1,
+  limit = 20,
+  status,
+  date,
+  keyword,
+  categories,
+  sortBy = "createdAt",
+  sortOrder = "desc",
+  categoriesFilter = []
+) => {
   if (categoriesFilter.length > 0) {
-    categoriesFilter = categoriesFilter.map(id => new mongoose.Types.ObjectId(id)); // Convert string IDs to ObjectIds
+    categoriesFilter = categoriesFilter.map(id => new mongoose.Types.ObjectId(id));
   }
+
   await invalidate(ACTIVE_VENUE_TYPES_CACHE_KEY);
+
   const cacheKey = buildVenueTypesCacheKey({
     scope: "admin",
     skip: page,
@@ -39,29 +94,62 @@ const getVenueTypesWithFilters = async (query, page, limit, status, date, keywor
     date,
     keyword,
     categories,
+    sortBy,
+    sortOrder,
     categoriesFilter: categoriesFilter.length > 0 ? categoriesFilter.join(",") : ""
   });
-console.log("query",query.categories );
+
   return cache({
     namespace: cacheKey,
-    ttl: 86400, // 1 day
-
+    ttl: 86400,
     fetchFn: async () => {
-      return getWithFilters({
-        model: VenueTypesModel,
-        query,
-        populate: [
-          {
-            path: "categories",
-            select: "title order",
-            match: { status: "active" },
-          },
+      const sortDirection = sortOrder === "asc" ? 1 : -1;
+      const pipeline = [{ $match: query }];
 
-        ],
-        options: { page, limit, sort: { title: 1 } },
+      // Lookup active categories
+      pipeline.push({
+        $lookup: {
+          from: "categories",
+          localField: "categories",
+          foreignField: "_id",
+          as: "categories",
+          pipeline: [
+            { $match: { status: "active" } },
+            { $project: { _id: 1, title: 1, order: 1 } },
+            { $sort: { title: 1 } } // sort categories alphabetically
+          ]
+        }
       });
 
-    },
+      // Add lowercase sort fields
+      if (sortBy === "title") {
+        pipeline.push({
+          $addFields: { sortField: { $toLower: { $ifNull: ["$title", ""] } } }
+        });
+      } else if (sortBy === "categoryTitle") {
+        pipeline.push({
+          $addFields: {
+            sortField: {
+              $toLower: {
+                $ifNull: [{ $arrayElemAt: ["$categories.title", 0] }, ""]
+              }
+            }
+          }
+        });
+      } else if (sortBy === "createdAt") {
+        pipeline.push({ $addFields: { sortField: "$createdAt" } });
+      }
+
+      // Apply sort, skip, limit
+      pipeline.push({ $sort: { sortField: sortDirection, _id: -1 } });
+      pipeline.push({ $skip: (page - 1) * limit });
+      if (limit > 0) pipeline.push({ $limit: limit });
+
+      // Remove temporary sort field
+      pipeline.push({ $project: { sortField: 0 } });
+
+      return VenueTypesModel.aggregate(pipeline).allowDiskUse(true);
+    }
   });
 };
 

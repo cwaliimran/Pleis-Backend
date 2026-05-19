@@ -140,22 +140,37 @@ const getMenuItems = async (req, res) => {
     endTime,
     date,
     companyOrganizer,
-    organization
+    organization,
+    sortBy,
+    sortOrder
   } = req.query;
-  if(req.user.userType==="organizer")
-  {
-       companyOrganizer=req.user._id
+  const SORT_FIELDS = ["menuItemName", "description", "menuName", "price"];
+  const SORT_ORDERS = ["asc", "desc"];
+  if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+    const key = sortBy && !SORT_FIELDS.includes(sortBy)
+      ? "invalid_sort_by_field"
+      : "invalid_sort_order";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
   }
-  if(!companyOrganizer){
+
+  if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+    const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+      : "sort_by_required_when_sort_order_is_provided";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+  if (req.user.userType === "organizer") {
+    companyOrganizer = req.user._id
+  }
+  if (!companyOrganizer) {
     return sendResponse({
       res,
       statusCode: 400,
       translationKey: "company_organizer_is_required",
     });
 
-    
+
   }
-  companyOrganizer =new mongoose.Types.ObjectId(companyOrganizer);
+  companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
   try {
     const { menuItems, meta } = await menuItemsService.getMenuItems({
       page,
@@ -170,7 +185,9 @@ const getMenuItems = async (req, res) => {
       timezone: req.user?.timezone,
       date,
       companyOrganizer,
-      organization
+      organization,
+      sortBy,
+      sortOrder
     });
 
     return sendResponse({
@@ -253,14 +270,14 @@ const updateMenuItem = async (req, res) => {
     availabilityType,
     event,
   } = req.body;
-    if (availabilityType === 'preOrdersEvent' && !event) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "event_is_required_for_preOrdersEvent",
-  
-      });
-    }
+  if (availabilityType === 'preOrdersEvent' && !event) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "event_is_required_for_preOrdersEvent",
+
+    });
+  }
 
   if (upSellItem) {
     if (upSellItem === "true") {
@@ -348,7 +365,7 @@ const updateMenuItem = async (req, res) => {
     if (endTime) {
       data.endTime = convertTimezoneToUtc(endTime, req.user.timezone, "hh:mm A");
     }
-     id = new mongoose.Types.ObjectId(id);
+    id = new mongoose.Types.ObjectId(id);
 
     const updated = await menuItemsService.updateMenuItem(id, data, timezone);
 
@@ -457,8 +474,8 @@ const getBundleMenuItems = async (req, res) => {
     date,
     companyOrganizer
   } = req.query;
-if(req.user.userType==="organizer")  {
-       companyOrganizer=req.user._id
+  if (req.user.userType === "organizer") {
+    companyOrganizer = req.user._id
   }
   try {
     const { menuItems, meta } = await menuItemsService.getBundleMenuItems({

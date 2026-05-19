@@ -40,9 +40,23 @@ const createUsersStreak = async (req, res) => {
 
 const getUsersStreaks = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, orderSort, companyOrganizer } = req.query;
-  if(!companyOrganizer){
+  let { keyword, status, date, orderSort, companyOrganizer, sortBy, sortOrder } = req.query;
+  if (!companyOrganizer) {
     companyOrganizer = req.user._id;
+  }
+  const SORT_FIELDS = ["userName", "userFirstName"];
+  const SORT_ORDERS = ["asc", "desc"];
+  if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+    const key = sortBy && !SORT_FIELDS.includes(sortBy)
+      ? "invalid_sort_by_field"
+      : "invalid_sort_order";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+
+  if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+    const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+      : "sort_by_required_when_sort_order_is_provided";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
   }
 
   try {
@@ -68,7 +82,8 @@ const getUsersStreaks = async (req, res) => {
       keyword,
       status,
       date,
-      orderSort
+      sortBy,
+      sortOrder
     });
 
     return sendResponse({
