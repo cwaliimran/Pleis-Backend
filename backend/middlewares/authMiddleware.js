@@ -92,9 +92,20 @@ const auth = async (req, res, next) => {
       if (user.userType === "manager") {
         //companyOrganizer,organizations -> fetch from db
         // Fetch organizations array
-        console.log("userId",userId );
+        console.log("userId", userId);
         let organizations = await getOrganizationsAsStaff(userId);
         let organizationIds = organizations.map(org => org._id.toString());
+
+        if (Array.isArray(organizations)) {
+          // Convert ObjectIds to string and join with comma
+          organizationIds = organizations
+            .map(org => org._id.toString())
+            .filter(id => id) // remove empty or null just in case
+            .join(",");
+        } else if (typeof organizations === "string") {
+          // Already a comma-separated string
+          organizationIds = organizations;
+        }
 
 
         if (!req.query.organizations) {
