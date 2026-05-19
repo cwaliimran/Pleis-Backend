@@ -214,8 +214,11 @@ const getForYouEventsAgainstInterests = async ({
       $facet: {
         data: [
           { $skip: skip },
-          { $limit: limit }
+          { $limit: limit },
+
+          ...getEventLookups()
         ],
+
         totalCount: [
           { $count: "count" }
         ]
