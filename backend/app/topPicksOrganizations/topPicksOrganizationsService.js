@@ -38,41 +38,55 @@ const getTopPicksOrganizations = async ({
 
 };
 
-const getTopPicksOrganizationsForHomeService = async ({ 
+const getTopPicksOrganizationsForHomeService = async ({
   category,
-  limit,
-  skip,
   userLocation,
   radiusKm,
+  timezone,
+  page,
+  limit,
+  skip,
+  userId,
+  ctx
 }) => {
+
   const filters = [];
 
   // Base status filter
   filters.push({ status: { $ne: "deleted" } });
 
-  // Build query
   const query = filters.length ? { $and: filters } : {};
 
-  // Convert category to ObjectId (IMPORTANT)
-  let categoryObjectId = null;
+  /* =====================================================
+     CATEGORY SAFE PARSING
+     ===================================================== */
+
+  let categoryObjectIds = [];
+
   if (category) {
-    categoryObjectId = new mongoose.Types.ObjectId(category);
+    const categoryArray = Array.isArray(category)
+      ? category
+      : [category];
+
+    categoryObjectIds = categoryArray
+      .filter(Boolean)
+      .map(id => new mongoose.Types.ObjectId(id));
   }
 
-  const topPicksOrganizations =
+  const result =
     await topPicksOrganizationRepo.getTopPicksOrganizationsWithFiltersHomeRepo(
       query,
       skip,
       limit,
       userLocation,
       radiusKm,
-      categoryObjectId
+      categoryObjectIds,
+      ctx
     );
 
-  const formattedTopPicksOrganizations = formatTopPicks(topPicksOrganizations);
-
   return {
-    topPicksOrganizations: formattedTopPicksOrganizations,
+    topPicksOrganizations: formatTopPicks(result.topPicksOrganizations),
+    totalCount: result.totalCount
   };
 };
 

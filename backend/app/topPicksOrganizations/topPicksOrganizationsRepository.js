@@ -165,13 +165,32 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
   limit,
   userLocation,
   radiusKm = 50,
-  categoryObjectId = null
+  categoryObjectIds = [],
+  ctx
 ) => {
+
+  const advanceFilters = ctx?.advanceFilters || {};
+
+  const filterCategories = (advanceFilters.categories || [])
+    .filter(Boolean)
+    .map(id => new mongoose.Types.ObjectId(id));
+
+  const filterTags = (advanceFilters.tags || [])
+    .filter(Boolean)
+    .map(id => new mongoose.Types.ObjectId(id));
+
+  const filterVenueTypes = (advanceFilters.venueTypes || [])
+    .filter(Boolean)
+    .map(id => new mongoose.Types.ObjectId(id));
+
   const pipeline = [];
 
   /* ===============================
-     1️⃣ CONDITIONAL GEO
+     BASE + GEO
      =============================== */
+
+  const baseMatch = { status: "active" };
+
   if (userLocation) {
     pipeline.push({
       $geoNear: {
@@ -180,170 +199,247 @@ const getTopPicksOrganizationsWithFiltersHomeRepo = async (
         distanceField: "distance",
         spherical: true,
         maxDistance: radiusKm * 1000,
-        query: { status: "active" },
-      },
+        query: baseMatch
+      }
     });
   } else {
-    pipeline.push({ $match: { status: "active" } });
+    pipeline.push({ $match: baseMatch });
   }
 
   /* ===============================
-     2️⃣ TOP PICKS JOIN
+     TOP PICKS JOIN
      =============================== */
+
   pipeline.push(
     {
       $lookup: {
         from: "toppicksorganizations",
         localField: "_id",
         foreignField: "organization",
-        as: "topPick",
-      },
+        as: "topPick"
+      }
     },
     { $unwind: "$topPick" },
     {
       $addFields: {
-        topPickStatus: "$topPick.status",
-      },
+        topPickStatus: "$topPick.status"
+      }
     },
     {
       $match: {
         ...query,
-        topPickStatus: "active",
-      },
+        topPickStatus: "active"
+      }
     }
   );
 
   /* ===============================
-     OPTIONAL CATEGORY FILTER
+     CATEGORY FILTER (CTX + DEFAULT MERGE)
      =============================== */
-  if (categoryObjectId) {
+
+  const finalCategories =
+    ctx && filterCategories.length
+      ? filterCategories
+      : categoryObjectIds;
+
+  if (finalCategories.length) {
     pipeline.push({
       $match: {
-        "otherInfo.categories": { $in: [categoryObjectId] },
-      },
+        "otherInfo.categories": {
+          $in: finalCategories
+        }
+      }
     });
   }
 
   /* ===============================
-     4️⃣ SORT
+     TAG FILTER (CTX ONLY)
      =============================== */
-  pipeline.push({ $sort: { "topPick.order": 1 } });
 
- /* ===============================
-   5️⃣ CREATOR POPULATION (FIXED)
-=============================== */
-pipeline.push(
-  {
-    $lookup: {
-      from: "users",
-      let: { creatorId: "$creator" },
-      pipeline: [
-        {
-          $match: {
-            $expr: { $eq: ["$_id", "$$creatorId"] }
-          }
-        },
-        {
-          $project: {
-            _id: 1,
-            "companyDetails.logo": 1,
-            "companyDetails.loyaltySettings.title": 1
-          }
+  if (ctx && filterTags.length) {
+    pipeline.push({
+      $match: {
+        "otherInfo.tags": {
+          $in: filterTags
         }
-      ],
-      as: "creator"
+      }
+    });
+  }
+
+  /* ===============================
+     SORT TOP PICKS ORDER
+     =============================== */
+
+  pipeline.push({
+    $sort: {
+      "topPick.order": 1
     }
-  },
-  {
-    $addFields: {
-      creator: {
-        $ifNull: [
-          { $arrayElemAt: ["$creator", 0] },
+  });
+
+  /* ===============================
+     CREATOR
+     =============================== */
+
+  pipeline.push(
+    {
+      $lookup: {
+        from: "users",
+        let: { creatorId: "$creator" },
+        pipeline: [
           {
-            _id: null,
-            companyDetails: {
-              logo: null,
-              loyaltySettings: { title: null }
+            $match: {
+              $expr: { $eq: ["$_id", "$$creatorId"] }
+            }
+          },
+          {
+            $project: {
+              _id: 1,
+              "companyDetails.logo": 1,
+              "companyDetails.loyaltySettings.title": 1
             }
           }
+        ],
+        as: "creator"
+      }
+    },
+    {
+      $addFields: {
+        creator: {
+          $ifNull: [
+            { $arrayElemAt: ["$creator", 0] },
+            {
+              _id: null,
+              companyDetails: {
+                logo: null,
+                loyaltySettings: { title: null }
+              }
+            }
+          ]
+        }
+      }
+    }
+  );
+
+  /* ===============================
+     VENUE + TYPE
+     =============================== */
+
+  pipeline.push(
+    {
+      $lookup: {
+        from: "venues",
+        let: { orgId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $eq: ["$organization", "$$orgId"]
+              },
+              isPrimary: true,
+              status: "active"
+            }
+          },
+          { $project: { venueType: 1 } }
+        ],
+        as: "primaryVenue"
+      }
+    },
+    {
+      $lookup: {
+        from: "venuetypes",
+        localField: "primaryVenue.venueType",
+        foreignField: "_id",
+        as: "venueTypes",
+        pipeline: [
+          { $project: { _id: 1, title: 1 } }
         ]
       }
     }
+  );
+
+  /* ===============================
+     VENUE TYPE FILTER (CTX ONLY)
+     =============================== */
+
+  if (ctx && filterVenueTypes.length) {
+    pipeline.push({
+      $match: {
+        "venueTypes._id": {
+          $in: filterVenueTypes
+        }
+      }
+    });
   }
-);
-
 
   /* ===============================
-     6️⃣ PRIMARY VENUE
+     TAGS
      =============================== */
-  pipeline.push({
-    $lookup: {
-      from: "venues",
-      let: { orgId: "$_id" },
-      pipeline: [
-        {
-          $match: {
-            $expr: { $eq: ["$organization", "$$orgId"] },
-            isPrimary: true,
-            status: "active",
-          },
-        },
-        { $project: { venueType: 1 } },
-      ],
-      as: "primaryVenue",
-    },
-  });
 
-  /* ===============================
-     7️⃣ VENUE TYPE POPULATION
-     =============================== */
-  pipeline.push({
-    $lookup: {
-      from: "venuetypes",
-      localField: "primaryVenue.venueType",
-      foreignField: "_id",
-      as: "venueTypes",
-      pipeline: [{ $project: { _id: 1, title: 1 } }],
-    },
-  });
-
-  /* ===============================
-     8️⃣ TAGS
-     =============================== */
   pipeline.push({
     $lookup: {
       from: "tags",
       localField: "otherInfo.tags",
       foreignField: "_id",
       as: "tags",
-      pipeline: [{ $project: { _id: 1, title: 1 } }],
-    },
+      pipeline: [
+        { $project: { _id: 1, title: 1 } }
+      ]
+    }
   });
 
   /* ===============================
-     9️⃣ PAGINATION
+     COUNT PIPELINE (BEFORE PAGINATION)
      =============================== */
-  pipeline.push({ $skip: skip }, { $limit: limit });
+
+  const countPipeline = [...pipeline];
+
+  countPipeline.push({
+    $count: "totalCount"
+  });
 
   /* ===============================
-     🔟 FINAL RESPONSE
+     PAGINATION
      =============================== */
+
+  pipeline.push(
+    { $skip: skip },
+    { $limit: limit }
+  );
+
+  /* ===============================
+     FINAL SHAPE
+     =============================== */
+
   pipeline.push({
     $project: {
       _id: 1,
       ...(userLocation ? { distance: 1 } : {}),
       "basicInfo.name": 1,
       "basicInfo.media": 1,
-      "otherInfo.description": 1,
+      "otherInfo": 1,
+      "location": 1,
+
       tags: 1,
       creator: 1,
       venue: {
-        venueType: "$venueTypes",
-      },
-    },
+        venueType: "$venueTypes"
+      }
+    }
   });
 
-  return Organizations.aggregate(pipeline);
+  /* ===============================
+     EXECUTION (PARALLEL)
+     =============================== */
+
+  const [organizations, countResult] = await Promise.all([
+    Organizations.aggregate(pipeline),
+    Organizations.aggregate(countPipeline)
+  ]);
+
+  return {
+    topPicksOrganizations: organizations,
+    totalCount: countResult[0]?.totalCount || 0
+  };
 };
 
 
