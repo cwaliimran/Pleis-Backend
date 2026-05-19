@@ -63,7 +63,7 @@ const getNearbyOrganizationsByLocation = async (req, res) => {
       });
     }
 
-    let { page, limit } = parsePaginationParams(req);
+    let { page, limit, skip } = parsePaginationParams(req);
     let { category } = req.body;
 
     let { radiusKm } = req.query;
@@ -75,6 +75,7 @@ const getNearbyOrganizationsByLocation = async (req, res) => {
       timezone,
       page,
       limit,
+      skip,
       userId: req.user._id
     });
 
@@ -108,7 +109,7 @@ const getForYouOrganizations = async (req, res) => {
       };
     }
 
-    let { page, limit } = parsePaginationParams(req);
+    let { page, limit, skip } = parsePaginationParams(req);
     let { category } = req.body;
 
 
@@ -119,6 +120,7 @@ const getForYouOrganizations = async (req, res) => {
       timezone,
       page,
       limit,
+      skip,
       userId
     });
 
@@ -154,7 +156,7 @@ const getTrendingOrganizationsForHome = async (req, res) => {
       };
     }
 
-    let { page, limit } = parsePaginationParams(req);
+    let { page, limit, skip } = parsePaginationParams(req);
     let { category } = req.body;
     const { organizations } = await getTrendingOrganizationsForHomeService({
       category,
@@ -163,6 +165,7 @@ const getTrendingOrganizationsForHome = async (req, res) => {
       timezone,
       page,
       limit,
+      skip,
       userId
     });
     return sendResponse({

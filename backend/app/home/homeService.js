@@ -85,11 +85,13 @@ const getHomeService = async ({ queryData }) => {
         radiusKm,
         page: 1,
         limit: 10,
+        skip: 0,
         userId,
       }),
 
       topPicksOrgs: getTopPicksOrganizationsForHomeService({
         category,
+        page: 1,
         limit: 10,
         skip: 0,
         userLocation,
@@ -103,6 +105,7 @@ const getHomeService = async ({ queryData }) => {
         timezone,
         page: 1,
         limit: 10,
+        skip: 0,
         userId,
       }),
 
@@ -132,6 +135,7 @@ const getHomeService = async ({ queryData }) => {
         timezone,
         page: 1,
         limit: 10,
+        skip: 0,
         userId,
       }),
 
@@ -142,6 +146,8 @@ const getHomeService = async ({ queryData }) => {
         timezone,
         page: 1,
         limit: 10,
+        skip: 0,
+        userId,
       }),
 
       customCategoriesRes: getCustomCategories({
@@ -167,6 +173,7 @@ const getHomeService = async ({ queryData }) => {
       suggestedLoyaltyClubsRes: getSuggestedLoyaltyClubsForHomeService({
         page: 1,
         limit: 10,
+        skip: 0,
         userId,
         userLocation,
         radiusKm,
@@ -385,7 +392,7 @@ const getHomeService = async ({ queryData }) => {
     pushIfValid(feed, {
       key: "forYouEvents",
       title: "For You Events",
-      data: results.forYouEvents?.data || [],
+      data: results.forYouEvents?.recommendedEvents || [],
     }, frequencyMap);
 
     pushIfValid(feed, {
@@ -408,7 +415,7 @@ const getHomeService = async ({ queryData }) => {
     pushIfValid(feed, {
       key: "loyaltyClubs",
       title: "Loyalty Clubs",
-      data: results.suggestedLoyaltyClubsRes || [],
+      data: results.suggestedLoyaltyClubsRes?.loyaltyClubs || [],
     }, frequencyMap);
 
 

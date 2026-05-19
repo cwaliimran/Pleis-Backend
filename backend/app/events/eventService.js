@@ -15,7 +15,7 @@ const { default: mongoose } = require("mongoose");
 const { logEngagementService } = require("@appEngagement/engagementEventsService");
 const Tags = require("@TagsModel");
 const { getUpdatesByEventIdService } = require("../../admin/updates/updatesService");
-const { getGiveawaysByEventIdService } = require("../giveaways/GiveawayService");
+const { getGiveawaysByEventIdService } = require("../giveaways/giveawayService");
 
 const getNearbyEvents = async (queryData) => {
   let {
@@ -173,51 +173,116 @@ const getNearbyEvents = async (queryData) => {
   }
 };
 
+const toObjectIdArray = (val) => {
+  if (!val) return [];
+  const arr = Array.isArray(val) ? val : [val];
+
+  return arr
+    .filter(Boolean)
+    .map(id => {
+      try {
+        return new mongoose.Types.ObjectId(id);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+};
+
 const thisWeekEvents = async ({
   timezone,
   category,
   userLocation,
-  radiusKm,
+  radiusKm = 50,
   page = 1,
   limit = 10,
-  userId
+  skip = 0,
+  userId,
+  ctx,
 }) => {
 
-  const catObjId = category ? new mongoose.Types.ObjectId(category) : null;
-
-  const categoryFilter = category
-    ? { "basicInfo.categories": { $in: [catObjId] } }
-    : {};
   const now = getCurrentDateInTimezone({ timezone });
-  const skip = Math.max(0, (page - 1) * limit);
-  let { start, end } = getStartAndEndOfWeek(now, timezone);
-  const dateFilter = {
-    "schedule.startDateTime": { $lte: end },
-    "schedule.endDateTime": { $gte: now  },
+  const { start, end } = getStartAndEndOfWeek(now, timezone);
+
+  /* ===============================
+     SAFE OBJECTID NORMALIZER
+     =============================== */
+  const toObjectIdArray = (val) => {
+    if (!val) return [];
+
+    const arr = Array.isArray(val) ? val : [val];
+
+    return arr
+      .filter(Boolean)
+      .map(v => {
+        try {
+          return new mongoose.Types.ObjectId(v);
+        } catch (e) {
+          return null;
+        }
+      })
+      .filter(Boolean);
   };
 
+  /* ===============================
+     CONTEXT FILTERS
+     =============================== */
+  const advanceFilters = ctx?.advanceFilters || {};
+
+  const ctxCategories = toObjectIdArray(advanceFilters.categories);
+  const ctxTags = toObjectIdArray(advanceFilters.tags);
+  const categoryIds = toObjectIdArray(category);
+
+  const finalCategories =
+    ctxCategories.length ? ctxCategories : categoryIds;
+
+  /* ===============================
+     DATE FILTER (WEEK WINDOW)
+     =============================== */
+  const dateFilter = {
+    "schedule.startDateTime": { $lte: end },
+    "schedule.endDateTime": { $gte: now },
+  };
+
+  /* ===============================
+     BASE QUERY (USED BY BOTH PIPELINES)
+     =============================== */
+  const baseQuery = {
+    status: "active",
+    ...dateFilter,
+  };
+
+  if (finalCategories.length) {
+    baseQuery["basicInfo.categories"] = {
+      $in: finalCategories,
+    };
+  }
+
+  if (ctxTags.length) {
+    baseQuery["basicInfo.tags"] = {
+      $in: ctxTags,
+    };
+  }
+
+  /* ===============================
+     MAIN PIPELINE
+     =============================== */
   const pipeline = [];
 
-  // GEO mode
   if (userLocation) {
-    const earthRadiusKm = 6378.1;
-    const radiusInRadians = (parseFloat(radiusKm) || 50) / earthRadiusKm;
-
     pipeline.push({
       $geoNear: {
         near: userLocation,
         key: "basicInfo.venueLocation",
         distanceField: "distance",
         spherical: true,
-        maxDistance: radiusInRadians * earthRadiusKm * 1000,
-        query: { status: "active", ...categoryFilter, ...dateFilter },
+        maxDistance: radiusKm * 1000,
+        query: baseQuery,
       },
     });
-  }
-  // GLOBAL mode
-  else {
+  } else {
     pipeline.push({
-      $match: { status: "active", ...categoryFilter, ...dateFilter },
+      $match: baseQuery,
     });
   }
 
@@ -240,16 +305,27 @@ const thisWeekEvents = async ({
         from: "organizations",
         let: { orgId: "$basicInfo.organization" },
         pipeline: [
-          { $match: { $expr: { $eq: ["$_id", "$$orgId"] } } },
+          {
+            $match: {
+              $expr: { $eq: ["$_id", "$$orgId"] },
+            },
+          },
           { $project: { basicInfo: 1 } },
         ],
         as: "basicInfo.organization",
       },
     },
-    { $unwind: { path: "$basicInfo.organization", preserveNullAndEmptyArrays: true } },
+    {
+      $unwind: {
+        path: "$basicInfo.organization",
+        preserveNullAndEmptyArrays: true,
+      },
+    }
   );
 
-  // ---------- isFavorite lookup (only if logged in) ----------
+  /* ===============================
+     FAVORITES (OPTIONAL)
+     =============================== */
   if (userId) {
     pipeline.push(
       {
@@ -282,43 +358,71 @@ const thisWeekEvents = async ({
     );
   }
 
+  /* ===============================
+     STABLE SORT (IMPORTANT FIX)
+     =============================== */
+  pipeline.push({
+    $sort: userLocation
+      ? { distance: 1, _id: 1 }
+      : { "schedule.startDateTime": 1, _id: 1 },
+  });
+
+  /* ===============================
+     PAGINATION
+     =============================== */
+  const safePage = Math.max(page, 1);
+  const safeSkip = skip || (safePage - 1) * limit;
+
   pipeline.push(
-    { $sort: userLocation ? { distance: 1 } : { "schedule.startDateTime": 1 } },
-    { $skip: skip },
-    { $limit: parseInt(limit) }
+    { $skip: safeSkip },
+    { $limit: Number(limit) }
   );
 
+  /* ===============================
+     MAIN QUERY
+     =============================== */
   const events = await eventRepo.aggregateEvents(pipeline);
 
-  // COUNT QUERY
-  const countPipeline = userLocation
-    ? [
-      {
-        $geoNear: {
-          near: userLocation,
-          key: "basicInfo.venueLocation",
-          distanceField: "distance",
-          spherical: true,
-          query: { status: "active", ...categoryFilter, ...dateFilter },
-        },
+  /* ===============================
+     COUNT PIPELINE (MUST MATCH EXACTLY)
+     =============================== */
+  const countPipeline = [];
+
+  if (userLocation) {
+    countPipeline.push({
+      $geoNear: {
+        near: userLocation,
+        key: "basicInfo.venueLocation",
+        distanceField: "distance",
+        spherical: true,
+        maxDistance: radiusKm * 1000,
+        query: baseQuery,
       },
-      { $count: "total" },
-    ]
-    : [
-      { $match: { status: "active", ...categoryFilter, ...dateFilter } },
-      { $count: "total" },
-    ];
+    });
+  } else {
+    countPipeline.push({
+      $match: baseQuery,
+    });
+  }
+
+  countPipeline.push({
+    $count: "total",
+  });
 
   const totalResult = await eventRepo.aggregateEvents(countPipeline);
   const totalFiltered = totalResult[0]?.total || 0;
 
+  /* ===============================
+     FORMAT RESPONSE
+     =============================== */
   const formattedEvents = events.map((event) =>
     formatEventResponse(event, { timezone })
   );
 
-  const meta = generateMeta(page, limit, totalFiltered);
-
-  return { data: formattedEvents, meta };
+  return {
+    data: formattedEvents,
+    totalCount: totalFiltered,
+  };
 };
 
 
@@ -355,7 +459,7 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
 
   const distanceFromMeters = distanceFrom * 1000;
 
-  
+
   const skip = Math.max(0, (page - 1) * limit);
   const now = getCurrentDateInTimezone({ timezone });
 
@@ -440,10 +544,10 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
   // ------------------------------------
   const categoryFilter = categories.length
     ? {
-        "basicInfo.categories": {
-          $in: categories.map((id) => new mongoose.Types.ObjectId(id)),
-        },
-      }
+      "basicInfo.categories": {
+        $in: categories.map((id) => new mongoose.Types.ObjectId(id)),
+      },
+    }
     : {};
 
   // ------------------------------------
@@ -455,12 +559,12 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
       .map((id) => new mongoose.Types.ObjectId(id));
 
   const tagObjectIds = toObjectIds(genre);
-  
+
 
   let tagFilter = {};
 
-  
-    if (tagObjectIds.length) {
+
+  if (tagObjectIds.length) {
     tagFilter = {
       "basicInfo.tags": { $all: [...tagObjectIds] },
     };
@@ -471,11 +575,11 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
   // ------------------------------------
   const keywordFilter = keyword?.trim()
     ? {
-        $or: [
-          { "basicInfo.title": { $regex: keyword, $options: "i" } },
-          { "basicInfo.description": { $regex: keyword, $options: "i" } },
-        ],
-      }
+      $or: [
+        { "basicInfo.title": { $regex: keyword, $options: "i" } },
+        { "basicInfo.description": { $regex: keyword, $options: "i" } },
+      ],
+    }
     : {};
 
   // ------------------------------------
@@ -516,16 +620,16 @@ const getNearbyEventsWithAdvanceFilters = async (queryData) => {
             { $project: { title: 1, venueType: 1, location: 1 } },
             ...(venueTypes.length
               ? [
-                  {
-                    $match: {
-                      venueType: {
-                        $in: venueTypes.map(
-                          (id) => new mongoose.Types.ObjectId(id)
-                        ),
-                      },
+                {
+                  $match: {
+                    venueType: {
+                      $in: venueTypes.map(
+                        (id) => new mongoose.Types.ObjectId(id)
+                      ),
                     },
                   },
-                ]
+                },
+              ]
               : []),
           ],
         },
@@ -674,12 +778,12 @@ const getEventIdByNanoid = async (nanoid) => {
 
 // TODO when user has skipped the interests selection we will show events based on his recent activity
 //get for you events for logged in user
-const getForYouEventsService = async ({ userId, userLocation, timezone, category, radiusKm, page = 1, limit = 20 }) => {
+const getForYouEventsService = async ({ userId, userLocation, timezone, category, radiusKm, page = 1, limit = 20, skip = 0, ctx }) => {
   // Fetch user preferences, interests, etc.
   const userPreferences = await getUserInterestsIdsForRecommendation(userId);
 
   // Get recommended events based on user preferences
-  let recommendedEvents = await getForYouEventsAgainstInterests({
+  let { recommendedEvents, totalCount } = await getForYouEventsAgainstInterests({
     userLocation,
     timezone,
     category,
@@ -687,10 +791,12 @@ const getForYouEventsService = async ({ userId, userLocation, timezone, category
     preferences: userPreferences,
     page,
     limit,
-    userId
+    skip,
+    userId,
+    ctx,
   });
 
-  return recommendedEvents;
+  return { recommendedEvents, totalCount };
 };
 const getEventReservations = async (nanoid, timezone) => {
   const Reservations = await eventRepo.getEventReservations(nanoid);

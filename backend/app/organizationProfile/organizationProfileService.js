@@ -280,8 +280,8 @@ const getSimilarOrganizations = async (organizationId, timezone) => {
   return result || [];
 };
 
-const getNearbyOrganizationsService = async ({ category, userLocation, radiusKm, timezone, page, limit, userId }) => {
-  let result = await getNearbyOrganizations({ category, userLocation, radiusKm, timezone, page, limit, userId });
+const getNearbyOrganizationsService = async ({ category, userLocation, radiusKm, timezone, page, limit, skip, userId, ctx }) => {
+  let result = await getNearbyOrganizations({ category, userLocation, radiusKm, timezone, page, limit, skip, userId, ctx });
   result.organizations = result.organizations.map(org => formatNearByOrganization(org, timezone));
 
   return result
@@ -297,15 +297,18 @@ const getSuggestedLoyaltyClubs = async ({ page = 1, limit = 10, userId, keyword 
   };
 };
 
-const getSuggestedLoyaltyClubsForHomeService = async ({ page = 1, limit = 10, userId, userLocation,
-  radiusKm = 50 }) => {
-  let result = await getSuggestedLoyaltyClubsForHome({
-    page, limit, userId, userLocation,
-    radiusKm
+const getSuggestedLoyaltyClubsForHomeService = async ({ page = 1, limit = 10, skip = 0, userId, userLocation,
+  radiusKm = 50, ctx }) => {
+  let { data, totalCount } = await getSuggestedLoyaltyClubsForHome({
+    page, limit, skip, userId, userLocation,
+    radiusKm, ctx
   });
-  const formatted = result.map(club => formatSuggestedClub(club));
+  const formatted = data.map(club => formatSuggestedClub(club));
 
-  return formatted || [];
+  return {
+    loyaltyClubs: formatted || [],
+    totalCount
+  }
 };
 
 const getForYouOrganizationsForHomeService = async ({
@@ -317,13 +320,14 @@ const getForYouOrganizationsForHomeService = async ({
   limit,
   skip,
   userId,
+  ctx
 }) => {
   const filters = [];
 
   // Base status filter
   filters.push({ status: { $ne: "deleted" } });
 
-  const organizations = await getForYouOrganizationsForHomeRepo({
+  const { organizations, totalCount } = await getForYouOrganizationsForHomeRepo({
     category,
     page,
     limit,
@@ -331,7 +335,8 @@ const getForYouOrganizationsForHomeService = async ({
     userLocation,
     radiusKm,
     timezone,
-    userId
+    userId,
+    ctx
   }
   );
 
@@ -339,6 +344,7 @@ const getForYouOrganizationsForHomeService = async ({
   let formattedOrganizations = organizations.map(org => formatNearByOrganization(org, timezone));
   return {
     organizations: formattedOrganizations,
+    totalCount: totalCount
   };
 
 };
@@ -350,21 +356,26 @@ const getTrendingOrganizationsForHomeService = async ({
   timezone,
   page = 1,
   limit = 10,
-  userId
+  skip = 0,
+  userId,
+  ctx,
 }) => {
-  const organizations = await getTrendingOrganizationsForHomeRepo({
+  const { organizations, totalCount } = await getTrendingOrganizationsForHomeRepo({
     category,
     userLocation,
     radiusKm,
     timezone,
     page,
     limit,
-    userId
+    skip,
+    userId,
+    ctx,
   });
 
   let formattedOrganizations = organizations.map(org => formatNearByOrganization(org, timezone));
   return {
     organizations: formattedOrganizations,
+    totalCount: totalCount
   };
 };
 
@@ -376,15 +387,17 @@ const getNewlyListedOrganizationsService = async ({
   limit = 10,
   skip = 0,
   timezone,
+  ctx,
 }) => {
 
-  const organizations = await getNewlyListedOrganizationsRepo({
+  const { organizations, totalCount } = await getNewlyListedOrganizationsRepo({
     category,
     userLocation,
     radiusKm,
     page,
     limit,
-    skip
+    skip,
+    ctx,
   });
 
   const formattedOrganizations = organizations.map(org =>
@@ -392,7 +405,8 @@ const getNewlyListedOrganizationsService = async ({
   );
 
   return {
-    organizations: formattedOrganizations
+    organizations: formattedOrganizations,
+    totalCount
   };
 };
 
