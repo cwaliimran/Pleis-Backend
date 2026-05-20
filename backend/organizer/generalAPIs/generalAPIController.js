@@ -40,17 +40,20 @@ const getVenueTypes = async (req, res) => {
 };
 const getOrganizations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date ,companyOrganizer} = req.query;
-    if(!companyOrganizer){
-  companyOrganizer=req.user._id;
+  let { keyword, status, date, companyOrganizer } = req.query;
+  if (!companyOrganizer) {
+    companyOrganizer = req.user._id;
   }
-if(!companyOrganizer){
-  return sendResponse({
-    res,
-    statusCode: 400,
-    translationKey: "company_organizer_id_required",
-  });
-}
+  if (req.user.originalUserId) {
+    companyOrganizer = req.user.originalUserId;
+  }
+  if (!companyOrganizer) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "company_organizer_id_required",
+    });
+  }
   try {
 
     if (date && !validateParams(req, res, {
@@ -60,14 +63,15 @@ if(!companyOrganizer){
     })) return;
 
 
-    const {organizations} = await generalAPIServices.getOrganizations({
+    const { organizations } = await generalAPIServices.getOrganizations({
       page,
       limit,
       keyword,
       status,
       date,
-      timezone:req.user.timezone,
-      companyOrganizer
+      timezone: req.user.timezone,
+      companyOrganizer,
+
     });
 
     return sendResponse({
@@ -88,9 +92,9 @@ if(!companyOrganizer){
 };
 const getVenues = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date ,organization} = req.query;
+  let { keyword, status, date, organization } = req.query;
 
- const CompanyOrganizer=req.user._id;
+  const CompanyOrganizer = req.user._id;
 
   try {
 
@@ -101,7 +105,7 @@ const getVenues = async (req, res) => {
     })) return;
 
 
-    const {Venues} = await generalAPIServices.getVenues({
+    const { Venues } = await generalAPIServices.getVenues({
       page,
       limit,
       keyword,
@@ -129,7 +133,7 @@ const getVenues = async (req, res) => {
 };
 const getCategories = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date} = req.query;
+  const { keyword, status, date } = req.query;
 
   try {
 
@@ -140,7 +144,7 @@ const getCategories = async (req, res) => {
     })) return;
 
 
-    const {Categories} = await generalAPIServices.getCategories({
+    const { Categories } = await generalAPIServices.getCategories({
       page,
       limit,
       keyword,
@@ -166,7 +170,7 @@ const getCategories = async (req, res) => {
 };
 const getTags = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date} = req.query;
+  const { keyword, status, date } = req.query;
 
   try {
 
@@ -177,7 +181,7 @@ const getTags = async (req, res) => {
     })) return;
 
 
-    const {Tags} = await generalAPIServices.getTags({
+    const { Tags } = await generalAPIServices.getTags({
       page,
       limit,
       keyword,
@@ -203,7 +207,7 @@ const getTags = async (req, res) => {
 };
 const getEvents = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date,organization } = req.query;
+  const { keyword, status, date, organization } = req.query;
 
   try {
 
@@ -214,14 +218,14 @@ const getEvents = async (req, res) => {
     })) return;
 
 
-    const{ Events } = await generalAPIServices.getEvents({
+    const { Events } = await generalAPIServices.getEvents({
       page,
       limit,
       keyword,
       status,
       date,
       organization,
-      creator:req.user._id
+      creator: req.user._id
     });
 
     return sendResponse({
@@ -241,9 +245,9 @@ const getEvents = async (req, res) => {
 };
 const getmenuItemCategories = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date,companyOrganizer } = req.query;
-if(!companyOrganizer){
-  companyOrganizer=req.user._id;
+  let { keyword, status, date, companyOrganizer } = req.query;
+  if (!companyOrganizer) {
+    companyOrganizer = req.user._id;
   }
   try {
 
@@ -254,14 +258,14 @@ if(!companyOrganizer){
     })) return;
 
 
-    const{ itemCategories } = await generalAPIServices.getmenuItemCategories({
+    const { itemCategories } = await generalAPIServices.getmenuItemCategories({
       page,
       limit,
       keyword,
       status,
       date,
       companyOrganizer,
-      creator:req.user._id
+      creator: req.user._id
     });
 
     return sendResponse({
@@ -281,7 +285,7 @@ if(!companyOrganizer){
 };
 const getmenu = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date,organization } = req.query;
+  let { keyword, status, date, organization } = req.query;
 
   try {
 
@@ -292,14 +296,14 @@ const getmenu = async (req, res) => {
     })) return;
 
 
-    const{ menu } = await generalAPIServices.getmenu({
+    const { menu } = await generalAPIServices.getmenu({
       page,
       limit,
       keyword,
       status,
       date,
       organization,
-      creator:req.user._id
+      creator: req.user._id
     });
 
     return sendResponse({
@@ -319,16 +323,16 @@ const getmenu = async (req, res) => {
 };
 const getmenuItem = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date,menu } = req.query;
-if(!menu){
-  return sendResponse({
-    res,
-    statusCode: 400,
-    translationKey: "menu_id_required", 
- 
+  let { keyword, status, date, menu } = req.query;
+  if (!menu) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "menu_id_required",
+
+    }
+    );
   }
-  );
-}
   try {
 
     if (date && !validateParams(req, res, {
@@ -338,14 +342,14 @@ if(!menu){
     })) return;
 
 
-    const{ itemCategories } = await generalAPIServices.getmenuItem({
+    const { itemCategories } = await generalAPIServices.getmenuItem({
       page,
       limit,
       keyword,
       status,
       date,
       menu,
-      creator:req.user._id
+      creator: req.user._id
     });
 
     return sendResponse({
@@ -375,13 +379,13 @@ const getTiers = async (req, res) => {
     })) return;
 
 
-    const{ tiers } = await generalAPIServices.getTiers({
+    const { tiers } = await generalAPIServices.getTiers({
       page,
       limit,
       keyword,
       status,
       date,
-      creator:req.user._id
+      creator: req.user._id
     });
 
     return sendResponse({
@@ -405,9 +409,9 @@ const getTiers = async (req, res) => {
 
 const getTickting = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date,event } = req.query;
+  const { keyword, status, date, event } = req.query;
 
-  if(!event){
+  if (!event) {
     return sendResponse({
       res,
       statusCode: 400,
@@ -431,8 +435,8 @@ const getTickting = async (req, res) => {
       status,
       date,
       event,
-      timezone:req.user.timezone,
-      creator:req.user._id
+      timezone: req.user.timezone,
+      creator: req.user._id
     });
 
     return sendResponse({
@@ -468,7 +472,7 @@ const getLoyaltyRewards = async (req, res) => {
       page,
       limit,
       date,
-      companyOrganizer:req.user._id,
+      companyOrganizer: req.user._id,
     });
 
     return sendResponse({
@@ -486,4 +490,4 @@ const getLoyaltyRewards = async (req, res) => {
     });
   }
 };
-module.exports = {getTiers,getmenuItem,getmenu, getmenuItemCategories, getVenueTypes,getOrganizations,getVenues,getCategories,getTags,getEvents,getTickting,getLoyaltyRewards };
+module.exports = { getTiers, getmenuItem, getmenu, getmenuItemCategories, getVenueTypes, getOrganizations, getVenues, getCategories, getTags, getEvents, getTickting, getLoyaltyRewards };

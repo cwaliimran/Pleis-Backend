@@ -25,12 +25,14 @@ const  formatUserResponse = (
     language: userObject.language,
     country: userObject.country,
     publicId: userObject.publicId,
+    companyDetails: userObject.companyDetails || null,
   };
 
   // Main response object
   let response = {
     basicInfo,
     accountState: {
+      companyDetails: userObject.companyDetails || null,
       twoFactorAuth: userObject.twoFA?.isEnabled || false,
       userType: userType || "user",
       status: userObject.accountState?.status || "active",
