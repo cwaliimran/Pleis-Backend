@@ -1015,6 +1015,13 @@ const getOrganizationsBatchRepo = async ({
 
   return { organizations };
 };
+const getCreatorByStaffId = async (staffId) => {
+  const org = await Organizations.findOne({
+    "staff.user": new mongoose.Types.ObjectId(staffId)
+  }).select("creator");
+
+  return org?.creator || null;
+};
 
 module.exports = {
   createOrganization,
@@ -1040,5 +1047,6 @@ module.exports = {
   getOrganizationsByTag,
   getOrganizationsByVenueType,
   getOrganizationByCategory,
-  getOrganizationsBatchRepo
+  getOrganizationsBatchRepo,
+  getCreatorByStaffId
 };

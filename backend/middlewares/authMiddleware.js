@@ -90,9 +90,7 @@ const auth = async (req, res, next) => {
 
       // if userType is manager then set companyOrganizer and organization Ids to request
       if (user.userType === "manager") {
-        //companyOrganizer,organizations -> fetch from db
-        // Fetch organizations array
-        console.log("userId", userId);
+
         let organizations = await getOrganizationsAsStaff(userId);
         let organizationIds = organizations.map(org => org._id.toString());
 

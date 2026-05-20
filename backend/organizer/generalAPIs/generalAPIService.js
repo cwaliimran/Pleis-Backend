@@ -14,7 +14,8 @@ const getOrganizations = async ({
   limit,
   keyword,
   status,
-  companyOrganizer
+  companyOrganizer,
+
 }) => {
   page = Number(page) || 1;
   limit = Number(limit);

@@ -23,6 +23,7 @@ const validator = require("validator");
 const crypto = require("crypto");
 const { registerUserUtility } = require("./authUtil");
 const { validatePhoneNumber } = require("../helperUtils/validationsUtil");
+const { getCreatorByStaffId } = require("../admin/organizations/organizationRepository");
 
 const createAdmin = async (req, res) => {
   try {
@@ -329,6 +330,13 @@ const login = async (req, res) => {
 
     // Ensure toJSON method is applied to strip out sensitive data
     const userObject = user.toJSON();
+    if (user.accountState.userType === "manager") {
+      const creatorId = await getCreatorByStaffId(user._id);
+      const creator = await User.findById(creatorId).select("companyDetails _id").lean();
+      userObject.companyDetails = creator?.companyDetails
+        ? { ...creator.companyDetails, _id: creator._id || null }
+        : null;
+    }
 
     // Format the user response using the utility function
     const response = formatUserResponse(userObject, token, [], ["resetToken", "organizations"]);

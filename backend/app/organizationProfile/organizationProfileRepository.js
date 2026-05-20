@@ -691,7 +691,8 @@ const getSuggestedLoyaltyClubsForUser = async ({
   const filter = {
     _id: { $nin: joinedClubIds },
     "accountState.status": "active",
-    "accountState.userType": "organizer"
+    "accountState.userType": "organizer",
+    "companyDetails.loyaltySettings.isEnabled": true,
   };
 
   if (keyword) {
@@ -750,6 +751,7 @@ const getSuggestedLoyaltyClubsForHome = async ({
     },
     "accountState.status": "active",
     "accountState.userType": "organizer",
+    "companyDetails.loyaltySettings.isEnabled": true,
     "companyDetails.loyaltySettings.title": { $exists: true, $ne: "" }
   };
 

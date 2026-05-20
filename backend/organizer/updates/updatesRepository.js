@@ -5,10 +5,10 @@ const Updates = require("@UpdatesModel");
 const { TicketingOrders } = require("@TicketingOrdersModel");
 const { UserReservations } = require("@UserReservationsModel");
 const { formatUpdate } = require("./formatters/updateFormatter");
-const {NotificationExp, NotificationTypes} = require("@NotificationsModel");
-const {sendUserNotifications} = require("../../controllers/communicationController");
+const { NotificationExp, NotificationTypes } = require("@NotificationsModel");
+const { sendUserNotifications } = require("../../controllers/communicationController");
 const Organizations = require("@OrganizationModel");
-const {Events} = require("@EventsModel");
+const { Events } = require("@EventsModel");
 const getUserIdsForEvent = async (eventId) => {
   try {
 
@@ -77,20 +77,20 @@ const getUserIdsForEvent = async (eventId) => {
 
 const createUpdates = async (data) => {
   try {
-    const update = new Updates(data); 
-     const userIds = await getUserIdsForEvent(data.event);
+    const update = new Updates(data);
+    const userIds = await getUserIdsForEvent(data.event);
     await update.save();
-  await sendUserNotifications({
-            recipientIds: userIds, // Send notification to each participant
-            title: data.title,
-            body: `You received a new message: ${data.description}`,
-            data: { type: NotificationTypes.EVENT_UPDATE, objectType: "group" },
-            sender: data.companyOrganizer,
-            objectId: data.event,
-          });
-    return update; 
+    await sendUserNotifications({
+      recipientIds: userIds, // Send notification to each participant
+      title: data.title,
+      body: `You received a new message: ${data.description}`,
+      data: { type: NotificationTypes.EVENT_UPDATE, objectType: "group" },
+      sender: data.companyOrganizer,
+      objectId: data.event,
+    });
+    return update;
   } catch (err) {
-    throw new Error("Error saving update: " + err.message); 
+    throw new Error("Error saving update: " + err.message);
   }
 };
 const getEventIdsForOrganizations = async (organizationIds) => {
@@ -127,6 +127,8 @@ const getUpdatess = async ({
   date,
   range,
   today,
+  sortBy = "createdAt",
+  sortOrder = "desc",
   skip
 }) => {
   // Ensure organizations is always an array
@@ -166,115 +168,119 @@ const getUpdatess = async ({
     return { updates: [], meta: { totalFiltered: 0, updatesCount: { total: 0, active: 0, inactive: 0 } } };
   }
 
-const pipeline = [
+  const pipeline = [
+    {
+      $match: {
+        ...(eventIds.length > 0 && { event: { $in: eventIds } }),
+        ...(!organizations.length && {
+          companyOrganizer: new mongoose.Types.ObjectId(userId)
+        })
+      }
+    }
+  ];
+
+  // 🔹 Range filters
+  if (range === "monthly") {
+    const { start, end } = getStartAndEndOfMonth(today, timezone);
+    pipeline.push({
+      $match: { createdAt: { $gte: start, $lt: end } }
+    });
+  }
+
+  if (range === "weekly") {
+    const { start, end } = getStartAndEndOfWeek(today, timezone);
+    pipeline.push({
+      $match: { createdAt: { $gte: start, $lt: end } }
+    });
+  }
+
+  if (range === "today") {
+    const start = new Date(today);
+    const end = new Date(new Date(today).setDate(start.getDate() + 1));
+    pipeline.push({
+      $match: { createdAt: { $gte: start, $lt: end } }
+    });
+  }
+
+  // 🔹 Status filter
+  if (status) {
+    pipeline.push({ $match: { status } });
+  } else {
+    pipeline.push({ $match: { status: { $ne: "deleted" } } });
+  }
+
+  // 🔹 Date filter
+  if (date) {
+    const start = new Date(date);
+    const end = new Date(new Date(date).setDate(start.getDate() + 1));
+    pipeline.push({
+      $match: { createdAt: { $gte: start, $lt: end } }
+    });
+  }
+
+  // 🔹 Keyword filter
+  if (keyword) {
+    pipeline.push({
+      $match: {
+        title: { $regex: keyword, $options: "i" }
+      }
+    });
+  }
+
+  // 🔹 Lookup Event
+  pipeline.push({
+    $lookup: {
+      from: "events",
+      localField: "event",
+      foreignField: "_id",
+      as: "eventDetails"
+    }
+  });
+
+  // 🔹 Extract organizationId from event
+  pipeline.push({
+    $addFields: {
+      organizationId: "$eventDetails.basicInfo.organization"
+    }
+  });
+
+  // Lookup Organization
+  pipeline.push({
+    $lookup: {
+      from: "organizations",
+      localField: "organizationId",
+      foreignField: "_id",
+      as: "organizations"
+    }
+  }),
   {
-    $match: {
-      ...(eventIds.length > 0 && { event: { $in: eventIds } }),
-      ...(!organizations.length && {
-        companyOrganizer: new mongoose.Types.ObjectId(userId)
-      })
+    $unwind: {
+      path: "$organizations",
+      preserveNullAndEmptyArrays: true // keep the doc even if no matching organization
     }
   }
-];
 
-// 🔹 Range filters
-if (range === "monthly") {
-  const { start, end } = getStartAndEndOfMonth(today, timezone);
   pipeline.push({
-    $match: { createdAt: { $gte: start, $lt: end } }
-  });
-}
+    $project: {
+      _id: 1,
+      image: 1,
+      description: 1,
+      status: 1,
+      createdAt: 1,
+      title: 1,
 
-if (range === "weekly") {
-  const { start, end } = getStartAndEndOfWeek(today, timezone);
-  pipeline.push({
-    $match: { createdAt: { $gte: start, $lt: end } }
-  });
-}
-
-if (range === "today") {
-  const start = new Date(today);
-  const end = new Date(new Date(today).setDate(start.getDate() + 1));
-  pipeline.push({
-    $match: { createdAt: { $gte: start, $lt: end } }
-  });
-}
-
-// 🔹 Status filter
-if (status) {
-  pipeline.push({ $match: { status } });
-} else {
-  pipeline.push({ $match: { status: { $ne: "deleted" } } });
-}
-
-// 🔹 Date filter
-if (date) {
-  const start = new Date(date);
-  const end = new Date(new Date(date).setDate(start.getDate() + 1));
-  pipeline.push({
-    $match: { createdAt: { $gte: start, $lt: end } }
-  });
-}
-
-// 🔹 Keyword filter
-if (keyword) {
-  pipeline.push({
-    $match: {
-      title: { $regex: keyword, $options: "i" }
+      eventId: { $arrayElemAt: ["$eventDetails._id", 0] },
+      eventTitle: { $arrayElemAt: ["$eventDetails.basicInfo.title", 0] },
+      organization: { $arrayElemAt: ["$organizations", 0] }
     }
   });
-}
 
-// 🔹 Lookup Event
-pipeline.push({
-  $lookup: {
-    from: "events",
-    localField: "event",
-    foreignField: "_id",
-    as: "eventDetails"
+
+  if (sortBy && sortOrder) {
+    const sortStage = {};
+    sortStage[sortBy] = sortOrder === "asc" ? 1 : -1;
+    pipeline.push({ $sort: sortStage });
   }
-});
-
-// 🔹 Extract organizationId from event
-pipeline.push({
-  $addFields: {
-    organizationId: "$eventDetails.basicInfo.organization"
-  }
-});
-
-// Lookup Organization
-pipeline.push({
-  $lookup: {
-    from: "organizations",
-    localField: "organizationId",
-    foreignField: "_id",
-    as: "organizationDetails"
-  }
-});
-
-
-pipeline.push({
-  $project: {
-    _id: 1,
-    image: 1,
-    description: 1,
-    status: 1,
-    createdAt: 1,
-    title: 1,
-
-    eventId: { $arrayElemAt: ["$eventDetails._id", 0] },
-    eventTitle: { $arrayElemAt: ["$eventDetails.basicInfo.title", 0] },
-
-    organizationName: {
-      $arrayElemAt: ["$organizationDetails.basicInfo.name", 0]
-    }
-  }
-});
-
-
-  // Sort by createdAt
-  pipeline.push({ $sort: { createdAt: -1 } });
-
   // Apply pagination and count
   pipeline.push({
     $facet: {
@@ -296,7 +302,7 @@ pipeline.push({
   let updates = result[0].data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-  const [total, active, inactive] = await Promise.all([ 
+  const [total, active, inactive] = await Promise.all([
     Updates.countDocuments({ creator: userId, status: { $ne: "deleted" } }),
     Updates.countDocuments({ creator: userId, status: "active" }),
     Updates.countDocuments({ creator: userId, status: "inactive" })
@@ -321,7 +327,7 @@ const findByIdAndUpdate = async (id, data) => {
 
 
 
-const getevents = async ({ organizations }) => {
+const getevents = async ({ organizations,status }) => {
   try {
 
 
@@ -338,55 +344,56 @@ const getevents = async ({ organizations }) => {
 
     // Convert organizations to ObjectId (if not already)
     const orgIds = organizations.map(id => new mongoose.Types.ObjectId(id));
-     // Log the ObjectIds to ensure correct conversion
+    // Log the ObjectIds to ensure correct conversion
 
     // Create the aggregation pipeline
-const pipeline = [
-  // Match events where the organization field is in the provided list of organizations
-  {
-    $match: {
-      "basicInfo.organization": { $in: orgIds } // Match events where the organization is in the provided orgIds (nested in basicInfo)
-    }
-  },
-  // Lookup event details from the Events collection
-  {
-    $lookup: {
-      from: "events",                // The collection to join (events collection)
-      localField: "basicInfo.organization", // Field in the current collection (organization inside basicInfo)
-      foreignField: "_id",            // Field in the events collection (_id)
-      as: "eventDetails"              // Alias for the matched events
-    }
-  },
-  // Check the eventDetails before unwinding
-  {
-    $addFields: {
-      eventDetailsCheck: "$eventDetails" // Add a field to check the eventDetails before unwind
-    }
-  },
-  // Project the _id and eventDetailsCheck
-  {
-    $project: {
-      _id:1,
-      title: "$basicInfo.title",
-    }
-  },
-  // Sort by createdAt (descending order)
-  {
-    $sort: { createdAt: -1 }
-  },
-  // Pagination and counting total filtered events
-  {
-    $facet: {
-      data: [
-        { $skip: 0 }, // Pagination skip
-        { $limit: 20 } // Limit results to 20
-      ],
-      totalFiltered: [
-        { $count: "count" } // Count the total number of filtered events
-      ]
-    }
-  }
-];
+    const pipeline = [
+      // Match events where the organization field is in the provided list of organizations
+      {
+        $match: {
+          "basicInfo.organization": { $in: orgIds },
+          "status": status // Match events with the specified status
+        }
+      },
+      // Lookup event details from the Events collection
+      {
+        $lookup: {
+          from: "events",                // The collection to join (events collection)
+          localField: "basicInfo.organization", // Field in the current collection (organization inside basicInfo)
+          foreignField: "_id",            // Field in the events collection (_id)
+          as: "eventDetails"              // Alias for the matched events
+        }
+      },
+      // Check the eventDetails before unwinding
+      {
+        $addFields: {
+          eventDetailsCheck: "$eventDetails" // Add a field to check the eventDetails before unwind
+        }
+      },
+      // Project the _id and eventDetailsCheck
+      {
+        $project: {
+          _id: 1,
+          title: "$basicInfo.title",
+        }
+      },
+      // Sort by createdAt (descending order)
+      {
+        $sort: { createdAt: -1 }
+      },
+      // Pagination and counting total filtered events
+      {
+        $facet: {
+          data: [
+            { $skip: 0 }, // Pagination skip
+            { $limit: 20 } // Limit results to 20
+          ],
+          totalFiltered: [
+            { $count: "count" } // Count the total number of filtered events
+          ]
+        }
+      }
+    ];
 
 
     // Execute aggregation
