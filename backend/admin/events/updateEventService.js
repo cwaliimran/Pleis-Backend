@@ -52,8 +52,8 @@ const updateEventService = async (eventId, payload, mode = "single") => {
     if (data.preOrdersEnabled !== undefined)
       doc.preOrdersEnabled = data.preOrdersEnabled;
 
-    if (data.status !== undefined)
-      doc.status = data.status;
+    if (data.basicInfo.status !== undefined)
+      doc.status = data.basicInfo.status;
     if (data.feedbackEnabled !== undefined)
       doc.feedbackEnabled = data.feedbackEnabled;
 

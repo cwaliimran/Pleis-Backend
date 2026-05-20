@@ -32,6 +32,9 @@ const getTransactions = async (req, res) => {
     if (req.user.userType === "organizer") {
         companyOrganizer = req.user._id;
     }
+    if (walletType = "companyLoyalty") {
+        organization = undefined;
+    }
     try {
         const { items, meta } = await unifiedService.getTransactionsService({
             page, limit, walletType, domainType, type, organization, companyOrganizer, entityId, startDate, date, endDate, keyword, user, startPoints, endPoints, ballance, referral, purchaseBased, streakBased, challengeBased, promotionBased, sortBy, sortOrder

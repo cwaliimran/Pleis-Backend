@@ -9,10 +9,10 @@ const createUpdates = async (data) => {
   let Updates = await UpdatesRepo.createUpdates(data);
   return Updates;
 };
-const getUpdatess = async ({ organizations, timezone, page, limit, keyword, status, userId, date, range }) => {
+const getUpdatess = async ({ organizations, timezone, page, limit, keyword, status, userId, date, range, sortBy, sortOrder }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { updates, meta } = await UpdatesRepo.getUpdatess({ organizations, timezone, page, limit, keyword, status, userId, date, range, today, skip });
+  let { updates, meta } = await UpdatesRepo.getUpdatess({ organizations, timezone, page, limit, keyword, status, userId, date, range, today, skip, sortBy, sortOrder });
 
   return {
     updates,

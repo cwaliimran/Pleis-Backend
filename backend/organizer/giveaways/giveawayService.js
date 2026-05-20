@@ -8,10 +8,10 @@ const createGiveaway = async (data) => {
   let Giveaway = await GiveawayRepo.createGiveaway(data);
   return Giveaway;
 };
-const getGiveaway = async ({ organizationId,timezone, page, limit, keyword, status, userId,  date, range }) => {
+const getGiveaway = async ({ organizationId,timezone, page, limit, keyword, status, userId,  date, range,sortBy,sortOrder,organizations }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { Giveaways, meta } = await GiveawayRepo.getGiveaway({ organizationId,timezone, page, limit, keyword, status, userId,  date, range, today, skip });
+  let { Giveaways, meta } = await GiveawayRepo.getGiveaway({ organizationId,timezone, page, limit, keyword, status, userId,  date, range, today, skip,sortBy,sortOrder,organizations });
 
   return {
     Giveaways,
@@ -121,10 +121,10 @@ const getWinners = async ({ timezone, page, limit, keyword, status, userId,  dat
 
 
 
-const getevents = async ({ timezone, page, limit, keyword, status, userId,  date, range }) => {
+const getevents = async ({ timezone, page, limit, keyword, status, userId,  date, range, organizations }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { events, meta } = await GiveawayRepo.getevents({ timezone, page, limit, keyword, status, userId,  date, range, today, skip });
+  let { events, meta } = await GiveawayRepo.getevents({ timezone, page, limit, keyword, status, userId,  date, range, today, skip, organizations });
 
   return {
     events,

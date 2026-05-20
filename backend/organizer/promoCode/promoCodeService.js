@@ -6,10 +6,10 @@ const createPromoCode = async (data) => {
   let promoCode = await promoCodeRepo.createPromoCode(data);
   return promoCode;
 };
-const getPromoCodes = async ({ timezone, page, limit, keyword, status, userId,  date, range }) => {
+const getPromoCodes = async ({ timezone, page, limit, keyword, status, userId,  date, range, sortBy, sortOrder }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { promoCodes, meta } = await promoCodeRepo.getPromoCodes({ timezone, page, limit, keyword, status, userId,  date, range, today, skip });
+  let { promoCodes, meta } = await promoCodeRepo.getPromoCodes({ timezone, page, limit, keyword, status, userId,  date, range, today, skip, sortBy, sortOrder });
 
   return {
     promoCodes,

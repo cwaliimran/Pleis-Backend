@@ -11,30 +11,45 @@ const promoCodeService = require("./reviewsService");
 
 const getReviews = async (req, res) => {
   let {
-    organization,keyword
+    organization, keyword, sortBy, sortOrder
   } = req.query;
 
   const organizer = req.user._id;
-  let organizationArray=[]
+  let organizationArray = []
+  const SORT_FIELDS = ["userName",];
+  const SORT_ORDERS = ["asc", "desc"];
+  if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+    const key = sortBy && !SORT_FIELDS.includes(sortBy)
+      ? "invalid_sort_by_field"
+      : "invalid_sort_order";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
 
-if(organization){
-   organizationArray = organization.split(','); 
-}
-  else{
+  if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+    const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+      : "sort_by_required_when_sort_order_is_provided";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+  if (organization) {
+    organizationArray = organization.split(',');
+  }
+  else {
     organizationArray = [];
   }
- 
+
 
   // Prepare the review data
   let data = {
     organization: organizationArray,
     keyword,
     organizer,
+    sortBy,
+    sortOrder
   };
 
   try {
-    const {data1,meta} = await promoCodeService.getReviews(data);
- 
+    const { data1, meta } = await promoCodeService.getReviews(data);
+
 
     if (data1.error) {
       return sendResponse({

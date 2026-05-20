@@ -4,18 +4,18 @@ const { generateMeta } = require("@utils/responseUtil");
 const 
 Marketing
 = require("@Marketing");
-
+const mongoose = require("mongoose");
 const createMarketing = async (data) => {
   let Marketing = await MarketingRepo.createMarketing(data);
   return Marketing;
 };
 
-const getMarketings = async ({ page, limit, keyword, status, date, userId, timezone }) => {
+const getMarketings = async ({ page, limit, keyword, status, date, userId, timezone, sortBy = "createdAt", sortOrder = "desc" }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   // Build query object
   const query = {
-    userId: userId,  // Ensure only marketing campaigns for the given userId are fetched
+    userId: new mongoose.Types.ObjectId(userId),  // Ensure only marketing campaigns for the given userId are fetched
   };
   if (status) query.status = status;
   else query.status = { $ne: "deleted" };
@@ -29,7 +29,7 @@ const getMarketings = async ({ page, limit, keyword, status, date, userId, timez
   }
 
   // Get Marketings with population
-  const Marketings = await MarketingRepo.getMarketingsWithFilters(query, skip, limit);
+  const Marketings = await MarketingRepo.getMarketingsWithFilters(query, skip, limit, sortBy, sortOrder);
 
   // Get counts
   const [total, active, inactive, totalFiltered] = await Promise.all([
@@ -69,7 +69,7 @@ const getUserMarketings = async ({ userId, page, limit, keyword, status, date, t
 
   // Build query object with userId and other filters
   const query = {
-    userId: userId,  // Ensure only marketing campaigns for the given userId are fetched
+    userId: new mongoose.Types.ObjectId(userId),  // Ensure only marketing campaigns for the given userId are fetched
   };
 
   // Apply status filter

@@ -44,7 +44,10 @@ const getOrganizations = async ({
   // ✅ Match company organizer → organization.creator
   if (companyOrganizer) {
     andConditions.push({
-      creator: new mongoose.Types.ObjectId(companyOrganizer)
+      $or: [
+        { creator: new mongoose.Types.ObjectId(companyOrganizer) },
+        { "staff.user": new mongoose.Types.ObjectId(companyOrganizer) }
+      ]
     });
   }
 
@@ -103,30 +106,29 @@ const getVenues = async ({
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   const andConditions = [];
-  if(!organization)
-  {
-    organization= await getOrganizationIdByCompanyOrganizer(CompanyOrganizer)
+  if (!organization) {
+    organization = await getOrganizationIdByCompanyOrganizer(CompanyOrganizer)
   }
 
   // ✅ Organization filter (comma or % separated)
-if (organization) {
-  let organizationIds;
+  if (organization) {
+    let organizationIds;
 
-  // If organization is a string, split it into an array of ObjectIds
-  if (typeof organization === 'string') {
-    organizationIds = organization
-      .split(/[,%]/)
-      .filter(Boolean)
-      .map(id => new mongoose.Types.ObjectId(id));
-  } else if (Array.isArray(organization)) {
-    // If organization is already an array of ObjectIds, just use it
-    organizationIds = organization.map(item => new mongoose.Types.ObjectId(item._id));
+    // If organization is a string, split it into an array of ObjectIds
+    if (typeof organization === 'string') {
+      organizationIds = organization
+        .split(/[,%]/)
+        .filter(Boolean)
+        .map(id => new mongoose.Types.ObjectId(id));
+    } else if (Array.isArray(organization)) {
+      // If organization is already an array of ObjectIds, just use it
+      organizationIds = organization.map(item => new mongoose.Types.ObjectId(item._id));
+    }
+
+    andConditions.push({
+      organization: { $in: organizationIds }
+    });
   }
-
-  andConditions.push({
-    organization: { $in: organizationIds }
-  });
-}
 
   // ✅ Status filter
   if (status) {

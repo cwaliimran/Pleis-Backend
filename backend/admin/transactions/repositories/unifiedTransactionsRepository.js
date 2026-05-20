@@ -111,8 +111,7 @@ const getTransactionsWithFilters = async ({
   sortOrder
 
 }) => {
-  console.log("sortBy", sortBy);
-  console.log("sortOrder", sortOrder);
+
 
   /* =====================================================
      🔵 CASE A — NO KEYWORD (FAST TWO-STAGE)
