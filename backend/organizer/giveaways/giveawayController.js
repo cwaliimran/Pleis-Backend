@@ -5,22 +5,22 @@ const {
   getReadableErrorMessage,
   convertTimezoneToUtc,
 } = require("../../helperUtils/responseUtil");
-const mongoose = require('mongoose'); 
+const mongoose = require('mongoose');
 const Giveawayervice = require("./giveawayService");
 
 const getWinners = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status , date, range ,giveawayId} = req.query;
+  let { keyword, status, date, range, giveawayId } = req.query;
   try {
-if(!giveawayId){
-  return sendResponse({
-    res,
-    statusCode: 400,
-    translationKey: "giveaway_id_is_required",
-  });
-}
+    if (!giveawayId) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "giveaway_id_is_required",
+      });
+    }
 
-    giveawayId = new  mongoose.Types.ObjectId(giveawayId); 
+    giveawayId = new mongoose.Types.ObjectId(giveawayId);
     const timezone = req.user.timezone;
     const { winners, meta } = await Giveawayervice.getWinners({
       timezone,
@@ -28,7 +28,7 @@ if(!giveawayId){
       limit,
       keyword,
       status,
-      userId:req.user._id,
+      userId: req.user._id,
       date,
       range,
       giveawayId
@@ -60,10 +60,10 @@ const createGiveaway = async (req, res) => {
     ticket,
     event,
     numberOfWinners,
-    status="active",
+    status = "active",
     ticketsPerWinner,
     endDateTime,
-    giveawayStatus="live",
+    giveawayStatus = "live",
 
   } = req.body;
 
@@ -124,8 +124,22 @@ const createGiveaway = async (req, res) => {
 };
 const getGiveaway = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status , date, range ,organizationId} = req.query;
+  const { keyword, status, date, range, organizationId,sortBy,sortOrder,organizations } = req.query;
   try {
+    const SORT_FIELDS = ["title", "eventTitle", "ticketTitle"];
+    const SORT_ORDERS = ["asc", "desc"];
+    if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+      const key = sortBy && !SORT_FIELDS.includes(sortBy)
+        ? "invalid_sort_by_field"
+        : "invalid_sort_order";
+      return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
+
+    if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+      const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+        : "sort_by_required_when_sort_order_is_provided";
+      return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
 
 
     const userId = req.user._id;
@@ -139,7 +153,10 @@ const getGiveaway = async (req, res) => {
       userId,
       date,
       range,
-      organizationId
+      organizationId,
+      sortBy,
+      sortOrder,
+      organizations
     });
 
     return sendResponse({
@@ -161,17 +178,17 @@ const getGiveaway = async (req, res) => {
 };
 const updateGiveaway = async (req, res) => {
   const { id } = req.params;
-let {
-  title,
-  ticket,
-  event,
-  numberOfWinners,
-  ticketsPerWinner,
-  organization,
-  endDateTime,
-  status ,
-  giveawayStatus ,
-} = req.body;
+  let {
+    title,
+    ticket,
+    event,
+    numberOfWinners,
+    ticketsPerWinner,
+    organization,
+    endDateTime,
+    status,
+    giveawayStatus,
+  } = req.body;
   const creator = req.user._id;
   const timezone = req.user.timezone;
   if (
@@ -179,27 +196,27 @@ let {
       pathParams: ["id"],
       objectIdFields: ["id"],
     })
-  )    return;
-  if(endDateTime){
-  endDateTime = convertTimezoneToUtc(
-  endDateTime,
-  timezone,
-  "YYYY-MM-DD hh:mm A"
-);
+  ) return;
+  if (endDateTime) {
+    endDateTime = convertTimezoneToUtc(
+      endDateTime,
+      timezone,
+      "YYYY-MM-DD hh:mm A"
+    );
   }
 
-let data = {
-  creator,
-  title,
-  ticket,
-  event,
-  numberOfWinners,
-  ticketsPerWinner,
-  organization,
-  endDateTime,
-  status,
-  giveawayStatus,
-};
+  let data = {
+    creator,
+    title,
+    ticket,
+    event,
+    numberOfWinners,
+    ticketsPerWinner,
+    organization,
+    endDateTime,
+    status,
+    giveawayStatus,
+  };
 
 
 
@@ -283,8 +300,9 @@ const deleteGiveaway = async (req, res) => {
 
 const getevents = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range } = req.query;
+  const { keyword, status = "active", date, range, organizations } = req.query;
   try {
+    console.log("organizations",organizations );
 
 
     const userId = req.user._id;
@@ -297,7 +315,8 @@ const getevents = async (req, res) => {
       status,
       userId,
       date,
-      range
+      range,
+      organizations
     });
 
     return sendResponse({
@@ -320,7 +339,7 @@ const getevents = async (req, res) => {
 
 const gettickets = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status , date, range, eventId } = req.query;
+  const { keyword, status, date, range, eventId } = req.query;
 
   try {
     // eventId is required to fetch tickets for a specific event

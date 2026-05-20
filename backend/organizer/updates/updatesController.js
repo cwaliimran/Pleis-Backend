@@ -14,35 +14,35 @@ const UpdatesService = require("./updatesService");
 
 
 const createUpdates = async (req, res) => {
-let {
-  title,
-  description,
-  event,
-  image,
-  status,
+  let {
+    title,
+    description,
+    event,
+    image,
+    status,
 
-} = req.body;
+  } = req.body;
 
-const userId = req.user._id;
-const timezone = req.user.timezone;
+  const userId = req.user._id;
+  const timezone = req.user.timezone;
 
-if (
-  !validateParams(req, res, {
-    rawData: [
-      "title", 
-      "description", 
-      "event",
-      "image", 
-    ],
-  })
-) return;
+  if (
+    !validateParams(req, res, {
+      rawData: [
+        "title",
+        "description",
+        "event",
+        "image",
+      ],
+    })
+  ) return;
   let data = {
-    companyOrganizer:userId,
-  title,
-  description,
-  event,
-  image,
-  status,
+    companyOrganizer: userId,
+    title,
+    description,
+    event,
+    image,
+    status,
   };
   try {
     const Updates = await UpdatesService.createUpdates(data);
@@ -71,14 +71,28 @@ if (
 };
 const getUpdatess = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range, organizations } = req.query;
+  const { keyword, status , date, range, organizations, sortBy, sortOrder } = req.query;
   try {
+    const SORT_FIELDS = ["title"];
+    const SORT_ORDERS = ["asc", "desc"];
+    if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+      const key = sortBy && !SORT_FIELDS.includes(sortBy)
+        ? "invalid_sort_by_field"
+        : "invalid_sort_order";
+      return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
+
+    if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+      const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+        : "sort_by_required_when_sort_order_is_provided";
+      return sendResponse({ res, statusCode: 400, translationKey: key });
+    }
 
 
     const userId = req.user._id;
     const timezone = req.user.timezone;
     const { updates, meta } = await UpdatesService.getUpdatess({
-        timezone,
+      timezone,
       page,
       limit,
       keyword,
@@ -86,7 +100,9 @@ const getUpdatess = async (req, res) => {
       userId,
       date,
       range,
-      organizations
+      organizations,
+      sortBy,
+      sortOrder
     });
 
     return sendResponse({
@@ -108,15 +124,15 @@ const getUpdatess = async (req, res) => {
 };
 const updateUpdates = async (req, res) => {
   const { id } = req.params;
-let {
-  title,
-  description,
-  event,
-  image,
-  status,
-} = req.body;
-const userId = req.user._id;
-const timezone = req.user.timezone;
+  let {
+    title,
+    description,
+    event,
+    image,
+    status,
+  } = req.body;
+  const userId = req.user._id;
+  const timezone = req.user.timezone;
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
@@ -125,15 +141,15 @@ const timezone = req.user.timezone;
   )
     return;
   let data = {
-    companyOrganizer:userId,
-title,
-  description,
-  event,
-  image,
-  status,
+    companyOrganizer: userId,
+    title,
+    description,
+    event,
+    image,
+    status,
   };
 
- 
+
   try {
     const updated = await UpdatesService.updateUpdates(id, data);
     if (updated && updated.error) {
@@ -214,13 +230,13 @@ const deleteUpdates = async (req, res) => {
 
 const getevents = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range,organizations } = req.query;
+  const { keyword, status = "active", date, range, organizations } = req.query;
   try {
 
     const userId = req.user._id;
     const timezone = req.user.timezone;
     const { events, meta } = await UpdatesService.getevents({
-        timezone,
+      timezone,
       page,
       limit,
       keyword,
@@ -253,5 +269,5 @@ module.exports = {
   getUpdatess,
   updateUpdates,
   deleteUpdates,
-getevents,
+  getevents,
 };

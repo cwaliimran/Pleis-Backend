@@ -79,12 +79,15 @@ const getUserIdsForEvent = async (eventId) => {
 
 const createGiveaway = async (data) => {
   try {
-    const organization = await Organizations.findOne({ creator: data.creator });
-
+    const organization = await Events.findOne({ _id: data.event }).select("basicInfo.organization")
+    const tickets = await TicketingsModel.findOne({ _id: { $in: data.ticket } }).select("quantity");
+    if (data.numberOfWinners * data.ticketsPerWinner > tickets.quantity) {
+      throw new Error("Not enough tickets available for the number of winners and tickets per winner");
+    }
+    data.organization = organization.basicInfo.organization;
     if (!organization) {
       throw new Error("No organization found for the provided user ID.");
     }
-    data.organization = organization._id;
     const clubMemberUserIds = await getClubMemberUserIdsByCompanyOrganizer(data.creator);
     const giveaway = new Giveaway(data);
     await giveaway.save();
@@ -193,17 +196,26 @@ const getWinners = async ({ giveawayId, timezone, page, limit, skip }) => {
     throw new Error("Error retrieving winners: " + err.message);
   }
 };
-const getGiveaway = async ({ organizationId, timezone, page, limit, keyword, status, userId, date, range, today, skip }) => {
+const getGiveaway = async ({ organizationId, timezone, page, limit, keyword, status, userId, date, range, today, skip, sortBy = "createdAt", sortOrder = "desc", organizations }) => {
   const organizationIds = organizationId
     ? organizationId.split(',').map(id => new mongoose.Types.ObjectId(id))
     : [];
+
+  const organizationIdsFromQuery = organizations
+    ? organizations.split(',').map(id => new mongoose.Types.ObjectId(id))
+    : [];
+    console.log("organizationIds",organizationIds );
+    console.log("organizationIdsFromQuery", organizationIdsFromQuery);
+
   let totalParticipants = 10
   const pipeline = [
     {
       $match: {
         ...(organizationIds.length > 0
           ? { organization: { $in: organizationIds } }
-          : { creator: new mongoose.Types.ObjectId(userId) }),
+          : organizationIdsFromQuery.length > 0
+            ? { organization: { $in: organizationIdsFromQuery } }
+            : { creator: new mongoose.Types.ObjectId(userId) }),
       }
     },
 
@@ -275,21 +287,35 @@ const getGiveaway = async ({ organizationId, timezone, page, limit, keyword, sta
         totalParticipants: { $literal: totalParticipants },
       },
     },
-
-    // Step 8: Sort by createdAt (descending)
-    { $sort: { createdAt: -1 } },
-
-    // Step 9: Apply pagination and count using $facet
-    {
-      $facet: {
-        data: [
-          { $skip: skip }, // Pagination skip
-          ...(limit === 0 ? [] : [{ $limit: limit }]) // Apply limit if provided
-        ],
-        totalFiltered: [{ $count: "count" }], // Total count of filtered results
-      },
-    },
   ];
+  if (["title", "eventTitle", "ticketTitle"].includes(sortBy)) {
+    let field;
+    if (sortBy === "title") field = "$title";
+    else if (sortBy === "eventTitle") field = "$eventTitle";
+    else if (sortBy === "ticketTitle") field = "$ticketTitle";
+
+    // Corrected $ifNull syntax
+    pipeline.push({
+      $addFields: {
+        sortField: { $toLower: { $ifNull: [field, ""] } } // <-- remove extra brackets
+      }
+    });
+
+    pipeline.push({
+      $sort: { sortField: sortOrder === "asc" ? 1 : -1, _id: -1 }
+    });
+  } else {
+    pipeline.push({ $sort: { createdAt: sortOrder === "asc" ? 1 : -1, _id: -1 } });
+  }
+  pipeline.push({
+    $facet: {
+      data: [
+        { $skip: skip },
+        ...(limit === 0 ? [] : [{ $limit: limit }])
+      ],
+      totalFiltered: [{ $count: "count" }]
+    }
+  });
 
   // Execute the aggregation pipeline
   const result = await Giveaway.aggregate(pipeline);
@@ -341,6 +367,7 @@ const getevents = async ({
   limit,
   keyword,
   status,
+  organizations,
   userId,
   date,
   skip
@@ -349,7 +376,14 @@ const getevents = async ({
     // Step 1: Match events where creator matches the provided userId
     {
       $match: {
-        ...(userId && { creator: new mongoose.Types.ObjectId(userId) }) // Filter events where creator == userId
+        ...(userId && { creator: new mongoose.Types.ObjectId(userId) }), // Filter events where creator == userId
+        ...(organizations && {
+          "basicInfo.organization": {
+            $in: organizations
+              .split(",")                       // split comma-separated string
+              .map(id => new mongoose.Types.ObjectId(id.trim())) // trim spaces and convert to ObjectId
+          }
+        }) // Filter events by organizations
       }
     }
   ];

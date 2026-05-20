@@ -12,13 +12,178 @@ const createMenu = async (data) => {
 };
 
 // Populate organization data for menus, but merge into "organization" field
-const getMenus = async ({ page, limit, keyword, status, userId, date, organization }) => {
+// const getMenus = async ({ page, limit, keyword, status, userId, date, organization }) => {
+//   const skip = limit === 0 ? 0 : (page - 1) * limit;
+//   const organizationIds = await getOrganizationIdsByCompanyOrganizer(userId);
+
+//   const pipeline = [
+
+
+//     // 🔗 Join organizations
+//     {
+//       $lookup: {
+//         from: "organizations",
+//         localField: "organization",
+//         foreignField: "_id",
+//         as: "organizationData",
+//         pipeline: [
+//           {
+//             $project: {
+//               _id: 1,
+//               "basicInfo.name": 1
+//             }
+//           }
+//         ]
+//       }
+//     },
+
+//     // 📦 Flatten organization
+//     {
+//       $unwind: {
+//         path: "$organizationData",
+//         preserveNullAndEmptyArrays: true
+//       }
+//     }
+//   ];
+
+//   // --------------------
+//   // 🏢 Organization filter (comma / % / array)
+//   // --------------------
+//   if (organization) {
+//     let orgArray = [];
+
+//     if (Array.isArray(organization)) {
+//       orgArray = organization;
+//     } else if (typeof organization === "string") {
+//       orgArray = organization.split(/[, %]+/);
+//     }
+
+//     orgArray = orgArray
+//       .map(id => id.trim())
+//       .filter(id => mongoose.Types.ObjectId.isValid(id));
+
+//     if (orgArray.length) {
+
+//       pipeline.push({
+//         $match: {
+//           organization: {
+//             $in: orgArray.map(id => new mongoose.Types.ObjectId(id))
+//           }
+//         }
+//       });
+//     }
+//   }
+//   else if (organizationIds.length > 0) {
+//     pipeline.push({
+//       $match: {
+//         organization: { $in: organizationIds }
+//       }
+//     });
+//   }
+
+//   // --------------------
+//   // 📌 Status filter
+//   // --------------------
+//   if (status) {
+//     pipeline.push({ $match: { status } });
+//   } else {
+//     pipeline.push({ $match: { status: { $ne: "deleted" } } });
+//   }
+
+//   // --------------------
+//   // 📅 Date filter (full day)
+//   // --------------------
+//   if (date) {
+//     const start = new Date(date);
+//     start.setUTCHours(0, 0, 0, 0);
+
+//     const end = new Date(date);
+//     end.setUTCHours(23, 59, 59, 999);
+
+//     pipeline.push({
+//       $match: {
+//         createdAt: { $gte: start, $lte: end }
+//       }
+//     });
+//   }
+
+//   // --------------------
+//   // 🔎 Keyword search
+//   // --------------------
+//   const keywordMatch = buildKeywordQueryFromModels(
+//     [
+//       { schema: Menus.schema },
+//       { schema: Organizations.schema, prefix: "organizationData." }
+//     ],
+//     keyword
+//   );
+
+//   if (Object.keys(keywordMatch).length) {
+//     pipeline.push({ $match: keywordMatch });
+//   }
+
+//   // --------------------
+//   // ⬇ Sort latest first
+//   // --------------------
+//   pipeline.push({ $sort: { createdAt: -1 } });
+
+//   // --------------------
+//   // 🧩 Merge organizationData → organization
+//   // --------------------
+//   pipeline.push(
+//     {
+//       $addFields: {
+//         organization: "$organizationData"
+//       }
+//     },
+//     {
+//       $project: {
+//         organizationData: 0
+//       }
+//     }
+//   );
+
+//   // --------------------
+//   // 📊 Pagination + count
+//   // --------------------
+//   pipeline.push({
+//     $facet: {
+//       data: [
+//         { $skip: skip },
+//         ...(limit === 0 ? [] : [{ $limit: limit }])
+//       ],
+//       totalFiltered: [{ $count: "count" }]
+//     }
+//   });
+
+//   // --------------------
+//   // 🚀 Execute aggregation
+//   // --------------------
+//   const result = await Menus.aggregate(pipeline);
+
+//   const menus = result[0]?.data || [];
+//   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+
+//   // --------------------
+//   // 📈 Meta counts
+//   // --------------------
+//   const [total, active, inactive] = await Promise.all([
+//     Menus.countDocuments({ creator: userId, status: { $ne: "deleted" } }),
+//     Menus.countDocuments({ creator: userId, status: "active" }),
+//     Menus.countDocuments({ creator: userId, status: "inactive" })
+//   ]);
+
+//   const meta = generateMeta(page, limit, totalFiltered);
+//   meta.menusCount = { total, active, inactive };
+
+//   return { menus, meta };
+// };
+
+const getMenus = async ({ page, limit, keyword, status, userId, date, organization, sortBy = "createdAt", sortOrder = "desc" }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const organizationIds = await getOrganizationIdsByCompanyOrganizer(userId);
 
   const pipeline = [
-
-
     // 🔗 Join organizations
     {
       $lookup: {
@@ -26,85 +191,47 @@ const getMenus = async ({ page, limit, keyword, status, userId, date, organizati
         localField: "organization",
         foreignField: "_id",
         as: "organizationData",
-        pipeline: [
-          {
-            $project: {
-              _id: 1,
-              "basicInfo.name": 1
-            }
-          }
-        ]
+        pipeline: [{ $project: { _id: 1, "basicInfo.name": 1 } }]
       }
     },
-
-    // 📦 Flatten organization
-    {
-      $unwind: {
-        path: "$organizationData",
-        preserveNullAndEmptyArrays: true
-      }
-    }
+    { $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true } }
   ];
 
   // --------------------
-  // 🏢 Organization filter (comma / % / array)
+  // 🏢 Organization filter
   // --------------------
   if (organization) {
     let orgArray = [];
-
-    if (Array.isArray(organization)) {
-      orgArray = organization;
-    } else if (typeof organization === "string") {
-      orgArray = organization.split(/[, %]+/);
-    }
+    if (Array.isArray(organization)) orgArray = organization;
+    else if (typeof organization === "string") orgArray = organization.split(/[, %]+/);
 
     orgArray = orgArray
       .map(id => id.trim())
       .filter(id => mongoose.Types.ObjectId.isValid(id));
 
     if (orgArray.length) {
-
       pipeline.push({
-        $match: {
-          organization: {
-            $in: orgArray.map(id => new mongoose.Types.ObjectId(id))
-          }
-        }
+        $match: { organization: { $in: orgArray.map(id => new mongoose.Types.ObjectId(id)) } }
       });
     }
-  }
-  else if (organizationIds.length > 0) {
-    pipeline.push({
-      $match: {
-        organization: { $in: organizationIds }
-      }
-    });
+  } else if (organizationIds.length > 0) {
+    pipeline.push({ $match: { organization: { $in: organizationIds } } });
   }
 
   // --------------------
   // 📌 Status filter
   // --------------------
-  if (status) {
-    pipeline.push({ $match: { status } });
-  } else {
-    pipeline.push({ $match: { status: { $ne: "deleted" } } });
-  }
+  pipeline.push({ $match: { status: status || { $ne: "deleted" } } });
 
   // --------------------
-  // 📅 Date filter (full day)
+  // 📅 Date filter
   // --------------------
   if (date) {
     const start = new Date(date);
     start.setUTCHours(0, 0, 0, 0);
-
     const end = new Date(date);
     end.setUTCHours(23, 59, 59, 999);
-
-    pipeline.push({
-      $match: {
-        createdAt: { $gte: start, $lte: end }
-      }
-    });
+    pipeline.push({ $match: { createdAt: { $gte: start, $lte: end } } });
   }
 
   // --------------------
@@ -117,30 +244,42 @@ const getMenus = async ({ page, limit, keyword, status, userId, date, organizati
     ],
     keyword
   );
+  if (Object.keys(keywordMatch).length) pipeline.push({ $match: keywordMatch });
 
-  if (Object.keys(keywordMatch).length) {
-    pipeline.push({ $match: keywordMatch });
+  // --------------------
+  // --- Add lowercase field for sorting
+  // --------------------
+  let sortFieldName;
+
+  if (sortBy === "title" || sortBy === "description") {
+    sortFieldName = sortBy; // directly "title" or "description"
+  } else if (sortBy === "organizationName") {
+    sortFieldName = "organizationData.basicInfo.name";
+  } else {
+    sortFieldName = "createdAt";
   }
 
-  // --------------------
-  // ⬇ Sort latest first
-  // --------------------
-  pipeline.push({ $sort: { createdAt: -1 } });
+  // Add lowercase sortField only for string fields
+  if (sortFieldName !== "createdAt") {
+    pipeline.push({
+      $addFields: {
+        sortField: { $toLower: { $ifNull: [`$${sortFieldName}`, ""] } }
+      }
+    });
+  } else {
+    // For createdAt, no need to lowercase
+    pipeline.push({ $addFields: { sortField: `$${sortFieldName}` } });
+  }
+
+  // Sort by the temporary sortField
+  pipeline.push({ $sort: { sortField: sortOrder === "asc" ? 1 : -1, _id: -1 } });
 
   // --------------------
   // 🧩 Merge organizationData → organization
   // --------------------
   pipeline.push(
-    {
-      $addFields: {
-        organization: "$organizationData"
-      }
-    },
-    {
-      $project: {
-        organizationData: 0
-      }
-    }
+    { $addFields: { organization: "$organizationData" } },
+    { $project: { organizationData: 0, sortField: 0 } }
   );
 
   // --------------------
@@ -148,10 +287,7 @@ const getMenus = async ({ page, limit, keyword, status, userId, date, organizati
   // --------------------
   pipeline.push({
     $facet: {
-      data: [
-        { $skip: skip },
-        ...(limit === 0 ? [] : [{ $limit: limit }])
-      ],
+      data: [{ $skip: skip }, ...(limit === 0 ? [] : [{ $limit: limit }])],
       totalFiltered: [{ $count: "count" }]
     }
   });
@@ -160,9 +296,8 @@ const getMenus = async ({ page, limit, keyword, status, userId, date, organizati
   // 🚀 Execute aggregation
   // --------------------
   const result = await Menus.aggregate(pipeline);
-
   const menus = result[0]?.data || [];
-  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+  const totalFiltered = result[0]?.totalFiltered?.[0]?.count || 0;
 
   // --------------------
   // 📈 Meta counts
@@ -176,10 +311,11 @@ const getMenus = async ({ page, limit, keyword, status, userId, date, organizati
   const meta = generateMeta(page, limit, totalFiltered);
   meta.menusCount = { total, active, inactive };
 
+  // --------------------
+  // Return formatted response
+  // --------------------
   return { menus, meta };
 };
-
-
 const updateMenu = async (id, data) => {
   console.log("id", id);
   const session = await mongoose.startSession();
