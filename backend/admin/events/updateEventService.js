@@ -26,10 +26,9 @@ const updateEventService = async (eventId, payload, mode = "single") => {
   const applyFields = (doc, data, skipSchedule = false) => {
 
     if (data.basicInfo) {
-      doc.basicInfo = {
-        ...doc.basicInfo,
-        ...data.basicInfo,
-      };
+      for (const key of Object.keys(data.basicInfo)) {
+        doc.basicInfo[key] = data.basicInfo[key];
+      }
     }
 
     if (data.basicInfo?.categories) {
@@ -52,7 +51,7 @@ const updateEventService = async (eventId, payload, mode = "single") => {
     if (data.preOrdersEnabled !== undefined)
       doc.preOrdersEnabled = data.preOrdersEnabled;
 
-    if (data.basicInfo.status !== undefined)
+    if (data.basicInfo?.status !== undefined)
       doc.status = data.basicInfo.status;
     if (data.feedbackEnabled !== undefined)
       doc.feedbackEnabled = data.feedbackEnabled;
