@@ -243,6 +243,7 @@ const deleteMenu = async (req, res) => {
 const duplicateMenuAndItems = async (req, res) => {
   const { id: menu } = req.params;
   const { organization } = req.body;
+  const timezone=req.user.timezone || "UTC";
 
   if (
     !validateParams(req, res, {
@@ -253,7 +254,7 @@ const duplicateMenuAndItems = async (req, res) => {
   )
     return;
   try {
-    const duplicatedMenu = await menusService.duplicateMenuAndItems(menu, organization);
+    const duplicatedMenu = await menusService.duplicateMenuAndItems(menu, organization, timezone);
     if (!duplicatedMenu) {
       return sendResponse({
         res,
