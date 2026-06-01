@@ -1,12 +1,12 @@
 // services/menuService.js
 const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
-const { generateMeta } = require("@utils/responseUtil");
+const { generateMeta, convertDateFormat, convertUtcToTimezone } = require("@utils/responseUtil");
 const Organizations = require("@OrganizationModel");
 const Menus = require("@MenusModel");
 const menuRepo = require("./menusRepository");
 const mongoose = require("mongoose");
 const { getOrganizationIdsByCompanyOrganizer } = require("../../../admin/organizations/organizationRepository");
-
+const moment = require("moment-timezone");
 const createMenu = async (data) => {
   return await menuRepo.createMenu(data);
 };
@@ -389,9 +389,29 @@ const getMenuDetails = async (id) => {
   if (!menu) return null;
   return menu;
 };
+const getTimezoneDateTime = (timezone = "Asia/Karachi") => {
+  const now = new Date();
 
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
 
-const duplicateMenuAndItems = async (menuId, organization) => {
+  const get = (type) => parts.find((p) => p.type === type)?.value;
+
+  return {
+    formattedDate: `${get("year")}-${get("month")}-${get("day")}`,
+    formattedTime: `${get("hour")}-${get("minute")}-${get("second")}`,
+  };
+};
+
+const duplicateMenuAndItems = async (menuId, organization, timezone) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -401,24 +421,15 @@ const duplicateMenuAndItems = async (menuId, organization) => {
     if (!menu) {
       throw new Error('Menu not found');
     }
-    // if (menu.organization.toString() === organization.toString()) {
-    //   throw new Error('Old and new organization cannot be the same');
-    // }
-    const now = new Date();
 
-    const formattedDate = now.toLocaleDateString("en-CA"); // 2026-05-18
-    const formattedTime = now.toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    }).replace(/:/g, "-"); // 09-55-39
+    const { formattedDate, formattedTime } = getTimezoneDateTime(timezone);
+
     const duplicatedMenu = {
       ...menu.toObject(),
       _id: new mongoose.Types.ObjectId(),
       title: `${menu.title}-copy-${formattedDate}-${formattedTime}`,
       status: "inactive",
-      organization: organization,
+      organization,
     };
     const savedDuplicatedMenu = await menuRepo.createDuplicatedMenu(duplicatedMenu, session);
     if (savedDuplicatedMenu.status === "active") {

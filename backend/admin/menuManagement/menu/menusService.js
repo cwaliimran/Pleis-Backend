@@ -272,8 +272,29 @@ const getMenuDetails = async (id) => {
   return menu;
 };
 
+const getTimezoneDateTime = (timezone = "Asia/Karachi") => {
+  const now = new Date();
 
-const duplicateMenuAndItems = async (menuId, organization) => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+
+  const get = (type) => parts.find((p) => p.type === type)?.value;
+
+  return {
+    formattedDate: `${get("year")}-${get("month")}-${get("day")}`,
+    formattedTime: `${get("hour")}-${get("minute")}-${get("second")}`,
+  };
+};
+
+const duplicateMenuAndItems = async (menuId, organization,timezone) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -286,15 +307,8 @@ const duplicateMenuAndItems = async (menuId, organization) => {
     // if (menu.organization.toString() === organization.toString()) {
     //   throw new Error('Old and new organization cannot be the same');
     // }
-    const now = new Date();
+    const { formattedDate, formattedTime } = getTimezoneDateTime(timezone);
 
-    const formattedDate = now.toLocaleDateString("en-CA"); // 2026-05-18
-    const formattedTime = now.toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    }).replace(/:/g, "-"); // 09-55-39
 
     const duplicatedMenu = {
       ...menu.toObject(),
@@ -303,6 +317,7 @@ const duplicateMenuAndItems = async (menuId, organization) => {
       status: "inactive",
       organization: organization,
     };
+
     const savedDuplicatedMenu = await menuRepo.createDuplicatedMenu(duplicatedMenu, session);
     if (savedDuplicatedMenu.status === "active") {
       const orgId = new mongoose.Types.ObjectId(savedDuplicatedMenu.organization);
