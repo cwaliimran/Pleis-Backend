@@ -411,77 +411,66 @@ const getLatestEventOrders = async ({
 };
 
 
-const getTicketPerformanceWeekly = async ({
-  eventId,
-  timezone = "UTC",
-  startDate = null,
-  endDate = null
-}) => {
-  const match = {
-    event: new mongoose.Types.ObjectId(eventId),
-    status: { $in: ["confirmed", "completed"] }
-  };
+const getTicketPerformanceWeekly = async ({ eventId, timezone = "UTC" }) => {
+  const eventObjectId = new mongoose.Types.ObjectId(eventId);
 
-  if (startDate || endDate) {
-    match.createdAt = {};
-    if (startDate) match.createdAt.$gte = new Date(startDate);
-    if (endDate) match.createdAt.$lte = new Date(endDate);
-  }
+  const event = await Events.findById(eventObjectId)
+    .select("schedule.startDateTime schedule.endDateTime")
+    .lean();
 
-  const rows = await TicketingOrders.aggregate([
-    { $match: match },
+  if (!event) return [];
 
-    {
-      $addFields: {
-        dayOfWeek: {
-          $dayOfWeek: {
-            date: "$createdAt",
-            timezone
-          }
+  const startDate = event.schedule?.startDateTime;
+  const now = new Date();
+
+  const endDate =
+    event.schedule?.endDateTime && event.schedule.endDateTime < now
+      ? event.schedule.endDateTime
+      : now;
+
+const rows = await TicketingBookings.aggregate([
+  {
+    $lookup: {
+      from: "ticketingorders",
+      localField: "order",
+      foreignField: "_id",
+      as: "order"
+    }
+  },
+  { $unwind: "$order" },
+
+  {
+    $match: {
+      "order.event": eventObjectId,
+      "order.status": { $in: ["paid", "completed"] }
+    }
+  },
+
+  {
+    $addFields: {
+      date: {
+        $dateToString: {
+          format: "%Y-%m-%d",
+          date: "$createdAt",
+          timezone
         }
       }
-    },
-
-    {
-      $group: {
-        _id: "$dayOfWeek",
-        totalAmount: { $sum: "$orderPricing.total" }
-      }
     }
-  ]);
+  },
 
-  // Mongo: 1 = Sunday, 7 = Saturday
-  const dayMap = {
-    1: "Sun",
-    2: "Mon",
-    3: "Tue",
-    4: "Wed",
-    5: "Thu",
-    6: "Fri",
-    7: "Sat"
-  };
-
-  // Initialize full week
-  const weekly = {
-    Mon: 0,
-    Tue: 0,
-    Wed: 0,
-    Thu: 0,
-    Fri: 0,
-    Sat: 0,
-    Sun: 0
-  };
-
-  for (const r of rows) {
-    const day = dayMap[r._id];
-    if (day) {
-      weekly[day] = Math.round(r.totalAmount);
+  {
+    $group: {
+      _id: "$date",
+      value: { $sum: 1 }
     }
-  }
+  },
 
-  return Object.entries(weekly).map(([day, value]) => ({
-    day,
-    value
+  { $sort: { _id: 1 } }
+]);
+
+  return rows.map(r => ({
+    date: r._id,
+    value: r.value
   }));
 };
 
@@ -684,9 +673,6 @@ const getTicketTypeStats = async ({ eventId }) => {
 const getScannedTicketProgress = async ({ eventId }) => {
   const eventObjectId = new mongoose.Types.ObjectId(eventId);
 
-  /* --------------------------------
-     AGGREGATE SCAN COUNTS
-     -------------------------------- */
   const stats = await TicketingBookings.aggregate([
     {
       $match: {
@@ -696,41 +682,52 @@ const getScannedTicketProgress = async ({ eventId }) => {
     },
     {
       $group: {
-        _id: "$status",
+        _id: {
+          ticketId: "$ticket.ticketId",
+          status: "$status"
+        },
         count: { $sum: 1 }
       }
     }
   ]);
 
-  let scannedCount = 0;
-  let notScannedCount = 0;
+  const map = new Map();
 
   for (const row of stats) {
-    if (row._id === "used") scannedCount = row.count;
-    if (row._id === "valid") notScannedCount = row.count;
+    const ticketId = row._id.ticketId?.toString();
+    if (!ticketId) continue;
+
+    if (!map.has(ticketId)) {
+      map.set(ticketId, {
+        ticketId,
+        scanned: { count: 0, percentage: 0 },
+        notScanned: { count: 0, percentage: 0 },
+        totalSold: 0
+      });
+    }
+
+    const entry = map.get(ticketId);
+
+    if (row._id.status === "used") entry.scanned.count = row.count;
+    if (row._id.status === "valid") entry.notScanned.count = row.count;
   }
 
-  const totalSold = scannedCount + notScannedCount;
+  // compute percentages per ticket
+  for (const entry of map.values()) {
+    entry.totalSold = entry.scanned.count + entry.notScanned.count;
 
-  const scannedPercentage =
-    totalSold === 0 ? 0 : Math.round((scannedCount / totalSold) * 100);
+    entry.scanned.percentage =
+      entry.totalSold === 0
+        ? 0
+        : Math.round((entry.scanned.count / entry.totalSold) * 100);
 
-  const notScannedPercentage =
-    totalSold === 0 ? 0 : 100 - scannedPercentage;
+    entry.notScanned.percentage =
+      entry.totalSold === 0
+        ? 0
+        : 100 - entry.scanned.percentage;
+  }
 
-  return {
-    totalSold,
-
-    scanned: {
-      count: scannedCount,
-      percentage: scannedPercentage
-    },
-
-    notScanned: {
-      count: notScannedCount,
-      percentage: notScannedPercentage
-    }
-  };
+  return Array.from(map.values());
 };
 
 const getTotalEventCountByOrganizationId = async (organizationId) => {

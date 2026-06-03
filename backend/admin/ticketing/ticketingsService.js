@@ -6,8 +6,8 @@ const ticketingRepo = require("./ticketingsRepository");
 const TicketingsModel = require("@TicketingsModel");
 
 const createTicketing = async (timezone, data) => {
-  data.organization=await getOrganizationIdByEventId(data.event)
-  data.companyOrganizer=await getOrgCompanyOrganizer(data.organization)
+  data.organization = await getOrganizationIdByEventId(data.event)
+  data.companyOrganizer = await getOrgCompanyOrganizer(data.organization)
   let ticketing = await ticketingRepo.createTicketing(data);
   if (!ticketing) return null;
   return formatTicketing(timezone, ticketing);
@@ -38,7 +38,7 @@ const getTicketings = async ({
 
   if (organizations) {
     const separator = organizations.includes("%") ? "%" : ",";
-    
+
     const orgArray = organizations
       .split(separator)
       .map(id => id.trim())
@@ -356,9 +356,63 @@ const EventsgetTicketings = async ({ timezone, eventId }) => {
 
 
 const getTicketSalesStatsService = async (eventId, startDate, endDate) => {
-  return ticketingRepo.getTicketSalesStats({ eventId, startDate, endDate });
-};
+  const data = await ticketingRepo.getTicketSalesStats({
+    eventId,
+    startDate,
+    endDate,
+  });
 
+
+  const slotData = data?.slotBasedSales;
+
+  if (!slotData?.tickets?.length) {
+    return data;
+  }
+
+  const formatDate = (d) => {
+    if (!d) return d;
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return d;
+    return date.toISOString().split("T")[0];
+  };
+
+  const formatTime = (d) => {
+    if (!d) return d;
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return d;
+    return date.toISOString().slice(11, 16);
+  };
+
+  const formattedTickets = slotData.tickets.map((ticket) => {
+    const slots = Array.isArray(ticket.slots) ? ticket.slots : [];
+
+    return {
+      ...ticket,
+      slots: slots.map((day) => {
+        const timeSlots = Array.isArray(day.timeSlots) ? day.timeSlots : [];
+
+        return {
+          ...day,
+          date: formatDate(day.date),
+          timeSlots: timeSlots.map((slot) => ({
+            ...slot,
+            date: formatDate(slot.date),
+            startTime: formatTime(slot.startTime),
+            endTime: formatTime(slot.endTime),
+          })),
+        };
+      }),
+    };
+  });
+
+  return {
+    ...data,
+    slotBasedSales: {
+      ...slotData,
+      tickets: formattedTickets,
+    },
+  };
+};
 module.exports = {
   createTicketing,
   getTicketings,

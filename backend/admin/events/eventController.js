@@ -759,6 +759,8 @@ const getEventAnalytics = async (req, res) => {
       data: analytics,
     });
   } catch (error) {
+    console.log("error==>",error)
+
     return sendResponse({
       res,
       statusCode: 500,
@@ -953,6 +955,7 @@ const getEventsByTag = async (req, res) => {
       data: events,
     });
   } catch (error) {
+
     return sendResponse({
       res,
       statusCode: 500,
@@ -961,6 +964,7 @@ const getEventsByTag = async (req, res) => {
     });
   }
 };
+
 
 module.exports = {
   createEvent,
@@ -978,6 +982,6 @@ module.exports = {
   getEventRatings,
   getEventbycompanyOrganizer,
   getEventsByVenueType,
-  getEventsByTag
+  getEventsByTag,
 
 };

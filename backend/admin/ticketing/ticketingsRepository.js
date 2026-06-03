@@ -578,27 +578,77 @@ const getTicketTypeSalesStats = async ({
 }) => {
   const eventObjectId = new mongoose.Types.ObjectId(eventId);
 
-  /* --------------------------------
-     1️⃣ LOAD TICKET STATUSES (SOURCE OF TRUTH)
-     -------------------------------- */
+  /* ----------------------------------------
+     1️⃣ LOAD TICKETS (SOURCE OF TRUTH)
+  ---------------------------------------- */
   const tickets = await TicketingsModel.find({
     event: eventObjectId,
     status: { $ne: "deleted" },
   })
-    .select("_id title status")
+    .select(`
+      _id title status quantity price transferFee
+      timeSensitivePricing fastTrackEntry
+    `)
     .lean();
 
-  const ticketStatusMap = {};
+  const ticketMetaMap = {};
   for (const t of tickets) {
-    ticketStatusMap[t._id.toString()] = {
+    ticketMetaMap[t._id.toString()] = {
       title: t.title,
       status: t.status,
+      basePrice: Number(t.price || 0),
+
+      earlyBirdPrice: Number(t.timeSensitivePricing?.earlyBird?.discountedPrice || 0),
+      lastMinutePrice: Number(t.timeSensitivePricing?.lastMinute?.discountedPrice || 0),
+
+      fastTrackFee: Number(t.fastTrackEntry?.extraPrice || 0),
+      transferFee: Number(t.transferFee || 0),
     };
   }
 
-  /* --------------------------------
-     2️⃣ BOOKINGS MATCH
-     -------------------------------- */
+  /* ----------------------------------------
+     2️⃣ CAPACITY MAP
+  ---------------------------------------- */
+  const capacityMap = await getTicketTypeCapacities(eventId);
+
+  /* ----------------------------------------
+     3️⃣ INIT RESULT
+  ---------------------------------------- */
+  const statsById = {};
+  let grandCount = 0;
+  let grandAmount = 0;
+
+  for (const [ticketId, meta] of Object.entries(capacityMap)) {
+    const tmeta = ticketMetaMap[ticketId] || {};
+
+    statsById[ticketId] = {
+      ticketId,
+      title: meta.title,
+
+      valid: { count: 0, amount: 0 },
+      used: { count: 0, amount: 0 },
+      cancelled: { count: 0, amount: 0 },
+      total: { count: 0, amount: 0 },
+
+      earlyBird: { count: 0, amount: 0 },
+      lastMinute: { count: 0, amount: 0 },
+      fastTrack: { count: 0, amount: 0 },
+      transfer: { count: 0, amount: 0 },
+
+      totalCreated: meta.totalCreated || 0,
+      sold: 0,
+      remaining: meta.totalCreated || 0,
+
+      revenue: 0,
+
+      status: tmeta.status || "inactive",
+      saleStatus: "onSale",
+    };
+  }
+
+  /* ----------------------------------------
+     4️⃣ BOOKINGS QUERY
+  ---------------------------------------- */
   const match = {
     "ticket.snapshot.event": eventObjectId,
   };
@@ -610,72 +660,107 @@ const getTicketTypeSalesStats = async ({
   }
 
   const bookings = await TicketingBookings.find(match)
-    .select("status ticket.ticketId ticket.snapshot.pricing.unitPrice")
+    .select(`
+      status ticket.ticketId
+      ticket.snapshot.pricing
+      isFastTrack transferHistory pricingPhase
+    `)
     .lean();
 
-  const capacityMap = await getTicketTypeCapacities(eventId);
-
-  const statsById = {};
-  let grandCount = 0;
-  let grandAmount = 0;
-
-  /* --------------------------------
-     3️⃣ INIT PER TICKET (AUTHORITATIVE)
-     -------------------------------- */
-  for (const [ticketId, meta] of Object.entries(capacityMap)) {
-    statsById[ticketId] = {
-      ticketId,
-      title: meta.title,
-
-      valid: { count: 0, amount: 0 },
-      used: { count: 0, amount: 0 },
-      cancelled: { count: 0, amount: 0 },
-      total: { count: 0, amount: 0 },
-
-      totalCreated: meta.totalCreated,
-
-      // ✅ FROM Ticketings collection
-      status: ticketStatusMap[ticketId]?.status ?? "inactive",
-
-      saleStatus: "onSale",
-    };
-  }
-
-  /* --------------------------------
-     4️⃣ PROCESS BOOKINGS (STATS ONLY)
-     -------------------------------- */
+  /* ----------------------------------------
+     5️⃣ PROCESS BOOKINGS
+  ---------------------------------------- */
   for (const b of bookings) {
     const ticketId = b.ticket?.ticketId?.toString();
     if (!ticketId || !statsById[ticketId]) continue;
 
-    const price = b.ticket?.snapshot?.pricing?.unitPrice || 0;
-    const bookingStatus = b.status;
-
     const bucket = statsById[ticketId];
-    if (!bucket[bookingStatus]) continue;
+    const meta = ticketMetaMap[ticketId] || {};
+    const pricing = b.ticket?.snapshot?.pricing || {};
 
-    bucket[bookingStatus].count += 1;
-    bucket[bookingStatus].amount += price;
+    const basePrice = Number(meta.basePrice || 0);
+
+    /* -------------------------
+       PHASE LOGIC
+    ------------------------- */
+    const phase = b.pricingPhase || pricing.phase || "regular";
+
+    let phasePrice = 0;
+
+    if (phase === "earlyBird") phasePrice = meta.earlyBirdPrice;
+    if (phase === "lastMinute") phasePrice = meta.lastMinutePrice;
+
+    /* -------------------------
+       FAST TRACK
+    ------------------------- */
+    const fastTrackFee = b.isFastTrack ? meta.fastTrackFee : 0;
+
+    /* -------------------------
+       TRANSFER (HISTORY BASED)
+    ------------------------- */
+    const transferCount = (b.transferHistory?.length || 0);
+    const transferFee = transferCount > 0 ? meta.transferFee : 0;
+
+    const finalPrice = basePrice + phasePrice + fastTrackFee + transferFee;
+
+    if (!bucket[b.status]) continue;
+
+    /* -------------------------
+       STATUS BUCKETS
+    ------------------------- */
+    bucket[b.status].count += 1;
+    bucket[b.status].amount += finalPrice;
 
     bucket.total.count += 1;
-    bucket.total.amount += price;
+    bucket.total.amount += finalPrice;
 
-    if (bookingStatus !== "cancelled") {
+    /* -------------------------
+       PHASE BUCKETS
+    ------------------------- */
+    if (phase === "earlyBird") {
+      bucket.earlyBird.count += 1;
+      bucket.earlyBird.amount += finalPrice;
+    }
+
+    if (phase === "lastMinute") {
+      bucket.lastMinute.count += 1;
+      bucket.lastMinute.amount += finalPrice;
+    }
+
+    /* -------------------------
+       FAST TRACK
+    ------------------------- */
+    if (b.isFastTrack) {
+      bucket.fastTrack.count += 1;
+      bucket.fastTrack.amount += finalPrice;
+    }
+
+    /* -------------------------
+       TRANSFER
+    ------------------------- */
+    if (transferCount > 0) {
+      bucket.transfer.count += transferCount;
+      bucket.transfer.amount += transferFee;
+    }
+
+    bucket.revenue += finalPrice;
+
+    if (b.status !== "cancelled") {
       grandCount += 1;
-      grandAmount += price;
+      grandAmount += finalPrice;
     }
   }
 
-  /* --------------------------------
-     5️⃣ FINAL DERIVED FIELDS
-     -------------------------------- */
-  for (const ticket of Object.values(statsById)) {
-    const remaining =
-      ticket.totalCreated - ticket.total.count;
-
-    ticket.saleStatus =
-      remaining > 0 ? "onSale" : "soldOut";
+  /* ----------------------------------------
+     6️⃣ DERIVED FIELDS
+  ---------------------------------------- */
+  for (const t of Object.values(statsById)) {
+    t.sold = t.total.count;
+    t.remaining = Math.max(t.totalCreated - t.sold, 0);
+    t.saleStatus = t.remaining > 0 ? "onSale" : "soldOut";
   }
+
+  let slotBasedSales = await getEventSlotSalesBreakdown(eventId);
 
   return {
     ticketingStats: {
@@ -684,16 +769,164 @@ const getTicketTypeSalesStats = async ({
         count: grandCount,
         amount: grandAmount,
       },
+      slotBasedSales,
     },
   };
 };
 
 
+const getEventSlotSalesBreakdown = async (eventId) => {
+  const eventObjectId = new mongoose.Types.ObjectId(eventId);
+  const now = new Date();
+
+  /* =====================================================
+     1. LOAD SLOT-BASED TICKETS
+  ===================================================== */
+  const tickets = await TicketingsModel.find({
+    event: eventObjectId,
+    status: { $ne: "deleted" },
+    "timingSlots.enabled": true,
+  }).lean();
+
+  if (!tickets.length) return { eventId, tickets: [] };
+
+  /* =====================================================
+     2. LOAD + NORMALIZE BOOKINGS (FIXED SOURCE OF TRUTH)
+  ===================================================== */
+  const bookings = await TicketingBookings.aggregate([
+    {
+      $match: {
+        "ticket.snapshot.event": eventObjectId,
+      },
+    },
+    {
+      $lookup: {
+        from: "ticketingorders",
+        localField: "order",
+        foreignField: "_id",
+        as: "order",
+      },
+    },
+    { $unwind: "$order" },
+    {
+      $match: {
+        $or: [
+          { status: { $in: ["valid", "used"] } },
+          {
+            status: "pending",
+            "order.status": "pendingPayment",
+            "order.lockUntil": { $gt: now },
+          },
+        ],
+      },
+    },
+    {
+      $project: {
+        status: 1,
+        "ticket.ticketId": 1,
+        "ticket.timeSlot": 1,
+      },
+    },
+  ]);
+
+  /* =====================================================
+     3. BUILD INDEX MAPS
+  ===================================================== */
+  const soldMap = new Map();     // valid + used
+  const scannedMap = new Map();  // used only
+
+  const isSold = (b) => ["valid", "used"].includes(b.status);
+  const isScanned = (b) => b.status === "used";
+
+  for (const b of bookings) {
+    const ticketId = b.ticket?.ticketId?.toString();
+    const slotId = b.ticket?.timeSlot?.toString();
+
+    if (!ticketId || !slotId) continue;
+
+    const key = `${ticketId}_${slotId}`;
+
+    if (isSold(b)) {
+      soldMap.set(key, (soldMap.get(key) || 0) + 1);
+    }
+
+    if (isScanned(b)) {
+      scannedMap.set(key, (scannedMap.get(key) || 0) + 1);
+    }
+  }
+
+  /* =====================================================
+     4. BUILD RESPONSE (NOW CONSISTENT WITH TICKET STATS)
+  ===================================================== */
+  const result = tickets.map((ticket) => {
+    const ticketId = ticket._id.toString();
+
+    let ticketSold = 0;
+    let ticketScanned = 0;
+    let ticketCapacity = 0;
+
+    const slots = (ticket.timingSlots.dateTimeSlots || []).map((day) => {
+      const date = day.date;
+
+      const timeSlots = (day.timeSlots || []).map((slot) => {
+        const slotId = slot._id.toString();
+        const key = `${ticketId}_${slotId}`;
+
+        const quantity = slot.quantity || 0;
+
+        const sold = soldMap.get(key) || 0;
+        const scanned = scannedMap.get(key) || 0;
+
+        const remaining = Math.max(quantity - sold, 0);
+
+        ticketSold += sold;
+        ticketScanned += scanned;
+        ticketCapacity += quantity;
+
+        return {
+          date,
+          timeSlotId: slotId,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          quantity,
+          sold,
+          scanned,
+          remaining,
+        };
+      });
+
+      return {
+        date,
+        timeSlots,
+      };
+    });
+
+    return {
+      ticketId,
+      title: ticket.title,
+
+      totalCreated: ticketCapacity,
+
+      sold: ticketSold,
+      scanned: ticketScanned,
+
+      remaining: Math.max(ticketCapacity - ticketSold, 0),
+
+      slots,
+    };
+  });
+
+  return {
+    eventId,
+    tickets: result,
+  };
+};
+
 
 const getTicketTypeCapacities = async (eventId) => {
   const tickets = await TicketingsModel.find({
     event: eventId,
-    status: { $ne: "deleted" }
+    status: { $ne: "deleted" },
   }).lean();
 
   const capacityMap = {};
@@ -702,8 +935,8 @@ const getTicketTypeCapacities = async (eventId) => {
     let total = 0;
 
     if (t.timingSlots?.enabled) {
-      for (const d of t.timingSlots.dateTimeSlots) {
-        for (const s of d.timeSlots) {
+      for (const d of t.timingSlots.dateTimeSlots || []) {
+        for (const s of d.timeSlots || []) {
           total += s.quantity || 0;
         }
       }
@@ -713,7 +946,7 @@ const getTicketTypeCapacities = async (eventId) => {
 
     capacityMap[t._id.toString()] = {
       title: t.title,
-      totalCreated: total
+      totalCreated: total,
     };
   }
 
