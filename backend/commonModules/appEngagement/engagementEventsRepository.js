@@ -398,6 +398,68 @@ const getUserIdsForOrganizationOrganizaerView = async (organization) => {
     return [];
   }
 };
+
+const getEventMonthlyViewsStats = async ({
+  entityType,
+  entityId,
+  action = "view",
+  year = new Date().getFullYear()
+}) => {
+  const objectId = new mongoose.Types.ObjectId(entityId);
+
+  const start = new Date(`${year}-01-01T00:00:00.000Z`);
+  const end = new Date(`${year}-12-31T23:59:59.999Z`);
+
+  const results = await EngagementEvents.aggregate([
+    {
+      $match: {
+        entityType,
+        entityId: objectId,
+        action,
+        createdAt: {
+          $gte: start,
+          $lte: end
+        }
+      }
+    },
+    {
+      $group: {
+        _id: { $month: "$createdAt" },
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+
+  const monthMap = {
+    1: "Jan",
+    2: "Feb",
+    3: "Mar",
+    4: "Apr",
+    5: "May",
+    6: "Jun",
+    7: "Jul",
+    8: "Aug",
+    9: "Sep",
+    10: "Oct",
+    11: "Nov",
+    12: "Dec"
+  };
+
+  const base = Object.values(monthMap).reduce((acc, m) => {
+    acc[m] = 0;
+    return acc;
+  }, {});
+
+  for (const r of results) {
+    base[monthMap[r._id]] = r.count;
+  }
+
+  return Object.entries(base).map(([month, visitors]) => ({
+    month,
+    visitors
+  }));
+};
+
 module.exports = {
   logEngagement,
   getUserIdsForOrganization,
@@ -408,5 +470,6 @@ module.exports = {
   getEngagementCountsByEntity,
   getWeeklyEngagementStats,
   getTotalEngagementEventsByOrganizationId,
-  getEventsViewsStats
+  getEventsViewsStats,
+  getEventMonthlyViewsStats
 };
