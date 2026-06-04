@@ -11,7 +11,7 @@ const { getUpdatesByEventIdService } = require("../updates/updatesService");
 const { getLatestEventTransactions } = require("../transactions/repositories/unifiedTransactionsRepository");
 const { formatEventOrder } = require("./formatter/formatEventOrder");
 const { countEngagementService } = require("../../commonModules/appEngagement/engagementEventsService");
-const { getEngagementCountsByEntity, getWeeklyEngagementStats, getEventsViewsStats } = require("../../commonModules/appEngagement/engagementEventsRepository");
+const { getEngagementCountsByEntity, getWeeklyEngagementStats, getEventsViewsStats, getEventMonthlyViewsStats } = require("../../commonModules/appEngagement/engagementEventsRepository");
 const { getEventAudienceAnalytics } = require("../../staff/events/eventRepository");
 const { nanoid } = require("nanoid");
 const createEvent = async ({ data, ticketingData }, timezone) => {
@@ -124,7 +124,7 @@ const getEvents = async ({
   timezone,
 
 }) => {
-  
+
 
 
   const query = {};
@@ -567,16 +567,21 @@ const getEventIdByNanoid = async (nanoid) => {
 };
 
 const getEventAnalyticsService = async (id) => {
-  const [engagementStats, weeklyViews, audienceAnalytics, ticketPerformanceWeekly, revenueAnalytics] = await Promise.all([
+  const [engagementStats, audienceAnalytics, monthlyViews] = await Promise.all([
     getEngagementCountsByEntity({ entityId: id, entityType: 'events', actions: ['view', 'favorite'] }),
-    getWeeklyEngagementStats({
+    // getWeeklyEngagementStats({
+    //   entityType: "events",
+    //   entityId: id,
+    //   action: "view"
+    // }),
+    getEventAudienceAnalytics(id),
+    // eventRepo.getTicketPerformanceWeekly({ eventId: id }),
+    // eventRepo.getEventRevenueAnalytics({ eventId: id }),
+    getEventMonthlyViewsStats({
       entityType: "events",
       entityId: id,
-      action: "view"
-    }),
-    getEventAudienceAnalytics(id),
-    eventRepo.getTicketPerformanceWeekly({ eventId: id }),
-    eventRepo.getEventRevenueAnalytics({ eventId: id })
+      action: "view",
+    })
   ]);
 
   return {
@@ -584,31 +589,56 @@ const getEventAnalyticsService = async (id) => {
       views: engagementStats.view || 0,
       favorites: engagementStats.favorite || 0
     },
-    weeklyViews,
+    // weeklyViews,
     audienceAnalytics,
-    ticketPerformanceWeekly,
-    revenueAnalytics
+    // ticketPerformanceWeekly,
+    // revenueAnalytics,
+    monthlyViews
   };
 };
 
 const getEventTicketsAnalyticsService = async (id) => {
-  const [ticketTypeStats, scannedTicketProgress, ticketPerformanceWeekly,
+  const [
+    ticketTypeStats,
+    scannedTicketProgress,
+    ticketPerformanceWeekly,
     ticketingStats
   ] = await Promise.all([
     eventRepo.getTicketTypeStats({ eventId: id }),
     eventRepo.getScannedTicketProgress({ eventId: id }),
     eventRepo.getTicketPerformanceWeekly({ eventId: id }),
     getTicketSalesStatsService(id),
-
   ]);
 
+  // -----------------------------------
+  // SCAN INDEXING (per ticket)
+  // -----------------------------------
+  const scanMap = new Map(
+    scannedTicketProgress.map(t => [t.ticketId.toString(), t])
+  );
+
+  const enrichedTicketTypeStats = ticketTypeStats.map(ticket => {
+    const scan = scanMap.get(ticket.ticketId.toString());
+
+    return {
+      ...ticket,
+      scanned: scan?.scanned || { count: 0, percentage: 0 },
+      notScanned: scan?.notScanned || { count: 0, percentage: 0 },
+      totalSold: scan?.totalSold || 0
+    };
+  });
+
+  // -----------------------------------
+  // RETURN CLEAN ANALYTICS PAYLOAD
+  // -----------------------------------
   return {
-    ticketTypeStats,
-    scannedTicketProgress,
-    ticketPerformanceWeekly,
+    ticketTypeStats: enrichedTicketTypeStats,
+    ticketPerformance: ticketPerformanceWeekly, 
     ticketingStats
   };
 };
+
+
 const getEventbycompanyOrganizer = async ({ companyOrganizer, timezone }) => {
   const query = {
     status: "active"
@@ -685,6 +715,6 @@ module.exports = {
   getEventsByVenueTypeService,
   getEventsByTagService,
   getEventsByCategoryService,
-  getEventsBatch
+  getEventsBatch,
 
 };

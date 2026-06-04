@@ -230,8 +230,14 @@ const getForYouEventsAgainstInterests = async ({
 
   const result = await Events.aggregate(pipeline).allowDiskUse(true);
 
-  const data = result[0]?.data || [];
+  let data = result[0]?.data || [];
   const totalCount = result[0]?.totalCount?.[0]?.count || 0;
+
+  //format formatRecentlyViewedEventResponse for data
+
+  data = data.map(event =>
+    formatRecentlyViewedEventResponse(event)
+  );
 
   return {
     recommendedEvents: data,

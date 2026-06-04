@@ -40,6 +40,7 @@ const formatRecentlyViewedEventResponse = (eventObject, options = {}) => {
           name: org.basicInfo?.name || "",
           media: {
             logo: getFullImageUrl(org.basicInfo?.media?.logo),
+            cover: getFullImageUrl(org.basicInfo?.media?.cover),
           },
         },
       };
