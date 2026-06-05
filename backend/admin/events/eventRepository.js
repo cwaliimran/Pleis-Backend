@@ -1111,6 +1111,177 @@ const getActiveEventsCountForOrganizations = async (
   ]);
 };
 
+const getEventTopInterests = async (eventId, limit = 10) => {
+  const eventObjectId = new mongoose.Types.ObjectId(eventId);
+
+  const attendeePipeline = [
+    {
+      $match: {
+        event: eventObjectId,
+        purpose: "eventTicketPurchase",
+        status: { $in: ["paid", "completed"] }
+      }
+    },
+
+    // unique attendees
+    {
+      $group: {
+        _id: "$user"
+      }
+    },
+
+    {
+      $lookup: {
+        from: "userinterests",
+        localField: "_id",
+        foreignField: "user",
+        as: "interest"
+      }
+    },
+
+    {
+      $unwind: "$interest"
+    }
+  ];
+
+  const results = await TicketingOrders.aggregate([
+    ...attendeePipeline,
+
+    // Categories
+    {
+      $project: {
+        ids: "$interest.categories"
+      }
+    },
+    {
+      $unwind: "$ids"
+    },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "ids",
+        foreignField: "_id",
+        as: "item"
+      }
+    },
+    {
+      $unwind: "$item"
+    },
+    {
+      $project: {
+        title: "$item.title",
+        type: { $literal: "category" }
+      }
+    },
+
+    // Tags
+    {
+      $unionWith: {
+        coll: "ticketingorders",
+        pipeline: [
+          ...attendeePipeline,
+
+          {
+            $project: {
+              ids: "$interest.tags"
+            }
+          },
+          {
+            $unwind: "$ids"
+          },
+          {
+            $lookup: {
+              from: "tags",
+              localField: "ids",
+              foreignField: "_id",
+              as: "item"
+            }
+          },
+          {
+            $unwind: "$item"
+          },
+          {
+            $project: {
+              title: "$item.title",
+              type: { $literal: "tag" }
+            }
+          }
+        ]
+      }
+    },
+
+    // Venue Types
+    {
+      $unionWith: {
+        coll: "ticketingorders",
+        pipeline: [
+          ...attendeePipeline,
+
+          {
+            $project: {
+              ids: "$interest.venueTypes"
+            }
+          },
+          {
+            $unwind: "$ids"
+          },
+          {
+            $lookup: {
+              from: "venuetypes",
+              localField: "ids",
+              foreignField: "_id",
+              as: "item"
+            }
+          },
+          {
+            $unwind: "$item"
+          },
+          {
+            $project: {
+              title: "$item.title",
+              type: { $literal: "venueType" }
+            }
+          }
+        ]
+      }
+    },
+
+    {
+      $group: {
+        _id: {
+          title: "$title",
+          type: "$type"
+        },
+        count: {
+          $sum: 1
+        }
+      }
+    },
+
+    {
+      $project: {
+        _id: 0,
+        title: "$_id.title",
+        type: "$_id.type",
+        count: 1
+      }
+    },
+
+    {
+      $sort: {
+        count: -1,
+        title: 1
+      }
+    },
+
+    {
+      $limit: limit
+    }
+  ]);
+
+  return results;
+};
+
 module.exports = {
   createEvent,
   getEventsWithFilters,
@@ -1138,5 +1309,6 @@ module.exports = {
   getEventsByTag,
   getEventsByCategory,
   getEventsBatchRepo,
-  getActiveEventsCountForOrganizations
+  getActiveEventsCountForOrganizations,
+  getEventTopInterests
 };
