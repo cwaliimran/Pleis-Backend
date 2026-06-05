@@ -567,7 +567,7 @@ const getEventIdByNanoid = async (nanoid) => {
 };
 
 const getEventAnalyticsService = async (id) => {
-  const [engagementStats, audienceAnalytics, monthlyViews] = await Promise.all([
+  const [engagementStats, audienceAnalytics, monthlyViews, eventTopInterests] = await Promise.all([
     getEngagementCountsByEntity({ entityId: id, entityType: 'events', actions: ['view', 'favorite'] }),
     // getWeeklyEngagementStats({
     //   entityType: "events",
@@ -581,7 +581,8 @@ const getEventAnalyticsService = async (id) => {
       entityType: "events",
       entityId: id,
       action: "view",
-    })
+    }),
+    eventRepo.getEventTopInterests(id, 10)
   ]);
 
   return {
@@ -593,7 +594,8 @@ const getEventAnalyticsService = async (id) => {
     audienceAnalytics,
     // ticketPerformanceWeekly,
     // revenueAnalytics,
-    monthlyViews
+    monthlyViews,
+    eventTopInterests
   };
 };
 
