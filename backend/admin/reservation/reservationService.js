@@ -1,6 +1,6 @@
 // services/reservationservice.js
 const { buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
-const { generateMeta, getCurrentDateInTimezone } = require("../../helperUtils/responseUtil");
+const { generateMeta, getCurrentDateInTimezone, fireAndForget } = require("../../helperUtils/responseUtil");
 const { reservationsFormatter, userReservationsFormatter } = require("../../app/reservations/formaters/reservationFormetter");
 const { userReservationFormatterAdjustDates } = require("./formatters/userReservationFormatterAdjustDates");
 const Reservations = require("@ReservationsModel");
@@ -21,6 +21,8 @@ const { cloneTimingSlots } = require("./utils/cloneTimingSlots");
 const { cloneSingleSlot } = require("./utils/cloneSingleSlot");
 const { sendUserNotifications } = require("../../controllers/communicationController");
 const { NotificationTypes } = require("../../models/Notifications");
+const { getActiveEventsForOrg } = require("../events/eventRepository");
+const { EventCheckins } = require("../../commonModules/events/EventCheckinsModel");
 
 const createReservation = async (data) => {
   let Reservation = await ReservationRepo.createReservation(data);
@@ -202,10 +204,10 @@ const updateUserReservationStatus = async (
   value,
   changedBy,
 ) => {
-  const reservation = await UserReservations.findById(id);
-  if (!reservation) return null;
-  reservation.status = value;
-  reservation.reservationChanges.push({
+  const updated = await UserReservations.findById(id);
+  if (!updated) return null;
+  updated.status = value;
+  updated.reservationChanges.push({
     changedBy: changedBy
       ? new mongoose.Types.ObjectId(changedBy)
       : null,
@@ -214,7 +216,64 @@ const updateUserReservationStatus = async (
     createdAt: new Date(),
   });
 
-  await reservation.save();
+  await updated.save();
+
+  //add entry in events checkins if value is "checkedIn"
+  if (value === "checkedIn") {
+    // Implementation for adding entry in events checkins
+      // Handle checked-in logic if needed
+        fireAndForget(
+          (async () => {
+            const reservation = updated;
+            const now = new Date();
+    
+            let events = [];
+    
+            // 1️⃣ If explicitly linked event exists
+            if (reservation.optionalEventId) {
+              events = [
+                {
+                  _id: reservation.optionalEventId,
+                  companyOrganizer: reservation.companyOrganizer,
+                },
+              ];
+            } else {
+              // 2️⃣ fallback → find active events
+              events = await getActiveEventsForOrg(
+                reservation.organizationId,
+                now
+              );
+            }
+    
+            if (!events.length) return;
+    
+            const userId = reservation.userId;
+    
+            if (!userId) return;
+    
+            const ops = events.map((event) => ({
+              updateOne: {
+                filter: {
+                  event: event._id,
+                  user: userId,
+                },
+                update: {
+                  $setOnInsert: {
+                    organization: reservation.organizationId,
+                    companyOrganizer: event.companyOrganizer,
+                    source: "reservation",
+                    checkedInAt: now,
+                  },
+                },
+                upsert: true,
+              },
+            }));
+    
+            await EventCheckins.bulkWrite(ops, { ordered: false });
+          })(),
+          "RESERVATION_EVENT_CHECKIN"
+        );
+  }
 
   return true;
 };

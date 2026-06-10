@@ -50,6 +50,9 @@
       "@EventsModel": [
         "backend/commonModules/events/Event.js"
       ],
+      "@EventCheckinsModel": [
+        "backend/commonModules/events/EventCheckinsModel.js"
+      ],
       "@EventNotificationLogsModel": [
         "backend/commonModules/events/EventNotificationLogs.js"
       ],

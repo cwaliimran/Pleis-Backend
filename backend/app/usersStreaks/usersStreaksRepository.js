@@ -2,6 +2,7 @@
 const UsersStreaks = require("@UsersStreaksModel");
 const { getModelCounts } = require("@dbUtils/queryUtil");
 const Streaks = require("@StreaksModel");
+const { EventCheckins } = require("@EventCheckinsModel");
 
 // Create usersStreak and automatically assign next order
 const { getTodayResetTime, MAX_ORGANIZATIONS_PER_DAY,
@@ -10,6 +11,8 @@ const { getTodayResetTime, MAX_ORGANIZATIONS_PER_DAY,
 const { default: mongoose } = require("mongoose");
 const { resolveChallengeByTaskTypeService } = require("../loyalty/challengesOrders/challengeOrdersService");
 const { createTransactionService } = require("../userWalletService/transactions/services/unifiedTransactionsService");
+const { fireAndForget } = require("../../helperUtils/responseUtil");
+const { getActiveEventsForOrg } = require("../../admin/events/eventRepository");
 
 const createUsersStreak = async (data) => {
   const { user: userId, companyOrganizer, organization, timezone = "UTC" } = data;
@@ -170,6 +173,53 @@ const createUsersStreak = async (data) => {
     await session.commitTransaction();
     session.endSession();
 
+
+
+    // 🔟 Trigger async challenge (already correct)
+    resolveChallengeByTaskTypeService({
+      userId,
+      companyOrganizer,
+      taskType: "visit",
+      value: 1,
+    });
+
+    // 🔥 WALK-IN EVENT CHECK-IN (NEW - PLACE HERE)
+    fireAndForget(
+      (async () => {
+        const now = new Date();
+
+        const activeEvents = await getActiveEventsForOrg(
+          organization,
+          now
+        );
+
+        if (!activeEvents.length) return;
+
+        const ops = activeEvents.map((event) => ({
+          updateOne: {
+            filter: {
+              event: event._id,
+              user: userId,
+            },
+            update: {
+              $setOnInsert: {
+                organization,
+                companyOrganizer: event.companyOrganizer,
+                source: "walkin",
+                checkedInAt: now,
+              },
+            },
+            upsert: true,
+          },
+        }));
+
+        await EventCheckins.bulkWrite(ops, { ordered: false });
+      })(),
+      "WALKIN_STREAK_EVENT_CHECKIN"
+    );
+
+
+
     // 🔟 Trigger async challenge (outside transaction)
     resolveChallengeByTaskTypeService({
       userId,
@@ -281,6 +331,7 @@ const getUserOrganizationStreak = async (userId, organization) => {
   return UsersStreaks.findOne({ user: userId, organization }).sort({ streak: -1 }).limit(1);
 };
 
+
 module.exports = {
   createUsersStreak,
   getUsersStreaksWithFilters,
@@ -291,5 +342,6 @@ module.exports = {
   findByIdAndUpdate,
   getUsersStreaksCounts,
   checkoutUsersStreak,
-  getUserOrganizationStreak
+  getUserOrganizationStreak,
+  
 };

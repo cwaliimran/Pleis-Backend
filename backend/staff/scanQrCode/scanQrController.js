@@ -190,7 +190,18 @@ const scanQrController = async (req, res) => {
       //   });
       // }
 
-      if (
+      if (reservation?.status === "confirmed") {
+        return sendResponse({
+          res,
+          statusCode: 200,
+          translationKey: "qr_code_scanned_successfully",
+          data: {
+            ...reservationData,
+            warnings,
+            companyWallet
+          },
+        });
+      } else if (
         reservation?.paymentDetails &&
         reservation.paymentDetails.paymentStatus !== "paid"
       ) {
