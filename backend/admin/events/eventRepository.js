@@ -1282,6 +1282,19 @@ const getEventTopInterests = async (eventId, limit = 10) => {
   return results;
 };
 
+
+const getActiveEventsForOrg = async (organizationId, now) => {
+  return Events.find({
+    "basicInfo.organization": organizationId,
+    status: "active",
+    "schedule.startDateTime": { $lte: now },
+    $or: [
+      { "schedule.endDateTime": { $gte: now } },
+      { "schedule.endDateTime": null },
+    ],
+  }).select("_id basicInfo.organization companyOrganizer");
+};
+
 module.exports = {
   createEvent,
   getEventsWithFilters,
@@ -1310,5 +1323,6 @@ module.exports = {
   getEventsByCategory,
   getEventsBatchRepo,
   getActiveEventsCountForOrganizations,
-  getEventTopInterests
+  getEventTopInterests,
+  getActiveEventsForOrg
 };

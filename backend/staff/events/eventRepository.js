@@ -1,12 +1,14 @@
 // repositories/eventRepository.js
 const { Events } = require("@EventsModel");
 const TicketingsModel = require("@TicketingsModel");
+const { EventCheckins } = require("@EventCheckinsModel");
 const { TicketingOrders } = require("../../commonModules/bookings/ticketings/TicketingOrders");
 const mongoose = require("mongoose");
 const { TicketingBookings } = require("../../commonModules/bookings/ticketings/TicketingBookings");
-const { generateMeta } = require("../../helperUtils/responseUtil");
+const { generateMeta, fireAndForget } = require("../../helperUtils/responseUtil");
 const { getWithFilters, getModelCounts } = require("@dbUtils/queryUtil");
 const crypto = require("crypto");
+const { User } = require("@UserModel");
 // Get all with filters
 const getEventsWithFilters = async (query, skip, limit) => {
   return Events.find(query).select("basicInfo schedule")
@@ -48,6 +50,146 @@ const findEventById = async (id) => {
 
 
 const getEventAudienceAnalytics = async (eventId, ticketId = null) => {
+  const eventObjectId = new mongoose.Types.ObjectId(eventId);
+
+  // 1️⃣ Ticket users
+  const ticketUsers = await TicketingBookings.distinct("user", {
+    "ticket.snapshot.event": eventObjectId,
+    ...(ticketId
+      ? { "ticket.ticketId": new mongoose.Types.ObjectId(ticketId) }
+      : {}),
+  });
+
+  // 2️⃣ Walk-in + reservation users
+  const checkinUsers = await EventCheckins.distinct("user", {
+    event: eventObjectId,
+  });
+
+  // 3️⃣ Merge + dedupe
+  const allUserIds = [
+    ...new Set([
+      ...ticketUsers.map((id) => id.toString()),
+      ...checkinUsers.map((id) => id.toString()),
+    ]),
+  ];
+
+  if (!allUserIds.length) {
+    return {
+      gender: {
+        Male: { count: 0, percentage: 0 },
+        Female: { count: 0, percentage: 0 },
+        Other: { count: 0, percentage: 0 },
+        Unknown: { count: 0, percentage: 0 },
+        total: 0,
+      },
+      ageRanges: [
+        { label: "18-25", value: 0 },
+        { label: "25-35", value: 0 },
+        { label: "35-45", value: 0 },
+        { label: "45-55", value: 0 },
+        { label: "55+", value: 0 },
+      ],
+    };
+  }
+
+  // 4️⃣ Fetch users
+  const users = await User.find({
+    _id: { $in: allUserIds },
+  }).select("gender dob");
+
+  // -----------------
+  // INITIALIZE BUCKETS
+  // -----------------
+  const genders = {
+    Male: 0,
+    Female: 0,
+    Other: 0,
+    Unknown: 0,
+  };
+
+  const ageBuckets = {
+    "18-25": 0,
+    "25-35": 0,
+    "35-45": 0,
+    "45-55": 0,
+    "55+": 0,
+  };
+
+  const now = new Date();
+
+  // -----------------
+  // PROCESS USERS
+  // -----------------
+  for (const user of users) {
+    // ---- Gender ----
+    if (["Male", "Female", "Other"].includes(user.gender)) {
+      genders[user.gender]++;
+    } else {
+      genders.Unknown++;
+    }
+
+    // ---- Age ----
+    if (!user.dob) continue;
+
+    let dobDate = null;
+
+    if (user.dob) {
+      dobDate = new Date(user.dob);
+
+      if (isNaN(dobDate.getTime())) {
+        dobDate = null;
+      }
+    }
+
+    if (!dobDate) continue;
+    
+    const age = Math.floor(
+      (now - dobDate) / (1000 * 60 * 60 * 24 * 365.25)
+    );
+
+    if (age < 18) continue;
+
+    if (age < 25) ageBuckets["18-25"]++;
+    else if (age < 35) ageBuckets["25-35"]++;
+    else if (age < 45) ageBuckets["35-45"]++;
+    else if (age < 55) ageBuckets["45-55"]++;
+    else ageBuckets["55+"]++;
+  }
+
+  // -----------------
+  // GENDER % CALCULATION
+  // -----------------
+  const totalGenderCount =
+    genders.Male + genders.Female + genders.Other + genders.Unknown;
+
+  const gender = Object.fromEntries(
+    Object.entries(genders).map(([key, count]) => [
+      key,
+      {
+        count,
+        percentage:
+          totalGenderCount === 0
+            ? 0
+            : Number(((count / totalGenderCount) * 100).toFixed(2)),
+      },
+    ])
+  );
+
+  gender.total = totalGenderCount;
+
+  return {
+    gender,
+    ageRanges: [
+      { label: "18-25", value: ageBuckets["18-25"] },
+      { label: "25-35", value: ageBuckets["25-35"] },
+      { label: "35-45", value: ageBuckets["35-45"] },
+      { label: "45-55", value: ageBuckets["45-55"] },
+      { label: "55+", value: ageBuckets["55+"] },
+    ],
+  };
+};
+
+/* const getEventAudienceAnalytics = async (eventId, ticketId = null) => {
   const rows = await TicketingBookings.aggregate([
     {
       $match: {
@@ -170,7 +312,7 @@ const getEventAudienceAnalytics = async (eventId, ticketId = null) => {
       { label: "55+", value: ageBuckets["55+"] }
     ]
   };
-};
+}; */
 
 
 
@@ -419,6 +561,27 @@ const checkInEventAttendee = async (eventId, ticketBookingId, scannedBy = null) 
 
   const currentVisits = attendee.checkInHistory?.length || 0;
 
+  if (currentVisits === 0) {
+    fireAndForget(
+      EventCheckins.updateOne(
+        {
+          event: eventId,
+          user: attendee.user,
+        },
+        {
+          $setOnInsert: {
+            organization: attendee.organization,
+            companyOrganizer: attendee.companyOrganizer,
+            source: "ticket",
+            checkedInAt: new Date(),
+          },
+        },
+        { upsert: true }
+      ),
+      "EVENT_CHECKIN_INSERT"
+    );
+  }
+
   // NOT REPEATABLE
   if (!repeatable) {
     if (attendee.status === "used") {
@@ -452,6 +615,8 @@ const checkInEventAttendee = async (eventId, ticketBookingId, scannedBy = null) 
   }
 
   await attendee.save();
+
+
 
   return { success: true, attendee };
 };
