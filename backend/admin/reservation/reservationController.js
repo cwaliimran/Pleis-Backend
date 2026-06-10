@@ -560,8 +560,8 @@ const changedBy = req.user._id;
     return;
 
   try {
-    const deleted = await reservationService.updateUserReservationStatus(id, value, changedBy);
-    if (!deleted) {
+    const userReservation = await reservationService.updateUserReservationStatus(id, value, changedBy);
+    if (!userReservation) {
       return sendResponse({
         res,
         statusCode: 404,

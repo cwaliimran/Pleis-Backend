@@ -120,8 +120,8 @@ const updateReservationStatus = async (req, res) => {
     return;
 
   try {
-    const cancelled = await reservationService.updateReservationStatus(id, status);
-    if (!cancelled) {
+    const userReservation = await reservationService.updateReservationStatus(id, status);
+    if (!userReservation) {
       return sendResponse({
         res,
         statusCode: 404,

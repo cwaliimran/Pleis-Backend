@@ -15,6 +15,7 @@ module.exports = {
     "@VenueTypesModel": "backend/admin/venueTypes/VenueTypesModel.js",
     "@TiersModel": "backend/admin/tiers/Tiers.js",
     "@EventsModel": "backend/commonModules/events/Event.js",
+    "@EventCheckinsModel": "backend/commonModules/events/EventCheckinsModel.js",
     "@EventNotificationLogsModel": "backend/commonModules/events/EventNotificationLogs.js",
     "@MenusModel": "backend/commonModules/menuManagement/menu/Menus.js",
     "@PresetsModel": "backend/commonModules/menuManagement/menuPreset/Presets.js",
