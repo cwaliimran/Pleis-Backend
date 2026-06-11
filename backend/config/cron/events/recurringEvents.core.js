@@ -1,3 +1,15 @@
+/* 
+Create a template event (with recurrence rules).
+A cron job runs regularly.
+It looks at the next 7 days.
+It reads all active recurring templates.
+For each template, it calculates upcoming dates based on rules (daily/weekly/monthly).
+It skips dates that already exist.
+It creates new event copies (occurrences).
+Each occurrence keeps the same duration and schedule pattern.
+It clones tickets, pricing, and time slots for each event.
+All occurrences stay linked back to the original template event.
+*/
 const { Events } = require("@EventsModel");
 const TicketingsModel = require("@TicketingsModel");
 
@@ -338,7 +350,6 @@ const generateImmediatelyForTemplate = async (templateId) => {
     _id: templateId,
     "recurringMeta.isTemplate": true,
     "schedule.recurringDetails.isEnabled": true,
-    status: "active",
   });
 
   if (!template) return;
