@@ -107,6 +107,7 @@ const findEventsByOrganization = async (organizationId, filter = {}, skip = 0, l
   return Events.find({
     "basicInfo.organization": organizationId,
     status: "active",
+    "recurringMeta.isTemplate": false,
     ...filter,
   })
     .populate("basicInfo.venue", "title location floorPlan")
@@ -130,6 +131,7 @@ const countEventsByOrganization = async (organizationId, now) => {
         $match: {
           "basicInfo.organization": new mongoose.Types.ObjectId(organizationId),
           status: { $ne: "deleted" },
+          "recurringMeta.isTemplate": false,
         },
       },
       {
