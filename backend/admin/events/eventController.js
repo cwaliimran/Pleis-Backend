@@ -311,7 +311,7 @@ const createEvent = async (req, res) => {
 
 const getEvents = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "active", startDate, endDate, organization, companyOrganizer, sortBy, sortOrder } = req.query;
+  let { keyword, status = "active", startDate, endDate, organization, companyOrganizer, sortBy, sortOrder,date } = req.query;
   const SORT_FIELDS = ["eventName", "venueName", "organizationName"];
   const SORT_ORDERS = ["asc", "desc"];
   if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
@@ -344,6 +344,15 @@ const getEvents = async (req, res) => {
 
       startDate = convertTimezoneToUtc(startDate, "UTC");
     }
+    if(date){
+
+      const isValid = validateParams(req, res, {
+        dateFields: { date: "YYYY-MM-DD" },
+      });
+      if (!isValid) return;
+
+      date = convertTimezoneToUtc(date, "UTC");
+    }
 
     // ✅ Handle endDate
     if (endDate) {
@@ -372,6 +381,7 @@ const getEvents = async (req, res) => {
       timezone,
       sortBy,
       sortOrder,
+      date
     });
 
     return sendResponse({
