@@ -34,6 +34,7 @@ const buildMongoQuery = ({
   companyOrganizer,
   startDate,
   endDate,
+  date,
   keyword
 }) => {
   const andArray = [];
@@ -92,6 +93,16 @@ const buildMongoQuery = ({
     end.setUTCHours(23, 59, 59, 999);
     andArray.push({ "schedule.endDateTime": { $lte: end } });
   }
+  if (date) {
+    const start = new Date(date);
+    start.setUTCHours(0, 0, 0, 0);
+    const end = new Date(date);
+    end.setUTCHours(23, 59, 59, 999);
+    console.log("start",start );
+    console.log("end",end );
+    andArray.push({ "schedule.startDateTime": { $gte: start } });
+    andArray.push({ "schedule.endDateTime": { $lte: end } });
+  }
 
   // Keyword search
   if (keyword) {
@@ -122,6 +133,7 @@ const getEvents = async ({
   sortBy,
   sortOrder,
   timezone,
+  date
 
 }) => {
 
@@ -134,7 +146,8 @@ const getEvents = async ({
     companyOrganizer,
     startDate,
     endDate,
-    keyword
+    keyword,
+    date
   });
 
   // Always exclude template events
@@ -182,6 +195,14 @@ const getEvents = async ({
     start.setUTCHours(0, 0, 0, 0);
     query["schedule.startDateTime"] = { $gte: start };
   }
+  if (date) {
+    const start = new Date(date);
+    start.setUTCHours(0, 0, 0, 0);
+    const end = new Date(date);
+    end.setUTCHours(23, 59, 59, 999);
+    query["schedule.startDateTime"] = { $gte: start };
+    query["schedule.endDateTime"] = { $lte: end };
+  }
 
   if (endDate) {
     const end = new Date(endDate);
@@ -197,6 +218,7 @@ const getEvents = async ({
   }
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
+ 
 
   const [events, eventsCounts] = await Promise.all([
     eventRepo.getEventsWithFilters(
