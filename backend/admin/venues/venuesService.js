@@ -15,7 +15,7 @@ const buildVenuesCacheKey = ({
   skip = 0,
   limit = 10,
   sortBy,
-  sortOrder
+  sortOrder,
 }) => {
   return `${venueRepo.ACTIVE_VENUES_CACHE_KEY}:${scope}:skip=${skip}:limit=${limit}:sortBy=${sortBy}:sortOrder=${sortOrder}`;
 }
@@ -30,7 +30,9 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
     skip,
     limit,
     sortBy,
-    sortOrder
+    sortOrder,
+    sortBy: sortBy || "createdAt",
+    sortOrder: sortOrder || "desc"
   });
   const filters = [];
   if (keyword) filters.push(`keyword=${keyword}`);
@@ -132,16 +134,37 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
           pipeline.push({
             $addFields: {
               organizationNameSort: {
-                $toLower: { $ifNull: ["$organizationData.basicInfo.name", ""] }
-              }
-            }
+                $toLower: { $ifNull: ["$organizationData.basicInfo.name", ""] },
+              },
+            },
           });
           pipeline.push({
-            $sort: { organizationNameSort: sortOrder === "asc" ? 1 : -1 }
+            $sort: { organizationNameSort: sortOrder === "asc" ? 1 : -1 },
           });
+        } else if (sortBy === "lastUpdatedAt") {
+          pipeline.push({
+            $sort: { updatedAt: sortOrder === "asc" ? 1 : -1 },
+          });
+        } else if (sortBy === "status") {
+          pipeline.push({
+            $addFields: {
+              _statusRank: {
+                $switch: {
+                  branches: [
+                    { case: { $eq: ["$status", "active"] }, then: 1 },
+                    { case: { $eq: ["$status", "inactive"] }, then: 2 },
+                    { case: { $eq: ["$status", "completed"] }, then: 3 },
+                    { case: { $eq: ["$status", "deleted"] }, then: 4 },
+                  ],
+                  default: 99,
+                },
+              },
+            },
+          });
+          pipeline.push({ $sort: { _statusRank: sortOrder === "asc" ? 1 : -1 } });
         } else {
           pipeline.push({
-            $sort: { [sortBy]: sortOrder === "asc" ? 1 : -1 }
+            $sort: { [sortBy]: sortOrder === "asc" ? 1 : -1 },
           });
         }
       }
@@ -175,7 +198,6 @@ const getVenues = async ({ page, limit, keyword, status, pinned, userId, date, o
       const formattedVenues = venues.map(venue => {
         const venueDoc = new Venues(venue);
         const formattedVenue = venueDoc.formatResponse();
-        console.log("venue.organizationData", venue);
         if (venue.organizationData) {
           formattedVenue.organization = formatOrganization(venue.organizationData);
         }
