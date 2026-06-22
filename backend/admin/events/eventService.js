@@ -35,7 +35,8 @@ const buildMongoQuery = ({
   startDate,
   endDate,
   date,
-  keyword
+  keyword,
+  venue
 }) => {
   const andArray = [];
 
@@ -113,6 +114,11 @@ const buildMongoQuery = ({
       ]
     });
   }
+  if (venue) {
+    andArray.push({
+      "basicInfo.venue": new mongoose.Types.ObjectId(venue)
+    });
+  }
 
   // Build final query for aggregation
   if (andArray.length === 0) return {};
@@ -133,12 +139,9 @@ const getEvents = async ({
   sortBy,
   sortOrder,
   timezone,
-  date
-
+  date,
+  venue,
 }) => {
-
-
-
   const query = {};
   const queryMongo = buildMongoQuery({
     status,
@@ -147,7 +150,8 @@ const getEvents = async ({
     startDate,
     endDate,
     keyword,
-    date
+    date,
+    venue,
   });
 
   // Always exclude template events
@@ -178,16 +182,13 @@ const getEvents = async ({
 
     if (organizationIds.length > 0) {
       query["basicInfo.organization"] = {
-        $in: organizationIds.map(
-          id => new mongoose.Types.ObjectId(id)
-        ),
+        $in: organizationIds.map((id) => new mongoose.Types.ObjectId(id)),
       };
     }
   }
 
   if (!organization && companyOrganizer) {
-    query["companyOrganizer"] =
-      new mongoose.Types.ObjectId(companyOrganizer);
+    query["companyOrganizer"] = new mongoose.Types.ObjectId(companyOrganizer);
   }
 
   if (startDate) {
@@ -218,7 +219,6 @@ const getEvents = async ({
   }
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
- 
 
   const [events, eventsCounts] = await Promise.all([
     eventRepo.getEventsWithFilters(
@@ -226,9 +226,10 @@ const getEvents = async ({
       skip,
       limit === 0 ? 0 : limit,
       sortBy,
-      sortOrder
+      sortOrder,
+      venue,
     ),
-    eventRepo.getEventsCounts(query),
+    eventRepo.getEventsCounts(query, venue),
   ]);
 
   let {
@@ -239,54 +240,60 @@ const getEvents = async ({
   } = eventsCounts || {};
 
   // Format events
-  let formattedEvents = events.map(event =>
-    formatEventResponse(event, { timezone })
+  let formattedEvents = events.map((event) =>
+    formatEventResponse(event, { timezone }),
   );
 
   /* =========================================================
      🔥 FETCH TICKET STATS
   ========================================================= */
 
-  const eventIds = events.map(e => e._id);
+  const eventIds = events.map((e) => e._id);
 
-  const [ticketStats, viewStats] = await Promise.all([
-    eventRepo.getEventsTicketStats(eventIds),
-    getEventsViewsStats(eventIds)
-  ]);
+  // const [ticketStats, viewStats] = await Promise.all([
+  //   eventRepo.getEventsTicketStats(eventIds),
+  //   getEventsViewsStats(eventIds),
+  // ]);
 
-  // Convert to maps
-  const ticketMap = new Map(
-    ticketStats.map(item => [
-      item.event.toString(),
-      {
-        totalTickets: item.totalTickets,
-        totalRevenue: item.totalRevenue
-      }
-    ])
-  );
+  // // Convert to maps
+  // const ticketMap = new Map(
+  //   ticketStats.map((item) => [
+  //     item.event.toString(),
+  //     {
+  //       totalTickets: item.totalTickets,
+  //       totalRevenue: item.totalRevenue,
+  //     },
+  //   ]),
+  // );
 
-  const viewMap = new Map(
-    viewStats.map(item => [
-      item.event.toString(),
-      item.totalViews
-    ])
-  );
+  // const viewMap = new Map(
+  //   viewStats.map((item) => [item.event.toString(), item.totalViews]),
+  // );
 
   // Attach to formatted events
-  formattedEvents = formattedEvents.map(event => {
-    const ticket = ticketMap.get(event._id.toString());
-    const views = viewMap.get(event._id.toString());
+  // formattedEvents = formattedEvents.map((event) => {
+  //   const ticket = ticketMap.get(event._id.toString());
+  //   const views = viewMap.get(event._id.toString());
+  //   return {
+  //     ...event,
+  //     meta: {
+  //       ...event.meta,
+  //       totalTickets: ticket?.totalTickets || 0,
+  //       totalRevenue: ticket?.totalRevenue || 0,
+  //       totalViews: views || 0,
+  //     },
+  //   };
+  // });
 
-    return {
-      ...event,
-      meta: {
-        ...event.meta,
-        totalTickets: ticket?.totalTickets || 0,
-        totalRevenue: ticket?.totalRevenue || 0,
-        totalViews: views || 0
-      }
-    };
-  });
+  formattedEvents = formattedEvents.map((event) => ({
+    ...event,
+    meta: {
+      ...event.meta,
+      totalTickets: event._tickets || 0,
+      totalRevenue: event._revenue || 0,
+      totalViews: event._views || 0,
+    },
+  }));
 
   return {
     events: formattedEvents,
@@ -551,13 +558,13 @@ const deleteEvent = async (eventId, scope = "single") => {
 
 
 const getEventDetails = async (id, timezone) => {
-  const [event, updates, ticketingStats, latestEventOrders, eventViews] = await Promise.all([
+  const [event, updates, ticketingStats, latestEventOrders, eventViews,favorites] = await Promise.all([
     eventRepo.findEventById(id),
     getUpdatesByEventIdService(id),
     getTicketSalesStatsService(id),
     eventRepo.getLatestEventOrders({ eventId: id }),
-    countEngagementService({ entityId: id, entityType: 'events', action: 'view' })
-
+    countEngagementService({ entityId: id, entityType: 'events', action: 'view' }),
+    countEngagementService({ entityId: id, entityType: 'events', action: 'favorite' })
   ])
   if (!event) return null;
   let data = formatEventResponse(event, { timezone });
@@ -568,6 +575,7 @@ const getEventDetails = async (id, timezone) => {
   data.ticketingStats = ticketingStats || {};
   data.latestEventOrders = formatLatestEventOrders || [];
   data.eventViews = eventViews || 0;
+  data.favorites = favorites || 0;
   return data
 };
 
