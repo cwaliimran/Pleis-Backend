@@ -72,7 +72,7 @@ const createVenue = async (req, res) => {
 
 const getVenues = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", pinned, date, organization, sortBy, sortOrder } = req.query;
+  const { keyword, status, pinned, date, organization, sortBy, sortOrder } = req.query;
   const { _id: userId } = req.user._id;
   try {
     if (date && !validateParams(req, res, {
@@ -80,7 +80,7 @@ const getVenues = async (req, res) => {
         date: "YYYY-MM-DD",
       },
     })) return;
-    const SORT_FIELDS = ["title", "createdAt", "organizationName"];
+    const SORT_FIELDS = ["title", "createdAt", "organizationName","status","lastUpdatedAt"];
     const SORT_ORDERS = ["asc", "desc"];
     if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
       const key = sortBy && !SORT_FIELDS.includes(sortBy)

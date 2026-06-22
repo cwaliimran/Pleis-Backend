@@ -1,26 +1,28 @@
 // repositories/eventRepository.js
 const { Events } = require("@EventsModel");
 const TicketingsModel = require("@TicketingsModel");
-const { getModelCounts, } = require('@dbUtils/queryUtil');
+const { getModelCounts } = require("@dbUtils/queryUtil");
 const mongoose = require("mongoose");
 const { TicketingOrders } = require("@TicketingOrdersModel");
 const { TicketingBookings } = require("@TicketingBookingsModel");
 const { getAllUsers } = require("../usersManagement/usersService");
 const { sendUserNotifications } = require("@notificationsUtil");
 const { NotificationTypes } = require("@NotificationsModel");
-const { getOrgCompanyOrganizer } = require("../organizations/organizationRepository");
+const {
+  getOrgCompanyOrganizer,
+} = require("../organizations/organizationRepository");
 const Venues = require("../../commonModules/venues/Venues");
-
 
 const createEvent = async (data, ticketingData) => {
   const session = await Events.startSession();
 
-
-  const companyOrganizer = await getOrgCompanyOrganizer(data.basicInfo.organization)
-  data.companyOrganizer = companyOrganizer
+  const companyOrganizer = await getOrgCompanyOrganizer(
+    data.basicInfo.organization,
+  );
+  data.companyOrganizer = companyOrganizer;
   if (ticketingData) {
-    ticketingData.companyOrganizer = companyOrganizer
-    ticketingData.organization = data.basicInfo.organization
+    ticketingData.companyOrganizer = companyOrganizer;
+    ticketingData.organization = data.basicInfo.organization;
   }
   // const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
   session.startTransaction();
@@ -39,7 +41,6 @@ const createEvent = async (data, ticketingData) => {
 
     let event = new Events(data);
     event = await event.save({ session });
-
 
     if (ticketingData) {
       if (data.recurringMeta?.isTemplate) {
@@ -76,7 +77,6 @@ const createEvent = async (data, ticketingData) => {
   }
 };
 
-
 // Get all with filters
 // const getEventsWithFilters = async (query, skip, limit, sortBy, sortOrder) => {
 //   console.log("query",query );
@@ -112,15 +112,15 @@ const createEvent = async (data, ticketingData) => {
 //     .limit(limit);
 // };
 
-
 const getEventsWithFilters = async (
   queryMongo,
   skip = 0,
   limit = 10,
   sortBy,
-  sortOrder
+  sortOrder,
+  venue,
+  
 ) => {
-
   // Helper to safely convert query to $and format for aggregation
 
   const pipeline = [
@@ -132,8 +132,8 @@ const getEventsWithFilters = async (
         from: "venues",
         localField: "basicInfo.venue",
         foreignField: "_id",
-        as: "venueData"
-      }
+        as: "venueData",
+      },
     },
     { $unwind: { path: "$venueData", preserveNullAndEmptyArrays: true } },
 
@@ -143,10 +143,12 @@ const getEventsWithFilters = async (
         from: "organizations",
         localField: "basicInfo.organization",
         foreignField: "_id",
-        as: "organizationData"
-      }
+        as: "organizationData",
+      },
     },
-    { $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true } },
+    {
+      $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true },
+    },
 
     // Lookup partner organization
     {
@@ -154,10 +156,15 @@ const getEventsWithFilters = async (
         from: "organizations",
         localField: "basicInfo.partnerOrganization",
         foreignField: "_id",
-        as: "partnerOrganizationData"
-      }
+        as: "partnerOrganizationData",
+      },
     },
-    { $unwind: { path: "$partnerOrganizationData", preserveNullAndEmptyArrays: true } },
+    {
+      $unwind: {
+        path: "$partnerOrganizationData",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
 
     // Lookup categories
     {
@@ -165,8 +172,8 @@ const getEventsWithFilters = async (
         from: "categories",
         localField: "basicInfo.categories",
         foreignField: "_id",
-        as: "categoriesData"
-      }
+        as: "categoriesData",
+      },
     },
 
     // Lookup tags
@@ -175,10 +182,68 @@ const getEventsWithFilters = async (
         from: "tags",
         localField: "basicInfo.tags",
         foreignField: "_id",
-        as: "tagsData"
-      }
-    }
+        as: "tagsData",
+      },
+    },
+    // Lookup ticket stats (revenue + tickets) per event
+    {
+      $lookup: {
+        from: "ticketingorders", // confirm actual collection name
+        let: { eventId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$event", "$$eventId"] },
+              purpose: "eventTicketPurchase",
+              status: { $in: ["paid", "completed"] },
+              "paymentDetails.paymentStatus": "paid",
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              totalTickets: { $sum: "$ticketsPurchased" },
+              totalRevenue: { $sum: "$orderPricing.total" },
+            },
+          },
+        ],
+        as: "_ticketStats",
+      },
+    },
+    // Lookup view stats per event
+    {
+      $lookup: {
+        from: "engagementevents", // confirm actual collection name
+        let: { eventId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$entityId", "$$eventId"] },
+              entityType: "events",
+              action: "view",
+            },
+          },
+          { $count: "totalViews" },
+        ],
+        as: "_viewStats",
+      },
+    },
+    // Flatten into numeric fields for sorting
+    {
+      $addFields: {
+        _revenue: { $ifNull: [{ $first: "$_ticketStats.totalRevenue" }, 0] },
+        _tickets: { $ifNull: [{ $first: "$_ticketStats.totalTickets" }, 0] },
+        _views: { $ifNull: [{ $first: "$_viewStats.totalViews" }, 0] },
+      },
+    },
   ];
+  if (venue) {
+    pipeline.push({
+      $match: {
+        "venueData._id": new mongoose.Types.ObjectId(venue),
+      },
+    });
+  }
   // Determine sort direction
   let sortDirection = sortOrder === "asc" ? 1 : -1;
 
@@ -187,39 +252,61 @@ const getEventsWithFilters = async (
     pipeline.push({
       $addFields: {
         organizationNameForSort: {
-          $toLower: { $ifNull: ["$organizationData.basicInfo.name", ""] }
-        }
-      }
+          $toLower: { $ifNull: ["$organizationData.basicInfo.name", ""] },
+        },
+      },
     });
 
     pipeline.push({
       $sort: {
         organizationNameForSort: sortDirection,
         // Tie-breaker: lowercase event title
-        eventTitleForSort: 1
-      }
+        eventTitleForSort: 1,
+      },
     });
-
   } else if (sortBy === "eventName") {
     // Case-insensitive sort for event title
     pipeline.push({
       $addFields: {
-        eventTitleForSort: { $toLower: { $ifNull: ["$basicInfo.title", ""] } }
-      }
+        eventTitleForSort: { $toLower: { $ifNull: ["$basicInfo.title", ""] } },
+      },
     });
 
     pipeline.push({ $sort: { eventTitleForSort: sortDirection } });
-
   } else if (sortBy === "venueName") {
     // Case-insensitive sort for venue title
     pipeline.push({
       $addFields: {
-        venueNameForSort: { $toLower: { $ifNull: ["$venueData.title", ""] } }
-      }
+        venueNameForSort: { $toLower: { $ifNull: ["$venueData.title", ""] } },
+      },
     });
 
     pipeline.push({ $sort: { venueNameForSort: sortDirection } });
-
+  } else if (sortBy === "startDate") {
+    pipeline.push({ $sort: { "schedule.startDateTime": sortDirection } });
+  } else if (sortBy === "endDate") {
+    pipeline.push({ $sort: { "schedule.endDateTime": sortDirection } });
+  } else if (sortBy === "status") {
+    pipeline.push({
+      $addFields: {
+        _statusRank: {
+          $switch: {
+            branches: [
+              { case: { $eq: ["$status", "active"] }, then: 1 },
+              { case: { $eq: ["$status", "inactive"] }, then: 2 },
+              { case: { $eq: ["$status", "completed"] }, then: 3 },
+              { case: { $eq: ["$status", "deleted"] }, then: 4 },
+            ],
+            default: 99,
+          },
+        },
+      },
+    });
+    pipeline.push({ $sort: { _statusRank: sortDirection } });
+  } else if (sortBy === "views") {
+    pipeline.push({ $sort: { _views: sortDirection } });
+  } else if (sortBy === "revenue") {
+    pipeline.push({ $sort: { _revenue: sortDirection } });
   } else {
     // Default sort by schedule.startDateTime
     pipeline.push({ $sort: { "schedule.startDateTime": sortDirection } });
@@ -233,7 +320,7 @@ const getEventsWithFilters = async (
   let events = await Events.aggregate(pipeline);
 
   // Format results to match your current populate structure
-  events = events.map(event => {
+  events = events.map((event) => {
     return {
       ...event,
       basicInfo: {
@@ -243,8 +330,8 @@ const getEventsWithFilters = async (
         organization: event.organizationData || null,
         partnerOrganization: event.partnerOrganizationData || null,
         categories: event.categoriesData || [],
-        tags: event.tagsData || []
-      }
+        tags: event.tagsData || [],
+      },
     };
   });
 
@@ -252,16 +339,14 @@ const getEventsWithFilters = async (
 };
 // Get all with filters
 const getMinimalEventsWithFilters = async (query) => {
-
-  return Events.find(query).select("basicInfo.title schedule")
-    .sort({ createdAt: -1 })
+  return Events.find(query)
+    .select("basicInfo.title schedule")
+    .sort({ createdAt: -1 });
 };
-
-
 
 const getEventsCounts = async (query) => {
   return getModelCounts({ model: Events, filterQuery: query });
-}
+};
 
 // Count by condition
 const countEvents = async (query = {}) => {
@@ -279,8 +364,16 @@ const findEventById = async (id) => {
         select: "title",
       },
     })
-    .populate({ path: "basicInfo.categories", select: "title image otherInfo", options: { sort: { title: 1 } } })
-    .populate({ path: "basicInfo.tags", select: "title otherInfo", options: { sort: { title: 1 } } })
+    .populate({
+      path: "basicInfo.categories",
+      select: "title image otherInfo",
+      options: { sort: { title: 1 } },
+    })
+    .populate({
+      path: "basicInfo.tags",
+      select: "title otherInfo",
+      options: { sort: { title: 1 } },
+    })
     .populate({
       path: "basicInfo.organization",
       select:
@@ -288,11 +381,9 @@ const findEventById = async (id) => {
     })
     .populate({
       path: "basicInfo.partnerOrganization",
-      select:
-        "basicInfo.name otherInfo.description basicInfo.media.logo",
+      select: "basicInfo.name otherInfo.description basicInfo.media.logo",
     });
 };
-
 
 // Delete
 const deleteEventById = async (event) => {
@@ -317,11 +408,11 @@ const updateMany = async (filter, update) => {
 
 const findEventByNanoid = async (nanoid) => {
   return Events.findOne({ publicId: nanoid }).select("_id");
-}
+};
 
 const getEventIdsByOrganization = async (organization) => {
   return Events.find({ "basicInfo.organization": organization }).select("_id");
-}
+};
 /**
  * Checks whether an organization already has an event
  * at the same startDateTime (excluding deleted events)
@@ -348,24 +439,19 @@ const isEventStartTimeAvailableForOrganization = async ({
   return !existingEvent;
 };
 
-
-const getLatestEventOrders = async ({
-  eventId,
-  limit = 10,
-  skip = 0
-}) => {
+const getLatestEventOrders = async ({ eventId, limit = 10, skip = 0 }) => {
   return TicketingOrders.aggregate([
     /* 1️⃣ Match event ticket orders */
     {
       $match: {
         event: new mongoose.Types.ObjectId(eventId),
-        purpose: "eventTicketPurchase"
-      }
+        purpose: "eventTicketPurchase",
+      },
     },
 
     /* 2️⃣ Sort newest first */
     {
-      $sort: { createdAt: -1 }
+      $sort: { createdAt: -1 },
     },
 
     /* 3️⃣ Pagination */
@@ -378,14 +464,14 @@ const getLatestEventOrders = async ({
         from: "users",
         localField: "user",
         foreignField: "_id",
-        as: "user"
-      }
+        as: "user",
+      },
     },
     {
       $unwind: {
         path: "$user",
-        preserveNullAndEmptyArrays: true
-      }
+        preserveNullAndEmptyArrays: true,
+      },
     },
 
     /* 5️⃣ Shape final response */
@@ -403,13 +489,12 @@ const getLatestEventOrders = async ({
           _id: "$user._id",
           firstName: "$user.firstName",
           lastName: "$user.lastName",
-          profileIcon: "$user.profileIcon"
-        }
-      }
-    }
+          profileIcon: "$user.profileIcon",
+        },
+      },
+    },
   ]);
 };
-
 
 const getTicketPerformanceWeekly = async ({ eventId, timezone = "UTC" }) => {
   const eventObjectId = new mongoose.Types.ObjectId(eventId);
@@ -428,56 +513,56 @@ const getTicketPerformanceWeekly = async ({ eventId, timezone = "UTC" }) => {
       ? event.schedule.endDateTime
       : now;
 
-const rows = await TicketingBookings.aggregate([
-  {
-    $lookup: {
-      from: "ticketingorders",
-      localField: "order",
-      foreignField: "_id",
-      as: "order"
-    }
-  },
-  { $unwind: "$order" },
+  const rows = await TicketingBookings.aggregate([
+    {
+      $lookup: {
+        from: "ticketingorders",
+        localField: "order",
+        foreignField: "_id",
+        as: "order",
+      },
+    },
+    { $unwind: "$order" },
 
-  {
-    $match: {
-      "order.event": eventObjectId,
-      "order.status": { $in: ["paid", "completed"] }
-    }
-  },
+    {
+      $match: {
+        "order.event": eventObjectId,
+        "order.status": { $in: ["paid", "completed"] },
+      },
+    },
 
-  {
-    $addFields: {
-      date: {
-        $dateToString: {
-          format: "%Y-%m-%d",
-          date: "$createdAt",
-          timezone
-        }
-      }
-    }
-  },
+    {
+      $addFields: {
+        date: {
+          $dateToString: {
+            format: "%Y-%m-%d",
+            date: "$createdAt",
+            timezone,
+          },
+        },
+      },
+    },
 
-  {
-    $group: {
-      _id: "$date",
-      value: { $sum: 1 }
-    }
-  },
+    {
+      $group: {
+        _id: "$date",
+        value: { $sum: 1 },
+      },
+    },
 
-  { $sort: { _id: 1 } }
-]);
+    { $sort: { _id: 1 } },
+  ]);
 
-  return rows.map(r => ({
+  return rows.map((r) => ({
     date: r._id,
-    value: r.value
+    value: r.value,
   }));
 };
 
 const getEventRevenueAnalytics = async ({
   eventId,
   timezone = "UTC",
-  mode = "all"
+  mode = "all",
 }) => {
   const now = new Date();
 
@@ -487,7 +572,7 @@ const getEventRevenueAnalytics = async ({
 
   let currentMatch = {
     event: new mongoose.Types.ObjectId(eventId),
-    status: { $in: ["confirmed", "completed"] }
+    status: { $in: ["confirmed", "completed"] },
   };
 
   let previousMatch = { ...currentMatch };
@@ -499,14 +584,14 @@ const getEventRevenueAnalytics = async ({
     currentMatch.createdAt = { $gte: startOfMonth };
     previousMatch.createdAt = {
       $gte: startOfPrevMonth,
-      $lt: startOfMonth
+      $lt: startOfMonth,
     };
   }
 
   if (mode === "lastMonth") {
     currentMatch.createdAt = {
       $gte: startOfPrevMonth,
-      $lt: startOfMonth
+      $lt: startOfMonth,
     };
   }
 
@@ -523,29 +608,39 @@ const getEventRevenueAnalytics = async ({
       {
         $addFields: {
           month: {
-            $month: { date: "$createdAt", timezone }
-          }
-        }
+            $month: { date: "$createdAt", timezone },
+          },
+        },
       },
       {
         $group: {
           _id: "$month",
-          amount: { $sum: "$orderPricing.total" }
-        }
-      }
+          amount: { $sum: "$orderPricing.total" },
+        },
+      },
     ]);
 
   const [currentRows, previousRows] = await Promise.all([
     aggregateByMonth(currentMatch),
-    mode === "thisMonth" ? aggregateByMonth(previousMatch) : []
+    mode === "thisMonth" ? aggregateByMonth(previousMatch) : [],
   ]);
 
   // ---------------------------
   // NORMALIZE MONTHS
   // ---------------------------
   const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ];
 
   const currentMap = {};
@@ -562,21 +657,18 @@ const getEventRevenueAnalytics = async ({
   const trend = months.map((m, i) => ({
     month: m,
     current: Math.round(currentMap[i + 1] || 0),
-    previous: Math.round(previousMap[i + 1] || 0)
+    previous: Math.round(previousMap[i + 1] || 0),
   }));
 
   // ---------------------------
   // TOTAL REVENUE
   // ---------------------------
-  const totalRevenue = trend.reduce(
-    (sum, m) => sum + m.current,
-    0
-  );
+  const totalRevenue = trend.reduce((sum, m) => sum + m.current, 0);
 
   return {
     totalRevenue,
     currency: "€",
-    trend
+    trend,
   };
 };
 
@@ -629,7 +721,7 @@ const getTicketTypeStats = async ({ eventId }) => {
 
   if (!orders.length) return Object.values(ticketMap);
 
-  const orderIds = orders.map(o => o._id);
+  const orderIds = orders.map((o) => o._id);
 
   /* --------------------------------
      3️⃣ LOAD BOOKINGS
@@ -654,7 +746,7 @@ const getTicketTypeStats = async ({ eventId }) => {
   /* --------------------------------
      5️⃣ FINAL RESPONSE
      -------------------------------- */
-  const result = Object.values(ticketMap).map(t => ({
+  const result = Object.values(ticketMap).map((t) => ({
     ticketId: t.ticketId,
     title: t.title,
     status: t.status,
@@ -666,10 +758,6 @@ const getTicketTypeStats = async ({ eventId }) => {
   return result;
 };
 
-
-
-
-
 const getScannedTicketProgress = async ({ eventId }) => {
   const eventObjectId = new mongoose.Types.ObjectId(eventId);
 
@@ -677,18 +765,18 @@ const getScannedTicketProgress = async ({ eventId }) => {
     {
       $match: {
         "ticket.snapshot.event": eventObjectId,
-        status: { $in: ["valid", "used"] }
-      }
+        status: { $in: ["valid", "used"] },
+      },
     },
     {
       $group: {
         _id: {
           ticketId: "$ticket.ticketId",
-          status: "$status"
+          status: "$status",
         },
-        count: { $sum: 1 }
-      }
-    }
+        count: { $sum: 1 },
+      },
+    },
   ]);
 
   const map = new Map();
@@ -702,7 +790,7 @@ const getScannedTicketProgress = async ({ eventId }) => {
         ticketId,
         scanned: { count: 0, percentage: 0 },
         notScanned: { count: 0, percentage: 0 },
-        totalSold: 0
+        totalSold: 0,
       });
     }
 
@@ -722,9 +810,7 @@ const getScannedTicketProgress = async ({ eventId }) => {
         : Math.round((entry.scanned.count / entry.totalSold) * 100);
 
     entry.notScanned.percentage =
-      entry.totalSold === 0
-        ? 0
-        : 100 - entry.scanned.percentage;
+      entry.totalSold === 0 ? 0 : 100 - entry.scanned.percentage;
   }
 
   return Array.from(map.values());
@@ -761,19 +847,18 @@ const getTotalEventCountByOrganizationId = async (organizationId) => {
 };
 const getLatestEventByOrganization = async (organizations) => {
   try {
-    const organizationIds = organizations.map(org => org._id);
+    const organizationIds = organizations.map((org) => org._id);
     const latestEvents = await Events.find({
       "basicInfo.organization": { $in: organizationIds },
     })
-      .sort({ 'schedule.startDateTime': -1 })
+      .sort({ "schedule.startDateTime": -1 })
       .limit(1);
     if (latestEvents.length === 0) {
       return [];
     }
     return latestEvents;
   } catch (error) {
-
-    throw new Error('Error fetching latest event');
+    throw new Error("Error fetching latest event");
   }
 };
 
@@ -801,22 +886,23 @@ const getEventbycompanyOrganizer = async (query) => {
   try {
     const { status, companyOrganizer } = query;
 
-    if (!companyOrganizer) return 'Company organizer ID is required';
+    if (!companyOrganizer) return "Company organizer ID is required";
 
     const event = await Events.find({
-      'companyOrganizer': companyOrganizer,
-      'status': status
+      companyOrganizer: companyOrganizer,
+      status: status,
     })
-      .select('_id basicInfo.title')
+      .select("_id basicInfo.title")
       .lean();
 
-    return event || 'No event found for this company organizer with the given status';
+    return (
+      event || "No event found for this company organizer with the given status"
+    );
   } catch (error) {
     console.error(error);
-    throw new Error('Error retrieving event');
+    throw new Error("Error retrieving event");
   }
 };
-
 
 /**
  * Get total tickets + total revenue per event
@@ -828,9 +914,7 @@ const getEventsTicketStats = async (eventIds = []) => {
     return [];
   }
 
-  const objectIds = eventIds.map(
-    (id) => new mongoose.Types.ObjectId(id)
-  );
+  const objectIds = eventIds.map((id) => new mongoose.Types.ObjectId(id));
 
   const results = await TicketingOrders.aggregate([
     {
@@ -862,14 +946,13 @@ const getEventsTicketStats = async (eventIds = []) => {
 };
 
 const getEventsByVenueType = async (venueTypeId) => {
-
   // Step 1: Fetch venues by venueType
   const venues = await Venues.find({
     venueType: new mongoose.Types.ObjectId(venueTypeId),
     status: "active",
   }).select("_id");
 
-  const venueIds = venues.map(v => v._id);
+  const venueIds = venues.map((v) => v._id);
 
   // Edge case: no venues → no events
   if (venueIds.length === 0) {
@@ -889,18 +972,17 @@ const getEventsByVenueType = async (venueTypeId) => {
     .populate("basicInfo.tags", "title")
     .populate(
       "basicInfo.organization",
-      "basicInfo.name basicInfo.media otherInfo.description"
+      "basicInfo.name basicInfo.media otherInfo.description",
     )
     .populate(
       "basicInfo.partnerOrganization",
-      "basicInfo.name basicInfo.media otherInfo.description"
+      "basicInfo.name basicInfo.media otherInfo.description",
     )
-    .sort({ "schedule.startDateTime": -1 }).limit(10);
+    .sort({ "schedule.startDateTime": -1 })
+    .limit(10);
 };
 
-
 const getEventsByTag = async (tagId) => {
-
   // Step 2: Query events directly
   const query = {
     "basicInfo.tags": tagId,
@@ -914,19 +996,17 @@ const getEventsByTag = async (tagId) => {
     .populate("basicInfo.tags", "title")
     .populate(
       "basicInfo.organization",
-      "basicInfo.name basicInfo.media otherInfo.description"
+      "basicInfo.name basicInfo.media otherInfo.description",
     )
     .populate(
       "basicInfo.partnerOrganization",
-      "basicInfo.name basicInfo.media otherInfo.description"
+      "basicInfo.name basicInfo.media otherInfo.description",
     )
     .sort({ "schedule.startDateTime": -1 })
     .limit(10);
 };
 
-
 const getEventsByCategory = async (categoryId) => {
-
   // Step 2: Query events directly
   const query = {
     "basicInfo.categories": categoryId,
@@ -940,14 +1020,14 @@ const getEventsByCategory = async (categoryId) => {
     .populate("basicInfo.tags", "title")
     .populate(
       "basicInfo.organization",
-      "basicInfo.name basicInfo.media otherInfo.description"
+      "basicInfo.name basicInfo.media otherInfo.description",
     )
     .populate(
       "basicInfo.partnerOrganization",
-      "basicInfo.name basicInfo.media otherInfo.description"
+      "basicInfo.name basicInfo.media otherInfo.description",
     )
     .sort({ "schedule.startDateTime": -1 })
-    .limit(10)
+    .limit(10);
 };
 
 const getEventsBatchRepo = async ({
@@ -956,9 +1036,13 @@ const getEventsBatchRepo = async ({
   venueTypeIds = [],
   limit = 50,
 }) => {
-  const tagObjectIds = tagIds.map(id => new mongoose.Types.ObjectId(id));
-  const categoryObjectIds = categoryIds.map(id => new mongoose.Types.ObjectId(id));
-  const venueTypeObjectIds = venueTypeIds.map(id => new mongoose.Types.ObjectId(id));
+  const tagObjectIds = tagIds.map((id) => new mongoose.Types.ObjectId(id));
+  const categoryObjectIds = categoryIds.map(
+    (id) => new mongoose.Types.ObjectId(id),
+  );
+  const venueTypeObjectIds = venueTypeIds.map(
+    (id) => new mongoose.Types.ObjectId(id),
+  );
 
   /* =====================================
      1️⃣ VENUE → VENUE IDS (ONLY IF NEEDED)
@@ -972,12 +1056,12 @@ const getEventsBatchRepo = async ({
       status: "active",
     }).select("_id venueType");
 
-    venueIds = venues.map(v => v._id);
+    venueIds = venues.map((v) => v._id);
 
     for (const v of venues) {
       venueTypeMap.set(
         v._id.toString(),
-        v.venueType.map(x => x.toString())
+        v.venueType.map((x) => x.toString()),
       );
     }
   }
@@ -1041,11 +1125,11 @@ const getEventsBatchRepo = async ({
     .populate("basicInfo.tags", "title")
     .populate(
       "basicInfo.organization",
-      "basicInfo.name basicInfo.media otherInfo.description"
+      "basicInfo.name basicInfo.media otherInfo.description",
     )
     .populate(
       "basicInfo.partnerOrganization",
-      "basicInfo.name basicInfo.media otherInfo.description"
+      "basicInfo.name basicInfo.media otherInfo.description",
     )
     .sort({ "schedule.startDateTime": -1 })
     .limit(limit)
@@ -1069,15 +1153,13 @@ const getEventsBatchRepo = async ({
   return { events };
 };
 
-const getActiveEventsCountForOrganizations = async (
-  organizationIds = []
-) => {
+const getActiveEventsCountForOrganizations = async (organizationIds = []) => {
   if (!Array.isArray(organizationIds) || organizationIds.length === 0) {
     return [];
   }
 
   const objectIds = organizationIds.map(
-    (id) => new mongoose.Types.ObjectId(id)
+    (id) => new mongoose.Types.ObjectId(id),
   );
 
   return Events.aggregate([
@@ -1119,15 +1201,15 @@ const getEventTopInterests = async (eventId, limit = 10) => {
       $match: {
         event: eventObjectId,
         purpose: "eventTicketPurchase",
-        status: { $in: ["paid", "completed"] }
-      }
+        status: { $in: ["paid", "completed"] },
+      },
     },
 
     // unique attendees
     {
       $group: {
-        _id: "$user"
-      }
+        _id: "$user",
+      },
     },
 
     {
@@ -1135,13 +1217,13 @@ const getEventTopInterests = async (eventId, limit = 10) => {
         from: "userinterests",
         localField: "_id",
         foreignField: "user",
-        as: "interest"
-      }
+        as: "interest",
+      },
     },
 
     {
-      $unwind: "$interest"
-    }
+      $unwind: "$interest",
+    },
   ];
 
   const results = await TicketingOrders.aggregate([
@@ -1150,28 +1232,28 @@ const getEventTopInterests = async (eventId, limit = 10) => {
     // Categories
     {
       $project: {
-        ids: "$interest.categories"
-      }
+        ids: "$interest.categories",
+      },
     },
     {
-      $unwind: "$ids"
+      $unwind: "$ids",
     },
     {
       $lookup: {
         from: "categories",
         localField: "ids",
         foreignField: "_id",
-        as: "item"
-      }
+        as: "item",
+      },
     },
     {
-      $unwind: "$item"
+      $unwind: "$item",
     },
     {
       $project: {
         title: "$item.title",
-        type: { $literal: "category" }
-      }
+        type: { $literal: "category" },
+      },
     },
 
     // Tags
@@ -1183,31 +1265,31 @@ const getEventTopInterests = async (eventId, limit = 10) => {
 
           {
             $project: {
-              ids: "$interest.tags"
-            }
+              ids: "$interest.tags",
+            },
           },
           {
-            $unwind: "$ids"
+            $unwind: "$ids",
           },
           {
             $lookup: {
               from: "tags",
               localField: "ids",
               foreignField: "_id",
-              as: "item"
-            }
+              as: "item",
+            },
           },
           {
-            $unwind: "$item"
+            $unwind: "$item",
           },
           {
             $project: {
               title: "$item.title",
-              type: { $literal: "tag" }
-            }
-          }
-        ]
-      }
+              type: { $literal: "tag" },
+            },
+          },
+        ],
+      },
     },
 
     // Venue Types
@@ -1219,43 +1301,43 @@ const getEventTopInterests = async (eventId, limit = 10) => {
 
           {
             $project: {
-              ids: "$interest.venueTypes"
-            }
+              ids: "$interest.venueTypes",
+            },
           },
           {
-            $unwind: "$ids"
+            $unwind: "$ids",
           },
           {
             $lookup: {
               from: "venuetypes",
               localField: "ids",
               foreignField: "_id",
-              as: "item"
-            }
+              as: "item",
+            },
           },
           {
-            $unwind: "$item"
+            $unwind: "$item",
           },
           {
             $project: {
               title: "$item.title",
-              type: { $literal: "venueType" }
-            }
-          }
-        ]
-      }
+              type: { $literal: "venueType" },
+            },
+          },
+        ],
+      },
     },
 
     {
       $group: {
         _id: {
           title: "$title",
-          type: "$type"
+          type: "$type",
         },
         count: {
-          $sum: 1
-        }
-      }
+          $sum: 1,
+        },
+      },
     },
 
     {
@@ -1263,25 +1345,24 @@ const getEventTopInterests = async (eventId, limit = 10) => {
         _id: 0,
         title: "$_id.title",
         type: "$_id.type",
-        count: 1
-      }
+        count: 1,
+      },
     },
 
     {
       $sort: {
         count: -1,
-        title: 1
-      }
+        title: 1,
+      },
     },
 
     {
-      $limit: limit
-    }
+      $limit: limit,
+    },
   ]);
 
   return results;
 };
-
 
 const getActiveEventsForOrg = async (organizationId, now) => {
   return Events.find({
@@ -1324,5 +1405,5 @@ module.exports = {
   getEventsBatchRepo,
   getActiveEventsCountForOrganizations,
   getEventTopInterests,
-  getActiveEventsForOrg
+  getActiveEventsForOrg,
 };

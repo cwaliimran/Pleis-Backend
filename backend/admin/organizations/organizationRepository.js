@@ -4,14 +4,26 @@ const Venues = require("@VenuesModel");
 const Organizations = require("@OrganizationModel");
 const Menus = require("@MenusModel");
 const { getModelCounts } = require("@dbUtils/queryUtil");
-const { getPromotionsByCreator } = require("../loyalty/promotions/promotionsRepository");
-const { getNotificationByOrganizationId } = require("../notifications/notificationsRepository");
-const { getTotalTicketsPurchasedByOrganizationId } = require("../ticketing/ticketingsRepository");
-const { getTotalEngagementEventsByOrganizationId } = require("@appEngagement/engagementEventsRepository");
-const { getTotalClosingBalanceByOrganizationId } = require("../transactions/repositories/unifiedTransactionsRepository");
+const {
+  getPromotionsByCreator,
+} = require("../loyalty/promotions/promotionsRepository");
+const {
+  getNotificationByOrganizationId,
+} = require("../notifications/notificationsRepository");
+const {
+  getTotalTicketsPurchasedByOrganizationId,
+} = require("../ticketing/ticketingsRepository");
+const {
+  getTotalEngagementEventsByOrganizationId,
+} = require("@appEngagement/engagementEventsRepository");
+const {
+  getTotalClosingBalanceByOrganizationId,
+} = require("../transactions/repositories/unifiedTransactionsRepository");
 const { default: mongoose } = require("mongoose");
 const { User } = require("@UsersModel");
-const { countClubMembersOfOrganization } = require("../loyalty/clubMembers/clubMembersRepository");
+const {
+  countClubMembersOfOrganization,
+} = require("../loyalty/clubMembers/clubMembersRepository");
 const { getActiveSubscription } = require("../usersManagement/usersRepository");
 const { getFullImageUrl } = require("@utils/imageHelper");
 
@@ -19,189 +31,248 @@ const { getFullImageUrl } = require("@utils/imageHelper");
 const createOrganization = async (data) => {
   const NoOrganizationCount = await Organizations.countDocuments({
     creator: new mongoose.Types.ObjectId(data.creator),
-    status: "active"
+    status: "active",
   });
-  const UsersOrganizationsLimit = await getActiveSubscription(data.creator)
+  const UsersOrganizationsLimit = await getActiveSubscription(data.creator);
   if (NoOrganizationCount >= UsersOrganizationsLimit) {
-    throw new Error("you_have_reached_the_maximum_number_of_organizations_allowed_for_your_subscription_plan_please_upgrade_your_subscription_to_create_more_organizations");
+    throw new Error(
+      "you_have_reached_the_maximum_number_of_organizations_allowed_for_your_subscription_plan_please_upgrade_your_subscription_to_create_more_organizations",
+    );
   }
   const organization = new Organizations(data);
   return await organization.save();
 };
 
 // Get all with filters
-const getOrganizationsWithFilters = async (query, skip, limit, sortBy, sortOrder) => {
+const getOrganizationsWithFilters = async (
+  query,
+  skip,
+  limit,
+  sortBy,
+  sortOrder,
+) => {
   const matchQuery = { ...query };
 
   // Set the match query for companyOrganizer if provided
   if (query.companyOrganizer) {
     matchQuery.creator = new mongoose.Types.ObjectId(query.companyOrganizer);
   }
+  console.log("sortBy", sortBy);
 
   // Aggregation pipeline
   const pipeline = [
     {
-      $match: matchQuery  // Match the query to filter organizations
+      $match: matchQuery, // Match the query to filter organizations
     },
     {
       $lookup: {
-        from: "users",  // Join with the Users collection
-        localField: "creator",  // Match creator in Organizations with _id in Users
-        foreignField: "_id",  // Match the _id in Users collection
+        from: "users", // Join with the Users collection
+        localField: "creator", // Match creator in Organizations with _id in Users
+        foreignField: "_id", // Match the _id in Users collection
         as: "user", // The result will be stored in a field named "user"
         pipeline: [
           {
             $project: {
               activeSubscription: 1, // Include activeSubscription field
-              inActiveSubscription: 1 // Include inActiveSubscription field
-            }
-          }
-        ]
-      }
+              inActiveSubscription: 1, // Include inActiveSubscription field
+            },
+          },
+        ],
+      },
     },
     {
       $unwind: {
-        path: "$user",  // Unwind the "user" array so that we can access user fields directly
-        preserveNullAndEmptyArrays: true  // Preserve organizations without matching users
-      }
+        path: "$user", // Unwind the "user" array so that we can access user fields directly
+        preserveNullAndEmptyArrays: true, // Preserve organizations without matching users
+      },
     },
     {
       $lookup: {
-        from: "users",  // Join with the Users collection
-        localField: "creator",  // Match creator in Organizations with _id in Users
-        foreignField: "_id",  // Match the _id in Users collection
+        from: "users", // Join with the Users collection
+        localField: "creator", // Match creator in Organizations with _id in Users
+        foreignField: "_id", // Match the _id in Users collection
         as: "creator", // The result will be stored in a field named "creator"
         pipeline: [
           {
             $project: {
               firstName: 1,
               lastName: 1,
-
-            }
-          }
-        ]
-      }
+            },
+          },
+        ],
+      },
     },
     {
       $unwind: {
-        path: "$creator",  // Unwind the "user" array so that we can access user fields directly
-        preserveNullAndEmptyArrays: true  // Preserve organizations without matching users
-      }
+        path: "$creator", // Unwind the "user" array so that we can access user fields directly
+        preserveNullAndEmptyArrays: true, // Preserve organizations without matching users
+      },
     },
     {
       $lookup: {
-        from: "engagementevents",  // Join with the EngagementEvents collection
-        localField: "_id",  // Match _id in Organizations with organization._id
-        foreignField: "entityId",  // Match the entityId in EngagementEvents
-        as: "viewCount",  // The result will be stored in a field named "viewCount"
+        from: "engagementevents", // Join with the EngagementEvents collection
+        localField: "_id", // Match _id in Organizations with organization._id
+        foreignField: "entityId", // Match the entityId in EngagementEvents
+        as: "viewCount", // The result will be stored in a field named "viewCount"
         pipeline: [
           {
             $match: {
-              entityType: "organizations",  // Only include engagement events of type "organizations"
-              action: "view"  // Only include "view" actions
-            }
+              entityType: "organizations", // Only include engagement events of type "organizations"
+              action: "view", // Only include "view" actions
+            },
           },
           {
             $group: {
-              _id: "$entityId",  // Group by organization entityId
-              viewCount: { $sum: 1 }  // Count the number of views for each organization
-            }
-          }
-        ]
-      }
+              _id: "$entityId", // Group by organization entityId
+              viewCount: { $sum: 1 }, // Count the number of views for each organization
+            },
+          },
+        ],
+      },
     },
     {
       $addFields: {
         viewCount: {
-          $ifNull: [
-            { $arrayElemAt: ["$viewCount.viewCount", 0] },
-            0
-          ]
-        }
-      }
+          $ifNull: [{ $arrayElemAt: ["$viewCount.viewCount", 0] }, 0],
+        },
+      },
     },
     {
       $lookup: {
-        from: "webhookevents",  // Join with the WebhookEvents collection
-        localField: "_id",  // Match _id in Organizations with organization._id
-        foreignField: "organization",  // Match the organization field in WebhookEvents
-        as: "revenueData",  // The result will be stored in a field named "revenueData"
+        from: "webhookevents", // Join with the WebhookEvents collection
+        localField: "_id", // Match _id in Organizations with organization._id
+        foreignField: "organization", // Match the organization field in WebhookEvents
+        as: "revenueData", // The result will be stored in a field named "revenueData"
         pipeline: [
           {
             $match: {
-              organization: { $exists: true },  // Ensure that the organization field exists in WebhookEvents
-            }
+              organization: { $exists: true }, // Ensure that the organization field exists in WebhookEvents
+            },
           },
           {
             $group: {
-              _id: "$organization",  // Group by organization entityId
-              totalRevenue: { $sum: { $toDouble: "$amount" } }  // Sum the revenue (amount) for each organization
-            }
-          }
-        ]
-      }
+              _id: "$organization", // Group by organization entityId
+              totalRevenue: { $sum: { $toDouble: "$amount" } }, // Sum the revenue (amount) for each organization
+            },
+          },
+        ],
+      },
     },
     {
       $unwind: {
-        path: "$revenueData",  // Unwind the "revenueData" array to access revenue per organization
-        preserveNullAndEmptyArrays: true  // Preserve organizations without matching events
-      }
+        path: "$revenueData", // Unwind the "revenueData" array to access revenue per organization
+        preserveNullAndEmptyArrays: true, // Preserve organizations without matching events
+      },
     },
     {
       $addFields: {
         revenue: {
           $ifNull: [
-            "$revenueData.totalRevenue",  // Get the totalRevenue from revenueData
-            0  // If no revenue data, default to 0
-          ]
-        }
-      }
+            "$revenueData.totalRevenue", // Get the totalRevenue from revenueData
+            0, // If no revenue data, default to 0
+          ],
+        },
+      },
     },
     {
       $project: {
-        revenueData: 0  // Remove the 'revenueData' field from the final output
-      }
+        revenueData: 0, // Remove the 'revenueData' field from the final output
+      },
     },
-
+    {
+      $lookup: {
+        from: "events",
+        let: { orgId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$basicInfo.organization", "$$orgId"] },
+              status: "active",
+              "recurringMeta.isTemplate": { $ne: true },
+              $or: [
+                { "schedule.endDateTime": { $gte: new Date() } },
+                {
+                  "schedule.endDateTime": null,
+                  "schedule.startDateTime": { $gte: new Date() },
+                },
+              ],
+            },
+          },
+          { $count: "count" },
+        ],
+        as: "_eventStats",
+      },
+    },
+    {
+      $addFields: {
+        _activeEventsCount: { $ifNull: [{ $first: "$_eventStats.count" }, 0] },
+      },
+    },
   ];
   if (sortBy && sortOrder) {
     if (sortBy === "organizationName") {
       pipeline.push({
         $addFields: {
           organizationNameSort: {
-            $toLower: { $ifNull: ["$basicInfo.name", ""] }
-          }
-        }
+            $toLower: { $ifNull: ["$basicInfo.name", ""] },
+          },
+        },
       });
       pipeline.push({
-        $sort: { organizationNameSort: sortOrder === "asc" ? 1 : -1 }
+        $sort: { organizationNameSort: sortOrder === "asc" ? 1 : -1 },
       });
-    }
-    else if (sortBy === "organizerName") {
+    } else if (sortBy === "organizerName") {
       pipeline.push({
         $addFields: {
           organizerNameSort: {
-            $toLower: { $ifNull: ["$creator.firstName", ""] }
-          }
-        }
+            $toLower: { $ifNull: ["$creator.firstName", ""] },
+          },
+        },
       });
       pipeline.push({
-        $sort: { organizerNameSort: sortOrder === "asc" ? 1 : -1 }
+        $sort: { organizerNameSort: sortOrder === "asc" ? 1 : -1 },
       });
+    } else if (sortBy === "subType") {
+      pipeline.push({
+        $addFields: {
+          _subType: {
+            $ifNull: [
+              { $first: "$user.activeSubscription.subscriptionTypes" },
+              "",
+            ],
+          },
+        },
+      });
+      pipeline.push({ $sort: { _subType: sortOrder === "asc" ? 1 : -1 } });
+    } else if (sortBy === "subEndDate") {
+      pipeline.push({
+        $addFields: {
+          _subEndDate: { $ifNull: ["$user.activeSubscription.endDate", null] },
+        },
+      });
+      pipeline.push({ $sort: { _subEndDate: sortOrder === "asc" ? 1 : -1 } });
+    } else if (sortBy === "views") {
+      pipeline.push({ $sort: { viewCount: sortOrder === "asc" ? 1 : -1 } });
+    } else if (sortBy === "events") {
+      pipeline.push({
+        $sort: { _activeEventsCount: sortOrder === "asc" ? 1 : -1 },
+      });
+    } else if (sortBy === "favorites") {
+      pipeline.push({
+        $addFields: {
+          _favorites: { $ifNull: ["$meta.favoritesCount", 0] },
+        },
+      });
+      pipeline.push({ $sort: { _favorites: sortOrder === "asc" ? 1 : -1 } });
     } else {
       pipeline.push({
-        $sort: { [sortBy]: sortOrder === "asc" ? 1 : -1 }
+        $sort: { [sortBy]: sortOrder === "asc" ? 1 : -1 },
       });
     }
   }
   if (skip !== undefined && limit !== undefined) {
-    pipeline.push(
-      { $skip: skip },
-      { $limit: limit }
-    );
+    pipeline.push({ $skip: skip }, { $limit: limit });
   }
-
-
 
   // Perform the aggregation query
   const results = await Organizations.aggregate(pipeline);
@@ -213,30 +284,39 @@ const countOrganizations = async (query = {}) => {
   return Organizations.countDocuments(query);
 };
 
-
 const getOrganizationCounts = async (query) => {
   return getModelCounts({ model: Organizations, filterQuery: query });
-}
+};
 
 // Find by ID
 const findOrganizationById = async (id) => {
   return Organizations.findById(id);
 };
 
-
 const getOrganizationDetails = async (id) => {
   // Fetch organization, primary venue, and other related data concurrently
 
   const {
-    getTotalEventCountByOrganizationId
+    getTotalEventCountByOrganizationId,
   } = require("../events/eventRepository");
   const companyOrganizer = await getOrgCompanyOrganizer(id);
   console.log("companyOrganizer", companyOrganizer);
 
-  const [organization, primaryVenue, events, ticketsSold, views, revenue, clubMembersCount] = await Promise.all([
+  const [
+    organization,
+    primaryVenue,
+    events,
+    ticketsSold,
+    views,
+    revenue,
+    clubMembersCount,
+  ] = await Promise.all([
     Organizations.findById(id)
       .populate({ path: "otherInfo.tags", options: { sort: { title: 1 } } })
-      .populate({ path: "otherInfo.categories", options: { sort: { title: 1 } } })
+      .populate({
+        path: "otherInfo.categories",
+        options: { sort: { title: 1 } },
+      })
       .populate({
         path: "creator",
         select: "firstName lastName email companyDetails",
@@ -250,7 +330,7 @@ const getOrganizationDetails = async (id) => {
     getTotalTicketsPurchasedByOrganizationId(id),
     getTotalEngagementEventsByOrganizationId(id),
     getTotalClosingBalanceByOrganizationId(id),
-    countClubMembersOfOrganization(companyOrganizer)
+    countClubMembersOfOrganization(companyOrganizer),
   ]);
 
   // Convert the organization to a plain object if it's a Mongoose document
@@ -267,19 +347,13 @@ const getOrganizationDetails = async (id) => {
   return orgObj;
 };
 
-
-
-
-
 // Delete
 const deleteOrganizationById = async (organization) => {
-
   return await organization.deleteOne();
 };
 
 // Optional: keep this only for non-nested shallow updates
 const findByIdAndUpdate = async (id, data) => {
-
   return Organizations.findByIdAndUpdate(id, { $set: data }, { new: true });
 };
 
@@ -312,10 +386,8 @@ const getOrganizationsAsStaff = async (userId) => {
       },
     });
 
-
-
   // For each organization, filter staff to only include the current user
-  return organizations.map(org => {
+  return organizations.map((org) => {
     if (org.creator?.toString() === userId.toString()) {
       // If creator, return all staff
       return org;
@@ -323,7 +395,7 @@ const getOrganizationsAsStaff = async (userId) => {
     // Otherwise, filter staff to only the current user
     return {
       ...org,
-      staff: org.staff.filter(s => s.user.toString() === userId.toString())
+      staff: org.staff.filter((s) => s.user.toString() === userId.toString()),
     };
   });
 };
@@ -333,10 +405,9 @@ const getStaffIdsByOrganization = async (organizationId) => {
     throw new Error("Invalid organization ID");
   }
 
-  const organization = await Organizations.findById(
-    organizationId,
-    { staff: 1 }
-  ).lean();
+  const organization = await Organizations.findById(organizationId, {
+    staff: 1,
+  }).lean();
 
   if (!organization || !organization.staff) {
     return [];
@@ -344,28 +415,39 @@ const getStaffIdsByOrganization = async (organizationId) => {
 
   // Extract staff user IDs
   const staffIds = organization.staff
-    .map(item => item.user)
+    .map((item) => item.user)
     .filter(Boolean)
-    .map(id => id.toString());
+    .map((id) => id.toString());
 
   return staffIds;
 };
 
-
 //get organization ids by company organizer
 const getOrganizationIdsByCompanyOrganizer = async (companyOrganizer) => {
-  const organizations = await Organizations.find({ creator: companyOrganizer }).select("_id").lean();
-  return organizations.map(org => org._id);
+  const organizations = await Organizations.find({ creator: companyOrganizer })
+    .select("_id")
+    .lean();
+  return organizations.map((org) => org._id);
 };
 
 //get organization names by company organizer
 const getOrganizationNamesByCompanyOrganizer = async (companyOrganizer) => {
-  const organizations = await Organizations.find({ creator: companyOrganizer, status: "active" }).select("basicInfo.name").lean();
+  const organizations = await Organizations.find({
+    creator: companyOrganizer,
+    status: "active",
+  })
+    .select("basicInfo.name")
+    .lean();
   return organizations;
 };
 const getOrganizationByCompanyOrganizer = async (companyOrganizer) => {
-  const organizations = await Organizations.find({ creator: companyOrganizer, status: "active" }).select("basicInfo.name basicInfo.media.logo location").lean();
-  const formattedOrganizations = organizations.map(org => {
+  const organizations = await Organizations.find({
+    creator: companyOrganizer,
+    status: "active",
+  })
+    .select("basicInfo.name basicInfo.media.logo location")
+    .lean();
+  const formattedOrganizations = organizations.map((org) => {
     if (org.basicInfo?.media?.logo) {
       const logoName = org.basicInfo.media.logo;
       org.basicInfo.media.logo = getFullImageUrl(logoName);
@@ -377,29 +459,38 @@ const getOrganizationByCompanyOrganizer = async (companyOrganizer) => {
 
 //getMenuIdsByCompanyOrganizer
 const getMenuIdsByCompanyOrganizer = async (companyOrganizer) => {
-  const organizationIds = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
-  const menus = await Menus.find({ organization: { $in: organizationIds }, status: "active" }).select("_id").lean();
+  const organizationIds =
+    await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
+  const menus = await Menus.find({
+    organization: { $in: organizationIds },
+    status: "active",
+  })
+    .select("_id")
+    .lean();
   console.log("menus", menus);
-  return menus.map(menu => menu._id);
+  return menus.map((menu) => menu._id);
 };
 const getMenuIdsByOrganization = async (organization) => {
   // Split the organization input by commas or % and convert to ObjectId
   const organizationIds = organization
     .split(/[,%]/) // supports both "," and "%"
     .filter(Boolean) // Remove any empty strings
-    .map(id => new mongoose.Types.ObjectId(id)); // Convert strings to ObjectIds
+    .map((id) => new mongoose.Types.ObjectId(id)); // Convert strings to ObjectIds
 
   // Query Menus where organization is in the list of organizationIds
-  const menus = await Menus.find({ organization: { $in: organizationIds }, status: "active" }).select("_id").lean();
+  const menus = await Menus.find({
+    organization: { $in: organizationIds },
+    status: "active",
+  })
+    .select("_id")
+    .lean();
 
   // Return the menu IDs
-  return menus.map(menu => menu._id);
+  return menus.map((menu) => menu._id);
 };
 
 const getOrgCompanyOrganizer = async (organizationId, session = null) => {
-  const query = Organizations
-    .findById(organizationId)
-    .select("creator");
+  const query = Organizations.findById(organizationId).select("creator");
 
   if (session) {
     query.session(session);
@@ -414,14 +505,16 @@ const getOrganizationNotifications = async (id) => {
   return notifications;
 };
 const getOrganizationIdByCompanyOrganizer = async (companyOrganizer) => {
-  const organizations = await Organizations.find({ creator: companyOrganizer }).select("_id").lean();
+  const organizations = await Organizations.find({ creator: companyOrganizer })
+    .select("_id")
+    .lean();
   return organizations;
 };
 
 //get company pickup options
 const getInAppOrderingSettings = async (companyOrganizer) => {
   const orgSettings = await Organizations.findOne({
-    creator: companyOrganizer
+    creator: companyOrganizer,
   })
     .select("inAppOrderingSettings")
     .lean();
@@ -442,7 +535,7 @@ const getOrganizationsByTag = async ({
   userLocation,
   radiusKm,
   page = 1,
-  limit = 10
+  limit = 10,
 }) => {
   const skip = (page - 1) * limit;
 
@@ -450,7 +543,7 @@ const getOrganizationsByTag = async ({
 
   const geoQuery = {
     status: "active",
-    "otherInfo.tags": { $in: [tagObjectId] }
+    "otherInfo.tags": { $in: [tagObjectId] },
   };
 
   const pipeline = [];
@@ -467,25 +560,19 @@ const getOrganizationsByTag = async ({
           distanceField: "distance",
           spherical: true,
           query: geoQuery,
-          ...(radiusKm && { maxDistance: radiusKm * 1000 })
-        }
+          ...(radiusKm && { maxDistance: radiusKm * 1000 }),
+        },
       },
-      { $sort: { distance: 1 } }
+      { $sort: { distance: 1 } },
     );
   } else {
-    pipeline.push(
-      { $match: geoQuery },
-      { $sort: { createdAt: -1 } }
-    );
+    pipeline.push({ $match: geoQuery }, { $sort: { createdAt: -1 } });
   }
 
   /* ===============================
      2️⃣ PAGINATION
      =============================== */
-  pipeline.push(
-    { $skip: skip },
-    { $limit: limit }
-  );
+  pipeline.push({ $skip: skip }, { $limit: limit });
 
   /* ===============================
      3️⃣ TAGS POPULATION (kept for consistency)
@@ -496,8 +583,8 @@ const getOrganizationsByTag = async ({
       localField: "otherInfo.tags",
       foreignField: "_id",
       as: "tags",
-      pipeline: [{ $project: { _id: 1, title: 1 } }]
-    }
+      pipeline: [{ $project: { _id: 1, title: 1 } }],
+    },
   });
 
   /* ===============================
@@ -512,18 +599,18 @@ const getOrganizationsByTag = async ({
           $match: {
             $expr: { $eq: ["$organization", "$$orgId"] },
             isPrimary: true,
-            status: "active"
-          }
+            status: "active",
+          },
         },
         {
           $project: {
             _id: 0,
-            venueType: 1
-          }
-        }
+            venueType: 1,
+          },
+        },
       ],
-      as: "primaryVenue"
-    }
+      as: "primaryVenue",
+    },
   });
 
   pipeline.push({
@@ -532,8 +619,8 @@ const getOrganizationsByTag = async ({
       localField: "primaryVenue.venueType",
       foreignField: "_id",
       as: "venueTypes",
-      pipeline: [{ $project: { _id: 1, title: 1 } }]
-    }
+      pipeline: [{ $project: { _id: 1, title: 1 } }],
+    },
   });
 
   /* ===============================
@@ -552,9 +639,9 @@ const getOrganizationsByTag = async ({
       tags: 1,
 
       venue: {
-        venueType: "$venueTypes"
-      }
-    }
+        venueType: "$venueTypes",
+      },
+    },
   });
 
   const organizations = await Organizations.aggregate(pipeline);
@@ -567,7 +654,7 @@ const getOrganizationsByVenueType = async ({
   userLocation,
   radiusKm,
   page = 1,
-  limit = 10
+  limit = 10,
 }) => {
   const skip = (page - 1) * limit;
 
@@ -578,23 +665,21 @@ const getOrganizationsByVenueType = async ({
      =============================== */
   const venueMatch = {
     status: "active",
-    venueType: { $in: [venueTypeObjectId] }
+    venueType: { $in: [venueTypeObjectId] },
   };
 
   const venuePipeline = [
     { $match: venueMatch },
     {
       $group: {
-        _id: "$organization"
-      }
-    }
+        _id: "$organization",
+      },
+    },
   ];
 
   const venueAgg = await Venues.aggregate(venuePipeline);
 
-  const organizationIds = venueAgg
-    .map(v => v._id)
-    .filter(Boolean);
+  const organizationIds = venueAgg.map((v) => v._id).filter(Boolean);
 
   if (organizationIds.length === 0) {
     return { organizations: [] };
@@ -606,7 +691,7 @@ const getOrganizationsByVenueType = async ({
 
   const geoQuery = {
     status: "active",
-    _id: { $in: organizationIds }
+    _id: { $in: organizationIds },
   };
 
   const pipeline = [];
@@ -621,25 +706,19 @@ const getOrganizationsByVenueType = async ({
           distanceField: "distance",
           spherical: true,
           query: geoQuery,
-          ...(radiusKm && { maxDistance: radiusKm * 1000 })
-        }
+          ...(radiusKm && { maxDistance: radiusKm * 1000 }),
+        },
       },
-      { $sort: { distance: 1 } }
+      { $sort: { distance: 1 } },
     );
   } else {
-    pipeline.push(
-      { $match: geoQuery },
-      { $sort: { createdAt: -1 } }
-    );
+    pipeline.push({ $match: geoQuery }, { $sort: { createdAt: -1 } });
   }
 
   /* ===============================
      3️⃣ PAGINATION
      =============================== */
-  pipeline.push(
-    { $skip: skip },
-    { $limit: limit }
-  );
+  pipeline.push({ $skip: skip }, { $limit: limit });
 
   /* ===============================
      4️⃣ TAGS POPULATION (same as nearby)
@@ -650,8 +729,8 @@ const getOrganizationsByVenueType = async ({
       localField: "otherInfo.tags",
       foreignField: "_id",
       as: "tags",
-      pipeline: [{ $project: { _id: 1, title: 1 } }]
-    }
+      pipeline: [{ $project: { _id: 1, title: 1 } }],
+    },
   });
 
   /* ===============================
@@ -666,18 +745,18 @@ const getOrganizationsByVenueType = async ({
           $match: {
             $expr: { $eq: ["$organization", "$$orgId"] },
             isPrimary: true,
-            status: "active"
-          }
+            status: "active",
+          },
         },
         {
           $project: {
             _id: 0,
-            venueType: 1
-          }
-        }
+            venueType: 1,
+          },
+        },
       ],
-      as: "primaryVenue"
-    }
+      as: "primaryVenue",
+    },
   });
 
   pipeline.push({
@@ -686,8 +765,8 @@ const getOrganizationsByVenueType = async ({
       localField: "primaryVenue.venueType",
       foreignField: "_id",
       as: "venueTypes",
-      pipeline: [{ $project: { _id: 1, title: 1 } }]
-    }
+      pipeline: [{ $project: { _id: 1, title: 1 } }],
+    },
   });
 
   /* ===============================
@@ -706,9 +785,9 @@ const getOrganizationsByVenueType = async ({
       tags: 1,
 
       venue: {
-        venueType: "$venueTypes"
-      }
-    }
+        venueType: "$venueTypes",
+      },
+    },
   });
 
   const organizations = await Organizations.aggregate(pipeline);
@@ -721,7 +800,7 @@ const getOrganizationByCategory = async ({
   userLocation,
   radiusKm,
   page = 1,
-  limit = 10
+  limit = 10,
 }) => {
   const skip = (page - 1) * limit;
 
@@ -729,7 +808,7 @@ const getOrganizationByCategory = async ({
 
   const geoQuery = {
     status: "active",
-    "otherInfo.categories": { $in: [categoryObjectId] }
+    "otherInfo.categories": { $in: [categoryObjectId] },
   };
 
   const pipeline = [];
@@ -746,25 +825,19 @@ const getOrganizationByCategory = async ({
           distanceField: "distance",
           spherical: true,
           query: geoQuery,
-          ...(radiusKm && { maxDistance: radiusKm * 1000 })
-        }
+          ...(radiusKm && { maxDistance: radiusKm * 1000 }),
+        },
       },
-      { $sort: { distance: 1 } }
+      { $sort: { distance: 1 } },
     );
   } else {
-    pipeline.push(
-      { $match: geoQuery },
-      { $sort: { createdAt: -1 } }
-    );
+    pipeline.push({ $match: geoQuery }, { $sort: { createdAt: -1 } });
   }
 
   /* ===============================
      2️⃣ PAGINATION
      =============================== */
-  pipeline.push(
-    { $skip: skip },
-    { $limit: limit }
-  );
+  pipeline.push({ $skip: skip }, { $limit: limit });
 
   /* ===============================
      3️⃣ TAGS (same as other pipelines)
@@ -775,8 +848,8 @@ const getOrganizationByCategory = async ({
       localField: "otherInfo.tags",
       foreignField: "_id",
       as: "tags",
-      pipeline: [{ $project: { _id: 1, title: 1 } }]
-    }
+      pipeline: [{ $project: { _id: 1, title: 1 } }],
+    },
   });
 
   /* ===============================
@@ -791,18 +864,18 @@ const getOrganizationByCategory = async ({
           $match: {
             $expr: { $eq: ["$organization", "$$orgId"] },
             isPrimary: true,
-            status: "active"
-          }
+            status: "active",
+          },
         },
         {
           $project: {
             _id: 0,
-            venueType: 1
-          }
-        }
+            venueType: 1,
+          },
+        },
       ],
-      as: "primaryVenue"
-    }
+      as: "primaryVenue",
+    },
   });
 
   pipeline.push({
@@ -811,8 +884,8 @@ const getOrganizationByCategory = async ({
       localField: "primaryVenue.venueType",
       foreignField: "_id",
       as: "venueTypes",
-      pipeline: [{ $project: { _id: 1, title: 1 } }]
-    }
+      pipeline: [{ $project: { _id: 1, title: 1 } }],
+    },
   });
 
   /* ===============================
@@ -831,9 +904,9 @@ const getOrganizationByCategory = async ({
       tags: 1,
 
       venue: {
-        venueType: "$venueTypes"
-      }
-    }
+        venueType: "$venueTypes",
+      },
+    },
   });
 
   const organizations = await Organizations.aggregate(pipeline);
@@ -849,9 +922,13 @@ const getOrganizationsBatchRepo = async ({
   radiusKm,
   limit = 50,
 }) => {
-  const tagObjectIds = tagIds.map(id => new mongoose.Types.ObjectId(id));
-  const categoryObjectIds = categoryIds.map(id => new mongoose.Types.ObjectId(id));
-  const venueTypeObjectIds = venueTypeIds.map(id => new mongoose.Types.ObjectId(id));
+  const tagObjectIds = tagIds.map((id) => new mongoose.Types.ObjectId(id));
+  const categoryObjectIds = categoryIds.map(
+    (id) => new mongoose.Types.ObjectId(id),
+  );
+  const venueTypeObjectIds = venueTypeIds.map(
+    (id) => new mongoose.Types.ObjectId(id),
+  );
 
   /* =====================================
      1️⃣ BUILD BASE FILTER ($or)
@@ -890,12 +967,12 @@ const getOrganizationsBatchRepo = async ({
     for (const v of venueAgg) {
       venueOrgMap.set(
         v._id.toString(),
-        v.venueTypes.map(x => x.toString())
+        v.venueTypes.map((x) => x.toString()),
       );
     }
 
     const orgIdsFromVenue = [...venueOrgMap.keys()].map(
-      id => new mongoose.Types.ObjectId(id)
+      (id) => new mongoose.Types.ObjectId(id),
     );
 
     if (orgIdsFromVenue.length) {
@@ -1017,7 +1094,7 @@ const getOrganizationsBatchRepo = async ({
 };
 const getCreatorByStaffId = async (staffId) => {
   const org = await Organizations.findOne({
-    "staff.user": new mongoose.Types.ObjectId(staffId)
+    "staff.user": new mongoose.Types.ObjectId(staffId),
   }).select("creator");
 
   return org?.creator || null;
@@ -1048,5 +1125,5 @@ module.exports = {
   getOrganizationsByVenueType,
   getOrganizationByCategory,
   getOrganizationsBatchRepo,
-  getCreatorByStaffId
+  getCreatorByStaffId,
 };

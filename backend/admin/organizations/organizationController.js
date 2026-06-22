@@ -118,7 +118,7 @@ const getOrganizationsAdmin = async (req, res) => {
         date: "YYYY-MM-DD",
       },
     })) return;
-    const SORT_FIELDS = ["organizerName", "createdAt", "organizationName"];
+    const SORT_FIELDS = ["organizerName", "createdAt", "organizationName","subType","subEndDate","views","favorites","events"];
     const SORT_ORDERS = ["asc", "desc"];
     if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
       const key = sortBy && !SORT_FIELDS.includes(sortBy)
