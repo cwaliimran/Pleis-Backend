@@ -311,8 +311,8 @@ const createEvent = async (req, res) => {
 
 const getEvents = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = "active", startDate, endDate, organization, companyOrganizer, sortBy, sortOrder,date } = req.query;
-  const SORT_FIELDS = ["eventName", "venueName", "organizationName"];
+  let { keyword, status, startDate, endDate, organization,venue, companyOrganizer, sortBy, sortOrder,date } = req.query;
+  const SORT_FIELDS = ["eventName", "venueName", "organizationName","startDate","endDate","revenue","views","status"];
   const SORT_ORDERS = ["asc", "desc"];
   if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
     const key = sortBy && !SORT_FIELDS.includes(sortBy)
@@ -381,7 +381,8 @@ const getEvents = async (req, res) => {
       timezone,
       sortBy,
       sortOrder,
-      date
+      date,
+      venue,
     });
 
     return sendResponse({

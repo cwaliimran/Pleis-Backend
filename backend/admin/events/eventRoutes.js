@@ -30,7 +30,7 @@ const apiRateLimiter = createRateLimiter("Events");
 // Create a new event
 router.post("/", roleMiddleware(["organizer", "admin", "manager"]), createEvent);
 
-// Get all events with pagination
+// Get all events with paginationx
 router.get("/", apiRateLimiter, getEvents);
 
 //getMinimalEventsInfo
