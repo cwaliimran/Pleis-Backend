@@ -119,7 +119,6 @@ const getEventsWithFilters = async (
   sortBy,
   sortOrder,
   venue,
-  
 ) => {
   // Helper to safely convert query to $and format for aggregation
 
@@ -228,12 +227,32 @@ const getEventsWithFilters = async (
         as: "_viewStats",
       },
     },
+    {
+      $lookup: {
+        from: "engagementevents", // confirm actual collection name
+        let: { eventId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$entityId", "$$eventId"] },
+              entityType: "events",
+              action: "favorite",
+            },
+          },
+          { $count: "totalFavorites" },
+        ],
+        as: "_favoriteStats",
+      },
+    },
     // Flatten into numeric fields for sorting
     {
       $addFields: {
         _revenue: { $ifNull: [{ $first: "$_ticketStats.totalRevenue" }, 0] },
         _tickets: { $ifNull: [{ $first: "$_ticketStats.totalTickets" }, 0] },
         _views: { $ifNull: [{ $first: "$_viewStats.totalViews" }, 0] },
+        _favorites: {
+          $ifNull: [{ $first: "$_favoriteStats.totalFavorites" }, 0],
+        },
       },
     },
   ];
@@ -286,6 +305,8 @@ const getEventsWithFilters = async (
     pipeline.push({ $sort: { "schedule.startDateTime": sortDirection } });
   } else if (sortBy === "endDate") {
     pipeline.push({ $sort: { "schedule.endDateTime": sortDirection } });
+  } else if (sortBy === "favorite") {
+    pipeline.push({ $sort: { _favorites: sortDirection } });
   } else if (sortBy === "status") {
     pipeline.push({
       $addFields: {
