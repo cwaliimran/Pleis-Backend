@@ -292,6 +292,7 @@ const getEvents = async ({
       totalTickets: event._tickets || 0,
       totalRevenue: event._revenue || 0,
       totalViews: event._views || 0,
+      totalFavorites: event._favorites || 0,
     },
   }));
 
