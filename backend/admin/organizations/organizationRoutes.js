@@ -8,7 +8,8 @@ const {
   getOrganizationNotifications,
   getOrganizationNamesByCompanyOrganizer,
   getOrganizationsByTag,
-  getOrganizationsByVenueType
+  getOrganizationsByVenueType,
+  getAllOrganizationsAdmin,
 } = require("./organizationController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -20,7 +21,7 @@ router.use(auth);
 
 // Create a rate limiter for Organizations
 const apiRateLimiter = createRateLimiter("Organizations");
-
+router.get("/all", apiRateLimiter, getAllOrganizationsAdmin);
 // Create a new organization
 router.post("/", roleMiddleware(["organizer", "admin", "manager"]), createOrganization);
 
@@ -36,6 +37,7 @@ router.put("/:id", roleMiddleware(["organizer", "admin", "manager", "staff"]), u
 
 // Delete a organization
 router.delete("/:id", deleteOrganization);
+ // Get all organizations without pagination
 
 //getOrganizationNamesByCompanyOrganizer
 router.get("/names/by-company-organizer/:companyOrganizer", apiRateLimiter, getOrganizationNamesByCompanyOrganizer);
