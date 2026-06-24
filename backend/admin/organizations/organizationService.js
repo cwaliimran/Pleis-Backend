@@ -14,7 +14,10 @@ const createOrganization = async ({ data, timezone }) => {
   let org = await organizationRepo.createOrganization(data);
   return formatOrganization(org, [], timezone);
 };
+const getAllOrganizationsAdmin = async ({ timezone }) => {
+  return await organizationRepo.getAllOrganizationsAdmin();
 
+}
 const getOrganizations = async ({ page, limit, keyword, status, creator, date, timezone }) => {
   const query = {};
   query.$or = [
@@ -67,7 +70,7 @@ const getOrganizations = async ({ page, limit, keyword, status, creator, date, t
   };
 };
 
-const getOrganizationsByAdmin = async ({ companyOrganizer, page, limit, keyword, status, date, timezone, sortBy, sortOrder }) => {
+const getOrganizationsByAdmin = async ({ companyOrganizer, page, limit, keyword, status, date, timezone, sortBy, sortOrder, organization, subType }) => {
   const query = {};
   if (companyOrganizer) {
     query.creator = new mongoose.Types.ObjectId(companyOrganizer);
@@ -77,6 +80,9 @@ const getOrganizationsByAdmin = async ({ companyOrganizer, page, limit, keyword,
     query.status = status;
   } else {
     query.status = { $ne: "deleted" };
+  }
+  if (organization) {
+    query._id = new mongoose.Types.ObjectId(organization);
   }
 
   if (date) {
@@ -107,7 +113,8 @@ const getOrganizationsByAdmin = async ({ companyOrganizer, page, limit, keyword,
         skip,
         limit === 0 ? 0 : limit,
         sortBy,
-        sortOrder
+        sortOrder,
+        subType
       ),
       organizationRepo.getOrganizationCounts(query),
     ]);
@@ -494,5 +501,6 @@ module.exports = {
   getOrganizationsByTagService,
   getOrganizationsByVenueTypeService,
   getOrganizationByCategoryService,
-  getOrganizationsBatch
+  getOrganizationsBatch,
+  getAllOrganizationsAdmin
 };
