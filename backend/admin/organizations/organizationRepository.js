@@ -3,6 +3,9 @@ const Venues = require("@VenuesModel");
 
 const Organizations = require("@OrganizationModel");
 const Menus = require("@MenusModel");
+
+
+
 const { getModelCounts } = require("@dbUtils/queryUtil");
 const {
   getPromotionsByCreator,
@@ -28,6 +31,11 @@ const { getActiveSubscription } = require("../usersManagement/usersRepository");
 const { getFullImageUrl } = require("@utils/imageHelper");
 
 // Create
+
+
+const getAllOrganizationsAdmin = async () => {
+  return await Organizations.find({status: { $eq: "active" }}).select("_id basicInfo.name").lean();
+};
 const createOrganization = async (data) => {
   const NoOrganizationCount = await Organizations.countDocuments({
     creator: new mongoose.Types.ObjectId(data.creator),
@@ -50,6 +58,7 @@ const getOrganizationsWithFilters = async (
   limit,
   sortBy,
   sortOrder,
+  subType
 ) => {
   const matchQuery = { ...query };
 
@@ -209,6 +218,13 @@ const getOrganizationsWithFilters = async (
       },
     },
   ];
+if (subType) {
+  pipeline.push({
+    $match: {
+      "user.activeSubscription.subscriptionTypes": subType, 
+    },
+  });
+}
   if (sortBy && sortOrder) {
     if (sortBy === "organizationName") {
       pipeline.push({
@@ -1126,4 +1142,5 @@ module.exports = {
   getOrganizationByCategory,
   getOrganizationsBatchRepo,
   getCreatorByStaffId,
+  getAllOrganizationsAdmin,
 };

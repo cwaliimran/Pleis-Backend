@@ -9,7 +9,26 @@ const {
 const { transformOperatingHoursToUtc } = require("../../shared/commonSchemas/operatingHours");
 
 const organizationService = require("./organizationService");
+const getAllOrganizationsAdmin = async (req, res) => {
+  const { timezone } = req.user;
+  try {
+    const organizations = await organizationService.getAllOrganizationsAdmin({ timezone });
 
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "organizations_fetched_successfully",
+      data: organizations,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
 const createOrganization = async (req, res) => {
 
   let { timezone } = req.user
@@ -110,7 +129,7 @@ const getOrganizations = async (req, res) => {
 
 const getOrganizationsAdmin = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, date, status = "active", companyOrganizer, sortBy, sortOrder } = req.query;
+  const { keyword, date, status = "active", companyOrganizer, sortBy, sortOrder,organization,subType } = req.query;
   let { timezone } = req.user;
   try {
     if (date && !validateParams(req, res, {
@@ -143,7 +162,9 @@ const getOrganizationsAdmin = async (req, res) => {
       date,
       timezone,
       sortBy,
-      sortOrder
+      sortOrder,
+      organization,
+      subType
     });
     return sendResponse({
       res,
@@ -450,5 +471,6 @@ module.exports = {
   getOrganizationNamesByCompanyOrganizer,
   getOrganizationNotifications,
   getOrganizationsByTag,
-  getOrganizationsByVenueType
+  getOrganizationsByVenueType,
+  getAllOrganizationsAdmin
 };
