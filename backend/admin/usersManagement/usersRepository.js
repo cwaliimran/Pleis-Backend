@@ -12,12 +12,16 @@ const createUser = async (data) => {
 };
 
 // Get all with filters
-const getUsersWithFilters = async (query, skip, limit) => {
-  const users = await User.aggregate([
+const getUsersWithFilters = async (
+  query,
+  skip,
+  limit,
+  organization,
+  sortBy = "createdAt",
+  sortOrder = -1,
+) => {
+  const pipeline = [
     { $match: query },
-    { $sort: { createdAt: -1 } },
-    { $skip: skip },
-    ...(limit > 0 ? [{ $limit: limit }] : []),
 
     // Lookup organizations where user is creator or staff
     {
@@ -30,10 +34,10 @@ const getUsersWithFilters = async (query, skip, limit) => {
               $expr: {
                 $or: [
                   { $eq: ["$creator", "$$userId"] },
-                  { $in: ["$$userId", "$staff.user"] }
-                ]
-              }
-            }
+                  { $in: ["$$userId", "$staff.user"] },
+                ],
+              },
+            },
           },
           // Filter staff: if creator, keep all staff, else only this user
           {
@@ -46,18 +50,27 @@ const getUsersWithFilters = async (query, skip, limit) => {
                     $filter: {
                       input: "$staff",
                       as: "s",
-                      cond: { $eq: ["$$s.user", "$$userId"] }
-                    }
-                  }
-                ]
-              }
-            }
+                      cond: { $eq: ["$$s.user", "$$userId"] },
+                    },
+                  },
+                ],
+              },
+            },
           },
-          { $project: { basicInfo: 1, staff: 1, creator: 1 } }
+          { $project: { basicInfo: 1, staff: 1, creator: 1 } },
         ],
-        as: "organizations"
-      }
+        as: "organizations",
+      },
     },
+    ...(organization
+      ? [
+          {
+            $match: {
+              "organizations._id": new mongoose.Types.ObjectId(organization),
+            },
+          },
+        ]
+      : []),
 
     // Optional: populate suppliers inside aggregation
     {
@@ -65,45 +78,68 @@ const getUsersWithFilters = async (query, skip, limit) => {
         from: "suppliers",
         localField: "companyDetails.suppliers",
         foreignField: "_id",
-        as: "companyDetails.suppliers"
-      }
+        as: "companyDetails.suppliers",
+      },
+    },
+    {
+      $lookup: {
+        from: "userlogs",
+        localField: "_id",
+        foreignField: "user",
+        as: "userlogs",
+      },
+    },
+    {
+      $addFields: {
+        lastLogin: {
+          $cond: [
+            { $gt: [{ $size: "$userlogs" }, 0] },
+            { $arrayElemAt: ["$userlogs.lastLogin", -1] },
+            null,
+          ],
+        },
+      },
     },
 
     // Lookup userglobalwallets
     {
       $lookup: {
         from: "userglobalwallets",
-        localField: "_id",  // Match the user._id with userglobalwallets.user
+        localField: "_id", // Match the user._id with userglobalwallets.user
         foreignField: "user",
-        as: "userglobalwallets"
-      }
+        as: "userglobalwallets",
+      },
     },
-    { $unwind: { path: "$userglobalwallets", preserveNullAndEmptyArrays: true } },  // Unwind userglobalwallets to access nested fields
+    {
+      $unwind: { path: "$userglobalwallets", preserveNullAndEmptyArrays: true },
+    }, // Unwind userglobalwallets to access nested fields
 
     {
       $lookup: {
         from: "globalstatuslevels",
-        localField: "userglobalwallets.global.level",  // Access the 'level' array inside 'userglobalwallets'
+        localField: "userglobalwallets.global.level", // Access the 'level' array inside 'userglobalwallets'
         foreignField: "_id",
-        as: "userglobalwallets.global.level"
-      }
+        as: "userglobalwallets.global.level",
+      },
     },
     {
       $addFields: {
         // Convert 'level' array to an object by selecting the first element
-        "userglobalwallets.global.level": { $arrayElemAt: ["$userglobalwallets.global.level", 0] }
-      }
+        "userglobalwallets.global.level": {
+          $arrayElemAt: ["$userglobalwallets.global.level", 0],
+        },
+      },
     },
     {
       $lookup: {
         from: "webhookevents",
-        localField: "_id",  // Match the user._id with webhookevents.user
-        foreignField: "companyOrganizer",  // Match the user's companyOrganizer with webhookevents
+        localField: "_id", // Match the user._id with webhookevents.user
+        foreignField: "companyOrganizer", // Match the user's companyOrganizer with webhookevents
         pipeline: [
-          { $project: { amount: 1 } }  // Select the relevant 'amount' field from webhookevents
+          { $project: { amount: 1 } }, // Select the relevant 'amount' field from webhookevents
         ],
-        as: "webhookevents"
-      }
+        as: "webhookevents",
+      },
     },
 
     // Calculate the sum of the 'amount' for each user using $reduce
@@ -111,14 +147,62 @@ const getUsersWithFilters = async (query, skip, limit) => {
       $addFields: {
         totalAmount: {
           $reduce: {
-            input: "$webhookevents",  // Use the 'webhookevents' array
-            initialValue: 0,  // Start the sum at 0
-            in: { $add: ["$$value", { $toDouble: "$$this.amount" }] }  // Add each 'amount' (convert to double if needed)
-          }
-        }
-      }
+            input: "$webhookevents", // Use the 'webhookevents' array
+            initialValue: 0, // Start the sum at 0
+            in: { $add: ["$$value", { $toDouble: "$$this.amount" }] }, // Add each 'amount' (convert to double if needed)
+          },
+        },
+      },
+    },
+  ];
+  if (sortBy && sortOrder) {
+
+    if(sortBy === "name") {
+      const fullNameSortStage = {
+        $addFields: {
+          fullName: { $concat: ["$firstName", " ", "$lastName"] },
+        },
+      };
+      pipeline.push(fullNameSortStage);
+      sortBy = "fullName";
     }
-  ]);
+    if(sortBy === "userName") {
+      sortBy = "username";
+    }
+    if(sortBy === "role") {
+      sortBy = "accountState.userType";
+    }
+    if(sortBy === "globalStatus") {
+      sortBy = "userglobalwallets.global.level.title";
+    }
+    if(sortBy === "status") {
+      sortBy = "accountState.status";
+    }
+    if(sortBy === "region") {
+      sortBy = "timezone";
+    }
+    if(sortBy === "lastLogin") {
+      sortBy = "lastLogin";
+    }
+    if(sortBy === "createdAt") {
+      sortBy = "createdAt";
+    }
+    if(sortBy === "companyName") {
+      sortBy = "companyDetails.name";
+    }
+    const sortStage = {
+      $sort: { [sortBy]: sortOrder === "asc" ? 1 : -1 },
+    };
+    pipeline.push(sortStage);
+  }
+  if (skip) {
+    pipeline.push({ $skip: skip });
+  }
+  if (limit) {
+    pipeline.push({ $limit: limit });
+  }
+
+  const users = await User.aggregate(pipeline);
 
   return users;
 };
@@ -166,8 +250,6 @@ const getStaffWithFilters = async (query, skip, limit) => {
   ]);
 };
 
-
-
 // Count by condition
 const countUsers = async (query = {}) => {
   return User.countDocuments(query);
@@ -182,18 +264,20 @@ const findUserById = async (id, projection = null) => {
   return User.findById(id, proj).populate([
     {
       path: "companyDetails.suppliers",
-      model: "Suppliers"
+      model: "Suppliers",
     },
     {
       path: "companyDetails.category",
-      model: "Categories"
-    }
+      model: "Categories",
+    },
   ]);
 };
 
 const getUserDetailsForQRRepo = async (id) => {
-  return User.findById(id).select("profileIcon firstName lastName email phoneNumber");
-}
+  return User.findById(id).select(
+    "profileIcon firstName lastName email phoneNumber",
+  );
+};
 
 // Update and save
 const updateUserData = async (user, data) => {
@@ -231,7 +315,7 @@ const updateUserInterests = async (userId, data) => {
       user: userId,
       categories: data.categories || [],
       venueTypes: data.venueTypes || [],
-      tags: data.tags || []
+      tags: data.tags || [],
     });
   }
   return await userInterests.save();
@@ -247,14 +331,16 @@ const getUserInterestsByUserId = async (userId) => {
 
 //get user interests by userId and populate references
 const getUserInterestsIdsForRecommendation = async (userId) => {
-  return UserInterests.findOne({ user: userId })
+  return UserInterests.findOne({ user: userId });
 };
 const getActiveSubscription = async (userId) => {
   console.log("userId", userId);
-  const user = await User.findById(new mongoose.Types.ObjectId(userId)).select("activeSubscription.numberOfOrganizations");
+  const user = await User.findById(new mongoose.Types.ObjectId(userId)).select(
+    "activeSubscription.numberOfOrganizations",
+  );
   if (!user) return 0;
   return user?.activeSubscription?.numberOfOrganizations || 0;
-}
+};
 module.exports = {
   createUser,
   getUsersWithFilters,
@@ -269,5 +355,5 @@ module.exports = {
   getUserInterestsByUserId,
   getUserInterestsIdsForRecommendation,
   getUserDetailsForQRRepo,
-  getActiveSubscription
+  getActiveSubscription,
 };

@@ -24,6 +24,7 @@ const crypto = require("crypto");
 const { registerUserUtility } = require("./authUtil");
 const { validatePhoneNumber } = require("../helperUtils/validationsUtil");
 const { getCreatorByStaffId } = require("../admin/organizations/organizationRepository");
+const UserLogs = require("../models/UserLogs");
 
 const createAdmin = async (req, res) => {
   try {
@@ -218,6 +219,26 @@ const companyDetails = async (req, res) => {
   }
 };
 
+const updateUserLog = async (userId, deviceId, deviceType) => {
+  const existing = await UserLogs.findOne({ user: userId });
+
+  if (existing) {
+    existing.lastLogin = new Date();
+    existing.deviceId = deviceId;
+    existing.deviceType = deviceType;
+    existing.status = "success";
+    await existing.save();
+  } else {
+    await UserLogs.create({
+      user: userId,
+      lastLogin: new Date(),
+      deviceId,
+      deviceType,
+      status: "success",
+    });
+  }
+};
+
 //login
 const login = async (req, res) => {
   try {
@@ -353,6 +374,7 @@ const login = async (req, res) => {
     } else {
       console.warn("FCM Token information not saved due to invalid input");
     }
+    await updateUserLog(user._id, req.body.deviceId, req.body.deviceType);
 
     // Send successful response with token and user data
     return sendResponse({
