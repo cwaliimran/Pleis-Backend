@@ -17,7 +17,7 @@ const { SubscriptionSettings } = require("@SubscriptionSettings");
 
 const APP_NAME = "Pleis App";
 
-const getAllUsers = async ({ page, limit, keyword, status, userType }) => {
+const getAllUsers = async ({ page, limit, keyword, status, userType, organization, company, sortBy, sortOrder }) => {
   const query = {
     "verificationStatus.email": "verified",
     // "email": { $ne: "guest@pleis.com" }
@@ -39,6 +39,9 @@ const getAllUsers = async ({ page, limit, keyword, status, userType }) => {
   if (userType !== undefined) {
     query["accountState.userType"] = userType;
   }
+  if (company !== undefined) {
+    query["_id"] = new mongoose.Types.ObjectId(company);
+  }
 
   const skip = (page - 1) * limit;
   const [users, totalFiltered, pending, active, rejected, suspended] =
@@ -46,7 +49,10 @@ const getAllUsers = async ({ page, limit, keyword, status, userType }) => {
       userRepo.getUsersWithFilters(
         query,
         skip,
-        limit
+        limit,
+        organization,
+        sortBy,
+        sortOrder
       ),
       userRepo.countUsers(query),
       userRepo.countUsers({ "accountState.status": "pending" }),
