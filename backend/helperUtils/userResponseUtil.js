@@ -43,7 +43,7 @@ const  formatUserResponse = (
       },
       userglobalwallets: userObject.userglobalwallets || [],
       revenue: userObject.totalAmount || 0,
-
+      lastLogin: userObject.lastLogin || null,
 
       ...(userObject.accountState?.reason && {
         reason: userObject.accountState.reason,
