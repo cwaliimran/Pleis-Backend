@@ -248,7 +248,8 @@ const getUserSubscriptions = async ({
         totalSubscriptionAmount: "$activeSubscription.totalSubscriptionAmount",
         startDate: "$activeSubscription.startDate",
         basePrice: "$activeSubscription.basePrice",
-        
+        status: "$activeSubscription.status",
+
         endDate: "$activeSubscription.endDate",
         subscriptionStatus: {
           $cond: [
@@ -343,6 +344,7 @@ const getUserSubscriptions = async ({
   /* ================================
      EXECUTE
   ================================= */
+  console.log("pipeline", pipeline);
   const result = await User.aggregate(pipeline);
 
 const users = result[0]?.data || [];
@@ -381,10 +383,11 @@ const inactiveSubscription =
         startDate: user.startDate,
         endDate: user.endDate,
         basePrice: user.basePrice,
-        status: user.activeSubscriptionStatus,
+        status: user.subscriptionStatus,
         orderingCommission: user.activeSubscription?.orderingCommission || 0,
         ticketingCommission: user.activeSubscription?.ticketingCommission || 0,
-        reservationCommission: user.activeSubscription?.reservationCommission || 0,
+        reservationCommission:
+          user.activeSubscription?.reservationCommission || 0,
       },
     };
   });
