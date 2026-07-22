@@ -21,12 +21,100 @@ const PricingPlanType = {
   MONTHLY: "monthly",
   YEARLY: "yearly",
 };
+
+
+const SubscriptionPaymentStatuses = {
+  NOT_REQUIRED: "not_required",
+  PENDING: "pending",
+  PROCESSING: "processing",
+  PAID: "paid",
+  FAILED: "failed",
+  CANCELLED: "cancelled",
+  REFUNDED: "refunded",
+};
+
+//schema against each subscription type to manage payments and their statuses
+const subscriptionTypePaymentSchema = new mongoose.Schema(
+  {
+    subscriptionType: {
+      type: String,
+      enum: Object.values(SubscriptionTypes),
+      required: true,
+    },
+
+    status: {
+      type: String,
+      enum: Object.values(SubscriptionPaymentStatuses),
+      default: SubscriptionPaymentStatuses.PENDING,
+      required: true,
+    },
+
+    paymentReference: {
+      type: String,
+      default: null,
+    },
+
+    providerTransactionId: {
+      type: String,
+      default: null,
+    },
+
+    amount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    currency: {
+      type: String,
+      default: "EUR",
+      uppercase: true,
+    },
+
+    paidAt: {
+      type: Date,
+      default: null,
+    },
+
+    failedAt: {
+      type: Date,
+      default: null,
+    },
+
+    failureReason: {
+      type: String,
+      default: null,
+    },
+  },
+  {
+    _id: false,
+  }
+);
+
 const subscriptionSchema = new mongoose.Schema({
   subscriptionTypes: {
     type: [String],
     enum: Object.values(SubscriptionTypes),
     default: [SubscriptionTypes.FREE], // default free subscription
     required: true,
+  },
+
+  subscriptionTypePayments: {
+    type: [subscriptionTypePaymentSchema],
+    default: [
+      {
+        subscriptionType: SubscriptionTypes.FREE,
+        status: SubscriptionPaymentStatuses.NOT_REQUIRED,
+        amount: 0,
+      },
+    ],
+    validate: {
+      validator(items) {
+        const types = items.map((item) => item.subscriptionType);
+        return new Set(types).size === types.length;
+      },
+      message: "duplicate_subscription_type_payment_not_allowed",
+    },
   },
   pricingPlan: {
     type: String,
@@ -73,6 +161,10 @@ const subscriptionSchema = new mongoose.Schema({
   reservationCommission: { type: Number, default: 0 },
 
 });
+
+
+
+
 
 const USER_TYPES = [
   "guest",
@@ -325,7 +417,7 @@ const userSchema = new mongoose.Schema(
       default: [],
     },
 
-    activeSubscription: {
+    activeSubscription: { // active subscription details for the user
       type: subscriptionSchema,
       default: {
         subscriptionTypes: [SubscriptionTypes.FREE],
@@ -336,9 +428,9 @@ const userSchema = new mongoose.Schema(
         status: "active",
         startDate: Date.now(),
         endDate: null
-      }
+      },
     },
-    inActiveSubscription: {
+    inActiveSubscription: { //upcoming subscription that will be activated after current subscription ends
       type: subscriptionSchema,
       default: {
         subscriptionTypes: [SubscriptionTypes.FREE],
@@ -486,7 +578,7 @@ userSchema.statics.findByCredentials = async (
   populateFields = []
 ) => {
 
-  let query = User.findOne({ email: email.toLowerCase().trim()});
+  let query = User.findOne({ email: email.toLowerCase().trim() });
 
   // Populate specified fields
   populateFields.forEach((field) => {
@@ -768,9 +860,11 @@ userSchema.index({ createdAt: 1, "accountState.status": 1 });
 
 const User = mongoose.model("User", userSchema);
 
+
 module.exports = {
   User,
   SubscriptionTypes,
+  SubscriptionPaymentStatuses,
   generateResetToken,
   createVerificationLink,
   USER_TYPES,

@@ -5,7 +5,8 @@ const {
   updateSubscription,
   deleteSubscription,
   getUserSubscriptions,
-  resetSubscriptions
+  resetSubscriptions,
+  updateUserSubscriptionPaymentStatus
 
 } = require("./subscriptionsController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
@@ -31,5 +32,9 @@ router.put("/", roleMiddleware(["organizer"]),   updateSubscription,
 )
 router.delete("/:id", roleMiddleware(["organizer"]), deleteSubscription);
 
+router.patch(
+  "/users/payment-status",
+  updateUserSubscriptionPaymentStatus
+);
 
 module.exports = router;

@@ -78,7 +78,7 @@ const processReminder = async (type, offsetMs, windowStart, windowEnd) => {
         if (type === "EXPIRED") {
           action = "SUBSCRIPTION_EXPIRED";
 
-          await activateInactiveSubscriptions(subScriptions);
+          await activateInactiveSubscriptions([subscription]);
         }
         // sendSubscriptionNotification({
         //     userId: subscription._id,
