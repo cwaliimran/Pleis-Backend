@@ -5,8 +5,34 @@ const { buildAuthorizationHeader } = require("./monriAuth");
 const monriRepository = require("./monriRepository");
 const { verifyTransaction, createTransactionMonriOrder } = require("./monriService");
 const { UserBillingInformation } = require("../../transactions/UserBillingInformation");
+const { SubscriptionTypes } = require("../../../models/UserModel");
 
 const FORCE_MONRI_TEST_ENV = true;
+const PAID_SUBSCRIPTION_TYPES = Object.values(SubscriptionTypes).filter(
+  (type) => type !== SubscriptionTypes.FREE
+);
+
+function getMonriCallbackPayload(req) {
+  // GET redirect → query; merchant callback → JSON body; form POST → body
+  return {
+    ...(req.query || {}),
+    ...(req.body && typeof req.body === "object" ? req.body : {}),
+  };
+}
+
+function normalizeDbPaymentMethod(paymentMethod) {
+  if (paymentMethod === "apple-pay") return "applePay";
+  if (paymentMethod === "google-pay") return "googlePay";
+  return "card";
+}
+
+function isApprovedMonriResponse(payload) {
+  return (
+    payload.response_code === "0000" ||
+    payload.response_code === "000" ||
+    payload.status === "approved"
+  );
+}
 
 function isMonriProduction() {
   if (FORCE_MONRI_TEST_ENV) return false;
@@ -303,7 +329,7 @@ googlePay.on("paymentError", function() {
 
 exports.handleSuccess = async (req, res) => {
   try {
-    const payload = req.query;
+    const payload = getMonriCallbackPayload(req);
 
     console.log("MONRI SUCCESS:", payload);
 
@@ -319,41 +345,46 @@ exports.handleSuccess = async (req, res) => {
       return res.status(404).json({ message: "Transaction not found" });
     }
 
-    const isValid = verifyMonriSuccessDigest({
-      payload,
-      successUrl: process.env.SUCCESS_URL,
-    });
-
-    if (!isValid) {
-      await monriRepository.updateTransaction(orderNumber, {
-        status: "invalid",
-        rawCallback: payload,
+    // Browser redirect includes digest — verify it.
+    // Merchant server-to-server callback is JSON without digest.
+    if (payload.digest) {
+      const isValid = verifyMonriSuccessDigest({
+        payload,
+        successUrl: process.env.SUCCESS_URL,
       });
 
-      return res.status(400).json({ message: "Invalid digest" });
+      if (!isValid) {
+        await monriRepository.updateTransaction(orderNumber, {
+          status: "invalid",
+          rawCallback: payload,
+        });
+
+        return res.status(400).json({ message: "Invalid digest" });
+      }
     }
 
-    // Monri success indicator
-    const approved = payload.response_code === "0000";
+    const approved = isApprovedMonriResponse(payload);
+    const update = {
+      rawCallback: payload,
+      ...(payload.approval_code && { approvalCode: payload.approval_code }),
+      ...(payload.id != null && { monriTransactionId: String(payload.id) }),
+      ...(payload.pan_token && { panToken: payload.pan_token }),
+    };
 
     if (approved) {
-      await monriRepository.updateTransaction(orderNumber, {
-        status: "paid",
-        approvalCode: payload.approval_code,
-        rawCallback: payload,
-      });
+      update.status = "paid";
     } else {
-      await monriRepository.updateTransaction(orderNumber, {
-        status: "failed",
-        rawCallback: payload,
-      });
+      update.status = "failed";
     }
+
+    await monriRepository.updateTransaction(orderNumber, update);
 
     return res.status(200).json({
       message: approved ? "Payment successful" : "Payment failed",
       orderNumber,
+      orderType: tx.orderType,
+      userId: tx.userId,
     });
-
   } catch (err) {
     console.error("Monri success handler error:", err);
     return res.status(500).json({ message: "Processing failed" });
@@ -364,11 +395,11 @@ exports.handleSuccess = async (req, res) => {
 
 exports.handleCancel = async (req, res) => {
   try {
-    const payload = req.query;
+    const payload = getMonriCallbackPayload(req);
 
     console.log("MONRI CANCEL:", payload);
 
-    const orderNumber = payload.order_number
+    const orderNumber = payload.order_number;
     if (!orderNumber) {
       return res.status(400).json({ message: "Missing order_number" });
     }
@@ -380,12 +411,14 @@ exports.handleCancel = async (req, res) => {
 
     await monriRepository.updateTransaction(orderNumber, {
       status: "cancelled",
-      rawCallback: payload
+      rawCallback: payload,
     });
 
     return res.status(200).json({
       message: "Payment cancelled",
-      orderNumber
+      orderNumber,
+      orderType: tx.orderType,
+      userId: tx.userId,
     });
   } catch (err) {
     console.error("Monri cancel handler error:", err);
@@ -464,12 +497,10 @@ exports.createWebPaySession = async (req, res) => {
 
     const currency = "EUR";
     const { amount, orderType, orderNumber, paymentMethod } = req.query;
+    const userId = req.user._id;
 
     // Normalize query paymentMethod to DB enum value
-    const dbPaymentMethod =
-      paymentMethod === "apple-pay" ? "applePay" :
-      paymentMethod === "google-pay" ? "googlePay" :
-      "card";
+    const dbPaymentMethod = normalizeDbPaymentMethod(paymentMethod);
 
     // Build reusable billing fields
     const billingAddress = billing?.billingAddress || {};
@@ -487,6 +518,7 @@ exports.createWebPaySession = async (req, res) => {
         amount: Number(amount),
         currency,
         orderType,
+        userId,
         status: "pending",
         paymentMethod: dbPaymentMethod,
       });
@@ -549,21 +581,10 @@ exports.createWebPaySession = async (req, res) => {
       amount: Number(amount),
       currency,
       orderType,
+      userId,
       status: "pending",
       paymentMethod: dbPaymentMethod,
     });
-
-    const transaction = {
-      ch_full_name: fullName,
-      address: billingAddress.address || "",
-      city: billingAddress.city || "",
-      zip: billingAddress.postalCode || "",
-      phone: billing?.phone || "",
-      country,
-      email: billing?.email || "",
-      orderInfo: "App payment",
-      language: "en",
-    };
 
     const environment = getMonriComponentsEnv();
 
@@ -583,24 +604,15 @@ exports.createWebPaySession = async (req, res) => {
     if (paymentMethod === "apple-pay") {
       response.locale = "en-US";
       response.environment = environment;
-      // response.transaction = transaction;
-      // response.apple_pay = {
-      //   locale: "en-US",
-      //   // buttonStyle: "black",
-      //   // buttonType: "buy",
-      //   environment,
-      //   transaction,
-      // };
       response.supported_payment_methods = "apple-pay";
 
-       // Monri form ch_* customer fields
-        response.ch_full_name = fullName;
-        response.ch_address = billingAddress.address || "";
-        response.ch_city = billingAddress.city || "";
-        response.ch_zip = billingAddress.postalCode || "";
-        response.ch_country = country;
-        response.ch_email = billing?.email || "";
-        response.ch_phone = billing?.phone || "";
+      response.ch_full_name = fullName;
+      response.ch_address = billingAddress.address || "";
+      response.ch_city = billingAddress.city || "";
+      response.ch_zip = billingAddress.postalCode || "";
+      response.ch_country = country;
+      response.ch_email = billing?.email || "";
+      response.ch_phone = billing?.phone || "";
     }
 
     // -----------------------------
@@ -608,34 +620,215 @@ exports.createWebPaySession = async (req, res) => {
     // -----------------------------
     if (paymentMethod === "google-pay") {
       response.countryCode = country || "US";
-      // response.currencyCode = currency;
       response.environment = environment;
-      // response.transaction = transaction;
-      // response.google_pay = {
-      //   buttonLocale: "en",
-      //   // buttonStyle: "black",
-      //   // buttonType: "buy",
-      //   environment,
-      //   transaction,
-      // };
       response.supported_payment_methods = "google-pay";
 
-        // Monri form ch_* customer fields
-        response.ch_full_name = fullName;
-        response.ch_address = billingAddress.address || "";
-        response.ch_city = billingAddress.city || "";
-        response.ch_zip = billingAddress.postalCode || "";
-        response.ch_country = country;
-        response.ch_email = billing?.email || "";
-        response.ch_phone = billing?.phone || "";
+      response.ch_full_name = fullName;
+      response.ch_address = billingAddress.address || "";
+      response.ch_city = billingAddress.city || "";
+      response.ch_zip = billingAddress.postalCode || "";
+      response.ch_country = country;
+      response.ch_email = billing?.email || "";
+      response.ch_phone = billing?.phone || "";
     }
 
     return res.json(response);
   } catch (err) {
     console.error("❌ createWebPaySession failed:", err);
 
+    if (err.code === "ORDER_ALREADY_FINALIZED" || err.statusCode === 409) {
+      return res.status(409).json({ message: err.message });
+    }
+
+    if (err.code === 11000) {
+      return res.status(409).json({
+        message: "orderNumber already exists — generate a new one",
+      });
+    }
+
     return res.status(500).json({
       message: "Init failed",
+      error: {
+        message: err.message,
+        name: err.name,
+      },
+    });
+  }
+};
+
+/**
+ * Subscription web-pay session.
+ * Frontend generates orderNumber and posts amount + subscriptionTypes.
+ * Billing is optional — Monri form collects it on submission.
+ */
+exports.createSubscriptionWebPaySession = async (req, res) => {
+  try {
+    const currency = "EUR";
+    const {
+      amount,
+      orderNumber,
+      subscriptionTypes,
+      paymentMethod,
+    } = { ...req.query, ...req.body };
+
+    if (!orderNumber) {
+      return res.status(400).json({ message: "orderNumber is required" });
+    }
+
+    const amountNumber = Number(amount);
+    if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+      return res.status(400).json({ message: "amount must be a positive number (minor units)" });
+    }
+
+    let parsedSubscriptionTypes = subscriptionTypes;
+    if (typeof subscriptionTypes === "string") {
+      try {
+        parsedSubscriptionTypes = JSON.parse(subscriptionTypes);
+      } catch {
+        parsedSubscriptionTypes = subscriptionTypes.split(",").map((t) => t.trim());
+      }
+    }
+
+    if (!Array.isArray(parsedSubscriptionTypes) || parsedSubscriptionTypes.length === 0) {
+      return res.status(400).json({
+        message: "subscriptionTypes must be a non-empty array",
+      });
+    }
+
+    const uniqueTypes = [...new Set(parsedSubscriptionTypes)];
+    const invalidTypes = uniqueTypes.filter(
+      (type) => !PAID_SUBSCRIPTION_TYPES.includes(type)
+    );
+    if (invalidTypes.length > 0) {
+      return res.status(400).json({
+        message: `Invalid subscriptionTypes: ${invalidTypes.join(", ")}`,
+        allowed: PAID_SUBSCRIPTION_TYPES,
+      });
+    }
+
+    const userId = req.user._id;
+    const amountStr = String(amountNumber);
+    const dbPaymentMethod = normalizeDbPaymentMethod(paymentMethod);
+
+    // Billing optional — use if present, otherwise empty (Monri form fills it)
+    const billing = await UserBillingInformation.findOne({
+      user: userId,
+      status: "active",
+    });
+    const billingAddress = billing?.billingAddress || {};
+    const fullName = `${billing?.firstName || ""} ${billing?.lastName || ""}`.trim();
+    const country = billingAddress.country === "USA" ? "US" : (billingAddress.country || "");
+
+    const digest = generateDigest({
+      orderNumber,
+      amount: amountStr,
+      currency,
+    });
+
+    await monriRepository.createTransaction({
+      orderNumber,
+      amount: amountNumber,
+      currency,
+      orderType: "subscription",
+      userId,
+      subscriptionTypes: uniqueTypes,
+      status: "pending",
+      paymentMethod: dbPaymentMethod,
+    });
+
+    const customerFields = {
+      ch_full_name: fullName,
+      ch_address: billingAddress.address || "",
+      ch_city: billingAddress.city || "",
+      ch_zip: billingAddress.postalCode || "",
+      ch_country: country,
+      ch_email: billing?.email || "",
+      ch_phone: billing?.phone || "",
+    };
+
+    // Card — same shape as /web-pay-session
+    if (!paymentMethod || paymentMethod === "card") {
+      return res.json({
+        authenticity_token: process.env.MONRI_AUTH_TOKEN,
+        transaction_type: "purchase",
+        order_number: orderNumber,
+        order_info: `Subscription: ${uniqueTypes.join(", ")}`,
+        amount: amountStr,
+        currency,
+        language: "en",
+        digest,
+        success_url_override: process.env.SUCCESS_URL,
+        cancel_url_override: process.env.CANCEL_URL,
+        supported_payment_methods: "card",
+        ...customerFields,
+      });
+    }
+
+    // Apple Pay / Google Pay — same shape as /web-pay-session
+    const payload = {
+      amount: amountNumber,
+      currency,
+      order_number: orderNumber,
+      transaction_type: "purchase",
+      order_info: `Subscription: ${uniqueTypes.join(", ")}`,
+      scenario: "charge",
+    };
+
+    const body = JSON.stringify(payload);
+    const authorization = buildAuthorizationHeader({ body });
+
+    const monriApiResponse = await axios.post(
+      `${getMonriBaseUrl()}/v2/payment/new`,
+      body,
+      {
+        headers: {
+          Authorization: authorization,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const environment = getMonriComponentsEnv();
+    const response = {
+      authenticity_token: process.env.MONRI_AUTH_TOKEN,
+      clientSecret: monriApiResponse.data.client_secret,
+      trx_token: monriApiResponse.data.id,
+      order_number: orderNumber,
+      amount: amountStr,
+      currency,
+      digest,
+      ...customerFields,
+    };
+
+    if (paymentMethod === "apple-pay") {
+      response.locale = "en-US";
+      response.environment = environment;
+      response.supported_payment_methods = "apple-pay";
+    }
+
+    if (paymentMethod === "google-pay") {
+      response.countryCode = country || "US";
+      response.environment = environment;
+      response.supported_payment_methods = "google-pay";
+    }
+
+    return res.json(response);
+  } catch (err) {
+    console.error("❌ createSubscriptionWebPaySession failed:", err);
+
+    if (err.code === "ORDER_ALREADY_FINALIZED" || err.statusCode === 409) {
+      return res.status(409).json({ message: err.message });
+    }
+
+    // Duplicate key from unique orderNumber race
+    if (err.code === 11000) {
+      return res.status(409).json({
+        message: "orderNumber already exists — generate a new one",
+      });
+    }
+
+    return res.status(500).json({
+      message: "Subscription payment init failed",
       error: {
         message: err.message,
         name: err.name,
