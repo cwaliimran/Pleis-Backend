@@ -1,11 +1,13 @@
-
 const {
   sendResponse,
   parsePaginationParams,
   validateParams,
   getReadableErrorMessage,
 } = require("../../helperUtils/responseUtil");
-const { countOrganizations, countActiveOrganizationsByCreator } = require("../organizations/organizationRepository");
+const {
+  countOrganizations,
+  countActiveOrganizationsByCreator,
+} = require("../organizations/organizationRepository");
 const SubscriptionService = require("./subscriptionsService");
 // Allowed modules
 const ALLOWED_MODULES = ["ordering", "loyalty", "reservations", "analytics"];
@@ -27,8 +29,10 @@ const getMultiOrgPrice = (numberOfOrganizations, multiOrgPricing) => {
 };
 const calculateModulePrice = (modulesToInclude, subscriptionSettings) => {
   let basePrice = 0;
-  modulesToInclude.forEach(module => {
-    const moduleSetting = subscriptionSettings.modulePricing.find(item => item.module === module);
+  modulesToInclude.forEach((module) => {
+    const moduleSetting = subscriptionSettings.modulePricing.find(
+      (item) => item.module === module,
+    );
     if (moduleSetting) {
       basePrice += moduleSetting.price;
     }
@@ -42,17 +46,26 @@ const calculateModulePrice = (modulesToInclude, subscriptionSettings) => {
  * Returns { basePrice (after bundle, before multi-org), finalPrice }
  */
 const calculateFullPlanPrice = (
+  first = false,
   subscriptionTypes,
   pricingPlan,
   numberOfOrganizations,
-  subscriptionSettings
+  subscriptionSettings,
+  availableBasePrice,
+  addedModules,
 ) => {
+  console.log("pricingPlan", pricingPlan);
   const selectedModules = subscriptionTypes || [];
   const modulesToInclude = selectedModules.filter(
-    (module) => module !== "analytics" && module !== "free"
+    (module) => module !== "analytics" && module !== "free",
   );
+  console.log("modulesToInclude", modulesToInclude);
 
   let basePrice = calculateModulePrice(modulesToInclude, subscriptionSettings);
+  const priceOfAddedModules = calculateModulePrice(addedModules, subscriptionSettings);
+  console.log("availableBasePrice", availableBasePrice);
+  console.log("basePrice", basePrice);
+  console.log("addedModules", addedModules);
 
   let bundleDiscount = 0;
   if (modulesToInclude.length === 2) {
@@ -60,13 +73,18 @@ const calculateFullPlanPrice = (
   } else if (modulesToInclude.length === 3) {
     bundleDiscount = subscriptionSettings.bundleDiscounts.threeModules;
   }
-
-  let priceAfterBundleDiscount =
-    basePrice - basePrice * (bundleDiscount / 100);
-
+  let priceAfterBundleDiscount = basePrice;
+  if (first) {
+    priceAfterBundleDiscount = basePrice - basePrice * (bundleDiscount / 100);
+  }
+  else{
+    basePrice = availableBasePrice + priceOfAddedModules;
+    priceAfterBundleDiscount = basePrice;
+  }
+  console.log("priceAfterBundleDiscount", priceAfterBundleDiscount);
   if (selectedModules.includes("analytics")) {
     const analyticsModule = subscriptionSettings.modulePricing.find(
-      (item) => item.module === "analytics"
+      (item) => item.module === "analytics",
     );
     if (analyticsModule) {
       priceAfterBundleDiscount += analyticsModule.price;
@@ -75,17 +93,20 @@ const calculateFullPlanPrice = (
 
   const multiOrgPrice = getMultiOrgPrice(
     numberOfOrganizations,
-    subscriptionSettings.multiOrgPricing
+    subscriptionSettings.multiOrgPricing,
+  );
+  console.log(
+    " subscriptionSettings.multiOrgPricing",
+    subscriptionSettings.multiOrgPricing,
   );
   let finalBasePrice =
     priceAfterBundleDiscount * (multiOrgPrice / 100) * numberOfOrganizations;
-
+  console.log("finalBasePrice", finalBasePrice);
   let finalPrice = finalBasePrice;
   if (pricingPlan === "yearly") {
     finalPrice = finalBasePrice * 12;
     finalPrice -=
-      finalPrice *
-      (subscriptionSettings.yearlyDiscount.discountPercent / 100);
+      finalPrice * (subscriptionSettings.yearlyDiscount.discountPercent / 100);
   }
 
   return {
@@ -95,12 +116,16 @@ const calculateFullPlanPrice = (
 };
 const compareModules = (includedModules, selectedModules) => {
   // Find the modules that are in selectedModules but not in includedModules (added modules)
-  const addedModules = selectedModules.filter(module => !includedModules.includes(module));
+  const addedModules = selectedModules.filter(
+    (module) => !includedModules.includes(module),
+  );
   // Find the modules that are in includedModules but not in selectedModules (removed modules)
-  const removedModules = includedModules.filter(module => !selectedModules.includes(module));
+  const removedModules = includedModules.filter(
+    (module) => !selectedModules.includes(module),
+  );
   return {
-    addedModules,    // Modules added
-    removedModules,  // Modules removed
+    addedModules, // Modules added
+    removedModules, // Modules removed
   };
 };
 const getDaysInCurrentMonth = (dateInput = null) => {
@@ -142,40 +167,49 @@ const getDaysInCurrentYear = () => {
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
   const isLeapYear = (year) => {
-    return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+    return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
   };
   return isLeapYear(currentYear) ? 366 : 365;
 };
 const checkIsTheUpdateAllowed = async (userSubscription, body) => {
   const currentSubscription = userSubscription.activeSubscription;
-  let finalDirection = 'None';
+  let finalDirection = "None";
 
   // Check if there is any difference in subscription types
-  const addedSubscriptionTypes = body.subscriptionTypes.filter(type => !currentSubscription.subscriptionTypes.includes(type));
-  const removedSubscriptionTypes = currentSubscription.subscriptionTypes.filter(type => !body.subscriptionTypes.includes(type));
+  const addedSubscriptionTypes = body.subscriptionTypes.filter(
+    (type) => !currentSubscription.subscriptionTypes.includes(type),
+  );
+  const removedSubscriptionTypes = currentSubscription.subscriptionTypes.filter(
+    (type) => !body.subscriptionTypes.includes(type),
+  );
 
   let subscriptionTypeChangeDirection = null; // 1 for increase, -1 for decrease
 
   // Determine if subscription types are increased or decreased
-  if (addedSubscriptionTypes.length > 0 && removedSubscriptionTypes.length === 0) {
+  if (
+    addedSubscriptionTypes.length > 0 &&
+    removedSubscriptionTypes.length === 0
+  ) {
     // Subscription types are increased
     subscriptionTypeChangeDirection = 1;
-  } else if (removedSubscriptionTypes.length > 0 && addedSubscriptionTypes.length === 0) {
+  } else if (
+    removedSubscriptionTypes.length > 0 &&
+    addedSubscriptionTypes.length === 0
+  ) {
     // Subscription types are decreased
     subscriptionTypeChangeDirection = -1;
-
   } else if (
     addedSubscriptionTypes.length > 0 &&
     removedSubscriptionTypes.length > 0
   ) {
-
     const isFreeSwitch =
       addedSubscriptionTypes.length === 1 &&
       addedSubscriptionTypes.includes("free");
 
     if (!isFreeSwitch) {
       return {
-        error: 'Invalid operation. Cannot mix increase and decrease subscription types.'
+        error:
+          "Invalid operation. Cannot mix increase and decrease subscription types.",
       };
     }
     subscriptionTypeChangeDirection = -1;
@@ -183,41 +217,45 @@ const checkIsTheUpdateAllowed = async (userSubscription, body) => {
 
   let pricingPlanChangeDirection = null;
   if (body.pricingPlan !== currentSubscription.pricingPlan) {
-
     pricingPlanChangeDirection = -1;
-    finalDirection = 'Decrease';
+    finalDirection = "Decrease";
     return { finalDirection };
   }
   const organizationChangeDirection =
-    body.numberOfOrganizations > currentSubscription.numberOfOrganizations ? 1 :
-      body.numberOfOrganizations < currentSubscription.numberOfOrganizations ? -1 : null;
+    body.numberOfOrganizations > currentSubscription.numberOfOrganizations
+      ? 1
+      : body.numberOfOrganizations < currentSubscription.numberOfOrganizations
+        ? -1
+        : null;
 
   const directions = [
     subscriptionTypeChangeDirection,
     organizationChangeDirection,
     pricingPlanChangeDirection,
-  ].filter(d => d !== null);
+  ].filter((d) => d !== null);
 
   const hasIncrease = directions.includes(1);
   const hasDecrease = directions.includes(-1);
 
   if (hasIncrease && hasDecrease) {
     return {
-      error: 'Cannot mix increase and decrease operations for subscription types, pricing plan, and number of organizations.',
+      error:
+        "Cannot mix increase and decrease operations for subscription types, pricing plan, and number of organizations.",
     };
   }
   if (hasIncrease) {
-    finalDirection = 'Increase';
+    finalDirection = "Increase";
   } else if (hasDecrease) {
-    finalDirection = 'Decrease';
+    finalDirection = "Decrease";
   }
   return { finalDirection };
-}
+};
 const calculateSubscriptionPrice = async (userId, body) => {
   const [subscriptionSettings, userSubscription] = await Promise.all([
     SubscriptionService.getSubscriptionSettings(),
-    SubscriptionService.getUserSubscription(userId)
+    SubscriptionService.getUserSubscription(userId),
   ]);
+  const availableBasePrice = userSubscription.activeSubscription.basePrice;
 
   const isFirstTimeOrFree =
     userSubscription.activeSubscription.subscriptionTypes.includes("free") ||
@@ -226,10 +264,12 @@ const calculateSubscriptionPrice = async (userId, body) => {
 
   if (isFirstTimeOrFree) {
     const { basePrice, finalPrice } = calculateFullPlanPrice(
+      (first = true),
       body.subscriptionTypes,
       body.pricingPlan,
       body.numberOfOrganizations,
-      subscriptionSettings
+      subscriptionSettings,
+      availableBasePrice,
     );
 
     if (
@@ -246,22 +286,25 @@ const calculateSubscriptionPrice = async (userId, body) => {
 
   const updatedSubscription = await checkIsTheUpdateAllowed(
     userSubscription,
-    body
+    body,
   );
   if (updatedSubscription.error) {
     return { error: updatedSubscription.error };
   }
 
+
   let moduleComparison = { addedModules: [], removedModules: [] };
   const amountPaid = Number(
-    userSubscription.activeSubscription.totalSubscriptionAmount || 0
+    userSubscription.activeSubscription.totalSubscriptionAmount || 0,
   );
+ 
   if (body.subscriptionTypes) {
     moduleComparison = compareModules(
       userSubscription.activeSubscription.subscriptionTypes,
-      body.subscriptionTypes
+      body.subscriptionTypes,
     );
   }
+   console.log("moduleComparison", moduleComparison);
 
   if (updatedSubscription.finalDirection === "Increase") {
     if (
@@ -277,29 +320,38 @@ const calculateSubscriptionPrice = async (userId, body) => {
       }
 
       const { basePrice, finalPrice } = calculateFullPlanPrice(
+        (first = false),
         body.subscriptionTypes,
         body.pricingPlan,
         body.numberOfOrganizations,
-        subscriptionSettings
+        subscriptionSettings,
+        availableBasePrice,
+        moduleComparison.addedModules,
       );
 
       const remainingDays = calculateRemainingDays(
         userSubscription.activeSubscription.startDate,
-        userSubscription.activeSubscription.endDate
+        userSubscription.activeSubscription.endDate,
       );
       const totalDays =
         userSubscription.activeSubscription.pricingPlan === "yearly"
           ? getDaysInCurrentYear()
           : getDaysInCurrentMonth(
-              userSubscription.activeSubscription.startDate
+              userSubscription.activeSubscription.startDate,
             );
+          console.log("totalDays", totalDays);
+          console.log("amountPaid", amountPaid);
+
 
       const remainingAmount = Math.max(finalPrice - amountPaid, 0);
       const pricePerDay = totalDays > 0 ? remainingAmount / totalDays : 0;
       const priceForRemainingDays = Number(
-        (pricePerDay * remainingDays).toFixed(2)
+        (pricePerDay * remainingDays).toFixed(2),
       );
+      console.log("emainingAmount", remainingAmount);
+      console.log("remainingDays", remainingDays);
 
+console.log("priceForRemainingDays", priceForRemainingDays);
       if (
         Number(body.totalSubscriptionAmount).toFixed(2) !==
           Number(finalPrice).toFixed(2) ||
@@ -308,9 +360,9 @@ const calculateSubscriptionPrice = async (userId, body) => {
       ) {
         return {
           error: `calculated_price_mismatch_expected_amount_is_${Number(
-            finalPrice
+            finalPrice,
           ).toFixed(2)}_and_remaining_days_price_is_${Number(
-            priceForRemainingDays
+            priceForRemainingDays,
           ).toFixed(2)}`,
         };
       }
@@ -334,7 +386,7 @@ const calculateSubscriptionPrice = async (userId, body) => {
         body.subscriptionTypes,
         body.pricingPlan,
         body.numberOfOrganizations,
-        subscriptionSettings
+        subscriptionSettings,
       );
 
       if (
@@ -358,16 +410,20 @@ const calculateSubscriptionPrice = async (userId, body) => {
 const updateSubscription = async (req, res) => {
   try {
     const {
-
       subscriptionTypes,
       pricingPlan,
       numberOfOrganizations,
       totalSubscriptionAmount,
-      status = "active"
+      status = "active",
     } = req.body;
 
-    const totalOrganizations = await countActiveOrganizationsByCreator(req.user._id);
-    if (numberOfOrganizations !== undefined && numberOfOrganizations < totalOrganizations) {
+    const totalOrganizations = await countActiveOrganizationsByCreator(
+      req.user._id,
+    );
+    if (
+      numberOfOrganizations !== undefined &&
+      numberOfOrganizations < totalOrganizations
+    ) {
       return sendResponse({
         res,
         statusCode: 400,
@@ -391,7 +447,7 @@ const updateSubscription = async (req, res) => {
       "ordering",
       "reservations",
       "analytics",
-      "loyalty"
+      "loyalty",
     ];
 
     const ALLOWED_PRICING_PLANS = ["monthly", "yearly"];
@@ -404,13 +460,9 @@ const updateSubscription = async (req, res) => {
     updatePayload.userId = req.user._id;
     updatePayload.status = status;
 
-
     // ---- subscriptionTypes ----
     if (subscriptionTypes !== undefined) {
-      if (
-        !Array.isArray(subscriptionTypes) ||
-        subscriptionTypes.length === 0
-      ) {
+      if (!Array.isArray(subscriptionTypes) || subscriptionTypes.length === 0) {
         return sendResponse({
           res,
           statusCode: 400,
@@ -512,7 +564,8 @@ const updateSubscription = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 200,
-        translationKey: "subscription_updated_successfully_it_will_reflect_after_current_subscription_end",
+        translationKey:
+          "subscription_updated_successfully_it_will_reflect_after_current_subscription_end",
         data: updated,
       });
     }
@@ -532,9 +585,6 @@ const updateSubscription = async (req, res) => {
     });
   }
 };
-
-
-
 
 const deleteSubscription = async (req, res) => {
   const { id } = req.params;
@@ -573,36 +623,21 @@ const deleteSubscription = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 const getSubscriptions = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let { keyword, status = "active", date, range } = req.query;
   try {
-
     const timezone = req.user.timezone;
-    const { subscriptions, meta } = await SubscriptionService.getavailableSubscriptions({
-      timezone,
-      page,
-      limit,
-      keyword,
-      status,
-      date,
-      range
-    });
+    const { subscriptions, meta } =
+      await SubscriptionService.getavailableSubscriptions({
+        timezone,
+        page,
+        limit,
+        keyword,
+        status,
+        date,
+        range,
+      });
 
     if (subscriptions.error) {
       return sendResponse({
@@ -629,22 +664,22 @@ const getSubscriptions = async (req, res) => {
   }
 };
 
-
 const getUserSubscriptions = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let { keyword, status, date, range } = req.query;
   try {
     const timezone = req.user.timezone;
-    const { subscriptions, meta } = await SubscriptionService.getUserSubscriptions({
-      timezone,
-      page,
-      limit,
-      keyword,
-      status,
-      date,
-      range,
-      userId: req.user._id
-    });
+    const { subscriptions, meta } =
+      await SubscriptionService.getUserSubscriptions({
+        timezone,
+        page,
+        limit,
+        keyword,
+        status,
+        date,
+        range,
+        userId: req.user._id,
+      });
 
     if (subscriptions.error) {
       return sendResponse({
@@ -678,7 +713,7 @@ const resetSubscriptions = async (req, res) => {
       userId = req.user._id;
     }
     const subscriptions = await SubscriptionService.resetSubscriptions({
-      userId
+      userId,
     });
 
     if (subscriptions.error) {
@@ -816,8 +851,7 @@ const updateUserSubscriptionPaymentStatus = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey:
-        "subscription_payment_status_updated_successfully",
+      translationKey: "subscription_payment_status_updated_successfully",
       data: updated,
     });
   } catch (error) {
@@ -839,5 +873,4 @@ module.exports = {
   getUserSubscriptions,
   resetSubscriptions,
   updateUserSubscriptionPaymentStatus,
-
 };

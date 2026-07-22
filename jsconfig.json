@@ -274,6 +274,18 @@
       ],
       "@SubscriptionNotificationLogsModel": [
         "backend/commonModules/subscriptions/SubScriptionNotificationLogs.js"
+      ],
+      "@BrandModel": [
+        "backend/admin/presetMenu/brand/Brand.js"
+      ],
+      "@ServingModel": [
+        "backend/admin/presetMenu/serving/Serving.js"
+      ],
+      "@DietTagsModel": [
+        "backend/admin/presetMenu/dietTags/DietTags.js"
+      ],
+      "@AllergenModel": [
+        "backend/admin/presetMenu/allergen/Allergen.js"
       ]
     }
   },
