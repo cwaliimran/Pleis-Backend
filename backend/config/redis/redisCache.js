@@ -70,6 +70,7 @@ async function releaseLock(key, token) {
  * MAIN CACHE
  */
 async function cache({ namespace, params = {}, ttl = 60, fetchFn }) {
+  console.log("namespace", namespace);
   const key = buildKey(namespace, params);
 
   if (!isRedisUp()) {
