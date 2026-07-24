@@ -348,7 +348,7 @@ const getUserSubscriptions = async ({
   /* ================================
      EXECUTE
   ================================= */
-  console.log("pipeline", pipeline);
+
   const result = await User.aggregate(pipeline);
 
 const users = result[0]?.data || [];

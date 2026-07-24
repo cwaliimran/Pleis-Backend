@@ -29,6 +29,7 @@ const getMultiOrgPrice = (numberOfOrganizations, multiOrgPricing) => {
 };
 const calculateModulePrice = (modulesToInclude, subscriptionSettings) => {
   let basePrice = 0;
+
   modulesToInclude.forEach((module) => {
     const moduleSetting = subscriptionSettings.modulePricing.find(
       (item) => item.module === module,
@@ -45,27 +46,81 @@ const calculateModulePrice = (modulesToInclude, subscriptionSettings) => {
  * modules → bundle discount → analytics → multi-org % → * orgs → yearly discount
  * Returns { basePrice (after bundle, before multi-org), finalPrice }
  */
-const calculateFullPlanPrice = (
-  first = false,
+// const calculateFullPlanPrice = (
+
+//   first = false,
+//   subscriptionTypes,
+//   pricingPlan,
+//   numberOfOrganizations,
+//   subscriptionSettings,
+//   availableBasePrice,
+//   addedModules,
+// ) => {
+
+//   const selectedModules = subscriptionTypes || [];
+//   const modulesToInclude = selectedModules.filter(
+//     (module) => module !== "analytics" && module !== "free",
+//   );
+
+//   let basePrice = calculateModulePrice(modulesToInclude, subscriptionSettings);
+
+//   let bundleDiscount = 0;
+//   if (modulesToInclude.length === 2) {
+//     bundleDiscount = subscriptionSettings.bundleDiscounts.twoModules;
+//   } else if (modulesToInclude.length === 3) {
+//     bundleDiscount = subscriptionSettings.bundleDiscounts.threeModules;
+//   }
+//   let priceAfterBundleDiscount = basePrice;
+//   if (first) {
+//     priceAfterBundleDiscount = basePrice - basePrice * (bundleDiscount / 100);
+//   }
+//   else{
+//     basePrice = availableBasePrice + priceOfAddedModules;
+//     priceAfterBundleDiscount = basePrice;
+//   }
+
+//   if (selectedModules.includes("analytics")) {
+//     const analyticsModule = subscriptionSettings.modulePricing.find(
+//       (item) => item.module === "analytics",
+//     );
+//     if (analyticsModule) {
+//       priceAfterBundleDiscount += analyticsModule.price;
+//     }
+//   }
+
+//   const multiOrgPrice = getMultiOrgPrice(
+//     numberOfOrganizations,
+//     subscriptionSettings.multiOrgPricing,
+//   );
+
+//   let finalBasePrice =
+//     priceAfterBundleDiscount * (multiOrgPrice / 100) * numberOfOrganizations;
+
+//   let finalPrice = finalBasePrice;
+//   if (pricingPlan === "yearly") {
+//     finalPrice = finalBasePrice * 12;
+//     finalPrice -=
+//       finalPrice * (subscriptionSettings.yearlyDiscount.discountPercent / 100);
+//   }
+
+//   return {
+//     basePrice: priceAfterBundleDiscount,
+//     finalPrice: Number(Number(finalPrice).toFixed(2)),
+//   };
+// };
+
+const calculateFullPlanPriceFirstTime = (
   subscriptionTypes,
   pricingPlan,
   numberOfOrganizations,
   subscriptionSettings,
-  availableBasePrice,
-  addedModules,
 ) => {
-  console.log("pricingPlan", pricingPlan);
   const selectedModules = subscriptionTypes || [];
   const modulesToInclude = selectedModules.filter(
     (module) => module !== "analytics" && module !== "free",
   );
-  console.log("modulesToInclude", modulesToInclude);
 
   let basePrice = calculateModulePrice(modulesToInclude, subscriptionSettings);
-  const priceOfAddedModules = calculateModulePrice(addedModules, subscriptionSettings);
-  console.log("availableBasePrice", availableBasePrice);
-  console.log("basePrice", basePrice);
-  console.log("addedModules", addedModules);
 
   let bundleDiscount = 0;
   if (modulesToInclude.length === 2) {
@@ -74,14 +129,8 @@ const calculateFullPlanPrice = (
     bundleDiscount = subscriptionSettings.bundleDiscounts.threeModules;
   }
   let priceAfterBundleDiscount = basePrice;
-  if (first) {
-    priceAfterBundleDiscount = basePrice - basePrice * (bundleDiscount / 100);
-  }
-  else{
-    basePrice = availableBasePrice + priceOfAddedModules;
-    priceAfterBundleDiscount = basePrice;
-  }
-  console.log("priceAfterBundleDiscount", priceAfterBundleDiscount);
+  priceAfterBundleDiscount = basePrice - basePrice * (bundleDiscount / 100);
+
   if (selectedModules.includes("analytics")) {
     const analyticsModule = subscriptionSettings.modulePricing.find(
       (item) => item.module === "analytics",
@@ -95,13 +144,10 @@ const calculateFullPlanPrice = (
     numberOfOrganizations,
     subscriptionSettings.multiOrgPricing,
   );
-  console.log(
-    " subscriptionSettings.multiOrgPricing",
-    subscriptionSettings.multiOrgPricing,
-  );
+
   let finalBasePrice =
     priceAfterBundleDiscount * (multiOrgPrice / 100) * numberOfOrganizations;
-  console.log("finalBasePrice", finalBasePrice);
+
   let finalPrice = finalBasePrice;
   if (pricingPlan === "yearly") {
     finalPrice = finalBasePrice * 12;
@@ -111,6 +157,51 @@ const calculateFullPlanPrice = (
 
   return {
     basePrice: priceAfterBundleDiscount,
+    finalPrice: Number(Number(finalPrice).toFixed(2)),
+  };
+};
+const calculateFullPlanPriceRecurring = (
+  subscriptionTypes,
+  pricingPlan,
+  numberOfOrganizations,
+  subscriptionSettings,
+  availableBasePrice,
+  addedModules,
+  changeInNumberOfOrganizations,
+) => {
+  const selectedModules = addedModules || [];
+  const modulesToInclude = selectedModules.filter(
+    (module) => module !== "analytics" && module !== "free",
+  );
+
+  let basePrice = calculateModulePrice(modulesToInclude, subscriptionSettings);
+  basePrice += availableBasePrice;
+
+  if (selectedModules.includes("analytics")) {
+    const analyticsModule = subscriptionSettings.modulePricing.find(
+      (item) => item.module === "analytics",
+    );
+    if (analyticsModule) {
+      basePrice += analyticsModule.price;
+    }
+  }
+  let finalBasePrice = basePrice * numberOfOrganizations;
+  if (changeInNumberOfOrganizations) {
+    const multiOrgPrice = getMultiOrgPrice(
+      numberOfOrganizations,
+      subscriptionSettings.multiOrgPricing,
+    );
+    finalBasePrice = basePrice * (multiOrgPrice / 100) * numberOfOrganizations;
+  }
+
+  let finalPrice = finalBasePrice;
+  if (pricingPlan === "yearly") {
+    finalPrice = finalBasePrice * 12;
+  } else if (pricingPlan === "monthly") {
+    finalPrice = finalBasePrice;
+  }
+  return {
+    basePrice: basePrice,
     finalPrice: Number(Number(finalPrice).toFixed(2)),
   };
 };
@@ -256,20 +347,21 @@ const calculateSubscriptionPrice = async (userId, body) => {
     SubscriptionService.getUserSubscription(userId),
   ]);
   const availableBasePrice = userSubscription.activeSubscription.basePrice;
-
+  const currentOrgCount =
+    userSubscription?.activeSubscription?.numberOfOrganizations;
+  const changeInNumberOfOrganizations =
+    Number(body.numberOfOrganizations) !== Number(currentOrgCount);
   const isFirstTimeOrFree =
     userSubscription.activeSubscription.subscriptionTypes.includes("free") ||
     userSubscription.activeSubscription.status == "inactive" ||
     userSubscription.activeSubscription.endDate == null;
 
   if (isFirstTimeOrFree) {
-    const { basePrice, finalPrice } = calculateFullPlanPrice(
-      (first = true),
+    const { basePrice, finalPrice } = calculateFullPlanPriceFirstTime(
       body.subscriptionTypes,
       body.pricingPlan,
       body.numberOfOrganizations,
       subscriptionSettings,
-      availableBasePrice,
     );
 
     if (
@@ -288,23 +380,22 @@ const calculateSubscriptionPrice = async (userId, body) => {
     userSubscription,
     body,
   );
+
   if (updatedSubscription.error) {
     return { error: updatedSubscription.error };
   }
-
 
   let moduleComparison = { addedModules: [], removedModules: [] };
   const amountPaid = Number(
     userSubscription.activeSubscription.totalSubscriptionAmount || 0,
   );
- 
+
   if (body.subscriptionTypes) {
     moduleComparison = compareModules(
       userSubscription.activeSubscription.subscriptionTypes,
       body.subscriptionTypes,
     );
   }
-   console.log("moduleComparison", moduleComparison);
 
   if (updatedSubscription.finalDirection === "Increase") {
     if (
@@ -318,17 +409,17 @@ const calculateSubscriptionPrice = async (userId, body) => {
           direction: updatedSubscription.finalDirection,
         };
       }
+      const addedModules = moduleComparison.addedModules || [];
 
-      const { basePrice, finalPrice } = calculateFullPlanPrice(
-        (first = false),
+      const { basePrice, finalPrice } = calculateFullPlanPriceRecurring(
         body.subscriptionTypes,
         body.pricingPlan,
         body.numberOfOrganizations,
         subscriptionSettings,
         availableBasePrice,
-        moduleComparison.addedModules,
+        addedModules,
+        changeInNumberOfOrganizations,
       );
-
       const remainingDays = calculateRemainingDays(
         userSubscription.activeSubscription.startDate,
         userSubscription.activeSubscription.endDate,
@@ -339,19 +430,13 @@ const calculateSubscriptionPrice = async (userId, body) => {
           : getDaysInCurrentMonth(
               userSubscription.activeSubscription.startDate,
             );
-          console.log("totalDays", totalDays);
-          console.log("amountPaid", amountPaid);
-
 
       const remainingAmount = Math.max(finalPrice - amountPaid, 0);
       const pricePerDay = totalDays > 0 ? remainingAmount / totalDays : 0;
       const priceForRemainingDays = Number(
         (pricePerDay * remainingDays).toFixed(2),
       );
-      console.log("emainingAmount", remainingAmount);
-      console.log("remainingDays", remainingDays);
 
-console.log("priceForRemainingDays", priceForRemainingDays);
       if (
         Number(body.totalSubscriptionAmount).toFixed(2) !==
           Number(finalPrice).toFixed(2) ||
@@ -382,7 +467,7 @@ console.log("priceForRemainingDays", priceForRemainingDays);
         userSubscription.activeSubscription.numberOfOrganizations ||
       body.pricingPlan !== userSubscription.activeSubscription.pricingPlan
     ) {
-      const { basePrice, finalPrice } = calculateFullPlanPrice(
+      const { basePrice, finalPrice } = calculateFullPlanPriceFirstTime(
         body.subscriptionTypes,
         body.pricingPlan,
         body.numberOfOrganizations,

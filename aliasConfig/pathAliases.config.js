@@ -141,4 +141,11 @@ module.exports = {
   "@ServingModel": "backend/admin/presetMenu/serving/Serving.js",
   "@DietTagsModel": "backend/admin/presetMenu/dietTags/DietTags.js",
   "@AllergenModel": "backend/admin/presetMenu/allergen/Allergen.js",
+  "@DaypartModel": "backend/admin/presetMenu/daypart/Daypart.js",
+  "@MenuItemSubCategoriesModel":
+    "backend/admin/presetMenu/menuItemSubCategories/MenuItemSubCategories.js",
+  "@MenuItemSubCategoryTypeModel":
+    "backend/admin/presetMenu/menuItemSubCategoryType/MenuItemSubCategoryType.js",
+  "@PresetTypeModel": "backend/admin/presetMenu/presetType/PresetType.js",
+
 };

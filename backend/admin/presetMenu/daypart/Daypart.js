@@ -40,5 +40,15 @@ const daypartSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+daypartSchema.index(
+  { user: 1, startTime: 1, endTime: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      startTime: { $type: "string" },
+      endTime: { $type: "string" },
+    },
+  },
+);
 
 module.exports = mongoose.model("Daypart", daypartSchema);

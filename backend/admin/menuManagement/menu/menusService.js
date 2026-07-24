@@ -5,27 +5,47 @@ const Organizations = require("@OrganizationModel");
 const Menus = require("@MenusModel");
 const menuRepo = require("./menusRepository");
 const mongoose = require("mongoose");
-const { getOrganizationIdsByCompanyOrganizer, getOrganizationByCompanyOrganizer } = require("../../organizations/organizationRepository");
+const {
+  getOrganizationIdsByCompanyOrganizer,
+  getOrganizationByCompanyOrganizer,
+} = require("../../organizations/organizationRepository");
 
 const createMenu = async (data) => {
   return await menuRepo.createMenu(data);
 };
 
 // Populate organization data for menus, but merge into "organization" field
-const getMenus = async ({ page, limit, keyword, status, date, organizations, companyOrganizer, sortBy, sortOrder }) => {
+const getMenus = async ({
+  page,
+  limit,
+  keyword,
+  status,
+  date,
+  organizations,
+  companyOrganizer,
+  sortBy,
+  sortOrder,
+}) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let organizationIds = [];
 
   // 1️⃣ If organizations explicitly provided, use them directly
   if (Array.isArray(organizations) && organizations.length > 0) {
-    organizationIds = organizations.map(id => new mongoose.Types.ObjectId(id));
+    organizationIds = organizations.map(
+      (id) => new mongoose.Types.ObjectId(id),
+    );
     // 2️⃣ Otherwise, if companyOrganizer provided, get orgs created by it
   } else if (companyOrganizer) {
-    organizationIds = await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
+    organizationIds =
+      await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
     if (organizationIds.length === 0) {
       return {
         menus: [],
-        meta: generateMeta(page, limit, 0, { total: 0, active: 0, inactive: 0 })
+        meta: generateMeta(page, limit, 0, {
+          total: 0,
+          active: 0,
+          inactive: 0,
+        }),
       };
     }
   }
@@ -41,21 +61,23 @@ const getMenus = async ({ page, limit, keyword, status, date, organizations, com
           {
             $project: {
               _id: 1,
-              "basicInfo.name": 1
-            }
-          }
-        ]
-      }
+              "basicInfo.name": 1,
+            },
+          },
+        ],
+      },
     },
-    { $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true } },
+    {
+      $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true },
+    },
   ];
 
   // 4️⃣ Apply filters dynamically
   if (organizationIds.length > 0) {
     pipeline.push({
       $match: {
-        organization: { $in: organizationIds }
-      }
+        organization: { $in: organizationIds },
+      },
     });
   }
 
@@ -69,7 +91,7 @@ const getMenus = async ({ page, limit, keyword, status, date, organizations, com
     const start = new Date(date);
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
     pipeline.push({
-      $match: { createdAt: { $gte: start, $lt: end } }
+      $match: { createdAt: { $gte: start, $lt: end } },
     });
   }
 
@@ -77,16 +99,15 @@ const getMenus = async ({ page, limit, keyword, status, date, organizations, com
   const keywordMatch = buildKeywordQueryFromModels(
     [
       { schema: Menus.schema },
-      { schema: Organizations.schema, prefix: "organizationData." }
+      { schema: Organizations.schema, prefix: "organizationData." },
     ],
-    keyword
+    keyword,
   );
 
   if (Object.keys(keywordMatch).length > 0) {
     pipeline.push({ $match: keywordMatch });
   }
-  console.log("sortOrder", sortOrder);
-  console.log("sortBy", sortBy);
+
   if (sortBy && sortOrder) {
     const sortDirection = sortOrder === "asc" ? 1 : -1;
 
@@ -94,66 +115,62 @@ const getMenus = async ({ page, limit, keyword, status, date, organizations, com
       pipeline.push({
         $addFields: {
           menuNameSort: {
-            $toLower: { $ifNull: ["$title", ""] }
-          }
-        }
+            $toLower: { $ifNull: ["$title", ""] },
+          },
+        },
       });
 
       pipeline.push({
         $sort: {
           menuNameSort: sortDirection,
-          _id: sortDirection
-        }
+          _id: sortDirection,
+        },
       });
-
     } else if (sortBy === "organizationName") {
       pipeline.push({
         $addFields: {
           organizationNameSort: {
             $toLower: {
-              $ifNull: ["$organizationData.basicInfo.name", ""]
-            }
-          }
-        }
+              $ifNull: ["$organizationData.basicInfo.name", ""],
+            },
+          },
+        },
       });
 
       pipeline.push({
         $sort: {
           organizationNameSort: sortDirection,
-          _id: sortDirection
-        }
+          _id: sortDirection,
+        },
       });
-
     } else if (sortBy === "description") {
       pipeline.push({
         $addFields: {
           descriptionSort: {
-            $toLower: { $ifNull: ["$description", ""] }
-          }
-        }
+            $toLower: { $ifNull: ["$description", ""] },
+          },
+        },
       });
 
       pipeline.push({
         $sort: {
           descriptionSort: sortDirection,
-          _id: sortDirection
-        }
+          _id: sortDirection,
+        },
       });
-
     } else if (sortBy === "createdAt") {
       pipeline.push({
         $sort: {
           createdAt: sortDirection,
-          _id: sortDirection
-        }
+          _id: sortDirection,
+        },
       });
-
     } else {
       pipeline.push({
         $sort: {
           createdAt: -1,
-          _id: -1
-        }
+          _id: -1,
+        },
       });
     }
   }
@@ -162,15 +179,15 @@ const getMenus = async ({ page, limit, keyword, status, date, organizations, com
 
   pipeline.push(
     { $addFields: { organization: "$organizationData" } },
-    { $project: { organizationData: 0 } }
+    { $project: { organizationData: 0 } },
   );
 
   // Pagination + count
   pipeline.push({
     $facet: {
       data: [{ $skip: skip }, ...(limit === 0 ? [] : [{ $limit: limit }])],
-      totalFiltered: [{ $count: "count" }]
-    }
+      totalFiltered: [{ $count: "count" }],
+    },
   });
 
   const result = await Menus.aggregate(pipeline);
@@ -186,7 +203,7 @@ const getMenus = async ({ page, limit, keyword, status, date, organizations, com
   const [total, active, inactive] = await Promise.all([
     Menus.countDocuments({ ...baseFilter, status: { $ne: "deleted" } }),
     Menus.countDocuments({ ...baseFilter, status: "active" }),
-    Menus.countDocuments({ ...baseFilter, status: "inactive" })
+    Menus.countDocuments({ ...baseFilter, status: "inactive" }),
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
@@ -194,10 +211,76 @@ const getMenus = async ({ page, limit, keyword, status, date, organizations, com
 
   return {
     menus,
-    meta
+    meta,
   };
 };
 
+const getMenusSummary = async ({
+  page,
+  limit,
+  organizations,
+  companyOrganizer,
+}) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  let organizationIds = [];
+
+  // 1️⃣ If organizations explicitly provided, use them directly
+  if (Array.isArray(organizations) && organizations.length > 0) {
+    organizationIds = organizations
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+
+    // 2️⃣ Otherwise, if companyOrganizer provided, get orgs created by it
+  } else if (companyOrganizer) {
+    organizationIds =
+      await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
+
+    if (organizationIds.length === 0) {
+      return {
+        menus: [],
+        meta: generateMeta(page, limit, 0, {
+          total: 0,
+          active: 0,
+          inactive: 0,
+        }),
+      };
+    }
+  }
+
+  const pipeline = [];
+
+  // 3️⃣ Apply filters
+  if (organizationIds.length > 0) {
+    pipeline.push({
+      $match: { organization: { $in: organizationIds } },
+    });
+  }
+
+  pipeline.push({ $match: { status: "active" } });
+
+  // stable ordering so pagination doesn't repeat/skip records
+  pipeline.push({ $sort: { createdAt: -1, _id: -1 } });
+
+  // 4️⃣ Pagination + count
+  pipeline.push({
+    $facet: {
+      data: [
+        { $skip: skip },
+        ...(limit === 0 ? [] : [{ $limit: limit }]),
+        { $project: { title: 1 } },
+      ],
+      totalFiltered: [{ $count: "count" }],
+    },
+  });
+
+  const result = await Menus.aggregate(pipeline);
+  const menus = result[0]?.data || [];
+  const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+
+  const meta = generateMeta(page, limit, totalFiltered);
+
+  return { menus, meta };
+};
 
 const updateMenu = async (id, data) => {
   const session = await mongoose.startSession();
@@ -239,7 +322,7 @@ const updateMenu = async (id, data) => {
           _id: { $ne: menuId },
         },
         { $set: { status: "inactive" } },
-        { session }
+        { session },
       );
     }
 
@@ -255,8 +338,6 @@ const updateMenu = async (id, data) => {
     session.endSession();
   }
 };
-
-
 
 const deleteMenu = async (id) => {
   const updated = await menuRepo.findByIdAndUpdate(id, {
@@ -294,7 +375,7 @@ const getTimezoneDateTime = (timezone = "Asia/Karachi") => {
   };
 };
 
-const duplicateMenuAndItems = async (menuId, organization,timezone) => {
+const duplicateMenuAndItems = async (menuId, organization, timezone) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -302,13 +383,12 @@ const duplicateMenuAndItems = async (menuId, organization,timezone) => {
     // Step 1: Duplicate the Menu
     const menu = await menuRepo.findMenuById(menuId);
     if (!menu) {
-      throw new Error('Menu not found');
+      throw new Error("Menu not found");
     }
     // if (menu.organization.toString() === organization.toString()) {
     //   throw new Error('Old and new organization cannot be the same');
     // }
     const { formattedDate, formattedTime } = getTimezoneDateTime(timezone);
-
 
     const duplicatedMenu = {
       ...menu.toObject(),
@@ -318,9 +398,14 @@ const duplicateMenuAndItems = async (menuId, organization,timezone) => {
       organization: organization,
     };
 
-    const savedDuplicatedMenu = await menuRepo.createDuplicatedMenu(duplicatedMenu, session);
+    const savedDuplicatedMenu = await menuRepo.createDuplicatedMenu(
+      duplicatedMenu,
+      session,
+    );
     if (savedDuplicatedMenu.status === "active") {
-      const orgId = new mongoose.Types.ObjectId(savedDuplicatedMenu.organization);
+      const orgId = new mongoose.Types.ObjectId(
+        savedDuplicatedMenu.organization,
+      );
       const menuId = new mongoose.Types.ObjectId(savedDuplicatedMenu._id);
       await Menus.updateMany(
         {
@@ -329,13 +414,12 @@ const duplicateMenuAndItems = async (menuId, organization,timezone) => {
           _id: { $ne: menuId },
         },
         { $set: { status: "inactive" } },
-        { session }
+        { session },
       );
     }
 
-
     const menuItems = await menuRepo.getMenuItemsByMenuId(menuId, session);
-    const duplicatedMenuItemsPromises = menuItems.map(item => {
+    const duplicatedMenuItemsPromises = menuItems.map((item) => {
       const duplicatedItem = {
         ...item.toObject(),
         _id: new mongoose.Types.ObjectId(),
@@ -359,7 +443,7 @@ const duplicateMenuAndItems = async (menuId, organization,timezone) => {
 
 const getMenuNamesByCompanyOrganizer = async (companyOrganizer) => {
   return await menuRepo.getMenuNamesByCompanyOrganizer(companyOrganizer);
-}
+};
 
 module.exports = {
   createMenu,
@@ -369,4 +453,5 @@ module.exports = {
   duplicateMenuAndItems,
   deleteMenu,
   getMenuNamesByCompanyOrganizer,
+  getMenusSummary,
 };

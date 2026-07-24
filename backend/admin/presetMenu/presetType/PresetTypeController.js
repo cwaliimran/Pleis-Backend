@@ -6,86 +6,47 @@ const {
   getReadableErrorMessage,
   convertTimezoneToUtc,
 } = require("../../../helperUtils/responseUtil");
-const moment = require("moment-timezone");
 
-const DaypartService = require("./daypartService");
+const presetTypeService = require("./PresetTypeService");
 
-const createDaypart = async (req, res) => {
-  let {
-    code,
-    status = "active",
-    name,
-    isAllDay = false,
-    startTime,
-    endTime,
-  } = req.body;
-  if (isAllDay) {
-    startTime = "00:00";
-    endTime = "23:59";
-  }
-  const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
-  const toMin = (t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3));
-
-  if (!TIME_RE.test(startTime) || !TIME_RE.test(endTime)) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Time must be in HH:mm format" });
-  }
-  if (toMin(endTime) <= toMin(startTime)) {
-    return res
-      .status(400)
-      .json({ success: false, message: "endTime must be after startTime" });
-  }
+const createpresetType = async (req, res) => {
+  let { code, status = "active", name, description,category,subCategory,type,example,image } = req.body;
 
   const user = req.user._id;
   const timezone = req.user.timezone;
-  console.log("timezone", timezone);
 
   if (
     !validateParams(req, res, {
-      rawData: ["code", "status", "name"],
+      rawData: ["code", "status", "name", "description","category","subCategory","type"],
     })
   )
     return;
-  const today = moment().tz(timezone).format("YYYY-MM-DD");
-
-  if (!isAllDay) {
-    startTime = convertTimezoneToUtc(
-      `${today} ${startTime}`,
-      timezone,
-      "YYYY-MM-DD HH:mm",
-      "HH:mm",
-    );
-    endTime = convertTimezoneToUtc(
-      `${today} ${endTime}`,
-      timezone,
-      "YYYY-MM-DD HH:mm",
-      "HH:mm",
-    );
-  }
   let data = {
     user,
     code,
     status,
     name,
-    isAllDay,
-    startTime,
-    endTime,
+    description,
+    category,
+    subCategory,
+    type,
+    example,
+    image
   };
   try {
-    const Daypart = await DaypartService.createDaypart(data);
-    if (!Daypart) {
+    const presetType = await presetTypeService.createpresetType(data);
+    if (!presetType) {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "Daypart_creation_failed",
+        translationKey: "presetType_creation_failed",
       });
     }
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "Daypart_created_successfully",
-      data: Daypart,
+      translationKey: "presetType_created_successfully",
+      data: presetType,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -97,13 +58,23 @@ const createDaypart = async (req, res) => {
     });
   }
 };
-const getDayparts = async (req, res) => {
+const getpresetTypes = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, sortBy, sortOrder, summary } = req.query;
+  const { keyword, status, date, sortBy, sortOrder, summary,category,subCategory,type } = req.query;
   try {
     const user = req.user._id;
     const timezone = req.user.timezone;
-    const SORT_FIELDS = ["code", "name", "createdAt", "status"];
+    const SORT_FIELDS = [
+      "code",
+      "name",
+      "description",
+      "category",
+      "subCategory",
+      "type",
+      "example",
+      "createdAt",
+      "status",
+    ];
     const SORT_ORDERS = ["asc", "desc"];
     if (
       (sortBy && !SORT_FIELDS.includes(sortBy)) ||
@@ -122,7 +93,7 @@ const getDayparts = async (req, res) => {
         : "sort_by_required_when_sort_order_is_provided";
       return sendResponse({ res, statusCode: 400, translationKey: key });
     }
-    const { Dayparts, meta } = await DaypartService.getDayparts({
+    const { presetTypes, meta } = await presetTypeService.getpresetTypes({
       timezone,
       page,
       limit,
@@ -133,13 +104,16 @@ const getDayparts = async (req, res) => {
       sortBy,
       sortOrder,
       summary,
+      category,
+      subCategory,
+      type,
     });
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Dayparts_fetched_successfully",
-      data: Dayparts,
+      translationKey: "presetTypes_fetched_successfully",
+      data: presetTypes,
       meta,
     });
   } catch (error) {
@@ -152,20 +126,25 @@ const getDayparts = async (req, res) => {
     });
   }
 };
-const updateDaypart = async (req, res) => {
+const updatepresetType = async (req, res) => {
   const { id } = req.params;
-  let { name, status } = req.body;
+  let { name, description, status, example, category, subCategory, type,image } = req.body;
 
   const user = req.user._id;
   const timezone = req.user.timezone;
 
   let data = {
     name,
+    description,
     status,
+    example,
+    category,
+    subCategory,
+    type,
   };
 
   try {
-    const updated = await DaypartService.updateDaypart(id, data);
+    const updated = await presetTypeService.updatepresetType(id, data);
     if (updated && updated.error) {
       return sendResponse({
         res,
@@ -178,14 +157,14 @@ const updateDaypart = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "Daypart_not_found",
+        translationKey: "presetType_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Daypart_updated_successfully",
+      translationKey: "presetType_updated_successfully",
       data: updated,
     });
   } catch (error) {
@@ -199,7 +178,7 @@ const updateDaypart = async (req, res) => {
   }
 };
 
-const deleteDaypart = async (req, res) => {
+const deletepresetType = async (req, res) => {
   const { id } = req.params;
 
   if (
@@ -211,19 +190,19 @@ const deleteDaypart = async (req, res) => {
     return;
 
   try {
-    const deleted = await DaypartService.deleteDaypart(id);
+    const deleted = await presetTypeService.deletepresetType(id);
     if (!deleted) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "Daypart_not_found",
+        translationKey: "presetType_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Daypart_deleted_successfully",
+      translationKey: "presetType_deleted_successfully",
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -235,13 +214,13 @@ const deleteDaypart = async (req, res) => {
     });
   }
 };
-const getDaypartCode = async (req, res) => {
+const getpresetTypeCode = async (req, res) => {
   try {
-    const code = await DaypartService.getDaypartCode();
+    const code = await presetTypeService.getpresetTypeCode();
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Daypart_code_fetched_successfully",
+      translationKey: "presetType_code_fetched_successfully",
       data: { code },
     });
   } catch (error) {
@@ -255,9 +234,9 @@ const getDaypartCode = async (req, res) => {
   }
 };
 module.exports = {
-  createDaypart,
-  getDayparts,
-  updateDaypart,
-  deleteDaypart,
-  getDaypartCode,
+  createpresetType,
+  getpresetTypes,
+  updatepresetType,
+  deletepresetType,
+  getpresetTypeCode,
 };
