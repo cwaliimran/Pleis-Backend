@@ -248,8 +248,13 @@ const getUserSubscriptions = async ({
         totalSubscriptionAmount: "$activeSubscription.totalSubscriptionAmount",
         startDate: "$activeSubscription.startDate",
         basePrice: "$activeSubscription.basePrice",
-        
+        status: "$activeSubscription.status",
         endDate: "$activeSubscription.endDate",
+        orderingCommission: "$activeSubscription.orderingCommission",
+        ticketingCommission: "$activeSubscription.ticketingCommission",
+        reservationCommission: "$activeSubscription.reservationCommission",
+        subscriptionTypePayments:
+          "$activeSubscription.subscriptionTypePayments",
         subscriptionStatus: {
           $cond: [
             {
@@ -343,6 +348,7 @@ const getUserSubscriptions = async ({
   /* ================================
      EXECUTE
   ================================= */
+
   const result = await User.aggregate(pipeline);
 
 const users = result[0]?.data || [];
@@ -381,10 +387,11 @@ const inactiveSubscription =
         startDate: user.startDate,
         endDate: user.endDate,
         basePrice: user.basePrice,
-        status: user.activeSubscriptionStatus,
-        orderingCommission: user.activeSubscription?.orderingCommission || 0,
-        ticketingCommission: user.activeSubscription?.ticketingCommission || 0,
-        reservationCommission: user.activeSubscription?.reservationCommission || 0,
+        status: user.subscriptionStatus,
+        orderingCommission: user.orderingCommission || 0,
+        ticketingCommission: user.ticketingCommission || 0,
+        reservationCommission: user.reservationCommission || 0,
+        subscriptionTypePayments: user.subscriptionTypePayments || [],
       },
     };
   });

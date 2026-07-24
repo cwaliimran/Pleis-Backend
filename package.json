@@ -115,7 +115,15 @@
     "@UserBillingInformationModel": "backend/commonModules/transactions/UserBillingInformation.js",
     "@triggerGlobalStreak": "backend/services/globalStreaksAndBadgesService/triggerGlobalStreak.js",
     "@manageBadgeHistory": "backend/commonModules/badgeCategories/manageHistory/",
-    "@SubscriptionNotificationLogsModel": "backend/commonModules/subscriptions/SubScriptionNotificationLogs.js"
+    "@SubscriptionNotificationLogsModel": "backend/commonModules/subscriptions/SubScriptionNotificationLogs.js",
+    "@BrandModel": "backend/admin/presetMenu/brand/Brand.js",
+    "@ServingModel": "backend/admin/presetMenu/serving/Serving.js",
+    "@DietTagsModel": "backend/admin/presetMenu/dietTags/DietTags.js",
+    "@AllergenModel": "backend/admin/presetMenu/allergen/Allergen.js",
+    "@DaypartModel": "backend/admin/presetMenu/daypart/Daypart.js",
+    "@MenuItemSubCategoriesModel": "backend/admin/presetMenu/menuItemSubCategories/MenuItemSubCategories.js",
+    "@MenuItemSubCategoryTypeModel": "backend/admin/presetMenu/menuItemSubCategoryType/MenuItemSubCategoryType.js",
+    "@PresetTypeModel": "backend/admin/presetMenu/presetType/PresetType.js"
   },
   "keywords": [],
   "author": "",

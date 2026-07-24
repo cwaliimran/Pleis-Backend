@@ -5,20 +5,22 @@ const {
   handleSuccess,
   handleCancel,
   createClientSecret,
-  createWebPaySession
+  createWebPaySession,
+  createSubscriptionWebPaySession,
 } = require("./monriController");
 const auth = require("../../../middlewares/authMiddleware");
 
 const router = express.Router();
 //webpay
 router.get("/web-pay-session", auth, createWebPaySession);
+router.post("/subscription-web-pay-session", auth, createSubscriptionWebPaySession);
 
 router.get("/redirect", redirectToMonriWebPay);
 router.get("/wallet-pay", redirectToMonriWalletPay);
 router.post("/payment-intent", createClientSecret);
 
 
-// Monri will call these on payment success / cancel
+// Monri browser redirect (GET) + merchant callback / form POST
 router.post("/success", handleSuccess);
 router.get("/success", handleSuccess);
 
