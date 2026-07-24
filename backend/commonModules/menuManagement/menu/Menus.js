@@ -25,13 +25,18 @@ const menusSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    startDate: {
+      type: Date,
+      required: true,
+    },
+
     isOrderingEnabled: { //if currently accepting orders
       type: Boolean,
       default: true,
     },
     status: {
       type: String,
-      enum: ["active", "inactive", "deleted"],
+      enum: ["active", "inactive", "deleted","draft"],
       default: "active",
     },
   },

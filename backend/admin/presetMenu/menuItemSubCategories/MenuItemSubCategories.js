@@ -1,32 +1,30 @@
 const mongoose = require("mongoose");
 
-const dietTagsSchema = new mongoose.Schema(
+const menuItemSubCategorySchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-    code: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-    },
     name: {
       type: String,
       required: true,
       trim: true,
     },
-    description: {
-      type: String,
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MenuItemCategory",
       required: true,
-      trim: true,
     },
     status: {
       type: String,
       enum: ["active", "inactive", "deleted"],
       default: "active",
+    },
+    order: {
+      type: Number,
+      default: 0,
     },
   },
   {
@@ -34,5 +32,7 @@ const dietTagsSchema = new mongoose.Schema(
   },
 );
 
-module.exports =
-  mongoose.models.DietTags || mongoose.model("DietTags", dietTagsSchema);
+module.exports = mongoose.model(
+  "MenuItemSubCategory",
+  menuItemSubCategorySchema,
+);

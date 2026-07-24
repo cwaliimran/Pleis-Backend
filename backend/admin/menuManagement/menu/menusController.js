@@ -5,6 +5,7 @@ const {
   generateMeta,
   getReadableErrorMessage,
 } = require("@utils/responseUtil");
+const moment = require("moment");
 
 const menusService = require("./menusService");
 
@@ -14,8 +15,8 @@ const createMenu = async (req, res) => {
     description = "",
     organization,
     status = "active",
+    startDate,
   } = req.body;
-
   if (
     !validateParams(req, res, {
       rawData: ["title"],
@@ -24,12 +25,25 @@ const createMenu = async (req, res) => {
   )
     return;
 
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+  if (
+    !startDate ||
+    !DATE_RE.test(startDate) ||
+    !moment(startDate, "YYYY-MM-DD", true).isValid()
+  ) {
+    return res.status(400).json({
+      success: false,
+      message: "startDate must be a valid date in YYYY-MM-DD format",
+    });
+  }
   let data = {
     title,
     description,
     organization,
     status,
     creator: req.user._id,
+    startDate,
   };
 
   //convert organization to array if it's not
@@ -63,50 +77,82 @@ const createMenu = async (req, res) => {
 
 const getMenus = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, organizations, date, companyOrganizer, sortBy, sortOrder } = req.query;
+  let {
+    keyword,
+    status,
+    organizations,
+    date,
+    companyOrganizer,
+    sortBy,
+    sortOrder,
+    summary,
+  } = req.query;
 
   try {
-    const SORT_FIELDS = ["menuName", "createdAt", "organizationName","description"];
+    const SORT_FIELDS = [
+      "menuName",
+      "createdAt",
+      "organizationName",
+      "description",
+    ];
     const SORT_ORDERS = ["asc", "desc"];
-    if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
-      const key = sortBy && !SORT_FIELDS.includes(sortBy)
-        ? "invalid_sort_by_field"
-        : "invalid_sort_order";
+    if (
+      (sortBy && !SORT_FIELDS.includes(sortBy)) ||
+      (sortOrder && !SORT_ORDERS.includes(sortOrder))
+    ) {
+      const key =
+        sortBy && !SORT_FIELDS.includes(sortBy)
+          ? "invalid_sort_by_field"
+          : "invalid_sort_order";
       return sendResponse({ res, statusCode: 400, translationKey: key });
     }
 
     if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
-      const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+      const key = sortBy
+        ? "sort_order_required_when_sort_by_is_provided"
         : "sort_by_required_when_sort_order_is_provided";
       return sendResponse({ res, statusCode: 400, translationKey: key });
     }
-
 
     // arse organizations if it’s a JSON string (e.g. '["id1","id2"]')
     if (typeof organizations === "string") {
       try {
         organizations = JSON.parse(organizations);
-      } catch (e) {
-
-      }
+      } catch (e) {}
     }
 
     // Ensure it's an array or undefined
     if (!Array.isArray(organizations)) {
       organizations = undefined;
     }
+    let menus = null;
+    let meta = null;
 
-    const { menus, meta } = await menusService.getMenus({
-      page,
-      limit,
-      keyword,
-      status,
-      organizations,
-      companyOrganizer,
-      date,
-      sortBy,
-      sortOrder
-    });
+    if (!summary) {
+      ({ menus, meta } = await menusService.getMenus({
+        page,
+        limit,
+        keyword,
+        status,
+        organizations,
+        companyOrganizer,
+        date,
+        sortBy,
+        sortOrder,
+      }));
+    } else if (summary) {
+      ({ menus, meta } = await menusService.getMenusSummary({
+        page,
+        limit,
+        keyword,
+        status,
+        organizations,
+        companyOrganizer,
+        date,
+        sortBy,
+        sortOrder,
+      }));
+    }
 
     return sendResponse({
       res,
@@ -171,7 +217,7 @@ const updateMenu = async (req, res) => {
     description,
     organization,
     status = "active",
-    isOrderingEnabled
+    isOrderingEnabled,
   } = req.body;
 
   if (
@@ -187,7 +233,7 @@ const updateMenu = async (req, res) => {
     description,
     organization,
     status,
-    isOrderingEnabled
+    isOrderingEnabled,
   };
 
   try {
@@ -257,7 +303,7 @@ const deleteMenu = async (req, res) => {
 const duplicateMenuAndItems = async (req, res) => {
   const { id: menu } = req.params;
   const { organization } = req.body;
-  const timezone=req.user.timezone || "UTC";
+  const timezone = req.user.timezone || "UTC";
 
   if (
     !validateParams(req, res, {
@@ -268,7 +314,11 @@ const duplicateMenuAndItems = async (req, res) => {
   )
     return;
   try {
-    const duplicatedMenu = await menusService.duplicateMenuAndItems(menu, organization,timezone);
+    const duplicatedMenu = await menusService.duplicateMenuAndItems(
+      menu,
+      organization,
+      timezone,
+    );
     if (!duplicatedMenu) {
       return sendResponse({
         res,
@@ -292,7 +342,7 @@ const duplicateMenuAndItems = async (req, res) => {
       error,
     });
   }
-}
+};
 const getMenuNamesByCompanyOrganizer = async (req, res) => {
   const { companyOrganizer } = req.params;
 
@@ -302,9 +352,11 @@ const getMenuNamesByCompanyOrganizer = async (req, res) => {
       !validateParams(req, res, {
         objectIdFields: ["companyOrganizer"],
       })
-    ) return;
+    )
+      return;
 
-    const menuNames = await menusService.getMenuNamesByCompanyOrganizer(companyOrganizer);
+    const menuNames =
+      await menusService.getMenuNamesByCompanyOrganizer(companyOrganizer);
     return sendResponse({
       res,
       statusCode: 200,
@@ -320,7 +372,7 @@ const getMenuNamesByCompanyOrganizer = async (req, res) => {
       error,
     });
   }
-}
+};
 
 module.exports = {
   createMenu,
@@ -329,5 +381,5 @@ module.exports = {
   deleteMenu,
   getMenuDetails,
   duplicateMenuAndItems,
-  getMenuNamesByCompanyOrganizer
+  getMenuNamesByCompanyOrganizer,
 };

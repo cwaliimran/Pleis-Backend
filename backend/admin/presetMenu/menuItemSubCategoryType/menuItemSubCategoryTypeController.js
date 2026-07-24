@@ -8,84 +8,41 @@ const {
 } = require("../../../helperUtils/responseUtil");
 const moment = require("moment-timezone");
 
-const DaypartService = require("./daypartService");
+const MenuItemSubCategoryTypeService = require("./menuItemSubCategoryTypeService");
 
-const createDaypart = async (req, res) => {
-  let {
-    code,
-    status = "active",
-    name,
-    isAllDay = false,
-    startTime,
-    endTime,
-  } = req.body;
-  if (isAllDay) {
-    startTime = "00:00";
-    endTime = "23:59";
-  }
-  const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
-  const toMin = (t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3));
-
-  if (!TIME_RE.test(startTime) || !TIME_RE.test(endTime)) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Time must be in HH:mm format" });
-  }
-  if (toMin(endTime) <= toMin(startTime)) {
-    return res
-      .status(400)
-      .json({ success: false, message: "endTime must be after startTime" });
-  }
+const createMenuItemSubCategoryType = async (req, res) => {
+  let { status = "active", name, subCategory} = req.body;
 
   const user = req.user._id;
   const timezone = req.user.timezone;
-  console.log("timezone", timezone);
 
   if (
     !validateParams(req, res, {
-      rawData: ["code", "status", "name"],
+      rawData: ["subCategory", "status", "name"],
     })
   )
     return;
-  const today = moment().tz(timezone).format("YYYY-MM-DD");
-
-  if (!isAllDay) {
-    startTime = convertTimezoneToUtc(
-      `${today} ${startTime}`,
-      timezone,
-      "YYYY-MM-DD HH:mm",
-      "HH:mm",
-    );
-    endTime = convertTimezoneToUtc(
-      `${today} ${endTime}`,
-      timezone,
-      "YYYY-MM-DD HH:mm",
-      "HH:mm",
-    );
-  }
   let data = {
     user,
-    code,
+    subCategory,
     status,
     name,
-    isAllDay,
-    startTime,
-    endTime,
   };
   try {
-    const Daypart = await DaypartService.createDaypart(data);
-    if (!Daypart) {
+    const MenuItemSubCategoryType =
+      await MenuItemSubCategoryTypeService.createMenuItemSubCategoryType(data);
+    if (!MenuItemSubCategoryType) {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "Daypart_creation_failed",
+        translationKey: "MenuItemSubCategoryType_creation_failed",
       });
     }
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "Daypart_created_successfully",
-      data: Daypart,
+      translationKey: "MenuItemSubCategoryType_created_successfully",
+      data: MenuItemSubCategoryType,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -97,13 +54,14 @@ const createDaypart = async (req, res) => {
     });
   }
 };
-const getDayparts = async (req, res) => {
+const getMenuItemSubCategoryTypes = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
+
   const { keyword, status, date, sortBy, sortOrder, summary } = req.query;
   try {
     const user = req.user._id;
     const timezone = req.user.timezone;
-    const SORT_FIELDS = ["code", "name", "createdAt", "status"];
+    const SORT_FIELDS = ["name", "subCategory", "createdAt", "status"];
     const SORT_ORDERS = ["asc", "desc"];
     if (
       (sortBy && !SORT_FIELDS.includes(sortBy)) ||
@@ -122,24 +80,25 @@ const getDayparts = async (req, res) => {
         : "sort_by_required_when_sort_order_is_provided";
       return sendResponse({ res, statusCode: 400, translationKey: key });
     }
-    const { Dayparts, meta } = await DaypartService.getDayparts({
-      timezone,
-      page,
-      limit,
-      keyword,
-      status,
-      user,
-      date,
-      sortBy,
-      sortOrder,
-      summary,
-    });
+    const { MenuItemSubCategoryTypes, meta } =
+      await MenuItemSubCategoryTypeService.getMenuItemSubCategoryTypes({
+        timezone,
+        page,
+        limit,
+        keyword,
+        status,
+        user,
+        date,
+        sortBy,
+        sortOrder,
+        summary,
+      });
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Dayparts_fetched_successfully",
-      data: Dayparts,
+      translationKey: "MenuItemSubCategoryTypes_fetched_successfully",
+      data: MenuItemSubCategoryTypes,
       meta,
     });
   } catch (error) {
@@ -152,9 +111,9 @@ const getDayparts = async (req, res) => {
     });
   }
 };
-const updateDaypart = async (req, res) => {
+const updateMenuItemSubCategoryType = async (req, res) => {
   const { id } = req.params;
-  let { name, status } = req.body;
+  let { name, status, subCategory, order } = req.body;
 
   const user = req.user._id;
   const timezone = req.user.timezone;
@@ -162,10 +121,15 @@ const updateDaypart = async (req, res) => {
   let data = {
     name,
     status,
+    subCategory,
+    order,
   };
 
   try {
-    const updated = await DaypartService.updateDaypart(id, data);
+    const updated = await MenuItemSubCategoryTypeService.updateMenuItemSubCategoryType(
+      id,
+      data,
+    );
     if (updated && updated.error) {
       return sendResponse({
         res,
@@ -178,14 +142,14 @@ const updateDaypart = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "Daypart_not_found",
+        translationKey: "MenuItemSubCategoryType_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Daypart_updated_successfully",
+      translationKey: "MenuItemSubCategoryType_updated_successfully",
       data: updated,
     });
   } catch (error) {
@@ -199,7 +163,7 @@ const updateDaypart = async (req, res) => {
   }
 };
 
-const deleteDaypart = async (req, res) => {
+const deleteMenuItemSubCategoryType = async (req, res) => {
   const { id } = req.params;
 
   if (
@@ -211,19 +175,20 @@ const deleteDaypart = async (req, res) => {
     return;
 
   try {
-    const deleted = await DaypartService.deleteDaypart(id);
+    const deleted =
+      await MenuItemSubCategoryTypeService.deleteMenuItemSubCategoryType(id);
     if (!deleted) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "Daypart_not_found",
+        translationKey: "MenuItemSubCategoryType_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Daypart_deleted_successfully",
+      translationKey: "MenuItemSubCategoryType_deleted_successfully",
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -235,13 +200,13 @@ const deleteDaypart = async (req, res) => {
     });
   }
 };
-const getDaypartCode = async (req, res) => {
+const getMenuItemSubCategoryTypeCode = async (req, res) => {
   try {
-    const code = await DaypartService.getDaypartCode();
+    const code = await MenuItemSubCategoryTypeService.getMenuItemSubCategoryTypeCode();
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Daypart_code_fetched_successfully",
+      translationKey: "MenuItemSubCategoryType_code_fetched_successfully",
       data: { code },
     });
   } catch (error) {
@@ -254,10 +219,55 @@ const getDaypartCode = async (req, res) => {
     });
   }
 };
+const reorderMenuItemSubCategoryType = async (req, res) => {
+  const { id } = req.params;
+  const { newOrder } = req.body;
+
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+      rawData: ["newOrder"],
+    })
+  )
+    return;
+  const user = req.user._id;
+  try {
+    const reordered =
+      await MenuItemSubCategoryTypeService.reorderMenuItemSubCategoryType(
+        id,
+        newOrder,
+        user,
+      );
+    if (!reordered) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "MenuItemSubCategoryType_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "MenuItemSubCategoryType_reordered_successfully",
+      data: reordered,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 module.exports = {
-  createDaypart,
-  getDayparts,
-  updateDaypart,
-  deleteDaypart,
-  getDaypartCode,
+  createMenuItemSubCategoryType,
+  getMenuItemSubCategoryTypes,
+  updateMenuItemSubCategoryType,
+  deleteMenuItemSubCategoryType,
+  getMenuItemSubCategoryTypeCode,
+  reorderMenuItemSubCategoryType,
 };

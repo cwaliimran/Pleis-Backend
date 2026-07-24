@@ -1,13 +1,14 @@
 const { getCurrentDateInTimezone } = require("@utils/responseUtil");
-const AllergenRepo = require("./daypartRepository");
+const formatDaypartTimes = require("./formator/formatDaypartTimes");
+const DaypartRepo = require("./daypartRepository");
 
 const { cache, invalidate } = require("@redisCache");
-const ACTIVE_AllergenS_CACHE_KEY = "Allergen:active";
-const createAllergen = async (data) => {
-  let Allergen = await AllergenRepo.createAllergen(data);
-  return Allergen;
+const ACTIVE_DaypartS_CACHE_KEY = "Daypart:active";
+const createDaypart = async (data) => {
+  let Daypart = await DaypartRepo.createDaypart(data);
+  return Daypart;
 };
-const getAllergens = async ({
+const getDayparts = async ({
   timezone,
   page,
   limit,
@@ -21,19 +22,20 @@ const getAllergens = async ({
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   if (summary) {
-    let { Allergens, meta } = await AllergenRepo.getAllergensSummary({
+    let { Dayparts, meta } = await DaypartRepo.getDaypartsSummary({
       timezone,
       page,
       limit,
       user,
       skip,
     });
+
     return {
-      Allergens,
+      Dayparts: Dayparts.map((d) => formatDaypartTimes(d, timezone)),
       meta,
     };
   }
-  let { Allergens, meta } = await AllergenRepo.getAllergens({
+  let { Dayparts, meta } = await DaypartRepo.getDayparts({
     timezone,
     page,
     limit,
@@ -47,14 +49,14 @@ const getAllergens = async ({
   });
 
   return {
-    Allergens,
+    Dayparts: Dayparts.map((d) => formatDaypartTimes(d, timezone)),
     meta,
   };
 };
-const updateAllergen = async (id, data) => {
-  const Allergen = await AllergenRepo.findAllergenById(id);
-  if (!Allergen) {
-    return { error: "Allergen_not_found" };
+const updateDaypart = async (id, data) => {
+  const Daypart = await DaypartRepo.findDaypartById(id);
+  if (!Daypart) {
+    return { error: "Daypart_not_found" };
   }
 
   // -----------------------------
@@ -77,32 +79,32 @@ const updateAllergen = async (id, data) => {
   }
 
   if (Object.keys(updateData).length === 0) {
-    return Allergen;
+    return Daypart;
   }
 
-  Object.assign(Allergen, updateData);
-  await Allergen.save();
-  await invalidate(ACTIVE_AllergenS_CACHE_KEY);
+  Object.assign(Daypart, updateData);
+  await Daypart.save();
+  await invalidate(ACTIVE_DaypartS_CACHE_KEY);
 
-  return Allergen;
+  return Daypart;
 };
 
-const deleteAllergen = async (id) => {
-  const updated = await AllergenRepo.findByIdAndUpdate(id, {
+const deleteDaypart = async (id) => {
+  const updated = await DaypartRepo.findByIdAndUpdate(id, {
     status: "deleted",
   });
   if (!updated) return null;
   return true;
 };
-const getAllergenCode = async () => {
-  const code = await AllergenRepo.generateUniqueAllergenCode();
+const getDaypartCode = async () => {
+  const code = await DaypartRepo.generateUniqueDaypartCode();
   return code;
 };
 module.exports = {
-  createAllergen,
-  getAllergens,
-  updateAllergen,
-  deleteAllergen,
-  getAllergenCode,
+  createDaypart,
+  getDayparts,
+  updateDaypart,
+  deleteDaypart,
+  getDaypartCode,
 };
 

@@ -1,23 +1,23 @@
-const Allergen = require("@AllergenModel");
+const Daypart = require("@DaypartModel");
 const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const { generateMeta } = require("@utils/responseUtil");
 
 const { cache, invalidate } = require("@redisCache");
-const ACTIVE_AllergenS_CACHE_KEY = "Allergen:active";
+const ACTIVE_DaypartS_CACHE_KEY = "Daypart:active";
 
 
-const createAllergen = async (data) => {
+const createDaypart = async (data) => {
   try {
-    const AllergenData = new Allergen(data);
-    await AllergenData.save();
-    await invalidate(ACTIVE_AllergenS_CACHE_KEY);
-    return AllergenData;
+    const DaypartData = new Daypart(data);
+    await DaypartData.save();
+    await invalidate(ACTIVE_DaypartS_CACHE_KEY);
+    return DaypartData;
   } catch (err) {
     throw err;
   }
 };
 
-const getAllergens = async ({
+const getDayparts = async ({
   timezone,
   page,
   limit,
@@ -30,7 +30,7 @@ const getAllergens = async ({
   sortOrder,
 }) => {
   // The heavy lifting — builds the pipeline, runs it, assembles meta.
-  const computeAllergens = async () => {
+  const computeDayparts = async () => {
     const pipeline = [];
 
     // Apply filters
@@ -52,7 +52,7 @@ const getAllergens = async ({
 
     if (keyword) {
       const keywordMatch = buildKeywordQueryFromModels(
-        [{ schema: Allergen.schema }],
+        [{ schema: Daypart.schema }],
         keyword,
       );
 
@@ -90,39 +90,39 @@ const getAllergens = async ({
       },
     });
 
-    const result = await Allergen.aggregate(pipeline);
+    const result = await Daypart.aggregate(pipeline);
 
-    const Allergens = result[0]?.data || [];
+    const Dayparts = result[0]?.data || [];
     const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
     // Additional counts for meta (active/inactive/total by userId as creator)
     const [total, active, inactive] = await Promise.all([
-      Allergen.countDocuments({
+      Daypart.countDocuments({
         ...(user && { user: user }),
         status: { $ne: "deleted" },
       }),
-      Allergen.countDocuments({ status: "active", ...(user && { user: user }) }),
-      Allergen.countDocuments({
+      Daypart.countDocuments({ status: "active", ...(user && { user: user }) }),
+      Daypart.countDocuments({
         status: "inactive",
         ...(user && { user: user }),
       }),
     ]);
 
     const meta = generateMeta(page, limit, totalFiltered);
-    meta.AllergensCount = { total, active, inactive };
+    meta.DaypartsCount = { total, active, inactive };
 
-    return { Allergens, meta };
+    return { Dayparts, meta };
   };
 
   // Only cache when the result is "stable" — no dynamic filters/sorting.
   const isCacheable = !date && !sortBy && !sortOrder && !keyword;
 
   if (!isCacheable) {
-    return computeAllergens();
+    return computeDayparts();
   }
-  console.log("ACTIVE_AllergenS_CACHE_KEY",ACTIVE_AllergenS_CACHE_KEY);
+  console.log("ACTIVE_DaypartS_CACHE_KEY",ACTIVE_DaypartS_CACHE_KEY);
   return cache({
-    namespace: ACTIVE_AllergenS_CACHE_KEY,
+    namespace: ACTIVE_DaypartS_CACHE_KEY,
     params: {
       page,
       skip,
@@ -130,10 +130,10 @@ const getAllergens = async ({
       status: status ?? "all",
     },
     ttl: 60,
-    fetchFn: computeAllergens,
+    fetchFn: computeDayparts,
   });
 };
-const getAllergensSummary = async ({ timezone, page, limit, user, skip }) => {
+const getDaypartsSummary = async ({ timezone, page, limit, user, skip }) => {
   const pipeline = [];
   pipeline.push({ $match: { status: "active" } });
 
@@ -155,37 +155,37 @@ const getAllergensSummary = async ({ timezone, page, limit, user, skip }) => {
     },
   });
 
-  const result = await Allergen.aggregate(pipeline);
+  const result = await Daypart.aggregate(pipeline);
 
-  let Allergens = result[0]?.data || [];
+  let Dayparts = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   // Additional counts for meta (active/inactive/total by userId as creator)
   const [total, active, inactive] = await Promise.all([
-    Allergen.countDocuments({
+    Daypart.countDocuments({
       ...(user && { user: user }),
       status: { $ne: "deleted" },
     }),
-    Allergen.countDocuments({ status: "active", ...(user && { user: user }) }),
-    Allergen.countDocuments({ status: "inactive", ...(user && { user: user }) }),
+    Daypart.countDocuments({ status: "active", ...(user && { user: user }) }),
+    Daypart.countDocuments({ status: "inactive", ...(user && { user: user }) }),
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
-  meta.AllergensCount = { total, active, inactive };
+  meta.DaypartsCount = { total, active, inactive };
 
-  return { Allergens, meta };
+  return { Dayparts, meta };
 };
 
-const findAllergenById = async (id) => {
-  return Allergen.findById(id);
+const findDaypartById = async (id) => {
+  return Daypart.findById(id);
 };
 
 const findByIdAndUpdate = async (id, data) => {
-  await invalidate(ACTIVE_AllergenS_CACHE_KEY);
-  return Allergen.findByIdAndUpdate(id, data, { new: true });
+  await invalidate(ACTIVE_DaypartS_CACHE_KEY);
+  return Daypart.findByIdAndUpdate(id, data, { new: true });
 };
-const generateUniqueAllergenCode = async () => {
-  const last = await Allergen.findOne({})
+const generateUniqueDaypartCode = async () => {
+  const last = await Daypart.findOne({})
     .sort({ createdAt: -1 })
     .select("code")
     .lean();
@@ -203,10 +203,10 @@ const generateUniqueAllergenCode = async () => {
   return `DP${String(nextNumber).padStart(3, "0")}`;
 };
 module.exports = {
-  createAllergen,
-  getAllergens,
-  findAllergenById,
+  createDaypart,
+  getDayparts,
+  findDaypartById,
   findByIdAndUpdate,
-  getAllergensSummary,
-  generateUniqueAllergenCode,
+  getDaypartsSummary,
+  generateUniqueDaypartCode,
 };
