@@ -2,11 +2,26 @@ const mongoose = require("mongoose");
 
 const monriTransactionSchema = new mongoose.Schema(
   {
-    orderNumber: { type: String, required: true },
+    orderNumber: { type: String, required: true, },
     orderType: {
       type: String,
-      enum: ["ticketingbookings", "userreservations", "menuorders", "tickettransfer"],
+      enum: [
+        "ticketingbookings",
+        "userreservations",
+        "menuorders",
+        "tickettransfer",
+        "subscription",
+      ],
       required: true,
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      index: true,
+    },
+    subscriptionTypes: {
+      type: [String],
+      default: undefined,
     },
     paymentMethod: {
       type: String,

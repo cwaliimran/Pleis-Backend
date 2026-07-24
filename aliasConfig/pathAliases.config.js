@@ -1,95 +1,151 @@
 module.exports = {
-    "@utils": "backend/helperUtils",
-    "@notificationsUtil": "backend/controllers/communicationController.js",
-    "@redisCache": "backend/config/redis/redisCache.js",
-    "@socketIo": "backend/config/sockets",
-    "@UsersModel": "backend/models/UserModel.js",
-    "@dbUtils": "backend/helperUtils/dbUtils",
-    "@appEngagement": "backend/commonModules/appEngagement",
-    "@recentlyViewed": "backend/commonModules/recentlyViewed",
-    "@OrganizationModel": "backend/commonModules/organizations/Organization.js",
-    "@VenuesModel": "backend/commonModules/venues/Venues.js",
-    "@SuppliersModel": "backend/commonModules/suppliers/Suppliers.js",
-    "@TagsModel": "backend/admin/tags/Tags.js",
-    "@CategoriesModel": "backend/admin/categories/Categories.js",
-    "@VenueTypesModel": "backend/admin/venueTypes/VenueTypesModel.js",
-    "@TiersModel": "backend/admin/tiers/Tiers.js",
-    "@EventsModel": "backend/commonModules/events/Event.js",
-    "@EventCheckinsModel": "backend/commonModules/events/EventCheckinsModel.js",
-    "@EventNotificationLogsModel": "backend/commonModules/events/EventNotificationLogs.js",
-    "@MenusModel": "backend/commonModules/menuManagement/menu/Menus.js",
-    "@PresetsModel": "backend/commonModules/menuManagement/menuPreset/Presets.js",
-    "@MenuItemsModel": "backend/commonModules/menuManagement/menuItems/MenuItems.js",
-    "@MenuItemCategoriesModel": "backend/commonModules/menuManagement/menuItemCategories/MenuItemCategories.js",
-    "@HighlightsModel": "backend/commonModules/highlights/Highlight.js",
-    "@ChallengeModel": "backend/commonModules/loyalty/challenges/models/Challenge/BaseChallenge.js",
-    "@PromotionModel": "backend/commonModules/loyalty/promotions/models/Promotion/BasePromotion.js",
-    "@RewardModel": "backend/commonModules/loyalty/rewards/models/baseReward.js",
-    "@ListingModel": "backend/commonModules/loyalty/listings/Listing.js",
-    "@ClubCollaborationModel": "backend/commonModules/loyalty/clubCollaborations/ClubCollaborations.js",
-    "@StreaksModel": "backend/commonModules/loyalty/streaks/Streaks.js",
-    "@UsersStreaksModel": "backend/commonModules/loyalty/streaks/UsersStreaks.js",
-    "@TicketingsModel": "backend/commonModules/ticketing/TicketingsModel.js",
-    "@ReservationsModel": "backend/commonModules/reservations/Reservation.js",
-    "@UserReservationsModel": "backend/commonModules/reservations/UsersReservation.js",
-    "@ReservationNotificationLogsModel": "backend/commonModules/reservations/ReservationNotificationLogs.js",
-    "@OrdersModel": "backend/commonModules/menuItemsAndOrders/Orders.js",
-    "@ClubMembersModel": "backend/commonModules/loyalty/clubMembers/ClubMembers.js",
-    "@UserModel": "backend/models/UserModel.js",
-    "@CustomCategoriesModel": "backend/admin/customCategories/CustomCategories.js",
-    "@BundleModel": "backend/commonModules/bundles/Bundle.js",
-    "@PromoCodeModel": "backend/commonModules/PromoCode/PromoCode.js",
-    "@StreakRulesModel": "backend/commonModules/loyalty/streaks/StreakRules.js",
-    "@GlobalReferralSettingsModel": "backend/commonModules/globalReferral/GlobalReferralSettings.js",
-    "@ReferredRecordModel": "backend/commonModules/globalReferral/ReferredRecord.js",
-    "@TicketingBookingsModel": "backend/commonModules/bookings/ticketings/TicketingBookings.js",
-    "@TicketingOrdersModel": "backend/commonModules/bookings/ticketings/TicketingOrders.js",
-    "@FriendRequestModel": "backend/commonModules/friendRequest/FriendRequest.js",
-    "@GlobalStatusLevelsModel": "backend/commonModules/globalLoyalty/statusLevels/GlobalStatusLevels.js",
-    "@UserGlobalWalletModel": "backend/commonModules/wallet/UserGlobalWallet.js",
-    "@GlobalRewardCategories": "backend/commonModules/globalLoyalty/globalRewardCategories/GlobalRewardCategories.js",
-    "@GlobalLoyaltyReward": "backend/commonModules/globalLoyalty/rewards/models/reward/BaseReward.js",
-    "@GlobalChallengeModel": "backend/commonModules/globalLoyalty/rewards/models/Challenge/models/Challenge/BaseChallenge.js",
-    "@ThirdPartyModel": "backend/commonModules/globalLoyalty/thirdParty/ThirdParty.js",
-    "@Marketing": "backend/commonModules/marketing/Marketing.js",
-    "@SubscriptionSettings": "backend/commonModules/subscriptions/SubscriptionSettings.js",
-    "@UnifiedWalletTransactionsModel": "backend/commonModules/transactions/UnifiedWalletTransactions.js",
-    "@Marketing": "backend/commonModules/marketing/Marketing.js",
-    "@UserCompanyLoyaltyWalletTransactionsModel": "backend/commonModules/wallet/UserCompanyLoyaltyWalletTransactions.js",
-    "@UpdatesModel": "backend/commonModules/updates/Updates.js",
-    "@NotificationsModel": "backend/models/Notifications.js",
-    "@LoyaltyRewardsOrdersModel": "backend/commonModules/loyalty/rewards/orders/LoyaltyRewardsOrders.js",
-    "@LoyaltyChallengesOrdersModel": "backend/commonModules/loyalty/challenges/orders/LoyaltyChallengesOrders.js",
-    "@LoyaltyChallengeNotificationLogsModel": "backend/commonModules/loyalty/challenges/orders/LoyaltyChallengeNotificationLogs.js",
-    "@GlobalChallengesOrdersModel": "backend/commonModules/globalLoyalty/challengeOrders/GlobalChallengesOrders.js",
-    "@GlobalChallengeNotificationLogsModel": "backend/commonModules/globalLoyalty/challengeOrders/GlobalChallengeNotificationLogs.js",
-    "@GiveawayModel": "backend/commonModules/giveaways/Giveaways.js",
-    "@GiveawayParticipantModel": "backend/commonModules/giveaways/Participants.js",
-    "@GlobalQrModel": "backend/commonModules/qrCode/models/QR/baseQr.js",
-    "@GlobalRewardsOrdersModel": "backend/commonModules/globalLoyalty/rewards/rewardsOrders/GlobalRewardsOrders.js",
-    "@BannerControlsModel": "backend/admin/bannerControl/BannerControls.js",
-    "@TopPicksOrganizationsModel": "backend/commonModules/browserControl/topPicksOrganizations/TopPicksOrganizations.js",
-    "@GlobalNotificationsModel": "backend/commonModules/notifications/notifications.js",
-    "@EngagementEventsModel": "backend/commonModules/appEngagement/EngagementEvents.js",
-    "@SupportRequestModel": "backend/models/SupportRequest.js",
-    "@FaqModel": "backend/admin/settings/models/Faq.js",
-    "@FaqModel": "backend/admin/settings/models/Faq.js",
-    "@BadgeCategoriesModel": "backend/commonModules/badgeCategories/BadgeCategories.js",
-    "@LoyaltyReferralSettingsModel": "backend/commonModules/loyalty/referrals/referralsSetting.js",
-    "@LoyaltyReferredRecordModel": "backend/commonModules/loyalty/referrals/ReferredRecord.js",
-    "@ReviewsModel": "backend/commonModules/reviews/Reviews.js",
-    "@UserContacts": "backend/commonModules/friendRequest/userContacts.js",
-    "@ApplyPointsByStaffModel": "backend/commonModules/applyPointsByStaff/ApplyPointsByStaff.js",
-    "@UserGlobalBadgesModel": "backend/commonModules/badgeCategories/UserGlobalBadages.js",
-    "@UsersGlobalStreaksLogsModel": "backend/commonModules/userGlobalStreaksProgress/UsersGlobalStreaksLogs.js",
-    "@UsersGlobalStreaksProgressModel": "backend/commonModules/userGlobalStreaksProgress/UsersGlobalStreaksProgress.js",
-    "@UserInterests": "backend/models/UserInterests.js",
-    "@MenuItemsSaleModel": "backend/commonModules/menuManagement/sale/MenuItemsSale.js",
-    "@SearchSuggestionModel": "backend/app/searchSuggestions/SearchSuggestion.js",
-    "@OrganizationStaffAttendanceModel": "backend/commonModules/staff/OrganizationStaffAttendance.js",
-    "@GlobalBasePromotionModel": "backend/commonModules/globalLoyalty/promotions/models/Promotion/basePromotion.js",
-    "@UserBillingInformationModel": "backend/commonModules/transactions/UserBillingInformation.js",
-    "@triggerGlobalStreak": "backend/services/globalStreaksAndBadgesService/triggerGlobalStreak.js",
-    "@manageBadgeHistory": "backend/commonModules/badgeCategories/manageHistory/",
-    "@SubscriptionNotificationLogsModel": "backend/commonModules/subscriptions/SubScriptionNotificationLogs.js",
+  "@utils": "backend/helperUtils",
+  "@notificationsUtil": "backend/controllers/communicationController.js",
+  "@redisCache": "backend/config/redis/redisCache.js",
+  "@socketIo": "backend/config/sockets",
+  "@UsersModel": "backend/models/UserModel.js",
+  "@dbUtils": "backend/helperUtils/dbUtils",
+  "@appEngagement": "backend/commonModules/appEngagement",
+  "@recentlyViewed": "backend/commonModules/recentlyViewed",
+  "@OrganizationModel": "backend/commonModules/organizations/Organization.js",
+  "@VenuesModel": "backend/commonModules/venues/Venues.js",
+  "@SuppliersModel": "backend/commonModules/suppliers/Suppliers.js",
+  "@TagsModel": "backend/admin/tags/Tags.js",
+  "@CategoriesModel": "backend/admin/categories/Categories.js",
+  "@VenueTypesModel": "backend/admin/venueTypes/VenueTypesModel.js",
+  "@TiersModel": "backend/admin/tiers/Tiers.js",
+  "@EventsModel": "backend/commonModules/events/Event.js",
+  "@EventCheckinsModel": "backend/commonModules/events/EventCheckinsModel.js",
+  "@EventNotificationLogsModel":
+    "backend/commonModules/events/EventNotificationLogs.js",
+  "@MenusModel": "backend/commonModules/menuManagement/menu/Menus.js",
+  "@PresetsModel": "backend/commonModules/menuManagement/menuPreset/Presets.js",
+  "@MenuItemsModel":
+    "backend/commonModules/menuManagement/menuItems/MenuItems.js",
+  "@MenuItemCategoriesModel":
+    "backend/commonModules/menuManagement/menuItemCategories/MenuItemCategories.js",
+  "@HighlightsModel": "backend/commonModules/highlights/Highlight.js",
+  "@ChallengeModel":
+    "backend/commonModules/loyalty/challenges/models/Challenge/BaseChallenge.js",
+  "@PromotionModel":
+    "backend/commonModules/loyalty/promotions/models/Promotion/BasePromotion.js",
+  "@RewardModel": "backend/commonModules/loyalty/rewards/models/baseReward.js",
+  "@ListingModel": "backend/commonModules/loyalty/listings/Listing.js",
+  "@ClubCollaborationModel":
+    "backend/commonModules/loyalty/clubCollaborations/ClubCollaborations.js",
+  "@StreaksModel": "backend/commonModules/loyalty/streaks/Streaks.js",
+  "@UsersStreaksModel": "backend/commonModules/loyalty/streaks/UsersStreaks.js",
+  "@TicketingsModel": "backend/commonModules/ticketing/TicketingsModel.js",
+  "@ReservationsModel": "backend/commonModules/reservations/Reservation.js",
+  "@UserReservationsModel":
+    "backend/commonModules/reservations/UsersReservation.js",
+  "@ReservationNotificationLogsModel":
+    "backend/commonModules/reservations/ReservationNotificationLogs.js",
+  "@OrdersModel": "backend/commonModules/menuItemsAndOrders/Orders.js",
+  "@ClubMembersModel":
+    "backend/commonModules/loyalty/clubMembers/ClubMembers.js",
+  "@UserModel": "backend/models/UserModel.js",
+  "@CustomCategoriesModel":
+    "backend/admin/customCategories/CustomCategories.js",
+  "@BundleModel": "backend/commonModules/bundles/Bundle.js",
+  "@PromoCodeModel": "backend/commonModules/PromoCode/PromoCode.js",
+  "@StreakRulesModel": "backend/commonModules/loyalty/streaks/StreakRules.js",
+  "@GlobalReferralSettingsModel":
+    "backend/commonModules/globalReferral/GlobalReferralSettings.js",
+  "@ReferredRecordModel":
+    "backend/commonModules/globalReferral/ReferredRecord.js",
+  "@TicketingBookingsModel":
+    "backend/commonModules/bookings/ticketings/TicketingBookings.js",
+  "@TicketingOrdersModel":
+    "backend/commonModules/bookings/ticketings/TicketingOrders.js",
+  "@FriendRequestModel": "backend/commonModules/friendRequest/FriendRequest.js",
+  "@GlobalStatusLevelsModel":
+    "backend/commonModules/globalLoyalty/statusLevels/GlobalStatusLevels.js",
+  "@UserGlobalWalletModel": "backend/commonModules/wallet/UserGlobalWallet.js",
+  "@GlobalRewardCategories":
+    "backend/commonModules/globalLoyalty/globalRewardCategories/GlobalRewardCategories.js",
+  "@GlobalLoyaltyReward":
+    "backend/commonModules/globalLoyalty/rewards/models/reward/BaseReward.js",
+  "@GlobalChallengeModel":
+    "backend/commonModules/globalLoyalty/rewards/models/Challenge/models/Challenge/BaseChallenge.js",
+  "@ThirdPartyModel":
+    "backend/commonModules/globalLoyalty/thirdParty/ThirdParty.js",
+  "@Marketing": "backend/commonModules/marketing/Marketing.js",
+  "@SubscriptionSettings":
+    "backend/commonModules/subscriptions/SubscriptionSettings.js",
+  "@UnifiedWalletTransactionsModel":
+    "backend/commonModules/transactions/UnifiedWalletTransactions.js",
+  "@Marketing": "backend/commonModules/marketing/Marketing.js",
+  "@UserCompanyLoyaltyWalletTransactionsModel":
+    "backend/commonModules/wallet/UserCompanyLoyaltyWalletTransactions.js",
+  "@UpdatesModel": "backend/commonModules/updates/Updates.js",
+  "@NotificationsModel": "backend/models/Notifications.js",
+  "@LoyaltyRewardsOrdersModel":
+    "backend/commonModules/loyalty/rewards/orders/LoyaltyRewardsOrders.js",
+  "@LoyaltyChallengesOrdersModel":
+    "backend/commonModules/loyalty/challenges/orders/LoyaltyChallengesOrders.js",
+  "@LoyaltyChallengeNotificationLogsModel":
+    "backend/commonModules/loyalty/challenges/orders/LoyaltyChallengeNotificationLogs.js",
+  "@GlobalChallengesOrdersModel":
+    "backend/commonModules/globalLoyalty/challengeOrders/GlobalChallengesOrders.js",
+  "@GlobalChallengeNotificationLogsModel":
+    "backend/commonModules/globalLoyalty/challengeOrders/GlobalChallengeNotificationLogs.js",
+  "@GiveawayModel": "backend/commonModules/giveaways/Giveaways.js",
+  "@GiveawayParticipantModel":
+    "backend/commonModules/giveaways/Participants.js",
+  "@GlobalQrModel": "backend/commonModules/qrCode/models/QR/baseQr.js",
+  "@GlobalRewardsOrdersModel":
+    "backend/commonModules/globalLoyalty/rewards/rewardsOrders/GlobalRewardsOrders.js",
+  "@BannerControlsModel": "backend/admin/bannerControl/BannerControls.js",
+  "@TopPicksOrganizationsModel":
+    "backend/commonModules/browserControl/topPicksOrganizations/TopPicksOrganizations.js",
+  "@GlobalNotificationsModel":
+    "backend/commonModules/notifications/notifications.js",
+  "@EngagementEventsModel":
+    "backend/commonModules/appEngagement/EngagementEvents.js",
+  "@SupportRequestModel": "backend/models/SupportRequest.js",
+  "@FaqModel": "backend/admin/settings/models/Faq.js",
+  "@FaqModel": "backend/admin/settings/models/Faq.js",
+  "@BadgeCategoriesModel":
+    "backend/commonModules/badgeCategories/BadgeCategories.js",
+  "@LoyaltyReferralSettingsModel":
+    "backend/commonModules/loyalty/referrals/referralsSetting.js",
+  "@LoyaltyReferredRecordModel":
+    "backend/commonModules/loyalty/referrals/ReferredRecord.js",
+  "@ReviewsModel": "backend/commonModules/reviews/Reviews.js",
+  "@UserContacts": "backend/commonModules/friendRequest/userContacts.js",
+  "@ApplyPointsByStaffModel":
+    "backend/commonModules/applyPointsByStaff/ApplyPointsByStaff.js",
+  "@UserGlobalBadgesModel":
+    "backend/commonModules/badgeCategories/UserGlobalBadages.js",
+  "@UsersGlobalStreaksLogsModel":
+    "backend/commonModules/userGlobalStreaksProgress/UsersGlobalStreaksLogs.js",
+  "@UsersGlobalStreaksProgressModel":
+    "backend/commonModules/userGlobalStreaksProgress/UsersGlobalStreaksProgress.js",
+  "@UserInterests": "backend/models/UserInterests.js",
+  "@MenuItemsSaleModel":
+    "backend/commonModules/menuManagement/sale/MenuItemsSale.js",
+  "@SearchSuggestionModel": "backend/app/searchSuggestions/SearchSuggestion.js",
+  "@OrganizationStaffAttendanceModel":
+    "backend/commonModules/staff/OrganizationStaffAttendance.js",
+  "@GlobalBasePromotionModel":
+    "backend/commonModules/globalLoyalty/promotions/models/Promotion/basePromotion.js",
+  "@UserBillingInformationModel":
+    "backend/commonModules/transactions/UserBillingInformation.js",
+  "@triggerGlobalStreak":
+    "backend/services/globalStreaksAndBadgesService/triggerGlobalStreak.js",
+  "@manageBadgeHistory": "backend/commonModules/badgeCategories/manageHistory/",
+  "@SubscriptionNotificationLogsModel":
+    "backend/commonModules/subscriptions/SubScriptionNotificationLogs.js",
+  "@BrandModel": "backend/admin/presetMenu/brand/Brand.js",
+  "@ServingModel": "backend/admin/presetMenu/serving/Serving.js",
+  "@DietTagsModel": "backend/admin/presetMenu/dietTags/DietTags.js",
+  "@AllergenModel": "backend/admin/presetMenu/allergen/Allergen.js",
+  "@DaypartModel": "backend/admin/presetMenu/daypart/Daypart.js",
+  "@MenuItemSubCategoriesModel":
+    "backend/admin/presetMenu/menuItemSubCategories/MenuItemSubCategories.js",
+  "@MenuItemSubCategoryTypeModel":
+    "backend/admin/presetMenu/menuItemSubCategoryType/MenuItemSubCategoryType.js",
+  "@PresetTypeModel": "backend/admin/presetMenu/presetType/PresetType.js",
+
 };

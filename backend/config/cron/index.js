@@ -161,10 +161,10 @@ const startCrons = () => {
   });
 
   ///* ======================================================
-  //   🕛 CRON 6: Promo code expiry (every minute)
+  //   🕛 CRON 7: Subscription reminder (every minute)
   //   ====================================================== */
-  // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
-  cron.schedule("0 * * * *", async () => { // run every 1 hour for production
+  cron.schedule("*/3 * * * * *", async () => { //5 seconds for testing
+  // cron.schedule("0 * * * *", async () => { // run every 1 hour for production
     const lockKey = "cron:subscription-reminder";
     const lock = await acquireLock(lockKey, 50);
 
@@ -183,10 +183,10 @@ const startCrons = () => {
 
   
   ///* ======================================================
-  //   🕛 CRON 7: Giveaways expiry (every minute)
+  //   🕛 CRON 8: Giveaways expiry (every minute)
   //   ====================================================== */
-  // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
-  cron.schedule("0 * * * *", async () => { // run every 1 hour for production
+  cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
+  // cron.schedule("0 * * * *", async () => { // run every 1 hour for production
     const lockKey = "cron:giveaways-expiry";
     const lock = await acquireLock(lockKey, 50);
 

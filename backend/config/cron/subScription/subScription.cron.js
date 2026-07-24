@@ -35,6 +35,7 @@ const processReminder = async (type, offsetMs, windowStart, windowEnd) => {
     const targetStartLower = new Date(windowStart.getTime() + offsetMs);
     const targetStartUpper = new Date(windowEnd.getTime() + offsetMs);
 
+
     const subScriptions = await User.find({
         "accountState.status": "active",
         "accountState.userType": "organizer",
@@ -57,6 +58,7 @@ const processReminder = async (type, offsetMs, windowStart, windowEnd) => {
             continue;
         }
         const userIds = [subscription._id];
+    
         if (!userIds.length) continue;
         let action;
         let context = {};
@@ -74,20 +76,21 @@ const processReminder = async (type, offsetMs, windowStart, windowEnd) => {
             action = "SUBSCRIPTION_EXPIRED_24H";
         }
         if (type === "EXPIRED") {
-            action = "SUBSCRIPTION_EXPIRED";
-            await activateInactiveSubscriptions(subScriptions);
+          action = "SUBSCRIPTION_EXPIRED";
+
+          await activateInactiveSubscriptions([subscription]);
         }
-        sendSubscriptionNotification({
-            userId: subscription._id,
-            action,
-            userIds,
-            context,
-            username: `${subscription.firstName} ${subscription.lastName}`,
-            expiryDate: subscription.activeSubscription.endDate,
-            email: subscription.email
-        }).catch(err =>
-            console.error("Reminder notification failed:", err)
-        );
+        // sendSubscriptionNotification({
+        //     userId: subscription._id,
+        //     action,
+        //     userIds,
+        //     context,
+        //     username: `${subscription.firstName} ${subscription.lastName}`,
+        //     expiryDate: subscription.activeSubscription.endDate,
+        //     email: subscription.email
+        // }).catch(err =>
+        //     console.error("Reminder notification failed:", err)
+        // );
     }
 };
 
