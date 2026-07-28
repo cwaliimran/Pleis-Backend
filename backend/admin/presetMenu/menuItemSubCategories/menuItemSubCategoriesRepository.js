@@ -27,6 +27,7 @@ const getMenuItemSubCategorys = async ({
   skip,
   sortBy,
   sortOrder,
+  category,
 }) => {
   // The heavy lifting — builds the pipeline, runs it, assembles meta.
   const computeMenuItemSubCategorys = async () => {
@@ -37,6 +38,9 @@ const getMenuItemSubCategorys = async ({
       pipeline.push({ $match: { status } });
     } else {
       pipeline.push({ $match: { status: { $ne: "deleted" } } });
+    }
+    if (category) {
+      pipeline.push({ $match: { category: new mongoose.Types.ObjectId(category) } });
     }
 
     if (date) {
@@ -111,14 +115,17 @@ const getMenuItemSubCategorys = async ({
       MenuItemSubCategory.countDocuments({
         ...(user && { user: user }),
         status: { $ne: "deleted" },
+        ...(category && { category: new mongoose.Types.ObjectId(category) }),
       }),
       MenuItemSubCategory.countDocuments({
         status: "active",
         ...(user && { user: user }),
+        ...(category && { category: new mongoose.Types.ObjectId(category) }),
       }),
       MenuItemSubCategory.countDocuments({
         status: "inactive",
         ...(user && { user: user }),
+        ...(category && { category: new mongoose.Types.ObjectId(category) }),
       }),
     ]);
 
@@ -128,27 +135,7 @@ const getMenuItemSubCategorys = async ({
     return { MenuItemSubCategorys, meta };
   };
 
-  // Only cache when the result is "stable" — no dynamic filters/sorting.
-  const isCacheable = !date && !sortBy && !sortOrder && !keyword;
-
-  if (!isCacheable) {
-    return computeMenuItemSubCategorys();
-  }
-  console.log(
-    "ACTIVE_MenuItemSubCategoryS_CACHE_KEY",
-    ACTIVE_MenuItemSubCategoryS_CACHE_KEY,
-  );
-  return cache({
-    namespace: ACTIVE_MenuItemSubCategoryS_CACHE_KEY,
-    params: {
-      page,
-      skip,
-      limit,
-      status: status ?? "all",
-    },
-    ttl: 60,
-    fetchFn: computeMenuItemSubCategorys,
-  });
+  return computeMenuItemSubCategorys();
 };
 const getMenuItemSubCategorysSummary = async ({
   timezone,
@@ -156,9 +143,13 @@ const getMenuItemSubCategorysSummary = async ({
   limit,
   user,
   skip,
+  category
 }) => {
   const pipeline = [];
   pipeline.push({ $match: { status: "active" } });
+  if (category) {
+    pipeline.push({ $match: { category: new mongoose.Types.ObjectId(category) } });
+  }
 
   pipeline.push({ $sort: { createdAt: -1 } });
 
@@ -188,14 +179,17 @@ const getMenuItemSubCategorysSummary = async ({
     MenuItemSubCategory.countDocuments({
       ...(user && { user: user }),
       status: { $ne: "deleted" },
+      ...(category && { category: new mongoose.Types.ObjectId(category) }),
     }),
     MenuItemSubCategory.countDocuments({
       status: "active",
       ...(user && { user: user }),
+      ...(category && { category: new mongoose.Types.ObjectId(category) }),
     }),
     MenuItemSubCategory.countDocuments({
       status: "inactive",
       ...(user && { user: user }),
+      ...(category && { category: new mongoose.Types.ObjectId(category) }),
     }),
   ]);
 

@@ -65,6 +65,9 @@
       "@MenuItemsModel": [
         "backend/commonModules/menuManagement/menuItems/MenuItems.js"
       ],
+      "@MenuItemsDiscountsModel": [
+        "backend/commonModules/menuManagement/menuItemsDiscounts/MenuItemsDiscounts.js"
+      ],
       "@MenuItemCategoriesModel": [
         "backend/commonModules/menuManagement/menuItemCategories/MenuItemCategories.js"
       ],
@@ -298,6 +301,9 @@
       ],
       "@PresetTypeModel": [
         "backend/admin/presetMenu/presetType/PresetType.js"
+      ],
+      "@MenuItemsCombosModel": [
+        "backend/commonModules/menuManagement/menuItemsCombos/MenuItemsCombos.js"
       ]
     }
   },

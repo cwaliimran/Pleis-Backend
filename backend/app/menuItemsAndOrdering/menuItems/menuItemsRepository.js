@@ -1,9 +1,69 @@
 // repositories/menuItemRepository.js
 const MenuItems = require("@MenuItemsModel");
+const { MenuItemsCombos } = require("@MenuItemsCombosModel");
+const { MenuItemsDiscounts } = require("@MenuItemsDiscountsModel");
+const {
+  resolveEffectiveDiscount,
+} = require("@MenuItemsDiscountsModel");
 const Menus = require("@MenusModel");
 const mongoose = require("mongoose");
 const MenuOrders = require("@OrdersModel");
 const { getActiveMenuItemPromotions } = require("../../loyalty/promotions/promotionsRepository");
+const { getCurrentDateInTimezone } = require("@utils/responseUtil");
+
+const pickBestDiscount = (discounts = [], basePrice = 0, at = new Date()) =>
+  resolveEffectiveDiscount(discounts, basePrice, at);
+
+const getActiveMenuItemDiscounts = async (menuItemIds = [], timezone = null) => {
+  if (!menuItemIds.length) return [];
+
+  // Get the current date and time in the user's timezone
+  const now = getCurrentDateInTimezone({ timezone, isDateOnly: false });
+
+  // Find discounts that have already started and not yet ended (active at 'now')
+  // startDate <= now <= endDate
+  // If a discount's startDate is in the future (startDate > now), it will NOT be matched and thus not shown.
+  return MenuItemsDiscounts.find({
+    status: "active",
+    startDate: { $lte: now },
+    endDate: { $gte: now },
+    menuItems: { $in: menuItemIds },
+  })
+    .select("name type value startDate endDate menuItems status createdAt")
+    .lean();
+};
+
+const attachMenuItemDiscounts = (menuItems = [], discounts = [], at = new Date()) => {
+  const discountMap = new Map();
+
+  discounts.forEach((discount) => {
+    (discount.menuItems || []).forEach((menuItemId) => {
+      const key = menuItemId.toString();
+      if (!discountMap.has(key)) {
+        discountMap.set(key, []);
+      }
+      discountMap.get(key).push({
+        _id: discount._id,
+        name: discount.name,
+        type: discount.type,
+        value: discount.value,
+        startDate: discount.startDate,
+        endDate: discount.endDate,
+        status: discount.status,
+        createdAt: discount.createdAt,
+      });
+    });
+  });
+
+  return menuItems.map((item) => ({
+    ...item,
+    discount: pickBestDiscount(
+      discountMap.get(item._id.toString()),
+      item.basePrice,
+      at,
+    ),
+  }));
+};
 
 const getMenuItemsWithFilters = async ({
   query = {},
@@ -66,6 +126,33 @@ const getMenuItemsWithFilters = async ({
     ...item,
     promotion: promotionMap.get(item._id.toString()) || null
   }));
+};
+
+const getMenuItemsWithFiltersV2 = async ({
+  query = {},
+  timezone = null
+}) => {
+  //timezone is in utc
+  const now = getCurrentDateInTimezone({ timezone, isDateOnly: false });
+  console.log("now", now);
+  //get day
+  const menuItems = await MenuItems.aggregate([
+    {
+      $match: {
+        ...query,
+        status: "active",
+        isAvailableInStock: { $ne: false },
+      },
+    },
+    { $sort: { createdAt: -1 } },
+  ]);
+
+  if (!menuItems.length) return [];
+
+  const menuItemIds = menuItems.map((item) => item._id);
+  const discounts = await getActiveMenuItemDiscounts(menuItemIds, timezone);
+
+  return attachMenuItemDiscounts(menuItems, discounts);
 };
 const buildMenuItemsSaleLookup = () => {
   const now = new Date();
@@ -210,6 +297,60 @@ const getRecommendedItems = async (
   }));
 };
 
+//userId, timezone, organization, menuId
+const getRecommendedItemsV2 = async (
+  userId = null,
+  timezone = null,
+  menuIds = [],
+) => {
+  const menuObjectIds = (Array.isArray(menuIds) ? menuIds : [menuIds])
+    .filter(Boolean)
+    .map((id) => new mongoose.Types.ObjectId(id._id || id));
+
+  if (!menuObjectIds.length) return [];
+
+  const items = await MenuItems.find({
+    menu: { $in: menuObjectIds },
+    status: "active",
+    isAvailableInStock: { $ne: false },
+    isRecommended: true,
+  }).lean();
+
+  if (!items.length) return [];
+
+  const menuItemIds = items.map((item) => item._id);
+  const discounts = await getActiveMenuItemDiscounts(menuItemIds, timezone);
+
+  return attachMenuItemDiscounts(items, discounts);
+};
+
+//userId, timezone, organization, menuId
+const getUpsellMenuItemsV2 = async (
+  userId = null,
+  timezone = null,
+  menuIds = [],
+) => {
+  const menuObjectIds = (Array.isArray(menuIds) ? menuIds : [menuIds])
+    .filter(Boolean)
+    .map((id) => new mongoose.Types.ObjectId(id._id || id));
+
+  if (!menuObjectIds.length) return [];
+
+  const items = await MenuItems.find({
+    menu: { $in: menuObjectIds },
+    status: "active",
+    isAvailableInStock: { $ne: false },
+    isUpsell: true,
+  }).lean();
+
+  if (!items.length) return [];
+
+  const menuItemIds = items.map((item) => item._id);
+  const discounts = await getActiveMenuItemDiscounts(menuItemIds, timezone);
+
+  return attachMenuItemDiscounts(items, discounts);
+};
+
 // ----------------------
 // HYBRID RECOMMENDER (ORG-BASED)
 // ----------------------
@@ -340,15 +481,125 @@ const getOrganizationHybridRecommendedItems = async (
   }));
 };
 
+const comboMenuItemLookupPipeline = [
+  {
+    $lookup: {
+      from: "dayparts",
+      localField: "daypart",
+      foreignField: "_id",
+      as: "daypart",
+      pipeline: [
+        {
+          $project: {
+            name: 1,
+            code: 1,
+            status: 1,
+            startTime: 1,
+            endTime: 1,
+            isAllDay: 1,
+          },
+        },
+      ],
+    },
+  },
+  {
+    $unwind: {
+      path: "$daypart",
+      preserveNullAndEmptyArrays: true,
+    },
+  },
+  {
+    $lookup: {
+      from: "allergens",
+      localField: "allergens",
+      foreignField: "_id",
+      as: "allergens",
+      pipeline: [{ $project: { name: 1, code: 1, status: 1 } }],
+    },
+  },
+  {
+    $project: {
+      title: 1,
+      status: 1,
+      basePrice: 1,
+      image: 1,
+      daypart: 1,
+      allergens: 1,
+      availableDays: 1,
+      category: 1,
+      type: 1,
+    },
+  },
+];
+
+const getMenuItemsCombos = async (menuItemIds = []) => {
+  if (!menuItemIds.length) return [];
+
+  const objectIds = menuItemIds.map((id) => new mongoose.Types.ObjectId(id));
+
+  return MenuItemsCombos.aggregate([
+    {
+      $match: {
+        status: "active",
+        menuItems: { $not: { $elemMatch: { $nin: objectIds } } },
+      },
+    },
+    {
+      $lookup: {
+        from: "menuitemsubcategories",
+        localField: "subCategory",
+        foreignField: "_id",
+        as: "subCategory",
+        pipeline: [{ $project: { name: 1, status: 1, category: 1 } }],
+      },
+    },
+    {
+      $unwind: {
+        path: "$subCategory",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: "menuitems",
+        localField: "menuItems",
+        foreignField: "_id",
+        as: "menuItems",
+        pipeline: [
+          {
+            $match: {
+              status: "active",
+              isAvailableInStock: { $ne: false },
+            },
+          },
+          ...comboMenuItemLookupPipeline,
+        ],
+      },
+    },
+    {
+      $match: {
+        $expr: { $gte: [{ $size: "$menuItems" }, 2] },
+      },
+    },
+    { $sort: { createdAt: -1 } },
+  ]);
+};
+
 
 module.exports = {
   getMenuItemsWithFilters,
+  getMenuItemsWithFiltersV2,
+  getActiveMenuItemDiscounts,
+  attachMenuItemDiscounts,
   countMenuItems,
   findMenuItemById,
   getMenuIdByOrganization,
   getRecommendedItems,
+  getRecommendedItemsV2,
   getOrganizationHybridRecommendedItems,
   getOrganizationIdByMenuItemId,
-  buildMenuItemsSaleLookup
+  buildMenuItemsSaleLookup,
+  getUpsellMenuItemsV2,
+  getMenuItemsCombos,
 
 };

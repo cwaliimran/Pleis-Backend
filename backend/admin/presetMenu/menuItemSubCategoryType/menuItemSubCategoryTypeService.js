@@ -20,6 +20,7 @@ const getMenuItemSubCategoryTypes = async ({
   sortBy,
   sortOrder,
   summary,
+  subCategory,
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   if (summary) {
@@ -30,6 +31,7 @@ const getMenuItemSubCategoryTypes = async ({
         limit,
         user,
         skip,
+        subCategory,
       });
 
     return {
@@ -51,6 +53,7 @@ const getMenuItemSubCategoryTypes = async ({
       skip,
       sortBy,
       sortOrder,
+      subCategory,
     });
 
   return {
@@ -70,7 +73,7 @@ const updateMenuItemSubCategoryType = async (id, data) => {
   // -----------------------------
   // ALLOWED FIELDS
   // -----------------------------
-  const allowedFields = ["name", "status", "category", "order"];
+  const allowedFields = ["name", "status", "subCategory", "order"];
 
   // -----------------------------
   // APPLY UPDATE FIELDS

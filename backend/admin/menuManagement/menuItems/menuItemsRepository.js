@@ -3,31 +3,41 @@ const MenuItems = require("@MenuItemsModel");
 const { getAllUsers } = require("../../../admin/usersManagement/usersService");
 const { sendUserNotifications } = require("@notificationsUtil");
 const { NotificationTypes } = require("@NotificationsModel");
+const { default: mongoose } = require("mongoose");
 
 
 // Create menuItem in a transaction and update organization
-const createMenuItem = async (data) => {
-  try {
-    // Create menuItem
-    console.log("data",data );
-    const menuItem = new MenuItems(data);
-    await menuItem.save();
-    // const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
-    // await sendUserNotifications({
-    //   recipientIds: userIds,
-    //   title: `A new menu item "${menuItem.title}" has been created.`,
-    //   body: `A new menu item "${menuItem.title}" is now available in the system.`,
-    //   data: { type: NotificationTypes.MENU_ITEM_CREATED, menuItemId: menuItem._id, objectType: "menuItems" },
-    //   sender: menuItem.creator,
-    //   objectId: menuItem._id,
-    //   image: menuItem.image || null,
 
-    // });
-    return menuItem;
-  } catch (err) {
-    throw err;
+const createMenuItem = async (data) => {
+  const session = await mongoose.startSession();
+
+  try {
+    session.startTransaction();
+
+    const { menuIds, ...menuItemData } = data;
+
+    const docs = menuIds.map((menuId) => ({
+      ...menuItemData,
+      menu: menuId,
+    }));
+
+    console.log("docs", docs);
+
+    const createdMenuItems = await MenuItems.insertMany(docs, {
+      session,
+    });
+
+    await session.commitTransaction();
+
+    return createdMenuItems;
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
   }
 };
+
 
 // Get all menuItems with their assigned organization populated, sorted by createdAt descending
 const getMenuItemsWithFilters = async (query = {}, skip = 0, limit = 10) => {
@@ -52,7 +62,15 @@ const countMenuItems = async (query = {}) => {
 
 // Find by ID
 const findMenuItemById = async (id) => {
-  return MenuItems.findById(id);
+  return MenuItems.findById(id)
+    .populate({
+      path: "daypart",
+      select: "name code status startTime endTime isAllDay",
+    })
+    .populate({
+      path: "allergens",
+      select: "name code status",
+    });
 };
 
 // Update and save

@@ -14,9 +14,9 @@ const Presets = require("@PresetsModel");
 
 
 const createMenuItem = async (data, timezone) => {
-  let doc = await menuItemRepo.createMenuItem(data);
-  let obj = formatMenuItem(doc, timezone);
-  return obj;
+  const docs = await menuItemRepo.createMenuItem(data);
+
+  return docs.map((doc) => formatMenuItem(doc, timezone));
 };
 
 
@@ -167,7 +167,6 @@ const getMenuItems = async ({
       };
     }
   }
-
   else if (companyOrganizer) {
     menuIds = await getMenuIdsByCompanyOrganizer(companyOrganizer);
 
@@ -228,6 +227,60 @@ const getMenuItems = async ({
       }
     },
     { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: "dayparts",
+        localField: "daypart",
+        foreignField: "_id",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              name: 1,
+              code: 1,
+              status: 1,
+              startTime: 1,
+              endTime: 1,
+              isAllDay: 1,
+            },
+          },
+        ],
+        as: "daypart",
+      },
+    },
+    {
+      $unwind: { path: "$daypart", preserveNullAndEmptyArrays: true },
+    },
+    {
+      $lookup: {
+        from: "allergens",
+        localField: "allergens",
+        foreignField: "_id",
+        as: "allergens",
+        pipeline: [{ $project: { _id: 1, name: 1, code: 1, status: 1 } }],
+      },
+    },
+    //also populate serving size
+    {
+      $lookup: {
+        from: "servings",
+        localField: "servingSize",
+        foreignField: "_id",
+        pipeline: [{ $project: { _id: 1, type: 1, code: 1, unit: 1 } }],
+        as: "serving",
+      },
+    },
+    { $unwind: { path: "$serving", preserveNullAndEmptyArrays: true } },
+    // diet tags — keep as array; do not $unwind (causes row duplication)
+    {
+      $lookup: {
+        from: "diettags",
+        localField: "dietTags",
+        foreignField: "_id",
+        as: "dietTags",
+        pipeline: [{ $project: { _id: 1, name: 1, code: 1, status: 1 } }],
+      },
+    },
 
 
     // ✅ FILTER AFTER LOOKUP
@@ -248,7 +301,6 @@ const getMenuItems = async ({
 
 
   ];
-  console.log("sortBy", sortBy, "sortOrder", sortOrder);
   if (sortBy && sortOrder) {
     const sortDirection = sortOrder === "asc" ? 1 : -1;
 
@@ -346,6 +398,20 @@ const updateMenuItem = async (id, data, timezone) => {
     "upSellItem",
     "availabilityType",
     "event",
+    "presetType",
+    "brand",
+    "amountQuantity",
+    "quantityType",
+    "comboItems",
+    "servingSize",
+    "availableDays",
+    "daypart",
+    "dietTags",
+    "allergens",
+    "cuisine",
+    "isRecommended",
+    "isTogo",
+    "isRequiresOrderConfirmation",
   ];
   const updateData = {};
   for (const key of allowedFields) {

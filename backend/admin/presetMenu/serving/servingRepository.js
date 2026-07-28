@@ -145,6 +145,7 @@ const getServingsSummary = async ({ timezone, page, limit, user, skip }) => {
       _id: 1,
       type: 1,
       code: 1,
+      unit: 1,
       level2: 1,
     },
   });
