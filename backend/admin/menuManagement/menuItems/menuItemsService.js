@@ -248,9 +248,7 @@ const getMenuItems = async ({
         as: "daypart",
       },
     },
-    {
-      $unwind: { path: "$daypart", preserveNullAndEmptyArrays: true },
-    },
+    // daypart is an array of refs — do not $unwind (causes row duplication)
     {
       $lookup: {
         from: "allergens",

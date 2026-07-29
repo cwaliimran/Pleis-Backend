@@ -10,6 +10,10 @@ const mongoose = require("mongoose");
 const MenuOrders = require("@OrdersModel");
 const { getActiveMenuItemPromotions } = require("../../loyalty/promotions/promotionsRepository");
 const { getCurrentDateInTimezone } = require("@utils/responseUtil");
+const { getAllDayparts } = require("../../../admin/presetMenu/daypart/daypartRepository");
+const {
+  filterByDaypartAndDaysWithFetch,
+} = require("../../../shared/menuItemsFilters/filterByDaypartAndDays");
 
 const pickBestDiscount = (discounts = [], basePrice = 0, at = new Date()) =>
   resolveEffectiveDiscount(discounts, basePrice, at);
@@ -73,7 +77,7 @@ const getMenuItemsWithFilters = async ({
 
   const menuItems = await MenuItems.aggregate([
     { $match: query },
-    ...buildMenuItemsSaleLookup(),
+    ...buildMenuItemsSaleLookup(timezone),
     { $sort: { createdAt: -1 } }
   ]);
 
@@ -132,30 +136,32 @@ const getMenuItemsWithFiltersV2 = async ({
   query = {},
   timezone = null
 }) => {
-  //timezone is in utc
-  const now = getCurrentDateInTimezone({ timezone, isDateOnly: false });
-  console.log("now", now);
   //get day
-  const menuItems = await MenuItems.aggregate([
+  let menuItems = await MenuItems.aggregate([
     {
       $match: {
         ...query,
         status: "active",
-        isAvailableInStock: { $ne: false },
+        isAvailableInStock: true,
       },
     },
     { $sort: { createdAt: -1 } },
   ]);
-
+console.log("menuItems.length===>",menuItems.length)
   if (!menuItems.length) return [];
+
+  menuItems = await filterByDaypartAndDaysWithFetch(menuItems, getAllDayparts, timezone || "UTC");
 
   const menuItemIds = menuItems.map((item) => item._id);
   const discounts = await getActiveMenuItemDiscounts(menuItemIds, timezone);
 
   return attachMenuItemDiscounts(menuItems, discounts);
 };
-const buildMenuItemsSaleLookup = () => {
-  const now = new Date();
+const buildMenuItemsSaleLookup = (timezone = null) => {
+  // Prefer user-local "now" when timezone is known; fall back to server UTC.
+  const now = timezone
+    ? getCurrentDateInTimezone({ timezone, isDateOnly: false })
+    : new Date();
 
   return [
     {
@@ -199,9 +205,15 @@ const buildMenuItemsSaleLookup = () => {
 };
 
 const getOrganizationIdByMenuItemId = async (menuId) => {
-  const menuItem = await Menus.findById(menuId).select("organization");
-  if (!menuItem || !menuItem.organization) throw new Error("Menu item or menu not found");
-  return menuItem.organization;
+  const menu = await Menus.findById(menuId).select("organization");
+  if (!menu || !menu.organization) throw new Error("Menu item or menu not found");
+  return menu.organization;
+};
+
+const getOrganizationIdFromMenuItem = async (menuItemId) => {
+  const menuItem = await MenuItems.findById(menuItemId).select("menu").lean();
+  if (!menuItem?.menu) throw new Error("Menu item or menu not found");
+  return getOrganizationIdByMenuItemId(menuItem.menu);
 };
 
 //recommended items
@@ -217,7 +229,7 @@ const countMenuItems = async (query = {}) => {
 const findMenuItemById = async (id, userId = null, timezone = null) => {
   const result = await MenuItems.aggregate([
     { $match: { _id: new mongoose.Types.ObjectId(id) } },
-    ...buildMenuItemsSaleLookup()
+    ...buildMenuItemsSaleLookup(timezone)
   ]);
 
   const item = result[0] || null;
@@ -265,11 +277,11 @@ const getRecommendedItems = async (
         menu: menuItem.menu,
         status: "active",
         category: menuItem.category,
-        isAvailableInStock: { $ne: false },
+        isAvailableInStock: true,
         type: { $regex: menuItem.type, $options: "i" }
       }
     },
-    ...buildMenuItemsSaleLookup(),
+    ...buildMenuItemsSaleLookup(timezone),
     { $sort: { createdAt: -1 } },
     { $limit: limit }
   ]);
@@ -378,7 +390,7 @@ const getOrganizationHybridRecommendedItems = async (
         isAvailableInStock: { $ne: false }
       }
     },
-    ...buildMenuItemsSaleLookup()
+    ...buildMenuItemsSaleLookup(timezone)
   ]);
 
   if (!menuItems.length) return [];
@@ -503,12 +515,6 @@ const comboMenuItemLookupPipeline = [
     },
   },
   {
-    $unwind: {
-      path: "$daypart",
-      preserveNullAndEmptyArrays: true,
-    },
-  },
-  {
     $lookup: {
       from: "allergens",
       localField: "allergens",
@@ -531,6 +537,13 @@ const comboMenuItemLookupPipeline = [
     },
   },
 ];
+
+const getMenuItemsCombosWithFilters = async ({ query = {} } = {}) => {
+  return MenuItemsCombos.find({ ...query, status: "active" })
+    .select("name description subCategory priceMode price status menuItems creator")
+    .populate("subCategory", "name status category")
+    .lean();
+};
 
 const getMenuItemsCombos = async (menuItemIds = []) => {
   if (!menuItemIds.length) return [];
@@ -598,8 +611,10 @@ module.exports = {
   getRecommendedItemsV2,
   getOrganizationHybridRecommendedItems,
   getOrganizationIdByMenuItemId,
+  getOrganizationIdFromMenuItem,
   buildMenuItemsSaleLookup,
   getUpsellMenuItemsV2,
   getMenuItemsCombos,
+  getMenuItemsCombosWithFilters,
 
 };

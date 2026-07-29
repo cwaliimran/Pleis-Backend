@@ -28,12 +28,6 @@ const menuItemsWithV2FieldsPipeline = [
     },
   },
   {
-    $unwind: {
-      path: "$daypart",
-      preserveNullAndEmptyArrays: true,
-    },
-  },
-  {
     $lookup: {
       from: "allergens",
       localField: "allergens",

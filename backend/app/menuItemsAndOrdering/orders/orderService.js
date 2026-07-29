@@ -12,6 +12,139 @@ const { getCheckedInStaffForOrganization } = require("../../../staff/organizatio
 const { usePromoCode } = require("../../promoCode/promoCodeRepository");
 const { getOrgCompanyOrganizer } = require("../../organizationProfile/organizationProfileRepository");
 const { calculateItemPrice } = require("./formatter/calculateItemPrice");
+const { calculateComboPrice } = require("../menuItems/formatter/formatMenuItemsCombos");
+
+const buildPricedMenuItemSnapshot = (menuItem) => {
+  const priceInfo = calculateItemPrice(menuItem);
+  return {
+    menuItem: menuItem._id,
+    unitPrice: priceInfo.originalPrice,
+    unitFinalPrice: priceInfo.finalPrice,
+    saleDiscountPerUnit: priceInfo.saleDiscount,
+    menuItemSnapShot: JSON.parse(JSON.stringify({
+      ...menuItem,
+      originalPrice: priceInfo.originalPrice,
+      salePrice: priceInfo.finalPrice,
+      hasDiscount: priceInfo.saleDiscount > 0,
+    })),
+  };
+};
+
+const validateComboSelection = (cartCombo, combo) => {
+  const requiredItemIds = (combo.menuItems || []).map((id) => id.toString());
+  const selectedIds = (cartCombo.items || []).map((id) => id.toString());
+
+  if (!requiredItemIds.length) {
+    throw new Error(`Combo has no menu items: ${cartCombo.combo}`);
+  }
+
+  if (selectedIds.length !== requiredItemIds.length) {
+    throw new Error(
+      `Combo ${cartCombo.combo} requires exactly ${requiredItemIds.length} items`,
+    );
+  }
+
+  const sortedRequired = [...requiredItemIds].sort();
+  const sortedSelected = [...selectedIds].sort();
+
+  if (sortedRequired.join() !== sortedSelected.join()) {
+    throw new Error(`Invalid items for combo: ${cartCombo.combo}`);
+  }
+
+  const quantity = Number(cartCombo.quantity);
+  if (!Number.isFinite(quantity) || quantity < 1) {
+    throw new Error(`Invalid quantity for combo: ${cartCombo.combo}`);
+  }
+
+  return { selectedIds, quantity };
+};
+
+const buildOrderCombos = async ({
+  combos = [],
+  comboDocs = [],
+  userId,
+  timezone,
+}) => {
+  if (!combos.length) return { orderCombos: [], combosTotal: 0, combosSaleDiscount: 0 };
+
+  const orderCombos = [];
+  let combosTotal = 0;
+  let combosSaleDiscount = 0;
+
+  for (const cartCombo of combos) {
+    const combo = comboDocs.find((c) => c._id.toString() === cartCombo.combo);
+    if (!combo) throw new Error(`Invalid combo: ${cartCombo.combo}`);
+
+    const { selectedIds, quantity } = validateComboSelection(cartCombo, combo);
+
+    const selectedObjectIds = selectedIds.map((id) => new mongoose.Types.ObjectId(id));
+    const comboMenuItems = await menuItemRepo.getMenuItemsWithFilters({
+      query: { _id: { $in: selectedObjectIds } },
+      userId,
+      timezone,
+    });
+
+    if (comboMenuItems.length !== selectedIds.length) {
+      throw new Error(`Invalid combo menu items for combo: ${cartCombo.combo}`);
+    }
+
+    const pricedItems = comboMenuItems.map((item) => {
+      const priceInfo = calculateItemPrice(item);
+      return {
+        ...item,
+        salePrice: priceInfo.finalPrice,
+        basePrice: priceInfo.originalPrice,
+      };
+    });
+
+    const comboPriceInfo = calculateComboPrice(
+      combo.priceMode,
+      combo.price,
+      pricedItems,
+    );
+
+    const unitPrice = comboPriceInfo.originalPrice;
+    const unitFinalPrice = comboPriceInfo.salePrice;
+    const saleDiscountPerUnit = Math.max(unitPrice - unitFinalPrice, 0);
+    const finalPrice = unitFinalPrice * quantity;
+
+    combosTotal += unitPrice * quantity;
+    combosSaleDiscount += saleDiscountPerUnit * quantity;
+
+    const comboItems = selectedIds.map((id) => {
+      const menuItem = comboMenuItems.find((m) => m._id.toString() === id);
+      const priced = buildPricedMenuItemSnapshot(menuItem);
+      return {
+        menuItem: priced.menuItem,
+        menuItemSnapShot: priced.menuItemSnapShot,
+      };
+    });
+
+    orderCombos.push({
+      combo: combo._id,
+      quantity,
+      items: comboItems,
+      unitPrice,
+      unitFinalPrice,
+      saleDiscountPerUnit,
+      finalPrice,
+      comboSnapShot: JSON.parse(JSON.stringify({
+        _id: combo._id,
+        name: combo.name,
+        description: combo.description || "",
+        subCategory: combo.subCategory || null,
+        priceMode: combo.priceMode,
+        price: combo.price,
+        status: combo.status,
+        originalPrice: unitPrice,
+        salePrice: unitFinalPrice,
+        hasDiscount: comboPriceInfo.hasDiscount,
+      })),
+    });
+  }
+
+  return { orderCombos, combosTotal, combosSaleDiscount };
+};
 
 const getStaffIdsByOrganization = async (organizationId) => {
   if (!mongoose.Types.ObjectId.isValid(organizationId)) {
@@ -40,40 +173,81 @@ const placeOrder = async ({
   userId,
   timezone,
   items,
+  combos,
   notes,
   paymentMethod,
   pickupType,
   tableNumber,
   promoCode
 }) => {
-  if (!items || !items.length) throw new Error("Cart is empty");
+  const cartCombos = combos || [];
+
+  if (!items.length && !cartCombos.length) {
+    throw new Error("Cart is empty");
+  }
 
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    // 1️⃣ Fetch menu items
-    const itemIds = items.map(i => new mongoose.Types.ObjectId(i.menuItem));
-    const menuItems = await menuItemRepo
-      .getMenuItemsWithFilters({
-        query: { _id: { $in: itemIds } }
+    let menuItems = [];
+    let organizationId;
+
+    if (items?.length) {
+      const itemIds = items.map((i) => new mongoose.Types.ObjectId(i.menuItem));
+      menuItems = await menuItemRepo.getMenuItemsWithFilters({
+        query: { _id: { $in: itemIds } },
+        userId,
+        timezone,
       });
 
-    if (!menuItems.length) throw new Error("Invalid items in cart");
+      if (!menuItems.length) throw new Error("Invalid items in cart");
 
-    // Determine organization
-    const organizationId =
-      await menuItemRepo.getOrganizationIdByMenuItemId(menuItems[0].menu);
+      organizationId = await menuItemRepo.getOrganizationIdByMenuItemId(menuItems[0].menu);
+    }
+
+    let comboDocs = [];
+    if (cartCombos.length) {
+      const comboIds = cartCombos.map((c) => new mongoose.Types.ObjectId(c.combo));
+      comboDocs = await menuItemRepo.getMenuItemsCombosWithFilters({
+        query: { _id: { $in: comboIds } },
+      });
+
+      if (comboDocs.length !== cartCombos.length) {
+        throw new Error("Invalid combos in cart");
+      }
+
+      const firstComboItemId = comboDocs[0].menuItems?.[0];
+      if (!firstComboItemId) throw new Error("Invalid combos in cart");
+
+      const comboOrgId = await menuItemRepo.getOrganizationIdFromMenuItem(firstComboItemId);
+
+      if (!organizationId) {
+        organizationId = comboOrgId;
+      } else if (comboOrgId.toString() !== organizationId.toString()) {
+        throw new Error("Combos and items must belong to the same organization");
+      }
+    }
+
     const companyOrganizer = await getOrgCompanyOrganizer(organizationId);
 
-
+    const {
+      orderCombos,
+      combosTotal,
+      combosSaleDiscount,
+    } = await buildOrderCombos({
+      combos: cartCombos,
+      comboDocs,
+      userId,
+      timezone,
+    });
 
     // 2️⃣ Prepare order items w/snapshot
-    let totalPrice = 0;
-    let totalSaleDiscount = 0;
-    let itemsTotal = 0;
+    let totalPrice = orderCombos.reduce((sum, combo) => sum + combo.finalPrice, 0);
+    let totalSaleDiscount = combosSaleDiscount;
+    let itemsTotal = combosTotal;
 
-    const orderItems = items.map(i => {
+    const orderItems = (items || []).map((i) => {
       const menuItem = menuItems.find(m => m._id.toString() === i.menuItem);
       if (!menuItem) throw new Error(`Invalid menu item: ${i.menuItem}`);
 
@@ -127,6 +301,7 @@ const placeOrder = async ({
       user: userId,
       organization: organizationId,
       items: orderItems,
+      combos: orderCombos,
       totalPrice,
       priceBreakdown: {
         itemsTotal,
@@ -182,7 +357,8 @@ const placeOrder = async ({
           objectType: "menuorders",
           organization_id: organizationId.toString(),
         },
-        image: (order.items[0].menuItemSnapShot.image) || "noimage",
+        image: (order.items[0]?.menuItemSnapShot?.image
+          || order.combos[0]?.items[0]?.menuItemSnapShot?.image) || "noimage",
         sender: userId,
         objectId: formattedOrder._id,
       });
@@ -218,7 +394,9 @@ const placePreOrderMenuItemsWithReservation = async ({
 
   const menuItems = await menuItemRepo.getMenuItemsWithFilters(
     {
-      query: { _id: { $in: itemIds } }
+      query: { _id: { $in: itemIds } },
+      userId,
+      timezone,
     }
   );
 

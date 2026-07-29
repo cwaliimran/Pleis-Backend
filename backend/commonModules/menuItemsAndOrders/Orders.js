@@ -10,6 +10,22 @@ const OrderItemSchema = new mongoose.Schema({
     menuItemSnapShot: { type: Object, required: true }, // Full JSON snapshot of the menuItem
 });
 
+const OrderComboItemSchema = new mongoose.Schema({
+    menuItem: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItems" },
+    menuItemSnapShot: { type: Object, required: true },
+});
+
+const OrderComboSchema = new mongoose.Schema({
+    combo: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItemsCombos" },
+    quantity: { type: Number, required: true },
+    items: [OrderComboItemSchema],
+    unitPrice: { type: Number, required: true },
+    unitFinalPrice: { type: Number, required: true },
+    saleDiscountPerUnit: { type: Number, default: 0 },
+    finalPrice: { type: Number, required: true },
+    comboSnapShot: { type: Object, required: true },
+});
+
 const OrdersSchema = new mongoose.Schema(
     {
         orderNumber: {
@@ -20,6 +36,7 @@ const OrdersSchema = new mongoose.Schema(
         organization: { type: mongoose.Schema.Types.ObjectId, ref: "Organizations", required: true },
         user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
         items: [OrderItemSchema],
+        combos: { type: [OrderComboSchema], default: [] },
         totalPrice: { type: Number, required: true },
         priceBreakdown: {
             type: Object,

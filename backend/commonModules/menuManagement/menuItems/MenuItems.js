@@ -146,9 +146,9 @@ const menuItemsSchema = new mongoose.Schema(
       default: [],
     },
     daypart: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: [mongoose.Schema.Types.ObjectId],
       ref: "Daypart",
-      default: null,
+      default: [],
     },
     //Dietary & Allergens
     dietTags: {

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=dev PORT=4012 nodemon backend/server.js",
     "dev1": "cross-env NODE_ENV=dev PORT=4014 node backend/server.js",
-    "prod": "cross-env NODE_ENV=prod nodemon backend/server.js",
+    "prod": "cross-env NODE_ENV=prod node backend/server.js",
     "mobileapps": "cross-env NODE_ENV=mobileapps nodemon backend/server.js",
     "pm2:dev:start": "pm2 start backend/config/ecosystem.config.js --env dev",
     "pm2:dev:reload": "pm2 reload pleis-backend --update-env",
