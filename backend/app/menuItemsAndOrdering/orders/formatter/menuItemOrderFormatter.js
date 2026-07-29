@@ -39,6 +39,32 @@ function menuItemOrderFormatter(order, timezone) {
     });
   }
 
+  if (Array.isArray(obj.combos)) {
+    obj.combos = obj.combos.map((combo) => {
+      if (Array.isArray(combo.items)) {
+        combo.items = combo.items.map((item) => {
+          if (item.menuItemSnapShot) {
+            const snap = item.menuItemSnapShot;
+            snap.image = getFullImageUrl(snap.image || "noimage.png");
+
+            if (snap.startTime && snap.endTime) {
+              snap.startTime = convertUtcToTimezone(snap.startTime, timezone, "hh:mm A");
+              snap.endTime = convertUtcToTimezone(snap.endTime, timezone, "hh:mm A");
+            }
+
+            delete snap.menu;
+            delete snap.__v;
+            delete snap.createdAt;
+            delete snap.updatedAt;
+            delete snap.creator;
+          }
+          return item;
+        });
+      }
+      return combo;
+    });
+  }
+
   delete obj.__v;
   return obj;
 }

@@ -32,13 +32,19 @@ const OperatingHoursSchema = new mongoose.Schema({
 
 
 /**
- * Converts local "HH:mm" string to UTC minutes (0–1439)
+ * Converts local time string to UTC minutes (0–1439)
  * Example: "10:00" in Asia/Karachi → 300 (05:00 UTC)
+ * Accepts "HH:mm", "hh:mm A", or already-normalized minutes.
  */
-
 function localTimeToUtcMinutes(timeStr, timezone) {
-  if (!timeStr) return null;
-  const utcMoment = moment.tz(timeStr, "HH:mm", timezone).utc();
+  if (timeStr === null || timeStr === undefined || timeStr === "") return null;
+  if (typeof timeStr === "number") {
+    if (Number.isNaN(timeStr) || timeStr < 0 || timeStr > 1439) return null;
+    return timeStr;
+  }
+  const formats = ["HH:mm", "hh:mm A", "h:mm A"];
+  const utcMoment = moment.tz(timeStr, formats, true, timezone).utc();
+  if (!utcMoment.isValid()) return null;
   return utcMoment.hours() * 60 + utcMoment.minutes();
 }
 
@@ -106,6 +112,18 @@ function getUtcMinutesAndLocalWeekdayKey(timezone = "Asia/Karachi") {
   return { utcMinutes, localWeekdayKey };
 }
 
+/**
+ * True if nowUtcMinutes falls inside [from, to], including overnight (from > to).
+ */
+function isWithinUtcMinutesWindow(from, to, nowUtcMinutes) {
+  if (from == null || to == null || nowUtcMinutes == null) return false;
+
+  if (from > to) {
+    return nowUtcMinutes >= from || nowUtcMinutes <= to;
+  }
+  return nowUtcMinutes >= from && nowUtcMinutes <= to;
+}
+
 function isOrganizationOpenNow(operatingHours, timezone = "Asia/Karachi") {
   if (!operatingHours) return false;
 
@@ -120,13 +138,7 @@ function isOrganizationOpenNow(operatingHours, timezone = "Asia/Karachi") {
 
   if (from == null || to == null) return false;
 
-  // Case: normal day
-  let isOpen = nowUtcMinutes >= from && nowUtcMinutes <= to;
-
-  // Case: overnight shift (e.g. 20:00 — 03:00)
-  if (from > to) {
-    isOpen = nowUtcMinutes >= from || nowUtcMinutes <= to;
-  }
+  let isOpen = isWithinUtcMinutesWindow(from, to, nowUtcMinutes);
 
   // Break window
   if (
@@ -141,12 +153,31 @@ function isOrganizationOpenNow(operatingHours, timezone = "Asia/Karachi") {
   return isOpen;
 }
 
+/**
+ * Daypart availability check — compare against restaurant/org timezone.
+ * Daypart.startTime / endTime are UTC minutes (0–1439).
+ */
+function isDaypartActiveNow(daypart, timezone = "UTC") {
+  if (!daypart) return false;
+  if (daypart.isAllDay) return true;
+  if (daypart.status && daypart.status !== "active") return false;
 
+  const { utcMinutes } = getUtcMinutesAndLocalWeekdayKey(timezone);
+  return isWithinUtcMinutesWindow(
+    daypart.startTime,
+    daypart.endTime,
+    utcMinutes,
+  );
+}
 
 module.exports = {
   OperatingHoursSchema,
   transformOperatingHoursToUtc,
   transformOperatingHoursToLocal,
   isOrganizationOpenNow,
-  getUtcMinutesAndLocalWeekdayKey
+  isDaypartActiveNow,
+  isWithinUtcMinutesWindow,
+  localTimeToUtcMinutes,
+  utcMinutesToLocalTime,
+  getUtcMinutesAndLocalWeekdayKey,
 };

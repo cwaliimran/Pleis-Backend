@@ -35,6 +35,13 @@ const createpresetType = async (req, res) => {
   };
   try {
     const presetType = await presetTypeService.createpresetType(data);
+    if (presetType && presetType.error) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: presetType.error,
+      });
+    }
     if (!presetType) {
       return sendResponse({
         res,

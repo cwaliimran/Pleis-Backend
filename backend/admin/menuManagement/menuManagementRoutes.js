@@ -19,6 +19,14 @@ router.use("/presets", require("../menuManagement/menuPreset/presetsRoutes"));
 
 router.use("/items", require("../menuManagement/menuItems/menuItemsRoutes"));
 router.use(
+  "/discounts",
+  require("../menuManagement/menuItemsDiscounts/menuItemsDiscountsRoutes"),
+);
+router.use(
+  "/combos",
+  require("../menuManagement/menuItemsCombos/menuItemsCombosRoutes"),
+);
+router.use(
   "/categories",
   require("../menuManagement/menuItemCategories/menuItemCategoriesRoutes"),
 );

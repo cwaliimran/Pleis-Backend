@@ -22,6 +22,8 @@ module.exports = {
   "@PresetsModel": "backend/commonModules/menuManagement/menuPreset/Presets.js",
   "@MenuItemsModel":
     "backend/commonModules/menuManagement/menuItems/MenuItems.js",
+  "@MenuItemsDiscountsModel":
+    "backend/commonModules/menuManagement/menuItemsDiscounts/MenuItemsDiscounts.js",
   "@MenuItemCategoriesModel":
     "backend/commonModules/menuManagement/menuItemCategories/MenuItemCategories.js",
   "@HighlightsModel": "backend/commonModules/highlights/Highlight.js",
@@ -147,5 +149,6 @@ module.exports = {
   "@MenuItemSubCategoryTypeModel":
     "backend/admin/presetMenu/menuItemSubCategoryType/MenuItemSubCategoryType.js",
   "@PresetTypeModel": "backend/admin/presetMenu/presetType/PresetType.js",
-
+  "@MenuItemsCombosModel":
+    "backend/commonModules/menuManagement/menuItemsCombos/MenuItemsCombos.js",
 };

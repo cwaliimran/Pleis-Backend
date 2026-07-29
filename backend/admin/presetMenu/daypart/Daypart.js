@@ -1,5 +1,10 @@
 const mongoose = require("mongoose");
 
+/**
+ * startTime / endTime store UTC minutes of day (0–1439), same pattern as
+ * shared/commonSchemas/operatingHours.js — recurring daily windows, not Dates.
+ * API accepts/returns local "HH:mm" (or "hh:mm A"); convert at the controller boundary.
+ */
 const daypartSchema = new mongoose.Schema(
   {
     user: {
@@ -28,26 +33,20 @@ const daypartSchema = new mongoose.Schema(
       default: false,
     },
     startTime: {
-      type: String,
-      trim: true,
+      type: Number,
+      default: null,
+      min: 0,
+      max: 1439,
     },
     endTime: {
-      type: String,
-      trim: true,
+      type: Number,
+      default: null,
+      min: 0,
+      max: 1439,
     },
   },
   {
     timestamps: true,
-  },
-);
-daypartSchema.index(
-  { user: 1, startTime: 1, endTime: 1 },
-  {
-    unique: true,
-    partialFilterExpression: {
-      startTime: { $type: "string" },
-      endTime: { $type: "string" },
-    },
   },
 );
 
