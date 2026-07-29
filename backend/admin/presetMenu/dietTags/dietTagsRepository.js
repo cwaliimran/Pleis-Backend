@@ -185,17 +185,17 @@ const findByIdAndUpdate = async (id, data) => {
   return DietTags.findByIdAndUpdate(id, data, { new: true });
 };
 const generateUniqueDietTagsCode = async () => {
-  const last = await DietTags.findOne()
-    .sort({ createdAt: -1 })
+  const docs = await DietTags.find({ code: { $regex: /^DIET\d+$/i } })
     .select("code")
     .lean();
-  let nextNumber = 1;
-  if (last?.code) {
-    const currentNumber = parseInt(last.code.replace("DIET", ""), 10);
-    nextNumber = currentNumber + 1;
+
+  let highest = 0;
+  for (const doc of docs) {
+    const n = Number(String(doc.code).replace(/^DIET/i, ""));
+    if (!Number.isNaN(n) && n > highest) highest = n;
   }
 
-  return `DIET${String(nextNumber).padStart(3, "0")}`;
+  return `DIET${String(highest + 1).padStart(3, "0")}`;
 };
 module.exports = {
   createDietTags,

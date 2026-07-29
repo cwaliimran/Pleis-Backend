@@ -1,13 +1,14 @@
-const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const formatDaypartTimes = require("./formator/formatDaypartTimes");
 const DaypartRepo = require("./daypartRepository");
 
-const { cache, invalidate } = require("@redisCache");
+const { invalidate } = require("@redisCache");
 const ACTIVE_DaypartS_CACHE_KEY = "Daypart:active";
-const createDaypart = async (data) => {
-  let Daypart = await DaypartRepo.createDaypart(data);
-  return Daypart;
+
+const createDaypart = async (data, timezone) => {
+  const Daypart = await DaypartRepo.createDaypart(data);
+  return formatDaypartTimes(Daypart, timezone);
 };
+
 const getDayparts = async ({
   timezone,
   page,
@@ -53,24 +54,21 @@ const getDayparts = async ({
     meta,
   };
 };
-const updateDaypart = async (id, data) => {
+
+const updateDaypart = async (id, data, timezone) => {
   const Daypart = await DaypartRepo.findDaypartById(id);
   if (!Daypart) {
     return { error: "Daypart_not_found" };
   }
 
-  // -----------------------------
-  // ALLOWED FIELDS
-  // -----------------------------
   const allowedFields = [
     "name",
     "status",
+    "isAllDay",
+    "startTime",
+    "endTime",
   ];
 
-
-  // -----------------------------
-  // APPLY UPDATE FIELDS
-  // -----------------------------
   const updateData = {};
   for (const key of allowedFields) {
     if (data[key] !== undefined) {
@@ -79,14 +77,15 @@ const updateDaypart = async (id, data) => {
   }
 
   if (Object.keys(updateData).length === 0) {
-    return Daypart;
+    return formatDaypartTimes(Daypart, timezone);
   }
 
   Object.assign(Daypart, updateData);
   await Daypart.save();
   await invalidate(ACTIVE_DaypartS_CACHE_KEY);
+  await invalidate(DaypartRepo.ALL_DaypartS_CACHE_KEY);
 
-  return Daypart;
+  return formatDaypartTimes(Daypart, timezone);
 };
 
 const deleteDaypart = async (id) => {
@@ -96,10 +95,12 @@ const deleteDaypart = async (id) => {
   if (!updated) return null;
   return true;
 };
+
 const getDaypartCode = async () => {
   const code = await DaypartRepo.generateUniqueDaypartCode();
   return code;
 };
+
 module.exports = {
   createDaypart,
   getDayparts,
@@ -107,4 +108,3 @@ module.exports = {
   deleteDaypart,
   getDaypartCode,
 };
-

@@ -2,13 +2,33 @@ const {
   sendResponse,
   parsePaginationParams,
   validateParams,
-  generateMeta,
   getReadableErrorMessage,
-  convertTimezoneToUtc,
 } = require("../../../helperUtils/responseUtil");
-const moment = require("moment-timezone");
+const {
+  localTimeToUtcMinutes,
+} = require("../../../shared/commonSchemas/operatingHours");
 
 const DaypartService = require("./daypartService");
+
+const normalizeDaypartTimes = ({
+  isAllDay,
+  startTime,
+  endTime,
+  timezone,
+}) => {
+  if (isAllDay) {
+    return { startTime: null, endTime: null };
+  }
+
+  const startMinutes = localTimeToUtcMinutes(startTime, timezone);
+  const endMinutes = localTimeToUtcMinutes(endTime, timezone);
+
+  if (startMinutes == null || endMinutes == null) {
+    return { error: "invalid_daypart_time_format" };
+  }
+
+  return { startTime: startMinutes, endTime: endMinutes };
+};
 
 const createDaypart = async (req, res) => {
   let {
@@ -19,27 +39,9 @@ const createDaypart = async (req, res) => {
     startTime,
     endTime,
   } = req.body;
-  if (isAllDay) {
-    startTime = "00:00";
-    endTime = "23:59";
-  }
-  const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
-  const toMin = (t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3));
-
-  if (!TIME_RE.test(startTime) || !TIME_RE.test(endTime)) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Time must be in HH:mm format" });
-  }
-  if (toMin(endTime) <= toMin(startTime)) {
-    return res
-      .status(400)
-      .json({ success: false, message: "endTime must be after startTime" });
-  }
 
   const user = req.user._id;
   const timezone = req.user.timezone;
-  console.log("timezone", timezone);
 
   if (
     !validateParams(req, res, {
@@ -47,33 +49,42 @@ const createDaypart = async (req, res) => {
     })
   )
     return;
-  const today = moment().tz(timezone).format("YYYY-MM-DD");
 
-  if (!isAllDay) {
-    startTime = convertTimezoneToUtc(
-      `${today} ${startTime}`,
-      timezone,
-      "YYYY-MM-DD HH:mm",
-      "HH:mm",
-    );
-    endTime = convertTimezoneToUtc(
-      `${today} ${endTime}`,
-      timezone,
-      "YYYY-MM-DD HH:mm",
-      "HH:mm",
-    );
+  if (!isAllDay && (!startTime || !endTime)) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "daypart_start_and_end_time_required",
+    });
   }
-  let data = {
+
+  const times = normalizeDaypartTimes({
+    isAllDay,
+    startTime,
+    endTime,
+    timezone,
+  });
+
+  if (times.error) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: times.error,
+    });
+  }
+
+  const data = {
     user,
     code,
     status,
     name,
     isAllDay,
-    startTime,
-    endTime,
+    startTime: times.startTime,
+    endTime: times.endTime,
   };
+
   try {
-    const Daypart = await DaypartService.createDaypart(data);
+    const Daypart = await DaypartService.createDaypart(data, timezone);
     if (!Daypart) {
       return sendResponse({
         res,
@@ -97,6 +108,7 @@ const createDaypart = async (req, res) => {
     });
   }
 };
+
 const getDayparts = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status, date, sortBy, sortOrder, summary } = req.query;
@@ -152,20 +164,56 @@ const getDayparts = async (req, res) => {
     });
   }
 };
+
 const updateDaypart = async (req, res) => {
   const { id } = req.params;
-  let { name, status } = req.body;
+  let { name, status, isAllDay, startTime, endTime } = req.body;
 
-  const user = req.user._id;
   const timezone = req.user.timezone;
 
-  let data = {
+  const data = {
     name,
     status,
   };
 
+  if (isAllDay !== undefined) {
+    data.isAllDay = isAllDay;
+  }
+
+  if (isAllDay === true) {
+    data.startTime = null;
+    data.endTime = null;
+  } else if (startTime !== undefined || endTime !== undefined || isAllDay === false) {
+    if (!startTime || !endTime) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "daypart_start_and_end_time_required",
+      });
+    }
+
+    const times = normalizeDaypartTimes({
+      isAllDay: false,
+      startTime,
+      endTime,
+      timezone,
+    });
+
+    if (times.error) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: times.error,
+      });
+    }
+
+    data.startTime = times.startTime;
+    data.endTime = times.endTime;
+    data.isAllDay = false;
+  }
+
   try {
-    const updated = await DaypartService.updateDaypart(id, data);
+    const updated = await DaypartService.updateDaypart(id, data, timezone);
     if (updated && updated.error) {
       return sendResponse({
         res,
@@ -235,6 +283,7 @@ const deleteDaypart = async (req, res) => {
     });
   }
 };
+
 const getDaypartCode = async (req, res) => {
   try {
     const code = await DaypartService.getDaypartCode();
@@ -254,6 +303,7 @@ const getDaypartCode = async (req, res) => {
     });
   }
 };
+
 module.exports = {
   createDaypart,
   getDayparts,

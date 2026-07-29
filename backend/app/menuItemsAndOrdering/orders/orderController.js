@@ -2,13 +2,12 @@ const orderService = require("./orderService");
 const { sendResponse, getReadableErrorMessage, validateParams, parsePaginationParams } = require("@utils/responseUtil");
 
 const placeOrder = async (req, res) => {
-  const { items, notes, paymentMethod = null, pickupType,
+  const { items = [], combos = [], notes, paymentMethod = null, pickupType,
     tableNumber, promoCode } = req.body;
   try {
 
     let validateData = {
       rawData: [
-        "items",
         "pickupType",
         "paymentMethod",
       ],
@@ -29,6 +28,7 @@ const placeOrder = async (req, res) => {
       userId: req.user._id,
       timezone: req.user.timezone,
       items,
+      combos,
       notes,
       paymentMethod,
       pickupType,

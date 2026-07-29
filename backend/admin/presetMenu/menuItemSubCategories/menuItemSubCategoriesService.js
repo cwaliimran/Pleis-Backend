@@ -20,6 +20,7 @@ const getMenuItemSubCategorys = async ({
   sortBy,
   sortOrder,
   summary,
+  category,
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   if (summary) {
@@ -30,6 +31,7 @@ const getMenuItemSubCategorys = async ({
         limit,
         user,
         skip,
+        category,
       });
 
     return {
@@ -51,6 +53,7 @@ const getMenuItemSubCategorys = async ({
       skip,
       sortBy,
       sortOrder,
+      category,
     });
 
   return {

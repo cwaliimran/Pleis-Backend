@@ -2,6 +2,7 @@
 const menuItemRepo = require("./menuItemsRepository");
 const { getFullImageUrl } = require("@utils/imageHelper");
 const { formatMenuItem } = require("./formatter/formatMenuItems");
+const { formatMenuItemsComboList } = require("./formatter/formatMenuItemsCombos");
 const MenuItemCategories = require("@MenuItemCategoriesModel");
 const { findOrganizationWithSelectFilter, getOrganizationMenuWithItems } = require("../../organizationProfile/organizationProfileRepository");
 const { default: mongoose } = require("mongoose");
@@ -81,6 +82,100 @@ console.log("menuId",menuId );
   return { organizationDetails, recommended: formattedRecommended, menu };
 };
 
+const getMenuItemsV2 = async ({ userId, timezone, organization }) => {
+  // 1️⃣ Get menu ID for the organization
+  const menuId = await menuItemRepo.getMenuIdByOrganization(organization);
+  if (!menuId) {
+    return { recommended: [], menu: [], combos: [] };
+  }
+  // 2️⃣ Fetch all active menu items for this menu
+
+  const menuItems = await menuItemRepo.getMenuItemsWithFiltersV2({
+    query: {
+      menu: {
+        $in: menuId.map(item => new mongoose.Types.ObjectId(item._id))
+      },
+    },
+    timezone
+  });
+
+
+  if (!menuItems.length) return { recommended: [], menu: [], combos: [] };
+
+
+  // 3️⃣ Collect all category IDs used
+  const categoryIds = [...new Set(menuItems.map(item => item.category.toString()))];
+
+  // 4️⃣ Fetch category names in batch
+  const [categories, recommended] = await Promise.all([
+    MenuItemCategories.find({ _id: { $in: categoryIds } }).select("_id title").lean(),
+    menuItemRepo.getRecommendedItemsV2(userId, timezone, menuId)
+  ]);
+  const categoryMap = categories.reduce((acc, cat) => {
+    acc[cat._id.toString()] = cat.title;
+    return acc;
+  }, {});
+
+  // 5️⃣ Group by category → type → items
+  const grouped = {};
+
+  menuItems.forEach((item) => {
+    const { type, category } = item;
+    const categoryName = categoryMap[category.toString()] || category.toString();
+
+    if (!grouped[categoryName]) grouped[categoryName] = {};
+    if (!grouped[categoryName][type]) grouped[categoryName][type] = [];
+
+    grouped[categoryName][type].push(applyMenuItemDiscountV2(formatMenuItem(item, timezone)));
+  });
+
+  // 6️⃣ Convert to desired response structure
+  const menu = Object.entries(grouped).map(([categoryName, typesObj]) => ({
+    category: categoryName,
+    types: Object.entries(typesObj).map(([typeName, items]) => ({
+      type: typeName,
+      items,
+    })),
+  }));
+
+
+  let organizationDetails = await findOrganizationWithSelectFilter(organization, "_id basicInfo.name basicInfo.media.logo");
+
+  if (organizationDetails?.basicInfo?.media?.logo) {
+    organizationDetails.basicInfo.media.logo = getFullImageUrl(organizationDetails.basicInfo.media.logo);
+  }
+
+  let formattedRecommended = recommended?.map(item => applyMenuItemDiscountV2(formatMenuItem(item, timezone))) || [];
+
+  const menuItemById = new Map(
+    menuItems.map((item) => [item._id.toString(), item]),
+  );
+
+  const rawCombos = await menuItemRepo.getMenuItemsCombos(
+    menuItems.map((item) => item._id),
+  );
+
+  const combos = formatMenuItemsComboList(rawCombos, {
+    timezone,
+    menuItemById,
+    applyDiscount: applyMenuItemDiscountV2,
+  });
+
+  return { organizationDetails, recommended: formattedRecommended, menu, combos };
+};
+
+const applyMenuItemDiscountV2 = (item) => {
+  const priceInfo = calculateItemPrice(item);
+
+  return {
+    ...item,
+    originalPrice: priceInfo.originalPrice,
+    salePrice: priceInfo.finalPrice,
+    hasDiscount: Boolean(item.discount),
+    discount: item.discount || null,
+  };
+};
+
 const applyMenuItemsSale = (item) => {
   const priceInfo = calculateItemPrice(item);
 
@@ -116,10 +211,34 @@ const getHybridRecommendedItems = async ({ userId, timezone, organization }) => 
   return { recommended: formatted };
 };
 
+const getRecommendedMenuItemsV2 = async ({ userId, timezone, organization }) => {
+  const menuId = await menuItemRepo.getMenuIdByOrganization(organization);
+  if (!menuId) {
+    return { recommended: [], menu: [] };
+  }
+  const recommended = await menuItemRepo.getRecommendedItemsV2(userId, timezone, menuId);
+  let formatted = recommended.map(item => formatMenuItem(item));
+  return { recommended: formatted };
+};
+
+const getUpsellMenuItemsV2 = async ({ userId, timezone, organization }) => {
+  const menuId = await menuItemRepo.getMenuIdByOrganization(organization);
+  if (!menuId) {
+    return { recommended: [], menu: [] };
+  }
+  const recommended = await menuItemRepo.getUpsellMenuItemsV2(userId, timezone, menuId);
+  let formatted = recommended.map(item => formatMenuItem(item));
+  return { recommended: formatted };
+};
+
 
 module.exports = {
   getMenuItems,
+  getMenuItemsV2,
   getMenuItemDetails,
   getHybridRecommendedItems,
-  applyMenuItemsSale
+  getRecommendedMenuItemsV2,
+  applyMenuItemsSale,
+  applyMenuItemDiscountV2,
+  getUpsellMenuItemsV2
 };

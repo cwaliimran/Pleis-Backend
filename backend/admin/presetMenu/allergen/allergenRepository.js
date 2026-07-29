@@ -185,17 +185,17 @@ const findByIdAndUpdate = async (id, data) => {
   return Allergen.findByIdAndUpdate(id, data, { new: true });
 };
 const generateUniqueAllergenCode = async () => {
-  const last = await Allergen.findOne()
-    .sort({ createdAt: -1 })
+  const docs = await Allergen.find({ code: { $regex: /^ALR\d+$/i } })
     .select("code")
     .lean();
-  let nextNumber = 1;
-  if (last?.code) {
-    const currentNumber = parseInt(last.code.replace("ALR", ""), 10);
-    nextNumber = currentNumber + 1;
+
+  let highest = 0;
+  for (const doc of docs) {
+    const n = Number(String(doc.code).replace(/^ALR/i, ""));
+    if (!Number.isNaN(n) && n > highest) highest = n;
   }
 
-  return `ALR${String(nextNumber).padStart(3, "0")}`;
+  return `ALR${String(highest + 1).padStart(3, "0")}`;
 };
 module.exports = {
   createAllergen,
