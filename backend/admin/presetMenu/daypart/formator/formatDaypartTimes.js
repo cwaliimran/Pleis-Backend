@@ -1,28 +1,30 @@
-const moment = require("moment");
-const { convertUtcToTimezone } = require("@utils/responseUtil");
+const {
+  utcMinutesToLocalTime,
+} = require("../../../../shared/commonSchemas/operatingHours");
 
+/**
+ * Converts stored UTC minutes → local "HH:mm" for API responses.
+ * Leaves isAllDay dayparts with null times.
+ */
 const formatDaypartTimes = (daypart, timezone) => {
   const item = daypart.toObject ? daypart.toObject() : { ...daypart };
 
-  if (item.isAllDay || !timezone) return item;
-
-  const dateStr = moment.utc(item.createdAt).format("YYYY-MM-DD");
-
-  if (item.startTime) {
-    item.startTime = convertUtcToTimezone(
-      `${dateStr}T${item.startTime}:00.000Z`,
-      timezone,
-      "HH:mm",
-    );
+  if (item.isAllDay) {
+    item.startTime = null;
+    item.endTime = null;
+    return item;
   }
-  if (item.endTime) {
-    item.endTime = convertUtcToTimezone(
-      `${dateStr}T${item.endTime}:00.000Z`,
-      timezone,
-      "HH:mm",
-    );
+
+  if (!timezone) return item;
+
+  if (item.startTime != null) {
+    item.startTime = utcMinutesToLocalTime(item.startTime, timezone);
+  }
+  if (item.endTime != null) {
+    item.endTime = utcMinutesToLocalTime(item.endTime, timezone);
   }
 
   return item;
 };
+
 module.exports = formatDaypartTimes;

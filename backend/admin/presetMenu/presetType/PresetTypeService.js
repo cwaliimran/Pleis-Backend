@@ -2,8 +2,20 @@ const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const presetTypeRepo = require("./PresetTypeRepository");
 const { formatImageFieldsList } = require("./formator/imageUrlFormatter");
 const { cache, invalidate } = require("@redisCache");
+const MenuItemSubCategory = require("@MenuItemSubCategoriesModel");
 const ACTIVE_presetTypeS_CACHE_KEY = "presetType:active";
 const createpresetType = async (data) => {
+  // Always persist category from the selected subcategory
+  if (data.subCategory) {
+    const subCategory = await MenuItemSubCategory.findById(data.subCategory)
+      .select("category")
+      .lean();
+    if (!subCategory?.category) {
+      return { error: "subCategory_not_found_or_missing_category" };
+    }
+    data.category = subCategory.category;
+  }
+
   let presetType = await presetTypeRepo.createpresetType(data);
   return presetType;
 };

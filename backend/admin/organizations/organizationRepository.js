@@ -496,7 +496,7 @@ const getMenuIdsByOrganization = async (organization) => {
   // Query Menus where organization is in the list of organizationIds
   const menus = await Menus.find({
     organization: { $in: organizationIds },
-    status: "active",
+    status: { $ne: "deleted" },
   })
     .select("_id")
     .lean();

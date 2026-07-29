@@ -4,6 +4,7 @@ const { generateMeta } = require("@utils/responseUtil");
 
 const { cache, invalidate } = require("@redisCache");
 const ACTIVE_DaypartS_CACHE_KEY = "Daypart:active";
+const ALL_DaypartS_CACHE_KEY = "Daypart:all";
 
 
 const createDaypart = async (data) => {
@@ -11,6 +12,7 @@ const createDaypart = async (data) => {
     const DaypartData = new Daypart(data);
     await DaypartData.save();
     await invalidate(ACTIVE_DaypartS_CACHE_KEY);
+    await invalidate(ALL_DaypartS_CACHE_KEY);
     return DaypartData;
   } catch (err) {
     throw err;
@@ -120,7 +122,6 @@ const getDayparts = async ({
   if (!isCacheable) {
     return computeDayparts();
   }
-  console.log("ACTIVE_DaypartS_CACHE_KEY",ACTIVE_DaypartS_CACHE_KEY);
   return cache({
     namespace: ACTIVE_DaypartS_CACHE_KEY,
     params: {
@@ -202,6 +203,17 @@ const generateUniqueDaypartCode = async () => {
 
   return `DP${String(nextNumber).padStart(3, "0")}`;
 };
+
+//get all dayparts and cache it also update them when any daypart is created or updated or deleted
+const getAllDayparts = async () => {
+  return cache({
+    namespace: ALL_DaypartS_CACHE_KEY,
+    params: {},
+    ttl: null,
+    fetchFn: () => Daypart.find(),
+  });
+};
+
 module.exports = {
   createDaypart,
   getDayparts,
@@ -209,4 +221,6 @@ module.exports = {
   findByIdAndUpdate,
   getDaypartsSummary,
   generateUniqueDaypartCode,
+  getAllDayparts,
+  ALL_DaypartS_CACHE_KEY,
 };

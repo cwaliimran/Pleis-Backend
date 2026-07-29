@@ -28,6 +28,7 @@ const getMenuItemSubCategoryTypes = async ({
   skip,
   sortBy,
   sortOrder,
+  subCategory,
 }) => {
   // The heavy lifting — builds the pipeline, runs it, assembles meta.
   const computeMenuItemSubCategoryTypes = async () => {
@@ -38,6 +39,9 @@ const getMenuItemSubCategoryTypes = async ({
       pipeline.push({ $match: { status } });
     } else {
       pipeline.push({ $match: { status: { $ne: "deleted" } } });
+    }
+    if (subCategory) {
+      pipeline.push({ $match: { subCategory: new mongoose.Types.ObjectId(subCategory) } });
     }
 
     if (date) {
@@ -126,14 +130,17 @@ const getMenuItemSubCategoryTypes = async ({
       MenuItemSubCategoryType.countDocuments({
         ...(user && { user: user }),
         status: { $ne: "deleted" },
+        ...(subCategory && { subCategory: new mongoose.Types.ObjectId(subCategory) }),
       }),
       MenuItemSubCategoryType.countDocuments({
         status: "active",
         ...(user && { user: user }),
+        ...(subCategory && { subCategory: new mongoose.Types.ObjectId(subCategory) }),
       }),
       MenuItemSubCategoryType.countDocuments({
         status: "inactive",
         ...(user && { user: user }),
+        ...(subCategory && { subCategory: new mongoose.Types.ObjectId(subCategory) }),
       }),
     ]);
 
@@ -143,27 +150,7 @@ const getMenuItemSubCategoryTypes = async ({
     return { MenuItemSubCategoryTypes, meta };
   };
 
-  // Only cache when the result is "stable" — no dynamic filters/sorting.
-  const isCacheable = !date && !sortBy && !sortOrder && !keyword;
-
-  if (!isCacheable) {
-    return computeMenuItemSubCategoryTypes();
-  }
-  console.log(
-    "ACTIVE_MenuItemSubCategoryTypeS_CACHE_KEY",
-    ACTIVE_MenuItemSubCategoryTypeS_CACHE_KEY,
-  );
-  return cache({
-    namespace: ACTIVE_MenuItemSubCategoryTypeS_CACHE_KEY,
-    params: {
-      page,
-      skip,
-      limit,
-      status: status ?? "all",
-    },
-    ttl: 60,
-    fetchFn: computeMenuItemSubCategoryTypes,
-  });
+  return computeMenuItemSubCategoryTypes();
 };
 const getMenuItemSubCategoryTypesSummary = async ({
   timezone,
@@ -171,9 +158,10 @@ const getMenuItemSubCategoryTypesSummary = async ({
   limit,
   user,
   skip,
+  subCategory,
 }) => {
   const pipeline = [];
-  pipeline.push({ $match: { status: "active" } });
+  pipeline.push({ $match: { status: "active", subCategory: new mongoose.Types.ObjectId(subCategory) } });
 
   pipeline.push({ $sort: { createdAt: -1 } });
 
@@ -203,14 +191,17 @@ const getMenuItemSubCategoryTypesSummary = async ({
     MenuItemSubCategoryType.countDocuments({
       ...(user && { user: user }),
       status: { $ne: "deleted" },
+      subCategory: new mongoose.Types.ObjectId(subCategory),
     }),
     MenuItemSubCategoryType.countDocuments({
       status: "active",
       ...(user && { user: user }),
+      subCategory: new mongoose.Types.ObjectId(subCategory),
     }),
     MenuItemSubCategoryType.countDocuments({
       status: "inactive",
       ...(user && { user: user }),
+      subCategory: new mongoose.Types.ObjectId(subCategory),
     }),
   ]);
 

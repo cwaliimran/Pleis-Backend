@@ -36,7 +36,7 @@ const menusSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["active", "inactive", "deleted","draft"],
+      enum: ["active", "inactive", "deleted", "draft"],
       default: "active",
     },
   },

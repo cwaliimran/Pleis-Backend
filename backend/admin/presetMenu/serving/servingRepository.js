@@ -145,6 +145,7 @@ const getServingsSummary = async ({ timezone, page, limit, user, skip }) => {
       _id: 1,
       type: 1,
       code: 1,
+      unit: 1,
       level2: 1,
     },
   });
@@ -187,17 +188,17 @@ const findByIdAndUpdate = async (id, data) => {
   return Serving.findByIdAndUpdate(id, data, { new: true });
 };
 const generateUniqueServingCode = async () => {
-  const last = await Serving.findOne()
-    .sort({ createdAt: -1 })
+  const docs = await Serving.find({ code: { $regex: /^SERV\d+$/i } })
     .select("code")
     .lean();
-  let nextNumber = 1;
-  if (last?.code) {
-    const currentNumber = parseInt(last.code.replace("SERV", ""), 10);
-    nextNumber = currentNumber + 1;
+
+  let highest = 0;
+  for (const doc of docs) {
+    const n = Number(String(doc.code).replace(/^SERV/i, ""));
+    if (!Number.isNaN(n) && n > highest) highest = n;
   }
 
-  return `SERV${String(nextNumber).padStart(3, "0")}`;
+  return `SERV${String(highest + 1).padStart(3, "0")}`;
 };
 module.exports = {
   createServing,

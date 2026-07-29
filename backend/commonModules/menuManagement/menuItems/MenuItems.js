@@ -108,6 +108,77 @@ const menuItemsSchema = new mongoose.Schema(
       ref: "Presets",
       default: null,
     },
+
+    /* v2 params */
+    presetType: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "PresetType",
+      default: null,
+    },
+    brand: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Brand",
+      default: null,
+    },
+    amountQuantity: { //e.g 200 mil, 250g
+      type: String,
+      default: "",
+    },
+    quantityType: {
+      type: String,
+      enum: ["single", "combo"],
+      default: "single",
+    },
+    comboItems: { //minimum 2 items when quantityType is combo
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "MenuItems",
+      default: [],
+    },
+    //Serving 
+    servingSize: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Serving",
+      default: null,
+    },
+    availableDays: {
+      type: [String],
+      enum: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
+      default: [],
+    },
+    daypart: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "Daypart",
+      default: [],
+    },
+    //Dietary & Allergens
+    dietTags: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "DietTags",
+      default: [],
+    },
+    allergens: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "Allergen",
+      default: [],
+    },
+    cuisine: {
+      type: String,
+      default: "",
+    },
+
+    isRecommended: {
+      type: Boolean,
+      default: false,
+    },
+    isTogo: {
+      type: Boolean,
+      default: false,
+    },
+    isRequiresOrderConfirmation: {
+      type: Boolean,
+      default: false,
+    },
+
   },
   {
     timestamps: true,

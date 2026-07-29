@@ -19,19 +19,65 @@ const createMenuItem = async (req, res) => {
     category,
     basePrice,
     taxPercent,
-    menu,
+    menuIds,
     startTime,
     endTime,
     status = "active",
+    companyOrganizer,
+    // v2 params
+    presetType,
+    brand,
+    amountQuantity,
+    quantityType,
+    comboItems,
+    servingSize,
+    availableDays,
+    daypart,
+    dietTags,
+    allergens,
+    cuisine,
+    isRecommended,
+    isTogo,
+    isRequiresOrderConfirmation,
   } = req.body;
+
+  if (quantityType === "combo" && (!comboItems || comboItems.length < 2)) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "combo_items_minimum_required",
+    });
+  }
 
   if (
     !validateParams(req, res, {
-      rawData: ["title", "type", "basePrice", "menu"],
-      objectIdFields: ["menu", "category"],
+      rawData: ["title", "type", "basePrice", "menuIds"],
+      objectIdFields: [
+        "menuIds",
+        "category",
+        "presetType",
+        "brand",
+        "servingSize",
+        "daypart",
+        "comboItems",
+        "dietTags",
+        "allergens",
+      ],
       dateFields: {
         startTime: "hh:mm A", // Example format: 02:30 PM
         endTime: "hh:mm A", // Example format: 02:30 PM
+      },
+      enumFields: {
+        quantityType: ["single", "combo"],
+        availableDays: [
+          "monday",
+          "tuesday",
+          "wednesday",
+          "thursday",
+          "friday",
+          "saturday",
+          "sunday",
+        ],
       },
     })
   )
@@ -45,11 +91,25 @@ const createMenuItem = async (req, res) => {
     category,
     basePrice,
     taxPercent,
-    menu,
+    menuIds,
     startTime,
     endTime,
     status,
-    creator: req.user?._id,
+    creator: companyOrganizer,
+    presetType,
+    brand,
+    amountQuantity,
+    quantityType,
+    comboItems,
+    servingSize,
+    availableDays,
+    daypart,
+    dietTags,
+    allergens,
+    cuisine,
+    isRecommended,
+    isTogo,
+    isRequiresOrderConfirmation,
   };
 
   if (startTime) {
@@ -62,8 +122,8 @@ const createMenuItem = async (req, res) => {
 
   try {
 
-    const menuItem = await menuItemsService.createMenuItem(data, timezone);
-    if (!menuItem) {
+    const menuItems = await menuItemsService.createMenuItem(data, timezone);
+    if (!menuItems) {
       return sendResponse({
         res,
         statusCode: 400,
@@ -74,7 +134,7 @@ const createMenuItem = async (req, res) => {
       res,
       statusCode: 201,
       translationKey: "menu_item_created_successfully",
-      data: menuItem,
+      data: menuItems,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -132,7 +192,7 @@ const getMenuItems = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let {
     keyword,
-    status = "active",
+    status = { $ne: "deleted" },
     menu,
     type,
     category,
@@ -269,6 +329,21 @@ const updateMenuItem = async (req, res) => {
     upSellItem,
     availabilityType,
     event,
+    // v2 params
+    presetType,
+    brand,
+    amountQuantity,
+    quantityType,
+    comboItems,
+    servingSize,
+    availableDays,
+    daypart,
+    dietTags,
+    allergens,
+    cuisine,
+    isRecommended,
+    isTogo,
+    isRequiresOrderConfirmation,
   } = req.body;
   if (availabilityType === 'preOrdersEvent' && !event) {
     return sendResponse({
@@ -307,12 +382,43 @@ const updateMenuItem = async (req, res) => {
   }
 
 
+  if (quantityType === "combo" && comboItems !== undefined && comboItems.length < 2) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "combo_items_minimum_required",
+    });
+  }
+
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
+      objectIdFields: [
+        "menu",
+        "category",
+        "presetType",
+        "brand",
+        "servingSize",
+        "daypart",
+        "comboItems",
+        "dietTags",
+        "allergens",
+      ],
       dateFields: {
         startTime: "hh:mm A", // Example format: 02:30 PM
         endTime: "hh:mm A", // Example format: 02:30 PM
+      },
+      enumFields: {
+        quantityType: ["single", "combo"],
+        availableDays: [
+          "monday",
+          "tuesday",
+          "wednesday",
+          "thursday",
+          "friday",
+          "saturday",
+          "sunday",
+        ],
       },
     })
   )
@@ -338,6 +444,20 @@ const updateMenuItem = async (req, res) => {
     upSellItem,
     availabilityType,
     event,
+    presetType,
+    brand,
+    amountQuantity,
+    quantityType,
+    comboItems,
+    servingSize,
+    availableDays,
+    daypart,
+    dietTags,
+    allergens,
+    cuisine,
+    isRecommended,
+    isTogo,
+    isRequiresOrderConfirmation,
   };
 
   try {

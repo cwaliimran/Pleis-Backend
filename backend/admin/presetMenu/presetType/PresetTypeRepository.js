@@ -64,31 +64,17 @@ const getpresetTypes = async ({
         },
       });
     }
+    // Resolve category via subcategory when PresetType.category is missing
     pipeline.push(
       {
         $lookup: {
-          from: "categories", // <-- confirm actual collection name
-          localField: "category",
-          foreignField: "_id",
-          as: "category",
-          pipeline: [{ $project: { title: 1, code: 1, status: 1 } }],
-        },
-      },
-      {
-        $unwind: {
-          path: "$category",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-    );
-    pipeline.push(
-      {
-        $lookup: {
-          from: "menuitemsubcategories", // <-- confirm actual collection name
+          from: "menuitemsubcategories",
           localField: "subCategory",
           foreignField: "_id",
           as: "subCategory",
-          pipeline: [{ $project: { name: 1, code: 1, status: 1 } }],
+          pipeline: [
+            { $project: { name: 1, code: 1, status: 1, category: 1 } },
+          ],
         },
       },
       {
@@ -97,11 +83,35 @@ const getpresetTypes = async ({
           preserveNullAndEmptyArrays: true,
         },
       },
+      {
+        $addFields: {
+          // Prefer subcategory's category — PresetType may hold a stale/wrong ID
+          category: { $ifNull: ["$subCategory.category", "$category"] },
+        },
+      },
     );
     pipeline.push(
       {
         $lookup: {
-          from: "menuitemsubcategorytypes", // <-- confirm actual collection name
+          from: "menuitemcategories",
+          localField: "category",
+          foreignField: "_id",
+          as: "category",
+          pipeline: [{ $project: { title: 1, status: 1 } }],
+        },
+      },
+      {
+        $unwind: {
+          path: "$category",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      { $unset: "subCategory.category" },
+    );
+    pipeline.push(
+      {
+        $lookup: {
+          from: "menuitemsubcategorytypes",
           localField: "type",
           foreignField: "_id",
           as: "type",
@@ -191,24 +201,7 @@ const getpresetTypes = async ({
     return { presetTypes, meta };
   };
 
-  // Only cache when the result is "stable" — no dynamic filters/sorting.
-  const isCacheable = !date && !sortBy && !sortOrder && !keyword && !category && !subCategory && !type;
-
-  if (!isCacheable) {
-    return computepresetTypes();
-  }
-  console.log("ACTIVE_presetTypeS_CACHE_KEY", ACTIVE_presetTypeS_CACHE_KEY);
-  return cache({
-    namespace: ACTIVE_presetTypeS_CACHE_KEY,
-    params: {
-      page,
-      skip,
-      limit,
-      status: status ?? "all",
-    },
-    ttl: 60,
-    fetchFn: computepresetTypes,
-  });
+  return computepresetTypes();
 };
 const getpresetTypesSummary = async ({ timezone, page, limit, user, skip }) => {
   const pipeline = [];
