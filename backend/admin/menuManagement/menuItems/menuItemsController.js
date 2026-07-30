@@ -29,7 +29,6 @@ const createMenuItem = async (req, res) => {
     brand,
     amountQuantity,
     quantityType,
-    comboItems,
     servingSize,
     availableDays,
     daypart,
@@ -41,14 +40,6 @@ const createMenuItem = async (req, res) => {
     isRequiresOrderConfirmation,
   } = req.body;
 
-  if (quantityType === "combo" && (!comboItems || comboItems.length < 2)) {
-    return sendResponse({
-      res,
-      statusCode: 400,
-      translationKey: "combo_items_minimum_required",
-    });
-  }
-
   if (
     !validateParams(req, res, {
       rawData: ["title", "type", "basePrice", "menuIds"],
@@ -59,7 +50,6 @@ const createMenuItem = async (req, res) => {
         "brand",
         "servingSize",
         "daypart",
-        "comboItems",
         "dietTags",
         "allergens",
       ],
@@ -100,7 +90,6 @@ const createMenuItem = async (req, res) => {
     brand,
     amountQuantity,
     quantityType,
-    comboItems,
     servingSize,
     availableDays,
     daypart,
@@ -334,7 +323,6 @@ const updateMenuItem = async (req, res) => {
     brand,
     amountQuantity,
     quantityType,
-    comboItems,
     servingSize,
     availableDays,
     daypart,
@@ -381,15 +369,6 @@ const updateMenuItem = async (req, res) => {
     }
   }
 
-
-  if (quantityType === "combo" && comboItems !== undefined && comboItems.length < 2) {
-    return sendResponse({
-      res,
-      statusCode: 400,
-      translationKey: "combo_items_minimum_required",
-    });
-  }
-
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
@@ -400,7 +379,6 @@ const updateMenuItem = async (req, res) => {
         "brand",
         "servingSize",
         "daypart",
-        "comboItems",
         "dietTags",
         "allergens",
       ],
@@ -448,7 +426,6 @@ const updateMenuItem = async (req, res) => {
     brand,
     amountQuantity,
     quantityType,
-    comboItems,
     servingSize,
     availableDays,
     daypart,

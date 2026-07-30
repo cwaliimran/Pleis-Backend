@@ -9,7 +9,10 @@ const {
 } = require("@utils/responseUtil");
 
 const menuItemsService = require("./menuItemsService");
-const { getInAppOrderingSettings } = require("../../../admin/organizations/organizationRepository");
+const deliveryOptionsService = require("../../../admin/organizations/deliveryOptions/deliveryOptionsService");
+const {
+  getOrganizationPickupSettings,
+} = require("../../../admin/organizations/organizationRepository");
 
 
 const getMenuItems = async (req, res) => {
@@ -173,7 +176,7 @@ const getMenuItemDetails = async (req, res) => {
     return;
 
   try {
-    const { menuItem, recommended } = await menuItemsService.getMenuItemDetails(id, userId, timezone);
+    const { menuItem } = await menuItemsService.getMenuItemDetails(id, userId, timezone);
     if (!menuItem) {
       return sendResponse({
         res,
@@ -186,7 +189,46 @@ const getMenuItemDetails = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "menu_item_details_fetched_successfully",
-      data: { menuItem, recommended },
+      data: { menuItem },
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
+const getMenuItemDetailsV2 = async (req, res) => {
+  const { id } = req.params;
+  const { _id: userId, timezone } = req.user;
+
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })
+  )
+    return;
+
+  try {
+    const { menuItem } = await menuItemsService.getMenuItemDetailsV2(id, userId, timezone);
+    if (!menuItem) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "menu_item_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "menu_item_details_fetched_successfully",
+      data: { menuItem },
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -200,33 +242,32 @@ const getMenuItemDetails = async (req, res) => {
 };
 
 const getPickupOptions = async (req, res) => {
-  const { id } = req.params;
+  const { organization } = req.params;
 
   if (
     !validateParams(req, res, {
-      pathParams: ["id"],
-      objectIdFields: ["id"],
+      pathParams: ["organization"],
+      objectIdFields: ["organization"],
     })
   )
     return;
 
   try {
-
-    const pickupOptions = await getInAppOrderingSettings(id)
-
-    if (!pickupOptions) {
-      return sendResponse({
-        res,
-        statusCode: 404,
-        translationKey: "menu_item_not_found",
-      });
-    }
+    const [deliveryOptions, orderingSettings] = await Promise.all([
+      deliveryOptionsService.getActiveDeliveryOptions(organization),
+      getOrganizationPickupSettings(organization),
+    ]);
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "pickup_options_fetched_successfully",
-      data: pickupOptions,
+      data: {
+        deliveryOptions,
+        paymentMethods: orderingSettings.paymentMethods,
+        deliveryMethods: orderingSettings.deliveryMethods,
+        tips: orderingSettings.tips,
+      },
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -246,5 +287,6 @@ module.exports = {
   getRecommendedMenuItemsV2,
   getUpsellMenuItemsV2,
   getMenuItemDetails,
+  getMenuItemDetailsV2,
   getPickupOptions,
 };

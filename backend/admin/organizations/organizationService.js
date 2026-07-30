@@ -9,10 +9,18 @@ const { formatOrganization, formatNotificationImage } = require("./formatter/for
 const { default: mongoose } = require("mongoose");
 const { invalidate } = require("@redisCache");
 const { getActiveEventsCountForOrganizations } = require("../events/eventRepository");
+const {
+  applyInAppOrderingSettingsV2,
+} = require("../../shared/organizations/inAppOrderingSettingsV2");
 const ACTIVE_ORGANIZATIONS_CACHE_KEY = "organizations:active";
 const createOrganization = async ({ data, timezone }) => {
   let org = await organizationRepo.createOrganization(data);
   return formatOrganization(org, [], timezone);
+};
+
+const createOrganizationV2 = async ({ data, timezone }) => {
+  // Reuses create; accepts inAppOrderingSettings.tips + sessionTimerLength
+  return createOrganization({ data, timezone });
 };
 const getAllOrganizationsAdmin = async ({ timezone }) => {
   return await organizationRepo.getAllOrganizationsAdmin();
@@ -312,7 +320,11 @@ const updateOrganization = async ({ id, data, timezone }) => {
             organization?.inAppOrderingSettings?.deliveryMethods?.toGo ??
             false,
         },
+        // Preserve v2 fields when updating payment/delivery via v1
+        tips: organization?.inAppOrderingSettings?.tips,
+        sessionTimerLength: organization?.inAppOrderingSettings?.sessionTimerLength,
       };
+      await organizationRepo.invalidateOrganizationPickupSettingsCache(id);
     }
 
 
@@ -346,6 +358,22 @@ const updateOrganization = async ({ id, data, timezone }) => {
   } finally {
     session.endSession();
   }
+};
+
+const updateOrganizationV2 = async ({ id, inAppOrderingSettings, timezone }) => {
+  await invalidate(ACTIVE_ORGANIZATIONS_CACHE_KEY);
+
+  const organization = await Organizations.findById(id);
+  if (!organization) return null;
+
+  applyInAppOrderingSettingsV2(organization, inAppOrderingSettings || {});
+  await organization.save();
+
+  if (inAppOrderingSettings !== undefined) {
+    await organizationRepo.invalidateOrganizationPickupSettingsCache(id);
+  }
+
+  return formatOrganization(organization, [], timezone);
 };
 
 
@@ -486,9 +514,11 @@ const getOrganizationsBatch = async ({
 
 module.exports = {
   createOrganization,
+  createOrganizationV2,
   getOrganizations,
   getOrganizationsByAdmin,
   updateOrganization,
+  updateOrganizationV2,
   findOrganizationById,
   deleteOrganization,
   getPublicOrganizations,

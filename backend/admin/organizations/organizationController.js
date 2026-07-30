@@ -9,6 +9,9 @@ const {
 const { transformOperatingHoursToUtc } = require("../../shared/commonSchemas/operatingHours");
 
 const organizationService = require("./organizationService");
+const {
+  validateInAppOrderingSettingsV2,
+} = require("../../shared/organizations/inAppOrderingSettingsV2");
 const getAllOrganizationsAdmin = async (req, res) => {
   const { timezone } = req.user;
   try {
@@ -67,6 +70,74 @@ const createOrganization = async (req, res) => {
       data,
       creator,
       timezone
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 201,
+      translationKey: "organization_created_successfully",
+      data: organization,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
+const createOrganizationV2 = async (req, res) => {
+  let { timezone } = req.user;
+
+  let data = ({
+    basicInfo,
+    otherInfo,
+    operatingHours,
+    location,
+    pinned,
+    image,
+    tags,
+    description,
+    title,
+    phoneNumber,
+    website,
+    inAppOrderingSettings,
+  } = req.body);
+
+  let creator = req.user._id;
+  if (req.user.userType === "admin") {
+    if (basicInfo && basicInfo.user) {
+      creator = basicInfo.user;
+    }
+  }
+  data.creator = creator;
+
+  if (!validateParams(req, res, { rawData: ["basicInfo"] })) return;
+
+  if (inAppOrderingSettings) {
+    const tipsError = validateInAppOrderingSettingsV2(inAppOrderingSettings);
+    if (tipsError) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: tipsError,
+      });
+    }
+    data.inAppOrderingSettings = inAppOrderingSettings;
+  }
+
+  if (operatingHours) {
+    operatingHours = transformOperatingHoursToUtc(operatingHours, timezone);
+    data.operatingHours = operatingHours;
+  }
+
+  try {
+    const organization = await organizationService.createOrganizationV2({
+      data,
+      timezone,
     });
 
     return sendResponse({
@@ -283,6 +354,67 @@ const updateOrganization = async (req, res) => {
   }
 };
 
+const updateOrganizationV2 = async (req, res) => {
+  const { id } = req.params;
+  const { timezone } = req.user;
+  const { inAppOrderingSettings } = req.body;
+
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })
+  )
+    return;
+
+  if (!inAppOrderingSettings) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "in_app_ordering_settings_required",
+    });
+  }
+
+  const tipsError = validateInAppOrderingSettingsV2(inAppOrderingSettings);
+  if (tipsError) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: tipsError,
+    });
+  }
+
+  try {
+    const updated = await organizationService.updateOrganizationV2({
+      id,
+      inAppOrderingSettings,
+      timezone,
+    });
+
+    if (!updated) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "organization_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "organization_updated_successfully",
+      data: updated,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: error.name === "ValidationError" ? 400 : 500,
+      translationKey: "internal_server",
+      error,
+    });
+  }
+};
+
 const deleteOrganization = async (req, res) => {
   const { id } = req.params;
 
@@ -462,10 +594,12 @@ const getOrganizationsByVenueType = async (req, res) => {
 
 module.exports = {
   createOrganization,
+  createOrganizationV2,
   getOrganizations,
   getPublicOrganizations,
   getOrganizationDetails,
   updateOrganization,
+  updateOrganizationV2,
   deleteOrganization,
   getOrganizationsAdmin,
   getOrganizationNamesByCompanyOrganizer,

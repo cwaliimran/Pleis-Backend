@@ -6,6 +6,7 @@ const {
   getRecommendedMenuItemsV2,
   getUpsellMenuItemsV2,
   getMenuItemDetails,
+  getMenuItemDetailsV2,
   getPickupOptions,
 } = require("./menuItemsController");
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
@@ -26,9 +27,10 @@ router.get("/v2", apiRateLimiter, getMenuItemsV2);
 router.get("/recommended", apiRateLimiter, getRecommendedMenuItems);
 router.get("/recommended-v2", apiRateLimiter, getRecommendedMenuItemsV2);
 router.get("/upsell-v2", apiRateLimiter, getUpsellMenuItemsV2);
-router.get("/pickup-options/:id", apiRateLimiter, getPickupOptions);
+router.get("/pickup-options/:organization", apiRateLimiter, getPickupOptions);
 
 //get menuItem details
+router.get("/v2/:id", apiRateLimiterDetails, getMenuItemDetailsV2);
 router.get("/:id", apiRateLimiterDetails, getMenuItemDetails);
 
 module.exports = router;
