@@ -28,6 +28,42 @@ const {
   countClubMembersOfOrganization,
 } = require("../loyalty/clubMembers/clubMembersRepository");
 const { getActiveSubscription } = require("../usersManagement/usersRepository");
+const { cache, invalidate } = require("@redisCache");
+
+const ORGANIZATION_PICKUP_SETTINGS_CACHE_KEY = "organizationPickupSettings";
+
+const getOrgPickupSettingsCacheKey = (organizationId) =>
+  `${ORGANIZATION_PICKUP_SETTINGS_CACHE_KEY}:${String(organizationId)}`;
+
+const invalidateOrganizationPickupSettingsCache = async (organizationId) => {
+  await invalidate(getOrgPickupSettingsCacheKey(organizationId));
+};
+
+// Backwards-compatible alias
+const invalidateOrganizationTipsCache = invalidateOrganizationPickupSettingsCache;
+
+const DEFAULT_PICKUP_SETTINGS = {
+  paymentMethods: {
+    instantPayment: false,
+    payLater: {
+      allow: false,
+      enableOrderAcceptance: false,
+      chargeOnAcceptance: false,
+      chargeOnDelivery: false,
+    },
+    cashPayment: false,
+  },
+  deliveryMethods: {
+    counterPickup: true,
+    tableDelivery: false,
+    toGo: false,
+  },
+  tips: {
+    enableCustomerTipping: false,
+    tipPresets: [],
+    allowCustomTips: false,
+  },
+};
 const { getFullImageUrl } = require("@utils/imageHelper");
 
 // Create
@@ -528,13 +564,43 @@ const getOrganizationIdByCompanyOrganizer = async (companyOrganizer) => {
 };
 
 //get company pickup options
-const getInAppOrderingSettings = async (companyOrganizer) => {
+const getInAppOrderingSettings = async (organization) => {
   const orgSettings = await Organizations.findOne({
-    creator: companyOrganizer,
+    _id: organization,
   })
     .select("inAppOrderingSettings")
     .lean();
   return orgSettings?.inAppOrderingSettings || [];
+};
+
+const getOrganizationPickupSettings = async (organizationId) => {
+  return cache({
+    namespace: getOrgPickupSettingsCacheKey(organizationId),
+    params: {},
+    ttl: null,
+    fetchFn: async () => {
+      const org = await Organizations.findById(organizationId)
+        .select(
+          "inAppOrderingSettings.paymentMethods inAppOrderingSettings.deliveryMethods inAppOrderingSettings.tips",
+        )
+        .lean();
+
+      const settings = org?.inAppOrderingSettings || {};
+
+      return {
+        paymentMethods:
+          settings.paymentMethods || { ...DEFAULT_PICKUP_SETTINGS.paymentMethods },
+        deliveryMethods:
+          settings.deliveryMethods || { ...DEFAULT_PICKUP_SETTINGS.deliveryMethods },
+        tips: settings.tips || { ...DEFAULT_PICKUP_SETTINGS.tips },
+      };
+    },
+  });
+};
+
+const getOrganizationTips = async (organizationId) => {
+  const settings = await getOrganizationPickupSettings(organizationId);
+  return settings?.tips || { ...DEFAULT_PICKUP_SETTINGS.tips };
 };
 
 const getLogoByOrganization = async (organizationId) => {
@@ -1134,6 +1200,10 @@ module.exports = {
   getOrganizationNotifications,
   getOrganizationIdByCompanyOrganizer,
   getInAppOrderingSettings,
+  getOrganizationPickupSettings,
+  getOrganizationTips,
+  invalidateOrganizationPickupSettingsCache,
+  invalidateOrganizationTipsCache,
   getMenuIdsByOrganization,
   getLogoByOrganization,
   getOrganizationByCompanyOrganizer,

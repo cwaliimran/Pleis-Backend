@@ -113,7 +113,7 @@ const organizationSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["active", "inactive", "blocked", "deleted","suspended"],
+      enum: ["active", "inactive", "blocked", "deleted", "suspended"],
       default: "active",
     },
     location: {
@@ -138,7 +138,7 @@ const organizationSchema = new mongoose.Schema(
 
       },
     ],
-    
+
     inAppOrderingSettings: {
       // Payment Methods
       paymentMethods: {
@@ -194,7 +194,42 @@ const organizationSchema = new mongoose.Schema(
           // Orders are packaged for takeaway.
         },
       },
+
+      //v2 fields
+      tips: { //Allow customers to add a tip before final payment. Tips are not covered by the reservation voucher.
+        enableCustomerTipping: {
+          type: Boolean,
+          default: false,
+          // Allow customers to tip the staff.
+        },
+        tipPresets: [
+          {
+            tipType: {
+              type: String,
+              enum: ['fixed', 'percentage'],
+              default: 'fixed',
+            },
+            value: {
+              type: Number,
+              default: 0,
+            }
+          },
+        ],
+        allowCustomTips: {
+          type: Boolean,
+          default: false,
+          // Allow customers to add a custom tip.
+        },
+      },
+
+      //Control the active ordering session length
+      sessionTimerLength: {
+        type: Number,
+        default: 30,
+        // The length of the active ordering session in minutes. Default is 30 minutes.
+      },
     },
+
   },
   {
     timestamps: true,
