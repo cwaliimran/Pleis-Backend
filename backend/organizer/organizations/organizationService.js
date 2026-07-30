@@ -7,9 +7,21 @@ const { generateMeta } = require("../../helperUtils/responseUtil");
 const mongoose = require("mongoose");
 const { formatOrganization } = require("./formatter/formatOrganization");
 const { User } = require("@UsersModel");
+const {
+  applyInAppOrderingSettingsV2,
+} = require("../../shared/organizations/inAppOrderingSettingsV2");
+const {
+  invalidateOrganizationPickupSettingsCache,
+} = require("../../admin/organizations/organizationRepository");
+
 const createOrganization = async ({ data }) => {
   let org = await organizationRepo.createOrganization(data);
   return formatOrganization(org);
+};
+
+const createOrganizationV2 = async ({ data }) => {
+  // Reuses create; accepts inAppOrderingSettings.tips + sessionTimerLength
+  return createOrganization({ data });
 };
 
 const getOrganizations = async ({ page, limit, keyword, status, creator, date, sortBy, sortOrder }) => {
@@ -334,7 +346,11 @@ const updateOrganization = async ({ id, data }) => {
           organization?.inAppOrderingSettings?.deliveryMethods?.toGo ??
           false,
       },
+      // Preserve v2 fields when updating payment/delivery via v1
+      tips: organization?.inAppOrderingSettings?.tips,
+      sessionTimerLength: organization?.inAppOrderingSettings?.sessionTimerLength,
     };
+    await invalidateOrganizationPickupSettingsCache(id);
   }
 
 
@@ -383,6 +399,20 @@ const updateOrganization = async ({ id, data }) => {
     }
   }
     await user.save();
+  return formatOrganization(organization);
+};
+
+const updateOrganizationV2 = async ({ id, inAppOrderingSettings }) => {
+  const organization = await organizationRepo.findOrganizationById(id);
+  if (!organization) return null;
+
+  applyInAppOrderingSettingsV2(organization, inAppOrderingSettings || {});
+  await organization.save();
+
+  if (inAppOrderingSettings !== undefined) {
+    await invalidateOrganizationPickupSettingsCache(id);
+  }
+
   return formatOrganization(organization);
 };
 
@@ -481,9 +511,11 @@ const getAllOrganizations = async ({ page, limit, keyword, status, creator, date
 
 module.exports = {
   createOrganization,
+  createOrganizationV2,
   getOrganizations,
   getOrganizationsByAdmin,
   updateOrganization,
+  updateOrganizationV2,
   findOrganizationById,
   deleteOrganization,
   getPublicOrganizations,
