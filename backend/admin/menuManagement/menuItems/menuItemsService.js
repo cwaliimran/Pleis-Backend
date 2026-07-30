@@ -400,7 +400,6 @@ const updateMenuItem = async (id, data, timezone) => {
     "brand",
     "amountQuantity",
     "quantityType",
-    "comboItems",
     "servingSize",
     "availableDays",
     "daypart",

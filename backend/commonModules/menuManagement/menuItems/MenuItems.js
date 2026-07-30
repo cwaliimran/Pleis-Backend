@@ -129,11 +129,6 @@ const menuItemsSchema = new mongoose.Schema(
       enum: ["single", "combo"],
       default: "single",
     },
-    comboItems: { //minimum 2 items when quantityType is combo
-      type: [mongoose.Schema.Types.ObjectId],
-      ref: "MenuItems",
-      default: [],
-    },
     //Serving 
     servingSize: {
       type: mongoose.Schema.Types.ObjectId,

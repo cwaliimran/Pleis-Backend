@@ -254,6 +254,43 @@ const findMenuItemById = async (id, userId = null, timezone = null) => {
   };
 };
 
+const findMenuItemByIdV2 = async (id, userId = null, timezone = null) => {
+  // get menu item details v2, apply getActiveMenuItemDiscounts, and populate all v2 fields
+  const item = await MenuItems.findById(id)
+    .populate({
+      path: "presetType",
+      select: "name code status image description",
+    })
+    .populate({
+      path: "brand",
+      select: "name brandOwner status",
+    })
+    .populate({
+      path: "servingSize",
+      select: "type code unit status level2",
+    })
+    .populate({
+      path: "daypart",
+      select: "name code status startTime endTime isAllDay",
+    })
+    .populate({
+      path: "dietTags",
+      select: "name code status description",
+    })
+    .populate({
+      path: "allergens",
+      select: "name code status",
+    })
+    .lean();
+
+  if (!item) return null;
+
+  const discounts = await getActiveMenuItemDiscounts([item._id], timezone);
+  const [itemWithDiscount] = attachMenuItemDiscounts([item], discounts);
+
+  return itemWithDiscount;
+};
+
 const getMenuIdByOrganization = async (organizationId) => {
   return await Menus.find({ organization: new mongoose.Types.ObjectId(organizationId), status: "active", isOrderingEnabled: true }).select("_id").sort({ createdAt: -1 });
 }
@@ -606,6 +643,7 @@ module.exports = {
   attachMenuItemDiscounts,
   countMenuItems,
   findMenuItemById,
+  findMenuItemByIdV2,
   getMenuIdByOrganization,
   getRecommendedItems,
   getRecommendedItemsV2,

@@ -8,6 +8,7 @@ module.exports = {
   "@appEngagement": "backend/commonModules/appEngagement",
   "@recentlyViewed": "backend/commonModules/recentlyViewed",
   "@OrganizationModel": "backend/commonModules/organizations/Organization.js",
+  "@DeliveryOptionsModel": "backend/commonModules/organizations/DeliveryOptions.js",
   "@VenuesModel": "backend/commonModules/venues/Venues.js",
   "@SuppliersModel": "backend/commonModules/suppliers/Suppliers.js",
   "@TagsModel": "backend/admin/tags/Tags.js",
