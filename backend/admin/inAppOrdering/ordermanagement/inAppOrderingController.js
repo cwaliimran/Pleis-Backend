@@ -63,7 +63,17 @@ const getOrders = async (req, res) => {
 };
 const updateOrders = async (req, res) => {
   const { id } = req.params;
-  const { status, paymentStatus, deliveredMenuItem, deliveredall } = req.body;
+  const {
+    status,
+    paymentStatus,
+    deliveredMenuItem,
+    deliveredall,
+    reasonForRejection,
+    reasonForCancellation,
+    noteForRejection,
+    noteForCancellation,
+    paymentMethod,
+  } = req.body;
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
@@ -77,7 +87,12 @@ const updateOrders = async (req, res) => {
     paymentStatus,
     deliveredMenuItem,
     deliveredall,
+    reasonForRejection,
+    reasonForCancellation,
+    noteForRejection,
+    noteForCancellation,
     updateBy: req.user._id,
+    paymentMethod,
   };
 
   try {

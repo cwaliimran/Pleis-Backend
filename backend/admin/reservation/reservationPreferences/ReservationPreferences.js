@@ -22,27 +22,31 @@ const ReservationPreferencesSchema = new mongoose.Schema(
         enum: ["enabled", "disabled"],
         default: "enabled",
       },
-      bookingOpensAfterHours: {
+      bookingOpensAfterMinutes: {
         type: Number,
         default: 0,
       },
-      bookingClosesBeforeHours: {
+      bookingClosesBeforeMinutes: {
         type: Number,
         default: 0,
       },
-      automaticResponse: {
-        autoAccept: {
-          type: Boolean,
-          default: false,
-        },
-        autoReject: {
-          type: Boolean,
-          default: false,
-        },
-        maxGuestPerReservationForAutoAccept: {
-          type: Number,
-          default: 0,
-        },
+      averageSlotDurationInMinutes: {
+        type: Number,
+        default: 0,
+      },
+    },
+    automaticResponse: {
+      autoAccept: {
+        type: Boolean,
+        default: false,
+      },
+      autoReject: {
+        type: Boolean,
+        default: false,
+      },
+      maxGuestPerReservationForAutoAccept: {
+        type: Number,
+        default: 0,
       },
     },
     cancellationPolicy: {

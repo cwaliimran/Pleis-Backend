@@ -2,12 +2,6 @@ const mongoose = require("mongoose");
 
 const paymentMethodSchema = new mongoose.Schema(
   {
-    user: {
-      // creator
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
     companyOrganizer: {
       // creator
       type: mongoose.Schema.Types.ObjectId,
@@ -24,6 +18,10 @@ const paymentMethodSchema = new mongoose.Schema(
       default: true,
     },
     payNow: {
+      type: Boolean,
+      default: false,
+    },
+    cash: {
       type: Boolean,
       default: false,
     },

@@ -10,21 +10,18 @@ const {
 const PaymentMethodService = require("./paymentMethodService");
 
 const getPaymentMethods = async (req, res) => {
-  const { organization, companyOrganizer } = req.query;
+  const { organization } = req.query;
   try {
-    if (!organization || !companyOrganizer) {
+    if (!organization) {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "organization_and_companyOrganizer_required",
+        translationKey: "organization_required",
       });
     }
 
-    const timezone = req.user.timezone;
-
     const PaymentMethodData = await PaymentMethodService.getPaymentMethods({
-      organization,
-      companyOrganizer,
+      organization
     });
 
     return sendResponse({
@@ -44,8 +41,7 @@ const getPaymentMethods = async (req, res) => {
   }
 };
 const updatePaymentMethod = async (req, res) => {
-  const { id } = req.params;
-  let { inAppPayments, payNow } = req.body;
+  let { inAppPayments, payNow,cash,organization,companyOrganizer } = req.body;
 
   const user = req.user._id;
   const timezone = req.user.timezone;
@@ -53,10 +49,13 @@ const updatePaymentMethod = async (req, res) => {
   let data = {
     inAppPayments,
     payNow,
+    cash,
+    organization,
+    companyOrganizer
   };
 
   try {
-    const updated = await PaymentMethodService.updatePaymentMethod(id, data);
+    const updated = await PaymentMethodService.updatePaymentMethod(organization, data);
     if (updated && updated.error) {
       return sendResponse({
         res,

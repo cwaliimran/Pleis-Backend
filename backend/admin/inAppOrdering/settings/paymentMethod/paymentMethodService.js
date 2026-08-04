@@ -1,23 +1,29 @@
 const PaymentMethodRepo = require("./paymentMethodRepository");
 
-const getPaymentMethods = async ({ organization, companyOrganizer }) => {
+const getPaymentMethods = async ({ organization }) => {
   const PaymentMethodData = await PaymentMethodRepo.getPaymentMethods({
     organization,
-    companyOrganizer,
   });
 
   return PaymentMethodData;
 };
-const updatePaymentMethod = async (id, data) => {
-  const PaymentMethod = await PaymentMethodRepo.findPaymentMethodById(id);
+const updatePaymentMethod = async (organization, data) => {
+  const PaymentMethod = await PaymentMethodRepo.findPaymentMethodById(organization);
+  console.log("data",data );
   if (!PaymentMethod) {
-    return { error: "PaymentMethod_not_found" };
+    return PaymentMethodRepo.createPaymentMethod({
+      organization,
+      companyOrganizer: data.companyOrganizer,
+      inAppPayments: data.inAppPayments,
+      payNow: data.payNow,
+      cash: data.cash
+    });
   }
 
   // -----------------------------
   // ALLOWED FIELDS
   // -----------------------------
-  const allowedFields = ["inAppPayments", "payNow"];
+  const allowedFields = ["inAppPayments", "payNow","cash"];
 
   // -----------------------------
   // APPLY UPDATE FIELDS

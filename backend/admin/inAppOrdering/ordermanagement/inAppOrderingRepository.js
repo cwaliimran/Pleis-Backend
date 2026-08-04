@@ -65,6 +65,7 @@ const getOrders = async ({
             $or: [
               { "user.firstName": { $regex: keyword, $options: "i" } },
               { "user.lastName": { $regex: keyword, $options: "i" } },
+              { "user.username": { $regex: keyword, $options: "i" } },
               { "user.email": { $regex: keyword, $options: "i" } },
               { orderNumber: { $regex: keyword, $options: "i" } },
             ],
@@ -74,9 +75,13 @@ const getOrders = async ({
 
   if (status && status.trim()) {
     if (status.trim() === "active") {
-      statusFilter = { status: { $nin: ["cancelled", "completed"] } };
+      statusFilter = {
+        status: { $nin: ["cancelled", "completed", "rejected"] },
+      };
     } else if (status.trim() === "past") {
-      statusFilter = { status: { $in: ["cancelled", "completed"] } };
+      statusFilter = {
+        status: { $in: ["cancelled", "completed", "rejected"] },
+      };
     }
   }
   if (orderStatus && orderStatus.trim()) {
@@ -252,11 +257,11 @@ const getOrders = async ({
       MenuOrders.aggregate(pipeline),
       Orders.countDocuments({
         organization: { $in: organizationsIds },
-        status: { $nin: ["cancelled", "completed"] },
+        status: { $nin: ["cancelled", "completed", "rejected"] },
       }),
       Orders.countDocuments({
         organization: { $in: organizationsIds },
-        status: { $in: ["cancelled", "completed"] },
+        status: { $in: ["cancelled", "completed", "rejected"] },
       }),
       getEventsCounts(eventCountQuery),
     ]);

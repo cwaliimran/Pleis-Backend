@@ -20,7 +20,7 @@ router.use(auth);
 // Create a rate limiter for Diet Tags
 const PaymentMethodRateLimiter = createRateLimiter("PaymentMethod");
 router.get("/", roleMiddleware(["admin"]), PaymentMethodRateLimiter, getPaymentMethods);
-router.put("/:id", roleMiddleware(["admin"]), updatePaymentMethod);
+router.put("/", roleMiddleware(["admin"]), updatePaymentMethod);
 
 
 module.exports = router;

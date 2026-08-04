@@ -6,18 +6,12 @@ const mongoose = require("mongoose");
 const { cache, invalidate } = require("@redisCache");
 const ACTIVE_PaymentMethodS_CACHE_KEY = "PaymentMethod:active";
 
-const getPaymentMethods = async ({ organization, companyOrganizer }) => {
+const getPaymentMethods = async ({ organization }) => {
   const paymentMethodData = await PaymentMethod.findOne({
-    organization: new mongoose.Types.ObjectId(organization),
-    companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
+    organization: new mongoose.Types.ObjectId(organization)
   }).lean();
 
-  const PaymentMethodData = paymentMethodData || {
-    organization,
-    companyOrganizer,
-    inAppPayment: true,
-    payNow: false,
-  };
+  const PaymentMethodData = paymentMethodData || {};
 
   return PaymentMethodData;
 };
@@ -76,8 +70,8 @@ const getPaymentMethodsSummary = async ({
   return { PaymentMethods, meta };
 };
 
-const findPaymentMethodById = async (id) => {
-  return PaymentMethod.findById(id);
+const findPaymentMethodById = async (organization) => {
+  return PaymentMethod.findOne({ organization: new mongoose.Types.ObjectId(organization) });
 };
 
 const findByIdAndUpdate = async (id, data) => {
@@ -85,9 +79,16 @@ const findByIdAndUpdate = async (id, data) => {
   return PaymentMethod.findByIdAndUpdate(id, data, { new: true });
 };
 
+
+const createPaymentMethod = async (data) => {
+  const newPaymentMethod = new PaymentMethod(data);
+  await newPaymentMethod.save();
+  return newPaymentMethod;
+};
 module.exports = {
   getPaymentMethods,
   findPaymentMethodById,
   findByIdAndUpdate,
   getPaymentMethodsSummary,
+  createPaymentMethod,
 };

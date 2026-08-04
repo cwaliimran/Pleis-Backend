@@ -102,6 +102,22 @@ const OrdersSchema = new mongoose.Schema(
             type: String,
             required: function () { return this.pickupType === "tableService"; },
         },
+        reasonForCancellation: {
+            type: String,
+            default: null,
+        },
+        reasonForRejection: {
+            type: String,
+            default: null,
+        },
+        noteForRejection: {
+            type: String,
+            default: null,
+        },
+        noteForCancellation: {
+            type: String,
+            default: null,
+        },
         updateHistory: {
             type: [
                 {

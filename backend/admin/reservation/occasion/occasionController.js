@@ -7,40 +7,37 @@ const {
   convertTimezoneToUtc,
 } = require("../../../helperUtils/responseUtil");
 
-const BrandService = require("./brandService");
+const Occasionervice = require("./occasionService");
 
-const createBrand = async (req, res) => {
-  let { name, status = "active", brandOwner } = req.body;
-
-  const user = req.user._id;
-  const timezone = req.user.timezone;
+const createOccasion = async (req, res) => {
+  let { companyOrganizer, organization, name, status = "active" } = req.body;
 
   if (
     !validateParams(req, res, {
-      rawData: ["name", "status", "brandOwner"],
+      rawData: ["companyOrganizer", "organization", "name"],
     })
   )
     return;
   let data = {
-    user,
+    companyOrganizer,
+    organization,
     name,
     status,
-    brandOwner,
   };
   try {
-    const Brand = await BrandService.createBrand(data);
-    if (!Brand) {
+    const OccasionData = await Occasionervice.createOccasion(data);
+    if (!OccasionData) {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "Brand_creation_failed",
+        translationKey: "Occasion_creation_failed",
       });
     }
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: "Brand_created_successfully",
-      data: Brand,
+      translationKey: "Occasion_created_successfully",
+      data: OccasionData,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -52,57 +49,26 @@ const createBrand = async (req, res) => {
     });
   }
 };
-const getBrands = async (req, res) => {
-  const { page, limit } = parsePaginationParams(req);
-  const {
-    keyword,
-    status,
-    date,
-    sortBy,
-    sortOrder,
-    summary
-  } = req.query;
+const getOccasion = async (req, res) => {
+  const { organization } = req.query;
   try {
+    if (!organization) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "organization_required",
+      });
+    }
     const user = req.user._id;
-    const timezone = req.user.timezone;
-    const SORT_FIELDS = ["name", "brandOwner", "createdAt", "status"];
-    const SORT_ORDERS = ["asc", "desc"];
-    if (
-      (sortBy && !SORT_FIELDS.includes(sortBy)) ||
-      (sortOrder && !SORT_ORDERS.includes(sortOrder))
-    ) {
-      const key =
-        sortBy && !SORT_FIELDS.includes(sortBy)
-          ? "invalid_sort_by_field"
-          : "invalid_sort_order";
-      return sendResponse({ res, statusCode: 400, translationKey: key });
-    }
-
-    if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
-      const key = sortBy
-        ? "sort_order_required_when_sort_by_is_provided"
-        : "sort_by_required_when_sort_order_is_provided";
-      return sendResponse({ res, statusCode: 400, translationKey: key });
-    }
-    const { Brands, meta } = await BrandService.getBrands({
-      timezone,
-      page,
-      limit,
-      keyword,
-      status,
-      user,
-      date,
-      sortBy,
-      sortOrder,
-      summary
+    const occasion = await Occasionervice.getOccasion({
+      organization,
     });
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Brands_fetched_successfully",
-      data: Brands,
-      meta,
+      translationKey: "Occasion_fetched_successfully",
+      data:occasion
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -114,11 +80,21 @@ const getBrands = async (req, res) => {
     });
   }
 };
-const updateBrand = async (req, res) => {
+const updateOccasion = async (req, res) => {
   const { id } = req.params;
   let {
     name,
-    brandOwner,
+    description,
+    numberOfTables,
+    maxCapacity,
+    maxPartySize,
+    conditionType,
+    bonosPoints,
+    isVisibleToGuest,
+    notes,
+    requireConfirmationToApprove,
+    occasionRequired,
+    tax,
     status,
   } = req.body;
 
@@ -127,12 +103,22 @@ const updateBrand = async (req, res) => {
 
   let data = {
     name,
-    brandOwner,
+    description,
+    numberOfTables,
+    maxCapacity,
+    maxPartySize,
+    conditionType,
+    bonosPoints,
+    isVisibleToGuest,
+    notes,
+    requireConfirmationToApprove,
+    occasionRequired,
+    tax,
     status,
   };
 
   try {
-    const updated = await BrandService.updateBrand(id, data);
+    const updated = await Occasionervice.updateOccasion(id, data);
     if (updated && updated.error) {
       return sendResponse({
         res,
@@ -145,14 +131,14 @@ const updateBrand = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "Brand_not_found",
+        translationKey: "Occasion_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Brand_updated_successfully",
+      translationKey: "Occasion_updated_successfully",
       data: updated,
     });
   } catch (error) {
@@ -166,7 +152,7 @@ const updateBrand = async (req, res) => {
   }
 };
 
-const deleteBrand = async (req, res) => {
+const deleteOccasion = async (req, res) => {
   const { id } = req.params;
 
   if (
@@ -178,19 +164,19 @@ const deleteBrand = async (req, res) => {
     return;
 
   try {
-    const deleted = await BrandService.deleteBrand(id);
+    const deleted = await Occasionervice.deleteOccasion(id);
     if (!deleted) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "Brand_not_found",
+        translationKey: "Occasion_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "Brand_deleted_successfully",
+      translationKey: "Occasion_deleted_successfully",
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -203,8 +189,8 @@ const deleteBrand = async (req, res) => {
   }
 };
 module.exports = {
-  createBrand,
-  getBrands,
-  updateBrand,
-  deleteBrand,
+  createOccasion,
+  getOccasion,
+  updateOccasion,
+  deleteOccasion,
 };

@@ -191,6 +191,7 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
         companyOrganizer: order.organization.creator,
         organization: order.organization._id,
         paymentStatus: "paid",
+        paymentMethod: order.paymentMethod,
         amount: order.totalPrice,
         payload: order,
       });
@@ -268,6 +269,18 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
         deliveryChanged = true;
       }
     });
+  }
+  if(data.resaonForRejection) {
+    order.reasonForRejection = data.reasonForRejection;
+  }
+  if(data.reasonForCancellation) {
+    order.reasonForCancellation = data.reasonForCancellation;
+  }
+  if(data.noteForRejection) {
+    order.noteForRejection = data.noteForRejection;
+  }
+  if(data.noteForCancellation) {
+    order.noteForCancellation = data.noteForCancellation;
   }
 
   await order.save();

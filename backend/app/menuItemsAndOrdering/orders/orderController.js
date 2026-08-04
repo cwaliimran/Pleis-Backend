@@ -3,7 +3,7 @@ const { sendResponse, getReadableErrorMessage, validateParams, parsePaginationPa
 
 const placeOrder = async (req, res) => {
   const { items = [], combos = [], notes, paymentMethod = null, pickupType,
-    tableNumber, promoCode } = req.body;
+    tableNumber, promoCode,userId } = req.body;
   try {
 
     let validateData = {
@@ -25,7 +25,7 @@ const placeOrder = async (req, res) => {
     if (!validateParams(req, res, validateData)) return;
 
     const { order } = await orderService.placeOrder({
-      userId: req.user._id,
+      userId: userId || req.user._id,
       timezone: req.user.timezone,
       items,
       combos,

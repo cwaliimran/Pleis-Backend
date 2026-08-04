@@ -1,31 +1,32 @@
 const mongoose = require("mongoose");
 
-const brandSchema = new mongoose.Schema(
+const occasionSchema = new mongoose.Schema(
   {
-    user: {
+    companyOrganizer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      required: true,
+    },
+    organization: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organization",
       required: true,
     },
     name: {
       type: String,
       required: true,
-      trim: true,
-    },
-    brandOwner: {
-      type: String,
-      required: true,
+      unique: true,
       trim: true,
     },
     status: {
       type: String,
       enum: ["active", "inactive", "deleted"],
       default: "active",
-    },
+    }
   },
   {
     timestamps: true,
   },
 );
 
-module.exports = mongoose.model("Brand", brandSchema);
+module.exports = mongoose.model("Occasion", occasionSchema);
