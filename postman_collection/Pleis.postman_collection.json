@@ -10522,17 +10522,23 @@
         {
           "name": "New Copy",
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{url}}app/home/global/filters",
+              "raw": "{{url}}app/menu/items/v2?organization=6a0469c70dd707bc19cb05d9",
               "host": [
                 "{{url}}app"
               ],
               "path": [
-                "home",
-                "global",
-                "filters"
+                "menu",
+                "items",
+                "v2"
+              ],
+              "query": [
+                {
+                  "key": "organization",
+                  "value": "6a0469c70dd707bc19cb05d9"
+                }
               ]
             }
           },
@@ -27268,7 +27274,7 @@
                       }
                     },
                     "url": {
-                      "raw": "{{url}}admin/menu/sub-categories/?summary=true",
+                      "raw": "{{url}}admin/menu/sub-categories/",
                       "host": [
                         "{{url}}admin"
                       ],
@@ -27296,7 +27302,8 @@
                         },
                         {
                           "key": "summary",
-                          "value": "true"
+                          "value": "true",
+                          "disabled": true
                         },
                         {
                           "key": "sortBy",
@@ -41362,7 +41369,7 @@
                       "raw": ""
                     },
                     "url": {
-                      "raw": "{{url}}admin/in-app-ordering/ordermanagement?organization=69737d30297ca37e0f10813a",
+                      "raw": "{{url}}admin/in-app-ordering/ordermanagement?organization=6a0469c70dd707bc19cb05d9&status=active",
                       "host": [
                         "{{url}}admin"
                       ],
@@ -41373,80 +41380,78 @@
                       "query": [
                         {
                           "key": "organization",
-                          "value": "69737d30297ca37e0f10813a",
+                          "value": "6a0469c70dd707bc19cb05d9",
                           "description": "6911cc376aca10eb719d7322"
                         },
                         {
-                          "key": "orderStatus",
-                          "value": "preorder",
-                          "disabled": true
-                        },
-                        {
-                          "key": "orderStatus",
-                          "value": "postorders",
-                          "disabled": true
-                        },
-                        {
-                          "key": "orderStatus",
+                          "key": "status",
                           "value": "active",
-                          "disabled": true
-                        },
-                        {
-                          "key": "activeorderStatus",
-                          "value": "inProgress",
-                          "type": "text",
-                          "disabled": true
-                        },
-                        {
-                          "key": "activeorderStatus",
-                          "value": "new",
-                          "disabled": true
-                        },
-                        {
-                          "key": "activeorderStatus",
-                          "value": "completed",
-                          "type": "text",
-                          "disabled": true
-                        },
-                        {
-                          "key": "pickupFilter",
-                          "value": "counter",
-                          "disabled": true
-                        },
-                        {
-                          "key": "pickupFilter",
-                          "value": "tableService",
-                          "type": "text",
-                          "disabled": true
+                          "description": "active, past"
                         },
                         {
                           "key": "pickupFilter",
                           "value": "togo",
-                          "type": "text",
-                          "disabled": true
-                        },
-                        {
-                          "key": "pickupFilter",
-                          "value": "preorder",
-                          "type": "text",
+                          "description": "\"counter\", \"tableService\", \"togo\"",
                           "disabled": true
                         },
                         {
                           "key": "keyword",
-                          "value": "usama",
-                          "type": "text",
+                          "value": "503@gmail.g",
                           "disabled": true
                         },
                         {
                           "key": "page",
                           "value": "8",
-                          "type": "text",
                           "disabled": true
                         },
                         {
                           "key": "limit",
                           "value": "1",
                           "disabled": true
+                        },
+                        {
+                          "key": "paymentMethod",
+                          "value": "cash",
+                          "description": "\"applePay\", \"card\", \"cash\"",
+                          "disabled": true
+                        },
+                        {
+                          "key": "range",
+                          "value": "thisMonth",
+                          "description": "today,yesterday,last7days,thisMonth",
+                          "disabled": true
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "payment Reminder",
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": ""
+                    },
+                    "url": {
+                      "raw": "{{url}}admin/in-app-ordering/ordermanagement/reminder?orderId=6a706083939473e9a5136053",
+                      "host": [
+                        "{{url}}admin"
+                      ],
+                      "path": [
+                        "in-app-ordering",
+                        "ordermanagement",
+                        "reminder"
+                      ],
+                      "query": [
+                        {
+                          "key": "orderId",
+                          "value": "6a706083939473e9a5136053"
                         }
                       ]
                     }
@@ -41460,7 +41465,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\r\n     \"status\":\"preorder\",       //\"pending\", \"confirmed\", \"sent\", \"completed\", \"cancelled\",\"preorder\"\r\n    \"paymentStatus\":\"pending\"        //\"pending\", \"paid\", \"failed\",\r\n    // \"deliveredMenuItem\":\"6911c3516aca10eb719d6f72,6911d21601e061abb7bbc00b,6911c3cb6aca10eb719d6f9e\"\r\n    // \"deliveredall\":false //false true\r\n}",
+                      "raw": "{\r\n    // initial \r\n    //  \"status\":\"confirmed\"   // on pressing the button confirm \r\n    // \"status\": \"cancelled\" // only if status is pending\r\n    // if paymentStatus is not paid \r\n    //  \"status\":\"sent\" // on pressing the button delivered \r\n    //  if paymentStatus is  paid \r\n    //  \"status\":\"completed\"// on pressing the button delivered \r\n    //    \"deliveredMenuItem\":\"6a69dc7ab9e53735cc4a30f4\"\r\n    // \"deliveredall\":false //false true\r\n    // update payment stat\r\n    // \"paymentStatus\": \"pending\" //\"pending\", \"paid\", \"failed\",\r\n    // \"deliveredall\":true,\r\n    // \"status\": \"completed\"\r\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -41480,7 +41485,7 @@
                       "variable": [
                         {
                           "key": "id",
-                          "value": "69134aff2bf0a2a94750a41f"
+                          "value": "6a706083939473e9a5136053"
                         }
                       ]
                     }
@@ -42247,6 +42252,88 @@
                       ]
                     },
                     "description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
+              "name": "settings",
+              "item": [
+                {
+                  "name": "update",
+                  "request": {
+                    "method": "PUT",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n    \"inAppPayment\":\"true\",\n    \"payNow\":\"false\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}admin/in-app-ordering/settings/payment-methods",
+                      "host": [
+                        "{{url}}admin"
+                      ],
+                      "path": [
+                        "in-app-ordering",
+                        "settings",
+                        "payment-methods"
+                      ],
+                      "query": [
+                        {
+                          "key": "category",
+                          "value": "6911bd7cd49fc086aabd257c",
+                          "disabled": true
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "New Request Copy",
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n    \"inAppPayment\":\"true\",\n    \"payNow\":\"false\",\n    \"companyOrganizer\":\"69803c6e926edf50d75db2ec\",\n    \"organization\":\"69737d30297ca37e0f10813a\"\n\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}admin/in-app-ordering/settings/payment-methods?organization=69737d30297ca37e0f10813a&companyOrganizer=69803c6e926edf50d75db2ec",
+                      "host": [
+                        "{{url}}admin"
+                      ],
+                      "path": [
+                        "in-app-ordering",
+                        "settings",
+                        "payment-methods"
+                      ],
+                      "query": [
+                        {
+                          "key": "organization",
+                          "value": "69737d30297ca37e0f10813a"
+                        },
+                        {
+                          "key": "companyOrganizer",
+                          "value": "69803c6e926edf50d75db2ec",
+                          "type": "text"
+                        }
+                      ]
+                    }
                   },
                   "response": []
                 }

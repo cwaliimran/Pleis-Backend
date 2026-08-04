@@ -585,6 +585,7 @@ const getMenuItemsCombosWithFilters = async ({ query = {} } = {}) => {
 const getMenuItemsCombos = async (menuItemIds = []) => {
   if (!menuItemIds.length) return [];
 
+
   const objectIds = menuItemIds.map((id) => new mongoose.Types.ObjectId(id));
 
   return MenuItemsCombos.aggregate([

@@ -152,4 +152,5 @@ module.exports = {
   "@PresetTypeModel": "backend/admin/presetMenu/presetType/PresetType.js",
   "@MenuItemsCombosModel":
     "backend/commonModules/menuManagement/menuItemsCombos/MenuItemsCombos.js",
+    "@PaymentMethodModel": "backend/admin/inAppOrdering/settings/PaymentMethod/PaymentMethod.js",
 };

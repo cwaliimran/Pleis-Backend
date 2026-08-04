@@ -51,13 +51,14 @@ const OrdersSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ["pendingPayment", "pending", "confirmed", "sent", "completed", "cancelled", "preorder"],
+            enum: ["pendingPayment", "pending", "confirmed", "sent", "completed", "cancelled", "rejected", "preorder"],
             default: "pending",
         },
         lockUntil: {
             type: Date,
-            index: true,
+            index: true
         },
+
 
         notes: { type: String, default: "" },
 
