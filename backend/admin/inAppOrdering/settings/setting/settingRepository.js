@@ -1,21 +1,19 @@
-const PaymentMethod = require("@PaymentMethodModel");
+const Setttings = require("./Setting");
 const { buildKeywordQueryFromModels } = require("@utils/dbUtils/queryUtil");
 const { generateMeta } = require("@utils/responseUtil");
 const mongoose = require("mongoose");
 
 const { cache, invalidate } = require("@redisCache");
-const ACTIVE_PaymentMethodS_CACHE_KEY = "PaymentMethod:active";
+const ACTIVE_Setttings_CACHE_KEY = "Setttings:active";
 
-const getPaymentMethods = async ({ organization }) => {
-  const paymentMethodData = await PaymentMethod.findOne({
+const getSetttings = async ({ organization }) => {
+  const SetttingsData = await Setttings.findOne({
     organization: new mongoose.Types.ObjectId(organization)
   }).lean();
 
-  const PaymentMethodData = paymentMethodData || {};
-
-  return PaymentMethodData;
+  return SetttingsData || {};
 };
-const getPaymentMethodsSummary = async ({
+const getSetttingsSummary = async ({
   timezone,
   page,
   limit,
@@ -43,52 +41,52 @@ const getPaymentMethodsSummary = async ({
     },
   });
 
-  const result = await PaymentMethod.aggregate(pipeline);
+  const result = await Setttings.aggregate(pipeline);
 
-  let PaymentMethods = result[0]?.data || [];
+  let Setttings = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   // Additional counts for meta (active/inactive/total by userId as creator)
   const [total, active, inactive] = await Promise.all([
-    PaymentMethod.countDocuments({
+    Setttings.countDocuments({
       ...(user && { user: user }),
       status: { $ne: "deleted" },
     }),
-    PaymentMethod.countDocuments({
+    Setttings.countDocuments({
       status: "active",
       ...(user && { user: user }),
     }),
-    PaymentMethod.countDocuments({
+    Setttings.countDocuments({
       status: "inactive",
       ...(user && { user: user }),
     }),
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
-  meta.PaymentMethodsCount = { total, active, inactive };
+  meta.SetttingsCount = { total, active, inactive };
 
-  return { PaymentMethods, meta };
+  return { Setttings, meta };
 };
 
-const findPaymentMethodById = async (organization) => {
-  return PaymentMethod.findOne({ organization: new mongoose.Types.ObjectId(organization) });
+const findSetttingsById = async (organization) => {
+  return Setttings.findOne({ organization: new mongoose.Types.ObjectId(organization) });
 };
 
 const findByIdAndUpdate = async (id, data) => {
-  await invalidate(ACTIVE_PaymentMethodS_CACHE_KEY);
-  return PaymentMethod.findByIdAndUpdate(id, data, { new: true });
+  await invalidate(ACTIVE_Setttings_CACHE_KEY);
+  return Setttings.findByIdAndUpdate(id, data, { new: true });
 };
 
 
-const createPaymentMethod = async (data) => {
-  const newPaymentMethod = new PaymentMethod(data);
-  await newPaymentMethod.save();
-  return newPaymentMethod;
+const createSetttings = async (data) => {
+  const newSetttings = new Setttings(data);
+  await newSetttings.save();
+  return newSetttings;
 };
 module.exports = {
-  getPaymentMethods,
-  findPaymentMethodById,
+  getSetttings,
+  findSetttingsById,
   findByIdAndUpdate,
-  getPaymentMethodsSummary,
-  createPaymentMethod,
+  getSetttingsSummary,
+  createSetttings,
 };

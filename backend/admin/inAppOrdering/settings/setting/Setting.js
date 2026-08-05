@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const paymentMethodSchema = new mongoose.Schema(
+const settingSchema = new mongoose.Schema(
   {
     companyOrganizer: {
       // creator
@@ -13,15 +13,21 @@ const paymentMethodSchema = new mongoose.Schema(
       ref: "Organization",
       required: true,
     },
-    inAppPayment: {
-      type: Boolean,
-      default: true,
+    paymentMethod: {
+      inAppPayment: {
+        type: Boolean,
+        default: true,
+      },
+      payNow: {
+        type: Boolean,
+        default: false,
+      },
+      cash: {
+        type: Boolean,
+        default: false,
+      },
     },
-    payNow: {
-      type: Boolean,
-      default: false,
-    },
-    cash: {
+    automaticOrderAcceptance: {
       type: Boolean,
       default: false,
     },
@@ -32,5 +38,4 @@ const paymentMethodSchema = new mongoose.Schema(
 );
 
 module.exports =
-  mongoose.models.PaymentMethod ||
-  mongoose.model("PaymentMethod", paymentMethodSchema);
+  mongoose.models.Setting || mongoose.model("Setting", settingSchema);

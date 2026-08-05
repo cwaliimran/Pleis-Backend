@@ -29,6 +29,7 @@ const apiRateLimiterDetails = createRateLimiter("Reservations/:id");
 
 // Create a new Reservation
 router.post("/", auth,roleMiddleware(["admin", "staff", "organizer", "manager"]), createReservation);
+router.use("/user", require("../../app/reservations/reservationRoutes"));
 router.post(
   "/preferences",
   auth,

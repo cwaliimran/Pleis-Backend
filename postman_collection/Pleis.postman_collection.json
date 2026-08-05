@@ -6914,7 +6914,7 @@
                       "variable": [
                         {
                           "key": "id",
-                          "value": "69678117cc3c3aac47a5f736"
+                          "value": "6a706083939473e9a5136053"
                         }
                       ]
                     }
@@ -7056,7 +7056,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"items\": [\n    {\n      \"menuItem\": \"6911c3516aca10eb719d6f72\",\n      \"quantity\": 1\n    }\n  ],\n  \"orderId\": \"6914928ed4ab4bca5895f9f2\"\n}\n",
+                      "raw": "{\n  \"items\": [\n    {\n      \"menuItem\": \"69738b0e20f1da0f3c92bea3\",\n      \"quantity\": 1\n    }\n  ],\n  \"orderId\": \"6a71d58b7d956e4c16f006b7\"\n}\n",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -7064,11 +7064,12 @@
                       }
                     },
                     "url": {
-                      "raw": "{{url}}app/menu/orders/add-more",
+                      "raw": "{{url}}app/staff/menu/orders/add-more",
                       "host": [
                         "{{url}}app"
                       ],
                       "path": [
+                        "staff",
                         "menu",
                         "orders",
                         "add-more"
@@ -35975,6 +35976,33 @@
               "response": []
             },
             {
+              "name": "add User Reservation",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"organizationId\": \"69737d30297ca37e0f10813a\",\r\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\", // required\r\n    \"firstName\": \"{{$randomFirstName}}\",\r\n    \"lastName\": {{$randomLastName}},\r\n    \"phoneNumber\": {\r\n        \"code\": \"+385\",\r\n        \"number\": \"998798769\"\r\n    },\r\n    \"reservationType\": \"VIP\",\r\n    \"partySize\": 2, // Required\r\n    \"numberOfTables\":1,\r\n        \"timingSlots\": {\r\n        \"enabled\": true,\r\n        \"dateTimeSlots\": [\r\n            {\r\n                \"date\": \"2026-02-16\",\r\n                \"timeSlots\": [\r\n                    {\r\n                        \"startTime\": \"12:00 PM\",\r\n                        \"endTime\": \"12:30 PM\"\r\n                    },\r\n                    {\r\n                        \"startTime\": \"12:30 PM\",\r\n                        \"endTime\": \"01:00 PM\"\r\n                    }\r\n                ]\r\n            },\r\n            {\r\n                \"date\": \"2026-02-17\",\r\n                \"timeSlots\": [\r\n                    {\r\n                        \"startTime\": \"12:00 PM\",\r\n                        \"endTime\": \"12:30 PM\"\r\n                    },\r\n                    {\r\n                        \"startTime\": \"12:30 PM\",\r\n                        \"endTime\": \"01:00 PM\"\r\n                    }\r\n                ]\r\n            }\r\n        ]\r\n    },\r\n\r\n\r\n    // \"conditionType\": \"minimumSpendOnLocation\", // [ \"fixedPrice\", \"minimumSpendOnLocation\"prepayOption\", \"noCondition\", \"ticketRequirement\", \"customText\",],\r\n    // \"conditionType\": \"fixedPrice\",\r\n    \"conditionType\": \"prepayOption\",\r\n    \"amount\": 10,\r\n    // \"conditionType\": \"customText\",\r\n    // \"customText\": \" this is custome text\",\r\n    // \"conditionType\": \"ticketRequirement\",\r\n    // \"ticketType\": \"vipEventPass\",\r\n    // \"conditionType\": \"ticketRequirement\",\r\n    // \"ticketType\": \"generalAdmission\",\r\n    // \"conditionType\": \"ticketRequirement\",\r\n    // \"ticketType\": \"premiumAccess\",\r\n    // \"conditionType\": \"noCondition\",\r\n    \"taxPercentage\": \"5\",\r\n    \"needsConfirmation\": true,\r\n    //   \"optionalEventId\": \"690d824d79228e2591462eb4\",\r\n    \"allowPreOrderMenuItems\": \"false\",\r\n\r\n    \"status\": \"active\" // [\"active\", \"inactive\", \"deleted\"],\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}admin/reservations/user",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "reservations",
+                    "user"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
               "name": "get",
               "protocolProfileBehavior": {
                 "disableBodyPruning": true
@@ -36237,70 +36265,6 @@
                     {
                       "key": "companyOrganizer",
                       "value": "69761cefe2d9f4ca0e722a3d",
-                      "disabled": true
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "New Request",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{url}}admin/reservations-analytics/analytics-transsections?page=2&limit=1",
-                  "host": [
-                    "{{url}}admin"
-                  ],
-                  "path": [
-                    "reservations-analytics",
-                    "analytics-transsections"
-                  ],
-                  "query": [
-                    {
-                      "key": "companyOrganizer",
-                      "value": "69999ae3d659acac68cff2d4",
-                      "disabled": true
-                    },
-                    {
-                      "key": "page",
-                      "value": "2"
-                    },
-                    {
-                      "key": "limit",
-                      "value": "1"
-                    }
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "New Request Copy",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{url}}admin/reservations-analytics//change-logs",
-                  "host": [
-                    "{{url}}admin"
-                  ],
-                  "path": [
-                    "reservations-analytics",
-                    "",
-                    "change-logs"
-                  ],
-                  "query": [
-                    {
-                      "key": "page",
-                      "value": "2",
-                      "disabled": true
-                    },
-                    {
-                      "key": "limit",
-                      "value": "1",
                       "disabled": true
                     }
                   ]
@@ -41420,6 +41384,11 @@
                           "value": "thisMonth",
                           "description": "today,yesterday,last7days,thisMonth",
                           "disabled": true
+                        },
+                        {
+                          "key": "orderStatus",
+                          "value": "sent",
+                          "disabled": true
                         }
                       ]
                     }
@@ -41465,7 +41434,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\r\n    // initial \r\n    //  \"status\":\"confirmed\"   // on pressing the button confirm \r\n    // \"status\": \"cancelled\" // only if status is pending\r\n    // if paymentStatus is not paid \r\n    //  \"status\":\"sent\" // on pressing the button delivered \r\n    //  if paymentStatus is  paid \r\n    //  \"status\":\"completed\"// on pressing the button delivered \r\n    //    \"deliveredMenuItem\":\"6a69dc7ab9e53735cc4a30f4\"\r\n    // \"deliveredall\":false //false true\r\n    // update payment stat\r\n    // \"paymentStatus\": \"pending\" //\"pending\", \"paid\", \"failed\",\r\n    // \"deliveredall\":true,\r\n    // \"status\": \"completed\"\r\n}",
+                      "raw": "{\r\n    // initial \r\n    //  \"status\":\"confirmed\"   // on pressing the button confirm \r\n    // \"status\": \"rejetcted\" // only if status is pending\r\n    // if paymentStatus is not paid \r\n    //  \"status\":\"sent\" // on pressing the button delivered \r\n    //  if paymentStatus is  paid \r\n    //  \"status\":\"completed\"// on pressing the button delivered \r\n    //    \"deliveredMenuItem\":\"6a69dc7ab9e53735cc4a30f4\"\r\n    // \"deliveredall\":false //false true\r\n    // update payment stat\r\n    \"paymentStatus\": \"paid\" //\"pending\", \"paid\", \"failed\",\r\n    // \"deliveredall\":true,\r\n    // \"status\": \"cancelled\"\r\n    // \"reasonForCancellation\":\"ok calcel it \"\r\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -41485,7 +41454,7 @@
                       "variable": [
                         {
                           "key": "id",
-                          "value": "6a706083939473e9a5136053"
+                          "value": "6a71c4aa7456154cc7817b50"
                         }
                       ]
                     }
@@ -42258,7 +42227,7 @@
               ]
             },
             {
-              "name": "settings",
+              "name": "payment Methods",
               "item": [
                 {
                   "name": "update",
@@ -42267,7 +42236,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"inAppPayment\":\"true\",\n    \"payNow\":\"false\"\n}",
+                      "raw": "{\n    \"inAppPayment\":\"true\",\n    \"payNow\":\"false\",\n    \"cash\":\"false\",\n    \"organization\":\"69737d30297ca37e0f10813a\",\n    \"companyOrganizer\":\"69803c6e926edf50d75db2ec\"\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -42283,20 +42252,13 @@
                         "in-app-ordering",
                         "settings",
                         "payment-methods"
-                      ],
-                      "query": [
-                        {
-                          "key": "category",
-                          "value": "6911bd7cd49fc086aabd257c",
-                          "disabled": true
-                        }
                       ]
                     }
                   },
                   "response": []
                 },
                 {
-                  "name": "New Request Copy",
+                  "name": "get",
                   "protocolProfileBehavior": {
                     "disableBodyPruning": true
                   },
@@ -42305,7 +42267,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"inAppPayment\":\"true\",\n    \"payNow\":\"false\",\n    \"companyOrganizer\":\"69803c6e926edf50d75db2ec\",\n    \"organization\":\"69737d30297ca37e0f10813a\"\n\n}",
+                      "raw": "",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -42313,7 +42275,7 @@
                       }
                     },
                     "url": {
-                      "raw": "{{url}}admin/in-app-ordering/settings/payment-methods?organization=69737d30297ca37e0f10813a&companyOrganizer=69803c6e926edf50d75db2ec",
+                      "raw": "{{url}}admin/in-app-ordering/settings/payment-methods?organization=69737d30297ca37e0f10813a",
                       "host": [
                         "{{url}}admin"
                       ],
@@ -42326,11 +42288,6 @@
                         {
                           "key": "organization",
                           "value": "69737d30297ca37e0f10813a"
-                        },
-                        {
-                          "key": "companyOrganizer",
-                          "value": "69803c6e926edf50d75db2ec",
-                          "type": "text"
                         }
                       ]
                     }
@@ -44677,6 +44634,343 @@
           ]
         },
         {
+          "name": "reservation Preferences",
+          "item": [
+            {
+              "name": "update",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"companyOrganizer\": \"64f1a2b3c4d5e6f7a8b9c0d1\",\n  \"isReservationEnabled\": true,\n  \"timeSlotsSetting\": {\n    \"status\": \"enabled\",\n    \"bookingOpensAfterMinutes\": 30,\n    \"bookingClosesBeforeMinutes\": 60,\n    \"averageSlotDurationInMinutes\": 45\n  },\n  \"automaticResponse\": {\n    \"autoAccept\": true,\n    \"autoReject\": false,\n    \"maxGuestPerReservationForAutoAccept\": 4\n  },\n  \"cancellationPolicy\": {\n    \"status\": \"enabled\",\n    \"hoursBeforeReservation\": 24\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}admin/reservation-preferences/:id",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "reservation-preferences",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "69737d30297ca37e0f10813a"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    // initial \r\n    //  \"status\":\"confirmed\"   // on pressing the button confirm \r\n    // \"status\": \"rejetcted\" // only if status is pending\r\n    // if paymentStatus is not paid \r\n    //  \"status\":\"sent\" // on pressing the button delivered \r\n    //  if paymentStatus is  paid \r\n    //  \"status\":\"completed\"// on pressing the button delivered \r\n       \"deliveredMenuItem\":\"6a69dc7ab9e53735cc4a30f4\"\r\n    // \"deliveredall\":false //false true\r\n    // update payment stat\r\n    // \"paymentStatus\": \"pending\" //\"pending\", \"paid\", \"failed\",\r\n    // \"deliveredall\":true,\r\n    // \"status\": \"completed\"\r\n}"
+                },
+                "url": {
+                  "raw": "{{url}}admin/reservation-preferences?organization=69737d30297ca37e0f10813a",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "reservation-preferences"
+                  ],
+                  "query": [
+                    {
+                      "key": "organization",
+                      "value": "69737d30297ca37e0f10813a"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "reservation Type",
+          "item": [
+            {
+              "name": "create",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"companyOrganizer\": \"64f1a2b3c4d5e6f7a8b9c0d1\",\n  \"organization\": \"69737d30297ca37e0f10813a\",\n  \"name\": \"VIP Booth\",\n  \"description\": \"Premium seating area near the bar\",\n  \"numberOfTables\": 5,\n  \"maxCapacity\": 20,\n  \"tax\":0,\n  \"maxPartySize\": 6,\n  \"conditionType\": \"minimumSpend\",\n  \"bonosPoints\": 10,\n  \"isVisibleToGuest\": true,\n  \"notes\": [\"Requires deposit\", \"Available after 8pm\"],\n  \"requireConfirmationToApprove\": true,\n  \"occasionRequired\": false,\n  \"status\": \"active\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}admin/reservation-types",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "reservation-types"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"companyOrganizer\": \"64f1a2b3c4d5e6f7a8b9c0d1\",\n  \"organization\": \"69737d30297ca37e0f10813a\",\n  \"name\": \"VIP Booth\",\n  \"description\": \"Premium seating area near the bar\",\n  \"numberOfTables\": 5,\n  \"maxCapacity\": 20,\n  \"tax\":0,\n  \"maxPartySize\": 6,\n  \"conditionType\": \"minimumSpend\",\n  \"bonosPoints\": 10,\n  \"isVisibleToGuest\": true,\n  \"notes\": [\"Requires deposit\", \"Available after 8pm\"],\n  \"requireConfirmationToApprove\": true,\n  \"occasionRequired\": false,\n  \"status\": \"active\"\n}"
+                },
+                "url": {
+                  "raw": "{{url}}admin/reservation-types?organization=69737d30297ca37e0f10813a&status=deleted",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "reservation-types"
+                  ],
+                  "query": [
+                    {
+                      "key": "summary",
+                      "value": "true",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": null,
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": null,
+                      "disabled": true
+                    },
+                    {
+                      "key": "organization",
+                      "value": "69737d30297ca37e0f10813a"
+                    },
+                    {
+                      "key": "status",
+                      "value": "deleted"
+                    },
+                    {
+                      "key": "conditionType",
+                      "value": "free",
+                      "description": "minimumSpend",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"companyOrganizer\": \"64f1a2b3c4d5e6f7a8b9c0d1\",\n  \"organization\": \"69737d30297ca37e0f10813a\",\n  \"name\": \"VIP Booth\",\n  \"description\": \"Premium seating area near the bar\",\n  \"numberOfTables\": 5,\n  \"maxCapacity\": 20,\n  \"tax\":0,\n  \"maxPartySize\": 6,\n  \"conditionType\": \"minimumSpend\",\n  \"bonosPoints\": 10,\n  \"isVisibleToGuest\": true,\n  \"notes\": [\"Requires deposit\", \"Available after 8pm\"],\n  \"requireConfirmationToApprove\": true,\n  \"occasionRequired\": false,\n  \"status\": \"active\"\n}"
+                },
+                "url": {
+                  "raw": "{{url}}admin/reservation-types/:id",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "reservation-types",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "6a71af5a932b68611f91c65b"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"{{$randomUserName}}\",\n//   \"description\": \"Premium seating area near the bar\",\n//   \"numberOfTables\": 5,\n//   \"maxCapacity\": 20,\n  \"tax\":10\n//   \"maxPartySize\": 6,\n//   \"conditionType\": \"minimumSpend\",\n//   \"bonosPoints\": 10,\n//   \"isVisibleToGuest\": true,\n//   \"notes\": [\"Requires deposit\", \"Available after 8pm\"],\n//   \"requireConfirmationToApprove\": true,\n//   \"occasionRequired\": false,\n//   \"status\": \"active\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}admin/reservation-types/:id",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "reservation-types",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "6a71af5a932b68611f91c65b"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "occasion",
+          "item": [
+            {
+              "name": "create",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"companyOrganizer\": \"64f1a2b3c4d5e6f7a8b9c0d1\",\n  \"organization\": \"69737d30297ca37e0f10813a\",\n  \"name\": \"VIP Booth\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}admin/occasion",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "occasion"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"companyOrganizer\": \"64f1a2b3c4d5e6f7a8b9c0d1\",\n  \"organization\": \"69737d30297ca37e0f10813a\",\n  \"name\": \"VIP Booth\",\n  \"description\": \"Premium seating area near the bar\",\n  \"numberOfTables\": 5,\n  \"maxCapacity\": 20,\n  \"tax\":0,\n  \"maxPartySize\": 6,\n  \"conditionType\": \"minimumSpend\",\n  \"bonosPoints\": 10,\n  \"isVisibleToGuest\": true,\n  \"notes\": [\"Requires deposit\", \"Available after 8pm\"],\n  \"requireConfirmationToApprove\": true,\n  \"occasionRequired\": false,\n  \"status\": \"active\"\n}"
+                },
+                "url": {
+                  "raw": "{{url}}admin/occasion?organization=69737d30297ca37e0f10813a",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "occasion"
+                  ],
+                  "query": [
+                    {
+                      "key": "organization",
+                      "value": "69737d30297ca37e0f10813a"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "delete",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"companyOrganizer\": \"64f1a2b3c4d5e6f7a8b9c0d1\",\n  \"organization\": \"69737d30297ca37e0f10813a\",\n  \"name\": \"VIP Booth\",\n  \"description\": \"Premium seating area near the bar\",\n  \"numberOfTables\": 5,\n  \"maxCapacity\": 20,\n  \"tax\":0,\n  \"maxPartySize\": 6,\n  \"conditionType\": \"minimumSpend\",\n  \"bonosPoints\": 10,\n  \"isVisibleToGuest\": true,\n  \"notes\": [\"Requires deposit\", \"Available after 8pm\"],\n  \"requireConfirmationToApprove\": true,\n  \"occasionRequired\": false,\n  \"status\": \"active\"\n}"
+                },
+                "url": {
+                  "raw": "{{url}}admin/occasion/:id",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "occasion",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "6a71b751490931f58993c0b1"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"{{$randomUserName}}\",\n  \"status\": \"active\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}admin/occasion/:id",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "occasion",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "6a71b751490931f58993c0b1"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
           "name": "Dashboard",
           "request": {
             "method": "GET",
@@ -44763,33 +45057,6 @@
           "response": []
         },
         {
-          "name": "New Request",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}admin/in-app-ordering/analytics/menu-item-performance",
-              "host": [
-                "{{url}}admin"
-              ],
-              "path": [
-                "in-app-ordering",
-                "analytics",
-                "menu-item-performance"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "New Request",
-          "request": {
-            "method": "GET",
-            "header": []
-          },
-          "response": []
-        },
-        {
           "name": "organizations-analytics",
           "request": {
             "method": "GET",
@@ -44811,155 +45078,6 @@
                 {
                   "key": "organization",
                   "value": "69761e64e2d9f4ca0e722a8c"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "New Request",
-          "request": {
-            "method": "GET",
-            "header": []
-          },
-          "response": []
-        },
-        {
-          "name": "New Request",
-          "request": {
-            "method": "GET",
-            "header": []
-          },
-          "response": []
-        },
-        {
-          "name": "New Request",
-          "request": {
-            "method": "PUT",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"preOrdersEnabled\":\"true\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}admin/events/6a0e4b007da8c8885d72eb9b",
-              "host": [
-                "{{url}}admin"
-              ],
-              "path": [
-                "events",
-                "6a0e4b007da8c8885d72eb9b"
-              ],
-              "query": [
-                {
-                  "key": "paymentMethod",
-                  "value": "card",
-                  "disabled": true
-                },
-                {
-                  "key": "type",
-                  "value": "musicc",
-                  "disabled": true
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "admin",
-          "request": {
-            "method": "PUT",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"status\": \"active\",\r\n    \"firstName\":\"Ahamd gills\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}admin/users/69999ae3d659acac68cff2d4",
-              "host": [
-                "{{url}}admin"
-              ],
-              "path": [
-                "users",
-                "69999ae3d659acac68cff2d4"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "New Request",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"companyOrganizer\": \"69999ae3d659acac68cff2d4\",\r\n    \"user\": \"692e9a6ae9eddb01e3459d4f\",\r\n    \"points\": 100,\r\n    \"notes\": \"\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}admin/loyalty/club-members/gift-points",
-              "host": [
-                "{{url}}admin"
-              ],
-              "path": [
-                "loyalty",
-                "club-members",
-                "gift-points"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "New Request",
-          "protocolProfileBehavior": {
-            "disableBodyPruning": true
-          },
-          "request": {
-            "method": "GET",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n    \"basicInfo\": {\r\n        \"media\": {\r\n            \"type\": \"image\",\r\n            \"name\": \"https://pleisstorage.blob.core.windows.net/pleisappcontainerdev/a707da80-2574-469f-89ed-7f54f81a6aa5.jpg\"\r\n        },\r\n        \"title\": \"Burger Deal Event\",\r\n        \"description\": \"Burger Deal Event\",\r\n        \"organization\": \"69f1a17610ae62f9f55406a7\",\r\n        \"venue\": \"69f1a49f10ae62f9f5540965\",\r\n        \"categories\": [\r\n            \"6911bd6bd49fc086aabd2561\",\r\n            \"6921e6ecd9366d79ebf6aa7e\",\r\n            \"6921f541d9366d79ebf6b661\"\r\n        ],\r\n        \"tags\": [\r\n            \"6953aef89c8a1a1042ef7e75\",\r\n            \"69908eeeb5f70ac6ac658b71\",\r\n            \"6953b85f9c8a1a1042ef820c\"\r\n        ]\r\n    },\r\n    \"schedule\": {\r\n        \"type\": \"oneTime\",\r\n        \"startDateTime\": \"2026-05-16 04:30 PM\",\r\n        \"endDateTime\": \"2026-05-16 06:00 PM\",\r\n        \"recurringDetails\": {\r\n            \"isEnabled\": true,\r\n            \"frequency\": \"weekly\",\r\n            \"interval\": 1,\r\n            \"daysOfWeek\": [\r\n                \"wed\",\r\n                \"fri\"\r\n            ],\r\n            \"endType\": \"never\"\r\n        }\r\n    }\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}admin/tags?limit=100& Page=1",
-              "host": [
-                "{{url}}admin"
-              ],
-              "path": [
-                "tags"
-              ],
-              "query": [
-                {
-                  "key": "limit",
-                  "value": "100"
-                },
-                {
-                  "key": " Page",
-                  "value": "1"
                 }
               ]
             }
@@ -45771,23 +45889,18 @@
                       }
                     },
                     "url": {
-                      "raw": "{{url}}app/menu/orders/?page=1&limit=10",
+                      "raw": "{{url}}app/staff/in-app-ordering?organization=69737d30297ca37e0f10813a",
                       "host": [
                         "{{url}}app"
                       ],
                       "path": [
-                        "menu",
-                        "orders",
-                        ""
+                        "staff",
+                        "in-app-ordering"
                       ],
                       "query": [
                         {
-                          "key": "page",
-                          "value": "1"
-                        },
-                        {
-                          "key": "limit",
-                          "value": "10"
+                          "key": "organization",
+                          "value": "69737d30297ca37e0f10813a"
                         }
                       ]
                     }
@@ -46017,6 +46130,59 @@
                   "response": []
                 },
                 {
+                  "name": "add more item",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    },
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n    \"menuItem\":\"\",\n    \"\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}app/menu/orders/add-more",
+                      "host": [
+                        "{{url}}app"
+                      ],
+                      "path": [
+                        "menu",
+                        "orders",
+                        "add-more"
+                      ]
+                    },
+                    "description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+                  },
+                  "response": []
+                },
+                {
                   "name": "pickup options",
                   "event": [
                     {
@@ -46042,11 +46208,8 @@
                       }
                     }
                   ],
-                  "protocolProfileBehavior": {
-                    "disableBodyPruning": true
-                  },
                   "request": {
-                    "method": "GET",
+                    "method": "POST",
                     "header": [],
                     "body": {
                       "mode": "raw",
@@ -46296,7 +46459,8 @@
                   "});"
                 ],
                 "type": "text/javascript",
-                "packages": {}
+                "packages": {},
+                "requests": {}
               }
             },
             {
@@ -46306,7 +46470,8 @@
                   ""
                 ],
                 "type": "text/javascript",
-                "packages": {}
+                "packages": {},
+                "requests": {}
               }
             }
           ],
@@ -46315,7 +46480,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"jadon67@example.com\",\n    \"password\": \"{{passwordStaff}}\",\n    \"userType\": \"staff\",\n    \"deviceType\": \"android\", //andoird/ios\n    \"deviceId\": \"1234\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
+              "raw": "{\n    \"email\": \"staff1@pleis.com\",\n    \"password\": \"Staff@123\",\n    \"userType\": \"staff\",\n    \"deviceType\": \"android\", //andoird/ios\n    \"deviceId\": \"1234\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -46551,31 +46716,29 @@
         },
         {
           "name": "New Request",
-          "protocolProfileBehavior": {
-            "disableBodyPruning": true
-          },
           "request": {
-            "method": "GET",
+            "method": "PUT",
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": ""
+              "raw": "{\n    \"status\":\"confirmed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
-              "raw": "{{url}}app/staff/in-app-ordering?organization=69737d30297ca37e0f10813a",
+              "raw": "{{url}}app/staff/in-app-ordering/:id",
               "host": [
                 "{{url}}app"
               ],
               "path": [
                 "staff",
-                "in-app-ordering"
+                "in-app-ordering",
+                ":id"
               ],
               "query": [
-                {
-                  "key": "organization",
-                  "value": "69737d30297ca37e0f10813a",
-                  "description": "6911cc376aca10eb719d7322"
-                },
                 {
                   "key": "orderStatus",
                   "value": "preorder",
@@ -46648,6 +46811,12 @@
                   "value": "1",
                   "disabled": true
                 }
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "69aeaf2ffed77fa6b93494ff"
+                }
               ]
             }
           },
@@ -46701,7 +46870,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n    \"qrData\": {\r\n        \"type\": \"loyaltyReward\",\r\n        \"id\": \"69cba997e41f6b2fdd89a599\",\r\n        \"companyOrganizer\": \"69b7a27e7fee06e491de2cc6\"\r\n    }\r\n}",
+              "raw": "{\r\n  \"items\": [\r\n    {\r\n      \"menuItem\": \"69738b0e20f1da0f3c92bea3\",\r\n      \"quantity\": 1\r\n    }\r\n  ],\r\n  \"orderId\": \"6a71d58b7d956e4c16f006b7\"\r\n}\r\n",
               "options": {
                 "raw": {
                   "language": "json"
@@ -46709,13 +46878,15 @@
               }
             },
             "url": {
-              "raw": "{{url}}app/staff/scan-qr",
+              "raw": "{{url}}app/staff/menu/orders/add-more",
               "host": [
                 "{{url}}app"
               ],
               "path": [
                 "staff",
-                "scan-qr"
+                "menu",
+                "orders",
+                "add-more"
               ]
             }
           },

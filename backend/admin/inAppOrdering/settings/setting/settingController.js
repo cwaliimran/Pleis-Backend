@@ -7,9 +7,9 @@ const {
   convertTimezoneToUtc,
 } = require("../../../../helperUtils/responseUtil");
 
-const PaymentMethodService = require("./paymentMethodService");
+const Setttingservice = require("./settingService");
 
-const getPaymentMethods = async (req, res) => {
+const getSetttings = async (req, res) => {
   const { organization } = req.query;
   try {
     if (!organization) {
@@ -20,15 +20,15 @@ const getPaymentMethods = async (req, res) => {
       });
     }
 
-    const PaymentMethodData = await PaymentMethodService.getPaymentMethods({
+    const SetttingsData = await Setttingservice.getSetttings({
       organization
     });
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "PaymentMethods_fetched_successfully",
-      data: PaymentMethodData,
+      translationKey: "Setttings_fetched_successfully",
+      data: SetttingsData,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -40,22 +40,26 @@ const getPaymentMethods = async (req, res) => {
     });
   }
 };
-const updatePaymentMethod = async (req, res) => {
-  let { inAppPayments, payNow,cash,organization,companyOrganizer } = req.body;
+const updateSetttings = async (req, res) => {
+  let {
+    paymentMethod,
+    organization,
+    companyOrganizer,
+    automaticOrderAcceptance,
+  } = req.body;
 
   const user = req.user._id;
   const timezone = req.user.timezone;
 
   let data = {
-    inAppPayments,
-    payNow,
-    cash,
+    paymentMethod,
+    automaticOrderAcceptance,
     organization,
     companyOrganizer
   };
 
   try {
-    const updated = await PaymentMethodService.updatePaymentMethod(organization, data);
+    const updated = await Setttingservice.updateSetttings(organization, data);
     if (updated && updated.error) {
       return sendResponse({
         res,
@@ -68,14 +72,14 @@ const updatePaymentMethod = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "PaymentMethod_not_found",
+        translationKey: "Setttings_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "PaymentMethod_updated_successfully",
+      translationKey: "Setttings_updated_successfully",
       data: updated,
     });
   } catch (error) {
@@ -90,6 +94,6 @@ const updatePaymentMethod = async (req, res) => {
 };
 
 module.exports = {
-  getPaymentMethods,
-  updatePaymentMethod,
+  getSetttings,
+  updateSetttings,
 };
