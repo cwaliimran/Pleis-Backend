@@ -20,14 +20,17 @@ const createReservation = async (req, res) => {
 
     const normalizedReservation =
       validateReservationPayload(req, res, req.body);
-
     if (!normalizedReservation) return;
+    let userId = req.user._id;
+    if(normalizedReservation.firstName || normalizedReservation.lastName ){
+      userId = null; // Set userId to null if the user is not logged in
+    }
 
     const result =
       await reservationService.createReservationService(
         {
           ...normalizedReservation,
-          userId: req.user._id,
+          userId,
         },
         session
       );

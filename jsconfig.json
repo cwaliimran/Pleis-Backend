@@ -29,6 +29,9 @@
       "@OrganizationModel": [
         "backend/commonModules/organizations/Organization.js"
       ],
+      "@DeliveryOptionsModel": [
+        "backend/commonModules/organizations/DeliveryOptions.js"
+      ],
       "@VenuesModel": [
         "backend/commonModules/venues/Venues.js"
       ],
@@ -304,6 +307,18 @@
       ],
       "@MenuItemsCombosModel": [
         "backend/commonModules/menuManagement/menuItemsCombos/MenuItemsCombos.js"
+      ],
+      "@PaymentMethodModel": [
+        "backend/admin/inAppOrdering/settings/setting/Setting.js"
+      ],
+      "@ReservationPreferencesModel": [
+        "backend/admin/reservation/reservationPreferences/ReservationPreferences.js"
+      ],
+      "@ReservationTypeModel": [
+        "backend/admin/reservation/reservationType/ReservationType.js"
+      ],
+      "@OccasionModel": [
+        "backend/admin/reservation/occasion/Occasion.js"
       ]
     }
   },

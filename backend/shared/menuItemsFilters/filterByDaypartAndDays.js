@@ -50,6 +50,7 @@ async function filterByDaypartAndDaysWithFetch(menuItems, getAllDaypartsFn, time
   if (!menuItems.length) return menuItems;
 
   const allDayparts = await getAllDaypartsFn();
+
   const daypartMap = new Map(allDayparts.map((d) => [d._id.toString(), d]));
 
   return filterByDaypartAndDays(menuItems, daypartMap, timezone);

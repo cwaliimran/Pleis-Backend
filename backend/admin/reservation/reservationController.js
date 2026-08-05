@@ -947,7 +947,40 @@ const changeUsersReservationsTiming = async (req, res) => {
     });
   }
 };
+const createReservationPreferences = async (req, res) => {
+  const { reservationId, preferences } = req.body;
+  const userId = req.user._id;
 
+  if (
+    !validateParams(req, res, {
+      rawData: ["reservationId", "preferences"],
+      objectIdFields: ["reservationId"],
+    })
+  ) return;
+
+  try {
+    const result = await reservationService.createReservationPreferences({
+      reservationId,
+      preferences,
+      userId,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 201,
+      translationKey: "reservation_preferences_created_successfully",
+      data: result,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 
 module.exports = {
   createReservation,
@@ -962,5 +995,6 @@ module.exports = {
   getCalendarReservations,
   copyUserReservationsController,
   copyReservationSlotsController,
-  changeUsersReservationsTiming
+  changeUsersReservationsTiming,
+  createReservationPreferences,
 };

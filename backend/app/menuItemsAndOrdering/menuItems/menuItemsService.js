@@ -88,6 +88,7 @@ const getMenuItemsV2 = async ({ userId, timezone, organization }) => {
   if (!menuId) {
     return { recommended: [], menu: [], combos: [] };
   }
+  console.log("menuId", menuId);
   // 2️⃣ Fetch all active menu items for this menu
 
   const menuItems = await menuItemRepo.getMenuItemsWithFiltersV2({
@@ -99,7 +100,7 @@ const getMenuItemsV2 = async ({ userId, timezone, organization }) => {
     timezone
   });
 
-
+console.log("menuItems", menuItems);
   if (!menuItems.length) return { recommended: [], menu: [], combos: [] };
 
 
@@ -154,6 +155,7 @@ const getMenuItemsV2 = async ({ userId, timezone, organization }) => {
   const rawCombos = await menuItemRepo.getMenuItemsCombos(
     menuItems.map((item) => item._id),
   );
+  console.log("rawCombos:", rawCombos);
 
   const combos = formatMenuItemsComboList(rawCombos, {
     timezone,

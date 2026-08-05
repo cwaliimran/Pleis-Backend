@@ -34,6 +34,7 @@ const createMenuItem = async (req, res) => {
     daypart,
     dietTags,
     allergens,
+    upSellItem,
     cuisine,
     isRecommended,
     isTogo,
@@ -97,6 +98,7 @@ const createMenuItem = async (req, res) => {
     allergens,
     cuisine,
     isRecommended,
+    upSellItem,
     isTogo,
     isRequiresOrderConfirmation,
   };
@@ -343,9 +345,9 @@ const updateMenuItem = async (req, res) => {
   }
 
   if (upSellItem) {
-    if (upSellItem === "true") {
+    if (upSellItem === "true"|| upSellItem === true) {
       upSellItem = true;
-    } else if (upSellItem === "false") {
+    } else if (upSellItem === "false" || upSellItem === false) {
       upSellItem = false;
     } else {
       return sendResponse({
