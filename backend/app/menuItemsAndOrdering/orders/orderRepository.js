@@ -3,9 +3,8 @@ const { getModelCounts } = require("../../../helperUtils/dbUtils/queryUtil");
 const mongoose = require("mongoose");
 
 const createOrder = async (orderData, session = null) => {
-  return Orders.create([orderData], { session }).then(res => res[0]);
+  return Orders.create([orderData], { session }).then((res) => res[0]);
 };
-
 
 const getOrderById = async (id) => {
   const orderId = new mongoose.Types.ObjectId(id);
@@ -84,16 +83,42 @@ const getOrderById = async (id) => {
         preserveNullAndEmptyArrays: true,
       },
     },
+    {
+      $lookup: {
+        from: "users",
+        localField: "user",
+        foreignField: "_id",
+        as: "user",
+        pipeline: [
+          {
+            $project: {
+              firstName: 1,
+              lastName: 1,
+              email: 1,
+              profileIcon: 1,
+            },
+          },
+        ],
+      },
+    },
+
+    // 5️⃣ Flatten user
+    {
+      $unwind: {
+        path: "$user",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
   ]);
 
   return result[0] || null;
 };
 
-
-
 const getOrdersByUser = async (userId, page, limit, query = {}) => {
   query.status = { $ne: "pendingPayment" }; // Exclude pendingPayment orders
-  return Orders.find({ user: userId, ...query }).select("orderNumber createdAt status paymentMethod paymentStatus").populate("organization", "basicInfo.name basicInfo.media.logo")
+  return Orders.find({ user: userId, ...query })
+    .select("orderNumber createdAt status paymentMethod paymentStatus")
+    .populate("organization", "basicInfo.name basicInfo.media.logo")
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit);
@@ -105,8 +130,8 @@ const getCounts = async (query) => {
     model: Orders,
     filterQuery: query,
     statusMap: {
-      status: ["pending", "confirmed", "completed", "cancelled"]
-    }
+      status: ["pending", "confirmed", "completed", "cancelled"],
+    },
   });
   return counts;
 };
@@ -120,15 +145,21 @@ const addItemsToOrder = async (orderId, newItems, additionalTotalPrice) => {
     orderId,
     {
       $push: { items: { $each: newItems } },
-      $inc: { totalPrice: additionalTotalPrice }
+      $inc: { totalPrice: additionalTotalPrice },
     },
-    { new: true }
+    { new: true },
   );
 };
 
 const updateOrderWithItems = async (
   orderId,
-  { newItems, additionalFinalPrice, newItemsTotal, newSaleDiscount, newFinalTotal }
+  {
+    newItems,
+    additionalFinalPrice,
+    newItemsTotal,
+    newSaleDiscount,
+    newFinalTotal,
+  },
 ) => {
   return Orders.findByIdAndUpdate(
     orderId,
@@ -138,13 +169,12 @@ const updateOrderWithItems = async (
       $set: {
         "priceBreakdown.itemsTotal": newItemsTotal,
         "priceBreakdown.saleDiscount": newSaleDiscount,
-        "priceBreakdown.finalTotal": newFinalTotal
-      }
+        "priceBreakdown.finalTotal": newFinalTotal,
+      },
     },
-    { new: true }
+    { new: true },
   );
 };
-
 
 const deleteOrder = async (orderId) => {
   return Orders.findByIdAndDelete(orderId);
@@ -153,22 +183,24 @@ const getTotalOrderPriceByUser = async (userId) => {
   try {
     // Find all orders for the given user
     const orders = await Orders.find({ user: userId })
-      .select("items totalPrice")  // Only select the items and totalPrice fields
-      .lean();  // Use lean() to return plain JavaScript objects instead of Mongoose documents
+      .select("items totalPrice") // Only select the items and totalPrice fields
+      .lean(); // Use lean() to return plain JavaScript objects instead of Mongoose documents
 
     if (orders.length === 0) return 0;
 
     // Sum the finalPrice of all items in each order
     let totalAmount = 0;
-    orders.forEach(order => {
+    orders.forEach((order) => {
       // Sum finalPrice of all items in the current order
-      const itemsTotal = order.items.reduce((sum, item) => sum + item.finalPrice, 0);
+      const itemsTotal = order.items.reduce(
+        (sum, item) => sum + item.finalPrice,
+        0,
+      );
       totalAmount += itemsTotal;
     });
 
     return totalAmount;
   } catch (error) {
-
     throw error;
   }
 };
@@ -181,5 +213,5 @@ module.exports = {
   deleteOrder,
   getCounts,
   getTotalOrderPriceByUser,
-  updateOrderWithItems
+  updateOrderWithItems,
 };
