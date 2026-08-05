@@ -30,12 +30,12 @@ const findOccasionById = async (id) => {
   return Occasion.findById(id);
 };
 
-const findByIdAndUpdate = async (id, data) => {
-  return Occasion.findByIdAndUpdate(id, data, { new: true });
+const findByIdAndDelete = async (id) => {
+  return Occasion.findByIdAndDelete(id);
 };
 module.exports = {
   createOccasion,
   getOccasion,
   findOccasionById,
-  findByIdAndUpdate,
+  findByIdAndDelete,
 };

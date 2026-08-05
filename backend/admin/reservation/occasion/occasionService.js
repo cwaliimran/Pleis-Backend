@@ -61,10 +61,8 @@ const updateOccasion = async (id, data) => {
 };
 
 const deleteOccasion = async (id) => {
-  const updated = await OccasionRepo.findByIdAndUpdate(id, {
-    status: "deleted",
-  });
-  if (!updated) return null;
+  const deleted = await OccasionRepo.findByIdAndDelete(id);
+  if (!deleted) return null;
   return true;
 };
 
