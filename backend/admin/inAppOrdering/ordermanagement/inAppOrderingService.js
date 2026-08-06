@@ -4,18 +4,66 @@ const { NotificationTypes } = require("@NotificationsModel");
 const mongoose = require("mongoose");
 const Menus = require("@MenusModel");
 const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
-const { sendUserNotifications } = require("../../../controllers/communicationController");
-const { calculatePointsRepo } = require("../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
-const { createTransactionService } = require("../../../app/userWalletService/transactions/services/unifiedTransactionsService");
-const { handleLoyaltyEarningConsequences } = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/handleLoyaltyEarningConsequences");
+const {
+  sendUserNotifications,
+} = require("../../../controllers/communicationController");
+const {
+  calculatePointsRepo,
+} = require("../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
+const {
+  createTransactionService,
+} = require("../../../app/userWalletService/transactions/services/unifiedTransactionsService");
+const {
+  handleLoyaltyEarningConsequences,
+} = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/handleLoyaltyEarningConsequences");
 const webhookRepository = require("../../../commonModules/paymentsIntegrations/paymentsWebhook/repositories/webhookRepository");
+const { getOrgCompanyOrganizer } = require("../../../admin/organizations/organizationRepository");
 
+const getDateRange = (period) => {
+  const now = new Date();
+  let start, end;
 
+  switch (period) {
+    case "today":
+      start = new Date(now);
+      end = new Date(now);
+      break;
+
+    case "yesterday":
+      start = new Date(now);
+      start.setUTCDate(start.getUTCDate() - 1);
+
+      end = new Date(start);
+      break;
+
+    case "last7days":
+      start = new Date(now);
+      start.setUTCDate(start.getUTCDate() - 6);
+
+      end = new Date(now);
+      break;
+
+    case "thisMonth":
+      start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+      end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
+      break;
+
+    default:
+      throw new Error(`Unknown period: ${period}`);
+  }
+
+  // Start of day (UTC)
+  start.setUTCHours(0, 0, 0, 0);
+
+  // End of day (UTC)
+  end.setUTCHours(23, 59, 59, 999);
+
+  return {
+    startDate: start,
+    endDate: end,
+  };
+};
 const getOrdersService = async ({
-  activeorderStatus,
-  pickupFilter,
-  orderStatus,
-  activeKeyword,
   timezone,
   page,
   limit,
@@ -23,25 +71,26 @@ const getOrdersService = async ({
   status,
   organization,
   date,
-  range
+  range,
+  paymentMethod,
+  pickupFilter,
+  orderStatus,
 }) => {
   page = Number(page) || 1;
   limit = Number(limit);
-
 
   if (Number.isNaN(limit) || limit < 0) {
     limit = 10;
   }
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-  const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-
-
+  let startDate = null;
+  let endDate = null;
+  if (range) {
+    ({ startDate, endDate } = getDateRange(range));
+  }
+  const companyOrganizer = await getOrgCompanyOrganizer(organization);
   let { Orderss, meta } = await OrdersRepo.getOrders({
-    activeorderStatus,
-    pickupFilter,
-    orderStatus,
-    activeKeyword,
     timezone,
     page,
     limit,
@@ -50,18 +99,19 @@ const getOrdersService = async ({
     organization,
     date,
     range,
-    today,
-    skip
+    paymentMethod,
+    pickupFilter,
+    skip,
+    startDate,
+    endDate,
+    companyOrganizer,
+    orderStatus,
   });
 
   return { Orderss, meta };
 };
 
-
-const updateOrderDetailsService = async ({
-  orderId,
-  data,
-}) => {
+const updateOrderDetailsService = async ({ orderId, data }) => {
   const order = await OrdersRepo.findOrdersById(orderId);
   const updateBy = data.updateBy;
 
@@ -87,21 +137,18 @@ const updateOrderDetailsService = async ({
   }
 
   // ALREADY PAID
-  if (
-    order.paymentStatus === "paid" &&
-    data.paymentStatus === "paid"
-  ) {
+  if (order.paymentStatus === "paid" && data.paymentStatus === "paid") {
     return { error: "order_already_paid" };
   }
   const updateHistory = {
     updatedAt: new Date(),
-    updatedBy: updateBy,  // Assuming `updateBy` is the User ID
-    updateData: data,  // This would contain all the updated fields
+    updatedBy: updateBy, // Assuming `updateBy` is the User ID
+    updateData: data, // This would contain all the updated fields
   };
 
   order.updateHistory.push(updateHistory);
   if (!order.updateHistory) {
-    order.updateHistory = [];  
+    order.updateHistory = [];
   }
 
   let statusChanged = false;
@@ -130,15 +177,12 @@ const updateOrderDetailsService = async ({
       order.paidAt = new Date();
     }
 
-
     /* ==========================
            🎯 Loyalty Points
         ========================== */
     const totalPrice = order.totalPrice || 0;
 
     if (totalPrice > 0) {
-
-
       const saveTransaction = await webhookRepository.saveIfNotProcessed({
         provider: "cash",
         orderNumber: order._id,
@@ -147,13 +191,14 @@ const updateOrderDetailsService = async ({
         companyOrganizer: order.organization.creator,
         organization: order.organization._id,
         paymentStatus: "paid",
+        paymentMethod: order.paymentMethod,
         amount: order.totalPrice,
         payload: order,
       });
       const pointsCalculation = await calculatePointsRepo(
         order.user,
         order.organization.creator,
-        totalPrice
+        totalPrice,
       );
 
       let companyPoints = {
@@ -182,7 +227,7 @@ const updateOrderDetailsService = async ({
           entityId: order._id,
           domainType: "menuorders",
         },
-        null
+        null,
       );
 
       if (!trx.success) {
@@ -194,40 +239,48 @@ const updateOrderDetailsService = async ({
         companyOrganizer: order.organization.creator,
         companyPoints: companyPoints,
         globalPoints: globalPoints,
-        menuOrder: order
+        menuOrder: order,
       });
-
-
     }
-
   }
 
   /* ===============================
      3️⃣ DELIVER ALL
   =============================== */
   if (typeof data.deliveredall === "boolean") {
-    order.items.forEach(item => {
+    order.items.forEach((item) => {
       item.isdelivered = data.deliveredall;
     });
     deliveryChanged = true;
-  }
+  } else if (data.deliveredMenuItem) {
 
   /* ===============================
      4️⃣ DELIVER SELECTED ITEMS
   =============================== */
-  else if (data.deliveredMenuItem) {
     const deliveredIds = data.deliveredMenuItem
       .split(",")
-      .map(id => id.trim())
+      .map((id) => id.trim())
       .filter(Boolean)
-      .map(id => new mongoose.Types.ObjectId(id));
+      .map((id) => new mongoose.Types.ObjectId(id));
 
-    order.items.forEach(item => {
-      if (deliveredIds.some(dId => dId.equals(item.menuItem))) {
+    order.items.forEach((item) => {
+      if (deliveredIds.some((dId) => dId.equals(item.menuItem))) {
         item.isdelivered = true;
         deliveryChanged = true;
       }
     });
+  }
+  if(data.resaonForRejection) {
+    order.reasonForRejection = data.reasonForRejection;
+  }
+  if(data.reasonForCancellation) {
+    order.reasonForCancellation = data.reasonForCancellation;
+  }
+  if(data.noteForRejection) {
+    order.noteForRejection = data.noteForRejection;
+  }
+  if(data.noteForCancellation) {
+    order.noteForCancellation = data.noteForCancellation;
   }
 
   await order.save();
@@ -283,25 +336,17 @@ const updateOrderDetailsService = async ({
   return order;
 };
 
-
 const updateInAppOrders = async (organization, isOrderingEnabled) => {
   try {
     return await Menus.updateMany(
       { organization },
       { $set: { isOrderingEnabled } },
-      { upsert: true }
+      { upsert: true },
     );
   } catch (error) {
     throw error;
   }
 };
-
-
-
-
-
-
-
 
 const getInAppOrders = async ({
   timezone,
@@ -332,20 +377,43 @@ const getInAppOrders = async ({
     status,
     organization,
     today,
-    skip
+    skip,
   });
 
   return data;
 };
 
+const sendPaymentReminder = async (orderId) => {
+  try {
+    const order = await OrdersRepo.getOrderById(orderId);
 
+    if (!order) {
+      return { error: "Order not found" };
+    }
 
+    await sendUserNotifications({
+      recipientIds: [order.user.toString()],
+      title: "Payment Reminder",
+      body: `Reminder: Please complete the payment for order ${order.orderNumber} to avoid cancellation.`,
+      data: {
+        type: NotificationTypes.REMINDER,
+        objectType: "menuorders",
+      },
+      sender: order.organization,
+      objectId: order._id,
+    });
 
+    return { success: true, message: "Payment reminder sent successfully" };
+  } catch (error) {
+    console.error("Error sending payment reminder:", error);
+    return { error: "Failed to send payment reminder" };
+  }
+};
 
 module.exports = {
   getOrdersService,
   updateInAppOrders,
   updateOrderDetailsService,
-  getInAppOrders
-
+  getInAppOrders,
+  sendPaymentReminder,
 };

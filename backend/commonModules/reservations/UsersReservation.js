@@ -4,14 +4,14 @@ const generateShortId = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 6
 
 const UserReservationsSchema = new mongoose.Schema(
   {
-
     bookingId: {
       type: String,
       index: true,
-      default: () => `RSV-${generateShortId()}`, //RSV for Reservation Booking 
+      default: () => `RSV-${generateShortId()}`, //RSV for Reservation Booking
     },
 
-    userId: { // the user who made the reservation if null then it's a walk-in reservation booked by staff
+    userId: {
+      // the user who made the reservation if null then it's a walk-in reservation booked by staff
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
@@ -35,11 +35,24 @@ const UserReservationsSchema = new mongoose.Schema(
       ],
       default: [],
     },
+    reservationType: {
+      type: mongoose.Schema.Types.String,
+      ref: "ReservationType",
+      required: true,
+    },
     partySize: {
       type: Number,
       default: 0,
     },
-
+    numberOfTables: {
+      type: Number,
+      default: 0,
+    },
+    occasion: {
+      type:mongoose.Schema.Types.String,
+      ref: "Occasion",
+      default: null,
+    },
     amount: {
       type: Number,
       default: 0,
@@ -53,7 +66,8 @@ const UserReservationsSchema = new mongoose.Schema(
       ref: "Organization",
       required: true,
     },
-    reservationId: { //if this is null then it's a standalone reservation added by staff for user
+    reservationId: {
+      //if this is null then it's a standalone reservation added by staff for user
       type: mongoose.Schema.Types.ObjectId,
       ref: "Reservations",
       default: null,
@@ -70,7 +84,6 @@ const UserReservationsSchema = new mongoose.Schema(
     },
 
     timingSlots: {
-
       dateTimeSlots: {
         type: [
           {
@@ -86,8 +99,8 @@ const UserReservationsSchema = new mongoose.Schema(
         default: [],
       },
     },
-    firstName: { type: String, default: "", },
-    lastName: { type: String, default: "", },
+    firstName: { type: String, default: "" },
+    lastName: { type: String, default: "" },
     phoneNumber: {
       code: {
         // Country code for phone number
@@ -114,7 +127,16 @@ const UserReservationsSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["pendingPayment", "needsConfirmation", "confirmed", "checkedIn", "rejected", "cancelled", "completed", "deleted"],
+      enum: [
+        "pendingPayment",
+        "needsConfirmation",
+        "confirmed",
+        "checkedIn",
+        "rejected",
+        "cancelled",
+        "completed",
+        "deleted",
+      ],
       default: "confirmed",
     },
 
@@ -123,7 +145,7 @@ const UserReservationsSchema = new mongoose.Schema(
       transactionId: { type: String, default: null }, // gateway ref
       paymentMethod: {
         type: String,
-        enum: ["applePay", "card","cash"],
+        enum: ["applePay", "card", "cash"],
         required: false,
       },
       paymentStatus: {
@@ -163,7 +185,7 @@ const UserReservationsSchema = new mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId,
         ref: "TicketingBookings",
         index: true, // enables fast reverse lookup
-      }
+      },
     ],
 
     reservationChanges: [
@@ -191,9 +213,9 @@ const UserReservationsSchema = new mongoose.Schema(
         action: {
           type: String,
           enum: [
-            "timingChanged",   // organizer updated time
-            "accepted",        // user accepted change
-            "cancelled",       // user cancelled reservation
+            "timingChanged", // organizer updated time
+            "accepted", // user accepted change
+            "cancelled", // user cancelled reservation
             "refundRequested", // user asked refund
             "refundProcessed", // admin refunded
           ],
@@ -204,7 +226,7 @@ const UserReservationsSchema = new mongoose.Schema(
         status: {
           type: String,
           enum: [
-            "pending",   // waiting user decision
+            "pending", // waiting user decision
             "accepted",
             "rejected",
             "completed",
@@ -233,7 +255,7 @@ const UserReservationsSchema = new mongoose.Schema(
 
   {
     timestamps: true,
-  }
+  },
 );
 
 UserReservationsSchema.index({

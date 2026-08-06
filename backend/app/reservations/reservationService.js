@@ -6,7 +6,15 @@ const { isOrganizationOpenNow } = require("../../shared/commonSchemas/operatingH
 
 const createReservationService = async (data, session) => {
   if (!session) throw new Error("session_required");
-
+  const check = await ReservationRepo.checkReservationAvailability({
+    reservationTypeId: data.reservationType,
+    partySize: data.partySize,
+    numberOfTables: data.numberOfTables,
+    organization: data.organizationId,
+  });
+  if (!check.allowed) {
+    return { success: false, message: check.message || "Reservation not allowed" };
+  }
 
   const result = await ReservationRepo.createReservation(data, session);
 

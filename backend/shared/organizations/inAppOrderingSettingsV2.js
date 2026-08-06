@@ -4,7 +4,7 @@ const validateInAppOrderingSettingsV2 = (inAppOrderingSettings = {}) => {
   const { tips, sessionTimerLength } = inAppOrderingSettings;
 
   if (sessionTimerLength !== undefined) {
-    if (typeof sessionTimerLength !== "number" || sessionTimerLength <= 0) {
+    if (typeof sessionTimerLength !== "number" || sessionTimerLength < 0) {
       return "invalid_session_timer_length";
     }
   }
