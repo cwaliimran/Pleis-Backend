@@ -44,6 +44,15 @@ router.use("/loyalty", require("../loyalty/loyaltyRoutes"));
 router.use("/global-loyalty", require("../globalLoyalty/loyaltyRoutes"));
 // reservation
 router.use("/reservations", require("../reservation/reservationRoutes"));
+router.use("/reservation-preferences", require("../reservation/reservationPreferences/reservationPreferencesRoutes"));
+router.use(
+  "/reservation-types",
+  require("../reservation/reservationType/reservationTypeRoutes"),
+);
+router.use(
+  "/occasion",
+  require("../reservation/occasion/occasionRoutes"),
+);
 router.use("/reservations-analytics", require("../reservation/reservationAnalytics/reservationAnalyticsRoutes"));
 //status badges
 router.use("/status-badges", require("../statusBadges/statusBadgesRoutes"));

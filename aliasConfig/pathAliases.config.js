@@ -152,4 +152,8 @@ module.exports = {
   "@PresetTypeModel": "backend/admin/presetMenu/presetType/PresetType.js",
   "@MenuItemsCombosModel":
     "backend/commonModules/menuManagement/menuItemsCombos/MenuItemsCombos.js",
+    "@PaymentMethodModel": "backend/admin/inAppOrdering/settings/PaymentMethod/PaymentMethod.js",
+    "@ReservationPreferencesModel": "backend/admin/reservation/reservationPreferences/ReservationPreferences.js",
+    "@ReservationTypeModel": "backend/admin/reservation/reservationType/ReservationType.js",
+    "@OccasionModel": "backend/admin/reservation/occasion/Occasion.js",
 };

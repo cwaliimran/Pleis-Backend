@@ -21,7 +21,7 @@ const createMenuItem = async (data) => {
       menu: menuId,
     }));
 
-    console.log("docs", docs);
+  
 
     const createdMenuItems = await MenuItems.insertMany(docs, {
       session,

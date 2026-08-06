@@ -5,12 +5,21 @@ const {
   getReadableErrorMessage,
   convertTimezoneToUtc,
 } = require("../../../helperUtils/responseUtil");
-const mongoose = require('mongoose'); // Import mongoose
+const mongoose = require("mongoose"); // Import mongoose
 
 const Orderservice = require("./inAppOrderingService");
 const getOrders = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, range, organization, activeKeyword, orderStatus, activeorderStatus, pickupFilter } = req.query;
+  let {
+    keyword,
+    status,
+    paymentMethod,
+    date,
+    range,
+    organization,
+    pickupFilter,
+    orderStatus
+  } = req.query;
   try {
     if (!organization) {
       return sendResponse({
@@ -19,7 +28,6 @@ const getOrders = async (req, res) => {
         translationKey: "organization_id_is_required",
       });
     }
-
 
     const timezone = req.user.timezone;
     const { Orderss, meta } = await Orderservice.getOrdersService({
@@ -31,10 +39,9 @@ const getOrders = async (req, res) => {
       organization,
       date,
       range,
-      activeKeyword,
+      paymentMethod,
+      pickupFilter,
       orderStatus,
-      activeorderStatus,
-      pickupFilter
     });
 
     return sendResponse({
@@ -60,28 +67,39 @@ const updateOrders = async (req, res) => {
     status,
     paymentStatus,
     deliveredMenuItem,
-    deliveredall
+    deliveredall,
+    reasonForRejection,
+    reasonForCancellation,
+    noteForRejection,
+    noteForCancellation,
+    paymentMethod,
   } = req.body;
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
       objectIdFields: ["id"],
     })
-  ) return;
-
+  )
+    return;
 
   let data = {
     status,
     paymentStatus,
     deliveredMenuItem,
     deliveredall,
-    updateBy: req.user._id
+    reasonForRejection,
+    reasonForCancellation,
+    noteForRejection,
+    noteForCancellation,
+    updateBy: req.user._id,
+    paymentMethod,
   };
 
-
-
   try {
-    const updated = await Orderservice.updateOrderDetailsService({ orderId: id, data });
+    const updated = await Orderservice.updateOrderDetailsService({
+      orderId: id,
+      data,
+    });
     if (updated && updated.error) {
       return sendResponse({
         res,
@@ -124,26 +142,24 @@ const updateInAppOrders = async (req, res) => {
       pathParams: ["organization"],
       objectIdFields: ["organization"],
     })
-  ) return;
+  )
+    return;
 
   // normalize boolean
   isOrderingEnabled =
     isOrderingEnabled === true || isOrderingEnabled === "true";
 
   try {
-    await Orderservice.updateInAppOrders(
-      organization,
-      isOrderingEnabled
-    );
+    await Orderservice.updateInAppOrders(organization, isOrderingEnabled);
 
     return sendResponse({
       res,
       statusCode: 200,
       data: isOrderingEnabled,
-      translationKey: `in_app_ordering_${isOrderingEnabled ? "enabled" : "disabled"
-        }`,
+      translationKey: `in_app_ordering_${
+        isOrderingEnabled ? "enabled" : "disabled"
+      }`,
     });
-
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
     return sendResponse({
@@ -154,8 +170,6 @@ const updateInAppOrders = async (req, res) => {
     });
   }
 };
-
-
 
 const getInAppOrders = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
@@ -197,9 +211,48 @@ const getInAppOrders = async (req, res) => {
   }
 };
 
+const sendPaymentReminder = async (req, res) => {
+  const { orderId } = req.query;
+
+  if (
+    !validateParams(req, res, {
+      queryParams: ["orderId"],
+      objectIdFields: ["orderId"],
+    })
+  )
+    return;
+
+  try {
+    const result = await Orderservice.sendPaymentReminder(orderId);
+
+    if (result && result.error) {
+      return sendResponse({         
+        res,
+        statusCode: 400,
+        translationKey: result.error,
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "payment_reminder_sent_successfully",
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
 module.exports = {
   getOrders,
   updateOrders,
   updateInAppOrders,
-  getInAppOrders
+  getInAppOrders,
+  sendPaymentReminder,
 };

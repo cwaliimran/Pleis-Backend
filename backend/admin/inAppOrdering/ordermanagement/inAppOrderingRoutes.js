@@ -3,7 +3,8 @@ const {
   getOrders,
   updateOrders,
   updateInAppOrders,
-  getInAppOrders
+  getInAppOrders,
+  sendPaymentReminder
 } = require("./inAppOrderingController"); // Assuming you have a separate controller for promo codes
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
@@ -23,6 +24,7 @@ router.get("/", roleMiddleware(["admin","organizer"]), OrdersRateLimiter, getOrd
 router.put("/update/:organization", roleMiddleware(["admin","organizer"]), updateInAppOrders);
 router.put("/:id", roleMiddleware(["admin","organizer"]), updateOrders);
 router.get("/update", roleMiddleware(["admin","organizer"]), getInAppOrders);
+router.get("/reminder", roleMiddleware(["admin", "organizer"]), sendPaymentReminder);
 
 
 

@@ -51,13 +51,14 @@ const OrdersSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ["pendingPayment", "pending", "confirmed", "sent", "completed", "cancelled", "preorder"],
+            enum: ["pendingPayment", "pending", "confirmed", "sent", "completed", "cancelled", "rejected", "preorder"],
             default: "pending",
         },
         lockUntil: {
             type: Date,
-            index: true,
+            index: true
         },
+
 
         notes: { type: String, default: "" },
 
@@ -100,6 +101,22 @@ const OrdersSchema = new mongoose.Schema(
         tableNumber: {
             type: String,
             required: function () { return this.pickupType === "tableService"; },
+        },
+        reasonForCancellation: {
+            type: String,
+            default: null,
+        },
+        reasonForRejection: {
+            type: String,
+            default: null,
+        },
+        noteForRejection: {
+            type: String,
+            default: null,
+        },
+        noteForCancellation: {
+            type: String,
+            default: null,
         },
         updateHistory: {
             type: [

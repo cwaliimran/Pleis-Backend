@@ -171,11 +171,7 @@ const filterOrders = ({
 
 const formatOrdersForUI = (
   orders = [],
-  orderStatus = "",
-  activeorderStatus = "",
-  pickupFilter = "",
-  limit = 10,
-  page = 1
+
 ) => {
   const counts = countOrders(orders);
 
