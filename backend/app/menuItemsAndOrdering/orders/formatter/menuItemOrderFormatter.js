@@ -12,7 +12,7 @@ function menuItemOrderFormatter(order, timezone) {
   if (obj.organization && obj.organization.basicInfo && obj.organization.basicInfo.media) {
     obj.organization.basicInfo.media.logo = getFullImageUrl(obj.organization.basicInfo.media.logo || "noimage.png");
   }
-  if(obj.user) {
+  if (obj.user) {
     obj.user.profileIcon = getFullImageUrl(obj.user.profileIcon || "noimage.png");
   }
 
@@ -22,7 +22,7 @@ function menuItemOrderFormatter(order, timezone) {
         const snap = item.menuItemSnapShot;
 
         // Format image URL
-        snap.image = getFullImageUrl(snap.image || "noimage.png");x
+        snap.image = getFullImageUrl(snap.image || "noimage.png");
 
         // Convert stored UTC times to user's timezone
         if (snap.startTime && snap.endTime) {
