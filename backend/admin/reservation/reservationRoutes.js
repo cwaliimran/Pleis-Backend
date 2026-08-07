@@ -14,6 +14,8 @@ const {
   copyReservationSlotsController,
   changeUsersReservationsTiming,
   createReservationPreferences,
+  getReservationsV2,
+  getReservationsV2Calender,
 } = require("./reservationController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -39,6 +41,18 @@ router.post(
 
 // Get all Reservations with pagination
 router.get("/", roleMiddleware(["admin", "staff", "organizer", "manager"]),apiRateLimiter, getReservations);
+router.get(
+  "/v2",
+  roleMiddleware(["admin", "staff", "organizer", "manager"]),
+  apiRateLimiter,
+  getReservationsV2,
+);
+router.get(
+  "/v2/calender",
+  roleMiddleware(["admin", "staff", "organizer", "manager"]),
+  apiRateLimiter,
+  getReservationsV2Calender,
+);
 router.get("/calendar", roleMiddleware(["admin", "staff", "organizer", "manager"]),apiRateLimiter, getCalendarReservations);
 router.post("/copy", roleMiddleware(["admin", "staff", "organizer", "manager"]),apiRateLimiter, copyUserReservationsController);
 router.post("/copy-slots", roleMiddleware(["admin", "staff", "organizer", "manager"]),apiRateLimiter, copyReservationSlotsController);

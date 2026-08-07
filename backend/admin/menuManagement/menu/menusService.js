@@ -375,7 +375,7 @@ const getTimezoneDateTime = (timezone = "Asia/Karachi") => {
   };
 };
 
-const duplicateMenuAndItems = async (menuId, organization, timezone) => {
+const duplicateMenuAndItems = async (menuId, organization, timezone,name) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -393,7 +393,7 @@ const duplicateMenuAndItems = async (menuId, organization, timezone) => {
     const duplicatedMenu = {
       ...menu.toObject(),
       _id: new mongoose.Types.ObjectId(),
-      title: `${menu.title}-copy-${formattedDate}-${formattedTime}`,
+      title: name || `${menu.title}-copy-${formattedDate}-${formattedTime}`,
       status: "inactive",
       organization: organization,
     };
