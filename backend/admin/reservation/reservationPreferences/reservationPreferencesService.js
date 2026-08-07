@@ -20,7 +20,6 @@ const updateReservationPreferences = async (id, data) => {
   // ALLOWED FIELDS
   // -----------------------------
   const allowedFields = [
-    "companyOrganizer",
     "isReservationEnabled",
     "timeSlotsSetting",
     "automaticResponse",

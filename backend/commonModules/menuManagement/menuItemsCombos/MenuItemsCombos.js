@@ -23,8 +23,22 @@ const menuItemsCombosSchema = new mongoose.Schema(
       default: "",
     },
     menuItems: {
-      type: [mongoose.Schema.Types.ObjectId],
-      ref: "MenuItems",
+      type: [
+        {
+          menuItem: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "MenuItems",
+            required: true,
+          },
+          quantity: {
+            type: Number,
+            required: true,
+            min: 1,
+            default: 1,
+          },
+          _id: false,
+        },
+      ],
       default: [],
       validate: {
         validator: (items) => Array.isArray(items) && items.length >= 2,

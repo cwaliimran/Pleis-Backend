@@ -26,11 +26,12 @@ const getReservationPreferencess = async (req, res) => {
       });
       console.log("ReservationPreferencess", ReservationPreferencess);
 
+
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "Reservation_Preferencess_fetched_successfully",
-      data: ReservationPreferencess.reservationPreferences || {},
+      data: ReservationPreferencess?.reservationPreferences || {},
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
