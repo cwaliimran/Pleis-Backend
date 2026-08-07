@@ -115,7 +115,7 @@ const comboLookupStages = [
       as: "_menuItemDocs",
       pipeline: [
         ...menuItemsWithV2FieldsPipeline,
-        { $project: { title: 1, menu: 1 } },
+        { $project: { title: 1, menu: 1, basePrice:1 } },
       ],
     },
   },
