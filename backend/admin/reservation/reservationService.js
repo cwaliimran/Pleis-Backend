@@ -1,8 +1,19 @@
 // services/reservationservice.js
-const { buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
-const { generateMeta, getCurrentDateInTimezone, fireAndForget } = require("../../helperUtils/responseUtil");
-const { reservationsFormatter, userReservationsFormatter } = require("../../app/reservations/formaters/reservationFormetter");
-const { userReservationFormatterAdjustDates } = require("./formatters/userReservationFormatterAdjustDates");
+const {
+  buildKeywordQueryFromModels,
+} = require("../../helperUtils/dbUtils/queryUtil");
+const {
+  generateMeta,
+  getCurrentDateInTimezone,
+  fireAndForget,
+} = require("../../helperUtils/responseUtil");
+const {
+  reservationsFormatter,
+  userReservationsFormatter,
+} = require("../../app/reservations/formaters/reservationFormetter");
+const {
+  userReservationFormatterAdjustDates,
+} = require("./formatters/userReservationFormatterAdjustDates");
 const Reservations = require("@ReservationsModel");
 const { UserReservations } = require("@UserReservationsModel");
 const ReservationRepo = require("./reservationRepository");
@@ -19,10 +30,15 @@ const {
 } = require("@utils/responseUtil");
 const { cloneTimingSlots } = require("./utils/cloneTimingSlots");
 const { cloneSingleSlot } = require("./utils/cloneSingleSlot");
-const { sendUserNotifications } = require("../../controllers/communicationController");
+const {
+  sendUserNotifications,
+} = require("../../controllers/communicationController");
 const { NotificationTypes } = require("../../models/Notifications");
 const { getActiveEventsForOrg } = require("../events/eventRepository");
-const { EventCheckins } = require("../../commonModules/events/EventCheckinsModel");
+const {
+  EventCheckins,
+} = require("../../commonModules/events/EventCheckinsModel");
+const { formatReservationDates } = require("./formatters/reservationDateFormatter");
 
 const createReservation = async (data) => {
   let Reservation = await ReservationRepo.createReservation(data);
@@ -30,22 +46,64 @@ const createReservation = async (data) => {
 };
 
 // Populate venue data for reservations (updated for new schema)
-const getReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range }) => {
+const getReservations = async ({
+  timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  userId,
+  organizationsId,
+  date,
+  range,
+}) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-  let { reservations, meta } = await ReservationRepo.getReservations({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, skip });
+  let { reservations, meta } = await ReservationRepo.getReservations({
+    timezone,
+    page,
+    limit,
+    keyword,
+    status,
+    userId,
+    organizationsId,
+    date,
+    range,
+    skip,
+  });
 
   return {
     reservations,
-    meta
+    meta,
   };
 };
-const getavailableReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range }) => {
+const getavailableReservations = async ({
+  timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  userId,
+  organizationsId,
+  date,
+  range,
+}) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
-  let { reservations, meta } = await ReservationRepo.getavailableReservations({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, skip });
+  let { reservations, meta } = await ReservationRepo.getavailableReservations({
+    timezone,
+    page,
+    limit,
+    keyword,
+    status,
+    userId,
+    organizationsId,
+    date,
+    range,
+    skip,
+  });
 
   return {
     reservations,
-    meta
+    meta,
   };
 };
 const updateReservation = async (id, data) => {
@@ -58,7 +116,6 @@ const updateReservation = async (id, data) => {
   // VALIDATIONS
   // -----------------------------
   if (data.conditionType) {
-
     // Utility for null/undefined check
     const isNil = (v) => v === null || v === undefined;
 
@@ -71,40 +128,35 @@ const updateReservation = async (id, data) => {
 
     // Condition type changed
     if (Reservation.conditionType !== data.conditionType) {
-
       if (data.conditionType === "minimumSpendOnLocation") {
-
         if (amountMissing && customTextMissing) {
           return {
-            error: "amount_or_customText_is_required_when_conditionType_changes_to_minimumSpendOnLocation."
+            error:
+              "amount_or_customText_is_required_when_conditionType_changes_to_minimumSpendOnLocation.",
           };
         }
 
         if (amountMissing) {
           return {
-            error: "amount_is_required_when_conditionType_changes_and_is_not_minimumSpendOnLocation."
+            error:
+              "amount_is_required_when_conditionType_changes_and_is_not_minimumSpendOnLocation.",
           };
         }
       }
     }
 
     // Ticket requirement validation
-    if (
-      data.conditionType === "ticketRequirement" &&
-      !data.ticketType
-    ) {
+    if (data.conditionType === "ticketRequirement" && !data.ticketType) {
       return {
-        error: "ticket_type_is_required_when_conditionType_is_ticketRequirement."
+        error:
+          "ticket_type_is_required_when_conditionType_is_ticketRequirement.",
       };
     }
 
     // Custom text validation
-    if (
-      data.conditionType === "customText" &&
-      !data.customText
-    ) {
+    if (data.conditionType === "customText" && !data.customText) {
       return {
-        error: "custom_text_is_required_when_conditionType_is_customText."
+        error: "custom_text_is_required_when_conditionType_is_customText.",
       };
     }
   }
@@ -130,7 +182,7 @@ const updateReservation = async (id, data) => {
     "organizationId",
     "reservationType",
     "notes",
-    "bonusPoints"
+    "bonusPoints",
   ];
 
   // -----------------------------
@@ -184,33 +236,47 @@ const getReservationDetails = async (id) => {
   return reservationsFormatter(Reservation);
 };
 
-
-
-
-
-const getUserReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, reservationId }) => {
+const getUserReservations = async ({
+  timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  userId,
+  organizationsId,
+  date,
+  range,
+  reservationId,
+}) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const today = getCurrentDateInTimezone({ timezone, isDateOnly: true });
-  let { reservations, meta } = await ReservationRepo.getUserReservations({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, today, skip, reservationId });
+  let { reservations, meta } = await ReservationRepo.getUserReservations({
+    timezone,
+    page,
+    limit,
+    keyword,
+    status,
+    userId,
+    organizationsId,
+    date,
+    range,
+    today,
+    skip,
+    reservationId,
+  });
 
   return {
     reservations,
-    meta
+    meta,
   };
 };
 
-const updateUserReservationStatus = async (
-  id,
-  value,
-  changedBy,
-) => {
+const updateUserReservationStatus = async (id, value, changedBy) => {
   const updated = await UserReservations.findById(id);
   if (!updated) return null;
   updated.status = value;
   updated.reservationChanges.push({
-    changedBy: changedBy
-      ? new mongoose.Types.ObjectId(changedBy)
-      : null,
+    changedBy: changedBy ? new mongoose.Types.ObjectId(changedBy) : null,
     action: "accepted",
     newStatus: value,
     createdAt: new Date(),
@@ -221,67 +287,64 @@ const updateUserReservationStatus = async (
   //add entry in events checkins if value is "checkedIn"
   if (value === "checkedIn") {
     // Implementation for adding entry in events checkins
-      // Handle checked-in logic if needed
-        fireAndForget(
-          (async () => {
-            const reservation = updated;
-            const now = new Date();
-    
-            let events = [];
-    
-            // 1️⃣ If explicitly linked event exists
-            if (reservation.optionalEventId) {
-              events = [
-                {
-                  _id: reservation.optionalEventId,
-                  companyOrganizer: reservation.companyOrganizer,
-                },
-              ];
-            } else {
-              // 2️⃣ fallback → find active events
-              events = await getActiveEventsForOrg(
-                reservation.organizationId,
-                now
-              );
-            }
-    
-            if (!events.length) return;
-    
-            const userId = reservation.userId;
-    
-            if (!userId) return;
-    
-            const ops = events.map((event) => ({
-              updateOne: {
-                filter: {
-                  event: event._id,
-                  user: userId,
-                },
-                update: {
-                  $setOnInsert: {
-                    organization: reservation.organizationId,
-                    companyOrganizer: event.companyOrganizer,
-                    source: "reservation",
-                    checkedInAt: now,
-                  },
-                },
-                upsert: true,
+    // Handle checked-in logic if needed
+    fireAndForget(
+      (async () => {
+        const reservation = updated;
+        const now = new Date();
+
+        let events = [];
+
+        // 1️⃣ If explicitly linked event exists
+        if (reservation.optionalEventId) {
+          events = [
+            {
+              _id: reservation.optionalEventId,
+              companyOrganizer: reservation.companyOrganizer,
+            },
+          ];
+        } else {
+          // 2️⃣ fallback → find active events
+          events = await getActiveEventsForOrg(reservation.organizationId, now);
+        }
+
+        if (!events.length) return;
+
+        const userId = reservation.userId;
+
+        if (!userId) return;
+
+        const ops = events.map((event) => ({
+          updateOne: {
+            filter: {
+              event: event._id,
+              user: userId,
+            },
+            update: {
+              $setOnInsert: {
+                organization: reservation.organizationId,
+                companyOrganizer: event.companyOrganizer,
+                source: "reservation",
+                checkedInAt: now,
               },
-            }));
-    
-            await EventCheckins.bulkWrite(ops, { ordered: false });
-          })(),
-          "RESERVATION_EVENT_CHECKIN"
-        );
+            },
+            upsert: true,
+          },
+        }));
+
+        await EventCheckins.bulkWrite(ops, { ordered: false });
+      })(),
+      "RESERVATION_EVENT_CHECKIN",
+    );
   }
 
   return true;
 };
 
-
 const updateUserReservation = async (data) => {
-  const UserReservation =
-    await ReservationRepo.findUserReservationById(data.id);
+  const UserReservation = await ReservationRepo.findUserReservationById(
+    data.id,
+  );
 
   if (!UserReservation) return null;
 
@@ -302,9 +365,7 @@ const updateUserReservation = async (data) => {
   let timingChanged = false;
 
   if (data.timingSlots) {
-    oldTiming = JSON.parse(
-      JSON.stringify(UserReservation.timingSlots)
-    );
+    oldTiming = JSON.parse(JSON.stringify(UserReservation.timingSlots));
 
     if (!UserReservation.timingSlots) {
       UserReservation.timingSlots = {
@@ -314,8 +375,7 @@ const updateUserReservation = async (data) => {
     }
 
     if (data.timingSlots.enabled !== undefined) {
-      UserReservation.timingSlots.enabled =
-        data.timingSlots.enabled;
+      UserReservation.timingSlots.enabled = data.timingSlots.enabled;
     }
 
     if (Array.isArray(data.timingSlots.dateTimeSlots)) {
@@ -362,14 +422,11 @@ const updateUserReservation = async (data) => {
   // -----------------------------
   if (UserReservation.userId) {
     await sendUserNotifications({
-      recipientIds: [
-        UserReservation.userId.toString(),
-      ],
+      recipientIds: [UserReservation.userId.toString()],
       title: "Reservation Updated",
-      body:
-        timingChanged
-          ? "Your reservation timing has been updated."
-          : "Your reservation details have been updated.",
+      body: timingChanged
+        ? "Your reservation timing has been updated."
+        : "Your reservation details have been updated.",
 
       data: {
         type: NotificationTypes.RESERVATION_UPDATE,
@@ -387,16 +444,23 @@ const updateUserReservation = async (data) => {
   };
 };
 
-
-
-const getCalendarReservationsService = async ({ timezone, companyOrganizer, organization, date }) => {
-  let { reservations } = await ReservationRepo.getCalendarReservations({ timezone, companyOrganizer, organization, date, });
+const getCalendarReservationsService = async ({
+  timezone,
+  companyOrganizer,
+  organization,
+  date,
+}) => {
+  let { reservations } = await ReservationRepo.getCalendarReservations({
+    timezone,
+    companyOrganizer,
+    organization,
+    date,
+  });
 
   return {
     reservations,
   };
 };
-
 
 const copyUserReservations = async ({
   reservations,
@@ -405,7 +469,7 @@ const copyUserReservations = async ({
   copiedBy,
 }) => {
   const reservationIds = reservations.map(
-    (id) => new mongoose.Types.ObjectId(id)
+    (id) => new mongoose.Types.ObjectId(id),
   );
 
   // 1️⃣ Fetch source reservations
@@ -446,10 +510,10 @@ const copyUserReservations = async ({
   }
 
   // 3️⃣ Bulk insert
-  let reservationsItems = await ReservationRepo.insertUserReservations(docsToInsert);
+  let reservationsItems =
+    await ReservationRepo.insertUserReservations(docsToInsert);
   return reservationsItems.map((res) => reservationsFormatter(res, timezone));
 };
-
 
 const copyReservationSlots = async ({
   reservationIds,
@@ -466,9 +530,7 @@ const copyReservationSlots = async ({
   /* --------------------------------
      1️⃣ Convert to ObjectIds
      -------------------------------- */
-  const objectIds = reservationIds.map(
-    (id) => new mongoose.Types.ObjectId(id)
-  );
+  const objectIds = reservationIds.map((id) => new mongoose.Types.ObjectId(id));
 
   /* --------------------------------
      2️⃣ Fetch all reservations at once
@@ -480,13 +542,9 @@ const copyReservationSlots = async ({
      -------------------------------- */
   if (sources.length !== reservationIds.length) {
     const foundIds = sources.map((s) => s._id.toString());
-    const missingIds = reservationIds.filter(
-      (id) => !foundIds.includes(id)
-    );
+    const missingIds = reservationIds.filter((id) => !foundIds.includes(id));
 
-    throw new Error(
-      `Reservations not found: ${missingIds.join(", ")}`
-    );
+    throw new Error(`Reservations not found: ${missingIds.join(", ")}`);
   }
 
   /* --------------------------------
@@ -505,7 +563,8 @@ const copyReservationSlots = async ({
 
     // ✅ Update business fields
     // cloned.reservationType = reservationType;
-    const reservationId = await ReservationRepo.getReservationTypeId(reservationType);
+    const reservationId =
+      await ReservationRepo.getReservationTypeId(reservationType);
     cloned.reservationId = reservationId;
     cloned.transferHistory = [];
     cloned.clonedFromReservationId = source._id;
@@ -534,11 +593,9 @@ const copyReservationSlots = async ({
      6️⃣ Format response
      -------------------------------- */
   return insertedReservations.map((reservation) =>
-    reservationsFormatter(reservation, timezone)
+    reservationsFormatter(reservation, timezone),
   );
 };
-
-
 
 const changeUsersReservationsTiming = async ({
   reservationIds,
@@ -550,9 +607,7 @@ const changeUsersReservationsTiming = async ({
     throw new Error("reservationIds must be a non-empty array");
   }
 
-  const objectIds = reservationIds.map(
-    (id) => new mongoose.Types.ObjectId(id)
-  );
+  const objectIds = reservationIds.map((id) => new mongoose.Types.ObjectId(id));
 
   /* --------------------------------
      1️⃣ Fetch reservations
@@ -578,13 +633,9 @@ const changeUsersReservationsTiming = async ({
     if (!slot) continue;
 
     // Save old timing
-    const oldTiming = JSON.parse(
-      JSON.stringify(reservation.timingSlots)
-    );
+    const oldTiming = JSON.parse(JSON.stringify(reservation.timingSlots));
 
-    const slotDate = moment(block.date)
-      .tz(timezone)
-      .format("YYYY-MM-DD");
+    const slotDate = moment(block.date).tz(timezone).format("YYYY-MM-DD");
 
     const newStart = moment
       .tz(`${slotDate} ${startTime}`, "YYYY-MM-DD hh:mm A", timezone)
@@ -601,8 +652,7 @@ const changeUsersReservationsTiming = async ({
     reservation.timingSlots.dateTimeSlots[0].timeSlots[0].endTime = newEnd;
 
     // Save change history
-    reservation.reservationChanges =
-      reservation.reservationChanges || [];
+    reservation.reservationChanges = reservation.reservationChanges || [];
 
     reservation.reservationChanges.push({
       changedBy: reservation.companyOrganizer,
@@ -637,7 +687,6 @@ const changeUsersReservationsTiming = async ({
     updatedDocs.push(reservation);
   }
 
-
   /* --------------------------------
      3️⃣ Execute bulk update
      -------------------------------- */
@@ -647,9 +696,9 @@ const changeUsersReservationsTiming = async ({
   }
 
   const recipientIds = reservations
-    .map(r => r.userId)
+    .map((r) => r.userId)
     .filter(Boolean)
-    .map(id => id.toString());
+    .map((id) => id.toString());
 
   if (recipientIds.length) {
     sendUserNotifications({
@@ -663,28 +712,76 @@ const changeUsersReservationsTiming = async ({
       sender: reservations[0]?.companyOrganizer?.toString() || null,
       objectId: reservations[0]?._id?.toString() || null,
     })
-      .then(() =>
-        console.log("Reservation timing notifications sent")
-      )
-      .catch(err =>
-        console.error(
-          "Error sending notifications in background:",
-          err
-        )
+      .then(() => console.log("Reservation timing notifications sent"))
+      .catch((err) =>
+        console.error("Error sending notifications in background:", err),
       );
   }
-
-
 
   /* --------------------------------
      4️⃣ Format response
      -------------------------------- */
   return updatedDocs.map((item) =>
-    userReservationFormatterAdjustDates(item, timezone)
+    userReservationFormatterAdjustDates(item, timezone),
   );
 };
 
+const getReservationsV2 = async ({
+  page,
+  limit,
+  status,
+  companyOrganizer,
+  organizationsId,
+  date,
+  timezone,
+  reservationType,
+}) => {
+  const skip = limit === 0 ? 0 : (page - 1) * limit;
+  let { reservations, meta } = await ReservationRepo.getReservationsV2({
+    page,
+    limit,
+    status,
+    companyOrganizer,
+    organizationsId,
+    date,
+    skip,
+    timezone,
+    reservationType,
+  });
 
+  return {
+    reservations: formatReservationDates(reservations, timezone),
+    meta,
+  };
+};
+
+const getWeekRange = (date) => {
+  const start = moment(date).startOf("isoWeek").toDate(); // Monday
+  const end = moment(date).endOf("isoWeek").toDate(); // Sunday
+
+  return { start, end };
+};
+const getReservationsV2Calender = async ({
+  timezone,
+  companyOrganizer,
+  organization,
+  date,
+}) => {
+  const { start, end } = getWeekRange(date);
+  console.log("start ", start, "end ", end);
+  let { reservations, meta } = await ReservationRepo.getReservationsV2Calender({
+    timezone,
+    companyOrganizer,
+    organization,
+    start,
+    end,
+  });
+
+  return {
+    reservations: formatReservationDates(reservations, timezone),
+    meta,
+  };
+};
 module.exports = {
   copyReservationSlots,
   createReservation,
@@ -698,5 +795,7 @@ module.exports = {
   getavailableReservations,
   getCalendarReservationsService,
   copyUserReservations,
-  changeUsersReservationsTiming
+  changeUsersReservationsTiming,
+  getReservationsV2,
+  getReservationsV2Calender,
 };

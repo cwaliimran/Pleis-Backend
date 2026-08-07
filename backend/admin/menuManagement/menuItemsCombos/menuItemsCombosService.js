@@ -38,7 +38,7 @@ const getMenuItemsCombos = async ({
     sortOrder,
     creator,
   });
-
+console.log("combos", combos);
   return {
     combos: formatMenuItemsComboList(combos),
     meta,

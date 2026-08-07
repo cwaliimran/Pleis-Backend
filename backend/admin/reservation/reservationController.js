@@ -490,6 +490,8 @@ const deleteReservation = async (req, res) => {
 
 
 
+
+
 const getUserReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status , date, range, organizationsId, companyOrganizer, reservationId } = req.query;
@@ -982,6 +984,90 @@ const createReservationPreferences = async (req, res) => {
   }
 };
 
+
+
+const getReservationsV2 = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let { status, date, organizationsId, companyOrganizer, reservationType } =
+    req.query;
+  try {
+    const timezone = req.user.timezone;
+    if (
+      (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
+      (!organizationsId || organizationsId === "undefined" || organizationsId === "null")
+    ) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "companyOrganizer_or_organizationsId_is_required",
+      });
+    } 
+    const resutl = await reservationService.getReservationsV2({
+      page,
+      limit,
+      status,
+      companyOrganizer,
+      organizationsId,
+      date,
+      timezone,
+      reservationType,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "reservations_fetched_successfully",
+      data: resutl.reservations,
+      meta: resutl.meta
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: error.message || "internal_server_error",
+      error,
+    });
+  }
+};
+
+const getReservationsV2Calender = async (req, res) => {
+  const { date, organization, companyOrganizer } = req.query;
+
+  try {
+    if (
+      (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
+      (!organization || organization === "undefined" || organization === "null")
+    ) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "companyOrganizer_and_organization_is_required",
+      });
+    }
+
+    const timezone = req.user.timezone;
+    const { reservations } = await reservationService.getReservationsV2Calender({
+      timezone,
+      companyOrganizer,
+      organization,
+      date,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "reservations_fetched_successfully",
+      data: reservations,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: error.message || "internal_server_error",
+      error,
+    });
+  }
+};
 module.exports = {
   createReservation,
   getReservations,
@@ -997,4 +1083,6 @@ module.exports = {
   copyReservationSlotsController,
   changeUsersReservationsTiming,
   createReservationPreferences,
+  getReservationsV2,
+  getReservationsV2Calender,
 };

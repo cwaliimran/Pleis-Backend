@@ -72,7 +72,7 @@ const createMenuItemsCombo = async (req, res) => {
   if (
     !validateParams(req, res, {
       rawData: ["name", "subCategory", "price", "priceMode"],
-      objectIdFields: ["subCategory", "menuItems"],
+      objectIdFields: ["subCategory"],
       enumFields: {
         priceMode: Object.values(PriceMode),
         status: ["active", "inactive"],
@@ -247,22 +247,31 @@ const updateMenuItemsCombo = async (req, res) => {
     price,
     status,
   } = req.body;
+if (menuItems !== undefined) {
+  const isValidMenuItems =
+    Array.isArray(menuItems) &&
+    menuItems.length >= 2 &&
+    menuItems.every(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        mongoose.Types.ObjectId.isValid(item.menuItem) &&
+        Number.isInteger(item.quantity) &&
+        item.quantity >= 1,
+    );
 
-  if (
-    menuItems !== undefined &&
-    (!Array.isArray(menuItems) || menuItems.length < 2)
-  ) {
+  if (!isValidMenuItems) {
     return sendResponse({
       res,
       statusCode: 400,
       translationKey: "combo_items_minimum_required",
     });
   }
-
+}
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
-      objectIdFields: ["id", "subCategory", "menuItems"],
+      objectIdFields: ["id", "subCategory"],
       enumFields: {
         priceMode: Object.values(PriceMode),
         status: ["active", "inactive", "deleted"],

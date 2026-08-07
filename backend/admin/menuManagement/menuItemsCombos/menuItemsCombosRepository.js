@@ -110,11 +110,38 @@ const comboLookupStages = [
   {
     $lookup: {
       from: "menuitems",
-      localField: "menuItems",
+      localField: "menuItems.menuItem",
       foreignField: "_id",
-      as: "menuItems",
-      pipeline: menuItemsWithV2FieldsPipeline,
+      as: "_menuItemDocs",
+      pipeline: [
+        ...menuItemsWithV2FieldsPipeline,
+        { $project: { title: 1, menu: 1 } },
+      ],
     },
+  },
+  {
+    $addFields: {
+      menuItems: {
+        $map: {
+          input: "$menuItems",
+          as: "mi",
+          in: {
+            quantity: "$$mi.quantity",
+            menuItem: {
+              $first: {
+                $filter: {
+                  input: "$_menuItemDocs",
+                  cond: { $eq: ["$$this._id", "$$mi.menuItem"] },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  {
+    $project: { _menuItemDocs: 0 },
   },
 ];
 
@@ -360,6 +387,7 @@ const getMenuItemsCombos = async ({
   const result = await MenuItemsCombos.aggregate(pipeline);
   const combos = await attachApplicableMenus(result[0]?.data || []);
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
+  console.log("combos", combos);
 
   const baseFilter = {
     ...(creator && { creator: new mongoose.Types.ObjectId(creator) }),
