@@ -302,7 +302,7 @@ const deleteMenu = async (req, res) => {
 };
 const duplicateMenuAndItems = async (req, res) => {
   const { id: menu } = req.params;
-  const { organization } = req.body;
+  const { organization,name } = req.body;
   const timezone = req.user.timezone || "UTC";
 
   if (
@@ -318,6 +318,7 @@ const duplicateMenuAndItems = async (req, res) => {
       menu,
       organization,
       timezone,
+      name  
     );
     if (!duplicatedMenu) {
       return sendResponse({

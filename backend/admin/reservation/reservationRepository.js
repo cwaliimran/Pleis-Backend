@@ -4,8 +4,11 @@ const { UserReservations } = require("@UserReservationsModel");
 const { User } = require("../../models/UserModel");
 const Event = require("@EventsModel");
 const mongoose = require("mongoose");
-const { reservationsFormatter, reservationsFormatterAdjustDates } = require("../../app/reservations/formaters/reservationFormetter");
-const Organizations = require("@OrganizationModel")
+const {
+  reservationsFormatter,
+  reservationsFormatterAdjustDates,
+} = require("../../app/reservations/formaters/reservationFormetter");
+const Organizations = require("@OrganizationModel");
 const {
   generateMeta,
   getStartAndEndOfMonth,
@@ -17,52 +20,61 @@ const {
 const { getAllUsers } = require("../usersManagement/usersService");
 const { sendUserNotifications } = require("@notificationsUtil");
 const { NotificationTypes } = require("@NotificationsModel");
-const { userReservationFormatterAdjustDates } = require("./formatters/userReservationFormatterAdjustDates");
-const { attachUserLevelsToReservations, buildClubMemberMap } = require("./utils/attachUserLevelsToReservations");
-const { getClubMembersForUsers } = require("../../app/loyalty/clubMembers/clubMembersRepository");
+const {
+  userReservationFormatterAdjustDates,
+} = require("./formatters/userReservationFormatterAdjustDates");
+const {
+  attachUserLevelsToReservations,
+  buildClubMemberMap,
+} = require("./utils/attachUserLevelsToReservations");
+const {
+  getClubMembersForUsers,
+} = require("../../app/loyalty/clubMembers/clubMembersRepository");
 const { getActiveTiersWithProjection } = require("../tiers/tiersRepository");
 const getCreatorFromOrganization = async (organizationId) => {
   try {
     const result = await Organizations.aggregate([
       {
-        $match: { _id: new mongoose.Types.ObjectId(organizationId) },  // Match the organization by its ID
+        $match: { _id: new mongoose.Types.ObjectId(organizationId) }, // Match the organization by its ID
       },
       {
         $lookup: {
-          from: "users",  // Assuming the 'creator' is in the 'users' collection
-          localField: "creator",  // Field in the 'organizations' collection that references the creator
-          foreignField: "_id",  // Field in the 'users' collection to match with
-          as: "creatorDetails",  // Alias for the resulting array of creator data
+          from: "users", // Assuming the 'creator' is in the 'users' collection
+          localField: "creator", // Field in the 'organizations' collection that references the creator
+          foreignField: "_id", // Field in the 'users' collection to match with
+          as: "creatorDetails", // Alias for the resulting array of creator data
         },
       },
       {
-        $unwind: { path: "$creatorDetails", preserveNullAndEmptyArrays: true },  // Unwind creator details array (if it exists)
+        $unwind: { path: "$creatorDetails", preserveNullAndEmptyArrays: true }, // Unwind creator details array (if it exists)
       },
       {
         $project: {
-          creatorId: "$creatorDetails._id",  // Extract just the _id of the creator
-          _id: 0,  // Exclude the organization _id from the result
+          creatorId: "$creatorDetails._id", // Extract just the _id of the creator
+          _id: 0, // Exclude the organization _id from the result
         },
       },
     ]);
 
     if (result.length > 0) {
-      return result[0].creatorId;  // Return the creator ID
+      return result[0].creatorId; // Return the creator ID
     } else {
-      return null;  // Return null if no matching organization is found
+      return null; // Return null if no matching organization is found
     }
   } catch (err) {
-
     throw err;
   }
 };
 const createReservation = async (data) => {
   try {
-
-    data.companyOrganizer = await getCreatorFromOrganization(data.organizationId);
+    data.companyOrganizer = await getCreatorFromOrganization(
+      data.organizationId,
+    );
     const Reservation = new Reservations(data);
     await Reservation.save();
-    const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(user => user._id.toString());
+    const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(
+      (user) => user._id.toString(),
+    );
     // await sendUserNotifications({
     //   recipientIds: userIds,
     //   title: `New Reservation Available`,
@@ -112,24 +124,37 @@ const findByIdAndUpdate = async (id, data) => {
   return Reservations.findByIdAndUpdate(id, data, { new: true });
 };
 
-
-
-
-const getReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, skip }) => {
+const getReservations = async ({
+  timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  userId,
+  organizationsId,
+  date,
+  range,
+  skip,
+}) => {
   const now = getCurrentDateInTimezone({ timezone });
-
 
   let organizationsIds = Array.isArray(organizationsId)
     ? organizationsId
-    : JSON.parse(organizationsId || '[]');
-  organizationsIds = organizationsIds.map(id => new mongoose.Types.ObjectId(id));
+    : JSON.parse(organizationsId || "[]");
+  organizationsIds = organizationsIds.map(
+    (id) => new mongoose.Types.ObjectId(id),
+  );
   const pipeline = [
     {
       $match: {
-        ...(userId && { companyOrganizer: new mongoose.Types.ObjectId(userId) }),
-        ...(organizationsIds.length > 0 && { organizationId: { $in: organizationsIds } }) // Match as ObjectId
-      }
-    }
+        ...(userId && {
+          companyOrganizer: new mongoose.Types.ObjectId(userId),
+        }),
+        ...(organizationsIds.length > 0 && {
+          organizationId: { $in: organizationsIds },
+        }), // Match as ObjectId
+      },
+    },
   ];
   if (range == "monthly") {
     const { start, end } = getStartAndEndOfMonth(now, timezone);
@@ -138,10 +163,10 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
       $match: {
         "timingSlots.dateTimeSlots": {
           $elemMatch: {
-            date: { $gte: start, $lt: end }
-          }
-        }
-      }
+            date: { $gte: start, $lt: end },
+          },
+        },
+      },
     });
   }
   if (range == "weekly") {
@@ -151,10 +176,10 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
       $match: {
         "timingSlots.dateTimeSlots": {
           $elemMatch: {
-            date: { $gte: start, $lt: end }
-          }
-        }
-      }
+            date: { $gte: start, $lt: end },
+          },
+        },
+      },
     });
   }
   if (range == "today") {
@@ -163,10 +188,10 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
       $match: {
         "timingSlots.dateTimeSlots": {
           $elemMatch: {
-            date: { $gte: start, $lt: end }
-          }
-        }
-      }
+            date: { $gte: start, $lt: end },
+          },
+        },
+      },
     });
   }
   // Apply filters
@@ -182,19 +207,17 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
       $match: {
         "timingSlots.dateTimeSlots": {
           $elemMatch: {
-            date: { $gte: start, $lt: end }
-          }
-        }
-      }
+            date: { $gte: start, $lt: end },
+          },
+        },
+      },
     });
   }
 
   if (keyword) {
     const keywordMatch = buildKeywordQueryFromModels(
-      [
-        { schema: Reservations.schema }
-      ],
-      keyword
+      [{ schema: Reservations.schema }],
+      keyword,
     );
 
     if (Object.keys(keywordMatch).length) {
@@ -207,46 +230,53 @@ const getReservations = async ({ timezone, page, limit, keyword, status, userId,
   // Apply pagination + counts using $facet
   pipeline.push({
     $facet: {
-      data: [
-        { $skip: skip },
-        ...(limit === 0 ? [] : [{ $limit: limit }])
-      ],
-      totalFiltered: [{ $count: "count" }]
-    }
+      data: [{ $skip: skip }, ...(limit === 0 ? [] : [{ $limit: limit }])],
+      totalFiltered: [{ $count: "count" }],
+    },
   });
   const result = await Reservations.aggregate(pipeline);
-
 
   let reservations = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   // Additional counts for meta (active/inactive/total by userId as creator)
   const [total, active, inactive] = await Promise.all([
-    Reservations.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "deleted" } }),
-    Reservations.countDocuments({ status: "active", ...(userId && { userId: userId }) }),
-    Reservations.countDocuments({ status: "inactive", ...(userId && { userId: userId }) })
+    Reservations.countDocuments({
+      ...(userId && { userId: userId }),
+      status: { $ne: "deleted" },
+    }),
+    Reservations.countDocuments({
+      status: "active",
+      ...(userId && { userId: userId }),
+    }),
+    Reservations.countDocuments({
+      status: "inactive",
+      ...(userId && { userId: userId }),
+    }),
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
   meta.reservationsCount = { total, active, inactive };
 
-
-  reservations = reservations.map(item => {
+  reservations = reservations.map((item) => {
     const formatted = reservationsFormatter(item);
-    if (formatted.conditionType == "noCondition" || formatted.conditionType == "ticketRequirement" || formatted.conditionType == "customText" || formatted.conditionType == "ticketRequirement") {
+    if (
+      formatted.conditionType == "noCondition" ||
+      formatted.conditionType == "ticketRequirement" ||
+      formatted.conditionType == "customText" ||
+      formatted.conditionType == "ticketRequirement"
+    ) {
       delete formatted.amount;
       if (formatted.conditionType == "noCondition") {
         delete formatted.ticketType;
       }
-    }
-    else {
+    } else {
       delete formatted.ticketType;
     }
     return formatted;
   });
-  return { reservations, meta }
-}
-
+  return { reservations, meta };
+};
 
 const getUserReservations = async ({
   timezone,
@@ -259,7 +289,7 @@ const getUserReservations = async ({
   date,
   range,
   skip = 0,
-  reservationId
+  reservationId,
 }) => {
   const now = getCurrentDateInTimezone({ timezone });
 
@@ -309,15 +339,15 @@ const getUserReservations = async ({
         from: "reservations",
         localField: "reservationId",
         foreignField: "_id",
-        as: "reservation"
-      }
+        as: "reservation",
+      },
     },
     {
       $unwind: {
         path: "$reservation",
-        preserveNullAndEmptyArrays: true
-      }
-    }
+        preserveNullAndEmptyArrays: true,
+      },
+    },
   );
 
   // -----------------------------
@@ -331,27 +361,26 @@ const getUserReservations = async ({
         pipeline: [
           {
             $match: {
-              $expr: { $eq: ["$_id", "$$eventId"] }
-            }
+              $expr: { $eq: ["$_id", "$$eventId"] },
+            },
           },
           {
             $project: {
               _id: 1,
-              "basicInfo.title": 1
-            }
-          }
+              "basicInfo.title": 1,
+            },
+          },
         ],
-        as: "event"
-      }
+        as: "event",
+      },
     },
     {
       $unwind: {
         path: "$event",
-        preserveNullAndEmptyArrays: true
-      }
-    }
+        preserveNullAndEmptyArrays: true,
+      },
+    },
   );
-
 
   // -----------------------------
   // 4️⃣ DATE RANGE FILTERS (Slots)
@@ -361,9 +390,9 @@ const getUserReservations = async ({
     pipeline.push({
       $match: {
         "timingSlots.dateTimeSlots": {
-          $elemMatch: { date: { $gte: start, $lt: end } }
-        }
-      }
+          $elemMatch: { date: { $gte: start, $lt: end } },
+        },
+      },
     });
   }
 
@@ -372,9 +401,9 @@ const getUserReservations = async ({
     pipeline.push({
       $match: {
         "timingSlots.dateTimeSlots": {
-          $elemMatch: { date: { $gte: start, $lt: end } }
-        }
-      }
+          $elemMatch: { date: { $gte: start, $lt: end } },
+        },
+      },
     });
   }
 
@@ -383,9 +412,9 @@ const getUserReservations = async ({
     pipeline.push({
       $match: {
         "timingSlots.dateTimeSlots": {
-          $elemMatch: { date: { $gte: start, $lt: end } }
-        }
-      }
+          $elemMatch: { date: { $gte: start, $lt: end } },
+        },
+      },
     });
   }
 
@@ -397,8 +426,8 @@ const getUserReservations = async ({
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
     pipeline.push({
       $match: {
-        createdAt: { $gte: start, $lt: end }
-      }
+        createdAt: { $gte: start, $lt: end },
+      },
     });
   }
 
@@ -408,7 +437,7 @@ const getUserReservations = async ({
   if (keyword) {
     const keywordMatch = buildKeywordQueryFromModels(
       [{ schema: UserReservations.schema }],
-      keyword
+      keyword,
     );
 
     if (Object.keys(keywordMatch).length) {
@@ -426,12 +455,9 @@ const getUserReservations = async ({
   // -----------------------------
   pipeline.push({
     $facet: {
-      data: [
-        { $skip: skip },
-        ...(limit === 0 ? [] : [{ $limit: limit }])
-      ],
-      totalFiltered: [{ $count: "count" }]
-    }
+      data: [{ $skip: skip }, ...(limit === 0 ? [] : [{ $limit: limit }])],
+      totalFiltered: [{ $count: "count" }],
+    },
   });
 
   // -----------------------------
@@ -449,20 +475,20 @@ const getUserReservations = async ({
   const userIds = [
     ...new Set(
       userReservations
-        .filter(r => r.userId) // remove null/undefined
-        .map(r => r.userId.toString())
-    )
-  ].map(id => new mongoose.Types.ObjectId(id));
+        .filter((r) => r.userId) // remove null/undefined
+        .map((r) => r.userId.toString()),
+    ),
+  ].map((id) => new mongoose.Types.ObjectId(id));
 
   const companyOrganizers = [
-    ...new Set(userReservations.map(r => r.companyOrganizer.toString()))
-  ].map(id => new mongoose.Types.ObjectId(id));
+    ...new Set(userReservations.map((r) => r.companyOrganizer.toString())),
+  ].map((id) => new mongoose.Types.ObjectId(id));
   // -----------------------------
   // FETCH ONCE (BULK)
   // -----------------------------
   const [members, activeTiers] = await Promise.all([
     getClubMembersForUsers({ userIds, companyOrganizers }),
-    getActiveTiersWithProjection({ _id: 1, title: 1 })
+    getActiveTiersWithProjection({ _id: 1, title: 1 }),
   ]);
 
   // -----------------------------
@@ -484,27 +510,23 @@ const getUserReservations = async ({
   const enrichedReservations = attachUserLevelsToReservations({
     reservations: userReservations,
     clubMemberMap: memberMap,
-    tierIdToTitle
+    tierIdToTitle,
   });
 
   // -----------------------------
   // FORMAT + RETURN
   // -----------------------------
   return {
-    reservations: enrichedReservations.map(item =>
-      userReservationFormatterAdjustDates(item, timezone)
+    reservations: enrichedReservations.map((item) =>
+      userReservationFormatterAdjustDates(item, timezone),
     ),
-    meta
+    meta,
   };
-
 };
-
-
 
 const findUserReservationById = async (id) => {
   return UserReservations.findById(id);
 };
-
 
 const findUserReservationsByIdsLean = async (ids) => {
   return UserReservations.find({
@@ -512,17 +534,22 @@ const findUserReservationsByIdsLean = async (ids) => {
   }).lean();
 };
 
-
-
 const findUserById = async (id) => {
   return User.findById(id);
 };
 
-
-
-
-
-const getavailableReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range, skip }) => {
+const getavailableReservations = async ({
+  timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  userId,
+  organizationsId,
+  date,
+  range,
+  skip,
+}) => {
   // let now = getCurrentDateInTimezone({ timezone });
   //  date = convertTimezoneToUtcDateOnly(
   //   now,
@@ -530,7 +557,6 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
   // );
 
   const now = getCurrentUtcDateOnly();
-
 
   let organizationObjectIds = null;
 
@@ -546,7 +572,7 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
 
     organizationObjectIds = ids
       .filter(Boolean)
-      .map(id => new mongoose.Types.ObjectId(id));
+      .map((id) => new mongoose.Types.ObjectId(id));
   }
   const pipeline = [
     {
@@ -560,22 +586,18 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
     },
   ];
 
-
   if (range == "monthly") {
-
     const { start, end } = getStartAndEndOfMonth(now, timezone);
     // Update the pipeline to match events within the specified date range
     pipeline.push({
       $match: {
         "timingSlots.dateTimeSlots": {
           $elemMatch: {
-            date: { $gte: start, $lt: end }
-          }
-        }
-      }
+            date: { $gte: start, $lt: end },
+          },
+        },
+      },
     });
-
-
   }
 
   if (range == "weekly") {
@@ -585,45 +607,36 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
     // Add 1 minute to the end date to capture events at the very end of the week
     const adjustedEnd = new Date(end.getTime() + 60000); // Add 1 minute to the end time
 
-
-
     // Update the pipeline to match events within the specified date range
     pipeline.push({
       $match: {
         "timingSlots.dateTimeSlots": {
           $elemMatch: {
-            date: { $gte: start, $lt: adjustedEnd }
-          }
-        }
-      }
+            date: { $gte: start, $lt: adjustedEnd },
+          },
+        },
+      },
     });
-
-
   }
 
   if (range == "today") {
     // Get the start and end of today based on the timezone
     const { start, end } = getStartAndEndOfDay(now, timezone);
 
-
     // Add 1 minute to the end date to capture events at the very end of the day
     const adjustedEnd = new Date(end.getTime() + 60000); // Add 1 minute to the end time
-
-
 
     // Update the pipeline to match events within the specified date range
     pipeline.push({
       $match: {
         "timingSlots.dateTimeSlots": {
           $elemMatch: {
-            date: { $gte: start, $lt: adjustedEnd }
-          }
-        }
-      }
+            date: { $gte: start, $lt: adjustedEnd },
+          },
+        },
+      },
     });
-
   }
-
 
   // Apply filters
   if (status) {
@@ -637,11 +650,8 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
 
     // Log the start and end dates for debugging
 
-
     // Add 1 minute to the end date to capture events that are scheduled at the very last minute
     end = new Date(end.getTime() + 60000); // 60,000 ms = 1 minute
-
-
 
     pipeline.push({
       $match: {
@@ -655,28 +665,25 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
                   cond: {
                     $and: [
                       { $gte: ["$$slot.date", start] }, // Match slot date >= start date
-                      { $lt: ["$$slot.date", end] } // Match slot date < end date
-                    ]
-                  }
-                }
-              }
+                      { $lt: ["$$slot.date", end] }, // Match slot date < end date
+                    ],
+                  },
+                },
+              },
             },
-            0
-          ]
-        }
-      }
+            0,
+          ],
+        },
+      },
     });
 
     // Log the pipeline for debugging
-
   }
 
   if (keyword) {
     const keywordMatch = buildKeywordQueryFromModels(
-      [
-        { schema: Reservations.schema }
-      ],
-      keyword
+      [{ schema: Reservations.schema }],
+      keyword,
     );
 
     if (Object.keys(keywordMatch).length) {
@@ -689,31 +696,35 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
   // Apply pagination + counts using $facet
   pipeline.push({
     $facet: {
-      data: [
-        { $skip: skip },
-        ...(limit === 0 ? [] : [{ $limit: limit }])
-      ],
-      totalFiltered: [{ $count: "count" }]
-    }
+      data: [{ $skip: skip }, ...(limit === 0 ? [] : [{ $limit: limit }])],
+      totalFiltered: [{ $count: "count" }],
+    },
   });
   const result = await Reservations.aggregate(pipeline);
-
 
   let reservations = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
   // Additional counts for meta (active/inactive/total by userId as creator)
   const [total, active, inactive] = await Promise.all([
-    Reservations.countDocuments({ ...(userId && { userId: userId }), status: { $ne: "deleted" } }),
-    Reservations.countDocuments({ status: "active", ...(userId && { userId: userId }) }),
-    Reservations.countDocuments({ status: "inactive", ...(userId && { userId: userId }) })
+    Reservations.countDocuments({
+      ...(userId && { userId: userId }),
+      status: { $ne: "deleted" },
+    }),
+    Reservations.countDocuments({
+      status: "active",
+      ...(userId && { userId: userId }),
+    }),
+    Reservations.countDocuments({
+      status: "inactive",
+      ...(userId && { userId: userId }),
+    }),
   ]);
 
   const meta = generateMeta(page, limit, totalFiltered);
   meta.reservationsCount = { total, active, inactive };
 
-
-  reservations = reservations.map(item => {
+  reservations = reservations.map((item) => {
     const formatted = reservationsFormatter(item, timezone);
     // if (formatted.conditionType == "noCondition" || formatted.conditionType == "ticketRequirement" || formatted.conditionType == "customText" || formatted.conditionType == "ticketRequirement") {
     //   delete formatted.amount;
@@ -726,15 +737,14 @@ const getavailableReservations = async ({ timezone, page, limit, keyword, status
     // }
     return formatted;
   });
-  return { reservations, meta }
-}
-
+  return { reservations, meta };
+};
 
 const getCalendarReservations = async ({
   timezone,
   companyOrganizer,
   organization,
-  date
+  date,
 }) => {
   const pipeline = [];
 
@@ -742,7 +752,7 @@ const getCalendarReservations = async ({
   // 1️⃣ BASE MATCH
   // -----------------------------
   const match = {
-    status: { $ne: "deleted" }
+    status: { $ne: "deleted" },
   };
 
   if (companyOrganizer) {
@@ -754,7 +764,6 @@ const getCalendarReservations = async ({
   }
 
   pipeline.push({ $match: match });
-
 
   // -----------------------------
   // 3️⃣ JOIN RESERVATION DEFINITION
@@ -771,19 +780,19 @@ const getCalendarReservations = async ({
               reservationType: 1,
               conditionType: 1,
               ticketType: 1,
-              amount: 1
-            }
-          }
+              amount: 1,
+            },
+          },
         ],
-        as: "reservation"
-      }
+        as: "reservation",
+      },
     },
     {
       $unwind: {
         path: "$reservation",
-        preserveNullAndEmptyArrays: true
-      }
-    }
+        preserveNullAndEmptyArrays: true,
+      },
+    },
   );
 
   // -----------------------------
@@ -795,15 +804,15 @@ const getCalendarReservations = async ({
         from: "events",
         localField: "optionalEventId",
         foreignField: "_id",
-        as: "event"
-      }
+        as: "event",
+      },
     },
     {
       $unwind: {
         path: "$event",
-        preserveNullAndEmptyArrays: true
-      }
-    }
+        preserveNullAndEmptyArrays: true,
+      },
+    },
   );
 
   // -----------------------------
@@ -817,10 +826,10 @@ const getCalendarReservations = async ({
       $match: {
         "timingSlots.dateTimeSlots": {
           $elemMatch: {
-            date: { $gte: start, $lt: end }
-          }
-        }
-      }
+            date: { $gte: start, $lt: end },
+          },
+        },
+      },
     });
   }
 
@@ -836,7 +845,7 @@ const getCalendarReservations = async ({
         _id: "$userId",
         firstName: "$firstName",
         lastName: "$lastName",
-        phoneNumber: "$phoneNumber"
+        phoneNumber: "$phoneNumber",
       },
 
       partySize: 1,
@@ -853,11 +862,10 @@ const getCalendarReservations = async ({
       member: "Gold",
 
       eventTitle: {
-        $ifNull: ["$event.basicInfo.title", "No Event Title"]
-      }
-    }
+        $ifNull: ["$event.basicInfo.title", "No Event Title"],
+      },
+    },
   });
-
 
   // -----------------------------
   // 7️⃣ SORT
@@ -870,13 +878,11 @@ const getCalendarReservations = async ({
   const reservationsResponse = await UserReservations.aggregate(pipeline);
 
   return {
-    reservations: reservationsResponse.map(item => reservationsFormatter(item, timezone))
-      .filter(Boolean)
+    reservations: reservationsResponse
+      .map((item) => reservationsFormatter(item, timezone))
+      .filter(Boolean),
   };
 };
-
-
-
 
 const findUserReservationsByIds = async (ids) => {
   return UserReservations.find({
@@ -909,17 +915,232 @@ const getReservationTypeId = async (reservationType) => {
   const reservation = await Reservations.findOne(
     {
       reservationType: {
-        $regex: new RegExp(`^${reservationType.trim()}$`, "i")
+        $regex: new RegExp(`^${reservationType.trim()}$`, "i"),
       },
-      status: "active"
+      status: "active",
     },
-    { _id: 1 }
+    { _id: 1 },
   ).lean();
 
   return reservation?._id || null;
 };
 
+const getReservationTypeCapacityStats = async (query) => {
+  const pipeline = [
+    { $match: query },
+    {
+      $group: {
+        _id: "$reservationType",
+        bookedCapacity: { $sum: "$partySize" },
+      },
+    },
+    {
+      $lookup: {
+        from: "reservationtypes",
+        let: { reservationTypeId: { $toObjectId: "$_id" } },
+        pipeline: [
+          { $match: { $expr: { $eq: ["$_id", "$$reservationTypeId"] } } },
+          { $project: { name: 1, maxCapacity: 1 } },
+        ],
+        as: "reservationTypeDetails",
+      },
+    },
+    {
+      $unwind: {
+        path: "$reservationTypeDetails",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        reservationTypeName: {
+          $ifNull: ["$reservationTypeDetails.name", "Unknown"],
+        },
+        maxCapacity: { $ifNull: ["$reservationTypeDetails.maxCapacity", 0] },
+        bookedCapacity: 1,
+      },
+    },
+  ];
 
+  return UserReservations.aggregate(pipeline);
+};
+const getReservationsV2 = async ({
+  page,
+  limit,
+  status,
+  companyOrganizer,
+  organizationsId,
+  date,
+  skip,
+  reservationType,
+}) => {
+  const summaryQuery = {
+    ...(companyOrganizer && {
+      companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
+    }),
+    ...(organizationsId && {
+      organizationId: new mongoose.Types.ObjectId(organizationsId),
+    }),
+  };
+  const query = {
+    ...(status && { status }),
+    ...(companyOrganizer && {
+      companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
+    }),
+    ...(organizationsId && {
+      organizationId: new mongoose.Types.ObjectId(organizationsId),
+    }),
+    ...(reservationType && {
+      reservationType: new mongoose.Types.ObjectId(reservationType),
+    }),
+  };
+
+  if (date) {
+    const start = new Date(date);
+    const end = new Date(new Date(date).setDate(start.getDate() + 1));
+
+    query["timingSlots.dateTimeSlots"] = {
+      $elemMatch: {
+        date: { $gte: start, $lt: end },
+      },
+    };
+  }
+
+  const pipeline = [
+    { $match: query },
+    { $sort: { createdAt: -1 } },
+    { $skip: skip },
+    ...(limit === 0 ? [] : [{ $limit: limit }]),
+    {
+      $lookup: {
+        from: "occasions", // adjust to actual Occasion collection name
+        let: {
+          occasionId: {
+            $convert: {
+              input: "$occasion",
+              to: "objectId",
+              onError: null,
+              onNull: null,
+            },
+          },
+        },
+        pipeline: [
+          { $match: { $expr: { $eq: ["$_id", "$$occasionId"] } } },
+          { $project: { name: 1 } },
+        ],
+        as: "occasionDetails",
+      },
+    },
+    {
+      $addFields: {
+        occasion: { $first: "$occasionDetails" },
+      },
+    },
+    {
+      $lookup: {
+        from: "organizations", // adjust to actual Organization collection name
+        let: {
+          organizationId: {
+            $convert: {
+              input: "$organizationId",
+              to: "objectId",
+              onError: null,
+              onNull: null,
+            },
+          },
+        },
+        pipeline: [
+          { $match: { $expr: { $eq: ["$_id", "$$organizationId"] } } },
+          { $project: { "basicInfo.name": 1 } },
+        ],
+        as: "organizationId",
+      },
+    },
+    {
+      $addFields: {
+        organizationId: { $first: "$organizationId" },
+      },
+    },
+    { $project: { occasionDetails: 0, organizationDetails: 0 } },
+  ];
+
+  const [reservations, reservationTypeCapacityStats, totalFiltered] =
+    await Promise.all([
+      UserReservations.aggregate(pipeline),
+      getReservationTypeCapacityStats(summaryQuery),
+      UserReservations.countDocuments(query),
+    ]);
+
+  let meta = generateMeta(page, limit, totalFiltered);
+  meta.reservationTypeCapacityStats = reservationTypeCapacityStats;
+
+  return { reservations, meta };
+};
+const getReservationsV2Calender = async ({
+  companyOrganizer,
+  organization,
+  startDate,
+  endDate,
+}) => {
+  const start = new Date(startDate);
+  const end = new Date(
+    new Date(endDate).setDate(new Date(endDate).getDate() + 1),
+  );
+
+  const pipeline = [
+    {
+      $match: {
+        status: { $ne: "deleted" },
+        ...(companyOrganizer && {
+          companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
+        }),
+        ...(organization && {
+          organizationId: new mongoose.Types.ObjectId(organization),
+        }),
+      },
+    },
+    { $unwind: "$timingSlots.dateTimeSlots" },
+    {
+      $match: {
+        "timingSlots.dateTimeSlots.date": { $gte: start, $lt: end },
+      },
+    },
+    {
+      $group: {
+        _id: {
+          $dateToString: {
+            format: "%Y-%m-%d",
+            date: "$timingSlots.dateTimeSlots.date",
+          },
+        },
+        totalReservations: { $sum: 1 },
+        timeSlots: {
+          $push: {
+            reservationId: "$_id",
+            bookingId: "$bookingId",
+            firstName: "$firstName",
+            lastName: "$lastName",
+            partySize: "$partySize",
+            status: "$status",
+            timeSlots: "$timingSlots.dateTimeSlots.timeSlots",
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        date: "$_id",
+        totalReservations: 1,
+        timeSlots: 1,
+      },
+    },
+    { $sort: { date: 1 } },
+  ];
+
+  return UserReservations.aggregate(pipeline);
+};
 module.exports = {
   findUserReservationById,
   insertSingleUserReservation,
@@ -940,5 +1161,7 @@ module.exports = {
   findUserReservationsByIdsLean,
   insertManyUserReservations,
   bulkUpdateUserReservations,
-  getReservationTypeId
+  getReservationTypeId,
+  getReservationsV2,
+  getReservationsV2Calender,
 };
