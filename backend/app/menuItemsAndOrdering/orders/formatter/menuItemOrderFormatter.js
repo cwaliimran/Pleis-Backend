@@ -8,12 +8,53 @@ function menuItemOrderFormatter(order, timezone) {
   if (!order) return null;
 
   const obj = typeof order.toObject === "function" ? order.toObject() : order;
+  if (Array.isArray(obj.reservation)) {
+    obj.reservation = obj.reservation.map((r) => {
+      const res = typeof r.toObject === "function" ? r.toObject() : r;
 
-  if (obj.organization && obj.organization.basicInfo && obj.organization.basicInfo.media) {
-    obj.organization.basicInfo.media.logo = getFullImageUrl(obj.organization.basicInfo.media.logo || "noimage.png");
+      if (res.timingSlots && Array.isArray(res.timingSlots.dateTimeSlots)) {
+        res.timingSlots.dateTimeSlots = res.timingSlots.dateTimeSlots.map(
+          (slot) => {
+            if (slot.date) {
+              slot.date = convertUtcToTimezone(slot.date, timezone);
+            }
+            if (Array.isArray(slot.timeSlots)) {
+              slot.timeSlots = slot.timeSlots.map((ts) => {
+                if (ts.startTime && ts.endTime) {
+                  ts.startTime = convertUtcToTimezone(ts.startTime, timezone);
+                  ts.endTime = convertUtcToTimezone(ts.endTime, timezone);
+                }
+                return ts;
+              });
+            }
+
+            return slot;
+          },
+        );
+      }
+
+      if (res.reservationType) {
+        delete res.reservationType.__v;
+        delete res.reservationType.createdAt;
+        delete res.reservationType.updatedAt;
+      }
+
+      return res;
+    });
   }
-  if(obj.user) {
-    obj.user.profileIcon = getFullImageUrl(obj.user.profileIcon || "noimage.png");
+  if (
+    obj.organization &&
+    obj.organization.basicInfo &&
+    obj.organization.basicInfo.media
+  ) {
+    obj.organization.basicInfo.media.logo = getFullImageUrl(
+      obj.organization.basicInfo.media.logo || "noimage.png",
+    );
+  }
+  if (obj.user) {
+    obj.user.profileIcon = getFullImageUrl(
+      obj.user.profileIcon || "noimage.png",
+    );
   }
 
   if (Array.isArray(obj.items)) {
@@ -22,12 +63,20 @@ function menuItemOrderFormatter(order, timezone) {
         const snap = item.menuItemSnapShot;
 
         // Format image URL
-        snap.image = getFullImageUrl(snap.image || "noimage.png");x
+        snap.image = getFullImageUrl(snap.image || "noimage.png");
 
         // Convert stored UTC times to user's timezone
         if (snap.startTime && snap.endTime) {
-          snap.startTime = convertUtcToTimezone(snap.startTime, timezone, "hh:mm A");
-          snap.endTime = convertUtcToTimezone(snap.endTime, timezone, "hh:mm A");
+          snap.startTime = convertUtcToTimezone(
+            snap.startTime,
+            timezone,
+            "hh:mm A",
+          );
+          snap.endTime = convertUtcToTimezone(
+            snap.endTime,
+            timezone,
+            "hh:mm A",
+          );
         }
 
         // Clean unnecessary fields
@@ -51,8 +100,16 @@ function menuItemOrderFormatter(order, timezone) {
             snap.image = getFullImageUrl(snap.image || "noimage.png");
 
             if (snap.startTime && snap.endTime) {
-              snap.startTime = convertUtcToTimezone(snap.startTime, timezone, "hh:mm A");
-              snap.endTime = convertUtcToTimezone(snap.endTime, timezone, "hh:mm A");
+              snap.startTime = convertUtcToTimezone(
+                snap.startTime,
+                timezone,
+                "hh:mm A",
+              );
+              snap.endTime = convertUtcToTimezone(
+                snap.endTime,
+                timezone,
+                "hh:mm A",
+              );
             }
 
             delete snap.menu;

@@ -13,7 +13,8 @@ const ReservationsSchema = new mongoose.Schema(
       required: true, // Assuming a user is required for each reservation
     },
     reservationType: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ReservationType", // Reference to the "ReservationType" model
       required: true,
     },
     ticketRequirement: {

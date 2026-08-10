@@ -34,6 +34,8 @@ const createReservation = async (req, res) => {
         },
         session
       );
+     console.log("result",result );
+
 
     if (!result.success) {
       await session.abortTransaction();
@@ -41,7 +43,7 @@ const createReservation = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 409,
-        translationKey: result.error
+        translationKey: result.error|| result.message || "Reservation_creation_failed",
       });
     }
 

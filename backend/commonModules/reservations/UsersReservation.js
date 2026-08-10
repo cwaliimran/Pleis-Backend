@@ -1,6 +1,9 @@
 const mongoose = require("mongoose");
 const { customAlphabet } = require("nanoid");
-const generateShortId = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 6);
+const generateShortId = customAlphabet(
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+  6,
+);
 
 const UserReservationsSchema = new mongoose.Schema(
   {
@@ -36,7 +39,7 @@ const UserReservationsSchema = new mongoose.Schema(
       default: [],
     },
     reservationType: {
-      type: mongoose.Schema.Types.String,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "ReservationType",
       required: true,
     },
@@ -49,7 +52,7 @@ const UserReservationsSchema = new mongoose.Schema(
       default: 0,
     },
     occasion: {
-      type:mongoose.Schema.Types.String,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Occasion",
       default: null,
     },
@@ -245,6 +248,15 @@ const UserReservationsSchema = new mongoose.Schema(
         },
       },
     ],
+    voucher: {
+      code: { type: String, default: () => `ORD-${generateShortId()}` },
+      status: {
+        type: String,
+        enum: [null, "pending", "applied", "expired", "cancelled"],
+        default: null,
+      },
+      discountAmount: { type: Number, default: 0 },
+    },
 
     userBillingInformation: {
       type: mongoose.Schema.Types.ObjectId,
@@ -264,7 +276,9 @@ UserReservationsSchema.index({
   "timingSlots.dateTimeSlots.timeSlots.startTime": 1,
 });
 
-
-const UserReservations = mongoose.model("UserReservations", UserReservationsSchema);
+const UserReservations = mongoose.model(
+  "UserReservations",
+  UserReservationsSchema,
+);
 
 module.exports = { UserReservations };

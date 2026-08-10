@@ -588,15 +588,20 @@ const changedBy = req.user._id;
 };
 
 const updateUserReservation = async (req, res) => {
-  const { id, userId } = req.params;
+  const { id } = req.params;
   const {
     firstName,
     lastName,
+    email,
     partySize,
     phoneNumber,
     reservationType,
     timingSlots,
     notes,
+    numberOfTables,
+    conditionType,
+    amount,
+    status,
   } = req.body;
   if (
     !validateParams(req, res, {
@@ -609,15 +614,18 @@ const updateUserReservation = async (req, res) => {
 
   let data = {
     id,
-    userId,
     firstName,
     lastName,
+    email,
     partySize,
     phoneNumber,
     reservationType,
     timingSlots,
     notes,
-
+    numberOfTables,
+    conditionType,
+    status,
+    amount,
   };
 
   if (data.timingSlots) {
@@ -682,8 +690,8 @@ const updateUserReservation = async (req, res) => {
   // Validate params
   if (
     !validateParams(req, res, {
-      pathParams: ["id", "userId"],
-      objectIdFields: ["id", "userId"],
+      pathParams: ["id"],
+      objectIdFields: ["id"],
     })
   ) {
     return; // Ensure you return if validation fails
@@ -988,7 +996,7 @@ const createReservationPreferences = async (req, res) => {
 
 const getReservationsV2 = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { status, date, organizationsId, companyOrganizer, reservationType } =
+  let { status, date, organizationsId, companyOrganizer, reservationType, startTime } =
     req.query;
   try {
     const timezone = req.user.timezone;
@@ -1011,6 +1019,7 @@ const getReservationsV2 = async (req, res) => {
       date,
       timezone,
       reservationType,
+      startTime,
     });
 
     return sendResponse({
@@ -1046,7 +1055,7 @@ const getReservationsV2Calender = async (req, res) => {
     }
 
     const timezone = req.user.timezone;
-    const { reservations } = await reservationService.getReservationsV2Calender({
+    const { reservations, meta } = await reservationService.getReservationsV2Calender({
       timezone,
       companyOrganizer,
       organization,
@@ -1058,6 +1067,7 @@ const getReservationsV2Calender = async (req, res) => {
       statusCode: 200,
       translationKey: "reservations_fetched_successfully",
       data: reservations,
+      meta,
     });
   } catch (error) {
     return sendResponse({

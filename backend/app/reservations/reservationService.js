@@ -5,6 +5,7 @@ const { formatOrganization } = require("../../commonModules/organizations/format
 const { isOrganizationOpenNow } = require("../../shared/commonSchemas/operatingHours");
 
 const createReservationService = async (data, session) => {
+
   if (!session) throw new Error("session_required");
   const check = await ReservationRepo.checkReservationAvailability({
     reservationTypeId: data.reservationType,
@@ -12,6 +13,7 @@ const createReservationService = async (data, session) => {
     numberOfTables: data.numberOfTables,
     organization: data.organizationId,
   });
+  console.log("check", check);
   if (!check.allowed) {
     return { success: false, message: check.message || "Reservation not allowed" };
   }
