@@ -42,6 +42,7 @@ const getOrders = async ({
   sortDirection = -1,
   companyOrganizer,
   orderStatus,
+  paymentStatus,
 }) => {
   let organizationsIds = [];
   if (organization) {
@@ -50,6 +51,7 @@ const getOrders = async ({
       .split(/[,%]+/) // Split by comma or '%'
       .map((id) => new mongoose.Types.ObjectId(id.trim())); // Convert to ObjectId
   }
+
 
   // Prepare status filter dynamically
   let statusFilter = {};
@@ -84,9 +86,12 @@ const getOrders = async ({
       };
     }
   }
-  if (orderStatus && orderStatus.trim()) {
-    statusFilter = { status: orderStatus.trim() };
+  if (paymentStatus && paymentStatus.trim()) {
+    statusFilter.paymentStatus = paymentStatus.trim();
   }
+    if (orderStatus && orderStatus.trim()) {
+      statusFilter = { status: orderStatus.trim() };
+    }
 
   if (pickupFilter && pickupFilter.trim()) {
     const normalizedPickupType = normalizePickupType(pickupFilter);

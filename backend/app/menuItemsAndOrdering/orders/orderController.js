@@ -3,7 +3,7 @@ const { sendResponse, getReadableErrorMessage, validateParams, parsePaginationPa
 
 const placeOrder = async (req, res) => {
   const { items = [], combos = [], notes, paymentMethod = null, pickupType,
-    tableNumber, promoCode,userId } = req.body;
+    tableNumber, promoCode,userId,tip } = req.body;
   try {
 
     let validateData = {
@@ -33,7 +33,8 @@ const placeOrder = async (req, res) => {
       paymentMethod,
       pickupType,
       tableNumber,
-      promoCode
+      promoCode,
+      tip
     });
 
 
@@ -94,14 +95,14 @@ const getOrderDetails = async (req, res) => {
   const { id } = req.params;
 
   if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
+  const timezone = req.user.timezone || "Asia/Kolkata";
 
   try {
-    const result = await orderService.getOrderDetails(id);
+    const result = await orderService.getOrderDetails(id,timezone);
     if (!result || !result.order) {
       return sendResponse({ res, statusCode: 404, translationKey: "order_not_found" });
     }
     const { order } = result;
-
     return sendResponse({
       res,
       statusCode: 200,

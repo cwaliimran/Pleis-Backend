@@ -14,7 +14,18 @@ const { getOrdersService, updateOrderDetailsService } = require("../../../admin/
 
 const getOrders = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, range, organization, activeKeyword, orderStatus, activeorderStatus, pickupFilter } = req.query;
+  let {
+    keyword,
+    status,
+    date,
+    range,
+    organization,
+    activeKeyword,
+    orderStatus,
+    activeorderStatus,
+    pickupFilter,
+    paymentStatus,
+  } = req.query;
   try {
     if (!organization) {
       return sendResponse({
@@ -36,7 +47,8 @@ const getOrders = async (req, res) => {
       activeKeyword,
       orderStatus,
       activeorderStatus,
-      pickupFilter
+      pickupFilter,
+      paymentStatus
     });
 
     return sendResponse({

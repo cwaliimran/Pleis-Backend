@@ -75,7 +75,7 @@ router.put("/:id", roleMiddleware(["admin", "staff", "organizer", "manager"]), u
 router.put("/updateStatus/:id/:value", roleMiddleware(["admin", "staff", "organizer", "manager"]), updateUserReservationStatus);
 
 // update user reservation
-router.put("/:userId/:id", roleMiddleware(["admin", "staff", "organizer", "manager"]), updateUserReservation);
+router.put("/user/:id", roleMiddleware(["admin", "staff", "organizer", "manager"]), updateUserReservation);
 
 // Delete a Reservation
 router.delete("/:id", roleMiddleware(["admin", "staff", "organizer", "manager"]), deleteReservation);
