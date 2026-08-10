@@ -257,7 +257,6 @@ const getPickupOptions = async (req, res) => {
       deliveryOptionsService.getActiveDeliveryOptions(organization),
       getOrganizationPickupSettings(organization),
     ]);
-
     return sendResponse({
       res,
       statusCode: 200,
@@ -278,7 +277,7 @@ const getPickupOptions = async (req, res) => {
       error,
     });
   }
-}
+};
 
 module.exports = {
   getMenuItems,

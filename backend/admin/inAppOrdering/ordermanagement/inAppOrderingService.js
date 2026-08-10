@@ -75,6 +75,7 @@ const getOrdersService = async ({
   paymentMethod,
   pickupFilter,
   orderStatus,
+  paymentStatus,
 }) => {
   page = Number(page) || 1;
   limit = Number(limit);
@@ -106,6 +107,7 @@ const getOrdersService = async ({
     endDate,
     companyOrganizer,
     orderStatus,
+    paymentStatus,
   });
 
   return { Orderss, meta };

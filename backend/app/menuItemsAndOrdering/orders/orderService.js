@@ -13,6 +13,9 @@ const { usePromoCode } = require("../../promoCode/promoCodeRepository");
 const { getOrgCompanyOrganizer } = require("../../organizationProfile/organizationProfileRepository");
 const { calculateItemPrice } = require("./formatter/calculateItemPrice");
 const { calculateComboPrice } = require("../menuItems/formatter/formatMenuItemsCombos");
+const { getWallet } = require("../../../app/loyalty/clubMembers/clubMembersRepository");
+const { getLatestUserReservations } = require("../../../admin/reservation/reservationRepository");
+
 
 const buildPricedMenuItemSnapshot = (menuItem) => {
   const priceInfo = calculateItemPrice(menuItem);
@@ -21,12 +24,14 @@ const buildPricedMenuItemSnapshot = (menuItem) => {
     unitPrice: priceInfo.originalPrice,
     unitFinalPrice: priceInfo.finalPrice,
     saleDiscountPerUnit: priceInfo.saleDiscount,
-    menuItemSnapShot: JSON.parse(JSON.stringify({
-      ...menuItem,
-      originalPrice: priceInfo.originalPrice,
-      salePrice: priceInfo.finalPrice,
-      hasDiscount: priceInfo.saleDiscount > 0,
-    })),
+    menuItemSnapShot: JSON.parse(
+      JSON.stringify({
+        ...menuItem,
+        originalPrice: priceInfo.originalPrice,
+        salePrice: priceInfo.finalPrice,
+        hasDiscount: priceInfo.saleDiscount > 0,
+      }),
+    ),
   };
 };
 
@@ -39,9 +44,7 @@ const validateComboSelection = (cartCombo, combo) => {
   }
 
   if (selectedIds.length !== requiredItemIds.length) {
-    throw new Error(
-      `Combo ${cartCombo.combo} requires exactly ${requiredItemIds.length} items`,
-    );
+    throw new Error(`Combo ${cartCombo.combo} requires exactly ${requiredItemIds.length} items`);
   }
 
   const sortedRequired = [...requiredItemIds].sort();
@@ -59,12 +62,7 @@ const validateComboSelection = (cartCombo, combo) => {
   return { selectedIds, quantity };
 };
 
-const buildOrderCombos = async ({
-  combos = [],
-  comboDocs = [],
-  userId,
-  timezone,
-}) => {
+const buildOrderCombos = async ({ combos = [], comboDocs = [], userId, timezone }) => {
   if (!combos.length) return { orderCombos: [], combosTotal: 0, combosSaleDiscount: 0 };
 
   const orderCombos = [];
@@ -97,11 +95,7 @@ const buildOrderCombos = async ({
       };
     });
 
-    const comboPriceInfo = calculateComboPrice(
-      combo.priceMode,
-      combo.price,
-      pricedItems,
-    );
+    const comboPriceInfo = calculateComboPrice(combo.priceMode, combo.price, pricedItems);
 
     const unitPrice = comboPriceInfo.originalPrice;
     const unitFinalPrice = comboPriceInfo.salePrice;
@@ -128,18 +122,20 @@ const buildOrderCombos = async ({
       unitFinalPrice,
       saleDiscountPerUnit,
       finalPrice,
-      comboSnapShot: JSON.parse(JSON.stringify({
-        _id: combo._id,
-        name: combo.name,
-        description: combo.description || "",
-        subCategory: combo.subCategory || null,
-        priceMode: combo.priceMode,
-        price: combo.price,
-        status: combo.status,
-        originalPrice: unitPrice,
-        salePrice: unitFinalPrice,
-        hasDiscount: comboPriceInfo.hasDiscount,
-      })),
+      comboSnapShot: JSON.parse(
+        JSON.stringify({
+          _id: combo._id,
+          name: combo.name,
+          description: combo.description || "",
+          subCategory: combo.subCategory || null,
+          priceMode: combo.priceMode,
+          price: combo.price,
+          status: combo.status,
+          originalPrice: unitPrice,
+          salePrice: unitFinalPrice,
+          hasDiscount: comboPriceInfo.hasDiscount,
+        }),
+      ),
     });
   }
 
@@ -151,10 +147,7 @@ const getStaffIdsByOrganization = async (organizationId) => {
     throw new Error("Invalid organization ID");
   }
 
-  const organization = await Organizations.findById(
-    organizationId,
-    { staff: 1 }
-  ).lean();
+  const organization = await Organizations.findById(organizationId, { staff: 1 }).lean();
 
   if (!organization || !organization.staff) {
     return [];
@@ -162,9 +155,9 @@ const getStaffIdsByOrganization = async (organizationId) => {
 
   // Extract staff user IDs
   const staffIds = organization.staff
-    .map(item => item.user)
+    .map((item) => item.user)
     .filter(Boolean)
-    .map(id => id.toString());
+    .map((id) => id.toString());
 
   return staffIds;
 };
@@ -178,7 +171,8 @@ const placeOrder = async ({
   paymentMethod,
   pickupType,
   tableNumber,
-  promoCode
+  promoCode,
+  tip
 }) => {
   const cartCombos = combos || [];
 
@@ -231,11 +225,7 @@ const placeOrder = async ({
 
     const companyOrganizer = await getOrgCompanyOrganizer(organizationId);
 
-    const {
-      orderCombos,
-      combosTotal,
-      combosSaleDiscount,
-    } = await buildOrderCombos({
+    const { orderCombos, combosTotal, combosSaleDiscount } = await buildOrderCombos({
       combos: cartCombos,
       comboDocs,
       userId,
@@ -248,7 +238,7 @@ const placeOrder = async ({
     let itemsTotal = combosTotal;
 
     const orderItems = (items || []).map((i) => {
-      const menuItem = menuItems.find(m => m._id.toString() === i.menuItem);
+      const menuItem = menuItems.find((m) => m._id.toString() === i.menuItem);
       if (!menuItem) throw new Error(`Invalid menu item: ${i.menuItem}`);
 
       const priceInfo = calculateItemPrice(menuItem);
@@ -263,6 +253,8 @@ const placeOrder = async ({
       itemsTotal += unitPrice * i.quantity;
       totalSaleDiscount += saleDiscountTotal;
       totalPrice += finalPrice;
+      tip = tip || 0;
+      totalPrice += tip;
 
       return {
         menuItem: menuItem._id,
@@ -271,6 +263,7 @@ const placeOrder = async ({
         unitFinalPrice,
         saleDiscountPerUnit,
         finalPrice,
+        tip,
         menuItemSnapShot: JSON.parse(JSON.stringify(menuItem)),
       };
     });
@@ -285,7 +278,7 @@ const placeOrder = async ({
           companyOrganizer,
           amount: totalPrice,
         },
-        session
+        session,
       );
 
       if (promoResult.error) {
@@ -294,7 +287,6 @@ const placeOrder = async ({
 
       totalPrice = promoResult.finalAmount;
     }
-
 
     // 3️⃣ Create order document inside session
     let orderData = {
@@ -306,10 +298,11 @@ const placeOrder = async ({
       priceBreakdown: {
         itemsTotal,
         saleDiscount: totalSaleDiscount,
-        promoDiscount: promoCode ? (promoResult.discount || 0) : 0,
+        promoDiscount: promoCode ? promoResult.discount || 0 : 0,
         tax: 0,
         finalTotal: totalPrice,
         promoCode: promoCode || null,
+        tip: tip || 0,
       },
       notes,
       paymentMethod,
@@ -328,12 +321,17 @@ const placeOrder = async ({
     let order = await orderRepo.createOrder(orderData, session);
 
     // 5️⃣ Commit atomic transaction
-    await session.commitTransaction();
-    session.endSession();
 
     let formattedOrder = menuItemOrderFormatter(order, timezone);
     //get user details
-    let userDetails = await findAppUserByIdWithProjectionService(userId, { profileIcon: 1, firstName: 1, lastName: 1, profileIcon: 1, email: 1, username: 1 });
+    let userDetails = await findAppUserByIdWithProjectionService(userId, {
+      profileIcon: 1,
+      firstName: 1,
+      lastName: 1,
+      profileIcon: 1,
+      email: 1,
+      username: 1,
+    });
     formattedOrder.user = userDetails;
 
     // Emit socket event for new order (only for cash payments)
@@ -348,6 +346,9 @@ const placeOrder = async ({
 
       const staffIds = await getCheckedInStaffForOrganization(organizationId, timezone);
 
+      await session.commitTransaction();
+      session.endSession();
+
       sendUserNotifications({
         recipientIds: staffIds,
         title: "New Order Placed",
@@ -357,18 +358,16 @@ const placeOrder = async ({
           objectType: "menuorders",
           organization_id: organizationId.toString(),
         },
-        image: (order.items[0]?.menuItemSnapShot?.image
-          || order.combos[0]?.items[0]?.menuItemSnapShot?.image) || "noimage",
+        image:
+          order.items[0]?.menuItemSnapShot?.image || order.combos[0]?.items[0]?.menuItemSnapShot?.image || "noimage",
         sender: userId,
         objectId: formattedOrder._id,
       });
     }
 
-    //TODO if paymentMethod is card/applePay and paid then send notification to staff as well, or maybe check from service where monri is processing payment 
-
+    //TODO if paymentMethod is card/applePay and paid then send notification to staff as well, or maybe check from service where monri is processing payment
 
     return { order: formattedOrder };
-
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
@@ -384,31 +383,27 @@ const placePreOrderMenuItemsWithReservation = async ({
   reservation,
   paymentMethod,
   userBillingInformation,
-  session
+  session,
 }) => {
-
   if (!items || !items.length) throw new Error("Cart is empty");
 
   // 1️⃣ Fetch menu items
-  const itemIds = items.map(i => new mongoose.Types.ObjectId(i.menuItem));
+  const itemIds = items.map((i) => new mongoose.Types.ObjectId(i.menuItem));
 
-  const menuItems = await menuItemRepo.getMenuItemsWithFilters(
-    {
-      query: { _id: { $in: itemIds } },
-      userId,
-      timezone,
-    }
-  );
+  const menuItems = await menuItemRepo.getMenuItemsWithFilters({
+    query: { _id: { $in: itemIds } },
+    userId,
+    timezone,
+  });
 
   if (!menuItems.length) throw new Error("Invalid items in cart");
 
-  const organizationId =
-    await menuItemRepo.getOrganizationIdByMenuItemId(menuItems[0].menu);
+  const organizationId = await menuItemRepo.getOrganizationIdByMenuItemId(menuItems[0].menu);
 
   let totalPrice = 0;
 
-  const orderItems = items.map(i => {
-    const menuItem = menuItems.find(m => m._id.toString() === i.menuItem);
+  const orderItems = items.map((i) => {
+    const menuItem = menuItems.find((m) => m._id.toString() === i.menuItem);
     if (!menuItem) throw new Error(`Invalid menu item: ${i.menuItem}`);
 
     const priceInfo = calculateItemPrice(menuItem);
@@ -444,7 +439,6 @@ const placePreOrderMenuItemsWithReservation = async ({
   return order;
 };
 
-
 const addMoreItemsToOrder = async ({ orderId, items }) => {
   if (!items || !items.length) throw new Error("No items to add");
 
@@ -452,16 +446,13 @@ const addMoreItemsToOrder = async ({ orderId, items }) => {
   const order = await orderRepo.getOrderById(orderId);
   if (!order) throw new Error("Order not found");
 
-  if (order.status === "cancelled")
-    throw new Error("Cannot add items to a cancelled order");
+  if (order.status === "cancelled") throw new Error("Cannot add items to a cancelled order");
 
-  if (order.paymentMethod !== "cash")
-    throw new Error("Cannot add items to this order");
+  if (order.paymentMethod !== "cash") throw new Error("Cannot add items to this order");
 
   // 2️⃣ Fetch menu items
-  const itemIds = items.map(i => new mongoose.Types.ObjectId(i.menuItem));
-  const menuItems = await menuItemRepo.getMenuItemsWithFilters(
-    { query: { _id: { $in: itemIds } } });
+  const itemIds = items.map((i) => new mongoose.Types.ObjectId(i.menuItem));
+  const menuItems = await menuItemRepo.getMenuItemsWithFilters({ query: { _id: { $in: itemIds } } });
 
   if (!menuItems.length) throw new Error("Invalid items to add");
 
@@ -470,8 +461,8 @@ const addMoreItemsToOrder = async ({ orderId, items }) => {
   let additionalSaleDiscount = 0;
 
   // 3️⃣ Prepare items
-  const newOrderItems = items.map(i => {
-    const menuItem = menuItems.find(m => m._id.toString() === i.menuItem);
+  const newOrderItems = items.map((i) => {
+    const menuItem = menuItems.find((m) => m._id.toString() === i.menuItem);
     if (!menuItem) throw new Error(`Invalid menu item: ${i.menuItem}`);
 
     const priceInfo = calculateItemPrice(menuItem);
@@ -508,7 +499,7 @@ const addMoreItemsToOrder = async ({ orderId, items }) => {
     additionalFinalPrice,
     newItemsTotal,
     newSaleDiscount,
-    newFinalTotal
+    newFinalTotal,
   });
 
   const formattedOrder = menuItemOrderFormatter(updatedOrder);
@@ -516,25 +507,44 @@ const addMoreItemsToOrder = async ({ orderId, items }) => {
   return { order: formattedOrder };
 };
 
-
 // 2️⃣ Get order by ID
-const getOrderDetails = async (orderId) => {
+const getOrderDetails = async (orderId,timezone) => {
   let order = await orderRepo.getOrderById(orderId);
   if (!order) return null;
-  let formattedOrder = menuItemOrderFormatter(order);
+  const userID=order.user._id;
+  const organizationID=order.organization._id;
+
+  const companyOrganizer = await getOrgCompanyOrganizer(organizationID);
+  const wallet = await getWallet(userID, companyOrganizer);
+  const reservation = await getLatestUserReservations(userID, organizationID, 5);
+
+  let promoCode = null;
+    if (reservation) {
+      order.reservation = reservation;
+    }
+  let formattedOrder = menuItemOrderFormatter(order, timezone);
+  if (wallet) {
+    formattedOrder.loyaltyWallet = {
+      levelTitle: wallet.level?.title,
+      points: wallet.points,
+      lifetimePoints: wallet.lifetimePoints,
+    };
+  }
   return { order: formattedOrder };
 };
 
 // 3️⃣ Get all orders for user
 const getUserOrders = async (userId, page, limit) => {
-  let [orders, counts] = await Promise.all([orderRepo.getOrdersByUser(userId, page, limit),
-  orderRepo.getCounts({ user: userId })]);
-  let formattedOrders = orders.map(order => menuItemOrderFormatter(order));
+  let [orders, counts] = await Promise.all([
+    orderRepo.getOrdersByUser(userId, page, limit),
+    orderRepo.getCounts({ user: userId }),
+  ]);
+  let formattedOrders = orders.map((order) => menuItemOrderFormatter(order));
 
   let { pending, confirmed, completed, cancelled, totalFiltered } = counts;
   let meta = generateMeta(page, limit, totalFiltered);
   meta.counts = { pending, confirmed, completed, cancelled };
-  return { orders: formattedOrders, meta, };
+  return { orders: formattedOrders, meta };
 };
 
 // 4️⃣ Update order status (admin or automated)
@@ -558,5 +568,5 @@ module.exports = {
   updateOrderStatus,
   cancelOrder,
   addMoreItemsToOrder,
-  placePreOrderMenuItemsWithReservation
+  placePreOrderMenuItemsWithReservation,
 };

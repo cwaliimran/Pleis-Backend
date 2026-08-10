@@ -49,7 +49,10 @@ const checkReservationAvailability = async ({
 
   if (!reservationType) {
     console.log("Reservation type not found");
-    return { allowed: false, message: "Reservation type not found" };
+    return {
+      allowed: false,
+      message: "Reservation type not found or is inactive",
+    };
   }
 
   const stats = await UserReservations.aggregate([
@@ -72,11 +75,34 @@ const checkReservationAvailability = async ({
   const usedTables = stats[0]?.usedTables || 0;
   const usedPartySize = stats[0]?.usedPartySize || 0;
 
-  const allowed =
-    usedTables + numberOfTables <= reservationType.numberOfTables &&
+  const tablesAvailable =
+    usedTables + numberOfTables <= reservationType.numberOfTables;
+  const partySizeAvailable =
     usedPartySize + partySize <= reservationType.maxPartySize;
 
-  return { allowed };
+  if (!tablesAvailable && !partySizeAvailable) {
+    return {
+      allowed: false,
+      message:
+        "Not enough tables or party capacity available for this reservation type",
+    };
+  }
+
+  if (!tablesAvailable) {
+    return {
+      allowed: false,
+      message: "Not enough tables available for this reservation type",
+    };
+  }
+
+  if (!partySizeAvailable) {
+    return {
+      allowed: false,
+      message: "Maximum party size for this reservation type has been reached",
+    };
+  }
+
+  return { allowed: true, message: "Reservation is available" };
 };
 
 const createReservation = async (data, session) => {
@@ -93,6 +119,7 @@ const createReservation = async (data, session) => {
     phoneNumber,
     promoCode,
     paymentMethod,
+    amount,
   } = data;
 
   /* ---------- Capacity check ---------- */
@@ -152,6 +179,10 @@ const createReservation = async (data, session) => {
       break;
     case "minimumSpend":
       totalReservationAmount = baseAmount;
+      data.voucher = {
+        status: "pending",
+        discountAmount: amount,
+      };
       break;
     default:
       totalReservationAmount = 0;
@@ -217,7 +248,6 @@ const createReservation = async (data, session) => {
   }
 
   /* ---------- Save reservation ---------- */
-  console.log("data",data );
 
   const userReservation = new UserReservations(data);
 

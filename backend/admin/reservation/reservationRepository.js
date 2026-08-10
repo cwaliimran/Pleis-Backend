@@ -873,6 +873,7 @@ const getCalendarReservations = async ({
   pipeline.push({ $sort: { createdAt: -1 } });
 
   // -----------------------------
+
   // 8️⃣ EXECUTE
   // -----------------------------
   const reservationsResponse = await UserReservations.aggregate(pipeline);
@@ -953,7 +954,7 @@ const getReservationTypeCapacityStats = async (query) => {
     },
     {
       $project: {
-        _id: 0,
+        _id: 1,
         reservationTypeName: {
           $ifNull: ["$reservationTypeDetails.name", "Unknown"],
         },
@@ -974,6 +975,7 @@ const getReservationsV2 = async ({
   date,
   skip,
   reservationType,
+  startTime,
 }) => {
   const summaryQuery = {
     ...(companyOrganizer && {
@@ -995,17 +997,31 @@ const getReservationsV2 = async ({
       reservationType: new mongoose.Types.ObjectId(reservationType),
     }),
   };
+  const dateTimeElemMatch = {};
+
+  if (startTime) {
+    const start = new Date(startTime);
+    const end = new Date(start);
+    end.setUTCDate(start.getUTCDate() + 1);
+
+    dateTimeElemMatch.timeSlots = {
+      $elemMatch: { startTime: { $gte: start, $lt: end } },
+    };
+  }
 
   if (date) {
     const start = new Date(date);
-    const end = new Date(new Date(date).setDate(start.getDate() + 1));
+    start.setUTCHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setUTCDate(start.getUTCDate() + 1);
 
-    query["timingSlots.dateTimeSlots"] = {
-      $elemMatch: {
-        date: { $gte: start, $lt: end },
-      },
-    };
+    dateTimeElemMatch.date = { $gte: start, $lt: end };
   }
+
+  if (startTime || date) {
+    query["timingSlots.dateTimeSlots"] = { $elemMatch: dateTimeElemMatch };
+  }
+  summaryQuery["timingSlots.dateTimeSlots"] = { $elemMatch: dateTimeElemMatch };
 
   const pipeline = [
     { $match: query },
@@ -1080,14 +1096,9 @@ const getReservationsV2 = async ({
 const getReservationsV2Calender = async ({
   companyOrganizer,
   organization,
-  startDate,
-  endDate,
+  start,
+  end,
 }) => {
-  const start = new Date(startDate);
-  const end = new Date(
-    new Date(endDate).setDate(new Date(endDate).getDate() + 1),
-  );
-
   const pipeline = [
     {
       $match: {
@@ -1138,8 +1149,59 @@ const getReservationsV2Calender = async ({
     },
     { $sort: { date: 1 } },
   ];
+  const pipelineMaxCapacity = [
+    {
+      $match: {
+        status: { $ne: "deleted" },
+        ...(companyOrganizer && {
+          companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
+        }),
+        ...(organization && {
+          organizationId: new mongoose.Types.ObjectId(organization),
+        }),
+      },
+    },
+    { $group: { _id: "$reservationType" } },
+    {
+      $lookup: {
+        from: "reservationtypes",
+        localField: "_id",
+        foreignField: "_id",
+        as: "type",
+      },
+    },
+    { $unwind: "$type" },
+    {
+      $group: {
+        _id: null,
+        totalMaxCapacity: { $sum: "$type.maxCapacity" },
+      },
+    },
+  ];
+  const [reservations, maxCapacityResult] = await Promise.all([
+    UserReservations.aggregate(pipeline),
+    UserReservations.aggregate(pipelineMaxCapacity),
+  ]);
+  console.log("maxCapacityResult", maxCapacityResult);
+  const totalMaxCapacity = maxCapacityResult[0]?.totalMaxCapacity || 0;
+  const meta = {
+    totalMaxCapacity,
+  };
+  return { reservations, meta };
+};
+const getLatestUserReservations = async (userId, organizationId, limit = 5) => {
+  const reservations = await UserReservations.find({
+    userId,
+    organizationId,
+  })
+    .select(
+      "reservationType amount timingSlots firstName lastName phoneNumber notes status",
+    )
+    .populate("reservationType")
+    .sort({ createdAt: -1 })
+    .limit(limit);
 
-  return UserReservations.aggregate(pipeline);
+  return reservations;
 };
 module.exports = {
   findUserReservationById,
@@ -1164,4 +1226,5 @@ module.exports = {
   getReservationTypeId,
   getReservationsV2,
   getReservationsV2Calender,
+  getLatestUserReservations,
 };
