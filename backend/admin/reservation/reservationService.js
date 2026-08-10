@@ -356,6 +356,11 @@ const updateUserReservation = async (data) => {
     "reservationType",
     "timingSlots",
     "notes",
+    "numberOfTables",
+    "conditionType",
+    "amount",
+    "email",
+    "status",
   ];
 
   // -----------------------------
@@ -725,7 +730,10 @@ const changeUsersReservationsTiming = async ({
     userReservationFormatterAdjustDates(item, timezone),
   );
 };
-
+const combineDateTime = (date, time, timezone) => {
+  const combined = `${date} ${time}`;
+  return convertTimezoneToUtc(combined, timezone, "YYYY-MM-DD HH:mm");
+};
 const getReservationsV2 = async ({
   page,
   limit,
@@ -735,7 +743,11 @@ const getReservationsV2 = async ({
   date,
   timezone,
   reservationType,
+  startTime,
 }) => {
+  if (date && startTime) {
+    startTime = combineDateTime(date, startTime, timezone);
+  }
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let { reservations, meta } = await ReservationRepo.getReservationsV2({
     page,
@@ -747,6 +759,7 @@ const getReservationsV2 = async ({
     skip,
     timezone,
     reservationType,
+    startTime,
   });
 
   return {
@@ -756,9 +769,8 @@ const getReservationsV2 = async ({
 };
 
 const getWeekRange = (date) => {
-  const start = moment(date).startOf("isoWeek").toDate(); // Monday
-  const end = moment(date).endOf("isoWeek").toDate(); // Sunday
-
+  const start = moment.utc(date).startOf("isoWeek").toDate(); 
+  const end = moment.utc(date).endOf("isoWeek").toDate(); 
   return { start, end };
 };
 const getReservationsV2Calender = async ({
@@ -768,7 +780,6 @@ const getReservationsV2Calender = async ({
   date,
 }) => {
   const { start, end } = getWeekRange(date);
-  console.log("start ", start, "end ", end);
   let { reservations, meta } = await ReservationRepo.getReservationsV2Calender({
     timezone,
     companyOrganizer,
@@ -776,7 +787,6 @@ const getReservationsV2Calender = async ({
     start,
     end,
   });
-
   return {
     reservations: formatReservationDates(reservations, timezone),
     meta,

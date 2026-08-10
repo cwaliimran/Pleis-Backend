@@ -28232,6 +28232,41 @@
                   "response": []
                 }
               ]
+            },
+            {
+              "name": "combo",
+              "item": [
+                {
+                  "name": "New Request",
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n    \"name\": \"Combo Deal (Serve 3.4)\",\n    \"subCategory\": \"6a69c837e472f22aa1ca069f\",\n    \"description\": \"Best for 3\",\n    \"menuItems\": [\n        {\n            \"menuItem\": \"6a69c78c17426d63e1bfb2b6\",\n            \"quantity\": 2\n        },\n        {\n            \"menuItem\": \"6a69dc7ab9e53735cc4a30f4\",\n            \"quantity\": 1\n        },\n        {\n            \"menuItem\": \"6a69deebb9e53735cc4a3344\",\n            \"quantity\": 3\n        }\n    ],\n    \"priceMode\": \"fixed_combo_price\",\n    \"price\": 600,\n    \"status\": \"active\",\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\"\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}admin/menu/combos",
+                      "host": [
+                        "{{url}}admin"
+                      ],
+                      "path": [
+                        "menu",
+                        "combos"
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
             }
           ]
         },
@@ -35982,7 +36017,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\r\n    \"organizationId\": \"69737d30297ca37e0f10813a\",\r\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\", // required\r\n    \"firstName\": \"{{$randomFirstName}}\",\r\n    \"lastName\": {{$randomLastName}},\r\n    \"phoneNumber\": {\r\n        \"code\": \"+385\",\r\n        \"number\": \"998798769\"\r\n    },\r\n    \"reservationType\": \"VIP\",\r\n    \"partySize\": 2, // Required\r\n    \"numberOfTables\":1,\r\n        \"timingSlots\": {\r\n        \"enabled\": true,\r\n        \"dateTimeSlots\": [\r\n            {\r\n                \"date\": \"2026-02-16\",\r\n                \"timeSlots\": [\r\n                    {\r\n                        \"startTime\": \"12:00 PM\",\r\n                        \"endTime\": \"12:30 PM\"\r\n                    },\r\n                    {\r\n                        \"startTime\": \"12:30 PM\",\r\n                        \"endTime\": \"01:00 PM\"\r\n                    }\r\n                ]\r\n            },\r\n            {\r\n                \"date\": \"2026-02-17\",\r\n                \"timeSlots\": [\r\n                    {\r\n                        \"startTime\": \"12:00 PM\",\r\n                        \"endTime\": \"12:30 PM\"\r\n                    },\r\n                    {\r\n                        \"startTime\": \"12:30 PM\",\r\n                        \"endTime\": \"01:00 PM\"\r\n                    }\r\n                ]\r\n            }\r\n        ]\r\n    },\r\n\r\n\r\n    // \"conditionType\": \"minimumSpendOnLocation\", // [ \"fixedPrice\", \"minimumSpendOnLocation\"prepayOption\", \"noCondition\", \"ticketRequirement\", \"customText\",],\r\n    // \"conditionType\": \"fixedPrice\",\r\n    \"conditionType\": \"prepayOption\",\r\n    \"amount\": 10,\r\n    // \"conditionType\": \"customText\",\r\n    // \"customText\": \" this is custome text\",\r\n    // \"conditionType\": \"ticketRequirement\",\r\n    // \"ticketType\": \"vipEventPass\",\r\n    // \"conditionType\": \"ticketRequirement\",\r\n    // \"ticketType\": \"generalAdmission\",\r\n    // \"conditionType\": \"ticketRequirement\",\r\n    // \"ticketType\": \"premiumAccess\",\r\n    // \"conditionType\": \"noCondition\",\r\n    \"taxPercentage\": \"5\",\r\n    \"needsConfirmation\": true,\r\n    //   \"optionalEventId\": \"690d824d79228e2591462eb4\",\r\n    \"allowPreOrderMenuItems\": \"false\",\r\n\r\n    \"status\": \"active\" // [\"active\", \"inactive\", \"deleted\"],\r\n}",
+                  "raw": "{\r\n    \"organizationId\": \"69737d30297ca37e0f10813a\", // required\r\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\", // required\r\n    \"firstName\": \"{{$randomFirstName}}\", // required\r\n    \"lastName\": \"{{$randomLastName}}\", // required\r\n    \"email\":\"emial.com\", // required\r\n    \"phoneNumber\": {\r\n        \"code\": \"+385\",\r\n        \"number\": \"998798769\"\r\n    },\r\n    \"reservationType\": \"6a7300fd8322123a78cf9fc6\",\r\n    \"partySize\": 2, // Required\r\n    \"numberOfTables\": 1,\r\n    \"timingSlots\": {\r\n        \"dateTimeSlots\": [ \r\n            {\r\n                \"date\": \"2026-02-16\",\r\n                \"timeSlots\": [\r\n                    {\r\n                        \"startTime\": \"2026-02-16T12:00:00.000Z\",\r\n                        \"endTime\": \"2026-02-16T12:30:00.000Z\"\r\n                    }\r\n                ]\r\n            }\r\n        ]\r\n    },\r\n    // \"conditionType\": \"minimumSpend\", // [ \"free\", \"minimumSpend\"],\r\n    \"conditionType\": \"free\",\r\n    // \"amount\": 10,// required when condition type is minimum spend\r\n    \"occasion\":\"id\",\r\n    \"status\": \"active\" // [\"pending\", \"accepted\", \"rejected\",\"completed\"],\r\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -36015,32 +36050,18 @@
                   "raw": ""
                 },
                 "url": {
-                  "raw": "{{url}}admin/reservations?range=monthly&limit=100&organizationsId=69737d30297ca37e0f10813a",
+                  "raw": "{{url}}admin/reservations/v2?date=2026-02-16&organizationsId=69737d30297ca37e0f10813a",
                   "host": [
                     "{{url}}admin"
                   ],
                   "path": [
-                    "reservations"
+                    "reservations",
+                    "v2"
                   ],
                   "query": [
                     {
                       "key": "date",
-                      "value": "2025-11-20",
-                      "disabled": true
-                    },
-                    {
-                      "key": "range",
-                      "value": "today",
-                      "disabled": true
-                    },
-                    {
-                      "key": "range",
-                      "value": "monthly"
-                    },
-                    {
-                      "key": "range",
-                      "value": "weekly",
-                      "disabled": true
+                      "value": "2026-02-16"
                     },
                     {
                       "key": "page",
@@ -36049,7 +36070,8 @@
                     },
                     {
                       "key": "limit",
-                      "value": "100"
+                      "value": "1",
+                      "disabled": true
                     },
                     {
                       "key": "organizationsId",
@@ -36058,6 +36080,68 @@
                     {
                       "key": "companyOrganizer",
                       "value": "6911c14b6fc7cbd864e745b6",
+                      "disabled": true
+                    },
+                    {
+                      "key": "reservationType",
+                      "value": "69737d30297ca37e0f10813a",
+                      "disabled": true
+                    },
+                    {
+                      "key": "startTime",
+                      "value": "20:00",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": null,
+                      "description": "        \"pendingPayment\",\n        \"needsConfirmation\",\n        \"confirmed\",\n        \"checkedIn\",\n        \"rejected\",\n        \"cancelled\",\n        \"completed\",\n        \"deleted\",",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "calender",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": ""
+                },
+                "url": {
+                  "raw": "{{url}}admin/reservations/v2/calender?date=2026-02-16&organization=69737d30297ca37e0f10813a",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "reservations",
+                    "v2",
+                    "calender"
+                  ],
+                  "query": [
+                    {
+                      "key": "date",
+                      "value": "2026-02-16"
+                    },
+                    {
+                      "key": "organization",
+                      "value": "69737d30297ca37e0f10813a"
+                    },
+                    {
+                      "key": "companyOrganizer",
+                      "value": "6911c14b6fc7cbd864e745b6",
+                      "disabled": true
+                    },
+                    {
+                      "key": "reservationType",
+                      "value": "69737d30297ca37e0f10813a",
                       "disabled": true
                     }
                   ]
@@ -42227,7 +42311,7 @@
               ]
             },
             {
-              "name": "payment Methods",
+              "name": "settings",
               "item": [
                 {
                   "name": "update",
@@ -42236,7 +42320,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"inAppPayment\":\"true\",\n    \"payNow\":\"false\",\n    \"cash\":\"false\",\n    \"organization\":\"69737d30297ca37e0f10813a\",\n    \"companyOrganizer\":\"69803c6e926edf50d75db2ec\"\n}",
+                      "raw": "{\n    \"paymentMethod\": {\n        \"inAppPayment\": \"true\",\n        \"payNow\": \"false\",\n        \"cash\": \"true\"\n    },\n    \"automaticOrderAcceptance\":\"true\",\n    \"organization\": \"69737d30297ca37e0f10813a\",\n    \"companyOrganizer\": \"69803c6e926edf50d75db2ec\"\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -42244,14 +42328,13 @@
                       }
                     },
                     "url": {
-                      "raw": "{{url}}admin/in-app-ordering/settings/payment-methods",
+                      "raw": "{{url}}admin/in-app-ordering/settings",
                       "host": [
                         "{{url}}admin"
                       ],
                       "path": [
                         "in-app-ordering",
-                        "settings",
-                        "payment-methods"
+                        "settings"
                       ]
                     }
                   },
@@ -42275,14 +42358,13 @@
                       }
                     },
                     "url": {
-                      "raw": "{{url}}admin/in-app-ordering/settings/payment-methods?organization=69737d30297ca37e0f10813a",
+                      "raw": "{{url}}admin/in-app-ordering/settings?organization=69737d30297ca37e0f10813a",
                       "host": [
                         "{{url}}admin"
                       ],
                       "path": [
                         "in-app-ordering",
-                        "settings",
-                        "payment-methods"
+                        "settings"
                       ],
                       "query": [
                         {
@@ -44643,7 +44725,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"companyOrganizer\": \"64f1a2b3c4d5e6f7a8b9c0d1\",\n  \"isReservationEnabled\": true,\n  \"timeSlotsSetting\": {\n    \"status\": \"enabled\",\n    \"bookingOpensAfterMinutes\": 30,\n    \"bookingClosesBeforeMinutes\": 60,\n    \"averageSlotDurationInMinutes\": 45\n  },\n  \"automaticResponse\": {\n    \"autoAccept\": true,\n    \"autoReject\": false,\n    \"maxGuestPerReservationForAutoAccept\": 4\n  },\n  \"cancellationPolicy\": {\n    \"status\": \"enabled\",\n    \"hoursBeforeReservation\": 24\n  }\n}",
+                  "raw": "{\n  \"companyOrganizer\": \"64f1a2b3c4d5e6f7a8b9c0d1\",\n  \"isReservationEnabled\": false\n//   \"timeSlotsSetting\": {\n//     \"status\": \"enabled\",\n//     \"bookingOpensAfterMinutes\": 30,\n//     \"bookingClosesBeforeMinutes\": 60,\n//     \"averageSlotDurationInMinutes\": 45\n//   },\n//   \"automaticResponse\": {\n//     \"autoAccept\": true,\n//     \"autoReject\": false,\n//     \"maxGuestPerReservationForAutoAccept\": 4\n//   },\n//   \"cancellationPolicy\": {\n//     \"status\": \"enabled\",\n//     \"hoursBeforeReservation\": 24\n//   }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -44662,7 +44744,7 @@
                   "variable": [
                     {
                       "key": "id",
-                      "value": "69737d30297ca37e0f10813a"
+                      "value": "6a05611cb349fe000bbdf117"
                     }
                   ]
                 }
@@ -44682,7 +44764,7 @@
                   "raw": "{\r\n    // initial \r\n    //  \"status\":\"confirmed\"   // on pressing the button confirm \r\n    // \"status\": \"rejetcted\" // only if status is pending\r\n    // if paymentStatus is not paid \r\n    //  \"status\":\"sent\" // on pressing the button delivered \r\n    //  if paymentStatus is  paid \r\n    //  \"status\":\"completed\"// on pressing the button delivered \r\n       \"deliveredMenuItem\":\"6a69dc7ab9e53735cc4a30f4\"\r\n    // \"deliveredall\":false //false true\r\n    // update payment stat\r\n    // \"paymentStatus\": \"pending\" //\"pending\", \"paid\", \"failed\",\r\n    // \"deliveredall\":true,\r\n    // \"status\": \"completed\"\r\n}"
                 },
                 "url": {
-                  "raw": "{{url}}admin/reservation-preferences?organization=69737d30297ca37e0f10813a",
+                  "raw": "{{url}}admin/reservation-preferences?organization=6a05611cb349fe000bbdf117",
                   "host": [
                     "{{url}}admin"
                   ],
@@ -44692,7 +44774,7 @@
                   "query": [
                     {
                       "key": "organization",
-                      "value": "69737d30297ca37e0f10813a"
+                      "value": "6a05611cb349fe000bbdf117"
                     }
                   ]
                 }
@@ -44743,7 +44825,7 @@
                   "raw": "{\n  \"companyOrganizer\": \"64f1a2b3c4d5e6f7a8b9c0d1\",\n  \"organization\": \"69737d30297ca37e0f10813a\",\n  \"name\": \"VIP Booth\",\n  \"description\": \"Premium seating area near the bar\",\n  \"numberOfTables\": 5,\n  \"maxCapacity\": 20,\n  \"tax\":0,\n  \"maxPartySize\": 6,\n  \"conditionType\": \"minimumSpend\",\n  \"bonosPoints\": 10,\n  \"isVisibleToGuest\": true,\n  \"notes\": [\"Requires deposit\", \"Available after 8pm\"],\n  \"requireConfirmationToApprove\": true,\n  \"occasionRequired\": false,\n  \"status\": \"active\"\n}"
                 },
                 "url": {
-                  "raw": "{{url}}admin/reservation-types?organization=69737d30297ca37e0f10813a&status=deleted",
+                  "raw": "{{url}}admin/reservation-types?summary=true&organization=69737d30297ca37e0f10813a",
                   "host": [
                     "{{url}}admin"
                   ],
@@ -44753,17 +44835,16 @@
                   "query": [
                     {
                       "key": "summary",
-                      "value": "true",
-                      "disabled": true
+                      "value": "true"
                     },
                     {
                       "key": "page",
-                      "value": null,
+                      "value": "",
                       "disabled": true
                     },
                     {
                       "key": "limit",
-                      "value": null,
+                      "value": "",
                       "disabled": true
                     },
                     {
@@ -44772,7 +44853,8 @@
                     },
                     {
                       "key": "status",
-                      "value": "deleted"
+                      "value": "deleted",
+                      "disabled": true
                     },
                     {
                       "key": "conditionType",
@@ -44858,7 +44940,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"companyOrganizer\": \"64f1a2b3c4d5e6f7a8b9c0d1\",\n  \"organization\": \"69737d30297ca37e0f10813a\",\n  \"name\": \"VIP Booth\"\n}",
+                  "raw": "{\n  \"companyOrganizer\": \"6a0462c80dd707bc19cb03c0\",\n  \"organization\": \"69737d30297ca37e0f10813a\",\n  \"name\": \"VIP Booth\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -44890,7 +44972,7 @@
                   "raw": "{\n  \"companyOrganizer\": \"64f1a2b3c4d5e6f7a8b9c0d1\",\n  \"organization\": \"69737d30297ca37e0f10813a\",\n  \"name\": \"VIP Booth\",\n  \"description\": \"Premium seating area near the bar\",\n  \"numberOfTables\": 5,\n  \"maxCapacity\": 20,\n  \"tax\":0,\n  \"maxPartySize\": 6,\n  \"conditionType\": \"minimumSpend\",\n  \"bonosPoints\": 10,\n  \"isVisibleToGuest\": true,\n  \"notes\": [\"Requires deposit\", \"Available after 8pm\"],\n  \"requireConfirmationToApprove\": true,\n  \"occasionRequired\": false,\n  \"status\": \"active\"\n}"
                 },
                 "url": {
-                  "raw": "{{url}}admin/occasion?organization=69737d30297ca37e0f10813a",
+                  "raw": "{{url}}admin/occasion?organization=6a0469c70dd707bc19cb05d9&status=deleted",
                   "host": [
                     "{{url}}admin"
                   ],
@@ -44900,7 +44982,11 @@
                   "query": [
                     {
                       "key": "organization",
-                      "value": "69737d30297ca37e0f10813a"
+                      "value": "6a0469c70dd707bc19cb05d9"
+                    },
+                    {
+                      "key": "status",
+                      "value": "deleted"
                     }
                   ]
                 }
@@ -45061,6 +45147,46 @@
           "request": {
             "method": "GET",
             "header": [],
+            "url": {
+              "raw": "{{url}}admin/organizations-analytics?organization=69761e64e2d9f4ca0e722a8c",
+              "host": [
+                "{{url}}admin"
+              ],
+              "path": [
+                "organizations-analytics"
+              ],
+              "query": [
+                {
+                  "key": "dateFilter",
+                  "value": "thisWeek",
+                  "disabled": true
+                },
+                {
+                  "key": "organization",
+                  "value": "69761e64e2d9f4ca0e722a8c"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "organizations-analytics Copy",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"inAppOrderingSettings\": {\n        \"tips\": {\n            \"enableCustomerTipping\": true,\n            \"tipPresets\": [\n                {\n                    \"tipType\": \"fixed\",\n                    \"value\": 10,\n                    \"_id\": \"6a6b54347f5d4fe7f29f2d58\"\n                },\n                {\n                    \"tipType\": \"percentage\",\n                    \"value\": 20,\n                    \"_id\": \"6a6b54347f5d4fe7f29f2d59\"\n                }\n            ],\n            \"allowCustomTips\": true\n        },\n        \"sessionTimerLength\": 0\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
               "raw": "{{url}}admin/organizations-analytics?organization=69761e64e2d9f4ca0e722a8c",
               "host": [
@@ -45949,18 +46075,20 @@
                       }
                     },
                     "url": {
-                      "raw": "{{url}}staff/orders/:id",
+                      "raw": "{{url}}app/staff/menu/orders/:id",
                       "host": [
-                        "{{url}}staff"
+                        "{{url}}app"
                       ],
                       "path": [
+                        "staff",
+                        "menu",
                         "orders",
                         ":id"
                       ],
                       "variable": [
                         {
                           "key": "id",
-                          "value": "69281b3f26dead17dd279aea"
+                          "value": "697471de20f1da0f3c92c509"
                         }
                       ]
                     }
