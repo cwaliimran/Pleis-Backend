@@ -104,6 +104,7 @@ const UserReservationsSchema = new mongoose.Schema(
     },
     firstName: { type: String, default: "" },
     lastName: { type: String, default: "" },
+    email: { type: String, default: "" },
     phoneNumber: {
       code: {
         // Country code for phone number

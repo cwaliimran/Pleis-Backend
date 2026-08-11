@@ -29,6 +29,10 @@ const baseChallengeSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    repeatComplition: {
+      type:Boolean,
+      default: false
+    },
 
     status: {
       type: String,

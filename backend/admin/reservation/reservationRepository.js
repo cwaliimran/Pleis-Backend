@@ -1055,6 +1055,31 @@ const getReservationsV2 = async ({
     },
     {
       $lookup: {
+        from: "reservationtypes", // adjust to actual Reservation collection name
+        let: {
+          reservationType: {
+            $convert: {
+              input: "$reservationType",
+              to: "objectId",
+              onError: null,
+              onNull: null,
+            },
+          },
+        },
+        pipeline: [
+          { $match: { $expr: { $eq: ["$_id", "$$reservationType"] } } },
+          { $project: { name: 1 } },
+        ],
+        as: "reservationType",
+      },
+    },
+    {
+      $addFields: {
+        reservationType: { $first: "$reservationType" },
+      },
+    },
+    {
+      $lookup: {
         from: "organizations", // adjust to actual Organization collection name
         let: {
           organizationId: {
