@@ -14,7 +14,8 @@ const baseRewardsSchema = new mongoose.Schema(
       enum: ["buyMenuItemReward", "customReward", "ticketReward"],
     },
 
-    sortingType: { // for display purposes and grouping similar rewards
+    sortingType: {
+      // for display purposes and grouping similar rewards
       type: String,
       default: "",
     },
@@ -24,7 +25,6 @@ const baseRewardsSchema = new mongoose.Schema(
     claimLimit: { type: Number, default: null },
 
     percentOff: { type: Number, default: null },
-
 
     tierLimit: {
       type: mongoose.Schema.Types.ObjectId,
@@ -37,7 +37,18 @@ const baseRewardsSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-
+    maxLimitPerUser: {
+      type: Number,
+      default: null,
+    },
+    availableAsReward: {
+      type: Boolean,
+      default: true,
+    },
+    challengeOnly: {
+      type: Boolean,
+      default: false,
+    },
     status: {
       type: String,
       enum: ["active", "inactive", "completed", "deleted"],
@@ -45,13 +56,16 @@ const baseRewardsSchema = new mongoose.Schema(
     },
 
     //if enabled reward will not show in app loyalty of rewards, but it will be tied to promotions and show in promotions section only
-    isPromotionOnly: { 
+    isPromotionOnly: {
       type: Boolean,
       default: false,
     },
-
+    availableAsReward:{
+      type: Boolean,
+      default: true,
+    }
   },
-  { timestamps: true, discriminatorKey: "rewardType" }
+  { timestamps: true, discriminatorKey: "rewardType" },
 );
 
 module.exports =

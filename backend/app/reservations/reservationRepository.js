@@ -40,6 +40,7 @@ const checkReservationAvailability = async ({
   partySize,
   numberOfTables,
   organization,
+  timingSlots,
 }) => {
   const reservationType = await ReservationType.findOne({
     _id: reservationTypeId,
@@ -48,19 +49,76 @@ const checkReservationAvailability = async ({
   }).lean();
 
   if (!reservationType) {
-    console.log("Reservation type not found");
     return {
       allowed: false,
       message: "Reservation type not found or is inactive",
     };
   }
 
+  // Get only active/pending/accepted reservations
+  // for the same organization and reservation type.
+  const existingReservations = await UserReservations.find({
+    reservationType: String(reservationTypeId),
+    organizationId: new mongoose.Types.ObjectId(organization),
+    status: {
+      $in: ["checkedIn", "confirmed", "needsConfirmation", "pendingPayment"],
+    },
+  })
+    .select("timingSlots numberOfTables partySize")
+    .lean();
+
+  // Check every requested date/time slot
+  for (const requestedDateBlock of timingSlots?.dateTimeSlots || []) {
+    for (const requestedSlot of requestedDateBlock.timeSlots || []) {
+      const requestedStart = new Date(requestedSlot.startTime);
+      const requestedEnd = new Date(requestedSlot.endTime);
+
+      for (const reservation of existingReservations) {
+        for (const existingDateBlock of reservation.timingSlots
+          ?.dateTimeSlots || []) {
+          for (const existingSlot of existingDateBlock.timeSlots || []) {
+            const existingStart = new Date(existingSlot.startTime);
+            const existingEnd = new Date(existingSlot.endTime);
+
+            // Check whether the requested slot overlaps
+            // with an already booked slot.
+            const isOverlapping =
+              requestedStart < existingEnd && requestedEnd > existingStart;
+
+            if (isOverlapping) {
+              return {
+                allowed: false,
+                message:
+                  "This reservation type is already booked for the selected time slot",
+                conflict: {
+                  date: requestedDateBlock.date,
+                  requestedStart: requestedSlot.startTime,
+                  requestedEnd: requestedSlot.endTime,
+                  bookedStart: existingSlot.startTime,
+                  bookedEnd: existingSlot.endTime,
+                },
+              };
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // If there is no time conflict, check table and party capacity.
   const stats = await UserReservations.aggregate([
     {
       $match: {
         reservationType: String(reservationTypeId),
         organizationId: new mongoose.Types.ObjectId(organization),
-        status: { $nin: ["cancelled", "deleted"] },
+        status: {
+          $in: [
+            "checkedIn",
+            "confirmed",
+            "needsConfirmation",
+            "pendingPayment",
+          ],
+        },
       },
     },
     {
@@ -77,6 +135,7 @@ const checkReservationAvailability = async ({
 
   const tablesAvailable =
     usedTables + numberOfTables <= reservationType.numberOfTables;
+
   const partySizeAvailable =
     usedPartySize + partySize <= reservationType.maxPartySize;
 
@@ -102,7 +161,10 @@ const checkReservationAvailability = async ({
     };
   }
 
-  return { allowed: true, message: "Reservation is available" };
+  return {
+    allowed: true,
+    message: "Reservation is available",
+  };
 };
 
 const createReservation = async (data, session) => {
@@ -153,7 +215,7 @@ const createReservation = async (data, session) => {
 
   /* ---------- Reservation base ---------- */
   let baseAmount = Number(data.amount ?? 0);
-  
+
   if (reservationId) {
     const reservationBase = await Reservations.findById(reservationId)
       .session(session)
@@ -296,7 +358,10 @@ const createReservation = async (data, session) => {
 
   /* ---------- Loyalty points ---------- */
 
-  if (data.status === "confirmed" && data.reservationSnapshot?.bonusPoints > 0) {
+  if (
+    data.status === "confirmed" &&
+    data.reservationSnapshot?.bonusPoints > 0
+  ) {
     let companyPoints = {
       base: data.reservationSnapshot.bonusPoints,
       multiplier: 1,

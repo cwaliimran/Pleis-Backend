@@ -16,13 +16,14 @@ const getRewards = async (req, res) => {
     const timezone = req.user?.timezone || "UTC";
     const companyOrganizer = req.params.companyOrganizer;
 
-    const { rewards } =
-      await rewardService.getRewardsByCompanyOrganizerService({
+    const { rewards } = await rewardService.getRewardsByCompanyOrganizerService(
+      {
         userId,
         companyOrganizer,
         timezone,
         keyword,
-      });
+      },
+    );
 
     return sendResponse({
       res,
@@ -30,7 +31,6 @@ const getRewards = async (req, res) => {
       translationKey: "rewards_fetched_successfully",
       data: rewards,
     });
-
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
     return sendResponse({
@@ -42,15 +42,17 @@ const getRewards = async (req, res) => {
   }
 };
 
-
-
-
-/* const getRewardDetails = async (req, res) => {
-  if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
+const getRewardDetails = async (req, res) => {
+  if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] }))
+    return;
   try {
     const reward = await rewardService.getRewardDetails(req.params.id);
     if (!reward) {
-      return sendResponse({ res, statusCode: 404, translationKey: "reward_not_found" });
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "reward_not_found",
+      });
     }
     return sendResponse({
       res,
@@ -60,19 +62,30 @@ const getRewards = async (req, res) => {
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
-    return sendResponse({ res, statusCode: 500, translationKey: readableError.message, error });
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: readableError.message,
+      error,
+    });
   }
-}; */
+};
 
 const claimReward = async (req, res) => {
   const { id, protectionUserDetails } = req.body; //protectionUserDetails only if ticket reward requirs protection details
-  if (!validateParams(req, res, { rawData: ["id"], objectIdFields: ["id"] })) return;
+  if (!validateParams(req, res, { rawData: ["id"], objectIdFields: ["id"] }))
+    return;
   try {
     const rewardId = id;
     const userId = req.user._id;
     const timezone = req.user?.timezone;
 
-    const result = await rewardService.claimRewardService(userId, rewardId, protectionUserDetails, timezone);
+    const result = await rewardService.claimRewardService(
+      userId,
+      rewardId,
+      protectionUserDetails,
+      timezone,
+    );
 
     if (!result.success) {
       return sendResponse({
@@ -90,7 +103,12 @@ const claimReward = async (req, res) => {
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
-    return sendResponse({ res, statusCode: 500, translationKey: readableError.message, error });
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: readableError.message,
+      error,
+    });
   }
 };
 
@@ -100,15 +118,14 @@ const getJoinedClubsRewards = async (req, res) => {
     const { keyword } = req.query;
     const userId = req.user._id;
     const timezone = req.user?.timezone || "UTC";
-    const result =
-      await rewardService.getRewardsForUserJoinedClubs({
-        userId,
-        page,
-        limit,
-        skip,
-        keyword,
-        timezone
-      });
+    const result = await rewardService.getRewardsForUserJoinedClubs({
+      userId,
+      page,
+      limit,
+      skip,
+      keyword,
+      timezone,
+    });
 
     return sendResponse({
       res,
@@ -128,10 +145,9 @@ const getJoinedClubsRewards = async (req, res) => {
   }
 };
 
-
 module.exports = {
   getRewards,
-  // getRewardDetails,
+  getRewardDetails,
   claimReward,
-  getJoinedClubsRewards
+  getJoinedClubsRewards,
 };

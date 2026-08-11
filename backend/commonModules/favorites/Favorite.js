@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const FavoriteTargetTypes = ["menu", "event", "organization"];
+const FavoriteTargetTypes = ["menu", "event", "organization","challenge", "promotion", "reward" ];
 
 const favoriteSchema = new mongoose.Schema(
     {

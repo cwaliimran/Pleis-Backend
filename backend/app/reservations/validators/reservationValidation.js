@@ -1,7 +1,4 @@
-const {
-  validateParams,
-  convertTimezoneToUtc,
-} = require("@utils/responseUtil");
+const { validateParams, convertTimezoneToUtc } = require("@utils/responseUtil");
 
 /**
  * ✅ Validates reservation
@@ -74,15 +71,15 @@ const validateReservationPayload = (req, res, reservation) => {
 
         // ✅ THIS NOW RUNS
         slot.startTime = convertTimezoneToUtc(
-          `${dateBlock.date} ${slot.startTime}`,
+          slot.startTime,
           timezone,
-          "YYYY-MM-DD hh:mm A"
+          "YYYY-MM-DDTHH:mm:ss.SSS[Z]",
         );
 
         slot.endTime = convertTimezoneToUtc(
-          `${dateBlock.date} ${slot.endTime}`,
+          slot.endTime,
           timezone,
-          "YYYY-MM-DD hh:mm A"
+          "YYYY-MM-DDTHH:mm:ss.SSS[Z]",
         );
       }
     }
