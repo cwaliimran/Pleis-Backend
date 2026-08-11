@@ -4,12 +4,8 @@ const { NotificationTypes } = require("@NotificationsModel");
 const mongoose = require("mongoose");
 const Menus = require("@MenusModel");
 const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
-const {
-  sendUserNotifications,
-} = require("../../../controllers/communicationController");
-const {
-  calculatePointsRepo,
-} = require("../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
+const { sendUserNotifications } = require("../../../controllers/communicationController");
+const { calculatePointsRepo } = require("../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
 const {
   createTransactionService,
 } = require("../../../app/userWalletService/transactions/services/unifiedTransactionsService");
@@ -130,11 +126,7 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
   }
 
   // ❌ Prevent payment change if already paid
-  if (
-    order.paymentStatus === "paid" &&
-    data.paymentStatus !== undefined &&
-    data.paymentStatus !== "paid"
-  ) {
+  if (order.paymentStatus === "paid" && data.paymentStatus !== undefined && data.paymentStatus !== "paid") {
     return { error: "Cant_change_paid_payment_status" };
   }
 
@@ -168,10 +160,7 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
   /* ===============================
      2️⃣ PAYMENT STATUS
   =============================== */
-  if (
-    data.paymentStatus !== undefined &&
-    data.paymentStatus !== order.paymentStatus
-  ) {
+  if (data.paymentStatus !== undefined && data.paymentStatus !== order.paymentStatus) {
     order.paymentStatus = data.paymentStatus;
     paymentChanged = true;
 
@@ -197,11 +186,7 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
         amount: order.totalPrice,
         payload: order,
       });
-      const pointsCalculation = await calculatePointsRepo(
-        order.user,
-        order.organization.creator,
-        totalPrice,
-      );
+      const pointsCalculation = await calculatePointsRepo(order.user, order.organization.creator, totalPrice);
 
       let companyPoints = {
         base: pointsCalculation.organizer.earnedPoints,
@@ -255,8 +240,7 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
     });
     deliveryChanged = true;
   } else if (data.deliveredMenuItem) {
-
-  /* ===============================
+    /* ===============================
      4️⃣ DELIVER SELECTED ITEMS
   =============================== */
     const deliveredIds = data.deliveredMenuItem
@@ -272,16 +256,22 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
       }
     });
   }
-  if(data.resaonForRejection) {
+  if (data.updateItemStatus && data.updateItemStatus.id && data.updateItemStatus.status) {
+    const menuItem = order.items.id(data.updateItemStatus?.id);
+    if (menuItem) {
+      menuItem.status = data.updateItemStatus?.status;
+    }
+  }
+  if (data.resaonForRejection) {
     order.reasonForRejection = data.reasonForRejection;
   }
-  if(data.reasonForCancellation) {
+  if (data.reasonForCancellation) {
     order.reasonForCancellation = data.reasonForCancellation;
   }
-  if(data.noteForRejection) {
+  if (data.noteForRejection) {
     order.noteForRejection = data.noteForRejection;
   }
-  if(data.noteForCancellation) {
+  if (data.noteForCancellation) {
     order.noteForCancellation = data.noteForCancellation;
   }
 
@@ -340,24 +330,13 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
 
 const updateInAppOrders = async (organization, isOrderingEnabled) => {
   try {
-    return await Menus.updateMany(
-      { organization },
-      { $set: { isOrderingEnabled } },
-      { upsert: true },
-    );
+    return await Menus.updateMany({ organization }, { $set: { isOrderingEnabled } }, { upsert: true });
   } catch (error) {
     throw error;
   }
 };
 
-const getInAppOrders = async ({
-  timezone,
-  page,
-  limit,
-  keyword,
-  status,
-  organization,
-}) => {
+const getInAppOrders = async ({ timezone, page, limit, keyword, status, organization }) => {
   page = Number(page) || 1;
   limit = Number(limit);
   if (limit) {

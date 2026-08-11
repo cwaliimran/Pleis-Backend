@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 
 const menuItemsSchema = new mongoose.Schema(
   {
-
     image: {
       type: String,
       default: "",
@@ -43,12 +42,10 @@ const menuItemsSchema = new mongoose.Schema(
       required: true,
     },
 
-
     startTime: {
       type: Date,
       default: null,
     },
-
 
     endTime: {
       type: Date,
@@ -66,7 +63,6 @@ const menuItemsSchema = new mongoose.Schema(
       enum: ["active", "inactive", "deleted"],
       default: "active",
     },
-
 
     //in case of limited time offer
     isLimitedTimeOffer: {
@@ -92,8 +88,8 @@ const menuItemsSchema = new mongoose.Schema(
     },
     availabilityType: {
       type: String,
-      enum: ['preOrdersOnly', 'preOrdersEvent', 'preOrderExclusive'],
-      default: null
+      enum: ["preOrdersOnly", "preOrdersEvent", "preOrderExclusive"],
+      default: null,
     },
     upSellItem: {
       type: Boolean,
@@ -120,7 +116,8 @@ const menuItemsSchema = new mongoose.Schema(
       ref: "Brand",
       default: null,
     },
-    amountQuantity: { //e.g 200 mil, 250g
+    amountQuantity: {
+      //e.g 200 mil, 250g
       type: String,
       default: "",
     },
@@ -129,7 +126,7 @@ const menuItemsSchema = new mongoose.Schema(
       enum: ["single", "combo"],
       default: "single",
     },
-    //Serving 
+    //Serving
     servingSize: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Serving",
@@ -160,7 +157,6 @@ const menuItemsSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-
     isRecommended: {
       type: Boolean,
       default: false,
@@ -173,11 +169,10 @@ const menuItemsSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 const MenuItems = mongoose.model("MenuItems", menuItemsSchema);

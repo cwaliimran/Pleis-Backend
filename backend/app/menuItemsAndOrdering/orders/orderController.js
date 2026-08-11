@@ -2,25 +2,29 @@ const orderService = require("./orderService");
 const { sendResponse, getReadableErrorMessage, validateParams, parsePaginationParams } = require("@utils/responseUtil");
 
 const placeOrder = async (req, res) => {
-  const { items = [], combos = [], notes, paymentMethod = null, pickupType,
-    tableNumber, promoCode,userId,tip } = req.body;
+  const {
+    items = [],
+    combos = [],
+    notes,
+    paymentMethod = null,
+    pickupType,
+    tableNumber,
+    promoCode,
+    userId,
+    tip,
+  } = req.body;
   try {
-
     let validateData = {
-      rawData: [
-        "pickupType",
-        "paymentMethod",
-      ],
+      rawData: ["pickupType", "paymentMethod"],
       enumFields: {
         pickupType: ["counter", "tableService", "togo"],
         paymentMethod: ["applePay", "card", "cash"],
       },
-    }
+    };
 
     if (pickupType === "tableService") {
       validateData.rawData.push("tableNumber");
     }
-
 
     if (!validateParams(req, res, validateData)) return;
 
@@ -34,9 +38,8 @@ const placeOrder = async (req, res) => {
       pickupType,
       tableNumber,
       promoCode,
-      tip
+      tip,
     });
-
 
     return sendResponse({
       res,
@@ -59,11 +62,8 @@ const addMoreItemsToOrder = async (req, res) => {
   const { orderId, items } = req.body;
   try {
     let validateData = {
-      rawData: [
-        "orderId",
-        "items",
-      ],
-    }
+      rawData: ["orderId", "items"],
+    };
 
     if (!validateParams(req, res, validateData)) return;
 
@@ -89,7 +89,7 @@ const addMoreItemsToOrder = async (req, res) => {
       error,
     });
   }
-}
+};
 
 const getOrderDetails = async (req, res) => {
   const { id } = req.params;
@@ -98,7 +98,7 @@ const getOrderDetails = async (req, res) => {
   const timezone = req.user.timezone || "Asia/Kolkata";
 
   try {
-    const result = await orderService.getOrderDetails(id,timezone);
+    const result = await orderService.getOrderDetails(id, timezone);
     if (!result || !result.order) {
       return sendResponse({ res, statusCode: 404, translationKey: "order_not_found" });
     }
@@ -125,7 +125,6 @@ const getUserOrders = async (req, res) => {
     const { page, limit } = parsePaginationParams(req);
 
     const { orders, meta } = await orderService.getUserOrders(req.user._id, page, limit);
-
 
     return sendResponse({
       res,

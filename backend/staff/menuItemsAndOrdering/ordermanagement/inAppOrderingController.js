@@ -6,11 +6,13 @@ const {
   getReadableErrorMessage,
   convertTimezoneToUtc,
 } = require("../../../helperUtils/responseUtil");
-const mongoose = require('mongoose'); // Import mongoose
+const mongoose = require("mongoose"); // Import mongoose
 
 const Orderservice = require("./inAppOrderingService");
-const { getOrdersService, updateOrderDetailsService } = require("../../../admin/inAppOrdering/ordermanagement/inAppOrderingService");
-
+const {
+  getOrdersService,
+  updateOrderDetailsService,
+} = require("../../../admin/inAppOrdering/ordermanagement/inAppOrderingService");
 
 const getOrders = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
@@ -48,7 +50,7 @@ const getOrders = async (req, res) => {
       orderStatus,
       activeorderStatus,
       pickupFilter,
-      paymentStatus
+      paymentStatus,
     });
 
     return sendResponse({
@@ -70,32 +72,27 @@ const getOrders = async (req, res) => {
 };
 const updateOrders = async (req, res) => {
   const { id } = req.params;
-  const {
-    status,
-    paymentStatus,
-    deliveredMenuItem,
-    deliveredall
-  } = req.body;
+  const { status, paymentStatus, deliveredMenuItem, deliveredall, updateItemStatus } = req.body;
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
       objectIdFields: ["id"],
     })
-  ) return;
-
+  )
+    return;
 
   let data = {
     status,
     paymentStatus,
     deliveredMenuItem,
     deliveredall,
-    updatedBy: req.user._id
+    updatedBy: req.user._id,
+    updateItemStatus,
   };
   const staffId = req.user._id;
 
-
   try {
-    const updated = await updateOrderDetailsService({ orderId: id, data })
+    const updated = await updateOrderDetailsService({ orderId: id, data });
     if (updated && updated.error) {
       return sendResponse({
         res,
@@ -134,12 +131,10 @@ const updateIsOrderingEnabled = async (req, res) => {
 
   if (
     !validateParams(req, res, {
-      rawData: [
-        "organization",
-        "isOrderingEnabled"
-      ],
+      rawData: ["organization", "isOrderingEnabled"],
     })
-  ) return;
+  )
+    return;
 
   try {
     const result = await Orderservice.updateIsOrderingEnabledService(organization, isOrderingEnabled);
@@ -169,10 +164,8 @@ const updateIsOrderingEnabled = async (req, res) => {
   }
 };
 
-
-
 module.exports = {
   getOrders,
   updateOrders,
-  updateIsOrderingEnabled
+  updateIsOrderingEnabled,
 };

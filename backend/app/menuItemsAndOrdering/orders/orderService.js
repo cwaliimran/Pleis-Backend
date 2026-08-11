@@ -16,7 +16,6 @@ const { calculateComboPrice } = require("../menuItems/formatter/formatMenuItemsC
 const { getWallet } = require("../../../app/loyalty/clubMembers/clubMembersRepository");
 const { getLatestUserReservations } = require("../../../admin/reservation/reservationRepository");
 
-
 const buildPricedMenuItemSnapshot = (menuItem) => {
   const priceInfo = calculateItemPrice(menuItem);
   return {
@@ -172,7 +171,7 @@ const placeOrder = async ({
   pickupType,
   tableNumber,
   promoCode,
-  tip
+  tip,
 }) => {
   const cartCombos = combos || [];
 
@@ -256,6 +255,8 @@ const placeOrder = async ({
       tip = tip || 0;
       totalPrice += tip;
 
+      const status = menuItem.isRequiresOrderConfirmation ? "pending" : "confirmed";
+
       return {
         menuItem: menuItem._id,
         quantity: i.quantity,
@@ -263,6 +264,7 @@ const placeOrder = async ({
         unitFinalPrice,
         saleDiscountPerUnit,
         finalPrice,
+        status,
         tip,
         menuItemSnapShot: JSON.parse(JSON.stringify(menuItem)),
       };
@@ -508,20 +510,20 @@ const addMoreItemsToOrder = async ({ orderId, items }) => {
 };
 
 // 2️⃣ Get order by ID
-const getOrderDetails = async (orderId,timezone) => {
+const getOrderDetails = async (orderId, timezone) => {
   let order = await orderRepo.getOrderById(orderId);
   if (!order) return null;
-  const userID=order.user._id;
-  const organizationID=order.organization._id;
+  const userID = order.user._id;
+  const organizationID = order.organization._id;
 
   const companyOrganizer = await getOrgCompanyOrganizer(organizationID);
   const wallet = await getWallet(userID, companyOrganizer);
   const reservation = await getLatestUserReservations(userID, organizationID, 5);
 
   let promoCode = null;
-    if (reservation) {
-      order.reservation = reservation;
-    }
+  if (reservation) {
+    order.reservation = reservation;
+  }
   let formattedOrder = menuItemOrderFormatter(order, timezone);
   if (wallet) {
     formattedOrder.loyaltyWallet = {

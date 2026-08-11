@@ -34,7 +34,6 @@ const createReservation = async (req, res) => {
         },
         session
       );
-     console.log("result",result );
 
 
     if (!result.success) {

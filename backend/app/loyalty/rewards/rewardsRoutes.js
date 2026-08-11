@@ -1,7 +1,7 @@
 const express = require("express");
 const {
   getRewards,
-  // getRewardDetails,
+  getRewardDetails,
   claimReward,
   getJoinedClubsRewards
 } = require("./rewardsController");
@@ -17,6 +17,7 @@ const apiRateLimiterDetails = createRateLimiter("Rewards/:id");
 
 router.get("/by-company/:companyOrganizer", apiRateLimiter, getRewards);
 router.get("/joined-clubs", apiRateLimiter, getJoinedClubsRewards);
+router.get("/:id", apiRateLimiterDetails, getRewardDetails);
 // router.get("/:id", apiRateLimiterDetails, getRewardDetails);
 router.post("/claim", apiRateLimiterDetails, claimReward);
 

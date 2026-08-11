@@ -14,7 +14,6 @@ const getRewardsByCompanyOrganizer = async ({ companyOrganizer }) => {
   const query = {
     companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
     status: "active",
-    isPromotionOnly: false, // Exclude promotion-only rewards
     $or: [
       { endDate: null },
       { endDate: { $gt: now } }
@@ -119,5 +118,5 @@ module.exports = {
   claimReward,
   getRewardsForDashboardPaged,
   countDashboardRewards,
-  getRewardById
+  getRewardById,
 };
