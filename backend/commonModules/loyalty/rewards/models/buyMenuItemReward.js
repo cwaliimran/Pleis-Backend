@@ -1,4 +1,4 @@
-const Reward = require("./BaseReward");
+const Reward = require("./baseReward");
 const mongoose = require("mongoose");
 
 const BuyMenuItemReward = Reward.discriminator(
@@ -11,8 +11,8 @@ const BuyMenuItemReward = Reward.discriminator(
         required: true,
       },
     },
-    { _id: false }
-  )
+    { _id: false },
+  ),
 );
 
 module.exports = BuyMenuItemReward;

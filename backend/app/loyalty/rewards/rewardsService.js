@@ -2,6 +2,7 @@ const rewardRepo = require("./rewardsRepository");
 
 const { checkClaimLimitForLoyaltyRewards } = require("../rewardsOrders/rewardsOrdersRepository");
 const { formatReward } = require("./formatters/formatReward");
+const { formatRewardDetails } = require("./formatters/formatRewardDetils");
 const { normalizeRewardClaimMeta } = require("./formatters/normalizeRewardClaimMeta");
 const clubMemberRepo = require("../clubMembers/clubMembersRepository");
 const { formatUserWallet } = require("../clubMembers/formatters/formatUserWallet");
@@ -225,9 +226,17 @@ const getRewardsForUserJoinedClubs = async ({
   };
 };
 
-
+const getRewardDetails = async (rewardId) => {
+  const reward = await rewardRepo.getRewardById(rewardId);
+  if (!reward) {
+    throw new Error("reward_not_found");
+  }
+  const formattedReward = await formatRewardDetails(reward);
+  return formattedReward;
+};
 module.exports = {
   getRewardsByCompanyOrganizerService,
   claimRewardService,
   getRewardsForUserJoinedClubs,
+  getRewardDetails,
 };
