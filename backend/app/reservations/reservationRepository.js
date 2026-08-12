@@ -5,9 +5,7 @@ const { User } = require("@UserModel");
 const mongoose = require("mongoose");
 const { reservationsFormatter } = require("./formaters/reservationFormetter");
 const Organizations = require("@OrganizationModel");
-const {
-  getUserInterestsIdsForRecommendation,
-} = require("../usersManagement/usersRepository");
+const { getUserInterestsIdsForRecommendation } = require("../usersManagement/usersRepository");
 
 const {
   generateMeta,
@@ -17,20 +15,14 @@ const {
   convertTimezoneToUtc,
   getStartAndEndOfMonth,
 } = require("../../helperUtils/responseUtil");
-const {
-  placePreOrderMenuItemsWithReservation,
-} = require("../menuItemsAndOrdering/orders/orderService");
-const {
-  sendUserNotifications,
-} = require("../../controllers/communicationController");
+const { placePreOrderMenuItemsWithReservation } = require("../menuItemsAndOrdering/orders/orderService");
+const { sendUserNotifications } = require("../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 const {
   getStaffIdsByOrganization,
   getLogoByOrganization,
 } = require("../../admin/organizations/organizationRepository");
-const {
-  createTransactionService,
-} = require("../userWalletService/transactions/services/unifiedTransactionsService");
+const { createTransactionService } = require("../userWalletService/transactions/services/unifiedTransactionsService");
 const { TAX_RATE_RESERVATION } = require("../../config/CONSTANTS");
 const { usePromoCode } = require("../promoCode/promoCodeRepository");
 const ReservationType = require("@ReservationTypeModel");
@@ -74,22 +66,19 @@ const checkReservationAvailability = async ({
       const requestedEnd = new Date(requestedSlot.endTime);
 
       for (const reservation of existingReservations) {
-        for (const existingDateBlock of reservation.timingSlots
-          ?.dateTimeSlots || []) {
+        for (const existingDateBlock of reservation.timingSlots?.dateTimeSlots || []) {
           for (const existingSlot of existingDateBlock.timeSlots || []) {
             const existingStart = new Date(existingSlot.startTime);
             const existingEnd = new Date(existingSlot.endTime);
 
             // Check whether the requested slot overlaps
             // with an already booked slot.
-            const isOverlapping =
-              requestedStart < existingEnd && requestedEnd > existingStart;
+            const isOverlapping = requestedStart < existingEnd && requestedEnd > existingStart;
 
             if (isOverlapping) {
               return {
                 allowed: false,
-                message:
-                  "This reservation type is already booked for the selected time slot",
+                message: "This reservation type is already booked for the selected time slot",
                 conflict: {
                   date: requestedDateBlock.date,
                   requestedStart: requestedSlot.startTime,
@@ -112,12 +101,7 @@ const checkReservationAvailability = async ({
         reservationType: String(reservationTypeId),
         organizationId: new mongoose.Types.ObjectId(organization),
         status: {
-          $in: [
-            "checkedIn",
-            "confirmed",
-            "needsConfirmation",
-            "pendingPayment",
-          ],
+          $in: ["checkedIn", "confirmed", "needsConfirmation", "pendingPayment"],
         },
       },
     },
@@ -133,17 +117,14 @@ const checkReservationAvailability = async ({
   const usedTables = stats[0]?.usedTables || 0;
   const usedPartySize = stats[0]?.usedPartySize || 0;
 
-  const tablesAvailable =
-    usedTables + numberOfTables <= reservationType.numberOfTables;
+  const tablesAvailable = usedTables + numberOfTables <= reservationType.numberOfTables;
 
-  const partySizeAvailable =
-    usedPartySize + partySize <= reservationType.maxPartySize;
+  const partySizeAvailable = usedPartySize + partySize <= reservationType.maxPartySize;
 
   if (!tablesAvailable && !partySizeAvailable) {
     return {
       allowed: false,
-      message:
-        "Not enough tables or party capacity available for this reservation type",
+      message: "Not enough tables or party capacity available for this reservation type",
     };
   }
 
@@ -217,9 +198,7 @@ const createReservation = async (data, session) => {
   let baseAmount = Number(data.amount ?? 0);
 
   if (reservationId) {
-    const reservationBase = await Reservations.findById(reservationId)
-      .session(session)
-      .lean();
+    const reservationBase = await Reservations.findById(reservationId).session(session).lean();
 
     if (!reservationBase) {
       throw new Error("Reservation not found");
@@ -287,18 +266,12 @@ const createReservation = async (data, session) => {
 
   /* ---------- Confirmation flow ---------- */
 
-  if (
-    data.conditionType === "noCondition" ||
-    data.conditionType === "minimumSpend" ||
-    data.conditionType === "free"
-  ) {
+  if (data.conditionType === "noCondition" || data.conditionType === "minimumSpend" || data.conditionType === "free") {
     data.status = "confirmed";
   } else if (data.reservationSnapshot.needsConfirmation) {
     data.status = "needsConfirmation";
   } else if (finalReservationAmount > 0) {
-    if (
-      ["card", "applePay", "cash"].includes(data?.paymentDetails?.paymentMethod)
-    ) {
+    if (["card", "applePay", "cash"].includes(data?.paymentDetails?.paymentMethod)) {
       data.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
 
       data.status = "pendingPayment";
@@ -358,10 +331,7 @@ const createReservation = async (data, session) => {
 
   /* ---------- Loyalty points ---------- */
 
-  if (
-    data.status === "confirmed" &&
-    data.reservationSnapshot?.bonusPoints > 0
-  ) {
+  if (data.status === "confirmed" && data.reservationSnapshot?.bonusPoints > 0) {
     let companyPoints = {
       base: data.reservationSnapshot.bonusPoints,
       multiplier: 1,
@@ -416,13 +386,9 @@ const createReservation = async (data, session) => {
     });
   }
 
-  const staffIds = await getStaffIdsByOrganization(
-    userReservation.organizationId,
-  );
+  const staffIds = await getStaffIdsByOrganization(userReservation.organizationId);
 
-  const organizationImage = await getLogoByOrganization(
-    userReservation.organizationId,
-  );
+  const organizationImage = await getLogoByOrganization(userReservation.organizationId);
 
   await sendUserNotifications({
     recipientIds: staffIds,
@@ -448,9 +414,7 @@ const validateReservationCapacity = async ({ reservationId }) => {
   const reservationObjectId = new mongoose.Types.ObjectId(reservationId);
 
   // 1️⃣ Fetch reservation definition
-  const reservation = await Reservations.findById(reservationObjectId).select(
-    "availableReservations",
-  );
+  const reservation = await Reservations.findById(reservationObjectId).select("availableReservations");
 
   if (!reservation) {
     return { valid: false, error: "reservation_not_found" };
@@ -497,10 +461,7 @@ const validateReservationCapacity = async ({ reservationId }) => {
 };
 
 const getReservationsWithFilters = async (query = {}, skip = 0, limit = 10) => {
-  return Reservations.find(query)
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
+  return Reservations.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit);
 };
 
 // Count by condition
@@ -554,8 +515,7 @@ const getReservations = async ({
 
   if (eventId) match.optionalEventId = new mongoose.Types.ObjectId(eventId);
 
-  if (organizationId)
-    match.organizationId = new mongoose.Types.ObjectId(organizationId);
+  if (organizationId) match.organizationId = new mongoose.Types.ObjectId(organizationId);
 
   /* --------------------------------
      2️⃣ DB PIPELINE (LIGHT)
@@ -577,16 +537,10 @@ const getReservations = async ({
                   {
                     $or: [
                       {
-                        $in: [
-                          "$status",
-                          ["confirmed", "checkedIn", "completed"],
-                        ],
+                        $in: ["$status", ["confirmed", "checkedIn", "completed"]],
                       },
                       {
-                        $and: [
-                          { $eq: ["$status", "pendingPayment"] },
-                          { $gt: ["$lockUntil", now] },
-                        ],
+                        $and: [{ $eq: ["$status", "pendingPayment"] }, { $gt: ["$lockUntil", now] }],
                       },
                     ],
                   },
@@ -602,10 +556,7 @@ const getReservations = async ({
     {
       $addFields: {
         remainingReservations: {
-          $subtract: [
-            "$availableReservations",
-            { $ifNull: [{ $first: "$blocked.count" }, 0] },
-          ],
+          $subtract: ["$availableReservations", { $ifNull: [{ $first: "$blocked.count" }, 0] }],
         },
       },
     },
@@ -650,9 +601,7 @@ const getReservations = async ({
           // date filter
           if (date && (blockDate < start || blockDate > end)) return null;
 
-          const timeSlots = (block.timeSlots || []).filter(
-            (slot) => new Date(slot.endTime) > now,
-          );
+          const timeSlots = (block.timeSlots || []).filter((slot) => new Date(slot.endTime) > now);
 
           if (!timeSlots.length) return null;
 
@@ -1038,9 +987,7 @@ const getOrganizationsWithReservationsForHome = async ({
   limit = Math.min(limit, 10);
   const radiusMeters = radiusKm * 1000;
 
-  const categoryObjectId = category
-    ? new mongoose.Types.ObjectId(category)
-    : null;
+  const categoryObjectId = category ? new mongoose.Types.ObjectId(category) : null;
 
   // user interests
   const prefs = await getUserInterestsIdsForRecommendation(userId);
@@ -1104,10 +1051,7 @@ const getOrganizationsWithReservationsForHome = async ({
                     ],
                   },
                   {
-                    $gt: [
-                      "$timingSlots.dateTimeSlots.timeSlots.endTime",
-                      "$$now",
-                    ],
+                    $gt: ["$timingSlots.dateTimeSlots.timeSlots.endTime", "$$now"],
                   },
                 ],
               },
@@ -1158,21 +1102,13 @@ const getOrganizationsWithReservationsForHome = async ({
                     0.6,
                     userCategories.length
                       ? {
-                          $divide: [
-                            "$matchedCategories",
-                            userCategories.length,
-                          ],
+                          $divide: ["$matchedCategories", userCategories.length],
                         }
                       : 0,
                   ],
                 },
                 {
-                  $multiply: [
-                    0.4,
-                    userTags.length
-                      ? { $divide: ["$matchedTags", userTags.length] }
-                      : 0,
-                  ],
+                  $multiply: [0.4, userTags.length ? { $divide: ["$matchedTags", userTags.length] } : 0],
                 },
               ],
             },
@@ -1193,10 +1129,7 @@ const getOrganizationsWithReservationsForHome = async ({
           {
             $match: {
               $expr: {
-                $and: [
-                  { $eq: ["$entityType", "organizations"] },
-                  { $eq: ["$entityId", "$$orgId"] },
-                ],
+                $and: [{ $eq: ["$entityType", "organizations"] }, { $eq: ["$entityId", "$$orgId"] }],
               },
             },
           },
@@ -1344,10 +1277,7 @@ const getOrganizationReservations = async ({ organizationId }) => {
         $expr: {
           $and: [
             {
-              $gt: [
-                "$timingSlots.dateTimeSlots.timeSlots.endTime",
-                "$timingSlots.dateTimeSlots.timeSlots.startTime",
-              ],
+              $gt: ["$timingSlots.dateTimeSlots.timeSlots.endTime", "$timingSlots.dateTimeSlots.timeSlots.startTime"],
             },
             {
               $gt: ["$timingSlots.dateTimeSlots.timeSlots.endTime", now],
@@ -1426,4 +1356,5 @@ module.exports = {
   getOrganizationReservations,
   getReservationForTransfer,
   checkReservationAvailability,
+  validateReservationCapacity,
 };

@@ -72,7 +72,7 @@ const getOrders = async (req, res) => {
 };
 const updateOrders = async (req, res) => {
   const { id } = req.params;
-  const { status, paymentStatus, deliveredMenuItem, deliveredall, updateItemStatus } = req.body;
+  const { status, paymentStatus, deliveredMenuItem, deliveredall } = req.body;
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
@@ -87,7 +87,6 @@ const updateOrders = async (req, res) => {
     deliveredMenuItem,
     deliveredall,
     updatedBy: req.user._id,
-    updateItemStatus,
   };
   const staffId = req.user._id;
 
@@ -125,7 +124,6 @@ const updateOrders = async (req, res) => {
     });
   }
 };
-
 const updateIsOrderingEnabled = async (req, res) => {
   let { organization, isOrderingEnabled } = req.body;
 
