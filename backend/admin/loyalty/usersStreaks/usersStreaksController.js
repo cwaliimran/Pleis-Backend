@@ -40,11 +40,19 @@ const createUsersStreak = async (req, res) => {
 
 const getUsersStreaks = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, orderSort, companyOrganizer, sortBy, sortOrder } = req.query;
+  let { keyword, status, date, orderSort, companyOrganizer, sortBy, sortOrder,lastVisitedFrom,badge } = req.query;
   if (!companyOrganizer) {
     companyOrganizer = req.user._id;
   }
-  const SORT_FIELDS = ["userName", "userFirstName"];
+  const SORT_FIELDS = [
+    "userName",
+    "userFirstName",
+    "streak",
+    "longestStreak",
+    "visits",
+    "status",
+    "lastVisitAt",
+  ];
   const SORT_ORDERS = ["asc", "desc"];
   if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
     const key = sortBy && !SORT_FIELDS.includes(sortBy)
@@ -83,7 +91,9 @@ const getUsersStreaks = async (req, res) => {
       status,
       date,
       sortBy,
-      sortOrder
+      sortOrder,
+      lastVisitedFrom,
+      badge,
     });
 
     return sendResponse({

@@ -182,6 +182,70 @@ const deleteChallenge = async (req, res) => {
     return sendResponse({ res, statusCode: 500, translationKey: readableError.message, error });
   }
 };
+const getChallengesV2 = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let {
+    keyword,
+    status,
+    date,
+    companyOrganizer,
+    sortBy,
+    sortOrder,
+    rewardType,
+    taskType,
+  } = req.query;
+  const SORT_FIELDS = ["title", "rewardType", "taskType","views","favorites","completions","participants","avgProgress"];
+  const SORT_ORDERS = ["asc", "desc"];
+  if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+    const key = sortBy && !SORT_FIELDS.includes(sortBy)
+      ? "invalid_sort_by_field"
+      : "invalid_sort_order";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+
+  if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+    const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+      : "sort_by_required_when_sort_order_is_provided";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+  if (!companyOrganizer) {
+    companyOrganizer = req.user?._id;
+  }
+  try {
+    //companyOrganizer is required to filter for specific company
+    if (!companyOrganizer) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "company_organizer_is_required",
+      });
+    }
+
+    const { challenges, meta } = await challengeService.getChallengesV2({
+      companyOrganizer,
+      page,
+      limit,
+      keyword,
+      status,
+      date,
+      timezone: req.user?.timezone,
+      sortBy,
+      sortOrder,
+      rewardType,
+      taskType,
+    });
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "challenges_fetched_successfully",
+      data: challenges,
+      meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({ res, statusCode: 500, translationKey: readableError.message, error });
+  }
+};
 
 module.exports = {
   createChallenge,
@@ -189,4 +253,5 @@ module.exports = {
   getChallengeDetails,
   updateChallenge,
   deleteChallenge,
+  getChallengesV2,
 };

@@ -35,7 +35,7 @@ const getUsersStreaksWithFilters = async (
   limit,
   sortBy = "createdAt",
   sortOrder = "asc",
-  selectFields = null
+  selectFields = null,
 ) => {
   const sortDirection = sortOrder === "desc" ? -1 : 1;
 
@@ -55,18 +55,18 @@ const getUsersStreaksWithFilters = async (
               firstName: 1,
               lastName: 1,
               email: 1,
-              profileIcon: 1
-            }
-          }
-        ]
-      }
+              profileIcon: 1,
+            },
+          },
+        ],
+      },
     },
     {
       $unwind: {
         path: "$user",
-        preserveNullAndEmptyArrays: true
-      }
-    }
+        preserveNullAndEmptyArrays: true,
+      },
+    },
   ];
 
   if (sortBy === "userName") {
@@ -75,17 +75,17 @@ const getUsersStreaksWithFilters = async (
         $addFields: {
           userNameSort: {
             $toLower: {
-              $ifNull: ["$user.username", ""]
-            }
-          }
-        }
+              $ifNull: ["$user.username", ""],
+            },
+          },
+        },
       },
       {
         $sort: {
           userNameSort: sortDirection,
-          _id: -1
-        }
-      }
+          _id: -1,
+        },
+      },
     );
   } else if (sortBy === "userFirstName") {
     pipeline.push(
@@ -93,24 +93,59 @@ const getUsersStreaksWithFilters = async (
         $addFields: {
           userFirstNameSort: {
             $toLower: {
-              $ifNull: ["$user.firstName", ""]
-            }
-          }
-        }
+              $ifNull: ["$user.firstName", ""],
+            },
+          },
+        },
       },
       {
         $sort: {
           userFirstNameSort: sortDirection,
-          _id: -1
-        }
-      }
+          _id: -1,
+        },
+      },
     );
+  } else if (sortBy === "streak") {
+    pipeline.push({
+      $sort: {
+        streak: sortDirection,
+        _id: -1,
+      },
+    });
+  } else if (sortBy === "longestStreak") {
+    pipeline.push({
+      $sort: {
+        longestStreak: sortDirection,
+        _id: -1,
+      },
+    });
+  } else if (sortBy === "visits") {
+    pipeline.push({
+      $sort: {
+        visits: sortDirection,
+        _id: -1,
+      },
+    });
+  } else if (sortBy === "status") {
+    pipeline.push({
+      $sort: {
+        status: sortDirection,
+        _id: -1,
+      },
+    });
+  } else if (sortBy === "lastVisitAt") {
+    pipeline.push({
+      $sort: {
+        lastVisitAt: sortDirection,
+        _id: -1,
+      },
+    });
   } else {
     pipeline.push({
       $sort: {
         createdAt: sortDirection,
-        _id: sortDirection
-      }
+        _id: sortDirection,
+      },
     });
   }
 
@@ -126,13 +161,130 @@ const countUsersStreaks = async (query = {}) => {
   return UsersStreaks.countDocuments(query);
 };
 
-const getUsersStreaksCounts = async (query) => {
-  return getModelCounts({ model: UsersStreaks, filterQuery: query });
-}
+const getUsersStreaksCounts = async (query = {}) => {
+  const matchStage = {
+    $match: query,
+  };
+
+  const result = await UsersStreaks.aggregate([
+    matchStage,
+
+    {
+      $group: {
+        _id: null,
+
+        // Average current streak
+        averageStreak: {
+          $avg: "$streak",
+        },
+
+        // Highest current streak
+        highestStreak: {
+          $max: "$streak",
+        },
+
+        // Total badges awarded
+        totalBadgesAwarded: {
+          $sum: {
+            $cond: [
+              {
+                $ne: ["$badge", ""],
+              },
+              1,
+              0,
+            ],
+          },
+        },
+
+        // Keep the user with the highest streak
+        topStreaker: {
+          $top: {
+            sortBy: {
+              streak: -1,
+              _id: 1,
+            },
+            output: {
+              user: "$user",
+              streak: "$streak",
+              visits: "$visits",
+              badge: "$badge",
+            },
+          },
+        },
+      },
+    },
+
+    // Get user information
+    {
+      $lookup: {
+        from: "users",
+        localField: "topStreaker.user",
+        foreignField: "_id",
+        as: "topStreakerUser",
+      },
+    },
+
+    {
+      $unwind: {
+        path: "$topStreakerUser",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
+    {
+      $project: {
+        _id: 0,
+
+        averageStreak: {
+          $round: ["$averageStreak", 2],
+        },
+
+        highestStreak: 1,
+
+        totalBadgesAwarded: 1,
+
+        topStreaker: {
+          name: {
+            $concat: [
+              {
+                $ifNull: ["$topStreakerUser.firstName", ""],
+              },
+              " ",
+              {
+                $ifNull: ["$topStreakerUser.lastName", ""],
+              },
+            ],
+          },
+          username: "$topStreakerUser.username",
+          streak: "$topStreaker.streak",
+          visits: "$topStreaker.visits",
+          badge: "$topStreaker.badge",
+        },
+      },
+    },
+  ]);
+
+  return (
+    result[0] || {
+      averageStreak: 0,
+      highestStreak: 0,
+      totalBadgesAwarded: 0,
+      topStreaker: {
+        name: "",
+        username: "",
+        streak: 0,
+        visits: 0,
+        badge: "",
+      },
+    }
+  );
+};
 
 // Find by ID
 const findUsersStreakById = async (id) => {
-  return UsersStreaks.findById(id).populate('user').populate('companyOrganizer');
+  return UsersStreaks.findById(id)
+    .populate("user")
+    .populate("companyOrganizer");
 };
 
 // Update and save
@@ -148,11 +300,16 @@ const deleteUsersStreakById = async (usersStreak) => {
 
 //findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
-  return UsersStreaks.findByIdAndUpdate(id, data, { new: true }).populate('user').populate('companyOrganizer');
+  return UsersStreaks.findByIdAndUpdate(id, data, { new: true })
+    .populate("user")
+    .populate("companyOrganizer");
 };
 
 const getUSerStreaskBuOrganizerAndUser = async (companyOrganizer, user) => {
-  return UsersStreaks.find({ companyOrganizer, user }).select('visits').lean().exec();
+  return UsersStreaks.find({ companyOrganizer, user })
+    .select("visits")
+    .lean()
+    .exec();
 };
 module.exports = {
   createUsersStreak,
@@ -163,5 +320,5 @@ module.exports = {
   deleteUsersStreakById,
   findByIdAndUpdate,
   getUsersStreaksCounts,
-  getUSerStreaskBuOrganizerAndUser
+  getUSerStreaskBuOrganizerAndUser,
 };

@@ -5,237 +5,256 @@ const Streaks = require("@StreaksModel");
 const { EventCheckins } = require("@EventCheckinsModel");
 
 // Create usersStreak and automatically assign next order
-const { getTodayResetTime, MAX_ORGANIZATIONS_PER_DAY,
+const {
+  getTodayResetTime,
+  MAX_ORGANIZATIONS_PER_DAY,
   MAX_CHECKINS_PER_DAY,
-  CHECKIN_COOLDOWN_MINUTES, } = require("./configs/streakSettings");
+  CHECKIN_COOLDOWN_MINUTES,
+} = require("./configs/streakSettings");
 const { default: mongoose } = require("mongoose");
-const { resolveChallengeByTaskTypeService } = require("../loyalty/challengesOrders/challengeOrdersService");
-const { createTransactionService } = require("../userWalletService/transactions/services/unifiedTransactionsService");
+const {
+  resolveChallengeByTaskTypeService,
+} = require("../loyalty/challengesOrders/challengeOrdersService");
+const {
+  createTransactionService,
+} = require("../userWalletService/transactions/services/unifiedTransactionsService");
 const { fireAndForget } = require("../../helperUtils/responseUtil");
 const { getActiveEventsForOrg } = require("../../admin/events/eventRepository");
 
-const createUsersStreak = async (data) => {
-  const { user: userId, companyOrganizer, organization, timezone = "UTC" } = data;
+/**
+ * Returns the start of the "period" a date falls into, based on countBase.
+ * Used to compare whether two dates are in the same / consecutive / skipped period.
+ */
+function getPeriodStart(date, countBase) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
 
+  if (countBase === "day") {
+    return d;
+  }
+
+  if (countBase === "week") {
+    const day = d.getDay(); // 0 = Sun
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diffToMonday);
+    return d;
+  }
+
+  if (countBase === "month") {
+    d.setDate(1);
+    return d;
+  }
+}
+
+/**
+ * Number of periods between the last visit and now.
+ * 0 = same period (already checked in)
+ * 1 = consecutive period (streak continues)
+ * >1 = at least one period skipped (streak breaks)
+ */
+function getPeriodGap(lastVisitAt, now, countBase) {
+  const prev = new Date(lastVisitAt);
+  const curr = new Date(now);
+
+  const diffMs = curr.getTime() - prev.getTime();
+  const diffHours = diffMs / (1000 * 60 * 60);
+  const diffDays = diffHours / 24;
+
+
+  if (diffMs < 0) {
+    return 0;
+  }
+
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+
+  // DAY
+  // 0 = less than 1 day
+  // 1 = 1 day to 2 days (24 hours grace)
+  // 2 = more than 2 days
+  if (countBase === "day") {
+    if (diffMs < ONE_DAY) {
+      return 0;
+    }
+
+    if (diffMs <= ONE_DAY * 2) {
+      return 1;
+    }
+
+    return 2;
+  }
+
+  // WEEK
+  // 0 = less than 7 days
+  // 1 = 7 days to 8 days (24 hours grace)
+  // 2 = more than 8 days
+  if (countBase === "week") {
+    const WEEK = 7 * ONE_DAY;
+
+    if (diffMs < WEEK) {
+      return 0;
+    }
+
+    if (diffMs <= WEEK + ONE_DAY) {
+      return 1;
+    }
+
+    return 2;
+  }
+
+  // MONTH
+  // 0 = within the month
+  // 1 = month length + 24 hours grace
+  // 2 = beyond the grace period
+  if (countBase === "month") {
+    const daysInLastMonth = new Date(
+      prev.getFullYear(),
+      prev.getMonth() + 1,
+      0,
+    ).getDate();
+
+    const MONTH = daysInLastMonth * ONE_DAY;
+
+    if (diffMs < MONTH) {
+      return 0;
+    }
+
+    if (diffMs <= MONTH + ONE_DAY) {
+      return 1;
+    }
+
+    return 2;
+  }
+
+  return 0;
+}
+
+/**
+ * Highest badge earned for a given streak count.
+ * Assumes badges are defined as { title, visits } thresholds.
+ */
+function getBadgeForStreak(badges = [], streakCount) {
+  let earned = "";
+  const sorted = [...badges].sort((a, b) => a.visits - b.visits);
+
+  for (const badge of sorted) {
+    if (streakCount >= badge.visits) earned = badge.title;
+  }
+
+  return earned;
+}
+
+/**
+ * Core logic: given the active streak rule and the user's existing streak doc,
+ * returns what the updated streak values should be. Does NOT save anything —
+ * pure calculation, easy to test.
+ */
+function computeStreakUpdate(streakRule, existingStreak, now = new Date()) {
+  const { countBase, badges = [] } = streakRule;
+
+  // First-ever check-in for this user/org
+  if (!existingStreak) {
+    const badge = getBadgeForStreak(badges, 1);
+    return {
+      isNew: true,
+      visits: 1,
+      streak: 1,
+      longestStreak: 1,
+      badge,
+      lastVisitAt: now,
+      lastBadgeAwardedAt: badge ? now : null,
+    };
+  }
+
+  const gap = getPeriodGap(existingStreak.lastVisitAt, now, countBase);
+
+
+  let { visits, streak, longestStreak } = existingStreak;
+
+  if (gap === 0) {
+    // Already checked in during this period — no double counting
+    return {
+      isNew: false,
+      visits,
+      streak,
+      longestStreak,
+      badge: existingStreak.badge,
+      lastVisitAt: now, // still bump last seen
+      lastBadgeAwardedAt: existingStreak.lastBadgeAwardedAt,
+      unchanged: true,
+    };
+  }
+
+  if (gap === 1) {
+    // consecutive period, streak continues
+    visits += 1;
+    streak += 1;
+  } else {
+    // gap > 1, streak broken, restart
+    visits = 1;
+    streak = 1;
+  }
+
+  longestStreak = Math.max(longestStreak, streak);
+
+  const badge = getBadgeForStreak(badges, streak) || existingStreak.badge;
+  const badgeChanged = badge && badge !== existingStreak.badge;
+
+  return {
+    isNew: false,
+    visits,
+    streak,
+    longestStreak,
+    badge,
+    lastVisitAt: now,
+    lastBadgeAwardedAt: badgeChanged ? now : existingStreak.lastBadgeAwardedAt,
+  };
+}
+
+module.exports = {
+  getPeriodStart,
+  getPeriodGap,
+  getBadgeForStreak,
+  computeStreakUpdate,
+};
+
+const createUsersStreak = async (data) => {
+  const streakRule = await Streaks.findOne({
+    companyOrganizer: data.companyOrganizer,
+    status: "active",
+  });
+  if (!streakRule) {
+    return;
+  }
   const session = await mongoose.startSession();
   session.startTransaction();
-
   try {
-    const now = new Date();
-    const todayReset = getTodayResetTime(timezone);
-
-    // 1️⃣ Global cooldown (across all orgs)
-    const lastGlobalCheckin = await UsersStreaks.findOne(
-      { user: userId },
+    const existingStreak = await UsersStreaks.findOne(
+      {
+        user: data.user,
+        companyOrganizer: data.companyOrganizer,
+        organization: data.organization,
+      },
       {},
-      { session, sort: { lastVisitAt: -1 } }
+      { session },
     );
+    const result = computeStreakUpdate(streakRule, existingStreak, new Date());
 
-    if (lastGlobalCheckin?.lastVisitAt) {
-      const diffMinutes =
-        (now - new Date(lastGlobalCheckin.lastVisitAt)) / (1000 * 60);
+    console.log("result", result);
+    // return
+    return;
 
-      if (diffMinutes < CHECKIN_COOLDOWN_MINUTES) {
-        throw new Error(
-          `Please wait ${Math.ceil(
-            CHECKIN_COOLDOWN_MINUTES - diffMinutes
-          )} minutes before checking in again.`
-        );
-      }
+    if (result.isNew) {
+      const created = new UsersStreaks({ ...data, ...result });
+      await created.save({ session });
+    } else if (!result.unchanged) {
+      Object.assign(existingStreak, result);
+      await existingStreak.save({ session });
+    } else {
+      existingStreak.lastVisitAt = new Date();
+      await existingStreak.save({ session }); // just bump timestamp
     }
-
-    // 2️⃣ Daily total check-in count
-    const totalCheckinsToday = await UsersStreaks.countDocuments(
-      {
-        user: userId,
-        lastVisitAt: { $gte: todayReset },
-      },
-      { session }
-    );
-
-    if (totalCheckinsToday >= MAX_CHECKINS_PER_DAY) {
-      throw new Error("Daily check-in limit reached (5 per day).");
-    }
-
-    // 3️⃣ Unique organizations per day
-    const uniqueOrgsToday = await UsersStreaks.distinct(
-      "organization",
-      {
-        user: userId,
-        lastVisitAt: { $gte: todayReset },
-      },
-      { session }
-    );
-
-    const alreadyCheckedToday = uniqueOrgsToday.some(
-      (org) => org.toString() === organization.toString()
-    );
-
-    if (
-      !alreadyCheckedToday &&
-      uniqueOrgsToday.length >= MAX_ORGANIZATIONS_PER_DAY
-    ) {
-      throw new Error(
-        "You can check in at a maximum of 5 organizations per day."
-      );
-    }
-
-    // 4️⃣ Get or create streak document (per org)
-    const userStreak = await UsersStreaks.findOneAndUpdate(
-      { user: userId, companyOrganizer, organization },
-      {
-        $setOnInsert: {
-          user: userId,
-          companyOrganizer,
-          organization,
-          visits: 0,
-          streak: 0,
-          longestStreak: 0,
-          points: 0,
-        },
-      },
-      { new: true, upsert: true, session }
-    );
-
-    // 5️⃣ Handle streak reset (ONLY streak, NOT visits)
-    if (userStreak.lastVisitAt) {
-      const lastReset = getTodayResetTime(timezone);
-
-      const previousReset = new Date(lastReset);
-      previousReset.setDate(previousReset.getDate() - 1);
-
-      // If last visit was before yesterday’s reset → streak breaks
-      if (userStreak.lastVisitAt < previousReset) {
-        userStreak.streak = 0;
-      }
-    }
-
-    // 6️⃣ Lifetime visit increment
-    userStreak.visits += 1;
-
-    // 7️⃣ Daily streak increment
-    userStreak.streak += 1;
-    userStreak.longestStreak = Math.max(
-      userStreak.longestStreak,
-      userStreak.streak
-    );
-
-    let pointsToAward = 0;
-
-    // 8️⃣ Award points only once per org per day
-    if (!alreadyCheckedToday) {
-      const rules = await Streaks.find(
-        {
-          companyOrganizer,
-          status: "active",
-        },
-        {},
-        { session }
-      );
-
-      const rule = rules.find((r) => r.visits === userStreak.visits);
-
-      if (rule) {
-        pointsToAward = rule.points;
-
-        const trx = await createTransactionService(
-          {
-            user: userId,
-            companyOrganizer,
-            companyPoints: {
-              base: pointsToAward,
-              multiplier: 1,
-              total: pointsToAward,
-              pointsPerEuro: 1,
-            },
-            allowNegative: false,
-            type: "earn",
-            description: "Points awarded for visit streak",
-            entityId: userStreak._id,
-            domainType: "userstreaks",
-          },
-          session
-        );
-
-        if (!trx.success) {
-          throw new Error(trx.message || "Transaction failed");
-        }
-
-        userStreak.points += pointsToAward;
-      }
-    }
-
-    // 9️⃣ Update last visit timestamp
-    userStreak.lastVisitAt = now;
-
-    await userStreak.save({ session });
-
     await session.commitTransaction();
     session.endSession();
-
-
-
-    // 🔟 Trigger async challenge (already correct)
-    resolveChallengeByTaskTypeService({
-      userId,
-      companyOrganizer,
-      taskType: "visit",
-      value: 1,
-    });
-
-    // 🔥 WALK-IN EVENT CHECK-IN (NEW - PLACE HERE)
-    fireAndForget(
-      (async () => {
-        const now = new Date();
-
-        const activeEvents = await getActiveEventsForOrg(
-          organization,
-          now
-        );
-
-        if (!activeEvents.length) return;
-
-        const ops = activeEvents.map((event) => ({
-          updateOne: {
-            filter: {
-              event: event._id,
-              user: userId,
-            },
-            update: {
-              $setOnInsert: {
-                organization,
-                companyOrganizer: event.companyOrganizer,
-                source: "walkin",
-                checkedInAt: now,
-              },
-            },
-            upsert: true,
-          },
-        }));
-
-        await EventCheckins.bulkWrite(ops, { ordered: false });
-      })(),
-      "WALKIN_STREAK_EVENT_CHECKIN"
-    );
-
-
-
-    // 🔟 Trigger async challenge (outside transaction)
-    resolveChallengeByTaskTypeService({
-      userId,
-      companyOrganizer,
-      taskType: "visit",
-      value: 1,
-    });
-
-    return {
-      organization,
-      visits: userStreak.visits,
-      streak: userStreak.streak,
-      longestStreak: userStreak.longestStreak,
-      pointsEarned: pointsToAward,
-      totalPoints: userStreak.points,
-    };
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
@@ -243,16 +262,18 @@ const createUsersStreak = async (data) => {
   }
 };
 
-
 // Get all with filters, sorted by 'order' ascending and then 'createdAt' descending
 const getUsersStreaksWithFilters = async (
   filter,
   skip,
   limit,
   sort = { createdAt: -1 },
-  selectFields = null
+  selectFields = null,
 ) => {
-  const query = UsersStreaks.find(filter).populate('user').populate('companyOrganizer').sort(sort);
+  const query = UsersStreaks.find(filter)
+    .populate("user")
+    .populate("companyOrganizer")
+    .sort(sort);
 
   if (selectFields) query.select(selectFields); // apply select dynamically
   if (limit > 0) query.skip(skip).limit(limit);
@@ -267,11 +288,13 @@ const countUsersStreaks = async (query = {}) => {
 
 const getUsersStreaksCounts = async (query) => {
   return getModelCounts({ model: UsersStreaks, filterQuery: query });
-}
+};
 
 // Find by ID
 const findUsersStreakById = async (id) => {
-  return UsersStreaks.findById(id).populate('user').populate('companyOrganizer');
+  return UsersStreaks.findById(id)
+    .populate("user")
+    .populate("companyOrganizer");
 };
 
 // Update and save
@@ -287,7 +310,9 @@ const deleteUsersStreakById = async (usersStreak) => {
 
 //findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
-  return UsersStreaks.findByIdAndUpdate(id, data, { new: true }).populate('user').populate('companyOrganizer');
+  return UsersStreaks.findByIdAndUpdate(id, data, { new: true })
+    .populate("user")
+    .populate("companyOrganizer");
 };
 
 const checkoutUsersStreak = async (data) => {
@@ -300,7 +325,7 @@ const checkoutUsersStreak = async (data) => {
     const userStreak = await UsersStreaks.findOne(
       { user: userId, companyOrganizer, organization },
       {},
-      { session }
+      { session },
     );
 
     if (!userStreak) {
@@ -328,9 +353,10 @@ const checkoutUsersStreak = async (data) => {
 
 //get user streaks by organization
 const getUserOrganizationStreak = async (userId, organization) => {
-  return UsersStreaks.findOne({ user: userId, organization }).sort({ streak: -1 }).limit(1);
+  return UsersStreaks.findOne({ user: userId, organization })
+    .sort({ streak: -1 })
+    .limit(1);
 };
-
 
 module.exports = {
   createUsersStreak,
@@ -343,5 +369,4 @@ module.exports = {
   getUsersStreaksCounts,
   checkoutUsersStreak,
   getUserOrganizationStreak,
-  
 };
