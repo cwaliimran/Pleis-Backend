@@ -40,7 +40,7 @@ const getChallengesWithFilters = async (
   skip = 0,
   limit = 10,
   sortBy = "createdAt",
-  sortOrder = "desc"
+  sortOrder = "desc",
 ) => {
   const sortDirection = sortOrder === "asc" ? 1 : -1;
 
@@ -56,40 +56,293 @@ const getChallengesWithFilters = async (
     sort = { createdAt: sortDirection, _id: sortDirection };
   }
 
-  return Challenge.find(query)
-    .populate("taskMenuItem")
+  return Challenge.aggregate([
+    { $match: query },
 
-    .populate({
-      path: "tierLimit",
-      select: "image title",
-    })
+    {
+      $lookup: {
+        from: "menuitems",
+        localField: "taskMenuItem",
+        foreignField: "_id",
+        as: "taskMenuItem",
+      },
+    },
+    { $unwind: { path: "$taskMenuItem", preserveNullAndEmptyArrays: true } },
 
-    .populate({
-      path: "reward.specialTicket.companyOrganizer",
-      select: "companyDetails.name",
-    })
+    {
+      $lookup: {
+        from: "tiers", // adjust to actual tierLimit collection name
+        localField: "tierLimit",
+        foreignField: "_id",
+        as: "tierLimit",
+        pipeline: [{ $project: { image: 1, title: 1 } }],
+      },
+    },
+    { $unwind: { path: "$tierLimit", preserveNullAndEmptyArrays: true } },
 
-    .populate({
-      path: "reward.specialTicket.organization",
-      select: "basicInfo.name",
-    })
+    {
+      $lookup: {
+        from: "users",
+        localField: "reward.specialTicket.companyOrganizer",
+        foreignField: "_id",
+        as: "reward.specialTicket.companyOrganizer",
+        pipeline: [{ $project: { "companyDetails.name": 1 } }],
+      },
+    },
+    {
+      $unwind: {
+        path: "$reward.specialTicket.companyOrganizer",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
 
-    .populate({
-      path: "reward.specialTicket.ticket",
-      select: "title",
-    })
+    {
+      $lookup: {
+        from: "organizations",
+        localField: "reward.specialTicket.organization",
+        foreignField: "_id",
+        as: "reward.specialTicket.organization",
+        pipeline: [{ $project: { "basicInfo.name": 1 } }],
+      },
+    },
+    {
+      $unwind: {
+        path: "$reward.specialTicket.organization",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
 
-    .populate({
-      path: "reward.specialTicket.event",
-      select: "basicInfo.title",
-    })
+    {
+      $lookup: {
+        from: "tickets",
+        localField: "reward.specialTicket.ticket",
+        foreignField: "_id",
+        as: "reward.specialTicket.ticket",
+        pipeline: [{ $project: { title: 1 } }],
+      },
+    },
+    {
+      $unwind: {
+        path: "$reward.specialTicket.ticket",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
 
-    .collation({ locale: "en", strength: 2 })
-    .sort(sort)
-    .skip(skip)
-    .limit(limit)
-    .lean()
-    .exec();
+    {
+      $lookup: {
+        from: "events",
+        localField: "reward.specialTicket.event",
+        foreignField: "_id",
+        as: "reward.specialTicket.event",
+        pipeline: [{ $project: { "basicInfo.title": 1 } }],
+      },
+    },
+    {
+      $unwind: {
+        path: "$reward.specialTicket.event",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
+    // views
+    {
+      $lookup: {
+        from: "engagementevents",
+        let: { challengeId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$entityType", "challenges"] },
+                  { $eq: ["$entityId", "$$challengeId"] },
+                  { $eq: ["$action", "view"] },
+                ],
+              },
+            },
+          },
+          { $count: "count" },
+        ],
+        as: "viewsArr",
+      },
+    },
+
+    // favorites
+    {
+      $lookup: {
+        from: "favorites",
+        let: { challengeId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$targetType", "challenge"] },
+                  { $eq: ["$targetId", "$$challengeId"] },
+                ],
+              },
+            },
+          },
+          { $count: "count" },
+        ],
+        as: "favoritesArr",
+      },
+    },
+
+    // participants / completed / average progress
+    {
+      $lookup: {
+        from: "loyaltychallengesorders",
+        let: { challengeId: "$_id" },
+        pipeline: [
+          { $match: { $expr: { $eq: ["$challenge", "$$challengeId"] } } },
+          {
+            $group: {
+              _id: null,
+              totalParticipants: { $sum: 1 },
+              completed: {
+                $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
+              },
+              avgProgress: {
+                $avg: {
+                  $cond: [
+                    { $gt: ["$progress.target", 0] },
+                    {
+                      $multiply: [
+                        { $divide: ["$progress.current", "$progress.target"] },
+                        100,
+                      ],
+                    },
+                    0,
+                  ],
+                },
+              },
+            },
+          },
+        ],
+        as: "orderStats",
+      },
+    },
+
+    // participants / completed / in-progress / expired / average progress
+    {
+      $lookup: {
+        from: "loyaltychallengesorders",
+        let: { challengeId: "$_id" },
+        pipeline: [
+          { $match: { $expr: { $eq: ["$challenge", "$$challengeId"] } } },
+          {
+            $group: {
+              _id: null,
+              totalParticipants: { $sum: 1 },
+              completed: {
+                $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
+              },
+              inProgress: {
+                $sum: { $cond: [{ $eq: ["$status", "in-progress"] }, 1, 0] },
+              },
+              expired: {
+                $sum: { $cond: [{ $eq: ["$status", "expired"] }, 1, 0] },
+              },
+              avgProgress: {
+                $avg: {
+                  $cond: [
+                    { $gt: ["$progress.target", 0] },
+                    {
+                      $multiply: [
+                        { $divide: ["$progress.current", "$progress.target"] },
+                        100,
+                      ],
+                    },
+                    0,
+                  ],
+                },
+              },
+            },
+          },
+        ],
+        as: "orderStats",
+      },
+    },
+
+    {
+      $addFields: {
+        views: { $ifNull: [{ $arrayElemAt: ["$viewsArr.count", 0] }, 0] },
+        favoritesCount: {
+          $ifNull: [{ $arrayElemAt: ["$favoritesArr.count", 0] }, 0],
+        },
+        totalParticipants: {
+          $ifNull: [{ $arrayElemAt: ["$orderStats.totalParticipants", 0] }, 0],
+        },
+        completed: {
+          $ifNull: [{ $arrayElemAt: ["$orderStats.completed", 0] }, 0],
+        },
+        inProgress: {
+          $ifNull: [{ $arrayElemAt: ["$orderStats.inProgress", 0] }, 0],
+        },
+        expired: { $ifNull: [{ $arrayElemAt: ["$orderStats.expired", 0] }, 0] },
+        averageProgress: {
+          $round: [
+            { $ifNull: [{ $arrayElemAt: ["$orderStats.avgProgress", 0] }, 0] },
+            2,
+          ],
+        },
+      },
+    },
+
+    {
+      $addFields: {
+        // % of viewers who ended up participating
+        participationRate: {
+          $cond: [
+            { $gt: ["$views", 0] },
+            {
+              $round: [
+                {
+                  $multiply: [
+                    { $divide: ["$totalParticipants", "$views"] },
+                    100,
+                  ],
+                },
+                2,
+              ],
+            },
+            0,
+          ],
+        },
+        // % of participants who completed the challenge
+        completionRate: {
+          $cond: [
+            { $gt: ["$totalParticipants", 0] },
+            {
+              $round: [
+                {
+                  $multiply: [
+                    { $divide: ["$completed", "$totalParticipants"] },
+                    100,
+                  ],
+                },
+                2,
+              ],
+            },
+            0,
+          ],
+        },
+      },
+    },
+
+    {
+      $project: {
+        viewsArr: 0,
+        favoritesArr: 0,
+        orderStats: 0,
+      },
+    },
+
+    { $sort: sort },
+    { $skip: skip },
+    { $limit: limit },
+  ]).collation({ locale: "en", strength: 2 });
 };
 // Count
 const countChallenges = async (query = {}) => {

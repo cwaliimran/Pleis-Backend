@@ -42,9 +42,11 @@ const getChallenges = async (req, res) => {
 };
 
 const getChallengeDetails = async (req, res) => {
+
   if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
   try {
-    const challenge = await challengeService.getChallengeDetails(req.params.id);
+    const userId = req.user._id;
+    const challenge = await challengeService.getChallengeDetails(req.params.id, userId);
     if (!challenge) {
       return sendResponse({ res, statusCode: 404, translationKey: "challenge_not_found" });
     }

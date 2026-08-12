@@ -1,6 +1,7 @@
 const challengeRepo = require("./challengesRepository");
 const { generateMeta, getCurrentDateInTimezone } = require("@utils/responseUtil");
 const formatChallenge = require("../../../commonModules/loyalty/challenges/formatters/formatChallenge");
+const { formatChallengeDetails } = require("./formatters/formatChallengeImage");
 const { checkClaimLimitForLoyaltyChallenges, getActiveChallengeOrdersForDashboard } = require("../challengesOrders/challengeOrdersRepository");
 const { formatChallengesByTierKey } = require("./formatters/formatChallenge");
 const clubMemberRepo = require("../clubMembers/clubMembersRepository");
@@ -8,10 +9,19 @@ const { formatUserWallet } = require("../clubMembers/formatters/formatUserWallet
 
 const { LoyaltyChallengesOrders } = require("@LoyaltyChallengesOrdersModel")
 const Challenge = require("@ChallengeModel");
+const { addEngagementEvent } = require("@appEngagement/engagementEventsRepository");
 
 
-const getChallengeDetails = async (id) => {
-  return await challengeRepo.findChallengeById(id);
+const getChallengeDetails = async (id, userId) => {
+const challenge = await challengeRepo.findChallengeById(id);
+  addEngagementEvent({
+    entityType: "challenges",
+    entityId: id,
+    action: "view",
+    userId: userId,
+  });
+
+return formatChallengeDetails(challenge);
 };
 
 const getEligibleChallengesForLoyaltyPage = async ({

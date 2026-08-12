@@ -2,7 +2,7 @@
 const Streaks = require("@StreaksModel");
 const { getModelCounts } = require("@dbUtils/queryUtil");
 
-// Create
+const mongoose = require("mongoose");
 // Create streak and automatically assign next order
 const createStreak = async (data) => {
   try {
@@ -37,17 +37,10 @@ const createStreak = async (data) => {
 
 // Get all with filters, sorted by 'visits' ascending and then 'createdAt' descending
 const getStreaksWithFilters = async (
-  filter,
-  skip,
-  limit,
-  selectFields = null
+  query = {},
+  
 ) => {
-  const query = Streaks.find(filter).sort({ visits: 1 });
-
-  if (selectFields) query.select(selectFields); // apply select dynamically
-  if (limit > 0) query.skip(skip).limit(limit);
-
-  return query.exec();
+  return Streaks.findOne({ companyOrganizer: query.companyOrganizer, status: "active" }).exec();
 };
 const getActiveStreaksByOrganizer = async (companyOrganizer) => {
   const query = Streaks.find({
@@ -68,12 +61,18 @@ const getStreaksCounts = async (query) => {
 
 
 // Find by ID
-const findStreakById = async (id) => {
-  return Streaks.findById(id);
+const findStreakByCompanyOrganizer = async (companyOrganizer) => {
+  return Streaks.findOne({ companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer) }).exec();
 };
 
 // Update and save
-const updateStreakData = async (streak, data) => {
+const updateStreakData = async (data) => {
+  const streak = await Streaks.findOne({
+    companyOrganizer: new mongoose.Types.ObjectId(data.companyOrganizer),
+    status: { $ne: "deleted" },
+  });
+  if (!streak) return null;
+
   Object.assign(streak, data);
   return await streak.save();
 };
@@ -98,7 +97,7 @@ module.exports = {
   createStreak,
   getStreaksWithFilters,
   countStreaks,
-  findStreakById,
+  findStreakByCompanyOrganizer,
   updateStreakData,
   deleteStreakById,
   findByIdAndUpdate,
