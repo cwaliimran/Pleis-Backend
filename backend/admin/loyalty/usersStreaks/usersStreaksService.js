@@ -13,15 +13,14 @@ const getUsersStreaks = async ({
   page,
   limit,
   keyword,
-  status,
   date,
-  orderSort = "asc",
   sortBy,
-  sortOrder
+  sortOrder,
+  lastVisitedFrom,
+  badge,
 }) => {
-
   const query = {
-    companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer)
+    companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
   };
 
   // Date filter
@@ -31,11 +30,25 @@ const getUsersStreaks = async ({
       $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
     };
   }
+  if (lastVisitedFrom) {
+    query.lastVisitAt = {
+      $gte: new Date(lastVisitedFrom),
+    };
+  }
+  if (badge) {
+    query.badge = badge;
+  }
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
   let [UsersStreaks, getUsersStreaksCounts] = await Promise.all([
-    usersStreakRepo.getUsersStreaksWithFilters(query, skip, limit === 0 ? 0 : limit,sortBy, sortOrder),
+    usersStreakRepo.getUsersStreaksWithFilters(
+      query,
+      skip,
+      limit === 0 ? 0 : limit,
+      sortBy,
+      sortOrder,
+    ),
     usersStreakRepo.getUsersStreaksCounts(query),
   ]);
 
@@ -45,7 +58,7 @@ const getUsersStreaks = async ({
   if (keyword) {
     const lowerKeyword = keyword.toLowerCase();
 
-    UsersStreaks = UsersStreaks.filter(item => {
+    UsersStreaks = UsersStreaks.filter((item) => {
       const user = item.user || {};
 
       return (

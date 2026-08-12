@@ -8,42 +8,13 @@ const createStreak = async ({ visits = 0, points = 0, companyOrganizer, status }
   return await streakRepo.createStreak({ visits, points, companyOrganizer, status });
 };
 
-const getStreaks = async ({ companyOrganizer, page, limit, keyword, status, date, orderSort = "asc" }) => {
+const getStreaks = async ({ companyOrganizer }) => {
   const query = {
     companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer)
   };
-
-  //Filter by status
-  query.status = status ? status : { $ne: "deleted" };
-
-  //Date filter (format: yyyy-mm-dd)
-  if (date) {
-    query.createdAt = {
-      $gte: new Date(date),
-      $lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
-    };
-  }
-
-  //Keyword search
-  if (keyword) {
-    query.$or = [{ title: { $regex: keyword, $options: "i" } }];
-  }
-
-  const skip = limit === 0 ? 0 : (page - 1) * limit;
-
-
-  let [streaks, getStreaksCounts] = await Promise.all([
-    streakRepo.getStreaksWithFilters(query, skip, limit === 0 ? 0 : limit),
-    streakRepo.getStreaksCounts(query),
-  ]);
-
-  const { totalFiltered, total, active, inactive } = getStreaksCounts;
-  const meta = generateMeta(page, limit, totalFiltered);
-  meta.streaksCount = { total, active, inactive };
-
-  // streaks = formatStreaks(streaks);
-
-  return { streaks, meta };
+  query.status = { $ne: "deleted" };
+  const streaks = await streakRepo.getStreaksWithFilters(query);
+  return streaks
 };
 
 const getPublicStreaks = async ({ page = 1, limit = 10, keyword, date, orderSort }) => {
@@ -83,22 +54,23 @@ const getPublicStreaks = async ({ page = 1, limit = 10, keyword, date, orderSort
   return { streaks, meta };
 };
 
-const updateStreak = async (id, data) => {
-  // Only update provided fields
+const updateStreak = async ( countBase, badges, companyOrganizer, status) => {
+  const existingStreak =
+    await streakRepo.findStreakByCompanyOrganizer(companyOrganizer);
+    if(!existingStreak) {
+     const createdStreak = await streakRepo.createStreak({ countBase, badges, companyOrganizer, status });
+      return createdStreak;
+    }
   const updateData = {
-    ...(data.visits !== undefined && { visits: data.visits }),
-    ...(data.points !== undefined && { points: data.points }),
-    ...(data.companyOrganizer !== undefined && { companyOrganizer: data.companyOrganizer }),
-    ...(data.status !== undefined && { status: data.status }),
+    ...(countBase !== undefined && { countBase }),
+    ...(badges !== undefined && { badges }),
+    ...(companyOrganizer !== undefined && { companyOrganizer }),
+    ...(status !== undefined && { status }),
   };
-
-  if (Object.keys(updateData).length === 0) {
-    const streak = await streakRepo.findStreakById(id);
-    return streak;
-  }
-
-  const updated = await streakRepo.findByIdAndUpdate(id, updateData);
-  return updated;
+  const updatedStreak = await streakRepo.updateStreakData(
+    updateData,
+  );
+  return updatedStreak;
 };
 
 const deleteStreak = async (id) => {

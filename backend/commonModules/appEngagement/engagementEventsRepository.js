@@ -459,6 +459,14 @@ const getEventMonthlyViewsStats = async ({
     visitors
   }));
 };
+const addEngagementEvent = async ({ entityType, entityId, action, userId }) => {
+  return await EngagementEvents.create({
+    entityType,
+    entityId,
+    action,
+    userId,
+  });
+};
 
 module.exports = {
   logEngagement,
@@ -471,5 +479,6 @@ module.exports = {
   getWeeklyEngagementStats,
   getTotalEngagementEventsByOrganizationId,
   getEventsViewsStats,
-  getEventMonthlyViewsStats
+  getEventMonthlyViewsStats,
+  addEngagementEvent,
 };

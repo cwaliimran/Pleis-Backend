@@ -4178,7 +4178,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"targetId\": \"690887e1a8adad86a7cfeec2\",\n  \"targetType\": \"event\" // event, organization\n}\n",
+                  "raw": "{\n  \"targetId\": \"690887e1a8adad86a7cfeec2\",\n  \"targetType\": \"challenge\" //\"menu\", \"event\", \"organization\",\"challenge\", \"promotion\", \"reward\"\n}\n",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -4568,6 +4568,84 @@
                         {
                           "key": "companyOrganizer",
                           "value": "69768d6ce2d9f4ca0e724c40"
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "challenges of company Copy",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    },
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    }
+                  ],
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}app/loyalty/challenges/:id",
+                      "host": [
+                        "{{url}}app"
+                      ],
+                      "path": [
+                        "loyalty",
+                        "challenges",
+                        ":id"
+                      ],
+                      "query": [
+                        {
+                          "key": "keyword",
+                          "value": "cafe",
+                          "disabled": true
+                        },
+                        {
+                          "key": "page",
+                          "value": "1",
+                          "disabled": true
+                        },
+                        {
+                          "key": "limit",
+                          "value": "10",
+                          "disabled": true
+                        }
+                      ],
+                      "variable": [
+                        {
+                          "key": "id",
+                          "value": "6a0ead1d7da8c8885d730ed4"
                         }
                       ]
                     }
@@ -5455,7 +5533,76 @@
                       "variable": [
                         {
                           "key": "companyOrganizer",
-                          "value": "69761cefe2d9f4ca0e722a3d"
+                          "value": "6911c14b6fc7cbd864e745b6"
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "rewards details",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    },
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    }
+                  ],
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}app/loyalty/rewards/:id",
+                      "host": [
+                        "{{url}}app"
+                      ],
+                      "path": [
+                        "loyalty",
+                        "rewards",
+                        ":id"
+                      ],
+                      "query": [
+                        {
+                          "key": "",
+                          "value": null,
+                          "description": "no pagination in this api",
+                          "disabled": true
+                        }
+                      ],
+                      "variable": [
+                        {
+                          "key": "id",
+                          "value": "6a7ae74e4b94151b9be870c7"
                         }
                       ]
                     }
@@ -6952,7 +7099,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"items\": [\n    {\n      \"menuItem\": \"698c2fa09345bb089e97302e\",\n      \"quantity\": 50\n    }\n  ],\n  \"pickupType\":\"tableService\", //counter, tableService, togo\n  \"tableNumber\":\"5\", //required in tableService case\n  \"notes\": \"No spice please.\",\n  \"paymentMethod\": \"applePay\" //\"applePay\", \"card\", \"cash\"\n}\n",
+                      "raw": "{\n  \"items\": [\n    {\n      \"menuItem\": \"698c2fa09345bb089e97302e\",\n      \"quantity\": 50\n    }\n  ],\n  \"pickupType\":\"tableService\", //counter, tableService, togo\n  \"tableNumber\":\"5\", //required in tableService case\n  \"notes\": \"No spice please.\",\n  \"tip\":12,\n  \"paymentMethod\": \"applePay\" //\"applePay\", \"card\", \"cash\"\n}\n",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -7180,7 +7327,7 @@
                       }
                     },
                     "url": {
-                      "raw": "{{url}}app/menu/items/pickup-options/:companyOrganizer",
+                      "raw": "{{url}}app/menu/items/pickup-options/:organization",
                       "host": [
                         "{{url}}app"
                       ],
@@ -7188,12 +7335,12 @@
                         "menu",
                         "items",
                         "pickup-options",
-                        ":companyOrganizer"
+                        ":organization"
                       ],
                       "variable": [
                         {
-                          "key": "companyOrganizer",
-                          "value": "6911c14b6fc7cbd864e745b6"
+                          "key": "organization",
+                          "value": "69f1a17610ae62f9f55406a7"
                         }
                       ]
                     }
@@ -31127,18 +31274,29 @@
                       }
                     },
                     "url": {
-                      "raw": "{{url}}admin/loyalty/challenges?companyOrganizer=6911c14b6fc7cbd864e745b6",
+                      "raw": "{{url}}admin/loyalty/challenges/v2?companyOrganizer=6911c14b6fc7cbd864e745b6",
                       "host": [
                         "{{url}}admin"
                       ],
                       "path": [
                         "loyalty",
-                        "challenges"
+                        "challenges",
+                        "v2"
                       ],
                       "query": [
                         {
                           "key": "companyOrganizer",
                           "value": "6911c14b6fc7cbd864e745b6"
+                        },
+                        {
+                          "key": "sortBy",
+                          "value": null,
+                          "disabled": true
+                        },
+                        {
+                          "key": "sortOrdr",
+                          "value": null,
+                          "disabled": true
                         }
                       ]
                     }
@@ -31232,7 +31390,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"companyOrganizer\":\"6911c14b6fc7cbd864e745b6\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe 2 times to claim this challenge\",\n    \"taskType\": \"visit\",\n    \"taskValue\": 3,\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 100\n    }\n}",
+                      "raw": "{\n    \"companyOrganizer\":\"6911c14b6fc7cbd864e745b6\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Check in at Cafe\",\n    \"description\": \"Visit our cafe 2 times to claim this challenge\",\n    \"taskType\": \"visit\",\n    \"taskValue\": 3,\n    \"claimLimit\": 1,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"repeatComplition\":\"false\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"points\",\n        \"rewardValue\": 100\n    }\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -31351,7 +31509,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Walk 10,000 steps\",\n    \"description\": \"Earn points by being active\",\n    \"taskType\": \"earnPoints\",\n    \"taskValue\": 500,\n    \"claimLimit\": 5,\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\": \"6911c3516aca10eb719d6f72\"\n    }\n}",
+                      "raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Walk 10,000 steps\",\n    \"description\": \"Earn points by being active\",\n    \"taskType\": \"earnPoints\",\n    \"taskValue\": 500,\n    \"claimLimit\": 5,\n    \"endDate\": \"2025-12-25\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"status\": \"active\",\n    \"repeatComplition\":\"false\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\": \"6911c3516aca10eb719d6f72\"\n    }\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -31469,7 +31627,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Buy 5 Burgers\",\n    \"description\": \"Order 5 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskValue\": 5,\n    \"taskMenuItem\": \"6911c3516aca10eb719d6f72\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
+                      "raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Buy 5 Burgers\",\n    \"description\": \"Order 5 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskValue\": 5,\n    \"taskMenuItem\": \"6911c3516aca10eb719d6f72\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"status\": \"active\",\n    \"repeatComplition\":\"false\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -31587,7 +31745,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Invite your friends\",\n    \"description\": \"Refer 3 friends to unlock rewards\",\n    \"taskType\": \"referUsers\",\n    \"taskValue\": 3,\n    \"claimLimit\": 10,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"customReward\",\n        \"customReward\": {\n            \"image\": \"68d7ee19c9469f7d754b5c99.png\",\n            \"title\": \"VIP Badge\",\n            \"description\": \"Special recognition for referring friends\"\n        }\n    }\n}",
+                      "raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Invite your friends\",\n    \"description\": \"Refer 3 friends to unlock rewards\",\n    \"taskType\": \"referUsers\",\n    \"taskValue\": 3,\n    \"claimLimit\": 10,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"status\": \"active\",\n    \"repeatComplition\":\"false\",\n    \"reward\": {\n        \"rewardType\": \"customReward\",\n        \"customReward\": {\n            \"image\": \"68d7ee19c9469f7d754b5c99.png\",\n            \"title\": \"VIP Badge\",\n            \"description\": \"Special recognition for referring friends\"\n        }\n    }\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -32376,18 +32534,111 @@
                       }
                     },
                     "url": {
-                      "raw": "{{url}}admin/loyalty/rewards?companyOrganizer=691c683da512c38d3350d13e",
+                      "raw": "{{url}}admin/loyalty/rewards/v2?companyOrganizer=6911c14b6fc7cbd864e745b6",
                       "host": [
                         "{{url}}admin"
                       ],
                       "path": [
                         "loyalty",
-                        "rewards"
+                        "rewards",
+                        "v2"
                       ],
                       "query": [
                         {
                           "key": "companyOrganizer",
-                          "value": "691c683da512c38d3350d13e"
+                          "value": "6911c14b6fc7cbd864e745b6"
+                        },
+                        {
+                          "key": "keyword",
+                          "value": "reward",
+                          "disabled": true
+                        },
+                        {
+                          "key": "status",
+                          "value": "",
+                          "disabled": true
+                        },
+                        {
+                          "key": "sortingType",
+                          "value": null,
+                          "disabled": true
+                        },
+                        {
+                          "key": "sortBy",
+                          "value": "views",
+                          "description": "\"title\", \"sortingType\", \"status\", \"views\", \"favoritesCount\", \"claimed\", \"redeemed\", \"conversion\"",
+                          "disabled": true
+                        },
+                        {
+                          "key": "sortOrder",
+                          "value": "desc",
+                          "disabled": true
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "get Types",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    },
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    }
+                  ],
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}admin/loyalty/rewards/types?companyOrganizer=6911c14b6fc7cbd864e745b6&limit=2",
+                      "host": [
+                        "{{url}}admin"
+                      ],
+                      "path": [
+                        "loyalty",
+                        "rewards",
+                        "types"
+                      ],
+                      "query": [
+                        {
+                          "key": "companyOrganizer",
+                          "value": "6911c14b6fc7cbd864e745b6"
+                        },
+                        {
+                          "key": "limit",
+                          "value": "2",
+                          "type": "text"
                         }
                       ]
                     }
@@ -32486,7 +32737,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"rewardType\": \"customReward\",\n    \"image\": \"950e5322-51f4-4e6d-82c9-2c489c9de00b.jpeg\",\n    \"title\": \"Custom Burger Reward\",\n    \"description\": \"Burger reward for only 50 points.\", //optional\n    \"sortingType\": \"food\",\n    \"endDate\": \"2026-01-15\",\n    \"minPointsRequiredToClaim\": 50, //optional\n    \"claimLimit\": 5, //optional\n    \"percentOff\": 0, //optional\n    \"tierLimit\": \"6915e2063d6228520ce27929\",\n    \"companyOrganizer\": \"691c694615c5e4a506226db8\",\n    \"status\": \"active\",\n    \"customReward\": {\n        \"image\": \"c5b6c82c-960d-4a7e-a5d3-ca03524f1674.webp\",\n        \"title\": \"Special Burger.\",\n        \"description\": \"Special burger with fries and loaded cheese.\"\n    }\n}",
+                      "raw": "{\n    \"rewardType\": \"customReward\",\n    \"image\": \"950e5322-51f4-4e6d-82c9-2c489c9de00b.jpeg\",\n    \"title\": \"Custom Burger Reward\",\n    \"description\": \"Burger reward for only 50 points.\", //optional\n    \"sortingType\": \"food\",\n    \"endDate\": \"2026-01-15\",\n    \"minPointsRequiredToClaim\": 50, //optional\n    \"claimLimit\": 5, //optional\n    \"percentOff\": 0, //optional\n    \"tierLimit\": \"6915e2063d6228520ce27929\",\n    \"companyOrganizer\": \"691c694615c5e4a506226db8\",\n    \"maxLimitPerUser\": 10,\n    \"isPromotionOnly\": true,\n    \"availableAsReward:\": \"false\",\n    \"status\": \"active\"\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -32605,7 +32856,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"rewardType\": \"ticketReward\",\n    \"image\": \"f32e903b-bd1d-44d4-a9be-b4ecea80efec.jfif\",\n    \"title\": \"Ticket Reward 1\",\n    \"description\": \"Get a free ticket for a special event.\",\n    \"sortingType\": \"category\",\n    \"endDate\": \"2026-05-15\",\n    \"minPointsRequiredToClaim\": 10,\n    \"claimLimit\": 10,\n    \"percentOff\": 0,\n    \"tierLimit\": \"6915e2063d6228520ce27929\",\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"status\": \"active\",\n    \"event\": \"6985994b4030e7a58b73e435\",\n    \"ticket\": \"6985994b4030e7a58b73e437\",\n    \"timeSlot\":\"\" //String of date/time\n}",
+                      "raw": "{\n    \"rewardType\": \"ticketReward\",\n    \"image\": \"f32e903b-bd1d-44d4-a9be-b4ecea80efec.jfif\",\n    \"title\": \"Ticket Reward 1\",\n    \"description\": \"Get a free ticket for a special event.\",\n    \"sortingType\": \"category\",\n    \"endDate\": \"2026-05-15\",\n    \"minPointsRequiredToClaim\": 10,\n    \"claimLimit\": 10,\n    \"percentOff\": 0,\n    \"tierLimit\": \"6915e2063d6228520ce27929\",\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"status\": \"active\",\n    \"event\": \"6985994b4030e7a58b73e435\",\n    \"ticket\": \"6985994b4030e7a58b73e437\",\n    \"maxLimitPerUser\": 10,\n    \"isPromotionOnly\": true,\n    \"availableAsReward:\": \"false\"\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -32724,7 +32975,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"rewardType\": \"buyMenuItemReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"endDate\": \"2025-11-15\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"status\": \"active\"\n}",
+                      "raw": "{\n    \"rewardType\": \"buyMenuItemReward\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"title\": \"Buy a Menu Item Reward\",\n    \"description\": \"Get a free item after purchasing a menu item.\", //optional\n    \"sortingType\": \"Fresh\",\n    \"endDate\": \"2025-11-15\",\n    \"minPointsRequiredToClaim\": 100,\n    \"claimLimit\": 1, //optional\n    \"percentOff\": 20, //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\", //optional\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"maxLimitPerUser\":10,\n    \"isPromotionOnly\":true,\n    \"availableAsReward:\":\"false\",\n    \"status\": \"active\"\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -33334,7 +33585,7 @@
                       }
                     },
                     "url": {
-                      "raw": "{{url}}admin/loyalty/streaks/?page=1&limit=1&status=active&companyOrganizer=6911c14b6fc7cbd864e745b6",
+                      "raw": "{{url}}admin/loyalty/streaks/?companyOrganizer=6911c14b6fc7cbd864e745b6",
                       "host": [
                         "{{url}}admin"
                       ],
@@ -33345,76 +33596,11 @@
                       ],
                       "query": [
                         {
-                          "key": "page",
-                          "value": "1"
-                        },
-                        {
-                          "key": "limit",
-                          "value": "1"
-                        },
-                        {
-                          "key": "status",
-                          "value": "active"
-                        },
-                        {
                           "key": "companyOrganizer",
                           "value": "6911c14b6fc7cbd864e745b6"
                         }
                       ]
                     }
-                  },
-                  "response": []
-                },
-                {
-                  "name": "add",
-                  "event": [
-                    {
-                      "listen": "test",
-                      "script": {
-                        "exec": [
-                          ""
-                        ],
-                        "type": "text/javascript",
-                        "packages": {},
-                        "requests": {}
-                      }
-                    },
-                    {
-                      "listen": "prerequest",
-                      "script": {
-                        "exec": [
-                          ""
-                        ],
-                        "type": "text/javascript",
-                        "packages": {},
-                        "requests": {}
-                      }
-                    }
-                  ],
-                  "request": {
-                    "method": "POST",
-                    "header": [],
-                    "body": {
-                      "mode": "raw",
-                      "raw": "{\n  \"visits\": 5,\n  \"points\": 100,\n  \"companyOrganizer\": \"6911b8946c940af405a4a603\"\n}",
-                      "options": {
-                        "raw": {
-                          "language": "json"
-                        }
-                      }
-                    },
-                    "url": {
-                      "raw": "{{url}}admin/loyalty/streaks/",
-                      "host": [
-                        "{{url}}admin"
-                      ],
-                      "path": [
-                        "loyalty",
-                        "streaks",
-                        ""
-                      ]
-                    },
-                    "description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
                   },
                   "response": []
                 },
@@ -33449,7 +33635,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n  \"visits\": 11,\n  \"points\": 100\n}",
+                      "raw": "{\n    \"countBase\": \"week\",\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"badges\": [\n        { \"title\": \"bronze\", \"visits\": 2 },\n        { \"title\": \"silver\", \"visits\": 10 },\n        { \"title\": \"gold\", \"visits\": 20 },\n        { \"title\": \"platinum\", \"visits\": 30 }\n    ]\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -33457,79 +33643,13 @@
                       }
                     },
                     "url": {
-                      "raw": "{{url}}admin/loyalty/streaks/:id",
+                      "raw": "{{url}}admin/loyalty/streaks",
                       "host": [
                         "{{url}}admin"
                       ],
                       "path": [
                         "loyalty",
-                        "streaks",
-                        ":id"
-                      ],
-                      "variable": [
-                        {
-                          "key": "id",
-                          "value": "6915aac63c521a7ce1581700"
-                        }
-                      ]
-                    },
-                    "description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
-                  },
-                  "response": []
-                },
-                {
-                  "name": "delete",
-                  "event": [
-                    {
-                      "listen": "test",
-                      "script": {
-                        "exec": [
-                          ""
-                        ],
-                        "type": "text/javascript",
-                        "packages": {},
-                        "requests": {}
-                      }
-                    },
-                    {
-                      "listen": "prerequest",
-                      "script": {
-                        "exec": [
-                          ""
-                        ],
-                        "type": "text/javascript",
-                        "packages": {},
-                        "requests": {}
-                      }
-                    }
-                  ],
-                  "request": {
-                    "method": "DELETE",
-                    "header": [],
-                    "body": {
-                      "mode": "raw",
-                      "raw": "",
-                      "options": {
-                        "raw": {
-                          "language": "json"
-                        }
-                      }
-                    },
-                    "url": {
-                      "raw": "{{url}}admin/loyalty/streaks/:id",
-                      "host": [
-                        "{{url}}admin"
-                      ],
-                      "path": [
-                        "loyalty",
-                        "streaks",
-                        ":id"
-                      ],
-                      "variable": [
-                        {
-                          "key": "id",
-                          "value": ""
-                        }
+                        "streaks"
                       ]
                     },
                     "description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
@@ -33583,7 +33703,7 @@
                       }
                     },
                     "url": {
-                      "raw": "{{url}}admin/loyalty/users-streaks?page=1&limit=1&companyOrganizer=6911c14b6fc7cbd864e745b6",
+                      "raw": "{{url}}admin/loyalty/users-streaks?page=1&limit=1&companyOrganizer=6911c14b6fc7cbd864e745b6&sortBy=userName&sortOrder=asc&lastVisitedFrom=2026-02-04",
                       "host": [
                         "{{url}}admin"
                       ],
@@ -33603,6 +33723,24 @@
                         {
                           "key": "companyOrganizer",
                           "value": "6911c14b6fc7cbd864e745b6"
+                        },
+                        {
+                          "key": "sortBy",
+                          "value": "userName",
+                          "description": "    \"userName\",\n    \"userFirstName\",\n    \"streak\",\n    \"longestStreak\",\n    \"visits\",\n    \"status\",\n    \"lastVisitAt\","
+                        },
+                        {
+                          "key": "sortOrder",
+                          "value": "asc"
+                        },
+                        {
+                          "key": "lastVisitedFrom",
+                          "value": "2026-02-04"
+                        },
+                        {
+                          "key": "badge",
+                          "value": null,
+                          "disabled": true
                         }
                       ]
                     }
@@ -35991,7 +36129,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\r\n    \"reservationType\": \"VIP\",\r\n    \"availableReservations\": 1,\r\n    \"maxCapacityPerReservation\": 10,\r\n    \"organizationId\": \"69737d30297ca37e0f10813a\", \r\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\", // required\r\n    // \"conditionType\": \"minimumSpendOnLocation\", // [ \"fixedPrice\", \"minimumSpendOnLocation\"prepayOption\", \"noCondition\", \"ticketRequirement\", \"customText\",],\r\n    // \"conditionType\": \"fixedPrice\",\r\n    \"conditionType\": \"prepayOption\",\r\n    \"amount\": 10,\r\n    // \"conditionType\": \"customText\",\r\n    // \"customText\": \" this is custome text\",\r\n    // \"conditionType\": \"ticketRequirement\",\r\n    // \"ticketType\": \"vipEventPass\",\r\n    // \"conditionType\": \"ticketRequirement\",\r\n    // \"ticketType\": \"generalAdmission\",\r\n    // \"conditionType\": \"ticketRequirement\",\r\n    // \"ticketType\": \"premiumAccess\",\r\n    // \"conditionType\": \"noCondition\",\r\n    \"taxPercentage\": \"5\",\r\n    \"needsConfirmation\": true,\r\n    //   \"optionalEventId\": \"690d824d79228e2591462eb4\",\r\n    \"allowPreOrderMenuItems\":\"false\",\r\n    \"timingSlots\": {\r\n        \"enabled\": true,\r\n        \"dateTimeSlots\": [\r\n            {\r\n                \"date\": \"2026-02-16\",\r\n                \"timeSlots\": [\r\n                    {\r\n                        \"startTime\": \"12:00 PM\",\r\n                        \"endTime\": \"12:30 PM\"\r\n                    },\r\n                    {\r\n                        \"startTime\": \"12:30 PM\",\r\n                        \"endTime\": \"01:00 PM\"\r\n                    }\r\n                ]\r\n            },\r\n            {\r\n                \"date\": \"2026-02-17\",\r\n                \"timeSlots\": [\r\n                    {\r\n\r\n                        \"startTime\": \"12:00 PM\",\r\n                        \"endTime\": \"12:30 PM\"\r\n                    },\r\n                    {\r\n                        \"startTime\": \"12:30 PM\",\r\n                        \"endTime\": \"01:00 PM\"\r\n                    }\r\n                ]\r\n            }\r\n        ]\r\n    },\r\n    \"status\": \"active\"     // [\"active\", \"inactive\", \"deleted\"],\r\n}",
+                  "raw": "{\r\n    \"reservationType\": \"\",\r\n    \"availableReservations\": 1,\r\n    \"maxCapacityPerReservation\": 10,\r\n    \"organizationId\": \"69737d30297ca37e0f10813a\", \r\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\", // required\r\n    // \"conditionType\": \"minimumSpendOnLocation\", // [ \"fixedPrice\", \"minimumSpendOnLocation\"prepayOption\", \"noCondition\", \"ticketRequirement\", \"customText\",],\r\n    // \"conditionType\": \"fixedPrice\",\r\n    \"conditionType\": \"prepayOption\",\r\n    \"amount\": 10,\r\n    // \"conditionType\": \"customText\",\r\n    // \"customText\": \" this is custome text\",\r\n    // \"conditionType\": \"ticketRequirement\",\r\n    // \"ticketType\": \"vipEventPass\",\r\n    // \"conditionType\": \"ticketRequirement\",\r\n    // \"ticketType\": \"generalAdmission\",\r\n    // \"conditionType\": \"ticketRequirement\",\r\n    // \"ticketType\": \"premiumAccess\",\r\n    // \"conditionType\": \"noCondition\",\r\n    \"taxPercentage\": \"5\",\r\n    \"needsConfirmation\": true,\r\n    //   \"optionalEventId\": \"690d824d79228e2591462eb4\",\r\n    \"allowPreOrderMenuItems\":\"false\",\r\n    \"timingSlots\": {\r\n        \"enabled\": true,\r\n        \"dateTimeSlots\": [\r\n            {\r\n                \"date\": \"2026-02-16\",\r\n                \"timeSlots\": [\r\n                    {\r\n                        \"startTime\": \"12:00 PM\",\r\n                        \"endTime\": \"12:30 PM\"\r\n                    },\r\n                    {\r\n                        \"startTime\": \"12:30 PM\",\r\n                        \"endTime\": \"01:00 PM\"\r\n                    }\r\n                ]\r\n            },\r\n            {\r\n                \"date\": \"2026-02-17\",\r\n                \"timeSlots\": [\r\n                    {\r\n\r\n                        \"startTime\": \"12:00 PM\",\r\n                        \"endTime\": \"12:30 PM\"\r\n                    },\r\n                    {\r\n                        \"startTime\": \"12:30 PM\",\r\n                        \"endTime\": \"01:00 PM\"\r\n                    }\r\n                ]\r\n            }\r\n        ]\r\n    },\r\n    \"status\": \"active\"     // [\"active\", \"inactive\", \"deleted\"],\r\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -36017,7 +36155,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\r\n    \"organizationId\": \"69737d30297ca37e0f10813a\", // required\r\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\", // required\r\n    \"firstName\": \"{{$randomFirstName}}\", // required\r\n    \"lastName\": \"{{$randomLastName}}\", // required\r\n    \"email\":\"emial.com\", // required\r\n    \"phoneNumber\": {\r\n        \"code\": \"+385\",\r\n        \"number\": \"998798769\"\r\n    },\r\n    \"reservationType\": \"6a7300fd8322123a78cf9fc6\",\r\n    \"partySize\": 2, // Required\r\n    \"numberOfTables\": 1,\r\n    \"timingSlots\": {\r\n        \"dateTimeSlots\": [ \r\n            {\r\n                \"date\": \"2026-02-16\",\r\n                \"timeSlots\": [\r\n                    {\r\n                        \"startTime\": \"2026-02-16T12:00:00.000Z\",\r\n                        \"endTime\": \"2026-02-16T12:30:00.000Z\"\r\n                    }\r\n                ]\r\n            }\r\n        ]\r\n    },\r\n    // \"conditionType\": \"minimumSpend\", // [ \"free\", \"minimumSpend\"],\r\n    \"conditionType\": \"free\",\r\n    // \"amount\": 10,// required when condition type is minimum spend\r\n    \"occasion\":\"id\",\r\n    \"status\": \"active\" // [\"pending\", \"accepted\", \"rejected\",\"completed\"],\r\n}",
+                  "raw": "{\r\n    \"organizationId\": \"6a0469c70dd707bc19cb05d9\",\r\n    \"firstName\": \"test\",\r\n    \"lastName\": \"res\",\r\n    \"email\": \"test01@gmail.com\",\r\n    \"phoneNumber\": {\r\n        \"code\": \"+385\",\r\n        \"number\": \"348093840934\"\r\n    },\r\n    \"reservationType\": \"6a756c7aeeb7ca9c2b09c1c2\",\r\n    \"partySize\": 4,\r\n    \"numberOfTables\": 1,\r\n    \"timingSlots\": {\r\n        \"dateTimeSlots\": [\r\n            {\r\n                \"date\": \"2026-08-11\",\r\n                \"timeSlots\": [\r\n                    {\r\n                        \"startTime\": \"2026-08-11T08:00:00.000Z\",\r\n                        \"endTime\": \"2026-08-11T09:00:00.000Z\"\r\n                    }\r\n                ]\r\n            }\r\n        ]\r\n    },\r\n    \"conditionType\": \"minimumSpend\",\r\n    \"status\": \"pending\",\r\n    \"amount\": 100,\r\n    \"occasion\": \"6a732897f0799401b8839d70\",\r\n    \"companyOrganizer\": \"6a0462c80dd707bc19cb03c0\"\r\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -36050,7 +36188,7 @@
                   "raw": ""
                 },
                 "url": {
-                  "raw": "{{url}}admin/reservations/v2?date=2026-02-16&organizationsId=69737d30297ca37e0f10813a",
+                  "raw": "{{url}}admin/reservations/v2?organizationsId=6a0469c70dd707bc19cb05d9",
                   "host": [
                     "{{url}}admin"
                   ],
@@ -36061,7 +36199,8 @@
                   "query": [
                     {
                       "key": "date",
-                      "value": "2026-02-16"
+                      "value": "2026-02-16",
+                      "disabled": true
                     },
                     {
                       "key": "page",
@@ -36075,7 +36214,7 @@
                     },
                     {
                       "key": "organizationsId",
-                      "value": "69737d30297ca37e0f10813a"
+                      "value": "6a0469c70dd707bc19cb05d9"
                     },
                     {
                       "key": "companyOrganizer",
@@ -36094,7 +36233,7 @@
                     },
                     {
                       "key": "status",
-                      "value": null,
+                      "value": "",
                       "description": "        \"pendingPayment\",\n        \"needsConfirmation\",\n        \"confirmed\",\n        \"checkedIn\",\n        \"rejected\",\n        \"cancelled\",\n        \"completed\",\n        \"deleted\",",
                       "disabled": true
                     }
@@ -36300,7 +36439,7 @@
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\r\n    \"firstName\": \"Ahmad\",\r\n    \"lastName\": \"Gill\",\r\n    \"phoneNumber\": {\r\n        \"code\": \"+92\",\r\n        \"number\": \"998798769\"\r\n    },\r\n    \"partySize\": 15,\r\n    \"reservationType\": \"window\",\r\n    \"timingSlots\": {\r\n        \"dateTimeSlots\": [\r\n            {\r\n                \"date\": \"2025-12-17\",\r\n                \"timeSlots\": [\r\n                    {\r\n                        \"startTime\": \"12:25 PM\",\r\n                        \"endTime\": \"12:30 PM\"\r\n                    }\r\n                ]\r\n            }\r\n        ]\r\n    }\r\n}",
+                  "raw": "{\r\n    // \"firstName\": \"{{$randomFirstName}}\", // required\r\n    // \"lastName\": \"{{$randomLastName}}\" // required\r\n    // \"email\":\"emial.com\", // required\r\n    // \"phoneNumber\": {\r\n    //     \"code\": \"+385\",\r\n    //     \"number\": \"998798769\"\r\n    // },\r\n    // \"reservationType\": \"6a7300fd8322123a78cf9fc6\",\r\n    // \"partySize\": 2, // Required\r\n    // \"numberOfTables\": 1,\r\n    // \"timingSlots\": {\r\n    //     \"dateTimeSlots\": [ \r\n    //         {\r\n    //             \"date\": \"2026-02-16\",\r\n    //             \"timeSlots\": [\r\n    //                 {\r\n    //                     \"startTime\": \"2026-02-16T12:00:00.000Z\",\r\n    //                     \"endTime\": \"2026-02-16T12:30:00.000Z\"\r\n    //                 }\r\n    //             ]\r\n    //         }\r\n    //     ]\r\n    // },\r\n    // \"notes\":\"helo\",\r\n    // // \"conditionType\": \"minimumSpend\", // [ \"free\", \"minimumSpend\"],\r\n    // \"conditionType\": \"free\",\r\n    // // \"amount\": 10,// required when condition type is minimum spend\r\n    // \"occasion\":\"id\",\r\n    \"status\": \"rejected\" // [\"pending\", \"accepted\", \"rejected\",\"completed\"],\r\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -36308,23 +36447,19 @@
                   }
                 },
                 "url": {
-                  "raw": "{{url}}admin/reservations/:userId/:id",
+                  "raw": "{{url}}admin/reservations/user/:id",
                   "host": [
                     "{{url}}admin"
                   ],
                   "path": [
                     "reservations",
-                    ":userId",
+                    "user",
                     ":id"
                   ],
                   "variable": [
                     {
-                      "key": "userId",
-                      "value": "6911b9931902fd1c55eb480c"
-                    },
-                    {
                       "key": "id",
-                      "value": "691f105e19c66cf25f0b618d"
+                      "value": "6a73141e9a77eb43008381e2"
                     }
                   ]
                 }
@@ -44825,7 +44960,7 @@
                   "raw": "{\n  \"companyOrganizer\": \"64f1a2b3c4d5e6f7a8b9c0d1\",\n  \"organization\": \"69737d30297ca37e0f10813a\",\n  \"name\": \"VIP Booth\",\n  \"description\": \"Premium seating area near the bar\",\n  \"numberOfTables\": 5,\n  \"maxCapacity\": 20,\n  \"tax\":0,\n  \"maxPartySize\": 6,\n  \"conditionType\": \"minimumSpend\",\n  \"bonosPoints\": 10,\n  \"isVisibleToGuest\": true,\n  \"notes\": [\"Requires deposit\", \"Available after 8pm\"],\n  \"requireConfirmationToApprove\": true,\n  \"occasionRequired\": false,\n  \"status\": \"active\"\n}"
                 },
                 "url": {
-                  "raw": "{{url}}admin/reservation-types?summary=true&organization=69737d30297ca37e0f10813a",
+                  "raw": "{{url}}admin/reservation-types?summary=true&organization=6a0469c70dd707bc19cb05d9",
                   "host": [
                     "{{url}}admin"
                   ],
@@ -44849,7 +44984,7 @@
                     },
                     {
                       "key": "organization",
-                      "value": "69737d30297ca37e0f10813a"
+                      "value": "6a0469c70dd707bc19cb05d9"
                     },
                     {
                       "key": "status",
@@ -46015,7 +46150,7 @@
                       }
                     },
                     "url": {
-                      "raw": "{{url}}app/staff/in-app-ordering?organization=69737d30297ca37e0f10813a",
+                      "raw": "{{url}}app/staff/in-app-ordering?organization=69737d30297ca37e0f10813a&paymentStatus=pending",
                       "host": [
                         "{{url}}app"
                       ],
@@ -46027,6 +46162,10 @@
                         {
                           "key": "organization",
                           "value": "69737d30297ca37e0f10813a"
+                        },
+                        {
+                          "key": "paymentStatus",
+                          "value": "pending"
                         }
                       ]
                     }
@@ -46968,7 +47107,7 @@
               }
             },
             "url": {
-              "raw": "{{url}}app/staff/reservations/users?organizationsId=69737d30297ca37e0f10813a&reservationId=69d73b60e5f0f7677c8be36c",
+              "raw": "{{url}}app/staff/reservations/users",
               "host": [
                 "{{url}}app"
               ],
@@ -46980,11 +47119,13 @@
               "query": [
                 {
                   "key": "organizationsId",
-                  "value": "69737d30297ca37e0f10813a"
+                  "value": "69737d30297ca37e0f10813a",
+                  "disabled": true
                 },
                 {
                   "key": "reservationId",
-                  "value": "69d73b60e5f0f7677c8be36c"
+                  "value": "69d73b60e5f0f7677c8be36c",
+                  "disabled": true
                 }
               ]
             }

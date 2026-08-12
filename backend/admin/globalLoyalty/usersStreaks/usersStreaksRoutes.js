@@ -2,7 +2,6 @@ const express = require("express");
 const {
   getUsersStreaks,
   updateUsersStreak,
-  deleteUsersStreak,
 } = require("./usersStreaksController");
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");

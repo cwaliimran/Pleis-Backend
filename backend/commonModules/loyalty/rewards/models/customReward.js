@@ -1,4 +1,4 @@
-const Reward = require("./BaseReward");
+const Reward = require("./baseReward");
 
 const mongoose = require("mongoose");
 
