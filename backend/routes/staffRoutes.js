@@ -23,6 +23,13 @@ router.use("/events", require("../staff/events/eventRoutes"));
 //reservations
 router.use("/reservations", require("../admin/reservation/reservationRoutes"));
 router.use("/reservations-booking", require("../staff/reservations/reservationRoutes"));
+router.use(
+  "/reservation-preferences",
+  require("../admin/reservation/reservationPreferences/reservationPreferencesRoutes"),
+);
+router.use("/reservation-types", require("../admin/reservation/reservationType/reservationTypeRoutes"));
+router.use("/occasion", require("../admin/reservation/occasion/occasionRoutes"));
+
 router.use("/orders", require("../app/menuItemsAndOrdering/orders/orderRoutes"));
 
 module.exports = router;
