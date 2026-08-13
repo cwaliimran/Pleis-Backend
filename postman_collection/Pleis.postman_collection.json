@@ -31290,12 +31290,12 @@
                         },
                         {
                           "key": "sortBy",
-                          "value": null,
+                          "value": "",
                           "disabled": true
                         },
                         {
                           "key": "sortOrdr",
-                          "value": null,
+                          "value": "",
                           "disabled": true
                         }
                       ]
@@ -31627,7 +31627,125 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Buy 5 Burgers\",\n    \"description\": \"Order 5 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskValue\": 5,\n    \"taskMenuItem\": \"6911c3516aca10eb719d6f72\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"status\": \"active\",\n    \"repeatComplition\":\"false\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
+                      "raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\": \"trophy.png\",\n    \"title\": \"Buy 5 Burgers\",\n    \"description\": \"Order 5 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskValue\": 5,\n    \"taskMenuItem\": [\n        \"64f1a2b3c4d5e6f7a8b9c0d1\",\n        \"64f1a2b3c4d5e6f7a8b9c0d2\"\n    ],\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"status\": \"active\",\n    \"repeatComplition\": \"false\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\":[ \"6911c3516aca10eb719d6f72\"]\n    }\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}admin/loyalty/challenges/",
+                      "host": [
+                        "{{url}}admin"
+                      ],
+                      "path": [
+                        "loyalty",
+                        "challenges",
+                        ""
+                      ]
+                    },
+                    "description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+                  },
+                  "response": [
+                    {
+                      "name": "add - buy menu item",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "url": {
+                          "raw": "{{url}}challenges/",
+                          "host": [
+                            "{{url}}challenges"
+                          ],
+                          "path": [
+                            ""
+                          ]
+                        }
+                      },
+                      "status": "Created",
+                      "code": 201,
+                      "_postman_previewlanguage": "Text",
+                      "header": [
+                        {
+                          "key": "X-Powered-By",
+                          "value": "Express"
+                        },
+                        {
+                          "key": "Access-Control-Allow-Origin",
+                          "value": "*"
+                        },
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        },
+                        {
+                          "key": "Content-Length",
+                          "value": "508"
+                        },
+                        {
+                          "key": "ETag",
+                          "value": "W/\"1fc-ou00dxBe6WV1//c1DgrOc4f33uM\""
+                        },
+                        {
+                          "key": "Date",
+                          "value": "Sun, 28 Sep 2025 11:22:49 GMT"
+                        },
+                        {
+                          "key": "Connection",
+                          "value": "keep-alive"
+                        },
+                        {
+                          "key": "Keep-Alive",
+                          "value": "timeout=5"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n    \"message\": \"Challenge created successfully\",\n    \"data\": {\n        \"title\": \"Buy 2 Burgers\",\n        \"description\": \"Order 2 burgers to earn rewards\",\n        \"taskType\": \"buyMenuItem\",\n        \"claimLimit\": 2,\n        \"endDate\": \"2025-12-30T19:00:00.000Z\",\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"status\": \"active\",\n        \"reward\": {\n            \"rewardType\": \"specialTicket\",\n            \"rewardValue\": 1\n        },\n        \"_id\": \"68d91a899e7c7d6dcd8439a7\",\n        \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n        \"createdAt\": \"2025-09-28T11:22:49.632Z\",\n        \"updatedAt\": \"2025-09-28T11:22:49.632Z\",\n        \"__v\": 0,\n        \"id\": \"68d91a899e7c7d6dcd8439a7\"\n    }\n}"
+                    }
+                  ]
+                },
+                {
+                  "name": "add - buy menu item Copy",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    },
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\": \"trophy.png\",\n    \"title\": \"Buy 5 Burgers\",\n    \"description\": \"Order 5 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskValue\": 5,\n    \"taskMenuItem\": [\n        \"64f1a2b3c4d5e6f7a8b9c0d1\",\n        \"64f1a2b3c4d5e6f7a8b9c0d2\"\n    ],\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"status\": \"active\",\n    \"repeatComplition\": \"false\",\n    \"reward\": {\n        \"rewardType\": \"linkedReward\",\n        \"linkedReward\": \"6911c3516aca10eb719d6f72\"\n    }\n}",
                       "options": {
                         "raw": {
                           "language": "json"

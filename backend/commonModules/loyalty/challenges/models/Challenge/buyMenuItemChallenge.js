@@ -1,4 +1,4 @@
-const Challenge = require("./BaseChallenge");
+const Challenge = require("./baseChallenge");
 const mongoose = require("mongoose");
 
 const BuyMenuItemChallenge = Challenge.discriminator(
@@ -7,16 +7,16 @@ const BuyMenuItemChallenge = Challenge.discriminator(
     {
       taskValue: {
         type: Number,
-        default: 1
+        default: 1,
       },
       taskMenuItem: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: [mongoose.Schema.Types.ObjectId],
         ref: "MenuItems",
         required: true,
       },
     },
-    { _id: false }
-  )
+    { _id: false },
+  ),
 );
 
 module.exports = BuyMenuItemChallenge;
