@@ -6,6 +6,10 @@ const createOrder = async (orderData, session = null) => {
   return Orders.create([orderData], { session }).then((res) => res[0]);
 };
 
+const updateOrder = async (query, updateData, session = null) => {
+  return Orders.findOneAndUpdate(query, updateData, { new: true, session });
+};
+
 const getOrderById = async (id) => {
   const orderId = new mongoose.Types.ObjectId(id);
 
@@ -153,13 +157,7 @@ const addItemsToOrder = async (orderId, newItems, additionalTotalPrice) => {
 
 const updateOrderWithItems = async (
   orderId,
-  {
-    newItems,
-    additionalFinalPrice,
-    newItemsTotal,
-    newSaleDiscount,
-    newFinalTotal,
-  },
+  { newItems, additionalFinalPrice, newItemsTotal, newSaleDiscount, newFinalTotal },
 ) => {
   return Orders.findByIdAndUpdate(
     orderId,
@@ -192,10 +190,7 @@ const getTotalOrderPriceByUser = async (userId) => {
     let totalAmount = 0;
     orders.forEach((order) => {
       // Sum finalPrice of all items in the current order
-      const itemsTotal = order.items.reduce(
-        (sum, item) => sum + item.finalPrice,
-        0,
-      );
+      const itemsTotal = order.items.reduce((sum, item) => sum + item.finalPrice, 0);
       totalAmount += itemsTotal;
     });
 
@@ -206,6 +201,7 @@ const getTotalOrderPriceByUser = async (userId) => {
 };
 module.exports = {
   createOrder,
+  updateOrder,
   getOrderById,
   getOrdersByUser,
   updateOrderStatus,

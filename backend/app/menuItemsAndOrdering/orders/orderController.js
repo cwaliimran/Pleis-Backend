@@ -12,13 +12,14 @@ const placeOrder = async (req, res) => {
     promoCode,
     userId,
     tip,
+    reservationId,
   } = req.body;
   try {
     let validateData = {
       rawData: ["pickupType", "paymentMethod"],
       enumFields: {
         pickupType: ["counter", "tableService", "togo"],
-        paymentMethod: ["applePay", "card", "cash"],
+        paymentMethod: ["applePay", "card", "cash", "payLater"],
       },
     };
 
@@ -39,6 +40,7 @@ const placeOrder = async (req, res) => {
       tableNumber,
       promoCode,
       tip,
+      reservationId,
     });
 
     return sendResponse({
@@ -49,6 +51,77 @@ const placeOrder = async (req, res) => {
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode || 400,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
+const updateOrderDetails = async (req, res) => {
+  const { items, combos, notes, paymentMethod, pickupType, tableNumber, promoCode, tip, userId } = req.body;
+
+  const { id: orderId } = req.params;
+
+  try {
+    const validateData = {
+      rawData: [],
+      enumFields: {},
+    };
+
+    // Validate only if field was provided
+    if (pickupType !== undefined) {
+      validateData.rawData.push("pickupType");
+
+      validateData.enumFields.pickupType = ["counter", "tableService", "togo"];
+    }
+
+    if (paymentMethod !== undefined) {
+      validateData.rawData.push("paymentMethod");
+
+      validateData.enumFields.paymentMethod = ["applePay", "card", "cash", "payLater"];
+    }
+
+    // tableNumber is required when changing pickupType
+    // to tableService
+    if (pickupType === "tableService" && tableNumber === undefined) {
+      validateData.rawData.push("tableNumber");
+    }
+
+    if (!validateParams(req, res, validateData)) return;
+
+    if (!orderId) {
+      throw new Error("Order ID is required");
+    }
+
+    const { order } = await orderService.updateOrder({
+      orderId,
+      userId: userId || req.user._id,
+      timezone: req.user.timezone,
+
+      // Keep these undefined if not supplied.
+      // undefined = don't update.
+      items,
+      combos,
+      notes,
+      paymentMethod,
+      pickupType,
+      tableNumber,
+      promoCode,
+      tip,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "order_updated_successfully",
+      data: order,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+
     return sendResponse({
       res,
       statusCode: readableError.statusCode || 400,
@@ -144,4 +217,4 @@ const getUserOrders = async (req, res) => {
   }
 };
 
-module.exports = { placeOrder, getOrderDetails, getUserOrders, addMoreItemsToOrder };
+module.exports = { placeOrder, getOrderDetails, getUserOrders, addMoreItemsToOrder, updateOrderDetails };

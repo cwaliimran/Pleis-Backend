@@ -1,9 +1,6 @@
 const mongoose = require("mongoose");
 const { customAlphabet } = require("nanoid");
-const generateShortId = customAlphabet(
-  "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-  6,
-);
+const generateShortId = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 6);
 
 const UserReservationsSchema = new mongoose.Schema(
   {
@@ -257,6 +254,7 @@ const UserReservationsSchema = new mongoose.Schema(
         default: null,
       },
       discountAmount: { type: Number, default: 0 },
+      usedAmount: { type: Number, default: 0 },
     },
 
     userBillingInformation: {
@@ -277,9 +275,6 @@ UserReservationsSchema.index({
   "timingSlots.dateTimeSlots.timeSlots.startTime": 1,
 });
 
-const UserReservations = mongoose.model(
-  "UserReservations",
-  UserReservationsSchema,
-);
+const UserReservations = mongoose.model("UserReservations", UserReservationsSchema);
 
 module.exports = { UserReservations };

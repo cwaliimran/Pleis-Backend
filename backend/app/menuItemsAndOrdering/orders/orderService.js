@@ -14,7 +14,11 @@ const { getOrgCompanyOrganizer } = require("../../organizationProfile/organizati
 const { calculateItemPrice } = require("./formatter/calculateItemPrice");
 const { calculateComboPrice } = require("../menuItems/formatter/formatMenuItemsCombos");
 const { getWallet } = require("../../../app/loyalty/clubMembers/clubMembersRepository");
-const { getLatestUserReservations } = require("../../../admin/reservation/reservationRepository");
+const {
+  getLatestUserReservations,
+  validateReservationForOrder,
+  consumeReservationVoucher,
+} = require("../../../admin/reservation/reservationRepository");
 
 const buildPricedMenuItemSnapshot = (menuItem) => {
   const priceInfo = calculateItemPrice(menuItem);
@@ -172,6 +176,7 @@ const placeOrder = async ({
   tableNumber,
   promoCode,
   tip,
+  reservationId,
 }) => {
   const cartCombos = combos || [];
 
@@ -252,8 +257,6 @@ const placeOrder = async ({
       itemsTotal += unitPrice * i.quantity;
       totalSaleDiscount += saleDiscountTotal;
       totalPrice += finalPrice;
-      tip = tip || 0;
-      totalPrice += tip;
 
       const status = menuItem.isRequiresOrderConfirmation ? "pending" : "confirmed";
 
@@ -265,7 +268,6 @@ const placeOrder = async ({
         saleDiscountPerUnit,
         finalPrice,
         status,
-        tip,
         menuItemSnapShot: JSON.parse(JSON.stringify(menuItem)),
       };
     });
@@ -289,18 +291,45 @@ const placeOrder = async ({
 
       totalPrice = promoResult.finalAmount;
     }
+    let voucherAmount = 0;
+    if (reservationId) {
+      const reservation = await validateReservationForOrder({
+        reservationId,
+        userId,
+        timezone,
+        session,
+      });
+
+      if (!reservation) {
+        throw new Error("Reservation not found or not valid for this user");
+      }
+
+      const voucherResult = await consumeReservationVoucher({
+        reservation,
+        orderAmount: totalPrice,
+        session,
+      });
+
+      voucherAmount = voucherResult.voucherAmount;
+      totalPrice = voucherResult.orderAmountDue;
+      if (voucherAmount > 0) {
+      }
+    }
 
     // 3️⃣ Create order document inside session
+    totalPrice += Number(tip || 0);
     let orderData = {
       user: userId,
       organization: organizationId,
       items: orderItems,
       combos: orderCombos,
       totalPrice,
+      reservation: reservationId || null,
       priceBreakdown: {
         itemsTotal,
         saleDiscount: totalSaleDiscount,
         promoDiscount: promoCode ? promoResult.discount || 0 : 0,
+        voucherDiscount: voucherAmount,
         tax: 0,
         finalTotal: totalPrice,
         promoCode: promoCode || null,
@@ -373,6 +402,347 @@ const placeOrder = async ({
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
+    throw err;
+  }
+};
+
+const updateOrder = async ({
+  orderId,
+  userId,
+  timezone,
+  items,
+  combos,
+  notes,
+  paymentMethod,
+  pickupType,
+  tableNumber,
+  promoCode,
+  tip,
+}) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    // 1️⃣ Get existing order
+    const existingOrder = await orderRepo.getOrderById(orderId, userId, session);
+
+    if (!existingOrder) {
+      throw new Error("Order not found");
+    }
+
+    // Only pendingPayment orders can be updated
+    if (existingOrder.status !== "pendingPayment") {
+      throw new Error("Only orders in pendingPayment state can be updated");
+    }
+
+    const organizationId = existingOrder.organization?._id || existingOrder.organization;
+
+    // IMPORTANT:
+    // undefined = don't update this field
+    // [] = explicitly replace with empty array
+
+    const shouldUpdateItems = items !== undefined;
+    const shouldUpdateCombos = combos !== undefined;
+
+    let orderItems = existingOrder.items || [];
+    let orderCombos = existingOrder.combos || [];
+
+    let itemsTotal = 0;
+    let totalSaleDiscount = 0;
+    let totalPrice = 0;
+
+    // =========================================================
+    // 2️⃣ UPDATE ITEMS ONLY IF PROVIDED
+    // =========================================================
+
+    if (shouldUpdateItems) {
+      if (!Array.isArray(items)) {
+        throw new Error("Items must be an array");
+      }
+
+      if (items.length) {
+        const itemIds = items.map((item) => new mongoose.Types.ObjectId(item.menuItem));
+
+        const menuItems = await menuItemRepo.getMenuItemsWithFilters({
+          query: {
+            _id: { $in: itemIds },
+          },
+          userId,
+          timezone,
+        });
+
+        if (menuItems.length !== items.length) {
+          throw new Error("Invalid items in cart");
+        }
+        // Make sure all items belong to same organization
+        const itemOrganizationId = await menuItemRepo.getOrganizationIdByMenuItemId(menuItems[0].menu);
+
+        if (itemOrganizationId.toString() !== organizationId.toString()) {
+          throw new Error("Items must belong to the same organization as the order");
+        }
+
+        orderItems = items.map((item) => {
+          const menuItem = menuItems.find((m) => m._id.toString() === item.menuItem.toString());
+
+          if (!menuItem) {
+            throw new Error(`Invalid menu item: ${item.menuItem}`);
+          }
+
+          if (!item.quantity || item.quantity <= 0) {
+            throw new Error(`Invalid quantity for menu item: ${item.menuItem}`);
+          }
+          const priceInfo = calculateItemPrice(menuItem);
+
+          const unitPrice = priceInfo.originalPrice;
+          const unitFinalPrice = priceInfo.finalPrice;
+          const saleDiscountPerUnit = priceInfo.saleDiscount;
+
+          const finalPrice = unitFinalPrice * item.quantity;
+
+          const saleDiscountTotal = saleDiscountPerUnit * item.quantity;
+
+          itemsTotal += unitPrice * item.quantity;
+
+          totalSaleDiscount += saleDiscountTotal;
+
+          totalPrice += finalPrice;
+
+          const status = menuItem.isRequiresOrderConfirmation ? "pending" : "confirmed";
+
+          return {
+            menuItem: menuItem._id,
+            quantity: item.quantity,
+
+            unitPrice,
+            unitFinalPrice,
+            saleDiscountPerUnit,
+            finalPrice,
+
+            status,
+
+            menuItemSnapShot: JSON.parse(JSON.stringify(menuItem)),
+          };
+        });
+      } else {
+        // Explicit [] means remove all items
+        orderItems = [];
+      }
+    }
+
+    // =========================================================
+    // 3️⃣ UPDATE COMBOS ONLY IF PROVIDED
+    // =========================================================
+
+    if (shouldUpdateCombos) {
+      if (!Array.isArray(combos)) {
+        throw new Error("Combos must be an array");
+      }
+
+      if (combos.length) {
+        const comboIds = combos.map((combo) => new mongoose.Types.ObjectId(combo.combo));
+
+        const comboDocs = await menuItemRepo.getMenuItemsCombosWithFilters({
+          query: {
+            _id: { $in: comboIds },
+          },
+        });
+
+        if (comboDocs.length !== combos.length) {
+          throw new Error("Invalid combos in cart");
+        }
+
+        // Validate combo organization
+        const firstComboItemId = comboDocs[0]?.menuItems?.[0];
+
+        if (!firstComboItemId) {
+          throw new Error("Invalid combos in cart");
+        }
+
+        const comboOrganizationId = await menuItemRepo.getOrganizationIdFromMenuItem(firstComboItemId);
+
+        if (comboOrganizationId.toString() !== organizationId.toString()) {
+          throw new Error("Combos must belong to the same organization as the order");
+        }
+
+        const companyOrganizer = await getOrgCompanyOrganizer(organizationId);
+
+        const { orderCombos: newOrderCombos } = await buildOrderCombos({
+          combos,
+          comboDocs,
+          userId,
+          timezone,
+        });
+
+        orderCombos = newOrderCombos;
+      } else {
+        // Explicit [] means remove all combos
+        orderCombos = [];
+      }
+    }
+
+    // =========================================================
+    // 4️⃣ CALCULATE COMBO TOTALS FROM RESULTING ORDER
+    // =========================================================
+
+    const combosTotal = orderCombos.reduce((sum, combo) => sum + combo.finalPrice, 0);
+
+    const comboSaleDiscount = orderCombos.reduce((sum, combo) => sum + (combo.saleDiscount || 0), 0);
+
+    totalPrice += combosTotal;
+
+    // If combos were not updated, calculate their original
+    // values from the existing snapshots/data where possible.
+    if (!shouldUpdateCombos) {
+      totalSaleDiscount += comboSaleDiscount;
+    } else {
+      totalSaleDiscount += comboSaleDiscount;
+    }
+
+    // =========================================================
+    // 5️⃣ OPTIONAL FIELD VALUES
+    // =========================================================
+
+    const finalPaymentMethod = paymentMethod !== undefined ? paymentMethod : existingOrder.paymentMethod;
+
+    const finalPromoCode = promoCode !== undefined ? promoCode : existingOrder.priceBreakdown?.promoCode;
+
+    const finalTip = tip !== undefined ? Number(tip || 0) : Number(existingOrder.priceBreakdown?.tip || 0);
+
+    if (finalTip < 0) {
+      throw new Error("Invalid tip");
+    }
+
+    // Tip is added ONCE
+    totalPrice += finalTip;
+
+    // =========================================================
+    // 6️⃣ PROMO
+    // =========================================================
+
+    let promoResult = null;
+
+    if (finalPromoCode) {
+      const companyOrganizer = await getOrgCompanyOrganizer(organizationId);
+
+      promoResult = await usePromoCode(
+        {
+          promoCode: finalPromoCode,
+          userId,
+          companyOrganizer,
+          amount: totalPrice,
+        },
+        session,
+      );
+
+      if (promoResult.error) {
+        throw new Error(promoResult.error);
+      }
+
+      totalPrice = promoResult.finalAmount;
+    }
+
+    // =========================================================
+    // 7️⃣ UPDATE DATA
+    // =========================================================
+
+    const updateData = {
+      status: "pendingPayment",
+
+      totalPrice,
+
+      priceBreakdown: {
+        itemsTotal,
+        saleDiscount: totalSaleDiscount,
+        promoDiscount: promoResult?.discount || 0,
+        tax: 0,
+        finalTotal: totalPrice,
+        promoCode: finalPromoCode || null,
+        tip: finalTip,
+      },
+
+      // Optional fields:
+      ...(notes !== undefined && {
+        notes,
+      }),
+
+      ...(paymentMethod !== undefined && {
+        paymentMethod,
+      }),
+
+      ...(pickupType !== undefined && {
+        pickupType,
+      }),
+
+      ...(tableNumber !== undefined && {
+        tableNumber,
+      }),
+
+      // Reset payment lock after update
+      lockUntil: new Date(Date.now() + 10 * 60 * 1000),
+    };
+
+    // Only replace items if items was sent
+    if (shouldUpdateItems) {
+      updateData.items = orderItems;
+    }
+
+    // Only replace combos if combos was sent
+    if (shouldUpdateCombos) {
+      updateData.combos = orderCombos;
+    }
+
+    // =========================================================
+    // 8️⃣ UPDATE ORDER
+    // =========================================================
+
+    const updatedOrder = await orderRepo.updateOrder({ _id: orderId }, updateData, session);
+
+    if (!updatedOrder) {
+      throw new Error("Failed to update order");
+    }
+
+    // =========================================================
+    // 9️⃣ FORMAT RESPONSE
+    // =========================================================
+
+    const formattedOrder = menuItemOrderFormatter(updatedOrder, timezone);
+
+    const userDetails = await findAppUserByIdWithProjectionService(userId, {
+      profileIcon: 1,
+      firstName: 1,
+      lastName: 1,
+      email: 1,
+      username: 1,
+    });
+
+    formattedOrder.user = userDetails;
+
+    // =========================================================
+    // 🔟 COMMIT
+    // =========================================================
+
+    await session.commitTransaction();
+    session.endSession();
+
+    // =========================================================
+    // 1️⃣1️⃣ SOCKET EVENT
+    // =========================================================
+
+    emitOrderEvent({
+      io: global.io,
+      eventName: "ORDER_UPDATED",
+      orderId: updatedOrder._id,
+      organizationId: updatedOrder.organization,
+      data: formattedOrder,
+    });
+
+    return {
+      order: formattedOrder,
+    };
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+
     throw err;
   }
 };
@@ -565,6 +935,7 @@ const cancelOrder = async (orderId) => {
 
 module.exports = {
   placeOrder,
+  updateOrder,
   getOrderDetails,
   getUserOrders,
   updateOrderStatus,

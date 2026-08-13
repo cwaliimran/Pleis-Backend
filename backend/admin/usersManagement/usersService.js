@@ -28,12 +28,7 @@ const getAllUsers = async ({ page, limit, keyword, status, userType, organizatio
     query["accountState.status"] = { $ne: "deleted" };
   }
   if (keyword && keyword.trim() !== "") {
-    const keywordMatch = buildKeywordQueryFromModels(
-      [
-        { schema: User.schema },
-      ],
-      keyword
-    );
+    const keywordMatch = buildKeywordQueryFromModels([{ schema: User.schema }], keyword);
     Object.assign(query, keywordMatch);
   }
   if (userType !== undefined) {
@@ -44,22 +39,14 @@ const getAllUsers = async ({ page, limit, keyword, status, userType, organizatio
   }
 
   const skip = (page - 1) * limit;
-  const [users, totalFiltered, pending, active, rejected, suspended] =
-    await Promise.all([
-      userRepo.getUsersWithFilters(
-        query,
-        skip,
-        limit,
-        organization,
-        sortBy,
-        sortOrder
-      ),
-      userRepo.countUsers(query),
-      userRepo.countUsers({ "accountState.status": "pending" }),
-      userRepo.countUsers({ "accountState.status": "active" }),
-      userRepo.countUsers({ "accountState.status": "rejected" }),
-      userRepo.countUsers({ "accountState.status": "suspended" }),
-    ]);
+  const [users, totalFiltered, pending, active, rejected, suspended] = await Promise.all([
+    userRepo.getUsersWithFilters(query, skip, limit, organization, sortBy, sortOrder),
+    userRepo.countUsers(query),
+    userRepo.countUsers({ "accountState.status": "pending" }),
+    userRepo.countUsers({ "accountState.status": "active" }),
+    userRepo.countUsers({ "accountState.status": "rejected" }),
+    userRepo.countUsers({ "accountState.status": "suspended" }),
+  ]);
 
   let meta = generateMeta(page, limit, totalFiltered);
   meta.usersCount = { pending, active, rejected, suspended };
@@ -77,12 +64,7 @@ const getStaff = async ({ page, limit, keyword, status, userType, currentUser })
   };
 
   if (keyword && keyword.trim() !== "") {
-    const keywordMatch = buildKeywordQueryFromModels(
-      [
-        { schema: User.schema },
-      ],
-      keyword
-    );
+    const keywordMatch = buildKeywordQueryFromModels([{ schema: User.schema }], keyword);
     Object.assign(query, keywordMatch);
   }
 
@@ -98,18 +80,15 @@ const getStaff = async ({ page, limit, keyword, status, userType, currentUser })
       status: { $ne: "deleted" },
     }).select("staff.user");
 
-
-    const allowedUserIds = orgs.flatMap(org => org.staff.map(s => s.user));
+    const allowedUserIds = orgs.flatMap((org) => org.staff.map((s) => s.user));
     query["_id"] = { $in: allowedUserIds };
-
   } else if (currentUser.userType === "organizer") {
     const orgs = await Organizations.find({
       creator: currentUser._id,
       status: { $ne: "deleted" },
     }).select("staff.user creator");
 
-
-    const allowedUserIds = orgs.flatMap(org => [org.creator, ...org.staff.map(s => s.user)]);
+    const allowedUserIds = orgs.flatMap((org) => [org.creator, ...org.staff.map((s) => s.user)]);
     query["_id"] = { $in: allowedUserIds };
   }
 
@@ -124,7 +103,6 @@ const getStaff = async ({ page, limit, keyword, status, userType, currentUser })
 
   return { users, meta };
 };
-
 
 function getEndDate(pricingPlan, startDate = new Date()) {
   if (!pricingPlan || pricingPlan === "free") return null;
@@ -141,11 +119,8 @@ function getEndDate(pricingPlan, startDate = new Date()) {
   return null;
 }
 
-
 const updateUser = async (req, res, options = {}) => {
-  const {
-    userId
-  } = options;
+  const { userId } = options;
   const {
     // email,
     phoneNumber,
@@ -167,10 +142,9 @@ const updateUser = async (req, res, options = {}) => {
     status,
     location,
     notifications,
-    subscriptions
+    subscriptions,
   } = req.body;
 
-  
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -188,26 +162,25 @@ const updateUser = async (req, res, options = {}) => {
     if (userId && status === "suspended") {
       await Organizations.updateMany(
         {
-          creator: userId,  // Match the organization by creator (userId)
-          status: "active"   // Match only organizations with "active" status
+          creator: userId, // Match the organization by creator (userId)
+          status: "active", // Match only organizations with "active" status
         },
         {
           $set: { status: "suspended" }, // Set the organization's status to "suspended"
-        }
+        },
       );
     }
     if (userId && status === "active") {
       await Organizations.updateMany(
         {
-          creator: userId,  // Match the organization by creator (userId)
-          status: "suspended"   // Match only organizations with "suspended" status
+          creator: userId, // Match the organization by creator (userId)
+          status: "suspended", // Match only organizations with "suspended" status
         },
         {
           $set: { status: "active" }, // Set the organization's status to "active"
-        }
+        },
       );
     }
-
 
     /*   // Check if email exists
       const existingUser = await User.findOne({ _id: { $ne: userId }, email: email.trim().toLowerCase() });
@@ -236,7 +209,7 @@ const updateUser = async (req, res, options = {}) => {
         _id: { $ne: userId },
         "phoneNumber.code": phoneNumber.code,
         "phoneNumber.number": phoneNumber.number,
-        "verificationStatus.phoneNumber": "verified"
+        "verificationStatus.phoneNumber": "verified",
       });
 
       if (existingPhone) {
@@ -272,19 +245,19 @@ const updateUser = async (req, res, options = {}) => {
     if ((userType === "staff" || userType === "manager") && Array.isArray(organizations)) {
       // Find all organizations where this user is currently staff
       const currentOrgs = await Organizations.find({ "staff.user": user._id }).session(session);
-      const currentOrgIds = currentOrgs.map(org => org._id.toString());
-      const newOrgIds = organizations.map(id => id.toString());
+      const currentOrgIds = currentOrgs.map((org) => org._id.toString());
+      const newOrgIds = organizations.map((id) => id.toString());
 
-      const orgsToRemove = currentOrgIds.filter(id => !newOrgIds.includes(id));
-      const orgsToAdd = newOrgIds.filter(id => !currentOrgIds.includes(id));
-      const orgsToUpdate = currentOrgIds.filter(id => newOrgIds.includes(id));
+      const orgsToRemove = currentOrgIds.filter((id) => !newOrgIds.includes(id));
+      const orgsToAdd = newOrgIds.filter((id) => !currentOrgIds.includes(id));
+      const orgsToUpdate = currentOrgIds.filter((id) => newOrgIds.includes(id));
 
       // Remove user from old organizations
       if (orgsToRemove.length > 0) {
         await Organizations.updateMany(
           { _id: { $in: orgsToRemove } },
           { $pull: { staff: { user: user._id } } },
-          { session }
+          { session },
         );
       }
 
@@ -300,13 +273,12 @@ const updateUser = async (req, res, options = {}) => {
         }
       }
 
-
       // Update modules/featuresAccess in current organizations
       if (orgsToUpdate.length > 0 && Array.isArray(modules)) {
         await Organizations.updateMany(
           { _id: { $in: orgsToUpdate }, "staff.user": user._id },
           { $set: { "staff.$.featuresAccess": modules } },
-          { session }
+          { session },
         );
       }
     }
@@ -319,10 +291,7 @@ const updateUser = async (req, res, options = {}) => {
     // Check if companyDetails.loyaltySettings is updated
     if (userType === "organizer" && companyDetails && companyDetails.loyaltySettings) {
       const newLoyaltySettings = companyDetails.loyaltySettings;
-      if (
-        newLoyaltySettings.model !== undefined ||
-        newLoyaltySettings.pointValuePercentage !== undefined
-      ) {
+      if (newLoyaltySettings.model !== undefined || newLoyaltySettings.pointValuePercentage !== undefined) {
         isLoyaltySettingsUpdated = true;
       }
     }
@@ -343,19 +312,23 @@ const updateUser = async (req, res, options = {}) => {
 
         // update loyaltySettings if provided
         loyaltySettings: {
-          isEnabled: companyDetails.loyaltySettings?.isEnabled ?? user.companyDetails?.loyaltySettings?.isEnabled ?? false,
+          isEnabled:
+            companyDetails.loyaltySettings?.isEnabled ?? user.companyDetails?.loyaltySettings?.isEnabled ?? false,
           title: companyDetails.loyaltySettings?.title ?? user.companyDetails?.loyaltySettings?.title ?? "",
           model: companyDetails.loyaltySettings?.model ?? user.companyDetails?.loyaltySettings?.model ?? "essential",
-          pointValuePercentage: companyDetails.loyaltySettings?.pointValuePercentage ?? user.companyDetails?.loyaltySettings?.pointValuePercentage ?? 0,
-          linkedClubs: companyDetails.loyaltySettings?.linkedClubs ?? user.companyDetails?.loyaltySettings?.linkedClubs ?? [],
+          pointValuePercentage:
+            companyDetails.loyaltySettings?.pointValuePercentage ??
+            user.companyDetails?.loyaltySettings?.pointValuePercentage ??
+            0,
+          linkedClubs:
+            companyDetails.loyaltySettings?.linkedClubs ?? user.companyDetails?.loyaltySettings?.linkedClubs ?? [],
         },
-
       };
 
       if (user.companyDetails.loyaltySettings.title === "") {
         user.companyDetails.loyaltySettings.title = companyDetails.name + " - Loyalty Club" || "Loyalty Club";
       }
-    }// -------------------------------------------------------------
+    } // -------------------------------------------------------------
     // SUBSCRIPTION HANDLING (Single Subscription Only)
     // -------------------------------------------------------------
     let incomingSub = null;
@@ -379,7 +352,7 @@ const updateUser = async (req, res, options = {}) => {
         totalSubscriptionAmount: req.body.totalSubscriptionAmount,
         startDate: req.body.startDate,
         endDate: req.body.endDate,
-        status: req.body.subscriptionStatus     // user manual status override
+        status: req.body.subscriptionStatus, // user manual status override
       };
     }
 
@@ -389,7 +362,6 @@ const updateUser = async (req, res, options = {}) => {
 
       // Fetch commission values from SubscriptionSettings model
       const subscriptionSettings = await SubscriptionSettings.findOne({});
-
 
       // Extract commissions from the settings document
       const orderingCommission = subscriptionSettings?.commissions?.orderingCommission || 0;
@@ -407,9 +379,7 @@ const updateUser = async (req, res, options = {}) => {
         // If user sends manual status → take it
         const manualStatus = incomingSub.status;
 
-        const finalStatus =
-          manualStatus ||
-          (systemEndDate && systemEndDate < now ? "expired" : "active");
+        const finalStatus = manualStatus || (systemEndDate && systemEndDate < now ? "expired" : "active");
 
         user.subscription = {
           subscriptionTypes: incomingSub.subscriptionTypes || ["free"],
@@ -421,26 +391,32 @@ const updateUser = async (req, res, options = {}) => {
           status: finalStatus,
 
           // Only update commission if it's not already set (positive value)
-          orderingCommission: user.subscription?.orderingCommission > 0 ? user.subscription.orderingCommission : (function () {
-            if (orderingCommission === 0) {
+          orderingCommission:
+            user.subscription?.orderingCommission > 0
+              ? user.subscription.orderingCommission
+              : (function () {
+                  if (orderingCommission === 0) {
+                  }
+                  return orderingCommission;
+                })(),
 
-            }
-            return orderingCommission;
-          })(),
+          ticketingCommission:
+            user.subscription?.ticketingCommission > 0
+              ? user.subscription.ticketingCommission
+              : (function () {
+                  if (ticketingCommission === 0) {
+                  }
+                  return ticketingCommission;
+                })(),
 
-          ticketingCommission: user.subscription?.ticketingCommission > 0 ? user.subscription.ticketingCommission : (function () {
-            if (ticketingCommission === 0) {
-
-            }
-            return ticketingCommission;
-          })(),
-
-          reservationCommission: user.subscription?.reservationCommission > 0 ? user.subscription.reservationCommission : (function () {
-            if (reservationCommission === 0) {
-
-            }
-            return reservationCommission;
-          })()
+          reservationCommission:
+            user.subscription?.reservationCommission > 0
+              ? user.subscription.reservationCommission
+              : (function () {
+                  if (reservationCommission === 0) {
+                  }
+                  return reservationCommission;
+                })(),
         };
       }
 
@@ -452,27 +428,20 @@ const updateUser = async (req, res, options = {}) => {
 
         const typeChanged =
           incomingSub.subscriptionTypes &&
-          JSON.stringify(incomingSub.subscriptionTypes.sort()) !==
-          JSON.stringify(oldSub.subscriptionTypes.sort());
+          JSON.stringify(incomingSub.subscriptionTypes.sort()) !== JSON.stringify(oldSub.subscriptionTypes.sort());
 
-        const planChanged =
-          incomingSub.pricingPlan &&
-          incomingSub.pricingPlan !== oldSub.pricingPlan;
+        const planChanged = incomingSub.pricingPlan && incomingSub.pricingPlan !== oldSub.pricingPlan;
 
         const orgChanged =
-          incomingSub.numberOfOrganizations &&
-          incomingSub.numberOfOrganizations !== oldSub.numberOfOrganizations;
+          incomingSub.numberOfOrganizations && incomingSub.numberOfOrganizations !== oldSub.numberOfOrganizations;
 
         const changed = typeChanged || planChanged || orgChanged;
 
         if (changed) {
-          if (
-            incomingSub.totalSubscriptionAmount === undefined ||
-            incomingSub.totalSubscriptionAmount < 0
-          ) {
+          if (incomingSub.totalSubscriptionAmount === undefined || incomingSub.totalSubscriptionAmount < 0) {
             return {
               errorCode: 400,
-              message: "totalSubscriptionAmount_required_when_subscription_changes"
+              message: "totalSubscriptionAmount_required_when_subscription_changes",
             };
           }
         }
@@ -483,8 +452,7 @@ const updateUser = async (req, res, options = {}) => {
           : oldSub.endDate;
 
         // 1) System status
-        const systemStatus =
-          newEndDate && newEndDate < now ? "expired" : "active";
+        const systemStatus = newEndDate && newEndDate < now ? "expired" : "active";
 
         // 2) User manual override (if provided)
         const manualStatus = incomingSub.status;
@@ -493,43 +461,44 @@ const updateUser = async (req, res, options = {}) => {
         const finalStatus = manualStatus || systemStatus;
 
         user.subscription = {
-          subscriptionTypes:
-            incomingSub.subscriptionTypes || oldSub.subscriptionTypes,
+          subscriptionTypes: incomingSub.subscriptionTypes || oldSub.subscriptionTypes,
           pricingPlan: incomingSub.pricingPlan || oldSub.pricingPlan,
-          numberOfOrganizations:
-            incomingSub.numberOfOrganizations ?? oldSub.numberOfOrganizations,
-          totalSubscriptionAmount:
-            incomingSub.totalSubscriptionAmount ?? oldSub.totalSubscriptionAmount,
+          numberOfOrganizations: incomingSub.numberOfOrganizations ?? oldSub.numberOfOrganizations,
+          totalSubscriptionAmount: incomingSub.totalSubscriptionAmount ?? oldSub.totalSubscriptionAmount,
           startDate: oldSub.startDate,
           endDate: newEndDate,
           status: finalStatus,
 
           // Only update commission if it's not already set (positive value)
-          orderingCommission: oldSub.orderingCommission > 0 ? oldSub.orderingCommission : (function () {
-            if (orderingCommission === 0) {
+          orderingCommission:
+            oldSub.orderingCommission > 0
+              ? oldSub.orderingCommission
+              : (function () {
+                  if (orderingCommission === 0) {
+                  }
+                  return orderingCommission;
+                })(),
 
-            }
-            return orderingCommission;
-          })(),
+          ticketingCommission:
+            oldSub.ticketingCommission > 0
+              ? oldSub.ticketingCommission
+              : (function () {
+                  if (ticketingCommission === 0) {
+                  }
+                  return ticketingCommission;
+                })(),
 
-          ticketingCommission: oldSub.ticketingCommission > 0 ? oldSub.ticketingCommission : (function () {
-            if (ticketingCommission === 0) {
-
-            }
-            return ticketingCommission;
-          })(),
-
-          reservationCommission: oldSub.reservationCommission > 0 ? oldSub.reservationCommission : (function () {
-            if (reservationCommission === 0) {
-
-            }
-            return reservationCommission;
-          })()
+          reservationCommission:
+            oldSub.reservationCommission > 0
+              ? oldSub.reservationCommission
+              : (function () {
+                  if (reservationCommission === 0) {
+                  }
+                  return reservationCommission;
+                })(),
         };
       }
     }
-
-
 
     //if isLoyaltySettingsUpdated then update all club members' tierKey and pointValuePercentage
     //so next time when they earn points it uses correct pointValuePercentage
@@ -538,8 +507,6 @@ const updateUser = async (req, res, options = {}) => {
       const pointValuePercentage = user.companyDetails.loyaltySettings.pointValuePercentage;
       await updateCompanyLoyaltySettings(user._id, tierKey, pointValuePercentage);
     }
-
-
 
     await user.save({ session });
 
@@ -572,8 +539,6 @@ const updateUser = async (req, res, options = {}) => {
   }
 };
 
-
-
 const deleteUser = async (id) => {
   const updated = await userRepo.findByIdAndUpdate(id, {
     "accountState.status": "deleted",
@@ -583,8 +548,11 @@ const deleteUser = async (id) => {
   return true;
 };
 
-const getUserDetails = async (id) => {
-  return await userRepo.findUserById(id);
+const getUserByFilters = async (filter = {}) => {
+  const user = await User.findOne(filter)
+    .select("profileIcon firstName lastName email phoneNumber username gender")
+    .lean();
+  return formatUserResponse(user);
 };
 
 const getUserDetailsForQRService = async (id) => {
@@ -593,7 +561,6 @@ const getUserDetailsForQRService = async (id) => {
   // formattedData = ;
   return formatUserResponse(data, null, [], ["accountState", "preferences", "metadata"]);
 };
-
 
 /**
  * Setup 2FA (Generate QR and Secret, but do not enable yet)
@@ -649,7 +616,6 @@ const confirmTwoFA = async (userId, token) => {
   return { isValid: true, newlyEnabled };
 };
 
-
 /**
  * Disable 2FA
  * @param {string} userId
@@ -667,7 +633,7 @@ const updateUserInterests = async (userId, data) => {
   // Update user interests in the database
   await userRepo.updateUserInterests(userId, data);
   return true;
-}
+};
 
 const getUserInterestsByUserId = async (userId) => {
   return await userRepo.getUserInterestsByUserId(userId);
@@ -683,17 +649,16 @@ const getUserInterestsByUserId = async (userId) => {
   return clubs;
 };
  */
-
 module.exports = {
   getAllUsers,
   getStaff,
   updateUser,
   deleteUser,
-  getUserDetails,
+  getUserByFilters,
   setupTwoFA,
   confirmTwoFA,
   disableTwoFA,
   updateUserInterests,
   getUserInterestsByUserId,
-  getUserDetailsForQRService
+  getUserDetailsForQRService,
 };

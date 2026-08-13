@@ -2,15 +2,25 @@ const mongoose = require("mongoose");
 
 const streaksSchema = new mongoose.Schema(
   {
-
-    visits: {
-      type: Number,
-      required: true, // e.g. on the 5th, 10th, or 20th visit
+    countBase: {
+      type: String,
+      enum: ["day", "week", "month"],
+      required: true,
     },
-    points: {
-      type: Number,
-      required: true, // how many points to give on that visit
-    },
+    badges: [
+      {
+        title: {
+          type: String,
+          enum: ["bronze", "silver", "gold", "platinum"],
+          required: true,
+        },
+        visits: {
+          type: Number,
+          required: true, // e.g. on the 5th, 10th, or 20th visit
+          min: 1,
+        },
+      },
+    ],
     companyOrganizer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -24,11 +34,11 @@ const streaksSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 streaksSchema.index(
-  { companyOrganizer: 1, visits: 1 },
+  { companyOrganizer: 1, },
   { unique: true, partialFilterExpression: { status: "active" } }
 );
 

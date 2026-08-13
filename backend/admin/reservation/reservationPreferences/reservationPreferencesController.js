@@ -20,12 +20,9 @@ const getReservationPreferencess = async (req, res) => {
       });
     }
 
-    const  ReservationPreferencess  =
-      await ReservationPreferencesService.getReservationPreferencess({
-        organization,
-      });
-      console.log("ReservationPreferencess", ReservationPreferencess);
-
+    const ReservationPreferencess = await ReservationPreferencesService.getReservationPreferencess({
+      organization,
+    });
 
     return sendResponse({
       res,
@@ -45,13 +42,7 @@ const getReservationPreferencess = async (req, res) => {
 };
 const updateReservationPreferences = async (req, res) => {
   const { id } = req.params;
-  let {
-    companyOrganizer,
-    isReservationEnabled,
-    timeSlotsSetting,
-    automaticResponse,
-    cancellationPolicy,
-  } = req.body;
+  let { companyOrganizer, isReservationEnabled, timeSlotsSetting, automaticResponse, cancellationPolicy } = req.body;
   const organization = id;
   if (!companyOrganizer || !organization) {
     return sendResponse({
@@ -74,11 +65,7 @@ const updateReservationPreferences = async (req, res) => {
   };
 
   try {
-    const updated =
-      await ReservationPreferencesService.updateReservationPreferences(
-        id,
-        data,
-      );
+    const updated = await ReservationPreferencesService.updateReservationPreferences(id, data);
     if (updated && updated.error) {
       return sendResponse({
         res,

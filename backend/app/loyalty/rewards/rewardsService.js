@@ -9,6 +9,7 @@ const { formatUserWallet } = require("../clubMembers/formatters/formatUserWallet
 const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
 const { generateMeta } = require("../../../helperUtils/responseUtil");
 const { formatSingleRewardByTierKey } = require("../../../commonModules/loyalty/rewards/utils/formatReward");
+const { addEngagementEvent } = require("@appEngagement/engagementEventsRepository");
 
 const getRewardsByCompanyOrganizerService = async ({
   companyOrganizer,
@@ -226,11 +227,17 @@ const getRewardsForUserJoinedClubs = async ({
   };
 };
 
-const getRewardDetails = async (rewardId) => {
+const getRewardDetails = async (rewardId, userId) => {
   const reward = await rewardRepo.getRewardById(rewardId);
   if (!reward) {
     throw new Error("reward_not_found");
   }
+  addEngagementEvent({
+    entityType: "rewards",
+    entityId: rewardId,
+    action: "view",
+    userId,
+  });
   const formattedReward = await formatRewardDetails(reward);
   return formattedReward;
 };
