@@ -154,6 +154,11 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
   =============================== */
   if (data.status !== undefined && data.status !== order.status) {
     order.status = data.status;
+    if (["pending", "confirmed", "rejected"].includes(data.status)) {
+      order.items.forEach((item) => {
+        item.status = data.status;
+      });
+    }
     statusChanged = true;
   }
 
@@ -255,12 +260,6 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
         deliveryChanged = true;
       }
     });
-  }
-  if (data.updateItemStatus && data.updateItemStatus.id && data.updateItemStatus.status) {
-    const menuItem = order.items.id(data.updateItemStatus?.id);
-    if (menuItem) {
-      menuItem.status = data.updateItemStatus?.status;
-    }
   }
   if (data.resaonForRejection) {
     order.reasonForRejection = data.reasonForRejection;

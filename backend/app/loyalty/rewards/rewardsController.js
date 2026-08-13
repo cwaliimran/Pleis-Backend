@@ -46,7 +46,8 @@ const getRewardDetails = async (req, res) => {
   if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] }))
     return;
   try {
-    const reward = await rewardService.getRewardDetails(req.params.id);
+    const userId = req.user._id;
+    const reward = await rewardService.getRewardDetails(req.params.id, userId);
     if (!reward) {
       return sendResponse({
         res,

@@ -109,7 +109,7 @@ const countDashboardRewards = async ({ clubIds, now, keyword = "" }) => {
   return Reward.countDocuments(query);
 };
 const getRewardById = async (rewardId) => {
-  return Reward.findById(rewardId)
+  return Reward.findById(rewardId).lean();
 }
 
 

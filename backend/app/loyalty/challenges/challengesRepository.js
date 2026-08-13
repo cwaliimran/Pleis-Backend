@@ -27,7 +27,8 @@ const findChallengeById = async (id) => {
     .populate("taskMenuItem")
     .populate("reward.rewardMenuItem")
     .populate("reward.specialTicket.ticket")
-    .populate("tierLimit");
+    .populate("tierLimit")
+    .lean();
 };
 
 const findBestActiveChallengeByTaskType = async ({

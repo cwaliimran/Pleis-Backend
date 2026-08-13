@@ -1,6 +1,12 @@
 const express = require("express");
 const auth = require("../../../middlewares/authMiddleware");
-const { placeOrder, getOrderDetails, getUserOrders, addMoreItemsToOrder } = require("./orderController");
+const {
+  placeOrder,
+  getOrderDetails,
+  getUserOrders,
+  addMoreItemsToOrder,
+  updateOrderDetails,
+} = require("./orderController");
 
 const router = express.Router();
 
@@ -12,6 +18,7 @@ router.post("/add-more", addMoreItemsToOrder);
 
 // Get details of an order
 router.get("/:id", getOrderDetails);
+router.put("/:id", updateOrderDetails);
 
 // Get all orders of logged-in user
 router.get("/", getUserOrders);

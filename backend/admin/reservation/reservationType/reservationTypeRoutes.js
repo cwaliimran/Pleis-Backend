@@ -21,8 +21,7 @@ const ReservationTypeRateLimiter = createRateLimiter("ReservationTypes");
 router.post("/", roleMiddleware(["admin"]), ReservationTypeRateLimiter, createReservationType);
 
 // Get all Reservation Types with pagination
-router.get("/", roleMiddleware(["admin"]), ReservationTypeRateLimiter, getReservationTypes);
-
+router.get("/", roleMiddleware(["admin", "staff"]), ReservationTypeRateLimiter, getReservationTypes);
 
 // Update an existing Reservation Type
 router.put("/:id", roleMiddleware(["admin"]), ReservationTypeRateLimiter, updateReservationType);
