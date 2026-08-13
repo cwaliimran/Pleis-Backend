@@ -56,14 +56,22 @@ baseChallengeSchema.methods.toJSON = function () {
       case "specialTicket":
         delete obj.reward.rewardMenuItem;
         delete obj.reward.customReward;
+        delete obj.reward.linkedReward;
         break;
       case "menuItem":
         delete obj.reward.rewardValue;
         delete obj.reward.customReward;
+        delete obj.reward.linkedReward;
         break;
       case "customReward":
         delete obj.reward.rewardValue;
         delete obj.reward.rewardMenuItem;
+        delete obj.reward.linkedReward;
+        break;
+      case "linkedReward":
+        delete obj.reward.rewardValue;
+        delete obj.reward.rewardMenuItem;
+        delete obj.reward.customReward;
         break;
     }
   }

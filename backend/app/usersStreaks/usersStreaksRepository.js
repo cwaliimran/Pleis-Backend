@@ -239,9 +239,6 @@ const createUsersStreak = async (data) => {
     );
     const result = computeStreakUpdate(streakRule, existingStreak, new Date());
 
-    console.log("result", result);
-    // return
-    return;
 
     if (result.isNew) {
       const created = new UsersStreaks({ ...data, ...result });
