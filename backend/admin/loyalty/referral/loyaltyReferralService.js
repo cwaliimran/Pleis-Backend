@@ -112,6 +112,7 @@ const getUserLoyaltyReferrals = async ({
       skip,
       type,
     });
+    console.log(" LoyaltyReferral", LoyaltyReferral);
 
   return {
     LoyaltyReferral,

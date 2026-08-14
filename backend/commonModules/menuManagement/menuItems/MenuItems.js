@@ -21,9 +21,9 @@ const menuItemsSchema = new mongoose.Schema(
       default: "",
     },
 
-    category: {
+    subCategory: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "MenuIitetemCategories",
+      ref: "MenuSubcategory",
       required: true,
     },
 
@@ -134,7 +134,15 @@ const menuItemsSchema = new mongoose.Schema(
     },
     availableDays: {
       type: [String],
-      enum: ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
+      enum: [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+      ],
       default: [],
     },
     daypart: {

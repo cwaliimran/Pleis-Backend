@@ -90,7 +90,96 @@ const getUserImage = async (userId) => {
   const user = await User.findById(userId).lean();
   return user?.profileIcon || "noimage.png";
 };
+const getLoyaltyReferralStats = async (companyOrganizer) => {
+  const companyOrganizerId = new mongoose.Types.ObjectId(companyOrganizer);
 
+  const [stats, settings] = await Promise.all([
+    LoyaltyReferredRecords.aggregate([
+      { $match: { companyOrganizer: companyOrganizerId } },
+      {
+        $facet: {
+          totals: [
+            {
+              $group: {
+                _id: null,
+                totalCompleted: {
+                  $sum: { $cond: [{ $eq: ["$purchased", true] }, 1, 0] },
+                },
+                totalPending: {
+                  $sum: {
+                    $cond: [
+                      {
+                        $and: [
+                          { $eq: ["$status", "active"] },
+                          { $eq: ["$purchased", false] },
+                        ],
+                      },
+                      1,
+                      0,
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+          topReferrer: [
+            { $group: { _id: "$referrer", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 1 },
+            {
+              $lookup: {
+                from: "users",
+                localField: "_id",
+                foreignField: "_id",
+                pipeline: [{ $project: { firstName: 1, lastName: 1 } }],
+                as: "referrer",
+              },
+            },
+            {
+              $unwind: { path: "$referrer", preserveNullAndEmptyArrays: true },
+            },
+            {
+              $project: {
+                _id: 0,
+                referrer: {
+                  _id: "$referrer._id",
+                  name: {
+                    $trim: {
+                      input: {
+                        $concat: [
+                          { $ifNull: ["$referrer.firstName", ""] },
+                          " ",
+                          { $ifNull: ["$referrer.lastName", ""] },
+                        ],
+                      },
+                    },
+                  },
+                },
+                count: 1,
+              },
+            },
+          ],
+        },
+      },
+    ]),
+    LoyaltyReferralSettings.findOne({ companyOrganizer: companyOrganizerId }),
+  ]);
+
+  const totals = stats[0]?.totals[0] || { totalCompleted: 0, totalPending: 0 };
+  const topReferrer = stats[0]?.topReferrer[0] || null;
+
+  const pointsPerCompleted = settings
+    ? (settings.userPoints || 0) + (settings.referrerPoints || 0)
+    : 0;
+  const totalPointsGiven = totals.totalCompleted * pointsPerCompleted;
+
+  return {
+    totalCompleted: totals.totalCompleted,
+    totalPending: totals.totalPending,
+    totalPointsGiven,
+    topReferrer,
+  };
+};
 
 const getUserLoyaltyReferrals = async ({
   timezone,
@@ -163,7 +252,7 @@ const getUserLoyaltyReferrals = async ({
   let LoyaltyReferral = result[0]?.data || [];
   const totalFiltered = result[0]?.totalFiltered?.[0]?.count || 0;
 
-  const [total, active, inactive] = await Promise.all([
+  const [total, active, inactive, stats] = await Promise.all([
     LoyaltyReferredRecords.countDocuments({
       ...(userId && { user: userId }),
       status: { $ne: "deleted" },
@@ -176,6 +265,7 @@ const getUserLoyaltyReferrals = async ({
       status: "inactive",
       ...(userId && { user: userId }),
     }),
+    getLoyaltyReferralStats(companyOrganizer)
   ]);
 
   const userNames = await User.find({
@@ -233,6 +323,7 @@ const getUserLoyaltyReferrals = async ({
 
   const meta = generateMeta(page, limit, totalFiltered);
   meta.LoyaltyReferralCount = { total, active, inactive };
+  meta.stats = stats;
 
   return { LoyaltyReferral, meta };
 };
