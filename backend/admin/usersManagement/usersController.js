@@ -9,30 +9,17 @@ const { formatUserResponse } = require("../../helperUtils/userResponseUtil.js");
 const usersService = require("./usersService.js");
 const { registerUserUtility } = require("../../controllers/authUtil.js");
 const { User } = require("../../models/UserModel.js");
-const {
-  getOrganizationsAsStaff,
-} = require("../organizations/organizationService.js");
-const {
-  formatOrganization,
-} = require("../organizations/formatter/formatOrganization.js");
-const {
-  getLatestEventByOrganization,
-} = require("../events/eventRepository.js");
-const {
-  getUserJoinedClubs,
-  getUserJoinedClubsall,
-} = require("../loyalty/clubMembers/clubMembersRepository.js");
+const { getOrganizationsAsStaff } = require("../organizations/organizationService.js");
+const { formatOrganization } = require("../organizations/formatter/formatOrganization.js");
+const { getLatestEventByOrganization } = require("../events/eventRepository.js");
+const { getUserJoinedClubs, getUserJoinedClubsall } = require("../loyalty/clubMembers/clubMembersRepository.js");
 const {
   getUserWallet,
   getTotalRedeemPurchases,
 } = require("../../app/userWalletService/global/walletManagement/userWalletRepository.js");
-const {
-  getUserEventEngagementDetails,
-} = require("../../app/favorites/favoriteRepository.js");
+const { getUserEventEngagementDetails } = require("../../app/favorites/favoriteRepository.js");
 const { getTotalPurchases } = require("../ticketing/ticketingsRepository.js");
-const {
-  getTotalOrderPriceByUser,
-} = require("../../app/menuItemsAndOrdering/orders/orderRepository.js");
+const { getTotalOrderPriceByUser } = require("../../app/menuItemsAndOrdering/orders/orderRepository.js");
 
 const createUser = async (req, res) => {
   const result = await registerUserUtility(req, res, {
@@ -60,15 +47,7 @@ const createUser = async (req, res) => {
 
 const getUsers = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const {
-    keyword,
-    status,
-    userType,
-    organization,
-    company,
-    sortBy,
-    sortOrder,
-  } = req.query;
+  const { keyword, status, userType, organization, company, sortBy, sortOrder } = req.query;
   const currentUser = req.user;
   const SORT_FIELDS = [
     "name",
@@ -79,17 +58,11 @@ const getUsers = async (req, res) => {
     "region",
     "createdAt",
     "lastLogin",
-    "companyName"
+    "companyName",
   ];
   const SORT_ORDERS = ["asc", "desc"];
-  if (
-    (sortBy && !SORT_FIELDS.includes(sortBy)) ||
-    (sortOrder && !SORT_ORDERS.includes(sortOrder))
-  ) {
-    const key =
-      sortBy && !SORT_FIELDS.includes(sortBy)
-        ? "invalid_sort_by_field"
-        : "invalid_sort_order";
+  if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
+    const key = sortBy && !SORT_FIELDS.includes(sortBy) ? "invalid_sort_by_field" : "invalid_sort_order";
     return sendResponse({ res, statusCode: 400, translationKey: key });
   }
 
@@ -119,15 +92,10 @@ const getUsers = async (req, res) => {
         // Use your updated toJSON (works for docs and plain objects)
         let formattedUser = User.prototype.toJSON(user);
 
-        if (
-          formattedUser.organizations &&
-          Array.isArray(formattedUser.organizations)
-        ) {
-          formattedUser.organizations = formattedUser.organizations.map(
-            (org) => {
-              return formatOrganization(org);
-            },
-          );
+        if (formattedUser.organizations && Array.isArray(formattedUser.organizations)) {
+          formattedUser.organizations = formattedUser.organizations.map((org) => {
+            return formatOrganization(org);
+          });
         }
 
         return formatUserResponse(formattedUser);
@@ -174,17 +142,13 @@ const getUsers = async (req, res) => {
       const filteredUsers = users.filter((user) => {
         if (currentUser.userType === "organizer") {
           // Organizer: users in orgs they created
-          return user.organizations?.some(
-            (org) => org.creator.toString() === currentUser._id.toString(),
-          );
+          return user.organizations?.some((org) => org.creator.toString() === currentUser._id.toString());
         }
 
         if (currentUser.userType === "manager") {
           // Manager: users in orgs where they're listed in staff
           return user.organizations?.some((org) =>
-            org.staff.some(
-              (s) => s.user.toString() === currentUser._id.toString(),
-            ),
+            org.staff.some((s) => s.user.toString() === currentUser._id.toString()),
           );
         }
 
@@ -196,15 +160,10 @@ const getUsers = async (req, res) => {
         // Use your updated toJSON (works for docs and plain objects)
         let formattedUser = User.prototype.toJSON(user);
 
-        if (
-          formattedUser.organizations &&
-          Array.isArray(formattedUser.organizations)
-        ) {
-          formattedUser.organizations = formattedUser.organizations.map(
-            (org) => {
-              return formatOrganization(org);
-            },
-          );
+        if (formattedUser.organizations && Array.isArray(formattedUser.organizations)) {
+          formattedUser.organizations = formattedUser.organizations.map((org) => {
+            return formatOrganization(org);
+          });
         }
 
         return formatUserResponse(formattedUser);
@@ -241,10 +200,7 @@ const updateUser = async (req, res) => {
   try {
     const currentUser = req.user;
     // Only admin, manager, or organizer can update other users' profiles
-    if (
-      currentUser._id.toString() !== id &&
-      !["admin", "manager", "organizer"].includes(currentUser.userType)
-    ) {
+    if (currentUser._id.toString() !== id && !["admin", "manager", "organizer"].includes(currentUser.userType)) {
       return sendResponse({
         res,
         statusCode: 403,
@@ -351,14 +307,9 @@ const getUserDetails = async (req, res) => {
       user.accountState?.userType === "manager"
     ) {
       const organizationsPromise = getOrganizationsAsStaff(user._id);
-      const eventsPromise = organizationsPromise.then((orgs) =>
-        getLatestEventByOrganization(orgs),
-      );
+      const eventsPromise = organizationsPromise.then((orgs) => getLatestEventByOrganization(orgs));
 
-      const [organizations, eventsData] = await Promise.all([
-        organizationsPromise,
-        eventsPromise,
-      ]);
+      const [organizations, eventsData] = await Promise.all([organizationsPromise, eventsPromise]);
 
       userObject.organizations = Array.isArray(organizations)
         ? organizations.map((org) => formatOrganization(org))
@@ -416,6 +367,33 @@ const getUserDetails = async (req, res) => {
   }
 };
 
+const getUserByFilters = async (req, res) => {
+  const { email, code, number } = req.query;
+  const query = {};
+  if (!email && !code && !number) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "at_least_one_filter_required",
+    });
+  }
+  if (email) {
+    query.email = email;
+  }
+
+  if (code && number) {
+    query["phoneNumber.code"] = code;
+    query["phoneNumber.number"] = number;
+  }
+  const user = await usersService.getUserByFilters(query);
+  return sendResponse({
+    res,
+    statusCode: 200,
+    translationKey: "user_fetched_successfully",
+    data: user,
+  });
+};
+
 // Setup 2FA (get QR code)
 const setupTwoFAController = async (req, res) => {
   const user = req.user;
@@ -443,10 +421,7 @@ const confirmTwoFAController = async (req, res) => {
   const { token } = req.body;
 
   try {
-    const { isValid, newlyEnabled } = await usersService.confirmTwoFA(
-      user._id,
-      token,
-    );
+    const { isValid, newlyEnabled } = await usersService.confirmTwoFA(user._id, token);
 
     if (!isValid) {
       return sendResponse({
@@ -573,4 +548,5 @@ module.exports = {
   getUserDetails,
   createUserInterests,
   getUserInterestsByUserId,
+  getUserByFilters,
 };
