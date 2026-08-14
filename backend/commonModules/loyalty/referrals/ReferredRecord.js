@@ -46,7 +46,7 @@ const loyaltyreferredRecordSchema = new mongoose.Schema(
     // Add status field with enum for active or inactive
     status: {
       type: String,
-      enum: ['active', 'inactive'],
+      enum: ['active', 'inactive',],
       default: 'active',  // Default to 'active' status
     },
   },
