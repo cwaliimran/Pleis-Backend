@@ -9,7 +9,7 @@ const {
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
 const roleMiddleware = require("../../../middlewares/roleMiddleware");
-const { updateOrderDetails } = require("@backend/app/menuItemsAndOrdering/orders/orderController");
+const { updateOrderDetails } = require("../../../app/menuItemsAndOrdering/orders/orderController");
 
 const router = express.Router();
 
