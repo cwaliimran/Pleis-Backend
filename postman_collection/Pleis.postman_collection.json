@@ -4116,7 +4116,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{url}}app/favorites?targetType=event&page=1&limit=10",
+                  "raw": "{{url}}app/favorites?targetType=promotion&page=1&limit=10",
                   "host": [
                     "{{url}}app"
                   ],
@@ -4132,7 +4132,7 @@
                     },
                     {
                       "key": "targetType",
-                      "value": "event"
+                      "value": "promotion"
                     },
                     {
                       "key": "page",
@@ -4149,36 +4149,12 @@
             },
             {
               "name": "add/remove toggle",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      ""
-                    ],
-                    "type": "text/javascript",
-                    "packages": {},
-                    "requests": {}
-                  }
-                },
-                {
-                  "listen": "prerequest",
-                  "script": {
-                    "exec": [
-                      ""
-                    ],
-                    "type": "text/javascript",
-                    "packages": {},
-                    "requests": {}
-                  }
-                }
-              ],
               "request": {
                 "method": "POST",
                 "header": [],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"targetId\": \"690887e1a8adad86a7cfeec2\",\n  \"targetType\": \"challenge\" //\"menu\", \"event\", \"organization\",\"challenge\", \"promotion\", \"reward\"\n}\n",
+                  "raw": "{\n  \"targetId\": \"6a82b7ad59ca7f04cf6e6a0b\",\n  \"targetType\": \"promotion\" //\"menu\", \"event\", \"organization\",\"challenge\", \"promotion\", \"reward\"\n}\n",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -5875,6 +5851,43 @@
                         {
                           "key": "limit",
                           "value": "100"
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "promotions detial",
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}app/loyalty/promotions/:id",
+                      "host": [
+                        "{{url}}app"
+                      ],
+                      "path": [
+                        "loyalty",
+                        "promotions",
+                        ":id"
+                      ],
+                      "variable": [
+                        {
+                          "key": "id",
+                          "value": "6a82b7ad59ca7f04cf6e6a0b"
                         }
                       ]
                     }
@@ -23032,7 +23045,8 @@
                       "});"
                     ],
                     "type": "text/javascript",
-                    "packages": {}
+                    "packages": {},
+                    "requests": {}
                   }
                 },
                 {
@@ -23042,7 +23056,8 @@
                       ""
                     ],
                     "type": "text/javascript",
-                    "packages": {}
+                    "packages": {},
+                    "requests": {}
                   }
                 }
               ],
@@ -27422,13 +27437,13 @@
                       }
                     },
                     "url": {
-                      "raw": "{{url}}admin/menu/sub-categories/",
+                      "raw": "{{url}}admin/menu/menu-sub-categories/",
                       "host": [
                         "{{url}}admin"
                       ],
                       "path": [
                         "menu",
-                        "sub-categories",
+                        "menu-sub-categories",
                         ""
                       ],
                       "query": [
@@ -32193,7 +32208,7 @@
                       }
                     },
                     "url": {
-                      "raw": "{{url}}admin/loyalty/promotions?companyOrganizer=6911c14b6fc7cbd864e745b6",
+                      "raw": "{{url}}admin/loyalty/promotions?companyOrganizer=68da7aa1e6f099d42e32da71",
                       "host": [
                         "{{url}}admin"
                       ],
@@ -32204,7 +32219,7 @@
                       "query": [
                         {
                           "key": "companyOrganizer",
-                          "value": "6911c14b6fc7cbd864e745b6"
+                          "value": "68da7aa1e6f099d42e32da71"
                         }
                       ]
                     }
@@ -32265,7 +32280,7 @@
                       "variable": [
                         {
                           "key": "id",
-                          "value": "6979fe9e004c3ec28b6ea0a9"
+                          "value": "6a82bb0004915d1f444145a2"
                         }
                       ]
                     }
@@ -32303,7 +32318,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"happyHour\", //[\"happyHour\", \"buyMenuItem\", \"productSale\"]\n    \"title\": \"Sample title\",\n    \"description\": \"description of item\",\n    \"startDate\": \"2026-01-23 09:00 PM\",\n    \"endDate\": \"2026-01-23 10:00 PM\",\n    \"tierLimit\": \"6911c41f6aca10eb719d6fc7\",\n    \"pointsMultiplier\": \"1.5\",\n    \"status\": \"active\",\n    \"claimLimit\":4\n    /*Ending on specific date*/\n    ,\n    \"recurringDetails\": {\n        \"isEnabled\": true,\n        \"frequency\": \"daily\", // \"daily\", \"weekly\", \"monthly\"\n        \"interval\": 1,\n        \"daysOfWeek\": [\n            \"mon\",\n            \"tue\",\n            \"wed\",\n            \"thu\",\n            \"fri\",\n            \"sat\",\n            \"sun\"\n        ],\n        \"endType\": \"onDate\",\n        \"endDate\": \"2026-02-20\"\n    }\n}",
+                      "raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"happyHour\",\n    \"title\": \"Sample title\",\n    \"description\": \"description of item\",\n    \"startDate\": \"2026-01-23\",\n    \"endDate\": \"2026-01-23\",\n    \"startTime\": \"12:00\", //optional\n    \"endTime\": \"23:00\", //optional\n    \"pointsMultiplier\": \"1.5\",\n    \"status\": \"active\",\n    \"activeDays\": {\n        \"mode\": \"all\" // all ,selective\n        // \"days\": [\n        //     \"mon\",\n        //     \"tue\",\n        //     \"wed\",\n        //     \"thu\",\n        //     \"fri\",\n        //     \"sat\",\n        //     \"sun\"\n        // ]\n    }\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -32326,7 +32341,7 @@
                   "response": []
                 },
                 {
-                  "name": "add - buy Menu Item",
+                  "name": "add - extra points for Item",
                   "event": [
                     {
                       "listen": "test",
@@ -32356,60 +32371,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"buyMenuItemPromotion\",\n    \"title\": \"Buy Coffee\",\n    \"description\": \"Best coffee to make your day\",\n    \"startDate\":\"2025-11-05\",\n    \"endDate\": \"2025-11-15\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"extraPoints\": 5,\n    \"status\": \"active\"\n}",
-                      "options": {
-                        "raw": {
-                          "language": "json"
-                        }
-                      }
-                    },
-                    "url": {
-                      "raw": "{{url}}admin/loyalty/promotions/",
-                      "host": [
-                        "{{url}}admin"
-                      ],
-                      "path": [
-                        "loyalty",
-                        "promotions",
-                        ""
-                      ]
-                    },
-                    "description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
-                  },
-                  "response": []
-                },
-                {
-                  "name": "add - claim Promotion",
-                  "event": [
-                    {
-                      "listen": "test",
-                      "script": {
-                        "exec": [
-                          ""
-                        ],
-                        "type": "text/javascript",
-                        "packages": {},
-                        "requests": {}
-                      }
-                    },
-                    {
-                      "listen": "prerequest",
-                      "script": {
-                        "exec": [
-                          ""
-                        ],
-                        "type": "text/javascript",
-                        "packages": {},
-                        "requests": {}
-                      }
-                    }
-                  ],
-                  "request": {
-                    "method": "POST",
-                    "header": [],
-                    "body": {
-                      "mode": "raw",
-                      "raw": "{\n    \"title\": \"test\",\n    \"description\": \"fdfdfdf\",\n    \"startDate\": \"2026-05-16\",\n    \"endDate\": \"2026-05-19\",\n    \"tierLimit\": \"6915e2063d6228520ce27929\",\n    \"promotionType\": \"claimPromotion\",\n    \"claimLimit\": 100000,\n    \"companyOrganizer\": \"69f19e2910ae62f9f55403c4\",\n    \"recurringDetails\": {\n        \"isEnabled\": false,\n        \"frequency\": \"\",\n        \"interval\": 1,\n        \"daysOfWeek\": [],\n        \"endType\": \"onDate\",\n        \"endDate\": \"2026-05-19\"\n    },\n    \"reward\": \"69fd7f03fa73f679f44c8afd\",\n    \"claimPoints\": 0,\n    \"status\": \"active\",\n    \"image\":\"noimage.png\"\n}",
+                      "raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"extraPointsForItem\",\n    \"title\": \"Buy Coffee\",\n    \"description\": \"Best coffee to make your day\",\n    \"startDate\": \"2026-01-23\",\n    \"endDate\": \"2026-01-23\",\n    \"startTime\": \"12:00\", //optional\n    \"endTime\": \"23:00\", //optional\n    \"menuItem\": [\n        \"68d7ee19c9469f7d754b5c99\"\n    ],\n    \"extraPoints\": 5,\n    \"status\": \"active\",\n    \"activeDays\": {\n        \"mode\": \"all\" // all ,selective\n        // \"days\": [\n        //     \"mon\",\n        //     \"tue\",\n        //     \"wed\",\n        //     \"thu\",\n        //     \"fri\",\n        //     \"sat\",\n        //     \"sun\"\n        // ]\n    }\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -32462,7 +32424,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\":\"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"productSale\",\n    \"title\": \"Buy Coffee\",\n    \"description\": \"Best coffee to make your day\",\n    \"startDate\":\"2025-11-05\",\n    \"endDate\": \"2025-11-15\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"menuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"discountedPrice\":\"40\",\n    \"extraPoints\": 5,\n    \"status\": \"active\"\n}",
+                      "raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"image\": \"68d8f3b5d9a10a4e5d408a5c.png\",\n    \"promotionType\": \"productSale\",\n    \"title\": \"Buy Coffee\",\n    \"description\": \"Best coffee to make your day\",\n    \"startDate\": \"2025-11-05\",\n    \"endDate\": \"2025-11-15\",\n    // \"startTime\": \"12:00\", //optional\n    // \"endTime\": \"23:00\", //optional\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"menuItem\": [\n        \"68d7ee19c9469f7d754b5c99\"\n    ],\n    \"discountedPercent\": 40,\n    \"status\": \"active\",\n    \"activeDays\": {\n        \"mode\": \"selective\", // all ,selective\n        \"days\": [\n            \"mon\",\n            \"tue\",\n            \"wed\",\n            \"thu\",\n            \"fri\",\n            \"sat\",\n            \"sun\"\n        ]\n    }\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -32515,7 +32477,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"title\": \"test\",\n    \"description\": \"fdfdfdf\",\n    \"startDate\": \"2026-05-16\",\n    \"endDate\": \"2026-05-19\",\n    \"tierLimit\": \"6915e2063d6228520ce27929\",\n    \"promotionType\": \"claimPromotion\",\n    \"claimLimit\": 100000,\n    \"companyOrganizer\": \"69f19e2910ae62f9f55403c4\",\n    \"recurringDetails\": {\n        \"isEnabled\": false,\n        \"frequency\": \"\",\n        \"interval\": 1,\n        \"daysOfWeek\": [],\n        \"endType\": \"onDate\",\n        \"endDate\": \"2026-05-19\"\n    },\n    \"reward\": \"69fd7f03fa73f679f44c8afd\",\n    \"claimPoints\": 0,\n    \"status\": \"active\",\n    \"image\":\"noimage.png\"\n}",
+                      "raw": "{\n    \"title\": \"test\"\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -32542,7 +32504,7 @@
                       "variable": [
                         {
                           "key": "id",
-                          "value": "69d8d165d503347a577ed293"
+                          "value": "6a82bb0004915d1f444145a2"
                         }
                       ]
                     },
@@ -32601,7 +32563,7 @@
                       "variable": [
                         {
                           "key": "id",
-                          "value": "68daa70cc6b557bd920a31c8"
+                          "value": "6a82bb0004915d1f444145a2"
                         }
                       ]
                     },
