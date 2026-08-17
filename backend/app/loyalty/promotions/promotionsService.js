@@ -1,6 +1,7 @@
 const repository = require("./promotionsRepository");
 const { generateMeta, getCurrentDateInTimezone } = require("@utils/responseUtil");
 const formatPromotion = require("../../../commonModules/loyalty/promotions/utils/formatPromotion");
+const { addEngagementEvent } = require("@appEngagement/engagementEventsRepository");
 
 const getPromotions = async ({
   userId,
@@ -47,6 +48,12 @@ const getDetails = async ({
   timezone,
 }) => {
   const now = getCurrentDateInTimezone({ timezone });
+    addEngagementEvent({
+      entityType: "promotions",
+      entityId: id,
+      action: "view",
+      userId: userId,
+    });
 
   return repository.findById({
     id,

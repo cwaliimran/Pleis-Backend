@@ -117,8 +117,18 @@ const updateMenuItemSubCategory = async (req, res) => {
   const { id } = req.params;
   let { name, status, category, order } = req.body;
 
-  const user = req.user._id;
-  const timezone = req.user.timezone;
+  if (order !== undefined && order !== null && order !== "") {
+    order = Number(order);
+    if (!Number.isFinite(order)) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_order",
+      });
+    }
+  } else {
+    order = undefined;
+  }
 
   let data = {
     name,
@@ -147,7 +157,6 @@ const updateMenuItemSubCategory = async (req, res) => {
         translationKey: "MenuItemSubCategory_not_found",
       });
     }
-
     return sendResponse({
       res,
       statusCode: 200,
@@ -233,13 +242,20 @@ const reorderMenuItemSubCategory = async (req, res) => {
     })
   )
     return;
-  const user = req.user._id;
+  const targetOrder = Number(newOrder);
+  if (!Number.isFinite(targetOrder)) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "invalid_order",
+    });
+  }
+
   try {
     const reordered =
       await MenuItemSubCategoryService.reorderMenuItemSubCategory(
         id,
-        newOrder,
-        user,
+        targetOrder,
       );
     if (!reordered) {
       return sendResponse({

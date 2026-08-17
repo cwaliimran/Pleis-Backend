@@ -6,12 +6,12 @@ const {
   HappyHourPromotion,
   ProductSalePromotion,
   ClaimPromotion,
+  extraPointsForItemPromotion,
 } = require("../../../commonModules/loyalty/promotions/models/Promotion/");
 
 // Decide which discriminator model to use
 const getModelBypromotionType = (promotionType) => {
   switch (promotionType) {
-
     case "buyMenuItemPromotion":
       return BuyMenuItemPromotion;
     case "happyHour":
@@ -20,6 +20,8 @@ const getModelBypromotionType = (promotionType) => {
       return ProductSalePromotion;
     case "claimPromotion":
       return ClaimPromotion;
+    case "extraPointsForItem":
+      return extraPointsForItemPromotion;
     default:
       return Promotion; // fallback
   }
@@ -170,6 +172,7 @@ const getWithFilters = async (
         from: "menuitems",
         localField: "menuItem",
         foreignField: "_id",
+        pipeline: [{ $project: { _id: 1, title: 1 } }],
         as: "menuItem",
       },
     },
@@ -193,9 +196,14 @@ const getWithFilters = async (
         },
         menuItem: {
           $cond: [
-            { $in: ["$promotionType", ["buyMenuItemPromotion", "productSale"]] },
-            { $arrayElemAt: ["$menuItem", 0] },
-            null,
+            {
+              $in: [
+                "$promotionType",
+                ["buyMenuItemPromotion", "productSale", "extraPointsForItem"],
+              ],
+            },
+            "$menuItem",
+            [],
           ],
         },
         tierLimit: {
@@ -213,7 +221,7 @@ const getWithFilters = async (
         descriptionSort: 0,
         promotionTypeSort: 0,
       },
-    }
+    },
   );
 
   return Promotion.aggregate(pipeline).allowDiskUse(true);

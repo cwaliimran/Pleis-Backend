@@ -4,7 +4,7 @@ const router = express.Router();
 
 // Import individual route modules
 router.use(
-  "/sub-categories",
+  "/menu-sub-categories",
   require("../menuManagement/menuSubcategory/menuSubcategoryRoutes"),
 );
 router.use( 
