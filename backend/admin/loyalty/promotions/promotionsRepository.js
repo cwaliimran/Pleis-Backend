@@ -1,5 +1,6 @@
-
-const { getRewardById } = require("../../../app/loyalty/rewards/rewardsRepository");
+const {
+  getRewardById,
+} = require("../../../app/loyalty/rewards/rewardsRepository");
 const {
   Promotion,
   BuyMenuItemPromotion,
@@ -34,7 +35,9 @@ const create = async (data) => {
     const reward = await getRewardById(data.reward);
     if (data.promotionType === "claimPromotion") {
       if (data.claimLimit > reward.claimLimit) {
-        throw new Error("Promotion claim limit cannot exceed reward claim limit");
+        throw new Error(
+          "Promotion claim limit cannot exceed reward claim limit",
+        );
       }
     }
     const item = new Model(data);
@@ -44,7 +47,6 @@ const create = async (data) => {
     throw err;
   }
 };
-
 
 // const getWithFilters = async (query, skip = 0, limit = 20) => {
 
@@ -125,7 +127,7 @@ const getWithFilters = async (
   skip = 0,
   limit = 20,
   sortBy = "createdAt",
-  sortOrder = "desc"
+  sortOrder = "desc",
 ) => {
   const sortDirection = sortOrder === "asc" ? 1 : -1;
 
@@ -141,6 +143,139 @@ const getWithFilters = async (
     sortStage = { createdAt: sortDirection, _id: sortDirection };
   }
 
+  // shared per-document enrichment: favorites, views, participants, points
+  const enrichStages = [
+    // total favorites for this promotion
+    {
+      $lookup: {
+        from: "favorites",
+        let: { promoId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$targetId", "$$promoId"] },
+                  { $eq: ["$targetType", "promotion"] },
+                ],
+              },
+            },
+          },
+          { $count: "count" },
+        ],
+        as: "favoritesLookup",
+      },
+    },
+    // total views for this promotion
+    {
+      $lookup: {
+        from: "engagementevents",
+        let: { promoId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$entityId", "$$promoId"] },
+                  { $eq: ["$entityType", "promotions"] },
+                  { $eq: ["$action", "view"] },
+                ],
+              },
+            },
+          },
+          { $count: "count" },
+        ],
+        as: "viewsLookup",
+      },
+    },
+    // participants + points awarded (redeemed orders by this organizer for this promotion)
+    {
+      $lookup: {
+        from: "promotionorders",
+        let: {
+          promoId: "$_id",
+          orgId: "$companyOrganizer",
+        },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [{ $eq: ["$promotion", "$$promoId"] }],
+              },
+            },
+          },
+          {
+            $group: {
+              _id: null,
+
+              // Count participants regardless of status
+              participants: { $sum: 1 },
+
+              // Only award points for redeemed orders
+              pointsAwarded: {
+                $sum: {
+                  $cond: [{ $eq: ["$status", "redeemed"] }, "$pointsSpent", 0],
+                },
+              },
+            },
+          },
+        ],
+        as: "orderStats",
+      },
+    },
+    {
+      $addFields: {
+        totalFavorites: {
+          $ifNull: [{ $arrayElemAt: ["$favoritesLookup.count", 0] }, 0],
+        },
+        totalViews: {
+          $ifNull: [{ $arrayElemAt: ["$viewsLookup.count", 0] }, 0],
+        },
+        participants: {
+          $ifNull: [{ $arrayElemAt: ["$orderStats.participants", 0] }, 0],
+        },
+        pointsAwarded: {
+          $ifNull: [{ $arrayElemAt: ["$orderStats.pointsAwarded", 0] }, 0],
+        },
+      },
+    },
+    {
+      $addFields: {
+        avgPointsPerParticipant: {
+          $cond: [
+            { $gt: ["$participants", 0] },
+            { $divide: ["$pointsAwarded", "$participants"] },
+            0,
+          ],
+        },
+        viewToParticipantPercentage: {
+          $cond: [
+            { $gt: ["$totalViews", 0] },
+            {
+              $min: [
+                100,
+                {
+                  $multiply: [
+                    { $divide: ["$participants", "$totalViews"] },
+                    100,
+                  ],
+                },
+              ],
+            },
+            0,
+          ],
+        },
+      },
+    },
+    {
+      $project: {
+        favoritesLookup: 0,
+        viewsLookup: 0,
+        orderStats: 0,
+      },
+    },
+  ];
+
   const pipeline = [
     { $match: query },
 
@@ -152,85 +287,141 @@ const getWithFilters = async (
       },
     },
 
-    { $sort: sortStage },
-    { $skip: skip },
-  ];
+    {
+      $facet: {
+        data: [
+          { $sort: sortStage },
+          { $skip: skip },
+          ...(limit > 0 ? [{ $limit: limit }] : []),
 
-  if (limit > 0) pipeline.push({ $limit: limit });
-
-  pipeline.push(
-    {
-      $lookup: {
-        from: "rewards",
-        localField: "reward",
-        foreignField: "_id",
-        as: "reward",
-      },
-    },
-    {
-      $lookup: {
-        from: "menuitems",
-        localField: "menuItem",
-        foreignField: "_id",
-        pipeline: [{ $project: { _id: 1, title: 1 } }],
-        as: "menuItem",
-      },
-    },
-    {
-      $lookup: {
-        from: "tiers",
-        localField: "tierLimit",
-        foreignField: "_id",
-        as: "tierLimit",
-        pipeline: [{ $project: { _id: 1, title: 1 } }],
-      },
-    },
-    {
-      $addFields: {
-        reward: {
-          $cond: [
-            { $eq: ["$promotionType", "claimPromotion"] },
-            { $arrayElemAt: ["$reward", 0] },
-            null,
-          ],
-        },
-        menuItem: {
-          $cond: [
-            {
-              $in: [
-                "$promotionType",
-                ["buyMenuItemPromotion", "productSale", "extraPointsForItem"],
-              ],
+          // existing reward/menuItem/tierLimit lookups
+          {
+            $lookup: {
+              from: "rewards",
+              localField: "reward",
+              foreignField: "_id",
+              as: "reward",
             },
-            "$menuItem",
-            [],
-          ],
-        },
-        tierLimit: {
-          $cond: [
-            { $ne: ["$tierLimit", []] },
-            { $arrayElemAt: ["$tierLimit", 0] },
-            null,
-          ],
-        },
+          },
+          {
+            $lookup: {
+              from: "menuitems",
+              localField: "menuItem",
+              foreignField: "_id",
+              pipeline: [{ $project: { _id: 1, title: 1 } }],
+              as: "menuItem",
+            },
+          },
+          {
+            $lookup: {
+              from: "tiers",
+              localField: "tierLimit",
+              foreignField: "_id",
+              as: "tierLimit",
+              pipeline: [{ $project: { _id: 1, title: 1 } }],
+            },
+          },
+          {
+            $addFields: {
+              reward: {
+                $cond: [
+                  { $eq: ["$promotionType", "claimPromotion"] },
+                  { $arrayElemAt: ["$reward", 0] },
+                  null,
+                ],
+              },
+              menuItem: {
+                $cond: [
+                  {
+                    $in: [
+                      "$promotionType",
+                      [
+                        "buyMenuItemPromotion",
+                        "productSale",
+                        "extraPointsForItem",
+                      ],
+                    ],
+                  },
+                  "$menuItem",
+                  [],
+                ],
+              },
+              tierLimit: {
+                $cond: [
+                  { $ne: ["$tierLimit", []] },
+                  { $arrayElemAt: ["$tierLimit", 0] },
+                  null,
+                ],
+              },
+            },
+          },
+
+          ...enrichStages,
+
+          {
+            $project: {
+              titleSort: 0,
+              descriptionSort: 0,
+              promotionTypeSort: 0,
+            },
+          },
+        ],
+
+        meta: [
+          ...enrichStages,
+          {
+            $group: {
+              _id: "$promotionType",
+              participants: { $sum: "$participants" },
+              pointsAwarded: { $sum: "$pointsAwarded" },
+              totalViews: { $sum: "$totalViews" },
+              totalFavorites: { $sum: "$totalFavorites" },
+            },
+          },
+          { $sort: { participants: -1 } },
+          {
+            $group: {
+              _id: null,
+              totalViews: { $sum: "$totalViews" },
+              totalFavorites: { $sum: "$totalFavorites" },
+              totalParticipants: { $sum: "$participants" },
+              totalPointsAwarded: { $sum: "$pointsAwarded" },
+              promotionTypeBreakdown: {
+                $push: {
+                  promotionType: "$_id",
+                  participants: "$participants",
+                  pointsAwarded: "$pointsAwarded",
+                  totalViews: "$totalViews",
+                  totalFavorites: "$totalFavorites",
+                },
+              },
+              highestPromotionType: {
+                $first: {
+                  promotionType: "$_id",
+                  participants: "$participants",
+                },
+              },
+            },
+          },
+        ],
       },
     },
+
     {
       $project: {
-        titleSort: 0,
-        descriptionSort: 0,
-        promotionTypeSort: 0,
+        data: 1,
+        meta: { $ifNull: [{ $arrayElemAt: ["$meta", 0] }, {}] },
       },
     },
-  );
+  ];
 
-  return Promotion.aggregate(pipeline).allowDiskUse(true);
+  const result = await Promotion.aggregate(pipeline).allowDiskUse(true);
+  return result[0] || { data: [], meta: {} };
 };
 
 module.exports = {
   getWithFilters,
 };
-
 
 // Count
 const count = async (query = {}) => {
@@ -241,7 +432,8 @@ const count = async (query = {}) => {
 const findById = async (id) => {
   return Promotion.findById(id)
     .populate("menuItem")
-    .populate({ path: "tierLimit", select: "image title" }).exec();
+    .populate({ path: "tierLimit", select: "image title" })
+    .exec();
 };
 
 // Update and save
@@ -253,13 +445,11 @@ const updateData = async (item, data) => {
 
 // Delete
 const deleteItem = async (item) => {
-
   return await item.deleteOne();
 };
 
 // findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
-
   return Promotion.findByIdAndUpdate(id, data, { new: true })
     .populate("menuItem")
     .populate("tierLimit");
@@ -272,7 +462,6 @@ const getPromotionsByCreator = async (creatorId) => {
     // Return promotions details or an empty array if none are found
     return promotions.length > 0 ? promotions : [];
   } catch (error) {
-
     return [];
   }
 };
@@ -285,5 +474,5 @@ module.exports = {
   updateData,
   deleteItem,
   findByIdAndUpdate,
-  getPromotionsByCreator
+  getPromotionsByCreator,
 };

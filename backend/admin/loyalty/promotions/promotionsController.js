@@ -162,7 +162,7 @@ const create = async (req, res) => {
 const get = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let { keyword, status, date, companyOrganizer, sortBy, sortOrder } = req.query;
-  const SORT_FIELDS = ["title", "description", "promotionType"];
+  const SORT_FIELDS = ["title", "description", "promotionType","status","views","favorites","participants","pointsAwarded"];
   const SORT_ORDERS = ["asc", "desc"];
   if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
     const key = sortBy && !SORT_FIELDS.includes(sortBy)

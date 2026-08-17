@@ -59,18 +59,11 @@ const get = async ({ companyOrganizer, page, limit, keyword, status, date, timez
     status: { $ne: "deleted" }
   };
 
-  const [total, active, inactive, totalFiltered] = await Promise.all([
-    Promotion.countDocuments(baseCountFilter),
-    Promotion.countDocuments({ ...baseCountFilter, status: "active" }),
-    Promotion.countDocuments({ ...baseCountFilter, status: "inactive" }),
-    Promotion.countDocuments(query),
-  ]);
-
-  const meta = generateMeta(page, limit, totalFiltered);
-  meta.counts = { total, active, inactive };
-
-  const formatted = records.map(r => formatPromotion(r, timezone));
-  return { responses: formatted, meta };
+  // const meta = generateMeta(page, limit, totalFiltered);
+  // meta.counts = { total, active, inactive };
+  
+  // const formatted = records.map(r => formatPromotion(r, timezone));
+  return { responses: records.data, meta:records.meta };
 };
 
 
