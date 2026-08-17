@@ -49,7 +49,6 @@ const getUserFavorites = async (userId, targetType, page, limit) => {
             refLookups,
             options: { page, limit },
         });
-
         // REMOVE records where lookup failed
         filtered = filtered.filter(fav => fav.object);
 
@@ -87,43 +86,51 @@ const getUserFavorites = async (userId, targetType, page, limit) => {
 };
 
 const refLookups = {
-    event: {
-        from: "events",
-        project: { "basicInfo.title": 1, "basicInfo.media": 1, "basicInfo.organization": 1, "basicInfo.venueLocation": 1, schedule: 1 },
-        subLookups: [
-            {
-                from: "organizations",
-                as: "basicInfo.organization",
-                localField: "basicInfo.organization",
-                project: { "basicInfo.name": 1, "basicInfo.media": 1, },
-                single: true,
-            },
-        ],
+  event: {
+    from: "events",
+    project: {
+      "basicInfo.title": 1,
+      "basicInfo.media": 1,
+      "basicInfo.organization": 1,
+      "basicInfo.venueLocation": 1,
+      schedule: 1,
     },
-    organization: {
+    subLookups: [
+      {
         from: "organizations",
-        project: {
-            "basicInfo.name": 1,
-            "basicInfo.media.logo": 1,
-            location: 1,
-            "otherInfo.categories": 1,
-        },
-        subLookups: [
-            {
-                from: "categories",
-                as: "otherInfo.categories",
-                localField: "otherInfo.categories",
-                project: { _id: 1, title: 1, image: 1 },
-            },
-        ],
+        as: "basicInfo.organization",
+        localField: "basicInfo.organization",
+        project: { "basicInfo.name": 1, "basicInfo.media": 1 },
+        single: true,
+      },
+    ],
+  },
+  organization: {
+    from: "organizations",
+    project: {
+      "basicInfo.name": 1,
+      "basicInfo.media.logo": 1,
+      location: 1,
+      "otherInfo.categories": 1,
     },
-    menu: {
-        from: "menus",
-        project: { "title": 1, },
-
-    },
-
-}
+    subLookups: [
+      {
+        from: "categories",
+        as: "otherInfo.categories",
+        localField: "otherInfo.categories",
+        project: { _id: 1, title: 1, image: 1 },
+      },
+    ],
+  },
+  menu: {
+    from: "menus",
+    project: { title: 1 },
+  },
+  promotion: {
+    from: "promotions",
+    project: { title: 1 },
+  },
+};
 
 
 

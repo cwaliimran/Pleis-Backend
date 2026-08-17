@@ -4,6 +4,7 @@ const HappyHourPromotion = require("./happyHourPromotion");
 const ProductSalePromotion = require("./productSalePromotion");
 const ClaimPromotion = require("./claimPromotion");
 const PromotionsOrders = require("./PromotionsOrders");
+const extraPointsForItemPromotion = require("./extraPointsForItem");
 
 module.exports = {
   Promotion,
@@ -11,5 +12,6 @@ module.exports = {
   HappyHourPromotion,
   ProductSalePromotion,
   ClaimPromotion,
-  PromotionsOrders
+  PromotionsOrders,
+  extraPointsForItemPromotion
 };
