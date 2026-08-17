@@ -285,6 +285,7 @@ const getUserDetails = async (req, res) => {
   try {
     let user = await usersService.getUserDetails(id);
 
+
     if (!user) {
       return sendResponse({
         res,
@@ -321,7 +322,8 @@ const getUserDetails = async (req, res) => {
       delete userObject.organizations;
       delete userObject.events;
 
-      // Fetch user interests and clubs concurrently
+
+      user
       const [
         interests_,
         joinedClubs_,
