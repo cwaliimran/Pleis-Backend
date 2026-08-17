@@ -6,12 +6,12 @@ const {
   HappyHourPromotion,
   ProductSalePromotion,
   ClaimPromotion,
+  extraPointsForItemPromotion,
 } = require("../../../commonModules/loyalty/promotions/models/Promotion/");
 
 // Decide which discriminator model to use
 const getModelBypromotionType = (promotionType) => {
   switch (promotionType) {
-
     case "buyMenuItemPromotion":
       return BuyMenuItemPromotion;
     case "happyHour":
@@ -20,6 +20,8 @@ const getModelBypromotionType = (promotionType) => {
       return ProductSalePromotion;
     case "claimPromotion":
       return ClaimPromotion;
+    case "extraPointsForItem":
+      return extraPointsForItemPromotion;
     default:
       return Promotion; // fallback
   }
