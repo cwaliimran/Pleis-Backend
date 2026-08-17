@@ -649,6 +649,11 @@ const getUserInterestsByUserId = async (userId) => {
   return clubs;
 };
  */
+
+const getUserDetails = async (id) => {
+  let data = await userRepo.getUserDetails(id);
+  return data;
+};
 module.exports = {
   getAllUsers,
   getStaff,
@@ -661,4 +666,5 @@ module.exports = {
   updateUserInterests,
   getUserInterestsByUserId,
   getUserDetailsForQRService,
+  getUserDetails,
 };

@@ -264,7 +264,11 @@ const getMenuSubcategorys = async ({
             ? "status"
             : sortBy === "createdAt"
               ? "createdAt"
-              : "createdAt";
+              : sortBy === "organization"
+                ? "organization.basicInfo.name"
+                : sortBy === "companyOrganizer"
+                  ? "companyOrganizer.firstName"
+                  : "createdAt";
 
       const sortDirection = sortOrder === "asc" ? 1 : -1;
 
@@ -392,7 +396,7 @@ const getMenuSubcategorys = async ({
     fetchFn: computeMenuSubcategorys,
   });
 };
-const   getMenuSubcategorysSummary = async ({
+const getMenuSubcategorysSummary = async ({
   timezone,
   page,
   limit,
