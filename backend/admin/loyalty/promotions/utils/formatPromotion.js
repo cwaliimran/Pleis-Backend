@@ -1,6 +1,7 @@
 const { getFullImageUrl } = require("../../../../helperUtils/imageHelper");
 const {
   convertUtcToTimezone,
+  convertUtcTimeToTimezone,
 } = require("../../../../helperUtils/responseUtil");
 
 // Helper function to handle date conversion
@@ -23,10 +24,11 @@ function convertPromotionDates(promotion, timezone, format) {
 function formatPromotion(promotion, timezone) {
   const obj = { ...promotion };
 
-  //attach full image URL
+  // Attach full image URL
   if (obj?.image) {
     obj.image = getFullImageUrl(obj.image);
   }
+
   if (obj?.companyOrganizer?.profileIcon) {
     obj.companyOrganizer.profileIcon = getFullImageUrl(
       obj.companyOrganizer.profileIcon,
@@ -36,48 +38,72 @@ function formatPromotion(promotion, timezone) {
   if (obj?.tierLimit?.image) {
     obj.tierLimit.image = getFullImageUrl(obj.tierLimit.image);
   }
+
   delete obj.claimLimit;
   delete obj.recurringMeta;
   delete obj.recurringDetails;
   delete obj.tierLimit;
   delete obj.reward;
+  delete obj.__v;
 
-  // Adjust obj properties based on promotionType
+  // Convert promotion time slots
+  if (obj.startTime) {
+    obj.startTime = convertUtcTimeToTimezone(
+      obj.startTime,
+      timezone,
+      "HH:mm",
+      "HH:mm",
+    );
+  }
+
+  if (obj.endTime) {
+    obj.endTime = convertUtcTimeToTimezone(
+      obj.endTime,
+      timezone,
+      "HH:mm",
+      "HH:mm",
+    );
+  }
+
+  // Adjust properties based on promotionType
   switch (obj.promotionType) {
     case "happyHour":
       delete obj.menuItem;
       delete obj.extraPoints;
       delete obj.discountedPrice;
+
       convertPromotionDates(obj, timezone, "YYYY-MM-DD hh:mm A");
       break;
 
     case "buyMenuItem":
-      delete obj.pointsMultiplier;
-      delete obj.discountedPrice;
-      convertPromotionDates(obj, timezone, "YYYY-MM-DD");
-      break;
     case "extraPointsForItem":
       delete obj.pointsMultiplier;
       delete obj.discountedPrice;
+
       convertPromotionDates(obj, timezone, "YYYY-MM-DD");
       break;
 
     case "productSale":
       delete obj.extraPoints;
+
       convertPromotionDates(obj, timezone, "YYYY-MM-DD");
       break;
+
     case "claimPromotion":
       delete obj.extraPoints;
       delete obj.discountedPrice;
       delete obj.menuItem;
+
       convertPromotionDates(obj, timezone, "YYYY-MM-DD");
       break;
+
     default:
       break;
   }
 
   obj.recurringDetails = obj?.recurringDetails || null;
-  if (obj.recurringDetails && obj.recurringDetails.endDate) {
+
+  if (obj.recurringDetails?.endDate) {
     obj.recurringDetails.endDate = convertUtcToTimezone(
       obj.recurringDetails.endDate,
       timezone,

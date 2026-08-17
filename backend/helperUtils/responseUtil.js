@@ -609,7 +609,20 @@ const convertUtcToTimezone = (
     return momentDate.format(outputFormat);
   }
 };
+const convertUtcTimeToTimezone = (
+  time,
+  timezone,
+  outputFormat = "HH:mm",
+  inputFormat = "HH:mm",
+) => {
+  const momentTime = moment.utc(time, inputFormat, true);
 
+  if (timezone) {
+    return momentTime.tz(timezone).format(outputFormat);
+  } else {
+    return momentTime.format(outputFormat);
+  }
+};
 /**
  * Converts a date from a specified timezone to UTC.
  * If the timezone is null or not provided, it formats the date without applying a timezone.
@@ -879,4 +892,5 @@ module.exports = {
   getEndDate,
   fireAndForget,
   uniqueObjectIds,
+  convertUtcTimeToTimezone,
 };
