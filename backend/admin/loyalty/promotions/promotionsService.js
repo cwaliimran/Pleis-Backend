@@ -61,9 +61,10 @@ const get = async ({ companyOrganizer, page, limit, keyword, status, date, timez
 
   // const meta = generateMeta(page, limit, totalFiltered);
   // meta.counts = { total, active, inactive };
-  
-  // const formatted = records.map(r => formatPromotion(r, timezone));
-  return { responses: records.data, meta:records.meta };
+  const data=records.data.map(r => formatPromotion(r, timezone));
+
+  const formatted = data;
+  return { responses: formatted, meta: records.meta };
 };
 
 
