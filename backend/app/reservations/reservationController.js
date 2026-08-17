@@ -11,30 +11,26 @@ const {
 const reservationService = require("./reservationService");
 const { validateReservationPayload } = require("./validators/reservationValidation");
 
-
 const createReservation = async (req, res) => {
   const session = await mongoose.startSession();
 
   try {
     session.startTransaction();
 
-    const normalizedReservation =
-      validateReservationPayload(req, res, req.body);
+    const normalizedReservation = validateReservationPayload(req, res, req.body);
     if (!normalizedReservation) return;
     let userId = req.user._id;
-    if(normalizedReservation.firstName || normalizedReservation.lastName ){
+    if (normalizedReservation.firstName || normalizedReservation.lastName) {
       userId = null; // Set userId to null if the user is not logged in
     }
 
-    const result =
-      await reservationService.createReservationService(
-        {
-          ...normalizedReservation,
-          userId,
-        },
-        session
-      );
-
+    const result = await reservationService.createReservationService(
+      {
+        ...normalizedReservation,
+        userId,
+      },
+      session,
+    );
 
     if (!result.success) {
       await session.abortTransaction();
@@ -42,7 +38,7 @@ const createReservation = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 409,
-        translationKey: result.error|| result.message || "Reservation_creation_failed",
+        translationKey: result.error || result.message || "Reservation_creation_failed",
       });
     }
 
@@ -54,7 +50,6 @@ const createReservation = async (req, res) => {
       translationKey: "Reservation_created_successfully",
       data: result.reservation,
     });
-
   } catch (error) {
     if (session.inTransaction()) {
       await session.abortTransaction();
@@ -72,7 +67,6 @@ const createReservation = async (req, res) => {
   }
 };
 
-
 const getReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let { keyword, status = "confirmed", date, availability = "", eventId, organizationId } = req.query;
@@ -80,11 +74,11 @@ const getReservations = async (req, res) => {
   try {
     if (
       !date || // Check if date is missing
-      (
-        (eventId === undefined || eventId === null || eventId === "undefined" || eventId === "null") && // Check if eventId is missing or invalid
-        (organizationId === undefined || organizationId === null || organizationId === "undefined" || organizationId === "null") // Check if organizationId is missing or invalid
-      )
-
+      ((eventId === undefined || eventId === null || eventId === "undefined" || eventId === "null") && // Check if eventId is missing or invalid
+        (organizationId === undefined ||
+          organizationId === null ||
+          organizationId === "undefined" ||
+          organizationId === "null")) // Check if organizationId is missing or invalid
     ) {
       return sendResponse({
         res,
@@ -94,15 +88,11 @@ const getReservations = async (req, res) => {
     }
 
     const userId = req.user._id;
-    eventId, organizationId;
+    (eventId, organizationId);
 
     if (eventId && eventId !== "undefined" && eventId !== "null") {
       eventId = eventId;
-    } else if (
-      organizationId &&
-      organizationId !== "undefined" &&
-      organizationId !== "null"
-    ) {
+    } else if (organizationId && organizationId !== "undefined" && organizationId !== "null") {
       organizationId = organizationId;
     }
 
@@ -116,7 +106,7 @@ const getReservations = async (req, res) => {
       eventId,
       organizationId,
       date,
-      availability
+      availability,
     });
 
     return sendResponse({
@@ -137,7 +127,7 @@ const getReservations = async (req, res) => {
   }
 };
 const getUserReservationDetails = async (req, res) => {
-  const { id } = req.params;  // Capture the ID from params
+  const { id } = req.params; // Capture the ID from params
   const timezone = req.user.timezone;
 
   if (
@@ -148,13 +138,9 @@ const getUserReservationDetails = async (req, res) => {
   )
     return;
 
-
   try {
-
-
     // Call the service directly with the ID
     const reservationDetails = await reservationService.getUserReservationDetailsService(id, timezone);
-
 
     if (!reservationDetails) {
       return sendResponse({
@@ -183,7 +169,6 @@ const getUserReservationDetails = async (req, res) => {
 };
 
 const getUserReservations = async (req, res) => {
-
   const { page, limit } = parsePaginationParams(req);
   let { keyword, date } = req.query;
   try {
@@ -236,12 +221,7 @@ const transferReservation = async (req, res) => {
     // ==============================
     // STEP 3: TRANSFER RESERVATION
     // ==============================
-    const { success, message } =
-      await reservationService.transferReservation(
-        reservationId,
-        newUserId,
-        userId
-      );
+    const { success, message } = await reservationService.transferReservation(reservationId, newUserId, userId);
 
     if (!success) {
       return sendResponse({
@@ -256,7 +236,6 @@ const transferReservation = async (req, res) => {
       statusCode: 200,
       translationKey: message,
     });
-
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
 
@@ -283,11 +262,7 @@ const acceptReservationChange = async (req, res) => {
     return;
 
   try {
-    const result =
-      await reservationService.acceptReservationChange(
-        id,
-        userId
-      );
+    const result = await reservationService.acceptReservationChange(id, userId);
 
     return sendResponse({
       res,
@@ -296,8 +271,7 @@ const acceptReservationChange = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    const readableError =
-      getReadableErrorMessage(error);
+    const readableError = getReadableErrorMessage(error);
 
     return sendResponse({
       res,
@@ -321,10 +295,7 @@ const cancelReservation = async (req, res) => {
     return;
 
   try {
-    const result = await reservationService.cancelReservation(
-      id,
-      userId
-    );
+    const result = await reservationService.cancelReservation(id, userId);
 
     return sendResponse({
       res,
@@ -344,6 +315,41 @@ const cancelReservation = async (req, res) => {
   }
 };
 
+const getReservationSlots = async (req, res) => {
+  const { date, organization } = req.query;
+  const userId = req.user._id;
+  const timezone = req.user.timezone;
+  try {
+    if (!date || !organization) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "date_and_organization_are_required",
+      });
+    }
+    const { data, message } = await reservationService.getReservationSlotsService({
+      userId,
+      date,
+      organizationId: organization,
+      timezone,
+    });
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: message,
+      data,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode || 500,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 
 module.exports = {
   createReservation,
@@ -353,4 +359,5 @@ module.exports = {
   transferReservation,
   acceptReservationChange,
   cancelReservation,
+  getReservationSlots,
 };

@@ -27,6 +27,242 @@ const { TAX_RATE_RESERVATION } = require("../../config/CONSTANTS");
 const { usePromoCode } = require("../promoCode/promoCodeRepository");
 const ReservationType = require("@ReservationTypeModel");
 
+const moment = require("moment-timezone");
+const ReservationPreferences = require("@ReservationPreferencesModel");
+
+const getReservationSlots = async ({ userId, date, organizationId, timezone }) => {
+  if (!timezone || !moment.tz.zone(timezone)) {
+    return {
+      allowed: false,
+      message: "Invalid timezone",
+      slots: [],
+    };
+  }
+
+  // --------------------------------------------------
+  // 1. Get organization
+  // --------------------------------------------------
+  const organizationDoc = await Organizations.findOne({
+    _id: organizationId,
+    status: "active",
+  })
+    .select("operatingHours")
+    .lean();
+
+  if (!organizationDoc) {
+    return {
+      allowed: false,
+      message: "Organization not found or inactive",
+      slots: [],
+    };
+  }
+
+  // --------------------------------------------------
+  // 2. Get reservation preferences
+  // --------------------------------------------------
+  const reservationPreferences = await ReservationPreferences.findOne({
+    organizationId,
+  })
+    .select("timeSlotsSetting")
+    .lean();
+
+  const settings = reservationPreferences?.timeSlotsSetting;
+
+  if (!settings || settings.status !== "enabled") {
+    return {
+      allowed: false,
+      message: "Reservation time slots are disabled",
+      slots: [],
+    };
+  }
+
+  const slotDuration = Number(settings.averageSlotDurationInMinutes);
+
+  const bookingOpensAfterMinutes = Number(settings.bookingOpensAfterMinutes || 0);
+
+  const bookingClosesBeforeMinutes = Number(settings.bookingClosesBeforeMinutes || 0);
+
+  if (!slotDuration || slotDuration <= 0) {
+    return {
+      allowed: false,
+      message: "Invalid slot duration",
+      slots: [],
+    };
+  }
+
+  // --------------------------------------------------
+  // 3. Parse requested date in USER timezone
+  // --------------------------------------------------
+  //
+  // IMPORTANT:
+  // date should be "YYYY-MM-DD"
+  //
+  // Example:
+  // 2026-08-17
+  //
+  // We intentionally parse it in the user's timezone.
+  //
+  const userDate = moment.tz(date, "YYYY-MM-DD", timezone);
+
+  if (!userDate.isValid()) {
+    return {
+      allowed: false,
+      message: "Invalid date",
+      slots: [],
+    };
+  }
+
+  const dayName = userDate.format("dddd").toLowerCase();
+
+  // --------------------------------------------------
+  // 4. Get operating hours
+  // --------------------------------------------------
+  const operatingHours = organizationDoc.operatingHours?.[dayName];
+
+  if (!operatingHours?.isOpen) {
+    return {
+      allowed: true,
+      message: "Organization is closed on this day",
+      date,
+      timezone,
+      slots: [],
+    };
+  }
+
+  const openingMinutes = Number(operatingHours.from);
+  const closingMinutes = Number(operatingHours.to);
+
+  if (Number.isNaN(openingMinutes) || Number.isNaN(closingMinutes)) {
+    return {
+      allowed: false,
+      message: "Invalid operating hours",
+      slots: [],
+    };
+  }
+
+  // --------------------------------------------------
+  // 5. Effective booking window
+  // --------------------------------------------------
+  const firstSlotStartMinutes = openingMinutes + bookingOpensAfterMinutes;
+
+  const lastSlotEndMinutes = closingMinutes - bookingClosesBeforeMinutes;
+
+  if (firstSlotStartMinutes >= lastSlotEndMinutes) {
+    return {
+      allowed: true,
+      message: "No reservation slots available",
+      date,
+      timezone,
+      slots: [],
+    };
+  }
+
+  // --------------------------------------------------
+  // 6. Get existing reservations
+  // --------------------------------------------------
+  const existingReservations = await UserReservations.find({
+    organizationId,
+    userId,
+    status: {
+      $in: ["checkedIn", "confirmed", "needsConfirmation", "pendingPayment"],
+    },
+
+    // If editing an existing reservation and you want
+    // to ignore the user's own reservation:
+    //
+    // userId: { $ne: userId },
+
+    "timingSlots.dateTimeSlots.date": date,
+  })
+    .select("timingSlots")
+    .lean();
+
+  // --------------------------------------------------
+  // 7. Get booked slots
+  // --------------------------------------------------
+  const bookedSlots = [];
+
+  for (const reservation of existingReservations) {
+    for (const dateBlock of reservation.timingSlots?.dateTimeSlots || []) {
+      if (dateBlock.date !== date) {
+        continue;
+      }
+
+      for (const existingSlot of dateBlock.timeSlots || []) {
+        const existingStart = moment.parseZone(existingSlot.startTime);
+
+        const existingEnd = moment.parseZone(existingSlot.endTime);
+
+        if (!existingStart.isValid() || !existingEnd.isValid()) {
+          continue;
+        }
+
+        bookedSlots.push({
+          start: existingStart,
+          end: existingEnd,
+        });
+      }
+    }
+  }
+
+  // --------------------------------------------------
+  // 8. Generate slots
+  // --------------------------------------------------
+  const slots = [];
+
+  for (
+    let startMinutes = firstSlotStartMinutes;
+    startMinutes + slotDuration <= lastSlotEndMinutes;
+    startMinutes += slotDuration
+  ) {
+    const endMinutes = startMinutes + slotDuration;
+
+    // ------------------------------------------------
+    // Operating hours are UTC minutes.
+    //
+    // So create the operating-hour time in UTC first.
+    // ------------------------------------------------
+    const utcStart = moment.utc(date, "YYYY-MM-DD").startOf("day").add(startMinutes, "minutes");
+
+    const utcEnd = moment.utc(date, "YYYY-MM-DD").startOf("day").add(endMinutes, "minutes");
+
+    // ------------------------------------------------
+    // Convert UTC operating time to user timezone.
+    // ------------------------------------------------
+    const userStart = utcStart.clone().tz(timezone);
+    const userEnd = utcEnd.clone().tz(timezone);
+
+    // ------------------------------------------------
+    // Check overlap
+    // ------------------------------------------------
+    const isBooked = bookedSlots.some(
+      (bookedSlot) => userStart.toDate() < bookedSlot.end.toDate() && userEnd.toDate() > bookedSlot.start.toDate(),
+    );
+
+    if (!isBooked) {
+      slots.push({
+        startTime: userStart.toISOString(),
+        endTime: userEnd.toISOString(),
+
+        // Optional display values
+        startTimeLocal: userStart.format("YYYY-MM-DD HH:mm"),
+        endTimeLocal: userEnd.format("YYYY-MM-DD HH:mm"),
+
+        available: true,
+      });
+    }
+  }
+
+  return {
+    allowed: true,
+    message: "Reservation slots retrieved successfully",
+    date,
+    timezone,
+    slotDuration,
+    slots,
+  };
+};
+
 const checkReservationAvailability = async ({
   reservationTypeId,
   partySize,
@@ -962,6 +1198,7 @@ const getUserReservationDetails = async (id) => {
           userBillingInformation: 1,
           partySize: 1,
           status: 1,
+          voucher: 1,
         },
       },
 
@@ -1357,4 +1594,5 @@ module.exports = {
   getReservationForTransfer,
   checkReservationAvailability,
   validateReservationCapacity,
+  getReservationSlots,
 };
