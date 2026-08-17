@@ -313,6 +313,7 @@ const updateMenuItem = async (req, res) => {
     endTime,
     status = "active",
     isLimitedTimeOffer,
+    
     isScheduled,
     startDate,
     endDate,

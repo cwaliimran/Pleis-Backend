@@ -22,8 +22,8 @@ const create = async (req, res) => {
   var objectIdFields = ["companyOrganizer"]
 
   if (req.body.promotionType === "happyHour") {
-    dateFields.startDate = "YYYY-MM-DD hh:mm A"
-    dateFields.endDate = "YYYY-MM-DD hh:mm A"
+    dateFields.startDate = "YYYY-MM-DD"
+    dateFields.endDate = "YYYY-MM-DD"
     rawData.push("pointsMultiplier")
   }
   if (req.body.promotionType === "buyMenuItemPromotion") {
@@ -41,7 +41,7 @@ const create = async (req, res) => {
   if (req.body.promotionType === "productSale") {
     dateFields.startDate = "YYYY-MM-DD"
     dateFields.endDate = "YYYY-MM-DD"
-    rawData.push("menuItem", "discountedPrice")
+    rawData.push("menuItem", "discountedPercent")
     objectIdFields.push("menuItem")
   }
   if (req.body.promotionType === "claimPromotion") {
@@ -50,10 +50,19 @@ const create = async (req, res) => {
     rawData.push("reward", "claimPoints")
     objectIdFields.push("reward")
   }
-  if(startTime && endTime){
-    dateFields.startTime = "hh:mm A"
-    dateFields.endTime = "hh:mm A"
-    rawData.push("startTime", "endTime")
+  if(req.body.startTime && req.body.endTime){
+     req.body.startTime = convertTimezoneToUtc(
+       req.body.startTime,
+       req.user.timezone,
+       "HH:mm",
+       "HH:mm",
+     );
+      req.body.endTime = convertTimezoneToUtc(
+        req.body.endTime,
+        req.user.timezone,
+        "HH:mm",
+        "HH:mm",
+      );
   }
 
   if (!validateParams(req, res, {
@@ -94,10 +103,10 @@ const create = async (req, res) => {
     if (req.body.promotionType === "happyHour") {
       //convert to utc
       if (req.body.startDate) {
-        req.body.startDate = convertTimezoneToUtc(req.body.startDate, req.user.timezone, "YYYY-MM-DD hh:mm A");
+        req.body.startDate = convertTimezoneToUtc(req.body.startDate, req.user.timezone, "YYYY-MM-DD");
       }
       if (req.body.endDate) {
-        req.body.endDate = convertTimezoneToUtc(req.body.endDate, req.user.timezone, "YYYY-MM-DD hh:mm A");
+        req.body.endDate = convertTimezoneToUtc(req.body.endDate, req.user.timezone, "YYYY-MM-DD");
       }
     } else {
       //convert to utc
