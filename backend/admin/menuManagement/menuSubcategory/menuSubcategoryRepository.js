@@ -25,6 +25,8 @@ const createMenuSubcategory = async (data) => {
   }
 };
 
+// const mongoose = require("mongoose");
+
 const getMenuSubcategorys = async ({
   isNullAllowed,
   timezone,
@@ -39,50 +41,134 @@ const getMenuSubcategorys = async ({
   companyOrganizer,
   skip,
 }) => {
-  // Coerce to a real boolean — query params often arrive as the string "false".
+  // Query params can arrive as strings
   const nullAllowed = isNullAllowed === true || isNullAllowed === "true";
 
-  // The heavy lifting — builds the pipeline, runs it, assembles meta.
+  /**
+   * Build organization/companyOrganizer filter.
+   *
+   * Rules when nullAllowed = true:
+   *
+   * organization:
+   *   requested organization OR null
+   *
+   * companyOrganizer:
+   *   requested companyOrganizer OR null
+   *
+   * If both are provided:
+   *   (organization = requested OR null)
+   *   AND
+   *   (companyOrganizer = requested OR null)
+   *
+   * Therefore this is also allowed:
+   *   organization = null
+   *   companyOrganizer = null
+   */
+  const buildScopeFilter = () => {
+    const filters = [];
+
+    // Organization filter
+    if (organization) {
+      const organizationIds = Array.isArray(organization)
+        ? organization
+        : [organization];
+
+      filters.push(
+        nullAllowed
+          ? {
+              $or: [
+                {
+                  organization: {
+                    $in: organizationIds,
+                  },
+                },
+                {
+                  organization: null,
+                },
+              ],
+            }
+          : {
+              organization: {
+                $in: organizationIds,
+              },
+            },
+      );
+    }
+
+    // Company Organizer filter
+    if (companyOrganizer) {
+      const companyOrganizerId =
+        companyOrganizer instanceof mongoose.Types.ObjectId
+          ? companyOrganizerId
+          : new mongoose.Types.ObjectId(companyOrganizer);
+
+      filters.push(
+        nullAllowed
+          ? {
+              $or: [
+                {
+                  companyOrganizer: companyOrganizerId,
+                },
+                {
+                  companyOrganizer: null,
+                },
+              ],
+            }
+          : {
+              companyOrganizer: companyOrganizerId,
+            },
+      );
+    }
+
+    return filters.length
+      ? {
+          $and: filters,
+        }
+      : {};
+  };
+
+  // ---------------------------------------------------------
+  // Main query
+  // ---------------------------------------------------------
+
   const computeMenuSubcategorys = async () => {
     const pipeline = [];
 
-    // Apply filters
+    // -------------------------------------------------------
+    // Status filter
+    // -------------------------------------------------------
+
     if (status) {
-      pipeline.push({ $match: { status } });
+      pipeline.push({
+        $match: {
+          status,
+        },
+      });
     } else {
-      pipeline.push({ $match: { status: { $ne: "deleted" } } });
+      pipeline.push({
+        $match: {
+          status: {
+            $ne: "deleted",
+          },
+        },
+      });
     }
 
-    const filters = [];
-    if (organization) {
-      filters.push(
-        nullAllowed
-          ? {
-              $or: [
-                { organization: { $in: organization } },
-                { organization: null },
-              ],
-            }
-          : { organization: { $in: organization } },
-      );
+    // -------------------------------------------------------
+    // Organization + Company Organizer filter
+    // -------------------------------------------------------
+
+    const scopeFilter = buildScopeFilter();
+
+    if (Object.keys(scopeFilter).length) {
+      pipeline.push({
+        $match: scopeFilter,
+      });
     }
-    if (companyOrganizer) {
-      const companyOrganizerId = new mongoose.Types.ObjectId(companyOrganizer);
-      filters.push(
-        nullAllowed
-          ? {
-              $or: [
-                { companyOrganizer: companyOrganizerId },
-                { companyOrganizer: null },
-              ],
-            }
-          : { companyOrganizer: companyOrganizerId },
-      );
-    }
-    const combinedFilter = filters.length ? { $and: filters } : {};
-    if (Object.keys(combinedFilter).length) {
-      pipeline.push({ $match: combinedFilter });
-    }
+
+    // -------------------------------------------------------
+    // Keyword filter
+    // -------------------------------------------------------
 
     if (keyword) {
       const keywordMatch = buildKeywordQueryFromModels(
@@ -91,61 +177,84 @@ const getMenuSubcategorys = async ({
       );
 
       if (Object.keys(keywordMatch).length) {
-        pipeline.push({ $match: keywordMatch });
+        pipeline.push({
+          $match: keywordMatch,
+        });
       }
     }
-    pipeline.push(
-      {
-        $lookup: {
-          from: "users",
-          localField: "companyOrganizer",
-          foreignField: "_id",
-          pipeline: [
-            {
-              $project: {
-                _id: 1,
-                firstName: 1,
-                lastName: 1,
-              },
-            },
-          ],
-          as: "companyOrganizer",
-        },
-      },
-      {
-        $addFields: {
-          companyOrganizer: {
-            $ifNull: [{ $arrayElemAt: ["$companyOrganizer", 0] }, null],
-          },
-        },
-      },
-    );
 
-    pipeline.push(
-      {
-        $lookup: {
-          from: "organizations",
-          localField: "organization",
-          foreignField: "_id",
-          pipeline: [
-            {
-              $project: {
-                _id: 1,
-                "basicInfo.name": 1,
-              },
+    // -------------------------------------------------------
+    // Company Organizer lookup
+    // -------------------------------------------------------
+
+    pipeline.push({
+      $lookup: {
+        from: "users",
+        localField: "companyOrganizer",
+        foreignField: "_id",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              firstName: 1,
+              lastName: 1,
             },
-          ],
-          as: "organization",
-        },
-      },
-      {
-        $addFields: {
-          organization: {
-            $ifNull: [{ $arrayElemAt: ["$organization", 0] }, null],
           },
+        ],
+        as: "companyOrganizer",
+      },
+    });
+
+    pipeline.push({
+      $addFields: {
+        companyOrganizer: {
+          $ifNull: [
+            {
+              $arrayElemAt: ["$companyOrganizer", 0],
+            },
+            null,
+          ],
         },
       },
-    );
+    });
+
+    // -------------------------------------------------------
+    // Organization lookup
+    // -------------------------------------------------------
+
+    pipeline.push({
+      $lookup: {
+        from: "organizations",
+        localField: "organization",
+        foreignField: "_id",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              "basicInfo.name": 1,
+            },
+          },
+        ],
+        as: "organization",
+      },
+    });
+
+    pipeline.push({
+      $addFields: {
+        organization: {
+          $ifNull: [
+            {
+              $arrayElemAt: ["$organization", 0],
+            },
+            null,
+          ],
+        },
+      },
+    });
+
+    // -------------------------------------------------------
+    // Sorting
+    // -------------------------------------------------------
 
     if (sortBy && sortOrder) {
       const sortField =
@@ -155,79 +264,107 @@ const getMenuSubcategorys = async ({
             ? "status"
             : sortBy === "createdAt"
               ? "createdAt"
-              : "createdAt"; // Default sort field
+              : "createdAt";
+
       const sortDirection = sortOrder === "asc" ? 1 : -1;
-      pipeline.push({ $sort: { [sortField]: sortDirection } });
+
+      pipeline.push({
+        $sort: {
+          [sortField]: sortDirection,
+        },
+      });
     } else {
-      pipeline.push({ $sort: { createdAt: -1 } });
+      pipeline.push({
+        $sort: {
+          createdAt: -1,
+        },
+      });
     }
 
-    // Apply pagination + counts using $facet
+    // -------------------------------------------------------
+    // Pagination + total count
+    // -------------------------------------------------------
+
     pipeline.push({
       $facet: {
-        data: [{ $skip: skip }, ...(limit === 0 ? [] : [{ $limit: limit }])],
-        totalFiltered: [{ $count: "count" }],
+        data: [
+          {
+            $skip: skip,
+          },
+          ...(limit === 0
+            ? []
+            : [
+                {
+                  $limit: limit,
+                },
+              ]),
+        ],
+
+        totalFiltered: [
+          {
+            $count: "count",
+          },
+        ],
       },
     });
+
+    // -------------------------------------------------------
+    // Execute aggregation
+    // -------------------------------------------------------
 
     const result = await MenuSubcategory.aggregate(pipeline);
 
     const MenuSubcategorys = result[0]?.data || [];
-    const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
 
-    // Additional counts for meta (active/inactive/total by userId as creator)
-    const countFilters = [];
-    if (organization) {
-      countFilters.push(
-        nullAllowed
-          ? {
-              $or: [
-                { organization: { $in: organization } },
-                { organization: null },
-              ],
-            }
-          : { organization: { $in: organization } },
-      );
-    }
-    if (companyOrganizer) {
-      const companyOrganizerId = new mongoose.Types.ObjectId(companyOrganizer);
-      countFilters.push(
-        nullAllowed
-          ? {
-              $or: [
-                { companyOrganizer: companyOrganizerId },
-                { companyOrganizer: null },
-              ],
-            }
-          : { companyOrganizer: companyOrganizerId },
-      );
-    }
-    const combinedCountFilter = countFilters.length
-      ? { $and: countFilters }
-      : {};
+    const totalFiltered = result[0]?.totalFiltered?.[0]?.count || 0;
+
+    // -------------------------------------------------------
+    // Counts
+    // -------------------------------------------------------
+
+    const combinedCountFilter = buildScopeFilter();
 
     const [total, active, inactive] = await Promise.all([
       MenuSubcategory.countDocuments({
         ...combinedCountFilter,
-        status: { $ne: "deleted" },
+        status: {
+          $ne: "deleted",
+        },
       }),
+
       MenuSubcategory.countDocuments({
+        ...combinedCountFilter,
         status: "active",
-        ...combinedCountFilter,
       }),
+
       MenuSubcategory.countDocuments({
-        status: "inactive",
         ...combinedCountFilter,
+        status: "inactive",
       }),
     ]);
 
-    const meta = generateMeta(page, limit, totalFiltered);
-    meta.MenuSubcategorysCount = { total, active, inactive };
+    // -------------------------------------------------------
+    // Meta
+    // -------------------------------------------------------
 
-    return { MenuSubcategorys, meta };
+    const meta = generateMeta(page, limit, totalFiltered);
+
+    meta.MenuSubcategorysCount = {
+      total,
+      active,
+      inactive,
+    };
+
+    return {
+      MenuSubcategorys,
+      meta,
+    };
   };
 
-  // Only cache when the result is "stable" — no dynamic filters/sorting.
+  // ---------------------------------------------------------
+  // Cache
+  // ---------------------------------------------------------
+
   const isCacheable =
     !companyOrganizer &&
     !organization &&
@@ -239,19 +376,23 @@ const getMenuSubcategorys = async ({
   if (!isCacheable) {
     return computeMenuSubcategorys();
   }
+
   return cache({
     namespace: ACTIVE_MenuSubcategoryS_CACHE_KEY,
+
     params: {
       page,
       skip,
       limit,
       status: status ?? "all",
     },
+
     ttl: 60,
+
     fetchFn: computeMenuSubcategorys,
   });
 };
-const getMenuSubcategorysSummary = async ({
+const   getMenuSubcategorysSummary = async ({
   timezone,
   page,
   limit,

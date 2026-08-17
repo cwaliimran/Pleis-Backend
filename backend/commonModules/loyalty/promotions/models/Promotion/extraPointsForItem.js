@@ -1,8 +1,8 @@
 const Promotion = require("./BasePromotion");
 const mongoose = require("mongoose");
 
-const ProductSalePromotion = Promotion.discriminator(
-  "productSale",
+const ExtraPointsForItemPromotion = Promotion.discriminator(
+  "extraPointsForItem",
   new mongoose.Schema(
     {
       menuItem: {
@@ -10,10 +10,10 @@ const ProductSalePromotion = Promotion.discriminator(
         ref: "MenuItems",
         required: true,
       },
-      discountedPercent: { type: Number, required: true },
+      extraPoints: { type: Number, default: 0 },
     },
-    { _id: false }
-  )
+    { _id: false },
+  ),
 );
 
-module.exports = ProductSalePromotion;
+module.exports = ExtraPointsForItemPromotion;

@@ -5,7 +5,7 @@ const engagementEventSchema = new mongoose.Schema(
     entityType: {
       type: String,
       //users refers to company organizers
-      enum: ["organizations", "events", "users","rewards","challenges"],
+      enum: ["organizations", "events", "users","rewards","challenges","promotions"],
       required: true
     },
 

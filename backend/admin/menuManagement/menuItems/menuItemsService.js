@@ -396,6 +396,7 @@ const updateMenuItem = async (id, data, timezone) => {
     "allergens",
     "cuisine",
     "isRecommended",
+    "subCategory",
     "isTogo",
     "isRequiresOrderConfirmation",
   ];

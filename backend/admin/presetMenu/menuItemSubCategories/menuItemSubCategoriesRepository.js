@@ -92,9 +92,14 @@ const getMenuItemSubCategorys = async ({
               ? "createdAt"
               : "order"; // Default sort field
       const sortDirection = sortOrder === "asc" ? 1 : -1;
-      pipeline.push({ $sort: { [sortField]: sortDirection } });
+      const sortStage = { [sortField]: sortDirection };
+      if (sortField === "order") {
+        sortStage.updatedAt = 1;
+        sortStage._id = 1;
+      }
+      pipeline.push({ $sort: sortStage });
     } else {
-      pipeline.push({ $sort: { order: 1 } });
+      pipeline.push({ $sort: { order: 1, updatedAt: 1, _id: 1 } });
     }
 
     // Apply pagination + counts using $facet
@@ -228,49 +233,45 @@ const generateUniqueMenuItemSubCategoryCode = async () => {
 
 
 
-const reorderMenuItemSubCategory = async (movedId, newIndex, user) => {
+const reorderMenuItemSubCategory = async (movedId, newOrder) => {
   const session = await mongoose.startSession();
   session.startTransaction();
-  console.log("movedId", movedId, "newIndex", newIndex," user", user);
 
   try {
-    const moved = await MenuItemSubCategory.findOne(
-      { _id: new mongoose.Types.ObjectId(movedId), user },
+    const moved = await MenuItemSubCategory.findById(
+      new mongoose.Types.ObjectId(movedId),
       null,
       { session },
     );
 
-    if (!moved) throw new Error("Subcategory not found");
-
-    // include deleted so their slots aren't reused
-    const siblings = await MenuItemSubCategory.find(
-      { user, category: moved.category },
-      { _id: 1, order: 1 },
-      { session },
-    ).sort({ order: 1, createdAt: 1 });
-
-    const currentIndex = siblings.findIndex((s) => s._id.equals(movedId));
-    const targetIndex = Math.max(0, Math.min(newIndex, siblings.length - 1));
-
-    if (currentIndex === targetIndex) {
-      await session.commitTransaction();
-      session.endSession();
-      return true;
+    if (!moved || moved.status === "deleted") {
+      throw new Error("Subcategory not found");
     }
 
-    // snapshot the existing order values in sorted position — this is the pool
-    const orderPool = siblings.map((s) => s.order);
+    const siblings = await MenuItemSubCategory.find(
+      { user: moved.user, status: { $ne: "deleted" } },
+      { _id: 1, order: 1 },
+      { session },
+    ).sort({ order: 1, updatedAt: 1, _id: 1 });
+
+    const currentIndex = siblings.findIndex((s) => s._id.equals(moved._id));
+    if (currentIndex === -1) throw new Error("Subcategory not found");
 
     const [item] = siblings.splice(currentIndex, 1);
+    const targetIndex = Math.max(
+      0,
+      Math.min(Math.round(Number(newOrder)) - 1, siblings.length),
+    );
     siblings.splice(targetIndex, 0, item);
 
+    const now = new Date();
     const ops = siblings
-      .map((doc, i) => ({ doc, order: orderPool[i] }))
+      .map((doc, i) => ({ doc, order: i + 1 }))
       .filter(({ doc, order }) => doc.order !== order)
       .map(({ doc, order }) => ({
         updateOne: {
           filter: { _id: doc._id },
-          update: { $set: { order } },
+          update: { $set: { order, updatedAt: now } },
         },
       }));
 
@@ -281,7 +282,10 @@ const reorderMenuItemSubCategory = async (movedId, newIndex, user) => {
     await session.commitTransaction();
     session.endSession();
     await invalidate(ACTIVE_MenuItemSubCategoryS_CACHE_KEY);
-    return true;
+
+    moved.order = targetIndex + 1;
+    moved.updatedAt = now;
+    return moved;
   } catch (err) {
     await session.abortTransaction();
     session.endSession();
