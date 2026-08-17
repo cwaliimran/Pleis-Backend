@@ -6,6 +6,21 @@ const mongoose = require("mongoose");
 
 const normalizeTitle = (title = "") => String(title).trim().toLowerCase();
 
+const getComboItemTitleOptions = (item = {}) => {
+  const nestedTitle =
+    item?.menuItem && typeof item.menuItem === "object"
+      ? item.menuItem.title
+      : undefined;
+
+  return [
+    ...new Set(
+      [item?.title, nestedTitle]
+        .map((title) => normalizeTitle(title))
+        .filter(Boolean),
+    ),
+  ];
+};
+
 const menuItemsWithV2FieldsPipeline = [
   {
     $lookup: {
@@ -150,20 +165,25 @@ const comboLookupStages = [
  * standalone items matching EVERY combo component title (Item Name).
  */
 const attachApplicableMenus = async (combos = []) => {
-  if (!combos.length) return combos;
+
+  if (!combos.length) {
+    return combos;
+  }
 
   const plainCombos = combos.map((combo) =>
     typeof combo.toObject === "function" ? combo.toObject() : combo,
   );
 
   const requiredTitlesByCombo = plainCombos.map((combo) => {
-    const titles = (combo.menuItems || [])
-      .map((item) => normalizeTitle(item.title))
-      .filter(Boolean);
-    return [...new Set(titles)];
+    const rawMenuItems = combo.menuItems || [];
+    const titlesPerItem = rawMenuItems
+      .map((item) => getComboItemTitleOptions(item))
+      .filter((titles) => titles.length);
+
+    return titlesPerItem;
   });
 
-  const allTitles = [...new Set(requiredTitlesByCombo.flat())];
+  const allTitles = [...new Set(requiredTitlesByCombo.flat(2))];
 
   if (!allTitles.length) {
     return plainCombos.map((combo) => ({
@@ -220,6 +240,9 @@ const attachApplicableMenus = async (combos = []) => {
     },
   ]);
 
+  if (!matchingItems.length) {
+  }
+
   const menuIndex = new Map();
 
   for (const item of matchingItems) {
@@ -264,13 +287,20 @@ const attachApplicableMenus = async (combos = []) => {
 
     const applicableMenus = [];
 
-    for (const [, entry] of menuIndex) {
-      if (entry.creatorId !== creatorId) continue;
+    for (const [key, entry] of menuIndex) {
+      if (entry.creatorId !== creatorId) {
+        continue;
+      }
 
-      const hasAllComponents = requiredTitles.every((title) =>
-        entry.titles.has(title),
+      const missingTitles = requiredTitles.filter(
+        (titleOptions) =>
+          !titleOptions.some((title) => entry.titles.has(title)),
       );
-      if (!hasAllComponents) continue;
+      const hasAllComponents = missingTitles.length === 0;
+
+      if (!hasAllComponents) {
+        continue;
+      }
 
       applicableMenus.push({
         _id: entry.menu._id,
@@ -387,7 +417,6 @@ const getMenuItemsCombos = async ({
   const result = await MenuItemsCombos.aggregate(pipeline);
   const combos = await attachApplicableMenus(result[0]?.data || []);
   const totalFiltered = result[0]?.totalFiltered[0]?.count || 0;
-  console.log("combos", combos);
 
   const baseFilter = {
     ...(creator && { creator: new mongoose.Types.ObjectId(creator) }),

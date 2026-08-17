@@ -32,9 +32,8 @@ router.post("/", roleMiddleware(["admin"]), MenuItemSubCategoryRateLimiter, crea
 router.get("/code", roleMiddleware(["admin"]), MenuItemSubCategoryRateLimiter, getMenuItemSubCategoryCode);
 
 
-// Update an existing Promo Code
-router.put("/:id", roleMiddleware(["admin"]), updateMenuItemSubCategory);
 router.put("/order/:id", roleMiddleware(["admin"]), reorderMenuItemSubCategory);
+router.put("/:id", roleMiddleware(["admin"]), updateMenuItemSubCategory);
 
 // Delete a Promo Code
 router.delete("/:id", roleMiddleware(["admin"]), deleteMenuItemSubCategory);

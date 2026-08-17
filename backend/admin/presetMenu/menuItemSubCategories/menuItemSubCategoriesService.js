@@ -70,14 +70,7 @@ const updateMenuItemSubCategory = async (id, data) => {
     return { error: "MenuItemSubCategory_not_found" };
   }
 
-  // -----------------------------
-  // ALLOWED FIELDS
-  // -----------------------------
-  const allowedFields = ["name", "status", "category", "order"];
-
-  // -----------------------------
-  // APPLY UPDATE FIELDS
-  // -----------------------------
+  const allowedFields = ["name", "status", "category"];
   const updateData = {};
   for (const key of allowedFields) {
     if (data[key] !== undefined) {
@@ -85,13 +78,19 @@ const updateMenuItemSubCategory = async (id, data) => {
     }
   }
 
-  if (Object.keys(updateData).length === 0) {
-    return MenuItemSubCategory;
+  if (Object.keys(updateData).length > 0) {
+    Object.assign(MenuItemSubCategory, updateData);
+    await MenuItemSubCategory.save();
+    await invalidate(ACTIVE_MenuItemSubCategoryS_CACHE_KEY);
   }
 
-  Object.assign(MenuItemSubCategory, updateData);
-  await MenuItemSubCategory.save();
-  await invalidate(ACTIVE_MenuItemSubCategoryS_CACHE_KEY);
+  if (data.order !== undefined && data.order !== null && data.order !== "") {
+    const targetOrder = Number(data.order);
+    if (!Number.isFinite(targetOrder)) {
+      return { error: "invalid_order" };
+    }
+    return MenuItemSubCategoryRepo.reorderMenuItemSubCategory(id, targetOrder);
+  }
 
   return MenuItemSubCategory;
 };
@@ -109,11 +108,10 @@ const getMenuItemSubCategoryCode = async () => {
   return code;
 };
 
-const reorderMenuItemSubCategory = async (movedId, newOrder, user) => {
+const reorderMenuItemSubCategory = async (movedId, newOrder) => {
   const moved = await MenuItemSubCategoryRepo.reorderMenuItemSubCategory(
     movedId,
     newOrder,
-    user,
   );
   if (!moved) {
     throw new Error("MenuItemSubCategory_not_found");
