@@ -4,13 +4,6 @@ on:
   push:
     branches:
       - dev
-  pull_request:
-    branches:
-      - dev
-    types:
-      - opened
-      - synchronize
-      - reopened
 
   workflow_dispatch:
 
