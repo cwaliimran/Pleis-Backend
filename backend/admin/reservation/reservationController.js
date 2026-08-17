@@ -656,7 +656,7 @@ const updateUserReservation = async (req, res) => {
   }
   const currentUser = req.user;
   // Only admin, manager, or organizer can update other users' profiles
-  if (currentUser._id.toString() !== id && !["admin", "manager", "organizer"].includes(currentUser.userType)) {
+  if (currentUser._id.toString() !== id && !["admin", "staff", "manager", "organizer"].includes(currentUser.userType)) {
     return sendResponse({
       res,
       statusCode: 403,
