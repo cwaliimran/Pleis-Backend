@@ -334,12 +334,17 @@ const getUserInterestsIdsForRecommendation = async (userId) => {
   return UserInterests.findOne({ user: userId });
 };
 const getActiveSubscription = async (userId) => {
-  console.log("userId", userId);
   const user = await User.findById(new mongoose.Types.ObjectId(userId)).select(
     "activeSubscription.numberOfOrganizations",
   );
   if (!user) return 0;
   return user?.activeSubscription?.numberOfOrganizations || 0;
+};
+const getUserDetails = async (id) => {
+  let data = await User.findById(id)
+    .populate("companyDetails.suppliers")
+    .populate("companyDetails.category");
+  return data;
 };
 module.exports = {
   createUser,
@@ -356,4 +361,5 @@ module.exports = {
   getUserInterestsIdsForRecommendation,
   getUserDetailsForQRRepo,
   getActiveSubscription,
+  getUserDetails,
 };

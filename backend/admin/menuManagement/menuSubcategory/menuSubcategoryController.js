@@ -84,7 +84,7 @@ const getMenuSubcategorys = async (req, res) => {
       companyOrganizer = null;
     }
 
-    const SORT_FIELDS = ["title", "createdAt", "status"];
+    const SORT_FIELDS = ["title", "createdAt", "status","organization"];
     const SORT_ORDERS = ["asc", "desc"];
     if (
       (sortBy && !SORT_FIELDS.includes(sortBy)) ||
