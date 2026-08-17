@@ -1,4 +1,3 @@
-
 const {
   sendResponse,
   parsePaginationParams,
@@ -29,7 +28,7 @@ const createReservation = async (req, res) => {
     organizationId,
     timingSlots,
     allowPreOrderMenuItems = false,
-    bonusPoints = 0
+    bonusPoints = 0,
   } = req.body;
 
   const userId = req.user._id;
@@ -57,13 +56,15 @@ const createReservation = async (req, res) => {
         "organizationId",
       ],
     })
-  ) return;
+  )
+    return;
   if (ticketRequirement === true || ticketRequirement === "true") {
-    if (!validateParams(req, res, {
-      rawData: [
-        "ticketType"
-      ],
-    })) return;
+    if (
+      !validateParams(req, res, {
+        rawData: ["ticketType"],
+      })
+    )
+      return;
   }
 
   if (conditionType == "fixedPrice" || conditionType == "prepayOption") {
@@ -78,10 +79,11 @@ const createReservation = async (req, res) => {
           "needsConfirmation",
           "status",
           "organizationId",
-          "amount"
+          "amount",
         ],
       })
-    ) return;
+    )
+      return;
   }
 
   // Timing slots validation
@@ -124,13 +126,13 @@ const createReservation = async (req, res) => {
           const startUtc = convertTimezoneToUtc(
             `${dateBlock.date} ${slot.startTime}`,
             timezone,
-            "YYYY-MM-DDTHH:mm:ss.SSSZ hh:mm A"
+            "YYYY-MM-DDTHH:mm:ss.SSSZ hh:mm A",
           );
 
           const endUtc = convertTimezoneToUtc(
             `${dateBlock.date} ${slot.endTime}`,
             timezone,
-            "YYYY-MM-DDTHH:mm:ss.SSSZ hh:mm A"
+            "YYYY-MM-DDTHH:mm:ss.SSSZ hh:mm A",
           );
 
           // 2️⃣ Replace startTime and endTime with the UTC converted values
@@ -147,7 +149,6 @@ const createReservation = async (req, res) => {
 
       // Replace the date with UTC date (adjusted for timezone)
       dateBlock.date = convertToUtcDateOnly(dateBlock.date, timezone);
-
     }
   }
 
@@ -168,7 +169,7 @@ const createReservation = async (req, res) => {
     organizationId,
     allowPreOrderMenuItems,
     timingSlots: timingSlots || { enabled: false, dateTimeSlots: [] },
-    bonusPoints
+    bonusPoints,
   };
 
   try {
@@ -197,7 +198,6 @@ const createReservation = async (req, res) => {
   }
 };
 
-
 const getavailableReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status = "active", date, range, organizationsId, companyOrganizer } = req.query;
@@ -224,7 +224,7 @@ const getavailableReservations = async (req, res) => {
       userId,
       organizationsId,
       date,
-      range
+      range,
     });
 
     return sendResponse({
@@ -302,7 +302,7 @@ const updateReservation = async (req, res) => {
     timingSlots,
     organizationId,
     notes,
-    bonusPoints
+    bonusPoints,
   } = req.body;
   const userId = req.user._id;
   const timezone = req.user.timezone;
@@ -332,7 +332,7 @@ const updateReservation = async (req, res) => {
     status,
     organizationId,
     notes,
-    bonusPoints
+    bonusPoints,
   };
   // --- Validate timing slots if enabled ---
   if (data.timingSlots?.enabled) {
@@ -373,16 +373,8 @@ const updateReservation = async (req, res) => {
         }
 
         // Convert times to UTC
-        slot.startTime = convertTimezoneToUtc(
-          `${dateBlock.date} ${slot.startTime}`,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-        slot.endTime = convertTimezoneToUtc(
-          `${dateBlock.date} ${slot.endTime}`,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
+        slot.startTime = convertTimezoneToUtc(`${dateBlock.date} ${slot.startTime}`, timezone, "YYYY-MM-DD hh:mm A");
+        slot.endTime = convertTimezoneToUtc(`${dateBlock.date} ${slot.endTime}`, timezone, "YYYY-MM-DD hh:mm A");
       }
     }
   } else {
@@ -396,16 +388,8 @@ const updateReservation = async (req, res) => {
           if (!slot.startTime || !slot.endTime) continue;
 
           // Convert times to UTC
-          slot.startTime = convertTimezoneToUtc(
-            `${dateBlock.date} ${slot.startTime}`,
-            timezone,
-            "YYYY-MM-DD hh:mm A"
-          );
-          slot.endTime = convertTimezoneToUtc(
-            `${dateBlock.date} ${slot.endTime}`,
-            timezone,
-            "YYYY-MM-DD hh:mm A"
-          );
+          slot.startTime = convertTimezoneToUtc(`${dateBlock.date} ${slot.startTime}`, timezone, "YYYY-MM-DD hh:mm A");
+          slot.endTime = convertTimezoneToUtc(`${dateBlock.date} ${slot.endTime}`, timezone, "YYYY-MM-DD hh:mm A");
         }
       }
     }
@@ -482,19 +466,9 @@ const deleteReservation = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-
-
-
-
 const getUserReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status , date, range, organizationsId, companyOrganizer, reservationId } = req.query;
+  const { keyword, status, date, range, organizationsId, companyOrganizer, reservationId } = req.query;
 
   try {
     if (!organizationsId) {
@@ -545,18 +519,16 @@ const getUserReservations = async (req, res) => {
   }
 };
 
-
 const updateUserReservationStatus = async (req, res) => {
   const { id, value } = req.params;
-const changedBy = req.user._id;
+  const changedBy = req.user._id;
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
       objectIdFields: ["id"],
       enumFields: {
-        value: ["pendingPayment", "needsConfirmation", "confirmed", "checkedIn", "rejected", "cancelled", "completed",
-        ]
-      }
+        value: ["pendingPayment", "needsConfirmation", "confirmed", "checkedIn", "rejected", "cancelled", "completed"],
+      },
     })
   )
     return;
@@ -656,9 +628,7 @@ const updateUserReservation = async (req, res) => {
         });
       }
 
-
       for (const slot of dateBlock.timeSlots) {
-
         if (!slot.startTime || !slot.endTime) {
           return sendResponse({
             res,
@@ -668,24 +638,12 @@ const updateUserReservation = async (req, res) => {
         }
 
         // Convert times to UTC
-        slot.startTime = convertTimezoneToUtc(
-          `${dateBlock.date} ${slot.startTime}`,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
+        slot.startTime = convertTimezoneToUtc(`${dateBlock.date} ${slot.startTime}`, timezone, "YYYY-MM-DD hh:mm A");
 
-        slot.endTime = convertTimezoneToUtc(
-          `${dateBlock.date} ${slot.endTime}`,
-          timezone,
-          "YYYY-MM-DD hh:mm A"
-        );
-
-
+        slot.endTime = convertTimezoneToUtc(`${dateBlock.date} ${slot.endTime}`, timezone, "YYYY-MM-DD hh:mm A");
       }
-
     }
   }
-
 
   // Validate params
   if (
@@ -698,10 +656,7 @@ const updateUserReservation = async (req, res) => {
   }
   const currentUser = req.user;
   // Only admin, manager, or organizer can update other users' profiles
-  if (
-    currentUser._id.toString() !== id &&
-    !["admin", "manager", "organizer"].includes(currentUser.userType)
-  ) {
+  if (currentUser._id.toString() !== id && !["admin", "manager", "organizer"].includes(currentUser.userType)) {
     return sendResponse({
       res,
       statusCode: 403,
@@ -735,7 +690,6 @@ const updateUserReservation = async (req, res) => {
   }
 };
 
-
 const getReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let { keyword, status, date, range, organizationsId, companyOrganizer } = req.query;
@@ -750,7 +704,6 @@ const getReservations = async (req, res) => {
         translationKey: "companyOrganizer_or_organizationsId_is_required",
       });
     }
-
 
     const userId = companyOrganizer;
     const timezone = req.user.timezone;
@@ -767,7 +720,7 @@ const getReservations = async (req, res) => {
       userId,
       organizationsId,
       date,
-      range
+      range,
     });
 
     return sendResponse({
@@ -792,14 +745,15 @@ const getCalendarReservations = async (req, res) => {
   const { date, organization, companyOrganizer } = req.query;
 
   try {
-
-    if (!validateParams(req, res, {
-      queryParams: ["date"],
-      dateFields: {
-        date: "YYYY-MM-DD",
-      },
-    })) return;
-
+    if (
+      !validateParams(req, res, {
+        queryParams: ["date"],
+        dateFields: {
+          date: "YYYY-MM-DD",
+        },
+      })
+    )
+      return;
 
     if (
       (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
@@ -842,12 +796,7 @@ const copyUserReservationsController = async (req, res) => {
     const { reservations, dates } = req.body;
     const timezone = req.user.timezone;
 
-    if (
-      !Array.isArray(reservations) ||
-      reservations.length === 0 ||
-      !Array.isArray(dates) ||
-      dates.length === 0
-    ) {
+    if (!Array.isArray(reservations) || reservations.length === 0 || !Array.isArray(dates) || dates.length === 0) {
       return sendResponse({
         res,
         statusCode: 400,
@@ -855,13 +804,12 @@ const copyUserReservationsController = async (req, res) => {
       });
     }
 
-    const copiedReservations =
-      await reservationService.copyUserReservations({
-        reservations,
-        dates,
-        timezone,
-        copiedBy: req.user._id,
-      });
+    const copiedReservations = await reservationService.copyUserReservations({
+      reservations,
+      dates,
+      timezone,
+      copiedBy: req.user._id,
+    });
 
     return sendResponse({
       res,
@@ -870,8 +818,6 @@ const copyUserReservationsController = async (req, res) => {
       data: copiedReservations,
     });
   } catch (error) {
-  
-
     return sendResponse({
       res,
       statusCode: 500,
@@ -881,26 +827,27 @@ const copyUserReservationsController = async (req, res) => {
   }
 };
 
-
 const copyReservationSlotsController = async (req, res) => {
   try {
     const { reservationIds, targetDate, startTime, reservationType } = req.body;
     const timezone = req.user.timezone;
 
-    if (!validateParams(req, res, {
-      rawData: ["reservationIds", "targetDate", "startTime", "reservationType"],
-      dateFields: { targetDate: "YYYY-MM-DD", startTime: "hh:mm A" },
-    })) return;
+    if (
+      !validateParams(req, res, {
+        rawData: ["reservationIds", "targetDate", "startTime", "reservationType"],
+        dateFields: { targetDate: "YYYY-MM-DD", startTime: "hh:mm A" },
+      })
+    )
+      return;
 
-    const newReservation =
-      await reservationService.copyReservationSlots({
-        reservationIds,
-        targetDate,
-        startTime,
-        reservationType,
-        timezone,
-        copiedBy: req.user._id,
-      });
+    const newReservation = await reservationService.copyReservationSlots({
+      reservationIds,
+      targetDate,
+      startTime,
+      reservationType,
+      timezone,
+      copiedBy: req.user._id,
+    });
 
     return sendResponse({
       res,
@@ -909,7 +856,6 @@ const copyReservationSlotsController = async (req, res) => {
       data: newReservation,
     });
   } catch (error) {
-
     return sendResponse({
       res,
       statusCode: 500,
@@ -932,15 +878,15 @@ const changeUsersReservationsTiming = async (req, res) => {
           endTime: "hh:mm A",
         },
       })
-    ) return;
+    )
+      return;
 
-    const updated =
-      await reservationService.changeUsersReservationsTiming({
-        reservationIds,
-        startTime,
-        endTime,
-        timezone,
-      });
+    const updated = await reservationService.changeUsersReservationsTiming({
+      reservationIds,
+      startTime,
+      endTime,
+      timezone,
+    });
 
     return sendResponse({
       res,
@@ -966,7 +912,8 @@ const createReservationPreferences = async (req, res) => {
       rawData: ["reservationId", "preferences"],
       objectIdFields: ["reservationId"],
     })
-  ) return;
+  )
+    return;
 
   try {
     const result = await reservationService.createReservationPreferences({
@@ -992,12 +939,9 @@ const createReservationPreferences = async (req, res) => {
   }
 };
 
-
-
 const getReservationsV2 = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { status, date, organizationsId, companyOrganizer, reservationType, startTime } =
-    req.query;
+  let { status, date, organizationsId, companyOrganizer, reservationType, startTime } = req.query;
   try {
     const timezone = req.user.timezone;
     if (
@@ -1009,7 +953,7 @@ const getReservationsV2 = async (req, res) => {
         statusCode: 400,
         translationKey: "companyOrganizer_or_organizationsId_is_required",
       });
-    } 
+    }
     const resutl = await reservationService.getReservationsV2({
       page,
       limit,
@@ -1027,7 +971,7 @@ const getReservationsV2 = async (req, res) => {
       statusCode: 200,
       translationKey: "reservations_fetched_successfully",
       data: resutl.reservations,
-      meta: resutl.meta
+      meta: resutl.meta,
     });
   } catch (error) {
     return sendResponse({
