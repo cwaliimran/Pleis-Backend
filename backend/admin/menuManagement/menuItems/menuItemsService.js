@@ -152,37 +152,34 @@ const getMenuItems = async ({
   companyOrganizer,
   organization,
   sortBy,
-  sortOrder
+  sortOrder,
+  subCategory,
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let menuIds = [];
   if (organization) {
     menuIds = await getMenuIdsByOrganization(organization);
 
-
     if (!menuIds.length) {
       return {
         menuItems: [],
-        meta: generateMeta(page, limit, 0)
+        meta: generateMeta(page, limit, 0),
       };
     }
-  }
-  else if (companyOrganizer) {
+  } else if (companyOrganizer) {
     menuIds = await getMenuIdsByCompanyOrganizer(companyOrganizer);
 
     if (!menuIds.length) {
       return {
         menuItems: [],
-        meta: generateMeta(page, limit, 0)
+        meta: generateMeta(page, limit, 0),
       };
     }
   }
 
-
-
   // ✅ BASE MATCH (NO menu here)
   const baseMatch = {
-    ...(status ? { status } : { status: { $ne: "deleted" } })
+    ...(status ? { status } : { status: { $ne: "deleted" } }),
   };
 
   if (date) {
@@ -191,11 +188,14 @@ const getMenuItems = async ({
     end.setDate(start.getDate() + 1);
     baseMatch.createdAt = { $gte: start, $lt: end };
   }
+  if (subCategory) {
+    baseMatch.subCategory = new mongoose.Types.ObjectId(subCategory);
+  }
 
   if (keyword) {
     baseMatch.$or = [
       { title: { $regex: keyword, $options: "i" } },
-      { description: { $regex: keyword, $options: "i" } }
+      { description: { $regex: keyword, $options: "i" } },
     ];
   }
 
@@ -208,25 +208,21 @@ const getMenuItems = async ({
         from: "menus",
         localField: "menu",
         foreignField: "_id",
-        pipeline: [
-          { $project: { _id: 1, title: 1, organization: 1 } }
-        ],
-        as: "menu"
-      }
+        pipeline: [{ $project: { _id: 1, title: 1, organization: 1 } }],
+        as: "menu",
+      },
     },
     { $unwind: "$menu" },
     {
       $lookup: {
-        from: "menuitemcategories",
-        localField: "category",
+        from: "menusubcategories",
+        localField: "subCategory",
         foreignField: "_id",
-        pipeline: [
-          { $project: { _id: 1, title: 1, image: 1 } }
-        ],
-        as: "category"
-      }
+        pipeline: [{ $project: { _id: 1, title: 1 } }],
+        as: "subCategory",
+      },
     },
-    { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: "$subCategory", preserveNullAndEmptyArrays: true } },
     {
       $lookup: {
         from: "dayparts",
@@ -280,24 +276,22 @@ const getMenuItems = async ({
       },
     },
 
-
     // ✅ FILTER AFTER LOOKUP
     ...(menu
       ? [{ $match: { "menu._id": new mongoose.Types.ObjectId(menu) } }]
       : []),
 
     ...(menuIds.length
-      ? [{
-        $match: {
-          "menu._id": {
-            $in: menuIds.map(id => new mongoose.Types.ObjectId(id))
-          }
-        }
-      }]
+      ? [
+          {
+            $match: {
+              "menu._id": {
+                $in: menuIds.map((id) => new mongoose.Types.ObjectId(id)),
+              },
+            },
+          },
+        ]
       : []),
-
-
-
   ];
   if (sortBy && sortOrder) {
     const sortDirection = sortOrder === "asc" ? 1 : -1;
@@ -313,17 +307,17 @@ const getMenuItems = async ({
         $addFields: {
           sortValue: {
             $toLower: {
-              $ifNull: [sortFieldMap[sortBy], ""]
-            }
-          }
-        }
+              $ifNull: [sortFieldMap[sortBy], ""],
+            },
+          },
+        },
       });
 
       pipeline.push({
         $sort: {
           sortValue: sortDirection,
-          _id: -1
-        }
+          _id: -1,
+        },
       });
     } else {
       const sortFieldMap = {
@@ -336,36 +330,31 @@ const getMenuItems = async ({
       pipeline.push({
         $sort: {
           [sortField]: sortDirection,
-          _id: -1
-        }
+          _id: -1,
+        },
       });
     }
   } else {
     pipeline.push({
       $sort: {
-        createdAt: -1
-      }
+        createdAt: -1,
+      },
     });
   }
-  pipeline.push(
-    {
-      $facet: {
-        data: [
-          { $skip: skip },
-          ...(limit === 0 ? [] : [{ $limit: limit }])
-        ],
-        total: [{ $count: "count" }]
-      }
-    }
-  );
+  pipeline.push({
+    $facet: {
+      data: [{ $skip: skip }, ...(limit === 0 ? [] : [{ $limit: limit }])],
+      total: [{ $count: "count" }],
+    },
+  });
 
   const result = await MenuItems.aggregate(pipeline);
   const data = result[0]?.data || [];
   const total = result[0]?.total?.[0]?.count || 0;
 
   return {
-    menuItems: data.map(item => formatMenuItem(item, timezone)),
-    meta: generateMeta(page, limit, total)
+    menuItems: data.map((item) => formatMenuItem(item, timezone)),
+    meta: generateMeta(page, limit, total),
   };
 };
 

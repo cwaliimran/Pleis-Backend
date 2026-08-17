@@ -5,7 +5,13 @@ const rewardSchema = new mongoose.Schema(
   {
     rewardType: {
       type: String,
-      enum: ["points", "specialTicket", "menuItem", "customReward"],
+      enum: [
+        "points",
+        "specialTicket",
+        "menuItem",
+        "customReward",
+        "linkedReward",
+      ],
       default: "points",
     },
     rewardValue: { type: Number, default: 0 },
@@ -43,8 +49,13 @@ const rewardSchema = new mongoose.Schema(
 
     // menu item reward
     rewardMenuItem: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: [mongoose.Schema.Types.ObjectId],
       ref: "MenuItems",
+      default: [],
+    },
+    linkedReward: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Reward",
       default: null,
     },
 
@@ -55,7 +66,7 @@ const rewardSchema = new mongoose.Schema(
       description: { type: String, default: "" },
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 module.exports = rewardSchema;

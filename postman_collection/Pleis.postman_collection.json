@@ -28081,7 +28081,7 @@
                       }
                     },
                     "url": {
-                      "raw": "{{url}}admin/menu/items?companyOrganizer=6911c14b6fc7cbd864e745b6",
+                      "raw": "{{url}}admin/menu/items?companyOrganizer=69999ae3d659acac68cff2d4&subCategory=6a7ee46fb2616ee3ab09e63f",
                       "host": [
                         "{{url}}admin"
                       ],
@@ -28092,12 +28092,12 @@
                       "query": [
                         {
                           "key": "menu",
-                          "value": "6911c1cc6fc7cbd864e7466d",
+                          "value": "6a04111f4a6c733ef8273f46",
                           "disabled": true
                         },
                         {
                           "key": "keyword",
-                          "value": "up",
+                          "value": "fulltimeleave",
                           "disabled": true
                         },
                         {
@@ -28107,7 +28107,11 @@
                         },
                         {
                           "key": "companyOrganizer",
-                          "value": "6911c14b6fc7cbd864e745b6"
+                          "value": "69999ae3d659acac68cff2d4"
+                        },
+                        {
+                          "key": "subCategory",
+                          "value": "6a7ee46fb2616ee3ab09e63f"
                         }
                       ]
                     }
@@ -28214,7 +28218,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"title\": \"Karahi Ghost\",\n    \"description\": \"Hello this is karahi Ghost\",\n    \"basePrice\": 1000,\n    \"taxPercent\": 0,\n    \"type\": \"Drink\",\n    \"category\": \"6911c2456fc7cbd864e74745\",\n    \"menu\": \"69b7a5567fee06e491de30af\",\n    \"startTime\": null,\n    \"endTime\": null,\n    \"image\": \"4eba0b20-01af-4fc7-9efc-14ca622db599.webp\"\n}",
+                      "raw": "{\n    \"title\": \"Coca-Cola\",\n    \"description\": \"Use for any Coca-Cola branded products.\",\n    \"type\": \"fulltimeleave\",\n    \"subCategory\": \"6a7ee46fb2616ee3ab09e63f\",\n    \"basePrice\": 12,\n    \"taxPercent\": 25,\n    \"menuIds\": [\n        \"6a04111f4a6c733ef8273f46\",\n        \"6a0e90907da8c8885d72fdc7\"\n    ],\n    \"startTime\": null,\n    \"endTime\": null,\n    \"status\": \"active\",\n    \"presetType\": \"6a6c98bb0bbd1df2839e0d77\",\n    \"brand\": \"6a69b2a2153c9e330a86cf70\",\n    \"amountQuantity\": \"20\",\n    \"quantityType\": \"single\",\n    \"servingSize\": \"6a69b229153c9e330a86cdd4\",\n    \"availableDays\": [\n        \"sunday\",\n        \"saturday\",\n        \"friday\",\n        \"thursday\",\n        \"wednesday\",\n        \"tuesday\",\n        \"monday\"\n    ],\n    \"daypart\": [\n        \"6a69a7b77f10a6b80d697375\"\n    ],\n    \"dietTags\": [\n        \"6a69b372cb2f80960eb60bce\"\n    ],\n    \"allergens\": [\n        \"6a69b0b97846fdc68646ea08\"\n    ],\n    \"cuisine\": \"test\",\n    \"isRecommended\": true,\n    \"upSellItem\": \"true\",\n    \"isTogo\": true,\n    \"isRequiresOrderConfirmation\": true,\n    \"image\": \"1cab98e1-b802-41e5-bc6c-be10df24cdc4.jpg\",\n    \"companyOrganizer\": \"69999ae3d659acac68cff2d4\"\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -31290,12 +31294,12 @@
                         },
                         {
                           "key": "sortBy",
-                          "value": null,
+                          "value": "",
                           "disabled": true
                         },
                         {
                           "key": "sortOrdr",
-                          "value": null,
+                          "value": "",
                           "disabled": true
                         }
                       ]
@@ -31627,7 +31631,125 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\":\"trophy.png\",\n    \"title\": \"Buy 5 Burgers\",\n    \"description\": \"Order 5 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskValue\": 5,\n    \"taskMenuItem\": \"6911c3516aca10eb719d6f72\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"status\": \"active\",\n    \"repeatComplition\":\"false\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
+                      "raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\": \"trophy.png\",\n    \"title\": \"Buy 5 Burgers\",\n    \"description\": \"Order 5 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskValue\": 5,\n    \"taskMenuItem\": [\n        \"64f1a2b3c4d5e6f7a8b9c0d1\",\n        \"64f1a2b3c4d5e6f7a8b9c0d2\"\n    ],\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"status\": \"active\",\n    \"repeatComplition\": \"false\",\n    \"reward\": {\n        \"rewardType\": \"menuItem\",\n        \"rewardMenuItem\":[ \"6911c3516aca10eb719d6f72\"]\n    }\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{url}}admin/loyalty/challenges/",
+                      "host": [
+                        "{{url}}admin"
+                      ],
+                      "path": [
+                        "loyalty",
+                        "challenges",
+                        ""
+                      ]
+                    },
+                    "description": "{ \"message\": \"Invalid subscription type. Valid types are: sparkConnection, bloomAgainEssentials, healingHearts\"}"
+                  },
+                  "response": [
+                    {
+                      "name": "add - buy menu item",
+                      "originalRequest": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n    \"companyOrganizer\": \"68da7aa1e6f099d42e32da71\",\n    \"title\": \"Buy 2 Burgers\",\n    \"description\": \"Order 2 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n    \"status\": \"active\",\n    \"reward\": {\n        \"rewardType\": \"specialTicket\",\n        \"rewardValue\": 1\n    }\n}",
+                          "options": {
+                            "raw": {
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "url": {
+                          "raw": "{{url}}challenges/",
+                          "host": [
+                            "{{url}}challenges"
+                          ],
+                          "path": [
+                            ""
+                          ]
+                        }
+                      },
+                      "status": "Created",
+                      "code": 201,
+                      "_postman_previewlanguage": "Text",
+                      "header": [
+                        {
+                          "key": "X-Powered-By",
+                          "value": "Express"
+                        },
+                        {
+                          "key": "Access-Control-Allow-Origin",
+                          "value": "*"
+                        },
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json; charset=utf-8"
+                        },
+                        {
+                          "key": "Content-Length",
+                          "value": "508"
+                        },
+                        {
+                          "key": "ETag",
+                          "value": "W/\"1fc-ou00dxBe6WV1//c1DgrOc4f33uM\""
+                        },
+                        {
+                          "key": "Date",
+                          "value": "Sun, 28 Sep 2025 11:22:49 GMT"
+                        },
+                        {
+                          "key": "Connection",
+                          "value": "keep-alive"
+                        },
+                        {
+                          "key": "Keep-Alive",
+                          "value": "timeout=5"
+                        }
+                      ],
+                      "cookie": [],
+                      "body": "{\n    \"message\": \"Challenge created successfully\",\n    \"data\": {\n        \"title\": \"Buy 2 Burgers\",\n        \"description\": \"Order 2 burgers to earn rewards\",\n        \"taskType\": \"buyMenuItem\",\n        \"claimLimit\": 2,\n        \"endDate\": \"2025-12-30T19:00:00.000Z\",\n        \"tierLimit\": \"68d8f3b5d9a10a4e5d408a5c\",\n        \"status\": \"active\",\n        \"reward\": {\n            \"rewardType\": \"specialTicket\",\n            \"rewardValue\": 1\n        },\n        \"_id\": \"68d91a899e7c7d6dcd8439a7\",\n        \"taskMenuItem\": \"68d7ee19c9469f7d754b5c99\",\n        \"createdAt\": \"2025-09-28T11:22:49.632Z\",\n        \"updatedAt\": \"2025-09-28T11:22:49.632Z\",\n        \"__v\": 0,\n        \"id\": \"68d91a899e7c7d6dcd8439a7\"\n    }\n}"
+                    }
+                  ]
+                },
+                {
+                  "name": "add - buy menu item Copy",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    },
+                    {
+                      "listen": "prerequest",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n    \"companyOrganizer\": \"6911c14b6fc7cbd864e745b6\",\n    \"image\": \"trophy.png\",\n    \"title\": \"Buy 5 Burgers\",\n    \"description\": \"Order 5 burgers to earn rewards\",\n    \"taskType\": \"buyMenuItem\",\n    \"taskValue\": 5,\n    \"taskMenuItem\": [\n        \"64f1a2b3c4d5e6f7a8b9c0d1\",\n        \"64f1a2b3c4d5e6f7a8b9c0d2\"\n    ],\n    \"claimLimit\": 2,\n    \"endDate\": \"2025-12-31\",\n    \"tierLimit\": \"6911c4546aca10eb719d6fdb\",\n    \"status\": \"active\",\n    \"repeatComplition\": \"false\",\n    \"reward\": {\n        \"rewardType\": \"linkedReward\",\n        \"linkedReward\": \"6911c3516aca10eb719d6f72\"\n    }\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -34184,6 +34306,43 @@
               ]
             },
             {
+              "name": "referal",
+              "item": [
+                {
+                  "name": "get",
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": ""
+                    },
+                    "url": {
+                      "raw": "{{url}}admin/loyalty/referral/user?companyOrganizer=69999ae3d659acac68cff2d4",
+                      "host": [
+                        "{{url}}admin"
+                      ],
+                      "path": [
+                        "loyalty",
+                        "referral",
+                        "user"
+                      ],
+                      "query": [
+                        {
+                          "key": "companyOrganizer",
+                          "value": "69999ae3d659acac68cff2d4"
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
               "name": "points calculator",
               "event": [
                 {
@@ -36255,7 +36414,7 @@
                   "raw": ""
                 },
                 "url": {
-                  "raw": "{{url}}admin/reservations/v2/calender?date=2026-02-16&organization=69737d30297ca37e0f10813a",
+                  "raw": "{{url}}admin/reservations/v2/calender",
                   "host": [
                     "{{url}}admin"
                   ],
@@ -36267,11 +36426,13 @@
                   "query": [
                     {
                       "key": "date",
-                      "value": "2026-02-16"
+                      "value": "2026-02-16",
+                      "disabled": true
                     },
                     {
                       "key": "organization",
-                      "value": "69737d30297ca37e0f10813a"
+                      "value": "69737d30297ca37e0f10813a",
+                      "disabled": true
                     },
                     {
                       "key": "companyOrganizer",
@@ -45192,6 +45353,221 @@
           ]
         },
         {
+          "name": "menu Sub Category",
+          "item": [
+            {
+              "name": "create",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"organization\": \"64f1a2b3c4d5e6f7a8b9c0d1\", // optional \n  \"companyOrganizer\": \"64f1a2b3c4d5e6f7a8b9c0d2\", // optional\n  \"title\": \"Beverages\",\n  \"status\": \"active\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}admin/menu/sub-categories",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "menu",
+                    "sub-categories"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n//   \"organization\": \"64f1a2b3c4d5e6f7a8b9c0d1\", \n//   \"companyOrganizer\": \"64f1a2b3c4d5e6f7a8b9c0d2\",\n//   \"title\": \"Beverages\",\n  \"status\": \"inactive\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}admin/menu/sub-categories/:id",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "menu",
+                    "sub-categories",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{menuSubcategoryId}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "update Copy",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}admin/menu/sub-categories/:id",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "menu",
+                    "sub-categories",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "{{menuSubcategoryId}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "get",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const response = pm.response.json();",
+                      "",
+                      "if (response.data && response.data.length > 0) {",
+                      "    const menuSubcategoryId = response.data[0]._id;",
+                      "    pm.collectionVariables.set(\"menuSubcategoryId\", menuSubcategoryId);",
+                      "    console.log(\"Saved menuSubcategoryId:\", menuSubcategoryId);",
+                      "} else {",
+                      "    console.warn(\"No data found in response to save menuSubcategoryId\");",
+                      "}",
+                      "",
+                      "pm.test(\"Response has data array\", function () {",
+                      "    pm.expect(response.data).to.be.an(\"array\");",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}admin/menu/sub-categories?status=inactive",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "menu",
+                    "sub-categories"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "inactive"
+                    },
+                    {
+                      "key": "keyword",
+                      "value": "hello",
+                      "type": "text",
+                      "disabled": true
+                    },
+                    {
+                      "key": "sortBy",
+                      "value": "title",
+                      "description": "\"title\", \"createdAt\", \"status\"",
+                      "disabled": true
+                    },
+                    {
+                      "key": "sortOrder",
+                      "value": "asc",
+                      "disabled": true
+                    },
+                    {
+                      "key": "summary",
+                      "value": "true",
+                      "disabled": true
+                    },
+                    {
+                      "key": "organization",
+                      "value": "69737d30297ca37e0f10813a,69737d30297ca37e0f10813a",
+                      "disabled": true
+                    },
+                    {
+                      "key": "companyOrganizer",
+                      "value": "69803c6e926edf50d75db2ec",
+                      "disabled": true
+                    },
+                    {
+                      "key": "isNullAllowed",
+                      "value": "false",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
           "name": "Dashboard",
           "request": {
             "method": "GET",
@@ -47341,6 +47717,10 @@
     },
     {
       "key": "presetTyId",
+      "value": ""
+    },
+    {
+      "key": "menuSubcategoryId",
       "value": ""
     }
   ]

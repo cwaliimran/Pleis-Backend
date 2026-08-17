@@ -105,10 +105,11 @@ module.exports = {
   "@MenuItemSubCategoriesModel": "backend/admin/presetMenu/menuItemSubCategories/MenuItemSubCategories.js",
   "@MenuItemSubCategoryTypeModel": "backend/admin/presetMenu/menuItemSubCategoryType/MenuItemSubCategoryType.js",
   "@PresetTypeModel": "backend/admin/presetMenu/presetType/PresetType.js",
-  "@MenuItemsCombosModel": "backend/commonModules/menuManagement/menuItemsCombos/MenuItemsCombos.js",
-  "@PaymentMethodModel": "backend/admin/inAppOrdering/settings/PaymentMethod/PaymentMethod.js",
-  "@ReservationPreferencesModel": "backend/admin/reservation/reservationPreferences/ReservationPreferences.js",
-  "@ReservationTypeModel": "backend/admin/reservation/reservationType/ReservationType.js",
-  "@OccasionModel": "backend/admin/reservation/occasion/Occasion.js",
-  "@backend": "backend",
+  "@MenuItemsCombosModel":
+    "backend/commonModules/menuManagement/menuItemsCombos/MenuItemsCombos.js",
+    "@PaymentMethodModel": "backend/admin/inAppOrdering/settings/PaymentMethod/PaymentMethod.js",
+    "@ReservationPreferencesModel": "backend/admin/reservation/reservationPreferences/ReservationPreferences.js",
+    "@ReservationTypeModel": "backend/admin/reservation/reservationType/ReservationType.js",
+    "@OccasionModel": "backend/admin/reservation/occasion/Occasion.js",
+  "@MenuSubcategoryModel": "backend/admin/menuManagement/menuSubcategory/MenuSubcategory.js",
 };
