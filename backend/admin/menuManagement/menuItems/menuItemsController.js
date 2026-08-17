@@ -43,7 +43,7 @@ const createMenuItem = async (req, res) => {
 
   if (
     !validateParams(req, res, {
-      rawData: ["title", "type", "basePrice", "menuIds"],
+      rawData: ["title", "basePrice", "menuIds"],
       objectIdFields: [
         "menuIds",
         "subCategory",

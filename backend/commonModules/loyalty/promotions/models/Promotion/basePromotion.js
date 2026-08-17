@@ -12,7 +12,13 @@ const basePromotionsSchema = new mongoose.Schema(
     promotionType: {
       type: String,
       required: true,
-      enum: ["happyHour", "claimPromotion", "buyMenuItemPromotion", "productSale"],
+      enum: [
+        "happyHour",
+        "claimPromotion",
+        "buyMenuItemPromotion",
+        "productSale",
+        "extraPointsForItem",
+      ],
     },
 
     startDate: { type: Date, default: null }, //contains date/time in happyHour case otherwise just date
@@ -37,9 +43,8 @@ const basePromotionsSchema = new mongoose.Schema(
       occurrenceIndex: {
         type: Number,
         default: 1,
-      }
+      },
     },
-
 
     tierLimit: {
       type: mongoose.Schema.Types.ObjectId,
@@ -58,18 +63,21 @@ const basePromotionsSchema = new mongoose.Schema(
       enum: ["active", "inactive", "completed", "deleted"],
       default: "active",
     },
-
+    startTime: { type: String, default: null },
+    endTime: { type: String, default: null },
+    activeDays: {
+      type: [String],
+      enum: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+      default: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+    },
   },
-  { timestamps: true, discriminatorKey: "promotionType" }
+  { timestamps: true, discriminatorKey: "promotionType" },
 );
 
-basePromotionsSchema.index(
-  {
-    companyOrganizer: 1,
-    "recurringMeta.parentPromotion": 1,
-    // startDate: 1,
-  },
-);
-
+basePromotionsSchema.index({
+  companyOrganizer: 1,
+  "recurringMeta.parentPromotion": 1,
+  // startDate: 1,
+});
 
 module.exports = mongoose.model("Promotion", basePromotionsSchema);

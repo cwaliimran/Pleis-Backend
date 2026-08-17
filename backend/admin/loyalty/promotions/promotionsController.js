@@ -32,6 +32,12 @@ const create = async (req, res) => {
     rawData.push("menuItem", "extraPoints")
     objectIdFields.push("menuItem")
   }
+    if (req.body.promotionType === "extraPointsForItem") {
+      dateFields.startDate = "YYYY-MM-DD";
+      dateFields.endDate = "YYYY-MM-DD";
+      rawData.push("menuItem", "extraPoints");
+      objectIdFields.push("menuItem");
+    }
   if (req.body.promotionType === "productSale") {
     dateFields.startDate = "YYYY-MM-DD"
     dateFields.endDate = "YYYY-MM-DD"
@@ -43,6 +49,11 @@ const create = async (req, res) => {
     dateFields.endDate = "YYYY-MM-DD"
     rawData.push("reward", "claimPoints")
     objectIdFields.push("reward")
+  }
+  if(startTime && endTime){
+    dateFields.startTime = "hh:mm A"
+    dateFields.endTime = "hh:mm A"
+    rawData.push("startTime", "endTime")
   }
 
   if (!validateParams(req, res, {
