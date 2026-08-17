@@ -172,6 +172,7 @@ const getWithFilters = async (
         from: "menuitems",
         localField: "menuItem",
         foreignField: "_id",
+        pipeline: [{ $project: { _id: 1, title: 1 } }],
         as: "menuItem",
       },
     },
@@ -195,9 +196,14 @@ const getWithFilters = async (
         },
         menuItem: {
           $cond: [
-            { $in: ["$promotionType", ["buyMenuItemPromotion", "productSale"]] },
-            { $arrayElemAt: ["$menuItem", 0] },
-            null,
+            {
+              $in: [
+                "$promotionType",
+                ["buyMenuItemPromotion", "productSale", "extraPointsForItem"],
+              ],
+            },
+            "$menuItem",
+            [],
           ],
         },
         tierLimit: {
@@ -215,7 +221,7 @@ const getWithFilters = async (
         descriptionSort: 0,
         promotionTypeSort: 0,
       },
-    }
+    },
   );
 
   return Promotion.aggregate(pipeline).allowDiskUse(true);

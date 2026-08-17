@@ -14,7 +14,6 @@ const basePromotionsSchema = new mongoose.Schema(
       required: true,
       enum: [
         "happyHour",
-        "claimPromotion",
         "buyMenuItemPromotion",
         "productSale",
         "extraPointsForItem",
@@ -66,9 +65,22 @@ const basePromotionsSchema = new mongoose.Schema(
     startTime: { type: String, default: null },
     endTime: { type: String, default: null },
     activeDays: {
-      type: [String],
-      enum: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-      default: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+      type: {
+        mode: {
+          type: String,
+          enum: ["all", "selective"],
+          default: "all",
+        },
+        days: {
+          type: [String],
+          enum: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+          default: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+        },
+      },
+      default: () => ({
+        mode: "all",
+        days: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+      }),
     },
   },
   { timestamps: true, discriminatorKey: "promotionType" },
