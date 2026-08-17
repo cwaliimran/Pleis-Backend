@@ -48,7 +48,6 @@ const createMenuItem = async (req, res) => {
         "menuIds",
         "subCategory",
         "presetType",
-        "brand",
         "servingSize",
         "daypart",
         "dietTags",
