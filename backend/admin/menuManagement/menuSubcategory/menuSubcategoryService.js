@@ -72,8 +72,8 @@ const updateMenuSubcategory = async (id, data) => {
     "organization",
     "companyOrganizer",
     "status",
+    "order",
   ];
-
 
   // -----------------------------
   // APPLY UPDATE FIELDS
@@ -99,6 +99,14 @@ const updateMenuSubcategory = async (id, data) => {
     return MenuSubcategoryRepo.reorderMenuSubcategory(id, targetOrder);
   }
 
+  if (data.order !== undefined && data.order !== null && data.order !== "") {
+    const targetOrder = Number(data.order);
+    if (!Number.isFinite(targetOrder)) {
+      return { error: "invalid_order" };
+    }
+    return MenuSubcategoryRepo.reorderMenuSubCategory(id, targetOrder);
+  }
+
   return MenuSubcategory;
 };
 
@@ -110,21 +118,20 @@ const deleteMenuSubcategory = async (id) => {
   return true;
 };
 
-const reorderMenuSubcategory = async (movedId, newOrder) => {
-  const moved = await MenuSubcategoryRepo.reorderMenuSubcategory(
+const reorderMenuSubCategory = async (movedId, newOrder) => {
+  const moved = await MenuSubcategoryRepo.reorderMenuSubCategory(
     movedId,
     newOrder,
   );
   if (!moved) {
-    throw new Error("MenuSubcategory_not_found");
+    throw new Error("MenuItemSubCategory_not_found");
   }
   return moved;
 };
-
 module.exports = {
   createMenuSubcategory,
   getMenuSubcategorys,
   updateMenuSubcategory,
   deleteMenuSubcategory,
-  reorderMenuSubcategory,
+  reorderMenuSubCategory,
 };

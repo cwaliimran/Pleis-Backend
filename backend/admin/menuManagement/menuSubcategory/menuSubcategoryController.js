@@ -11,7 +11,7 @@ const {
 const MenuSubcategoryService = require("./menuSubcategoryService");
 
 const createMenuSubcategory = async (req, res) => {
-  let { title, status = "active", organization, companyOrganizer, order = 0 } = req.body;
+  let { title, status = "active", organization, companyOrganizer,order } = req.body;
   const userType = req.user.userType;
   if (userType !== "admin") {
     if (!organization) {
@@ -235,7 +235,7 @@ const deleteMenuSubcategory = async (req, res) => {
     });
   }
 };
-const reorderMenuSubcategory = async (req, res) => {
+const reorderMenuSubCategory = async (req, res) => {
   const { id } = req.params;
   const { newOrder } = req.body;
 
@@ -257,7 +257,7 @@ const reorderMenuSubcategory = async (req, res) => {
   }
 
   try {
-    const reordered = await MenuSubcategoryService.reorderMenuSubcategory(
+    const reordered = await MenuSubcategoryService.reorderMenuSubCategory(
       id,
       targetOrder,
     );
@@ -290,5 +290,5 @@ module.exports = {
   getMenuSubcategorys,
   updateMenuSubcategory,
   deleteMenuSubcategory,
-  reorderMenuSubcategory,
+  reorderMenuSubCategory,
 };

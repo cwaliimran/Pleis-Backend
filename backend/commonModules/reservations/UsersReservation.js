@@ -38,7 +38,7 @@ const UserReservationsSchema = new mongoose.Schema(
     reservationType: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "ReservationType",
-      required: true,
+      default: null,
     },
     partySize: {
       type: Number,
@@ -82,7 +82,6 @@ const UserReservationsSchema = new mongoose.Schema(
       ref: "User", // Reference to the "User" model
       required: true, // Assuming a user is required for each reservation
     },
-
     timingSlots: {
       dateTimeSlots: {
         type: [
@@ -98,6 +97,10 @@ const UserReservationsSchema = new mongoose.Schema(
         ],
         default: [],
       },
+    },
+    bookingDuration: {
+      type: String,
+      default: "slots",
     },
     firstName: { type: String, default: "" },
     lastName: { type: String, default: "" },

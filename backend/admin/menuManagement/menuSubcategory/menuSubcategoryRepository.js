@@ -291,17 +291,9 @@ const getMenuSubcategorys = async ({
                 ? "organization.basicInfo.name"
                 : sortBy === "companyOrganizer"
                   ? "companyOrganizer.firstName"
-                  : sortBy === "order"
-                    ? "order"
-                    : "order";
+                  : "order"; // Default to order if sortBy is unrecognized
 
       const sortDirection = sortOrder === "asc" ? 1 : -1;
-      const sortStage = { [sortField]: sortDirection };
-      if (sortField === "order") {
-        sortStage.updatedAt = 1;
-        sortStage._id = 1;
-      }
-
       pipeline.push({
         $sort: sortStage,
       });
@@ -309,8 +301,6 @@ const getMenuSubcategorys = async ({
       pipeline.push({
         $sort: {
           order: 1,
-          updatedAt: 1,
-          _id: 1,
         },
       });
     }
@@ -509,7 +499,7 @@ const findByIdAndUpdate = async (id, data) => {
   return MenuSubcategory.findByIdAndUpdate(id, data, { new: true });
 };
 
-const reorderMenuSubcategory = async (movedId, newOrder) => {
+const reorderMenuSubCategory = async (movedId, newOrder) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -525,7 +515,7 @@ const reorderMenuSubcategory = async (movedId, newOrder) => {
     }
 
     const siblings = await MenuSubcategory.find(
-      buildSiblingFilter(moved),
+      { user: moved.user, status: { $ne: "deleted" } },
       { _id: 1, order: 1 },
       { session },
     ).sort({ order: 1, updatedAt: 1, _id: 1 });
@@ -568,12 +558,11 @@ const reorderMenuSubcategory = async (movedId, newOrder) => {
     throw err;
   }
 };
-
 module.exports = {
   createMenuSubcategory,
   getMenuSubcategorys,
   findMenuSubcategoryById,
   findByIdAndUpdate,
   getMenuSubcategorysSummary,
-  reorderMenuSubcategory,
+  reorderMenuSubCategory,
 };
