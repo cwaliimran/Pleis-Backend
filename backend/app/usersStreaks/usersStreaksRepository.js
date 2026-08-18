@@ -12,12 +12,8 @@ const {
   CHECKIN_COOLDOWN_MINUTES,
 } = require("./configs/streakSettings");
 const { default: mongoose } = require("mongoose");
-const {
-  resolveChallengeByTaskTypeService,
-} = require("../loyalty/challengesOrders/challengeOrdersService");
-const {
-  createTransactionService,
-} = require("../userWalletService/transactions/services/unifiedTransactionsService");
+const { resolveChallengeByTaskTypeService } = require("../loyalty/challengesOrders/challengeOrdersService");
+const { createTransactionService } = require("../userWalletService/transactions/services/unifiedTransactionsService");
 const { fireAndForget } = require("../../helperUtils/responseUtil");
 const { getActiveEventsForOrg } = require("../../admin/events/eventRepository");
 
@@ -59,7 +55,6 @@ function getPeriodGap(lastVisitAt, now, countBase) {
   const diffMs = curr.getTime() - prev.getTime();
   const diffHours = diffMs / (1000 * 60 * 60);
   const diffDays = diffHours / 24;
-
 
   if (diffMs < 0) {
     return 0;
@@ -106,11 +101,7 @@ function getPeriodGap(lastVisitAt, now, countBase) {
   // 1 = month length + 24 hours grace
   // 2 = beyond the grace period
   if (countBase === "month") {
-    const daysInLastMonth = new Date(
-      prev.getFullYear(),
-      prev.getMonth() + 1,
-      0,
-    ).getDate();
+    const daysInLastMonth = new Date(prev.getFullYear(), prev.getMonth() + 1, 0).getDate();
 
     const MONTH = daysInLastMonth * ONE_DAY;
 
@@ -166,7 +157,6 @@ function computeStreakUpdate(streakRule, existingStreak, now = new Date()) {
   }
 
   const gap = getPeriodGap(existingStreak.lastVisitAt, now, countBase);
-
 
   let { visits, streak, longestStreak } = existingStreak;
 
@@ -239,7 +229,6 @@ const createUsersStreak = async (data) => {
     );
     const result = computeStreakUpdate(streakRule, existingStreak, new Date());
 
-
     if (result.isNew) {
       const created = new UsersStreaks({ ...data, ...result });
       await created.save({ session });
@@ -260,17 +249,8 @@ const createUsersStreak = async (data) => {
 };
 
 // Get all with filters, sorted by 'order' ascending and then 'createdAt' descending
-const getUsersStreaksWithFilters = async (
-  filter,
-  skip,
-  limit,
-  sort = { createdAt: -1 },
-  selectFields = null,
-) => {
-  const query = UsersStreaks.find(filter)
-    .populate("user")
-    .populate("companyOrganizer")
-    .sort(sort);
+const getUsersStreaksWithFilters = async (filter, skip, limit, sort = { createdAt: -1 }, selectFields = null) => {
+  const query = UsersStreaks.find(filter).populate("user").populate("companyOrganizer").sort(sort);
 
   if (selectFields) query.select(selectFields); // apply select dynamically
   if (limit > 0) query.skip(skip).limit(limit);
@@ -289,9 +269,7 @@ const getUsersStreaksCounts = async (query) => {
 
 // Find by ID
 const findUsersStreakById = async (id) => {
-  return UsersStreaks.findById(id)
-    .populate("user")
-    .populate("companyOrganizer");
+  return UsersStreaks.findById(id).populate("user").populate("companyOrganizer");
 };
 
 // Update and save
@@ -307,9 +285,7 @@ const deleteUsersStreakById = async (usersStreak) => {
 
 //findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
-  return UsersStreaks.findByIdAndUpdate(id, data, { new: true })
-    .populate("user")
-    .populate("companyOrganizer");
+  return UsersStreaks.findByIdAndUpdate(id, data, { new: true }).populate("user").populate("companyOrganizer");
 };
 
 const checkoutUsersStreak = async (data) => {
@@ -319,14 +295,14 @@ const checkoutUsersStreak = async (data) => {
   session.startTransaction();
 
   try {
-    const userStreak = await UsersStreaks.findOne(
-      { user: userId, companyOrganizer, organization },
-      {},
-      { session },
-    );
+    const userStreak = await UsersStreaks.findOne({ user: userId, companyOrganizer, organization }, {}, { session });
 
     if (!userStreak) {
-      throw new Error("No active check-in found for this organization.");
+      return {
+        message: "Checkout successful.",
+        organization,
+      };
+      // throw new Error("No active check-in found for this organization.");
     }
 
     // ✅ Remove cooldown trigger
@@ -350,9 +326,7 @@ const checkoutUsersStreak = async (data) => {
 
 //get user streaks by organization
 const getUserOrganizationStreak = async (userId, organization) => {
-  return UsersStreaks.findOne({ user: userId, organization })
-    .sort({ streak: -1 })
-    .limit(1);
+  return UsersStreaks.findOne({ user: userId, organization }).sort({ streak: -1 }).limit(1);
 };
 
 module.exports = {

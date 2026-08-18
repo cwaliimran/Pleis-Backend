@@ -9,7 +9,7 @@ router.use(roleMiddleware(["staff"]));
 router.use("/organizations", require("../staff/organizations/organizationRoutes"));
 //menue items
 router.use("/menu-items", require("../staff/menuItemsAndOrdering/menuItems/menuItemsRoutes"));
-// router.use("/menu/orders", require("../app/menuItemsAndOrdering/orders/orderRoutes"));
+router.use("/menu/orders", require("../app/menuItemsAndOrdering/orders/orderRoutes"));
 //in app ordering
 router.use("/in-app-ordering", require("../staff/menuItemsAndOrdering/ordermanagement/inAppOrderingRoutes"));
 //transactions and points

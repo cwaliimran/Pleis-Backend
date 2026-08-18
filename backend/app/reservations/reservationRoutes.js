@@ -7,6 +7,7 @@ const {
   transferReservation,
   acceptReservationChange,
   cancelReservation,
+  getReservationSlots,
 } = require("./reservationController");
 const createRateLimiter = require("../../helperUtils/rateLimiter");
 const auth = require("../../middlewares/authMiddleware");
@@ -38,6 +39,7 @@ router.get("/reservation-types", apiRateLimiter, getReservationTypes);
 router.get("/occasion", apiRateLimiter, getOccasion);
 router.get("/v2/calender", apiRateLimiter, getReservationsV2Calender);
 
+router.get("/slots", apiRateLimiterDetails, getReservationSlots);
 //get Reservation details
 router.get("/details/:id", apiRateLimiterDetails, getUserReservationDetails);
 
