@@ -318,7 +318,7 @@ const updateMenu = async (id, data) => {
       await Menus.updateMany(
         {
           organization: orgId,
-          status: { $ne: "deleted" },
+          status: "active",
           _id: { $ne: menuId },
         },
         { $set: { status: "inactive" } },
@@ -375,7 +375,7 @@ const getTimezoneDateTime = (timezone = "Asia/Karachi") => {
   };
 };
 
-const duplicateMenuAndItems = async (menuId, organization, timezone,name) => {
+const duplicateMenuAndItems = async (menuId, organization, timezone, name) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 

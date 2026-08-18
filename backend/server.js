@@ -55,6 +55,8 @@ const connectToDB = require("./helperUtils/server-setup");
 const { backupMongoDB } = require("./helperUtils/dataBaseBackup");
 const { getRedisClient } = require("./config/redis/redisConfig");
 const { startCrons } = require("./config/cron");
+require('./bullmq');
+
 
 /**
  * ------------------------------------------------

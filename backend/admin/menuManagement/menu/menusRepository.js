@@ -3,7 +3,20 @@ const Menus = require("@MenusModel");
 const { getOrganizationIdsByCompanyOrganizer } = require("../../organizations/organizationRepository");
 const { default: mongoose } = require("mongoose");
 const MenuItems = require("@MenuItemsModel");
+const { activeMenuQueue } = require("../../../bullmq/queues");
 
+async function scheduleMenuActivation(organizationId, menuId, startDate) {
+  const delay = new Date(startDate).getTime() - Date.now();
+
+  await activeMenuQueue.add(
+    "activate-menu",
+    { organizationId, menuId },
+    {
+      delay: Math.max(delay, 0),
+      jobId: `activate-menu-${menuId}`,
+    },
+  );
+}
 // Create menu in a transaction and update organization
 
 const createMenu = async (data) => {
@@ -11,7 +24,7 @@ const createMenu = async (data) => {
   session.startTransaction();
   try {
     // Only deactivate old menus if organization is provided
-    if (data.organization) {
+    if (data.status === "active" && data.organization) {
       await Menus.updateMany(
         { organization: data.organization, status: "active" },
         { $set: { status: "inactive" } },
@@ -22,6 +35,10 @@ const createMenu = async (data) => {
     // Create new menu
     const menu = new Menus(data);
     await menu.save({ session });
+    if (data.startDate) {
+      await scheduleMenuActivation(data.organization, menu._id, data.startDate);
+    }
+
 
     // Commit transaction
     await session.commitTransaction();
