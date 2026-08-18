@@ -25,7 +25,11 @@ router.post("/", roleMiddleware(["admin", "organizer"]), MenuSubcategoryRateLimi
 router.get("/", roleMiddleware(["admin", "organizer"]), MenuSubcategoryRateLimiter, getMenuSubcategorys);
 
 
-router.put("/order/:id", roleMiddleware(["admin", "organizer"]), reorderMenuSubcategory);
+router.put(
+  "/order/:id",
+  roleMiddleware(["admin", "organizer"]),
+  reorderMenuSubCategory,
+);
 router.put("/:id", roleMiddleware(["admin", "organizer"]), MenuSubcategoryRateLimiter, updateMenuSubcategory);
 router.put("/order/:id", roleMiddleware(["admin"]), reorderMenuSubCategory);
 
