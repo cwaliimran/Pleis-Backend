@@ -85,13 +85,19 @@ const updateMenuSubcategory = async (id, data) => {
     }
   }
 
-  if (Object.keys(updateData).length === 0) {
-    return MenuSubcategory;
+  if (Object.keys(updateData).length > 0) {
+    Object.assign(MenuSubcategory, updateData);
+    await MenuSubcategory.save();
+    await invalidate(ACTIVE_MenuSubcategoryS_CACHE_KEY);
   }
 
-  Object.assign(MenuSubcategory, updateData);
-  await MenuSubcategory.save();
-  await invalidate(ACTIVE_MenuSubcategoryS_CACHE_KEY);
+  if (data.order !== undefined && data.order !== null && data.order !== "") {
+    const targetOrder = Number(data.order);
+    if (!Number.isFinite(targetOrder)) {
+      return { error: "invalid_order" };
+    }
+    return MenuSubcategoryRepo.reorderMenuSubcategory(id, targetOrder);
+  }
 
   if (data.order !== undefined && data.order !== null && data.order !== "") {
     const targetOrder = Number(data.order);

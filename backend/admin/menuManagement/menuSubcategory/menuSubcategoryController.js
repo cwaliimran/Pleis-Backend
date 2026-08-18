@@ -85,7 +85,7 @@ const getMenuSubcategorys = async (req, res) => {
       companyOrganizer = null;
     }
 
-    const SORT_FIELDS = ["title", "createdAt", "status","organization"];
+    const SORT_FIELDS = ["title", "createdAt", "status", "organization", "order"];
     const SORT_ORDERS = ["asc", "desc"];
     if (
       (sortBy && !SORT_FIELDS.includes(sortBy)) ||
@@ -138,14 +138,27 @@ const getMenuSubcategorys = async (req, res) => {
 };
 const updateMenuSubcategory = async (req, res) => {
   const { id } = req.params;
-  let { organization, companyOrganizer, title, status,order } = req.body;
+  let { organization, companyOrganizer, title, status, order } = req.body;
+
+  if (order !== undefined && order !== null && order !== "") {
+    order = Number(order);
+    if (!Number.isFinite(order)) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_order",
+      });
+    }
+  } else {
+    order = undefined;
+  }
 
   let data = {
     organization,
     companyOrganizer,
     title,
     status,
-    order
+    order,
   };
 
   try {
@@ -252,14 +265,14 @@ const reorderMenuSubCategory = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "MenuItemSubCategory_not_found",
+        translationKey: "MenuSubcategory_not_found",
       });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "MenuItemSubCategory_reordered_successfully",
+      translationKey: "MenuSubcategory_reordered_successfully",
       data: reordered,
     });
   } catch (error) {

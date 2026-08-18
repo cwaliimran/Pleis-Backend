@@ -14,8 +14,31 @@ const buildMenuSubcategorysCacheKey = ({
   return `${ACTIVE_MenuSubcategoryS_CACHE_KEY}:page=${page}:skip=${skip}:limit=${limit}:status=${status}`;
 };
 
+const buildSiblingFilter = (doc) => ({
+  status: { $ne: "deleted" },
+  organization: doc.organization || null,
+  companyOrganizer: doc.companyOrganizer || null,
+});
+
 const createMenuSubcategory = async (data) => {
   try {
+    const requestedOrder = Number(data.order);
+    const hasManualOrder =
+      data.order !== undefined &&
+      data.order !== null &&
+      data.order !== "" &&
+      Number.isFinite(requestedOrder) &&
+      requestedOrder > 0;
+
+    if (!hasManualOrder) {
+      const last = await MenuSubcategory.findOne(buildSiblingFilter(data))
+        .sort({ order: -1 })
+        .select("order");
+      data.order = last?.order ? last.order + 1 : 1;
+    } else {
+      data.order = requestedOrder;
+    }
+
     const MenuSubcategoryData = new MenuSubcategory(data);
     await MenuSubcategoryData.save();
     await invalidate(ACTIVE_MenuSubcategoryS_CACHE_KEY);
@@ -272,9 +295,7 @@ const getMenuSubcategorys = async ({
 
       const sortDirection = sortOrder === "asc" ? 1 : -1;
       pipeline.push({
-        $sort: {
-          [sortField]: sortDirection,
-        },
+        $sort: sortStage,
       });
     } else {
       pipeline.push({
@@ -407,7 +428,7 @@ const getMenuSubcategorysSummary = async ({
   const pipeline = [];
   pipeline.push({ $match: { status: "active" } });
 
-  pipeline.push({ $sort: { createdAt: -1 } });
+  pipeline.push({ $sort: { order: 1, updatedAt: 1, _id: 1 } });
   if (organization) {
     pipeline.push({
       $match: {

@@ -6,4 +6,5 @@ function getFullImageUrl(imagePath, baseUrl = process.env.AZURE_STORAGE_BASE_URL
   return imagePath || baseUrl + "noimage.png";
 }
 
+
 module.exports = { getFullImageUrl };
