@@ -268,10 +268,9 @@ const getMenuSubcategorys = async ({
                 ? "organization.basicInfo.name"
                 : sortBy === "companyOrganizer"
                   ? "companyOrganizer.firstName"
-                  : "createdAt";
+                  : "order"; // Default to order if sortBy is unrecognized
 
       const sortDirection = sortOrder === "asc" ? 1 : -1;
-
       pipeline.push({
         $sort: {
           [sortField]: sortDirection,
@@ -280,7 +279,7 @@ const getMenuSubcategorys = async ({
     } else {
       pipeline.push({
         $sort: {
-          createdAt: -1,
+          order: 1,
         },
       });
     }
@@ -478,10 +477,71 @@ const findByIdAndUpdate = async (id, data) => {
   await invalidate(ACTIVE_MenuSubcategoryS_CACHE_KEY);
   return MenuSubcategory.findByIdAndUpdate(id, data, { new: true });
 };
+
+const reorderMenuSubCategory = async (movedId, newOrder) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const moved = await MenuSubcategory.findById(
+      new mongoose.Types.ObjectId(movedId),
+      null,
+      { session },
+    );
+
+    if (!moved || moved.status === "deleted") {
+      throw new Error("Subcategory not found");
+    }
+
+    const siblings = await MenuSubcategory.find(
+      { user: moved.user, status: { $ne: "deleted" } },
+      { _id: 1, order: 1 },
+      { session },
+    ).sort({ order: 1, updatedAt: 1, _id: 1 });
+
+    const currentIndex = siblings.findIndex((s) => s._id.equals(moved._id));
+    if (currentIndex === -1) throw new Error("Subcategory not found");
+
+    const [item] = siblings.splice(currentIndex, 1);
+    const targetIndex = Math.max(
+      0,
+      Math.min(Math.round(Number(newOrder)) - 1, siblings.length),
+    );
+    siblings.splice(targetIndex, 0, item);
+
+    const now = new Date();
+    const ops = siblings
+      .map((doc, i) => ({ doc, order: i + 1 }))
+      .filter(({ doc, order }) => doc.order !== order)
+      .map(({ doc, order }) => ({
+        updateOne: {
+          filter: { _id: doc._id },
+          update: { $set: { order, updatedAt: now } },
+        },
+      }));
+
+    if (ops.length) {
+      await MenuSubcategory.bulkWrite(ops, { session });
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+    await invalidate(ACTIVE_MenuSubcategoryS_CACHE_KEY);
+
+    moved.order = targetIndex + 1;
+    moved.updatedAt = now;
+    return moved;
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    throw err;
+  }
+};
 module.exports = {
   createMenuSubcategory,
   getMenuSubcategorys,
   findMenuSubcategoryById,
   findByIdAndUpdate,
   getMenuSubcategorysSummary,
+  reorderMenuSubCategory,
 };
