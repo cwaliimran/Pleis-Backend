@@ -2,18 +2,14 @@
 const MenuItems = require("@MenuItemsModel");
 const { MenuItemsCombos } = require("@MenuItemsCombosModel");
 const { MenuItemsDiscounts } = require("@MenuItemsDiscountsModel");
-const {
-  resolveEffectiveDiscount,
-} = require("@MenuItemsDiscountsModel");
+const { resolveEffectiveDiscount } = require("@MenuItemsDiscountsModel");
 const Menus = require("@MenusModel");
 const mongoose = require("mongoose");
 const MenuOrders = require("@OrdersModel");
 const { getActiveMenuItemPromotions } = require("../../loyalty/promotions/promotionsRepository");
 const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const { getAllDayparts } = require("../../../admin/presetMenu/daypart/daypartRepository");
-const {
-  filterByDaypartAndDaysWithFetch,
-} = require("../../../shared/menuItemsFilters/filterByDaypartAndDays");
+const { filterByDaypartAndDaysWithFetch } = require("../../../shared/menuItemsFilters/filterByDaypartAndDays");
 
 const pickBestDiscount = (discounts = [], basePrice = 0, at = new Date()) =>
   resolveEffectiveDiscount(discounts, basePrice, at);
@@ -61,24 +57,15 @@ const attachMenuItemDiscounts = (menuItems = [], discounts = [], at = new Date()
 
   return menuItems.map((item) => ({
     ...item,
-    discount: pickBestDiscount(
-      discountMap.get(item._id.toString()),
-      item.basePrice,
-      at,
-    ),
+    discount: pickBestDiscount(discountMap.get(item._id.toString()), item.basePrice, at),
   }));
 };
 
-const getMenuItemsWithFilters = async ({
-  query = {},
-  userId = null,
-  timezone = null
-}) => {
-
+const getMenuItemsWithFilters = async ({ query = {}, userId = null, timezone = null }) => {
   const menuItems = await MenuItems.aggregate([
     { $match: query },
     ...buildMenuItemsSaleLookup(timezone),
-    { $sort: { createdAt: -1 } }
+    { $sort: { createdAt: -1 } },
   ]);
 
   if (!menuItems.length) return [];
@@ -95,7 +82,7 @@ const getMenuItemsWithFilters = async ({
      Collect menu item ids
   -------------------------------- */
 
-  const menuItemIds = menuItems.map(item => item._id);
+  const menuItemIds = menuItems.map((item) => item._id);
 
   /* --------------------------------
      Fetch promotions
@@ -104,7 +91,7 @@ const getMenuItemsWithFilters = async ({
   const promotions = await getActiveMenuItemPromotions({
     menuItemIds,
     userId,
-    timezone
+    timezone,
   });
 
   /* --------------------------------
@@ -113,29 +100,23 @@ const getMenuItemsWithFilters = async ({
 
   const promotionMap = new Map();
 
-  promotions.forEach(promo => {
+  promotions.forEach((promo) => {
     if (!promo.menuItem) return;
 
-    promotionMap.set(
-      promo.menuItem._id.toString(),
-      promo
-    );
+    promotionMap.set(promo.menuItem._id.toString(), promo);
   });
 
   /* --------------------------------
      Attach promotion to menu items
   -------------------------------- */
 
-  return menuItems.map(item => ({
+  return menuItems.map((item) => ({
     ...item,
-    promotion: promotionMap.get(item._id.toString()) || null
+    promotion: promotionMap.get(item._id.toString()) || null,
   }));
 };
 
-const getMenuItemsWithFiltersV2 = async ({
-  query = {},
-  timezone = null
-}) => {
+const getMenuItemsWithFiltersV2 = async ({ query = {}, timezone = null }) => {
   //get day
   let menuItems = await MenuItems.aggregate([
     {
@@ -147,7 +128,7 @@ const getMenuItemsWithFiltersV2 = async ({
     },
     { $sort: { createdAt: -1 } },
   ]);
-console.log("menuItems.length===>",menuItems.length)
+
   if (!menuItems.length) return [];
 
   menuItems = await filterByDaypartAndDaysWithFetch(menuItems, getAllDayparts, timezone || "UTC");
@@ -159,9 +140,7 @@ console.log("menuItems.length===>",menuItems.length)
 };
 const buildMenuItemsSaleLookup = (timezone = null) => {
   // Prefer user-local "now" when timezone is known; fall back to server UTC.
-  const now = timezone
-    ? getCurrentDateInTimezone({ timezone, isDateOnly: false })
-    : new Date();
+  const now = timezone ? getCurrentDateInTimezone({ timezone, isDateOnly: false }) : new Date();
 
   return [
     {
@@ -173,34 +152,34 @@ const buildMenuItemsSaleLookup = (timezone = null) => {
             $match: {
               status: "active",
               startDateTime: { $lte: now },
-              endDateTime: { $gte: now }
-            }
+              endDateTime: { $gte: now },
+            },
           },
           {
             $match: {
               $expr: {
-                $in: ["$$menuItemId", "$menuItems"]
-              }
-            }
+                $in: ["$$menuItemId", "$menuItems"],
+              },
+            },
           },
           { $sort: { discountValue: -1 } },
-          { $limit: 1 }
+          { $limit: 1 },
         ],
-        as: "sale"
-      }
+        as: "sale",
+      },
     },
     {
       $unwind: {
         path: "$sale",
-        preserveNullAndEmptyArrays: true
-      }
+        preserveNullAndEmptyArrays: true,
+      },
     },
     {
       $addFields: {
         saleDiscountType: "$sale.discountType",
-        saleDiscountValue: "$sale.discountValue"
-      }
-    }
+        saleDiscountValue: "$sale.discountValue",
+      },
+    },
   ];
 };
 
@@ -217,8 +196,7 @@ const getOrganizationIdFromMenuItem = async (menuItemId) => {
 };
 
 //recommended items
-//fetch item and its category, type then fetch relevant items based on category and type 
-
+//fetch item and its category, type then fetch relevant items based on category and type
 
 // Count by condition
 const countMenuItems = async (query = {}) => {
@@ -229,7 +207,7 @@ const countMenuItems = async (query = {}) => {
 const findMenuItemById = async (id, userId = null, timezone = null) => {
   const result = await MenuItems.aggregate([
     { $match: { _id: new mongoose.Types.ObjectId(id) } },
-    ...buildMenuItemsSaleLookup(timezone)
+    ...buildMenuItemsSaleLookup(timezone),
   ]);
 
   const item = result[0] || null;
@@ -240,17 +218,14 @@ const findMenuItemById = async (id, userId = null, timezone = null) => {
   const promotions = await getActiveMenuItemPromotions({
     menuItemIds: [item._id],
     userId,
-    timezone
+    timezone,
   });
 
-  const promotion =
-    promotions.find(
-      (p) => p.menuItem && p.menuItem._id.toString() === item._id.toString()
-    ) || null;
+  const promotion = promotions.find((p) => p.menuItem && p.menuItem._id.toString() === item._id.toString()) || null;
 
   return {
     ...item,
-    promotion
+    promotion,
   };
 };
 
@@ -292,18 +267,19 @@ const findMenuItemByIdV2 = async (id, userId = null, timezone = null) => {
 };
 
 const getMenuIdByOrganization = async (organizationId) => {
-  return await Menus.find({ organization: new mongoose.Types.ObjectId(organizationId), status: "active", isOrderingEnabled: true }).select("_id").sort({ createdAt: -1 });
-}
+  return await Menus.find({
+    organization: new mongoose.Types.ObjectId(organizationId),
+    status: "active",
+    isOrderingEnabled: true,
+  })
+    .select("_id")
+    .sort({ createdAt: -1 });
+};
 
 // Recommended items
 // Fetch item and its category/type, then get similar items
 
-const getRecommendedItems = async (
-  menuItemId,
-  userId = null,
-  timezone = null,
-  limit = 10
-) => {
+const getRecommendedItems = async (menuItemId, userId = null, timezone = null, limit = 10) => {
   const menuItem = await MenuItems.findById(menuItemId).lean();
   if (!menuItem) throw new Error("Menu item not found");
 
@@ -315,12 +291,12 @@ const getRecommendedItems = async (
         status: "active",
         category: menuItem.category,
         isAvailableInStock: true,
-        type: { $regex: menuItem.type, $options: "i" }
-      }
+        type: { $regex: menuItem.type, $options: "i" },
+      },
     },
     ...buildMenuItemsSaleLookup(timezone),
     { $sort: { createdAt: -1 } },
-    { $limit: limit }
+    { $limit: limit },
   ]);
 
   if (!items.length || !userId) return items;
@@ -330,7 +306,7 @@ const getRecommendedItems = async (
   const promotions = await getActiveMenuItemPromotions({
     menuItemIds,
     userId,
-    timezone
+    timezone,
   });
 
   const promotionMap = new Map();
@@ -342,16 +318,12 @@ const getRecommendedItems = async (
 
   return items.map((item) => ({
     ...item,
-    promotion: promotionMap.get(item._id.toString()) || null
+    promotion: promotionMap.get(item._id.toString()) || null,
   }));
 };
 
 //userId, timezone, organization, menuId
-const getRecommendedItemsV2 = async (
-  userId = null,
-  timezone = null,
-  menuIds = [],
-) => {
+const getRecommendedItemsV2 = async (userId = null, timezone = null, menuIds = []) => {
   const menuObjectIds = (Array.isArray(menuIds) ? menuIds : [menuIds])
     .filter(Boolean)
     .map((id) => new mongoose.Types.ObjectId(id._id || id));
@@ -374,11 +346,7 @@ const getRecommendedItemsV2 = async (
 };
 
 //userId, timezone, organization, menuId
-const getUpsellMenuItemsV2 = async (
-  userId = null,
-  timezone = null,
-  menuIds = [],
-) => {
+const getUpsellMenuItemsV2 = async (userId = null, timezone = null, menuIds = []) => {
   const menuObjectIds = (Array.isArray(menuIds) ? menuIds : [menuIds])
     .filter(Boolean)
     .map((id) => new mongoose.Types.ObjectId(id._id || id));
@@ -403,17 +371,12 @@ const getUpsellMenuItemsV2 = async (
 // ----------------------
 // HYBRID RECOMMENDER (ORG-BASED)
 // ----------------------
-const getOrganizationHybridRecommendedItems = async (
-  userId,
-  timezone,
-  organizationId,
-  limit = 10
-) => {
+const getOrganizationHybridRecommendedItems = async (userId, timezone, organizationId, limit = 10) => {
   // 1. Find active menu
   const menu = await Menus.findOne({
     organization: organizationId,
     status: "active",
-    isOrderingEnabled: true
+    isOrderingEnabled: true,
   }).select("_id");
 
   if (!menu) return [];
@@ -424,10 +387,10 @@ const getOrganizationHybridRecommendedItems = async (
       $match: {
         menu: menu._id,
         status: "active",
-        isAvailableInStock: { $ne: false }
-      }
+        isAvailableInStock: { $ne: false },
+      },
     },
-    ...buildMenuItemsSaleLookup(timezone)
+    ...buildMenuItemsSaleLookup(timezone),
   ]);
 
   if (!menuItems.length) return [];
@@ -436,9 +399,7 @@ const getOrganizationHybridRecommendedItems = async (
      PURCHASE HISTORY
   ------------------------------- */
 
-  const orders = await MenuOrders.find({ user: userId })
-    .select("items")
-    .lean();
+  const orders = await MenuOrders.find({ user: userId }).select("items").lean();
 
   const frequencyMap = {};
 
@@ -455,7 +416,10 @@ const getOrganizationHybridRecommendedItems = async (
   ------------------------------- */
 
   const tokenize = (str) =>
-    str.toLowerCase().split(/[\s,.-]+/).filter(Boolean);
+    str
+      .toLowerCase()
+      .split(/[\s,.-]+/)
+      .filter(Boolean);
 
   /* -------------------------------
      BUILD SCORES
@@ -474,12 +438,11 @@ const getOrganizationHybridRecommendedItems = async (
       });
     });
 
-    const purchaseScore =
-      frequencyMap[item._id.toString()] || 0;
+    const purchaseScore = frequencyMap[item._id.toString()] || 0;
 
     return {
       ...item,
-      _score: purchaseScore * 2 + textScore
+      _score: purchaseScore * 2 + textScore,
     };
   });
 
@@ -501,32 +464,29 @@ const getOrganizationHybridRecommendedItems = async (
 
   if (!userId) return sortedItems;
 
-  const menuItemIds = sortedItems.map(item => item._id);
+  const menuItemIds = sortedItems.map((item) => item._id);
 
   const promotions = await getActiveMenuItemPromotions({
     menuItemIds,
     userId,
-    timezone
+    timezone,
   });
 
   const promotionMap = new Map();
 
-  promotions.forEach(promo => {
+  promotions.forEach((promo) => {
     if (!promo.menuItem) return;
 
-    promotionMap.set(
-      promo.menuItem._id.toString(),
-      promo
-    );
+    promotionMap.set(promo.menuItem._id.toString(), promo);
   });
 
   /* -------------------------------
      ATTACH PROMOTIONS
   ------------------------------- */
 
-  return sortedItems.map(item => ({
+  return sortedItems.map((item) => ({
     ...item,
-    promotion: promotionMap.get(item._id.toString()) || null
+    promotion: promotionMap.get(item._id.toString()) || null,
   }));
 };
 
@@ -585,7 +545,6 @@ const getMenuItemsCombosWithFilters = async ({ query = {} } = {}) => {
 const getMenuItemsCombos = async (menuItemIds = []) => {
   if (!menuItemIds.length) return [];
 
-
   const objectIds = menuItemIds.map((id) => new mongoose.Types.ObjectId(id));
 
   return MenuItemsCombos.aggregate([
@@ -636,7 +595,6 @@ const getMenuItemsCombos = async (menuItemIds = []) => {
   ]);
 };
 
-
 module.exports = {
   getMenuItemsWithFilters,
   getMenuItemsWithFiltersV2,
@@ -655,5 +613,4 @@ module.exports = {
   getUpsellMenuItemsV2,
   getMenuItemsCombos,
   getMenuItemsCombosWithFilters,
-
 };
