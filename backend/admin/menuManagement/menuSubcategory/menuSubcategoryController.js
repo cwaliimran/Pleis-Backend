@@ -11,7 +11,7 @@ const {
 const MenuSubcategoryService = require("./menuSubcategoryService");
 
 const createMenuSubcategory = async (req, res) => {
-  let { title, status = "active", organization, companyOrganizer } = req.body;
+  let { title, status = "active", organization, companyOrganizer,order } = req.body;
   const userType = req.user.userType;
   if (userType !== "admin") {
     if (!organization) {
@@ -35,6 +35,7 @@ const createMenuSubcategory = async (req, res) => {
     status,
     organization,
     companyOrganizer,
+    order,
   };
   try {
     const MenuSubcategory =
@@ -137,13 +138,14 @@ const getMenuSubcategorys = async (req, res) => {
 };
 const updateMenuSubcategory = async (req, res) => {
   const { id } = req.params;
-  let { organization, companyOrganizer, title, status } = req.body;
+  let { organization, companyOrganizer, title, status,order } = req.body;
 
   let data = {
     organization,
     companyOrganizer,
     title,
     status,
+    order
   };
 
   try {
@@ -220,9 +222,60 @@ const deleteMenuSubcategory = async (req, res) => {
     });
   }
 };
+const reorderMenuSubCategory = async (req, res) => {
+  const { id } = req.params;
+  const { newOrder } = req.body;
+
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+      rawData: ["newOrder"],
+    })
+  )
+    return;
+  const targetOrder = Number(newOrder);
+  if (!Number.isFinite(targetOrder)) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "invalid_order",
+    });
+  }
+
+  try {
+    const reordered = await MenuSubcategoryService.reorderMenuSubCategory(
+      id,
+      targetOrder,
+    );
+    if (!reordered) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "MenuItemSubCategory_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "MenuItemSubCategory_reordered_successfully",
+      data: reordered,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 module.exports = {
   createMenuSubcategory,
   getMenuSubcategorys,
   updateMenuSubcategory,
   deleteMenuSubcategory,
+  reorderMenuSubCategory,
 };
