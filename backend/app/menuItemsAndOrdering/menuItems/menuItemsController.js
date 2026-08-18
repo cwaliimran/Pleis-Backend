@@ -10,16 +10,11 @@ const {
 
 const menuItemsService = require("./menuItemsService");
 const deliveryOptionsService = require("../../../admin/organizations/deliveryOptions/deliveryOptionsService");
-const {
-  getOrganizationPickupSettings,
-} = require("../../../admin/organizations/organizationRepository");
-
+const { getOrganizationPickupSettings } = require("../../../admin/organizations/organizationRepository");
+const { getSetttings } = require("../../../admin/inAppOrdering/settings/setting/settingRepository");
 
 const getMenuItems = async (req, res) => {
-  const {
-    status = "active",
-    organization
-  } = req.query;
+  const { status = "active", organization } = req.query;
   let { _id: userId } = req.user;
   try {
     const { organizationDetails, recommended, menu } = await menuItemsService.getMenuItems({
@@ -46,10 +41,7 @@ const getMenuItems = async (req, res) => {
   }
 };
 const getMenuItemsV2 = async (req, res) => {
-  const {
-    status = "active",
-    organization
-  } = req.query;
+  const { status = "active", organization } = req.query;
   let { _id: userId } = req.user;
   try {
     const { organizationDetails, recommended, menu, combos } = await menuItemsService.getMenuItemsV2({
@@ -77,9 +69,7 @@ const getMenuItemsV2 = async (req, res) => {
 };
 
 const getRecommendedMenuItems = async (req, res) => {
-  const {
-    organization
-  } = req.query;
+  const { organization } = req.query;
   let { _id: userId, timezone } = req.user;
   try {
     const { recommended } = await menuItemsService.getHybridRecommendedItems({
@@ -106,9 +96,7 @@ const getRecommendedMenuItems = async (req, res) => {
 };
 
 const getRecommendedMenuItemsV2 = async (req, res) => {
-  const {
-    organization
-  } = req.query;
+  const { organization } = req.query;
   let { _id: userId, timezone } = req.user;
   try {
     const { recommended } = await menuItemsService.getRecommendedMenuItemsV2({
@@ -135,9 +123,7 @@ const getRecommendedMenuItemsV2 = async (req, res) => {
 };
 
 const getUpsellMenuItemsV2 = async (req, res) => {
-  const {
-    organization
-  } = req.query;
+  const { organization } = req.query;
   let { _id: userId, timezone } = req.user;
   try {
     const { recommended } = await menuItemsService.getUpsellMenuItemsV2({
@@ -253,9 +239,10 @@ const getPickupOptions = async (req, res) => {
     return;
 
   try {
-    const [deliveryOptions, orderingSettings] = await Promise.all([
+    const [deliveryOptions, orderingSettings, appSettings] = await Promise.all([
       deliveryOptionsService.getActiveDeliveryOptions(organization),
       getOrganizationPickupSettings(organization),
+      getSetttings({ organization }),
     ]);
     return sendResponse({
       res,
@@ -266,6 +253,7 @@ const getPickupOptions = async (req, res) => {
         paymentMethods: orderingSettings.paymentMethods,
         deliveryMethods: orderingSettings.deliveryMethods,
         tips: orderingSettings.tips,
+        appSettings,
       },
     });
   } catch (error) {
