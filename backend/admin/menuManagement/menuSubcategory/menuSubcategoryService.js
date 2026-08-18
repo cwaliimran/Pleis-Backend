@@ -96,7 +96,7 @@ const updateMenuSubcategory = async (id, data) => {
     if (!Number.isFinite(targetOrder)) {
       return { error: "invalid_order" };
     }
-    return MenuSubcategoryRepo.reorderMenuSubcategory(id, targetOrder);
+    return MenuSubcategoryRepo.reorderMenuSubCategory(id, targetOrder);
   }
 
   if (data.order !== undefined && data.order !== null && data.order !== "") {
@@ -124,7 +124,7 @@ const reorderMenuSubCategory = async (movedId, newOrder) => {
     newOrder,
   );
   if (!moved) {
-    throw new Error("MenuItemSubCategory_not_found");
+    throw new Error("MenuSubcategory_not_found");
   }
   return moved;
 };
