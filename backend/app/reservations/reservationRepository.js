@@ -61,11 +61,11 @@ const getReservationSlots = async ({ userId, date, organizationId, timezone }) =
   // 2. Get reservation preferences
   // --------------------------------------------------
   const reservationPreferences = await ReservationPreferences.findOne({
-    organizationId,
+    organization: organizationId,
   })
     .select("timeSlotsSetting")
     .lean();
-
+  console.log("reservationPreferences", reservationPreferences);
   const settings = reservationPreferences?.timeSlotsSetting;
 
   if (!settings || settings.status !== "enabled") {
@@ -161,7 +161,7 @@ const getReservationSlots = async ({ userId, date, organizationId, timezone }) =
   // 6. Get existing reservations
   // --------------------------------------------------
   const existingReservations = await UserReservations.find({
-    organizationId,
+    organization: organizationId,
     userId,
     status: {
       $in: ["checkedIn", "confirmed", "needsConfirmation", "pendingPayment"],
@@ -209,7 +209,10 @@ const getReservationSlots = async ({ userId, date, organizationId, timezone }) =
   // 8. Generate slots
   // --------------------------------------------------
   const slots = [];
+  const now = moment.tz(timezone);
 
+  // Check whether requested date is today
+  const isToday = userDate.format("YYYY-MM-DD") === now.format("YYYY-MM-DD");
   for (
     let startMinutes = firstSlotStartMinutes;
     startMinutes + slotDuration <= lastSlotEndMinutes;
@@ -238,144 +241,153 @@ const getReservationSlots = async ({ userId, date, organizationId, timezone }) =
     const isBooked = bookedSlots.some(
       (bookedSlot) => userStart.toDate() < bookedSlot.end.toDate() && userEnd.toDate() > bookedSlot.start.toDate(),
     );
+    const isPassed = isToday && userStart.isSameOrBefore(now);
 
-    if (!isBooked) {
-      slots.push({
-        startTime: userStart.toISOString(),
-        endTime: userEnd.toISOString(),
+    slots.push({
+      // startTime: userStart.toISOString(),
+      // endTime: userEnd.toISOString(),
 
-        // Optional display values
-        startTimeLocal: userStart.format("YYYY-MM-DD HH:mm"),
-        endTimeLocal: userEnd.format("YYYY-MM-DD HH:mm"),
+      // Optional display values
+      startTime: userStart.format("YYYY-MM-DD HH:mm"),
+      endTime: userEnd.format("YYYY-MM-DD HH:mm"),
+      // Separate hour/minute values for frontend
+      startHour: userStart.hour(),
+      startMinute: userStart.minute(),
 
-        available: true,
-      });
-    }
+      endHour: userEnd.hour(),
+      endMinute: userEnd.minute(),
+
+      available: !isBooked && !isPassed,
+    });
   }
+  const hours = [
+    ...new Set(slots.filter((slot) => slot.available).flatMap((slot) => [slot.startHour, slot.endHour])),
+  ].sort((a, b) => a - b);
 
+  const minutes = [
+    ...new Set(slots.filter((slot) => slot.available).flatMap((slot) => [slot.startMinute, slot.endMinute])),
+  ].sort((a, b) => a - b);
   return {
     allowed: true,
     message: "Reservation slots retrieved successfully",
     date,
     timezone,
     slotDuration,
+    hourMins: { hours, minutes },
     slots,
   };
 };
 
 const checkReservationAvailability = async ({
   reservationTypeId,
-  partySize,
-  numberOfTables,
+  partySize = 0,
+  numberOfTables = 0,
   organization,
   timingSlots,
+  userId,
 }) => {
-  const reservationType = await ReservationType.findOne({
-    _id: reservationTypeId,
-    organization,
-    status: "active",
-  }).lean();
+  let reservationType = null;
 
-  if (!reservationType) {
-    return {
-      allowed: false,
-      message: "Reservation type not found or is inactive",
-    };
+  if (reservationTypeId) {
+    reservationType = await ReservationType.findOne({
+      _id: reservationTypeId,
+      organization,
+      status: "active",
+    }).lean();
+
+    if (!reservationType) {
+      return {
+        allowed: false,
+        message: "Reservation type not found or is inactive",
+      };
+    }
   }
 
-  // Get only active/pending/accepted reservations
-  // for the same organization and reservation type.
-  const existingReservations = await UserReservations.find({
-    reservationType: String(reservationTypeId),
+  const filter = {
     organizationId: new mongoose.Types.ObjectId(organization),
     status: {
       $in: ["checkedIn", "confirmed", "needsConfirmation", "pendingPayment"],
     },
-  })
-    .select("timingSlots numberOfTables partySize")
+  };
+
+  if (userId) filter.userId = new mongoose.Types.ObjectId(userId);
+  if (reservationTypeId) filter.reservationType = String(reservationTypeId);
+
+  const reservations = await UserReservations.find(filter)
+    .select("timingSlots numberOfTables partySize bookingDuration")
     .lean();
 
-  // Check every requested date/time slot
-  for (const requestedDateBlock of timingSlots?.dateTimeSlots || []) {
-    for (const requestedSlot of requestedDateBlock.timeSlots || []) {
-      const requestedStart = new Date(requestedSlot.startTime);
-      const requestedEnd = new Date(requestedSlot.endTime);
+  for (const dateBlock of timingSlots?.dateTimeSlots || []) {
+    const date = dateBlock.date;
+    const requestedSlots = dateBlock.timeSlots || [];
+    const isWholeDay = !requestedSlots.length;
 
-      for (const reservation of existingReservations) {
-        for (const existingDateBlock of reservation.timingSlots?.dateTimeSlots || []) {
-          for (const existingSlot of existingDateBlock.timeSlots || []) {
-            const existingStart = new Date(existingSlot.startTime);
-            const existingEnd = new Date(existingSlot.endTime);
+    const dateReservations = reservations.filter((r) => r.timingSlots?.dateTimeSlots?.some((d) => d.date === date));
 
-            // Check whether the requested slot overlaps
-            // with an already booked slot.
-            const isOverlapping = requestedStart < existingEnd && requestedEnd > existingStart;
+    // Whole-day booking: check capacity for the whole date
+    if (isWholeDay) {
+      if (reservationType) {
+        const usedTables = dateReservations.reduce((sum, r) => sum + (r.numberOfTables || 0), 0);
 
-            if (isOverlapping) {
-              return {
-                allowed: false,
-                message: "This reservation type is already booked for the selected time slot",
-                conflict: {
-                  date: requestedDateBlock.date,
-                  requestedStart: requestedSlot.startTime,
-                  requestedEnd: requestedSlot.endTime,
-                  bookedStart: existingSlot.startTime,
-                  bookedEnd: existingSlot.endTime,
-                },
-              };
-            }
-          }
+        const usedPartySize = dateReservations.reduce((sum, r) => sum + (r.partySize || 0), 0);
+
+        if (usedTables + numberOfTables > reservationType.numberOfTables) {
+          return {
+            allowed: false,
+            message: "Not enough tables available",
+            conflict: { date },
+          };
+        }
+
+        if (usedPartySize + partySize > reservationType.maxPartySize) {
+          return {
+            allowed: false,
+            message: "Maximum party size has been reached",
+            conflict: { date },
+          };
         }
       }
+
+      continue;
     }
-  }
 
-  // If there is no time conflict, check table and party capacity.
-  const stats = await UserReservations.aggregate([
-    {
-      $match: {
-        reservationType: String(reservationTypeId),
-        organizationId: new mongoose.Types.ObjectId(organization),
-        status: {
-          $in: ["checkedIn", "confirmed", "needsConfirmation", "pendingPayment"],
-        },
-      },
-    },
-    {
-      $group: {
-        _id: null,
-        usedTables: { $sum: "$numberOfTables" },
-        usedPartySize: { $sum: "$partySize" },
-      },
-    },
-  ]);
+    // Normal booking
+    const conflictingReservations = dateReservations.filter((r) => {
+      if (r.bookingDuration === "wholeDay") return true;
 
-  const usedTables = stats[0]?.usedTables || 0;
-  const usedPartySize = stats[0]?.usedPartySize || 0;
+      const existingBlock = r.timingSlots?.dateTimeSlots?.find((d) => d.date === date);
 
-  const tablesAvailable = usedTables + numberOfTables <= reservationType.numberOfTables;
+      return requestedSlots.some((slot) => {
+        const start = new Date(slot.startTime);
+        const end = new Date(slot.endTime);
 
-  const partySizeAvailable = usedPartySize + partySize <= reservationType.maxPartySize;
+        return existingBlock?.timeSlots?.some((existing) => {
+          return start < new Date(existing.endTime) && end > new Date(existing.startTime);
+        });
+      });
+    });
 
-  if (!tablesAvailable && !partySizeAvailable) {
-    return {
-      allowed: false,
-      message: "Not enough tables or party capacity available for this reservation type",
-    };
-  }
+    if (reservationType) {
+      const usedTables = conflictingReservations.reduce((sum, r) => sum + (r.numberOfTables || 0), 0);
 
-  if (!tablesAvailable) {
-    return {
-      allowed: false,
-      message: "Not enough tables available for this reservation type",
-    };
-  }
+      const usedPartySize = conflictingReservations.reduce((sum, r) => sum + (r.partySize || 0), 0);
 
-  if (!partySizeAvailable) {
-    return {
-      allowed: false,
-      message: "Maximum party size for this reservation type has been reached",
-    };
+      if (usedTables + numberOfTables > reservationType.numberOfTables) {
+        return {
+          allowed: false,
+          message: "Not enough tables available",
+          conflict: { date },
+        };
+      }
+
+      if (usedPartySize + partySize > reservationType.maxPartySize) {
+        return {
+          allowed: false,
+          message: "Maximum party size has been reached",
+          conflict: { date },
+        };
+      }
+    }
   }
 
   return {
@@ -516,6 +528,10 @@ const createReservation = async (data, session) => {
     }
   } else {
     data.status = "confirmed";
+  }
+
+  if (!data.timingSlots?.dateTimeSlots?.[0]?.timeSlots?.length) {
+    data.bookingDuration = "wholeDay";
   }
 
   /* ---------- Save reservation ---------- */

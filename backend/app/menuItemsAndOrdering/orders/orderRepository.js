@@ -121,7 +121,7 @@ const getOrderById = async (id) => {
 const getOrdersByUser = async (userId, page, limit, query = {}) => {
   query.status = { $ne: "pendingPayment" }; // Exclude pendingPayment orders
   return Orders.find({ user: userId, ...query })
-    .select("orderNumber createdAt status paymentMethod paymentStatus")
+    .select("orderNumber createdAt status paymentMethod paymentStatus priceBreakdown")
     .populate("organization", "basicInfo.name basicInfo.media.logo")
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)

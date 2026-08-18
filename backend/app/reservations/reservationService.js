@@ -12,6 +12,7 @@ const createReservationService = async (data, session) => {
     numberOfTables: data.numberOfTables,
     organization: data.organizationId,
     timingSlots: data.timingSlots,
+    userId: data.userId,
   });
 
   if (!check.allowed) {
@@ -20,6 +21,7 @@ const createReservationService = async (data, session) => {
       message: check.message || "Reservation not allowed",
     };
   }
+
   const result = await ReservationRepo.createReservation(data, session);
 
   if (!result?.success) {
@@ -309,15 +311,8 @@ const getReservationSlotsService = async ({ userId, date, organizationId, timezo
         message: "Date is required",
       };
     }
-
-    if (!timezone || !moment.tz.zone(timezone)) {
-      return {
-        slots: [],
-        message: "Valid timezone is required",
-      };
-    }
     // Assuming slots are generated here
-    const data = getReservationSlotss({ userId, date, organizationId, timezone });
+    const data = await ReservationRepo.getReservationSlots({ userId, date, organizationId, timezone });
     return {
       data,
       message: "Success",

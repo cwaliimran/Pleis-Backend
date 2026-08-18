@@ -10,8 +10,21 @@ const usersUsersStreaksService = require("./usersStreaksService");
 
 const createUsersStreak = async (req, res) => {
   const { companyOrganizer, organization } = req.body;
-
-  if (!validateParams(req, res, { rawData: ["companyOrganizer", "organization"], objectIdFields: ["companyOrganizer", "organization"] })) return;
+  console.log(
+    "Creating user streak for user:",
+    req.user._id,
+    "companyOrganizer:",
+    companyOrganizer,
+    "organization:",
+    organization,
+  );
+  if (
+    !validateParams(req, res, {
+      rawData: ["companyOrganizer", "organization"],
+      objectIdFields: ["companyOrganizer", "organization"],
+    })
+  )
+    return;
 
   try {
     const usersStreak = await usersUsersStreaksService.createUsersStreak({
@@ -51,11 +64,15 @@ const getUserMaxStreak = async (req, res) => {
       });
     }
 
-    if (date && !validateParams(req, res, {
-      dateFields: {
-        date: "YYYY-MM-DD",
-      },
-    })) return;
+    if (
+      date &&
+      !validateParams(req, res, {
+        dateFields: {
+          date: "YYYY-MM-DD",
+        },
+      })
+    )
+      return;
 
     const { usersUsersStreaks, meta } = await usersUsersStreaksService.getUserMaxStreak({
       user,
@@ -64,7 +81,7 @@ const getUserMaxStreak = async (req, res) => {
       keyword,
       status,
       date,
-      orderSort
+      orderSort,
     });
 
     return sendResponse({
@@ -72,7 +89,7 @@ const getUserMaxStreak = async (req, res) => {
       statusCode: 200,
       translationKey: "users_usersUsersStreaks_fetched_successfully",
       data: usersUsersStreaks,
-      meta
+      meta,
     });
   } catch (error) {
     return sendResponse({
@@ -89,18 +106,24 @@ const getPublicUsersStreaks = async (req, res) => {
   const { keyword, date } = req.query;
 
   try {
-    if (date && !validateParams(req, res, {
-      dateFields: {
-        date: "YYYY-MM-DD",
-      },
-    })) return;
+    if (
+      date &&
+      !validateParams(req, res, {
+        dateFields: {
+          date: "YYYY-MM-DD",
+        },
+      })
+    )
+      return;
 
-    const { usersUsersStreaks, meta } = await usersUsersStreaksService.getPublicUsersStreaks({
-      page,
-      limit,
-      keyword,
-      date
-    }).populate('companyOrganizer');
+    const { usersUsersStreaks, meta } = await usersUsersStreaksService
+      .getPublicUsersStreaks({
+        page,
+        limit,
+        keyword,
+        date,
+      })
+      .populate("companyOrganizer");
 
     return sendResponse({
       res,
@@ -205,11 +228,16 @@ const checkoutUsersStreak = async (req, res) => {
   const user = req.user._id;
   const { companyOrganizer, organization } = req.body;
 
-  if (!validateParams(req, res, { rawData: ["companyOrganizer", "organization"], objectIdFields: ["companyOrganizer", "organization"] })) return;
+  if (
+    !validateParams(req, res, {
+      rawData: ["companyOrganizer", "organization"],
+      objectIdFields: ["companyOrganizer", "organization"],
+    })
+  )
+    return;
 
   try {
     const userStreak = await usersUsersStreaksService.checkoutUsersStreak({ user, companyOrganizer, organization });
-
 
     return sendResponse({
       res,

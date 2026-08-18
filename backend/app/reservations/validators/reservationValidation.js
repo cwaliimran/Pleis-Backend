@@ -7,6 +7,7 @@ const { validateParams, convertTimezoneToUtc } = require("@utils/responseUtil");
  */
 const validateReservationPayload = (req, res, reservation) => {
   const timezone = req.user.timezone;
+  const userType = req.user.userType;
 
   // ==============================
   // 1️⃣ Basic validation
@@ -15,23 +16,19 @@ const validateReservationPayload = (req, res, reservation) => {
   req.body = reservation;
 
   try {
+    const rawData = ["organizationId", "partySize", "companyOrganizer", "reservationType", "timingSlots"];
+
+    // These are required for non-user types
+    // if (userType !== "user") {
+    //   rawData.push("timingSlots");
+    // }
     if (
       !validateParams(req, res, {
-        rawData: [
-          "partySize",
-          "timingSlots",
-          "organizationId",
-          "companyOrganizer",
-        ],
+        rawData,
         enumFields: {
           "paymentDetails.paymentMethod": ["applePay", "card", "cash"],
         },
-        objectIdFields: [
-          "organizationId",
-          "companyOrganizer",
-          "reservationId",
-          "optionalEventId",
-        ],
+        objectIdFields: ["organizationId", "companyOrganizer", "reservationId", "optionalEventId"],
       })
     ) {
       return null;
@@ -70,17 +67,9 @@ const validateReservationPayload = (req, res, reservation) => {
         }
 
         // ✅ THIS NOW RUNS
-        slot.startTime = convertTimezoneToUtc(
-          slot.startTime,
-          timezone,
-          "YYYY-MM-DDTHH:mm:ss.SSS[Z]",
-        );
+        slot.startTime = convertTimezoneToUtc(slot.startTime, timezone, "YYYY-MM-DDTHH:mm:ss.SSS[Z]");
 
-        slot.endTime = convertTimezoneToUtc(
-          slot.endTime,
-          timezone,
-          "YYYY-MM-DDTHH:mm:ss.SSS[Z]",
-        );
+        slot.endTime = convertTimezoneToUtc(slot.endTime, timezone, "YYYY-MM-DDTHH:mm:ss.SSS[Z]");
       }
     }
   }
