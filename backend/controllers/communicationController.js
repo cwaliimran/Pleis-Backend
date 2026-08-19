@@ -249,7 +249,7 @@ const sendUserNotifications = async ({
         logger.log("No devices found for the provided user IDs.");
       }
     } catch (error) {
-      console.error("Error sending notifications in background:", error);
+      console.error("Error sending notifications in background");
     }
   });
 };

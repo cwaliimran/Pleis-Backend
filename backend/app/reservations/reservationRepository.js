@@ -424,7 +424,8 @@ const createReservation = async (data, session) => {
 
   const {
     userId,
-    reservationId,
+    // reservationId,
+    reservationType,
     partySize,
     preOrderMenuItems,
     timezone,
@@ -434,19 +435,20 @@ const createReservation = async (data, session) => {
     promoCode,
     paymentMethod,
     amount,
+    occasion,
   } = data;
 
   /* ---------- Capacity check ---------- */
-  if (reservationId) {
-    const capacityCheck = await validateReservationCapacity({
-      reservationId,
-      session,
-    });
+  // if (reservationId) {
+  //   const capacityCheck = await validateReservationCapacity({
+  //     reservationId,
+  //     session,
+  //   });
 
-    if (!capacityCheck.allowed) {
-      return { success: false, error: capacityCheck.message };
-    }
-  }
+  //   if (!capacityCheck.allowed) {
+  //     return { success: false, error: capacityCheck.message };
+  //   }
+  // }
   /* ---------- Resolve user ---------- */
 
   let userData;
@@ -468,35 +470,57 @@ const createReservation = async (data, session) => {
   /* ---------- Reservation base ---------- */
   let baseAmount = Number(data.amount ?? 0);
 
-  if (reservationId) {
-    const reservationBase = await Reservations.findById(reservationId).session(session).lean();
+  // if (reservationId) {
+  //   const reservationBase = await Reservations.findById(reservationId).session(session).lean();
 
-    if (!reservationBase) {
-      throw new Error("Reservation not found");
-    }
+  //   if (!reservationBase) {
+  //     throw new Error("Reservation not found");
+  //   }
 
-    data.reservationSnapshot = reservationBase;
+  //   data.reservationSnapshot = reservationBase;
 
-    baseAmount = Number(reservationBase.amount ?? 0);
-  }
+  //   baseAmount = Number(reservationBase.amount ?? 0);
+  // }
 
   /* ---------- Reservation Pricing ---------- */
 
   let totalReservationAmount = 0;
 
-  switch (data.conditionType) {
-    case "free":
-      totalReservationAmount = baseAmount;
-      break;
-    case "minimumSpend":
-      totalReservationAmount = baseAmount;
-      data.voucher = {
-        status: "pending",
-        discountAmount: amount,
-      };
-      break;
-    default:
-      totalReservationAmount = 0;
+  /* ---------- Reservation Type ---------- */
+  
+  let reservationTypeData = await ReservationType.findOne({ _id: reservationType, status: "active" }).session(session).lean();
+
+  if (!reservationTypeData) {
+    return { success: false, error: "Reservation type not found" };
+  }
+
+  if (reservationTypeData.conditionType === "minimumSpend") {
+    if(!amount) {
+      return { success: false, error: "Minimum spend is required" };
+    }
+    if (amount < reservationTypeData.minimumSpend) {
+      return { success: false, error: "Minimum spend is less than the required minimum spend" };
+    }
+    totalReservationAmount = amount;
+  }
+
+  if (reservationTypeData.requireConfirmationToApprove) {
+    data.status = "needsConfirmation";
+  } else {
+    if (reservationTypeData.amount > 0) {
+      if (["card", "applePay"].includes(paymentMethod)) {
+        data.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
+        data.status = "pendingPayment";
+      } else {
+        return { success: false, error: "Payment method is required" };
+      }
+    } else {
+      data.status = "confirmed";
+    }
+  }
+
+  if (!data.timingSlots?.dateTimeSlots?.[0]?.timeSlots?.length) {
+    data.bookingDuration = "wholeDay";
   }
 
   /* ---------- Reservation Tax ---------- */
@@ -536,28 +560,9 @@ const createReservation = async (data, session) => {
 
   /* ---------- Confirmation flow ---------- */
 
-  if (data.conditionType === "noCondition" || data.conditionType === "minimumSpend" || data.conditionType === "free") {
-    data.status = "confirmed";
-  } else if (data.reservationSnapshot.needsConfirmation) {
-    data.status = "needsConfirmation";
-  } else if (finalReservationAmount > 0) {
-    if (["card", "applePay", "cash"].includes(data?.paymentDetails?.paymentMethod)) {
-      data.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
-
-      data.status = "pendingPayment";
-    } else {
-      throw new Error("Payment method is required");
-    }
-  } else {
-    data.status = "confirmed";
-  }
-
-  if (!data.timingSlots?.dateTimeSlots?.[0]?.timeSlots?.length) {
-    data.bookingDuration = "wholeDay";
-  }
 
   /* ---------- Save reservation ---------- */
-
+  data.amount = finalReservationAmount;
   const userReservation = new UserReservations(data);
 
   await userReservation.save({ session });
@@ -989,6 +994,7 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
         partySize: 1,
         amount: 1,
         timingSlots: 1,
+        voucher: 1,
         status: 1,
         createdAt: 1,
         updatedAt: 1,

@@ -67,6 +67,7 @@ const createReservation = async (req, res) => {
   }
 };
 
+
 const getReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   let { keyword, status = "confirmed", date, availability = "", eventId, organizationId } = req.query;

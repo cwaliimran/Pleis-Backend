@@ -17,7 +17,7 @@ const processPaymentWebhook = async ({
 
   //get monri payment method by orderNumber
   let monriPaymentMethod = await findByOrderNumber(payload.transaction.orderNumber);
-  let paymentMethod = monriPaymentMethod ? monriPaymentMethod.paymentMethod : null;
+  let paymentMethod = monriPaymentMethod ? monriPaymentMethod.paymentMethod : "applePay";
   const event = await webhookRepository.saveIfNotProcessed({
     provider,
     orderNumber: payload.transaction.orderNumber,

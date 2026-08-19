@@ -16,7 +16,7 @@ const validateReservationPayload = (req, res, reservation) => {
   req.body = reservation;
 
   try {
-    const rawData = ["organizationId", "partySize", "companyOrganizer", "reservationType"];
+    const rawData = ["organizationId", "partySize", "companyOrganizer", "reservationType", "occasion"];
 
     // These are required for non-user types
     // if (userType !== "user") {
@@ -28,7 +28,7 @@ const validateReservationPayload = (req, res, reservation) => {
         enumFields: {
           "paymentDetails.paymentMethod": ["applePay", "card", "cash"],
         },
-        objectIdFields: ["organizationId", "companyOrganizer", "reservationId", "optionalEventId"],
+        objectIdFields: ["organizationId", "companyOrganizer", "optionalEventId", "reservationType", "occasion"],
       })
     ) {
       return null;
@@ -77,5 +77,6 @@ const validateReservationPayload = (req, res, reservation) => {
 
   return reservation;
 };
+
 
 module.exports = { validateReservationPayload };
