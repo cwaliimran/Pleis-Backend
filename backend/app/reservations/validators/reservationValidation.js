@@ -16,7 +16,7 @@ const validateReservationPayload = (req, res, reservation) => {
   req.body = reservation;
 
   try {
-    const rawData = ["organizationId", "partySize", "companyOrganizer", "reservationType", "occasion"];
+    const rawData = ["organizationId", "partySize", "companyOrganizer", "reservationType"];
 
     // These are required for non-user types
     // if (userType !== "user") {
@@ -77,6 +77,5 @@ const validateReservationPayload = (req, res, reservation) => {
 
   return reservation;
 };
-
 
 module.exports = { validateReservationPayload };
