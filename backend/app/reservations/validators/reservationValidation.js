@@ -16,7 +16,7 @@ const validateReservationPayload = (req, res, reservation) => {
   req.body = reservation;
 
   try {
-    const rawData = ["organizationId", "partySize", "companyOrganizer", "reservationType", "timingSlots"];
+    const rawData = ["organizationId", "partySize", "companyOrganizer", "reservationType"];
 
     // These are required for non-user types
     // if (userType !== "user") {
@@ -50,26 +50,27 @@ const validateReservationPayload = (req, res, reservation) => {
         });
         return null;
       }
-
-      if (!Array.isArray(dateBlock.timeSlots) || !dateBlock.timeSlots.length) {
-        res.status(400).json({
-          translationKey: "time_slots_required_for_date",
-        });
-        return null;
-      }
-
-      for (const slot of dateBlock.timeSlots) {
-        if (!slot.startTime || !slot.endTime) {
+      if (dateBlock.timeSlots?.length) {
+        if (!Array.isArray(dateBlock.timeSlots) || !dateBlock.timeSlots.length) {
           res.status(400).json({
-            translationKey: "invalid_start_or_end_time_in_slot",
+            translationKey: "time_slots_required_for_date",
           });
           return null;
         }
 
-        // ✅ THIS NOW RUNS
-        slot.startTime = convertTimezoneToUtc(slot.startTime, timezone, "YYYY-MM-DDTHH:mm:ss.SSS[Z]");
+        for (const slot of dateBlock.timeSlots) {
+          if (!slot.startTime || !slot.endTime) {
+            res.status(400).json({
+              translationKey: "invalid_start_or_end_time_in_slot",
+            });
+            return null;
+          }
 
-        slot.endTime = convertTimezoneToUtc(slot.endTime, timezone, "YYYY-MM-DDTHH:mm:ss.SSS[Z]");
+          // ✅ THIS NOW RUNS
+          slot.startTime = convertTimezoneToUtc(slot.startTime, timezone, "YYYY-MM-DDTHH:mm:ss.SSS[Z]");
+
+          slot.endTime = convertTimezoneToUtc(slot.endTime, timezone, "YYYY-MM-DDTHH:mm:ss.SSS[Z]");
+        }
       }
     }
   }
