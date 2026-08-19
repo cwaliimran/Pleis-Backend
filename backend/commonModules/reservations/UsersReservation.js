@@ -163,6 +163,7 @@ const UserReservationsSchema = new mongoose.Schema(
     lockUntil: {
       type: Date,
       index: true,
+      default: null,
     },
 
     paidAt: {

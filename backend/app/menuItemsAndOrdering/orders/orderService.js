@@ -304,6 +304,7 @@ const placeOrder = async ({
         throw new Error("Reservation not found or not valid for this user");
       }
 
+
       const voucherResult = await consumeReservationVoucher({
         reservation,
         orderAmount: totalPrice,
@@ -312,8 +313,7 @@ const placeOrder = async ({
 
       voucherAmount = voucherResult.voucherAmount;
       totalPrice = voucherResult.orderAmountDue;
-      if (voucherAmount > 0) {
-      }
+    
     }
 
     // 3️⃣ Create order document inside session

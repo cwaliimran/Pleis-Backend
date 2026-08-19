@@ -1141,7 +1141,6 @@ const getReservationsV2Calender = async ({ companyOrganizer, organization, start
     UserReservations.aggregate(pipeline),
     UserReservations.aggregate(pipelineMaxCapacity),
   ]);
-  console.log("maxCapacityResult", maxCapacityResult);
   const totalMaxCapacity = maxCapacityResult[0]?.totalMaxCapacity || 0;
   const meta = {
     totalMaxCapacity,
@@ -1232,6 +1231,10 @@ const consumeReservationVoucher = async ({ reservation, orderAmount, session }) 
   const voucherAmount = Math.min(amount, remainingBalance);
 
   const orderAmountDue = amount - voucherAmount;
+  //if whole amount is used then set status to applied
+  if (voucherAmount === remainingBalance) {
+    voucher.status = "applied";
+  }
 
   const updated = await UserReservations.findOneAndUpdate(
     {
@@ -1241,6 +1244,9 @@ const consumeReservationVoucher = async ({ reservation, orderAmount, session }) 
     {
       $inc: {
         "voucher.usedAmount": voucherAmount,
+      },
+      $set: {
+        "voucher.status": voucher.status,
       },
     },
     {
