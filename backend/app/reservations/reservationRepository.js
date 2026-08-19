@@ -30,6 +30,24 @@ const ReservationType = require("@ReservationTypeModel");
 const moment = require("moment-timezone");
 const ReservationPreferences = require("@ReservationPreferencesModel");
 
+const getReservationTimeRange = (slot, bookingDuration) => {
+  const start = moment.parseZone(slot.startTime);
+
+  if (bookingDuration === "wholeDay") {
+    return {
+      start,
+      end: start.clone().endOf("day"),
+    };
+  }
+
+  const duration = Number(bookingDuration);
+
+  return {
+    start,
+    end: duration > 0 ? start.clone().add(duration, "minutes") : moment.parseZone(slot.endTime),
+  };
+};
+
 const getReservationSlots = async ({ userId, date, organizationId, timezone }) => {
   if (!timezone || !moment.tz.zone(timezone)) {
     return {
@@ -189,18 +207,23 @@ const getReservationSlots = async ({ userId, date, organizationId, timezone }) =
       }
 
       for (const existingSlot of dateBlock.timeSlots || []) {
-        const existingStart = moment.parseZone(existingSlot.startTime);
+        const { start, end } = getReservationTimeRange(existingSlot, reservation.bookingDuration);
 
-        const existingEnd = moment.parseZone(existingSlot.endTime);
-
-        if (!existingStart.isValid() || !existingEnd.isValid()) {
-          continue;
+        if (start.isValid() && end.isValid()) {
+          bookedSlots.push({ start, end });
         }
+        // const existingStart = moment.parseZone(existingSlot.startTime);
 
-        bookedSlots.push({
-          start: existingStart,
-          end: existingEnd,
-        });
+        // const existingEnd = moment.parseZone(existingSlot.endTime);
+
+        // if (!existingStart.isValid() || !existingEnd.isValid()) {
+        //   continue;
+        // }
+
+        // bookedSlots.push({
+        //   start: existingStart,
+        //   end: existingEnd,
+        // });
       }
     }
   }
@@ -452,7 +475,6 @@ const createReservation = async (data, session) => {
       throw new Error("Reservation not found");
     }
 
-    data.reservationSnapshot = reservationBase;
     data.reservationSnapshot = reservationBase;
 
     baseAmount = Number(reservationBase.amount ?? 0);
@@ -1182,6 +1204,21 @@ const getUserReservationDetails = async (id) => {
         },
       },
 
+      {
+        $lookup: {
+          from: "reservationtypes",
+          localField: "reservationType",
+          foreignField: "_id",
+          as: "reservationType",
+        },
+      },
+      {
+        $unwind: {
+          path: "$reservationType",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
       // 🔟 Final projection
       {
         $project: {
@@ -1193,7 +1230,7 @@ const getUserReservationDetails = async (id) => {
           userName: { $concat: ["$user.firstName", " ", "$user.lastName"] },
           phoneNumber: "$user.phoneNumber",
           venueFullAddress: "$venue.location.fullAddress",
-          reservationType: "$reservationDetails.reservationType",
+          reservationType: "$reservationType",
 
           transactions: 1, // ✅ included here
 
