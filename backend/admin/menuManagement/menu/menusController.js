@@ -16,6 +16,7 @@ const createMenu = async (req, res) => {
     organization,
     status = "active",
     startDate,
+    venue,
   } = req.body;
   if (
     !validateParams(req, res, {
@@ -44,6 +45,7 @@ const createMenu = async (req, res) => {
     status,
     creator: req.user._id,
     startDate,
+    venue,
   };
 
   //convert organization to array if it's not
@@ -90,10 +92,14 @@ const getMenus = async (req, res) => {
 
   try {
     const SORT_FIELDS = [
-      "menuName",
+      "title",
+      "description",
       "createdAt",
       "organizationName",
-      "description",
+      "startDate",
+      "createdAt",
+      "venue",
+
     ];
     const SORT_ORDERS = ["asc", "desc"];
     if (
