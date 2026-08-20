@@ -76,6 +76,7 @@ function formatPromotion(promotion, timezone) {
       break;
 
     case "buyMenuItem":
+    case "buyMenuItemPromotion":
     case "extraPointsForItem":
       delete obj.pointsMultiplier;
       delete obj.discountedPrice;

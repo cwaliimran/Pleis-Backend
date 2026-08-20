@@ -6,6 +6,9 @@ const { generateMeta } = require("@utils/responseUtil");
 const formatPromotion = require("./utils/formatPromotion");
 const { generateImmediatelyForPromotionTemplate } = require("./utils/recurringPromotion.core");
 const { getRewardById } = require("../../../app/loyalty/rewards/rewardsRepository");
+const {
+  resolvePromotionTimes,
+} = require("../../../commonModules/loyalty/promotions/utils/promotionSchedule");
 const create = async (data, timezone) => {
   const promotion = await repository.create(data);
 
@@ -79,6 +82,12 @@ const update = async (id, data, scope = "single", timezone) => {
   } 
 
     if (!promotion) return null;
+
+    if (data.startTime !== undefined || data.endTime !== undefined) {
+      const times = resolvePromotionTimes(data, promotion);
+      data.startTime = times.startTime;
+      data.endTime = times.endTime;
+    }
 
     const { recurringMeta } = promotion;
 

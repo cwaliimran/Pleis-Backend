@@ -4,6 +4,9 @@ const repository = require("./promotionsRepository");
 const mongoose = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
 const formatPromotion = require("./utils/formatPromotion");
+const {
+  resolvePromotionTimes,
+} = require("../../../commonModules/loyalty/promotions/utils/promotionSchedule");
 
 const create = async (data,timezone) => {
   let promotion = await repository.create(data);
@@ -55,13 +58,19 @@ const get = async ({ companyOrganizer, page, limit, keyword, status, date, timez
   return { responses: formatted, meta };
 };
 
-const update = async (id, data) => {
+const update = async (id, data, timezone) => {
   const item = await repository.findById(id);
   if (!item) return null;
+
+  if (data.startTime !== undefined || data.endTime !== undefined) {
+    const times = resolvePromotionTimes(data, item);
+    data.startTime = times.startTime;
+    data.endTime = times.endTime;
+  }
+
   Object.assign(item, data);
   await item.save();
-  //fetch updated item and return
-  return await getDetails(id);
+  return await getDetails(id, timezone);
 };
 
 const deleteItem = async (id) => {
