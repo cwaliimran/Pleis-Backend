@@ -519,7 +519,6 @@ const getMenuIdsByCompanyOrganizer = async (companyOrganizer) => {
   })
     .select("_id")
     .lean();
-  console.log("menus", menus);
   return menus.map((menu) => menu._id);
 };
 const getMenuIdsByOrganization = async (organization) => {
