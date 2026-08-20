@@ -83,7 +83,6 @@ const getReservationSlots = async ({ userId, date, organizationId, timezone }) =
   })
     .select("timeSlotsSetting")
     .lean();
-  console.log("reservationPreferences", reservationPreferences);
   const settings = reservationPreferences?.timeSlotsSetting;
 
   if (!settings || settings.status !== "enabled") {
@@ -487,15 +486,17 @@ const createReservation = async (data, session) => {
   let totalReservationAmount = 0;
 
   /* ---------- Reservation Type ---------- */
-  
-  let reservationTypeData = await ReservationType.findOne({ _id: reservationType, status: "active" }).session(session).lean();
+
+  let reservationTypeData = await ReservationType.findOne({ _id: reservationType, status: "active" })
+    .session(session)
+    .lean();
 
   if (!reservationTypeData) {
     return { success: false, error: "Reservation type not found" };
   }
 
   if (reservationTypeData.conditionType === "minimumSpend") {
-    if(!amount) {
+    if (!amount) {
       return { success: false, error: "Minimum spend is required" };
     }
     if (amount < reservationTypeData.minimumSpend) {
@@ -559,7 +560,6 @@ const createReservation = async (data, session) => {
   data.amount = finalReservationAmount;
 
   /* ---------- Confirmation flow ---------- */
-
 
   /* ---------- Save reservation ---------- */
   data.amount = finalReservationAmount;
@@ -1636,6 +1636,29 @@ const getReservationForTransfer = async (id) => {
   return UserReservations.findById(id).select("_id userId transferHistory");
 };
 
+const getTodayReservationVoucher = ({ user, filter }) => {
+  const { _id: userId, timezone } = user;
+  const { organizationId, date } = filter;
+  const startOfDay = date
+    ? moment.tz(date, timezone).startOf("day").toDate()
+    : moment.tz(timezone).startOf("day").toDate();
+
+  const endOfDay = date ? moment.tz(date, timezone).endOf("day").toDate() : moment.tz(timezone).endOf("day").toDate();
+
+  return UserReservations.find({
+    userId,
+    organizationId: organizationId,
+    "timingSlots.dateTimeSlots.date": {
+      $gte: startOfDay,
+      $lte: endOfDay,
+    },
+    "voucher.status": "pending",
+    "voucher.discountAmount": { $gt: 0 },
+  })
+    .select("voucher timingSlots")
+    .lean();
+};
+
 module.exports = {
   createReservation,
   getReservationsWithFilters,
@@ -1651,6 +1674,7 @@ module.exports = {
   getOrganizationsWithReservationsForHome,
   getOrganizationReservations,
   getReservationForTransfer,
+  getTodayReservationVoucher,
   checkReservationAvailability,
   validateReservationCapacity,
   getReservationSlots,

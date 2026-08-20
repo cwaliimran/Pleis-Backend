@@ -252,9 +252,8 @@ const updateUserReservationStatus = async (id, value, changedBy) => {
   //find find reservation type and get minimum spend if they amount is >0 then it should change status to
   const userReservation = await UserReservations.findById(id);
   if (!userReservation) return null;
-
   let lockUntil = null;
-  if (userReservation.status === "pendingPayment"){
+  if (userReservation.status === "pendingPayment") {
     //lock for 30 minutes
     lockUntil = new Date(Date.now() + 30 * 60 * 1000);
   }
@@ -264,15 +263,17 @@ const updateUserReservationStatus = async (id, value, changedBy) => {
     {
       $set: {
         status: value,
+        ...(lockUntil ? { lockUntil } : {}),
       },
       $push: {
         reservationChanges: {
           changedBy: changedBy ? new mongoose.Types.ObjectId(changedBy) : null,
-          action: "accepted",
-          newStatus: value,
+          action: "reservationStatusChanged",
+          oldValue: userReservation.status,
+          newValue: value,
+          reason: "Reservation status updated by organizer",
           createdAt: now,
         },
-        lockUntil: lockUntil ? lockUntil : null,
       },
     },
     {
@@ -328,34 +329,34 @@ const updateUserReservationStatus = async (id, value, changedBy) => {
   }
 
   //notify user about the reservation status change
-  fireAndForget(async () => {
-     sendUserNotifications({
-      recipientIds: [userReservation.userId.toString()],
-      title: "Reservation " + value,
-      body:
-        value === "confirmed"
-          ? "Your reservation has been confirmed"
-          : value === "cancelled"
-          ? "Your reservation has been cancelled"
-          : value === "checkedIn"
-          ? "Your reservation has been checked in"
-          : value === "rejected"
-          ? "Your reservation has been rejected"
-          : value === "needsConfirmation"
-          ? "Your reservation needs confirmation"
-          : value === "pendingPayment"
-          ? "Your reservation is pending payment"
-          : value === "completed"
-          ? "Your reservation has been completed"
-          : "Your reservation status has been changed to " + value,
-      data: {
-        type: NotificationTypes.RESERVATION_UPDATE,
-        objectType: "userreservations",
-      },
-      sender: changedBy ? changedBy.toString() : userReservation.companyOrganizer?.toString() || null,
-      objectId: userReservation._id?.toString() || null,
-    }).catch((err) => console.error("Error sending notifications in background:"));
-  }, "RESERVATION_STATUS_CHANGE");
+  // fireAndForget(async () => {
+  //    sendUserNotifications({
+  //     recipientIds: [userReservation.userId.toString()],
+  //     title: "Reservation " + value,
+  //     body:
+  //       value === "confirmed"
+  //         ? "Your reservation has been confirmed"
+  //         : value === "cancelled"
+  //         ? "Your reservation has been cancelled"
+  //         : value === "checkedIn"
+  //         ? "Your reservation has been checked in"
+  //         : value === "rejected"
+  //         ? "Your reservation has been rejected"
+  //         : value === "needsConfirmation"
+  //         ? "Your reservation needs confirmation"
+  //         : value === "pendingPayment"
+  //         ? "Your reservation is pending payment"
+  //         : value === "completed"
+  //         ? "Your reservation has been completed"
+  //         : "Your reservation status has been changed to " + value,
+  //     data: {
+  //       type: NotificationTypes.RESERVATION_UPDATE,
+  //       objectType: "userreservations",
+  //     },
+  //     sender: changedBy ? changedBy.toString() : userReservation.companyOrganizer?.toString() || null,
+  //     objectId: userReservation._id?.toString() || null,
+  //   }).catch((err) => console.error("Error sending notifications in background:"));
+  // }, "RESERVATION_STATUS_CHANGE");
   return true;
 };
 
@@ -652,10 +653,10 @@ const changeUsersReservationsTiming = async ({ reservationIds, startTime, endTim
           $push: {
             reservationChanges: {
               changedBy: reservation.companyOrganizer,
-              oldTiming,
-              newTiming: reservation.timingSlots,
+              oldValue: oldTiming,
+              newValue: reservation.timingSlots,
               action: "timingChanged",
-              status: "pending",
+              reason: "Reservation timing updated by organizer",
               createdAt: new Date(),
             },
           },

@@ -174,6 +174,7 @@ const placeOrder = async ({
   paymentMethod,
   pickupType,
   tableNumber,
+  deliveryOption,
   promoCode,
   tip,
   reservationId,
@@ -304,7 +305,6 @@ const placeOrder = async ({
         throw new Error("Reservation not found or not valid for this user");
       }
 
-
       const voucherResult = await consumeReservationVoucher({
         reservation,
         orderAmount: totalPrice,
@@ -313,7 +313,6 @@ const placeOrder = async ({
 
       voucherAmount = voucherResult.voucherAmount;
       totalPrice = voucherResult.orderAmountDue;
-    
     }
 
     // 3️⃣ Create order document inside session
@@ -339,6 +338,7 @@ const placeOrder = async ({
       paymentMethod,
       pickupType,
       tableNumber,
+      deliveryOption,
       orderType: "online",
     };
 
@@ -375,11 +375,10 @@ const placeOrder = async ({
         data: formattedOrder,
       });
 
-      const staffIds = await getCheckedInStaffForOrganization(organizationId, timezone);
-
       await session.commitTransaction();
       session.endSession();
 
+      const staffIds = await getCheckedInStaffForOrganization(organizationId, timezone);
       sendUserNotifications({
         recipientIds: staffIds,
         title: "New Order Placed",
@@ -417,6 +416,7 @@ const updateOrder = async ({
   pickupType,
   tableNumber,
   promoCode,
+  deliveryOption,
   tip,
 }) => {
   const session = await mongoose.startSession();
@@ -675,6 +675,9 @@ const updateOrder = async ({
 
       ...(tableNumber !== undefined && {
         tableNumber,
+      }),
+      ...(deliveryOption !== undefined && {
+        deliveryOption,
       }),
 
       // Reset payment lock after update

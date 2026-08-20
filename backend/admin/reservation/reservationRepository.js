@@ -1212,46 +1212,31 @@ const consumeReservationVoucher = async ({ reservation, orderAmount, session }) 
     return {
       voucherAmount: 0,
       orderAmountDue: Math.max(amount, 0),
-      remainingBalance: Number(voucher?.discountAmount || 0) - Number(voucher?.usedAmount || 0),
+      remainingBalance: Math.max(Number(voucher?.discountAmount || 0) - Number(voucher?.usedAmount || 0), 0),
     };
   }
 
-  const voucherTotal = Number(voucher.discountAmount) || 0;
-  const voucherUsed = Number(voucher.usedAmount) || 0;
-  const remainingBalance = Math.max(voucherTotal - voucherUsed, 0);
+  const total = Number(voucher.discountAmount) || 0;
+  const used = Number(voucher.usedAmount) || 0;
+  const remaining = Math.max(total - used, 0);
 
-  if (!remainingBalance) {
-    return {
-      voucherAmount: 0,
-      orderAmountDue: amount,
-      remainingBalance: 0,
-    };
-  }
-
-  const voucherAmount = Math.min(amount, remainingBalance);
-
-  const orderAmountDue = amount - voucherAmount;
-  //if whole amount is used then set status to applied
-  if (voucherAmount === remainingBalance) {
-    voucher.status = "applied";
-  }
+  const voucherAmount = Math.min(amount, remaining);
+  const newUsed = used + voucherAmount;
+  const newRemaining = Math.max(total - newUsed, 0);
 
   const updated = await UserReservations.findOneAndUpdate(
     {
       _id: reservation._id,
-      // "voucher.usedAmount": voucherUsed,
+      "voucher.status": "pending",
+      "voucher.usedAmount": used,
     },
     {
-      $inc: {
-        "voucher.usedAmount": voucherAmount,
-      },
+      $inc: { "voucher.usedAmount": voucherAmount },
       $set: {
-        "voucher.status": voucher.status,
+        "voucher.status": newRemaining === 0 ? "applied" : "pending",
       },
     },
-    {
-      session,
-    },
+    { session },
   );
 
   if (!updated) {
@@ -1260,8 +1245,8 @@ const consumeReservationVoucher = async ({ reservation, orderAmount, session }) 
 
   return {
     voucherAmount,
-    orderAmountDue,
-    remainingBalance: remainingBalance - voucherAmount,
+    orderAmountDue: amount - voucherAmount,
+    remainingBalance: newRemaining,
   };
 };
 module.exports = {

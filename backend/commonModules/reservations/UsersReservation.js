@@ -199,46 +199,29 @@ const UserReservationsSchema = new mongoose.Schema(
         changedBy: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "User",
-          default: null, // null = system/staff/walk-in
+          default: null, // null = system
         },
 
-        // previous confirmed timing
-        oldTiming: {
-          type: Object,
-          default: null,
-        },
-
-        // proposed timing
-        newTiming: {
-          type: Object,
-          default: null,
-        },
-
-        // what type of action
+        // type of change
         action: {
           type: String,
-          enum: [
-            "timingChanged", // organizer updated time
-            "accepted", // user accepted change
-            "cancelled", // user cancelled reservation
-            "refundRequested", // user asked refund
-            "refundProcessed", // admin refunded
-          ],
+          enum: ["timingChanged", "reservationStatusChanged", "paymentStatusChanged"],
           required: true,
         },
 
-        // state of change
-        status: {
+        // previous value
+        oldValue: {
           type: String,
-          enum: [
-            "pending", // waiting user decision
-            "accepted",
-            "rejected",
-            "completed",
-          ],
-          default: "completed",
+          default: null,
         },
 
+        // new value
+        newValue: {
+          type: String,
+          default: null,
+        },
+
+        // optional reason
         reason: {
           type: String,
           default: "",
