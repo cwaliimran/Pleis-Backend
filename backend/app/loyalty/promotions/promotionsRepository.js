@@ -559,6 +559,8 @@ const getActiveLoyaltyHappyHourPromotion = async ({
         promotionType: "happyHour",
         status: "active",
         companyOrganizer: organizerId,
+
+        // Date eligibility
         startDate: { $lte: now },
         endDate: { $gte: now },
       },
@@ -647,24 +649,53 @@ const getActiveLoyaltyHappyHourPromotion = async ({
 
   if (recurrence?.isEnabled) {
     const dayMap = [
-      "sun", "mon", "tue", "wed",
-      "thu", "fri", "sat"
+      "sun",
+      "mon",
+      "tue",
+      "wed",
+      "thu",
+      "fri",
+      "sat",
     ];
 
     const todayKey = dayMap[now.getDay()];
 
     if (
       recurrence.frequency === "weekly" &&
-      recurrence.daysOfWeek.length &&
+      recurrence.daysOfWeek?.length &&
       !recurrence.daysOfWeek.includes(todayKey)
     ) {
       return null;
     }
 
-    if (
-      recurrence.endDate &&
-      now > recurrence.endDate
-    ) {
+    if (recurrence.endDate && now > recurrence.endDate) {
+      return null;
+    }
+  }
+
+  /* =============================
+     ACTIVE DAYS CHECK
+  ============================== */
+
+  const activeDays = promotion.activeDays;
+
+  if (
+    activeDays?.mode === "selective" &&
+    activeDays.days?.length
+  ) {
+    const dayMap = [
+      "sun",
+      "mon",
+      "tue",
+      "wed",
+      "thu",
+      "fri",
+      "sat",
+    ];
+
+    const todayKey = dayMap[now.getDay()];
+
+    if (!activeDays.days.includes(todayKey)) {
       return null;
     }
   }
@@ -673,32 +704,37 @@ const getActiveLoyaltyHappyHourPromotion = async ({
      HAPPY HOUR TIME CHECK
   ============================== */
 
-  const start = promotion.startDate;
-  const end = promotion.endDate;
+  // No time restriction = active all day
+  if (!promotion.startTime || !promotion.endTime) {
+    return promotion;
+  }
 
-  if (!start || !end) return promotion;
+  const timeToMinutes = (time) => {
+    const [hours, minutes] = time.split(":").map(Number);
 
-  const startMinutes =
-    start.getUTCHours() * 60 +
-    start.getUTCMinutes();
+    return hours * 60 + minutes;
+  };
 
-  const endMinutes =
-    end.getUTCHours() * 60 +
-    end.getUTCMinutes();
+  const startMinutes = timeToMinutes(promotion.startTime);
+  const endMinutes = timeToMinutes(promotion.endTime);
 
   const currentMinutes =
-    now.getUTCHours() * 60 +
-    now.getUTCMinutes();
+    now.getHours() * 60 +
+    now.getMinutes();
 
-  // supports midnight crossing HH
+  // Supports both:
+  // 10:00 -> 20:00
+  // 22:00 -> 02:00
   const insideWindow =
     startMinutes <= endMinutes
       ? currentMinutes >= startMinutes &&
-      currentMinutes <= endMinutes
+        currentMinutes <= endMinutes
       : currentMinutes >= startMinutes ||
-      currentMinutes <= endMinutes;
+        currentMinutes <= endMinutes;
 
-  if (!insideWindow) return null;
+  if (!insideWindow) {
+    return null;
+  }
 
   return promotion;
 };

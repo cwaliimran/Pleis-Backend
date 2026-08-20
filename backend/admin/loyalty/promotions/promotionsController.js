@@ -257,7 +257,23 @@ const update = async (req, res) => {
       });
     }
 
-    const isHappyHour = existing.promotionType === "happyHour";
+    // ----------------------------------
+    // TIME CONVERSION (24h, same as create)
+    // ----------------------------------
+    if (data.startTime && data.endTime) {
+      data.startTime = convertTimezoneToUtc(
+        data.startTime,
+        timezone,
+        "HH:mm",
+        "HH:mm",
+      );
+      data.endTime = convertTimezoneToUtc(
+        data.endTime,
+        timezone,
+        "HH:mm",
+        "HH:mm",
+      );
+    }
 
     // ----------------------------------
     // DATE VALIDATION + CONVERSION
@@ -265,13 +281,8 @@ const update = async (req, res) => {
     if (data.startDate || data.endDate) {
       let dateFields = {};
 
-      if (isHappyHour) {
-        if (data.startDate) dateFields.startDate = "YYYY-MM-DD hh:mm A";
-        if (data.endDate) dateFields.endDate = "YYYY-MM-DD hh:mm A";
-      } else {
-        if (data.startDate) dateFields.startDate = "YYYY-MM-DD";
-        if (data.endDate) dateFields.endDate = "YYYY-MM-DD";
-      }
+      if (data.startDate) dateFields.startDate = "YYYY-MM-DD";
+      if (data.endDate) dateFields.endDate = "YYYY-MM-DD";
 
       if (!validateParams(req, res, { dateFields })) return;
 
@@ -279,7 +290,7 @@ const update = async (req, res) => {
         data.startDate = convertTimezoneToUtc(
           data.startDate,
           timezone,
-          isHappyHour ? "YYYY-MM-DD hh:mm A" : "YYYY-MM-DD"
+          "YYYY-MM-DD"
         );
       }
 
@@ -287,7 +298,7 @@ const update = async (req, res) => {
         data.endDate = convertTimezoneToUtc(
           data.endDate,
           timezone,
-          isHappyHour ? "YYYY-MM-DD hh:mm A" : "YYYY-MM-DD"
+          "YYYY-MM-DD"
         );
       }
 
@@ -334,7 +345,7 @@ const update = async (req, res) => {
     // ----------------------------------
     // UPDATE WITH SCOPE
     // ----------------------------------
-    const updated = await service.update(req.params.id, data, scope);
+    const updated = await service.update(req.params.id, data, scope, timezone);
 
     if (!updated) {
       return sendResponse({
