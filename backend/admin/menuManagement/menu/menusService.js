@@ -25,6 +25,7 @@ const getMenus = async ({
   companyOrganizer,
   sortBy,
   sortOrder,
+  venue,
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let organizationIds = [];
@@ -200,6 +201,14 @@ const getMenus = async ({
       });
     }
   }
+  else {
+    pipeline.push({
+      $sort: {
+        createdAt: -1,
+        _id: -1,
+      },
+    });
+  }
 
   // Sort, merge, clean
 
@@ -322,6 +331,8 @@ const updateMenu = async (id, data) => {
       "organization",
       "status",
       "isOrderingEnabled",
+      "venue",
+      "startDate",
     ];
 
     const updateData = {};

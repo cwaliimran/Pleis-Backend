@@ -56,6 +56,20 @@ const getChallengesWithFilters = async (
     sort = { createdAt: sortDirection, _id: sortDirection };
   }
 
+  const menuItemLookupPipeline = [
+    {
+      $lookup: {
+        from: "menus",
+        localField: "menu",
+        foreignField: "_id",
+        pipeline: [{ $project: { _id: 1, title: 1 } }],
+        as: "menu",
+      },
+    },
+    { $unwind: { path: "$menu", preserveNullAndEmptyArrays: true } },
+    { $project: { _id: 1, title: 1, menu: 1 } },
+  ];
+
   return Challenge.aggregate([
     { $match: query },
 
@@ -65,9 +79,23 @@ const getChallengesWithFilters = async (
         localField: "taskMenuItem",
         foreignField: "_id",
         as: "taskMenuItem",
+        pipeline: menuItemLookupPipeline,
       },
     },
-    { $unwind: { path: "$taskMenuItem", preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
+        from: "menuitems",
+        localField: "reward.rewardMenuItem",
+        foreignField: "_id",
+        as: "rewardMenuItemDocs",
+        pipeline: menuItemLookupPipeline,
+      },
+    },
+    {
+      $addFields: {
+        "reward.rewardMenuItem": "$rewardMenuItemDocs",
+      },
+    },
 
     {
       $lookup: {
@@ -336,6 +364,7 @@ const getChallengesWithFilters = async (
         viewsArr: 0,
         favoritesArr: 0,
         orderStats: 0,
+        rewardMenuItemDocs: 0,
       },
     },
 
