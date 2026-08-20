@@ -19,6 +19,7 @@ const {
   validateReservationForOrder,
   consumeReservationVoucher,
 } = require("../../../admin/reservation/reservationRepository");
+const DeliveryOptions = require("@DeliveryOptionsModel");
 
 const buildPricedMenuItemSnapshot = (menuItem) => {
   const priceInfo = calculateItemPrice(menuItem);
@@ -191,7 +192,10 @@ const placeOrder = async ({
   try {
     let menuItems = [];
     let organizationId;
-
+    const deliveryOptionData = await DeliveryOptions.findOne({ _id: deliveryOption }).lean();
+    if (deliveryOption && !deliveryOptionData) {
+      throw new Error("Invalid delivery option");
+    }
     if (items?.length) {
       const itemIds = items.map((i) => new mongoose.Types.ObjectId(i.menuItem));
       menuItems = await menuItemRepo.getMenuItemsWithFilters({
@@ -317,6 +321,7 @@ const placeOrder = async ({
 
     // 3️⃣ Create order document inside session
     totalPrice += Number(tip || 0);
+    console.log(deliveryOptionData?.deliveryMethod, "deliveryOptionData?.deliveryMethod");
     let orderData = {
       user: userId,
       organization: organizationId,
@@ -336,7 +341,7 @@ const placeOrder = async ({
       },
       notes,
       paymentMethod,
-      pickupType,
+      pickupType: deliveryOptionData?.deliveryMethod || pickupType,
       tableNumber,
       deliveryOption,
       orderType: "online",
@@ -354,6 +359,7 @@ const placeOrder = async ({
     // 5️⃣ Commit atomic transaction
 
     let formattedOrder = menuItemOrderFormatter(order, timezone);
+
     //get user details
     let userDetails = await findAppUserByIdWithProjectionService(userId, {
       profileIcon: 1,
@@ -364,7 +370,8 @@ const placeOrder = async ({
       username: 1,
     });
     formattedOrder.user = userDetails;
-
+    await session.commitTransaction();
+    session.endSession();
     // Emit socket event for new order (only for cash payments)
     if (paymentMethod === "cash") {
       emitOrderEvent({
@@ -374,11 +381,8 @@ const placeOrder = async ({
         organizationId: order.organization,
         data: formattedOrder,
       });
-
-      await session.commitTransaction();
-      session.endSession();
-
       const staffIds = await getCheckedInStaffForOrganization(organizationId, timezone);
+
       sendUserNotifications({
         recipientIds: staffIds,
         title: "New Order Placed",
