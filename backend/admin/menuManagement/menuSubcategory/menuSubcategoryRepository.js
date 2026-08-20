@@ -515,7 +515,11 @@ const reorderMenuSubCategory = async (movedId, newOrder) => {
     }
 
     const siblings = await MenuSubcategory.find(
-      { user: moved.user, status: { $ne: "deleted" } },
+      {
+        user: moved.user,
+        companyOrganizer: moved.companyOrganizer,
+        status: { $ne: "deleted" },
+      },
       { _id: 1, order: 1 },
       { session },
     ).sort({ order: 1, updatedAt: 1, _id: 1 });
@@ -528,8 +532,6 @@ const reorderMenuSubCategory = async (movedId, newOrder) => {
       0,
       Math.min(Math.round(Number(newOrder)) - 1, siblings.length),
     );
-    console.log("targetIndex", targetIndex);
-    console.log("siblings.length", siblings.length);
     siblings.splice(targetIndex, 0, item);
 
     const now = new Date();

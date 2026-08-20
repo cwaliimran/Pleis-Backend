@@ -89,6 +89,8 @@ const getUserLoyaltyReferrals = async ({
   date,
   companyOrganizer,
   type,
+  sortBy,
+  sortOrder,
 }) => {
 
   const skip = limit === 0 ? 0 : (page - 1) * limit;
@@ -111,8 +113,11 @@ const getUserLoyaltyReferrals = async ({
       today,
       skip,
       type,
+      sortBy,
+      sortOrder,
+
     });
-    console.log(" LoyaltyReferral", LoyaltyReferral);
+
 
   return {
     LoyaltyReferral,
