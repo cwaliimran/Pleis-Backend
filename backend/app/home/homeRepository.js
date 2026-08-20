@@ -3,6 +3,9 @@ const { Events } = require("@EventsModel");
 const { User } = require("@UserModel");
 const Promotion = require("@PromotionModel");
 const {Highlights} = require("@HighlightsModel");
+const {
+    isPromotionScheduleActive,
+} = require("../../commonModules/loyalty/promotions/utils/promotionSchedule");
 
 const MAX_DISTANCE_KM = 50;
 const MAX_LIMIT = 100;
@@ -139,12 +142,23 @@ const fetchPromotions = async ({
             title: 1,
             reward: 1,
             tierLimit: 1,
-            createdAt: 1
+            createdAt: 1,
+            startDate: 1,
+            endDate: 1,
+            startTime: 1,
+            endTime: 1,
+            activeDays: 1,
+            recurringDetails: 1,
         })
         .populate("reward")
         .populate("tierLimit", "type entryPoints")
         .limit(MAX_LIMIT)
-        .lean();
+        .lean()
+        .then((promotions) =>
+            promotions.filter((promotion) =>
+                isPromotionScheduleActive({ ...promotion, now }),
+            ),
+        );
 };
 
 // ----------------------------------------------------

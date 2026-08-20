@@ -26,6 +26,7 @@ const createReservationType = async (req, res) => {
     occasionRequired,
     tax,
     status,
+    minimumSpend,
   } = req.body;
 
   const user = req.user._id;
@@ -67,6 +68,7 @@ const createReservationType = async (req, res) => {
     occasionRequired,
     tax,
     status,
+    minimumSpend,
   };
   try {
     const ReservationTypeData =
@@ -151,6 +153,7 @@ const updateReservationType = async (req, res) => {
     occasionRequired,
     tax,
     status,
+    minimumSpend,
   } = req.body;
 
   const user = req.user._id;
@@ -170,6 +173,7 @@ const updateReservationType = async (req, res) => {
     occasionRequired,
     tax,
     status,
+    minimumSpend
   };
 
   try {

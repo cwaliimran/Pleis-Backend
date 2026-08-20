@@ -193,6 +193,8 @@ const getUserLoyaltyReferrals = async ({
   today,
   skip,
   type,
+  sortBy,
+  sortOrder,
 }) => {
 
   const pipeline = [
@@ -235,7 +237,12 @@ const getUserLoyaltyReferrals = async ({
     },
   });
 
-  pipeline.push({ $sort: { createdAt: -1 } });
+  if (sortBy && sortOrder) {
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
+    pipeline.push({ $sort: { [sortBy]: sortDirection } });
+  } else {
+    pipeline.push({ $sort: { createdAt: -1 } });
+  }
 
   pipeline.push({
     $facet: {

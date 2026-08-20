@@ -97,7 +97,7 @@ const getPromotionsByCompanyOrganizerService = async ({
 };
 
 const claimPromotion = async (promotionId, userId, timezone) => {
-  const promotion = await repository.claimPromotion(promotionId, userId);
+  const promotion = await repository.claimPromotion(promotionId, userId, timezone);
   if (!promotion) return null;
 
   return promotion;

@@ -8,7 +8,6 @@ const {
 const formatLoyaltyListing = require("./formatter/formatLoyaltyListing");
 const LoyaltyReferralService = require("./loyaltyReferralService");
 
-
 /* =========================================================
    SETTINGS (Singleton Per Company)
 ========================================================= */
@@ -33,7 +32,8 @@ const createLoyaltyReferral = async (req, res) => {
         "companyOrganizer",
       ],
     })
-  ) return;
+  )
+    return;
 
   const data = {
     companyOrganizer,
@@ -46,8 +46,7 @@ const createLoyaltyReferral = async (req, res) => {
   };
 
   try {
-    const result =
-      await LoyaltyReferralService.createLoyaltyReferral(data);
+    const result = await LoyaltyReferralService.createLoyaltyReferral(data);
 
     return sendResponse({
       res,
@@ -55,7 +54,6 @@ const createLoyaltyReferral = async (req, res) => {
       translationKey: "loyalty_referral_saved_successfully",
       data: result,
     });
-
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
 
@@ -67,7 +65,6 @@ const createLoyaltyReferral = async (req, res) => {
     });
   }
 };
-
 
 const getLoyaltyReferrals = async (req, res) => {
   let { companyOrganizer } = req.query;
@@ -85,10 +82,9 @@ const getLoyaltyReferrals = async (req, res) => {
   }
 
   try {
-    const result =
-      await LoyaltyReferralService.getLoyaltyReferrals({
-        companyOrganizer,
-      });
+    const result = await LoyaltyReferralService.getLoyaltyReferrals({
+      companyOrganizer,
+    });
 
     return sendResponse({
       res,
@@ -96,7 +92,6 @@ const getLoyaltyReferrals = async (req, res) => {
       translationKey: "loyalty_referral_fetched_successfully",
       data: result, // single object (or null)
     });
-
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
 
@@ -109,7 +104,6 @@ const getLoyaltyReferrals = async (req, res) => {
   }
 };
 
-
 const updateLoyaltyReferral = async (req, res) => {
   const { id } = req.params;
 
@@ -118,7 +112,8 @@ const updateLoyaltyReferral = async (req, res) => {
       pathParams: ["id"],
       objectIdFields: ["id"],
     })
-  ) return;
+  )
+    return;
 
   const {
     userPoints,
@@ -138,8 +133,7 @@ const updateLoyaltyReferral = async (req, res) => {
   };
 
   try {
-    const updated =
-      await LoyaltyReferralService.updateLoyaltyReferral(data);
+    const updated = await LoyaltyReferralService.updateLoyaltyReferral(data);
 
     if (updated?.error) {
       return sendResponse({
@@ -163,7 +157,6 @@ const updateLoyaltyReferral = async (req, res) => {
       translationKey: "loyalty_referral_updated_successfully",
       data: updated,
     });
-
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
 
@@ -176,7 +169,6 @@ const updateLoyaltyReferral = async (req, res) => {
   }
 };
 
-
 const deleteLoyaltyReferral = async (req, res) => {
   const { id } = req.params;
 
@@ -185,11 +177,11 @@ const deleteLoyaltyReferral = async (req, res) => {
       pathParams: ["id"],
       objectIdFields: ["id"],
     })
-  ) return;
+  )
+    return;
 
   try {
-    const deleted =
-      await LoyaltyReferralService.deleteLoyaltyReferral(id);
+    const deleted = await LoyaltyReferralService.deleteLoyaltyReferral(id);
 
     if (!deleted) {
       return sendResponse({
@@ -204,7 +196,6 @@ const deleteLoyaltyReferral = async (req, res) => {
       statusCode: 200,
       translationKey: "loyalty_referral_deleted_successfully",
     });
-
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
 
@@ -217,8 +208,6 @@ const deleteLoyaltyReferral = async (req, res) => {
   }
 };
 
-
-
 /* =========================================================
    USER REFERRAL RECORDS (Pagination Preserved)
 ========================================================= */
@@ -226,7 +215,36 @@ const deleteLoyaltyReferral = async (req, res) => {
 const getUserLoyaltyReferrals = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
 
-  let { keyword, status, date, type = "loyalty", companyOrganizer } = req.query;
+  let { keyword, status, date, type = "loyalty", companyOrganizer, sortBy, sortOrder } = req.query;
+  const SORT_FIELDS = [
+    "user",
+    "referrerUserName",
+    "referralLimit",
+    "userReward",
+    "referrerReward",
+    "loyaltyReferralsCount",
+    "createdAt",
+    "expiryDate",
+    "status",
+  ];
+  const SORT_ORDERS = ["asc", "desc"];
+  if (
+    (sortBy && !SORT_FIELDS.includes(sortBy)) ||
+    (sortOrder && !SORT_ORDERS.includes(sortOrder))
+  ) {
+    const key =
+      sortBy && !SORT_FIELDS.includes(sortBy)
+        ? "invalid_sort_by_field"
+        : "invalid_sort_order";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
+
+  if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
+    const key = sortBy
+      ? "sort_order_required_when_sort_by_is_provided"
+      : "sort_by_required_when_sort_order_is_provided";
+    return sendResponse({ res, statusCode: 400, translationKey: key });
+  }
 
   if (!companyOrganizer) {
     companyOrganizer = req.user._id;
@@ -255,18 +273,17 @@ const getUserLoyaltyReferrals = async (req, res) => {
         date,
         companyOrganizer,
         type,
+        sortBy,
+        sortOrder,
       });
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "loyalty_referrals_fetched_successfully",
-      data: LoyaltyReferral.map(item =>
-        formatLoyaltyListing(item)
-      ),
+      data: LoyaltyReferral.map((item) => formatLoyaltyListing(item)),
       meta,
     });
-
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
 
@@ -279,14 +296,11 @@ const getUserLoyaltyReferrals = async (req, res) => {
   }
 };
 
-
-
 const resetUserReferralLimits = async (req, res) => {
   const limit = 0;
 
   try {
-    const result =
-      await LoyaltyReferralService.resetUserReferralLimits(limit);
+    const result = await LoyaltyReferralService.resetUserReferralLimits(limit);
 
     return sendResponse({
       res,
@@ -294,7 +308,6 @@ const resetUserReferralLimits = async (req, res) => {
       translationKey: "loyalty_referral_reset_successfully",
       data: result,
     });
-
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
 
@@ -307,13 +320,11 @@ const resetUserReferralLimits = async (req, res) => {
   }
 };
 
-
-
 module.exports = {
   createLoyaltyReferral,
   getLoyaltyReferrals,
   updateLoyaltyReferral,
   deleteLoyaltyReferral,
-  getUserLoyaltyReferrals,   // pagination preserved
+  getUserLoyaltyReferrals, // pagination preserved
   resetUserReferralLimits,
 };

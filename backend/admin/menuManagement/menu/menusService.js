@@ -70,6 +70,32 @@ const getMenus = async ({
     {
       $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true },
     },
+    {
+      $lookup: {
+        from: "venues",
+        let: { venueIds: "$venue" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $in: [
+                  "$_id",
+                  {
+                    $map: {
+                      input: { $ifNull: ["$$venueIds", []] },
+                      as: "id",
+                      in: { $toObjectId: "$$id" },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          { $project: { _id: 1, title: 1 } },
+        ],
+        as: "venue",
+      },
+    },
   ];
 
   // 4️⃣ Apply filters dynamically

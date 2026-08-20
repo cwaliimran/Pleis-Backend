@@ -351,6 +351,39 @@ const getReservationSlots = async (req, res) => {
   }
 };
 
+const getTodayReservationVoucher = async (req, res) => {
+  const user = req?.user;
+  if (
+    !validateParams(req, res, {
+      queryParams: ["organizationId"],
+      objectIdFields: ["organizationId"],
+    })
+  )
+    return;
+  try {
+    const result = await reservationService.getTodayReservationVoucherService({
+      user,
+      filter: req.query,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "Success",
+      data: result,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode || 500,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
 module.exports = {
   createReservation,
   getReservations,
@@ -360,4 +393,5 @@ module.exports = {
   acceptReservationChange,
   cancelReservation,
   getReservationSlots,
+  getTodayReservationVoucher,
 };

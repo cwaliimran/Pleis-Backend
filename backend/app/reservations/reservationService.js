@@ -326,6 +326,10 @@ const getReservationSlotsService = async ({ userId, date, organizationId, timezo
   }
 };
 
+const getTodayReservationVoucherService = async ({ user, filter }) => {
+  return ReservationRepo.getTodayReservationVoucher({ user, filter });
+};
+
 module.exports = {
   getOrganizationsWithReservationsForHomeService,
   createReservationService,
@@ -338,4 +342,5 @@ module.exports = {
   cancelReservation,
   requestRefund,
   getReservationSlotsService,
+  getTodayReservationVoucherService,
 };

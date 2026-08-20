@@ -71,6 +71,7 @@ const updateReservationType = async (id, data) => {
     "occasionRequired",
     "tax",
     "status",
+    "minimumSpend",
   ];
 
 

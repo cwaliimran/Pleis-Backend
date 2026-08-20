@@ -14,6 +14,10 @@ const { generateMeta } = require("@utils/responseUtil");
 const formatPromotion = require("./formatters/formatPromotion");
 const { normalizePromotionClaimMeta } = require("./formatters/normalizePromotionClaimMeta");
 const { createTransactionService } = require("../../userWalletService/transactions/services/unifiedTransactionsService");
+const {
+  isPromotionScheduleActive,
+  getPromotionScheduleReasons,
+} = require("../../../commonModules/loyalty/promotions/utils/promotionSchedule");
 
 
 // Count
@@ -289,9 +293,22 @@ const applyPromotionEligibility = async ({
       now,
     });
 
+    const scheduleReasons = getPromotionScheduleReasons(
+      promo,
+      now,
+      timezone,
+    );
+
+    const cannotClaimReasons = [
+      ...(meta.cannotClaimReasons || []),
+      ...scheduleReasons,
+    ];
+
     items.push({
       ...formatted,
       ...meta,
+      cannotClaimReasons,
+      canClaim: cannotClaimReasons.length === 0,
     });
   }
 
@@ -553,12 +570,14 @@ const getActiveLoyaltyHappyHourPromotion = async ({
   const organizerId = new mongoose.Types.ObjectId(companyOrganizer);
   const userObjectId = new mongoose.Types.ObjectId(userId);
 
-  const [promotion] = await Promotion.aggregate([
+  const promotions = await Promotion.aggregate([
     {
       $match: {
         promotionType: "happyHour",
         status: "active",
         companyOrganizer: organizerId,
+
+        // Date eligibility
         startDate: { $lte: now },
         endDate: { $gte: now },
       },
@@ -620,7 +639,7 @@ const getActiveLoyaltyHappyHourPromotion = async ({
     },
 
     { $sort: { pointsMultiplier: -1 } },
-    { $limit: 1 },
+    { $limit: 20 },
 
     {
       $addFields: {
@@ -637,74 +656,17 @@ const getActiveLoyaltyHappyHourPromotion = async ({
     { $project: { claimStats: 0 } },
   ]);
 
-  if (!promotion) return null;
-
-  /* =============================
-     RECURRENCE CHECK
-  ============================== */
-
-  const recurrence = promotion.recurringDetails;
-
-  if (recurrence?.isEnabled) {
-    const dayMap = [
-      "sun", "mon", "tue", "wed",
-      "thu", "fri", "sat"
-    ];
-
-    const todayKey = dayMap[now.getDay()];
-
-    if (
-      recurrence.frequency === "weekly" &&
-      recurrence.daysOfWeek.length &&
-      !recurrence.daysOfWeek.includes(todayKey)
-    ) {
-      return null;
-    }
-
-    if (
-      recurrence.endDate &&
-      now > recurrence.endDate
-    ) {
-      return null;
+  for (const promotion of promotions) {
+    if (isPromotionScheduleActive({ ...promotion, now })) {
+      return promotion;
     }
   }
 
-  /* =============================
-     HAPPY HOUR TIME CHECK
-  ============================== */
-
-  const start = promotion.startDate;
-  const end = promotion.endDate;
-
-  if (!start || !end) return promotion;
-
-  const startMinutes =
-    start.getUTCHours() * 60 +
-    start.getUTCMinutes();
-
-  const endMinutes =
-    end.getUTCHours() * 60 +
-    end.getUTCMinutes();
-
-  const currentMinutes =
-    now.getUTCHours() * 60 +
-    now.getUTCMinutes();
-
-  // supports midnight crossing HH
-  const insideWindow =
-    startMinutes <= endMinutes
-      ? currentMinutes >= startMinutes &&
-      currentMinutes <= endMinutes
-      : currentMinutes >= startMinutes ||
-      currentMinutes <= endMinutes;
-
-  if (!insideWindow) return null;
-
-  return promotion;
+  return null;
 };
 
 
-const claimPromotion = async (promotionId, userId) => {
+const claimPromotion = async (promotionId, userId, timezone = "UTC") => {
   const now = new Date();
 
   /* ---------------- Fetch promotion ---------------- */
@@ -732,7 +694,7 @@ const claimPromotion = async (promotionId, userId) => {
     await applyPromotionEligibility({
       promotions: [promotion],
       userId,
-      timezone: "UTC",
+      timezone,
       now,
     });
 
@@ -800,8 +762,14 @@ const getActiveMenuItemPromotions = async ({
 
   if (!promotions.length) return [];
 
+  const currentlyActive = promotions.filter((promo) =>
+    isPromotionScheduleActive({ ...promo, now, timezone }),
+  );
+
+  if (!currentlyActive.length) return [];
+
   const formatted = await applyPromotionEligibility({
-    promotions,
+    promotions: currentlyActive,
     userId,
     timezone,
     now,

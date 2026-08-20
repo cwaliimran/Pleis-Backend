@@ -86,6 +86,7 @@ const getOrdersService = async ({
   if (range) {
     ({ startDate, endDate } = getDateRange(range));
   }
+  console.log("startDate", startDate, "endDate", endDate);
   const companyOrganizer = await getOrgCompanyOrganizer(organization);
   let { Orderss, meta } = await OrdersRepo.getOrders({
     timezone,

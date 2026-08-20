@@ -2,14 +2,23 @@ const mongoose = require("mongoose");
 const { UserReservations } = require("@UserReservationsModel");
 const MenuOrders = require("@OrdersModel");
 const { calculatePointsRepo } = require("../../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
-const { createTransactionService } = require("../../../../app/userWalletService/transactions/services/unifiedTransactionsService");
+const {
+  createTransactionService,
+} = require("../../../../app/userWalletService/transactions/services/unifiedTransactionsService");
 const { handleLoyaltyEarningConsequences } = require("./handleLoyaltyEarningConsequences");
-const { sendReservationNotification } = require("../../../../controllers/notificationHelper/reservationNotificationService");
-const { sendMenuOrderNotification } = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
+const {
+  sendReservationNotification,
+} = require("../../../../controllers/notificationHelper/reservationNotificationService");
+const {
+  sendMenuOrderNotification,
+} = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
 const { fireAndForget } = require("../../../../helperUtils/responseUtil");
 const { getUserReservationDetails } = require("../../../../app/reservations/reservationRepository");
 const { userReservationsFormatter } = require("../../../../app/reservations/formaters/reservationFormetter");
-const { reservationConfirmationEmailTemplate, reservationCancelledEmailTemplate } = require("../../../../helperUtils/emailTemplates/userReservationsTemplates");
+const {
+  reservationConfirmationEmailTemplate,
+  reservationCancelledEmailTemplate,
+} = require("../../../../helperUtils/emailTemplates/userReservationsTemplates");
 const { sendEmailViaMailgun } = require("../../../../helperUtils/emailUtil");
 const { findAppUserByIdWithProjectionService } = require("../../../../app/usersManagement/usersService");
 const triggerBadgeEngine = require("@triggerGlobalStreak");
@@ -23,7 +32,6 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   let globalPoints = null;
 
   try {
-
     session.startTransaction();
 
     if (result.status === "pending") {
@@ -32,8 +40,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
       return;
     }
 
-    userReservation = await UserReservations
-      .findById(reservationId)
+    userReservation = await UserReservations.findById(reservationId)
       .populate("preOrderMenuItemsOrder")
       .session(session);
 
@@ -58,9 +65,21 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
             "paymentDetails.paymentStatus": "paid",
             "paymentDetails.transactionId": result.transactionId,
             paidAt: new Date(),
+            "voucher.discountAmount": userReservation?.priceBreakDown?.reservationAmount || 0,
+            "voucher.status": "pending",
+          },
+          $push: {
+            reservationChanges: {
+              changedBy: null,
+              action: "paymentStatusChanged",
+              oldValue: userReservation.paymentDetails?.paymentStatus || "pending",
+              newValue: "paid",
+              reason: "Payment status updated by system",
+              createdAt: new Date(),
+            },
           },
         },
-        { session }
+        { session },
       );
 
       if (menuOrder) {
@@ -75,72 +94,61 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
               transactionId: result.transactionId,
             },
           },
-          { session }
+          { session },
         );
       }
 
       try {
         console.log("[reservationOrderFinalizerService] Fetching reservation details for email.");
-        const reservationDetails =
-          await getUserReservationDetails(
-            userReservation._id
-          );
+        const reservationDetails = await getUserReservationDetails(userReservation._id);
 
-        let userDetails = await findAppUserByIdWithProjectionService(userReservation.userId, { timezone: 1, email: 1, username: 1 });
+        let userDetails = await findAppUserByIdWithProjectionService(userReservation.userId, {
+          timezone: 1,
+          email: 1,
+          username: 1,
+        });
 
-        const formatted =
-          userReservationsFormatter(
-            reservationDetails,
-            userDetails.timezone || "UTC"
-          );
+        const formatted = userReservationsFormatter(reservationDetails, userDetails.timezone || "UTC");
 
-        const html =
-          reservationConfirmationEmailTemplate({
-            userName: formatted.userName,
-            reservation: formatted,
-            organizationName: formatted.organizationName,
-            currency: "EUR"
-          });
+        const html = reservationConfirmationEmailTemplate({
+          userName: formatted.userName,
+          reservation: formatted,
+          organizationName: formatted.organizationName,
+          currency: "EUR",
+        });
 
         console.log("[reservationOrderFinalizerService] Sending reservation confirmation email to:", userDetails.email);
 
-        sendEmailViaMailgun(
-          userDetails.email,
-          "Your reservation is confirmed",
-          html
-        );
-
+        sendEmailViaMailgun(userDetails.email, "Your reservation is confirmed", html);
       } catch (err) {
         console.error("[reservationOrderFinalizerService] Reservation confirmation email failed:", err);
       }
 
       const totalPrice = userReservation.amount || 0;
 
-      let bonusPoints =
-        userReservation?.reservationSnapshot?.bonusPoints ?? 0;
+      let bonusPoints = userReservation?.reservationSnapshot?.bonusPoints ?? 0;
 
       console.log("[reservationOrderFinalizerService] Calculating loyalty points.");
-      const pointsCalculation =
-        await calculatePointsRepo(
-          userReservation.userId,
-          userReservation.companyOrganizer,
-          totalPrice
-        );
+      const pointsCalculation = await calculatePointsRepo(
+        userReservation.userId,
+        userReservation.companyOrganizer,
+        totalPrice,
+      );
 
       companyPoints = {
         base: pointsCalculation.organizer.earnedPoints,
         multiplier: pointsCalculation.organizer.organizerMultiplier || 1,
-        total: (pointsCalculation.organizer.earnedPoints + bonusPoints),
+        total: pointsCalculation.organizer.earnedPoints + bonusPoints,
         pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
-        bonusPoints
+        bonusPoints,
       };
 
       globalPoints = {
         base: pointsCalculation.global.earnedPoints,
         multiplier: pointsCalculation.global.globalMultiplier || 1,
-        total: (pointsCalculation.global.earnedPoints + bonusPoints),
+        total: pointsCalculation.global.earnedPoints + bonusPoints,
         pointsPerEuro: pointsCalculation.global.pointsPerEuro,
-        bonusPoints
+        bonusPoints,
       };
 
       console.log("[reservationOrderFinalizerService] Creating loyalty transaction.");
@@ -157,7 +165,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
           entityId: userReservation._id,
           domainType: "userreservations",
         },
-        session
+        session,
       );
 
       if (!trx.success) {
@@ -180,7 +188,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
             "paymentDetails.paymentStatus": "failed",
           },
         },
-        { session }
+        { session },
       );
 
       if (menuOrder) {
@@ -193,7 +201,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
               paymentStatus: "failed",
             },
           },
-          { session }
+          { session },
         );
       }
     }
@@ -201,38 +209,27 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
     await session.commitTransaction();
 
     if (result.status === "failed") {
-      const reservationDetails =
-        await getUserReservationDetails(userReservation._id);
+      const reservationDetails = await getUserReservationDetails(userReservation._id);
 
-      let userDetails =
-        await findAppUserByIdWithProjectionService(
-          userReservation.userId,
-          { timezone: 1, email: 1, username: 1 }
-        );
+      let userDetails = await findAppUserByIdWithProjectionService(userReservation.userId, {
+        timezone: 1,
+        email: 1,
+        username: 1,
+      });
 
-      const formatted =
-        userReservationsFormatter(
-          reservationDetails,
-          userDetails.timezone || "UTC"
-        );
+      const formatted = userReservationsFormatter(reservationDetails, userDetails.timezone || "UTC");
 
-      const html =
-        reservationCancelledEmailTemplate({
-          userName: formatted.userName,
-          reservation: formatted,
-          organizationName: formatted.organizationName
-        });
+      const html = reservationCancelledEmailTemplate({
+        userName: formatted.userName,
+        reservation: formatted,
+        organizationName: formatted.organizationName,
+      });
 
-      await sendEmailViaMailgun(
-        userDetails.email,
-        "Reservation payment failed",
-        html
-      );
+      await sendEmailViaMailgun(userDetails.email, "Reservation payment failed", html);
     }
 
     committed = true;
     console.log("[reservationOrderFinalizerService] Transaction committed.");
-
   } catch (err) {
     if (session.inTransaction()) {
       console.error("[reservationOrderFinalizerService] Error occurred, aborting transaction:", err);
@@ -250,17 +247,15 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   if (committed && userReservation) {
     console.log("[reservationOrderFinalizerService] Running post-commit side effects.");
 
-
     if (userReservation.amount && userReservation.amount > 0) {
       fireAndForget(
         triggerBadgeEngine(userReservation.userId, {
           category: "singlePurchase",
           amount: userReservation.amount,
         }),
-        "TRIGGER_BADGE_ENGINE"
+        "TRIGGER_BADGE_ENGINE",
       );
     }
-
 
     /**
      * =====================================================
@@ -275,7 +270,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
           companyOrganizer: userReservation.companyOrganizer,
           companyPoints,
           globalPoints,
-          menuOrder: menuOrder
+          menuOrder: menuOrder,
         });
       } catch (err) {
         console.error("[LOYALTY] Reservation side effect failed:", err);
@@ -294,7 +289,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
           reservationId: userReservation._id,
           action: "RESERVATION_CONFIRMED",
         }),
-        "RESERVATION_CONFIRMED_NOTIFICATION"
+        "RESERVATION_CONFIRMED_NOTIFICATION",
       );
     }
 
@@ -305,7 +300,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
           reservationId: userReservation._id,
           action: "RESERVATION_CANCELLED",
         }),
-        "RESERVATION_CANCELLED_NOTIFICATION"
+        "RESERVATION_CANCELLED_NOTIFICATION",
       );
     }
 
@@ -322,7 +317,7 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
             orderId: menuOrder._id,
             action: "MENU_ORDER_CONFIRMED",
           }),
-          "RESERVATION_MENU_CONFIRMED_NOTIFICATION"
+          "RESERVATION_MENU_CONFIRMED_NOTIFICATION",
         );
       }
 
@@ -333,12 +328,11 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
             orderId: menuOrder._id,
             action: "MENU_ORDER_CANCELLED",
           }),
-          "RESERVATION_MENU_CANCELLED_NOTIFICATION"
+          "RESERVATION_MENU_CANCELLED_NOTIFICATION",
         );
       }
     }
   }
 };
-
 
 module.exports = { reservationOrderFinalizerService };
