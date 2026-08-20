@@ -355,7 +355,7 @@ const updateMenu = async (id, data) => {
       await Menus.updateMany(
         {
           organization: orgId,
-          status: { $ne: "deleted" },
+          status: "active",
           _id: { $ne: menuId },
         },
         { $set: { status: "inactive" } },

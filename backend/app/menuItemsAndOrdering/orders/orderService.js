@@ -150,7 +150,9 @@ const getStaffIdsByOrganization = async (organizationId) => {
     throw new Error("Invalid organization ID");
   }
 
-  const organization = await Organizations.findById(organizationId, { staff: 1 }).lean();
+  const organization = await Organizations.findById(organizationId, {
+    staff: 1,
+  }).lean();
 
   if (!organization || !organization.staff) {
     return [];
@@ -430,8 +432,7 @@ const updateOrder = async ({
       throw new Error("Order not found");
     }
 
-    // Only pendingPayment orders can be updated
-    if (existingOrder.status !== "pendingPayment") {
+    if (existingOrder.status !== "pending") {
       throw new Error("Only orders in pendingPayment state can be updated");
     }
 
@@ -454,6 +455,7 @@ const updateOrder = async ({
     // =========================================================
     // 2️⃣ UPDATE ITEMS ONLY IF PROVIDED
     // =========================================================
+    let orderStatus = existingOrder.status;
 
     if (shouldUpdateItems) {
       if (!Array.isArray(items)) {
@@ -526,6 +528,14 @@ const updateOrder = async ({
       } else {
         // Explicit [] means remove all items
         orderItems = [];
+      }
+
+      // Recompute order-level status from the items we just built.
+      // Only ever auto-update it if the order is currently "pending" —
+      // any other existing status (e.g. "confirmed", "cancelled") is left untouched.
+      if (orderStatus === "pending") {
+        const hasItemNeedingConfirmation = orderItems.some((item) => item.status === "pending");
+        orderStatus = hasItemNeedingConfirmation ? "pending" : "confirmed";
       }
     }
 
@@ -646,7 +656,7 @@ const updateOrder = async ({
     // =========================================================
 
     const updateData = {
-      status: "pendingPayment",
+      status: orderStatus,
 
       totalPrice,
 
@@ -827,7 +837,9 @@ const addMoreItemsToOrder = async ({ orderId, items }) => {
 
   // 2️⃣ Fetch menu items
   const itemIds = items.map((i) => new mongoose.Types.ObjectId(i.menuItem));
-  const menuItems = await menuItemRepo.getMenuItemsWithFilters({ query: { _id: { $in: itemIds } } });
+  const menuItems = await menuItemRepo.getMenuItemsWithFilters({
+    query: { _id: { $in: itemIds } },
+  });
 
   if (!menuItems.length) throw new Error("Invalid items to add");
 
