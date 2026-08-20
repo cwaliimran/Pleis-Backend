@@ -528,6 +528,8 @@ const reorderMenuSubCategory = async (movedId, newOrder) => {
       0,
       Math.min(Math.round(Number(newOrder)) - 1, siblings.length),
     );
+    console.log("targetIndex", targetIndex);
+    console.log("siblings.length", siblings.length);
     siblings.splice(targetIndex, 0, item);
 
     const now = new Date();
