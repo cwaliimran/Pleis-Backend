@@ -7,6 +7,9 @@ const {
 } = require("@utils/responseUtil");
 
 const service = require("./promotionsService");
+const {
+  preparePromotionTimesForStorage,
+} = require("../../../commonModules/loyalty/promotions/utils/promotionSchedule");
 
 const create = async (req, res) => {
   let { timezone } = req.user;
@@ -17,8 +20,8 @@ const create = async (req, res) => {
   var objectIdFields = ["companyOrganizer"]
 
   if (req.body.promotionType === "happyHour") {
-    dateFields.startDate = "YYYY-MM-DD hh:mm A"
-    dateFields.endDate = "YYYY-MM-DD hh:mm A"
+    dateFields.startDate = "YYYY-MM-DD"
+    dateFields.endDate = "YYYY-MM-DD"
     rawData.push("pointsMultiplier")
   }
   if (req.body.promotionType === "buyMenuItemPromotion") {
@@ -74,25 +77,20 @@ const create = async (req, res) => {
 
 
   try {
+    const times = preparePromotionTimesForStorage(
+      req.body,
+      req.user.timezone,
+      convertTimezoneToUtc,
+    );
+    req.body.startTime = times.startTime;
+    req.body.endTime = times.endTime;
 
-    if (req.body.promotionType === "happyHour") {
-      //convert to utc
-      if (req.body.startDate) {
-        req.body.startDate = convertTimezoneToUtc(req.body.startDate, req.user.timezone, "YYYY-MM-DD hh:mm A");
-      }
-      if (req.body.endDate) {
-        req.body.endDate = convertTimezoneToUtc(req.body.endDate, req.user.timezone, "YYYY-MM-DD hh:mm A");
-      }
-    } else {
-      //convert to utc
-      if (req.body.startDate) {
-        req.body.startDate = convertTimezoneToUtc(req.body.startDate, req.user.timezone, "YYYY-MM-DD");
-      }
-      if (req.body.endDate) {
-        req.body.endDate = convertTimezoneToUtc(req.body.endDate, req.user.timezone, "YYYY-MM-DD");
-      }
+    if (req.body.startDate) {
+      req.body.startDate = convertTimezoneToUtc(req.body.startDate, req.user.timezone, "YYYY-MM-DD");
     }
-
+    if (req.body.endDate) {
+      req.body.endDate = convertTimezoneToUtc(req.body.endDate, req.user.timezone, "YYYY-MM-DD");
+    }
 
     //end date cannot be before start date
     if (req.body.startDate && req.body.endDate && new Date(req.body.endDate) < new Date(req.body.startDate)) {
@@ -179,7 +177,35 @@ const getDetails = async (req, res) => {
 const update = async (req, res) => {
   if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
   try {
-    const updated = await service.update(req.params.id, req.body);
+    const { timezone } = req.user;
+    const data = { ...req.body };
+
+    const times = preparePromotionTimesForStorage(
+      data,
+      timezone,
+      convertTimezoneToUtc,
+    );
+    if (data.startTime !== undefined || data.endTime !== undefined) {
+      data.startTime = times.startTime;
+      data.endTime = times.endTime;
+    }
+
+    if (data.startDate) {
+      data.startDate = convertTimezoneToUtc(data.startDate, timezone, "YYYY-MM-DD");
+    }
+    if (data.endDate) {
+      data.endDate = convertTimezoneToUtc(data.endDate, timezone, "YYYY-MM-DD");
+    }
+
+    if (data.startDate && data.endDate && new Date(data.endDate) < new Date(data.startDate)) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "end_date_cannot_be_before_start_date",
+      });
+    }
+
+    const updated = await service.update(req.params.id, data, timezone);
     if (!updated) {
       return sendResponse({ res, statusCode: 404, translationKey: "promotion_not_found" });
     }

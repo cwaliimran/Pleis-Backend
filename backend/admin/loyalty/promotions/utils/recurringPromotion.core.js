@@ -15,17 +15,6 @@ const addDaysUTC = (d, days) =>
 const diffDaysUTC = (a, b) =>
   Math.floor((startOfDayUTC(b) - startOfDayUTC(a)) / DAY_MS);
 
-const withSameTimeUTC = (day, ref) =>
-  new Date(Date.UTC(
-    day.getUTCFullYear(),
-    day.getUTCMonth(),
-    day.getUTCDate(),
-    ref.getUTCHours(),
-    ref.getUTCMinutes(),
-    ref.getUTCSeconds(),
-    ref.getUTCMilliseconds()
-  ));
-
 // ======================================================
 // CRON ENTRY
 // ======================================================
@@ -108,7 +97,7 @@ const getUpcomingPromotionDates = (template, horizonDate, existingCount) => {
     if (rule.frequency === "daily") {
       const diff = diffDaysUTC(baseDay, cursor);
       if (diff >= 0 && diff % rule.interval === 0) {
-        list.push(withSameTimeUTC(cursor, baseStart));
+        list.push(startOfDayUTC(cursor));
         generated++;
       }
     }
@@ -126,7 +115,7 @@ const getUpcomingPromotionDates = (template, horizonDate, existingCount) => {
         !rule.daysOfWeek.length || rule.daysOfWeek.includes(weekday);
 
       if (diffWeeks >= 0 && diffWeeks % rule.interval === 0 && allowed) {
-        list.push(withSameTimeUTC(cursor, baseStart));
+        list.push(startOfDayUTC(cursor));
         generated++;
       }
     }
@@ -138,7 +127,7 @@ const getUpcomingPromotionDates = (template, horizonDate, existingCount) => {
         (cursor.getUTCMonth() - baseDay.getUTCMonth());
 
       if (monthsDiff >= 0 && monthsDiff % rule.interval === 0) {
-        list.push(withSameTimeUTC(cursor, baseStart));
+        list.push(startOfDayUTC(cursor));
         generated++;
       }
     }
