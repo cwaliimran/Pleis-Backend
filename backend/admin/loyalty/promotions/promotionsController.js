@@ -156,7 +156,16 @@ const create = async (req, res) => {
 
 const get = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, companyOrganizer, sortBy, sortOrder } = req.query;
+  let {
+    keyword,
+    status,
+    startDate,
+    endDate,
+    companyOrganizer,
+    sortBy,
+    sortOrder,
+    promotionType,
+  } = req.query;
   const SORT_FIELDS = ["title", "description", "promotionType","status","views","favorites","participants","pointsAwarded"];
   const SORT_ORDERS = ["asc", "desc"];
   if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
@@ -190,10 +199,12 @@ const get = async (req, res) => {
       limit,
       keyword,
       status,
-      date,
+      startDate,
+      endDate,
       timezone: req.user?.timezone,
       sortBy,
       sortOrder,
+      promotionType,
     });
     return sendResponse({
       res,

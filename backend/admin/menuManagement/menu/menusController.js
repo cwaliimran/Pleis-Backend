@@ -85,6 +85,7 @@ const getMenus = async (req, res) => {
     organizations,
     date,
     companyOrganizer,
+    venue,
     sortBy,
     sortOrder,
     summary,
@@ -145,6 +146,7 @@ const getMenus = async (req, res) => {
         date,
         sortBy,
         sortOrder,
+        venue,
       }));
     } else if (summary) {
       ({ menus, meta } = await menusService.getMenusSummary({
