@@ -2,6 +2,23 @@ const { tiersFormatter } = require("../../../../admin/tiers/formatters/tiersForm
 const { getFullImageUrl } = require("../../../../helperUtils/imageHelper");
 const { convertUtcToTimezone } = require("../../../../helperUtils/responseUtil");
 
+const attachMenuItemImage = (item) => {
+    if (item && item.image) {
+        return { ...item, image: getFullImageUrl(item.image) };
+    }
+    return item;
+};
+
+const formatMenuItems = (items) => {
+    if (Array.isArray(items)) {
+        return items.map(attachMenuItemImage);
+    }
+    if (items) {
+        return attachMenuItemImage(items);
+    }
+    return items;
+};
+
 // utils/formatChallenge.js
 function formatChallenge(challenge, timezone) {
     const obj = { ...challenge };
@@ -39,9 +56,7 @@ function formatChallenge(challenge, timezone) {
                 delete obj.reward.rewardValue;
                 delete obj.reward.customReward;
                 delete obj.reward.specialTicket;
-                if(obj.reward.rewardMenuItem && obj.reward.rewardMenuItem.image){
-                    obj.reward.rewardMenuItem.image = getFullImageUrl(obj.reward.rewardMenuItem.image)
-                }
+                obj.reward.rewardMenuItem = formatMenuItems(obj.reward.rewardMenuItem);
                 break;
             case "customReward":
                 delete obj.reward.rewardValue;
@@ -63,10 +78,7 @@ function formatChallenge(challenge, timezone) {
             delete obj.taskMenuItem;
             break;
         case "buyMenuItem":
-            // delete obj.taskValue;
-            if(obj.taskMenuItem && obj.taskMenuItem.image){
-                obj.taskMenuItem.image = getFullImageUrl(obj.taskMenuItem.image)
-            }
+            obj.taskMenuItem = formatMenuItems(obj.taskMenuItem);
             break;
         case "referUsers":
             delete obj.taskMenuItem;

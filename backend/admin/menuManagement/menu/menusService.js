@@ -331,6 +331,8 @@ const updateMenu = async (id, data) => {
       "organization",
       "status",
       "isOrderingEnabled",
+      "venue",
+      "startDate",
     ];
 
     const updateData = {};

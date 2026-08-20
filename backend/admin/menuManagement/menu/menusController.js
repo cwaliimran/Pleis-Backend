@@ -226,12 +226,17 @@ const updateMenu = async (req, res) => {
     organization,
     status = "active",
     isOrderingEnabled,
+    venue,
+    startDate,
   } = req.body;
 
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
-      objectIdFields: ["id", "organization"],
+      objectIdFields: ["id", "organization", "venue"],
+      dateFields: {
+        startDate: "YYYY-MM-DD",
+      },
     })
   )
     return;
@@ -242,6 +247,8 @@ const updateMenu = async (req, res) => {
     organization,
     status,
     isOrderingEnabled,
+    venue,
+    startDate,
   };
 
   try {
