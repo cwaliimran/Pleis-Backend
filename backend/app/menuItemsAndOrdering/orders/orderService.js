@@ -56,8 +56,22 @@ const buildPricedMenuItemSnapshot = (menuItem) => {
   };
 };
 
+const resolveComboComponentMenuItemId = (entry) => {
+  if (!entry) return null;
+  // Nested schema: { menuItem: ObjectId|doc, quantity }
+  if (typeof entry === "object" && entry.menuItem != null) {
+    const ref = entry.menuItem;
+    return ref._id || ref;
+  }
+  // Legacy flat ObjectId / populated doc
+  return entry._id || entry;
+};
+
 const validateComboSelection = (cartCombo, combo) => {
-  const requiredItemIds = (combo.menuItems || []).map((id) => id.toString());
+  const requiredItemIds = (combo.menuItems || [])
+    .map((entry) => resolveComboComponentMenuItemId(entry))
+    .filter(Boolean)
+    .map((id) => id.toString());
   const selectedIds = (cartCombo.items || []).map((id) => id.toString());
 
   if (!requiredItemIds.length) {
@@ -117,12 +131,25 @@ const buildOrderCombos = async ({
       throw new Error(`Invalid combo menu items for combo: ${cartCombo.combo}`);
     }
 
-    const pricedItems = comboMenuItems.map((item) => {
+    const componentQuantityByItemId = new Map(
+      (combo.menuItems || []).map((entry) => {
+        const id = resolveComboComponentMenuItemId(entry);
+        const componentQty = Number(entry?.quantity);
+        return [
+          id.toString(),
+          Number.isFinite(componentQty) && componentQty > 0 ? componentQty : 1,
+        ];
+      }),
+    );
+
+    const pricedItems = selectedIds.map((id) => {
+      const item = comboMenuItems.find((m) => m._id.toString() === id);
       const priceInfo = calculateItemPrice(item);
       return {
         ...item,
         salePrice: priceInfo.finalPrice,
         basePrice: priceInfo.originalPrice,
+        quantity: componentQuantityByItemId.get(id) || 1,
       };
     });
 
@@ -146,6 +173,7 @@ const buildOrderCombos = async ({
       return {
         menuItem: priced.menuItem,
         menuItemSnapShot: priced.menuItemSnapShot,
+        quantity: componentQuantityByItemId.get(id) || 1,
       };
     });
 
@@ -259,7 +287,9 @@ const placeOrder = async ({
         throw new Error("Invalid combos in cart");
       }
 
-      const firstComboItemId = comboDocs[0].menuItems?.[0];
+      const firstComboItemId = resolveComboComponentMenuItemId(
+        comboDocs[0].menuItems?.[0],
+      );
       if (!firstComboItemId) throw new Error("Invalid combos in cart");
 
       const comboOrgId =
@@ -646,7 +676,9 @@ const updateOrder = async ({
         }
 
         // Validate combo organization
-        const firstComboItemId = comboDocs[0]?.menuItems?.[0];
+        const firstComboItemId = resolveComboComponentMenuItemId(
+          comboDocs[0]?.menuItems?.[0],
+        );
 
         if (!firstComboItemId) {
           throw new Error("Invalid combos in cart");
