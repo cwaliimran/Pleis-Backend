@@ -702,7 +702,10 @@ const getMenuItemsCombos = async (menuItems = [], companyOrganizer = null) => {
       creator: combo.creator,
       menuItems: resolvedItems.map((item) => {
         const { _comboQuantity, ...rest } = item;
-        return rest;
+        return {
+          ...rest,
+          quantity: _comboQuantity || 1,
+        };
       }),
     });
   }
