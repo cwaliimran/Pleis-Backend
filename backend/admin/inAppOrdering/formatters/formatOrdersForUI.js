@@ -17,14 +17,33 @@ const matchPickupType = (order, pickupFilter) => {
   );
 };
 
-const hasUndeliveredItem = (order) =>
-  Array.isArray(order.items) &&
-  order.items.some(item => item.isdelivered === false);
+const hasUndeliveredItem = (order) => {
+  const items = Array.isArray(order.items) ? order.items : [];
+  const combos = Array.isArray(order.combos) ? order.combos : [];
+  return (
+    items.some((item) => item.isdelivered === false) ||
+    combos.some((combo) =>
+      (combo.items || []).some((item) => item.isdelivered === false),
+    )
+  );
+};
 
-const allItemsDelivered = (order) =>
-  Array.isArray(order.items) &&
-  order.items.length > 0 &&
-  order.items.every(item => item.isdelivered === true);
+const allItemsDelivered = (order) => {
+  const items = Array.isArray(order.items) ? order.items : [];
+  const combos = Array.isArray(order.combos) ? order.combos : [];
+  if (!items.length && !combos.length) return false;
+  const itemsOk =
+    !items.length || items.every((item) => item.isdelivered === true);
+  const combosOk =
+    !combos.length ||
+    combos.every(
+      (combo) =>
+        Array.isArray(combo.items) &&
+        combo.items.length > 0 &&
+        combo.items.every((item) => item.isdelivered === true),
+    );
+  return itemsOk && combosOk;
+};
 
 const isPaid = (order) => order.paymentStatus === "paid";
 
