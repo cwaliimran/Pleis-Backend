@@ -76,15 +76,27 @@ const getMenuItemsDiscounts = async ({
     }
   }
 
-  pipeline.push({
-    $lookup: {
-      from: "menuitems",
-      localField: "menuItems",
-      foreignField: "_id",
-      as: "menuItems",
-      pipeline: [{ $project: { title: 1, status: 1 } }],
-    },
-  });
+pipeline.push({
+  $lookup: {
+    from: "menuitems",
+    localField: "menuItems",
+    foreignField: "_id",
+    as: "menuItems",
+    pipeline: [
+      { $project: { title: 1, status: 1, menu: 1 } },
+      {
+        $lookup: {
+          from: "menus",
+          localField: "menu",
+          foreignField: "_id",
+          as: "menu",
+          pipeline: [{ $project: { title: 1 } }],
+        },
+      },
+      { $unwind: { path: "$menu", preserveNullAndEmptyArrays: true } },
+    ],
+  },
+});
 
   if (sortBy && sortOrder) {
     const sortField =

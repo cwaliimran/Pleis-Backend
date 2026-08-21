@@ -1,8 +1,10 @@
 // services/menuItemService.js
 const menuItemRepo = require("./menuItemsRepository");
 const { formatMenuItem } = require("./formatter/formatMenuItems");
-const MenuItemCategories = require("@MenuItemCategoriesModel");
-const { applyMenuItemsSale } = require("../../../app/menuItemsAndOrdering/menuItems/menuItemsService");
+const MenuSubcategory = require("@MenuSubcategoryModel");
+const {
+  applyMenuItemsSale,
+} = require("../../../app/menuItemsAndOrdering/menuItems/menuItemsService");
 
 const getMenuItems = async ({ timezone, organization }) => {
   const menuId = await menuItemRepo.getMenuIdByOrganization(organization);
@@ -12,28 +14,23 @@ const getMenuItems = async ({ timezone, organization }) => {
     menu: menuId._id,
     status: "active",
   });
-
   if (!menuItems.length) return { menu: [] };
 
   const categoryIds = [
-    ...new Set(menuItems.map(i => i.category.toString()))
+    ...new Set(menuItems.map((i) => i.subCategory.toString())),
   ];
-
-  const categories = await MenuItemCategories
-    .find({ _id: { $in: categoryIds } })
+  const categories = await MenuSubcategory.find({ _id: { $in: categoryIds } })
     .select("_id title")
     .lean();
-
+  
   const categoryMap = categories.reduce((acc, cat) => {
     acc[cat._id.toString()] = cat.title;
     return acc;
   }, {});
-
   return {
     menu: formatMenuGrouping(menuItems, timezone, categoryMap),
   };
 };
-
 
 const getMenuItemsToManage = async ({ timezone, organization }) => {
   const menu = await menuItemRepo.getMenuIdByOrganization(organization);
@@ -41,17 +38,16 @@ const getMenuItemsToManage = async ({ timezone, organization }) => {
 
   const menuItems = await menuItemRepo.getMenuItemsWithFilters({
     menu: menu._id,
-    status: { $in: ["active", "inactive"] }
+    status: { $in: ["active", "inactive"] },
   });
 
   if (!menuItems.length) return { menu: [] };
 
-  const categoryIds = [
-    ...new Set(menuItems.map(i => i.category.toString()))
-  ];
+  const categoryIds = [...new Set(menuItems.map((i) => i.category.toString()))];
 
-  const categories = await MenuItemCategories
-    .find({ _id: { $in: categoryIds } })
+  const categories = await MenuItemCategories.find({
+    _id: { $in: categoryIds },
+  })
     .select("_id title")
     .lean();
 
@@ -66,27 +62,26 @@ const getMenuItemsToManage = async ({ timezone, organization }) => {
       menu: menu._id,
       isOrderingEnabled: menu.isOrderingEnabled || true,
       totalItems: menuItems.length,
-      totalInStock: menuItems.filter(i => i.status === "active").length,
-      totalOutOfStock: menuItems.filter(i => i.status !== "active").length,
+      totalInStock: menuItems.filter((i) => i.status === "active").length,
+      totalOutOfStock: menuItems.filter((i) => i.status !== "active").length,
     },
   };
 };
-
 
 function formatMenuGrouping(menuItems, timezone, categoryMap = {}) {
   const grouped = {};
 
   menuItems.forEach((item) => {
-    const { type, category } = item;
+    const { type, subCategory } = item;
 
     const categoryName =
-      categoryMap[category.toString()] || category.toString();
+      categoryMap[subCategory.toString()] || subCategory.toString();
 
     if (!grouped[categoryName]) grouped[categoryName] = {};
     if (!grouped[categoryName][type]) grouped[categoryName][type] = [];
 
     grouped[categoryName][type].push(
-      applyMenuItemsSale(formatMenuItem(item, timezone))
+      applyMenuItemsSale(formatMenuItem(item, timezone)),
     );
   });
 
@@ -99,15 +94,12 @@ function formatMenuGrouping(menuItems, timezone, categoryMap = {}) {
   }));
 }
 
-
 const getMenuItemDetails = async (id) => {
-  const [menuItem] = await Promise.all([
-    menuItemRepo.findMenuItemById(id),
-  ]);
+  const [menuItem] = await Promise.all([menuItemRepo.findMenuItemById(id)]);
   if (!menuItem) return null;
   //format menu item and recommended items
   const formattedMenuItem = applyMenuItemsSale(
-    formatMenuItem(menuItem, timezone)
+    formatMenuItem(menuItem, timezone),
   );
 
   return { menuItem: formattedMenuItem };
@@ -144,7 +136,6 @@ const updateMenuStockService = async ({ type, menu, timezone }) => {
   return data;
 };
 
-
 const updateMenuItem = async (id, data, timezone) => {
   const menuItem = await menuItemRepo.findMenuItemById(id);
   if (!menuItem) return null;
@@ -160,7 +151,7 @@ const updateMenuItem = async (id, data, timezone) => {
     "menu",
     "startTime",
     "endTime",
-    "status"
+    "status",
   ];
   const updateData = {};
   for (const key of allowedFields) {
@@ -187,5 +178,5 @@ module.exports = {
   getMenuItemDetails,
   getMenuItemsToManage,
   updateMenuStockService,
-  updateMenuItem
+  updateMenuItem,
 };
