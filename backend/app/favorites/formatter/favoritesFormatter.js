@@ -88,9 +88,23 @@ function formatFavoritesOrganization(item, options = {}) {
   org.isFavorite = true;
   return org;
 }
+function formatFavoritesChallenges(item, options = {}) {
+  let org = typeof item.toObject === "function" ? item.toObject() : item;
+  if (!org) return null;
+
+  delete org.__v;
+
+  if (org.image) {
+    org.image = getFullImageUrl(org.image);
+  }
+
+  org.isFavorite = true;
+  return org;
+}
 
 
 module.exports = {
   formatFavoritesEventResponse,
   formatFavoritesOrganization,
+  formatFavoritesChallenges,
 };
