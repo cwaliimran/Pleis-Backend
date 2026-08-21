@@ -317,7 +317,6 @@ const getMenus = async ({ page, limit, keyword, status, userId, date, organizati
   return { menus, meta };
 };
 const updateMenu = async (id, data) => {
-  console.log("id", id);
   const session = await mongoose.startSession();
   session.startTransaction();
 

@@ -102,7 +102,7 @@ const getOrganizationsWithFilters = async (
   if (query.companyOrganizer) {
     matchQuery.creator = new mongoose.Types.ObjectId(query.companyOrganizer);
   }
-  console.log("sortBy", sortBy);
+
 
   // Aggregation pipeline
   const pipeline = [
@@ -352,7 +352,6 @@ const getOrganizationDetails = async (id) => {
     getTotalEventCountByOrganizationId,
   } = require("../events/eventRepository");
   const companyOrganizer = await getOrgCompanyOrganizer(id);
-  console.log("companyOrganizer", companyOrganizer);
 
   const [
     organization,

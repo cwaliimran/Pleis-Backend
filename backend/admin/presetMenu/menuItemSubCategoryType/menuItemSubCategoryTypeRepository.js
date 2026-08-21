@@ -241,7 +241,7 @@ const generateUniqueMenuItemSubCategoryTypeCode = async () => {
 const reorderMenuItemSubCategoryType = async (movedId, newIndex, user) => {
   const session = await mongoose.startSession();
   session.startTransaction();
-  console.log("movedId", movedId, "newIndex", newIndex, " user", user);
+
 
   try {
     const moved = await MenuItemSubCategoryType.findOne(

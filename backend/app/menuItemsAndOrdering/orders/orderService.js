@@ -323,7 +323,6 @@ const placeOrder = async ({
 
     // 3️⃣ Create order document inside session
     totalPrice += Number(tip || 0);
-    console.log(deliveryOptionData?.deliveryMethod, "deliveryOptionData?.deliveryMethod");
     let orderData = {
       user: userId,
       organization: organizationId,

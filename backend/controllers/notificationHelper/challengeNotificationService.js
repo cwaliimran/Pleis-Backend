@@ -98,9 +98,6 @@ const sendChallengeNotification = async ({
       image: null,
     });
 
-    console.log(
-      `[CHALLENGE_NOTIFICATION] ${action} sent for ${challengeOrderId}`
-    );
 
   } catch (err) {
     console.error("[CHALLENGE_NOTIFICATION] Failed:", err);

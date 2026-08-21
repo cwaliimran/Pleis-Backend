@@ -53,9 +53,6 @@ const processReminder = async (
     .select("_id userId")
     .lean();
 
-  console.log(
-    `Found ${reservations.length} reservations for ${type} between ${lowerBound.toISOString()} and ${upperBound.toISOString()}`
-  );
 
   for (const reservation of reservations) {
 

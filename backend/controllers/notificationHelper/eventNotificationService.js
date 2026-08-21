@@ -99,7 +99,6 @@ const sendEventNotification = async ({
         }
 
         if (!userIds.length) {
-            console.log(`[NOTIFICATION] No recipients found for event ${eventId}`);
             return;
         }
 
@@ -120,9 +119,6 @@ const sendEventNotification = async ({
                     : null,
         });
 
-        console.log(
-            `[NOTIFICATION] ${action} sent for event ${eventId} to ${userIds.length} users`
-        );
     } catch (err) {
         console.error("[NOTIFICATION] Failed:", err);
     }

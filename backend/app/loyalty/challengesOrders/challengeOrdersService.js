@@ -168,12 +168,8 @@ const resolveBuyMenuItemChallengeService = async ({
   items = []
 }) => {
 
-  console.log("[BUY_MENU_CHALLENGE] 🚀 Started", {
-    userId,
-    companyOrganizer,
-    itemsCount: items.length
-  });
-  console.log("[BUY_MENU_CHALLENGE] 📦 Raw Items", items);
+
+
 
   const qtyMap = new Map();
 
@@ -186,21 +182,15 @@ const resolveBuyMenuItemChallengeService = async ({
     );
   }
 
-  console.log("[BUY_MENU_CHALLENGE] 🧮 Aggregated Quantities", {
-    aggregatedItems: Array.from(qtyMap.entries())
-  });
 
   if (!qtyMap.size) {
-    console.log("[BUY_MENU_CHALLENGE] ❌ No applicable menu items");
+   
     return { success: false, message: "menu_item_not_applicable" };
   }
 
   for (const [menuItemId, incomingQty] of qtyMap.entries()) {
 
-    console.log("[BUY_MENU_CHALLENGE] 🔎 Processing Menu Item", {
-      menuItemId,
-      incomingQty
-    });
+
 
     const challenges = await Challenge.find({
       companyOrganizer,
@@ -209,17 +199,11 @@ const resolveBuyMenuItemChallengeService = async ({
       status: "active"
     }).sort({ taskValue: 1, createdAt: 1 });
 
-    console.log("[BUY_MENU_CHALLENGE] 🎯 Found Challenges", {
-      count: challenges.length,
-      menuItemId
-    });
+
 
     for (const challenge of challenges) {
 
-      console.log("[BUY_MENU_CHALLENGE] 🏁 Evaluating Challenge", {
-        challengeId: challenge._id,
-        title: challenge.title
-      });
+
 
       const existingOrder = await LoyaltyChallengesOrders.findOne({
         user: userId,
@@ -227,26 +211,17 @@ const resolveBuyMenuItemChallengeService = async ({
         status: "in-progress"
       }).lean();
 
-      console.log("[BUY_MENU_CHALLENGE] 📦 Existing Order Check", {
-        challengeId: challenge._id,
-        hasExistingOrder: Boolean(existingOrder)
-      });
+ 
 
       let order = await repo.startOrGetChallengeOrder({
         userId,
         challenge
       });
 
-      console.log("[BUY_MENU_CHALLENGE] 🆕 startOrGetChallengeOrder Result", {
-        challengeId: challenge._id,
-        orderId: order?._id
-      });
+
 
       if (!existingOrder) {
-        console.log("[BUY_MENU_CHALLENGE] 🔔 Sending CHALLENGE_STARTED Notification", {
-          challengeId: challenge._id,
-          userId
-        });
+
 
         await sendUserNotifications({
           recipientIds: [userId.toString()],
@@ -280,39 +255,23 @@ const resolveBuyMenuItemChallengeService = async ({
         companyOrganizer
       });
 
-      console.log("[BUY_MENU_CHALLENGE] 📈 Progress Update Result", {
-        challengeId: challenge._id,
-        updatedProgress: updated?.progress
-      });
+
 
       if (!updated) {
-        console.log("[BUY_MENU_CHALLENGE] ⚠️ Progress Update Failed", {
-          challengeId: challenge._id
-        });
+
         continue;
       }
 
       if (updated.progress.current >= updated.progress.target && updated.status === "in-progress") {
-        console.log("[BUY_MENU_CHALLENGE] ✅ Challenge Completed Triggered", {
-          challengeId: challenge._id,
-          current: updated.progress.current,
-          target: updated.progress.target
-        });
+
 
         await finalizeChallengeCompletion(updated);
       } else {
-        console.log("[BUY_MENU_CHALLENGE] ⏳ Challenge Still In Progress", {
-          challengeId: challenge._id,
-          current: updated.progress.current,
-          target: updated.progress.target
-        });
       }
     }
   }
 
-  console.log("[BUY_MENU_CHALLENGE] 🎉 Completed Execution", {
-    userId
-  });
+
 
   return { success: true, message: "challenge_progress_updated" };
 };
@@ -327,12 +286,7 @@ const resolveGenericTaskTypeService = async ({
 
   let remaining = value;
 
-  console.log("[GENERIC_CHALLENGE] 🚀 Started", {
-    userId,
-    companyOrganizer,
-    taskType,
-    value
-  });
+ 
 
   // 1️⃣ Fetch eligible challenges (easiest first)
   const challenges = await repo.findEligibleChallengesByTaskType({
@@ -340,12 +294,9 @@ const resolveGenericTaskTypeService = async ({
     taskType
   });
 
-  console.log("[GENERIC_CHALLENGE] 🔎 Eligible Challenges", {
-    count: challenges.length
-  });
+
 
   if (!challenges.length) {
-    console.log("[GENERIC_CHALLENGE] ❌ No active challenge found");
     return { success: false, message: "no_active_challenge_found" };
   }
 
@@ -353,10 +304,7 @@ const resolveGenericTaskTypeService = async ({
 
     if (remaining <= 0) break;
 
-    console.log("[GENERIC_CHALLENGE] 🏁 Evaluating Challenge", {
-      challengeId: challenge._id,
-      title: challenge.title
-    });
+
 
     // 2️⃣ Always try to get active order first
     let order = await repo.startOrGetChallengeOrder({
@@ -364,34 +312,23 @@ const resolveGenericTaskTypeService = async ({
       challenge
     });
 
-    console.log("[GENERIC_CHALLENGE] 🆕 startOrGetChallengeOrder Result", {
-      challengeId: challenge._id,
-      orderId: order?._id
-    });
+ 
 
     if (!order) {
-      console.log("[GENERIC_CHALLENGE] ⚠️ No order could be started or fetched", {
-        challengeId: challenge._id
-      });
+
       continue;
     }
 
     // 3️⃣ If this is a brand new cycle, THEN check claim limit
     if (order.progress.current === 0) {
       const canStart = await repo.canStartNewCycle(userId, challenge);
-      console.log("[GENERIC_CHALLENGE] 🔄 Can start new cycle?", {
-        challengeId: challenge._id,
-        canStart
-      });
+
       if (!canStart) continue;
     }
 
     // 🔔 Send STARTED if first cycle
     if (order.progress.current === 0) {
-      console.log("[GENERIC_CHALLENGE] 🔔 Sending CHALLENGE_STARTED Notification", {
-        challengeId: challenge._id,
-        userId
-      });
+
       await sendUserNotifications({
         recipientIds: [userId.toString()],
         title: challenge.title,
@@ -410,11 +347,7 @@ const resolveGenericTaskTypeService = async ({
 
       const previousCurrent = order.progress.current;
 
-      console.log("[GENERIC_CHALLENGE] ➕ Incrementing Progress", {
-        orderId: order._id,
-        previousCurrent,
-        remaining
-      });
+
 
       const result =
         await repo.incrementChallengeProgressWithOverflow({
@@ -423,19 +356,12 @@ const resolveGenericTaskTypeService = async ({
         });
 
       if (!result) {
-        console.log("[GENERIC_CHALLENGE] ⚠️ Progress increment failed", {
-          orderId: order._id
-        });
+
         break;
       }
 
       const { order: updated, remaining: newRemaining } = result;
 
-      console.log("[GENERIC_CHALLENGE] 📈 Progress Update Result", {
-        challengeId: challenge._id,
-        updatedProgress: updated?.progress,
-        remaining: newRemaining
-      });
 
       remaining = newRemaining;
 
@@ -451,20 +377,13 @@ const resolveGenericTaskTypeService = async ({
       // ✅ Completion
       if (updated.progress.current >= updated.progress.target && updated.status === "in-progress") {
 
-        console.log("[GENERIC_CHALLENGE] ✅ Challenge Completed Triggered", {
-          challengeId: challenge._id,
-          current: updated.progress.current,
-          target: updated.progress.target
-        });
+ 
 
         await finalizeChallengeCompletion(updated);
 
         // Check if another cycle allowed
         const allowed = await repo.canStartNewCycle(userId, challenge);
-        console.log("[GENERIC_CHALLENGE] 🔄 Can start another cycle after completion?", {
-          challengeId: challenge._id,
-          allowed
-        });
+
         if (!allowed) break;
 
         // Start next cycle
@@ -473,10 +392,6 @@ const resolveGenericTaskTypeService = async ({
           challenge
         });
 
-        console.log("[GENERIC_CHALLENGE] 🆕 Started new cycle order", {
-          challengeId: challenge._id,
-          orderId: order?._id
-        });
 
         if (!order) break;
 
@@ -487,10 +402,7 @@ const resolveGenericTaskTypeService = async ({
     }
   }
 
-  console.log("[GENERIC_CHALLENGE] 🎉 Completed Execution", {
-    userId,
-    taskType
-  });
+
 
   return { success: true };
 };
@@ -655,7 +567,7 @@ const finalizeChallengeCompletion = async (order) => {
 
     } else if (challenge.reward?.rewardType === "points") {
 
-      console.log("[LOYALTY] Processing points reward", JSON.stringify(challenge, null, 2));
+  
       // =====================================================
       // 💎 POINTS REWARD
       // =====================================================

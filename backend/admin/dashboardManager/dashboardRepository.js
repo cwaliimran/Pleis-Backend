@@ -127,7 +127,6 @@ const getUserStats = async ({ dateFilter, timezone, companyOrganizer, CompanyOrg
     return Model.countDocuments(finalMatch);
   };
 
-  console.log("CompanyOrganizations", CompanyOrganizations);
 
   if (companyOrganizer && CompanyOrganizations && CompanyOrganizations.length > 0) {
 

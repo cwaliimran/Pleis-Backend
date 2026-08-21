@@ -204,8 +204,6 @@ const getGiveaway = async ({ organizationId, timezone, page, limit, keyword, sta
   const organizationIdsFromQuery = organizations
     ? organizations.split(',').map(id => new mongoose.Types.ObjectId(id))
     : [];
-    console.log("organizationIds",organizationIds );
-    console.log("organizationIdsFromQuery", organizationIdsFromQuery);
 
   let totalParticipants = 10
   const pipeline = [

@@ -79,7 +79,7 @@ const createEvent = async (data, ticketingData) => {
 
 // Get all with filters
 // const getEventsWithFilters = async (query, skip, limit, sortBy, sortOrder) => {
-//   console.log("query",query );
+
 //   let sortField = "schedule.startDateTime";
 //   let sortDirection = -1;
 //   if (sortBy && sortOrder) {
@@ -98,8 +98,6 @@ const createEvent = async (data, ticketingData) => {
 
 //     sortDirection = sortOrder === "asc" ? 1 : -1;
 //   }
-//   console.log("sortField",sortField );
-//   console.log("sortDirection", sortDirection);
 
 //   return Events.find(query)
 //     .populate("basicInfo.venue", "title location floorPlan")

@@ -14,10 +14,10 @@ const { calculateItemPrice } = require("../orders/formatter/calculateItemPrice")
 
 const getMenuItems = async ({ userId, timezone, organization }) => {
   // const result = await getOrganizationMenuWithItems({ organizationId: organization, userId, timezone });
-  // console.log("result ", result);
+
   // 1️⃣ Get menu ID for the organization
   const menuId = await menuItemRepo.getMenuIdByOrganization(organization);
-  console.log("menuId", menuId);
+
   if (!menuId) {
     return { recommended: [], menu: [] };
   }
@@ -29,7 +29,7 @@ const getMenuItems = async ({ userId, timezone, organization }) => {
         $in: menuId.map((item) => new mongoose.Types.ObjectId(item._id)),
       },
       status: "active",
-      isAvailableInStock: { $ne: false },
+      isAvailableInStock: true,
     },
     userId,
     timezone,
@@ -189,7 +189,7 @@ const getMenuItemsV2 = async ({ userId, timezone, organization }) => {
   const menuItemById = new Map(menuItems.map((item) => [item._id.toString(), item]));
 
   const rawCombos = await menuItemRepo.getMenuItemsCombos(menuItems.map((item) => item._id));
-  console.log("rawCombos:", rawCombos);
+
 
   const combos = formatMenuItemsComboList(rawCombos, {
     timezone,

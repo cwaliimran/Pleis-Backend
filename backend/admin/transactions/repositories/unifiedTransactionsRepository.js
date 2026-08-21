@@ -515,7 +515,6 @@ const attachBookings = async (txList) => {
 
     // Log the entityId to check if it's missing
     if (!tx.entityId) {
-      console.log(`Skipping transaction due to missing entityId:`, tx);
       return { ...tx, bookings: [] };  // Skip if entityId is missing
     }
 

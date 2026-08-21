@@ -1400,7 +1400,6 @@ const getAnalyticsValue = async ({ user, companyOrganizer }) => {
     getUserVenueTypes({ user }),
 
   ]);
-  console.log("topRepeatedOrders", topRepeatedOrders);
 
   return {
     loyaltyTransections: loyaltyTransections.data,

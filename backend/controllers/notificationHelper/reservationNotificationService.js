@@ -107,9 +107,6 @@ const sendReservationNotification = async ({
       image: null, // You may extend with event/organization image later
     });
 
-    console.log(
-      `[RESERVATION_NOTIFICATION] ${action} sent for reservation ${reservationId}`
-    );
   } catch (err) {
     console.error("[RESERVATION_NOTIFICATION] Failed:", err);
   }

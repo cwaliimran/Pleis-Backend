@@ -98,9 +98,6 @@ const sendSubscriptionNotification = async ({
         // Send Email via Mailgun if not expired
         await sendEmailViaMailgun([email], config.title(context), mBody);
 
-        console.log(
-            `[NOTIFICATION] ${action} sent for user ${userId} to ${userIds.length} users`
-        );
     } catch (err) {
         console.error("[NOTIFICATION] Failed:", err);
     }

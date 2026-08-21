@@ -14,11 +14,8 @@ function emitOrderEvent({
     timestamp: Date.now(),
   };
 
-  // console.log(
-  //   `📡 Emitting ${eventName} → order ${orderId}` +
-  //   (organizationId ? ` | org ${organizationId}` : " | NO ORG")
-  // );
-  // console.log("Payload:", payload);
+  // 
+  // 
 
   /* ======================================================
      👥 ORG-SCOPED EMITS (ONLY IF orgId EXISTS)

@@ -16,7 +16,7 @@ const get = async (req, res) => {
       timezone: req.user?.timezone,
       userId,
     });
-    console.log("userId",userId );
+   
     return sendResponse({
       res,
       statusCode: 200,
