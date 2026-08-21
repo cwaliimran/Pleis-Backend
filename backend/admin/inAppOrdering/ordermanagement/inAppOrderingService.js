@@ -244,70 +244,49 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
       item.isdelivered = data.deliveredall;
     });
     (order.combos || []).forEach((combo) => {
-      (combo.items || []).forEach((item) => {
-        item.isdelivered = data.deliveredall;
-      });
+      combo.isdelivered = data.deliveredall;
     });
     deliveryChanged = true;
-  } else if (data.deliveredMenuItem) {
+  } else {
     /* ===============================
-       4️⃣ DELIVER SELECTED ITEMS
-       deliveredMenuItem accepts:
-       - order item menuItem ids
-       - combo.items[].menuItem ids
-       - combo catalog id / combo line _id → all items in that combo
+       4️⃣ DELIVER SELECTED MENU ITEMS
     =============================== */
-    const deliveredIds = String(data.deliveredMenuItem)
-      .split(",")
-      .map((id) => id.trim())
-      .filter(Boolean)
-      .map((id) => new mongoose.Types.ObjectId(id));
+    if (data.deliveredMenuItem) {
+      const deliveredIds = String(data.deliveredMenuItem)
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean)
+        .map((id) => new mongoose.Types.ObjectId(id));
 
-    const idMatches = (value) =>
-      value != null && deliveredIds.some((dId) => dId.equals(value));
-
-    (order.items || []).forEach((item) => {
-      if (idMatches(item.menuItem) || idMatches(item._id)) {
-        item.isdelivered = true;
-        deliveryChanged = true;
-      }
-    });
-
-    (order.combos || []).forEach((combo) => {
-      const markWholeCombo = idMatches(combo.combo) || idMatches(combo._id);
-      (combo.items || []).forEach((item) => {
-        if (markWholeCombo || idMatches(item.menuItem) || idMatches(item._id)) {
+      (order.items || []).forEach((item) => {
+        if (deliveredIds.some((dId) => dId.equals(item.menuItem))) {
           item.isdelivered = true;
           deliveryChanged = true;
         }
       });
-    });
-  } else if (data.deliveredCombo) {
+    }
+
     /* ===============================
-     4️⃣b DELIVER COMBO ITEM(S)
-     deliveredCombo accepts:
-     - combo.items[]._id (a specific item inside a combo)
-     - combo.items[].menuItem id
-     - combo catalog id / combo line _id → all items in that combo
-  =============================== */
-    const deliveredComboIds = String(data.deliveredCombo)
-      .split(",")
-      .map((id) => id.trim())
-      .filter(Boolean)
-      .map((id) => new mongoose.Types.ObjectId(id));
+       5️⃣ DELIVER WHOLE COMBOS (by combo id)
+    =============================== */
+    if (data.deliveredCombo) {
+      const deliveredComboIds = String(data.deliveredCombo)
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean)
+        .map((id) => new mongoose.Types.ObjectId(id));
 
-    const idMatches = (value) =>
-      value != null && deliveredComboIds.some((dId) => dId.equals(value));
-
-    (order.combos || []).forEach((combo) => {
-      const markWholeCombo = idMatches(combo.combo) || idMatches(combo._id);
-      (combo.items || []).forEach((item) => {
-        if (markWholeCombo || idMatches(item.menuItem) || idMatches(item._id)) {
-          item.isdelivered = true;
+      (order.combos || []).forEach((combo) => {
+        if (
+          deliveredComboIds.some(
+            (dId) => dId.equals(combo.combo) || dId.equals(combo._id),
+          )
+        ) {
+          combo.isdelivered = true;
           deliveryChanged = true;
         }
       });
-    });
+    }
   }
   if (data.resaonForRejection) {
     order.reasonForRejection = data.reasonForRejection;

@@ -22,9 +22,7 @@ const hasUndeliveredItem = (order) => {
   const combos = Array.isArray(order.combos) ? order.combos : [];
   return (
     items.some((item) => item.isdelivered === false) ||
-    combos.some((combo) =>
-      (combo.items || []).some((item) => item.isdelivered === false),
-    )
+    combos.some((combo) => combo.isdelivered === false)
   );
 };
 
@@ -35,13 +33,7 @@ const allItemsDelivered = (order) => {
   const itemsOk =
     !items.length || items.every((item) => item.isdelivered === true);
   const combosOk =
-    !combos.length ||
-    combos.every(
-      (combo) =>
-        Array.isArray(combo.items) &&
-        combo.items.length > 0 &&
-        combo.items.every((item) => item.isdelivered === true),
-    );
+    !combos.length || combos.every((combo) => combo.isdelivered === true);
   return itemsOk && combosOk;
 };
 

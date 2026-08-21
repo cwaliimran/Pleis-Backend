@@ -56,44 +56,46 @@ const updateOrders = async (staffId, id, data) => {
       item.isdelivered = data.deliveredall;
     });
     (order.combos || []).forEach((combo) => {
-      (combo.items || []).forEach((item) => {
-        item.isdelivered = data.deliveredall;
-      });
+      combo.isdelivered = data.deliveredall;
     });
-  }
+  } else {
+    /* ===============================
+       4️⃣ DELIVER SELECTED MENU ITEMS
+    =============================== */
+    if (data.deliveredMenuItem) {
+      const deliveredIds = String(data.deliveredMenuItem)
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean)
+        .map((id) => new mongoose.Types.ObjectId(id));
 
-  /* ===============================
-     4️⃣ DELIVER SELECTED ITEMS
-     accepts menuItem ids and/or combo ids
-  =============================== */
-  else if (data.deliveredMenuItem) {
-    const deliveredIds = String(data.deliveredMenuItem)
-      .split(",")
-      .map((id) => id.trim())
-      .filter(Boolean)
-      .map((id) => new mongoose.Types.ObjectId(id));
-
-    const idMatches = (value) =>
-      value != null && deliveredIds.some((dId) => dId.equals(value));
-
-    (order.items || []).forEach((item) => {
-      if (idMatches(item.menuItem) || idMatches(item._id)) {
-        item.isdelivered = true;
-      }
-    });
-
-    (order.combos || []).forEach((combo) => {
-      const markWholeCombo = idMatches(combo.combo) || idMatches(combo._id);
-      (combo.items || []).forEach((item) => {
-        if (
-          markWholeCombo ||
-          idMatches(item.menuItem) ||
-          idMatches(item._id)
-        ) {
+      (order.items || []).forEach((item) => {
+        if (deliveredIds.some((dId) => dId.equals(item.menuItem))) {
           item.isdelivered = true;
         }
       });
-    });
+    }
+
+    /* ===============================
+       5️⃣ DELIVER WHOLE COMBOS (by combo id)
+    =============================== */
+    if (data.deliveredCombo) {
+      const deliveredComboIds = String(data.deliveredCombo)
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean)
+        .map((id) => new mongoose.Types.ObjectId(id));
+
+      (order.combos || []).forEach((combo) => {
+        if (
+          deliveredComboIds.some(
+            (dId) => dId.equals(combo.combo) || dId.equals(combo._id),
+          )
+        ) {
+          combo.isdelivered = true;
+        }
+      });
+    }
   }
 
 
