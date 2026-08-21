@@ -331,7 +331,6 @@ exports.handleSuccess = async (req, res) => {
   try {
     const payload = getMonriCallbackPayload(req);
 
-    console.log("MONRI SUCCESS:", payload);
 
     const orderNumber = payload.order_number;
 
@@ -397,7 +396,6 @@ exports.handleCancel = async (req, res) => {
   try {
     const payload = getMonriCallbackPayload(req);
 
-    console.log("MONRI CANCEL:", payload);
 
     const orderNumber = payload.order_number;
     if (!orderNumber) {

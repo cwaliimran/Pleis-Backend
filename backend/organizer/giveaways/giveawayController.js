@@ -302,7 +302,6 @@ const getevents = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
   const { keyword, status = "active", date, range, organizations } = req.query;
   try {
-    console.log("organizations",organizations );
 
 
     const userId = req.user._id;

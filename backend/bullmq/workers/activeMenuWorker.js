@@ -71,15 +71,15 @@ const activeMenuWorker = new Worker(
 );
 
 activeMenuWorker.on("completed", (job, result) => {
-  console.log(`[active-menu] job ${job.id} completed`, result);
+ 
 });
 
 activeMenuWorker.on("failed", (job, err) => {
-  console.error(`[active-menu] job ${job?.id} failed:`, err.message);
+ 
 });
 
 activeMenuWorker.on("error", (err) => {
-  console.error("[active-menu] worker error:", err.message);
+ 
 });
 
 module.exports = activeMenuWorker;

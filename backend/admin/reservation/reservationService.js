@@ -692,8 +692,8 @@ const changeUsersReservationsTiming = async ({ reservationIds, startTime, endTim
       sender: reservations[0]?.companyOrganizer?.toString() || null,
       objectId: reservations[0]?._id?.toString() || null,
     })
-      .then(() => console.log("Reservation timing notifications sent"))
-      .catch((err) => console.error("Error sending notifications in background:"));
+      .then(() => {})
+      .catch((err) => console.error("Error sending notifications in background:", err));
   }
 
   /* --------------------------------

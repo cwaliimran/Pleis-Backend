@@ -33,7 +33,7 @@ const updatePromoCode = async (id, data) => {
   }
 }
 }
-console.log("data",data );
+
   // -----------------------------
   // ALLOWED FIELDS
   // -----------------------------

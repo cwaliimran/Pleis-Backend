@@ -198,7 +198,6 @@ const createNotifications = async (data) => {
     }
 
     const userIds = usersResult.userIds || [];
-    console.log("userIds", userIds.length);
     return
 
     const notificationSystemType =

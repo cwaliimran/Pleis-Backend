@@ -40,7 +40,7 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
     /* ==========================
        1️⃣ Load Menu Order
     ========================== */
-    console.log("menuOrderId", menuOrderId, result);
+
     menuOrder = await MenuOrders.findById(menuOrderId)
       .populate({
         path: "organization",

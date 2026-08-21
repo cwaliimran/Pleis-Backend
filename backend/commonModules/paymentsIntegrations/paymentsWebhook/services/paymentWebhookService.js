@@ -179,8 +179,6 @@ const getOrdersTransactionsService = async ({
   if (resDate) {
     if (resStartTime) {
       // Convert the start date + time to UTC using the existing convertTimezoneToUtc function
-      console.log("resStartTime", resStartTime);
-      console.log("resEndTime", resEndTime);
 
       resStartTimeUtc = convertTimezoneToUtc(
         `${resDate} ${resStartTime}`,
