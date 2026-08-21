@@ -120,7 +120,7 @@ const getDietTagss = async ({
   if (!isCacheable) {
     return computeDietTagss();
   }
-  console.log("ACTIVE_DietTagsS_CACHE_KEY",ACTIVE_DietTagsS_CACHE_KEY);
+
   return cache({
     namespace: ACTIVE_DietTagsS_CACHE_KEY,
     params: {

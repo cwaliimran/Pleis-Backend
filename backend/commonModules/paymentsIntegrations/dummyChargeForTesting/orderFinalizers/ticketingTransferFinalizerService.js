@@ -10,16 +10,6 @@ const ticketingTransferFinalizerService = async ({
   newUserId,
   result,
 }) => {
-  console.log(
-    "[TicketTransferFinalizer] start booking:",
-    bookingId,
-    "from:",
-    userId,
-    "to:",
-    newUserId,
-    "status:",
-    result.status
-  );
 
   const session = await mongoose.startSession();
 
@@ -31,14 +21,9 @@ const ticketingTransferFinalizerService = async ({
       .session(session);
 
     if (!booking) {
-      console.log("[TicketTransferFinalizer] booking not found");
       throw new Error("ticketing_booking_not_found");
     }
     let globalPoints = null;
-    console.log(
-      "[TicketTransferFinalizer] booking loaded, current owner:",
-      booking.user.toString()
-    );
 
     // Gateway pending → do nothing
     if (result.status === "pending") {
@@ -49,7 +34,6 @@ const ticketingTransferFinalizerService = async ({
 
     // Idempotency guard
     if (booking.user.toString() === newUserId.toString()) {
-      console.log("[TicketTransferFinalizer] already transferred, skipping");
       await session.commitTransaction();
       return;
     }
@@ -58,10 +42,8 @@ const ticketingTransferFinalizerService = async ({
        ✅ PAYMENT SUCCESS
     ========================== */
     if (result.status === "paid") {
-      console.log("[TicketTransferFinalizer] payment success");
 
       if (booking.user.toString() !== userId.toString()) {
-        console.log("[TicketTransferFinalizer] unauthorized transfer");
         throw new Error("unauthorized_transfer_attempt");
       }
 
@@ -77,20 +59,12 @@ const ticketingTransferFinalizerService = async ({
 
       await booking.save({ session });
 
-      console.log("[TicketTransferFinalizer] ownership transferred");
 
       /* ---------- GLOBAL POINTS ONLY ---------- */
       const amount = result.amount ?? 0;
 
-      console.log(
-        "[TicketTransferFinalizer] transfer amount:",
-        amount,
-        "organizer:",
-        booking.companyOrganizer
-      );
 
       if (amount > 0 && booking.companyOrganizer) {
-        console.log("[TicketTransferFinalizer] calculating global points");
 
         const pointsCalculation = await calculatePointsRepo(
           userId,
@@ -105,10 +79,6 @@ const ticketingTransferFinalizerService = async ({
           pointsPerEuro: pointsCalculation.global.pointsPerEuro,
         };
 
-        console.log(
-          "[TicketTransferFinalizer] global points earned:",
-          globalPoints.total
-        );
 
         if (globalPoints.total > 0) {
           const trxData = {
@@ -122,31 +92,16 @@ const ticketingTransferFinalizerService = async ({
             domainType: "ticketingbookings",
           };
 
-          console.log(
-            "[TicketTransferFinalizer] issuing global points transaction"
-          );
 
           const trx = await createTransactionService(trxData, session);
 
           if (!trx.success) {
-            console.log(
-              "[TicketTransferFinalizer] wallet update failed"
-            );
             throw new Error(trx.message || "wallet_update_failed");
           }
 
-          console.log(
-            "[TicketTransferFinalizer] global points issued successfully"
-          );
         } else {
-          console.log(
-            "[TicketTransferFinalizer] no global points earned"
-          );
         }
       } else {
-        console.log(
-          "[TicketTransferFinalizer] points skipped (amount or organizer missing)"
-        );
       }
     }
 
@@ -154,11 +109,9 @@ const ticketingTransferFinalizerService = async ({
        ❌ PAYMENT FAILED
     ========================== */
     if (result.status === "failed") {
-      console.log("[TicketTransferFinalizer] payment failed, no changes");
     }
 
     await session.commitTransaction();
-    console.log("[TicketTransferFinalizer] transaction committed");
 
     if (globalPoints && globalPoints?.total > 0) {
       handleLoyaltyEarningConsequences({
@@ -174,13 +127,11 @@ const ticketingTransferFinalizerService = async ({
 
     if (session.inTransaction()) {
       await session.abortTransaction();
-      console.log("[TicketTransferFinalizer] transaction aborted");
     }
 
     throw err;
   } finally {
     session.endSession();
-    console.log("[TicketTransferFinalizer] session ended");
   }
 };
 

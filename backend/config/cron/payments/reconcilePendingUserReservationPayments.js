@@ -20,18 +20,12 @@ const reconcilePendingUserReservationPayments = async () => {
     lockUntil: { $lt: new Date() },
   });
 
-  // console.log("🔄 Reconciling", reservations.length, "pending reservations...");
+  // 
 
   for (const reservation of reservations) {
     try {
       const result = await attemptUserReservationOrderPayment(reservation._id);
 
-      console.log(
-        "reservationId==>",
-        reservation._id.toString(),
-        "status==>",
-        result.status
-      );
 
       await reservationOrderFinalizerService({
         reservationId: reservation._id,

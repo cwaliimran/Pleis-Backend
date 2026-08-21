@@ -79,7 +79,6 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
     // ✅ PAYMENT SUCCESS
     // =====================================================
     if (result.status === "paid") {
-      console.log("[TICKETING] Payment status is 'paid'. Updating bookings...");
       await TicketingBookings.updateMany(
         { order: orderId },
         { $set: { status: "valid" } },
@@ -87,7 +86,6 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
       );
 
       if (userReservation) {
-        console.log("[TICKETING] Updating user reservation to 'confirmed'...");
         await UserReservations.updateOne(
           { _id: userReservation._id },
           {
@@ -103,7 +101,6 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
       }
 
       if (menuOrder) {
-        console.log("[TICKETING] Updating menu order to 'confirmed'...");
         await MenuOrders.updateOne(
           { _id: menuOrder._id },
           {
@@ -119,7 +116,6 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
       }
 
       // 🎯 Calculate loyalty points
-      console.log("[TICKETING] Calculating loyalty points...");
       const pointsCalculation = await calculatePointsRepo(
         order.user,
         order.companyOrganizer,
@@ -153,7 +149,6 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
         domainType: "ticketingorders",
       };
 
-      console.log("[TICKETING] Creating wallet transaction...");
       const trx = await createTransactionService(trxData, session);
 
       if (!trx.success) {
@@ -165,7 +160,6 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
         // =====================================================
         // 📧 TICKET CONFIRMATION EMAIL
         // =====================================================
-        console.log("[TICKETING] Preparing ticket confirmation email...");
 
         const userDetails =
           await findAppUserByIdWithProjectionService(
@@ -177,16 +171,7 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
           .populate("organization")
           .lean();
 
-        console.log("[EMAIL] Bookings fetched:", {
-          count: bookings?.length,
-          sample: bookings?.[0] ? {
-            ticketBookingId: bookings[0].ticketBookingId,
-            organizationName: bookings[0]?.organization?.basicInfo?.name,
-            snapshotEvent: bookings[0]?.ticket?.snapshot?.event,
-          } : null
-        });
         if (!bookings?.length) {
-          console.log("[TICKETING] No bookings found for order, skipping email.");
           return;
         }
 
@@ -196,7 +181,6 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
         let event = null;
 
         if (eventId) {
-          console.log("[TICKETING] Fetching event details for email...");
           event = await mongoose
             .model("Event")
             .findById(eventId)
@@ -212,7 +196,6 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
           });
         }
 
-        console.log("[TICKETING] Rendering email template...");
         const html = ticketConfirmationEmailTemplate({
           userName: userDetails.username,
           organizationName: bookings[0]?.organization?.basicInfo?.name,
@@ -228,7 +211,6 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
         if (process.env.NODE_ENV != "dev") {
           email = userDetails.email
         }
-        console.log(`[TICKETING] Sending confirmation email to: ${email}`);
         await sendEmailViaMailgun(
           email,
           "Your tickets are confirmed",
@@ -278,7 +260,6 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
       }
 
       try {
-        console.log("[EMAIL] Preparing FAILED payment email (DEV MODE)...");
 
         const userDetails =
           await findAppUserByIdWithProjectionService(

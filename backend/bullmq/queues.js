@@ -15,7 +15,6 @@ const activeMenuQueue = new Queue(QUEUE_NAMES.ACTIVE_MENU, {
   },
 });
 
-console.log(`[queue] "${QUEUE_NAMES.ACTIVE_MENU}" queue initialized`);
 
 activeMenuQueue.on("error", (err) => {
   console.error(`[queue] "${QUEUE_NAMES.ACTIVE_MENU}" error:`, err.message);

@@ -18,7 +18,7 @@ const getDashboard = async (req, res) => {
     companyOrganizer = req.user._id;
   }
   let CompanyOrganizations = req.query.organizations || [];
-  console.log("CompanyOrganizations",req.query );
+
 
   if (
     !CompanyOrganizations ||

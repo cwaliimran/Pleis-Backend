@@ -18,30 +18,24 @@ ENTRY POINT
 
 const triggerBadgeEngine = async (userId, payload = {}) => {
 
-    console.log("[BADGE_ENGINE] Starting triggerBadgeEngine for user:", userId, "payload:", payload);
 
     // global streak always runs
     await triggerGlobalStreak(userId);
 
     if (!payload.category) {
-        console.log("[BADGE_ENGINE] No category provided, exiting.");
         return;
     }
 
-    console.log("[BADGE_ENGINE] Processing category:", payload.category);
 
     switch (payload.category) {
 
         case "spending":
-            console.log("[BADGE_ENGINE] Handling spending, amount:", payload.amount);
             return handleSpending(userId, payload.amount);
 
         case "singlePurchase":
-            console.log("[BADGE_ENGINE] Handling singlePurchase, amount:", payload.amount);
             return handleSinglePurchase(userId, payload.amount);
 
         case "repeatVisit":
-            console.log("[BADGE_ENGINE] Handling repeatVisit, venueId:", payload.venueId);
             return handleRepeatVisit(
                 userId,
                 payload.venueId,
@@ -49,11 +43,9 @@ const triggerBadgeEngine = async (userId, payload = {}) => {
             );
 
         case "referral":
-            console.log("[BADGE_ENGINE] Handling referral, referredUserId:", payload.referredUserId);
             return handleReferral(userId, payload.referredUserId);
 
         default:
-            console.log("[BADGE_ENGINE] Unknown category:", payload.category);
             return;
     }
 };
@@ -65,14 +57,12 @@ GLOBAL STREAK
 
 const triggerGlobalStreak = async (userId) => {
 
-    console.log("[GLOBAL_STREAK] Starting triggerGlobalStreak for user:", userId);
 
     const now = new Date();
 
     let user = await UsersGlobalStreaksProgress.findOne({ user: userId });
 
     if (!user) {
-        console.log("[GLOBAL_STREAK] No existing progress found, creating new record.");
         user = await UsersGlobalStreaksProgress.create({ user: userId });
     }
 
@@ -80,7 +70,6 @@ const triggerGlobalStreak = async (userId) => {
 
     if (user.streak.resetAt && now > user.streak.resetAt) {
 
-        console.log("[GLOBAL_STREAK] 48h inactivity detected, resetting streak from", user.streak.current, "to 0.");
 
         await UsersGlobalStreaksLogs.create({
             user: userId,
@@ -99,7 +88,6 @@ const triggerGlobalStreak = async (userId) => {
     /* cooldown */
 
     if (user.streak.cooldownEndsAt && now < user.streak.cooldownEndsAt) {
-        console.log("[GLOBAL_STREAK] User is in cooldown until:", user.streak.cooldownEndsAt);
         return;
     }
 
@@ -107,7 +95,6 @@ const triggerGlobalStreak = async (userId) => {
 
     user.streak.current += 1;
 
-    console.log("[GLOBAL_STREAK] Incrementing streak to:", user.streak.current);
 
     user.streak.longest = Math.max(
         user.streak.longest,
@@ -129,7 +116,6 @@ const triggerGlobalStreak = async (userId) => {
 
     await user.save();
 
-    console.log("[GLOBAL_STREAK] Streak saved. Logging increment.");
 
     await UsersGlobalStreaksLogs.create({
         user: userId,
@@ -138,7 +124,6 @@ const triggerGlobalStreak = async (userId) => {
         newStreak: user.streak.current
     });
 
-    console.log("[GLOBAL_STREAK] Evaluating streak badges.");
 
     await evaluateBadges({
         userId,
@@ -147,7 +132,6 @@ const triggerGlobalStreak = async (userId) => {
         newMetrics: user.metrics
     });
 
-    console.log("[GLOBAL_STREAK] Completed for user:", userId);
 
 };
 
@@ -158,7 +142,6 @@ SPENDING BADGES
 
 const handleSpending = async (userId, amount) => {
 
-    console.log("[SPENDING] Starting handleSpending for user:", userId, "amount:", amount);
 
     const user = await UsersGlobalStreaksProgress.findOne({ user: userId });
 
@@ -169,14 +152,12 @@ const handleSpending = async (userId, amount) => {
 
     user.metrics.spending.amount += amount;
 
-    console.log("[SPENDING] Updated total spending to:", user.metrics.spending.amount);
 
     await Promise.all([
         user.save(),
         recordUserSpending(userId, amount)
     ]);
 
-    console.log("[SPENDING] Saved. Evaluating spending badges.");
 
     await evaluateBadges({
         userId,
@@ -185,7 +166,6 @@ const handleSpending = async (userId, amount) => {
         newMetrics: user.metrics
     });
 
-    console.log("[SPENDING] Completed for user:", userId);
 
 };
 
@@ -196,7 +176,6 @@ SINGLE PURCHASE
 
 const handleSinglePurchase = async (userId, amount) => {
 
-    console.log("[SINGLE_PURCHASE] Starting handleSinglePurchase for user:", userId, "amount:", amount);
 
     const user = await UsersGlobalStreaksProgress.findOne({ user: userId });
 
@@ -207,11 +186,9 @@ const handleSinglePurchase = async (userId, amount) => {
 
     user.metrics.singlePurchase.amount = amount;
 
-    console.log("[SINGLE_PURCHASE] Set singlePurchase amount to:", amount);
 
     await user.save();
 
-    console.log("[SINGLE_PURCHASE] Saved. Evaluating singlePurchase badges.");
 
     await evaluateBadges({
         userId,
@@ -220,7 +197,6 @@ const handleSinglePurchase = async (userId, amount) => {
         newMetrics: user.metrics
     });
 
-    console.log("[SINGLE_PURCHASE] Completed for user:", userId);
 
 };
 
@@ -231,7 +207,6 @@ REPEAT VISIT
 
 const handleRepeatVisit = async (userId, venueId, organizationId) => {
 
-    console.log("[REPEAT_VISIT] Starting handleRepeatVisit for user:", userId, "venueId:", venueId);
 
     await UserVenueVisits.updateOne(
         { user: userId, venue: venueId },
@@ -245,7 +220,6 @@ const handleRepeatVisit = async (userId, venueId, organizationId) => {
         { upsert: true }
     );
 
-    console.log("[REPEAT_VISIT] Updated venue visit record.");
 
     const user = await UsersGlobalStreaksProgress.findOne({ user: userId });
 
@@ -258,7 +232,6 @@ const handleRepeatVisit = async (userId, venueId, organizationId) => {
         venue: venueId
     });
 
-    console.log("[REPEAT_VISIT] Visit count for this venue:", visit.visitCount);
 
     const previousMetrics = { repeatVisit: { count: visit.visitCount - 1 } };
 
@@ -266,7 +239,6 @@ const handleRepeatVisit = async (userId, venueId, organizationId) => {
 
     await user.save();
 
-    console.log("[REPEAT_VISIT] Evaluating repeatVisit badges.");
 
     await evaluateBadges({
         userId,
@@ -275,11 +247,9 @@ const handleRepeatVisit = async (userId, venueId, organizationId) => {
         newMetrics
     });
 
-    console.log("[REPEAT_VISIT] Proceeding to venueExplorer check.");
 
     await handleVenueExplorer(userId);
 
-    console.log("[REPEAT_VISIT] Completed for user:", userId);
 
 };
 
@@ -290,13 +260,11 @@ VENUE EXPLORER
 
 const handleVenueExplorer = async (userId) => {
 
-    console.log("[VENUE_EXPLORER] Starting handleVenueExplorer for user:", userId);
 
     const venueCount = await UserVenueVisits.countDocuments({
         user: userId
     });
 
-    console.log("[VENUE_EXPLORER] Total unique venues visited:", venueCount);
 
     const user = await UsersGlobalStreaksProgress.findOne({ user: userId });
 
@@ -309,7 +277,6 @@ const handleVenueExplorer = async (userId) => {
 
     await user.save();
 
-    console.log("[VENUE_EXPLORER] Evaluating venueExplorer badges.");
 
     await evaluateBadges({
         userId,
@@ -318,7 +285,6 @@ const handleVenueExplorer = async (userId) => {
         newMetrics: user.metrics
     });
 
-    console.log("[VENUE_EXPLORER] Completed for user:", userId);
 
 };
 
@@ -329,7 +295,6 @@ REFERRALS
 
 const handleReferral = async (userId, referredUserId) => {
 
-    console.log("[REFERRAL] Starting handleReferral for user:", userId, "referredUserId:", referredUserId);
 
     await UserReferrals.updateOne(
         { referrer: userId, referredUser: referredUserId },
@@ -337,13 +302,11 @@ const handleReferral = async (userId, referredUserId) => {
         { upsert: true }
     );
 
-    console.log("[REFERRAL] Referral record upserted.");
 
     const referralCount = await UserReferrals.countDocuments({
         referrer: userId
     });
 
-    console.log("[REFERRAL] Total referral count:", referralCount);
 
     const user = await UsersGlobalStreaksProgress.findOne({ user: userId });
 
@@ -356,7 +319,6 @@ const handleReferral = async (userId, referredUserId) => {
 
     await user.save();
 
-    console.log("[REFERRAL] Evaluating referral badges.");
 
     await evaluateBadges({
         userId,
@@ -365,7 +327,6 @@ const handleReferral = async (userId, referredUserId) => {
         newMetrics: user.metrics
     });
 
-    console.log("[REFERRAL] Completed for user:", userId);
 
 };
 
@@ -376,7 +337,6 @@ MONTHLY SPENDING LEDGER
 
 async function recordUserSpending(userId, amount) {
 
-    console.log("[MONTHLY_SPEND] Recording spending for user:", userId, "amount:", amount);
 
     const now = new Date();
 
@@ -389,7 +349,6 @@ async function recordUserSpending(userId, amount) {
         { upsert: true }
     );
 
-    console.log("[MONTHLY_SPEND] Recorded for year:", year, "month:", month);
 
 }
 
@@ -400,7 +359,6 @@ TOP SPENDER CRON // runs on the 1st of every month at 00:00
 
 cron.schedule("0 0 1 * *", async () => {
 
-    console.log("[TOP_SPENDER_CRON] Running monthly top spender cron job.");
 
     const now = new Date();
 
@@ -411,7 +369,6 @@ cron.schedule("0 0 1 * *", async () => {
     const year = prevMonth.getUTCFullYear();
     const month = prevMonth.getUTCMonth() + 1;
 
-    console.log("[TOP_SPENDER_CRON] Evaluating for year:", year, "month:", month);
 
     /* =========================================
        FIND HIGHEST SPEND VALUE
@@ -423,13 +380,11 @@ cron.schedule("0 0 1 * *", async () => {
         .lean();
 
     if (!topRecord) {
-        console.log("[TOP_SPENDER_CRON] No spending records found for this month.");
         return;
     }
 
     const highestSpend = topRecord.totalSpent;
 
-    console.log("[TOP_SPENDER_CRON] Highest spend value:", highestSpend);
 
     /* =========================================
        FIND ALL USERS WITH SAME SPEND
@@ -445,11 +400,9 @@ cron.schedule("0 0 1 * *", async () => {
         .lean();
 
     if (!topUsers.length) {
-        console.log("[TOP_SPENDER_CRON] No top users found.");
         return;
     }
 
-    console.log("[TOP_SPENDER_CRON] Found", topUsers.length, "top spender(s).");
 
     /* =========================================
        AWARD BADGES
@@ -465,18 +418,15 @@ cron.schedule("0 0 1 * *", async () => {
 
     await Promise.all(jobs);
 
-    console.log("[TOP_SPENDER_CRON] Completed awarding top spender badges.");
 
 });
 
 const awardTopSpenderBadge = async (userId) => {
 
-    console.log("[TOP_SPENDER] Awarding top spender badge to user:", userId);
 
     const user = await UsersGlobalStreaksProgress.findOne({ user: userId });
 
     if (!user) {
-        console.log("[TOP_SPENDER] User not found, skipping.");
         return;
     }
 
@@ -489,7 +439,6 @@ const awardTopSpenderBadge = async (userId) => {
 
     await user.save();
 
-    console.log("[TOP_SPENDER] Evaluating topSpender badges.");
 
     await evaluateBadges({
         userId,
@@ -498,7 +447,6 @@ const awardTopSpenderBadge = async (userId) => {
         newMetrics: user.metrics
     });
 
-    console.log("[TOP_SPENDER] Completed for user:", userId);
 };
 
 
@@ -513,7 +461,6 @@ const evaluateBadges = async ({
     newMetrics,
 }) => {
 
-    console.log("[EVALUATE_BADGES] Starting evaluation for user:", userId, "categories:", categories);
 
     const badges = await BadgeCategories.find({
         category: { $in: categories },
@@ -521,11 +468,9 @@ const evaluateBadges = async ({
     }).lean();
 
     if (!badges.length) {
-        console.log("[EVALUATE_BADGES] No active badges found for categories:", categories);
         return;
     }
 
-    console.log("[EVALUATE_BADGES] Found", badges.length, "badge(s) to evaluate.");
 
     let totalPoints = 0;
 
@@ -553,7 +498,6 @@ const evaluateBadges = async ({
             threshold <= newValue
         ) {
 
-            console.log("[EVALUATE_BADGES] Badge unlocked:", badge.title, "| threshold:", threshold, "| previousValue:", previousValue, "| newValue:", newValue);
 
             /* =========================================
                SAVE / UPDATE USER BADGE
@@ -624,11 +568,9 @@ const evaluateBadges = async ({
     }
 
     if (!transactions.length) {
-        console.log("[EVALUATE_BADGES] No new badges earned.");
         return;
     }
 
-    console.log("[EVALUATE_BADGES] Total points to award:", totalPoints);
 
     /* =========================================
        UPDATE USER TOTAL POINTS
@@ -639,7 +581,6 @@ const evaluateBadges = async ({
         { $inc: { totalPointsEarned: totalPoints } }
     );
 
-    console.log("[EVALUATE_BADGES] Updated user total points. Executing transactions and notifications.");
 
     /* =========================================
        EXECUTE TRANSACTIONS + NOTIFICATIONS
@@ -650,7 +591,6 @@ const evaluateBadges = async ({
         ...notifications
     ]);
 
-    console.log("[EVALUATE_BADGES] Completed badge evaluation for user:", userId);
 
 };
 

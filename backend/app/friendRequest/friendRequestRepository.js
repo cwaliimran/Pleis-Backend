@@ -22,7 +22,7 @@ const getFriends = async ({
       },
     },
   ];
-  console.log("keyword", keyword);
+
   // 2️⃣ Keyword search
   if (keyword) {
     const safeKeyword = escapeRegex(keyword);

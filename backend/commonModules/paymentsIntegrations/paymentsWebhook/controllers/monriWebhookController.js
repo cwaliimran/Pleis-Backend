@@ -13,7 +13,6 @@ const monriWebhookController = async (req, res) => {
 
     const bodyData = req.body;
     bodyData.user = userId;
-    console.log("bodyData", bodyData);
 
     if (
       !validateParams(req, res, {
@@ -121,7 +120,6 @@ const getTransactionStats = async (req, res) => {
       companyOrganizer = undefined;
     }
   }
-  console.log("organizations", organizations);
   try {
     if (dateFilter && !validateParams(req, res, {
       enumFields: {

@@ -188,7 +188,6 @@ const { findControllerFile, findModels } = require("./linkControllersAndModels")
   const root = "/Users/s/Desktop/Development/Projects/Pleis/Pleis-Backend/backend";
   const mainRouter = path.join(root, "routes/index.js");
 
-  console.log("🔍 Scanning routes starting from:", mainRouter);
   const allRoutes = parseRouterFile(mainRouter, "/api/v1");
 
   const enriched = [];
@@ -205,7 +204,6 @@ const { findControllerFile, findModels } = require("./linkControllersAndModels")
 
   const outPath = path.join(__dirname, "../output/routesMap.json");
   fs.writeFileSync(outPath, JSON.stringify(enriched, null, 2));
-  console.log("✅ Routes map generated successfully at:", outPath);
 })();
 `
 );
@@ -233,4 +231,3 @@ npm run discover
 `
 );
 
-console.log("✅ AutoTester tool created successfully (no chalk, safe skipping).");
