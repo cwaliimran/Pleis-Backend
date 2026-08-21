@@ -118,7 +118,7 @@ const getMenuItemsV2 = async ({ userId, timezone, organization }) => {
   // 1️⃣ Get menu ID for the organization
   let organizationDetails = await findOrganizationWithSelectFilter(
     organization,
-    "_id basicInfo.name basicInfo.media.logo",
+    "_id basicInfo.name basicInfo.media.logo creator",
   );
 
   if (organizationDetails?.basicInfo?.media?.logo) {
@@ -188,8 +188,12 @@ const getMenuItemsV2 = async ({ userId, timezone, organization }) => {
 
   const menuItemById = new Map(menuItems.map((item) => [item._id.toString(), item]));
 
-  const rawCombos = await menuItemRepo.getMenuItemsCombos(menuItems.map((item) => item._id));
-
+  // Combos are global per companyOrganizer — only apply to this org's menus/items
+  const companyOrganizer = organizationDetails?.creator || null;
+  if (organizationDetails?.creator) {
+    delete organizationDetails.creator;
+  }
+  const rawCombos = await menuItemRepo.getMenuItemsCombos(menuItems, companyOrganizer);
 
   const combos = formatMenuItemsComboList(rawCombos, {
     timezone,

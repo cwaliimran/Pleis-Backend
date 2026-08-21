@@ -84,10 +84,10 @@ const menuItemsWithV2FieldsPipeline = [
 const populateComboLookups = [
   {
     path: "subCategory",
-    select: "name status category",
+    select: "title status",
   },
   {
-    path: "menuItems",
+    path: "menuItems.menuItem",
     select: "title status basePrice image daypart allergens menu creator",
     populate: [
       {
@@ -100,7 +100,7 @@ const populateComboLookups = [
       },
       {
         path: "menu",
-        select: "title status",
+        select: "title status creator organization",
       },
     ],
   },
@@ -109,11 +109,11 @@ const populateComboLookups = [
 const comboLookupStages = [
   {
     $lookup: {
-      from: "menuitemsubcategories",
+      from: "menusubcategories",
       localField: "subCategory",
       foreignField: "_id",
       as: "subCategory",
-      pipeline: [{ $project: { name: 1, status: 1, category: 1 } }],
+      pipeline: [{ $project: { title: 1, status: 1 } }],
     },
   },
   {
@@ -161,11 +161,11 @@ const comboLookupStages = [
 ];
 
 /**
- * A combo can appear in a menu when that menu (same creator) has
- * standalone items matching EVERY combo component title (Item Name).
+ * A combo can appear in a menu when:
+ *  - combo.creator (companyOrganizer) owns the menu item, menu, and organization
+ *  - that menu has standalone items matching EVERY combo component title
  */
 const attachApplicableMenus = async (combos = []) => {
-
   if (!combos.length) {
     return combos;
   }
@@ -201,6 +201,13 @@ const attachApplicableMenus = async (combos = []) => {
     ),
   ].map((id) => new mongoose.Types.ObjectId(id));
 
+  if (!creatorIds.length) {
+    return plainCombos.map((combo) => ({
+      ...combo,
+      applicableMenus: [],
+    }));
+  }
+
   const titleMatchers = allTitles.map(
     (title) =>
       new RegExp(`^${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i"),
@@ -221,12 +228,52 @@ const attachApplicableMenus = async (combos = []) => {
         foreignField: "_id",
         as: "menu",
         pipeline: [
-          { $match: { status: { $ne: "deleted" } } },
-          { $project: { title: 1, status: 1, organization: 1 } },
+          {
+            $match: {
+              status: { $ne: "deleted" },
+              creator: { $in: creatorIds },
+            },
+          },
+          {
+            $lookup: {
+              from: "organizations",
+              localField: "organization",
+              foreignField: "_id",
+              as: "organization",
+              pipeline: [
+                {
+                  $match: {
+                    status: { $ne: "deleted" },
+                    creator: { $in: creatorIds },
+                  },
+                },
+                { $project: { _id: 1, creator: 1 } },
+              ],
+            },
+          },
+          { $unwind: "$organization" },
+          {
+            $project: {
+              title: 1,
+              status: 1,
+              organization: 1,
+              creator: 1,
+            },
+          },
         ],
       },
     },
     { $unwind: "$menu" },
+    {
+      $match: {
+        $expr: {
+          $and: [
+            { $eq: ["$creator", "$menu.creator"] },
+            { $eq: ["$creator", "$menu.organization.creator"] },
+          ],
+        },
+      },
+    },
     {
       $project: {
         _id: 1,
@@ -239,9 +286,6 @@ const attachApplicableMenus = async (combos = []) => {
       },
     },
   ]);
-
-  if (!matchingItems.length) {
-  }
 
   const menuIndex = new Map();
 
@@ -287,7 +331,7 @@ const attachApplicableMenus = async (combos = []) => {
 
     const applicableMenus = [];
 
-    for (const [key, entry] of menuIndex) {
+    for (const [, entry] of menuIndex) {
       if (entry.creatorId !== creatorId) {
         continue;
       }
@@ -306,10 +350,6 @@ const attachApplicableMenus = async (combos = []) => {
         _id: entry.menu._id,
         title: entry.menu.title,
         status: entry.menu.status,
-        // matchingItems: requiredTitles.map((title) => ({
-        //   requiredTitle: title,
-        //   items: entry.itemsByTitle.get(title) || [],
-        // })),
       });
     }
 
@@ -324,6 +364,83 @@ const createMenuItemsCombo = async (data) => {
   const combo = new MenuItemsCombos(data);
   await combo.save();
   return combo;
+};
+
+/**
+ * Ensure every combo component belongs to the same companyOrganizer
+ * via menuItem.creator, menu.creator, and organization.creator.
+ */
+const assertMenuItemsBelongToCompanyOrganizer = async (
+  menuItems = [],
+  companyOrganizer,
+) => {
+  if (!companyOrganizer) {
+    return { ok: false, error: "company_organizer_required" };
+  }
+
+  const ids = menuItems
+    .map((item) => item?.menuItem || item)
+    .filter(Boolean)
+    .map((id) => new mongoose.Types.ObjectId(id));
+
+  if (ids.length < 2) {
+    return { ok: false, error: "combo_items_minimum_required" };
+  }
+
+  const creatorId = new mongoose.Types.ObjectId(companyOrganizer);
+
+  const ownedItems = await MenuItems.aggregate([
+    {
+      $match: {
+        _id: { $in: ids },
+        creator: creatorId,
+        status: { $ne: "deleted" },
+      },
+    },
+    {
+      $lookup: {
+        from: "menus",
+        localField: "menu",
+        foreignField: "_id",
+        as: "menu",
+        pipeline: [
+          {
+            $match: {
+              creator: creatorId,
+              status: { $ne: "deleted" },
+            },
+          },
+          {
+            $lookup: {
+              from: "organizations",
+              localField: "organization",
+              foreignField: "_id",
+              as: "organization",
+              pipeline: [
+                {
+                  $match: {
+                    creator: creatorId,
+                    status: { $ne: "deleted" },
+                  },
+                },
+                { $project: { _id: 1 } },
+              ],
+            },
+          },
+          { $unwind: "$organization" },
+          { $project: { _id: 1 } },
+        ],
+      },
+    },
+    { $unwind: "$menu" },
+    { $project: { _id: 1 } },
+  ]);
+
+  if (ownedItems.length !== ids.length) {
+    return { ok: false, error: "combo_menu_items_must_belong_to_company_organizer" };
+  }
+
+  return { ok: true };
 };
 
 const getMenuItemsCombos = async ({
@@ -395,7 +512,7 @@ const getMenuItemsCombos = async ({
           : sortBy === "priceMode"
             ? "priceMode"
             : sortBy === "subCategory"
-              ? "subCategory.name"
+              ? "subCategory.title"
               : sortBy === "status"
                 ? "status"
                 : sortBy === "createdAt"
@@ -460,4 +577,5 @@ module.exports = {
   findMenuItemsComboByIdWithMenus,
   findByIdAndUpdate,
   attachApplicableMenus,
+  assertMenuItemsBelongToCompanyOrganizer,
 };
