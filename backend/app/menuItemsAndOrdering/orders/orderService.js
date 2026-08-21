@@ -549,10 +549,6 @@ const updateOrder = async ({
     let orderItems = existingOrder.items || [];
     let orderCombos = existingOrder.combos || [];
 
-    let itemsTotal = 0;
-    let totalSaleDiscount = 0;
-    let totalPrice = 0;
-
     // =========================================================
     // 2️⃣ UPDATE ITEMS ONLY IF PROVIDED
     // =========================================================
@@ -609,14 +605,6 @@ const updateOrder = async ({
 
           const finalPrice = unitFinalPrice * item.quantity;
 
-          const saleDiscountTotal = saleDiscountPerUnit * item.quantity;
-
-          itemsTotal += unitPrice * item.quantity;
-
-          totalSaleDiscount += saleDiscountTotal;
-
-          totalPrice += finalPrice;
-
           const status = menuItem.isRequiresOrderConfirmation
             ? "pending"
             : "confirmed";
@@ -641,9 +629,9 @@ const updateOrder = async ({
       }
 
       // Recompute order-level status from the items we just built.
-      // Only ever auto-update it if the order is currently "pending" —
-      // any other existing status (e.g. "confirmed", "cancelled") is left untouched.
-      if (orderStatus === "pending") {
+      // Only when there are line items; empty items (combo-only cart) stay pending.
+      // Any other existing status (e.g. "confirmed", "cancelled") is left untouched.
+      if (orderStatus === "pending" && orderItems.length) {
         const hasItemNeedingConfirmation = orderItems.some(
           (item) => item.status === "pending",
         );
@@ -652,7 +640,7 @@ const updateOrder = async ({
     }
 
     // =========================================================
-    // 3️⃣ UPDATE COMBOS ONLY IF PROVIDED
+    // 3️⃣ UPDATE COMBOS ONLY IF PROVIDED (same shape as placeOrder)
     // =========================================================
 
     if (shouldUpdateCombos) {
@@ -693,8 +681,6 @@ const updateOrder = async ({
           );
         }
 
-        const companyOrganizer = await getOrgCompanyOrganizer(organizationId);
-
         const { orderCombos: newOrderCombos } = await buildOrderCombos({
           combos,
           comboDocs,
@@ -709,28 +695,42 @@ const updateOrder = async ({
       }
     }
 
+    if (
+      (shouldUpdateItems || shouldUpdateCombos) &&
+      !orderItems.length &&
+      !orderCombos.length
+    ) {
+      throw new Error("Cart is empty");
+    }
+
     // =========================================================
-    // 4️⃣ CALCULATE COMBO TOTALS FROM RESULTING ORDER
+    // 4️⃣ RECALCULATE TOTALS FROM RESULTING ITEMS + COMBOS
     // =========================================================
 
-    const combosTotal = orderCombos.reduce(
-      (sum, combo) => sum + combo.finalPrice,
-      0,
-    );
+    let itemsTotal = 0;
+    let totalSaleDiscount = 0;
+    let totalPrice = 0;
 
-    const comboSaleDiscount = orderCombos.reduce(
-      (sum, combo) => sum + (combo.saleDiscount || 0),
-      0,
-    );
+    for (const item of orderItems) {
+      const qty = Number(item.quantity) || 0;
+      const unitPrice =
+        item.unitPrice != null
+          ? Number(item.unitPrice)
+          : qty
+            ? Number(item.finalPrice || 0) / qty
+            : 0;
+      const saleDiscountPerUnit = Number(item.saleDiscountPerUnit || 0);
 
-    totalPrice += combosTotal;
+      itemsTotal += unitPrice * qty;
+      totalSaleDiscount += saleDiscountPerUnit * qty;
+      totalPrice += Number(item.finalPrice || 0);
+    }
 
-    // If combos were not updated, calculate their original
-    // values from the existing snapshots/data where possible.
-    if (!shouldUpdateCombos) {
-      totalSaleDiscount += comboSaleDiscount;
-    } else {
-      totalSaleDiscount += comboSaleDiscount;
+    for (const combo of orderCombos) {
+      const qty = Number(combo.quantity) || 0;
+      itemsTotal += Number(combo.unitPrice || 0) * qty;
+      totalSaleDiscount += Number(combo.saleDiscountPerUnit || 0) * qty;
+      totalPrice += Number(combo.finalPrice || 0);
     }
 
     // =========================================================

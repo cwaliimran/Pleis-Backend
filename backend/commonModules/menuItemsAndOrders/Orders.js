@@ -17,6 +17,7 @@ const OrderItemSchema = new mongoose.Schema({
 
 const OrderComboItemSchema = new mongoose.Schema({
   menuItem: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItems" },
+  quantity: { type: Number, default: 1, min: 1 },
   menuItemSnapShot: { type: Object, required: true },
 });
 
