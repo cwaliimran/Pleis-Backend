@@ -68,7 +68,6 @@ function attachRedisAdapter(io) {
    */
   io.adapter(createAdapter(pubClient, subClient));
 
-  console.log("🔗 Socket.IO Redis adapter attached");
 }
 
 module.exports = { attachRedisAdapter };

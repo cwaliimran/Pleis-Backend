@@ -14,6 +14,7 @@ const { sendEmailViaMailgun } = require("../../helperUtils/emailUtil");
 const { createOrSkipDevice } = require("../../models/Devices");
 const { updateCompanyLoyaltySettings } = require("../../app/loyalty/clubMembers/clubMembersRepository");
 const { SubscriptionSettings } = require("@SubscriptionSettings");
+const { hardDeleteUserById } = require("../../helperUtils/hardDeleteUser");
 
 const APP_NAME = "Pleis App";
 
@@ -540,11 +541,8 @@ const updateUser = async (req, res, options = {}) => {
 };
 
 const deleteUser = async (id) => {
-  const updated = await userRepo.findByIdAndUpdate(id, {
-    "accountState.status": "deleted",
-  });
-  if (!updated) return null;
-  userCache.del(id.toString());
+  const result = await hardDeleteUserById(id);
+  if (!result) return null;
   return true;
 };
 

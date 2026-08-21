@@ -91,9 +91,6 @@ const sendMenuOrderNotification = async ({
       image: null, // You can extend later to include item image snapshot
     });
 
-    console.log(
-      `[MENU_NOTIFICATION] ${action} sent for order ${orderId}`
-    );
   } catch (err) {
     console.error("[MENU_NOTIFICATION] Failed:", err);
   }

@@ -3,7 +3,6 @@ const chalk = require("chalk");
 
 async function testEndpoint(app, endpoint, payload = null) {
   const { method, fullPath } = endpoint;
-  console.log(chalk.cyan(`Testing ${method} ${fullPath}`));
 
   switch (method) {
     case "GET":

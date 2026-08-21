@@ -167,10 +167,20 @@ const findReservationTypeById = async (id) => {
 const findByIdAndUpdate = async (id, data) => {
   return ReservationType.findByIdAndUpdate(id, data, { new: true });
 };
+const checkReservationCapacity = async ({ reservationTypeId }) => {
+  const reservationType = await ReservationType.findById(reservationTypeId).select("maxCapacity");
+  if (!reservationType) {
+    return 0
+  }
+
+  return reservationType.maxCapacity;
+};
+
 module.exports = {
   createReservationType,
   getReservationTypes,
   findReservationTypeById,
   findByIdAndUpdate,
   getReservationTypesSummary,
+  checkReservationCapacity,
 };

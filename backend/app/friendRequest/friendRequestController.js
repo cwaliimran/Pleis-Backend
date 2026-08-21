@@ -135,7 +135,7 @@ const updateFriendRequests = async (req, res) => {
   const { id } = req.params;
 
   let { status} = req.body;
-  console.log("status",status );
+
   try {
     const validActions = ["accept", "reject", "cancel"];
     if (!validActions.includes(status)) {

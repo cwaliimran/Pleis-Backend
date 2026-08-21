@@ -10,14 +10,6 @@ const usersUsersStreaksService = require("./usersStreaksService");
 
 const createUsersStreak = async (req, res) => {
   const { companyOrganizer, organization } = req.body;
-  console.log(
-    "Creating user streak for user:",
-    req.user._id,
-    "companyOrganizer:",
-    companyOrganizer,
-    "organization:",
-    organization,
-  );
   if (
     !validateParams(req, res, {
       rawData: ["companyOrganizer", "organization"],

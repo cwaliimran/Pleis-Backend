@@ -66,7 +66,6 @@ const get = async ({ page, limit, keyword, status, date, timezone, sortBy, sortO
 const update = async (id, data, scope = "single") => {
   const item = await repository.findById(id);
   if (!item) return null;
-console.log("data",data );
   const { recurringMeta } = item;
 
   // ❌ Never mutate recurrence on single instance

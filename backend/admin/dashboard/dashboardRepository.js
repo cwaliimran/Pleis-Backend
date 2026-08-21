@@ -468,9 +468,7 @@ const getOrganizerPerformanceByMonth = async ({
   companyOrganizer
   
 }) => {
-  console.log("companyOrganizer",companyOrganizer);
-  console.log("organizerId",organizerId );
-  console.log("organizationId",organizationId );
+
   const match = {
     purpose: "eventTicketPurchase",
     status: { $in: ["confirmed", "completed","paid"] },

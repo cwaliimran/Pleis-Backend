@@ -62,11 +62,26 @@ const attachMenuItemDiscounts = (menuItems = [], discounts = [], at = new Date()
 };
 
 const getMenuItemsWithFilters = async ({ query = {}, userId = null, timezone = null }) => {
-  const menuItems = await MenuItems.aggregate([
-    { $match: query },
+  let menuItems = await MenuItems.aggregate([
+    {
+      $match: {
+        ...query,
+        status: query.status || "active",
+        isAvailableInStock: true,
+      },
+    },
     ...buildMenuItemsSaleLookup(timezone),
     { $sort: { createdAt: -1 } },
   ]);
+
+  if (!menuItems.length) return [];
+
+  // Same availability rules as V2: daypart + availableDays in org/user timezone
+  menuItems = await filterByDaypartAndDaysWithFetch(
+    menuItems,
+    getAllDayparts,
+    timezone || "UTC",
+  );
 
   if (!menuItems.length) return [];
 
@@ -330,12 +345,20 @@ const getRecommendedItemsV2 = async (userId = null, timezone = null, menuIds = [
 
   if (!menuObjectIds.length) return [];
 
-  const items = await MenuItems.find({
+  let items = await MenuItems.find({
     menu: { $in: menuObjectIds },
     status: "active",
-    isAvailableInStock: { $ne: false },
+    isAvailableInStock: true,
     isRecommended: true,
   }).lean();
+
+  if (!items.length) return [];
+
+  items = await filterByDaypartAndDaysWithFetch(
+    items,
+    getAllDayparts,
+    timezone || "UTC",
+  );
 
   if (!items.length) return [];
 
@@ -345,7 +368,7 @@ const getRecommendedItemsV2 = async (userId = null, timezone = null, menuIds = [
   return attachMenuItemDiscounts(items, discounts);
 };
 
-//userId, timezone, organization, menuId
+// userId, timezone, organization, menuId
 const getUpsellMenuItemsV2 = async (userId = null, timezone = null, menuIds = []) => {
   const menuObjectIds = (Array.isArray(menuIds) ? menuIds : [menuIds])
     .filter(Boolean)
@@ -353,12 +376,20 @@ const getUpsellMenuItemsV2 = async (userId = null, timezone = null, menuIds = []
 
   if (!menuObjectIds.length) return [];
 
-  const items = await MenuItems.find({
+  let items = await MenuItems.find({
     menu: { $in: menuObjectIds },
     status: "active",
-    isAvailableInStock: { $ne: false },
-    isUpsell: true,
+    isAvailableInStock: true,
+    upSellItem: true,
   }).lean();
+
+  if (!items.length) return [];
+
+  items = await filterByDaypartAndDaysWithFetch(
+    items,
+    getAllDayparts,
+    timezone || "UTC",
+  );
 
   if (!items.length) return [];
 

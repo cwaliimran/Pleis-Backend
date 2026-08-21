@@ -15,7 +15,6 @@ const handleLoyaltyEarningConsequences = ({
   if (companyPoints?.total > 0) {
     checkLoyaltyTierPromotion(userId, companyOrganizer)
       .then(() => {
-        console.log(`[LOYALTY] Tier promotion check completed for user ${userId}`);
       })
       .catch(err =>
         console.error("[LOYALTY] Tier promotion failed:", err)
@@ -26,7 +25,6 @@ const handleLoyaltyEarningConsequences = ({
   if (globalPoints?.total > 0) {
     checkPromotionGlobal(userId)
       .then(() => {
-        console.log(`[GLOBAL] Global promotion check completed for user ${userId}`);
       })
       .catch(err =>
         console.error("[GLOBAL] Global promotion failed:", err)
@@ -50,7 +48,6 @@ const handleLoyaltyEarningConsequences = ({
         items,
       })
         .then(() => {
-          console.log(`[CHALLENGE] buyMenuItem resolved for user ${userId}`);
         })
         .catch(err =>
           console.error("[CHALLENGE] Menu item challenge failed:", err)
@@ -67,7 +64,6 @@ const handleLoyaltyEarningConsequences = ({
       value: companyPoints.total,
     })
       .then(() => {
-        console.log(`[CHALLENGE] Company earnPoints resolved for user ${userId}`);
       })
       .catch(err =>
         console.error("[CHALLENGE] Company earn challenge failed:", err)
@@ -82,7 +78,6 @@ const handleLoyaltyEarningConsequences = ({
       value: globalPoints.total,
     })
       .then(() => {
-        console.log(`[GLOBAL CHALLENGE] globalEarnPoints resolved for user ${userId}`);
       })
       .catch(err =>
         console.error("[GLOBAL CHALLENGE] Global earn challenge failed:", err)

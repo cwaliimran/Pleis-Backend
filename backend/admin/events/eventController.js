@@ -296,7 +296,7 @@ const createEvent = async (req, res) => {
 //         );
 
 //         // Log the update for each event
-//         console.log(`Updated event _id: ${event._id} with companyOrganizer: ${companyOrganizer}`);
+//         
 //       }
 //     }
 

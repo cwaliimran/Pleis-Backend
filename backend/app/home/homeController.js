@@ -67,7 +67,7 @@ const getHome = async (req, res) => {
     const { status, data } = await getHomeService({ queryData });
 
     if (status === false) {
-      console.log("Error fetching home==>", data)
+   
       return sendResponse({
         res,
         statusCode: 500,

@@ -308,6 +308,8 @@ const checkReservationAvailability = async ({
   timingSlots,
   userId,
 }) => {
+
+
   let reservationType = null;
 
   if (reservationTypeId) {
@@ -317,7 +319,9 @@ const checkReservationAvailability = async ({
       status: "active",
     }).lean();
 
+
     if (!reservationType) {
+
       return {
         allowed: false,
         message: "Reservation type not found or is inactive",
@@ -335,38 +339,75 @@ const checkReservationAvailability = async ({
   if (userId) filter.userId = new mongoose.Types.ObjectId(userId);
   if (reservationTypeId) filter.reservationType = String(reservationTypeId);
 
+
+
   const reservations = await UserReservations.find(filter)
     .select("timingSlots numberOfTables partySize bookingDuration")
     .lean();
 
+
+
+  // Normalize any date-like value (Date object, ISO string, or "YYYY-MM-DD") to "YYYY-MM-DD"
+  const toDateOnly = (d) => new Date(d).toISOString().slice(0, 10);
+
+  const checkCapacity = ({ usedTables, usedPartySize, date }) => {
+
+
+    if (usedPartySize + partySize > reservationType.maxCapacity) {
+      return {
+        allowed: false,
+        message: "Maximum capacity has been reached",
+        conflict: { date },
+      };
+    }
+
+    if (usedTables + numberOfTables > reservationType.numberOfTables) {
+      return {
+        allowed: false,
+        message: "Not enough tables available",
+        conflict: { date },
+      };
+    }
+
+    if (usedPartySize + partySize > reservationType.maxPartySize) {
+      return {
+        allowed: false,
+        message: "Maximum party size has been reached",
+        conflict: { date },
+      };
+    }
+
+    return null;
+  };
+
   for (const dateBlock of timingSlots?.dateTimeSlots || []) {
-    const date = dateBlock.date;
+    const date = toDateOnly(dateBlock.date);
     const requestedSlots = dateBlock.timeSlots || [];
     const isWholeDay = !requestedSlots.length;
 
-    const dateReservations = reservations.filter((r) => r.timingSlots?.dateTimeSlots?.some((d) => d.date === date));
+
+    const dateReservations = reservations.filter((r) =>
+      r.timingSlots?.dateTimeSlots?.some((d) => toDateOnly(d.date) === date),
+    );
+
 
     // Whole-day booking: check capacity for the whole date
     if (isWholeDay) {
       if (reservationType) {
-        const usedTables = dateReservations.reduce((sum, r) => sum + (r.numberOfTables || 0), 0);
+        const usedTables = dateReservations.reduce(
+          (sum, r) => sum + (r.numberOfTables || 0),
+          0,
+        );
+        const usedPartySize = dateReservations.reduce(
+          (sum, r) => sum + (r.partySize || 0),
+          0,
+        );
 
-        const usedPartySize = dateReservations.reduce((sum, r) => sum + (r.partySize || 0), 0);
 
-        if (usedTables + numberOfTables > reservationType.numberOfTables) {
-          return {
-            allowed: false,
-            message: "Not enough tables available",
-            conflict: { date },
-          };
-        }
-
-        if (usedPartySize + partySize > reservationType.maxPartySize) {
-          return {
-            allowed: false,
-            message: "Maximum party size has been reached",
-            conflict: { date },
-          };
+        const failure = checkCapacity({ usedTables, usedPartySize, date });
+        if (failure) {
+    
+          return failure;
         }
       }
 
@@ -377,47 +418,53 @@ const checkReservationAvailability = async ({
     const conflictingReservations = dateReservations.filter((r) => {
       if (r.bookingDuration === "wholeDay") return true;
 
-      const existingBlock = r.timingSlots?.dateTimeSlots?.find((d) => d.date === date);
+      const existingBlock = r.timingSlots?.dateTimeSlots?.find(
+        (d) => toDateOnly(d.date) === date,
+      );
 
       return requestedSlots.some((slot) => {
+        if (!slot?.startTime || !slot?.endTime) return false;
+
         const start = new Date(slot.startTime);
         const end = new Date(slot.endTime);
 
         return existingBlock?.timeSlots?.some((existing) => {
-          return start < new Date(existing.endTime) && end > new Date(existing.startTime);
+          if (!existing?.startTime || !existing?.endTime) return false;
+
+          return (
+            start < new Date(existing.endTime) &&
+            end > new Date(existing.startTime)
+          );
         });
       });
     });
 
+ 
+
     if (reservationType) {
-      const usedTables = conflictingReservations.reduce((sum, r) => sum + (r.numberOfTables || 0), 0);
+      const usedTables = conflictingReservations.reduce(
+        (sum, r) => sum + (r.numberOfTables || 0),
+        0,
+      );
+      const usedPartySize = conflictingReservations.reduce(
+        (sum, r) => sum + (r.partySize || 0),
+        0,
+      );
 
-      const usedPartySize = conflictingReservations.reduce((sum, r) => sum + (r.partySize || 0), 0);
-
-      if (usedTables + numberOfTables > reservationType.numberOfTables) {
-        return {
-          allowed: false,
-          message: "Not enough tables available",
-          conflict: { date },
-        };
-      }
-
-      if (usedPartySize + partySize > reservationType.maxPartySize) {
-        return {
-          allowed: false,
-          message: "Maximum party size has been reached",
-          conflict: { date },
-        };
+      const failure = checkCapacity({ usedTables, usedPartySize, date });
+      if (failure) {
+ 
+        return failure;
       }
     }
   }
+
 
   return {
     allowed: true,
     message: "Reservation is available",
   };
 };
-
 const createReservation = async (data, session) => {
   if (!session) throw new Error("session_required");
 
@@ -1659,6 +1706,27 @@ const getTodayReservationVoucher = ({ user, filter }) => {
     .lean();
 };
 
+const bookedCapacity = async ({ reservationTypeId, date }) => {
+  const result = await UserReservations.aggregate([
+    {
+      $match: {
+        reservationType: new mongoose.Types.ObjectId(reservationTypeId),
+        status: { $nin: ["cancelled", "deleted", "rejected", "completed"] },
+        "timingSlots.dateTimeSlots.date": {
+          $eq: date ? new Date(date) : new Date().toISOString().slice(0, 10),
+        },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: "$partySize" },
+      },
+    },
+  ]);
+
+  return result[0]?.total || 0;
+};
 module.exports = {
   createReservation,
   getReservationsWithFilters,
@@ -1678,4 +1746,6 @@ module.exports = {
   checkReservationAvailability,
   validateReservationCapacity,
   getReservationSlots,
+  bookedCapacity,
+  
 };
