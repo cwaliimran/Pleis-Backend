@@ -41,6 +41,7 @@ const getChallengesWithFilters = async (
   limit = 10,
   sortBy = "createdAt",
   sortOrder = "desc",
+  rewardType,
 ) => {
   const sortDirection = sortOrder === "asc" ? 1 : -1;
 
@@ -72,6 +73,7 @@ const getChallengesWithFilters = async (
 
   return Challenge.aggregate([
     { $match: query },
+    ...(rewardType ? [{ $match: { "reward.rewardType": rewardType } }] : []),
 
     {
       $lookup: {

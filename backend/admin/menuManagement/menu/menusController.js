@@ -123,16 +123,16 @@ const getMenus = async (req, res) => {
     }
 
     // arse organizations if it’s a JSON string (e.g. '["id1","id2"]')
-    if (typeof organizations === "string") {
-      try {
-        organizations = JSON.parse(organizations);
-      } catch (e) {}
-    }
+    // if (typeof organizations === "string") {
+    //   try {
+    //     organizations = JSON.parse(organizations);
+    //   } catch (e) {}
+    // }
 
-    // Ensure it's an array or undefined
-    if (!Array.isArray(organizations)) {
-      organizations = undefined;
-    }
+    // // Ensure it's an array or undefined
+    // if (!Array.isArray(organizations)) {
+    //   organizations = undefined;
+    // }
     let menus = null;
     let meta = null;
 

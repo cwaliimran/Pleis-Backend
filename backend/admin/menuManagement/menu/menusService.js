@@ -29,13 +29,14 @@ const getMenus = async ({
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let organizationIds = [];
+  if (organizations) {
+    const orgList = Array.isArray(organizations)
+      ? organizations
+      : [organizations];
 
-  // 1️⃣ If organizations explicitly provided, use them directly
-  if (Array.isArray(organizations) && organizations.length > 0) {
-    organizationIds = organizations.map(
-      (id) => new mongoose.Types.ObjectId(id),
-    );
-    // 2️⃣ Otherwise, if companyOrganizer provided, get orgs created by it
+    if (orgList.length > 0) {
+      organizationIds = orgList.map((id) => new mongoose.Types.ObjectId(id));
+    }
   } else if (companyOrganizer) {
     organizationIds =
       await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
@@ -200,8 +201,7 @@ const getMenus = async ({
         },
       });
     }
-  }
-  else {
+  } else {
     pipeline.push({
       $sort: {
         createdAt: -1,
@@ -259,13 +259,14 @@ const getMenusSummary = async ({
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let organizationIds = [];
 
-  // 1️⃣ If organizations explicitly provided, use them directly
-  if (Array.isArray(organizations) && organizations.length > 0) {
-    organizationIds = organizations
-      .filter((id) => mongoose.Types.ObjectId.isValid(id))
-      .map((id) => new mongoose.Types.ObjectId(id));
+  if (organizations) {
+    const orgList = Array.isArray(organizations)
+      ? organizations
+      : [organizations];
 
-    // 2️⃣ Otherwise, if companyOrganizer provided, get orgs created by it
+    if (orgList.length > 0) {
+      organizationIds = orgList.map((id) => new mongoose.Types.ObjectId(id));
+    }
   } else if (companyOrganizer) {
     organizationIds =
       await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
