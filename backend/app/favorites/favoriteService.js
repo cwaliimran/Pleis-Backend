@@ -3,7 +3,7 @@ const Organizations = require("../../commonModules/organizations/Organization");
 const Menus = require("../../commonModules/menuManagement/menu/Menus");
 const { Events } = require("@EventsModel");
 const { generateMeta } = require("../../helperUtils/responseUtil");
-const { formatFavoritesEventResponse, formatFavoritesOrganization } = require("./formatter/favoritesFormatter");
+const { formatFavoritesEventResponse, formatFavoritesOrganization, formatFavoritesChallenges } = require("./formatter/favoritesFormatter");
 
 /**
  * Maps target types to their corresponding Mongoose models.
@@ -71,6 +71,11 @@ const getUserFavorites = async ({ userId, location, timezone, targetType, page =
         formattedObject = formatFavoritesOrganization(fav.object);
       } else if (fav.targetType === 'event') {
         formattedObject = formatFavoritesEventResponse(fav.object, { userLocation: location, timezone });
+      } else if (fav.targetType === 'challenge' || fav.targetType === 'promotion' || fav.targetType === 'reward') {
+        formattedObject = formatFavoritesChallenges(fav.object, {
+          userLocation: location,
+          timezone,
+        });
       } else if (fav.targetType === 'menu') {
         formattedObject = fav.object; // Add menu formatting if needed
       } else {
@@ -100,24 +105,27 @@ const getUserFavorites = async ({ userId, location, timezone, targetType, page =
 
     favorites = {
       events: events?.map((fav) => ({
-        ...fav.toObject?.() || fav,
-        object: formatFavoritesEventResponse(fav.object, { userLocation: location, timezone }),
+        ...(fav.toObject?.() || fav),
+        object: formatFavoritesEventResponse(fav.object, {
+          userLocation: location,
+          timezone,
+        }),
       })),
       organizations: organizations?.map((fav) => ({
-        ...fav.toObject?.() || fav,
+        ...(fav.toObject?.() || fav),
         object: formatFavoritesOrganization(fav.object),
       })),
       challenge: challenge?.map((fav) => ({
-        ...fav.toObject?.() || fav,
-        object: fav.object,
+        ...(fav.toObject?.() || fav),
+        object: formatFavoritesChallenges(fav.object),
       })),
       promotion: promotion?.map((fav) => ({
-        ...fav.toObject?.() || fav,
-        object: fav.object,
+        ...(fav.toObject?.() || fav),
+        object: formatFavoritesChallenges(fav.object),
       })),
       reward: reward?.map((fav) => ({
-        ...fav.toObject?.() || fav,
-        object: fav.object,
+        ...(fav.toObject?.() || fav),
+        object: formatFavoritesChallenges(fav.object),
       })),
     };
     counts = {

@@ -64,6 +64,8 @@ const getUserFavorites = async (req, res) => {
     const { targetType } = req.query;
     const { _id: userId, location, timezone } = req.user;
 
+
+
     try {
         if (
             targetType &&

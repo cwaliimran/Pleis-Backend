@@ -71,7 +71,6 @@ const getChallengesV2 = async ({
     const end = new Date(new Date(date).setDate(start.getDate() + 1));
     query.createdAt = { $gte: start, $lt: end };
   }
-  if (rewardType) query.rewardType = rewardType;
   if (taskType) query.taskType = taskType;
   if (keyword) {
     Object.assign(
@@ -87,6 +86,7 @@ const getChallengesV2 = async ({
     limit,
     sortBy,
     sortOrder,
+    rewardType,
   );
 
   // Get counts

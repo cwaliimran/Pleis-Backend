@@ -181,17 +181,23 @@ const getTotalOrderPriceByUser = async (userId) => {
   try {
     // Find all orders for the given user
     const orders = await Orders.find({ user: userId })
-      .select("items totalPrice") // Only select the items and totalPrice fields
+      .select("items combos totalPrice") // items + combos for spend totals
       .lean(); // Use lean() to return plain JavaScript objects instead of Mongoose documents
 
     if (orders.length === 0) return 0;
 
-    // Sum the finalPrice of all items in each order
+    // Sum finalPrice of all items + combos in each order
     let totalAmount = 0;
     orders.forEach((order) => {
-      // Sum finalPrice of all items in the current order
-      const itemsTotal = order.items.reduce((sum, item) => sum + item.finalPrice, 0);
-      totalAmount += itemsTotal;
+      const itemsTotal = (order.items || []).reduce(
+        (sum, item) => sum + (item.finalPrice || 0),
+        0,
+      );
+      const combosTotal = (order.combos || []).reduce(
+        (sum, combo) => sum + (combo.finalPrice || 0),
+        0,
+      );
+      totalAmount += itemsTotal + combosTotal;
     });
 
     return totalAmount;

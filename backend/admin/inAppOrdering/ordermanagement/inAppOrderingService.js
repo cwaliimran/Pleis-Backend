@@ -240,26 +240,53 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
      3️⃣ DELIVER ALL
   =============================== */
   if (typeof data.deliveredall === "boolean") {
-    order.items.forEach((item) => {
+    (order.items || []).forEach((item) => {
       item.isdelivered = data.deliveredall;
     });
-    deliveryChanged = true;
-  } else if (data.deliveredMenuItem) {
-    /* ===============================
-     4️⃣ DELIVER SELECTED ITEMS
-  =============================== */
-    const deliveredIds = data.deliveredMenuItem
-      .split(",")
-      .map((id) => id.trim())
-      .filter(Boolean)
-      .map((id) => new mongoose.Types.ObjectId(id));
-
-    order.items.forEach((item) => {
-      if (deliveredIds.some((dId) => dId.equals(item.menuItem))) {
-        item.isdelivered = true;
-        deliveryChanged = true;
-      }
+    (order.combos || []).forEach((combo) => {
+      combo.isdelivered = data.deliveredall;
     });
+    deliveryChanged = true;
+  } else {
+    /* ===============================
+       4️⃣ DELIVER SELECTED MENU ITEMS
+    =============================== */
+    if (data.deliveredMenuItem) {
+      const deliveredIds = String(data.deliveredMenuItem)
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean)
+        .map((id) => new mongoose.Types.ObjectId(id));
+
+      (order.items || []).forEach((item) => {
+        if (deliveredIds.some((dId) => dId.equals(item.menuItem))) {
+          item.isdelivered = true;
+          deliveryChanged = true;
+        }
+      });
+    }
+
+    /* ===============================
+       5️⃣ DELIVER WHOLE COMBOS (by combo id)
+    =============================== */
+    if (data.deliveredCombo) {
+      const deliveredComboIds = String(data.deliveredCombo)
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean)
+        .map((id) => new mongoose.Types.ObjectId(id));
+
+      (order.combos || []).forEach((combo) => {
+        if (
+          deliveredComboIds.some(
+            (dId) => dId.equals(combo.combo) || dId.equals(combo._id),
+          )
+        ) {
+          combo.isdelivered = true;
+          deliveryChanged = true;
+        }
+      });
+    }
   }
   if (data.resaonForRejection) {
     order.reasonForRejection = data.reasonForRejection;
@@ -304,7 +331,10 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
         type: NotificationTypes.ORDER_UPDATE,
         objectType: "menuorders",
       },
-      image: order.items?.[0]?.menuItemSnapShot?.image || null,
+      image:
+        order.items?.[0]?.menuItemSnapShot?.image ||
+        order.combos?.[0]?.items?.[0]?.menuItemSnapShot?.image ||
+        null,
       sender: order.organization,
       objectId: order._id,
     });

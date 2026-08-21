@@ -229,6 +229,7 @@ const getOrders = async ({
         paymentMethod: 1,
         pickupType: 1,
         createdAt: 1,
+        combos:1,
         orderType: 1,
         tableNumber: 1,
         user: 1, // Include the user info in the final result

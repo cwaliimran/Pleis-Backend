@@ -285,7 +285,6 @@ const getUserDetails = async (req, res) => {
   try {
     let user = await usersService.getUserDetails(id);
 
-
     if (!user) {
       return sendResponse({
         res,
@@ -322,8 +321,7 @@ const getUserDetails = async (req, res) => {
       delete userObject.organizations;
       delete userObject.events;
 
-
-      user
+      user;
       const [
         interests_,
         joinedClubs_,
@@ -384,8 +382,15 @@ const getUserByFilters = async (req, res) => {
   }
 
   if (code && number) {
-    query["phoneNumber.code"] = code;
-    query["phoneNumber.number"] = number;
+    query["phoneNumber.code"] = {
+      $regex: code,
+      $options: "i",
+    };
+
+    query["phoneNumber.number"] = {
+      $regex: number,
+      $options: "i",
+    };
   }
   const user = await usersService.getUserByFilters(query);
   return sendResponse({
