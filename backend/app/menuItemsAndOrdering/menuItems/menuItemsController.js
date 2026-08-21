@@ -50,7 +50,6 @@ const getMenuItemsV2 = async (req, res) => {
       timezone: req.user?.timezone,
       organization,
     });
-
     return sendResponse({
       res,
       statusCode: 200,

@@ -1,25 +1,42 @@
 const orderRepo = require("./orderRepository");
 const menuItemRepo = require("../menuItems/menuItemsRepository");
 const mongoose = require("mongoose");
-const { menuItemOrderFormatter } = require("./formatter/menuItemOrderFormatter");
+const {
+  menuItemOrderFormatter,
+} = require("./formatter/menuItemOrderFormatter");
 const { generateMeta } = require("../../../helperUtils/responseUtil");
-const { sendUserNotifications } = require("../../../controllers/communicationController");
+const {
+  sendUserNotifications,
+} = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 const Organizations = require("@OrganizationModel");
 const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
-const { findAppUserByIdWithProjectionService } = require("../../usersManagement/usersService");
-const { getCheckedInStaffForOrganization } = require("../../../staff/organizations/organizationRepository");
+const {
+  findAppUserByIdWithProjectionService,
+} = require("../../usersManagement/usersService");
+const {
+  getCheckedInStaffForOrganization,
+} = require("../../../staff/organizations/organizationRepository");
 const { usePromoCode } = require("../../promoCode/promoCodeRepository");
-const { getOrgCompanyOrganizer } = require("../../organizationProfile/organizationProfileRepository");
+const {
+  getOrgCompanyOrganizer,
+} = require("../../organizationProfile/organizationProfileRepository");
 const { calculateItemPrice } = require("./formatter/calculateItemPrice");
-const { calculateComboPrice } = require("../menuItems/formatter/formatMenuItemsCombos");
-const { getWallet } = require("../../../app/loyalty/clubMembers/clubMembersRepository");
+const {
+  calculateComboPrice,
+} = require("../menuItems/formatter/formatMenuItemsCombos");
+const {
+  getWallet,
+} = require("../../../app/loyalty/clubMembers/clubMembersRepository");
 const {
   getLatestUserReservations,
   validateReservationForOrder,
   consumeReservationVoucher,
 } = require("../../../admin/reservation/reservationRepository");
 const DeliveryOptions = require("@DeliveryOptionsModel");
+const {
+  getSetttings,
+} = require("../../../admin/inAppOrdering/settings/setting/settingRepository");
 
 const buildPricedMenuItemSnapshot = (menuItem) => {
   const priceInfo = calculateItemPrice(menuItem);
@@ -39,8 +56,22 @@ const buildPricedMenuItemSnapshot = (menuItem) => {
   };
 };
 
+const resolveComboComponentMenuItemId = (entry) => {
+  if (!entry) return null;
+  // Nested schema: { menuItem: ObjectId|doc, quantity }
+  if (typeof entry === "object" && entry.menuItem != null) {
+    const ref = entry.menuItem;
+    return ref._id || ref;
+  }
+  // Legacy flat ObjectId / populated doc
+  return entry._id || entry;
+};
+
 const validateComboSelection = (cartCombo, combo) => {
-  const requiredItemIds = (combo.menuItems || []).map((id) => id.toString());
+  const requiredItemIds = (combo.menuItems || [])
+    .map((entry) => resolveComboComponentMenuItemId(entry))
+    .filter(Boolean)
+    .map((id) => id.toString());
   const selectedIds = (cartCombo.items || []).map((id) => id.toString());
 
   if (!requiredItemIds.length) {
@@ -48,7 +79,9 @@ const validateComboSelection = (cartCombo, combo) => {
   }
 
   if (selectedIds.length !== requiredItemIds.length) {
-    throw new Error(`Combo ${cartCombo.combo} requires exactly ${requiredItemIds.length} items`);
+    throw new Error(
+      `Combo ${cartCombo.combo} requires exactly ${requiredItemIds.length} items`,
+    );
   }
 
   const sortedRequired = [...requiredItemIds].sort();
@@ -66,8 +99,14 @@ const validateComboSelection = (cartCombo, combo) => {
   return { selectedIds, quantity };
 };
 
-const buildOrderCombos = async ({ combos = [], comboDocs = [], userId, timezone }) => {
-  if (!combos.length) return { orderCombos: [], combosTotal: 0, combosSaleDiscount: 0 };
+const buildOrderCombos = async ({
+  combos = [],
+  comboDocs = [],
+  userId,
+  timezone,
+}) => {
+  if (!combos.length)
+    return { orderCombos: [], combosTotal: 0, combosSaleDiscount: 0 };
 
   const orderCombos = [];
   let combosTotal = 0;
@@ -79,7 +118,9 @@ const buildOrderCombos = async ({ combos = [], comboDocs = [], userId, timezone 
 
     const { selectedIds, quantity } = validateComboSelection(cartCombo, combo);
 
-    const selectedObjectIds = selectedIds.map((id) => new mongoose.Types.ObjectId(id));
+    const selectedObjectIds = selectedIds.map(
+      (id) => new mongoose.Types.ObjectId(id),
+    );
     const comboMenuItems = await menuItemRepo.getMenuItemsWithFilters({
       query: { _id: { $in: selectedObjectIds } },
       userId,
@@ -90,16 +131,33 @@ const buildOrderCombos = async ({ combos = [], comboDocs = [], userId, timezone 
       throw new Error(`Invalid combo menu items for combo: ${cartCombo.combo}`);
     }
 
-    const pricedItems = comboMenuItems.map((item) => {
+    const componentQuantityByItemId = new Map(
+      (combo.menuItems || []).map((entry) => {
+        const id = resolveComboComponentMenuItemId(entry);
+        const componentQty = Number(entry?.quantity);
+        return [
+          id.toString(),
+          Number.isFinite(componentQty) && componentQty > 0 ? componentQty : 1,
+        ];
+      }),
+    );
+
+    const pricedItems = selectedIds.map((id) => {
+      const item = comboMenuItems.find((m) => m._id.toString() === id);
       const priceInfo = calculateItemPrice(item);
       return {
         ...item,
         salePrice: priceInfo.finalPrice,
         basePrice: priceInfo.originalPrice,
+        quantity: componentQuantityByItemId.get(id) || 1,
       };
     });
 
-    const comboPriceInfo = calculateComboPrice(combo.priceMode, combo.price, pricedItems);
+    const comboPriceInfo = calculateComboPrice(
+      combo.priceMode,
+      combo.price,
+      pricedItems,
+    );
 
     const unitPrice = comboPriceInfo.originalPrice;
     const unitFinalPrice = comboPriceInfo.salePrice;
@@ -115,6 +173,7 @@ const buildOrderCombos = async ({ combos = [], comboDocs = [], userId, timezone 
       return {
         menuItem: priced.menuItem,
         menuItemSnapShot: priced.menuItemSnapShot,
+        quantity: componentQuantityByItemId.get(id) || 1,
       };
     });
 
@@ -194,7 +253,9 @@ const placeOrder = async ({
   try {
     let menuItems = [];
     let organizationId;
-    const deliveryOptionData = await DeliveryOptions.findOne({ _id: deliveryOption }).lean();
+    const deliveryOptionData = await DeliveryOptions.findOne({
+      _id: deliveryOption,
+    }).lean();
     if (deliveryOption && !deliveryOptionData) {
       throw new Error("Invalid delivery option");
     }
@@ -208,12 +269,16 @@ const placeOrder = async ({
 
       if (!menuItems.length) throw new Error("Invalid items in cart");
 
-      organizationId = await menuItemRepo.getOrganizationIdByMenuItemId(menuItems[0].menu);
+      organizationId = await menuItemRepo.getOrganizationIdByMenuItemId(
+        menuItems[0].menu,
+      );
     }
 
     let comboDocs = [];
     if (cartCombos.length) {
-      const comboIds = cartCombos.map((c) => new mongoose.Types.ObjectId(c.combo));
+      const comboIds = cartCombos.map(
+        (c) => new mongoose.Types.ObjectId(c.combo),
+      );
       comboDocs = await menuItemRepo.getMenuItemsCombosWithFilters({
         query: { _id: { $in: comboIds } },
       });
@@ -222,31 +287,41 @@ const placeOrder = async ({
         throw new Error("Invalid combos in cart");
       }
 
-      const firstComboItemId = comboDocs[0].menuItems?.[0];
+      const firstComboItemId = resolveComboComponentMenuItemId(
+        comboDocs[0].menuItems?.[0],
+      );
       if (!firstComboItemId) throw new Error("Invalid combos in cart");
 
-      const comboOrgId = await menuItemRepo.getOrganizationIdFromMenuItem(firstComboItemId);
+      const comboOrgId =
+        await menuItemRepo.getOrganizationIdFromMenuItem(firstComboItemId);
 
       if (!organizationId) {
         organizationId = comboOrgId;
       } else if (comboOrgId.toString() !== organizationId.toString()) {
-        throw new Error("Combos and items must belong to the same organization");
+        throw new Error(
+          "Combos and items must belong to the same organization",
+        );
       }
     }
 
     const companyOrganizer = await getOrgCompanyOrganizer(organizationId);
 
-    const { orderCombos, combosTotal, combosSaleDiscount } = await buildOrderCombos({
-      combos: cartCombos,
-      comboDocs,
-      userId,
-      timezone,
-    });
+    const { orderCombos, combosTotal, combosSaleDiscount } =
+      await buildOrderCombos({
+        combos: cartCombos,
+        comboDocs,
+        userId,
+        timezone,
+      });
 
     // 2️⃣ Prepare order items w/snapshot
-    let totalPrice = orderCombos.reduce((sum, combo) => sum + combo.finalPrice, 0);
+    let totalPrice = orderCombos.reduce(
+      (sum, combo) => sum + combo.finalPrice,
+      0,
+    );
     let totalSaleDiscount = combosSaleDiscount;
     let itemsTotal = combosTotal;
+    let isOrderNeedingConfirmation = false;
 
     const orderItems = (items || []).map((i) => {
       const menuItem = menuItems.find((m) => m._id.toString() === i.menuItem);
@@ -259,13 +334,16 @@ const placeOrder = async ({
       const saleDiscountPerUnit = priceInfo.saleDiscount;
 
       const finalPrice = unitFinalPrice * i.quantity;
-      const saleDiscountTotal = saleDiscountPerUnit * i.quantity;
 
       itemsTotal += unitPrice * i.quantity;
-      totalSaleDiscount += saleDiscountTotal;
+      totalSaleDiscount += saleDiscountPerUnit * i.quantity;
       totalPrice += finalPrice;
 
-      const status = menuItem.isRequiresOrderConfirmation ? "pending" : "confirmed";
+      const status = menuItem.isRequiresOrderConfirmation
+        ? "pending"
+        : "confirmed";
+      if (menuItem.isRequiresOrderConfirmation)
+        isOrderNeedingConfirmation = true;
 
       return {
         menuItem: menuItem._id,
@@ -322,6 +400,9 @@ const placeOrder = async ({
     }
 
     // 3️⃣ Create order document inside session
+    console.log("organizationId", organizationId);
+
+    const setting = await getSetttings({ organization: organizationId });
     totalPrice += Number(tip || 0);
     let orderData = {
       user: userId,
@@ -347,11 +428,16 @@ const placeOrder = async ({
       deliveryOption,
       orderType: "online",
     };
-
     let orderStatus = "pending";
     if (paymentMethod === "applePay" || paymentMethod === "card") {
       orderStatus = "pendingPayment";
       orderData.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
+    } else if (
+      setting.automaticOrderAcceptance &&
+      setting.automaticOrderAcceptance === true &&
+      !isOrderNeedingConfirmation
+    ) {
+      orderStatus = "confirmed";
     }
     orderData.status = orderStatus;
 
@@ -382,7 +468,10 @@ const placeOrder = async ({
         organizationId: order.organization,
         data: formattedOrder,
       });
-      const staffIds = await getCheckedInStaffForOrganization(organizationId, timezone);
+      const staffIds = await getCheckedInStaffForOrganization(
+        organizationId,
+        timezone,
+      );
 
       sendUserNotifications({
         recipientIds: staffIds,
@@ -394,7 +483,9 @@ const placeOrder = async ({
           organization_id: organizationId.toString(),
         },
         image:
-          order.items[0]?.menuItemSnapShot?.image || order.combos[0]?.items[0]?.menuItemSnapShot?.image || "noimage",
+          order.items[0]?.menuItemSnapShot?.image ||
+          order.combos[0]?.items[0]?.menuItemSnapShot?.image ||
+          "noimage",
         sender: userId,
         objectId: formattedOrder._id,
       });
@@ -429,7 +520,11 @@ const updateOrder = async ({
 
   try {
     // 1️⃣ Get existing order
-    const existingOrder = await orderRepo.getOrderById(orderId, userId, session);
+    const existingOrder = await orderRepo.getOrderById(
+      orderId,
+      userId,
+      session,
+    );
 
     if (!existingOrder) {
       throw new Error("Order not found");
@@ -439,7 +534,8 @@ const updateOrder = async ({
       throw new Error("Only orders in pendingPayment state can be updated");
     }
 
-    const organizationId = existingOrder.organization?._id || existingOrder.organization;
+    const organizationId =
+      existingOrder.organization?._id || existingOrder.organization;
 
     // IMPORTANT:
     // undefined = don't update this field
@@ -450,10 +546,6 @@ const updateOrder = async ({
 
     let orderItems = existingOrder.items || [];
     let orderCombos = existingOrder.combos || [];
-
-    let itemsTotal = 0;
-    let totalSaleDiscount = 0;
-    let totalPrice = 0;
 
     // =========================================================
     // 2️⃣ UPDATE ITEMS ONLY IF PROVIDED
@@ -466,7 +558,9 @@ const updateOrder = async ({
       }
 
       if (items.length) {
-        const itemIds = items.map((item) => new mongoose.Types.ObjectId(item.menuItem));
+        const itemIds = items.map(
+          (item) => new mongoose.Types.ObjectId(item.menuItem),
+        );
 
         const menuItems = await menuItemRepo.getMenuItemsWithFilters({
           query: {
@@ -480,14 +574,19 @@ const updateOrder = async ({
           throw new Error("Invalid items in cart");
         }
         // Make sure all items belong to same organization
-        const itemOrganizationId = await menuItemRepo.getOrganizationIdByMenuItemId(menuItems[0].menu);
+        const itemOrganizationId =
+          await menuItemRepo.getOrganizationIdByMenuItemId(menuItems[0].menu);
 
         if (itemOrganizationId.toString() !== organizationId.toString()) {
-          throw new Error("Items must belong to the same organization as the order");
+          throw new Error(
+            "Items must belong to the same organization as the order",
+          );
         }
 
         orderItems = items.map((item) => {
-          const menuItem = menuItems.find((m) => m._id.toString() === item.menuItem.toString());
+          const menuItem = menuItems.find(
+            (m) => m._id.toString() === item.menuItem.toString(),
+          );
 
           if (!menuItem) {
             throw new Error(`Invalid menu item: ${item.menuItem}`);
@@ -504,15 +603,9 @@ const updateOrder = async ({
 
           const finalPrice = unitFinalPrice * item.quantity;
 
-          const saleDiscountTotal = saleDiscountPerUnit * item.quantity;
-
-          itemsTotal += unitPrice * item.quantity;
-
-          totalSaleDiscount += saleDiscountTotal;
-
-          totalPrice += finalPrice;
-
-          const status = menuItem.isRequiresOrderConfirmation ? "pending" : "confirmed";
+          const status = menuItem.isRequiresOrderConfirmation
+            ? "pending"
+            : "confirmed";
 
           return {
             menuItem: menuItem._id,
@@ -534,16 +627,18 @@ const updateOrder = async ({
       }
 
       // Recompute order-level status from the items we just built.
-      // Only ever auto-update it if the order is currently "pending" —
-      // any other existing status (e.g. "confirmed", "cancelled") is left untouched.
-      if (orderStatus === "pending") {
-        const hasItemNeedingConfirmation = orderItems.some((item) => item.status === "pending");
+      // Only when there are line items; empty items (combo-only cart) stay pending.
+      // Any other existing status (e.g. "confirmed", "cancelled") is left untouched.
+      if (orderStatus === "pending" && orderItems.length) {
+        const hasItemNeedingConfirmation = orderItems.some(
+          (item) => item.status === "pending",
+        );
         orderStatus = hasItemNeedingConfirmation ? "pending" : "confirmed";
       }
     }
 
     // =========================================================
-    // 3️⃣ UPDATE COMBOS ONLY IF PROVIDED
+    // 3️⃣ UPDATE COMBOS ONLY IF PROVIDED (same shape as placeOrder)
     // =========================================================
 
     if (shouldUpdateCombos) {
@@ -552,7 +647,9 @@ const updateOrder = async ({
       }
 
       if (combos.length) {
-        const comboIds = combos.map((combo) => new mongoose.Types.ObjectId(combo.combo));
+        const comboIds = combos.map(
+          (combo) => new mongoose.Types.ObjectId(combo.combo),
+        );
 
         const comboDocs = await menuItemRepo.getMenuItemsCombosWithFilters({
           query: {
@@ -565,19 +662,22 @@ const updateOrder = async ({
         }
 
         // Validate combo organization
-        const firstComboItemId = comboDocs[0]?.menuItems?.[0];
+        const firstComboItemId = resolveComboComponentMenuItemId(
+          comboDocs[0]?.menuItems?.[0],
+        );
 
         if (!firstComboItemId) {
           throw new Error("Invalid combos in cart");
         }
 
-        const comboOrganizationId = await menuItemRepo.getOrganizationIdFromMenuItem(firstComboItemId);
+        const comboOrganizationId =
+          await menuItemRepo.getOrganizationIdFromMenuItem(firstComboItemId);
 
         if (comboOrganizationId.toString() !== organizationId.toString()) {
-          throw new Error("Combos must belong to the same organization as the order");
+          throw new Error(
+            "Combos must belong to the same organization as the order",
+          );
         }
-
-        const companyOrganizer = await getOrgCompanyOrganizer(organizationId);
 
         const { orderCombos: newOrderCombos } = await buildOrderCombos({
           combos,
@@ -593,33 +693,56 @@ const updateOrder = async ({
       }
     }
 
+    if (
+      (shouldUpdateItems || shouldUpdateCombos) &&
+      !orderItems.length &&
+      !orderCombos.length
+    ) {
+      throw new Error("Cart is empty");
+    }
+
     // =========================================================
-    // 4️⃣ CALCULATE COMBO TOTALS FROM RESULTING ORDER
+    // 4️⃣ RECALCULATE TOTALS FROM RESULTING ITEMS + COMBOS
     // =========================================================
 
-    const combosTotal = orderCombos.reduce((sum, combo) => sum + combo.finalPrice, 0);
+    let itemsTotal = 0;
+    let totalSaleDiscount = 0;
+    let totalPrice = 0;
 
-    const comboSaleDiscount = orderCombos.reduce((sum, combo) => sum + (combo.saleDiscount || 0), 0);
+    for (const item of orderItems) {
+      const qty = item.quantity || 0;
+      // Fresh lines have unitPrice; older saved items may only have finalPrice
+      itemsTotal +=
+        item.unitPrice != null
+          ? item.unitPrice * qty
+          : item.finalPrice || 0;
+      totalSaleDiscount += (item.saleDiscountPerUnit || 0) * qty;
+      totalPrice += item.finalPrice || 0;
+    }
 
-    totalPrice += combosTotal;
-
-    // If combos were not updated, calculate their original
-    // values from the existing snapshots/data where possible.
-    if (!shouldUpdateCombos) {
-      totalSaleDiscount += comboSaleDiscount;
-    } else {
-      totalSaleDiscount += comboSaleDiscount;
+    for (const combo of orderCombos) {
+      const qty = combo.quantity || 0;
+      itemsTotal += (combo.unitPrice || 0) * qty;
+      totalSaleDiscount += (combo.saleDiscountPerUnit || 0) * qty;
+      totalPrice += combo.finalPrice || 0;
     }
 
     // =========================================================
     // 5️⃣ OPTIONAL FIELD VALUES
     // =========================================================
 
-    const finalPaymentMethod = paymentMethod !== undefined ? paymentMethod : existingOrder.paymentMethod;
+    const finalPaymentMethod =
+      paymentMethod !== undefined ? paymentMethod : existingOrder.paymentMethod;
 
-    const finalPromoCode = promoCode !== undefined ? promoCode : existingOrder.priceBreakdown?.promoCode;
+    const finalPromoCode =
+      promoCode !== undefined
+        ? promoCode
+        : existingOrder.priceBreakdown?.promoCode;
 
-    const finalTip = tip !== undefined ? Number(tip || 0) : Number(existingOrder.priceBreakdown?.tip || 0);
+    const finalTip =
+      tip !== undefined
+        ? Number(tip || 0)
+        : Number(existingOrder.priceBreakdown?.tip || 0);
 
     if (finalTip < 0) {
       throw new Error("Invalid tip");
@@ -711,7 +834,11 @@ const updateOrder = async ({
     // 8️⃣ UPDATE ORDER
     // =========================================================
 
-    const updatedOrder = await orderRepo.updateOrder({ _id: orderId }, updateData, session);
+    const updatedOrder = await orderRepo.updateOrder(
+      { _id: orderId },
+      updateData,
+      session,
+    );
 
     if (!updatedOrder) {
       throw new Error("Failed to update order");
@@ -786,7 +913,9 @@ const placePreOrderMenuItemsWithReservation = async ({
 
   if (!menuItems.length) throw new Error("Invalid items in cart");
 
-  const organizationId = await menuItemRepo.getOrganizationIdByMenuItemId(menuItems[0].menu);
+  const organizationId = await menuItemRepo.getOrganizationIdByMenuItemId(
+    menuItems[0].menu,
+  );
 
   let totalPrice = 0;
 
@@ -834,9 +963,11 @@ const addMoreItemsToOrder = async ({ orderId, items }) => {
   const order = await orderRepo.getOrderById(orderId);
   if (!order) throw new Error("Order not found");
 
-  if (order.status === "cancelled") throw new Error("Cannot add items to a cancelled order");
+  if (order.status === "cancelled")
+    throw new Error("Cannot add items to a cancelled order");
 
-  if (order.paymentMethod !== "cash") throw new Error("Cannot add items to this order");
+  if (order.paymentMethod !== "cash")
+    throw new Error("Cannot add items to this order");
 
   // 2️⃣ Fetch menu items
   const itemIds = items.map((i) => new mongoose.Types.ObjectId(i.menuItem));
@@ -880,7 +1011,8 @@ const addMoreItemsToOrder = async ({ orderId, items }) => {
 
   // 4️⃣ Recalculate breakdown
   const newItemsTotal = order.priceBreakdown.itemsTotal + additionalItemsTotal;
-  const newSaleDiscount = order.priceBreakdown.saleDiscount + additionalSaleDiscount;
+  const newSaleDiscount =
+    order.priceBreakdown.saleDiscount + additionalSaleDiscount;
   const newFinalTotal = order.totalPrice + additionalFinalPrice;
 
   // 5️⃣ Update order
@@ -906,7 +1038,11 @@ const getOrderDetails = async (orderId, timezone) => {
 
   const companyOrganizer = await getOrgCompanyOrganizer(organizationID);
   const wallet = await getWallet(userID, companyOrganizer);
-  const reservation = await getLatestUserReservations(userID, organizationID, 5);
+  const reservation = await getLatestUserReservations(
+    userID,
+    organizationID,
+    5,
+  );
 
   let promoCode = null;
   if (reservation) {

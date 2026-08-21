@@ -128,7 +128,15 @@ const refLookups = {
   },
   promotion: {
     from: "promotions",
-    project: { title: 1 },
+    project: { title: 1, image: 1, promotionType: 1,description:1 },
+  },
+  challenge: {
+    from: "challenges",
+    project: { title: 1, image: 1, taskType: 1,description:1 },
+  },
+  reward: {
+    from: "rewards",
+    project: { title: 1, image: 1, rewardType: 1,description:1 },
   },
 };
 

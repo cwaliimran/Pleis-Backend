@@ -38,7 +38,9 @@ const getMenuItems = async ({ userId, timezone, organization }) => {
   if (!menuItems.length) return { recommended: [], menu: [] };
 
   // 3️⃣ Collect all category IDs used
-  const categoryIds = [...new Set(menuItems.map((item) => item.category.toString()))];
+  const categoryIds = [
+    ...new Set(menuItems.map((item) => item.subCategory.toString())),
+  ];
 
   // 4️⃣ Fetch category names in batch
   const [categories, recommended] = await Promise.all([
@@ -56,8 +58,8 @@ const getMenuItems = async ({ userId, timezone, organization }) => {
   const grouped = {};
 
   menuItems.forEach((item) => {
-    const { type, category } = item;
-    const categoryName = categoryMap[category.toString()] || category.toString();
+    const { type, subCategory } = item;
+    const categoryName = categoryMap[subCategory.toString()] || subCategory.toString();
 
     if (!grouped[categoryName]) grouped[categoryName] = {};
     if (!grouped[categoryName][type]) grouped[categoryName][type] = [];
@@ -118,7 +120,7 @@ const getMenuItemsV2 = async ({ userId, timezone, organization }) => {
   // 1️⃣ Get menu ID for the organization
   let organizationDetails = await findOrganizationWithSelectFilter(
     organization,
-    "_id basicInfo.name basicInfo.media.logo",
+    "_id basicInfo.name basicInfo.media.logo creator",
   );
 
   if (organizationDetails?.basicInfo?.media?.logo) {
@@ -188,8 +190,12 @@ const getMenuItemsV2 = async ({ userId, timezone, organization }) => {
 
   const menuItemById = new Map(menuItems.map((item) => [item._id.toString(), item]));
 
-  const rawCombos = await menuItemRepo.getMenuItemsCombos(menuItems.map((item) => item._id));
-
+  // Combos are global per companyOrganizer — only apply to this org's menus/items
+  const companyOrganizer = organizationDetails?.creator || null;
+  if (organizationDetails?.creator) {
+    delete organizationDetails.creator;
+  }
+  const rawCombos = await menuItemRepo.getMenuItemsCombos(menuItems, companyOrganizer);
 
   const combos = formatMenuItemsComboList(rawCombos, {
     timezone,

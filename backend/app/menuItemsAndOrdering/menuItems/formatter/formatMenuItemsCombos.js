@@ -1,11 +1,16 @@
 const { PriceMode } = require("@MenuItemsCombosModel");
 const { formatMenuItem } = require("./formatMenuItems");
 
+const resolveComponentQuantity = (quantity) => {
+  const qty = Number(quantity);
+  return Number.isFinite(qty) && qty > 0 ? qty : 1;
+};
+
 const calculateComboPrice = (priceMode, price, formattedItems = []) => {
-  const originalPrice = formattedItems.reduce(
-    (sum, item) => sum + (item.salePrice ?? item.basePrice ?? 0),
-    0,
-  );
+  const originalPrice = formattedItems.reduce((sum, item) => {
+    const unitPrice = item.salePrice ?? item.basePrice ?? 0;
+    return sum + unitPrice * resolveComponentQuantity(item.quantity);
+  }, 0);
 
   let salePrice = originalPrice;
 
@@ -37,6 +42,28 @@ const formatComboMenuItem = (comboItem, { timezone, menuItemById, applyDiscount 
   return applyDiscount ? applyDiscount(formatted) : formatted;
 };
 
+const normalizeComboMenuItemEntry = (entry) => {
+  if (!entry) return null;
+
+  // Nested schema: { menuItem: doc|ObjectId, quantity }
+  if (
+    entry.menuItem != null &&
+    typeof entry.menuItem === "object" &&
+    entry.menuItem._id
+  ) {
+    return {
+      item: entry.menuItem,
+      quantity: resolveComponentQuantity(entry.quantity),
+    };
+  }
+
+  // Flat menu item (app remapped combos) or legacy ObjectId entry
+  return {
+    item: entry,
+    quantity: resolveComponentQuantity(entry.quantity),
+  };
+};
+
 const formatMenuItemsCombo = (
   combo,
   { timezone = null, menuItemById = new Map(), applyDiscount } = {},
@@ -44,9 +71,13 @@ const formatMenuItemsCombo = (
   const obj = typeof combo.toObject === "function" ? combo.toObject() : combo;
   if (!obj) return null;
 
-  const formattedItems = (obj.menuItems || []).map((item) =>
-    formatComboMenuItem(item, { timezone, menuItemById, applyDiscount }),
-  );
+  const formattedItems = (obj.menuItems || [])
+    .map((entry) => normalizeComboMenuItemEntry(entry))
+    .filter(Boolean)
+    .map(({ item, quantity }) => ({
+      ...formatComboMenuItem(item, { timezone, menuItemById, applyDiscount }),
+      quantity,
+    }));
 
   const priceInfo = calculateComboPrice(obj.priceMode, obj.price, formattedItems);
 
@@ -57,7 +88,7 @@ const formatMenuItemsCombo = (
     subCategory: obj.subCategory
       ? {
           _id: obj.subCategory._id,
-          name: obj.subCategory.name,
+          title: obj.subCategory.title || obj.subCategory.name || null,
           status: obj.subCategory.status,
         }
       : null,
