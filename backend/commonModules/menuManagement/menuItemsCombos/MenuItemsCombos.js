@@ -15,7 +15,7 @@ const menuItemsCombosSchema = new mongoose.Schema(
     },
     subCategory: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "MenuItemSubCategory",
+      ref: "MenuSubcategory",
       required: true,
     },
     description: {

@@ -573,25 +573,37 @@ const getMenuItemsCombosWithFilters = async ({ query = {} } = {}) => {
     .lean();
 };
 
-const getMenuItemsCombos = async (menuItemIds = []) => {
-  if (!menuItemIds.length) return [];
+const getMenuItemsCombos = async (menuItems = [], companyOrganizer = null) => {
+  if (!menuItems.length || !companyOrganizer) return [];
 
-  const objectIds = menuItemIds.map((id) => new mongoose.Types.ObjectId(id));
+  const normalizeTitle = (title = "") => String(title).trim().toLowerCase();
 
-  return MenuItemsCombos.aggregate([
+  const itemsByTitle = new Map();
+  for (const item of menuItems) {
+    const key = normalizeTitle(item.title);
+    if (!key) continue;
+    if (!itemsByTitle.has(key)) itemsByTitle.set(key, []);
+    itemsByTitle.get(key).push(item);
+  }
+
+  if (!itemsByTitle.size) return [];
+
+  const creatorId = new mongoose.Types.ObjectId(companyOrganizer);
+
+  const combos = await MenuItemsCombos.aggregate([
     {
       $match: {
         status: "active",
-        menuItems: { $not: { $elemMatch: { $nin: objectIds } } },
+        creator: creatorId,
       },
     },
     {
       $lookup: {
-        from: "menuitemsubcategories",
+        from: "menusubcategories",
         localField: "subCategory",
         foreignField: "_id",
         as: "subCategory",
-        pipeline: [{ $project: { name: 1, status: 1, category: 1 } }],
+        pipeline: [{ $project: { title: 1, status: 1 } }],
       },
     },
     {
@@ -603,27 +615,99 @@ const getMenuItemsCombos = async (menuItemIds = []) => {
     {
       $lookup: {
         from: "menuitems",
-        localField: "menuItems",
+        localField: "menuItems.menuItem",
         foreignField: "_id",
-        as: "menuItems",
-        pipeline: [
-          {
-            $match: {
-              status: "active",
-              isAvailableInStock: { $ne: false },
-            },
-          },
-          ...comboMenuItemLookupPipeline,
-        ],
+        as: "_templateItems",
+        pipeline: [{ $project: { title: 1, status: 1 } }],
       },
     },
     {
-      $match: {
-        $expr: { $gte: [{ $size: "$menuItems" }, 2] },
+      $addFields: {
+        _componentTitles: {
+          $map: {
+            input: "$menuItems",
+            as: "mi",
+            in: {
+              quantity: "$$mi.quantity",
+              title: {
+                $let: {
+                  vars: {
+                    doc: {
+                      $first: {
+                        $filter: {
+                          input: "$_templateItems",
+                          as: "t",
+                          cond: { $eq: ["$$t._id", "$$mi.menuItem"] },
+                        },
+                      },
+                    },
+                  },
+                  in: "$$doc.title",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        name: 1,
+        description: 1,
+        subCategory: 1,
+        priceMode: 1,
+        price: 1,
+        status: 1,
+        creator: 1,
+        createdAt: 1,
+        _componentTitles: 1,
       },
     },
     { $sort: { createdAt: -1 } },
   ]);
+
+  const applicable = [];
+
+  for (const combo of combos) {
+    const components = combo._componentTitles || [];
+    if (components.length < 2) continue;
+
+    const resolvedItems = [];
+    let canApply = true;
+
+    for (const component of components) {
+      const titleKey = normalizeTitle(component.title);
+      const matches = titleKey ? itemsByTitle.get(titleKey) : null;
+      if (!matches?.length) {
+        canApply = false;
+        break;
+      }
+      // Prefer an unused item of the same title when quantity > 1 components share a name
+      resolvedItems.push({
+        ...matches[0],
+        _comboQuantity: component.quantity || 1,
+      });
+    }
+
+    if (!canApply || resolvedItems.length < 2) continue;
+
+    applicable.push({
+      _id: combo._id,
+      name: combo.name,
+      description: combo.description,
+      subCategory: combo.subCategory,
+      priceMode: combo.priceMode,
+      price: combo.price,
+      status: combo.status,
+      creator: combo.creator,
+      menuItems: resolvedItems.map((item) => {
+        const { _comboQuantity, ...rest } = item;
+        return rest;
+      }),
+    });
+  }
+
+  return applicable;
 };
 
 module.exports = {

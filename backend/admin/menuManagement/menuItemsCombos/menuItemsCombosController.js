@@ -71,8 +71,8 @@ const createMenuItemsCombo = async (req, res) => {
 
   if (
     !validateParams(req, res, {
-      rawData: ["name", "subCategory", "price", "priceMode"],
-      objectIdFields: ["subCategory"],
+      rawData: ["name", "subCategory", "price", "priceMode", "companyOrganizer"],
+      objectIdFields: ["subCategory", "companyOrganizer"],
       enumFields: {
         priceMode: Object.values(PriceMode),
         status: ["active", "inactive"],
@@ -99,6 +99,13 @@ const createMenuItemsCombo = async (req, res) => {
 
   try {
     const combo = await menuItemsComboService.createMenuItemsCombo(data);
+    if (combo && combo.error) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: combo.error,
+      });
+    }
     if (!combo) {
       return sendResponse({
         res,
@@ -134,7 +141,7 @@ const getMenuItemsCombos = async (req, res) => {
     date,
     sortBy,
     sortOrder,
-    creator,
+    companyOrganizer: creator,
   } = req.query;
 
   const SORT_FIELDS = [

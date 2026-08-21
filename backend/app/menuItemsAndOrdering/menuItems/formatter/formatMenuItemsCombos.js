@@ -57,7 +57,7 @@ const formatMenuItemsCombo = (
     subCategory: obj.subCategory
       ? {
           _id: obj.subCategory._id,
-          name: obj.subCategory.name,
+          title: obj.subCategory.title || obj.subCategory.name || null,
           status: obj.subCategory.status,
         }
       : null,
