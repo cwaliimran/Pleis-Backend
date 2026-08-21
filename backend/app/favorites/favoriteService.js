@@ -83,13 +83,19 @@ const getUserFavorites = async ({ userId, location, timezone, targetType, page =
     });
   } else {
     // No targetType: get both events and organizations, each with their own limit
-    const [events, organizations] = await Promise.all([
-      favoriteRepo.getUserFavorites(userId, 'event', page, 10),
-      favoriteRepo.getUserFavorites(userId, 'organization', page, 10),
+    const [events, organizations, challenge, promotion, reward] = await Promise.all([
+      favoriteRepo.getUserFavorites(userId, "event", page, 10),
+      favoriteRepo.getUserFavorites(userId, "organization", page, 10),
+      favoriteRepo.getUserFavorites(userId, "challenge", page, 10),
+      favoriteRepo.getUserFavorites(userId, "promotion", page, 10),
+      favoriteRepo.getUserFavorites(userId, "reward", page, 10),
     ]);
-    const [eventCount, orgCount] = await Promise.all([
+    const [eventCount, orgCount, challengeCount, promotionCount, rewardCount] = await Promise.all([
       favoriteRepo.countFavorites({ user: userId, targetType: 'event' }),
       favoriteRepo.countFavorites({ user: userId, targetType: 'organization' }),
+      favoriteRepo.countFavorites({ user: userId, targetType: 'challenge' }),
+      favoriteRepo.countFavorites({ user: userId, targetType: 'promotion' }),
+      favoriteRepo.countFavorites({ user: userId, targetType: 'reward' }),
     ]);
 
     favorites = {
@@ -101,10 +107,25 @@ const getUserFavorites = async ({ userId, location, timezone, targetType, page =
         ...fav.toObject?.() || fav,
         object: formatFavoritesOrganization(fav.object),
       })),
+      challenge: challenge?.map((fav) => ({
+        ...fav.toObject?.() || fav,
+        object: fav.object,
+      })),
+      promotion: promotion?.map((fav) => ({
+        ...fav.toObject?.() || fav,
+        object: fav.object,
+      })),
+      reward: reward?.map((fav) => ({
+        ...fav.toObject?.() || fav,
+        object: fav.object,
+      })),
     };
     counts = {
       events: eventCount,
       organizations: orgCount,
+      challenge: challengeCount,
+      promotion: promotionCount,
+      reward: rewardCount,
     };
   }
 
