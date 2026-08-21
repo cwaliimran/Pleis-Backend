@@ -21,7 +21,6 @@ const OrderItemSchema = new mongoose.Schema({
 const OrderComboItemSchema = new mongoose.Schema({
   menuItem: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItems" },
   quantity: { type: Number, default: 1, min: 1 },
-  isdelivered: { type: Boolean, default: false },
   menuItemSnapShot: { type: Object, required: true },
 });
 
@@ -29,6 +28,7 @@ const OrderComboSchema = new mongoose.Schema({
   combo: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItemsCombos" },
   quantity: { type: Number, required: true },
   items: [OrderComboItemSchema],
+  isdelivered: { type: Boolean, default: false },
   unitPrice: { type: Number, required: true },
   unitFinalPrice: { type: Number, required: true },
   saleDiscountPerUnit: { type: Number, default: 0 },
