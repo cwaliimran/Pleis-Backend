@@ -513,6 +513,48 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
 
+    // Audit-only snapshot after hard delete. Never used for login, social match, or restore.
+    deletionMeta: {
+      type: {
+        deletedAt: {
+          type: Date,
+          default: null,
+        },
+        previousEmail: {
+          type: String,
+          default: null,
+        },
+        previousUsername: {
+          type: String,
+          default: null,
+        },
+        previousPhoneNumber: {
+          code: {
+            type: String,
+            default: "",
+          },
+          number: {
+            type: String,
+            default: "",
+          },
+        },
+        previousProvider: {
+          type: String,
+          default: null,
+        },
+        previousFirstName: {
+          type: String,
+          default: null,
+        },
+        previousLastName: {
+          type: String,
+          default: null,
+        },
+      },
+      default: null,
+      select: false,
+    },
+
   },
   {
     timestamps: true,
@@ -578,7 +620,10 @@ userSchema.statics.findByCredentials = async (
   populateFields = []
 ) => {
 
-  let query = User.findOne({ email: email.toLowerCase().trim() });
+  let query = User.findOne({
+    email: email.toLowerCase().trim(),
+    "accountState.status": { $ne: "deleted" },
+  });
 
   // Populate specified fields
   populateFields.forEach((field) => {
@@ -802,6 +847,7 @@ userSchema.methods.toJSON = function (userData) {
   }
 
   delete userObject.password;
+  delete userObject.deletionMeta;
 
   if (process.env.NODE_ENV === "prod") {
     delete userObject.otpInfo;
@@ -857,6 +903,10 @@ userSchema.index(
 
 userSchema.index({ location: "2dsphere" });
 userSchema.index({ createdAt: 1, "accountState.status": 1 });
+userSchema.index(
+  { "deletionMeta.previousEmail": 1 },
+  { sparse: true, name: "deletionMeta_previousEmail_idx" }
+);
 
 const User = mongoose.model("User", userSchema);
 

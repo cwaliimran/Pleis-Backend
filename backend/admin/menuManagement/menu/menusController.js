@@ -14,6 +14,7 @@ const createMenu = async (req, res) => {
     title,
     description = "",
     organization,
+    companyOrganizer,
     status = "active",
     startDate,
     venue,
@@ -43,7 +44,7 @@ const createMenu = async (req, res) => {
     description,
     organization,
     status,
-    creator: req.user._id,
+    creator: companyOrganizer || req.user._id,
     startDate,
     venue,
   };

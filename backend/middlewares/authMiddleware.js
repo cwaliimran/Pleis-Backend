@@ -74,7 +74,8 @@ const auth = async (req, res, next) => {
 
       if (
         user.accountState.status === "restricted" ||
-        user.accountState.status === "suspended"
+        user.accountState.status === "suspended" ||
+        user.accountState.status === "deleted"
       ) {
         return sendResponse({
           res,
