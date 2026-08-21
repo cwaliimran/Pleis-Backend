@@ -38,7 +38,9 @@ const getMenuItems = async ({ userId, timezone, organization }) => {
   if (!menuItems.length) return { recommended: [], menu: [] };
 
   // 3️⃣ Collect all category IDs used
-  const categoryIds = [...new Set(menuItems.map((item) => item.category.toString()))];
+  const categoryIds = [
+    ...new Set(menuItems.map((item) => item.subCategory.toString())),
+  ];
 
   // 4️⃣ Fetch category names in batch
   const [categories, recommended] = await Promise.all([
@@ -56,8 +58,8 @@ const getMenuItems = async ({ userId, timezone, organization }) => {
   const grouped = {};
 
   menuItems.forEach((item) => {
-    const { type, category } = item;
-    const categoryName = categoryMap[category.toString()] || category.toString();
+    const { type, subCategory } = item;
+    const categoryName = categoryMap[subCategory.toString()] || subCategory.toString();
 
     if (!grouped[categoryName]) grouped[categoryName] = {};
     if (!grouped[categoryName][type]) grouped[categoryName][type] = [];
