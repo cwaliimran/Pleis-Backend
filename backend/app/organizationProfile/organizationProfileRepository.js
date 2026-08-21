@@ -188,10 +188,11 @@ const getOrganizationMenuWithItems = async ({
   const items = await getMenuItemsWithFilters({
     query: {
       menu: menu._id,
-      status: "active"
+      status: "active",
+      isAvailableInStock: true,
     },
     userId,
-    timezone
+    timezone,
   });
 
   return [

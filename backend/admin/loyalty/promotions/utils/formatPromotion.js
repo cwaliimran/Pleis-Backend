@@ -72,10 +72,11 @@ function formatPromotion(promotion, timezone) {
       delete obj.extraPoints;
       delete obj.discountedPrice;
 
-      convertPromotionDates(obj, timezone, "YYYY-MM-DD hh:mm A");
+      convertPromotionDates(obj, timezone, "YYYY-MM-DD");
       break;
 
     case "buyMenuItem":
+    case "buyMenuItemPromotion":
     case "extraPointsForItem":
       delete obj.pointsMultiplier;
       delete obj.discountedPrice;

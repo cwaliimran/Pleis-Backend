@@ -9,6 +9,9 @@ const {
   ClaimPromotion,
   extraPointsForItemPromotion,
 } = require("../../../commonModules/loyalty/promotions/models/Promotion/");
+const {
+  resolvePromotionTimes,
+} = require("../../../commonModules/loyalty/promotions/utils/promotionSchedule");
 
 // Decide which discriminator model to use
 const getModelBypromotionType = (promotionType) => {
@@ -31,6 +34,10 @@ const getModelBypromotionType = (promotionType) => {
 // Create promotion
 const create = async (data) => {
   try {
+    const times = resolvePromotionTimes(data);
+    data.startTime = times.startTime;
+    data.endTime = times.endTime;
+
     const Model = getModelBypromotionType(data.promotionType);
     const reward = await getRewardById(data.reward);
     if (data.promotionType === "claimPromotion") {
@@ -308,7 +315,21 @@ const getWithFilters = async (
               from: "menuitems",
               localField: "menuItem",
               foreignField: "_id",
-              pipeline: [{ $project: { _id: 1, title: 1 } }],
+              pipeline: [
+                {
+                  $lookup: {
+                    from: "menus",
+                    localField: "menu",
+                    foreignField: "_id",
+                    pipeline: [{ $project: { _id: 1, title: 1 } }],
+                    as: "menu",
+                  },
+                },
+                {
+                  $unwind: { path: "$menu", preserveNullAndEmptyArrays: true },
+                },
+                { $project: { _id: 1, title: 1, menu: 1 } },
+              ],
               as: "menuItem",
             },
           },
@@ -438,6 +459,12 @@ const findById = async (id) => {
 
 // Update and save
 const updateData = async (item, data) => {
+  if (data.startTime !== undefined || data.endTime !== undefined) {
+    const times = resolvePromotionTimes(data, item);
+    data.startTime = times.startTime;
+    data.endTime = times.endTime;
+  }
+
   Object.assign(item, data);
 
   return await item.save();
@@ -450,6 +477,15 @@ const deleteItem = async (item) => {
 
 // findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
+  const existing = await Promotion.findById(id);
+  if (!existing) return null;
+
+  if (data.startTime !== undefined || data.endTime !== undefined) {
+    const times = resolvePromotionTimes(data, existing);
+    data.startTime = times.startTime;
+    data.endTime = times.endTime;
+  }
+
   return Promotion.findByIdAndUpdate(id, data, { new: true })
     .populate("menuItem")
     .populate("tierLimit");

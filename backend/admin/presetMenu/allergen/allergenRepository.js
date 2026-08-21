@@ -120,7 +120,7 @@ const getAllergens = async ({
   if (!isCacheable) {
     return computeAllergens();
   }
-  console.log("ACTIVE_AllergenS_CACHE_KEY",ACTIVE_AllergenS_CACHE_KEY);
+
   return cache({
     namespace: ACTIVE_AllergenS_CACHE_KEY,
     params: {

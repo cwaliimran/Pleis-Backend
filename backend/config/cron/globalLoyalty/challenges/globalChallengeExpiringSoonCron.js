@@ -21,9 +21,6 @@ const runGlobalChallengeExpiringSoonCron = async () => {
       },
     }).lean();
 
-    console.log(
-      `[GLOBAL_CHALLENGE_CRON] Found ${expiringOrders.length} expiring global challenges`
-    );
 
     for (const order of expiringOrders) {
 
@@ -50,9 +47,6 @@ const runGlobalChallengeExpiringSoonCron = async () => {
         objectId: order.challenge
       });
 
-      console.log(
-        `[GLOBAL_CHALLENGE_CRON] Notification sent for order ${order._id}`
-      );
     }
 
   } catch (err) {

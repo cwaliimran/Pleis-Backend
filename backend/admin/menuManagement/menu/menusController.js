@@ -14,8 +14,10 @@ const createMenu = async (req, res) => {
     title,
     description = "",
     organization,
+    companyOrganizer,
     status = "active",
     startDate,
+    venue,
   } = req.body;
   if (
     !validateParams(req, res, {
@@ -42,8 +44,9 @@ const createMenu = async (req, res) => {
     description,
     organization,
     status,
-    creator: req.user._id,
+    creator: companyOrganizer || req.user._id,
     startDate,
+    venue,
   };
 
   //convert organization to array if it's not
@@ -83,6 +86,7 @@ const getMenus = async (req, res) => {
     organizations,
     date,
     companyOrganizer,
+    venue,
     sortBy,
     sortOrder,
     summary,
@@ -90,10 +94,14 @@ const getMenus = async (req, res) => {
 
   try {
     const SORT_FIELDS = [
-      "menuName",
+      "title",
+      "description",
       "createdAt",
       "organizationName",
-      "description",
+      "startDate",
+      "createdAt",
+      "venue",
+
     ];
     const SORT_ORDERS = ["asc", "desc"];
     if (
@@ -139,6 +147,7 @@ const getMenus = async (req, res) => {
         date,
         sortBy,
         sortOrder,
+        venue,
       }));
     } else if (summary) {
       ({ menus, meta } = await menusService.getMenusSummary({
@@ -218,12 +227,17 @@ const updateMenu = async (req, res) => {
     organization,
     status = "active",
     isOrderingEnabled,
+    venue,
+    startDate,
   } = req.body;
 
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
-      objectIdFields: ["id", "organization"],
+      objectIdFields: ["id", "organization", "venue"],
+      dateFields: {
+        startDate: "YYYY-MM-DD",
+      },
     })
   )
     return;
@@ -234,6 +248,8 @@ const updateMenu = async (req, res) => {
     organization,
     status,
     isOrderingEnabled,
+    venue,
+    startDate,
   };
 
   try {

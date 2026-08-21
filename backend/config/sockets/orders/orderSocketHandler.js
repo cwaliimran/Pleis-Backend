@@ -25,13 +25,8 @@ function orderSocketHandler(io, role) {
     if (role === "user") {
       socket.join(`user:${String(userId)}`);
 
-      console.log("🟢 user connected", {
-        userId,
-        socketId: socket.id,
-      });
 
       socket.on("disconnect", () => {
-        console.log("🔴 user disconnected", { userId });
       });
 
       return;
@@ -53,17 +48,8 @@ function orderSocketHandler(io, role) {
 
     socket.join(`org:${String(organizationId)}`);
 
-    console.log(`🟢 ${role} connected`, {
-      userId,
-      organizationId,
-      socketId: socket.id,
-    });
 
     socket.on("disconnect", () => {
-      console.log(`🔴 ${role} disconnected`, {
-        userId,
-        organizationId,
-      });
     });
   });
 }

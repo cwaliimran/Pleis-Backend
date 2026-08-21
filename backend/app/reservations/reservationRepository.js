@@ -30,6 +30,24 @@ const ReservationType = require("@ReservationTypeModel");
 const moment = require("moment-timezone");
 const ReservationPreferences = require("@ReservationPreferencesModel");
 
+const getReservationTimeRange = (slot, bookingDuration) => {
+  const start = moment.parseZone(slot.startTime);
+
+  if (bookingDuration === "wholeDay") {
+    return {
+      start,
+      end: start.clone().endOf("day"),
+    };
+  }
+
+  const duration = Number(bookingDuration);
+
+  return {
+    start,
+    end: duration > 0 ? start.clone().add(duration, "minutes") : moment.parseZone(slot.endTime),
+  };
+};
+
 const getReservationSlots = async ({ userId, date, organizationId, timezone }) => {
   if (!timezone || !moment.tz.zone(timezone)) {
     return {
@@ -65,7 +83,6 @@ const getReservationSlots = async ({ userId, date, organizationId, timezone }) =
   })
     .select("timeSlotsSetting")
     .lean();
-  console.log("reservationPreferences", reservationPreferences);
   const settings = reservationPreferences?.timeSlotsSetting;
 
   if (!settings || settings.status !== "enabled") {
@@ -189,18 +206,23 @@ const getReservationSlots = async ({ userId, date, organizationId, timezone }) =
       }
 
       for (const existingSlot of dateBlock.timeSlots || []) {
-        const existingStart = moment.parseZone(existingSlot.startTime);
+        const { start, end } = getReservationTimeRange(existingSlot, reservation.bookingDuration);
 
-        const existingEnd = moment.parseZone(existingSlot.endTime);
-
-        if (!existingStart.isValid() || !existingEnd.isValid()) {
-          continue;
+        if (start.isValid() && end.isValid()) {
+          bookedSlots.push({ start, end });
         }
+        // const existingStart = moment.parseZone(existingSlot.startTime);
 
-        bookedSlots.push({
-          start: existingStart,
-          end: existingEnd,
-        });
+        // const existingEnd = moment.parseZone(existingSlot.endTime);
+
+        // if (!existingStart.isValid() || !existingEnd.isValid()) {
+        //   continue;
+        // }
+
+        // bookedSlots.push({
+        //   start: existingStart,
+        //   end: existingEnd,
+        // });
       }
     }
   }
@@ -286,6 +308,8 @@ const checkReservationAvailability = async ({
   timingSlots,
   userId,
 }) => {
+
+
   let reservationType = null;
 
   if (reservationTypeId) {
@@ -295,7 +319,9 @@ const checkReservationAvailability = async ({
       status: "active",
     }).lean();
 
+
     if (!reservationType) {
+
       return {
         allowed: false,
         message: "Reservation type not found or is inactive",
@@ -313,38 +339,75 @@ const checkReservationAvailability = async ({
   if (userId) filter.userId = new mongoose.Types.ObjectId(userId);
   if (reservationTypeId) filter.reservationType = String(reservationTypeId);
 
+
+
   const reservations = await UserReservations.find(filter)
     .select("timingSlots numberOfTables partySize bookingDuration")
     .lean();
 
+
+
+  // Normalize any date-like value (Date object, ISO string, or "YYYY-MM-DD") to "YYYY-MM-DD"
+  const toDateOnly = (d) => new Date(d).toISOString().slice(0, 10);
+
+  const checkCapacity = ({ usedTables, usedPartySize, date }) => {
+
+
+    if (usedPartySize + partySize > reservationType.maxCapacity) {
+      return {
+        allowed: false,
+        message: "Maximum capacity has been reached",
+        conflict: { date },
+      };
+    }
+
+    if (usedTables + numberOfTables > reservationType.numberOfTables) {
+      return {
+        allowed: false,
+        message: "Not enough tables available",
+        conflict: { date },
+      };
+    }
+
+    if (usedPartySize + partySize > reservationType.maxPartySize) {
+      return {
+        allowed: false,
+        message: "Maximum party size has been reached",
+        conflict: { date },
+      };
+    }
+
+    return null;
+  };
+
   for (const dateBlock of timingSlots?.dateTimeSlots || []) {
-    const date = dateBlock.date;
+    const date = toDateOnly(dateBlock.date);
     const requestedSlots = dateBlock.timeSlots || [];
     const isWholeDay = !requestedSlots.length;
 
-    const dateReservations = reservations.filter((r) => r.timingSlots?.dateTimeSlots?.some((d) => d.date === date));
+
+    const dateReservations = reservations.filter((r) =>
+      r.timingSlots?.dateTimeSlots?.some((d) => toDateOnly(d.date) === date),
+    );
+
 
     // Whole-day booking: check capacity for the whole date
     if (isWholeDay) {
       if (reservationType) {
-        const usedTables = dateReservations.reduce((sum, r) => sum + (r.numberOfTables || 0), 0);
+        const usedTables = dateReservations.reduce(
+          (sum, r) => sum + (r.numberOfTables || 0),
+          0,
+        );
+        const usedPartySize = dateReservations.reduce(
+          (sum, r) => sum + (r.partySize || 0),
+          0,
+        );
 
-        const usedPartySize = dateReservations.reduce((sum, r) => sum + (r.partySize || 0), 0);
 
-        if (usedTables + numberOfTables > reservationType.numberOfTables) {
-          return {
-            allowed: false,
-            message: "Not enough tables available",
-            conflict: { date },
-          };
-        }
-
-        if (usedPartySize + partySize > reservationType.maxPartySize) {
-          return {
-            allowed: false,
-            message: "Maximum party size has been reached",
-            conflict: { date },
-          };
+        const failure = checkCapacity({ usedTables, usedPartySize, date });
+        if (failure) {
+    
+          return failure;
         }
       }
 
@@ -355,53 +418,60 @@ const checkReservationAvailability = async ({
     const conflictingReservations = dateReservations.filter((r) => {
       if (r.bookingDuration === "wholeDay") return true;
 
-      const existingBlock = r.timingSlots?.dateTimeSlots?.find((d) => d.date === date);
+      const existingBlock = r.timingSlots?.dateTimeSlots?.find(
+        (d) => toDateOnly(d.date) === date,
+      );
 
       return requestedSlots.some((slot) => {
+        if (!slot?.startTime || !slot?.endTime) return false;
+
         const start = new Date(slot.startTime);
         const end = new Date(slot.endTime);
 
         return existingBlock?.timeSlots?.some((existing) => {
-          return start < new Date(existing.endTime) && end > new Date(existing.startTime);
+          if (!existing?.startTime || !existing?.endTime) return false;
+
+          return (
+            start < new Date(existing.endTime) &&
+            end > new Date(existing.startTime)
+          );
         });
       });
     });
 
+ 
+
     if (reservationType) {
-      const usedTables = conflictingReservations.reduce((sum, r) => sum + (r.numberOfTables || 0), 0);
+      const usedTables = conflictingReservations.reduce(
+        (sum, r) => sum + (r.numberOfTables || 0),
+        0,
+      );
+      const usedPartySize = conflictingReservations.reduce(
+        (sum, r) => sum + (r.partySize || 0),
+        0,
+      );
 
-      const usedPartySize = conflictingReservations.reduce((sum, r) => sum + (r.partySize || 0), 0);
-
-      if (usedTables + numberOfTables > reservationType.numberOfTables) {
-        return {
-          allowed: false,
-          message: "Not enough tables available",
-          conflict: { date },
-        };
-      }
-
-      if (usedPartySize + partySize > reservationType.maxPartySize) {
-        return {
-          allowed: false,
-          message: "Maximum party size has been reached",
-          conflict: { date },
-        };
+      const failure = checkCapacity({ usedTables, usedPartySize, date });
+      if (failure) {
+ 
+        return failure;
       }
     }
   }
+
 
   return {
     allowed: true,
     message: "Reservation is available",
   };
 };
-
 const createReservation = async (data, session) => {
   if (!session) throw new Error("session_required");
 
   const {
     userId,
-    reservationId,
+    // reservationId,
+    reservationType,
     partySize,
     preOrderMenuItems,
     timezone,
@@ -411,19 +481,20 @@ const createReservation = async (data, session) => {
     promoCode,
     paymentMethod,
     amount,
+    occasion,
   } = data;
 
   /* ---------- Capacity check ---------- */
-  if (reservationId) {
-    const capacityCheck = await validateReservationCapacity({
-      reservationId,
-      session,
-    });
+  // if (reservationId) {
+  //   const capacityCheck = await validateReservationCapacity({
+  //     reservationId,
+  //     session,
+  //   });
 
-    if (!capacityCheck.allowed) {
-      return { success: false, error: capacityCheck.message };
-    }
-  }
+  //   if (!capacityCheck.allowed) {
+  //     return { success: false, error: capacityCheck.message };
+  //   }
+  // }
   /* ---------- Resolve user ---------- */
 
   let userData;
@@ -445,36 +516,59 @@ const createReservation = async (data, session) => {
   /* ---------- Reservation base ---------- */
   let baseAmount = Number(data.amount ?? 0);
 
-  if (reservationId) {
-    const reservationBase = await Reservations.findById(reservationId).session(session).lean();
+  // if (reservationId) {
+  //   const reservationBase = await Reservations.findById(reservationId).session(session).lean();
 
-    if (!reservationBase) {
-      throw new Error("Reservation not found");
-    }
+  //   if (!reservationBase) {
+  //     throw new Error("Reservation not found");
+  //   }
 
-    data.reservationSnapshot = reservationBase;
-    data.reservationSnapshot = reservationBase;
+  //   data.reservationSnapshot = reservationBase;
 
-    baseAmount = Number(reservationBase.amount ?? 0);
-  }
+  //   baseAmount = Number(reservationBase.amount ?? 0);
+  // }
 
   /* ---------- Reservation Pricing ---------- */
 
   let totalReservationAmount = 0;
 
-  switch (data.conditionType) {
-    case "free":
-      totalReservationAmount = baseAmount;
-      break;
-    case "minimumSpend":
-      totalReservationAmount = baseAmount;
-      data.voucher = {
-        status: "pending",
-        discountAmount: amount,
-      };
-      break;
-    default:
-      totalReservationAmount = 0;
+  /* ---------- Reservation Type ---------- */
+
+  let reservationTypeData = await ReservationType.findOne({ _id: reservationType, status: "active" })
+    .session(session)
+    .lean();
+
+  if (!reservationTypeData) {
+    return { success: false, error: "Reservation type not found" };
+  }
+
+  if (reservationTypeData.conditionType === "minimumSpend") {
+    if (!amount) {
+      return { success: false, error: "Minimum spend is required" };
+    }
+    if (amount < reservationTypeData.minimumSpend) {
+      return { success: false, error: "Minimum spend is less than the required minimum spend" };
+    }
+    totalReservationAmount = amount;
+  }
+
+  if (reservationTypeData.requireConfirmationToApprove) {
+    data.status = "needsConfirmation";
+  } else {
+    if (reservationTypeData.amount > 0) {
+      if (["card", "applePay"].includes(paymentMethod)) {
+        data.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
+        data.status = "pendingPayment";
+      } else {
+        return { success: false, error: "Payment method is required" };
+      }
+    } else {
+      data.status = "confirmed";
+    }
+  }
+
+  if (!data.timingSlots?.dateTimeSlots?.[0]?.timeSlots?.length) {
+    data.bookingDuration = "wholeDay";
   }
 
   /* ---------- Reservation Tax ---------- */
@@ -514,28 +608,8 @@ const createReservation = async (data, session) => {
 
   /* ---------- Confirmation flow ---------- */
 
-  if (data.conditionType === "noCondition" || data.conditionType === "minimumSpend" || data.conditionType === "free") {
-    data.status = "confirmed";
-  } else if (data.reservationSnapshot.needsConfirmation) {
-    data.status = "needsConfirmation";
-  } else if (finalReservationAmount > 0) {
-    if (["card", "applePay", "cash"].includes(data?.paymentDetails?.paymentMethod)) {
-      data.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
-
-      data.status = "pendingPayment";
-    } else {
-      throw new Error("Payment method is required");
-    }
-  } else {
-    data.status = "confirmed";
-  }
-
-  if (!data.timingSlots?.dateTimeSlots?.[0]?.timeSlots?.length) {
-    data.bookingDuration = "wholeDay";
-  }
-
   /* ---------- Save reservation ---------- */
-
+  data.amount = finalReservationAmount;
   const userReservation = new UserReservations(data);
 
   await userReservation.save({ session });
@@ -967,6 +1041,7 @@ const getUserReservations = async ({ timezone, page, limit, userId, date }) => {
         partySize: 1,
         amount: 1,
         timingSlots: 1,
+        voucher: 1,
         status: 1,
         createdAt: 1,
         updatedAt: 1,
@@ -1182,6 +1257,21 @@ const getUserReservationDetails = async (id) => {
         },
       },
 
+      {
+        $lookup: {
+          from: "reservationtypes",
+          localField: "reservationType",
+          foreignField: "_id",
+          as: "reservationType",
+        },
+      },
+      {
+        $unwind: {
+          path: "$reservationType",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
       // 🔟 Final projection
       {
         $project: {
@@ -1193,7 +1283,7 @@ const getUserReservationDetails = async (id) => {
           userName: { $concat: ["$user.firstName", " ", "$user.lastName"] },
           phoneNumber: "$user.phoneNumber",
           venueFullAddress: "$venue.location.fullAddress",
-          reservationType: "$reservationDetails.reservationType",
+          reservationType: "$reservationType",
 
           transactions: 1, // ✅ included here
 
@@ -1593,6 +1683,50 @@ const getReservationForTransfer = async (id) => {
   return UserReservations.findById(id).select("_id userId transferHistory");
 };
 
+const getTodayReservationVoucher = ({ user, filter }) => {
+  const { _id: userId, timezone } = user;
+  const { organizationId, date } = filter;
+  const startOfDay = date
+    ? moment.tz(date, timezone).startOf("day").toDate()
+    : moment.tz(timezone).startOf("day").toDate();
+
+  const endOfDay = date ? moment.tz(date, timezone).endOf("day").toDate() : moment.tz(timezone).endOf("day").toDate();
+
+  return UserReservations.find({
+    userId,
+    organizationId: organizationId,
+    "timingSlots.dateTimeSlots.date": {
+      $gte: startOfDay,
+      $lte: endOfDay,
+    },
+    "voucher.status": "pending",
+    "voucher.discountAmount": { $gt: 0 },
+  })
+    .select("voucher timingSlots")
+    .lean();
+};
+
+const bookedCapacity = async ({ reservationTypeId, date }) => {
+  const result = await UserReservations.aggregate([
+    {
+      $match: {
+        reservationType: new mongoose.Types.ObjectId(reservationTypeId),
+        status: { $nin: ["cancelled", "deleted", "rejected", "completed"] },
+        "timingSlots.dateTimeSlots.date": {
+          $eq: date ? new Date(date) : new Date().toISOString().slice(0, 10),
+        },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: "$partySize" },
+      },
+    },
+  ]);
+
+  return result[0]?.total || 0;
+};
 module.exports = {
   createReservation,
   getReservationsWithFilters,
@@ -1608,7 +1742,10 @@ module.exports = {
   getOrganizationsWithReservationsForHome,
   getOrganizationReservations,
   getReservationForTransfer,
+  getTodayReservationVoucher,
   checkReservationAvailability,
   validateReservationCapacity,
   getReservationSlots,
+  bookedCapacity,
+  
 };

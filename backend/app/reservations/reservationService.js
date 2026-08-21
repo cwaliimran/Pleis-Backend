@@ -1,25 +1,92 @@
 // services/reservationservice.js
-const { reservationsFormatter, userReservationsFormatter, logQRCode } = require("./formaters/reservationFormetter");
+const {
+  reservationsFormatter,
+  userReservationsFormatter,
+  logQRCode,
+} = require("./formaters/reservationFormetter");
 const ReservationRepo = require("./reservationRepository");
-const { formatOrganization } = require("../../commonModules/organizations/formatter/formatOrganization");
-const { isOrganizationOpenNow } = require("../../shared/commonSchemas/operatingHours");
+const {
+  formatOrganization,
+} = require("../../commonModules/organizations/formatter/formatOrganization");
+const {
+  isOrganizationOpenNow,
+} = require("../../shared/commonSchemas/operatingHours");
+const {
+  checkReservationCapacity,
+} = require("../../admin/reservation/reservationType/reservationTypeRepository");
+const {
+  getReservationPreferencess,
+} = require("../../admin/reservation/reservationPreferences/reservationPreferencesRepository");
 
+const getOccupancyPercentage = (existingReservation, capacityCheck) => {
+  if (
+    typeof existingReservation !== "number" ||
+    typeof capacityCheck !== "number"
+  ) {
+    throw new Error("existingReservation and capacityCheck must be numbers");
+  }
+
+  if (capacityCheck <= 0) {
+    return 0; // avoid division by zero / invalid capacity
+  }
+
+  if (existingReservation < 0) {
+    throw new Error("existingReservation cannot be negative");
+  }
+
+  const percentage = (existingReservation / capacityCheck) * 100;
+
+  return Math.min(percentage, 100); // cap at 100% in case of overbooking
+};
 const createReservationService = async (data, session) => {
   if (!session) throw new Error("session_required");
-  const check = await ReservationRepo.checkReservationAvailability({
-    reservationTypeId: data.reservationType,
-    partySize: data.partySize,
-    numberOfTables: data.numberOfTables,
-    organization: data.organizationId,
-    timingSlots: data.timingSlots,
-    userId: data.userId,
-  });
-
+  const [check, organizationPreferences] = await Promise.all([
+    ReservationRepo.checkReservationAvailability({
+      reservationTypeId: data.reservationType,
+      partySize: data.partySize,
+      numberOfTables: data.numberOfTables,
+      organization: data.organizationId,
+      timingSlots: data.timingSlots,
+      userId: data.userId,
+    }),
+    getReservationPreferencess({ organization: data.organizationId }),
+  ]);
   if (!check.allowed) {
     return {
       success: false,
       message: check.message || "Reservation not allowed",
     };
+  }
+  const date =
+    data.timingSlots?.dateTimeSlots?.[0]?.date ||
+    new Date().toISOString().slice(0, 10);
+
+  const [existingReservation, capacityCheck] = await Promise.all([
+    ReservationRepo.bookedCapacity({
+      reservationTypeId: data.reservationType,
+      date,
+    }),
+    checkReservationCapacity({ reservationTypeId: data.reservationType }),
+  ]);
+
+  const occupancyPercentage = getOccupancyPercentage(
+    existingReservation,
+    capacityCheck,
+  );
+
+  const { automaticResponse } =
+    organizationPreferences?.reservationPreferences || {};
+
+  if (
+    automaticResponse?.autoAccept === true &&
+    automaticResponse?.maxGuestPerReservationForAutoAccept >= data.partySize &&
+    occupancyPercentage <= 90
+  ) {
+    data.status = "confirmed";
+  }
+
+  if (automaticResponse?.autoReject === true && occupancyPercentage >= 99) {
+    data.status = "rejected";
   }
 
   const result = await ReservationRepo.createReservation(data, session);
@@ -63,7 +130,9 @@ const getReservations = async ({
     if (!reservations || reservations.length === 0) {
       return { reservations: [], meta };
     }
-    reservations = reservations.map((reservation) => reservationsFormatter(reservation, timezone));
+    reservations = reservations.map((reservation) =>
+      reservationsFormatter(reservation, timezone),
+    );
     return {
       reservations,
       meta,
@@ -76,7 +145,14 @@ const getReservations = async ({
   }
 };
 
-const getUserReservations = async ({ timezone, page, limit, keyword, userId, date }) => {
+const getUserReservations = async ({
+  timezone,
+  page,
+  limit,
+  keyword,
+  userId,
+  date,
+}) => {
   try {
     let { reservations, meta } = await ReservationRepo.getUserReservations({
       timezone,
@@ -90,7 +166,9 @@ const getUserReservations = async ({ timezone, page, limit, keyword, userId, dat
       return { reservations: [], meta };
     }
 
-    reservations = reservations.map((reservation) => userReservationsFormatter(reservation, timezone));
+    reservations = reservations.map((reservation) =>
+      userReservationsFormatter(reservation, timezone),
+    );
 
     return {
       reservations,
@@ -139,14 +217,15 @@ const getOrganizationsWithReservationsForHomeService = async ({
   timezone,
   category,
 }) => {
-  const organizations = await ReservationRepo.getOrganizationsWithReservationsForHome({
-    userId,
-    userLocation,
-    radiusKm,
-    timezone,
-    limit: 10,
-    category,
-  });
+  const organizations =
+    await ReservationRepo.getOrganizationsWithReservationsForHome({
+      userId,
+      userLocation,
+      radiusKm,
+      timezone,
+      limit: 10,
+      category,
+    });
 
   return organizations.map((org) => ({
     ...formatOrganization(org, { timezone, userId }),
@@ -169,7 +248,10 @@ const getOrganizationsWithReservationsForHomeService = async ({
   }));
 };
 
-const getOrganizationReservationsService = async ({ organizationId, timezone }) => {
+const getOrganizationReservationsService = async ({
+  organizationId,
+  timezone,
+}) => {
   try {
     let reservations = await ReservationRepo.getOrganizationReservations({
       organizationId,
@@ -178,21 +260,27 @@ const getOrganizationReservationsService = async ({ organizationId, timezone }) 
     if (!reservations || reservations.length === 0) {
       return { reservations: [] };
     }
-    reservations = reservations.map((reservation) => reservationsFormatter(reservation, timezone));
+    reservations = reservations.map((reservation) =>
+      reservationsFormatter(reservation, timezone),
+    );
     return reservations;
   } catch (error) {
     return []; // Return empty array on error
   }
 };
 const transferReservation = async (reservationId, newUserId, userId) => {
-  const reservation = await ReservationRepo.getReservationForTransfer(reservationId);
+  const reservation =
+    await ReservationRepo.getReservationForTransfer(reservationId);
 
   if (!reservation) {
     return { success: false, message: "reservation_not_found" };
   }
 
   // must belong to user AND must not be same user
-  if (reservation.userId.toString() !== userId.toString() || reservation.userId.toString() === newUserId.toString()) {
+  if (
+    reservation.userId.toString() !== userId.toString() ||
+    reservation.userId.toString() === newUserId.toString()
+  ) {
     return { success: false, message: "unauthorized_transfer_attempt" };
   }
 
@@ -216,7 +304,9 @@ const transferReservation = async (reservationId, newUserId, userId) => {
 const acceptReservationChange = async (id, userId) => {
   const reservation = await ReservationRepo.findUserReservationById(id);
 
-  const change = reservation.reservationChanges.find((c) => c.status === "pending");
+  const change = reservation.reservationChanges.find(
+    (c) => c.status === "pending",
+  );
 
   if (!change) throw new Error("no_pending_change");
 
@@ -244,7 +334,10 @@ const cancelReservation = async (id, userId) => {
   }
 
   // ---- Refund if paid ----
-  if (reservation.paymentDetails?.paymentStatus === "paid" && reservation.paymentDetails?.transactionId) {
+  if (
+    reservation.paymentDetails?.paymentStatus === "paid" &&
+    reservation.paymentDetails?.transactionId
+  ) {
     try {
       //TODO refund payment
       // call refund service
@@ -285,7 +378,8 @@ const cancelReservation = async (id, userId) => {
 const requestRefund = async (id, userId) => {
   const reservation = await ReservationRepo.findUserReservationById(id);
 
-  if (reservation.paymentDetails.paymentStatus !== "paid") throw new Error("refund_not_allowed");
+  if (reservation.paymentDetails.paymentStatus !== "paid")
+    throw new Error("refund_not_allowed");
 
   reservation.reservationChanges.push({
     changedBy: userId,
@@ -296,7 +390,12 @@ const requestRefund = async (id, userId) => {
   await reservation.save();
 };
 
-const getReservationSlotsService = async ({ userId, date, organizationId, timezone }) => {
+const getReservationSlotsService = async ({
+  userId,
+  date,
+  organizationId,
+  timezone,
+}) => {
   try {
     if (!organizationId) {
       return {
@@ -312,7 +411,12 @@ const getReservationSlotsService = async ({ userId, date, organizationId, timezo
       };
     }
     // Assuming slots are generated here
-    const data = await ReservationRepo.getReservationSlots({ userId, date, organizationId, timezone });
+    const data = await ReservationRepo.getReservationSlots({
+      userId,
+      date,
+      organizationId,
+      timezone,
+    });
     return {
       data,
       message: "Success",
@@ -324,6 +428,10 @@ const getReservationSlotsService = async ({ userId, date, organizationId, timezo
       message: "Error fetching reservation slots",
     };
   }
+};
+
+const getTodayReservationVoucherService = async ({ user, filter }) => {
+  return ReservationRepo.getTodayReservationVoucher({ user, filter });
 };
 
 module.exports = {
@@ -338,4 +446,5 @@ module.exports = {
   cancelReservation,
   requestRefund,
   getReservationSlotsService,
+  getTodayReservationVoucherService,
 };

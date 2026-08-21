@@ -8,7 +8,7 @@ const reconcilePendingTicketingOrdersPayments = async () => {
     // lockUntil: { $lt: new Date() },
   });
 
-  // console.log("🔄 Reconciling", orders.length, "pending orders...");
+  // 
   for (const order of orders) {
     const result = await attemptTicketingOrdersPayment(order._id);
     await ticketingOrderFinalizerService({ orderId: order._id, result });

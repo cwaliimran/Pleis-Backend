@@ -102,13 +102,14 @@ const OrdersSchema = new mongoose.Schema(
       ref: "UserReservations",
       default: undefined,
     },
-
-    pickupType: { type: String, enum: ["counter", "tableService", "togo"], default: "counter" },
+    deliveryOption: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "DeliveryOptions",
+      required: true,
+    },
+    pickupType: { type: String },
     tableNumber: {
       type: String,
-      required: function () {
-        return this.pickupType === "tableService";
-      },
     },
     reasonForCancellation: {
       type: String,

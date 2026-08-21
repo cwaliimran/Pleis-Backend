@@ -24,9 +24,6 @@ const runLoyaltyChallengeExpiringSoonCron = async () => {
       },
     }).lean();
 
-    console.log(
-      `[CHALLENGE_CRON] Found ${expiringOrders.length} expiring challenges`
-    );
 
     for (const order of expiringOrders) {
 
@@ -53,9 +50,6 @@ const runLoyaltyChallengeExpiringSoonCron = async () => {
         objectId: order._id
       });
 
-      console.log(
-        `[CHALLENGE_CRON] Expiring soon notification sent for order ${order._id}`
-      );
     }
 
   } catch (err) {

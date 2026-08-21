@@ -9,6 +9,7 @@ const placeOrder = async (req, res) => {
     paymentMethod = null,
     pickupType,
     tableNumber,
+    deliveryOption,
     promoCode,
     userId,
     tip,
@@ -16,11 +17,12 @@ const placeOrder = async (req, res) => {
   } = req.body;
   try {
     let validateData = {
-      rawData: ["pickupType", "paymentMethod"],
+      rawData: ["paymentMethod", "deliveryOption"],
       enumFields: {
         pickupType: ["counter", "tableService", "togo"],
         paymentMethod: ["applePay", "card", "cash", "payLater"],
       },
+      objectIdFields: ["deliveryOption"],
     };
 
     if (pickupType === "tableService") {
@@ -41,6 +43,7 @@ const placeOrder = async (req, res) => {
       promoCode,
       tip,
       reservationId,
+      deliveryOption,
     });
 
     return sendResponse({
@@ -61,7 +64,8 @@ const placeOrder = async (req, res) => {
 };
 
 const updateOrderDetails = async (req, res) => {
-  const { items, combos, notes, paymentMethod, pickupType, tableNumber, promoCode, tip, userId } = req.body;
+  const { items, combos, notes, paymentMethod, pickupType, tableNumber, deliveryOption, promoCode, tip, userId } =
+    req.body;
 
   const { id: orderId } = req.params;
 
@@ -109,6 +113,7 @@ const updateOrderDetails = async (req, res) => {
       paymentMethod,
       pickupType,
       tableNumber,
+      deliveryOption,
       promoCode,
       tip,
     });

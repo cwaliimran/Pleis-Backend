@@ -17,7 +17,7 @@ const processPaymentWebhook = async ({
 
   //get monri payment method by orderNumber
   let monriPaymentMethod = await findByOrderNumber(payload.transaction.orderNumber);
-  let paymentMethod = monriPaymentMethod ? monriPaymentMethod.paymentMethod : null;
+  let paymentMethod = monriPaymentMethod ? monriPaymentMethod.paymentMethod : "applePay";
   const event = await webhookRepository.saveIfNotProcessed({
     provider,
     orderNumber: payload.transaction.orderNumber,
@@ -179,8 +179,6 @@ const getOrdersTransactionsService = async ({
   if (resDate) {
     if (resStartTime) {
       // Convert the start date + time to UTC using the existing convertTimezoneToUtc function
-      console.log("resStartTime", resStartTime);
-      console.log("resEndTime", resEndTime);
 
       resStartTimeUtc = convertTimezoneToUtc(
         `${resDate} ${resStartTime}`,

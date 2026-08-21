@@ -19,6 +19,7 @@ const {
   validateReservationForOrder,
   consumeReservationVoucher,
 } = require("../../../admin/reservation/reservationRepository");
+const DeliveryOptions = require("@DeliveryOptionsModel");
 
 const buildPricedMenuItemSnapshot = (menuItem) => {
   const priceInfo = calculateItemPrice(menuItem);
@@ -150,7 +151,9 @@ const getStaffIdsByOrganization = async (organizationId) => {
     throw new Error("Invalid organization ID");
   }
 
-  const organization = await Organizations.findById(organizationId, { staff: 1 }).lean();
+  const organization = await Organizations.findById(organizationId, {
+    staff: 1,
+  }).lean();
 
   if (!organization || !organization.staff) {
     return [];
@@ -174,6 +177,7 @@ const placeOrder = async ({
   paymentMethod,
   pickupType,
   tableNumber,
+  deliveryOption,
   promoCode,
   tip,
   reservationId,
@@ -190,7 +194,10 @@ const placeOrder = async ({
   try {
     let menuItems = [];
     let organizationId;
-
+    const deliveryOptionData = await DeliveryOptions.findOne({ _id: deliveryOption }).lean();
+    if (deliveryOption && !deliveryOptionData) {
+      throw new Error("Invalid delivery option");
+    }
     if (items?.length) {
       const itemIds = items.map((i) => new mongoose.Types.ObjectId(i.menuItem));
       menuItems = await menuItemRepo.getMenuItemsWithFilters({
@@ -312,8 +319,6 @@ const placeOrder = async ({
 
       voucherAmount = voucherResult.voucherAmount;
       totalPrice = voucherResult.orderAmountDue;
-      if (voucherAmount > 0) {
-      }
     }
 
     // 3️⃣ Create order document inside session
@@ -337,8 +342,9 @@ const placeOrder = async ({
       },
       notes,
       paymentMethod,
-      pickupType,
+      pickupType: deliveryOptionData?.deliveryMethod || pickupType,
       tableNumber,
+      deliveryOption,
       orderType: "online",
     };
 
@@ -354,6 +360,7 @@ const placeOrder = async ({
     // 5️⃣ Commit atomic transaction
 
     let formattedOrder = menuItemOrderFormatter(order, timezone);
+
     //get user details
     let userDetails = await findAppUserByIdWithProjectionService(userId, {
       profileIcon: 1,
@@ -364,7 +371,8 @@ const placeOrder = async ({
       username: 1,
     });
     formattedOrder.user = userDetails;
-
+    await session.commitTransaction();
+    session.endSession();
     // Emit socket event for new order (only for cash payments)
     if (paymentMethod === "cash") {
       emitOrderEvent({
@@ -374,11 +382,7 @@ const placeOrder = async ({
         organizationId: order.organization,
         data: formattedOrder,
       });
-
       const staffIds = await getCheckedInStaffForOrganization(organizationId, timezone);
-
-      await session.commitTransaction();
-      session.endSession();
 
       sendUserNotifications({
         recipientIds: staffIds,
@@ -417,6 +421,7 @@ const updateOrder = async ({
   pickupType,
   tableNumber,
   promoCode,
+  deliveryOption,
   tip,
 }) => {
   const session = await mongoose.startSession();
@@ -430,8 +435,7 @@ const updateOrder = async ({
       throw new Error("Order not found");
     }
 
-    // Only pendingPayment orders can be updated
-    if (existingOrder.status !== "pendingPayment") {
+    if (existingOrder.status !== "pending") {
       throw new Error("Only orders in pendingPayment state can be updated");
     }
 
@@ -454,6 +458,7 @@ const updateOrder = async ({
     // =========================================================
     // 2️⃣ UPDATE ITEMS ONLY IF PROVIDED
     // =========================================================
+    let orderStatus = existingOrder.status;
 
     if (shouldUpdateItems) {
       if (!Array.isArray(items)) {
@@ -526,6 +531,14 @@ const updateOrder = async ({
       } else {
         // Explicit [] means remove all items
         orderItems = [];
+      }
+
+      // Recompute order-level status from the items we just built.
+      // Only ever auto-update it if the order is currently "pending" —
+      // any other existing status (e.g. "confirmed", "cancelled") is left untouched.
+      if (orderStatus === "pending") {
+        const hasItemNeedingConfirmation = orderItems.some((item) => item.status === "pending");
+        orderStatus = hasItemNeedingConfirmation ? "pending" : "confirmed";
       }
     }
 
@@ -646,7 +659,7 @@ const updateOrder = async ({
     // =========================================================
 
     const updateData = {
-      status: "pendingPayment",
+      status: orderStatus,
 
       totalPrice,
 
@@ -675,6 +688,9 @@ const updateOrder = async ({
 
       ...(tableNumber !== undefined && {
         tableNumber,
+      }),
+      ...(deliveryOption !== undefined && {
+        deliveryOption,
       }),
 
       // Reset payment lock after update
@@ -824,7 +840,9 @@ const addMoreItemsToOrder = async ({ orderId, items }) => {
 
   // 2️⃣ Fetch menu items
   const itemIds = items.map((i) => new mongoose.Types.ObjectId(i.menuItem));
-  const menuItems = await menuItemRepo.getMenuItemsWithFilters({ query: { _id: { $in: itemIds } } });
+  const menuItems = await menuItemRepo.getMenuItemsWithFilters({
+    query: { _id: { $in: itemIds } },
+  });
 
   if (!menuItems.length) throw new Error("Invalid items to add");
 

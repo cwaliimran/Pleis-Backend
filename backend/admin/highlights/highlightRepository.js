@@ -159,7 +159,6 @@ const getHighlightsWithFilters = async (query, keyword, skip, limit, sortBy, sor
 
       pipeline.push({ $skip: skip });
       pipeline.push({ $limit: limit });
-      console.log("pipeline", pipeline);
 
 
       // Apply keyword filter AFTER lookup

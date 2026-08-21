@@ -69,14 +69,22 @@ function getRedisClient() {
     }),
   });
 
-  redisClient.on("connect", () => {
+  redisClient.on("ready", () => {
     redisAvailable = true;
     console.log("🚀 Redis connected:", isAzure ? "Azure" : "Local");
   });
 
-  redisClient.on("error", (error) => {
-    console.log("⚠️ Redis connection error", error);
+  redisClient.on("close", () => {
     redisAvailable = false;
+  });
+
+  redisClient.on("end", () => {
+    redisAvailable = false;
+  });
+
+  redisClient.on("error", (error) => {
+    // Do not flip redisAvailable off on transient errors — status is the source of truth
+    console.log("⚠️ Redis connection error", error?.message || error);
   });
 
   return redisClient;
@@ -129,10 +137,12 @@ function createNewRedisClient() {
 
 /**
  * Redis availability flag
- * Used to gracefully bypass cache when Redis is down
+ * Prefer client status so transient "error" events don't disable invalidation
+ * while reads can still hit stale keys after reconnect.
  */
 function isRedisUp() {
-  return redisAvailable;
+  if (!redisClient) return false;
+  return redisClient.status === "ready" || redisAvailable;
 }
 
 module.exports = {

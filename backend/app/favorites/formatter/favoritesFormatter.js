@@ -10,7 +10,7 @@ const { formatCategories } = require("../../../admin/categories/formatters/categ
  * @param {Object} eventObject - Mongoose doc or plain object
  * @param {Object} options - optional settings: { timezone, includeFields, excludeFields }
  */
-const formatFavoritesEventResponse = (eventObject, options = {}) => {
+const   formatFavoritesEventResponse = (eventObject, options = {}) => {
   if (!eventObject) return null;
 
 

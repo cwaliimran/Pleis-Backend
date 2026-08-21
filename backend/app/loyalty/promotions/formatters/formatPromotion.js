@@ -1,7 +1,9 @@
 const { getFullImageUrl } = require("../../../../helperUtils/imageHelper");
-const { convertUtcToTimezone } = require("../../../../helperUtils/responseUtil");
+const {
+    convertUtcToTimezone,
+    convertUtcTimeToTimezone,
+} = require("../../../../helperUtils/responseUtil");
 
-// Helper function to handle date conversion
 function convertPromotionDates(promotion, timezone, format) {
     if (promotion.startDate && promotion.endDate && timezone) {
         promotion.startDate = convertUtcToTimezone(promotion.startDate, timezone, format);
@@ -9,11 +11,28 @@ function convertPromotionDates(promotion, timezone, format) {
     }
 }
 
-// utils/formatPromotion.js
+function convertPromotionTimes(promotion, timezone) {
+    if (promotion.startTime) {
+        promotion.startTime = convertUtcTimeToTimezone(
+            promotion.startTime,
+            timezone,
+            "HH:mm",
+            "HH:mm",
+        );
+    }
+    if (promotion.endTime) {
+        promotion.endTime = convertUtcTimeToTimezone(
+            promotion.endTime,
+            timezone,
+            "HH:mm",
+            "HH:mm",
+        );
+    }
+}
+
 function formatPromotion(promotion, timezone, tierKey) {
     let obj = { ...promotion };
 
-    //attach full image URL
     if (obj?.image) {
         obj.image = getFullImageUrl(obj.image);
     }
@@ -25,33 +44,35 @@ function formatPromotion(promotion, timezone, tierKey) {
         obj.tierLimit.image = getFullImageUrl(obj.tierLimit.image);
     }
 
-    // Adjust obj properties based on promotionType
+    convertPromotionTimes(obj, timezone);
+
     switch (obj.promotionType) {
         case "happyHour":
             delete obj.menuItem;
             delete obj.extraPoints;
             delete obj.discountedPrice;
-            convertPromotionDates(obj, timezone, "YYYY-MM-DD hh:mm A");
+            convertPromotionDates(obj, timezone, "YYYY-MM-DD");
             break;
 
         case "buyMenuItemPromotion":
+        case "extraPointsForItem":
             delete obj.pointsMultiplier;
             delete obj.discountedPrice;
             obj.menuItem.image= getFullImageUrl(obj.menuItem?.image);
-            convertPromotionDates(obj, timezone, "YYYY-MM-DD hh:mm A");
+            convertPromotionDates(obj, timezone, "YYYY-MM-DD");
             break;
 
         case "productSale":
             delete obj.extraPoints;
              obj.menuItem.image= getFullImageUrl(obj.menuItem?.image);
-            convertPromotionDates(obj, timezone, "YYYY-MM-DD hh:mm A");
+            convertPromotionDates(obj, timezone, "YYYY-MM-DD");
             break;
         case "claimPromotion":
             delete obj.extraPoints;
             delete obj.discountedPrice;
             delete obj.menuItem;
             obj.reward.image= getFullImageUrl(obj.reward?.image);
-            convertPromotionDates(obj, timezone, "YYYY-MM-DD hh:mm A");
+            convertPromotionDates(obj, timezone, "YYYY-MM-DD");
             break;
             
         case  "globalHappyHourPromotion":
@@ -78,8 +99,6 @@ function formatPromotion(promotion, timezone, tierKey) {
             "YYYY-MM-DD"
         );
     }
-
-
 
     if (tierKey) {
         obj = formatSinglePromotionByTierKey(obj, tierKey);

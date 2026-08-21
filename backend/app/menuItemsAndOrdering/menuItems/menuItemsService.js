@@ -14,10 +14,10 @@ const { calculateItemPrice } = require("../orders/formatter/calculateItemPrice")
 
 const getMenuItems = async ({ userId, timezone, organization }) => {
   // const result = await getOrganizationMenuWithItems({ organizationId: organization, userId, timezone });
-  // console.log("result ", result);
+
   // 1️⃣ Get menu ID for the organization
   const menuId = await menuItemRepo.getMenuIdByOrganization(organization);
-  console.log("menuId", menuId);
+
   if (!menuId) {
     return { recommended: [], menu: [] };
   }
@@ -29,7 +29,7 @@ const getMenuItems = async ({ userId, timezone, organization }) => {
         $in: menuId.map((item) => new mongoose.Types.ObjectId(item._id)),
       },
       status: "active",
-      isAvailableInStock: { $ne: false },
+      isAvailableInStock: true,
     },
     userId,
     timezone,
@@ -116,11 +116,19 @@ const formatMenuItemV2 = (item, timezone, subCategoryMap) => {
 
 const getMenuItemsV2 = async ({ userId, timezone, organization }) => {
   // 1️⃣ Get menu ID for the organization
+  let organizationDetails = await findOrganizationWithSelectFilter(
+    organization,
+    "_id basicInfo.name basicInfo.media.logo",
+  );
+
+  if (organizationDetails?.basicInfo?.media?.logo) {
+    organizationDetails.basicInfo.media.logo = getFullImageUrl(organizationDetails.basicInfo.media.logo);
+  }
+
   const menuId = await menuItemRepo.getMenuIdByOrganization(organization);
   if (!menuId) {
-    return { recommended: [], menu: [], combos: [] };
+    return { organizationDetails, recommended: [], menu: [], combos: [] };
   }
-  console.log("menuId", menuId);
   // 2️⃣ Fetch all active menu items for this menu
 
   const menuItems = await menuItemRepo.getMenuItemsWithFiltersV2({
@@ -132,7 +140,7 @@ const getMenuItemsV2 = async ({ userId, timezone, organization }) => {
     timezone,
   });
 
-  if (!menuItems.length) return { recommended: [], menu: [], combos: [] };
+  if (!menuItems.length) return { organizationDetails, recommended: [], menu: [], combos: [] };
 
   const recommended = await menuItemRepo.getRecommendedItemsV2(userId, timezone, menuId);
 
@@ -175,22 +183,13 @@ const getMenuItemsV2 = async ({ userId, timezone, organization }) => {
   // 6️⃣ Convert to desired response structure
   const menu = Object.values(grouped);
 
-  let organizationDetails = await findOrganizationWithSelectFilter(
-    organization,
-    "_id basicInfo.name basicInfo.media.logo",
-  );
-
-  if (organizationDetails?.basicInfo?.media?.logo) {
-    organizationDetails.basicInfo.media.logo = getFullImageUrl(organizationDetails.basicInfo.media.logo);
-  }
-
   let formattedRecommended =
     recommended?.map((item) => applyMenuItemDiscountV2(formatMenuItemV2(item, timezone, subCategoryMap))) || [];
 
   const menuItemById = new Map(menuItems.map((item) => [item._id.toString(), item]));
 
   const rawCombos = await menuItemRepo.getMenuItemsCombos(menuItems.map((item) => item._id));
-  console.log("rawCombos:", rawCombos);
+
 
   const combos = formatMenuItemsComboList(rawCombos, {
     timezone,

@@ -17,7 +17,7 @@ const { buildTopEvents } = require("./utils/buildTopEvents");
  * DASHBOARD – Load all cards at once
  */
 const getDashboard = async ({ dateFilter, timezone, companyOrganizer,CompanyOrganizations }) => {
-  console.log("companyOrganizer",companyOrganizer );
+
   const promises = [
     dashboardRepo.getUserStats({ dateFilter, timezone, companyOrganizer,CompanyOrganizations }),
     dashboardRepo.getEventStats({ dateFilter, timezone, status: "active", companyOrganizer,CompanyOrganizations }),
@@ -101,7 +101,7 @@ const getDashboard = async ({ dateFilter, timezone, companyOrganizer,CompanyOrga
     topViewedEvents,
     followersOverTime,    topPerformingEvents
   ] = await Promise.all(promises);
-  console.log("organizations",organizations );
+
   return {
     stats: [
       // ---------------- USERS ----------------

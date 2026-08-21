@@ -7,6 +7,9 @@ const {
 } = require("@utils/responseUtil");
 
 const service = require("./promotionsService");
+const {
+  preparePromotionTimesForStorage,
+} = require("../../../commonModules/loyalty/promotions/utils/promotionSchedule");
 
 const create = async (req, res) => {
   let { timezone } = req.user;
@@ -50,20 +53,6 @@ const create = async (req, res) => {
     rawData.push("reward", "claimPoints")
     objectIdFields.push("reward")
   }
-  if(req.body.startTime && req.body.endTime){
-     req.body.startTime = convertTimezoneToUtc(
-       req.body.startTime,
-       req.user.timezone,
-       "HH:mm",
-       "HH:mm",
-     );
-      req.body.endTime = convertTimezoneToUtc(
-        req.body.endTime,
-        req.user.timezone,
-        "HH:mm",
-        "HH:mm",
-      );
-  }
 
   if (!validateParams(req, res, {
     rawData,
@@ -99,25 +88,28 @@ const create = async (req, res) => {
 
 
   try {
+    const times = preparePromotionTimesForStorage(
+      req.body,
+      req.user.timezone,
+      convertTimezoneToUtc,
+    );
+    req.body.startTime = times.startTime;
+    req.body.endTime = times.endTime;
 
-    if (req.body.promotionType === "happyHour") {
-      //convert to utc
-      if (req.body.startDate) {
-        req.body.startDate = convertTimezoneToUtc(req.body.startDate, req.user.timezone, "YYYY-MM-DD");
-      }
-      if (req.body.endDate) {
-        req.body.endDate = convertTimezoneToUtc(req.body.endDate, req.user.timezone, "YYYY-MM-DD");
-      }
-    } else {
-      //convert to utc
-      if (req.body.startDate) {
-        req.body.startDate = convertTimezoneToUtc(req.body.startDate, req.user.timezone, "YYYY-MM-DD");
-      }
-      if (req.body.endDate) {
-        req.body.endDate = convertTimezoneToUtc(req.body.endDate, req.user.timezone, "YYYY-MM-DD");
-      }
+    if (req.body.startDate) {
+      req.body.startDate = convertTimezoneToUtc(
+        req.body.startDate,
+        req.user.timezone,
+        "YYYY-MM-DD",
+      );
     }
-
+    if (req.body.endDate) {
+      req.body.endDate = convertTimezoneToUtc(
+        req.body.endDate,
+        req.user.timezone,
+        "YYYY-MM-DD",
+      );
+    }
 
     //end date cannot be before start date
     if (req.body.startDate && req.body.endDate && new Date(req.body.endDate) < new Date(req.body.startDate)) {
@@ -150,9 +142,12 @@ const create = async (req, res) => {
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
+    const isTimePairError = /startTime and endTime/i.test(
+      error?.message || readableError.message || "",
+    );
     return sendResponse({
       res,
-      statusCode: readableError.statusCode,
+      statusCode: isTimePairError ? 400 : readableError.statusCode,
       translationKey: readableError.message,
       error,
     });
@@ -161,7 +156,16 @@ const create = async (req, res) => {
 
 const get = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, companyOrganizer, sortBy, sortOrder } = req.query;
+  let {
+    keyword,
+    status,
+    startDate,
+    endDate,
+    companyOrganizer,
+    sortBy,
+    sortOrder,
+    promotionType,
+  } = req.query;
   const SORT_FIELDS = ["title", "description", "promotionType","status","views","favorites","participants","pointsAwarded"];
   const SORT_ORDERS = ["asc", "desc"];
   if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
@@ -195,10 +199,12 @@ const get = async (req, res) => {
       limit,
       keyword,
       status,
-      date,
+      startDate,
+      endDate,
       timezone: req.user?.timezone,
       sortBy,
       sortOrder,
+      promotionType,
     });
     return sendResponse({
       res,
@@ -257,7 +263,15 @@ const update = async (req, res) => {
       });
     }
 
-    const isHappyHour = existing.promotionType === "happyHour";
+    const times = preparePromotionTimesForStorage(
+      data,
+      timezone,
+      convertTimezoneToUtc,
+    );
+    if (data.startTime !== undefined || data.endTime !== undefined) {
+      data.startTime = times.startTime;
+      data.endTime = times.endTime;
+    }
 
     // ----------------------------------
     // DATE VALIDATION + CONVERSION
@@ -265,13 +279,8 @@ const update = async (req, res) => {
     if (data.startDate || data.endDate) {
       let dateFields = {};
 
-      if (isHappyHour) {
-        if (data.startDate) dateFields.startDate = "YYYY-MM-DD hh:mm A";
-        if (data.endDate) dateFields.endDate = "YYYY-MM-DD hh:mm A";
-      } else {
-        if (data.startDate) dateFields.startDate = "YYYY-MM-DD";
-        if (data.endDate) dateFields.endDate = "YYYY-MM-DD";
-      }
+      if (data.startDate) dateFields.startDate = "YYYY-MM-DD";
+      if (data.endDate) dateFields.endDate = "YYYY-MM-DD";
 
       if (!validateParams(req, res, { dateFields })) return;
 
@@ -279,7 +288,7 @@ const update = async (req, res) => {
         data.startDate = convertTimezoneToUtc(
           data.startDate,
           timezone,
-          isHappyHour ? "YYYY-MM-DD hh:mm A" : "YYYY-MM-DD"
+          "YYYY-MM-DD"
         );
       }
 
@@ -287,7 +296,7 @@ const update = async (req, res) => {
         data.endDate = convertTimezoneToUtc(
           data.endDate,
           timezone,
-          isHappyHour ? "YYYY-MM-DD hh:mm A" : "YYYY-MM-DD"
+          "YYYY-MM-DD"
         );
       }
 
@@ -334,7 +343,7 @@ const update = async (req, res) => {
     // ----------------------------------
     // UPDATE WITH SCOPE
     // ----------------------------------
-    const updated = await service.update(req.params.id, data, scope);
+    const updated = await service.update(req.params.id, data, scope, timezone);
 
     if (!updated) {
       return sendResponse({
@@ -353,16 +362,17 @@ const update = async (req, res) => {
 
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
+    const isTimePairError = /startTime and endTime/i.test(
+      error?.message || readableError.message || "",
+    );
     return sendResponse({
       res,
-      statusCode: 500,
+      statusCode: isTimePairError ? 400 : 500,
       translationKey: readableError.message,
       error,
     });
   }
 };
-
-
 
 const deleteItem = async (req, res) => {
   const { scope = "single" } = req.query; // single | future

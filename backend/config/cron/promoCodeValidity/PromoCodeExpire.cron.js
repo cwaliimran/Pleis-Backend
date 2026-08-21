@@ -13,7 +13,7 @@ const PromoCodeExpireCron = async () => {
       { $set: { status: "inactive" } }
     );
 
-    // console.log(`PromoCodeExpireCron: Updated ${promoCodes.modifiedCount} promo codes to expired status`);
+    // 
   } catch (err) {
     console.error("Promo code expiry cron failed:", err);
   }

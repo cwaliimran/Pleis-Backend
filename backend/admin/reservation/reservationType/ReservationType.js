@@ -15,7 +15,6 @@ const reservationTypeSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
     },
     tax: {
@@ -44,6 +43,10 @@ const reservationTypeSchema = new mongoose.Schema(
       type: String,
       enum: ["free", "minimumSpend"],
       default: "free",
+    },
+    minimumSpend: { //only for minimum spend condition type
+      type: Number,
+      default: 0,
     },
     bonosPoints: {
       type: Number,

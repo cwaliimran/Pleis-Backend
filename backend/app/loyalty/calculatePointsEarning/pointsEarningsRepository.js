@@ -61,8 +61,7 @@ const calculatePointsRepo = async (
     organizerPointsPerEuro *
     organizerMultiplier
   );
-  console.log("totalSpendingCompany",totalSpendingCompany );
-  console.log("organizerEarnedPoints",organizerEarnedPoints );
+
 
   const globalPointsPerEuro =
     10 + globalBonus + tierBonus;

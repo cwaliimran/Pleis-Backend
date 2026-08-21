@@ -6,8 +6,6 @@ const { createTransaction } = require("./monriRepository");
 function buildAuthorizationHeader(body) {
   const fullpath = "/v2/terminal-entry/create-or-update";
   const timestamp = Date.now().toString(); // milliseconds
-  console.log("MONRI_KEY:", process.env.MONRI_KEY);
-  console.log("MONRI_AUTH_TOKEN:", process.env.MONRI_AUTH_TOKEN);
 
 
 

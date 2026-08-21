@@ -25,6 +25,7 @@ const getMenus = async ({
   companyOrganizer,
   sortBy,
   sortOrder,
+  venue,
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let organizationIds = [];
@@ -69,6 +70,32 @@ const getMenus = async ({
     },
     {
       $unwind: { path: "$organizationData", preserveNullAndEmptyArrays: true },
+    },
+    {
+      $lookup: {
+        from: "venues",
+        let: { venueIds: "$venue" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $in: [
+                  "$_id",
+                  {
+                    $map: {
+                      input: { $ifNull: ["$$venueIds", []] },
+                      as: "id",
+                      in: { $toObjectId: "$$id" },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+          { $project: { _id: 1, title: 1 } },
+        ],
+        as: "venue",
+      },
     },
   ];
 
@@ -173,6 +200,14 @@ const getMenus = async ({
         },
       });
     }
+  }
+  else {
+    pipeline.push({
+      $sort: {
+        createdAt: -1,
+        _id: -1,
+      },
+    });
   }
 
   // Sort, merge, clean
@@ -296,6 +331,8 @@ const updateMenu = async (id, data) => {
       "organization",
       "status",
       "isOrderingEnabled",
+      "venue",
+      "startDate",
     ];
 
     const updateData = {};
@@ -318,7 +355,7 @@ const updateMenu = async (id, data) => {
       await Menus.updateMany(
         {
           organization: orgId,
-          status: { $ne: "deleted" },
+          status: "active",
           _id: { $ne: menuId },
         },
         { $set: { status: "inactive" } },
@@ -375,7 +412,7 @@ const getTimezoneDateTime = (timezone = "Asia/Karachi") => {
   };
 };
 
-const duplicateMenuAndItems = async (menuId, organization, timezone,name) => {
+const duplicateMenuAndItems = async (menuId, organization, timezone, name) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 

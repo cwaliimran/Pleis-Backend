@@ -27,7 +27,7 @@ try {
   console.log('Firebase Admin SDK initialized successfully.');
 } catch (error) {
   // Log any errors during initialization
-  console.error('Error initializing Firebase Admin SDK:', error);
+  console.error('❌ Error initializing Firebase Admin SDK!');
 }
 module.exports = admin;
 

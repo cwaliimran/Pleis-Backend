@@ -144,8 +144,11 @@ const registerUserUtility = async (req, res, options = {}) => {
     }
 
 
-    // Check if email exists
-    const existingUser = await User.findOne({ email: email.trim().toLowerCase() });
+    // Check if email exists (deleted accounts are ignored so the email can be reused)
+    const existingUser = await User.findOne({
+      email: email.trim().toLowerCase(),
+      "accountState.status": { $ne: "deleted" },
+    });
     if (existingUser && existingUser.verificationStatus.email === "verified") {
       sendResponse({
         res,
@@ -311,7 +314,6 @@ const registerUserUtility = async (req, res, options = {}) => {
     return { success: true, user: formattedResponse, responseSent: false };
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
-    console.log("readableError==>", readableError)
     sendResponse({
       res,
       statusCode: readableError.statusCode,

@@ -1,16 +1,18 @@
 const mongoose = require("mongoose");
 const MenuOrders = require("@OrdersModel");
-const {
-  calculatePointsRepo,
-} = require("../../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
+const { calculatePointsRepo } = require("../../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
 const {
   createTransactionService,
 } = require("../../../../app/userWalletService/transactions/services/unifiedTransactionsService");
 
 const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
-const { menuItemOrderFormatter } = require("../../../../app/menuItemsAndOrdering/orders/formatter/menuItemOrderFormatter");
+const {
+  menuItemOrderFormatter,
+} = require("../../../../app/menuItemsAndOrdering/orders/formatter/menuItemOrderFormatter");
 const { findAppUserByIdWithProjectionService } = require("../../../../app/usersManagement/usersService");
-const { sendMenuOrderNotification } = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
+const {
+  sendMenuOrderNotification,
+} = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
 const { fireAndForget } = require("../../../../helperUtils/responseUtil");
 
 const { handleLoyaltyEarningConsequences } = require("./handleLoyaltyEarningConsequences");
@@ -38,6 +40,7 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
     /* ==========================
        1️⃣ Load Menu Order
     ========================== */
+
     menuOrder = await MenuOrders.findById(menuOrderId)
       .populate({
         path: "organization",
@@ -63,14 +66,12 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
        ✅ PAYMENT SUCCESS
     ========================== */
     if (result.status === "paid") {
-
       menuOrder.status = "confirmed";
       menuOrder.paymentStatus = "paid";
       menuOrder.paidAt = new Date();
       menuOrder.transactionId = result.transactionId || null;
 
       await menuOrder.save({ session });
-
 
       const populatedOrder = await MenuOrders.findById(menuOrder._id)
         .populate("organization", "basicInfo.name")
@@ -84,20 +85,12 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
         currency: "EUR",
       });
 
-      await sendEmailViaMailgun(
-        menuOrder.user.email,
-        "Your order has been confirmed",
-        mBody
-      );
+      await sendEmailViaMailgun(menuOrder.user.email, "Your order has been confirmed", mBody);
 
       const totalPrice = menuOrder.totalPrice || 0;
 
       if (totalPrice > 0) {
-        const pointsCalculation = await calculatePointsRepo(
-          menuOrder.user,
-          companyOrganizer,
-          totalPrice
-        );
+        const pointsCalculation = await calculatePointsRepo(menuOrder.user, companyOrganizer, totalPrice);
 
         companyPoints = {
           base: pointsCalculation.organizer.earnedPoints,
@@ -126,7 +119,7 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
             entityId: menuOrder._id,
             domainType: "menuorders",
           },
-          session
+          session,
         );
 
         if (!trx.success) {
@@ -146,8 +139,6 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
 
     await session.commitTransaction();
     committed = true;
-
-
   } catch (err) {
     if (session.inTransaction()) {
       await session.abortTransaction();
@@ -161,18 +152,15 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
    🚀 POST-COMMIT SIDE EFFECTS (OUTSIDE TRANSACTION)
 ===================================================== */
   if (committed && menuOrder) {
-
-
     if (menuOrder.totalPrice && menuOrder.totalPrice > 0) {
       fireAndForget(
         triggerBadgeEngine(menuOrder.user, {
           category: "singlePurchase",
           amount: menuOrder.totalPrice,
         }),
-        "TRIGGER_BADGE_ENGINE"
+        "TRIGGER_BADGE_ENGINE",
       );
     }
-
 
     /**
      * =====================================================
@@ -186,13 +174,12 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
           companyOrganizer,
           companyPoints,
           globalPoints,
-          menuOrder
+          menuOrder,
         });
       } catch (err) {
         console.error("[LOYALTY] Menu side effect failed:", err);
       }
     }
-
 
     /**
      * =====================================================
@@ -205,7 +192,7 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
           orderId: menuOrder._id,
           action: "MENU_ORDER_CONFIRMED",
         }),
-        "MENU_ORDER_CONFIRMED_NOTIFICATION"
+        "MENU_ORDER_CONFIRMED_NOTIFICATION",
       );
     }
 
@@ -215,10 +202,9 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
           orderId: menuOrder._id,
           action: "MENU_ORDER_CANCELLED",
         }),
-        "MENU_ORDER_CANCELLED_NOTIFICATION"
+        "MENU_ORDER_CANCELLED_NOTIFICATION",
       );
     }
-
 
     /**
      * =====================================================
@@ -226,22 +212,16 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
      * =====================================================
      */
     if (result.status === "paid") {
-      findAppUserByIdWithProjectionService(
-        menuOrder.user,
-        {
-          profileIcon: 1,
-          firstName: 1,
-          lastName: 1,
-          email: 1,
-          username: 1,
-          timezone: 1,
-        }
-      )
-        .then(userDetails => {
-          let formattedOrder = menuItemOrderFormatter(
-            menuOrder,
-            userDetails.timezone
-          );
+      findAppUserByIdWithProjectionService(menuOrder.user, {
+        profileIcon: 1,
+        firstName: 1,
+        lastName: 1,
+        email: 1,
+        username: 1,
+        timezone: 1,
+      })
+        .then((userDetails) => {
+          let formattedOrder = menuItemOrderFormatter(menuOrder, userDetails.timezone);
 
           formattedOrder.user = userDetails;
           formattedOrder.organization = menuOrder.organization._id;
@@ -254,14 +234,9 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
             data: formattedOrder,
           });
         })
-        .catch(err =>
-          console.error("Order emit failed:", err)
-        );
+        .catch((err) => console.error("Order emit failed:", err));
     }
   }
-
 };
-
-
 
 module.exports = { menuOrderFinalizerService };

@@ -5,6 +5,9 @@ const {
   ProductSalePromotion,
   ClaimPromotion,
 } = require("../../../commonModules/loyalty/promotions/models/Promotion/");
+const {
+  resolvePromotionTimes,
+} = require("../../../commonModules/loyalty/promotions/utils/promotionSchedule");
 
 // Decide which discriminator model to use
 const getModelByTaskType = (taskType) => {
@@ -26,7 +29,11 @@ const getModelByTaskType = (taskType) => {
 // Create promotion
 const create = async (data) => {
   try {
-    const Model = getModelByTaskType(data.taskType);
+    const times = resolvePromotionTimes(data);
+    data.startTime = times.startTime;
+    data.endTime = times.endTime;
+
+    const Model = getModelByTaskType(data.taskType || data.promotionType);
     const item = new Model(data);
     const saved = await item.save();
     return saved.toObject(); // Removes Mongoose internals
