@@ -52,28 +52,47 @@ const updateOrders = async (staffId, id, data) => {
      3️⃣ DELIVER ALL (HIGHEST PRIORITY)
   =============================== */
   if (typeof data.deliveredall === "boolean") {
-    order.items.forEach(item => {
+    (order.items || []).forEach((item) => {
       item.isdelivered = data.deliveredall;
+    });
+    (order.combos || []).forEach((combo) => {
+      (combo.items || []).forEach((item) => {
+        item.isdelivered = data.deliveredall;
+      });
     });
   }
 
   /* ===============================
      4️⃣ DELIVER SELECTED ITEMS
-     (ONLY IF deliveredall NOT SENT)
+     accepts menuItem ids and/or combo ids
   =============================== */
   else if (data.deliveredMenuItem) {
-    const deliveredIds = data.deliveredMenuItem
+    const deliveredIds = String(data.deliveredMenuItem)
       .split(",")
-      .map(id => id.trim())
+      .map((id) => id.trim())
       .filter(Boolean)
-      .map(id => new mongoose.Types.ObjectId(id));
+      .map((id) => new mongoose.Types.ObjectId(id));
 
-    order.items.forEach(item => {
-      if (
-        deliveredIds.some(dId => dId.equals(item.menuItem))
-      ) {
+    const idMatches = (value) =>
+      value != null && deliveredIds.some((dId) => dId.equals(value));
+
+    (order.items || []).forEach((item) => {
+      if (idMatches(item.menuItem) || idMatches(item._id)) {
         item.isdelivered = true;
       }
+    });
+
+    (order.combos || []).forEach((combo) => {
+      const markWholeCombo = idMatches(combo.combo) || idMatches(combo._id);
+      (combo.items || []).forEach((item) => {
+        if (
+          markWholeCombo ||
+          idMatches(item.menuItem) ||
+          idMatches(item._id)
+        ) {
+          item.isdelivered = true;
+        }
+      });
     });
   }
 

@@ -67,6 +67,7 @@ const updateOrders = async (req, res) => {
     status,
     paymentStatus,
     deliveredMenuItem,
+    deliveredCombo,
     deliveredall,
     reasonForRejection,
     reasonForCancellation,
@@ -93,6 +94,7 @@ const updateOrders = async (req, res) => {
     noteForCancellation,
     updateBy: req.user._id,
     paymentMethod,
+    deliveredCombo,
   };
 
   try {

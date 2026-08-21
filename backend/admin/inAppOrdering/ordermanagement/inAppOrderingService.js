@@ -240,25 +240,51 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
      3️⃣ DELIVER ALL
   =============================== */
   if (typeof data.deliveredall === "boolean") {
-    order.items.forEach((item) => {
+    (order.items || []).forEach((item) => {
       item.isdelivered = data.deliveredall;
+    });
+    (order.combos || []).forEach((combo) => {
+      (combo.items || []).forEach((item) => {
+        item.isdelivered = data.deliveredall;
+      });
     });
     deliveryChanged = true;
   } else if (data.deliveredMenuItem) {
     /* ===============================
-     4️⃣ DELIVER SELECTED ITEMS
-  =============================== */
-    const deliveredIds = data.deliveredMenuItem
+       4️⃣ DELIVER SELECTED ITEMS
+       deliveredMenuItem accepts:
+       - order item menuItem ids
+       - combo.items[].menuItem ids
+       - combo catalog id / combo line _id → all items in that combo
+    =============================== */
+    const deliveredIds = String(data.deliveredMenuItem)
       .split(",")
       .map((id) => id.trim())
       .filter(Boolean)
       .map((id) => new mongoose.Types.ObjectId(id));
 
-    order.items.forEach((item) => {
-      if (deliveredIds.some((dId) => dId.equals(item.menuItem))) {
+    const idMatches = (value) =>
+      value != null && deliveredIds.some((dId) => dId.equals(value));
+
+    (order.items || []).forEach((item) => {
+      if (idMatches(item.menuItem) || idMatches(item._id)) {
         item.isdelivered = true;
         deliveryChanged = true;
       }
+    });
+
+    (order.combos || []).forEach((combo) => {
+      const markWholeCombo = idMatches(combo.combo) || idMatches(combo._id);
+      (combo.items || []).forEach((item) => {
+        if (
+          markWholeCombo ||
+          idMatches(item.menuItem) ||
+          idMatches(item._id)
+        ) {
+          item.isdelivered = true;
+          deliveryChanged = true;
+        }
+      });
     });
   }
   if (data.resaonForRejection) {
@@ -304,7 +330,10 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
         type: NotificationTypes.ORDER_UPDATE,
         objectType: "menuorders",
       },
-      image: order.items?.[0]?.menuItemSnapShot?.image || null,
+      image:
+        order.items?.[0]?.menuItemSnapShot?.image ||
+        order.combos?.[0]?.items?.[0]?.menuItemSnapShot?.image ||
+        null,
       sender: order.organization,
       objectId: order._id,
     });

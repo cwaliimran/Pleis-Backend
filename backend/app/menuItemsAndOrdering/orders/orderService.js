@@ -321,7 +321,6 @@ const placeOrder = async ({
     );
     let totalSaleDiscount = combosSaleDiscount;
     let itemsTotal = combosTotal;
-
     let isOrderNeedingConfirmation = false;
 
     const orderItems = (items || []).map((i) => {
@@ -335,10 +334,9 @@ const placeOrder = async ({
       const saleDiscountPerUnit = priceInfo.saleDiscount;
 
       const finalPrice = unitFinalPrice * i.quantity;
-      const saleDiscountTotal = saleDiscountPerUnit * i.quantity;
 
       itemsTotal += unitPrice * i.quantity;
-      totalSaleDiscount += saleDiscountTotal;
+      totalSaleDiscount += saleDiscountPerUnit * i.quantity;
       totalPrice += finalPrice;
 
       const status = menuItem.isRequiresOrderConfirmation
@@ -712,25 +710,21 @@ const updateOrder = async ({
     let totalPrice = 0;
 
     for (const item of orderItems) {
-      const qty = Number(item.quantity) || 0;
-      const unitPrice =
+      const qty = item.quantity || 0;
+      // Fresh lines have unitPrice; older saved items may only have finalPrice
+      itemsTotal +=
         item.unitPrice != null
-          ? Number(item.unitPrice)
-          : qty
-            ? Number(item.finalPrice || 0) / qty
-            : 0;
-      const saleDiscountPerUnit = Number(item.saleDiscountPerUnit || 0);
-
-      itemsTotal += unitPrice * qty;
-      totalSaleDiscount += saleDiscountPerUnit * qty;
-      totalPrice += Number(item.finalPrice || 0);
+          ? item.unitPrice * qty
+          : item.finalPrice || 0;
+      totalSaleDiscount += (item.saleDiscountPerUnit || 0) * qty;
+      totalPrice += item.finalPrice || 0;
     }
 
     for (const combo of orderCombos) {
-      const qty = Number(combo.quantity) || 0;
-      itemsTotal += Number(combo.unitPrice || 0) * qty;
-      totalSaleDiscount += Number(combo.saleDiscountPerUnit || 0) * qty;
-      totalPrice += Number(combo.finalPrice || 0);
+      const qty = combo.quantity || 0;
+      itemsTotal += (combo.unitPrice || 0) * qty;
+      totalSaleDiscount += (combo.saleDiscountPerUnit || 0) * qty;
+      totalPrice += combo.finalPrice || 0;
     }
 
     // =========================================================

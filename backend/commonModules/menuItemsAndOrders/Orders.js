@@ -11,6 +11,9 @@ const OrderItemSchema = new mongoose.Schema({
     default: "confirmed",
   },
   isdelivered: { type: Boolean, default: false },
+  unitPrice: { type: Number },
+  unitFinalPrice: { type: Number },
+  saleDiscountPerUnit: { type: Number, default: 0 },
   finalPrice: { type: Number, required: true }, // total for that item (with quantity)
   menuItemSnapShot: { type: Object, required: true }, // Full JSON snapshot of the menuItem
 });
@@ -18,6 +21,7 @@ const OrderItemSchema = new mongoose.Schema({
 const OrderComboItemSchema = new mongoose.Schema({
   menuItem: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItems" },
   quantity: { type: Number, default: 1, min: 1 },
+  isdelivered: { type: Boolean, default: false },
   menuItemSnapShot: { type: Object, required: true },
 });
 
