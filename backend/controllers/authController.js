@@ -25,6 +25,7 @@ const { registerUserUtility } = require("./authUtil");
 const { validatePhoneNumber } = require("../helperUtils/validationsUtil");
 const { getCreatorByStaffId } = require("../admin/organizations/organizationRepository");
 const UserLogs = require("../models/UserLogs");
+const { hardDeleteUserById } = require("../helperUtils/hardDeleteUser");
 
 const createAdmin = async (req, res) => {
   try {
@@ -69,7 +70,10 @@ const createAdmin = async (req, res) => {
 
     const { email, firstName, lastName, profileIcon, password, timezone, deviceId, deviceType } = req.body;
 
-    const existing = await User.findOne({ email });
+    const existing = await User.findOne({
+      email,
+      "accountState.status": { $ne: "deleted" },
+    });
     if (existing) {
       return sendResponse({
         res,
@@ -414,6 +418,7 @@ const loginTest = async (req, res) => {
     const user = await User.findOne({
       email,
       "accountState.userType": userType,
+      "accountState.status": { $ne: "deleted" },
     });
 
     // Check if an error occurred
@@ -539,13 +544,17 @@ const generateOtp = async (req, res) => {
     // Load user
     let user;
     if (type === "email") {
-      user = await User.findOne({ email: email.toLowerCase() }).select(
+      user = await User.findOne({
+        email: email.toLowerCase(),
+        "accountState.status": { $ne: "deleted" },
+      }).select(
         "email accountState otpInfo timezone"
       );
     } else {
       user = await User.findOne({
         "phoneNumber.code": phoneNumber.code,
         "phoneNumber.number": phoneNumber.number,
+        "accountState.status": { $ne: "deleted" },
       }).select("phoneNumber accountState otpInfo timezone");
     }
 
@@ -658,13 +667,17 @@ const verifyOtp = async (req, res) => {
 
     let user;
     if (type === "email") {
-      user = await User.findOne({ email: email.toLowerCase() }).select(
+      user = await User.findOne({
+        email: email.toLowerCase(),
+        "accountState.status": { $ne: "deleted" },
+      }).select(
         "email accountState otpInfo verificationStatus timezone"
       );
     } else if (type === "phoneNumber") {
       user = await User.findOne({
         "phoneNumber.code": phoneNumber.code,
         "phoneNumber.number": phoneNumber.number,
+        "accountState.status": { $ne: "deleted" },
       }).select("phoneNumber accountState otpInfo verificationStatus timezone");
     }
 
@@ -813,7 +826,10 @@ const resendEmailVerificationLink = async (req, res) => {
     const { email } = req.body;
 
     // Find the user by email
-    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    const user = await User.findOne({
+      email: email.trim().toLowerCase(),
+      "accountState.status": { $ne: "deleted" },
+    });
 
     if (!user) {
       return sendResponse({
@@ -862,7 +878,10 @@ const resendEmailVerificationLink = async (req, res) => {
 const sendPasswordResetLink = async (req, res) => {
   const { email } = req.body;
 
-  const user = await User.findOne({ email: email.trim().toLowerCase() });
+  const user = await User.findOne({
+    email: email.trim().toLowerCase(),
+    "accountState.status": { $ne: "deleted" },
+  });
   if (!user) {
     return sendResponse({
       res,
@@ -976,6 +995,7 @@ const resetPassword = async (req, res) => {
     const user = await User.findOne({
       email: email.trim().toLowerCase(),
       resetToken: resetToken,
+      "accountState.status": { $ne: "deleted" },
     });
 
     if (!user) {
@@ -1051,31 +1071,15 @@ const logout = async (req, res) => {
 
 const hardDeleteAccount = async (req, res) => {
   try {
-    const userId = req.user._id;
-    const email = req.user.email;
+    const result = await hardDeleteUserById(req.user._id);
 
-    // Generate a random email using the userId and original email
-    const randomEmail = `deleted_user_${userId}_${Date.now()}@example.com`;
-
-    // Update the user's account state to deleted and set the finalDeletionDate
-    await User.findByIdAndUpdate(
-      userId,
-      {
-        $set: {
-          email: randomEmail, // replace with random email
-          previousEmail: email, // store the original email
-          phoneNumber: { code: "", number: "" }, // clear phone number object
-          profileIcon: "noimage.png",
-          "accountState.status": "deleted",
-        },
-      },
-      { new: true }
-    );
-
-    await Devices.updateOne(
-      { userId: userId },
-      { $set: { devices: [] } } // This will empty the array of devices for the user
-    );
+    if (!result) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "user_not_found",
+      });
+    }
 
     return sendResponse({
       res,
@@ -1151,9 +1155,10 @@ const socialAuth = async (req, res) => {
 
     // Normalize email to lowercase
     email = email.trim().toLowerCase();
-    // Find user by socialId or email
+    // Deleted accounts are not recoverable: same email/socialId must create a new user
     let existingUser = await User.findOne({
       $or: [{ [`${provider}Id`]: socialId }, { email }],
+      "accountState.status": { $ne: "deleted" },
     });
 
     // If user exists, update or link the social provider
@@ -1292,7 +1297,10 @@ const checkEmailExistsAndVerified = async (req, res) => {
         translationKey: "missing_email",
       });
     }
-    const user = await User.findOne({ email: email.trim().toLowerCase() }).select("verificationStatus");
+    const user = await User.findOne({
+      email: email.trim().toLowerCase(),
+      "accountState.status": { $ne: "deleted" },
+    }).select("verificationStatus");
     const existsAndVerified = !!(user && user.verificationStatus.email === "verified");
     return sendResponse({
       res,
@@ -1386,7 +1394,10 @@ const checkUserNameExists = async (req, res) => {
     }
 
 
-    const user = await User.findOne({ username: userName }).select("_id");
+    const user = await User.findOne({
+      username: userName,
+      "accountState.status": { $ne: "deleted" },
+    }).select("_id");
 
     if (user) {
       // Username is taken

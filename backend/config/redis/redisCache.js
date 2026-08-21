@@ -108,6 +108,15 @@ async function cache({ namespace, params = {}, ttl = 60, fetchFn }) { //ttl is i
       return fresh;
     }
 
+    // If invalidate cleared this lock while we were fetching, do not rewrite stale data
+    try {
+      const currentLock = await redis.get(`lock:${key}`);
+      if (currentLock !== lock) {
+        console.log(`⚠️ SKIP STORE (lock lost / invalidated) -> ${key}`);
+        return fresh;
+      }
+    } catch { }
+
     try {
       await setJson(key, fresh, ttl === null ? null : ttl);
       console.log(`🧩 STORED -> ${key}`);
@@ -122,23 +131,52 @@ async function cache({ namespace, params = {}, ttl = 60, fetchFn }) { //ttl is i
 
 /**
  * INVALIDATE
+ * Always deletes the exact key + lock first (reliable).
+ * SCAN is best-effort for prefix matches and must not block/skip exact DEL.
  */
 async function invalidate(prefix) {
-  if (!isRedisUp()) return true;
+  if (!isRedisUp()) {
+    console.log(`⚠️ INVALIDATE SKIPPED (Redis down) -> ${prefix}`);
+    return true;
+  }
 
   try {
-    const stream = redis.scanStream({ match: `${prefix}*`, count: 200 });
-    const pipeline = redis.pipeline();
+    const deleted = await redis.del(prefix, `lock:${prefix}`);
+    console.log(`🧹 INVALIDATED exact -> ${prefix} (deleted=${deleted})`);
 
-    return new Promise((resolve, reject) => {
-      stream.on("data", (keys) => keys.forEach((k) => pipeline.del(k)));
-      stream.on("end", async () => {
+    // Best-effort prefix cleanup; don't fail invalidation if SCAN has issues
+    try {
+      const matched = new Set();
+      const stream = redis.scanStream({ match: `${prefix}*`, count: 200 });
+
+      await Promise.race([
+        new Promise((resolve, reject) => {
+          stream.on("data", (keys) => keys.forEach((k) => matched.add(k)));
+          stream.on("end", resolve);
+          stream.on("error", reject);
+        }),
+        new Promise((resolve) => setTimeout(resolve, 2000)),
+      ]);
+
+      if (matched.size > 0) {
+        const pipeline = redis.pipeline();
+        for (const k of matched) {
+          pipeline.del(k);
+          pipeline.del(`lock:${k}`);
+        }
         await pipeline.exec();
-        resolve(true);
-      });
-      stream.on("error", reject);
-    });
-  } catch (_) {
+        console.log(`🧹 INVALIDATED scan -> ${prefix}* (matched=${matched.size})`);
+      }
+    } catch (scanErr) {
+      console.log(`⚠️ INVALIDATE SCAN SKIPPED -> ${prefix}`, scanErr?.message || scanErr);
+    }
+
+    return true;
+  } catch (err) {
+    console.log(`⚠️ INVALIDATE FAILED -> ${prefix}`, err?.message || err);
+    try {
+      await redis.del(prefix, `lock:${prefix}`);
+    } catch (_) { }
     return true;
   }
 }

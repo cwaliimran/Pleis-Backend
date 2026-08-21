@@ -29,7 +29,7 @@ const getMenuItems = async ({ userId, timezone, organization }) => {
         $in: menuId.map((item) => new mongoose.Types.ObjectId(item._id)),
       },
       status: "active",
-      isAvailableInStock: { $ne: false },
+      isAvailableInStock: true,
     },
     userId,
     timezone,
