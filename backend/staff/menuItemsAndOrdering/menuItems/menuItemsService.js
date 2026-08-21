@@ -1,10 +1,51 @@
 // services/menuItemService.js
 const menuItemRepo = require("./menuItemsRepository");
+const appMenuItemRepo = require("../../../app/menuItemsAndOrdering/menuItems/menuItemsRepository");
 const { formatMenuItem } = require("./formatter/formatMenuItems");
-const MenuSubcategory = require("@MenuSubcategoryModel");
 const {
+  formatMenuItemsComboList,
+} = require("../../../app/menuItemsAndOrdering/menuItems/formatter/formatMenuItemsCombos");
+const {
+  applyMenuItemDiscountV2,
   applyMenuItemsSale,
 } = require("../../../app/menuItemsAndOrdering/menuItems/menuItemsService");
+const MenuSubcategory = require("@MenuSubcategoryModel");
+const mongoose = require("mongoose");
+const {
+  getOrgCompanyOrganizer,
+} = require("../../../app/organizationProfile/organizationProfileRepository");
+
+const getSubCategoryId = (subCategory) => {
+  if (!subCategory) return null;
+  if (typeof subCategory === "object") {
+    return subCategory._id ? subCategory._id.toString() : null;
+  }
+  return subCategory.toString();
+};
+
+const resolveSubCategoryTitle = (subCategory, subCategoryMap = {}) => {
+  const id = getSubCategoryId(subCategory);
+  if (!id) return null;
+  return subCategoryMap[id] || null;
+};
+
+const formatMenuItemV2 = (item, timezone, subCategoryMap) => {
+  const formatted = formatMenuItem(item, timezone);
+  if (!formatted) return formatted;
+
+  const subCategoryTitle = resolveSubCategoryTitle(
+    formatted.subCategory,
+    subCategoryMap,
+  );
+
+  if (subCategoryTitle) {
+    formatted.subCategory = subCategoryTitle;
+  } else {
+    delete formatted.subCategory;
+  }
+
+  return formatted;
+};
 
 const getMenuItems = async ({ timezone, organization }) => {
   const menuId = await menuItemRepo.getMenuIdByOrganization(organization);
@@ -22,7 +63,7 @@ const getMenuItems = async ({ timezone, organization }) => {
   const categories = await MenuSubcategory.find({ _id: { $in: categoryIds } })
     .select("_id title")
     .lean();
-  
+
   const categoryMap = categories.reduce((acc, cat) => {
     acc[cat._id.toString()] = cat.title;
     return acc;
@@ -30,6 +71,82 @@ const getMenuItems = async ({ timezone, organization }) => {
   return {
     menu: formatMenuGrouping(menuItems, timezone, categoryMap),
   };
+};
+
+/** Staff v2: same menu/combo shape as app v2, without org/recommended/upsell. */
+const getMenuItemsV2 = async ({ timezone, organization }) => {
+  const menus = await appMenuItemRepo.getMenuIdByOrganization(organization);
+  if (!menus?.length) return { menu: [], combos: [] };
+
+  const menuItems = await appMenuItemRepo.getMenuItemsWithFiltersV2({
+    query: {
+      menu: {
+        $in: menus.map((item) => new mongoose.Types.ObjectId(item._id)),
+      },
+    },
+    timezone,
+  });
+
+  if (!menuItems.length) return { menu: [], combos: [] };
+
+  const subCategoryIds = [
+    ...new Set(
+      menuItems.map((item) => getSubCategoryId(item.subCategory)).filter(Boolean),
+    ),
+  ];
+
+  const subCategories = subCategoryIds.length
+    ? await MenuSubcategory.find({ _id: { $in: subCategoryIds } })
+        .select("_id title")
+        .lean()
+    : [];
+
+  const subCategoryMap = subCategories.reduce((acc, sub) => {
+    acc[sub._id.toString()] = sub.title;
+    return acc;
+  }, {});
+
+  const grouped = {};
+  menuItems.forEach((item) => {
+    const subCategoryTitle = resolveSubCategoryTitle(
+      item.subCategory,
+      subCategoryMap,
+    );
+    if (!subCategoryTitle) return;
+
+    const key = getSubCategoryId(item.subCategory);
+    if (!grouped[key]) {
+      grouped[key] = {
+        subCategory: subCategoryTitle,
+        items: [],
+      };
+    }
+
+    grouped[key].items.push(
+      applyMenuItemDiscountV2(
+        formatMenuItemV2(item, timezone, subCategoryMap),
+      ),
+    );
+  });
+
+  const menu = Object.values(grouped);
+  const menuItemById = new Map(
+    menuItems.map((item) => [item._id.toString(), item]),
+  );
+
+  const companyOrganizer = await getOrgCompanyOrganizer(organization);
+  const rawCombos = await appMenuItemRepo.getMenuItemsCombos(
+    menuItems,
+    companyOrganizer,
+  );
+
+  const combos = formatMenuItemsComboList(rawCombos, {
+    timezone,
+    menuItemById,
+    applyDiscount: applyMenuItemDiscountV2,
+  });
+
+  return { menu, combos };
 };
 
 const getMenuItemsToManage = async ({ timezone, organization }) => {
@@ -43,9 +160,16 @@ const getMenuItemsToManage = async ({ timezone, organization }) => {
 
   if (!menuItems.length) return { menu: [] };
 
-  const categoryIds = [...new Set(menuItems.map((i) => i.category.toString()))];
+  const categoryIds = [
+    ...new Set(
+      menuItems
+        .map((i) => i.subCategory || i.category)
+        .filter(Boolean)
+        .map((id) => id.toString()),
+    ),
+  ];
 
-  const categories = await MenuItemCategories.find({
+  const categories = await MenuSubcategory.find({
     _id: { $in: categoryIds },
   })
     .select("_id title")
@@ -73,9 +197,10 @@ function formatMenuGrouping(menuItems, timezone, categoryMap = {}) {
 
   menuItems.forEach((item) => {
     const { type, subCategory } = item;
+    const categoryKey = (subCategory || item.category || "").toString();
+    if (!categoryKey) return;
 
-    const categoryName =
-      categoryMap[subCategory.toString()] || subCategory.toString();
+    const categoryName = categoryMap[categoryKey] || categoryKey;
 
     if (!grouped[categoryName]) grouped[categoryName] = {};
     if (!grouped[categoryName][type]) grouped[categoryName][type] = [];
@@ -94,10 +219,9 @@ function formatMenuGrouping(menuItems, timezone, categoryMap = {}) {
   }));
 }
 
-const getMenuItemDetails = async (id) => {
-  const [menuItem] = await Promise.all([menuItemRepo.findMenuItemById(id)]);
+const getMenuItemDetails = async (id, timezone) => {
+  const menuItem = await menuItemRepo.findMenuItemById(id);
   if (!menuItem) return null;
-  //format menu item and recommended items
   const formattedMenuItem = applyMenuItemsSale(
     formatMenuItem(menuItem, timezone),
   );
@@ -105,35 +229,8 @@ const getMenuItemDetails = async (id) => {
   return { menuItem: formattedMenuItem };
 };
 
-const updateMenuStockService = async ({ type, menu, timezone }) => {
-  // Update stock based on type
-  let data = await menuItemRepo.updateMenuStock({ type, menu });
-
-  // const menuItems = await menuItemRepo.getMenuItemsWithFilters({
-  //   menu,
-  // });
-
-  // if (!menuItems.length) return { menu: [] };
-
-  // const categoryIds = [
-  //   ...new Set(menuItems.map(i => i.category.toString()))
-  // ];
-
-  // const categories = await MenuItemCategories
-  //   .find({ _id: { $in: categoryIds } })
-  //   .select("_id title")
-  //   .lean();
-
-  // const categoryMap = categories.reduce((acc, cat) => {
-  //   acc[cat._id.toString()] = cat.title;
-  //   return acc;
-  // }, {});
-
-  // return {
-  //   menu: formatMenuGrouping(menuItems, timezone, categoryMap),
-  //   menuId: menu,
-  // };
-  return data;
+const updateMenuStockService = async ({ type, menu }) => {
+  return menuItemRepo.updateMenuStock({ type, menu });
 };
 
 const updateMenuItem = async (id, data, timezone) => {
@@ -161,20 +258,18 @@ const updateMenuItem = async (id, data, timezone) => {
   }
 
   if (Object.keys(updateData).length === 0) {
-    return menuItem; // nothing to update
+    return menuItem;
   }
 
   Object.assign(menuItem, updateData);
   await menuItem.save();
 
-  // Return updated menuItem
-  let obj = formatMenuItem(menuItem, timezone);
-
-  return obj;
+  return formatMenuItem(menuItem, timezone);
 };
 
 module.exports = {
   getMenuItems,
+  getMenuItemsV2,
   getMenuItemDetails,
   getMenuItemsToManage,
   updateMenuStockService,
