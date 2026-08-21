@@ -276,11 +276,33 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
     (order.combos || []).forEach((combo) => {
       const markWholeCombo = idMatches(combo.combo) || idMatches(combo._id);
       (combo.items || []).forEach((item) => {
-        if (
-          markWholeCombo ||
-          idMatches(item.menuItem) ||
-          idMatches(item._id)
-        ) {
+        if (markWholeCombo || idMatches(item.menuItem) || idMatches(item._id)) {
+          item.isdelivered = true;
+          deliveryChanged = true;
+        }
+      });
+    });
+  } else if (data.deliveredCombo) {
+    /* ===============================
+     4️⃣b DELIVER COMBO ITEM(S)
+     deliveredCombo accepts:
+     - combo.items[]._id (a specific item inside a combo)
+     - combo.items[].menuItem id
+     - combo catalog id / combo line _id → all items in that combo
+  =============================== */
+    const deliveredComboIds = String(data.deliveredCombo)
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean)
+      .map((id) => new mongoose.Types.ObjectId(id));
+
+    const idMatches = (value) =>
+      value != null && deliveredComboIds.some((dId) => dId.equals(value));
+
+    (order.combos || []).forEach((combo) => {
+      const markWholeCombo = idMatches(combo.combo) || idMatches(combo._id);
+      (combo.items || []).forEach((item) => {
+        if (markWholeCombo || idMatches(item.menuItem) || idMatches(item._id)) {
           item.isdelivered = true;
           deliveryChanged = true;
         }
