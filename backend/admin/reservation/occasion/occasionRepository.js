@@ -5,6 +5,7 @@ const { generateMeta } = require("@utils/responseUtil");
 
 const createOccasion = async (data) => {
   try {
+
     const OccasionData = new Occasion(data);
     await OccasionData.save();
     return OccasionData;

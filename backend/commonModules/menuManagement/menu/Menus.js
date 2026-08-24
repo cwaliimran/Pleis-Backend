@@ -28,7 +28,6 @@ const menusSchema = new mongoose.Schema(
     venue: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: "Venues",
-      required: true,
     },
     startDate: {
       type: Date,
