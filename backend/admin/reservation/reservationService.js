@@ -1,11 +1,19 @@
 // services/reservationservice.js
-const { buildKeywordQueryFromModels } = require("../../helperUtils/dbUtils/queryUtil");
-const { generateMeta, getCurrentDateInTimezone, fireAndForget } = require("../../helperUtils/responseUtil");
+const {
+  buildKeywordQueryFromModels,
+} = require("../../helperUtils/dbUtils/queryUtil");
+const {
+  generateMeta,
+  getCurrentDateInTimezone,
+  fireAndForget,
+} = require("../../helperUtils/responseUtil");
 const {
   reservationsFormatter,
   userReservationsFormatter,
 } = require("../../app/reservations/formaters/reservationFormetter");
-const { userReservationFormatterAdjustDates } = require("./formatters/userReservationFormatterAdjustDates");
+const {
+  userReservationFormatterAdjustDates,
+} = require("./formatters/userReservationFormatterAdjustDates");
 const Reservations = require("@ReservationsModel");
 const { UserReservations } = require("@UserReservationsModel");
 const ReservationRepo = require("./reservationRepository");
@@ -22,11 +30,17 @@ const {
 } = require("@utils/responseUtil");
 const { cloneTimingSlots } = require("./utils/cloneTimingSlots");
 const { cloneSingleSlot } = require("./utils/cloneSingleSlot");
-const { sendUserNotifications } = require("../../controllers/communicationController");
+const {
+  sendUserNotifications,
+} = require("../../controllers/communicationController");
 const { NotificationTypes } = require("../../models/Notifications");
 const { getActiveEventsForOrg } = require("../events/eventRepository");
-const { EventCheckins } = require("../../commonModules/events/EventCheckinsModel");
-const { formatReservationDates } = require("./formatters/reservationDateFormatter");
+const {
+  EventCheckins,
+} = require("../../commonModules/events/EventCheckinsModel");
+const {
+  formatReservationDates,
+} = require("./formatters/reservationDateFormatter");
 
 const createReservation = async (data) => {
   let Reservation = await ReservationRepo.createReservation(data);
@@ -34,7 +48,17 @@ const createReservation = async (data) => {
 };
 
 // Populate venue data for reservations (updated for new schema)
-const getReservations = async ({ timezone, page, limit, keyword, status, userId, organizationsId, date, range }) => {
+const getReservations = async ({
+  timezone,
+  page,
+  limit,
+  keyword,
+  status,
+  userId,
+  organizationsId,
+  date,
+  range,
+}) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let { reservations, meta } = await ReservationRepo.getReservations({
     timezone,
@@ -109,13 +133,15 @@ const updateReservation = async (id, data) => {
       if (data.conditionType === "minimumSpendOnLocation") {
         if (amountMissing && customTextMissing) {
           return {
-            error: "amount_or_customText_is_required_when_conditionType_changes_to_minimumSpendOnLocation.",
+            error:
+              "amount_or_customText_is_required_when_conditionType_changes_to_minimumSpendOnLocation.",
           };
         }
 
         if (amountMissing) {
           return {
-            error: "amount_is_required_when_conditionType_changes_and_is_not_minimumSpendOnLocation.",
+            error:
+              "amount_is_required_when_conditionType_changes_and_is_not_minimumSpendOnLocation.",
           };
         }
       }
@@ -124,7 +150,8 @@ const updateReservation = async (id, data) => {
     // Ticket requirement validation
     if (data.conditionType === "ticketRequirement" && !data.ticketType) {
       return {
-        error: "ticket_type_is_required_when_conditionType_is_ticketRequirement.",
+        error:
+          "ticket_type_is_required_when_conditionType_is_ticketRequirement.",
       };
     }
 
@@ -361,7 +388,9 @@ const updateUserReservationStatus = async (id, value, changedBy) => {
 };
 
 const updateUserReservation = async (data) => {
-  const UserReservation = await ReservationRepo.findUserReservationById(data.id);
+  const UserReservation = await ReservationRepo.findUserReservationById(
+    data.id,
+  );
 
   if (!UserReservation) return null;
 
@@ -401,7 +430,8 @@ const updateUserReservation = async (data) => {
     }
 
     if (Array.isArray(data.timingSlots.dateTimeSlots)) {
-      UserReservation.timingSlots.dateTimeSlots = data.timingSlots.dateTimeSlots;
+      UserReservation.timingSlots.dateTimeSlots =
+        data.timingSlots.dateTimeSlots;
     }
 
     timingChanged = true;
@@ -423,7 +453,8 @@ const updateUserReservation = async (data) => {
   // Save history if timing changed
   // -----------------------------
   if (timingChanged) {
-    UserReservation.reservationChanges = UserReservation.reservationChanges || [];
+    UserReservation.reservationChanges =
+      UserReservation.reservationChanges || [];
 
     UserReservation.reservationChanges.push({
       changedBy: data.userId || null,
@@ -444,7 +475,9 @@ const updateUserReservation = async (data) => {
     await sendUserNotifications({
       recipientIds: [UserReservation.userId.toString()],
       title: "Reservation Updated",
-      body: timingChanged ? "Your reservation timing has been updated." : "Your reservation details have been updated.",
+      body: timingChanged
+        ? "Your reservation timing has been updated."
+        : "Your reservation details have been updated.",
 
       data: {
         type: NotificationTypes.RESERVATION_UPDATE,
@@ -462,7 +495,12 @@ const updateUserReservation = async (data) => {
   };
 };
 
-const getCalendarReservationsService = async ({ timezone, companyOrganizer, organization, date }) => {
+const getCalendarReservationsService = async ({
+  timezone,
+  companyOrganizer,
+  organization,
+  date,
+}) => {
   let { reservations } = await ReservationRepo.getCalendarReservations({
     timezone,
     companyOrganizer,
@@ -475,11 +513,19 @@ const getCalendarReservationsService = async ({ timezone, companyOrganizer, orga
   };
 };
 
-const copyUserReservations = async ({ reservations, dates, timezone, copiedBy }) => {
-  const reservationIds = reservations.map((id) => new mongoose.Types.ObjectId(id));
+const copyUserReservations = async ({
+  reservations,
+  dates,
+  timezone,
+  copiedBy,
+}) => {
+  const reservationIds = reservations.map(
+    (id) => new mongoose.Types.ObjectId(id),
+  );
 
   // 1️⃣ Fetch source reservations
-  const sourceReservations = await ReservationRepo.findUserReservationsByIds(reservationIds);
+  const sourceReservations =
+    await ReservationRepo.findUserReservationsByIds(reservationIds);
 
   if (!sourceReservations.length) {
     throw new Error("No reservations found to copy");
@@ -515,11 +561,19 @@ const copyUserReservations = async ({ reservations, dates, timezone, copiedBy })
   }
 
   // 3️⃣ Bulk insert
-  let reservationsItems = await ReservationRepo.insertUserReservations(docsToInsert);
+  let reservationsItems =
+    await ReservationRepo.insertUserReservations(docsToInsert);
   return reservationsItems.map((res) => reservationsFormatter(res, timezone));
 };
 
-const copyReservationSlots = async ({ reservationIds, targetDate, startTime, reservationType, timezone, copiedBy }) => {
+const copyReservationSlots = async ({
+  reservationIds,
+  targetDate,
+  startTime,
+  reservationType,
+  timezone,
+  copiedBy,
+}) => {
   if (!Array.isArray(reservationIds) || reservationIds.length === 0) {
     throw new Error("reservationIds must be a non-empty array");
   }
@@ -532,7 +586,8 @@ const copyReservationSlots = async ({ reservationIds, targetDate, startTime, res
   /* --------------------------------
      2️⃣ Fetch all reservations at once
      -------------------------------- */
-  const sources = await ReservationRepo.findUserReservationsByIdsLean(objectIds);
+  const sources =
+    await ReservationRepo.findUserReservationsByIdsLean(objectIds);
   /* --------------------------------
      3️⃣ Validate all exist
      -------------------------------- */
@@ -559,7 +614,8 @@ const copyReservationSlots = async ({ reservationIds, targetDate, startTime, res
 
     // ✅ Update business fields
     // cloned.reservationType = reservationType;
-    const reservationId = await ReservationRepo.getReservationTypeId(reservationType);
+    const reservationId =
+      await ReservationRepo.getReservationTypeId(reservationType);
     cloned.reservationId = reservationId;
     cloned.transferHistory = [];
     cloned.clonedFromReservationId = source._id;
@@ -579,17 +635,25 @@ const copyReservationSlots = async ({ reservationIds, targetDate, startTime, res
   /* --------------------------------
      5️⃣ Bulk Insert
      -------------------------------- */
-  const insertedReservations = await ReservationRepo.insertManyUserReservations(docsToInsert);
+  const insertedReservations =
+    await ReservationRepo.insertManyUserReservations(docsToInsert);
 
   //TODO notify user about time change
 
   /* --------------------------------
      6️⃣ Format response
      -------------------------------- */
-  return insertedReservations.map((reservation) => reservationsFormatter(reservation, timezone));
+  return insertedReservations.map((reservation) =>
+    reservationsFormatter(reservation, timezone),
+  );
 };
 
-const changeUsersReservationsTiming = async ({ reservationIds, startTime, endTime, timezone }) => {
+const changeUsersReservationsTiming = async ({
+  reservationIds,
+  startTime,
+  endTime,
+  timezone,
+}) => {
   if (!Array.isArray(reservationIds) || reservationIds.length === 0) {
     throw new Error("reservationIds must be a non-empty array");
   }
@@ -599,7 +663,8 @@ const changeUsersReservationsTiming = async ({ reservationIds, startTime, endTim
   /* --------------------------------
      1️⃣ Fetch reservations
      -------------------------------- */
-  const reservations = await ReservationRepo.findUserReservationsByIds(objectIds);
+  const reservations =
+    await ReservationRepo.findUserReservationsByIds(objectIds);
 
   if (!reservations.length) {
     throw new Error("Reservations not found");
@@ -623,9 +688,15 @@ const changeUsersReservationsTiming = async ({ reservationIds, startTime, endTim
 
     const slotDate = moment(block.date).tz(timezone).format("YYYY-MM-DD");
 
-    const newStart = moment.tz(`${slotDate} ${startTime}`, "YYYY-MM-DD hh:mm A", timezone).utc().toDate();
+    const newStart = moment
+      .tz(`${slotDate} ${startTime}`, "YYYY-MM-DD hh:mm A", timezone)
+      .utc()
+      .toDate();
 
-    const newEnd = moment.tz(`${slotDate} ${endTime}`, "YYYY-MM-DD hh:mm A", timezone).utc().toDate();
+    const newEnd = moment
+      .tz(`${slotDate} ${endTime}`, "YYYY-MM-DD hh:mm A", timezone)
+      .utc()
+      .toDate();
 
     // Apply new timing locally
     reservation.timingSlots.dateTimeSlots[0].timeSlots[0].startTime = newStart;
@@ -693,13 +764,17 @@ const changeUsersReservationsTiming = async ({ reservationIds, startTime, endTim
       objectId: reservations[0]?._id?.toString() || null,
     })
       .then(() => {})
-      .catch((err) => console.error("Error sending notifications in background:", err));
+      .catch((err) =>
+        console.error("Error sending notifications in background:", err),
+      );
   }
 
   /* --------------------------------
      4️⃣ Format response
      -------------------------------- */
-  return updatedDocs.map((item) => userReservationFormatterAdjustDates(item, timezone));
+  return updatedDocs.map((item) =>
+    userReservationFormatterAdjustDates(item, timezone),
+  );
 };
 const combineDateTime = (date, time, timezone) => {
   const combined = `${date} ${time}`;
@@ -716,9 +791,15 @@ const getReservationsV2 = async ({
   reservationType,
   startTime,
 }) => {
-  if (date && startTime) {
-    startTime = combineDateTime(date, startTime, timezone);
-  }
+  let endTime = null;
+if (date && startTime) {
+  startTime = combineDateTime(date, startTime, timezone);
+
+  endTime = moment
+    .utc(startTime)
+    .add(1, "hour")
+    .format("YYYY-MM-DDTHH:mm:ss.SSSZ");
+}
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let { reservations, meta } = await ReservationRepo.getReservationsV2({
     page,
@@ -731,6 +812,7 @@ const getReservationsV2 = async ({
     timezone,
     reservationType,
     startTime,
+    endTime,
   });
 
   return {
@@ -744,7 +826,12 @@ const getWeekRange = (date) => {
   const end = moment.utc(date).endOf("isoWeek").toDate();
   return { start, end };
 };
-const getReservationsV2Calender = async ({ timezone, companyOrganizer, organization, date }) => {
+const getReservationsV2Calender = async ({
+  timezone,
+  companyOrganizer,
+  organization,
+  date,
+}) => {
   const { start, end } = getWeekRange(date);
   let { reservations, meta } = await ReservationRepo.getReservationsV2Calender({
     timezone,
