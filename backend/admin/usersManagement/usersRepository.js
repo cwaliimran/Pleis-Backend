@@ -155,45 +155,49 @@ const getUsersWithFilters = async (
       },
     },
   ];
-  if (sortBy && sortOrder) {
+  if (sortBy) {
+    const normalizedSortBy = sortBy?.trim().toLowerCase();
 
-    if(sortBy === "name") {
-      const fullNameSortStage = {
+    if (normalizedSortBy === "name") {
+      pipeline.push({
         $addFields: {
-          fullName: { $concat: ["$firstName", " ", "$lastName"] },
+          fullName: {
+            $concat: [
+              { $ifNull: ["$firstName", ""] },
+              " ",
+              { $ifNull: ["$lastName", ""] },
+            ],
+          },
         },
-      };
-      pipeline.push(fullNameSortStage);
+      });
+
       sortBy = "fullName";
-    }
-    if(sortBy === "userName") {
+    } else if (normalizedSortBy === "username") {
       sortBy = "username";
-    }
-    if(sortBy === "role") {
+    } else if (normalizedSortBy === "role") {
       sortBy = "accountState.userType";
-    }
-    if(sortBy === "globalStatus") {
+    } else if (normalizedSortBy === "globalstatus") {
       sortBy = "userglobalwallets.global.level.title";
-    }
-    if(sortBy === "status") {
+    } else if (normalizedSortBy === "status") {
       sortBy = "accountState.status";
-    }
-    if(sortBy === "region") {
+    } else if (normalizedSortBy === "region") {
       sortBy = "timezone";
-    }
-    if(sortBy === "lastLogin") {
+    } else if (normalizedSortBy === "lastlogin") {
       sortBy = "lastLogin";
-    }
-    if(sortBy === "createdAt") {
+    } else if (normalizedSortBy === "createdat") {
       sortBy = "createdAt";
-    }
-    if(sortBy === "companyName") {
+    } else if (normalizedSortBy === "companyname") {
       sortBy = "companyDetails.name";
     }
-    const sortStage = {
-      $sort: { [sortBy]: sortOrder === "asc" ? 1 : -1 },
-    };
-    pipeline.push(sortStage);
+
+    const direction =
+      sortOrder === "asc" || sortOrder === 1 || sortOrder === "1" ? 1 : -1;
+
+    pipeline.push({
+      $sort: {
+        [sortBy]: direction,
+      },
+    });
   }
   if (skip) {
     pipeline.push({ $skip: skip });
@@ -202,7 +206,10 @@ const getUsersWithFilters = async (
     pipeline.push({ $limit: limit });
   }
 
-  const users = await User.aggregate(pipeline);
+  const users = await User.aggregate(pipeline).collation({
+    locale: "en",
+    strength: 2,
+  });
 
   return users;
 };

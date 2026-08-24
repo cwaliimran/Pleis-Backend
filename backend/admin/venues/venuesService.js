@@ -358,14 +358,14 @@ const getVenueDetails = async (id, select = []) => {
 
 const getVenueTitles = async ({ companyOrganizer, organization }) => {
   let organizationObjectId;
+
   if (organization) {
     if (!mongoose.Types.ObjectId.isValid(organization)) {
       throw new Error("Invalid organization ID");
     }
+
     organizationObjectId = new mongoose.Types.ObjectId(organization);
-  }
-  // If organization is not provided, use companyOrganizer
-  else if (companyOrganizer) {
+  } else if (companyOrganizer) {
     const creatorId = companyOrganizer;
 
     if (!mongoose.Types.ObjectId.isValid(creatorId)) {
@@ -374,17 +374,14 @@ const getVenueTitles = async ({ companyOrganizer, organization }) => {
 
     const creatorObjectId = new mongoose.Types.ObjectId(creatorId);
 
-    // Use the companyOrganizer as the organization reference
     const data = await Organizations.aggregate([
-      /* 1️⃣ Match creator organizations */
       {
         $match: {
           creator: creatorObjectId,
-          status: "active"
-        }
+          status: "active",
+        },
       },
 
-      /* 2️⃣ Lookup venues */
       {
         $lookup: {
           from: "venues",
@@ -395,59 +392,63 @@ const getVenueTitles = async ({ companyOrganizer, organization }) => {
                 $expr: {
                   $and: [
                     { $eq: ["$organization", "$$orgId"] },
-                    { $eq: ["$status", "active"] }
-                  ]
-                }
-              }
+                    { $eq: ["$status", "active"] },
+                  ],
+                },
+              },
             },
             {
               $project: {
                 _id: 1,
                 title: 1,
-                location: 1
-              }
-            }
+                location: 1,
+              },
+            },
           ],
-          as: "venues"
-        }
+          as: "venues",
+        },
       },
 
-      /* 3️⃣ Remove orgs with no venues (optional but faster output) */
       {
         $match: {
-          "venues.0": { $exists: true }
-        }
+          "venues.0": { $exists: true },
+        },
       },
 
-      /* 4️⃣ Flatten */
       { $unwind: "$venues" },
 
-      /* 5️⃣ Final output */
+      // Sort venues by title
+      {
+        $sort: {
+          "venues.title": 1,
+        },
+      },
+
       {
         $project: {
           _id: "$venues._id",
           title: "$venues.title",
-          location: "$venues.location"
-        }
-      }
-    ]);
+          location: "$venues.location",
+        },
+      },
+    ]).collation({
+      locale: "en",
+      strength: 2,
+    });
 
     return data;
   } else {
     throw new Error("No valid organization or companyOrganizer provided");
   }
 
-  // If organization is passed directly
   const data = await Organizations.aggregate([
-    /* 1️⃣ Match organization */
     {
       $match: {
         _id: organizationObjectId,
-        status: "active"
-      }
+        status: "active",
+      },
     },
 
-    /* 2️⃣ Lookup venues */
     {
       $lookup: {
         from: "venues",
@@ -458,42 +459,49 @@ const getVenueTitles = async ({ companyOrganizer, organization }) => {
               $expr: {
                 $and: [
                   { $eq: ["$organization", "$$orgId"] },
-                  { $eq: ["$status", "active"] }
-                ]
-              }
-            }
+                  { $eq: ["$status", "active"] },
+                ],
+              },
+            },
           },
           {
             $project: {
               _id: 1,
               title: 1,
-              location: 1
-            }
-          }
+              location: 1,
+            },
+          },
         ],
-        as: "venues"
-      }
+        as: "venues",
+      },
     },
 
-    /* 3️⃣ Remove orgs with no venues (optional but faster output) */
     {
       $match: {
-        "venues.0": { $exists: true }
-      }
+        "venues.0": { $exists: true },
+      },
     },
 
-    /* 4️⃣ Flatten */
     { $unwind: "$venues" },
 
-    /* 5️⃣ Final output */
+    // Sort venues by title
+    {
+      $sort: {
+        "venues.title": 1,
+      },
+    },
+
     {
       $project: {
         _id: "$venues._id",
         title: "$venues.title",
-        location: "$venues.location"
-      }
-    }
-  ]);
+        location: "$venues.location",
+      },
+    },
+  ]).collation({
+    locale: "en",
+    strength: 2,
+  });
 
   return data;
 };
