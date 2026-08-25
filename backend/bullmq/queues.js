@@ -7,6 +7,8 @@ const QUEUE_NAMES = {
 
 const activeMenuQueue = new Queue(QUEUE_NAMES.ACTIVE_MENU, {
   connection,
+  // Azure Cache for Redis 6.0 uses volatile-lru and cannot be upgraded/reconfigured from the app
+  skipVersionCheck: true,
   defaultJobOptions: {
     attempts: 3,
     backoff: { type: "exponential", delay: 5000 },

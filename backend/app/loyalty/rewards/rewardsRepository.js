@@ -6,17 +6,19 @@ const {
   Reward,
 } = require("../../../commonModules/loyalty/rewards/models");
 const { createRewardOrderService } = require("../rewardsOrders/rewardsOrdersService");
+const { getStartAndEndOfDay } = require("../../../helperUtils/responseUtil");
 
 
 // Get ALL rewards by company organizer (no pagination)
-const getRewardsByCompanyOrganizer = async ({ companyOrganizer }) => {
-  const now = new Date();
+const getRewardsByCompanyOrganizer = async ({ companyOrganizer, timezone = "UTC" }) => {
+  const { start, end } = getStartAndEndOfDay(new Date(), timezone);
+  // Include no-expiry rewards plus those ending today or later (exclude past)
   const query = {
     companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
     status: "active",
     $or: [
       { endDate: null },
-      { endDate: { $gt: now } }
+      { endDate: { $gte: start } }
     ]
   };
 
