@@ -66,6 +66,7 @@ const activeMenuWorker = new Worker(
   },
   {
     connection,
+    skipVersionCheck: true,
     concurrency: 5,
   },
 );
