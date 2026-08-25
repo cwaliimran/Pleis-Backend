@@ -63,7 +63,7 @@ const createMenu = async (req, res) => {
 
 const getMenus = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", organization, date, companyOrganizer, sortBy, sortOrder } = req.query;
+  const { keyword, status, organization, date, companyOrganizer, sortBy, sortOrder } = req.query;
 
   const userId = req.user._id;
   const SORT_FIELDS = ["title", "createdAt", "organizationName","description"];

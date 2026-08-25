@@ -29,10 +29,19 @@ const getMenus = async ({
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let organizationIds = [];
+
   if (organizations) {
     const orgList = Array.isArray(organizations)
-      ? organizations
-      : [organizations];
+      ? organizations.flatMap((org) => org.split(","))
+      : organizations.split(",");
+
+    organizationIds = orgList
+
+      .map((org) => org.trim())
+
+      .filter(Boolean)
+
+      .map((org) => new mongoose.Types.ObjectId(org));
 
     if (orgList.length > 0) {
       organizationIds = orgList.map((id) => new mongoose.Types.ObjectId(id));
@@ -256,6 +265,7 @@ const getMenusSummary = async ({
   organizations,
   companyOrganizer,
 }) => {
+  console.log("organizations", organizations);
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let organizationIds = [];
 

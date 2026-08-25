@@ -22,7 +22,7 @@ const DaypartRateLimiter = createRateLimiter("Daypart");
 router.post("/", roleMiddleware(["admin"]), DaypartRateLimiter, createDaypart);
 
 // Get all Promo Codes with pagination
-router.get("/", roleMiddleware(["admin"]), DaypartRateLimiter, getDayparts);
+router.get("/", roleMiddleware(["admin","organizer"]), DaypartRateLimiter, getDayparts);
 router.get("/code", roleMiddleware(["admin"]), DaypartRateLimiter, getDaypartCode);
 
 

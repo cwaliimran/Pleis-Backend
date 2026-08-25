@@ -33,6 +33,8 @@ const getMenuItemsDiscounts = async ({
   date,
   sortBy,
   sortOrder,
+  startDate,
+  endDate,
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   const { discounts, meta } = await menuItemsDiscountRepo.getMenuItemsDiscounts({
@@ -45,7 +47,10 @@ const getMenuItemsDiscounts = async ({
     date,
     skip,
     sortBy,
+    
     sortOrder,
+    startDate,
+    endDate,
   });
 
   return {

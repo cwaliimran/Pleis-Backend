@@ -135,6 +135,8 @@ const getMenuItemsDiscounts = async (req, res) => {
     date,
     sortBy,
     sortOrder,
+    startDate,
+    endDate,
   } = req.query;
 
   const SORT_FIELDS = [
@@ -184,6 +186,8 @@ const getMenuItemsDiscounts = async (req, res) => {
         date,
         sortBy,
         sortOrder,
+        startDate,
+        endDate,
       });
 
     return sendResponse({

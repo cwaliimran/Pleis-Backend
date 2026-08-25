@@ -6,17 +6,10 @@ const {
 const { PriceMode } = require("@MenuItemsCombosModel");
 
 const createMenuItemsCombo = async (data) => {
-  const ownership = await menuItemsComboRepo.assertMenuItemsBelongToCompanyOrganizer(
-    data.menuItems,
-    data.creator,
-  );
-  if (!ownership.ok) {
-    return { error: ownership.error };
-  }
-
   const doc = await menuItemsComboRepo.createMenuItemsCombo(data);
-  const populated =
-    await menuItemsComboRepo.findMenuItemsComboByIdWithMenus(doc._id);
+  const populated = await menuItemsComboRepo.findMenuItemsComboByIdWithMenus(
+    doc._id,
+  );
   return formatMenuItemsCombo(populated);
 };
 
@@ -85,17 +78,6 @@ const updateMenuItemsCombo = async (id, data) => {
     return formatMenuItemsCombo(enriched);
   }
 
-  if (updateData.menuItems) {
-    const ownership =
-      await menuItemsComboRepo.assertMenuItemsBelongToCompanyOrganizer(
-        updateData.menuItems,
-        combo.creator,
-      );
-    if (!ownership.ok) {
-      return { error: ownership.error };
-    }
-  }
-
   const finalPriceMode = updateData.priceMode ?? combo.priceMode;
   const finalPrice =
     updateData.price !== undefined ? updateData.price : combo.price;
@@ -114,8 +96,7 @@ const updateMenuItemsCombo = async (id, data) => {
   Object.assign(combo, updateData);
   await combo.save();
 
-  const updated =
-    await menuItemsComboRepo.findMenuItemsComboByIdWithMenus(id);
+  const updated = await menuItemsComboRepo.findMenuItemsComboByIdWithMenus(id);
   return formatMenuItemsCombo(updated);
 };
 

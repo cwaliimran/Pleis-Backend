@@ -22,7 +22,7 @@ const ServingRateLimiter = createRateLimiter("Servings");
 router.post("/", roleMiddleware(["admin"]), ServingRateLimiter, createServing);
 
 // Get all Promo Codes with pagination
-router.get("/", roleMiddleware(["admin"]), ServingRateLimiter, getServings);
+router.get("/", roleMiddleware(["admin","organizer"]), ServingRateLimiter, getServings);
 router.get("/code", roleMiddleware(["admin"]), ServingRateLimiter, getServingCode);
 
 

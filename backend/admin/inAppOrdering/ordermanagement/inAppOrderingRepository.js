@@ -52,7 +52,6 @@ const getOrders = async ({
       .map((id) => new mongoose.Types.ObjectId(id.trim())); // Convert to ObjectId
   }
 
-
   // Prepare status filter dynamically
   let statusFilter = {};
   // if(pickupFilter=="tableService"){
@@ -89,9 +88,9 @@ const getOrders = async ({
   if (paymentStatus && paymentStatus.trim()) {
     statusFilter.paymentStatus = paymentStatus.trim();
   }
-    if (orderStatus && orderStatus.trim()) {
-      statusFilter = { status: orderStatus.trim() };
-    }
+  if (orderStatus && orderStatus.trim()) {
+    statusFilter = { status: orderStatus.trim() };
+  }
 
   if (pickupFilter && pickupFilter.trim()) {
     const normalizedPickupType = normalizePickupType(pickupFilter);
@@ -153,6 +152,28 @@ const getOrders = async ({
         localField: "userObjectId",
         foreignField: "_id",
         as: "userInfo",
+      },
+    },
+    {
+      $lookup: {
+        from: "deliveryoptions",
+        localField: "deliveryOption",
+        foreignField: "_id",
+        pipeline: [
+          {
+            $project: {
+              _id: 1,
+              title: 1,
+            },
+          },
+        ],
+        as: "deliveryOption",
+      },
+    },
+    {
+      $unwind: {
+        path: "$deliveryOption",
+        preserveNullAndEmptyArrays: true,
       },
     },
     {
@@ -226,10 +247,11 @@ const getOrders = async ({
         items: 1,
         totalPrice: 1,
         paymentStatus: 1,
+        deliveryOption: 1,
         paymentMethod: 1,
         pickupType: 1,
         createdAt: 1,
-        combos:1,
+        combos: 1,
         orderType: 1,
         tableNumber: 1,
         user: 1, // Include the user info in the final result
