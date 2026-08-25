@@ -122,7 +122,7 @@ const getMenuSubcategorys = async ({
     if (companyOrganizer) {
       const companyOrganizerId =
         companyOrganizer instanceof mongoose.Types.ObjectId
-          ? companyOrganizerId
+          ? companyOrganizer
           : new mongoose.Types.ObjectId(companyOrganizer);
 
       filters.push(
@@ -291,9 +291,14 @@ const getMenuSubcategorys = async ({
                 ? "organization.basicInfo.name"
                 : sortBy === "companyOrganizer"
                   ? "companyOrganizer.firstName"
-                  : "order"; // Default to order if sortBy is unrecognized
+                  : "order";
 
       const sortDirection = sortOrder === "asc" ? 1 : -1;
+
+      const sortStage = {
+        [sortField]: sortDirection,
+      };
+
       pipeline.push({
         $sort: sortStage,
       });
@@ -562,6 +567,67 @@ const reorderMenuSubCategory = async (movedId, newOrder) => {
     throw err;
   }
 };
+const reorderMenuSubCategoriesAfterDelete = async (deletedId) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const deleted = await MenuSubcategory.findById(
+      new mongoose.Types.ObjectId(deletedId),
+      null,
+      { session },
+    );
+
+    if (!deleted) {
+      throw new Error("Subcategory not found");
+    }
+
+    const siblings = await MenuSubcategory.find(
+      {
+        user: deleted.user,
+        companyOrganizer: deleted.companyOrganizer,
+        status: { $ne: "deleted" },
+      },
+      { _id: 1, order: 1 },
+      { session },
+    ).sort({ order: 1, updatedAt: 1, _id: 1 });
+
+    const now = new Date();
+
+    const ops = siblings
+      .map((doc, index) => ({
+        doc,
+        order: index + 1,
+      }))
+      .filter(({ doc, order }) => doc.order !== order)
+      .map(({ doc, order }) => ({
+        updateOne: {
+          filter: { _id: doc._id },
+          update: {
+            $set: {
+              order,
+              updatedAt: now,
+            },
+          },
+        },
+      }));
+
+    if (ops.length) {
+      await MenuSubcategory.bulkWrite(ops, { session });
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    await invalidate(ACTIVE_MenuSubcategoryS_CACHE_KEY);
+
+    return true;
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    throw err;
+  }
+};
 module.exports = {
   createMenuSubcategory,
   getMenuSubcategorys,
@@ -569,4 +635,5 @@ module.exports = {
   findByIdAndUpdate,
   getMenuSubcategorysSummary,
   reorderMenuSubCategory,
+  reorderMenuSubCategoriesAfterDelete,
 };

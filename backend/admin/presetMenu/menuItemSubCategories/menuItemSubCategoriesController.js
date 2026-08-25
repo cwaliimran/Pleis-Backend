@@ -58,7 +58,7 @@ const createMenuItemSubCategory = async (req, res) => {
 const getMenuItemSubCategorys = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
 
-  const { keyword, status, date, sortBy, sortOrder, summary, category } = req.query;
+  const { keyword, status, date, sortBy="name", sortOrder="asc", summary, category } = req.query;
   try {
     const user = req.user._id;
     const timezone = req.user.timezone;

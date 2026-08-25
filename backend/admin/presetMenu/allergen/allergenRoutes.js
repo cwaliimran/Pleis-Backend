@@ -22,7 +22,7 @@ const AllergenRateLimiter = createRateLimiter("Allergen");
 router.post("/", roleMiddleware(["admin"]), AllergenRateLimiter, createAllergen);
 
 // Get all Promo Codes with pagination
-router.get("/", roleMiddleware(["admin"]), AllergenRateLimiter, getAllergens);
+router.get("/", roleMiddleware(["admin","organizer"]), AllergenRateLimiter, getAllergens);
 router.get("/code", roleMiddleware(["admin"]), AllergenRateLimiter, getAllergenCode);
 
 

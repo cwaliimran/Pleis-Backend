@@ -20,7 +20,7 @@ router.use("/subscriptions", require("../subscriptions/subscriptionsRoutes"));
 router.use("/reviews", require("../reviews/reviewsRoutes"));
 router.use("/menu-management/items", require("../../admin/menuManagement/menuItems/menuItemsRoutes"));
 router.use("/menu/categories", require("../../admin/menuManagement/menuItemCategories/menuItemCategoriesRoutes"));
-router.use("/menu", require("../menuManagement/menu/menusRoutes"));
+router.use("/menu", require("../../admin/menuManagement/menuManagementRoutes"));
 router.use("/events-analytics", require("../../admin/events/analytics/analyticsRoutes"));
 
 router.use("/qr-code", require("../qr/qrRoutes"));
@@ -36,4 +36,5 @@ router.use("/in-app-ordering", require("../../admin/inAppOrdering/inAppOrderingR
 router.use("/transactions", require("../../admin/transactions/routes/unifiedTransactionsRoutes"));
 router.use("/notifications", require("../../admin/notifications/notificationsRoutes"))
 router.use("/reservations-analytics", require("../../admin/reservation/reservationAnalytics/reservationAnalyticsRoutes"));
+router.use("/preset-menu", require("../../admin/presetMenu/index"));
 module.exports = router;

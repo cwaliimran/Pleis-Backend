@@ -21,7 +21,7 @@ const BrandRateLimiter = createRateLimiter("Brands");
 router.post("/", roleMiddleware(["admin"]), BrandRateLimiter, createBrand);
 
 // Get all Promo Codes with pagination
-router.get("/", roleMiddleware(["admin"]), BrandRateLimiter, getBrands);
+router.get("/", roleMiddleware(["admin","organizer"]), BrandRateLimiter, getBrands);
 
 
 // Update an existing Promo Code

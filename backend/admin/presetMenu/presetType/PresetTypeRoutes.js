@@ -22,7 +22,7 @@ const presetTypeRateLimiter = createRateLimiter("presetType");
 router.post("/", roleMiddleware(["admin"]), presetTypeRateLimiter, createpresetType);
 
 // Get all Promo Codes with pagination
-router.get("/", roleMiddleware(["admin"]), presetTypeRateLimiter, getpresetTypes);
+router.get("/", roleMiddleware(["admin","organizer"]), presetTypeRateLimiter, getpresetTypes);
 router.get("/code", roleMiddleware(["admin"]), presetTypeRateLimiter, getpresetTypeCode);
 
 

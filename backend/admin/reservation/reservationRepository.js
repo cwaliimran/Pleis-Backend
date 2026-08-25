@@ -21,9 +21,16 @@ const {
 const { getAllUsers } = require("../usersManagement/usersService");
 const { sendUserNotifications } = require("@notificationsUtil");
 const { NotificationTypes } = require("@NotificationsModel");
-const { userReservationFormatterAdjustDates } = require("./formatters/userReservationFormatterAdjustDates");
-const { attachUserLevelsToReservations, buildClubMemberMap } = require("./utils/attachUserLevelsToReservations");
-const { getClubMembersForUsers } = require("../../app/loyalty/clubMembers/clubMembersRepository");
+const {
+  userReservationFormatterAdjustDates,
+} = require("./formatters/userReservationFormatterAdjustDates");
+const {
+  attachUserLevelsToReservations,
+  buildClubMemberMap,
+} = require("./utils/attachUserLevelsToReservations");
+const {
+  getClubMembersForUsers,
+} = require("../../app/loyalty/clubMembers/clubMembersRepository");
 const { getActiveTiersWithProjection } = require("../tiers/tiersRepository");
 const getCreatorFromOrganization = async (organizationId) => {
   try {
@@ -61,10 +68,14 @@ const getCreatorFromOrganization = async (organizationId) => {
 };
 const createReservation = async (data) => {
   try {
-    data.companyOrganizer = await getCreatorFromOrganization(data.organizationId);
+    data.companyOrganizer = await getCreatorFromOrganization(
+      data.organizationId,
+    );
     const Reservation = new Reservations(data);
     await Reservation.save();
-    const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map((user) => user._id.toString());
+    const userIds = (await getAllUsers({ page: 1, limit: 1000000 })).users.map(
+      (user) => user._id.toString(),
+    );
     // await sendUserNotifications({
     //   recipientIds: userIds,
     //   title: `New Reservation Available`,
@@ -82,7 +93,10 @@ const createReservation = async (data) => {
 
 // Get all Reservations with their assigned organization populated, sorted by createdAt descending
 const getReservationsWithFilters = async (query = {}, skip = 0, limit = 10) => {
-  return Reservations.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit);
+  return Reservations.find(query)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
 };
 
 // Count by condition
@@ -125,8 +139,12 @@ const getReservations = async ({
 }) => {
   const now = getCurrentDateInTimezone({ timezone });
 
-  let organizationsIds = Array.isArray(organizationsId) ? organizationsId : JSON.parse(organizationsId || "[]");
-  organizationsIds = organizationsIds.map((id) => new mongoose.Types.ObjectId(id));
+  let organizationsIds = Array.isArray(organizationsId)
+    ? organizationsId
+    : JSON.parse(organizationsId || "[]");
+  organizationsIds = organizationsIds.map(
+    (id) => new mongoose.Types.ObjectId(id),
+  );
   const pipeline = [
     {
       $match: {
@@ -198,7 +216,10 @@ const getReservations = async ({
   }
 
   if (keyword) {
-    const keywordMatch = buildKeywordQueryFromModels([{ schema: Reservations.schema }], keyword);
+    const keywordMatch = buildKeywordQueryFromModels(
+      [{ schema: Reservations.schema }],
+      keyword,
+    );
 
     if (Object.keys(keywordMatch).length) {
       pipeline.push({ $match: keywordMatch });
@@ -284,7 +305,15 @@ const getUserReservations = async ({
   //   match.status = status;
   // } else {
   match.status = {
-    $in: ["pendingPayment", "needsConfirmation", "confirmed", "checkedIn", "rejected", "cancelled", "completed"],
+    $in: [
+      "pendingPayment",
+      "needsConfirmation",
+      "confirmed",
+      "checkedIn",
+      "rejected",
+      "cancelled",
+      "completed",
+    ],
   };
   // }
 
@@ -407,7 +436,10 @@ const getUserReservations = async ({
   // 6️⃣ KEYWORD SEARCH
   // -----------------------------
   if (keyword) {
-    const keywordMatch = buildKeywordQueryFromModels([{ schema: UserReservations.schema }], keyword);
+    const keywordMatch = buildKeywordQueryFromModels(
+      [{ schema: UserReservations.schema }],
+      keyword,
+    );
 
     if (Object.keys(keywordMatch).length) {
       pipeline.push({ $match: keywordMatch });
@@ -449,9 +481,9 @@ const getUserReservations = async ({
     ),
   ].map((id) => new mongoose.Types.ObjectId(id));
 
-  const companyOrganizers = [...new Set(userReservations.map((r) => r.companyOrganizer.toString()))].map(
-    (id) => new mongoose.Types.ObjectId(id),
-  );
+  const companyOrganizers = [
+    ...new Set(userReservations.map((r) => r.companyOrganizer.toString())),
+  ].map((id) => new mongoose.Types.ObjectId(id));
   // -----------------------------
   // FETCH ONCE (BULK)
   // -----------------------------
@@ -486,7 +518,9 @@ const getUserReservations = async ({
   // FORMAT + RETURN
   // -----------------------------
   return {
-    reservations: enrichedReservations.map((item) => userReservationFormatterAdjustDates(item, timezone)),
+    reservations: enrichedReservations.map((item) =>
+      userReservationFormatterAdjustDates(item, timezone),
+    ),
     meta,
   };
 };
@@ -527,11 +561,19 @@ const getavailableReservations = async ({
 
   let organizationObjectIds = null;
 
-  if (organizationsId && organizationsId !== "undefined" && organizationsId !== "null") {
+  if (
+    organizationsId &&
+    organizationsId !== "undefined" &&
+    organizationsId !== "null"
+  ) {
     // support comma or % separated ids
-    const ids = organizationsId.includes("%") ? organizationsId.split("%") : organizationsId.split(",");
+    const ids = organizationsId.includes("%")
+      ? organizationsId.split("%")
+      : organizationsId.split(",");
 
-    organizationObjectIds = ids.filter(Boolean).map((id) => new mongoose.Types.ObjectId(id));
+    organizationObjectIds = ids
+      .filter(Boolean)
+      .map((id) => new mongoose.Types.ObjectId(id));
   }
   const pipeline = [
     {
@@ -640,7 +682,10 @@ const getavailableReservations = async ({
   }
 
   if (keyword) {
-    const keywordMatch = buildKeywordQueryFromModels([{ schema: Reservations.schema }], keyword);
+    const keywordMatch = buildKeywordQueryFromModels(
+      [{ schema: Reservations.schema }],
+      keyword,
+    );
 
     if (Object.keys(keywordMatch).length) {
       pipeline.push({ $match: keywordMatch });
@@ -696,7 +741,12 @@ const getavailableReservations = async ({
   return { reservations, meta };
 };
 
-const getCalendarReservations = async ({ timezone, companyOrganizer, organization, date }) => {
+const getCalendarReservations = async ({
+  timezone,
+  companyOrganizer,
+  organization,
+  date,
+}) => {
   const pipeline = [];
 
   // -----------------------------
@@ -830,7 +880,9 @@ const getCalendarReservations = async ({ timezone, companyOrganizer, organizatio
   const reservationsResponse = await UserReservations.aggregate(pipeline);
 
   return {
-    reservations: reservationsResponse.map((item) => reservationsFormatter(item, timezone)).filter(Boolean),
+    reservations: reservationsResponse
+      .map((item) => reservationsFormatter(item, timezone))
+      .filter(Boolean),
   };
 };
 
@@ -925,7 +977,9 @@ const getReservationsV2 = async ({
   skip,
   reservationType,
   startTime,
+  endTime,
 }) => {
+
   const summaryQuery = {
     ...(companyOrganizer && {
       companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
@@ -948,13 +1002,15 @@ const getReservationsV2 = async ({
   };
   const dateTimeElemMatch = {};
 
-  if (startTime) {
+  if (startTime && endTime) {
     const start = new Date(startTime);
-    const end = new Date(start);
-    end.setUTCDate(start.getUTCDate() + 1);
+    const end = new Date(endTime);
 
     dateTimeElemMatch.timeSlots = {
-      $elemMatch: { startTime: { $gte: start, $lt: end } },
+      $elemMatch: {
+        startTime: { $lte: end },
+        endTime: { $gte: start },
+      },
     };
   }
 
@@ -990,7 +1046,10 @@ const getReservationsV2 = async ({
             },
           },
         },
-        pipeline: [{ $match: { $expr: { $eq: ["$_id", "$$occasionId"] } } }, { $project: { name: 1 } }],
+        pipeline: [
+          { $match: { $expr: { $eq: ["$_id", "$$occasionId"] } } },
+          { $project: { name: 1 } },
+        ],
         as: "occasionDetails",
       },
     },
@@ -1012,7 +1071,10 @@ const getReservationsV2 = async ({
             },
           },
         },
-        pipeline: [{ $match: { $expr: { $eq: ["$_id", "$$reservationType"] } } }, { $project: { name: 1 } }],
+        pipeline: [
+          { $match: { $expr: { $eq: ["$_id", "$$reservationType"] } } },
+          { $project: { name: 1 } },
+        ],
         as: "reservationType",
       },
     },
@@ -1034,7 +1096,10 @@ const getReservationsV2 = async ({
             },
           },
         },
-        pipeline: [{ $match: { $expr: { $eq: ["$_id", "$$organizationId"] } } }, { $project: { "basicInfo.name": 1 } }],
+        pipeline: [
+          { $match: { $expr: { $eq: ["$_id", "$$organizationId"] } } },
+          { $project: { "basicInfo.name": 1 } },
+        ],
         as: "organizationId",
       },
     },
@@ -1046,18 +1111,24 @@ const getReservationsV2 = async ({
     { $project: { occasionDetails: 0, organizationDetails: 0 } },
   ];
 
-  const [reservations, reservationTypeCapacityStats, totalFiltered] = await Promise.all([
-    UserReservations.aggregate(pipeline),
-    getReservationTypeCapacityStats(summaryQuery),
-    UserReservations.countDocuments(query),
-  ]);
+  const [reservations, reservationTypeCapacityStats, totalFiltered] =
+    await Promise.all([
+      UserReservations.aggregate(pipeline),
+      getReservationTypeCapacityStats(summaryQuery),
+      UserReservations.countDocuments(query),
+    ]);
 
   let meta = generateMeta(page, limit, totalFiltered);
   meta.reservationTypeCapacityStats = reservationTypeCapacityStats;
 
   return { reservations, meta };
 };
-const getReservationsV2Calender = async ({ companyOrganizer, organization, start, end }) => {
+const getReservationsV2Calender = async ({
+  companyOrganizer,
+  organization,
+  start,
+  end,
+}) => {
   const pipeline = [
     {
       $match: {
@@ -1152,7 +1223,9 @@ const getLatestUserReservations = async (userId, organizationId, limit = 5) => {
     userId,
     organizationId,
   })
-    .select("reservationType amount timingSlots firstName lastName phoneNumber notes status")
+    .select(
+      "reservationType amount timingSlots firstName lastName phoneNumber notes status",
+    )
     .populate("reservationType")
     .sort({ createdAt: -1 })
     .limit(limit);
@@ -1160,7 +1233,12 @@ const getLatestUserReservations = async (userId, organizationId, limit = 5) => {
   return reservations;
 };
 
-const validateReservationForOrder = async ({ reservationId, userId, timezone, session }) => {
+const validateReservationForOrder = async ({
+  reservationId,
+  userId,
+  timezone,
+  session,
+}) => {
   if (!reservationId) {
     return null;
   }
@@ -1187,24 +1265,32 @@ const validateReservationForOrder = async ({ reservationId, userId, timezone, se
 
   const now = moment.tz(timezone);
 
-  const isReservationToday = reservation.timingSlots?.dateTimeSlots?.some((dateSlot) => {
-    if (!dateSlot.date) {
-      return false;
-    }
+  const isReservationToday = reservation.timingSlots?.dateTimeSlots?.some(
+    (dateSlot) => {
+      if (!dateSlot.date) {
+        return false;
+      }
 
-    const reservationDate = moment.tz(dateSlot.date, timezone);
+      const reservationDate = moment.tz(dateSlot.date, timezone);
 
-    return reservationDate.isSame(now, "day");
-  });
+      return reservationDate.isSame(now, "day");
+    },
+  );
 
   if (!isReservationToday) {
-    throw new Error("Reservation voucher can only be used on the reservation day");
+    throw new Error(
+      "Reservation voucher can only be used on the reservation day",
+    );
   }
 
   return reservation;
 };
 
-const consumeReservationVoucher = async ({ reservation, orderAmount, session }) => {
+const consumeReservationVoucher = async ({
+  reservation,
+  orderAmount,
+  session,
+}) => {
   const amount = Number(orderAmount) || 0;
   const voucher = reservation?.voucher;
 
@@ -1212,7 +1298,10 @@ const consumeReservationVoucher = async ({ reservation, orderAmount, session }) 
     return {
       voucherAmount: 0,
       orderAmountDue: Math.max(amount, 0),
-      remainingBalance: Math.max(Number(voucher?.discountAmount || 0) - Number(voucher?.usedAmount || 0), 0),
+      remainingBalance: Math.max(
+        Number(voucher?.discountAmount || 0) - Number(voucher?.usedAmount || 0),
+        0,
+      ),
     };
   }
 

@@ -32,6 +32,8 @@ const getMenuItemsDiscounts = async ({
   skip,
   sortBy,
   sortOrder,
+  startDate,
+  endDate,
 }) => {
   await syncExpiredDiscounts();
 
@@ -45,6 +47,16 @@ const getMenuItemsDiscounts = async ({
 
   if (type) {
     pipeline.push({ $match: { type } });
+  }
+  if (startDate && endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    pipeline.push({
+      $match: {
+        startDate: { $gte: start },
+        endDate: { $lte: end },
+      },
+    });
   }
 
   if (companyOrganizer) {

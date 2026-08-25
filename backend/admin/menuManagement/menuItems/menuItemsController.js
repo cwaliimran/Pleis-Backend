@@ -11,7 +11,7 @@ const { default: mongoose } = require("mongoose");
 
 const createMenuItem = async (req, res) => {
   let { timezone } = req.user;
-  const {
+  let {
     image,
     title,
     description = "",
@@ -40,6 +40,10 @@ const createMenuItem = async (req, res) => {
     isTogo,
     isRequiresOrderConfirmation,
   } = req.body;
+
+  if (req.user.userType === "organizer") {
+    companyOrganizer = req.user._id;
+  }
 
   if (
     !validateParams(req, res, {
