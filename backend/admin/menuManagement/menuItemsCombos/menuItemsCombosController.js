@@ -60,6 +60,9 @@ const createMenuItemsCombo = async (req, res) => {
     status = "active",
     companyOrganizer,
   } = req.body;
+  if (req.user && req.user.userType === "organizer") {
+    companyOrganizer = req.user._id;
+  }
 
   if (!menuItems || !Array.isArray(menuItems) || menuItems.length < 2) {
     return sendResponse({
@@ -68,10 +71,11 @@ const createMenuItemsCombo = async (req, res) => {
       translationKey: "combo_items_minimum_required",
     });
   }
+  console.log("companyOrganizer", companyOrganizer);
 
   if (
     !validateParams(req, res, {
-      rawData: ["name", "subCategory", "price", "priceMode", "companyOrganizer"],
+      rawData: ["name", "subCategory", "price", "priceMode"],
       objectIdFields: ["subCategory", "companyOrganizer"],
       enumFields: {
         priceMode: Object.values(PriceMode),

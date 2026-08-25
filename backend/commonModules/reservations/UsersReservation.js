@@ -205,7 +205,13 @@ const UserReservationsSchema = new mongoose.Schema(
         // type of change
         action: {
           type: String,
-          enum: ["timingChanged", "reservationStatusChanged", "paymentStatusChanged"],
+          enum: [
+            "timingChanged",
+            "reservationStatusChanged",
+            "paymentStatusChanged",
+            "cancelled",
+            "refundProcessed",
+          ],
           required: true,
         },
 

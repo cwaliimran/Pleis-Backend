@@ -5,6 +5,21 @@ const { cache, invalidate } = require("@redisCache");
 const ACTIVE_MenuSubcategoryS_CACHE_KEY = "MenuSubcategory:active";
 const createMenuSubcategory = async (data) => {
   let MenuSubcategory = await MenuSubcategoryRepo.createMenuSubcategory(data);
+    if (data.order !== undefined && data.order !== null && data.order !== "") {
+      const targetOrder = Number(data.order);
+      if (!Number.isFinite(targetOrder)) {
+        return { error: "invalid_order" };
+      }
+      return MenuSubcategoryRepo.reorderMenuSubCategory(MenuSubcategory._id, targetOrder);
+    }
+
+    if (data.order !== undefined && data.order !== null && data.order !== "") {
+      const targetOrder = Number(data.order);
+      if (!Number.isFinite(targetOrder)) {
+        return { error: "invalid_order" };
+      }
+      return MenuSubcategoryRepo.reorderMenuSubCategory(MenuSubcategory._id, targetOrder);
+    }
   return MenuSubcategory;
 };
 const getMenuSubcategorys = async ({
@@ -114,7 +129,9 @@ const deleteMenuSubcategory = async (id) => {
   const updated = await MenuSubcategoryRepo.findByIdAndUpdate(id, {
     status: "deleted",
   });
+
   if (!updated) return null;
+  await MenuSubcategoryRepo.reorderMenuSubCategoriesAfterDelete(id);
   return true;
 };
 

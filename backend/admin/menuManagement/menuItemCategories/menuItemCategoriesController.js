@@ -45,7 +45,7 @@ const createCategory = async (req, res) => {
 
 const getCategories = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status = 'active', date, companyOrganizer, sortBy, sortOrder } = req.query;
+  let { keyword, status = 'active', date, companyOrganizer, sortBy="title", sortOrder="asc" } = req.query;
 
   const SORT_FIELDS = ["title", "createdAt"];
   const SORT_ORDERS = ["asc", "desc"];
