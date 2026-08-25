@@ -1223,9 +1223,7 @@ const getLatestUserReservations = async (userId, organizationId, limit = 5) => {
     userId,
     organizationId,
   })
-    .select(
-      "reservationType amount timingSlots firstName lastName phoneNumber notes status",
-    )
+    .select("reservationType amount timingSlots firstName lastName phoneNumber notes status voucher")
     .populate("reservationType")
     .sort({ createdAt: -1 })
     .limit(limit);
