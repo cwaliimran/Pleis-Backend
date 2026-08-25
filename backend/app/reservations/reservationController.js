@@ -28,6 +28,7 @@ const createReservation = async (req, res) => {
       {
         ...normalizedReservation,
         userId,
+        user: req.user,
       },
       session,
     );
