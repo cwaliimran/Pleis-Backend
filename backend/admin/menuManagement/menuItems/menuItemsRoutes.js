@@ -26,20 +26,40 @@ router.post("/import", roleMiddleware(["admin", "organizer", "staff", "manager"]
 router.post("/", roleMiddleware(["admin", "organizer", "staff", "manager"]), createMenuItem);
 
 // Get all menuItems with pagination
-router.get("/", apiRateLimiter, getMenuItems);
-router.get("/bundles", apiRateLimiter, getBundleMenuItems);
+router.get(
+  "/",
+  apiRateLimiter,
+  roleMiddleware(["admin", "organizer", "staff", "manager"]),
+  getMenuItems,
+);
+router.get(
+  "/bundles",
+  apiRateLimiter,
+  roleMiddleware(["admin", "organizer", "staff", "manager"]),
+  getBundleMenuItems,
+);
 
 //get menu items against menu id
-router.get("/menu/:menuId", apiRateLimiter, getMenuItemsByMenuId);
+router.get(
+  "/menu/:menuId",
+  apiRateLimiter,
+  roleMiddleware(["admin", "organizer", "manager"]),
+  getMenuItemsByMenuId,
+);
 
 //get menuItem details
-router.get("/:id", apiRateLimiterDetails, getMenuItemDetails);
+router.get(
+  "/:id",
+  apiRateLimiterDetails,
+  roleMiddleware(["admin", "organizer",  "manager"]),
+  getMenuItemDetails,
+);
 
 // Update an existing menuItem
-router.put("/:id", roleMiddleware(["admin", "organizer", "staff", "manager"]), updateMenuItem);
+router.put("/:id", roleMiddleware(["admin", "organizer",  "manager"]), updateMenuItem);
 
 // Delete a menuItem
-router.delete("/:id", roleMiddleware(["admin", "organizer", "staff", "manager"]), deleteMenuItem);
+router.delete("/:id", roleMiddleware(["admin", "organizer",  "manager"]), deleteMenuItem);
 
 
 module.exports = router;

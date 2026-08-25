@@ -91,7 +91,7 @@ const getMenus = async (req, res) => {
     sortOrder,
     summary,
   } = req.query;
-
+console.log("organizations", organizations);
   try {
     const SORT_FIELDS = [
       "title",
@@ -135,7 +135,9 @@ const getMenus = async (req, res) => {
     // }
     let menus = null;
     let meta = null;
-
+    if(req.user.userType === "organizer" && !companyOrganizer){
+      companyOrganizer = req.user._id;
+    }
     if (!summary) {
       ({ menus, meta } = await menusService.getMenus({
         page,

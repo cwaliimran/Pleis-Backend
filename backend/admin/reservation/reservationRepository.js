@@ -1005,7 +1005,6 @@ const getReservationsV2 = async ({
   if (startTime && endTime) {
     const start = new Date(startTime);
     const end = new Date(endTime);
-    console.log("start", start, "end", end);
 
     dateTimeElemMatch.timeSlots = {
       $elemMatch: {

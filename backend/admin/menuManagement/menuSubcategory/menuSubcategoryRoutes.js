@@ -31,7 +31,7 @@ router.put(
   reorderMenuSubCategory,
 );
 router.put("/:id", roleMiddleware(["admin", "organizer"]), MenuSubcategoryRateLimiter, updateMenuSubcategory);
-router.put("/order/:id", roleMiddleware(["admin"]), reorderMenuSubCategory);
+router.put("/order/:id", roleMiddleware(["admin", "organizer"]), reorderMenuSubCategory);
 
 // Delete a Menu Subcategory
 router.delete("/:id", roleMiddleware(["admin", "organizer"]), MenuSubcategoryRateLimiter, deleteMenuSubcategory);

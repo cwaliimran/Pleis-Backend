@@ -22,7 +22,7 @@ const DietTagsRateLimiter = createRateLimiter("DietTags");
 router.post("/", roleMiddleware(["admin"]), DietTagsRateLimiter, createDietTags);
 
 // Get all Promo Codes with pagination
-router.get("/", roleMiddleware(["admin"]), DietTagsRateLimiter, getDietTagss);
+router.get("/", roleMiddleware(["admin","organizer"]), DietTagsRateLimiter, getDietTagss);
 router.get("/code", roleMiddleware(["admin"]), DietTagsRateLimiter, getDietTagsCode);
 
 

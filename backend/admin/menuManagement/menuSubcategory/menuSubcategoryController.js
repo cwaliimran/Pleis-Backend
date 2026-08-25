@@ -14,13 +14,6 @@ const createMenuSubcategory = async (req, res) => {
   let { title, status = "active", organization, companyOrganizer,order } = req.body;
   const userType = req.user.userType;
   if (userType !== "admin") {
-    if (!organization) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "organization_required",
-      });
-    }
     companyOrganizer = req.user._id;
   }
 
@@ -68,8 +61,8 @@ const getMenuSubcategorys = async (req, res) => {
   let {
     keyword,
     status,
-    sortBy,
-    sortOrder,
+    sortBy="title",
+    sortOrder="asc",
     summary,
     organization,
     companyOrganizer,

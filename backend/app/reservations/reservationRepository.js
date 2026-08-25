@@ -1149,6 +1149,28 @@ const getUserReservationDetails = async (id) => {
           preserveNullAndEmptyArrays: true,
         },
       },
+      {
+        $lookup: {
+          from: "reservationpreferences",
+          localField: "organizationId",
+          foreignField: "organization",
+          pipeline: [
+            {
+              $project: {
+                cancellationPolicy: 1,
+              },
+            },
+          ],
+          as: "reservationPreferences",
+        },
+      },
+      //undwind reservationDetails
+      {
+        $unwind: {
+          path: "$reservationPreferences",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
 
       // 3️⃣ Convert transactions array → object
       {
@@ -1295,6 +1317,7 @@ const getUserReservationDetails = async (id) => {
           companyOrganizer: 1,
           optionalEventId: 1,
           createdAt: 1,
+          reservationPreferences: 1,
           updatedAt: 1,
           preOrderMenuItemsOrder: 1,
           ticketingBookingRefs: 1,
