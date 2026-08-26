@@ -19,8 +19,8 @@ router.use(auth);
 
 // Create a rate limiter for Diet Tags
 const SetttingsRateLimiter = createRateLimiter("Setttings");
-router.get("/", roleMiddleware(["admin"]), SetttingsRateLimiter, getSetttings);
-router.put("/", roleMiddleware(["admin"]), updateSetttings);
+router.get("/", roleMiddleware(["admin","organizer"]), SetttingsRateLimiter, getSetttings);
+router.put("/", roleMiddleware(["admin","organizer"]), SetttingsRateLimiter, updateSetttings);
 
 
 module.exports = router;

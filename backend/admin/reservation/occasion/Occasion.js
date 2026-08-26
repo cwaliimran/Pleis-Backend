@@ -34,18 +34,6 @@ const occasionSchema = new mongoose.Schema(
 // Same name is allowed across different companyOrganizer/organization,
 // but cannot be duplicated within the same companyOrganizer + organization
 // when status is active.
-occasionSchema.index(
-  {
-    companyOrganizer: 1,
-    organization: 1,
-    name: 1,
-  },
-  {
-    unique: true,
-    partialFilterExpression: {
-      status: "active",
-    },
-  },
-);
+
 
 module.exports = mongoose.model("Occasion", occasionSchema);

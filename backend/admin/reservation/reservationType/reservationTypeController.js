@@ -28,14 +28,13 @@ const createReservationType = async (req, res) => {
     status,
     minimumSpend,
   } = req.body;
-
-  const user = req.user._id;
-  const timezone = req.user.timezone;
+  if (req.user.userType === "organizer") {
+    companyOrganizer = req.user._id;
+  }
 
   if (
     !validateParams(req, res, {
       rawData: [
-        "companyOrganizer",
         "organization",
         "name",
         "numberOfTables",

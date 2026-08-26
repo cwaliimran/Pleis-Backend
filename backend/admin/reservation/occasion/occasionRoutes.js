@@ -13,15 +13,15 @@ const OccasionRateLimiter = createRateLimiter("Occasion");
 
 // Routes for Reservation Type Management
 // Create a new Reservation Type
-router.post("/", roleMiddleware(["admin"]), OccasionRateLimiter, createOccasion);
+router.post("/", roleMiddleware(["admin","organizer"]), OccasionRateLimiter, createOccasion);
 
 // Get all Reservation Types with pagination
-router.get("/", roleMiddleware(["admin", "staff"]), OccasionRateLimiter, getOccasion);
+router.get("/", roleMiddleware(["admin", "staff","organizer"]), OccasionRateLimiter, getOccasion);
 
 // Update an existing Reservation Type
-router.put("/:id", roleMiddleware(["admin"]), OccasionRateLimiter, updateOccasion);
+router.put("/:id", roleMiddleware(["admin","organizer"]), OccasionRateLimiter, updateOccasion);
 
 // Delete a Reservation Type
-router.delete("/:id", roleMiddleware(["admin"]), OccasionRateLimiter, deleteOccasion);
+router.delete("/:id", roleMiddleware(["admin","organizer"]), OccasionRateLimiter, deleteOccasion);
 
 module.exports = router;
