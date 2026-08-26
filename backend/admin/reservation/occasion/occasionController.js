@@ -11,10 +11,13 @@ const Occasionervice = require("./occasionService");
 
 const createOccasion = async (req, res) => {
   let { companyOrganizer, organization, name, status = "active" } = req.body;
+  if (req.user.userType === "organizer") {
+    companyOrganizer = req.user._id;
+  }
 
   if (
     !validateParams(req, res, {
-      rawData: ["companyOrganizer", "organization", "name"],
+      rawData: ["organization", "name"],
     })
   )
     return;
@@ -68,7 +71,7 @@ const getOccasion = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "Occasion_fetched_successfully",
-      data:occasion
+      data: occasion,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);

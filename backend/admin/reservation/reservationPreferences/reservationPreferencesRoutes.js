@@ -9,7 +9,7 @@ const router = express.Router();
 router.use(auth);
 
 const ReservationPreferencesRateLimiter = createRateLimiter("ReservationPreferencess");
-router.get("/", roleMiddleware(["admin", "staff"]), ReservationPreferencesRateLimiter, getReservationPreferencess);
-router.put("/:id", roleMiddleware(["admin"]), updateReservationPreferences);
+router.get("/", roleMiddleware(["admin", "staff","organizer"]), ReservationPreferencesRateLimiter, getReservationPreferencess);
+router.put("/:id", roleMiddleware(["admin","organizer"]), updateReservationPreferences);
 
 module.exports = router;
