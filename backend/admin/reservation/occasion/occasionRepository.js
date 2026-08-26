@@ -5,7 +5,15 @@ const { generateMeta } = require("@utils/responseUtil");
 
 const createOccasion = async (data) => {
   try {
-
+    const existingOccasion = await Occasion.findOne({
+      companyOrganizer: new mongoose.Types.ObjectId(data.companyOrganizer),
+      organization: new mongoose.Types.ObjectId(data.organization),
+      name: data.name,
+      status: "active",
+    });
+    if (existingOccasion) {
+      throw new Error("Occasion already exists");
+    }
     const OccasionData = new Occasion(data);
     await OccasionData.save();
     return OccasionData;

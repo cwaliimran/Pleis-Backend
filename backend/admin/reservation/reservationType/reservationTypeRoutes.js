@@ -18,15 +18,15 @@ const ReservationTypeRateLimiter = createRateLimiter("ReservationTypes");
 
 // Routes for Reservation Type Management
 // Create a new Reservation Type
-router.post("/", roleMiddleware(["admin"]), ReservationTypeRateLimiter, createReservationType);
+router.post("/", roleMiddleware(["admin","organizer"]), ReservationTypeRateLimiter, createReservationType);
 
 // Get all Reservation Types with pagination
-router.get("/", roleMiddleware(["admin", "staff"]), ReservationTypeRateLimiter, getReservationTypes);
+router.get("/", roleMiddleware(["admin", "staff","organizer"]), ReservationTypeRateLimiter, getReservationTypes);
 
 // Update an existing Reservation Type
-router.put("/:id", roleMiddleware(["admin"]), ReservationTypeRateLimiter, updateReservationType);
+router.put("/:id", roleMiddleware(["admin","organizer"]), ReservationTypeRateLimiter, updateReservationType);
 
 // Delete a Reservation Type
-router.delete("/:id", roleMiddleware(["admin"]), ReservationTypeRateLimiter, deleteReservationType);
+router.delete("/:id", roleMiddleware(["admin","organizer"]), ReservationTypeRateLimiter, deleteReservationType);
 
 module.exports = router;
