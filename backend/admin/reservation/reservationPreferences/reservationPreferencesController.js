@@ -44,6 +44,9 @@ const updateReservationPreferences = async (req, res) => {
   const { id } = req.params;
   let { companyOrganizer, isReservationEnabled, timeSlotsSetting, automaticResponse, cancellationPolicy } = req.body;
   const organization = id;
+  if (req.user.userType === "organizer") {
+    companyOrganizer = req.user._id;
+  }
   if (!companyOrganizer || !organization) {
     return sendResponse({
       res,

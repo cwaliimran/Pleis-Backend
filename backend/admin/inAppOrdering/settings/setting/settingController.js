@@ -50,6 +50,9 @@ const updateSetttings = async (req, res) => {
 
   const user = req.user._id;
   const timezone = req.user.timezone;
+  if(req.user.userType === "organizer") {
+    companyOrganizer = req.user._id;
+  }
 
   let data = {
     paymentMethod,

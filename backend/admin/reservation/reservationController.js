@@ -39,7 +39,8 @@ const createReservation = async (req, res) => {
       return sendResponse({
         res,
         statusCode: 400,
-        translationKey: "either_amount_or_customText_must_be_provided_when_conditionType_is_'minimumSpendOnLocation'",
+        translationKey:
+          "either_amount_or_customText_must_be_provided_when_conditionType_is_'minimumSpendOnLocation'",
       });
     }
   }
@@ -108,7 +109,10 @@ const createReservation = async (req, res) => {
         });
       }
 
-      if (!Array.isArray(dateBlock.timeSlots) || dateBlock.timeSlots.length === 0) {
+      if (
+        !Array.isArray(dateBlock.timeSlots) ||
+        dateBlock.timeSlots.length === 0
+      ) {
         return sendResponse({
           res,
           statusCode: 400,
@@ -200,11 +204,22 @@ const createReservation = async (req, res) => {
 
 const getavailableReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status = "active", date, range, organizationsId, companyOrganizer } = req.query;
+  const {
+    keyword,
+    status = "active",
+    date,
+    range,
+    organizationsId,
+    companyOrganizer,
+  } = req.query;
   try {
     if (
-      (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
-      (!organizationsId || !Array.isArray(JSON.parse(organizationsId)) || JSON.parse(organizationsId).length === 0)
+      (!companyOrganizer ||
+        companyOrganizer === "undefined" ||
+        companyOrganizer === "null") &&
+      (!organizationsId ||
+        !Array.isArray(JSON.parse(organizationsId)) ||
+        JSON.parse(organizationsId).length === 0)
     ) {
       return sendResponse({
         res,
@@ -215,17 +230,18 @@ const getavailableReservations = async (req, res) => {
 
     const userId = companyOrganizer;
     const timezone = req.user.timezone;
-    const { reservations, meta } = await reservationService.getavailableReservations({
-      timezone,
-      page,
-      limit,
-      keyword,
-      status,
-      userId,
-      organizationsId,
-      date,
-      range,
-    });
+    const { reservations, meta } =
+      await reservationService.getavailableReservations({
+        timezone,
+        page,
+        limit,
+        keyword,
+        status,
+        userId,
+        organizationsId,
+        date,
+        range,
+      });
 
     return sendResponse({
       res,
@@ -355,7 +371,10 @@ const updateReservation = async (req, res) => {
         });
       }
 
-      if (!Array.isArray(dateBlock.timeSlots) || dateBlock.timeSlots.length === 0) {
+      if (
+        !Array.isArray(dateBlock.timeSlots) ||
+        dateBlock.timeSlots.length === 0
+      ) {
         return sendResponse({
           res,
           statusCode: 400,
@@ -373,8 +392,16 @@ const updateReservation = async (req, res) => {
         }
 
         // Convert times to UTC
-        slot.startTime = convertTimezoneToUtc(`${dateBlock.date} ${slot.startTime}`, timezone, "YYYY-MM-DD hh:mm A");
-        slot.endTime = convertTimezoneToUtc(`${dateBlock.date} ${slot.endTime}`, timezone, "YYYY-MM-DD hh:mm A");
+        slot.startTime = convertTimezoneToUtc(
+          `${dateBlock.date} ${slot.startTime}`,
+          timezone,
+          "YYYY-MM-DD hh:mm A",
+        );
+        slot.endTime = convertTimezoneToUtc(
+          `${dateBlock.date} ${slot.endTime}`,
+          timezone,
+          "YYYY-MM-DD hh:mm A",
+        );
       }
     }
   } else {
@@ -388,8 +415,16 @@ const updateReservation = async (req, res) => {
           if (!slot.startTime || !slot.endTime) continue;
 
           // Convert times to UTC
-          slot.startTime = convertTimezoneToUtc(`${dateBlock.date} ${slot.startTime}`, timezone, "YYYY-MM-DD hh:mm A");
-          slot.endTime = convertTimezoneToUtc(`${dateBlock.date} ${slot.endTime}`, timezone, "YYYY-MM-DD hh:mm A");
+          slot.startTime = convertTimezoneToUtc(
+            `${dateBlock.date} ${slot.startTime}`,
+            timezone,
+            "YYYY-MM-DD hh:mm A",
+          );
+          slot.endTime = convertTimezoneToUtc(
+            `${dateBlock.date} ${slot.endTime}`,
+            timezone,
+            "YYYY-MM-DD hh:mm A",
+          );
         }
       }
     }
@@ -468,7 +503,15 @@ const deleteReservation = async (req, res) => {
 
 const getUserReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  const { keyword, status, date, range, organizationsId, companyOrganizer, reservationId } = req.query;
+  const {
+    keyword,
+    status,
+    date,
+    range,
+    organizationsId,
+    companyOrganizer,
+    reservationId,
+  } = req.query;
 
   try {
     if (!organizationsId) {
@@ -478,7 +521,11 @@ const getUserReservations = async (req, res) => {
         translationKey: "organizationsId_is_required",
       });
     }
-    if (!reservationId || reservationId === "undefined" || reservationId === "null") {
+    if (
+      !reservationId ||
+      reservationId === "undefined" ||
+      reservationId === "null"
+    ) {
       return sendResponse({
         res,
         statusCode: 400,
@@ -488,18 +535,20 @@ const getUserReservations = async (req, res) => {
 
     const userId = companyOrganizer;
     const timezone = req.user.timezone;
-    const { reservations, meta } = await reservationService.getUserReservations({
-      timezone,
-      page,
-      limit,
-      keyword,
-      status,
-      userId,
-      organizationsId,
-      date,
-      range,
-      reservationId,
-    });
+    const { reservations, meta } = await reservationService.getUserReservations(
+      {
+        timezone,
+        page,
+        limit,
+        keyword,
+        status,
+        userId,
+        organizationsId,
+        date,
+        range,
+        reservationId,
+      },
+    );
 
     return sendResponse({
       res,
@@ -527,14 +576,27 @@ const updateUserReservationStatus = async (req, res) => {
       pathParams: ["id"],
       objectIdFields: ["id"],
       enumFields: {
-        value: ["pendingPayment", "needsConfirmation", "confirmed", "checkedIn", "rejected", "cancelled", "completed"],
+        value: [
+          "pendingPayment",
+          "needsConfirmation",
+          "confirmed",
+          "checkedIn",
+          "rejected",
+          "cancelled",
+          "completed",
+        ],
       },
     })
   )
     return;
 
   try {
-    const userReservation = await reservationService.updateUserReservationStatus(id, value, changedBy);
+    const userReservation =
+      await reservationService.updateUserReservationStatus(
+        id,
+        value,
+        changedBy,
+      );
     if (!userReservation) {
       return sendResponse({
         res,
@@ -620,7 +682,10 @@ const updateUserReservation = async (req, res) => {
         });
       }
 
-      if (!Array.isArray(dateBlock.timeSlots) || dateBlock.timeSlots.length === 0) {
+      if (
+        !Array.isArray(dateBlock.timeSlots) ||
+        dateBlock.timeSlots.length === 0
+      ) {
         return sendResponse({
           res,
           statusCode: 400,
@@ -638,9 +703,17 @@ const updateUserReservation = async (req, res) => {
         }
 
         // Convert times to UTC
-        slot.startTime = convertTimezoneToUtc(`${dateBlock.date} ${slot.startTime}`, timezone, "YYYY-MM-DD hh:mm A");
+        slot.startTime = convertTimezoneToUtc(
+          `${dateBlock.date} ${slot.startTime}`,
+          timezone,
+          "YYYY-MM-DD hh:mm ",
+        );
 
-        slot.endTime = convertTimezoneToUtc(`${dateBlock.date} ${slot.endTime}`, timezone, "YYYY-MM-DD hh:mm A");
+        slot.endTime = convertTimezoneToUtc(
+          `${dateBlock.date} ${slot.endTime}`,
+          timezone,
+          "YYYY-MM-DD hh:mm ",
+        );
       }
     }
   }
@@ -656,7 +729,10 @@ const updateUserReservation = async (req, res) => {
   }
   const currentUser = req.user;
   // Only admin, manager, or organizer can update other users' profiles
-  if (currentUser._id.toString() !== id && !["admin", "staff", "manager", "organizer"].includes(currentUser.userType)) {
+  if (
+    currentUser._id.toString() !== id &&
+    !["admin", "staff", "manager", "organizer"].includes(currentUser.userType)
+  ) {
     return sendResponse({
       res,
       statusCode: 403,
@@ -692,11 +768,16 @@ const updateUserReservation = async (req, res) => {
 
 const getReservations = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { keyword, status, date, range, organizationsId, companyOrganizer } = req.query;
+  let { keyword, status, date, range, organizationsId, companyOrganizer } =
+    req.query;
   try {
     if (
-      (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
-      (!organizationsId || organizationsId === "undefined" || organizationsId === "null")
+      (!companyOrganizer ||
+        companyOrganizer === "undefined" ||
+        companyOrganizer === "null") &&
+      (!organizationsId ||
+        organizationsId === "undefined" ||
+        organizationsId === "null")
     ) {
       return sendResponse({
         res,
@@ -711,17 +792,18 @@ const getReservations = async (req, res) => {
     //     date,
     //     timezone
     //   );
-    const { reservations, meta } = await reservationService.getavailableReservations({
-      timezone,
-      page,
-      limit,
-      keyword,
-      status,
-      userId,
-      organizationsId,
-      date,
-      range,
-    });
+    const { reservations, meta } =
+      await reservationService.getavailableReservations({
+        timezone,
+        page,
+        limit,
+        keyword,
+        status,
+        userId,
+        organizationsId,
+        date,
+        range,
+      });
 
     return sendResponse({
       res,
@@ -756,7 +838,9 @@ const getCalendarReservations = async (req, res) => {
       return;
 
     if (
-      (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
+      (!companyOrganizer ||
+        companyOrganizer === "undefined" ||
+        companyOrganizer === "null") &&
       (!organization || organization === "undefined" || organization === "null")
     ) {
       return sendResponse({
@@ -767,12 +851,13 @@ const getCalendarReservations = async (req, res) => {
     }
 
     const timezone = req.user.timezone;
-    const { reservations } = await reservationService.getCalendarReservationsService({
-      timezone,
-      companyOrganizer,
-      organization,
-      date,
-    });
+    const { reservations } =
+      await reservationService.getCalendarReservationsService({
+        timezone,
+        companyOrganizer,
+        organization,
+        date,
+      });
 
     return sendResponse({
       res,
@@ -796,7 +881,12 @@ const copyUserReservationsController = async (req, res) => {
     const { reservations, dates } = req.body;
     const timezone = req.user.timezone;
 
-    if (!Array.isArray(reservations) || reservations.length === 0 || !Array.isArray(dates) || dates.length === 0) {
+    if (
+      !Array.isArray(reservations) ||
+      reservations.length === 0 ||
+      !Array.isArray(dates) ||
+      dates.length === 0
+    ) {
       return sendResponse({
         res,
         statusCode: 400,
@@ -834,7 +924,12 @@ const copyReservationSlotsController = async (req, res) => {
 
     if (
       !validateParams(req, res, {
-        rawData: ["reservationIds", "targetDate", "startTime", "reservationType"],
+        rawData: [
+          "reservationIds",
+          "targetDate",
+          "startTime",
+          "reservationType",
+        ],
         dateFields: { targetDate: "YYYY-MM-DD", startTime: "hh:mm A" },
       })
     )
@@ -941,12 +1036,23 @@ const createReservationPreferences = async (req, res) => {
 
 const getReservationsV2 = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
-  let { status, date, organizationsId, companyOrganizer, reservationType, startTime } = req.query;
+  let {
+    status,
+    date,
+    organizationsId,
+    companyOrganizer,
+    reservationType,
+    startTime,
+  } = req.query;
   try {
     const timezone = req.user.timezone;
     if (
-      (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
-      (!organizationsId || organizationsId === "undefined" || organizationsId === "null")
+      (!companyOrganizer ||
+        companyOrganizer === "undefined" ||
+        companyOrganizer === "null") &&
+      (!organizationsId ||
+        organizationsId === "undefined" ||
+        organizationsId === "null")
     ) {
       return sendResponse({
         res,
@@ -988,7 +1094,9 @@ const getReservationsV2Calender = async (req, res) => {
 
   try {
     if (
-      (!companyOrganizer || companyOrganizer === "undefined" || companyOrganizer === "null") &&
+      (!companyOrganizer ||
+        companyOrganizer === "undefined" ||
+        companyOrganizer === "null") &&
       (!organization || organization === "undefined" || organization === "null")
     ) {
       return sendResponse({
@@ -999,12 +1107,13 @@ const getReservationsV2Calender = async (req, res) => {
     }
 
     const timezone = req.user.timezone;
-    const { reservations, meta } = await reservationService.getReservationsV2Calender({
-      timezone,
-      companyOrganizer,
-      organization,
-      date,
-    });
+    const { reservations, meta } =
+      await reservationService.getReservationsV2Calender({
+        timezone,
+        companyOrganizer,
+        organization,
+        date,
+      });
 
     return sendResponse({
       res,

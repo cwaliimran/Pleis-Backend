@@ -37,4 +37,13 @@ router.use("/transactions", require("../../admin/transactions/routes/unifiedTran
 router.use("/notifications", require("../../admin/notifications/notificationsRoutes"))
 router.use("/reservations-analytics", require("../../admin/reservation/reservationAnalytics/reservationAnalyticsRoutes"));
 router.use("/preset-menu", require("../../admin/presetMenu/index"));
+router.use(
+  "/reservation-preferences",
+  require("../../admin/reservation/reservationPreferences/reservationPreferencesRoutes"),
+);
+router.use(
+  "/reservation-types",
+  require("../../admin/reservation/reservationType/reservationTypeRoutes"),
+);
+router.use("/occasion", require("../../admin/reservation/occasion/occasionRoutes"));
 module.exports = router;
