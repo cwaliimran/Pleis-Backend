@@ -5,6 +5,7 @@ const {
   updateMenuSubcategory,
   deleteMenuSubcategory,
   reorderMenuSubCategory,
+  getMenuSubcategoryTypes,
 } = require("./menuSubcategoryController"); // Assuming you have a separate controller for promo codes
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
@@ -23,6 +24,12 @@ router.post("/", roleMiddleware(["admin", "organizer"]), MenuSubcategoryRateLimi
 
 // Get all Menu Subcategories with pagination
 router.get("/", roleMiddleware(["admin", "organizer"]), MenuSubcategoryRateLimiter, getMenuSubcategorys);
+router.get(
+  "/items",
+  roleMiddleware(["admin", "organizer"]),
+  MenuSubcategoryRateLimiter,
+  getMenuSubcategoryTypes,
+); 
 
 
 router.put(

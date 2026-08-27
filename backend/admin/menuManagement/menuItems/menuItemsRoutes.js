@@ -8,6 +8,7 @@ const {
   getMenuItemDetails,
   getMenuItemsByMenuId,
   getBundleMenuItems,
+  updateSubCategoryBulk,
 } = require("./menuItemsController");
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
@@ -24,7 +25,11 @@ const apiRateLimiterDetails = createRateLimiter("MenuItems/:id");
 router.post("/import", roleMiddleware(["admin", "organizer", "staff", "manager"]), importMenuItems);
 // Create a new menuItem
 router.post("/", roleMiddleware(["admin", "organizer", "staff", "manager"]), createMenuItem);
-
+router.put(
+  "/bulk",
+  roleMiddleware(["admin", "organizer", "manager"]),
+  updateSubCategoryBulk,
+);
 // Get all menuItems with pagination
 router.get(
   "/",
@@ -57,6 +62,7 @@ router.get(
 
 // Update an existing menuItem
 router.put("/:id", roleMiddleware(["admin", "organizer",  "manager"]), updateMenuItem);
+
 
 // Delete a menuItem
 router.delete("/:id", roleMiddleware(["admin", "organizer",  "manager"]), deleteMenuItem);
