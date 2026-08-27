@@ -514,15 +514,15 @@ const getMenuIdsByCompanyOrganizer = async (companyOrganizer) => {
     await getOrganizationIdsByCompanyOrganizer(companyOrganizer);
   const menus = await Menus.find({
     organization: { $in: organizationIds },
-    status: "active",
+    status:{ $ne: "deleted" },
   })
     .select("_id")
     .lean();
   return menus.map((menu) => menu._id);
 };
-const getMenuIdsByOrganization = async (organization) => {
+const getMenuIdsByOrganization = async (organizations) => {
   // Split the organization input by commas or % and convert to ObjectId
-  const organizationIds = organization
+  const organizationIds = organizations 
     .split(/[,%]/) // supports both "," and "%"
     .filter(Boolean) // Remove any empty strings
     .map((id) => new mongoose.Types.ObjectId(id)); // Convert strings to ObjectIds

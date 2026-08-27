@@ -4,7 +4,7 @@ const { getAllUsers } = require("../../../admin/usersManagement/usersService");
 const { sendUserNotifications } = require("@notificationsUtil");
 const { NotificationTypes } = require("@NotificationsModel");
 const { default: mongoose } = require("mongoose");
-
+const { generateMeta } = require("@utils/responseUtil");
 
 // Create menuItem in a transaction and update organization
 
@@ -21,8 +21,6 @@ const createMenuItem = async (data) => {
       menu: menuId,
     }));
 
-  
-
     const createdMenuItems = await MenuItems.insertMany(docs, {
       session,
     });
@@ -38,10 +36,8 @@ const createMenuItem = async (data) => {
   }
 };
 
-
 // Get all menuItems with their assigned organization populated, sorted by createdAt descending
 const getMenuItemsWithFilters = async (query = {}, skip = 0, limit = 10) => {
-
   const menuItems = await MenuItems.find(query)
     .populate({
       path: "menu",
@@ -82,13 +78,11 @@ const updateMenuItemData = async (menuItem, data) => {
 
 // Delete
 const deleteMenuItemById = async (menuItem) => {
-
   return await menuItem.deleteOne();
 };
 
 //findByIdAndUpdate
 const findByIdAndUpdate = async (id, data) => {
-
   return MenuItems.findByIdAndUpdate(id, data, { new: true });
 };
 
@@ -98,17 +92,48 @@ const getUnassignedMenuItems = async (userId) => {
   return await MenuItems.find({
     status: "active",
     organization: { $in: [null, undefined] },
-    creator: userId
+    creator: userId,
   });
 };
 
 const findMenuItemsByMenuId = async (menuId) => {
   return MenuItems.find({
     menu: menuId,
-    status: "active"
+    status: "active",
   });
 };
 
+const getMenuItemsBySubCategory = async (subCategoryId, options = {}) => {
+  const { status, page = 1, limit = 10 } = options;
+
+  const filter = { subCategory: subCategoryId };
+  if (status) filter.status = status;
+
+  const skip = (page - 1) * limit;
+
+  const [data, total] = await Promise.all([
+    MenuItems.find(filter)
+      .select("_id title status")
+      // caseFirst: "lower" makes "a" sort before "A" (default Mongo/ICU puts "A" first)
+      .collation({
+        locale: "en",
+        strength: 2,
+        caseLevel: true,
+        caseFirst: "lower",
+      })
+      .sort({ title: 1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    MenuItems.countDocuments(filter),
+  ]);
+  const meta = generateMeta(page, limit, total);
+
+  return {
+    data,
+    meta,
+  };
+};
 
 module.exports = {
   createMenuItem,
@@ -119,5 +144,6 @@ module.exports = {
   updateMenuItemData,
   deleteMenuItemById,
   findByIdAndUpdate,
-  findMenuItemsByMenuId
+  findMenuItemsByMenuId,
+  getMenuItemsBySubCategory,
 };

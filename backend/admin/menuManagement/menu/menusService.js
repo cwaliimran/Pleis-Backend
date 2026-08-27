@@ -265,7 +265,6 @@ const getMenusSummary = async ({
   organizations,
   companyOrganizer,
 }) => {
-  console.log("organizations", organizations);
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let organizationIds = [];
 

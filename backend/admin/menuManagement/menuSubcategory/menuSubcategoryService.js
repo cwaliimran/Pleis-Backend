@@ -2,6 +2,7 @@ const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const MenuSubcategoryRepo = require("./menuSubcategoryRepository");
 
 const { cache, invalidate } = require("@redisCache");
+const { getMenuItemsBySubCategory } = require("../menuItems/menuItemsRepository");
 const ACTIVE_MenuSubcategoryS_CACHE_KEY = "MenuSubcategory:active";
 const createMenuSubcategory = async (data) => {
   let MenuSubcategory = await MenuSubcategoryRepo.createMenuSubcategory(data);
@@ -145,10 +146,28 @@ const reorderMenuSubCategory = async (movedId, newOrder) => {
   }
   return moved;
 };
+
+const getMenuSubcategorytypes = async ({
+  page,
+  limit,
+  subCategory,
+}) => {
+  if (subCategory) {
+    let { data,meta } = await getMenuItemsBySubCategory(
+      subCategory,
+      { status: "active", page, limit }
+    );
+    return {
+      data,
+      meta,
+    };
+  }
+};
 module.exports = {
   createMenuSubcategory,
   getMenuSubcategorys,
   updateMenuSubcategory,
   deleteMenuSubcategory,
   reorderMenuSubCategory,
+  getMenuSubcategorytypes,
 };

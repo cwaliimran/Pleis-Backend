@@ -11,7 +11,13 @@ const {
 const MenuSubcategoryService = require("./menuSubcategoryService");
 
 const createMenuSubcategory = async (req, res) => {
-  let { title, status = "active", organization, companyOrganizer,order } = req.body;
+  let {
+    title,
+    status = "active",
+    organization,
+    companyOrganizer,
+    order,
+  } = req.body;
   const userType = req.user.userType;
   if (userType !== "admin") {
     companyOrganizer = req.user._id;
@@ -61,8 +67,8 @@ const getMenuSubcategorys = async (req, res) => {
   let {
     keyword,
     status,
-    sortBy="title",
-    sortOrder="asc",
+    sortBy = "title",
+    sortOrder = "asc",
     summary,
     organization,
     companyOrganizer,
@@ -78,7 +84,13 @@ const getMenuSubcategorys = async (req, res) => {
       companyOrganizer = null;
     }
 
-    const SORT_FIELDS = ["title", "createdAt", "status", "organization", "order"];
+    const SORT_FIELDS = [
+      "title",
+      "createdAt",
+      "status",
+      "organization",
+      "order",
+    ];
     const SORT_ORDERS = ["asc", "desc"];
     if (
       (sortBy && !SORT_FIELDS.includes(sortBy)) ||
@@ -278,10 +290,46 @@ const reorderMenuSubCategory = async (req, res) => {
     });
   }
 };
+const getMenuSubcategoryTypes = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+  let { subCategory } = req.query;
+  try {
+    if (!subCategory) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "subCategory_required",
+      });
+    }
+    const { data, meta } =
+      await MenuSubcategoryService.getMenuSubcategorytypes({
+        page,
+        limit,
+        subCategory,
+      });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "MenuSubcategoryTypes_fetched_successfully",
+      data: data,
+      meta,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 module.exports = {
   createMenuSubcategory,
   getMenuSubcategorys,
   updateMenuSubcategory,
   deleteMenuSubcategory,
   reorderMenuSubCategory,
+  getMenuSubcategoryTypes,
 };
