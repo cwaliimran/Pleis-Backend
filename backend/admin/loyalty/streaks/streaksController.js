@@ -131,7 +131,10 @@ const getPublicStreaks = async (req, res) => {
 };
 
 const updateStreak = async (req, res) => {
-  const { countBase, badges, companyOrganizer, status = "active" } = req.body;
+  let { countBase, badges, companyOrganizer, status = "active" } = req.body;
+  if(req.user.userType==="organizer"){
+    companyOrganizer = req.user._id;
+  }
 
   if (countBase && !["day", "week", "month"].includes(countBase)) {
     return sendResponse({
