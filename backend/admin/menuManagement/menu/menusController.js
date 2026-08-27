@@ -91,7 +91,6 @@ const getMenus = async (req, res) => {
     sortOrder,
     summary,
   } = req.query;
-console.log("organizations", organizations);
   try {
     const SORT_FIELDS = [
       "title",

@@ -115,7 +115,6 @@ const createMenuItem = async (req, res) => {
   }
 
   try {
-
     const menuItems = await menuItemsService.createMenuItem(data, timezone);
     if (!menuItems) {
       return sendResponse({
@@ -144,16 +143,18 @@ const createMenuItem = async (req, res) => {
 //importMenuItems the frontend will pas menuItems as an array of menu items to be created. The service will validate each menu item and create them in bulk. If any menu item fails validation, the entire operation will fail and no menu items will be created. This ensures data integrity and consistency.
 const importMenuItems = async (req, res) => {
   const { menu, companyOrganizer, presetItems } = req.body;
-  if (!validateParams(req, res, {
-    rawData: ["menu", "companyOrganizer", "presetItems"],
-    objectIdFields: ["menu", "companyOrganizer"],
-  }))
+  if (
+    !validateParams(req, res, {
+      rawData: ["menu", "companyOrganizer", "presetItems"],
+      objectIdFields: ["menu", "companyOrganizer"],
+    })
+  )
     return;
 
   let data = {
     menu,
     companyOrganizer,
-    presetItems
+    presetItems,
   };
 
   try {
@@ -179,8 +180,8 @@ const importMenuItems = async (req, res) => {
       translationKey: readableError.message,
       error,
     });
-  };
-}
+  }
+};
 
 const getMenuItems = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
@@ -194,26 +195,31 @@ const getMenuItems = async (req, res) => {
     endTime,
     date,
     companyOrganizer,
-    organization,
+    organizations,
     sortBy,
-    sortOrder
+    sortOrder,
   } = req.query;
   const SORT_FIELDS = ["menuItemName", "description", "menuName", "price"];
   const SORT_ORDERS = ["asc", "desc"];
-  if ((sortBy && !SORT_FIELDS.includes(sortBy)) || (sortOrder && !SORT_ORDERS.includes(sortOrder))) {
-    const key = sortBy && !SORT_FIELDS.includes(sortBy)
-      ? "invalid_sort_by_field"
-      : "invalid_sort_order";
+  if (
+    (sortBy && !SORT_FIELDS.includes(sortBy)) ||
+    (sortOrder && !SORT_ORDERS.includes(sortOrder))
+  ) {
+    const key =
+      sortBy && !SORT_FIELDS.includes(sortBy)
+        ? "invalid_sort_by_field"
+        : "invalid_sort_order";
     return sendResponse({ res, statusCode: 400, translationKey: key });
   }
 
   if ((sortBy && !sortOrder) || (!sortBy && sortOrder)) {
-    const key = sortBy ? "sort_order_required_when_sort_by_is_provided"
+    const key = sortBy
+      ? "sort_order_required_when_sort_by_is_provided"
       : "sort_by_required_when_sort_order_is_provided";
     return sendResponse({ res, statusCode: 400, translationKey: key });
   }
   if (req.user.userType === "organizer") {
-    companyOrganizer = req.user._id
+    companyOrganizer = req.user._id;
   }
   if (!companyOrganizer) {
     return sendResponse({
@@ -221,10 +227,13 @@ const getMenuItems = async (req, res) => {
       statusCode: 400,
       translationKey: "company_organizer_is_required",
     });
-
-
   }
-  companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
+  if(organizations){
+    companyOrganizer = null;
+  }
+  else{
+    companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
+  }
   try {
     const { menuItems, meta } = await menuItemsService.getMenuItems({
       page,
@@ -239,9 +248,9 @@ const getMenuItems = async (req, res) => {
       timezone: req.user?.timezone,
       date,
       companyOrganizer,
-      organization,
+      organizations,
       sortBy,
-      sortOrder
+      sortOrder,
     });
 
     return sendResponse({
@@ -274,7 +283,10 @@ const getMenuItemDetails = async (req, res) => {
     return;
 
   try {
-    const menuItem = await menuItemsService.getMenuItemDetails(id, req.user?.timezone);
+    const menuItem = await menuItemsService.getMenuItemDetails(
+      id,
+      req.user?.timezone,
+    );
     if (!menuItem) {
       return sendResponse({
         res,
@@ -316,7 +328,7 @@ const updateMenuItem = async (req, res) => {
     endTime,
     status = "active",
     isLimitedTimeOffer,
-    
+
     isScheduled,
     startDate,
     endDate,
@@ -339,17 +351,16 @@ const updateMenuItem = async (req, res) => {
     isTogo,
     isRequiresOrderConfirmation,
   } = req.body;
-  if (availabilityType === 'preOrdersEvent' && !event) {
+  if (availabilityType === "preOrdersEvent" && !event) {
     return sendResponse({
       res,
       statusCode: 400,
       translationKey: "event_is_required_for_preOrdersEvent",
-
     });
   }
 
   if (upSellItem) {
-    if (upSellItem === "true"|| upSellItem === true) {
+    if (upSellItem === "true" || upSellItem === true) {
       upSellItem = true;
     } else if (upSellItem === "false" || upSellItem === false) {
       upSellItem = false;
@@ -451,22 +462,37 @@ const updateMenuItem = async (req, res) => {
     if (endDate) {
       data.endDate = convertTimezoneToUtc(endDate, timezone, "YYYY-MM-DD");
     }
-    const allowedAvailabilityTypes = ['preOrdersOnly', 'preOrdersEvent', 'preOrderExclusive'];
-    if (availabilityType && !allowedAvailabilityTypes.includes(availabilityType)) {
+    const allowedAvailabilityTypes = [
+      "preOrdersOnly",
+      "preOrdersEvent",
+      "preOrderExclusive",
+    ];
+    if (
+      availabilityType &&
+      !allowedAvailabilityTypes.includes(availabilityType)
+    ) {
       return sendResponse({
         res,
         statusCode: 400,
         translationKey: "invalid_availability_type",
-        error: `availabilityType must be one of ${allowedAvailabilityTypes.join(', ')}`,
+        error: `availabilityType must be one of ${allowedAvailabilityTypes.join(", ")}`,
       });
     }
 
     if (startTime) {
-      data.startTime = convertTimezoneToUtc(startTime, req.user.timezone, "hh:mm A");
+      data.startTime = convertTimezoneToUtc(
+        startTime,
+        req.user.timezone,
+        "hh:mm A",
+      );
     }
 
     if (endTime) {
-      data.endTime = convertTimezoneToUtc(endTime, req.user.timezone, "hh:mm A");
+      data.endTime = convertTimezoneToUtc(
+        endTime,
+        req.user.timezone,
+        "hh:mm A",
+      );
     }
     id = new mongoose.Types.ObjectId(id);
 
@@ -546,7 +572,10 @@ const getMenuItemsByMenuId = async (req, res) => {
     return;
 
   try {
-    const menuItems = await menuItemsService.getMenuItemsByMenuId(menuId, req.user?.timezone);
+    const menuItems = await menuItemsService.getMenuItemsByMenuId(
+      menuId,
+      req.user?.timezone,
+    );
     return sendResponse({
       res,
       statusCode: 200,
@@ -575,10 +604,10 @@ const getBundleMenuItems = async (req, res) => {
     startTime,
     endTime,
     date,
-    companyOrganizer
+    companyOrganizer,
   } = req.query;
   if (req.user.userType === "organizer") {
-    companyOrganizer = req.user._id
+    companyOrganizer = req.user._id;
   }
   try {
     const { menuItems, meta } = await menuItemsService.getBundleMenuItems({
@@ -613,6 +642,50 @@ const getBundleMenuItems = async (req, res) => {
     });
   }
 };
+
+const updateSubCategoryBulk = async (req, res) => {
+  let { newSubCategory, oldSubCategory } = req.body;
+  
+
+  if (
+    !validateParams(req, res, {
+      objectIdFields: ["oldSubCategory", "newSubCategory"],
+    })
+  )
+    return;
+
+  let data = {
+    oldSubCategory,
+    newSubCategory,
+  };
+
+  try {
+    const updated = await menuItemsService.updateSubCategoryBulk(data);
+
+    if (!updated) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "menu_item_subCategory_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "menu_item_subCategory_updated_successfully",
+      data: updated,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
 module.exports = {
   createMenuItem,
   importMenuItems,
@@ -621,5 +694,6 @@ module.exports = {
   deleteMenuItem,
   getMenuItemDetails,
   getMenuItemsByMenuId,
-  getBundleMenuItems
+  getBundleMenuItems,
+  updateSubCategoryBulk,
 };

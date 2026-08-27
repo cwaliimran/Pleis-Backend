@@ -48,7 +48,27 @@ const getReservationTimeRange = (slot, bookingDuration) => {
   };
 };
 
-const getReservationSlots = async ({ userId, date, organizationId, timezone }) => {
+const getReservationSlots = async ({ userId, date, organizationId, timezone, capacity = 40, requestedGuests = 1 }) => {
+  // --------------------------------------------------
+  // Constants
+  // --------------------------------------------------
+
+  // IMPORTANT:
+  // averageSlotDurationInMinutes is kept as the DB field name.
+  //
+  // Its meaning is now:
+  // "Expected reservation duration"
+  //
+  // Example:
+  // averageSlotDurationInMinutes = 90
+  //
+  // Slot frequency is ALWAYS 15 minutes.
+  const SLOT_INTERVAL_MINUTES = 15;
+
+  // --------------------------------------------------
+  // 1. Validate timezone
+  // --------------------------------------------------
+
   if (!timezone || !moment.tz.zone(timezone)) {
     return {
       allowed: false,
@@ -58,8 +78,9 @@ const getReservationSlots = async ({ userId, date, organizationId, timezone }) =
   }
 
   // --------------------------------------------------
-  // 1. Get organization
+  // 2. Get organization
   // --------------------------------------------------
+
   const organizationDoc = await Organizations.findOne({
     _id: organizationId,
     status: "active",
@@ -76,13 +97,15 @@ const getReservationSlots = async ({ userId, date, organizationId, timezone }) =
   }
 
   // --------------------------------------------------
-  // 2. Get reservation preferences
+  // 3. Get reservation preferences
   // --------------------------------------------------
+
   const reservationPreferences = await ReservationPreferences.findOne({
     organization: organizationId,
   })
     .select("timeSlotsSetting")
     .lean();
+
   const settings = reservationPreferences?.timeSlotsSetting;
 
   if (!settings || settings.status !== "enabled") {
@@ -93,32 +116,58 @@ const getReservationSlots = async ({ userId, date, organizationId, timezone }) =
     };
   }
 
-  const slotDuration = Number(settings.averageSlotDurationInMinutes);
+  // --------------------------------------------------
+  // IMPORTANT:
+  //
+  // Keep the existing DB field name:
+  // averageSlotDurationInMinutes
+  //
+  // But treat it as:
+  // Average Reservation Duration
+  // --------------------------------------------------
+
+  const reservationDuration = Number(settings.averageSlotDurationInMinutes);
 
   const bookingOpensAfterMinutes = Number(settings.bookingOpensAfterMinutes || 0);
 
   const bookingClosesBeforeMinutes = Number(settings.bookingClosesBeforeMinutes || 0);
 
-  if (!slotDuration || slotDuration <= 0) {
+  if (!reservationDuration || reservationDuration <= 0) {
     return {
       allowed: false,
-      message: "Invalid slot duration",
+      message: "Invalid reservation duration",
       slots: [],
     };
   }
 
   // --------------------------------------------------
-  // 3. Parse requested date in USER timezone
+  // 4. Validate capacity
   // --------------------------------------------------
-  //
-  // IMPORTANT:
-  // date should be "YYYY-MM-DD"
-  //
-  // Example:
-  // 2026-08-17
-  //
-  // We intentionally parse it in the user's timezone.
-  //
+
+  const totalCapacity = Number(capacity);
+
+  if (!totalCapacity || totalCapacity <= 0) {
+    return {
+      allowed: false,
+      message: "Invalid reservation capacity",
+      slots: [],
+    };
+  }
+
+  const guestsRequested = Number(requestedGuests || 1);
+
+  if (!guestsRequested || guestsRequested <= 0) {
+    return {
+      allowed: false,
+      message: "Invalid requested guest count",
+      slots: [],
+    };
+  }
+
+  // --------------------------------------------------
+  // 5. Parse requested date in USER timezone
+  // --------------------------------------------------
+
   const userDate = moment.tz(date, "YYYY-MM-DD", timezone);
 
   if (!userDate.isValid()) {
@@ -132,8 +181,9 @@ const getReservationSlots = async ({ userId, date, organizationId, timezone }) =
   const dayName = userDate.format("dddd").toLowerCase();
 
   // --------------------------------------------------
-  // 4. Get operating hours
+  // 6. Get operating hours
   // --------------------------------------------------
+
   const operatingHours = organizationDoc.operatingHours?.[dayName];
 
   if (!operatingHours?.isOpen) {
@@ -158,13 +208,17 @@ const getReservationSlots = async ({ userId, date, organizationId, timezone }) =
   }
 
   // --------------------------------------------------
-  // 5. Effective booking window
+  // 7. Effective booking window
   // --------------------------------------------------
+
   const firstSlotStartMinutes = openingMinutes + bookingOpensAfterMinutes;
 
-  const lastSlotEndMinutes = closingMinutes - bookingClosesBeforeMinutes;
+  const lastReservationEndMinutes = closingMinutes - bookingClosesBeforeMinutes;
 
-  if (firstSlotStartMinutes >= lastSlotEndMinutes) {
+  if (
+    firstSlotStartMinutes >= lastReservationEndMinutes ||
+    reservationDuration > lastReservationEndMinutes - firstSlotStartMinutes
+  ) {
     return {
       allowed: true,
       message: "No reservation slots available",
@@ -175,29 +229,44 @@ const getReservationSlots = async ({ userId, date, organizationId, timezone }) =
   }
 
   // --------------------------------------------------
-  // 6. Get existing reservations
+  // 8. Get ALL existing reservations
   // --------------------------------------------------
+  //
+  // IMPORTANT:
+  //
+  // Previously this had:
+  //
+  // userId
+  //
+  // That only returned the current user's reservations.
+  //
+  // For occupancy such as:
+  //
+  // 2 / 40
+  //
+  // we need reservations from ALL users.
+  //
+  // If you are editing an existing reservation, you can
+  // additionally exclude that reservation by reservation ID.
+  // --------------------------------------------------
+
   const existingReservations = await UserReservations.find({
     organization: organizationId,
-    userId,
+
     status: {
       $in: ["checkedIn", "confirmed", "needsConfirmation", "pendingPayment"],
     },
 
-    // If editing an existing reservation and you want
-    // to ignore the user's own reservation:
-    //
-    // userId: { $ne: userId },
-
     "timingSlots.dateTimeSlots.date": date,
   })
-    .select("timingSlots")
+    .select("timingSlots bookingDuration numberOfGuests guests partySize guestCount userId")
     .lean();
 
   // --------------------------------------------------
-  // 7. Get booked slots
+  // 9. Convert existing reservations into ranges
   // --------------------------------------------------
-  const bookedSlots = [];
+
+  const bookedReservations = [];
 
   for (const reservation of existingReservations) {
     for (const dateBlock of reservation.timingSlots?.dateTimeSlots || []) {
@@ -208,98 +277,271 @@ const getReservationSlots = async ({ userId, date, organizationId, timezone }) =
       for (const existingSlot of dateBlock.timeSlots || []) {
         const { start, end } = getReservationTimeRange(existingSlot, reservation.bookingDuration);
 
-        if (start.isValid() && end.isValid()) {
-          bookedSlots.push({ start, end });
+        if (!start.isValid() || !end.isValid()) {
+          continue;
         }
-        // const existingStart = moment.parseZone(existingSlot.startTime);
 
-        // const existingEnd = moment.parseZone(existingSlot.endTime);
+        // --------------------------------------------------
+        // Get number of guests for this reservation
+        //
+        // IMPORTANT:
+        // Use the actual guest field from your schema.
+        //
+        // If your schema has only one field, simplify this
+        // to that field.
+        // --------------------------------------------------
 
-        // if (!existingStart.isValid() || !existingEnd.isValid()) {
-        //   continue;
-        // }
+        const reservationGuests = Number(
+          reservation.numberOfGuests ?? reservation.guests ?? reservation.partySize ?? reservation.guestCount ?? 0,
+        );
 
-        // bookedSlots.push({
-        //   start: existingStart,
-        //   end: existingEnd,
-        // });
+        bookedReservations.push({
+          start,
+          end,
+          guests: reservationGuests,
+          userId: reservation.userId,
+        });
       }
     }
   }
 
   // --------------------------------------------------
-  // 8. Generate slots
+  // 10. Generate reservation slots
   // --------------------------------------------------
+
   const slots = [];
+
   const now = moment.tz(timezone);
 
-  // Check whether requested date is today
   const isToday = userDate.format("YYYY-MM-DD") === now.format("YYYY-MM-DD");
+
+  // --------------------------------------------------
+  // IMPORTANT:
+  //
+  // Start every 15 minutes.
+  //
+  // Reservation duration can be 60, 90, 120 etc.
+  //
+  // Example:
+  //
+  // reservationDuration = 90
+  // SLOT_INTERVAL_MINUTES = 15
+  //
+  // 14:00 -> 15:30
+  // 14:15 -> 15:45
+  // 14:30 -> 16:00
+  // 14:45 -> 16:15
+  // 15:00 -> 16:30
+  // --------------------------------------------------
+
   for (
     let startMinutes = firstSlotStartMinutes;
-    startMinutes + slotDuration <= lastSlotEndMinutes;
-    startMinutes += slotDuration
+    startMinutes + reservationDuration <= lastReservationEndMinutes;
+    startMinutes += SLOT_INTERVAL_MINUTES
   ) {
-    const endMinutes = startMinutes + slotDuration;
+    const endMinutes = startMinutes + reservationDuration;
 
-    // ------------------------------------------------
-    // Operating hours are UTC minutes.
+    // --------------------------------------------------
+    // Create start/end based on organization's operating
+    // time.
     //
-    // So create the operating-hour time in UTC first.
-    // ------------------------------------------------
+    // Keeping your existing UTC logic here.
+    // --------------------------------------------------
+
     const utcStart = moment.utc(date, "YYYY-MM-DD").startOf("day").add(startMinutes, "minutes");
 
     const utcEnd = moment.utc(date, "YYYY-MM-DD").startOf("day").add(endMinutes, "minutes");
 
-    // ------------------------------------------------
-    // Convert UTC operating time to user timezone.
-    // ------------------------------------------------
     const userStart = utcStart.clone().tz(timezone);
     const userEnd = utcEnd.clone().tz(timezone);
 
-    // ------------------------------------------------
-    // Check overlap
-    // ------------------------------------------------
-    const isBooked = bookedSlots.some(
-      (bookedSlot) => userStart.toDate() < bookedSlot.end.toDate() && userEnd.toDate() > bookedSlot.start.toDate(),
-    );
+    // --------------------------------------------------
+    // Check whether this reservation slot has already
+    // passed.
+    // --------------------------------------------------
+
     const isPassed = isToday && userStart.isSameOrBefore(now);
 
-    slots.push({
-      // startTime: userStart.toISOString(),
-      // endTime: userEnd.toISOString(),
+    // --------------------------------------------------
+    // Calculate occupancy
+    // --------------------------------------------------
+    //
+    // A reservation contributes to this slot when its
+    // reservation period overlaps the slot period.
+    //
+    // Example:
+    //
+    // Existing:
+    // 14:00 -> 15:30
+    //
+    // Selected slot:
+    // 15:00 -> 16:30
+    //
+    // They overlap, so the existing guests are counted.
+    // --------------------------------------------------
 
-      // Optional display values
+    let occupiedGuests = 0;
+
+    const overlappingReservations = [];
+
+    for (const reservation of bookedReservations) {
+      const isOverlapping =
+        userStart.toDate() < reservation.end.toDate() && userEnd.toDate() > reservation.start.toDate();
+
+      if (!isOverlapping) {
+        continue;
+      }
+
+      occupiedGuests += reservation.guests;
+
+      overlappingReservations.push({
+        start: reservation.start,
+        end: reservation.end,
+        guests: reservation.guests,
+      });
+    }
+
+    // --------------------------------------------------
+    // Remaining capacity
+    // --------------------------------------------------
+
+    const remainingCapacity = Math.max(totalCapacity - occupiedGuests, 0);
+
+    // --------------------------------------------------
+    // Occupancy percentage
+    // --------------------------------------------------
+
+    const occupancyPercentage = totalCapacity > 0 ? Math.round((occupiedGuests / totalCapacity) * 100) : 100;
+
+    // --------------------------------------------------
+    // Capacity status
+    // --------------------------------------------------
+
+    let capacityStatus = "low";
+
+    if (occupancyPercentage >= 90) {
+      capacityStatus = "high";
+    } else if (occupancyPercentage >= 70) {
+      capacityStatus = "medium";
+    }
+
+    // --------------------------------------------------
+    // Can this reservation accommodate requested guests?
+    // --------------------------------------------------
+
+    const hasCapacity = remainingCapacity >= guestsRequested;
+
+    // --------------------------------------------------
+    // Final availability
+    // --------------------------------------------------
+
+    const available = !isPassed && hasCapacity;
+
+    // --------------------------------------------------
+    // Add slot
+    // --------------------------------------------------
+
+    slots.push({
+      // ------------------------------------------------
+      // Reservation time range
+      // ------------------------------------------------
+
       startTime: userStart.format("YYYY-MM-DD HH:mm"),
       endTime: userEnd.format("YYYY-MM-DD HH:mm"),
+
+      // ------------------------------------------------
       // Separate hour/minute values for frontend
+      // ------------------------------------------------
+
       startHour: userStart.hour(),
       startMinute: userStart.minute(),
 
       endHour: userEnd.hour(),
       endMinute: userEnd.minute(),
 
-      available: !isBooked && !isPassed,
+      // ------------------------------------------------
+      // Availability
+      // ------------------------------------------------
+
+      available,
+
+      // ------------------------------------------------
+      // Capacity / occupancy
+      // ------------------------------------------------
+
+      occupancy: {
+        occupied: occupiedGuests,
+        capacity: totalCapacity,
+        remaining: remainingCapacity,
+        percentage: occupancyPercentage,
+        status: capacityStatus,
+      },
+
+      // ------------------------------------------------
+      // Helpful frontend fields
+      // ------------------------------------------------
+
+      isPassed,
+      hasCapacity,
+
+      // Optional:
+      // useful if frontend needs to display:
+      // "2 / 40"
+      occupancyLabel: `${occupiedGuests} / ${totalCapacity}`,
+
+      // Optional:
+      // useful if frontend needs to display:
+      // "38 seats remaining"
+      remainingLabel: `${remainingCapacity} remaining`,
     });
   }
-  const hours = [
-    ...new Set(slots.filter((slot) => slot.available).flatMap((slot) => [slot.startHour, slot.endHour])),
-  ].sort((a, b) => a - b);
 
-  const minutes = [
-    ...new Set(slots.filter((slot) => slot.available).flatMap((slot) => [slot.startMinute, slot.endMinute])),
-  ].sort((a, b) => a - b);
+  // --------------------------------------------------
+  // 11. Available hours
+  // --------------------------------------------------
+
+  const availableSlots = slots.filter((slot) => slot.available);
+
+  const hours = [...new Set(availableSlots.flatMap((slot) => [slot.startHour, slot.endHour]))].sort((a, b) => a - b);
+
+  const minutes = [...new Set(availableSlots.flatMap((slot) => [slot.startMinute, slot.endMinute]))].sort(
+    (a, b) => a - b,
+  );
+
+  // --------------------------------------------------
+  // 12. Response
+  // --------------------------------------------------
+
   return {
     allowed: true,
+
     message: "Reservation slots retrieved successfully",
+
     date,
     timezone,
-    slotDuration,
-    hourMins: { hours, minutes },
+
+    // Keep existing response field if frontend already
+    // expects it.
+    slotDuration: reservationDuration,
+
+    // Explicitly expose the meaning.
+    reservationDuration,
+
+    // Slots are generated every 15 minutes.
+    slotInterval: SLOT_INTERVAL_MINUTES,
+
+    capacity: totalCapacity,
+
+    requestedGuests: guestsRequested,
+
+    hourMins: {
+      hours,
+      minutes,
+    },
+
     slots,
   };
 };
-
 const checkReservationAvailability = async ({
   reservationTypeId,
   partySize = 0,
@@ -308,8 +550,6 @@ const checkReservationAvailability = async ({
   timingSlots,
   userId,
 }) => {
-
-
   let reservationType = null;
 
   if (reservationTypeId) {
@@ -319,9 +559,7 @@ const checkReservationAvailability = async ({
       status: "active",
     }).lean();
 
-
     if (!reservationType) {
-
       return {
         allowed: false,
         message: "Reservation type not found or is inactive",
@@ -339,20 +577,14 @@ const checkReservationAvailability = async ({
   if (userId) filter.userId = new mongoose.Types.ObjectId(userId);
   if (reservationTypeId) filter.reservationType = String(reservationTypeId);
 
-
-
   const reservations = await UserReservations.find(filter)
     .select("timingSlots numberOfTables partySize bookingDuration")
     .lean();
-
-
 
   // Normalize any date-like value (Date object, ISO string, or "YYYY-MM-DD") to "YYYY-MM-DD"
   const toDateOnly = (d) => new Date(d).toISOString().slice(0, 10);
 
   const checkCapacity = ({ usedTables, usedPartySize, date }) => {
-
-
     if (usedPartySize + partySize > reservationType.maxCapacity) {
       return {
         allowed: false,
@@ -385,28 +617,18 @@ const checkReservationAvailability = async ({
     const requestedSlots = dateBlock.timeSlots || [];
     const isWholeDay = !requestedSlots.length;
 
-
     const dateReservations = reservations.filter((r) =>
       r.timingSlots?.dateTimeSlots?.some((d) => toDateOnly(d.date) === date),
     );
 
-
     // Whole-day booking: check capacity for the whole date
     if (isWholeDay) {
       if (reservationType) {
-        const usedTables = dateReservations.reduce(
-          (sum, r) => sum + (r.numberOfTables || 0),
-          0,
-        );
-        const usedPartySize = dateReservations.reduce(
-          (sum, r) => sum + (r.partySize || 0),
-          0,
-        );
-
+        const usedTables = dateReservations.reduce((sum, r) => sum + (r.numberOfTables || 0), 0);
+        const usedPartySize = dateReservations.reduce((sum, r) => sum + (r.partySize || 0), 0);
 
         const failure = checkCapacity({ usedTables, usedPartySize, date });
         if (failure) {
-    
           return failure;
         }
       }
@@ -418,9 +640,7 @@ const checkReservationAvailability = async ({
     const conflictingReservations = dateReservations.filter((r) => {
       if (r.bookingDuration === "wholeDay") return true;
 
-      const existingBlock = r.timingSlots?.dateTimeSlots?.find(
-        (d) => toDateOnly(d.date) === date,
-      );
+      const existingBlock = r.timingSlots?.dateTimeSlots?.find((d) => toDateOnly(d.date) === date);
 
       return requestedSlots.some((slot) => {
         if (!slot?.startTime || !slot?.endTime) return false;
@@ -431,34 +651,21 @@ const checkReservationAvailability = async ({
         return existingBlock?.timeSlots?.some((existing) => {
           if (!existing?.startTime || !existing?.endTime) return false;
 
-          return (
-            start < new Date(existing.endTime) &&
-            end > new Date(existing.startTime)
-          );
+          return start < new Date(existing.endTime) && end > new Date(existing.startTime);
         });
       });
     });
 
- 
-
     if (reservationType) {
-      const usedTables = conflictingReservations.reduce(
-        (sum, r) => sum + (r.numberOfTables || 0),
-        0,
-      );
-      const usedPartySize = conflictingReservations.reduce(
-        (sum, r) => sum + (r.partySize || 0),
-        0,
-      );
+      const usedTables = conflictingReservations.reduce((sum, r) => sum + (r.numberOfTables || 0), 0);
+      const usedPartySize = conflictingReservations.reduce((sum, r) => sum + (r.partySize || 0), 0);
 
       const failure = checkCapacity({ usedTables, usedPartySize, date });
       if (failure) {
- 
         return failure;
       }
     }
   }
-
 
   return {
     allowed: true,
@@ -1770,5 +1977,4 @@ module.exports = {
   validateReservationCapacity,
   getReservationSlots,
   bookedCapacity,
-  
 };

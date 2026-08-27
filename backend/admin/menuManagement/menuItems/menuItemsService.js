@@ -150,15 +150,15 @@ const getMenuItems = async ({
   menu,
   timezone,
   companyOrganizer,
-  organization,
+  organizations,
   sortBy,
   sortOrder,
   subCategory,
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
   let menuIds = [];
-  if (organization) {
-    menuIds = await getMenuIdsByOrganization(organization);
+  if (organizations) {
+    menuIds = await getMenuIdsByOrganization(organizations);
 
     if (!menuIds.length) {
       return {
@@ -177,7 +177,6 @@ const getMenuItems = async ({
     }
   }
 
-  // ✅ BASE MATCH (NO menu here)
   const baseMatch = {
     ...(status ? { status } : { status: { $ne: "deleted" } }),
   };
@@ -608,6 +607,15 @@ const getBundleMenuItems = async ({ page, limit, keyword, status, date, menu, ti
     meta
   };
 };
+
+
+const updateSubCategoryBulk = async (data) => {
+  const update = await MenuItems.updateMany(
+    { subCategory: new mongoose.Types.ObjectId(data.oldSubCategory) },
+    { $set: { subCategory: new mongoose.Types.ObjectId(data.newSubCategory) } }
+  );
+  return update;
+};
 module.exports = {
   createMenuItem,
   importMenuItems,
@@ -616,5 +624,6 @@ module.exports = {
   getMenuItemDetails,
   deleteMenuItem,
   getMenuItemsByMenuId,
-  getBundleMenuItems
+  getBundleMenuItems,
+  updateSubCategoryBulk,
 };

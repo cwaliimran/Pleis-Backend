@@ -147,6 +147,9 @@ const getMenuItemsCombos = async (req, res) => {
     sortOrder,
     companyOrganizer: creator,
   } = req.query;
+  if (req.user && req.user.userType === "organizer") {
+    creator = req.user._id;
+  }
 
   const SORT_FIELDS = [
     "name",
