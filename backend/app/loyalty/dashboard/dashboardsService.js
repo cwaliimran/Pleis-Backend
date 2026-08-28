@@ -180,7 +180,6 @@ const getSuggestedRewardsForDashboard = async ({
   limit = 10,
   timezone
 }) => {
-  const now = new Date();
   const skip = (page - 1) * limit;
 
   // 1️⃣ Clubs user follows
@@ -203,10 +202,9 @@ const getSuggestedRewardsForDashboard = async ({
   // 3️⃣ Fetch rewards (DB paginated)
   const rewards = await rewardsRepo.getRewardsForDashboardPaged({
     clubIds,
-    now,
     skip,
     limit,
-    timezone
+    timezone,
   });
 
   if (!rewards.length) {
@@ -308,6 +306,7 @@ const getSuggestedRewardsForDashboard = async ({
         claimedCount,
         userPoints,
         userTierEntry,
+        timezone,
       }),
     });
 

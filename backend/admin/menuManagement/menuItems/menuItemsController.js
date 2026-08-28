@@ -535,8 +535,8 @@ const deleteMenuItem = async (req, res) => {
     return;
 
   try {
-    const deleted = await menuItemsService.deleteMenuItem(id);
-    if (!deleted) {
+    const result = await menuItemsService.deleteMenuItem(id);
+    if (!result) {
       return sendResponse({
         res,
         statusCode: 404,
@@ -548,6 +548,7 @@ const deleteMenuItem = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "menu_item_deleted_successfully",
+      data: result,
     });
   } catch (error) {
     const readableError = getReadableErrorMessage(error);
@@ -686,12 +687,50 @@ const updateSubCategoryBulk = async (req, res) => {
     });
   }
 };
+
+
+const getDeleteImpact = async (req, res) => {
+  const { id } = req.params;
+  if (
+    !validateParams(req, res, {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    })
+  )
+    return;
+  try {
+    const confirmation = await menuItemsService.getDeleteConfirmation(id);
+    if (!confirmation) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "menu_item_not_found",
+      });
+    }
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "menu_item_delete_impact_fetched",
+      data: confirmation,
+    });
+  } catch (error) {
+    const readableError = getReadableErrorMessage(error);
+    return sendResponse({
+      res,
+      statusCode: readableError.statusCode,
+      translationKey: readableError.message,
+      error,
+    });
+  }
+};
+
 module.exports = {
   createMenuItem,
   importMenuItems,
   getMenuItems,
   updateMenuItem,
   deleteMenuItem,
+  getDeleteImpact,
   getMenuItemDetails,
   getMenuItemsByMenuId,
   getBundleMenuItems,

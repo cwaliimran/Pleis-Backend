@@ -1,4 +1,5 @@
 const REWARD_CLAIM_REASONS = require("./rewardClaimReasons");
+const { isRewardEndDateExpired } = require("../../../../commonModules/loyalty/rewards/utils/rewardEndDate");
 
 const REWARD_REASON_ORDER = Object.freeze({
   [REWARD_CLAIM_REASONS.TIER_NOT_ELIGIBLE]: 1,
@@ -14,6 +15,7 @@ const normalizeRewardClaimMeta = ({
   userPoints = null,
   userTierEntry = null,
   now = new Date(),
+  timezone = "UTC",
 }) => {
   const cannotClaimReasons = [];
   const rewardId = reward?._id?.toString();
@@ -38,7 +40,7 @@ const normalizeRewardClaimMeta = ({
     cannotClaimReasons.push(REWARD_CLAIM_REASONS.REWARD_INACTIVE);
   }
 
-  if (reward?.endDate && new Date(reward.endDate) < now) {
+  if (isRewardEndDateExpired(reward?.endDate, now, timezone)) {
     cannotClaimReasons.push(REWARD_CLAIM_REASONS.REWARD_EXPIRED);
   }
 

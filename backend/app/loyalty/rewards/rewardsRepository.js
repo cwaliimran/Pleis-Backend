@@ -6,20 +6,15 @@ const {
   Reward,
 } = require("../../../commonModules/loyalty/rewards/models");
 const { createRewardOrderService } = require("../rewardsOrders/rewardsOrdersService");
-const { getStartAndEndOfDay } = require("../../../helperUtils/responseUtil");
+const { getActiveRewardEndDateQuery } = require("../../../commonModules/loyalty/rewards/utils/rewardEndDate");
 
 
 // Get ALL rewards by company organizer (no pagination)
 const getRewardsByCompanyOrganizer = async ({ companyOrganizer, timezone = "UTC" }) => {
-  const { start, end } = getStartAndEndOfDay(new Date(), timezone);
-  // Include no-expiry rewards plus those ending today or later (exclude past)
   const query = {
     companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
     status: "active",
-    $or: [
-      { endDate: null },
-      { endDate: { $gte: start } }
-    ]
+    ...getActiveRewardEndDateQuery(timezone),
   };
 
   return Reward.find(query)
@@ -43,20 +38,16 @@ const claimReward = async (userId, rewardId, protectionUserDetails, timezone) =>
  */
 const getRewardsForDashboardPaged = async ({
   clubIds,
-  now,
   skip,
   limit,
   keyword = "",
-  timezone
+  timezone = "UTC",
 }) => {
   const query = {
     companyOrganizer: { $in: clubIds },
     status: "active",
-    isPromotionOnly: false, // Exclude promotion-only rewards
-    $or: [
-      { endDate: null },
-      { endDate: { $gt: now } },
-    ],
+    isPromotionOnly: false,
+    ...getActiveRewardEndDateQuery(timezone),
   };
 
   if (keyword) {
@@ -86,15 +77,12 @@ const getRewardsForDashboardPaged = async ({
 };
 
 
-const countDashboardRewards = async ({ clubIds, now, keyword = "" }) => {
+const countDashboardRewards = async ({ clubIds, keyword = "", timezone = "UTC" }) => {
   const query = {
     companyOrganizer: { $in: clubIds },
     status: "active",
-    isPromotionOnly: false, // Exclude promotion-only rewards
-    $or: [
-      { endDate: null },
-      { endDate: { $gt: now } }
-    ]
+    isPromotionOnly: false,
+    ...getActiveRewardEndDateQuery(timezone),
   };
 
   if (keyword) {

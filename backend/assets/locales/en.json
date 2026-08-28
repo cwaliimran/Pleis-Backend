@@ -216,6 +216,7 @@
   "menu_item_details_fetched_successfully": "Menu item details fetched successfully",
   "menu_item_updated_successfully": "Menu item updated successfully",
   "menu_item_deleted_successfully": "Menu item deleted successfully",
+  "menu_item_delete_confirmation_fetched": "Menu item delete impact fetched successfully",
   "tier_creation_failed": "Tier creation failed",
   "tier_created_successfully": "Tier created successfully",
   "tiers_fetched_successfully": "Tiers fetched successfully",

@@ -5,6 +5,7 @@ const {
   getMenuItems,
   updateMenuItem,
   deleteMenuItem,
+  getDeleteImpact,
   getMenuItemDetails,
   getMenuItemsByMenuId,
   getBundleMenuItems,
@@ -62,6 +63,9 @@ router.get(
 
 // Update an existing menuItem
 router.put("/:id", roleMiddleware(["admin", "organizer",  "manager"]), updateMenuItem);
+
+//delete confirmation
+router.get("/:id/delete-impact", apiRateLimiterDetails, roleMiddleware(["admin", "organizer",  "manager",]), getDeleteImpact);
 
 
 // Delete a menuItem

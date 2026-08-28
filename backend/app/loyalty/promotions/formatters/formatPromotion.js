@@ -58,13 +58,19 @@ function formatPromotion(promotion, timezone, tierKey) {
         case "extraPointsForItem":
             delete obj.pointsMultiplier;
             delete obj.discountedPrice;
-            obj.menuItem.image= getFullImageUrl(obj.menuItem?.image);
+            // obj.menuItem.image= getFullImageUrl(obj.menuItem?.image);
+            obj.menuItem.map(item => {
+                item.image = getFullImageUrl(item?.image);
+            });
             convertPromotionDates(obj, timezone, "YYYY-MM-DD");
             break;
 
         case "productSale":
             delete obj.extraPoints;
-             obj.menuItem.image= getFullImageUrl(obj.menuItem?.image);
+             // obj.menuItem.image= getFullImageUrl(obj.menuItem?.image);
+             obj.menuItem.map(item => {
+                item.image = getFullImageUrl(item?.image);
+            });
             convertPromotionDates(obj, timezone, "YYYY-MM-DD");
             break;
         case "claimPromotion":
