@@ -66,10 +66,17 @@ const validateReservationPayload = (req, res, reservation) => {
             return null;
           }
 
-          // ✅ THIS NOW RUNS
-          slot.startTime = convertTimezoneToUtc(slot.startTime, timezone, "YYYY-MM-DDTHH:mm:ss.SSS[Z]");
+          slot.startTime = convertTimezoneToUtc(
+            `${dateBlock.date} ${slot.startTime}`,
+            timezone,
+            "YYYY-MM-DD HH:mm",
+          );
 
-          slot.endTime = convertTimezoneToUtc(slot.endTime, timezone, "YYYY-MM-DDTHH:mm:ss.SSS[Z]");
+          slot.endTime = convertTimezoneToUtc(
+            `${dateBlock.date} ${slot.endTime}`,
+            timezone,
+            "YYYY-MM-DD HH:mm",
+          );
         }
       }
     }
