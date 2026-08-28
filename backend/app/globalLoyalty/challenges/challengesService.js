@@ -20,8 +20,6 @@ const getGlobalLoyaltyChallenges = async ({
   limit,
   skip
 }) => {
-  const now = new Date();
-
   // 1️⃣ Global wallet
   const wallet = await getUserWallet(userId);
   if (!wallet) {
@@ -32,7 +30,7 @@ const getGlobalLoyaltyChallenges = async ({
   const userTierEntry = wallet.global.level?.entryPoints ?? 0;
 
   // 2️⃣ Active global challenges
-  let challenges = await challengesRepo.getActiveGlobalChallenges({ now, keyword });
+  let challenges = await challengesRepo.getActiveGlobalChallenges({ keyword, timezone });
 
   // 3️⃣ Active orders (progress)
   const activeOrders =

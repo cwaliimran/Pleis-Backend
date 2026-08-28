@@ -1,4 +1,9 @@
 const moment = require("moment-timezone");
+const { getStartAndEndOfDay } = require("../../../../helperUtils/responseUtil");
+const {
+  isEndDateExpired,
+  isStartDateNotReached,
+} = require("../../rewards/utils/rewardEndDate");
 
 const HH_MM_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
@@ -8,6 +13,17 @@ const hasTimeValue = (value) => value != null && value !== "";
 const timeToMinutes = (time) => {
   const [hours, minutes] = String(time).split(":").map(Number);
   return hours * 60 + minutes;
+};
+
+const getCurrentUtcMinutes = (now = new Date()) =>
+  now.getUTCHours() * 60 + now.getUTCMinutes();
+
+const isSameCalendarDay = (date, now, timezone = "UTC") => {
+  if (!date) return false;
+  return (
+    moment.tz(date, timezone).format("YYYY-MM-DD") ===
+    moment.tz(now, timezone).format("YYYY-MM-DD")
+  );
 };
 
 const getDayKey = (now, timezone) => {
@@ -115,11 +131,68 @@ const isPromotionTimeActive = ({
 
   const startMinutes = timeToMinutes(startTime);
   const endMinutes = timeToMinutes(endTime);
-  const currentMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const currentMinutes = getCurrentUtcMinutes(now);
 
   return startMinutes <= endMinutes
     ? currentMinutes >= startMinutes && currentMinutes <= endMinutes
     : currentMinutes >= startMinutes || currentMinutes <= endMinutes;
+};
+
+const isPromotionNotStarted = ({
+  startDate,
+  startTime,
+  now = new Date(),
+  timezone = "UTC",
+} = {}) => {
+  if (!startDate) return false;
+
+  if (isStartDateNotReached(startDate, now, timezone)) {
+    return true;
+  }
+
+  if (
+    isSameCalendarDay(startDate, now, timezone) &&
+    hasTimeValue(startTime) &&
+    getCurrentUtcMinutes(now) < timeToMinutes(startTime)
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
+const isPromotionExpired = ({
+  endDate,
+  endTime,
+  startTime,
+  now = new Date(),
+  timezone = "UTC",
+} = {}) => {
+  if (!endDate) return false;
+
+  const { end: endDayEnd } = getStartAndEndOfDay(endDate, timezone);
+  if (now > endDayEnd) {
+    return true;
+  }
+
+  if (
+    isSameCalendarDay(endDate, now, timezone) &&
+    hasTimeValue(endTime)
+  ) {
+    const current = getCurrentUtcMinutes(now);
+    const endMinutes = timeToMinutes(endTime);
+    const startMinutes = hasTimeValue(startTime)
+      ? timeToMinutes(startTime)
+      : 0;
+
+    if (startMinutes <= endMinutes) {
+      return current > endMinutes;
+    }
+
+    return current > endMinutes && current < startMinutes;
+  }
+
+  return false;
 };
 
 const isPromotionDayActive = ({
@@ -143,7 +216,7 @@ const isPromotionRecurrenceActive = ({
     return true;
   }
 
-  if (recurringDetails.endDate && now > new Date(recurringDetails.endDate)) {
+  if (recurringDetails.endDate && isEndDateExpired(recurringDetails.endDate, now, timezone)) {
     return false;
   }
 
@@ -167,13 +240,13 @@ const isPromotionScheduleActive = ({
   activeDays,
   recurringDetails,
   now = new Date(),
-  timezone,
+  timezone = "UTC",
 } = {}) => {
-  if (startDate && now < new Date(startDate)) {
+  if (isPromotionNotStarted({ startDate, startTime, now, timezone })) {
     return false;
   }
 
-  if (endDate && now > new Date(endDate)) {
+  if (isPromotionExpired({ endDate, endTime, startTime, now, timezone })) {
     return false;
   }
 
@@ -191,9 +264,32 @@ const isPromotionScheduleActive = ({
 const getPromotionScheduleReasons = (
   promotion = {},
   now = new Date(),
-  timezone,
+  timezone = "UTC",
 ) => {
   const reasons = [];
+
+  if (
+    isPromotionNotStarted({
+      startDate: promotion.startDate,
+      startTime: promotion.startTime,
+      now,
+      timezone,
+    })
+  ) {
+    reasons.push("PROMOTION_NOT_STARTED");
+  }
+
+  if (
+    isPromotionExpired({
+      endDate: promotion.endDate,
+      endTime: promotion.endTime,
+      startTime: promotion.startTime,
+      now,
+      timezone,
+    })
+  ) {
+    reasons.push("PROMOTION_EXPIRED");
+  }
 
   if (
     !isPromotionRecurrenceActive({
@@ -236,6 +332,8 @@ module.exports = {
   resolvePromotionTimes,
   preparePromotionTimesForStorage,
   isPromotionTimeActive,
+  isPromotionNotStarted,
+  isPromotionExpired,
   isPromotionDayActive,
   isPromotionRecurrenceActive,
   isPromotionScheduleActive,

@@ -65,8 +65,6 @@ const getLoyaltyDashboardChallenges = async ({
   limit = 10,
   timezone
 }) => {
-  const now = new Date();
-
   // 1️⃣ Clubs user follows
   const clubIds = await clubMemberRepo.getFollowedClubIds(userId);
   if (!clubIds.length) {
@@ -102,7 +100,7 @@ const getLoyaltyDashboardChallenges = async ({
   let challenges =
     await challengesRepo.getEligibleChallengesForDashboard({
       clubIds,
-      now
+      timezone,
     });
 
   // 5️⃣ Claim limit filtering

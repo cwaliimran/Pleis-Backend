@@ -21,6 +21,11 @@ const mapRefs = (items = [], titleKey = "title") =>
     status: item.status,
   }));
 
+// Field may store a single menu item ref or an array depending on type / legacy data
+const menuItemFieldQuery = (field, objectId) => ({
+  $or: [{ [field]: objectId }, { [field]: { $in: [objectId] } }],
+});
+
 const findMenuItemDeleteReferences = async (menuItemId) => {
   const objectId = new mongoose.Types.ObjectId(menuItemId);
 
@@ -32,23 +37,24 @@ const findMenuItemDeleteReferences = async (menuItemId) => {
     menuItemRewardChallenges,
     buyMenuItemPromotions,
     productSalePromotions,
+    extraPointsForItemPromotions,
     buyMenuItemRewards,
   ] = await Promise.all([
     MenuItemsCombos.find({
       status: NOT_DELETED,
-      "menuItems.menuItem": objectId,
+      ...menuItemFieldQuery("menuItems.menuItem", objectId),
     })
       .select("name status")
       .lean(),
     MenuItemsDiscounts.find({
       status: NOT_DELETED,
-      menuItems: objectId,
+      ...menuItemFieldQuery("menuItems", objectId),
     })
       .select("name status type value startDate endDate")
       .lean(),
     MenuItemsSale.find({
       status: NOT_DELETED,
-      menuItems: objectId,
+      ...menuItemFieldQuery("menuItems", objectId),
     })
       .select("title status discountType discountValue startDateTime endDateTime")
       .lean(),
@@ -70,21 +76,28 @@ const findMenuItemDeleteReferences = async (menuItemId) => {
     Promotion.find({
       status: NOT_DELETED,
       promotionType: "buyMenuItemPromotion",
-      menuItem: objectId,
+      ...menuItemFieldQuery("menuItem", objectId),
     })
       .select("title status promotionType startDate endDate")
       .lean(),
     Promotion.find({
       status: NOT_DELETED,
       promotionType: "productSale",
-      menuItem: objectId,
+      ...menuItemFieldQuery("menuItem", objectId),
+    })
+      .select("title status promotionType startDate endDate")
+      .lean(),
+    Promotion.find({
+      status: NOT_DELETED,
+      promotionType: "extraPointsForItem",
+      ...menuItemFieldQuery("menuItem", objectId),
     })
       .select("title status promotionType startDate endDate")
       .lean(),
     Reward.find({
       status: NOT_DELETED,
       rewardType: "buyMenuItemReward",
-      menuItem: objectId,
+      ...menuItemFieldQuery("menuItem", objectId),
     })
       .select("title status rewardType endDate")
       .lean(),
@@ -101,6 +114,7 @@ const findMenuItemDeleteReferences = async (menuItemId) => {
     promotions: {
       buyMenuItemPromotion: mapRefs(buyMenuItemPromotions),
       productSale: mapRefs(productSalePromotions),
+      extraPointsForItem: mapRefs(extraPointsForItemPromotions),
     },
     rewards: {
       buyMenuItemReward: mapRefs(buyMenuItemRewards),
@@ -115,6 +129,7 @@ const findMenuItemDeleteReferences = async (menuItemId) => {
     challengesMenuItemReward: references.challenges.menuItemReward.length,
     promotionsBuyMenuItem: references.promotions.buyMenuItemPromotion.length,
     promotionsProductSale: references.promotions.productSale.length,
+    promotionsExtraPointsForItem: references.promotions.extraPointsForItem.length,
     rewardsBuyMenuItem: references.rewards.buyMenuItemReward.length,
   };
 
@@ -140,20 +155,21 @@ const cascadeSoftDeleteMenuItemReferences = async (menuItemId, session = null) =
     challengesMenuItemReward,
     promotionsBuyMenuItem,
     promotionsProductSale,
+    promotionsExtraPointsForItem,
     rewardsBuyMenuItem,
   ] = await Promise.all([
     MenuItemsCombos.updateMany(
-      { status: NOT_DELETED, "menuItems.menuItem": objectId },
+      { status: NOT_DELETED, ...menuItemFieldQuery("menuItems.menuItem", objectId) },
       { $set: { status: "deleted" } },
       options,
     ),
     MenuItemsDiscounts.updateMany(
-      { status: NOT_DELETED, menuItems: objectId },
+      { status: NOT_DELETED, ...menuItemFieldQuery("menuItems", objectId) },
       { $set: { status: "deleted" } },
       options,
     ),
     MenuItemsSale.updateMany(
-      { status: NOT_DELETED, menuItems: objectId },
+      { status: NOT_DELETED, ...menuItemFieldQuery("menuItems", objectId) },
       { $set: { status: "deleted" } },
       options,
     ),
@@ -180,7 +196,7 @@ const cascadeSoftDeleteMenuItemReferences = async (menuItemId, session = null) =
       {
         status: NOT_DELETED,
         promotionType: "buyMenuItemPromotion",
-        menuItem: objectId,
+        ...menuItemFieldQuery("menuItem", objectId),
       },
       { $set: { status: "deleted" } },
       options,
@@ -189,7 +205,16 @@ const cascadeSoftDeleteMenuItemReferences = async (menuItemId, session = null) =
       {
         status: NOT_DELETED,
         promotionType: "productSale",
-        menuItem: objectId,
+        ...menuItemFieldQuery("menuItem", objectId),
+      },
+      { $set: { status: "deleted" } },
+      options,
+    ),
+    Promotion.updateMany(
+      {
+        status: NOT_DELETED,
+        promotionType: "extraPointsForItem",
+        ...menuItemFieldQuery("menuItem", objectId),
       },
       { $set: { status: "deleted" } },
       options,
@@ -198,7 +223,7 @@ const cascadeSoftDeleteMenuItemReferences = async (menuItemId, session = null) =
       {
         status: NOT_DELETED,
         rewardType: "buyMenuItemReward",
-        menuItem: objectId,
+        ...menuItemFieldQuery("menuItem", objectId),
       },
       { $set: { status: "deleted" } },
       options,
@@ -213,6 +238,7 @@ const cascadeSoftDeleteMenuItemReferences = async (menuItemId, session = null) =
     challengesMenuItemReward: challengesMenuItemReward.modifiedCount,
     promotionsBuyMenuItem: promotionsBuyMenuItem.modifiedCount,
     promotionsProductSale: promotionsProductSale.modifiedCount,
+    promotionsExtraPointsForItem: promotionsExtraPointsForItem.modifiedCount,
     rewardsBuyMenuItem: rewardsBuyMenuItem.modifiedCount,
   };
 

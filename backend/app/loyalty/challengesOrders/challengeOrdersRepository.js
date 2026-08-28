@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const { LoyaltyChallengesOrders } = require("@LoyaltyChallengesOrdersModel");
 const { getModelCounts } = require("@dbUtils/queryUtil");
 const Challenge = require("@ChallengeModel");
+const { getActiveEndDateQuery } = require("../../../commonModules/loyalty/rewards/utils/rewardEndDate");
 
 // Create or get an existing challenge progress record
 const startOrGetChallengeOrder = async ({ userId, challenge }) => {
@@ -185,13 +186,14 @@ const findActiveOrderByTaskType = async ({
  */
 const findEligibleChallengesByTaskType = async ({
   companyOrganizer,
-  taskType
+  taskType,
+  timezone = "UTC",
 }) => {
   return Challenge.find({
     companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
     status: "active",
     taskType,
-    endDate: { $gte: new Date() }
+    ...getActiveEndDateQuery(timezone),
   })
     .sort({ taskValue: 1, createdAt: 1 }) // ✅ easiest first
     .lean();

@@ -6,6 +6,12 @@ const isRewardEndDateExpired = (endDate, now = new Date(), timezone = "UTC") => 
   return now > end;
 };
 
+const isStartDateNotReached = (startDate, now = new Date(), timezone = "UTC") => {
+  if (!startDate) return false;
+  const { start } = getStartAndEndOfDay(startDate, timezone);
+  return now < start;
+};
+
 const getActiveRewardEndDateQuery = (timezone = "UTC") => {
   const { start } = getStartAndEndOfDay(new Date(), timezone);
   return {
@@ -16,7 +22,31 @@ const getActiveRewardEndDateQuery = (timezone = "UTC") => {
   };
 };
 
+const getActivePromotionDateQuery = (timezone = "UTC") => {
+  const { start, end } = getStartAndEndOfDay(new Date(), timezone);
+  return {
+    $and: [
+      {
+        $or: [
+          { endDate: null },
+          { endDate: { $gte: start } },
+        ],
+      },
+      {
+        $or: [
+          { startDate: null },
+          { startDate: { $lte: end } },
+        ],
+      },
+    ],
+  };
+};
+
 module.exports = {
   isRewardEndDateExpired,
   getActiveRewardEndDateQuery,
+  isEndDateExpired: isRewardEndDateExpired,
+  getActiveEndDateQuery: getActiveRewardEndDateQuery,
+  isStartDateNotReached,
+  getActivePromotionDateQuery,
 };

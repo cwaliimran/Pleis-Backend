@@ -1,5 +1,6 @@
 const challengeRepo = require("./challengesRepository");
-const { generateMeta, getCurrentDateInTimezone } = require("@utils/responseUtil");
+const { generateMeta } = require("@utils/responseUtil");
+const { getActiveEndDateQuery } = require("../../../commonModules/loyalty/rewards/utils/rewardEndDate");
 const formatChallenge = require("../../../commonModules/loyalty/challenges/formatters/formatChallenge");
 const { formatChallengeDetails } = require("./formatters/formatChallengeImage");
 const { checkClaimLimitForLoyaltyChallenges, getActiveChallengeOrdersForDashboard } = require("../challengesOrders/challengeOrdersRepository");
@@ -29,8 +30,6 @@ const getEligibleChallengesForLoyaltyPage = async ({
   companyOrganizer,
   timezone
 }) => {
-  const now = new Date();
-
   // 1️⃣ Wallet (tier)
   let userCompanyWallet = await clubMemberRepo.getWallet(userId, companyOrganizer);
   userCompanyWallet = formatUserWallet(userCompanyWallet);
@@ -58,7 +57,7 @@ const getEligibleChallengesForLoyaltyPage = async ({
   let activeChallenges = await Challenge.find({
     companyOrganizer,
     status: "active",
-    endDate: { $gte: now }
+    ...getActiveEndDateQuery(timezone || "UTC"),
   })
     .populate("tierLimit")
     .populate("taskMenuItem")
@@ -127,7 +126,6 @@ const getChallengesWithPaginationService = async ({
   timezone,
   keyword
 }) => {
-  const now = new Date();
   const skip = (page - 1) * limit;
 
   /* ------------------------------
@@ -144,12 +142,12 @@ const getChallengesWithPaginationService = async ({
   const [challenges, total] = await Promise.all([
     challengeRepo.getChallengesWithPagination({
       clubIds,
-      now,
       skip,
       limit,
-      keyword
+      keyword,
+      timezone,
     }),
-    challengeRepo.countChallengesWithPagination({ clubIds, now, keyword }),
+    challengeRepo.countChallengesWithPagination({ clubIds, keyword, timezone }),
   ]);
 
 

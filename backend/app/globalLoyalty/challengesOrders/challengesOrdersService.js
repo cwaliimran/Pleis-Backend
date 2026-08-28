@@ -22,7 +22,6 @@ const resolveGlobalChallengeByTaskTypeService = async ({
 
   try {
 
-    const now = new Date();
     let remaining = value;
 
     const buffer = {
@@ -32,7 +31,7 @@ const resolveGlobalChallengeByTaskTypeService = async ({
     };
 
     const challenges =
-      await challengesRepo.getActiveGlobalChallenges({ now });
+      await challengesRepo.getActiveGlobalChallenges({ timezone });
 
     const eligible = challenges
       .filter(ch => ch.taskType === taskType)
