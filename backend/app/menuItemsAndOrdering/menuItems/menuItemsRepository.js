@@ -9,7 +9,10 @@ const MenuOrders = require("@OrdersModel");
 const { getActiveMenuItemPromotions } = require("../../loyalty/promotions/promotionsRepository");
 const { getCurrentDateInTimezone } = require("@utils/responseUtil");
 const { getAllDayparts } = require("../../../admin/presetMenu/daypart/daypartRepository");
-const { filterByDaypartAndDaysWithFetch } = require("../../../shared/menuItemsFilters/filterByDaypartAndDays");
+const {
+  filterByDaypartAndDays,
+  filterByDaypartAndDaysWithFetch,
+} = require("../../../shared/menuItemsFilters/filterByDaypartAndDays");
 
 const pickBestDiscount = (discounts = [], basePrice = 0, at = new Date()) =>
   resolveEffectiveDiscount(discounts, basePrice, at);
@@ -573,8 +576,16 @@ const getMenuItemsCombosWithFilters = async ({ query = {} } = {}) => {
     .lean();
 };
 
-const getMenuItemsCombos = async (menuItems = [], companyOrganizer = null) => {
+const getMenuItemsCombos = async (
+  menuItems = [],
+  companyOrganizer = null,
+  timezone = "UTC",
+) => {
   if (!menuItems.length || !companyOrganizer) return [];
+
+  const effectiveTimezone = timezone || "UTC";
+  const allDayparts = await getAllDayparts();
+  const daypartMap = new Map(allDayparts.map((d) => [d._id.toString(), d]));
 
   const normalizeTitle = (title = "") => String(title).trim().toLowerCase();
 
@@ -690,6 +701,17 @@ const getMenuItemsCombos = async (menuItems = [], companyOrganizer = null) => {
     }
 
     if (!canApply || resolvedItems.length < 2) continue;
+
+    if (combo.subCategory?.status && combo.subCategory.status !== "active") {
+      continue;
+    }
+
+    const availableComponents = filterByDaypartAndDays(
+      resolvedItems,
+      daypartMap,
+      effectiveTimezone,
+    );
+    if (availableComponents.length !== resolvedItems.length) continue;
 
     applicable.push({
       _id: combo._id,

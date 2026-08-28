@@ -18,6 +18,7 @@ const {
   isPromotionScheduleActive,
   getPromotionScheduleReasons,
 } = require("../../../commonModules/loyalty/promotions/utils/promotionSchedule");
+const { getActivePromotionDateQuery } = require("../../../commonModules/loyalty/rewards/utils/rewardEndDate");
 
 
 // Count
@@ -31,6 +32,7 @@ const findById = async ({
   userId,
   timezone,
   now,
+  companyOrganizer,
 }) => {
   const promotion = await Promotion.findById(id)
     .populate("menuItem")
@@ -43,6 +45,13 @@ const findById = async ({
     .lean();
 
   if (!promotion) return null;
+
+  if (
+    companyOrganizer &&
+    String(promotion.companyOrganizer?._id) !== String(companyOrganizer)
+  ) {
+    return null;
+  }
 
   const items = await applyPromotionEligibility({
     promotions: [promotion],
@@ -67,7 +76,7 @@ const getPromotionsByCompanyOrganizer = async ({
   const match = {
     status: "active",
     companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
-    endDate: { $gte: now },
+    ...getActivePromotionDateQuery(timezone),
   };
 
   const promotions = await Promotion.find(match)
@@ -122,13 +131,7 @@ const getPromotionsForDashboard = async ({
   const matchQuery = {
     companyOrganizer: { $in: clubIds },
     status: "active",
-    $or: [
-      { startDate: null, endDate: null },
-      {
-        startDate: { $lte: now },
-        endDate: { $gte: now },
-      },
-    ],
+    ...getActivePromotionDateQuery(timezone),
   };
 
   /* ===============================
@@ -291,6 +294,7 @@ const applyPromotionEligibility = async ({
       userTierEntry:
         wallet.level?.entryPoints ?? 0,
       now,
+      timezone,
     });
 
     const scheduleReasons = getPromotionScheduleReasons(
@@ -329,7 +333,7 @@ const getPromotionsForHome = async ({
     {
       $match: {
         status: "active",
-        endDate: { $gte: now },
+        ...getActivePromotionDateQuery(timezone),
       },
     },
     {
@@ -420,15 +424,22 @@ const getPromotions = async ({
   keyword,
   timezone,
   now,
+  companyOrganizer,
 }) => {
   const skip = limit === 0 ? 0 : (page - 1) * limit;
 
+  const baseMatch = {
+    status: "active",
+    ...getActivePromotionDateQuery(timezone),
+  };
+
+  if (companyOrganizer) {
+    baseMatch.companyOrganizer = new mongoose.Types.ObjectId(companyOrganizer);
+  }
+
   const pipeline = [
     {
-      $match: {
-        status: "active",
-        endDate: { $gte: now },
-      },
+      $match: baseMatch,
     },
   ];
 
@@ -564,6 +575,7 @@ const getActiveLoyaltyHappyHourPromotion = async ({
   userId,
   userTierEntryPoints = 0,
   now = new Date(),
+  timezone = "UTC",
 }) => {
   if (!companyOrganizer || !userId) return null;
 
@@ -576,10 +588,7 @@ const getActiveLoyaltyHappyHourPromotion = async ({
         promotionType: "happyHour",
         status: "active",
         companyOrganizer: organizerId,
-
-        // Date eligibility
-        startDate: { $lte: now },
-        endDate: { $gte: now },
+        ...getActivePromotionDateQuery(timezone),
       },
     },
 
@@ -657,7 +666,7 @@ const getActiveLoyaltyHappyHourPromotion = async ({
   ]);
 
   for (const promotion of promotions) {
-    if (isPromotionScheduleActive({ ...promotion, now })) {
+    if (isPromotionScheduleActive({ ...promotion, now, timezone })) {
       return promotion;
     }
   }
@@ -753,8 +762,7 @@ const getActiveMenuItemPromotions = async ({
     promotionType: "buyMenuItemPromotion",
     menuItem: { $in: menuItemIds },
     status: "active",
-    startDate: { $lte: now },
-    endDate: { $gte: now },
+    ...getActivePromotionDateQuery(timezone),
   })
     .populate("tierLimit")
     .populate("reward")

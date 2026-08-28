@@ -20,7 +20,10 @@ const connectToDB = async (retries = 5, delay = 3000) => {
       logger.info("MongoDB connection opened — running bootstrap");
       await runDBBootstrap();
     } catch (err) {
-      logger.fatal("DB bootstrap failed", { error: err });
+      logger.error("DB bootstrap failed", {
+        error: err.message,
+        stack: err.stack,
+      });
       // ❗ Do NOT exit — let app continue
     }
   });
@@ -47,8 +50,9 @@ const connectToDB = async (retries = 5, delay = 3000) => {
       });
 
       if (attempt === retries) {
-        logger.fatal("MongoDB connection failed after retries", {
+        logger.error("MongoDB connection failed after retries", {
           uri: uri.replace(/\/\/.*@/, "//***@"),
+          error: err.message,
         });
         return;
       }

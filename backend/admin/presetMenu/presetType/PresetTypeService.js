@@ -82,6 +82,7 @@ const updatepresetType = async (id, data) => {
     "name",
     "description",
     "status",
+    "image",
   ];
 
 

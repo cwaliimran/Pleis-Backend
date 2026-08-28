@@ -9,6 +9,13 @@ const {
 const createRateLimiter = require("../../../helperUtils/rateLimiter");
 const auth = require("../../../middlewares/authMiddleware");
 const roleMiddleware = require("../../../middlewares/roleMiddleware");
+const {
+  createMenuItem,
+  getMenuItems,
+  updateMenuItem,
+  deleteMenuItem,
+  getMenuItemDetails,
+} = require("../../../admin/menuManagement/menuItems/menuItemsController");
 
 const router = express.Router();
 
@@ -19,7 +26,11 @@ const apiRateLimiter = createRateLimiter("MenuItems");
 const apiRateLimiterDetails = createRateLimiter("MenuItems/:id");
 
 // Create a new menuItem
-router.post("/", roleMiddleware(["admin", "organizer", "staff", "manager"]), createMenuItem);
+router.post(
+  "/",
+  roleMiddleware(["admin", "organizer", "staff", "manager"]),
+  createMenuItem,
+);
 
 // Get all menuItems with pagination
 router.get("/", apiRateLimiter, getMenuItems);
@@ -28,10 +39,17 @@ router.get("/", apiRateLimiter, getMenuItems);
 router.get("/:id", apiRateLimiterDetails, getMenuItemDetails);
 
 // Update an existing menuItem
-router.put("/:id", roleMiddleware(["admin", "organizer", "staff", "manager"]), updateMenuItem);
+router.put(
+  "/:id",
+  roleMiddleware(["admin", "organizer", "staff", "manager"]),
+  updateMenuItem,
+);
 
 // Delete a menuItem
-router.delete("/:id", roleMiddleware(["admin", "organizer", "staff", "manager"]), deleteMenuItem);
-
+router.delete(
+  "/:id",
+  roleMiddleware(["admin", "organizer", "staff", "manager"]),
+  deleteMenuItem,
+);
 
 module.exports = router;

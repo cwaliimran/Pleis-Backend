@@ -36,13 +36,12 @@ const getCompanyLoyaltyProfile = async (companyOrganizer) => {
       .lean(),
     ClubMembers.countDocuments({ companyOrganizer, status: "active" })
   ]);
-  companyDoc.companyDetails.accountState = companyDoc.accountState;
-
-  if (!companyDoc) return null;
-  companyDoc.companyDetails.totalMembers = totalMembers || 0;
-  return {
-    companyDetails: companyDoc.companyDetails,
-  };
+    if (!companyDoc || !companyDoc.companyDetails) return null;
+    companyDoc.companyDetails.accountState = companyDoc.accountState || null;
+    companyDoc.companyDetails.totalMembers = totalMembers || 0;
+    return {
+      companyDetails: companyDoc.companyDetails,
+    };
 };
 
 

@@ -1,4 +1,5 @@
 const repository = require("./promotionsRepository");
+const { getActivePromotionDateQuery } = require("../../../commonModules/loyalty/rewards/utils/rewardEndDate");
 const { generateMeta, getCurrentDateInTimezone } = require("@utils/responseUtil");
 const formatPromotion = require("../../../commonModules/loyalty/promotions/utils/formatPromotion");
 const { addEngagementEvent } = require("@appEngagement/engagementEventsRepository");
@@ -9,6 +10,7 @@ const getPromotions = async ({
   limit,
   keyword,
   timezone,
+  companyOrganizer,
 }) => {
   const now = getCurrentDateInTimezone({ timezone });
 
@@ -19,6 +21,7 @@ const getPromotions = async ({
     keyword,
     timezone,
     now,
+    companyOrganizer,
   });
 };
 
@@ -46,6 +49,7 @@ const getDetails = async ({
   id,
   userId,
   timezone,
+  companyOrganizer,
 }) => {
   const now = getCurrentDateInTimezone({ timezone });
     addEngagementEvent({
@@ -60,6 +64,7 @@ const getDetails = async ({
     userId,
     timezone,
     now,
+    companyOrganizer,
   });
 };
 
@@ -88,7 +93,7 @@ const getPromotionsByCompanyOrganizerService = async ({
   const totalFiltered = await repository.count({
     status: "active",
     companyOrganizer,
-    endDate: { $gte: now },
+    ...getActivePromotionDateQuery(timezone),
   });
 
   const meta = generateMeta(page, limit, totalFiltered);
