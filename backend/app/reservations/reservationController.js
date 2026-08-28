@@ -15,6 +15,9 @@ const createReservation = async (req, res) => {
   const session = await mongoose.startSession();
 
   try {
+    if(req.user.userType === "organizer") {
+      req.body.companyOrganizer = req.user._id;
+    }
     session.startTransaction();
 
     const normalizedReservation = validateReservationPayload(req, res, req.body);
