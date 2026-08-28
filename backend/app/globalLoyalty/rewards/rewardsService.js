@@ -43,6 +43,7 @@ const getGlobalRewardsService = async ({ userId, category, keyword, timezone }) 
         claimedCount: meta.totalClaimed,
         userPoints,
         userTierEntry,
+        timezone,
       }),
     };
   });

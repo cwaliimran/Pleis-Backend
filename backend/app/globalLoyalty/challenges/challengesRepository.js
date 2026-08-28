@@ -1,13 +1,14 @@
+const { getActiveEndDateQuery } = require("../../../commonModules/loyalty/rewards/utils/rewardEndDate");
 const Challenge = require("@GlobalChallengeModel");
 
 /**
  * Fetch active global challenges
  * (no organizer dependency)
  */
-const getActiveGlobalChallenges = async ({ now, keyword }) => {
+const getActiveGlobalChallenges = async ({ keyword, timezone = "UTC" }) => {
   const query = {
     status: "active",
-    endDate: { $gte: now }
+    ...getActiveEndDateQuery(timezone),
   };
 
   if (keyword) {

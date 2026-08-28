@@ -5,9 +5,13 @@ const {
 } = require("../../../../helperUtils/responseUtil");
 
 function convertPromotionDates(promotion, timezone, format) {
-    if (promotion.startDate && promotion.endDate && timezone) {
-        promotion.startDate = convertUtcToTimezone(promotion.startDate, timezone, format);
-        promotion.endDate = convertUtcToTimezone(promotion.endDate, timezone, format);
+    if (timezone) {
+        if (promotion.startDate) {
+            promotion.startDate = convertUtcToTimezone(promotion.startDate, timezone, format);
+        }
+        if (promotion.endDate) {
+            promotion.endDate = convertUtcToTimezone(promotion.endDate, timezone, format);
+        }
     }
 }
 
@@ -58,13 +62,28 @@ function formatPromotion(promotion, timezone, tierKey) {
         case "extraPointsForItem":
             delete obj.pointsMultiplier;
             delete obj.discountedPrice;
-            obj.menuItem.image= getFullImageUrl(obj.menuItem?.image);
+            if (Array.isArray(obj.menuItem)) {
+                obj.menuItem.forEach(item => {
+                    item.image = getFullImageUrl(item?.image);
+                });
+            } else if (obj.menuItem && typeof obj.menuItem === "object") {
+                obj.menuItem.image = getFullImageUrl(obj.menuItem?.image);
+            }
+   
             convertPromotionDates(obj, timezone, "YYYY-MM-DD");
             break;
 
         case "productSale":
             delete obj.extraPoints;
-             obj.menuItem.image= getFullImageUrl(obj.menuItem?.image);
+             // obj.menuItem.image = getFullImageUrl(obj.menuItem?.image);
+             if (Array.isArray(obj.menuItem)) {
+                 obj.menuItem.forEach(item => {
+                     item.image = getFullImageUrl(item?.image);
+                 });
+             } else if (obj.menuItem && typeof obj.menuItem === "object") {
+                 obj.menuItem.image = getFullImageUrl(obj.menuItem?.image);
+             }
+    
             convertPromotionDates(obj, timezone, "YYYY-MM-DD");
             break;
         case "claimPromotion":

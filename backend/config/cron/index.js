@@ -144,8 +144,8 @@ const startCrons = () => {
   ///* ======================================================
   //   🕛 CRON 6: Promo code expiry (every minute)
   //   ====================================================== */
-  cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
-  // cron.schedule("0 * * * *", async () => { // run every 1 hour for production
+  // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
+  cron.schedule("0 * * * *", async () => { // run every 1 hour for production
     const lockKey = "cron:promo-code-expiry";
     const lock = await acquireLock(lockKey, 50);
 
@@ -185,8 +185,8 @@ const startCrons = () => {
   ///* ======================================================
   //   🕛 CRON 8: Giveaways expiry (every minute)
   //   ====================================================== */
-  cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
-  // cron.schedule("0 * * * *", async () => { // run every 1 hour for production
+  // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
+  cron.schedule("0 * * * *", async () => { // run every 1 hour for production
     const lockKey = "cron:giveaways-expiry";
     const lock = await acquireLock(lockKey, 50);
 

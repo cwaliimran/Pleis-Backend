@@ -28,6 +28,7 @@ const getRewardsByCompanyOrganizerService = async ({
   // 2️⃣ Fetch rewards
   const rewards = await rewardRepo.getRewardsByCompanyOrganizer({
     companyOrganizer,
+    timezone,
   });
 
   if (!rewards.length) {
@@ -71,6 +72,7 @@ const getRewardsByCompanyOrganizerService = async ({
         claimedCount: meta.totalClaimed,
         userPoints,
         userTierEntry,
+        timezone,
       }),
     };
   });
@@ -118,7 +120,7 @@ const getRewardsForUserJoinedClubs = async ({
   keyword = "",
   timezone
 }) => {
-  const now = new Date();
+  const computedSkip = skip || (page - 1) * limit;
   /* ===============================
      1️⃣ Clubs user is member of
   =============================== */
@@ -146,12 +148,12 @@ const getRewardsForUserJoinedClubs = async ({
   const [rewards, total] = await Promise.all([
     rewardRepo.getRewardsForDashboardPaged({
       clubIds,
-      now,
-      skip,
+      skip: computedSkip,
       limit,
       keyword,
+      timezone,
     }),
-    rewardRepo.countDashboardRewards({ clubIds, now, keyword }),
+    rewardRepo.countDashboardRewards({ clubIds, keyword, timezone }),
   ]);
 
   if (!rewards.length) {
@@ -208,6 +210,8 @@ const getRewardsForUserJoinedClubs = async ({
         reward: formattedReward,
         claimedCount,
         userPoints: wallet.points ?? 0,
+        userTierEntry: wallet.level?.entryPoints ?? 0,
+        timezone,
       }),
     });
   }

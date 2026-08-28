@@ -98,6 +98,7 @@ const getCompanyProfileWithLoyaltyInfo = async (
     getRewardsByCompanyOrganizerService({
       companyOrganizer,
       userId,
+      timezone,
     }),
     
 

@@ -38,6 +38,14 @@ const {
   getSetttings,
 } = require("../../../admin/inAppOrdering/settings/setting/settingRepository");
 
+const orderNeedsConfirmation = (orderItems = [], orderCombos = []) =>
+  orderItems.some((item) => item.status === "pending") ||
+  orderCombos.some((combo) =>
+    (combo.items || []).some(
+      (item) => item.menuItemSnapShot?.isRequiresOrderConfirmation,
+    ),
+  );
+
 const buildPricedMenuItemSnapshot = (menuItem) => {
   const priceInfo = calculateItemPrice(menuItem);
   return {
@@ -321,7 +329,6 @@ const placeOrder = async ({
     );
     let totalSaleDiscount = combosSaleDiscount;
     let itemsTotal = combosTotal;
-    let isOrderNeedingConfirmation = false;
 
     const orderItems = (items || []).map((i) => {
       const menuItem = menuItems.find((m) => m._id.toString() === i.menuItem);
@@ -342,8 +349,6 @@ const placeOrder = async ({
       const status = menuItem.isRequiresOrderConfirmation
         ? "pending"
         : "confirmed";
-      if (menuItem.isRequiresOrderConfirmation)
-        isOrderNeedingConfirmation = true;
 
       return {
         menuItem: menuItem._id,
@@ -356,6 +361,11 @@ const placeOrder = async ({
         menuItemSnapShot: JSON.parse(JSON.stringify(menuItem)),
       };
     });
+
+    const isOrderNeedingConfirmation = orderNeedsConfirmation(
+      orderItems,
+      orderCombos,
+    );
 
     let promoResult = null;
 
@@ -626,15 +636,6 @@ const updateOrder = async ({
         orderItems = [];
       }
 
-      // Recompute order-level status from the items we just built.
-      // Only when there are line items; empty items (combo-only cart) stay pending.
-      // Any other existing status (e.g. "confirmed", "cancelled") is left untouched.
-      if (orderStatus === "pending" && orderItems.length) {
-        const hasItemNeedingConfirmation = orderItems.some(
-          (item) => item.status === "pending",
-        );
-        orderStatus = hasItemNeedingConfirmation ? "pending" : "confirmed";
-      }
     }
 
     // =========================================================
@@ -691,6 +692,16 @@ const updateOrder = async ({
         // Explicit [] means remove all combos
         orderCombos = [];
       }
+    }
+
+    if (
+      (shouldUpdateItems || shouldUpdateCombos) &&
+      orderStatus === "pending" &&
+      (orderItems.length || orderCombos.length)
+    ) {
+      orderStatus = orderNeedsConfirmation(orderItems, orderCombos)
+        ? "pending"
+        : "confirmed";
     }
 
     if (

@@ -420,11 +420,64 @@ const updateMenuItem = async (id, data, timezone) => {
 };
 
 const deleteMenuItem = async (id) => {
-  const updated = await menuItemRepo.findByIdAndUpdate(id, {
-    status: "deleted",
-  });
-  if (!updated) return null;
-  return true;
+  const menuItem = await MenuItems.findById(id).select("_id status").lean();
+  if (!menuItem || menuItem.status === "deleted") return null;
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { cascaded, totalCascaded } =
+      await menuItemRepo.cascadeSoftDeleteMenuItemReferences(id, session);
+
+    const updated = await menuItemRepo.findByIdAndUpdate(
+      id,
+      { status: "deleted" },
+      session,
+    );
+
+    if (!updated) {
+      await session.abortTransaction();
+      return null;
+    }
+
+    await session.commitTransaction();
+
+    return {
+      menuItem: {
+        _id: updated._id,
+        title: updated.title,
+        status: updated.status,
+      },
+      cascaded,
+      totalCascaded,
+    };
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
+};
+
+const getDeleteConfirmation = async (id) => {
+  const menuItem = await MenuItems.findById(id).select("_id title status").lean();
+  if (!menuItem || menuItem.status === "deleted") return null;
+
+  const impact = await menuItemRepo.findMenuItemDeleteReferences(id);
+
+  return {
+    menuItem: {
+      _id: menuItem._id,
+      title: menuItem.title,
+      status: menuItem.status,
+    },
+    hasReferences: impact.hasReferences,
+    totalReferences: impact.totalReferences,
+    counts: impact.counts,
+    references: impact.references,
+    willCascadeOnDelete: impact.hasReferences,
+  };
 };
 
 const getMenuItemDetails = async (id, timezone) => {
@@ -623,6 +676,7 @@ module.exports = {
   updateMenuItem,
   getMenuItemDetails,
   deleteMenuItem,
+  getDeleteConfirmation,
   getMenuItemsByMenuId,
   getBundleMenuItems,
   updateSubCategoryBulk,

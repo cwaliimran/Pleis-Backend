@@ -28,6 +28,7 @@ const normalizePromotionClaimMeta = ({
   userPoints = 0,
   userTierEntry = 0,
   now = new Date(),
+  timezone = "UTC",
 }) => {
   const cannotClaimReasons = [];
 
@@ -57,22 +58,6 @@ const normalizePromotionClaimMeta = ({
   /* ---------- Status ---------- */
   if (promotion.status !== "active") {
     cannotClaimReasons.push("PROMOTION_INACTIVE");
-  }
-
-  /* ---------- Not started ---------- */
-  if (
-    promotion.startDate &&
-    new Date(promotion.startDate) > now
-  ) {
-    cannotClaimReasons.push("PROMOTION_NOT_STARTED");
-  }
-
-  /* ---------- Expired ---------- */
-  if (
-    promotion.endDate &&
-    new Date(promotion.endDate) < now
-  ) {
-    cannotClaimReasons.push("PROMOTION_EXPIRED");
   }
 
   cannotClaimReasons.sort(
