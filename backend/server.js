@@ -224,11 +224,8 @@ server.listen(PORT, () => {
 
     setInterval(backupMongoDB, 24 * 60 * 60 * 1000);
   } catch (err) {
-    logger.fatal("Startup failure", {
-      error: err.message,
-      stack: err.stack,
-    });
-
+    crashLogger.fatal("Startup failure", err);
+    process.exit(1);
   }
 })();
 
@@ -265,11 +262,11 @@ process.on("SIGINT", shutdown);
  * Crash handlers (unexpected)
  * =======================================================
  */
-process.on("unhandledRejection", (reason, promise) => {
-  crashLogger.fatal("Unhandled Promise Rejection", {
-    reason: reason?.message || reason,
-    stack: reason?.stack,
-  });
+process.on("unhandledRejection", (reason) => {
+  const error =
+    reason instanceof Error ? reason : new Error(String(reason));
+
+  crashLogger.fatal("Unhandled Promise Rejection", error);
 
   // Give logger time to flush
   setTimeout(() => {
@@ -278,10 +275,7 @@ process.on("unhandledRejection", (reason, promise) => {
 });
 
 process.on("uncaughtException", (err) => {
-  crashLogger.fatal("Uncaught Exception", {
-    error: err.message,
-    stack: err.stack,
-  });
+  crashLogger.fatal("Uncaught Exception", err);
 
   setTimeout(() => {
     process.exit(1);

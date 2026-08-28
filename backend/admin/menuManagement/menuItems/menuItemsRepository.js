@@ -147,88 +147,77 @@ const cascadeSoftDeleteMenuItemReferences = async (menuItemId, session = null) =
   const objectId = new mongoose.Types.ObjectId(menuItemId);
   const options = session ? { session } : {};
 
-  const [
-    combos,
-    discounts,
-    sales,
-    challengesBuyMenuItemTask,
-    challengesMenuItemReward,
-    promotionsBuyMenuItem,
-    promotionsProductSale,
-    promotionsExtraPointsForItem,
-    rewardsBuyMenuItem,
-  ] = await Promise.all([
-    MenuItemsCombos.updateMany(
-      { status: NOT_DELETED, ...menuItemFieldQuery("menuItems.menuItem", objectId) },
-      { $set: { status: "deleted" } },
-      options,
-    ),
-    MenuItemsDiscounts.updateMany(
-      { status: NOT_DELETED, ...menuItemFieldQuery("menuItems", objectId) },
-      { $set: { status: "deleted" } },
-      options,
-    ),
-    MenuItemsSale.updateMany(
-      { status: NOT_DELETED, ...menuItemFieldQuery("menuItems", objectId) },
-      { $set: { status: "deleted" } },
-      options,
-    ),
-    Challenge.updateMany(
-      {
-        status: NOT_DELETED,
-        taskType: "buyMenuItem",
-        taskMenuItem: objectId,
-      },
-      { $set: { status: "deleted" } },
-      options,
-    ),
-    Challenge.updateMany(
-      {
-        status: NOT_DELETED,
-        "reward.rewardType": "menuItem",
-        reward: { $exists: true },
-        "reward.rewardMenuItem": objectId,
-      },
-      { $set: { status: "deleted" } },
-      options,
-    ),
-    Promotion.updateMany(
-      {
-        status: NOT_DELETED,
-        promotionType: "buyMenuItemPromotion",
-        ...menuItemFieldQuery("menuItem", objectId),
-      },
-      { $set: { status: "deleted" } },
-      options,
-    ),
-    Promotion.updateMany(
-      {
-        status: NOT_DELETED,
-        promotionType: "productSale",
-        ...menuItemFieldQuery("menuItem", objectId),
-      },
-      { $set: { status: "deleted" } },
-      options,
-    ),
-    Promotion.updateMany(
-      {
-        status: NOT_DELETED,
-        promotionType: "extraPointsForItem",
-        ...menuItemFieldQuery("menuItem", objectId),
-      },
-      { $set: { status: "deleted" } },
-      options,
-    ),
-    Reward.updateMany(
-      {
-        status: NOT_DELETED,
-        rewardType: "buyMenuItemReward",
-        ...menuItemFieldQuery("menuItem", objectId),
-      },
-      { $set: { status: "deleted" } },
-      options,
-    ),
-  ]);
+  // MongoDB transactions do not support parallel ops on the same session
+  const combos = await MenuItemsCombos.updateMany(
+    { status: NOT_DELETED, ...menuItemFieldQuery("menuItems.menuItem", objectId) },
+    { $set: { status: "deleted" } },
+    options,
+  );
+  const discounts = await MenuItemsDiscounts.updateMany(
+    { status: NOT_DELETED, ...menuItemFieldQuery("menuItems", objectId) },
+    { $set: { status: "deleted" } },
+    options,
+  );
+  const sales = await MenuItemsSale.updateMany(
+    { status: NOT_DELETED, ...menuItemFieldQuery("menuItems", objectId) },
+    { $set: { status: "deleted" } },
+    options,
+  );
+  const challengesBuyMenuItemTask = await Challenge.updateMany(
+    {
+      status: NOT_DELETED,
+      taskType: "buyMenuItem",
+      taskMenuItem: objectId,
+    },
+    { $set: { status: "deleted" } },
+    options,
+  );
+  const challengesMenuItemReward = await Challenge.updateMany(
+    {
+      status: NOT_DELETED,
+      "reward.rewardType": "menuItem",
+      reward: { $exists: true },
+      "reward.rewardMenuItem": objectId,
+    },
+    { $set: { status: "deleted" } },
+    options,
+  );
+  const promotionsBuyMenuItem = await Promotion.updateMany(
+    {
+      status: NOT_DELETED,
+      promotionType: "buyMenuItemPromotion",
+      ...menuItemFieldQuery("menuItem", objectId),
+    },
+    { $set: { status: "deleted" } },
+    options,
+  );
+  const promotionsProductSale = await Promotion.updateMany(
+    {
+      status: NOT_DELETED,
+      promotionType: "productSale",
+      ...menuItemFieldQuery("menuItem", objectId),
+    },
+    { $set: { status: "deleted" } },
+    options,
+  );
+  const promotionsExtraPointsForItem = await Promotion.updateMany(
+    {
+      status: NOT_DELETED,
+      promotionType: "extraPointsForItem",
+      ...menuItemFieldQuery("menuItem", objectId),
+    },
+    { $set: { status: "deleted" } },
+    options,
+  );
+  const rewardsBuyMenuItem = await Reward.updateMany(
+    {
+      status: NOT_DELETED,
+      rewardType: "buyMenuItemReward",
+      ...menuItemFieldQuery("menuItem", objectId),
+    },
+    { $set: { status: "deleted" } },
+    options,
+  );
 
   const cascaded = {
     combos: combos.modifiedCount,
