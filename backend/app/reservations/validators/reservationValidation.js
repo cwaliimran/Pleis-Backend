@@ -59,17 +59,21 @@ const validateReservationPayload = (req, res, reservation) => {
         }
 
         for (const slot of dateBlock.timeSlots) {
-          if (!slot.startTime || !slot.endTime) {
-            res.status(400).json({
-              translationKey: "invalid_start_or_end_time_in_slot",
-            });
-            return null;
+          if (slot.startTime !== "") {
+            slot.startTime = convertTimezoneToUtc(
+              `${dateBlock.date} ${slot.startTime}`,
+              timezone,
+              "YYYY-MM-DD HH:mm",
+            );
           }
 
-          // ✅ THIS NOW RUNS
-          slot.startTime = convertTimezoneToUtc(slot.startTime, timezone, "YYYY-MM-DDTHH:mm:ss.SSS[Z]");
-
-          slot.endTime = convertTimezoneToUtc(slot.endTime, timezone, "YYYY-MM-DDTHH:mm:ss.SSS[Z]");
+          if (slot.endTime !== "") {
+            slot.endTime = convertTimezoneToUtc(
+              `${dateBlock.date} ${slot.endTime}`,
+              timezone,
+              "YYYY-MM-DD HH:mm",
+            );
+          }
         }
       }
     }

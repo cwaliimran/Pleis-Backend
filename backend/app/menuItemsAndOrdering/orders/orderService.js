@@ -440,7 +440,7 @@ const placeOrder = async ({
     };
     let orderStatus = "pending";
     if (paymentMethod === "applePay" || paymentMethod === "card") {
-      orderStatus = "pendingPayment";
+      orderStatus = "pending";
       orderData.lockUntil = new Date(Date.now() + 10 * 60 * 1000);
     } else if (
       setting.automaticOrderAcceptance &&
@@ -541,7 +541,7 @@ const updateOrder = async ({
     }
 
     if (existingOrder.status !== "pending") {
-      throw new Error("Only orders in pendingPayment state can be updated");
+      throw new Error("Only orders in pending state can be updated");
     }
 
     const organizationId =

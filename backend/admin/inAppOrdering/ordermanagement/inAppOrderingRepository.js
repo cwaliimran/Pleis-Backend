@@ -39,7 +39,7 @@ const getOrders = async ({
   skip,
   pickupFilter,
   paymentMethod,
-  sortDirection = -1,
+  sortDirection = 1,
   companyOrganizer,
   orderStatus,
   paymentStatus,
