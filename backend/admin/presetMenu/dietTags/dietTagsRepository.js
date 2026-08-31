@@ -8,6 +8,10 @@ const ACTIVE_DietTagsS_CACHE_KEY = "DietTags:active";
 
 const createDietTags = async (data) => {
   try {
+    const esisting = await DietTags.findOne({ name: data.name, status: { $ne: "deleted" } });
+    if (esisting) {
+      throw new Error("diet_tag_already_exists");
+    }
     const dietTags = new DietTags(data);
     await dietTags.save();
     await invalidate(ACTIVE_DietTagsS_CACHE_KEY);

@@ -144,9 +144,19 @@ const getMenuItemsWithFiltersV2 = async ({ query = {}, timezone = null }) => {
         isAvailableInStock: true,
       },
     },
+    {
+      $lookup: {
+        from: "menusubcategories",
+        localField: "subCategory",
+        foreignField: "_id",
+        pipeline: [{ $match: { status: "active" } }, { $project: { _id: 1 } }],
+        as: "subCategoryInfo",
+      },
+    },
+    { $match: { subCategoryInfo: { $ne: [] } } },
+    { $project: { subCategoryInfo: 0 } },
     { $sort: { createdAt: -1 } },
   ]);
-
   if (!menuItems.length) return [];
 
   menuItems = await filterByDaypartAndDaysWithFetch(menuItems, getAllDayparts, timezone || "UTC");

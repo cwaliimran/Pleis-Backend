@@ -27,6 +27,7 @@ const getBrands = async ({
       limit,
       user,
       skip,
+      keyword,
     });
     return {
       Brands,
