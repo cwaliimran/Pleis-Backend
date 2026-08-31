@@ -17,7 +17,11 @@ const {
 const {
   getCheckedInStaffForOrganization,
 } = require("../../../staff/organizations/organizationRepository");
-const { usePromoCode } = require("../../promoCode/promoCodeRepository");
+const {
+  usePromoCode,
+  calculatePromoDiscount,
+  releasePromoCode,
+} = require("../../promoCode/promoCodeRepository");
 const {
   getOrgCompanyOrganizer,
 } = require("../../organizationProfile/organizationProfileRepository");
@@ -544,6 +548,10 @@ const updateOrder = async ({
       throw new Error("Only orders in pending state can be updated");
     }
 
+    // #region agent log
+    fetch('http://127.0.0.1:7606/ingest/25d149bb-e577-4cf4-9c2b-13c4addd66ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6050ad'},body:JSON.stringify({sessionId:'6050ad',runId:'post-fix',hypothesisId:'H1',location:'orderService.js:updateOrder:entry',message:'updateOrder existing vs incoming',data:{orderId:String(orderId),status:existingOrder.status,existingTotal:existingOrder.totalPrice,existingBreakdown:existingOrder.priceBreakdown,incomingTip:tip,incomingPromo:promoCode,didSendItems:items!==undefined,didSendCombos:combos!==undefined,didSendTip:tip!==undefined,didSendPromo:promoCode!==undefined},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+
     const organizationId =
       existingOrder.organization?._id || existingOrder.organization;
 
@@ -694,14 +702,30 @@ const updateOrder = async ({
       }
     }
 
+    // Customer updates must not auto-confirm. Card/applePay stay pending until
+    // paid (same as placeOrder). Cash may confirm only with auto-accept and
+    // no items that require confirmation.
     if (
       (shouldUpdateItems || shouldUpdateCombos) &&
       orderStatus === "pending" &&
       (orderItems.length || orderCombos.length)
     ) {
-      orderStatus = orderNeedsConfirmation(orderItems, orderCombos)
-        ? "pending"
-        : "confirmed";
+      const paymentForStatus =
+        paymentMethod !== undefined
+          ? paymentMethod
+          : existingOrder.paymentMethod;
+      const isOnlinePayment =
+        paymentForStatus === "applePay" || paymentForStatus === "card";
+      const needsConfirmation = orderNeedsConfirmation(orderItems, orderCombos);
+
+      if (isOnlinePayment || needsConfirmation) {
+        orderStatus = "pending";
+      } else {
+        const setting = await getSetttings({ organization: organizationId });
+        if (setting?.automaticOrderAcceptance === true) {
+          orderStatus = "confirmed";
+        }
+      }
     }
 
     if (
@@ -745,10 +769,16 @@ const updateOrder = async ({
     const finalPaymentMethod =
       paymentMethod !== undefined ? paymentMethod : existingOrder.paymentMethod;
 
+    const existingPromoCode = existingOrder.priceBreakdown?.promoCode
+      ? String(existingOrder.priceBreakdown.promoCode).trim().toUpperCase()
+      : null;
+
     const finalPromoCode =
       promoCode !== undefined
-        ? promoCode
-        : existingOrder.priceBreakdown?.promoCode;
+        ? promoCode && String(promoCode).trim()
+          ? String(promoCode).trim().toUpperCase()
+          : null
+        : existingPromoCode;
 
     const finalTip =
       tip !== undefined
@@ -759,34 +789,86 @@ const updateOrder = async ({
       throw new Error("Invalid tip");
     }
 
-    // Tip is added ONCE
-    totalPrice += finalTip;
+    const existingTip = Number(existingOrder.priceBreakdown?.tip || 0);
+    const itemsAndCombosTotal = totalPrice;
+    const voucherDiscount = Number(
+      existingOrder.priceBreakdown?.voucherDiscount || 0,
+    );
+    const promoChanged = (existingPromoCode || null) !== (finalPromoCode || null);
+    const willConsumeUsage = Boolean(finalPromoCode) && promoChanged;
+
+    // #region agent log
+    fetch('http://127.0.0.1:7606/ingest/25d149bb-e577-4cf4-9c2b-13c4addd66ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6050ad'},body:JSON.stringify({sessionId:'6050ad',runId:'post-fix',hypothesisId:'H1',location:'orderService.js:updateOrder:beforeTipPromo',message:'totals before tip/promo',data:{itemsTotal,totalSaleDiscount,itemsAndCombosTotal,existingTip,finalTip,tipDelta:finalTip-existingTip,existingPromo:existingPromoCode,finalPromoCode:finalPromoCode||null,promoChanged,willConsumeUsage,willReleaseOld:Boolean(promoChanged&&existingPromoCode)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     // =========================================================
-    // 6️⃣ PROMO
+    // 6️⃣ PROMO (on items+combos, before tip — same order as placeOrder)
     // =========================================================
 
     let promoResult = null;
 
-    if (finalPromoCode) {
+    if (finalPromoCode || (promoChanged && existingPromoCode)) {
       const companyOrganizer = await getOrgCompanyOrganizer(organizationId);
 
-      promoResult = await usePromoCode(
-        {
-          promoCode: finalPromoCode,
-          userId,
-          companyOrganizer,
-          amount: totalPrice,
-        },
-        session,
-      );
-
-      if (promoResult.error) {
-        throw new Error(promoResult.error);
+      if (promoChanged && existingPromoCode) {
+        await releasePromoCode(
+          {
+            promoCode: existingPromoCode,
+            userId,
+            companyOrganizer,
+          },
+          session,
+        );
       }
 
-      totalPrice = promoResult.finalAmount;
+      if (finalPromoCode) {
+        const promoAmount = totalPrice;
+
+        // #region agent log
+        fetch('http://127.0.0.1:7606/ingest/25d149bb-e577-4cf4-9c2b-13c4addd66ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6050ad'},body:JSON.stringify({sessionId:'6050ad',runId:'post-fix',hypothesisId:'H2',location:'orderService.js:updateOrder:beforeUsePromo',message:'applying promo before tip',data:{finalPromoCode,promoAmount,itemsAndCombosTotal,finalTip,willConsumeUsage,samePromoAsExisting:!promoChanged},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+
+        promoResult = willConsumeUsage
+          ? await usePromoCode(
+              {
+                promoCode: finalPromoCode,
+                userId,
+                companyOrganizer,
+                amount: promoAmount,
+              },
+              session,
+            )
+          : await calculatePromoDiscount(
+              {
+                promoCode: finalPromoCode,
+                userId,
+                companyOrganizer,
+                amount: promoAmount,
+                skipUsageLimits: true,
+              },
+              session,
+            );
+
+        if (promoResult.error) {
+          // #region agent log
+          fetch('http://127.0.0.1:7606/ingest/25d149bb-e577-4cf4-9c2b-13c4addd66ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6050ad'},body:JSON.stringify({sessionId:'6050ad',runId:'post-fix',hypothesisId:'H3',location:'orderService.js:updateOrder:promoError',message:'promo apply failed',data:{error:promoResult.error,finalPromoCode,samePromoAsExisting:!promoChanged,willConsumeUsage},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
+          throw new Error(promoResult.error);
+        }
+
+        totalPrice = promoResult.finalAmount;
+      }
     }
+
+    if (voucherDiscount > 0) {
+      totalPrice -= Math.min(voucherDiscount, totalPrice);
+    }
+
+    totalPrice += finalTip;
+
+    // #region agent log
+    fetch('http://127.0.0.1:7606/ingest/25d149bb-e577-4cf4-9c2b-13c4addd66ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6050ad'},body:JSON.stringify({sessionId:'6050ad',runId:'post-fix',hypothesisId:'H4',location:'orderService.js:updateOrder:finalTotals',message:'final recalculated totals',data:{itemsTotal,totalSaleDiscount,itemsAndCombosTotal,finalTip,promoDiscount:promoResult?.discount||0,promoFinalAmount:promoResult?.finalAmount,resultingTotal:totalPrice,expectedReplaceTipTotal:itemsAndCombosTotal-(promoResult?.discount||0)-voucherDiscount+finalTip,voucherKept:voucherDiscount,willConsumeUsage},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     // =========================================================
     // 7️⃣ UPDATE DATA
@@ -801,6 +883,7 @@ const updateOrder = async ({
         itemsTotal,
         saleDiscount: totalSaleDiscount,
         promoDiscount: promoResult?.discount || 0,
+        voucherDiscount,
         tax: 0,
         finalTotal: totalPrice,
         promoCode: finalPromoCode || null,
@@ -1079,6 +1162,9 @@ const getUserOrders = async (userId, page, limit) => {
   let formattedOrders = orders.map((order) => menuItemOrderFormatter(order));
 
   let { pending, confirmed, completed, cancelled, totalFiltered } = counts;
+  // #region agent log
+  fetch('http://127.0.0.1:7606/ingest/25d149bb-e577-4cf4-9c2b-13c4addd66ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6050ad'},body:JSON.stringify({sessionId:'6050ad',runId:'post-fix',hypothesisId:'H5',location:'orderService.js:getUserOrders:counts',message:'status counts from getCounts',data:{pending,confirmed,completed,cancelled,totalFiltered,countsKeys:counts&&Object.keys(counts),rawCountsType:typeof counts},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   let meta = generateMeta(page, limit, totalFiltered);
   meta.counts = { pending, confirmed, completed, cancelled };
   return { orders: formattedOrders, meta };

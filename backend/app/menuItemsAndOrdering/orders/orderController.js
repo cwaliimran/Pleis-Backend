@@ -201,7 +201,6 @@ const getOrderDetails = async (req, res) => {
 const getUserOrders = async (req, res) => {
   try {
     const { page, limit } = parsePaginationParams(req);
-
     const { orders, meta } = await orderService.getUserOrders(req.user._id, page, limit);
 
     return sendResponse({
