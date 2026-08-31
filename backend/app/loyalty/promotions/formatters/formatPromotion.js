@@ -64,9 +64,11 @@ function formatPromotion(promotion, timezone, tierKey) {
             delete obj.discountedPrice;
             if (Array.isArray(obj.menuItem)) {
                 obj.menuItem.forEach(item => {
-                    item.image = getFullImageUrl(item?.image);
+                    if (item && typeof item === "object" && item._id) {
+                        item.image = getFullImageUrl(item?.image);
+                    }
                 });
-            } else if (obj.menuItem && typeof obj.menuItem === "object") {
+            } else if (obj.menuItem && typeof obj.menuItem === "object" && obj.menuItem._id) {
                 obj.menuItem.image = getFullImageUrl(obj.menuItem?.image);
             }
    

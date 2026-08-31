@@ -195,7 +195,133 @@ const validatePromoCode = async (data) => {
 };
 
 
+const calculatePromoDiscount = async (data, session = null) => {
+  try {
+    const { promoCode, companyOrganizer, amount, userId, skipUsageLimits = false } = data;
+    const normalizedCode = promoCode.trim().toUpperCase();
+
+    const foundPromoCode = await PromoCode.findOne(
+      {
+        promoCode: normalizedCode,
+        companyOrganizer,
+      },
+      null,
+      { session }
+    );
+
+    if (!foundPromoCode) {
+      return { error: "Promo code not found for the given organizer." };
+    }
+
+    if (foundPromoCode.status !== "active") {
+      return { error: "Promo code is not active." };
+    }
+
+    if (new Date() > foundPromoCode.expiryDate) {
+      return { error: "Promo code has expired." };
+    }
+
+    if (!skipUsageLimits) {
+      if (foundPromoCode.usedCount >= foundPromoCode.maxUsage) {
+        return { error: "Promo code usage limit reached." };
+      }
+
+      const userKey = userId.toString();
+      const userUsage = foundPromoCode.usersUsed.get(userKey);
+
+      if (userUsage && userUsage.count >= foundPromoCode.maxCountPerUser) {
+        return {
+          error: "You have exceeded the maximum usage for this promo code.",
+        };
+      }
+    }
+
+    let discount = 0;
+
+    if (foundPromoCode.discountType === "percentage") {
+      discount = (foundPromoCode.discountValue / 100) * amount;
+
+      if (
+        foundPromoCode.maxDiscountCap > 0 &&
+        discount > foundPromoCode.maxDiscountCap
+      ) {
+        discount = foundPromoCode.maxDiscountCap;
+      }
+    }
+
+    if (foundPromoCode.discountType === "amount") {
+      discount = foundPromoCode.discountValue;
+
+      if (
+        foundPromoCode.maxDiscountCap > 0 &&
+        discount > foundPromoCode.maxDiscountCap
+      ) {
+        discount = foundPromoCode.maxDiscountCap;
+      }
+    }
+
+    if (amount - discount < 0) {
+      return {
+        error: "Discount exceeds the total amount. Please adjust your order.",
+      };
+    }
+
+    return {
+      success: true,
+      discount,
+      finalAmount: Math.max(amount - discount, 0),
+      maxDiscountCap: foundPromoCode.maxDiscountCap,
+      discountType: foundPromoCode.discountType,
+    };
+  } catch (err) {
+    throw err;
+  }
+};
+
+const releasePromoCode = async (data, session = null) => {
+  try {
+    const { promoCode, userId, companyOrganizer } = data;
+    if (!promoCode) {
+      return { success: true };
+    }
+
+    const normalizedCode = String(promoCode).trim().toUpperCase();
+    const foundPromoCode = await PromoCode.findOne(
+      {
+        promoCode: normalizedCode,
+        companyOrganizer,
+      },
+      null,
+      { session }
+    );
+
+    if (!foundPromoCode) {
+      return { success: true };
+    }
+
+    foundPromoCode.usedCount = Math.max((foundPromoCode.usedCount || 0) - 1, 0);
+
+    const userKey = userId.toString();
+    const userUsage = foundPromoCode.usersUsed.get(userKey);
+    if (userUsage) {
+      const nextCount = (userUsage.count || 1) - 1;
+      if (nextCount <= 0) {
+        foundPromoCode.usersUsed.delete(userKey);
+      } else {
+        foundPromoCode.usersUsed.set(userKey, { count: nextCount });
+      }
+    }
+
+    await foundPromoCode.save({ session });
+    return { success: true };
+  } catch (err) {
+    throw err;
+  }
+};
+
 module.exports = {
   usePromoCode,
   validatePromoCode,
+  calculatePromoDiscount,
+  releasePromoCode,
 };

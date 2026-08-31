@@ -1,5 +1,5 @@
 const repository = require("./promotionsRepository");
-const { getActivePromotionDateQuery } = require("../../../commonModules/loyalty/rewards/utils/rewardEndDate");
+const { getActivePromotionMatchQuery } = require("../../../commonModules/loyalty/promotions/utils/promotionSchedule");
 const { generateMeta, getCurrentDateInTimezone } = require("@utils/responseUtil");
 const formatPromotion = require("../../../commonModules/loyalty/promotions/utils/formatPromotion");
 const { addEngagementEvent } = require("@appEngagement/engagementEventsRepository");
@@ -93,7 +93,7 @@ const getPromotionsByCompanyOrganizerService = async ({
   const totalFiltered = await repository.count({
     status: "active",
     companyOrganizer,
-    ...getActivePromotionDateQuery(timezone),
+    ...getActivePromotionMatchQuery(timezone, now),
   });
 
   const meta = generateMeta(page, limit, totalFiltered);

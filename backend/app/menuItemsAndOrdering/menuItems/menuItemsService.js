@@ -140,6 +140,7 @@ const getMenuItemsV2 = async ({ userId, timezone, organization }) => {
       },
     },
     timezone,
+    userId,
   });
 
   if (!menuItems.length) return { organizationDetails, recommended: [], menu: [], combos: [] };
@@ -232,6 +233,9 @@ const applyMenuItemDiscountV2 = (item) => {
     salePrice: priceInfo.finalPrice,
     hasDiscount: Boolean(item.discount),
     discount: item.discount || null,
+    promotion: item.promotion || null,
+    extraPoints: item.extraPoints ?? null,
+    happyHour: item.happyHour || null,
   };
 };
 
@@ -276,7 +280,7 @@ const getRecommendedMenuItemsV2 = async ({ userId, timezone, organization }) => 
     return { recommended: [], menu: [] };
   }
   const recommended = await menuItemRepo.getRecommendedItemsV2(userId, timezone, menuId);
-  let formatted = recommended.map((item) => formatMenuItem(item));
+  let formatted = recommended.map((item) => applyMenuItemDiscountV2(formatMenuItem(item, timezone)));
   return { recommended: formatted };
 };
 
@@ -286,7 +290,7 @@ const getUpsellMenuItemsV2 = async ({ userId, timezone, organization }) => {
     return { recommended: [], menu: [] };
   }
   const recommended = await menuItemRepo.getUpsellMenuItemsV2(userId, timezone, menuId);
-  let formatted = recommended.map((item) => formatMenuItem(item));
+  let formatted = recommended.map((item) => applyMenuItemDiscountV2(formatMenuItem(item, timezone)));
   return { recommended: formatted };
 };
 

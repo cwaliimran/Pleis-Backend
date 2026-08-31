@@ -36,7 +36,7 @@ const baseChallengeSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["active", "inactive", "completed", "deleted"],
+      enum: ["active", "inactive", "completed", "deleted",],
       default: "active",
     },
 

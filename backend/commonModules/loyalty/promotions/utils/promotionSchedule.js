@@ -3,6 +3,7 @@ const { getStartAndEndOfDay } = require("../../../../helperUtils/responseUtil");
 const {
   isEndDateExpired,
   isStartDateNotReached,
+  getActivePromotionDateQuery,
 } = require("../../rewards/utils/rewardEndDate");
 
 const HH_MM_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -17,6 +18,12 @@ const timeToMinutes = (time) => {
 
 const getCurrentUtcMinutes = (now = new Date()) =>
   now.getUTCHours() * 60 + now.getUTCMinutes();
+
+const formatUtcHhMm = (now = new Date()) => {
+  const hours = String(now.getUTCHours()).padStart(2, "0");
+  const minutes = String(now.getUTCMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+};
 
 const isSameCalendarDay = (date, now, timezone = "UTC") => {
   if (!date) return false;
@@ -261,6 +268,55 @@ const isPromotionScheduleActive = ({
   return isPromotionTimeActive({ startTime, endTime, now });
 };
 
+/**
+ * Mongo filter for optional daily time window.
+ * null/null (or missing) skips the restriction. startTime > endTime is overnight.
+ * Stored startTime/endTime are UTC "HH:mm".
+ */
+const getActivePromotionTimeQuery = (now = new Date()) => {
+  const current = formatUtcHhMm(now);
+
+  return {
+    $or: [
+      {
+        $and: [
+          { startTime: { $in: [null, ""] } },
+          { endTime: { $in: [null, ""] } },
+        ],
+      },
+      {
+        $and: [
+          { startTime: { $gt: "" } },
+          { endTime: { $gt: "" } },
+          { $expr: { $lte: ["$startTime", "$endTime"] } },
+          { startTime: { $lte: current } },
+          { endTime: { $gte: current } },
+        ],
+      },
+      {
+        $and: [
+          { startTime: { $gt: "" } },
+          { endTime: { $gt: "" } },
+          { $expr: { $gt: ["$startTime", "$endTime"] } },
+          {
+            $or: [
+              { startTime: { $lte: current } },
+              { endTime: { $gte: current } },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+};
+
+const getActivePromotionMatchQuery = (timezone = "UTC", now = new Date()) => ({
+  $and: [
+    getActivePromotionDateQuery(timezone),
+    getActivePromotionTimeQuery(now),
+  ],
+});
+
 const getPromotionScheduleReasons = (
   promotion = {},
   now = new Date(),
@@ -338,4 +394,6 @@ module.exports = {
   isPromotionRecurrenceActive,
   isPromotionScheduleActive,
   getPromotionScheduleReasons,
+  getActivePromotionTimeQuery,
+  getActivePromotionMatchQuery,
 };

@@ -17,8 +17,8 @@ const { createTransactionService } = require("../../userWalletService/transactio
 const {
   isPromotionScheduleActive,
   getPromotionScheduleReasons,
+  getActivePromotionMatchQuery,
 } = require("../../../commonModules/loyalty/promotions/utils/promotionSchedule");
-const { getActivePromotionDateQuery } = require("../../../commonModules/loyalty/rewards/utils/rewardEndDate");
 
 
 // Count
@@ -76,7 +76,7 @@ const getPromotionsByCompanyOrganizer = async ({
   const match = {
     status: "active",
     companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
-    ...getActivePromotionDateQuery(timezone),
+    ...getActivePromotionMatchQuery(timezone, now),
   };
 
   const promotions = await Promotion.find(match)
@@ -131,7 +131,7 @@ const getPromotionsForDashboard = async ({
   const matchQuery = {
     companyOrganizer: { $in: clubIds },
     status: "active",
-    ...getActivePromotionDateQuery(timezone),
+    ...getActivePromotionMatchQuery(timezone, now),
   };
 
   /* ===============================
@@ -333,7 +333,7 @@ const getPromotionsForHome = async ({
     {
       $match: {
         status: "active",
-        ...getActivePromotionDateQuery(timezone),
+        ...getActivePromotionMatchQuery(timezone, now),
       },
     },
     {
@@ -430,7 +430,7 @@ const getPromotions = async ({
 
   const baseMatch = {
     status: "active",
-    ...getActivePromotionDateQuery(timezone),
+    ...getActivePromotionMatchQuery(timezone, now),
   };
 
   if (companyOrganizer) {
@@ -588,7 +588,7 @@ const getActiveLoyaltyHappyHourPromotion = async ({
         promotionType: "happyHour",
         status: "active",
         companyOrganizer: organizerId,
-        ...getActivePromotionDateQuery(timezone),
+        ...getActivePromotionMatchQuery(timezone, now),
       },
     },
 
@@ -758,20 +758,23 @@ const getActiveMenuItemPromotions = async ({
   now = new Date()
 }) => {
 
+  if (!menuItemIds?.length) return [];
+
   const promotions = await Promotion.find({
-    promotionType: "buyMenuItemPromotion",
+    promotionType: { $in: ["buyMenuItemPromotion", "extraPointsForItem"] },
     menuItem: { $in: menuItemIds },
     status: "active",
-    ...getActivePromotionDateQuery(timezone),
+    ...getActivePromotionMatchQuery(timezone || "UTC", now),
   })
     .populate("tierLimit")
     .populate("reward")
+    .populate({ path: "menuItem", select: "_id title image" })
     .lean();
 
   if (!promotions.length) return [];
 
   const currentlyActive = promotions.filter((promo) =>
-    isPromotionScheduleActive({ ...promo, now, timezone }),
+    isPromotionScheduleActive({ ...promo, now, timezone: timezone || "UTC" }),
   );
 
   if (!currentlyActive.length) return [];
@@ -786,6 +789,56 @@ const getActiveMenuItemPromotions = async ({
   return formatted;
 };
 
+const getActiveMenuItemProductSales = async ({
+  menuItemIds,
+  timezone,
+  now = new Date(),
+}) => {
+  if (!menuItemIds?.length) return [];
+
+  const promotions = await Promotion.find({
+    promotionType: "productSale",
+    menuItem: { $in: menuItemIds },
+    status: "active",
+    ...getActivePromotionMatchQuery(timezone || "UTC", now),
+  })
+    .select("title discountedPercent menuItem startDate endDate startTime endTime status createdAt activeDays recurringDetails")
+    .lean();
+
+  if (!promotions.length) return [];
+
+  return promotions.filter((promo) =>
+    isPromotionScheduleActive({ ...promo, now, timezone: timezone || "UTC" }),
+  );
+};
+
+const getActiveMenuHappyHourPromotion = async ({
+  companyOrganizer,
+  timezone,
+  now = new Date(),
+}) => {
+  if (!companyOrganizer) return null;
+
+  const promotions = await Promotion.find({
+    promotionType: "happyHour",
+    status: "active",
+    companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
+    ...getActivePromotionMatchQuery(timezone || "UTC", now),
+  })
+    .sort({ pointsMultiplier: -1 })
+    .lean();
+
+  if (!promotions.length) return null;
+
+  const active = promotions.find((promo) =>
+    isPromotionScheduleActive({ ...promo, now, timezone: timezone || "UTC" }),
+  );
+
+  if (!active) return null;
+
+  return formatPromotion(active, timezone);
+};
+
 module.exports = {
   count,
   findById,
@@ -796,6 +849,8 @@ module.exports = {
   getActiveLoyaltyHappyHourPromotion,
   claimPromotion,
   getActiveMenuItemPromotions,
+  getActiveMenuItemProductSales,
+  getActiveMenuHappyHourPromotion,
 
 };
 
