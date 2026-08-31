@@ -35,18 +35,34 @@ const getOrganizationProfile = async (queryData) => {
     }).catch(console.error);
 
 
-    const [orgProfile, orgEvents, reservations, menu, reviews, similarOrganizations, userOrganizationStreak] = await Promise.all([
+    let [
+      orgProfile,
+      orgEvents,
+      reservations,
+      menu,
+      reviews,
+      similarOrganizations,
+      userOrganizationStreak,
+    ] = await Promise.all([
       findOrganizationById(userId, organizationId),
-      getOrganizationEvents({ organizationId, filter, timezone, userLocation: queryData.userLocation, userId }), // Filter for "upcoming" or "past"
+      getOrganizationEvents({
+        organizationId,
+        filter,
+        timezone,
+        userLocation: queryData.userLocation,
+        userId,
+      }), // Filter for "upcoming" or "past"
       getOrganizationReservationsService({ organizationId, timezone }),
-      getOrganizationMenu(organizationId, userId, timezone),
+      getMenuItemsV2({ userId, timezone, organization: organizationId }),
       getOrganizationReviews(organizationId), // Get reviews with reviewer names
       getSimilarOrganizations(organizationId, timezone),
-      getUserOrganizationStreak(userId, organizationId)
+      getUserOrganizationStreak(userId, organizationId),
     ]);
     if (!orgProfile.org) {
       throw new Error("Organization not found");
     }
+  
+    menu=menu?.menu||[];
 
     // Format organization profile info
     let orgProfileInfo = formatOrganization(orgProfile.org);
@@ -192,7 +208,7 @@ const getOrganizationMenu = async (organizationId, userId, timezone) => {
 };
 
 const { getFullImageUrl } = require("../../helperUtils/imageHelper"); // Import getFullImageUrl
-const { applyMenuItemsSale } = require("../menuItemsAndOrdering/menuItems/menuItemsService");
+const { applyMenuItemsSale, getMenuItemsV2 } = require("../menuItemsAndOrdering/menuItems/menuItemsService");
 const { getUserOrganizationStreak } = require("../usersStreaks/usersStreaksRepository");
 
 const getOrganizationReviews = async (organizationId, page = 1, limit = 10) => {
