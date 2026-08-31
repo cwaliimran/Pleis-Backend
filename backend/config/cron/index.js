@@ -11,14 +11,30 @@ const {
 
 const { runRecurringEventsCron } = require("./events/recurringEvents.core");
 const { runEventReminderCron } = require("./events/eventReminder.cron");
-const { runRecurringPromotionsCron } = require("../../admin/loyalty/promotions/utils/recurringPromotion.core");
-const { runRecurringGlobalPromotionsCron } = require("../../admin/globalLoyalty/promotions/utils/recurringPromotion.core");
-const { runLoyaltyChallengeExpiringSoonCron } = require("./loyalty/challenges/challengeExpiringSoonCron");
-const { runGlobalChallengeExpiringSoonCron } = require("./globalLoyalty/challenges/globalChallengeExpiringSoonCron");
+const {
+  runRecurringPromotionsCron,
+} = require("../../admin/loyalty/promotions/utils/recurringPromotion.core");
+const {
+  runRecurringGlobalPromotionsCron,
+} = require("../../admin/globalLoyalty/promotions/utils/recurringPromotion.core");
+const {
+  runLoyaltyChallengeExpiringSoonCron,
+} = require("./loyalty/challenges/challengeExpiringSoonCron");
+const {
+  runGlobalChallengeExpiringSoonCron,
+} = require("./globalLoyalty/challenges/globalChallengeExpiringSoonCron");
 const { flushEngagementBuffer } = require("./engagement/flushEngagementBuffer");
-const { PromoCodeExpireCron } = require("./promoCodeValidity/PromoCodeExpire.cron");
-const { runSubscriptionReminderCron } = require("./subScription/subScription.cron");
-const { giveAwaysExpireCron, giveAwaysExpireAndWinnerCron } = require("./giveAways/giveAwaysExpireAndWinnerCron.cron");
+const {
+  PromoCodeExpireCron,
+} = require("./promoCodeValidity/PromoCodeExpire.cron");
+const {
+  runSubscriptionReminderCron,
+} = require("./subScription/subScription.cron");
+const {
+  giveAwaysExpireCron,
+  giveAwaysExpireAndWinnerCron,
+} = require("./giveAways/giveAwaysExpireAndWinnerCron.cron");
+const { runLoyaltyChallengeUpdateCron } = require("./loyalty/challenges/challengeUpdate");
 
 const startCrons = () => {
   /* ======================================================
@@ -63,8 +79,6 @@ const startCrons = () => {
     }
   });
 
-
-
   ///* ======================================================
   //   🕛 CRON 3: Event reminders (every minute)
   //   ====================================================== */
@@ -84,7 +98,6 @@ const startCrons = () => {
     }
   });
 
-
   /* ======================================================
      ⏳ CRON 4: Challenge expiring soon reminders (every hour)
      ====================================================== */
@@ -102,7 +115,23 @@ const startCrons = () => {
       await releaseLock(lockKey, lock);
     }
   });
+  /* ======================================================
+     ⏳ CRON 4: Challenge update 
+     ====================================================== */
+  cron.schedule("5 0 * * *", async () => {
+    const lockKey = "cron:challenge-update";
+    const lock = await acquireLock(lockKey, 50);
 
+    if (!lock) return;
+
+    try {
+      await runLoyaltyChallengeUpdateCron();
+    } catch (err) {
+      console.error("Challenge update cron error:", err);
+    } finally {
+      await releaseLock(lockKey, lock);
+    }
+  });
 
   /* ======================================================
      ⏳ CRON 5: Global Challenge expiring soon reminders (every hour)
@@ -139,13 +168,12 @@ const startCrons = () => {
     }
   });
 
-
-
   ///* ======================================================
   //   🕛 CRON 6: Promo code expiry (every minute)
   //   ====================================================== */
-  cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
-  // cron.schedule("0 * * * *", async () => { // run every 1 hour for production
+  // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
+  cron.schedule("0 * * * *", async () => {
+    // run every 1 hour for production
     const lockKey = "cron:promo-code-expiry";
     const lock = await acquireLock(lockKey, 50);
 
@@ -163,8 +191,9 @@ const startCrons = () => {
   ///* ======================================================
   //   🕛 CRON 7: Subscription reminder (every minute)
   //   ====================================================== */
-  cron.schedule("*/3 * * * * *", async () => { //5 seconds for testing
-  // cron.schedule("0 * * * *", async () => { // run every 1 hour for production
+  cron.schedule("*/3 * * * * *", async () => {
+    //5 seconds for testing
+    // cron.schedule("0 * * * *", async () => { // run every 1 hour for production
     const lockKey = "cron:subscription-reminder";
     const lock = await acquireLock(lockKey, 50);
 
@@ -179,14 +208,12 @@ const startCrons = () => {
     }
   });
 
-
-
-  
   ///* ======================================================
   //   🕛 CRON 8: Giveaways expiry (every minute)
   //   ====================================================== */
-  cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
-  // cron.schedule("0 * * * *", async () => { // run every 1 hour for production
+  // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
+  cron.schedule("0 * * * *", async () => {
+    // run every 1 hour for production
     const lockKey = "cron:giveaways-expiry";
     const lock = await acquireLock(lockKey, 50);
 
@@ -200,9 +227,6 @@ const startCrons = () => {
       await releaseLock(lockKey, lock);
     }
   });
-
-
-  
 };
 
 module.exports = { startCrons };

@@ -10,9 +10,11 @@ const { convertUtcToTimezone } = require("@utils/responseUtil");
  * @returns {Object|null}
  */
 function formatMenuItem(item, timezone) {
-    let obj = typeof item.toObject === "function" ? item.toObject() : item;
+    if (!item) return null;
 
-    if (!obj) return null;
+    // Clone so display formatting does not mutate the source (combo formatting
+    // would otherwise convert already-local times and emit "Invalid date").
+    let obj = typeof item.toObject === "function" ? item.toObject() : { ...item };
 
     // Format image URL
     obj.image = getFullImageUrl(obj.image || "noimage.png");

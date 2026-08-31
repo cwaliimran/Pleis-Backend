@@ -140,6 +140,7 @@ const getMenuItemsV2 = async ({ userId, timezone, organization }) => {
       },
     },
     timezone,
+    userId,
   });
 
   if (!menuItems.length) return { organizationDetails, recommended: [], menu: [], combos: [] };
@@ -153,12 +154,17 @@ const getMenuItemsV2 = async ({ userId, timezone, organization }) => {
     ),
   ];
 
-  // 4️⃣ Fetch subcategory names in batch
+  // 4️⃣ Fetch subcategory names in batch (sorted by admin order field)
   const subCategories = subCategoryIds.length
-    ? await MenuSubcategory.find({ _id: { $in: subCategoryIds } })
-        .select("_id title")
+    ? await MenuSubcategory.find({
+        _id: { $in: subCategoryIds },
+        status: "active",
+      })
+        .select("_id title order")
+        .sort({ order: 1 })
         .lean()
     : [];
+
   const subCategoryMap = subCategories.reduce((acc, sub) => {
     acc[sub._id.toString()] = sub.title;
     return acc;
@@ -182,11 +188,19 @@ const getMenuItemsV2 = async ({ userId, timezone, organization }) => {
     grouped[key].items.push(applyMenuItemDiscountV2(formatMenuItemV2(item, timezone, subCategoryMap)));
   });
 
-  // 6️⃣ Convert to desired response structure
-  const menu = Object.values(grouped);
+  // 6️⃣ Preserve subcategory order from admin `order` field (not item iteration order)
+  const menu = subCategories
+    .map((sub) => grouped[sub._id.toString()])
+    .filter(Boolean);
 
   let formattedRecommended =
-    recommended?.map((item) => applyMenuItemDiscountV2(formatMenuItemV2(item, timezone, subCategoryMap))) || [];
+    recommended
+      ?.filter((item) =>
+        resolveSubCategoryTitle(item.subCategory, subCategoryMap),
+      )
+      .map((item) =>
+        applyMenuItemDiscountV2(formatMenuItemV2(item, timezone, subCategoryMap)),
+      ) || [];
 
   const menuItemById = new Map(menuItems.map((item) => [item._id.toString(), item]));
 
@@ -195,7 +209,11 @@ const getMenuItemsV2 = async ({ userId, timezone, organization }) => {
   if (organizationDetails?.creator) {
     delete organizationDetails.creator;
   }
-  const rawCombos = await menuItemRepo.getMenuItemsCombos(menuItems, companyOrganizer);
+  const rawCombos = await menuItemRepo.getMenuItemsCombos(
+    menuItems,
+    companyOrganizer,
+    timezone,
+  );
 
   const combos = formatMenuItemsComboList(rawCombos, {
     timezone,
@@ -215,6 +233,9 @@ const applyMenuItemDiscountV2 = (item) => {
     salePrice: priceInfo.finalPrice,
     hasDiscount: Boolean(item.discount),
     discount: item.discount || null,
+    promotion: item.promotion || null,
+    extraPoints: item.extraPoints ?? null,
+    happyHour: item.happyHour || null,
   };
 };
 
@@ -259,7 +280,7 @@ const getRecommendedMenuItemsV2 = async ({ userId, timezone, organization }) => 
     return { recommended: [], menu: [] };
   }
   const recommended = await menuItemRepo.getRecommendedItemsV2(userId, timezone, menuId);
-  let formatted = recommended.map((item) => formatMenuItem(item));
+  let formatted = recommended.map((item) => applyMenuItemDiscountV2(formatMenuItem(item, timezone)));
   return { recommended: formatted };
 };
 
@@ -269,7 +290,7 @@ const getUpsellMenuItemsV2 = async ({ userId, timezone, organization }) => {
     return { recommended: [], menu: [] };
   }
   const recommended = await menuItemRepo.getUpsellMenuItemsV2(userId, timezone, menuId);
-  let formatted = recommended.map((item) => formatMenuItem(item));
+  let formatted = recommended.map((item) => applyMenuItemDiscountV2(formatMenuItem(item, timezone)));
   return { recommended: formatted };
 };
 

@@ -127,9 +127,19 @@ const getBrands = async ({
     fetchFn: computeBrands,
   });
 };
-const getBrandsSummary = async ({ timezone, page, limit, user, skip }) => {
+const getBrandsSummary = async ({ timezone, page, limit, user, skip, keyword }) => {
   const pipeline = [];
   pipeline.push({ $match: { status: "active" } });
+    if (keyword) {
+      const keywordMatch = buildKeywordQueryFromModels(
+        [{ schema: Brand.schema }],
+        keyword,
+      );
+  
+      if (Object.keys(keywordMatch).length) {
+        pipeline.push({ $match: keywordMatch });
+      }
+    }
 
   pipeline.push({ $sort: { createdAt: -1 } });
 

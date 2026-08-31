@@ -309,7 +309,7 @@
         "backend/commonModules/menuManagement/menuItemsCombos/MenuItemsCombos.js"
       ],
       "@PaymentMethodModel": [
-        "backend/admin/inAppOrdering/settings/setting/Setting.js"
+        "backend/admin/inAppOrdering/settings/PaymentMethod/PaymentMethod.js"
       ],
       "@ReservationPreferencesModel": [
         "backend/admin/reservation/reservationPreferences/ReservationPreferences.js"
@@ -319,6 +319,9 @@
       ],
       "@OccasionModel": [
         "backend/admin/reservation/occasion/Occasion.js"
+      ],
+      "@MenuSubcategoryModel": [
+        "backend/admin/menuManagement/menuSubcategory/MenuSubcategory.js"
       ]
     }
   },

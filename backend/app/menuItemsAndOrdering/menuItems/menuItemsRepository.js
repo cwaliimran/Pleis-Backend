@@ -6,10 +6,13 @@ const { resolveEffectiveDiscount } = require("@MenuItemsDiscountsModel");
 const Menus = require("@MenusModel");
 const mongoose = require("mongoose");
 const MenuOrders = require("@OrdersModel");
-const { getActiveMenuItemPromotions } = require("../../loyalty/promotions/promotionsRepository");
-const { getCurrentDateInTimezone } = require("@utils/responseUtil");
+const { getActiveMenuItemPromotions, getActiveMenuItemProductSales, getActiveMenuHappyHourPromotion } = require("../../loyalty/promotions/promotionsRepository");
+const { getCurrentDateInTimezone, getStartAndEndOfDay } = require("@utils/responseUtil");
 const { getAllDayparts } = require("../../../admin/presetMenu/daypart/daypartRepository");
-const { filterByDaypartAndDaysWithFetch } = require("../../../shared/menuItemsFilters/filterByDaypartAndDays");
+const {
+  filterByDaypartAndDays,
+  filterByDaypartAndDaysWithFetch,
+} = require("../../../shared/menuItemsFilters/filterByDaypartAndDays");
 
 const pickBestDiscount = (discounts = [], basePrice = 0, at = new Date()) =>
   resolveEffectiveDiscount(discounts, basePrice, at);
@@ -61,6 +64,148 @@ const attachMenuItemDiscounts = (menuItems = [], discounts = [], at = new Date()
   }));
 };
 
+const getPromotionMenuItemIds = (promo) => {
+  const raw = promo?.menuItem;
+  if (!raw) return [];
+  const list = Array.isArray(raw) ? raw : [raw];
+  return list
+    .map((menuItem) => (menuItem?._id || menuItem)?.toString?.())
+    .filter(Boolean);
+};
+
+const toItemPromotion = (promo) => {
+  if (!promo) return null;
+
+  return {
+    _id: promo._id,
+    title: promo.title,
+    description: promo.description || "",
+    image: promo.image,
+    promotionType: promo.promotionType,
+    extraPoints: Number(promo.extraPoints) || 0,
+    startDate: promo.startDate,
+    endDate: promo.endDate,
+    startTime: promo.startTime ?? null,
+    endTime: promo.endTime ?? null,
+    status: promo.status,
+  };
+};
+
+const isBetterPromotion = (candidate, current) => {
+  if (!current) return true;
+
+  const candidatePoints = Number(candidate?.extraPoints) || 0;
+  const currentPoints = Number(current?.extraPoints) || 0;
+  if (candidatePoints !== currentPoints) return candidatePoints > currentPoints;
+
+  return new Date(candidate?.createdAt || 0) > new Date(current?.createdAt || 0);
+};
+
+const buildPromotionMap = (promotions = []) => {
+  const promotionMap = new Map();
+
+  promotions.forEach((promo) => {
+    getPromotionMenuItemIds(promo).forEach((id) => {
+      const existing = promotionMap.get(id);
+      if (isBetterPromotion(promo, existing)) {
+        promotionMap.set(id, promo);
+      }
+    });
+  });
+
+  return promotionMap;
+};
+
+const attachMenuItemPromotions = (menuItems = [], promotions = [], { slim = false } = {}) => {
+  const promotionMap = buildPromotionMap(promotions);
+
+  return menuItems.map((item) => {
+    const promo = promotionMap.get(item._id.toString()) || null;
+    if (!slim) {
+      return {
+        ...item,
+        promotion: promo,
+      };
+    }
+
+    const payload = toItemPromotion(promo);
+    return {
+      ...item,
+      promotion: payload,
+      extraPoints: payload?.extraPoints ?? null,
+    };
+  });
+};
+
+const toDiscountFromProductSale = (promo, timezone = "UTC") => {
+  const { start } = promo.startDate
+    ? getStartAndEndOfDay(promo.startDate, timezone)
+    : { start: promo.startDate };
+  const { end } = promo.endDate
+    ? getStartAndEndOfDay(promo.endDate, timezone)
+    : { end: promo.endDate };
+
+  return {
+    _id: promo._id,
+    name: promo.title,
+    type: "percentage",
+    value: Number(promo.discountedPercent) || 0,
+    startDate: start,
+    endDate: end,
+    status: promo.status,
+    createdAt: promo.createdAt,
+    menuItems: getPromotionMenuItemIds(promo),
+  };
+};
+
+const toItemHappyHour = (promo) => {
+  if (!promo) return null;
+
+  return {
+    _id: promo._id,
+    title: promo.title,
+    description: promo.description || "",
+    image: promo.image,
+    promotionType: "happyHour",
+    pointsMultiplier: Number(promo.pointsMultiplier) || 1,
+    startDate: promo.startDate,
+    endDate: promo.endDate,
+    startTime: promo.startTime ?? null,
+    endTime: promo.endTime ?? null,
+    status: promo.status,
+  };
+};
+
+const attachActiveMenuItemOffers = async (
+  menuItems = [],
+  { userId = null, timezone = null, companyOrganizer = null } = {},
+) => {
+  if (!menuItems.length) return menuItems;
+
+  const organizerId = companyOrganizer || menuItems[0]?.creator || null;
+  const menuItemIds = menuItems.map((item) => item._id);
+  const [discounts, promotions, productSales, happyHour] = await Promise.all([
+    getActiveMenuItemDiscounts(menuItemIds, timezone),
+    getActiveMenuItemPromotions({ menuItemIds, userId, timezone }),
+    getActiveMenuItemProductSales({ menuItemIds, timezone }),
+    getActiveMenuHappyHourPromotion({ companyOrganizer: organizerId, timezone }),
+  ]);
+
+  const saleDiscounts = productSales.map((promo) =>
+    toDiscountFromProductSale(promo, timezone || "UTC"),
+  );
+  const happyHourPayload = toItemHappyHour(happyHour);
+
+  return attachMenuItemPromotions(
+    attachMenuItemDiscounts(menuItems, [...discounts, ...saleDiscounts]),
+    promotions,
+    { slim: true },
+  ).map((item) => ({
+    ...item,
+    happyHour: happyHourPayload,
+  }));
+};
+
 const getMenuItemsWithFilters = async ({ query = {}, userId = null, timezone = null }) => {
   let menuItems = await MenuItems.aggregate([
     {
@@ -109,30 +254,10 @@ const getMenuItemsWithFilters = async ({ query = {}, userId = null, timezone = n
     timezone,
   });
 
-  /* --------------------------------
-     Map promotions by menuItemId
-  -------------------------------- */
-
-  const promotionMap = new Map();
-
-  promotions.forEach((promo) => {
-    if (!promo.menuItem) return;
-
-    promotionMap.set(promo.menuItem._id.toString(), promo);
-  });
-
-  /* --------------------------------
-     Attach promotion to menu items
-  -------------------------------- */
-
-  return menuItems.map((item) => ({
-    ...item,
-    promotion: promotionMap.get(item._id.toString()) || null,
-  }));
+  return attachMenuItemPromotions(menuItems, promotions);
 };
 
-const getMenuItemsWithFiltersV2 = async ({ query = {}, timezone = null }) => {
-  //get day
+const getMenuItemsWithFiltersV2 = async ({ query = {}, timezone = null, userId = null }) => {
   let menuItems = await MenuItems.aggregate([
     {
       $match: {
@@ -141,17 +266,24 @@ const getMenuItemsWithFiltersV2 = async ({ query = {}, timezone = null }) => {
         isAvailableInStock: true,
       },
     },
+    {
+      $lookup: {
+        from: "menusubcategories",
+        localField: "subCategory",
+        foreignField: "_id",
+        pipeline: [{ $match: { status: "active" } }, { $project: { _id: 1 } }],
+        as: "subCategoryInfo",
+      },
+    },
+    { $match: { subCategoryInfo: { $ne: [] } } },
+    { $project: { subCategoryInfo: 0 } },
     { $sort: { createdAt: -1 } },
   ]);
-
   if (!menuItems.length) return [];
 
   menuItems = await filterByDaypartAndDaysWithFetch(menuItems, getAllDayparts, timezone || "UTC");
 
-  const menuItemIds = menuItems.map((item) => item._id);
-  const discounts = await getActiveMenuItemDiscounts(menuItemIds, timezone);
-
-  return attachMenuItemDiscounts(menuItems, discounts);
+  return attachActiveMenuItemOffers(menuItems, { userId, timezone });
 };
 const buildMenuItemsSaleLookup = (timezone = null) => {
   // Prefer user-local "now" when timezone is known; fall back to server UTC.
@@ -236,12 +368,8 @@ const findMenuItemById = async (id, userId = null, timezone = null) => {
     timezone,
   });
 
-  const promotion = promotions.find((p) => p.menuItem && p.menuItem._id.toString() === item._id.toString()) || null;
-
-  return {
-    ...item,
-    promotion,
-  };
+  const [itemWithPromotion] = attachMenuItemPromotions([item], promotions);
+  return itemWithPromotion;
 };
 
 const findMenuItemByIdV2 = async (id, userId = null, timezone = null) => {
@@ -275,10 +403,8 @@ const findMenuItemByIdV2 = async (id, userId = null, timezone = null) => {
 
   if (!item) return null;
 
-  const discounts = await getActiveMenuItemDiscounts([item._id], timezone);
-  const [itemWithDiscount] = attachMenuItemDiscounts([item], discounts);
-
-  return itemWithDiscount;
+  const [itemWithOffers] = await attachActiveMenuItemOffers([item], { userId, timezone });
+  return itemWithOffers;
 };
 
 const getMenuIdByOrganization = async (organizationId) => {
@@ -324,17 +450,7 @@ const getRecommendedItems = async (menuItemId, userId = null, timezone = null, l
     timezone,
   });
 
-  const promotionMap = new Map();
-
-  promotions.forEach((promo) => {
-    if (!promo.menuItem) return;
-    promotionMap.set(promo.menuItem._id.toString(), promo);
-  });
-
-  return items.map((item) => ({
-    ...item,
-    promotion: promotionMap.get(item._id.toString()) || null,
-  }));
+  return attachMenuItemPromotions(items, promotions);
 };
 
 //userId, timezone, organization, menuId
@@ -362,10 +478,7 @@ const getRecommendedItemsV2 = async (userId = null, timezone = null, menuIds = [
 
   if (!items.length) return [];
 
-  const menuItemIds = items.map((item) => item._id);
-  const discounts = await getActiveMenuItemDiscounts(menuItemIds, timezone);
-
-  return attachMenuItemDiscounts(items, discounts);
+  return attachActiveMenuItemOffers(items, { userId, timezone });
 };
 
 // userId, timezone, organization, menuId
@@ -393,10 +506,7 @@ const getUpsellMenuItemsV2 = async (userId = null, timezone = null, menuIds = []
 
   if (!items.length) return [];
 
-  const menuItemIds = items.map((item) => item._id);
-  const discounts = await getActiveMenuItemDiscounts(menuItemIds, timezone);
-
-  return attachMenuItemDiscounts(items, discounts);
+  return attachActiveMenuItemOffers(items, { userId, timezone });
 };
 
 // ----------------------
@@ -503,22 +613,7 @@ const getOrganizationHybridRecommendedItems = async (userId, timezone, organizat
     timezone,
   });
 
-  const promotionMap = new Map();
-
-  promotions.forEach((promo) => {
-    if (!promo.menuItem) return;
-
-    promotionMap.set(promo.menuItem._id.toString(), promo);
-  });
-
-  /* -------------------------------
-     ATTACH PROMOTIONS
-  ------------------------------- */
-
-  return sortedItems.map((item) => ({
-    ...item,
-    promotion: promotionMap.get(item._id.toString()) || null,
-  }));
+  return attachMenuItemPromotions(sortedItems, promotions);
 };
 
 const comboMenuItemLookupPipeline = [
@@ -573,8 +668,16 @@ const getMenuItemsCombosWithFilters = async ({ query = {} } = {}) => {
     .lean();
 };
 
-const getMenuItemsCombos = async (menuItems = [], companyOrganizer = null) => {
+const getMenuItemsCombos = async (
+  menuItems = [],
+  companyOrganizer = null,
+  timezone = "UTC",
+) => {
   if (!menuItems.length || !companyOrganizer) return [];
+
+  const effectiveTimezone = timezone || "UTC";
+  const allDayparts = await getAllDayparts();
+  const daypartMap = new Map(allDayparts.map((d) => [d._id.toString(), d]));
 
   const normalizeTitle = (title = "") => String(title).trim().toLowerCase();
 
@@ -690,6 +793,17 @@ const getMenuItemsCombos = async (menuItems = [], companyOrganizer = null) => {
     }
 
     if (!canApply || resolvedItems.length < 2) continue;
+
+    if (combo.subCategory?.status && combo.subCategory.status !== "active") {
+      continue;
+    }
+
+    const availableComponents = filterByDaypartAndDays(
+      resolvedItems,
+      daypartMap,
+      effectiveTimezone,
+    );
+    if (availableComponents.length !== resolvedItems.length) continue;
 
     applicable.push({
       _id: combo._id,

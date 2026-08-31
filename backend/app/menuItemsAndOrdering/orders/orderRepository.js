@@ -1,5 +1,4 @@
 const Orders = require("@OrdersModel");
-const { getModelCounts } = require("../../../helperUtils/dbUtils/queryUtil");
 const mongoose = require("mongoose");
 
 const createOrder = async (orderData, session = null) => {
@@ -119,9 +118,10 @@ const getOrderById = async (id) => {
 };
 
 const getOrdersByUser = async (userId, page, limit, query = {}) => {
-  query.status = { $ne: "pendingPayment" }; // Exclude pendingPayment orders
+  // query.status = { $ne: "pendingPayment" }; // Exclude pendingPayment orders
   return Orders.find({ user: userId, ...query })
     .select("orderNumber createdAt status paymentMethod paymentStatus priceBreakdown")
+    .populate("deliveryOption", "title deliveryMethod")
     .populate("organization", "basicInfo.name basicInfo.media.logo")
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
@@ -129,15 +129,30 @@ const getOrdersByUser = async (userId, page, limit, query = {}) => {
 };
 
 const getCounts = async (query) => {
-  query.status = { $ne: "pendingPayment" }; // Exclude pendingPayment orders
-  let counts = getModelCounts({
-    model: Orders,
-    filterQuery: query,
-    statusMap: {
-      status: ["pending", "confirmed", "completed", "cancelled"],
-    },
-  });
-  return counts;
+  const match = { ...query };
+  if (match.user && !(match.user instanceof mongoose.Types.ObjectId)) {
+    match.user = new mongoose.Types.ObjectId(match.user);
+  }
+
+  const [totalFiltered, grouped] = await Promise.all([
+    Orders.countDocuments(query),
+    Orders.aggregate([
+      { $match: match },
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ]),
+  ]);
+
+  const byStatus = Object.fromEntries(
+    (grouped || []).map((row) => [row._id, row.count]),
+  );
+
+  return {
+    totalFiltered,
+    pending: byStatus.pending || 0,
+    confirmed: byStatus.confirmed || 0,
+    completed: byStatus.completed || 0,
+    cancelled: byStatus.cancelled || 0,
+  };
 };
 
 const updateOrderStatus = async (orderId, status) => {

@@ -1,10 +1,240 @@
 // repositories/menuItemRepository.js
 const MenuItems = require("@MenuItemsModel");
+const { MenuItemsCombos } = require("@MenuItemsCombosModel");
+const { MenuItemsDiscounts } = require("@MenuItemsDiscountsModel");
+const MenuItemsSale = require("@MenuItemsSaleModel");
+const { Challenge } = require("../../../commonModules/loyalty/challenges/models/Challenge/index");
+const { Promotion } = require("../../../commonModules/loyalty/promotions/models/Promotion/index");
+const { Reward } = require("../../../commonModules/loyalty/rewards/models/index");
 const { getAllUsers } = require("../../../admin/usersManagement/usersService");
 const { sendUserNotifications } = require("@notificationsUtil");
 const { NotificationTypes } = require("@NotificationsModel");
 const { default: mongoose } = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
+
+const NOT_DELETED = { $ne: "deleted" };
+
+const mapRefs = (items = [], titleKey = "title") =>
+  items.map((item) => ({
+    _id: item._id,
+    title: item[titleKey] || item.title || item.name || null,
+    status: item.status,
+  }));
+
+// Field may store a single menu item ref or an array depending on type / legacy data
+const menuItemFieldQuery = (field, objectId) => ({
+  $or: [{ [field]: objectId }, { [field]: { $in: [objectId] } }],
+});
+
+const findMenuItemDeleteReferences = async (menuItemId) => {
+  const objectId = new mongoose.Types.ObjectId(menuItemId);
+
+  const [
+    combos,
+    discounts,
+    sales,
+    buyMenuItemChallenges,
+    menuItemRewardChallenges,
+    buyMenuItemPromotions,
+    productSalePromotions,
+    extraPointsForItemPromotions,
+    buyMenuItemRewards,
+  ] = await Promise.all([
+    MenuItemsCombos.find({
+      status: NOT_DELETED,
+      ...menuItemFieldQuery("menuItems.menuItem", objectId),
+    })
+      .select("name status")
+      .lean(),
+    MenuItemsDiscounts.find({
+      status: NOT_DELETED,
+      ...menuItemFieldQuery("menuItems", objectId),
+    })
+      .select("name status type value startDate endDate")
+      .lean(),
+    MenuItemsSale.find({
+      status: NOT_DELETED,
+      ...menuItemFieldQuery("menuItems", objectId),
+    })
+      .select("title status discountType discountValue startDateTime endDateTime")
+      .lean(),
+    Challenge.find({
+      status: NOT_DELETED,
+      taskType: "buyMenuItem",
+      taskMenuItem: objectId,
+    })
+      .select("title status taskType taskValue")
+      .lean(),
+    Challenge.find({
+      status: NOT_DELETED,
+      "reward.rewardType": "menuItem",
+      reward: { $exists: true },
+      "reward.rewardMenuItem": objectId,
+    })
+      .select("title status taskType reward.rewardType")
+      .lean(),
+    Promotion.find({
+      status: NOT_DELETED,
+      promotionType: "buyMenuItemPromotion",
+      ...menuItemFieldQuery("menuItem", objectId),
+    })
+      .select("title status promotionType startDate endDate")
+      .lean(),
+    Promotion.find({
+      status: NOT_DELETED,
+      promotionType: "productSale",
+      ...menuItemFieldQuery("menuItem", objectId),
+    })
+      .select("title status promotionType startDate endDate")
+      .lean(),
+    Promotion.find({
+      status: NOT_DELETED,
+      promotionType: "extraPointsForItem",
+      ...menuItemFieldQuery("menuItem", objectId),
+    })
+      .select("title status promotionType startDate endDate")
+      .lean(),
+    Reward.find({
+      status: NOT_DELETED,
+      rewardType: "buyMenuItemReward",
+      ...menuItemFieldQuery("menuItem", objectId),
+    })
+      .select("title status rewardType endDate")
+      .lean(),
+  ]);
+
+  const references = {
+    combos: mapRefs(combos, "name"),
+    discounts: mapRefs(discounts, "name"),
+    sales: mapRefs(sales, "title"),
+    challenges: {
+      buyMenuItemTask: mapRefs(buyMenuItemChallenges),
+      menuItemReward: mapRefs(menuItemRewardChallenges),
+    },
+    promotions: {
+      buyMenuItemPromotion: mapRefs(buyMenuItemPromotions),
+      productSale: mapRefs(productSalePromotions),
+      extraPointsForItem: mapRefs(extraPointsForItemPromotions),
+    },
+    rewards: {
+      buyMenuItemReward: mapRefs(buyMenuItemRewards),
+    },
+  };
+
+  const counts = {
+    combos: references.combos.length,
+    discounts: references.discounts.length,
+    sales: references.sales.length,
+    challengesBuyMenuItemTask: references.challenges.buyMenuItemTask.length,
+    challengesMenuItemReward: references.challenges.menuItemReward.length,
+    promotionsBuyMenuItem: references.promotions.buyMenuItemPromotion.length,
+    promotionsProductSale: references.promotions.productSale.length,
+    promotionsExtraPointsForItem: references.promotions.extraPointsForItem.length,
+    rewardsBuyMenuItem: references.rewards.buyMenuItemReward.length,
+  };
+
+  const totalReferences = Object.values(counts).reduce((sum, n) => sum + n, 0);
+
+  return {
+    references,
+    counts,
+    totalReferences,
+    hasReferences: totalReferences > 0,
+  };
+};
+
+const cascadeSoftDeleteMenuItemReferences = async (menuItemId, session = null) => {
+  const objectId = new mongoose.Types.ObjectId(menuItemId);
+  const options = session ? { session } : {};
+
+  // MongoDB transactions do not support parallel ops on the same session
+  const combos = await MenuItemsCombos.updateMany(
+    { status: NOT_DELETED, ...menuItemFieldQuery("menuItems.menuItem", objectId) },
+    { $set: { status: "deleted" } },
+    options,
+  );
+  const discounts = await MenuItemsDiscounts.updateMany(
+    { status: NOT_DELETED, ...menuItemFieldQuery("menuItems", objectId) },
+    { $set: { status: "deleted" } },
+    options,
+  );
+  const sales = await MenuItemsSale.updateMany(
+    { status: NOT_DELETED, ...menuItemFieldQuery("menuItems", objectId) },
+    { $set: { status: "deleted" } },
+    options,
+  );
+  const challengesBuyMenuItemTask = await Challenge.updateMany(
+    {
+      status: NOT_DELETED,
+      taskType: "buyMenuItem",
+      taskMenuItem: objectId,
+    },
+    { $set: { status: "deleted" } },
+    options,
+  );
+  const challengesMenuItemReward = await Challenge.updateMany(
+    {
+      status: NOT_DELETED,
+      "reward.rewardType": "menuItem",
+      reward: { $exists: true },
+      "reward.rewardMenuItem": objectId,
+    },
+    { $set: { status: "deleted" } },
+    options,
+  );
+  const promotionsBuyMenuItem = await Promotion.updateMany(
+    {
+      status: NOT_DELETED,
+      promotionType: "buyMenuItemPromotion",
+      ...menuItemFieldQuery("menuItem", objectId),
+    },
+    { $set: { status: "deleted" } },
+    options,
+  );
+  const promotionsProductSale = await Promotion.updateMany(
+    {
+      status: NOT_DELETED,
+      promotionType: "productSale",
+      ...menuItemFieldQuery("menuItem", objectId),
+    },
+    { $set: { status: "deleted" } },
+    options,
+  );
+  const promotionsExtraPointsForItem = await Promotion.updateMany(
+    {
+      status: NOT_DELETED,
+      promotionType: "extraPointsForItem",
+      ...menuItemFieldQuery("menuItem", objectId),
+    },
+    { $set: { status: "deleted" } },
+    options,
+  );
+  const rewardsBuyMenuItem = await Reward.updateMany(
+    {
+      status: NOT_DELETED,
+      rewardType: "buyMenuItemReward",
+      ...menuItemFieldQuery("menuItem", objectId),
+    },
+    { $set: { status: "deleted" } },
+    options,
+  );
+
+  const cascaded = {
+    combos: combos.modifiedCount,
+    discounts: discounts.modifiedCount,
+    sales: sales.modifiedCount,
+    challengesBuyMenuItemTask: challengesBuyMenuItemTask.modifiedCount,
+    challengesMenuItemReward: challengesMenuItemReward.modifiedCount,
+    promotionsBuyMenuItem: promotionsBuyMenuItem.modifiedCount,
+    promotionsProductSale: promotionsProductSale.modifiedCount,
+    promotionsExtraPointsForItem: promotionsExtraPointsForItem.modifiedCount,
+    rewardsBuyMenuItem: rewardsBuyMenuItem.modifiedCount,
+  };
+
+  const totalCascaded = Object.values(cascaded).reduce((sum, n) => sum + n, 0);
+
+  return { cascaded, totalCascaded };
+};
 
 // Create menuItem in a transaction and update organization
 
@@ -82,8 +312,11 @@ const deleteMenuItemById = async (menuItem) => {
 };
 
 //findByIdAndUpdate
-const findByIdAndUpdate = async (id, data) => {
-  return MenuItems.findByIdAndUpdate(id, data, { new: true });
+const findByIdAndUpdate = async (id, data, session = null) => {
+  return MenuItems.findByIdAndUpdate(id, data, {
+    new: true,
+    ...(session ? { session } : {}),
+  });
 };
 
 //get menuItems for menuItem options dropdown where organization is not assigned yet
@@ -146,4 +379,6 @@ module.exports = {
   findByIdAndUpdate,
   findMenuItemsByMenuId,
   getMenuItemsBySubCategory,
+  findMenuItemDeleteReferences,
+  cascadeSoftDeleteMenuItemReferences,
 };

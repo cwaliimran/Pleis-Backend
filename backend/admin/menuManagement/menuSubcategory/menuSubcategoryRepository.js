@@ -205,6 +205,21 @@ const getMenuSubcategorys = async ({
         });
       }
     }
+    // Menu items count lookup
+    pipeline.push({
+      $lookup: {
+        from: "menuitems",
+        localField: "_id",
+        foreignField: "subCategory",
+        pipeline: [{ $count: "count" }],
+        as: "menuItemsCount",
+      },
+    });
+    pipeline.push({
+      $addFields: {
+        menuItemsCount: { $ifNull: [{ $first: "$menuItemsCount.count" }, 0] },
+      },
+    });
 
     // -------------------------------------------------------
     // Company Organizer lookup
@@ -520,11 +535,7 @@ const reorderMenuSubCategory = async (movedId, newOrder) => {
     }
 
     const siblings = await MenuSubcategory.find(
-      {
-        user: moved.user,
-        companyOrganizer: moved.companyOrganizer,
-        status: { $ne: "deleted" },
-      },
+      buildSiblingFilter(moved),
       { _id: 1, order: 1 },
       { session },
     ).sort({ order: 1, updatedAt: 1, _id: 1 });
@@ -583,11 +594,7 @@ const reorderMenuSubCategoriesAfterDelete = async (deletedId) => {
     }
 
     const siblings = await MenuSubcategory.find(
-      {
-        user: deleted.user,
-        companyOrganizer: deleted.companyOrganizer,
-        status: { $ne: "deleted" },
-      },
+      buildSiblingFilter(deleted),
       { _id: 1, order: 1 },
       { session },
     ).sort({ order: 1, updatedAt: 1, _id: 1 });

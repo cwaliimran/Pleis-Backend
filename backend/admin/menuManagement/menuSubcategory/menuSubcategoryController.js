@@ -67,7 +67,7 @@ const getMenuSubcategorys = async (req, res) => {
   let {
     keyword,
     status,
-    sortBy = "title",
+    sortBy = "order",
     sortOrder = "asc",
     summary,
     organization,

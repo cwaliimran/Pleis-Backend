@@ -26,10 +26,6 @@ const menuSubcategorySchema = new mongoose.Schema(
       enum: ["active", "inactive", "deleted"],
       default: "active",
     },
-    order: {
-      type: Number,
-      default: 0,
-    },
   },
   {
     timestamps: true,

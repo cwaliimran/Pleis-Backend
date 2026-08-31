@@ -147,6 +147,7 @@ const updatepresetType = async (req, res) => {
     example,
     category,
     subCategory,
+    image,
     type,
   };
 

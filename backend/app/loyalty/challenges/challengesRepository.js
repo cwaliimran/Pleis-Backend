@@ -1,6 +1,7 @@
 const {
   Challenge,
 } = require("../../../commonModules/loyalty/challenges/models/Challenge");
+const { getActiveEndDateQuery } = require("../../../commonModules/loyalty/rewards/utils/rewardEndDate");
 const { default: mongoose } = require("mongoose");
 
 
@@ -33,13 +34,14 @@ const findChallengeById = async (id) => {
 
 const findBestActiveChallengeByTaskType = async ({
   companyOrganizer,
-  taskType
+  taskType,
+  timezone = "UTC",
 }) => {
   return Challenge.findOne({
     companyOrganizer,
     taskType,
     status: "active",
-    endDate: { $gte: new Date() }
+    ...getActiveEndDateQuery(timezone),
   })
     .sort({ taskValue: 1 }) // 👈 MINIMUM effort first
     .lean();
@@ -47,7 +49,7 @@ const findBestActiveChallengeByTaskType = async ({
 
 const getEligibleChallengesForDashboard = async ({
   clubIds,
-  now
+  timezone = "UTC",
 }) => {
   const organizerObjectIds = clubIds.map(id =>
     new mongoose.Types.ObjectId(id)
@@ -56,7 +58,7 @@ const getEligibleChallengesForDashboard = async ({
   let challenges = await Challenge.find({
     companyOrganizer: { $in: organizerObjectIds },
     status: "active",
-    endDate: { $gte: now }
+    ...getActiveEndDateQuery(timezone),
   })
     .populate("tierLimit")
     .populate({
@@ -74,19 +76,17 @@ const getEligibleChallengesForDashboard = async ({
 // challengesRepo.js
 const getChallengesWithPagination = async ({
   clubIds,
-  now,
   skip,
   limit,
   keyword = "",
+  timezone = "UTC",
 }) => {
   const filters = [
     {
       companyOrganizer: { $in: clubIds },
       status: "active",
     },
-    {
-      $or: [{ endDate: null }, { endDate: { $gt: now } }],
-    },
+    getActiveEndDateQuery(timezone),
   ];
 
   if (keyword) {
@@ -110,15 +110,17 @@ const getChallengesWithPagination = async ({
     .lean();
 };
 
-const countChallengesWithPagination = async ({ clubIds, now, keyword = "" }) => {
+const countChallengesWithPagination = async ({
+  clubIds,
+  keyword = "",
+  timezone = "UTC",
+}) => {
   const baseFilters = [
     {
       companyOrganizer: { $in: clubIds },
       status: "active",
     },
-    {
-      $or: [{ endDate: null }, { endDate: { $gt: now } }],
-    },
+    getActiveEndDateQuery(timezone),
   ];
 
   if (keyword) {

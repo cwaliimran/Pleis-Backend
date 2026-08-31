@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { isRewardEndDateExpired } = require("../../../commonModules/loyalty/rewards/utils/rewardEndDate");
 const Reward = require("@RewardModel");
 const { RewardsOrders } = require("@LoyaltyRewardsOrdersModel");
 const { TicketingOrders } = require("@TicketingOrdersModel");
@@ -17,7 +18,7 @@ const createRewardOrder = async ({ userId, rewardId, protectionUserDetails, time
     const reward = await Reward.findById(rewardId).lean();
     if (!reward) throw new Error("reward_not_found");
     if (reward.status !== "active") throw new Error("reward_not_active");
-    if (reward.endDate && reward.endDate < new Date()) {
+    if (isRewardEndDateExpired(reward.endDate, new Date(), timezone)) {
       throw new Error("reward_expired");
     }
 

@@ -96,8 +96,12 @@ const getMenuItemsV2 = async ({ timezone, organization }) => {
   ];
 
   const subCategories = subCategoryIds.length
-    ? await MenuSubcategory.find({ _id: { $in: subCategoryIds } })
-        .select("_id title")
+    ? await MenuSubcategory.find({
+        _id: { $in: subCategoryIds },
+        status: "active",
+      })
+        .select("_id title order")
+        .sort({ order: 1 })
         .lean()
     : [];
 
@@ -129,7 +133,9 @@ const getMenuItemsV2 = async ({ timezone, organization }) => {
     );
   });
 
-  const menu = Object.values(grouped);
+  const menu = subCategories
+    .map((sub) => grouped[sub._id.toString()])
+    .filter(Boolean);
   const menuItemById = new Map(
     menuItems.map((item) => [item._id.toString(), item]),
   );
@@ -138,6 +144,7 @@ const getMenuItemsV2 = async ({ timezone, organization }) => {
   const rawCombos = await appMenuItemRepo.getMenuItemsCombos(
     menuItems,
     companyOrganizer,
+    timezone,
   );
 
   const combos = formatMenuItemsComboList(rawCombos, {

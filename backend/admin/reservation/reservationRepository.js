@@ -1008,8 +1008,8 @@ const getReservationsV2 = async ({
 
     dateTimeElemMatch.timeSlots = {
       $elemMatch: {
-        startTime: { $lte: end },
-        endTime: { $gte: start },
+        startTime: { $gte: start },
+        endTime: { $lte: end },
       },
     };
   }

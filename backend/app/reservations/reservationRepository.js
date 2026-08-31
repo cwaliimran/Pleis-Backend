@@ -601,7 +601,7 @@ const checkReservationAvailability = async ({
       };
     }
 
-    if (usedPartySize + partySize > reservationType.maxPartySize) {
+    if ( partySize > reservationType.maxPartySize) {
       return {
         allowed: false,
         message: "Maximum party size has been reached",
