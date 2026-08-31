@@ -205,6 +205,21 @@ const getMenuSubcategorys = async ({
         });
       }
     }
+    // Menu items count lookup
+    pipeline.push({
+      $lookup: {
+        from: "menuitems",
+        localField: "_id",
+        foreignField: "subCategory",
+        pipeline: [{ $count: "count" }],
+        as: "menuItemsCount",
+      },
+    });
+    pipeline.push({
+      $addFields: {
+        menuItemsCount: { $ifNull: [{ $first: "$menuItemsCount.count" }, 0] },
+      },
+    });
 
     // -------------------------------------------------------
     // Company Organizer lookup

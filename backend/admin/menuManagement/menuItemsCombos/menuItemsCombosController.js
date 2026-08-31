@@ -71,7 +71,7 @@ const createMenuItemsCombo = async (req, res) => {
       translationKey: "combo_items_minimum_required",
     });
   }
-  console.log("companyOrganizer", companyOrganizer);
+
 
   if (
     !validateParams(req, res, {
@@ -79,7 +79,7 @@ const createMenuItemsCombo = async (req, res) => {
       objectIdFields: ["subCategory", "companyOrganizer"],
       enumFields: {
         priceMode: Object.values(PriceMode),
-        status: ["active", "inactive"],
+        status: ["active", "inactive", "notOrderable"],
       },
     })
   ) {

@@ -27,6 +27,7 @@ const getServings = async ({
       limit,
       user,
       skip,
+      keyword,
     });
     return {
       Servings,

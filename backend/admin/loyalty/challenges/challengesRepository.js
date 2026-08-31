@@ -45,17 +45,20 @@ const getChallengesWithFilters = async (
 ) => {
   const sortDirection = sortOrder === "asc" ? 1 : -1;
 
-  let sort = { createdAt: -1, _id: -1 };
+  const sortFieldMap = {
+    title: "title",
+    rewardType: "reward.rewardType",
+    taskType: "taskType",
+    views: "views",
+    favorites: "favoritesCount",
+    completions: "completed",
+    participants: "totalParticipants",
+    avgProgress: "averageProgress",
+    createdAt: "createdAt",
+  };
 
-  if (sortBy === "name") {
-    sort = { title: sortDirection, _id: -1 };
-  } else if (sortBy === "rewardType") {
-    sort = { "reward.rewardType": sortDirection, _id: -1 };
-  } else if (sortBy === "taskType") {
-    sort = { taskType: sortDirection, _id: -1 };
-  } else if (sortBy === "createdAt") {
-    sort = { createdAt: sortDirection, _id: sortDirection };
-  }
+  const sortField = sortFieldMap[sortBy] || "createdAt";
+  const sort = { [sortField]: sortDirection, _id: sortDirection };
 
   const menuItemLookupPipeline = [
     {
