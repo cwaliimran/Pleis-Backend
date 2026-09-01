@@ -2,6 +2,32 @@ const { resolveChallengeByTaskTypeService } = require("../../../../app/loyalty/c
 const { resolveGlobalChallengeByTaskTypeService } = require("../../../../app/globalLoyalty/challengesOrders/challengesOrdersService");
 const { checkLoyaltyTierPromotion } = require("../../../../app/loyalty/clubMembers/clubMembersRepository");
 const { checkPromotionGlobal } = require("../../../../app/userWalletService/global/walletManagement/userWalletRepository");
+const { awardMenuItemPromotionsForOrder } = require("../../../../app/loyalty/promotions/promotionsRepository");
+
+const collectPurchasedMenuItems = (menuOrder) => {
+  const items = [];
+
+  for (const item of menuOrder?.items || []) {
+    if (!item?.menuItem || !item?.quantity) continue;
+    items.push({
+      menuItem: item.menuItem,
+      quantity: Number(item.quantity),
+    });
+  }
+
+  for (const combo of menuOrder?.combos || []) {
+    const comboQty = Number(combo?.quantity) || 1;
+    for (const item of combo?.items || []) {
+      if (!item?.menuItem || !item?.quantity) continue;
+      items.push({
+        menuItem: item.menuItem,
+        quantity: Number(item.quantity) * comboQty,
+      });
+    }
+  }
+
+  return items;
+};
 
 const handleLoyaltyEarningConsequences = ({
   userId,
@@ -32,27 +58,30 @@ const handleLoyaltyEarningConsequences = ({
   }
 
   // 🎯 Buy Menu Item Challenge
-  if (menuOrder?.items?.length) {
-    const items = menuOrder.items
-      .filter(i => i?.menuItem && i?.quantity > 0)
-      .map(i => ({
-        menuItem: i.menuItem,
-        quantity: i.quantity
-      }));
+  const items = collectPurchasedMenuItems(menuOrder);
 
-    if (items.length) {
-      resolveChallengeByTaskTypeService({
-        userId,
-        companyOrganizer,
-        taskType: "buyMenuItem",
-        items,
+  if (items.length) {
+    awardMenuItemPromotionsForOrder({
+      userId,
+      companyOrganizer,
+      menuOrder,
+    })
+      .then(() => {})
+      .catch((err) =>
+        console.error("[PROMOTION] Menu item promotion failed:", err)
+      );
+
+    resolveChallengeByTaskTypeService({
+      userId,
+      companyOrganizer,
+      taskType: "buyMenuItem",
+      items,
+    })
+      .then(() => {
       })
-        .then(() => {
-        })
-        .catch(err =>
-          console.error("[CHALLENGE] Menu item challenge failed:", err)
-        );
-    }
+      .catch(err =>
+        console.error("[CHALLENGE] Menu item challenge failed:", err)
+      );
   }
 
   // 🎯 Company Earn Challenge

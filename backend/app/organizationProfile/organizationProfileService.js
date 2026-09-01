@@ -39,7 +39,7 @@ const getOrganizationProfile = async (queryData) => {
       orgProfile,
       orgEvents,
       reservations,
-      menu,
+      menuPayload,
       reviews,
       similarOrganizations,
       userOrganizationStreak,
@@ -61,9 +61,8 @@ const getOrganizationProfile = async (queryData) => {
     if (!orgProfile.org) {
       throw new Error("Organization not found");
     }
-  
-    menu=menu?.menu||[];
 
+    const menu = menuPayload?.menu || [];
     // Format organization profile info
     let orgProfileInfo = formatOrganization(orgProfile.org);
     let userCompanyWallet = await getWallet(userId, orgProfile.org.creator, null, { autoCreate: false });
@@ -77,10 +76,10 @@ const getOrganizationProfile = async (queryData) => {
 
     // Set favorite status and venue information
     orgProfileInfo.isFavorite = orgProfile.isFavorite;
-    orgProfileInfo.venue = orgProfile.orgVenue;
 
-    // Remove floor plan from venue info if present
-    delete orgProfileInfo?.venue?.floorPlan;
+  if (orgProfile.orgVenue) {
+    orgProfileInfo.venue = formatVenue(orgProfile.orgVenue);
+  }
 
     // Localize operating hours
     if (orgProfileInfo.operatingHours) {
@@ -210,6 +209,7 @@ const getOrganizationMenu = async (organizationId, userId, timezone) => {
 const { getFullImageUrl } = require("../../helperUtils/imageHelper"); // Import getFullImageUrl
 const { applyMenuItemsSale, getMenuItemsV2 } = require("../menuItemsAndOrdering/menuItems/menuItemsService");
 const { getUserOrganizationStreak } = require("../usersStreaks/usersStreaksRepository");
+const { formatVenue } = require("../../commonModules/venues/formatter/formatVenue");
 
 const getOrganizationReviews = async (organizationId, page = 1, limit = 10) => {
   const skip = (page - 1) * limit;
