@@ -281,6 +281,7 @@ const getMenuItemsWithFiltersV2 = async ({ query = {}, timezone = null, userId =
   ]);
   if (!menuItems.length) return [];
 
+
   menuItems = await filterByDaypartAndDaysWithFetch(menuItems, getAllDayparts, timezone || "UTC");
 
   return attachActiveMenuItemOffers(menuItems, { userId, timezone });

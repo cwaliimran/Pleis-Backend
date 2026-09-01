@@ -35,19 +35,34 @@ const getOrganizationProfile = async (queryData) => {
     }).catch(console.error);
 
 
-    const [orgProfile, orgEvents, reservations, menu, reviews, similarOrganizations, userOrganizationStreak] = await Promise.all([
+    let [
+      orgProfile,
+      orgEvents,
+      reservations,
+      menuPayload,
+      reviews,
+      similarOrganizations,
+      userOrganizationStreak,
+    ] = await Promise.all([
       findOrganizationById(userId, organizationId),
-      getOrganizationEvents({ organizationId, filter, timezone, userLocation: queryData.userLocation, userId }), // Filter for "upcoming" or "past"
+      getOrganizationEvents({
+        organizationId,
+        filter,
+        timezone,
+        userLocation: queryData.userLocation,
+        userId,
+      }), // Filter for "upcoming" or "past"
       getOrganizationReservationsService({ organizationId, timezone }),
-      getOrganizationMenu(organizationId, userId, timezone),
+      getMenuItemsV2({ userId, timezone, organization: organizationId }),
       getOrganizationReviews(organizationId), // Get reviews with reviewer names
       getSimilarOrganizations(organizationId, timezone),
-      getUserOrganizationStreak(userId, organizationId)
+      getUserOrganizationStreak(userId, organizationId),
     ]);
     if (!orgProfile.org) {
       throw new Error("Organization not found");
     }
 
+    const menu = menuPayload?.menu || [];
     // Format organization profile info
     let orgProfileInfo = formatOrganization(orgProfile.org);
     let userCompanyWallet = await getWallet(userId, orgProfile.org.creator, null, { autoCreate: false });
@@ -61,10 +76,10 @@ const getOrganizationProfile = async (queryData) => {
 
     // Set favorite status and venue information
     orgProfileInfo.isFavorite = orgProfile.isFavorite;
-    orgProfileInfo.venue = orgProfile.orgVenue;
 
-    // Remove floor plan from venue info if present
-    delete orgProfileInfo?.venue?.floorPlan;
+  if (orgProfile.orgVenue) {
+    orgProfileInfo.venue = formatVenue(orgProfile.orgVenue);
+  }
 
     // Localize operating hours
     if (orgProfileInfo.operatingHours) {
@@ -192,8 +207,9 @@ const getOrganizationMenu = async (organizationId, userId, timezone) => {
 };
 
 const { getFullImageUrl } = require("../../helperUtils/imageHelper"); // Import getFullImageUrl
-const { applyMenuItemsSale } = require("../menuItemsAndOrdering/menuItems/menuItemsService");
+const { applyMenuItemsSale, getMenuItemsV2 } = require("../menuItemsAndOrdering/menuItems/menuItemsService");
 const { getUserOrganizationStreak } = require("../usersStreaks/usersStreaksRepository");
+const { formatVenue } = require("../../commonModules/venues/formatter/formatVenue");
 
 const getOrganizationReviews = async (organizationId, page = 1, limit = 10) => {
   const skip = (page - 1) * limit;

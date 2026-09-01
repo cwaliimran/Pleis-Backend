@@ -10,6 +10,7 @@ const { createTransactionService } = require(
   "../../userWalletService/transactions/services/unifiedTransactionsService"
 );
 const TicketingsModel = require("@TicketingsModel"); // adjust path if needed
+const MenuItems = require("@MenuItemsModel");
 
 const mongoose = require("mongoose");
 const { createTicketingBookingService } = require("../../bookings/ticketings/ticketingBookingService");
@@ -169,7 +170,7 @@ const resolveBuyMenuItemChallengeService = async ({
 }) => {
 
 
-
+console.log("resolveBuyMenuItemChallengeService===>", JSON.stringify(items, null, 5));
 
   const qtyMap = new Map();
 
@@ -190,21 +191,38 @@ const resolveBuyMenuItemChallengeService = async ({
 
   for (const [menuItemId, incomingQty] of qtyMap.entries()) {
 
+    const purchasedItem = await MenuItems.findById(menuItemId)
+      .select("presetType title creator")
+      .lean();
 
+    if (!purchasedItem) continue;
+
+    const equivalentMenuItemIds = [purchasedItem._id];
+
+    // Menu items that share presetType + title count toward the same challenge
+    if (purchasedItem.presetType && purchasedItem.title) {
+      const equivalentItems = await MenuItems.find({
+        _id: { $ne: purchasedItem._id },
+        presetType: purchasedItem.presetType,
+        title: purchasedItem.title,
+        creator: purchasedItem.creator
+      })
+        .select("_id")
+        .lean();
+
+      equivalentMenuItemIds.push(...equivalentItems.map((item) => item._id));
+    }
 
     const challenges = await Challenge.find({
       companyOrganizer,
       taskType: "buyMenuItem",
-      taskMenuItem: menuItemId,
+      taskMenuItem: { $in: equivalentMenuItemIds },
       status: "active"
     }).sort({ taskValue: 1, createdAt: 1 });
 
 
 
     for (const challenge of challenges) {
-
-
-
       const existingOrder = await LoyaltyChallengesOrders.findOne({
         user: userId,
         challenge: challenge._id,
@@ -222,8 +240,7 @@ const resolveBuyMenuItemChallengeService = async ({
 
       if (!existingOrder) {
 
-
-        await sendUserNotifications({
+        void sendUserNotifications({
           recipientIds: [userId.toString()],
           title: challenge.title,
           body: "Your challenge has started. Good luck!",

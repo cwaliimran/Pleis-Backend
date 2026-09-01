@@ -33,6 +33,7 @@ const PromotionOrderSchema = new mongoose.Schema(
         "happyHour",
         "claimPromotion",
         "buyMenuItemPromotion",
+        "extraPointsForItem",
         "productSale",
       ],
       required: true,
