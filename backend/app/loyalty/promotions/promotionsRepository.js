@@ -1,4 +1,5 @@
 const { default: mongoose } = require("mongoose");
+const MenuItems = require("@MenuItemsModel");
 const {
   Promotion,
   PromotionsOrders,
@@ -751,6 +752,124 @@ const claimPromotion = async (promotionId, userId, timezone = "UTC") => {
 };
 
 
+const getPromoMenuItemIds = (menuItem) => {
+  if (!menuItem) return [];
+  const list = Array.isArray(menuItem) ? menuItem : [menuItem];
+  return list.map((item) => String(item?._id || item)).filter(Boolean);
+};
+
+const toObjectIds = (ids = []) =>
+  [...new Set(ids.map((id) => String(id?._id || id)).filter(Boolean))]
+    .filter((id) => mongoose.isValidObjectId(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+
+const getMenuItemIdentityKey = (item) => {
+  if (!item?.presetType || !item?.title) return null;
+  return `${item.presetType}::${item.title}::${item.creator || ""}`;
+};
+
+/**
+ * Menu items that share presetType + title + creator count as the same
+ * promotion target. Returns expanded lookup ids and a map from any
+ * equivalent id back to the originally requested menu item ids (so
+ * attachMenuItemPromotions can still match the items being displayed).
+ */
+const getEquivalentMenuItemMatch = async (menuItemIds = []) => {
+  const requestedIds = [...new Set(menuItemIds.map((id) => String(id)))];
+  const equivalentToRequested = new Map();
+
+  const addLink = (fromId, requestedId) => {
+    const key = String(fromId);
+    if (!equivalentToRequested.has(key)) equivalentToRequested.set(key, new Set());
+    equivalentToRequested.get(key).add(String(requestedId));
+  };
+
+  if (!requestedIds.length) {
+    return { lookupIds: [], equivalentToRequested };
+  }
+
+  const requestedItems = await MenuItems.find({ _id: { $in: requestedIds } })
+    .select("_id presetType title creator")
+    .lean();
+
+  const lookupIds = new Set(requestedItems.map((item) => String(item._id)));
+  const identityGroups = new Map();
+
+  for (const item of requestedItems) {
+    addLink(item._id, item._id);
+
+    const key = getMenuItemIdentityKey(item);
+    if (!key) continue;
+
+    if (!identityGroups.has(key)) identityGroups.set(key, []);
+    identityGroups.get(key).push(item);
+  }
+
+  if (identityGroups.size) {
+    const siblingQueries = [...identityGroups.values()].map((group) => ({
+      presetType: group[0].presetType,
+      title: group[0].title,
+      creator: group[0].creator,
+    }));
+
+    const siblings = await MenuItems.find({ $or: siblingQueries })
+      .select("_id presetType title creator")
+      .lean();
+
+    for (const sibling of siblings) {
+      lookupIds.add(String(sibling._id));
+      const requestedGroup = identityGroups.get(getMenuItemIdentityKey(sibling)) || [];
+      for (const requested of requestedGroup) {
+        addLink(sibling._id, requested._id);
+      }
+    }
+  }
+
+  return {
+    lookupIds: [...lookupIds],
+    equivalentToRequested,
+  };
+};
+
+const bindPromotionsToRequestedMenuItems = (promotions = [], equivalentToRequested) => {
+  if (!promotions.length) return promotions;
+
+  return promotions.map((promo) => {
+    const promoItemIds = getPromoMenuItemIds(promo.menuItem);
+    const requestedMatches = new Set();
+
+    for (const id of promoItemIds) {
+      const matches = equivalentToRequested.get(id);
+      if (matches) matches.forEach((requestedId) => requestedMatches.add(requestedId));
+    }
+
+    const existing = new Set(promoItemIds);
+    const missing = [...requestedMatches].filter((id) => !existing.has(id));
+    if (!missing.length) return promo;
+
+    if (Array.isArray(promo.menuItem)) {
+      return {
+        ...promo,
+        menuItem: [...promo.menuItem, ...missing.map((id) => ({ _id: id }))],
+      };
+    }
+
+    // Single linked item: retarget onto the requested item when there is only one
+    if (missing.length === 1 && promo.menuItem && typeof promo.menuItem === "object") {
+      return {
+        ...promo,
+        menuItem: { ...promo.menuItem, _id: missing[0] },
+      };
+    }
+
+    const original = promo.menuItem ? [promo.menuItem] : [];
+    return {
+      ...promo,
+      menuItem: [...original, ...missing.map((id) => ({ _id: id }))],
+    };
+  });
+};
+
 const getActiveMenuItemPromotions = async ({
   menuItemIds,
   userId,
@@ -760,9 +879,14 @@ const getActiveMenuItemPromotions = async ({
 
   if (!menuItemIds?.length) return [];
 
+  const { lookupIds, equivalentToRequested } =
+    await getEquivalentMenuItemMatch(menuItemIds);
+
+  if (!lookupIds.length) return [];
+
   const promotions = await Promotion.find({
     promotionType: { $in: ["buyMenuItemPromotion", "extraPointsForItem"] },
-    menuItem: { $in: menuItemIds },
+    menuItem: { $in: toObjectIds(lookupIds) },
     status: "active",
     ...getActivePromotionMatchQuery(timezone || "UTC", now),
   })
@@ -786,7 +910,7 @@ const getActiveMenuItemPromotions = async ({
     now,
   });
 
-  return formatted;
+  return bindPromotionsToRequestedMenuItems(formatted, equivalentToRequested);
 };
 
 const getActiveMenuItemProductSales = async ({
@@ -796,9 +920,14 @@ const getActiveMenuItemProductSales = async ({
 }) => {
   if (!menuItemIds?.length) return [];
 
+  const { lookupIds, equivalentToRequested } =
+    await getEquivalentMenuItemMatch(menuItemIds);
+
+  if (!lookupIds.length) return [];
+
   const promotions = await Promotion.find({
     promotionType: "productSale",
-    menuItem: { $in: menuItemIds },
+    menuItem: { $in: toObjectIds(lookupIds) },
     status: "active",
     ...getActivePromotionMatchQuery(timezone || "UTC", now),
   })
@@ -807,9 +936,11 @@ const getActiveMenuItemProductSales = async ({
 
   if (!promotions.length) return [];
 
-  return promotions.filter((promo) =>
+  const currentlyActive = promotions.filter((promo) =>
     isPromotionScheduleActive({ ...promo, now, timezone: timezone || "UTC" }),
   );
+
+  return bindPromotionsToRequestedMenuItems(currentlyActive, equivalentToRequested);
 };
 
 const getActiveMenuHappyHourPromotion = async ({
@@ -839,6 +970,106 @@ const getActiveMenuHappyHourPromotion = async ({
   return formatPromotion(active, timezone);
 };
 
+const awardMenuItemPromotionsForOrder = async ({
+  userId,
+  companyOrganizer,
+  menuOrder,
+  timezone,
+}) => {
+  const purchased = [];
+
+  for (const item of menuOrder?.items || []) {
+    if (!item?.menuItem || !item?.quantity) continue;
+    purchased.push({
+      menuItem: item.menuItem?._id || item.menuItem,
+      quantity: Number(item.quantity),
+    });
+  }
+
+  for (const combo of menuOrder?.combos || []) {
+    const comboQty = Number(combo?.quantity) || 1;
+    for (const item of combo?.items || []) {
+      if (!item?.menuItem || !item?.quantity) continue;
+      purchased.push({
+        menuItem: item.menuItem?._id || item.menuItem,
+        quantity: Number(item.quantity) * comboQty,
+      });
+    }
+  }
+
+  if (!purchased.length) return [];
+
+  const { User } = require("@UserModel");
+  let tz = timezone;
+  if (!tz) {
+    const user = await User.findById(userId).select("timezone").lean();
+    tz = user?.timezone || "UTC";
+  }
+
+  const promotions = await getActiveMenuItemPromotions({
+    menuItemIds: purchased.map((item) => item.menuItem),
+    userId,
+    timezone: tz,
+  });
+
+  const awarded = [];
+
+  for (const promo of promotions) {
+    if (!["buyMenuItemPromotion", "extraPointsForItem"].includes(promo.promotionType)) {
+      continue;
+    }
+    if (promo.canClaim === false) continue;
+
+    const organizerId = String(promo.companyOrganizer?._id || promo.companyOrganizer || "");
+    if (companyOrganizer && organizerId && organizerId !== String(companyOrganizer)) {
+      continue;
+    }
+
+    const promoItemIds = new Set(getPromoMenuItemIds(promo.menuItem));
+    const qty = purchased.reduce((sum, item) => {
+      const id = String(item.menuItem?._id || item.menuItem);
+      return promoItemIds.has(id) ? sum + Number(item.quantity || 0) : sum;
+    }, 0);
+    if (qty <= 0) continue;
+
+    const extra = (Number(promo.extraPoints) || 0) * qty;
+    if (extra <= 0) continue;
+
+    const order = await PromotionsOrders.create({
+      promotion: promo._id,
+      promotionType: promo.promotionType,
+      companyOrganizer: companyOrganizer || promo.companyOrganizer?._id || promo.companyOrganizer,
+      pointsSpent: 0,
+      user: userId,
+      status: "redeemed",
+      redeemedAt: new Date(),
+    });
+
+    await createTransactionService(
+      {
+        user: userId,
+        companyOrganizer: companyOrganizer || promo.companyOrganizer?._id || promo.companyOrganizer,
+        organization: menuOrder?.organization?._id || menuOrder?.organization || null,
+        type: "earn",
+        domainType: "promotionorders",
+        entityId: order._id,
+        companyPoints: { base: extra, total: extra },
+        description: `Menu item promotion ${promo.title}`,
+      },
+      null,
+    );
+
+    awarded.push({
+      promotionId: String(promo._id),
+      title: promo.title,
+      extraPoints: extra,
+      quantity: qty,
+    });
+  }
+
+  return awarded;
+};
+
 module.exports = {
   count,
   findById,
@@ -851,6 +1082,7 @@ module.exports = {
   getActiveMenuItemPromotions,
   getActiveMenuItemProductSales,
   getActiveMenuHappyHourPromotion,
+  awardMenuItemPromotionsForOrder,
 
 };
 

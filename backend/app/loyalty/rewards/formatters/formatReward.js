@@ -22,12 +22,21 @@ function formatReward(reward, timezone) {
         }
     }
 
+    const formatMenuItemImage = (item) => {
+        if (!item || typeof item !== "object") return item;
+        return {
+            ...item,
+            image: getFullImageUrl(item.image || "noimage.png"),
+        };
+    };
+
     // Safely handle menuItem image (check if menuItem and image exist)
-    if (obj?.menuItem?.image) {
-        obj.menuItem.image = getFullImageUrl(obj.menuItem.image);
-    } else if (obj?.menuItem) {
-        // If menuItem exists but no image, set default image
-        obj.menuItem.image = getFullImageUrl("noimage.png");
+    if (obj?.menuItem) {
+        obj.menuItem = formatMenuItemImage(obj.menuItem);
+    }
+
+    if (Array.isArray(obj.equivalentMenuItems)) {
+        obj.equivalentMenuItems = obj.equivalentMenuItems.map(formatMenuItemImage);
     }
 
     // Safely handle the main image of the reward
@@ -43,6 +52,7 @@ function formatReward(reward, timezone) {
             // Ensure customReward exists before trying to access its properties
             if (obj.customReward) {
                 delete obj.menuItem;  // Remove menuItem if it's a custom reward
+                delete obj.equivalentMenuItems;
                 delete obj.event;     // Remove event if it's a custom reward
 
                 // Check if customReward.image exists
@@ -61,6 +71,7 @@ function formatReward(reward, timezone) {
 
         case "ticketReward":
             delete obj.menuItem;  // Remove menuItem if it's a ticketReward
+            delete obj.equivalentMenuItems;
             delete obj.customReward;  // Remove customReward if it's a ticketReward
             if (obj?.event?.basicInfo?.media?.name) {
                 obj.event.basicInfo.media.name = getFullImageUrl(obj.event.basicInfo?.media.name);

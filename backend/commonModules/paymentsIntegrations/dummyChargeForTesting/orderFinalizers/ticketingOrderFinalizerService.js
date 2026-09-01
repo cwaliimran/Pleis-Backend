@@ -342,16 +342,18 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
      * 🎯 Loyalty Side Effects (Non-blocking)
      * =====================================================
      */
-    try {
-      handleLoyaltyEarningConsequences({
-        userId: order.user,
-        companyOrganizer: order.companyOrganizer,
-        companyPoints,
-        globalPoints,
-        menuOrder: order
-      });
-    } catch (err) {
-      console.error("[LOYALTY] Side effect failed:", err);
+    if (result.status === "paid") {
+      try {
+        handleLoyaltyEarningConsequences({
+          userId: order.user,
+          companyOrganizer: order.companyOrganizer,
+          companyPoints,
+          globalPoints,
+          menuOrder,
+        });
+      } catch (err) {
+        console.error("[LOYALTY] Side effect failed:", err);
+      }
     }
 
 

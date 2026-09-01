@@ -39,7 +39,7 @@ const getOrganizationProfile = async (queryData) => {
       orgProfile,
       orgEvents,
       reservations,
-      menu,
+      menuPayload,
       reviews,
       similarOrganizations,
       userOrganizationStreak,
@@ -61,8 +61,8 @@ const getOrganizationProfile = async (queryData) => {
     if (!orgProfile.org) {
       throw new Error("Organization not found");
     }
-  
-    menu=menu?.menu||[];
+
+    const menu = menuPayload?.menu || [];
     // Format organization profile info
     let orgProfileInfo = formatOrganization(orgProfile.org);
     let userCompanyWallet = await getWallet(userId, orgProfile.org.creator, null, { autoCreate: false });
