@@ -233,10 +233,10 @@ const getOrders = async ({
       },
     },
 
-    // 🔹 Pagination with skip and limit
-    { $skip: skipValue || 0 }, // Use skipValue to skip records based on page and limit
+    // Sort before skip/limit so newest orders appear on page 1
+    { $sort: { createdAt: sortDirection, _id: sortDirection } },
+    { $skip: skipValue || 0 },
     { $limit: limit || 10 },
-    { $sort: { createdAt: sortDirection } },
 
     // 🔹 Project the necessary fields for the response
     {
