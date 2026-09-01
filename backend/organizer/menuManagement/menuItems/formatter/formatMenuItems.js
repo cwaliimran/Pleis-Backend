@@ -1,5 +1,6 @@
 const { getFullImageUrl } = require("@utils/imageHelper");
 const { convertUtcToTimezone } = require("@utils/responseUtil");
+const { attachMenuIds } = require("../../../../shared/menuItems/menuField");
 
 /**
  * Formats the `object` field inside BannerControls dynamically
@@ -17,7 +18,7 @@ function formatMenuItem(item, timezone) {
     // Format image URL
     obj.image = getFullImageUrl(obj.image || "noimage.png");
     
-    return obj;
+    return attachMenuIds(obj);
 }
 
 module.exports = { formatMenuItem };

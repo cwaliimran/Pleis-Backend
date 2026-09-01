@@ -3,12 +3,14 @@ const { buildKeywordQueryFromModels } = require("@dbUtils/queryUtil");
 const { generateMeta } = require("@utils/responseUtil");
 const Organizations = require("@OrganizationModel");
 const Menus = require("@MenusModel");
+const MenuItems = require("@MenuItemsModel");
 const menuRepo = require("./menusRepository");
 const mongoose = require("mongoose");
 const {
   getOrganizationIdsByCompanyOrganizer,
   getOrganizationByCompanyOrganizer,
 } = require("../../organizations/organizationRepository");
+const { addMenuIdPipeline } = require("../../../shared/menuItems/menuField");
 
 const createMenu = async (data) => {
   return await menuRepo.createMenu(data);
@@ -453,29 +455,23 @@ const duplicateMenuAndItems = async (menuId, organization, timezone, name) => {
       const orgId = new mongoose.Types.ObjectId(
         savedDuplicatedMenu.organization,
       );
-      const menuId = new mongoose.Types.ObjectId(savedDuplicatedMenu._id);
+      const duplicatedMenuId = new mongoose.Types.ObjectId(savedDuplicatedMenu._id);
       await Menus.updateMany(
         {
           organization: orgId,
           status: { $ne: "deleted" },
-          _id: { $ne: menuId },
+          _id: { $ne: duplicatedMenuId },
         },
         { $set: { status: "inactive" } },
         { session },
       );
     }
 
-    const menuItems = await menuRepo.getMenuItemsByMenuId(menuId, session);
-    const duplicatedMenuItemsPromises = menuItems.map((item) => {
-      const duplicatedItem = {
-        ...item.toObject(),
-        _id: new mongoose.Types.ObjectId(),
-        menu: savedDuplicatedMenu._id,
-      };
-      return menuRepo.createDuplicatedMenuItem(duplicatedItem, session);
-    });
-
-    await Promise.all(duplicatedMenuItemsPromises);
+    await MenuItems.updateMany(
+      { menu: menuId, status: { $ne: "deleted" } },
+      addMenuIdPipeline(savedDuplicatedMenu._id),
+      { session },
+    );
 
     await session.commitTransaction();
     session.endSession();

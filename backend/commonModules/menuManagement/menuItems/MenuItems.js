@@ -37,9 +37,9 @@ const menuItemsSchema = new mongoose.Schema(
     },
 
     menu: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: [mongoose.Schema.Types.ObjectId],
       ref: "Menus",
-      required: true,
+      default: [],
     },
 
     startTime: {

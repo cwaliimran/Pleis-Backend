@@ -299,14 +299,15 @@ const createLimitedTimeItem = async (data, timezone) => {
 };
 
 const createMenuItemFromPreset = async (data, timezone) => {
-  const { preSets, menuId } = data;
-
-  // Ensure preSets is an array of IDs
-  const presetIds = preSets.map(id => mongoose.Types.ObjectId(id));
+  const { preSets, menuId, subCategory, creator } = data;
 
   try {
+    const presetIds = preSets.map((id) => new mongoose.Types.ObjectId(id));
+    const menuIds = Array.isArray(menuId) ? menuId : [menuId];
+    const menuObjectIds = menuIds.map((id) => new mongoose.Types.ObjectId(id));
+
     const presetsData = await PresetModel.find({
-      '_id': { $in: presetIds }, 
+      _id: { $in: presetIds },
     });
 
     // If no presets are found
@@ -314,35 +315,41 @@ const createMenuItemFromPreset = async (data, timezone) => {
       return { error: "No presets found with the provided IDs" };
     }
 
+    const resolvedSubCategory = subCategory || presetsData[0]?.subCategory;
+    if (!resolvedSubCategory) {
+      return { error: "subCategory_required" };
+    }
+    if (!creator) {
+      return { error: "creator_required" };
+    }
+
     // Create an array of new menu items using the fetched preset data
-    const menuItemsData = presetsData.map(preset => {
+    const menuItemsData = presetsData.map((preset) => {
       return {
-        image: preset.image || "",  // Default image if not available
+        image: preset.image || "",
         title: preset.title || "",
         description: preset.description || "",
-        basePrice: preset.basePrice || 0,
-        category: preset.category,  // Assuming category is a valid ObjectId
-        menu: menuId,               // Use provided menuId for all items
-        status: "active",           // Default status
+        basePrice: Number(preset.basePrice || 0),
+        category: preset.category,
+        subCategory: preset.subCategory || resolvedSubCategory,
+        menu: menuObjectIds,
+        creator,
+        status: "active",
         isLimitedTimeOffer: preset.isLimitedTimeOffer || false,
         startDate: preset.startDate || null,
         endDate: preset.endDate || null,
         event: preset.event || null,
         availabilityType: preset.availabilityType || null,
         upSellItem: preset.upSellItem || false,
-        isAvailableInStock: preset.isAvailableInStock || true,
-        // You can add any additional fields here as needed
+        isAvailableInStock: preset.isAvailableInStock !== false,
+        parentPreset: preset._id,
       };
     });
 
-    // Insert the new menu items into the database
     const createdMenuItems = await MenuItems.insertMany(menuItemsData);
 
-    // Return success response
     return createdMenuItems;
-
   } catch (error) {
-
     return { error: "Error creating menu items from preset: " + error.message };
   }
 };

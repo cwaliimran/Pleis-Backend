@@ -47,7 +47,10 @@ const countMenuItems = async (query = {}) => {
 
 // Find by ID
 const findMenuItemById = async (id) => {
-  return MenuItems.findById(id);
+  return MenuItems.findById(id).populate({
+    path: "menu",
+    select: "title status organization",
+  });
 };
 
 // Update and save

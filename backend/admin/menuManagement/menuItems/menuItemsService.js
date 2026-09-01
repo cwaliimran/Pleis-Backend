@@ -11,12 +11,13 @@ const { getMenuIdsByCompanyOrganizer, getMenuIdsByOrganization } = require("../.
 const { formatMenuItem, formatBundleMenuItem } = require("../menuItemCategories/formatter/formatItemCategories");
 const Organizations = require("@OrganizationModel");
 const Presets = require("@PresetsModel");
+const { addMenuIdPipeline } = require("../../../shared/menuItems/menuField");
 
 
 const createMenuItem = async (data, timezone) => {
-  const docs = await menuItemRepo.createMenuItem(data);
-
-  return docs.map((doc) => formatMenuItem(doc, timezone));
+  const doc = await menuItemRepo.createMenuItem(data);
+  const populated = await menuItemRepo.findMenuItemById(doc._id);
+  return formatMenuItem(populated || doc, timezone);
 };
 
 
@@ -26,6 +27,7 @@ const importMenuItems = async (data) => {
     menu,
     companyOrganizer,
     presetItems = [],
+    subCategory,
   } = data;
 
   // remove invalid / duplicate ids from request
@@ -41,14 +43,14 @@ const importMenuItems = async (data) => {
 
 
   const alreadyImportedItems = await MenuItems.find({
-    menu,
+    creator: companyOrganizer,
     parentPreset: {
       $in: uniquePresetIds,
     },
     status: {
       $ne: "deleted",
     },
-  }).select("parentPreset");
+  }).select("parentPreset menu");
 
   const alreadyImportedPresetIds = new Set(
     alreadyImportedItems.map((item) =>
@@ -56,27 +58,33 @@ const importMenuItems = async (data) => {
     )
   );
 
+  const menuObjectId = new mongoose.Types.ObjectId(menu);
+
+  for (const item of alreadyImportedItems) {
+    await MenuItems.updateOne(
+      { _id: item._id },
+      addMenuIdPipeline(menuObjectId),
+    );
+  }
+
   const filteredPresetIds = uniquePresetIds.filter(
     (id) => !alreadyImportedPresetIds.has(id)
   );
 
   if (!filteredPresetIds.length) {
-    return [];
+    return alreadyImportedItems;
   }
 
   // fetch presets
   const presets = await Presets.find({
     _id: {
-      $in: presetItems.map((id) => new mongoose.Types.ObjectId(id)),
+      $in: filteredPresetIds.map((id) => new mongoose.Types.ObjectId(id)),
     },
-    // status: "active",
   });
 
   if (!presets.length) {
-    return [];
+    return alreadyImportedItems;
   }
-
-
 
   // map preset -> menu item shape
   const menuItemsData = presets.map((preset) => ({
@@ -84,10 +92,10 @@ const importMenuItems = async (data) => {
     title: preset.title || "",
     description: preset.description || "",
     category: preset.category,
+    subCategory: preset.subCategory || subCategory,
     basePrice: Number(preset.basePrice || 0),
 
-    // menu item required fields
-    menu,
+    menu: [menuObjectId],
     creator: companyOrganizer,
 
     // optional defaults
@@ -211,7 +219,6 @@ const getMenuItems = async ({
         as: "menu",
       },
     },
-    { $unwind: "$menu" },
     {
       $lookup: {
         from: "menusubcategories",
@@ -299,7 +306,7 @@ const getMenuItems = async ({
       const sortFieldMap = {
         menuItemName: "$title",
         description: "$description",
-        menuName: "$menu.title",
+        menuName: { $arrayElemAt: ["$menu.title", 0] },
       };
 
       pipeline.push({
@@ -413,10 +420,8 @@ const updateMenuItem = async (id, data, timezone) => {
   Object.assign(menuItem, updateData);
   await menuItem.save();
 
-  // Return updated menuItem
-  let obj = formatMenuItem(menuItem, timezone);
-
-  return obj;
+  const populated = await menuItemRepo.findMenuItemById(id);
+  return formatMenuItem(populated || menuItem, timezone);
 };
 
 const deleteMenuItem = async (id) => {
@@ -548,7 +553,7 @@ const getBundleMenuItems = async ({ page, limit, keyword, status, date, menu, ti
         from: "menus",
         let: { menu: "$menu" },
         pipeline: [
-          { $match: { $expr: { $eq: ["$_id", "$$menu"] } } },
+          { $match: { $expr: { $in: ["$_id", { $cond: [{ $isArray: "$$menu" }, "$$menu", ["$$menu"]] }] } } },
           { $project: { _id: 1, title: 1, image: 1, venue: 1, organization: 1 } },
           // 🔹 Lookup Organization (like in getMenus)
           {
@@ -583,7 +588,6 @@ const getBundleMenuItems = async ({ page, limit, keyword, status, date, menu, ti
         as: "menuData"
       }
     },
-    { $unwind: { path: "$menuData", preserveNullAndEmptyArrays: true } }
   );
 
   // 5️⃣ Populate Category

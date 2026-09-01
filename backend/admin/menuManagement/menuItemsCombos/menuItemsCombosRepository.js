@@ -61,12 +61,6 @@ const menuItemsWithV2FieldsPipeline = [
     },
   },
   {
-    $unwind: {
-      path: "$menu",
-      preserveNullAndEmptyArrays: true,
-    },
-  },
-  {
     $project: {
       title: 1,
       status: 1,

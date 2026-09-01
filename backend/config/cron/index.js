@@ -152,7 +152,7 @@ const startCrons = () => {
   });
 
   // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
-  cron.schedule("*/10 * * * *", async () => {
+  cron.schedule("*/10 * * * *", async () => {// run every 10 minutes for production
     const lockKey = "cron:engagement-buffer-flush";
     const lock = await acquireLock(lockKey, 120);
 
@@ -160,7 +160,7 @@ const startCrons = () => {
 
     try {
       await flushEngagementBuffer();
-      console.log("📊 Engagement buffer flushed");
+      // console.log("📊 Engagement buffer flushed");
     } catch (err) {
       console.error("❌ Engagement flush cron failed:", err);
     } finally {

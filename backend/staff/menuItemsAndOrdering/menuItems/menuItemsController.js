@@ -2,9 +2,11 @@ const {
   sendResponse,
   validateParams,
   getReadableErrorMessage,
+  convertTimezoneToUtc,
 } = require("@utils/responseUtil");
 
 const menuItemsService = require("./menuItemsService");
+const { resolveMenuIdsFromBody } = require("../../../shared/menuItems/menuField");
 
 
 const getMenuItems = async (req, res) => {
@@ -182,6 +184,7 @@ const updateMenuItem = async (req, res) => {
     basePrice,
     taxPercent,
     menu,
+    menuIds,
     startTime,
     endTime,
     status = "active",
@@ -190,6 +193,7 @@ const updateMenuItem = async (req, res) => {
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
+      objectIdFields: ["menu", "menuIds"],
       dateFields: {
         startTime: "hh:mm A", // Example format: 02:30 PM
         endTime: "hh:mm A", // Example format: 02:30 PM
@@ -206,7 +210,7 @@ const updateMenuItem = async (req, res) => {
     category,
     basePrice,
     taxPercent,
-    menu,
+    menu: resolveMenuIdsFromBody({ menuIds, menu }),
     startTime,
     endTime,
     status,

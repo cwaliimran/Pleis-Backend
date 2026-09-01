@@ -11,11 +11,12 @@ const Organizations = require("@OrganizationModel");
 // const MenuItemCategories = require("../menuItemCategories/MenuItemCategories");
 const { formatMenuItem } = require("./formatter/formatMenuItems");
 const { getOrganizationIdByCompanyOrganizer } = require("../../../admin/organizations/organizationRepository");
+const { toObjectIdArray } = require("../../../shared/menuItems/menuField");
 
 const createMenuItem = async (data, timezone) => {
-  let doc = await menuItemRepo.createMenuItem(data);
-  let obj = formatMenuItem(doc, timezone);
-  return obj;
+  const doc = await menuItemRepo.createMenuItem(data);
+  const populated = await menuItemRepo.findMenuItemById(doc._id);
+  return formatMenuItem(populated || doc, timezone);
 };
 
 const getMenuItems = async ({ timezone,page, limit, keyword, status, userId, date, organization }) => {
@@ -83,26 +84,13 @@ if (!organization) {
               ],
               as: "organization"  // Store the result in organization field
             }
-          }
+          },
+          { $unwind: { path: "$organization", preserveNullAndEmptyArrays: true } },
         ],
         as: "menu"  // Output array containing menu details
       }
     });
 
-    // Unwind the menu and organization to get them as a single object
-    pipeline.push({
-      $unwind: {
-        path: "$menu",
-        preserveNullAndEmptyArrays: true  // Allow for menus that may not have an organization
-      }
-    });
-
-    pipeline.push({
-      $unwind: {
-        path: "$menu.organization",
-        preserveNullAndEmptyArrays: true  // Allow for menus that may not have an organization
-      }
-    });
     pipeline.push({
       $lookup: {
         from: "menuitemcategories",  // Join with the Menus collection
@@ -149,7 +137,8 @@ if (!organization) {
               ],
               as: "organization"  // Store the result in organization field
             }
-          }
+          },
+          { $unwind: { path: "$organization", preserveNullAndEmptyArrays: true } },
         ],
         as: "menu"  // Output array containing menu details
       }
@@ -171,13 +160,6 @@ if (!organization) {
     pipeline.push({
       $unwind: {
         path: "$category",
-        preserveNullAndEmptyArrays: true  // Allow for menus that may not have an organization
-      }
-    });
-
-    pipeline.push({
-      $unwind: {
-        path: "$menu.organization",
         preserveNullAndEmptyArrays: true  // Allow for menus that may not have an organization
       }
     });
@@ -270,7 +252,7 @@ const updateMenuItem = async (id, data, timezone) => {
   const updateData = {};
   for (const key of allowedFields) {
     if (data[key] !== undefined) {
-      updateData[key] = data[key];
+      updateData[key] = key === "menu" ? toObjectIdArray(data[key]) : data[key];
     }
   }
 
@@ -295,10 +277,10 @@ const deleteMenuItem = async (id) => {
   return true;
 };
 
-const getMenuItemDetails = async (id) => {
+const getMenuItemDetails = async (id, timezone) => {
   const menuItem = await menuItemRepo.findMenuItemById(id);
   if (!menuItem) return null;
-  return menuItem;
+  return formatMenuItem(menuItem, timezone);
 };
 
 

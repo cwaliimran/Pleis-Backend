@@ -9,6 +9,7 @@ const {
 } = require("@utils/responseUtil");
 
 const menuItemsService = require("./menuItemsService");
+const { resolveMenuIdsFromBody } = require("../../../shared/menuItems/menuField");
 
 const createMenuItem = async (req, res) => {
   let { timezone } = req.user;
@@ -21,6 +22,7 @@ const createMenuItem = async (req, res) => {
     basePrice,
     taxPercent,
     menu,
+    menuIds,
     startTime,
     endTime,
     status = "active",
@@ -28,8 +30,8 @@ const createMenuItem = async (req, res) => {
 
   if (
     !validateParams(req, res, {
-      rawData: ["title", "type", "basePrice", "menu"],
-      objectIdFields: ["menu", "category"],
+      rawData: ["title", "type", "basePrice"],
+      objectIdFields: ["menu", "menuIds", "category"],
       dateFields: {
         startTime: "hh:mm A", // Example format: 02:30 PM
         endTime: "hh:mm A", // Example format: 02:30 PM
@@ -37,6 +39,15 @@ const createMenuItem = async (req, res) => {
     })
   )
     return;
+
+  const resolvedMenuIds = resolveMenuIdsFromBody({ menuIds, menu });
+  if (!resolvedMenuIds?.length) {
+    return sendResponse({
+      res,
+      statusCode: 400,
+      translationKey: "menuIds_required",
+    });
+  }
 
   let data = {
     image,
@@ -46,7 +57,7 @@ const createMenuItem = async (req, res) => {
     category,
     basePrice,
     taxPercent,
-    menu,
+    menu: resolvedMenuIds,
     startTime,
     endTime,
     status,
@@ -192,6 +203,7 @@ const updateMenuItem = async (req, res) => {
     basePrice,
     taxPercent,
     menu,
+    menuIds,
     startTime,
     endTime,
     status = "active",
@@ -200,6 +212,7 @@ const updateMenuItem = async (req, res) => {
   if (
     !validateParams(req, res, {
       pathParams: ["id"],
+      objectIdFields: ["menu", "menuIds", "category"],
       dateFields: {
         startTime: "hh:mm A", // Example format: 02:30 PM
         endTime: "hh:mm A", // Example format: 02:30 PM
@@ -216,7 +229,7 @@ const updateMenuItem = async (req, res) => {
     category,
     basePrice,
     taxPercent,
-    menu,
+    menu: resolveMenuIdsFromBody({ menuIds, menu }),
     startTime,
     endTime,
     status,

@@ -8,6 +8,7 @@ const {
 
 const menuItemsService = require("./menuItemsService");
 const { default: mongoose } = require("mongoose");
+const { resolveMenuIdsFromBody } = require("../../../shared/menuItems/menuField");
 
 const createMenuItem = async (req, res) => {
   let { timezone } = req.user;
@@ -142,11 +143,11 @@ const createMenuItem = async (req, res) => {
 
 //importMenuItems the frontend will pas menuItems as an array of menu items to be created. The service will validate each menu item and create them in bulk. If any menu item fails validation, the entire operation will fail and no menu items will be created. This ensures data integrity and consistency.
 const importMenuItems = async (req, res) => {
-  const { menu, companyOrganizer, presetItems } = req.body;
+  const { menu, companyOrganizer, presetItems, subCategory } = req.body;
   if (
     !validateParams(req, res, {
       rawData: ["menu", "companyOrganizer", "presetItems"],
-      objectIdFields: ["menu", "companyOrganizer"],
+      objectIdFields: ["menu", "companyOrganizer", "subCategory"],
     })
   )
     return;
@@ -155,6 +156,7 @@ const importMenuItems = async (req, res) => {
     menu,
     companyOrganizer,
     presetItems,
+    subCategory,
   };
 
   try {
@@ -324,6 +326,7 @@ const updateMenuItem = async (req, res) => {
     basePrice,
     taxPercent,
     menu,
+    menuIds,
     startTime,
     endTime,
     status = "active",
@@ -391,6 +394,7 @@ const updateMenuItem = async (req, res) => {
       pathParams: ["id"],
       objectIdFields: [
         "menu",
+        "menuIds",
         "subCategory",
         "presetType",
         "brand",
@@ -427,7 +431,7 @@ const updateMenuItem = async (req, res) => {
     subCategory,
     basePrice,
     taxPercent,
-    menu,
+    menu: resolveMenuIdsFromBody({ menuIds, menu }),
     startTime,
     endTime,
     status,

@@ -475,7 +475,9 @@ const createMenuItemFromPreset = async (req, res) => {
   let { timezone } = req.user;
   let {
     preSets,
-    menuId
+    menuId,
+    subCategory,
+    companyOrganizer,
   } = req.body;
   // Ensure menuItems is an array if provided
   if (!preSets || !Array.isArray(preSets)) {
@@ -500,11 +502,20 @@ if (
 
   let data = {
     preSets,
-    menuId
+    menuId,
+    subCategory,
+    creator: companyOrganizer || req.user?._id,
   };
 
   try {
     const result = await Menuervice.createMenuItemFromPreset(data, timezone);
+    if (result?.error) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: result.error,
+      });
+    }
     if (!result) {
       return sendResponse({
         res,

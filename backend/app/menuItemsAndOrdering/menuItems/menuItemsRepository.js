@@ -5,6 +5,7 @@ const { MenuItemsDiscounts } = require("@MenuItemsDiscountsModel");
 const { resolveEffectiveDiscount } = require("@MenuItemsDiscountsModel");
 const Menus = require("@MenusModel");
 const mongoose = require("mongoose");
+const { firstMenuId, toObjectIdArray } = require("../../../shared/menuItems/menuField");
 const MenuOrders = require("@OrdersModel");
 const { getActiveMenuItemPromotions, getActiveMenuItemProductSales, getActiveMenuHappyHourPromotion } = require("../../loyalty/promotions/promotionsRepository");
 const { getCurrentDateInTimezone, getStartAndEndOfDay } = require("@utils/responseUtil");
@@ -331,14 +332,16 @@ const buildMenuItemsSaleLookup = (timezone = null) => {
 };
 
 const getOrganizationIdByMenuItemId = async (menuId) => {
-  const menu = await Menus.findById(menuId).select("organization");
+  const id = firstMenuId(menuId);
+  if (!id) throw new Error("Menu item or menu not found");
+  const menu = await Menus.findById(id).select("organization");
   if (!menu || !menu.organization) throw new Error("Menu item or menu not found");
   return menu.organization;
 };
 
 const getOrganizationIdFromMenuItem = async (menuItemId) => {
   const menuItem = await MenuItems.findById(menuItemId).select("menu").lean();
-  if (!menuItem?.menu) throw new Error("Menu item or menu not found");
+  if (!toObjectIdArray(menuItem?.menu).length) throw new Error("Menu item or menu not found");
   return getOrganizationIdByMenuItemId(menuItem.menu);
 };
 
@@ -428,7 +431,7 @@ const getRecommendedItems = async (menuItemId, userId = null, timezone = null, l
     {
       $match: {
         _id: { $ne: new mongoose.Types.ObjectId(menuItemId) },
-        menu: menuItem.menu,
+        menu: { $in: toObjectIdArray(menuItem.menu) },
         status: "active",
         category: menuItem.category,
         isAvailableInStock: true,

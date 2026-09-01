@@ -1,13 +1,10 @@
 const { getFullImageUrl } = require("@utils/imageHelper");
 const { convertUtcToTimezone } = require("@utils/responseUtil");
+const { attachMenuIds } = require("../../../../shared/menuItems/menuField");
 
 /**
- * Formats the `object` field inside BannerControls dynamically
- * depending on its type and model.
- *
- * @param {Object} obj - Populated `object` document
- * @param {String} type - The type field ("Event", "Organizer", "LoyaltyProgram", etc.)
- * @returns {Object|null}
+ * Formats a menu item for admin/organizer responses.
+ * `menu` is always an array of menus; `menuIds` is the id list for update forms.
  */
 function formatMenuItem(item, timezone) {
   let obj = typeof item.toObject === "function" ? item.toObject() : item;
@@ -30,7 +27,6 @@ function formatMenuItem(item, timezone) {
     obj.endDate = convertUtcToTimezone(obj.endDate, timezone, "YYYY-MM-DD");
   }
 
-  // ✅ SAFE MENU HANDLING
   if (obj.menuData) {
     obj.menu = obj.menuData;
   }
@@ -39,29 +35,26 @@ function formatMenuItem(item, timezone) {
     obj.category = obj.categoryData;
   }
 
-  // Optional cleanup
   delete obj.menuData;
   delete obj.categoryData;
 
-  return obj;
+  return attachMenuIds(obj);
 }
 
 function formatBundleMenuItem(item, timezone) {
   let obj = typeof item.toObject === "function" ? item.toObject() : item;
   if (!obj) return null;
 
-  // Keep formatting logic (if you need it for other use-cases)
   if (obj.startTime && obj.endTime) {
     obj.startTime = convertUtcToTimezone(obj.startTime, timezone, "hh:mm A");
     obj.endTime = convertUtcToTimezone(obj.endTime, timezone, "hh:mm A");
   }
 
-  // Return ONLY required fields
   return {
     _id: obj._id,
     title: obj.title,
-    price: obj.basePrice|| 0, // choose price
+    price: obj.basePrice || 0,
   };
 }
 
-module.exports = { formatMenuItem,formatBundleMenuItem };
+module.exports = { formatMenuItem, formatBundleMenuItem };

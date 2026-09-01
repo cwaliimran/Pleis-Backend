@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Menu Item API Changes — Frontend Guide</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #171e27;
+      --panel-2: #1d2631;
+      --line: #2a3644;
+      --text: #e8eef5;
+      --muted: #9aabbd;
+      --accent: #5b9fd4;
+      --ok: #3dbe8c;
+      --warn: #e0b15a;
+      --break: #e07a6e;
+      --prev: #c47a5a;
+      --now: #4caf8a;
+      --code: #0c1116;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .wrap { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+    nav {
+      position: sticky; top: 0; height: 100vh; overflow: auto;
+      background: var(--panel); border-right: 1px solid var(--line);
+      padding: 24px 16px;
+    }
+    nav h1 { font-size: 15px; margin: 0 0 6px; letter-spacing: .02em; }
+    nav .sub { color: var(--muted); font-size: 12px; margin-bottom: 20px; }
+    nav a {
+      display: block; color: var(--muted); text-decoration: none;
+      font-size: 13px; padding: 6px 10px; border-radius: 6px;
+    }
+    nav a:hover, nav a:focus { background: var(--panel-2); color: var(--text); }
+    nav .g { font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--accent); margin: 16px 10px 6px; }
+    main { padding: 40px 48px 80px; max-width: 1080px; }
+    h2 { font-size: 26px; margin: 0 0 12px; }
+    h3 { font-size: 18px; margin: 32px 0 10px; }
+    h4 { font-size: 14px; margin: 16px 0 8px; color: var(--muted); font-weight: 600; }
+    p, li { color: var(--text); }
+    .muted { color: var(--muted); }
+    .lead { font-size: 16px; color: var(--muted); max-width: 720px; }
+    .pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 28px; }
+    .pill {
+      font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line);
+    }
+    .pill.break { background: #3a1f1c; color: #ffb4ab; border-color: #5c322c; }
+    .pill.ok { background: #163328; color: #8ee7c0; border-color: #245c44; }
+    .pill.warn { background: #332a14; color: #f0d089; border-color: #5c4a22; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0 24px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    code { font-size: 12.5px; background: var(--code); padding: 1px 6px; border-radius: 4px; }
+    pre {
+      background: var(--code); border: 1px solid var(--line); border-radius: 10px;
+      padding: 14px 16px; overflow: auto; font-size: 12px; line-height: 1.45; margin: 0;
+    }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 10px 0 20px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    .card .hd {
+      font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      padding: 8px 12px; border-bottom: 1px solid var(--line);
+    }
+    .card.prev .hd { background: #2a1c18; color: #f0b49a; }
+    .card.now .hd { background: #163328; color: #8ee7c0; }
+    .card .bd { padding: 0; }
+    .callout {
+      border: 1px solid var(--line); border-left: 3px solid var(--accent);
+      background: var(--panel); border-radius: 8px; padding: 12px 14px; margin: 16px 0;
+      font-size: 14px; color: var(--muted);
+    }
+    .callout strong { color: var(--text); }
+    .path { font-size: 13px; color: var(--accent); margin: 0 0 8px; }
+    hr { border: 0; border-top: 1px solid var(--line); margin: 40px 0; }
+    .toc-note { font-size: 12px; color: var(--muted); margin-top: 24px; }
+    @media (max-width: 920px) {
+      .wrap { grid-template-columns: 1fr; }
+      nav { position: relative; height: auto; }
+      .split { grid-template-columns: 1fr; }
+      main { padding: 24px 18px 60px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav>
+      <h1>Menu item APIs</h1>
+      <div class="sub">Frontend changelog · shared menus</div>
+      <div class="g">Start here</div>
+      <a href="#summary">Summary</a>
+      <a href="#mental-model">Mental model</a>
+      <a href="#checklist">Frontend checklist</a>
+      <div class="g">Must update</div>
+      <a href="#create">Create item</a>
+      <a href="#details">Get details</a>
+      <a href="#update">Update item</a>
+      <a href="#list">List items</a>
+      <a href="#by-menu">Items by menu id</a>
+      <a href="#import">Import presets</a>
+      <a href="#duplicate">Duplicate menu</a>
+      <a href="#inapp-preset">In-app from preset</a>
+      <div class="g">Shape-only</div>
+      <a href="#nested">Nested admin chips</a>
+      <a href="#organizer">Organizer routes</a>
+      <a href="#staff">Staff routes</a>
+      <div class="g">No change</div>
+      <a href="#unchanged">Guest / app APIs</a>
+    </nav>
+
+    <main>
+      <h2>Frontend API changelog</h2>
+      <p class="lead">
+        A menu item is now <strong>one document shared across many menus</strong>.
+        Stop treating “same product on two menus” as two records. Base path:
+        <code>/api/v1</code>.
+      </p>
+      <div class="pills">
+        <span class="pill break">Breaking — admin / organizer item CRUD</span>
+        <span class="pill warn">Shape-only — nested chips</span>
+        <span class="pill ok">Unchanged — guest app + staff reads</span>
+      </div>
+
+      <h3 id="summary">What changed at a glance</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Topic</th>
+            <th>Previous</th>
+            <th>Now</th>
+            <th>FE action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Storage</td>
+            <td><code>menu</code> = one ObjectId. Create cloned one doc per <code>menuIds</code> entry.</td>
+            <td><code>menu</code> = array of ObjectIds. One <code>_id</code> for the product.</td>
+            <td>One form, multi-select menus</td>
+          </tr>
+          <tr>
+            <td>Create response</td>
+            <td><code>data</code> was an <strong>array</strong> of clones</td>
+            <td><code>data</code> is <strong>one object</strong></td>
+            <td>Do not loop <code>data</code></td>
+          </tr>
+          <tr>
+            <td>Details / list <code>menu</code></td>
+            <td>Single id or one populated object</td>
+            <td>Always an <strong>array</strong> of populated menus + <code>menuIds</code></td>
+            <td>Bind edit multi-select to <code>menuIds</code></td>
+          </tr>
+          <tr>
+            <td>List rows</td>
+            <td>One row per clone</td>
+            <td>One row per product</td>
+            <td>Show multiple menu chips</td>
+          </tr>
+          <tr>
+            <td>Update menus</td>
+            <td>Changing menus created/deleted clones</td>
+            <td>Send <code>menuIds</code> to <strong>replace</strong> membership</td>
+            <td>Full list, not a patch</td>
+          </tr>
+          <tr>
+            <td>Duplicate menu</td>
+            <td>Cloned every item</td>
+            <td>Same item <code>_id</code>s; new menu id appended</td>
+            <td>Do not expect new item ids</td>
+          </tr>
+          <tr>
+            <td>Guest / staff GET</td>
+            <td>No <code>menu</code> on items</td>
+            <td>Still no <code>menu</code> / <code>menuIds</code></td>
+            <td>None</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <strong>Edit form contract:</strong> load <code>GET .../items/:id</code> →
+        put <code>data.menuIds</code> into the menus multi-select → save with
+        <code>PUT</code> body <code>{ "menuIds": [...] }</code>.
+        Use <code>data.menu[].title</code> for labels.
+      </div>
+
+      <h3 id="mental-model">Mental model</h3>
+      <div class="split">
+        <div class="card prev">
+          <div class="hd">Previous</div>
+          <div class="bd"><pre>Zinger on Main Course  →  _id A  (menu: Main)
+Zinger on Lunch        →  _id B  (menu: Lunch)   // clone
+Edit A does not change B</pre></div>
+        </div>
+        <div class="card now">
+          <div class="hd">Now</div>
+          <div class="bd"><pre>Zinger                 →  _id A
+  menu / menuIds       →  [Main Course, Lunch]
+Edit A updates price/title everywhere it is linked</pre></div>
+        </div>
+      </div>
+
+      <h3 id="checklist">Frontend checklist</h3>
+      <ol>
+        <li>Create item: menus multi-select → <code>menuIds[]</code>. Treat <code>201 data</code> as an object.</li>
+        <li>Edit item: prefill from <code>menuIds</code>; submit <code>menuIds</code>.</li>
+        <li>Item table: one row; chips from <code>menu</code> / <code>menuIds</code>.</li>
+        <li>Stop create/update/delete of “the same item on another menu” as separate records.</li>
+        <li>Import: send <code>subCategory</code> for first-time imports.</li>
+        <li>If UI used <code>item.menu.title</code> on discounts/combos/loyalty, use <code>item.menu[0].title</code> or join titles.</li>
+        <li>Guest app and staff list/details: no change.</li>
+      </ol>
+
+      <hr />
+
+      <!-- CREATE -->
+      <h3 id="create">1. Create menu item <span class="pill break">breaking</span></h3>
+      <p class="path">POST /admin/menu/items<br />POST /organizer/menu-management/items</p>
+      <p class="muted">Required: <code>title</code>, <code>basePrice</code>, <code>menuIds</code> (non-empty ObjectId array). Other fields unchanged.</p>
+
+      <h4>Request</h4>
+      <div class="split">
+        <div class="card prev">
+          <div class="hd">Previous</div>
+          <div class="bd"><pre>{
+  "title": "Zinger Burger",
+  "basePrice": 20,
+  "menuIds": ["MENU_MAIN", "MENU_LUNCH"],
+  "subCategory": "SUBCAT_ID",
+  "companyOrganizer": "ORGANIZER_ID"
+}
+/* backend inserted one clone per menuIds entry */</pre></div>
+        </div>
+        <div class="card now">
+          <div class="hd">Now</div>
+          <div class="bd"><pre>{
+  "title": "Zinger Burger",
+  "basePrice": 20,
+  "taxPercent": 5,
+  "menuIds": ["MENU_MAIN", "MENU_LUNCH"],
+  "subCategory": "SUBCAT_ID",
+  "companyOrganizer": "ORGANIZER_ID",
+  "presetType": "PRESET_TYPE_ID",
+  "servingSize": "SERVING_ID",
+  "availableDays": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
+  "daypart": ["DAYPART_ID"],
+  "status": "active"
+}</pre></div>
+        </div>
+      </div>
+
+      <h4>Response <code>201</code></h4>
+      <div class="split">
+        <div class="card prev">
+          <div class="hd">Previous — data is an array</div>
+          <div class="bd"><pre>{
+  "message": "Menu item created successfully",
+  "data": [
+    { "_id": "ITEM_A", "title": "Zinger Burger", "menu": "MENU_MAIN" },
+    { "_id": "ITEM_B", "title": "Zinger Burger", "menu": "MENU_LUNCH" }
+  ]
+}</pre></div>
+        </div>
+        <div class="card now">
+          <div class="hd">Now — data is one object</div>
+          <div class="bd"><pre>{
+  "statusCode": 201,
+  "message": "Menu item created successfully",
+  "data": {
+    "_id": "ITEM_A",
+    "title": "Zinger Burger",
+    "basePrice": 20,
+    "menu": [
+      {
+        "_id": "MENU_MAIN",
+        "title": "Main Course",
+        "status": "active",
+        "organization": "ORG_ID"
+      },
+      {
+        "_id": "MENU_LUNCH",
+        "title": "Lunch",
+        "status": "inactive",
+        "organization": "ORG_ID"
+      }
+    ],
+    "menuIds": ["MENU_MAIN", "MENU_LUNCH"]
+  }
+}</pre></div>
+        </div>
+      </div>
+      <div class="callout">Use <code>data._id</code> and <code>data.menuIds</code>. <code>Array.isArray(data)</code> is now false.</div>
+
+      <hr />
+
+      <!-- DETAILS -->
+      <h3 id="details">2. Get item details <span class="pill break">breaking shape</span></h3>
+      <p class="path">GET /admin/menu/items/:id<br />GET /organizer/menu-management/items/:id</p>
+      <p class="muted">Use this to hydrate the edit form.</p>
+      <div class="split">
+        <div class="card prev">
+          <div class="hd">Previous</div>
+          <div class="bd"><pre>{
+  "data": {
+    "_id": "ITEM_A",
+    "title": "Zinger Burger",
+    "menu": {
+      "_id": "MENU_MAIN",
+      "title": "Main Course",
+      "status": "active"
+    }
+  }
+}</pre></div>
+        </div>
+        <div class="card now">
+          <div class="hd">Now</div>
+          <div class="bd"><pre>{
+  "data": {
+    "_id": "ITEM_A",
+    "title": "Zinger Burger",
+    "menu": [
+      {
+        "_id": "MENU_MAIN",
+        "title": "Main Course",
+        "status": "active",
+        "organization": "ORG_ID"
+      }
+    ],
+    "menuIds": ["MENU_MAIN"]
+  }
+}</pre></div>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Field</th><th>Use on FE</th></tr></thead>
+        <tbody>
+          <tr><td><code>menuIds</code></td><td>Value of the menus multi-select</td></tr>
+          <tr><td><code>menu</code></td><td>Labels: <code>title</code>, <code>status</code>. Always an array — never <code>data.menu._id</code></td></tr>
+        </tbody>
+      </table>
+
+      <hr />
+
+      <!-- UPDATE -->
+      <h3 id="update">3. Update menu item <span class="pill break">breaking</span></h3>
+      <p class="path">PUT /admin/menu/items/:id<br />PUT /organizer/menu-management/items/:id</p>
+
+      <h4>Request</h4>
+      <div class="split">
+        <div class="card prev">
+          <div class="hd">Previous</div>
+          <div class="bd"><pre>{
+  "title": "Zinger Burger",
+  "basePrice": 21,
+  "menu": "MENU_MAIN"
+}
+/* or menuIds that spawned extra clones */</pre></div>
+        </div>
+        <div class="card now">
+          <div class="hd">Now — replace full membership</div>
+          <div class="bd"><pre>{
+  "title": "Zinger Burger",
+  "basePrice": 21,
+  "menuIds": ["MENU_MAIN", "MENU_LUNCH"]
+}</pre></div>
+        </div>
+      </div>
+      <ul>
+        <li><code>menuIds</code> <strong>replaces</strong> the list (not add/remove patch).</li>
+        <li>Omit <code>menuIds</code> and <code>menu</code> to leave membership unchanged.</li>
+        <li><code>menuIds: []</code> unlinks from every menu (item remains; guest list hides it).</li>
+        <li>Legacy <code>menu</code> (string or array) still works; prefer <code>menuIds</code>.</li>
+      </ul>
+      <h4>Response <code>200</code></h4>
+      <p class="muted">Same shape as details: <code>menu[]</code> + <code>menuIds[]</code>.</p>
+      <pre>{
+  "message": "Menu item updated successfully",
+  "data": {
+    "_id": "ITEM_A",
+    "title": "Zinger Burger",
+    "basePrice": 21,
+    "menu": [ { "_id": "MENU_MAIN", "title": "Main Course", "status": "active" } ],
+    "menuIds": ["MENU_MAIN"]
+  }
+}</pre>
+
+      <hr />
+
+      <!-- LIST -->
+      <h3 id="list">4. List menu items <span class="pill break">row count</span></h3>
+      <p class="path">GET /admin/menu/items?companyOrganizer=&amp;keyword=&amp;menu=&amp;limit=<br />GET /organizer/menu-management/items?...</p>
+      <div class="split">
+        <div class="card prev">
+          <div class="hd">Previous — two rows for one product</div>
+          <div class="bd"><pre>{
+  "data": [
+    { "_id": "ITEM_A", "title": "Zinger", "menu": { "_id": "MAIN", "title": "Main Course" } },
+    { "_id": "ITEM_B", "title": "Zinger", "menu": { "_id": "LUNCH", "title": "Lunch" } }
+  ]
+}</pre></div>
+        </div>
+        <div class="card now">
+          <div class="hd">Now — one row</div>
+          <div class="bd"><pre>{
+  "data": [
+    {
+      "_id": "ITEM_A",
+      "title": "Zinger Burger",
+      "menu": [
+        { "_id": "MENU_MAIN", "title": "Main Course" },
+        { "_id": "MENU_LUNCH", "title": "Lunch" }
+      ],
+      "menuIds": ["MENU_MAIN", "MENU_LUNCH"]
+    }
+  ]
+}</pre></div>
+        </div>
+      </div>
+      <ul>
+        <li><code>?menu=&lt;id&gt;</code> means “items whose <code>menu</code> array <strong>contains</strong> this id”, not a clone filter.</li>
+        <li>Sort <code>sortBy=menuName</code> uses the <strong>first</strong> linked menu title.</li>
+        <li>Show multiple chips from <code>menu</code> / <code>menuIds</code>.</li>
+      </ul>
+
+      <hr />
+
+      <!-- BY MENU -->
+      <h3 id="by-menu">5. Items by menu id</h3>
+      <p class="path">GET /admin/menu/items/menu/:menuId</p>
+      <p>Same membership filter. Shared <code>_id</code>s, not clones. Each row still has <code>menu[]</code> and <code>menuIds[]</code> (may include other menus besides <code>:menuId</code>).</p>
+      <p class="path" style="margin-top:16px">GET /admin/menu/items/bundles?companyOrganizer=</p>
+      <p class="muted">Still a list of <code>{ _id, title, price }</code>. No <code>menu</code> on bundle rows.</p>
+      <p class="path">GET /admin/menu/items/:id/delete-impact</p>
+      <p class="muted">Unchanged purpose. Cascade still keys off the single item <code>_id</code>.</p>
+
+      <hr />
+
+      <!-- IMPORT -->
+      <h3 id="import">6. Import presets <span class="pill warn">add subCategory for new imports</span></h3>
+      <p class="path">POST /admin/menu/items/import</p>
+      <p><code>menu</code> is still a <strong>single</strong> menu id. New: if those presets are new for the organizer, send <code>subCategory</code> (presets only have old <code>category</code>).</p>
+      <div class="split">
+        <div class="card prev">
+          <div class="hd">Previous</div>
+          <div class="bd"><pre>{
+  "menu": "MENU_MAIN",
+  "companyOrganizer": "ORGANIZER_ID",
+  "presetItems": ["PRESET_1", "PRESET_2"]
+}
+/* created a new item even if already imported */</pre></div>
+        </div>
+        <div class="card now">
+          <div class="hd">Now</div>
+          <div class="bd"><pre>{
+  "menu": "MENU_MAIN",
+  "companyOrganizer": "ORGANIZER_ID",
+  "presetItems": ["PRESET_1", "PRESET_2"],
+  "subCategory": "SUBCAT_ID"
+}</pre></div>
+        </div>
+      </div>
+      <ul>
+        <li>Already imported by this organizer → <strong>relink</strong> existing <code>_id</code> (<code>$addToSet</code>). No clone. <code>subCategory</code> not required for relink.</li>
+        <li>Brand-new preset → one item with <code>menu: [MENU_MAIN]</code>. <code>subCategory</code> required.</li>
+        <li>Response <code>201 data</code> is still an array of item docs (imported / relinked rows).</li>
+      </ul>
+
+      <hr />
+
+      <!-- DUPLICATE -->
+      <h3 id="duplicate">7. Duplicate menu <span class="pill break">behavior</span></h3>
+      <p class="path">POST /admin/menu/duplicate/:id</p>
+      <p>Request body is unchanged:</p>
+      <pre>{
+  "organization": "ORG_ID",
+  "name": "Main Course copy"
+}</pre>
+      <div class="split">
+        <div class="card prev">
+          <div class="hd">Previous</div>
+          <div class="bd"><pre>New inactive menu
++ cloned every item (new _ids)
+linked only to the copy</pre></div>
+        </div>
+        <div class="card now">
+          <div class="hd">Now</div>
+          <div class="bd"><pre>New inactive menu
+Items keep the same _ids
+New menu id is appended to menu[]
+
+GET item → menuIds includes source + copy</pre></div>
+        </div>
+      </div>
+      <div class="callout">Do not expect a new item id per product. Deleting a duplicated menu does not currently remove that id from items; PUT <code>menuIds</code> to clean up if needed.</div>
+
+      <hr />
+
+      <!-- IN-APP PRESET -->
+      <h3 id="inapp-preset">8. In-app create from preset <span class="pill warn">add subCategory</span></h3>
+      <p class="path">POST /admin/in-app-ordering/menu-management</p>
+      <div class="split">
+        <div class="card prev">
+          <div class="hd">Previous</div>
+          <div class="bd"><pre>{
+  "preSets": ["PRESET_ID"],
+  "menuId": "MENU_MAIN"
+}</pre></div>
+        </div>
+        <div class="card now">
+          <div class="hd">Now</div>
+          <div class="bd"><pre>{
+  "preSets": ["PRESET_ID"],
+  "menuId": "MENU_MAIN",
+  "subCategory": "SUBCAT_ID",
+  "companyOrganizer": "ORGANIZER_ID"
+}</pre></div>
+        </div>
+      </div>
+      <p>Created items store <code>menu</code> as <code>["MENU_MAIN"]</code>. Response is an array of created items.</p>
+
+      <hr />
+
+      <!-- NESTED -->
+      <h3 id="nested">9. Nested admin chips <span class="pill warn">shape only</span></h3>
+      <p>No request change. Nested <code>menu</code> on a menu-item object is now an <strong>array</strong>. Lists no longer duplicate the parent row once per menu.</p>
+
+      <h4>Request</h4>
+      <p class="muted">Unchanged query params (<code>companyOrganizer</code>, pagination, etc.).</p>
+
+      <h4>Response — nested <code>menu</code></h4>
+      <div class="split">
+        <div class="card prev">
+          <div class="hd">Previous</div>
+          <div class="bd"><pre>"menu": { "_id": "MENU_MAIN", "title": "Main Course" }
+
+/* or after $unwind: two parent rows,
+   each with one menu object */</pre></div>
+        </div>
+        <div class="card now">
+          <div class="hd">Now</div>
+          <div class="bd"><pre>"menu": [
+  { "_id": "MENU_MAIN", "title": "Main Course" },
+  { "_id": "MENU_LUNCH", "title": "Lunch" }
+]</pre></div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>Endpoint</th><th>Nested path</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>GET /admin/menu/discounts</code><br /><code>GET /admin/menu/discounts/:id</code></td>
+            <td><code>menuItems[].menu</code></td>
+          </tr>
+          <tr>
+            <td><code>GET /admin/menu/combos</code><br /><code>GET /admin/menu/combos/:id</code></td>
+            <td><code>menuItems[].menuItem.menu</code><br />Combo <code>applicableMenus</code> still works</td>
+          </tr>
+          <tr>
+            <td><code>GET /admin/loyalty/challenges</code> (+ <code>/:id</code>)</td>
+            <td><code>taskMenuItem[].menu</code> / reward menu item <code>menu</code></td>
+          </tr>
+          <tr>
+            <td><code>GET /admin/loyalty/promotions</code> (+ <code>/:id</code>)</td>
+            <td><code>menuItem[].menu</code></td>
+          </tr>
+          <tr>
+            <td><code>GET /admin/loyalty/rewards</code> (+ <code>/:id</code>)</td>
+            <td><code>menuItem.menu</code></td>
+          </tr>
+          <tr>
+            <td><code>GET /admin/in-app-ordering/menu-management</code></td>
+            <td>Summary rows: nested item <code>menu</code> is an array</td>
+          </tr>
+          <tr>
+            <td><code>GET /admin/in-app-ordering/menu-management/menu-items?organization=</code></td>
+            <td>Item list — one row per product (no duplicate ids)</td>
+          </tr>
+          <tr>
+            <td><code>GET /admin/in-app-ordering/menu-management/sale</code></td>
+            <td>No FE contract change expected</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>If UI did <code>item.menu.title</code>, switch to:</p>
+      <pre>const titles = (item.menu || []).map(m =&gt; m.title).join(", ");
+const first = item.menu?.[0]?.title;</pre>
+
+      <hr />
+
+      <!-- ORGANIZER -->
+      <h3 id="organizer">10. Organizer routes</h3>
+      <p>Organizer mounts the same admin item APIs:</p>
+      <table>
+        <thead><tr><th>Organizer path</th><th>Same contract as</th></tr></thead>
+        <tbody>
+          <tr><td><code>/organizer/menu-management/items</code></td><td>Admin create / list / details / update / delete</td></tr>
+          <tr><td><code>/organizer/menu</code></td><td>Admin menus including duplicate</td></tr>
+          <tr><td><code>GET /organizer/general/menu-item?menu=MENU_ID</code></td><td>Dropdown: items whose <code>menu</code> array contains that id. Response is still a compact list (<code>_id</code>, <code>title</code>, …).</td></tr>
+        </tbody>
+      </table>
+
+      <hr />
+
+      <!-- STAFF -->
+      <h3 id="staff">11. Staff routes <span class="pill ok">reads unchanged</span></h3>
+      <p class="path">Prefix: /app/staff/menu-items</p>
+      <table>
+        <thead><tr><th>Endpoint</th><th>Previous</th><th>Now</th><th>FE</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>GET /v2?organization=</code></td>
+            <td>Grouped menu + combos; items had no <code>menu</code></td>
+            <td>Same. Still strips <code>menu</code> / <code>menuIds</code></td>
+            <td>None</td>
+          </tr>
+          <tr>
+            <td><code>GET /?organization=</code> (v1)</td>
+            <td>Grouped by category/type</td>
+            <td>Same omit of <code>menu</code>. Fixed 500 when item had no subcategory</td>
+            <td>None</td>
+          </tr>
+          <tr>
+            <td><code>GET /manage?organization=</code></td>
+            <td><code>data.menu</code> grouped + <code>meta.menu</code> = active menu id</td>
+            <td>Same. Item objects still omit membership</td>
+            <td>None</td>
+          </tr>
+          <tr>
+            <td><code>GET /:id</code></td>
+            <td><code>data.menuItem</code> without <code>menu</code></td>
+            <td>Same</td>
+            <td>None</td>
+          </tr>
+          <tr>
+            <td><code>POST /:id/manage</code></td>
+            <td><code>menu</code> as a single id (if sent)</td>
+            <td>Accepts <code>menuIds</code> array or <code>menu</code>. Omit to leave membership</td>
+            <td>Optional — GET does not return <code>menuIds</code></td>
+          </tr>
+          <tr>
+            <td><code>POST /manage/stock-update</code></td>
+            <td><code>{ "type": "allInStock"|"allOutOfStock", "menu": "MENU_ID" }</code></td>
+            <td>Same; <code>menu</code> is still one menu id (updates items that include it)</td>
+            <td>None</td>
+          </tr>
+          <tr>
+            <td><code>GET /app/staff/in-app-ordering?organization=</code></td>
+            <td>Orders for items on the org’s active menu</td>
+            <td>Same; lookup uses array membership</td>
+            <td>None</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Optional staff update payload:</p>
+      <pre>POST /app/staff/menu-items/:id/manage
+{
+  "title": "Zinger Burger",
+  "menuIds": ["MENU_MAIN"]
+}</pre>
+
+      <hr />
+
+      <!-- UNCHANGED -->
+      <h3 id="unchanged">12. Guest / app — no FE change</h3>
+      <p>These still <strong>omit</strong> <code>menu</code> and <code>menuIds</code>. Orders still use item <code>_id</code>.</p>
+      <table>
+        <thead><tr><th>Endpoint</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET /app/menu/items?organization=</code></td><td>v1 grouped menu</td></tr>
+          <tr><td><code>GET /app/menu/items/v2?organization=</code></td><td>v2 menu + combos + recommended</td></tr>
+          <tr><td><code>GET /app/menu/items/:id</code> and <code>/v2/:id</code></td><td>Details without membership</td></tr>
+          <tr><td><code>GET /app/menu/items/recommended</code></td><td></td></tr>
+          <tr><td><code>GET /app/menu/items/recommended-v2?organization=</code></td><td></td></tr>
+          <tr><td><code>GET /app/menu/items/upsell-v2?organization=</code></td><td></td></tr>
+          <tr><td><code>GET /app/menu/items/pickup-options/:organization</code></td><td></td></tr>
+        </tbody>
+      </table>
+      <p>Guest v2 only shows items linked to that org’s <strong>active</strong> ordering menu. Unlink from that menu (PUT <code>menuIds</code> without it) and the item disappears from the guest list.</p>
+
+      <div class="callout" style="margin-top: 28px;">
+        <strong>Copy-paste mapping for admin item form</strong><br /><br />
+        Create: <code>menuIds: selectedMenuIds</code> → read <code>res.data._id</code> (object).<br />
+        Edit load: <code>selectedMenuIds = res.data.menuIds</code>.<br />
+        Edit save: <code>{ ...fields, menuIds: selectedMenuIds }</code>.
+      </div>
+    </main>
+  </div>
+</body>
+</html>

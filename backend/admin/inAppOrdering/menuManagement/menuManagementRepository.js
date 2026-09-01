@@ -48,9 +48,6 @@ const getMenuItems = async ({
       }
     },
     {
-      $unwind: "$menuDetails" // Flatten the array to match the first item
-    },
-    {
       $match: {
         "menuDetails.organization": organization, // Match the organization field in the menuDetails
         status: "active" // Only include active items
@@ -93,9 +90,6 @@ const getMenuItems = async ({
         ],
         as: "menuDetails"
       }
-    },
-    {
-      $unwind: "$menuDetails"
     },
     {
       $match: {
@@ -243,9 +237,6 @@ const fetchMenuItems = async (organization) => {
         }
       },
       {
-        $unwind: "$menuDetails" // Unwind the menuDetails array to access organization
-      },
-      {
         $match: {
           "menuDetails.organization": new mongoose.Types.ObjectId(organization), // Match organization field in menuDetails
           status: "active" // Only active items
@@ -334,9 +325,16 @@ const getMenuItemsSales = async ({
         as: "menu",
       },
     },
-    { $unwind: "$menu" },
-
-    // 5️⃣ Join category
+    {
+      $match: {
+        "menu.organization": new mongoose.Types.ObjectId(organization),
+      },
+    },
+    {
+      $addFields: {
+        menu: { $arrayElemAt: ["$menu", 0] },
+      },
+    },
     {
       $lookup: {
         from: "menuitemcategories",
@@ -558,9 +556,6 @@ const getSummary = async ({
       as: "menu" // The result of the lookup will be saved in menuDetails
     }
   });
-
-  // Unwind to flatten the array of menuDetails
-  basePipeline.push({ $unwind: "$menu" });
 
   // Match the organization field in menuDetails
   if (organization) {

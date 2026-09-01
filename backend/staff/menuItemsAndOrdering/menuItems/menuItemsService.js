@@ -11,6 +11,7 @@ const {
 } = require("../../../app/menuItemsAndOrdering/menuItems/menuItemsService");
 const MenuSubcategory = require("@MenuSubcategoryModel");
 const mongoose = require("mongoose");
+const { toObjectIdArray } = require("../../../shared/menuItems/menuField");
 const {
   getOrgCompanyOrganizer,
 } = require("../../../app/organizationProfile/organizationProfileRepository");
@@ -58,7 +59,12 @@ const getMenuItems = async ({ timezone, organization }) => {
   if (!menuItems.length) return { menu: [] };
 
   const categoryIds = [
-    ...new Set(menuItems.map((i) => i.subCategory.toString())),
+    ...new Set(
+      menuItems
+        .map((i) => i.subCategory || i.category)
+        .filter(Boolean)
+        .map((id) => id.toString()),
+    ),
   ];
   const categories = await MenuSubcategory.find({ _id: { $in: categoryIds } })
     .select("_id title")
@@ -260,7 +266,7 @@ const updateMenuItem = async (id, data, timezone) => {
   const updateData = {};
   for (const key of allowedFields) {
     if (data[key] !== undefined) {
-      updateData[key] = data[key];
+      updateData[key] = key === "menu" ? toObjectIdArray(data[key]) : data[key];
     }
   }
 

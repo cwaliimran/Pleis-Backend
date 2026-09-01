@@ -64,7 +64,6 @@ const getWithFilters = async (
               pipeline: [{ $project: { title: 1 } }],
             },
           },
-          { $unwind: { path: "$menu", preserveNullAndEmptyArrays: true } },
         ],
       },
     },

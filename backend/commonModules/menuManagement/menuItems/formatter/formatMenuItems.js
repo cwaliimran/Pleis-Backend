@@ -1,5 +1,6 @@
 const { getFullImageUrl } = require("@utils/imageHelper");
 const { convertUtcToTimezone } = require("@utils/responseUtil");
+const { attachMenuIds } = require("../../../../shared/menuItems/menuField");
 
 /**
  * Formats the `object` field inside BannerControls dynamically
@@ -24,12 +25,12 @@ function formatMenuItem(item, timezone) {
         }
     
         // Attach nested menu (with venue inside) and category
-        obj.menu = obj.menuData || null;
-        obj.category = obj.categoryData || null;
-    
-        // No separate top-level venue — it's nested under obj.menu.venue
-    
-    return obj;
+        obj.menu = obj.menuData || obj.menu || [];
+        obj.category = obj.categoryData || obj.category || null;
+        delete obj.menuData;
+        delete obj.categoryData;
+
+        return attachMenuIds(obj);
 }
 
 module.exports = { formatMenuItem };

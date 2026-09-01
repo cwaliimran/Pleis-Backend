@@ -325,9 +325,6 @@ const getWithFilters = async (
                     as: "menu",
                   },
                 },
-                {
-                  $unwind: { path: "$menu", preserveNullAndEmptyArrays: true },
-                },
                 { $project: { _id: 1, title: 1, menu: 1 } },
               ],
               as: "menuItem",

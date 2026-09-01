@@ -11,6 +11,7 @@ const { sendUserNotifications } = require("@notificationsUtil");
 const { NotificationTypes } = require("@NotificationsModel");
 const { default: mongoose } = require("mongoose");
 const { generateMeta } = require("@utils/responseUtil");
+const { toObjectIdArray } = require("../../../shared/menuItems/menuField");
 
 const NOT_DELETED = { $ne: "deleted" };
 
@@ -244,20 +245,21 @@ const createMenuItem = async (data) => {
   try {
     session.startTransaction();
 
-    const { menuIds, ...menuItemData } = data;
+    const { menuIds, menu, ...menuItemData } = data;
+    const ids = toObjectIdArray(menuIds ?? menu);
 
-    const docs = menuIds.map((menuId) => ({
-      ...menuItemData,
-      menu: menuId,
-    }));
+    if (!ids.length) {
+      throw new Error("menuIds_required");
+    }
 
-    const createdMenuItems = await MenuItems.insertMany(docs, {
-      session,
-    });
+    const [createdMenuItem] = await MenuItems.create(
+      [{ ...menuItemData, menu: ids }],
+      { session },
+    );
 
     await session.commitTransaction();
 
-    return createdMenuItems;
+    return createdMenuItem;
   } catch (error) {
     await session.abortTransaction();
     throw error;
@@ -289,6 +291,10 @@ const countMenuItems = async (query = {}) => {
 // Find by ID
 const findMenuItemById = async (id) => {
   return MenuItems.findById(id)
+    .populate({
+      path: "menu",
+      select: "title status organization",
+    })
     .populate({
       path: "daypart",
       select: "name code status startTime endTime isAllDay",
