@@ -1,7 +1,4 @@
 const { getFullImageUrl } = require("../../../helperUtils/imageHelper");
-const { calculateDistance } = require("../../../helperUtils/calculateDistance");
-const { formatEventSchedule } = rrequire("../../../admin/events/formatter/eventFormatter");
-const { formatCategories } = require("../../../admin/categories/formatters/categoryFormatter");
 
 /**
  * Formats an event document into a public-friendly JSON response.
