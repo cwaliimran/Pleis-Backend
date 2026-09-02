@@ -261,17 +261,19 @@ const findByIdAndUpdate = async (id, data) => {
   return presetType.findByIdAndUpdate(id, data, { new: true });
 };
 const generateUniquepresetTypeCode = async () => {
-  const docs = await presetType
-    .find({ code: /^PIC\d+$/ })
+  const lastDoc = await presetType
+    .findOne({ code: { $exists: true, $ne: null } })
+    .sort({ createdAt: -1 }) // or { _id: -1 } if there's no createdAt field
     .select("code")
     .lean();
 
-  const highest = docs.reduce((max, { code }) => {
-    const n = parseInt(code.slice(3), 10);
-    return Number.isFinite(n) && n > max ? n : max;
-  }, 0);
-
-  return `PIC${String(highest + 1).padStart(3, "0")}`;
+  if (!lastDoc || !lastDoc.code) {
+    return "0000";
+  }
+  const rest = lastDoc.code.slice(3); 
+  const n = parseInt(rest, 10);
+  const next = Number.isFinite(n) ? n + 1 : 0;
+  return String(next).padStart(4, "0");
 };
 module.exports = {
   createpresetType,
