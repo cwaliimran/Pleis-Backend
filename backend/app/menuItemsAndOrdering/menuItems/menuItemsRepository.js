@@ -195,9 +195,12 @@ const attachActiveMenuItemOffers = async (
     toDiscountFromProductSale(promo, timezone || "UTC"),
   );
   const happyHourPayload = toItemHappyHour(happyHour);
+  const now = timezone
+    ? getCurrentDateInTimezone({ timezone, isDateOnly: false })
+    : new Date();
 
   return attachMenuItemPromotions(
-    attachMenuItemDiscounts(menuItems, [...discounts, ...saleDiscounts]),
+    attachMenuItemDiscounts(menuItems, [...discounts, ...saleDiscounts], now),
     promotions,
     { slim: true },
   ).map((item) => ({
@@ -230,31 +233,8 @@ const getMenuItemsWithFilters = async ({ query = {}, userId = null, timezone = n
 
   if (!menuItems.length) return [];
 
-  /* --------------------------------
-     If no user → skip promotion logic
-  -------------------------------- */
-
-  if (!userId) {
-    return menuItems;
-  }
-
-  /* --------------------------------
-     Collect menu item ids
-  -------------------------------- */
-
-  const menuItemIds = menuItems.map((item) => item._id);
-
-  /* --------------------------------
-     Fetch promotions
-  -------------------------------- */
-
-  const promotions = await getActiveMenuItemPromotions({
-    menuItemIds,
-    userId,
-    timezone,
-  });
-
-  return attachMenuItemPromotions(menuItems, promotions);
+  // Same V2 discounts / product sales used by menu fetch, so order pricing matches the menu.
+  return attachActiveMenuItemOffers(menuItems, { userId, timezone });
 };
 
 const getMenuItemsWithFiltersV2 = async ({ query = {}, timezone = null, userId = null }) => {
