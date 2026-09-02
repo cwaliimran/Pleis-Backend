@@ -338,16 +338,11 @@ const placeOrder = async ({
       const menuItem = menuItems.find((m) => m._id.toString() === i.menuItem);
       if (!menuItem) throw new Error(`Invalid menu item: ${i.menuItem}`);
 
-      const priceInfo = calculateItemPrice(menuItem);
+      const priced = buildPricedMenuItemSnapshot(menuItem);
+      const finalPrice = priced.unitFinalPrice * i.quantity;
 
-      const unitPrice = priceInfo.originalPrice;
-      const unitFinalPrice = priceInfo.finalPrice;
-      const saleDiscountPerUnit = priceInfo.saleDiscount;
-
-      const finalPrice = unitFinalPrice * i.quantity;
-
-      itemsTotal += unitPrice * i.quantity;
-      totalSaleDiscount += saleDiscountPerUnit * i.quantity;
+      itemsTotal += priced.unitPrice * i.quantity;
+      totalSaleDiscount += priced.saleDiscountPerUnit * i.quantity;
       totalPrice += finalPrice;
 
       const status = menuItem.isRequiresOrderConfirmation
@@ -355,14 +350,10 @@ const placeOrder = async ({
         : "confirmed";
 
       return {
-        menuItem: menuItem._id,
+        ...priced,
         quantity: i.quantity,
-        unitPrice,
-        unitFinalPrice,
-        saleDiscountPerUnit,
         finalPrice,
         status,
-        menuItemSnapShot: JSON.parse(JSON.stringify(menuItem)),
       };
     });
 
@@ -474,7 +465,6 @@ const placeOrder = async ({
     await session.commitTransaction();
     session.endSession();
     // Emit socket event for new order (only for cash payments)
-    if (paymentMethod === "cash") {
       emitOrderEvent({
         io: global.io,
         eventName: "NEW_ORDER",
@@ -503,7 +493,6 @@ const placeOrder = async ({
         sender: userId,
         objectId: formattedOrder._id,
       });
-    }
 
     //TODO if paymentMethod is card/applePay and paid then send notification to staff as well, or maybe check from service where monri is processing payment
 
@@ -544,9 +533,9 @@ const updateOrder = async ({
       throw new Error("Order not found");
     }
 
-    if (existingOrder.status !== "pending") {
-      throw new Error("Only orders in pending state can be updated");
-    }
+    // if (existingOrder.status !== "pending") {
+    //   throw new Error("Only orders in pending state can be updated");
+    // }
 
     // #region agent log
     fetch('http://127.0.0.1:7606/ingest/25d149bb-e577-4cf4-9c2b-13c4addd66ed',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6050ad'},body:JSON.stringify({sessionId:'6050ad',runId:'post-fix',hypothesisId:'H1',location:'orderService.js:updateOrder:entry',message:'updateOrder existing vs incoming',data:{orderId:String(orderId),status:existingOrder.status,existingTotal:existingOrder.totalPrice,existingBreakdown:existingOrder.priceBreakdown,incomingTip:tip,incomingPromo:promoCode,didSendItems:items!==undefined,didSendCombos:combos!==undefined,didSendTip:tip!==undefined,didSendPromo:promoCode!==undefined},timestamp:Date.now()})}).catch(()=>{});
@@ -613,30 +602,17 @@ const updateOrder = async ({
           if (!item.quantity || item.quantity <= 0) {
             throw new Error(`Invalid quantity for menu item: ${item.menuItem}`);
           }
-          const priceInfo = calculateItemPrice(menuItem);
-
-          const unitPrice = priceInfo.originalPrice;
-          const unitFinalPrice = priceInfo.finalPrice;
-          const saleDiscountPerUnit = priceInfo.saleDiscount;
-
-          const finalPrice = unitFinalPrice * item.quantity;
+          const priced = buildPricedMenuItemSnapshot(menuItem);
 
           const status = menuItem.isRequiresOrderConfirmation
             ? "pending"
             : "confirmed";
 
           return {
-            menuItem: menuItem._id,
+            ...priced,
             quantity: item.quantity,
-
-            unitPrice,
-            unitFinalPrice,
-            saleDiscountPerUnit,
-            finalPrice,
-
+            finalPrice: priced.unitFinalPrice * item.quantity,
             status,
-
-            menuItemSnapShot: JSON.parse(JSON.stringify(menuItem)),
           };
         });
       } else {
@@ -1017,18 +993,14 @@ const placePreOrderMenuItemsWithReservation = async ({
     const menuItem = menuItems.find((m) => m._id.toString() === i.menuItem);
     if (!menuItem) throw new Error(`Invalid menu item: ${i.menuItem}`);
 
-    const priceInfo = calculateItemPrice(menuItem);
-    const finalPrice = priceInfo.finalPrice * i.quantity;
+    const priced = buildPricedMenuItemSnapshot(menuItem);
+    const finalPrice = priced.unitFinalPrice * i.quantity;
     totalPrice += finalPrice;
 
     return {
-      menuItem: menuItem._id,
+      ...priced,
       quantity: i.quantity,
-      unitPrice: priceInfo.originalPrice,
-      unitFinalPrice: priceInfo.finalPrice,
-      saleDiscountPerUnit: priceInfo.saleDiscount,
       finalPrice,
-      menuItemSnapShot: JSON.parse(JSON.stringify(menuItem)),
     };
   });
 
@@ -1050,7 +1022,7 @@ const placePreOrderMenuItemsWithReservation = async ({
   return order;
 };
 
-const addMoreItemsToOrder = async ({ orderId, items }) => {
+const addMoreItemsToOrder = async ({ orderId, items, userId = null, timezone = null }) => {
   if (!items || !items.length) throw new Error("No items to add");
 
   // 1️⃣ Fetch existing order
@@ -1067,6 +1039,8 @@ const addMoreItemsToOrder = async ({ orderId, items }) => {
   const itemIds = items.map((i) => new mongoose.Types.ObjectId(i.menuItem));
   const menuItems = await menuItemRepo.getMenuItemsWithFilters({
     query: { _id: { $in: itemIds } },
+    userId,
+    timezone,
   });
 
   if (!menuItems.length) throw new Error("Invalid items to add");
@@ -1080,26 +1054,17 @@ const addMoreItemsToOrder = async ({ orderId, items }) => {
     const menuItem = menuItems.find((m) => m._id.toString() === i.menuItem);
     if (!menuItem) throw new Error(`Invalid menu item: ${i.menuItem}`);
 
-    const priceInfo = calculateItemPrice(menuItem);
+    const priced = buildPricedMenuItemSnapshot(menuItem);
+    const finalPrice = priced.unitFinalPrice * i.quantity;
 
-    const unitPrice = priceInfo.originalPrice;
-    const unitFinalPrice = priceInfo.finalPrice;
-    const saleDiscountPerUnit = priceInfo.saleDiscount;
-
-    const finalPrice = unitFinalPrice * i.quantity;
-
-    additionalItemsTotal += unitPrice * i.quantity;
-    additionalSaleDiscount += saleDiscountPerUnit * i.quantity;
+    additionalItemsTotal += priced.unitPrice * i.quantity;
+    additionalSaleDiscount += priced.saleDiscountPerUnit * i.quantity;
     additionalFinalPrice += finalPrice;
 
     return {
-      menuItem: menuItem._id,
+      ...priced,
       quantity: i.quantity,
-      unitPrice,
-      unitFinalPrice,
-      saleDiscountPerUnit,
       finalPrice,
-      menuItemSnapShot: JSON.parse(JSON.stringify(menuItem)),
     };
   });
 
