@@ -31,9 +31,13 @@ async function emitMenuItemChange(menuItems, updateTypes = ["updated"]) {
     menus.map((menu) => [String(menu._id), menu.organization]),
   );
 
+  const emittedOrgs = new Set();
   docs.forEach((doc) => {
     const organizationId = orgByMenu.get(String(doc.menu));
     if (!organizationId) return;
+    const orgKey = String(organizationId);
+    if (emittedOrgs.has(orgKey)) return;
+    emittedOrgs.add(orgKey);
     emitMenuItemEvent({
       io: global.io,
       eventName: "MENU_ITEM_CHANGED",
@@ -715,4 +719,5 @@ module.exports = {
   getMenuItemsByMenuId,
   getBundleMenuItems,
   updateSubCategoryBulk,
+  emitMenuItemChange,
 };
