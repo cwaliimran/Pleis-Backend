@@ -1,7 +1,22 @@
 const deliveryOptionsRepo = require("./deliveryOptionsRepository");
+const { emitDeliveryOptionEvent } = require("@socketIo/deliveryOptions/deliveryOptionSocketEmitter");
+
+function emitDeliveryOptionChange(deliveryOption, updateTypes = ["updated"]) {
+  if (!deliveryOption) return;
+  emitDeliveryOptionEvent({
+    io: global.io,
+    eventName: "DELIVERY_OPTION_CHANGED",
+    deliveryOptionId: deliveryOption._id,
+    organizationId: deliveryOption.organization,
+    data: deliveryOption,
+    updateTypes,
+  });
+}
 
 const createDeliveryOption = async (data) => {
-  return deliveryOptionsRepo.createDeliveryOption(data);
+  const created = await deliveryOptionsRepo.createDeliveryOption(data);
+  emitDeliveryOptionChange(created, ["created"]);
+  return created;
 };
 
 const getDeliveryOptions = async ({ organizationId, status } = {}) => {
@@ -49,6 +64,7 @@ const updateDeliveryOption = async (id, organizationId, data) => {
   await deliveryOptionsRepo.invalidateOrganizationDeliveryOptionsCache(
     organizationId,
   );
+  emitDeliveryOptionChange(deliveryOption, ["updated"]);
   return deliveryOption;
 };
 
@@ -64,6 +80,7 @@ const deleteDeliveryOption = async (id, organizationId) => {
   await deliveryOptionsRepo.invalidateOrganizationDeliveryOptionsCache(
     organizationId,
   );
+  emitDeliveryOptionChange(deliveryOption, ["deleted"]);
   return true;
 };
 

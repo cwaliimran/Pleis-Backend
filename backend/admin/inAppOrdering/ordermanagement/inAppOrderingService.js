@@ -3,7 +3,7 @@ const OrdersRepo = require("./inAppOrderingRepository");
 const { NotificationTypes } = require("@NotificationsModel");
 const mongoose = require("mongoose");
 const Menus = require("@MenusModel");
-const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
+const { emitOrderUpdate } = require("@socketIo/orders/orderSocketEmitter");
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { calculatePointsRepo } = require("../../../app/loyalty/calculatePointsEarning/pointsEarningsRepository");
 const {
@@ -148,6 +148,7 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
   let statusChanged = false;
   let paymentChanged = false;
   let deliveryChanged = false;
+  const updateTypes = [];
 
   /* ===============================
      1️⃣ STATUS
@@ -160,6 +161,7 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
       });
     }
     statusChanged = true;
+    updateTypes.push("status");
   }
 
   /* ===============================
@@ -168,6 +170,7 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
   if (data.paymentStatus !== undefined && data.paymentStatus !== order.paymentStatus) {
     order.paymentStatus = data.paymentStatus;
     paymentChanged = true;
+    updateTypes.push("payment");
 
     if (data.paymentStatus === "paid" && !order.paidAt) {
       order.paidAt = new Date();
@@ -247,6 +250,7 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
       combo.isdelivered = data.deliveredall;
     });
     deliveryChanged = true;
+    updateTypes.push("delivery");
   } else {
     /* ===============================
        4️⃣ DELIVER SELECTED MENU ITEMS
@@ -262,6 +266,7 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
         if (deliveredIds.some((dId) => dId.equals(item.menuItem))) {
           item.isdelivered = true;
           deliveryChanged = true;
+          if (!updateTypes.includes("delivery")) updateTypes.push("delivery");
         }
       });
     }
@@ -284,39 +289,35 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
         ) {
           combo.isdelivered = true;
           deliveryChanged = true;
+          if (!updateTypes.includes("delivery")) updateTypes.push("delivery");
         }
       });
     }
   }
-  if (data.resaonForRejection) {
-    order.reasonForRejection = data.reasonForRejection;
+  if (data.reasonForRejection || data.resaonForRejection) {
+    order.reasonForRejection = data.reasonForRejection || data.resaonForRejection;
+    updateTypes.push("rejection");
   }
   if (data.reasonForCancellation) {
     order.reasonForCancellation = data.reasonForCancellation;
+    updateTypes.push("cancellation");
   }
   if (data.noteForRejection) {
     order.noteForRejection = data.noteForRejection;
+    if (!updateTypes.includes("rejection")) updateTypes.push("rejection");
   }
   if (data.noteForCancellation) {
     order.noteForCancellation = data.noteForCancellation;
+    if (!updateTypes.includes("cancellation")) updateTypes.push("cancellation");
+  }
+  if (data.paymentMethod !== undefined && data.paymentMethod !== order.paymentMethod) {
+    order.paymentMethod = data.paymentMethod;
+    updateTypes.push("paymentMethod");
   }
 
   await order.save();
 
-  /* ===============================
-     SOCKET UPDATE
-  =============================== */
-  emitOrderEvent({
-    io: global.io,
-    eventName: "ORDER_UPDATE",
-    orderId: order._id,
-    organizationId: order.organization,
-    userId: order.user,
-    data: {
-      status: order.status,
-      paymentStatus: order.paymentStatus,
-    },
-  });
+  emitOrderUpdate(order, updateTypes.length ? updateTypes : ["order"]);
 
   /* ===============================
      NOTIFICATIONS
