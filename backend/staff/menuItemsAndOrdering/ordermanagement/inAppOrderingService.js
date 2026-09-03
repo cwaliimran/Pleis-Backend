@@ -3,7 +3,7 @@ const OrdersRepo = require("./inAppOrderingRepository");
 const mongoose = require("mongoose");
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
-const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
+const { emitOrderUpdate } = require("@socketIo/orders/orderSocketEmitter");
 
 
 const getOrders = async ({ activeorderStatus, pickupFilter, orderStatus, activeKeyword, timezone, page, limit, keyword, status, organizationId, date, range }) => {
@@ -101,17 +101,17 @@ const updateOrders = async (staffId, id, data) => {
 
   await order.save();
 
-  emitOrderEvent({
-    io: global.io,
-    eventName: "ORDER_UPDATE",
-    orderId: order._id,
-    organizationId: order.organization,
-    userId: order.user,
-    data: {
-      status: order.status,
-      paymentStatus: order.paymentStatus,
-    },
-  });
+  const updateTypes = [];
+  if (data.status !== undefined) updateTypes.push("status");
+  if (data.paymentStatus !== undefined) updateTypes.push("payment");
+  if (
+    typeof data.deliveredall === "boolean" ||
+    data.deliveredMenuItem ||
+    data.deliveredCombo
+  ) {
+    updateTypes.push("delivery");
+  }
+  emitOrderUpdate(order, updateTypes.length ? updateTypes : ["order"]);
 
 
   sendUserNotifications({

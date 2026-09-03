@@ -14,22 +14,22 @@ function toPlain(value) {
   return value;
 }
 
-function emitOrderEvent({
+function emitMenuItemEvent({
   io,
-  eventName,
-  orderId,
+  eventName = "MENU_ITEM_CHANGED",
+  menuItemId,
   organizationId,
-  userId,
   data = {},
   updateTypes,
 }) {
   if (!io) return;
 
   const orgId = toId(organizationId);
-  const uid = toId(userId);
+  if (!orgId) return;
+
   const payload = {
     event: eventName,
-    orderId: toId(orderId),
+    menuItemId: toId(menuItemId),
     organizationId: orgId,
     data: toPlain(data),
     timestamp: Date.now(),
@@ -39,27 +39,10 @@ function emitOrderEvent({
     payload.updateTypes = updateTypes;
   }
 
-  if (orgId) {
-    io.of("/staff/orders").to(`org:${orgId}`).emit(eventName, payload);
-    io.of("/admin/orders").to(`org:${orgId}`).emit(eventName, payload);
-    io.of("/organizer/orders").to(`org:${orgId}`).emit(eventName, payload);
-  }
-
-  if (uid) {
-    io.of("/user/orders").to(`user:${uid}`).emit(eventName, payload);
-  }
+  io.of("/user/menu").to(`org:${orgId}`).emit(eventName, payload);
+  io.of("/staff/menu").to(`org:${orgId}`).emit(eventName, payload);
+  io.of("/admin/menu").to(`org:${orgId}`).emit(eventName, payload);
+  io.of("/organizer/menu").to(`org:${orgId}`).emit(eventName, payload);
 }
 
-function emitOrderUpdate(order, updateTypes = []) {
-  emitOrderEvent({
-    io: global.io,
-    eventName: "ORDER_UPDATE",
-    orderId: order._id,
-    organizationId: order.organization,
-    userId: order.user,
-    data: order,
-    updateTypes,
-  });
-}
-
-module.exports = { emitOrderEvent, emitOrderUpdate };
+module.exports = { emitMenuItemEvent };

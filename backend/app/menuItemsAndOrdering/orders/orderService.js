@@ -10,7 +10,7 @@ const {
 } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 const Organizations = require("@OrganizationModel");
-const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
+const { emitOrderEvent, emitOrderUpdate } = require("@socketIo/orders/orderSocketEmitter");
 const {
   findAppUserByIdWithProjectionService,
 } = require("../../usersManagement/usersService");
@@ -470,6 +470,7 @@ const placeOrder = async ({
         eventName: "NEW_ORDER",
         orderId: order._id,
         organizationId: order.organization,
+        userId: order.user,
         data: formattedOrder,
       });
       const staffIds = await getCheckedInStaffForOrganization(
@@ -941,13 +942,7 @@ const updateOrder = async ({
     // 1️⃣1️⃣ SOCKET EVENT
     // =========================================================
 
-    emitOrderEvent({
-      io: global.io,
-      eventName: "ORDER_UPDATED",
-      orderId: updatedOrder._id,
-      organizationId: updatedOrder.organization,
-      data: formattedOrder,
-    });
+    emitOrderUpdate(updatedOrder, ["order"]);
 
     return {
       order: formattedOrder,
@@ -1084,6 +1079,7 @@ const addMoreItemsToOrder = async ({ orderId, items, userId = null, timezone = n
   });
 
   const formattedOrder = menuItemOrderFormatter(updatedOrder);
+  emitOrderUpdate(updatedOrder, ["items"]);
 
   return { order: formattedOrder };
 };
@@ -1138,13 +1134,18 @@ const getUserOrders = async (userId, page, limit) => {
 // 4️⃣ Update order status (admin or automated)
 const updateOrderStatus = async (orderId, status) => {
   let orderStatusUpdate = await orderRepo.updateOrderStatus(orderId, status);
+  if (orderStatusUpdate) {
+    emitOrderUpdate(orderStatusUpdate, ["status"]);
+  }
   let formattedOrder = menuItemOrderFormatter(orderStatusUpdate);
   return { order: formattedOrder };
 };
 
-// 5️⃣ Cancel order
 const cancelOrder = async (orderId) => {
   let order = await orderRepo.updateOrderStatus(orderId, "cancelled");
+  if (order) {
+    emitOrderUpdate(order, ["status", "cancellation"]);
+  }
   let formattedOrder = menuItemOrderFormatter(order);
   return { order: formattedOrder };
 };
