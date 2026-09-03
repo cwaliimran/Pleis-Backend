@@ -5,7 +5,7 @@ const {
   createTransactionService,
 } = require("../../../../app/userWalletService/transactions/services/unifiedTransactionsService");
 
-const { emitOrderEvent } = require("@socketIo/orders/orderSocketEmitter");
+const { emitOrderEvent, emitOrderUpdate } = require("@socketIo/orders/orderSocketEmitter");
 const {
   menuItemOrderFormatter,
 } = require("../../../../app/menuItemsAndOrdering/orders/formatter/menuItemOrderFormatter");
@@ -208,10 +208,11 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
 
     /**
      * =====================================================
-     * 📡 Real-Time Socket Emit (Only on Success)
+     * 📡 Real-Time Socket Emit
      * =====================================================
      */
     if (result.status === "paid") {
+      emitOrderUpdate(menuOrder, ["status", "payment"]);
       findAppUserByIdWithProjectionService(menuOrder.user, {
         profileIcon: 1,
         firstName: 1,
@@ -231,10 +232,15 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
             eventName: "NEW_ORDER",
             orderId: menuOrder._id,
             organizationId: menuOrder.organization._id,
+            userId: menuOrder.user,
             data: formattedOrder,
           });
         })
         .catch((err) => console.error("Order emit failed:", err));
+    }
+
+    if (result.status === "failed") {
+      emitOrderUpdate(menuOrder, ["status", "payment", "cancellation"]);
     }
   }
 };
