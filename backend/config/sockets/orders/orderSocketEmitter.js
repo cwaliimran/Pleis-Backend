@@ -1,3 +1,8 @@
+const {
+  getOrderByIdForAdminUI,
+  withOrderItemImageUrls,
+} = require("../../../admin/inAppOrdering/ordermanagement/inAppOrderingRepository");
+
 function toId(value) {
   if (!value) return null;
   if (typeof value === "string") return value;
@@ -23,30 +28,66 @@ function emitOrderEvent({
   data = {},
   updateTypes,
 }) {
+  void emitOrderEventAsync({
+    io,
+    eventName,
+    orderId,
+    organizationId,
+    userId,
+    data,
+    updateTypes,
+  }).catch((err) => {
+    console.error("Order socket emit failed:", err);
+  });
+}
+
+async function emitOrderEventAsync({
+  io,
+  eventName,
+  orderId,
+  organizationId,
+  userId,
+  data = {},
+  updateTypes,
+}) {
   if (!io) return;
 
   const orgId = toId(organizationId);
   const uid = toId(userId);
-  const payload = {
+  const fallbackData = withOrderItemImageUrls(toPlain(data));
+
+  let orgData = fallbackData;
+  try {
+    const listShape = await getOrderByIdForAdminUI(orderId);
+    if (listShape) {
+      orgData = JSON.parse(JSON.stringify(listShape));
+    }
+  } catch (err) {
+    console.error("Order socket list-shape fetch failed:", err);
+  }
+
+  const payloadBase = {
     event: eventName,
     orderId: toId(orderId),
     organizationId: orgId,
-    data: toPlain(data),
     timestamp: Date.now(),
   };
 
   if (updateTypes) {
-    payload.updateTypes = updateTypes;
+    payloadBase.updateTypes = updateTypes;
   }
 
   if (orgId) {
+    const payload = { ...payloadBase, data: orgData };
     io.of("/staff/orders").to(`org:${orgId}`).emit(eventName, payload);
     io.of("/admin/orders").to(`org:${orgId}`).emit(eventName, payload);
     io.of("/organizer/orders").to(`org:${orgId}`).emit(eventName, payload);
   }
 
   if (uid) {
-    io.of("/user/orders").to(`user:${uid}`).emit(eventName, payload);
+    io.of("/user/orders")
+      .to(`user:${uid}`)
+      .emit(eventName, { ...payloadBase, data: fallbackData });
   }
 }
 
