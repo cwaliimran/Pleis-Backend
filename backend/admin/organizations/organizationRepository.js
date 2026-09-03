@@ -1180,7 +1180,16 @@ const getCreatorByStaffId = async (staffId) => {
   return org?.creator || null;
 };
 
+
+const isInappOrderingEnabled = async (organizationId) => {
+  const org = await Organizations.findById(organizationId).select(
+    "inAppOrderingEnabled",
+  );
+  return org?.inAppOrderingEnabled || false;
+};
+
 module.exports = {
+  isInappOrderingEnabled,
   createOrganization,
   getOrganizationsWithFilters,
   countOrganizations,
