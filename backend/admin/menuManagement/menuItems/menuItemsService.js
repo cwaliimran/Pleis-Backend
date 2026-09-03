@@ -11,10 +11,47 @@ const { getMenuIdsByCompanyOrganizer, getMenuIdsByOrganization } = require("../.
 const { formatMenuItem, formatBundleMenuItem } = require("../menuItemCategories/formatter/formatItemCategories");
 const Organizations = require("@OrganizationModel");
 const Presets = require("@PresetsModel");
+const { emitMenuItemEvent } = require("@socketIo/menuItems/menuItemSocketEmitter");
 
+async function emitMenuItemChange(menuItems, updateTypes = ["updated"]) {
+  const docs = (Array.isArray(menuItems) ? menuItems : [menuItems]).filter(
+    Boolean,
+  );
+  if (!docs.length) return;
+
+  const menuIds = [
+    ...new Set(docs.map((doc) => String(doc.menu)).filter((id) => id && id !== "undefined")),
+  ];
+  if (!menuIds.length) return;
+
+  const menus = await Menus.find({ _id: { $in: menuIds } })
+    .select("organization")
+    .lean();
+  const orgByMenu = new Map(
+    menus.map((menu) => [String(menu._id), menu.organization]),
+  );
+
+  const emittedOrgs = new Set();
+  docs.forEach((doc) => {
+    const organizationId = orgByMenu.get(String(doc.menu));
+    if (!organizationId) return;
+    const orgKey = String(organizationId);
+    if (emittedOrgs.has(orgKey)) return;
+    emittedOrgs.add(orgKey);
+    emitMenuItemEvent({
+      io: global.io,
+      eventName: "MENU_ITEM_CHANGED",
+      menuItemId: doc._id,
+      organizationId,
+      data: doc,
+      updateTypes,
+    });
+  });
+}
 
 const createMenuItem = async (data, timezone) => {
   const docs = await menuItemRepo.createMenuItem(data);
+  await emitMenuItemChange(docs, ["created"]);
 
   return docs.map((doc) => formatMenuItem(doc, timezone));
 };
@@ -412,6 +449,7 @@ const updateMenuItem = async (id, data, timezone) => {
 
   Object.assign(menuItem, updateData);
   await menuItem.save();
+  await emitMenuItemChange(menuItem, ["updated"]);
 
   // Return updated menuItem
   let obj = formatMenuItem(menuItem, timezone);
@@ -420,7 +458,7 @@ const updateMenuItem = async (id, data, timezone) => {
 };
 
 const deleteMenuItem = async (id) => {
-  const menuItem = await MenuItems.findById(id).select("_id status").lean();
+  const menuItem = await MenuItems.findById(id).select("_id status title menu").lean();
   if (!menuItem || menuItem.status === "deleted") return null;
 
   const session = await mongoose.startSession();
@@ -442,6 +480,7 @@ const deleteMenuItem = async (id) => {
     }
 
     await session.commitTransaction();
+    await emitMenuItemChange(updated, ["deleted"]);
 
     return {
       menuItem: {
@@ -680,4 +719,5 @@ module.exports = {
   getMenuItemsByMenuId,
   getBundleMenuItems,
   updateSubCategoryBulk,
+  emitMenuItemChange,
 };

@@ -137,6 +137,13 @@ const getMenuNamesByCompanyOrganizer = async (companyOrganizer) => {
   return menus;
 };
 
+const isOrderingEnabled = async (organizationId) => {
+  const org =
+    await Menus.findById(organizationId).select("isOrderingEnabled");
+    console.log("org", org);
+  return org?.isOrderingEnabled || false;
+};
+
 
 
 module.exports = {
@@ -152,4 +159,5 @@ module.exports = {
   deleteMenuById,
   findByIdAndUpdate,
   getMenuNamesByCompanyOrganizer,
+  isOrderingEnabled,
 };

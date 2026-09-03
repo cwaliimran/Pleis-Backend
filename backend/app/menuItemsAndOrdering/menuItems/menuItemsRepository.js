@@ -312,9 +312,14 @@ const buildMenuItemsSaleLookup = (timezone = null) => {
 };
 
 const getOrganizationIdByMenuItemId = async (menuId) => {
-  const menu = await Menus.findById(menuId).select("organization");
+  const menu = await Menus.findById(menuId).select(
+    "organization isOrderingEnabled",
+  );
   if (!menu || !menu.organization) throw new Error("Menu item or menu not found");
-  return menu.organization;
+  return {
+    organization: menu.organization,
+    isOrderingEnabled: menu.isOrderingEnabled,
+  };
 };
 
 const getOrganizationIdFromMenuItem = async (menuItemId) => {

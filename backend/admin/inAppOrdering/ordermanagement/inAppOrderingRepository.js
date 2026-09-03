@@ -12,6 +12,35 @@ const { formatOrdersForUI } = require("../formatters/formatOrdersForUI");
 const { getModelCounts } = require("@utils/dbUtils/queryUtil");
 const { getFullImageUrl } = require("@utils/imageHelper");
 
+const withFullItemImage = (item) => {
+  if (!item?.menuItemSnapShot) return item;
+  return {
+    ...item,
+    menuItemSnapShot: {
+      ...item.menuItemSnapShot,
+      image: getFullImageUrl(item.menuItemSnapShot.image || "noimage.png"),
+    },
+  };
+};
+
+const withOrderItemImageUrls = (order) => {
+  if (!order) return order;
+  return {
+    ...order,
+    items: Array.isArray(order.items)
+      ? order.items.map(withFullItemImage)
+      : order.items,
+    combos: Array.isArray(order.combos)
+      ? order.combos.map((combo) => ({
+          ...combo,
+          items: Array.isArray(combo.items)
+            ? combo.items.map(withFullItemImage)
+            : combo.items,
+        }))
+      : order.combos,
+  };
+};
+
 const getOrganizationIdsByOrganizer = async (organizerId) => {
   const orgs = await Organizations.find(
     { creator: new mongoose.Types.ObjectId(organizerId) },
@@ -297,7 +326,7 @@ const getOrders = async ({
   if (!result?.[0]) {
     return { Orderss: [], meta: generateMeta(page, limit, 0) };
   }
-  const Orderss = result[0].data || [];
+  const Orderss = (result[0].data || []).map(withOrderItemImageUrls);
   let meta = generateMeta(page, limit, count.totalFiltered);
   meta.constantData = { activeCount, rejectedCompletedCount };
 
@@ -339,10 +368,125 @@ const getInAppOrders = async ({ organization }) => {
 const getOrderById = async (orderId) => {
   return Orders.findById(orderId).lean();
 };
+
+const getOrderByIdForAdminUI = async (orderId) => {
+  if (!orderId || !mongoose.Types.ObjectId.isValid(orderId)) return null;
+
+  const _id = new mongoose.Types.ObjectId(orderId);
+  const existing = await Orders.findById(_id).select("organization").lean();
+  if (!existing) return null;
+
+  const org = await Organizations.findById(existing.organization)
+    .select("creator")
+    .lean();
+  const companyOrganizer = org?.creator || null;
+
+  const pipeline = [
+    { $match: { _id } },
+    {
+      $addFields: {
+        userObjectId: {
+          $cond: [
+            { $eq: [{ $type: "$user" }, "objectId"] },
+            "$user",
+            { $toObjectId: "$user" },
+          ],
+        },
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "userObjectId",
+        foreignField: "_id",
+        as: "userInfo",
+      },
+    },
+    {
+      $lookup: {
+        from: "deliveryoptions",
+        localField: "deliveryOption",
+        foreignField: "_id",
+        pipeline: [{ $project: { _id: 1, title: 1 } }],
+        as: "deliveryOption",
+      },
+    },
+    {
+      $unwind: {
+        path: "$deliveryOption",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: "clubmembers",
+        localField: "userObjectId",
+        foreignField: "user",
+        pipeline: [
+          ...(companyOrganizer
+            ? [{ $match: { companyOrganizer } }]
+            : [{ $match: { _id: null } }]),
+          { $project: { _id: 1, tierKey: 1 } },
+        ],
+        as: "clubMemberInfo",
+      },
+    },
+    {
+      $addFields: {
+        clubMemberInfo: { $arrayElemAt: ["$clubMemberInfo", 0] },
+        user: {
+          _id: "$userObjectId",
+          username: { $arrayElemAt: ["$userInfo.username", 0] },
+          firstName: { $arrayElemAt: ["$userInfo.firstName", 0] },
+          lastName: { $arrayElemAt: ["$userInfo.lastName", 0] },
+          email: { $arrayElemAt: ["$userInfo.email", 0] },
+          profileIcon: {
+            $concat: [
+              process.env.AZURE_STORAGE_BASE_URL || "",
+              {
+                $ifNull: [
+                  { $arrayElemAt: ["$userInfo.profileIcon", 0] },
+                  "noimage.png",
+                ],
+              },
+            ],
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        orderNumber: 1,
+        status: 1,
+        items: 1,
+        totalPrice: 1,
+        paymentStatus: 1,
+        deliveryOption: 1,
+        paymentMethod: 1,
+        pickupType: 1,
+        createdAt: 1,
+        combos: 1,
+        orderType: 1,
+        tableNumber: 1,
+        user: 1,
+        organization: 1,
+        priceBreakdown: 1,
+        clubMemberInfo: 1,
+      },
+    },
+  ];
+
+  const [doc] = await MenuOrders.aggregate(pipeline);
+  return withOrderItemImageUrls(doc) || null;
+};
+
 module.exports = {
   getOrders,
   findOrdersById,
   findByIdAndUpdate,
   getInAppOrders,
   getOrderById,
+  getOrderByIdForAdminUI,
+  withOrderItemImageUrls,
 };
