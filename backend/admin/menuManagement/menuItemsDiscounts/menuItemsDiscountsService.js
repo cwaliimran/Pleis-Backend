@@ -4,6 +4,24 @@ const {
   formatMenuItemsDiscountList,
 } = require("./formatter/formatMenuItemsDiscounts");
 const { buildOverlapWarning } = require("@MenuItemsDiscountsModel");
+const MenuItems = require("@MenuItemsModel");
+const { emitMenuItemChange } = require("../menuItems/menuItemsService");
+
+const toMenuItemIds = (refs = []) => [
+  ...new Set(
+    (Array.isArray(refs) ? refs : [])
+      .map((item) => String(item?._id || item))
+      .filter((id) => id && id !== "undefined"),
+  ),
+];
+
+const emitDiscountMenuItemChanges = async (menuItemRefs) => {
+  const ids = toMenuItemIds(menuItemRefs);
+  if (!ids.length) return;
+  const item = await MenuItems.findOne({ _id: { $in: ids } });
+  if (!item) return;
+  await emitMenuItemChange(item, ["updated"]);
+};
 
 const createMenuItemsDiscount = async (data, timezone) => {
   const overlapping = await menuItemsDiscountRepo.findOverlappingActiveDiscounts({
@@ -15,6 +33,7 @@ const createMenuItemsDiscount = async (data, timezone) => {
   const doc = await menuItemsDiscountRepo.createMenuItemsDiscount(data);
   const populated = await menuItemsDiscountRepo.findMenuItemsDiscountById(doc._id);
   const formatted = formatMenuItemsDiscount(populated, timezone);
+  await emitDiscountMenuItemChanges(doc.menuItems);
 
   return {
     ...formatted,
@@ -98,6 +117,8 @@ const updateMenuItemsDiscount = async (id, data, timezone) => {
     return { error: "end_date_must_be_after_start_date" };
   }
 
+  const oldMenuItemIds = toMenuItemIds(discount.menuItems);
+
   Object.assign(discount, updateData);
   await discount.save();
 
@@ -110,6 +131,10 @@ const updateMenuItemsDiscount = async (id, data, timezone) => {
 
   const updated = await menuItemsDiscountRepo.findMenuItemsDiscountById(id);
   const formatted = formatMenuItemsDiscount(updated, timezone);
+  await emitDiscountMenuItemChanges([
+    ...oldMenuItemIds,
+    ...toMenuItemIds(updated?.menuItems),
+  ]);
 
   return {
     ...formatted,
@@ -122,6 +147,7 @@ const deleteMenuItemsDiscount = async (id) => {
     status: "deleted",
   });
   if (!updated) return null;
+  await emitDiscountMenuItemChanges(updated.menuItems);
   return true;
 };
 
