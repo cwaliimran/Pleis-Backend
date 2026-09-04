@@ -303,5 +303,7 @@
   "recently_viewed_items_fetched_successfully": "Recently viewed items fetched successfully",
   "invalid_type": "Invalid type",
   "share_link_generated_successfully": "Share link generated successfully",
-  "invalid_parameters": "Invalid parameters"
+  "invalid_parameters": "Invalid parameters",
+  "billko_account_required": "A Billko account is required before you can take payments. Register with Billko, then add your API key in company details.",
+  "billko_api_key_required_to_sell": "A Billko account is required before you can take payments. Register with Billko, then add your API key in company details."
 }

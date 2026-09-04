@@ -10,6 +10,9 @@ const { resolveTimeSensitivePricing } = require("./utils/timeSensitivePricing");
 const { Types } = require("mongoose");
 const { TAX_RATE_BOOKING } = require("../../../config/CONSTANTS");
 const { usePromoCode } = require("../../promoCode/promoCodeRepository");
+const {
+  assertOrganizerBillkoReady,
+} = require("../../../commonModules/paymentsIntegrations/billko/billkoCredentials");
 
 
 const createTicketingBookingService = async (
@@ -38,6 +41,8 @@ const createTicketingBookingService = async (
 
   const { organizationId, companyOrganizer } =
     await getOrganizationIdFromTicketId(firstTicketId);
+
+  await assertOrganizerBillkoReady(companyOrganizer);
 
   const eventId =
     validationResult.ticketSnapshots[0]?.snapshot?.event || null;

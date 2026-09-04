@@ -13,6 +13,7 @@ const {
   sendMenuOrderNotification,
 } = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
 const { fireAndForget } = require("../../../../helperUtils/responseUtil");
+const { enqueueFiscalDocument } = require("../../../../bullmq/queues");
 const { getUserReservationDetails } = require("../../../../app/reservations/reservationRepository");
 const { userReservationsFormatter } = require("../../../../app/reservations/formaters/reservationFormetter");
 const {
@@ -237,7 +238,24 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   // 🚀 POST-COMMIT SIDE EFFECTS
   // =====================================================
   if (committed && userReservation) {
-  
+    if (result.status === "paid") {
+      fireAndForget(
+        enqueueFiscalDocument({
+          kind: "reservation_confirmation",
+          orderId: userReservation._id,
+        }),
+        "FISCAL_RESERVATION_CONFIRMATION",
+      );
+      if (menuOrder?._id) {
+        fireAndForget(
+          enqueueFiscalDocument({
+            kind: "ordering_confirmation",
+            orderId: menuOrder._id,
+          }),
+          "FISCAL_ORDERING_CONFIRMATION",
+        );
+      }
+    }
 
     if (userReservation.amount && userReservation.amount > 0) {
       fireAndForget(

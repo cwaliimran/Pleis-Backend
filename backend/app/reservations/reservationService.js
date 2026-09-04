@@ -7,6 +7,9 @@ const { checkReservationCapacity } = require("../../admin/reservation/reservatio
 const {
   getReservationPreferencess,
 } = require("../../admin/reservation/reservationPreferences/reservationPreferencesRepository");
+const {
+  assertOrganizerBillkoReady,
+} = require("../../commonModules/paymentsIntegrations/billko/billkoCredentials");
 
 const getOccupancyPercentage = (existingReservation, capacityCheck) => {
   if (typeof existingReservation !== "number" || typeof capacityCheck !== "number") {
@@ -27,6 +30,7 @@ const getOccupancyPercentage = (existingReservation, capacityCheck) => {
 };
 const createReservationService = async (data, session) => {
   if (!session) throw new Error("session_required");
+  await assertOrganizerBillkoReady(data.companyOrganizer);
   const userTimezone = data?.user?.timezone || "UTC";
   const [check, organizationPreferences] = await Promise.all([
     ReservationRepo.checkReservationAvailability({

@@ -6,6 +6,12 @@ const monriRepository = require("./monriRepository");
 const { verifyTransaction, createTransactionMonriOrder } = require("./monriService");
 const { UserBillingInformation } = require("../../transactions/UserBillingInformation");
 const { SubscriptionTypes } = require("../../../models/UserModel");
+const {
+  assertOrganizerBillkoReady,
+} = require("../billko/billkoCredentials");
+const { TicketingOrders } = require("@TicketingOrdersModel");
+const { UserReservations } = require("@UserReservationsModel");
+const MenuOrders = require("@OrdersModel");
 
 const FORCE_MONRI_TEST_ENV = true;
 const PAID_SUBSCRIPTION_TYPES = Object.values(SubscriptionTypes).filter(
@@ -24,6 +30,30 @@ function normalizeDbPaymentMethod(paymentMethod) {
   if (paymentMethod === "apple-pay") return "applePay";
   if (paymentMethod === "google-pay") return "googlePay";
   return "card";
+}
+
+async function assertBillkoReadyForMonriOrder(orderType, orderNumber) {
+  if (!orderNumber) return;
+  let companyOrganizerId;
+  if (orderType === "menuorders") {
+    const order = await MenuOrders.findById(orderNumber)
+      .select("companyOrganizer")
+      .lean();
+    companyOrganizerId = order?.companyOrganizer;
+  } else if (orderType === "ticketingbookings") {
+    const order = await TicketingOrders.findById(orderNumber)
+      .select("companyOrganizer")
+      .lean();
+    companyOrganizerId = order?.companyOrganizer;
+  } else if (orderType === "userreservations") {
+    const reservation = await UserReservations.findById(orderNumber)
+      .select("companyOrganizer")
+      .lean();
+    companyOrganizerId = reservation?.companyOrganizer;
+  }
+  if (companyOrganizerId) {
+    await assertOrganizerBillkoReady(companyOrganizerId);
+  }
 }
 
 function isApprovedMonriResponse(payload) {
@@ -497,6 +527,8 @@ exports.createWebPaySession = async (req, res) => {
     const { amount, orderType, orderNumber, paymentMethod } = req.query;
     const userId = req.user._id;
 
+    await assertBillkoReadyForMonriOrder(orderType, orderNumber);
+
     // Normalize query paymentMethod to DB enum value
     const dbPaymentMethod = normalizeDbPaymentMethod(paymentMethod);
 
@@ -636,6 +668,10 @@ exports.createWebPaySession = async (req, res) => {
 
     if (err.code === "ORDER_ALREADY_FINALIZED" || err.statusCode === 409) {
       return res.status(409).json({ message: err.message });
+    }
+
+    if (err.statusCode === 403) {
+      return res.status(403).json({ message: err.message });
     }
 
     if (err.code === 11000) {

@@ -15,6 +15,7 @@ const { createOrSkipDevice } = require("../../models/Devices");
 const { updateCompanyLoyaltySettings } = require("../../app/loyalty/clubMembers/clubMembersRepository");
 const { SubscriptionSettings } = require("@SubscriptionSettings");
 const { hardDeleteUserById } = require("../../helperUtils/hardDeleteUser");
+const { mergeCompanyBillkoKey } = require("../../commonModules/paymentsIntegrations/billko/billkoAuth");
 
 const APP_NAME = "Pleis App";
 
@@ -308,8 +309,9 @@ const updateUser = async (req, res, options = {}) => {
         bankAccountNumber: companyDetails.bankAccountNumber ?? user.companyDetails?.bankAccountNumber,
         representativeName: companyDetails.representativeName ?? user.companyDetails?.representativeName,
         location: companyDetails.location ?? user.companyDetails?.location,
-        suppliers: companyDetails.suppliers ?? user.companyDetails?.suppliers,
+        suppliers: companyDetails.suppliers ?? user.companyDetails?.suppliers ?? [],
         status: companyDetails.status ?? user.companyDetails?.status ?? "active",
+        ...mergeCompanyBillkoKey(user.companyDetails, companyDetails),
 
         // update loyaltySettings if provided
         loyaltySettings: {

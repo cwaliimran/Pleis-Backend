@@ -14,6 +14,7 @@ const {
   sendMenuOrderNotification,
 } = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
 const { fireAndForget } = require("../../../../helperUtils/responseUtil");
+const { enqueueFiscalDocument } = require("../../../../bullmq/queues");
 
 const { handleLoyaltyEarningConsequences } = require("./handleLoyaltyEarningConsequences");
 const { menuOrderConfirmationEmailTemplate } = require("../../../../helperUtils/emailTemplates");
@@ -152,6 +153,15 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
    🚀 POST-COMMIT SIDE EFFECTS (OUTSIDE TRANSACTION)
 ===================================================== */
   if (committed && menuOrder) {
+    if (result.status === "paid") {
+      fireAndForget(
+        enqueueFiscalDocument({
+          kind: "ordering_confirmation",
+          orderId: menuOrder._id,
+        }),
+        "FISCAL_ORDERING_CONFIRMATION",
+      );
+    }
     if (menuOrder.totalPrice && menuOrder.totalPrice > 0) {
       fireAndForget(
         triggerBadgeEngine(menuOrder.user, {
