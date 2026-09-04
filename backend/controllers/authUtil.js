@@ -223,6 +223,7 @@ const registerUserUtility = async (req, res, options = {}) => {
       const billkoFields = mergeCompanyBillkoKey(
         existingUser?.companyDetails,
         companyDetails,
+        existingUser?._id,
       );
       delete companyDetails.billkoApiKey;
       Object.assign(companyDetails, billkoFields);

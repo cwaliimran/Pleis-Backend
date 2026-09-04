@@ -44,10 +44,28 @@ function decryptSecret(payload) {
   );
 }
 
-function mergeCompanyBillkoKey(existing, incoming = {}) {
+const BILLKO_READY_CACHE_NS = "billko:organizer-ready";
+
+function invalidateOrganizerBillkoReadyCache(companyOrganizerId) {
+  Promise.resolve()
+    .then(() => {
+      const { invalidate, buildKey } = require("@redisCache");
+      const key = companyOrganizerId
+        ? buildKey(BILLKO_READY_CACHE_NS, { id: String(companyOrganizerId) })
+        : BILLKO_READY_CACHE_NS;
+      return invalidate(key);
+    })
+    .catch(() => {});
+}
+
+function mergeCompanyBillkoKey(existing, incoming = {}, organizerId) {
   const nextEncrypted = incoming.billkoApiKey
     ? encryptSecret(incoming.billkoApiKey)
     : existing?.billkoApiKeyEncrypted || "";
+
+  if (incoming.billkoApiKey) {
+    invalidateOrganizerBillkoReadyCache(organizerId);
+  }
 
   return {
     billkoApiKeyEncrypted: nextEncrypted,
@@ -66,10 +84,20 @@ function stripBillkoSecrets(companyDetails) {
     ...rest
   } = companyDetails;
 
+  let decrypted = typeof billkoApiKey === "string" ? billkoApiKey : "";
+  if (!decrypted && billkoApiKeyEncrypted) {
+    try {
+      decrypted = decryptSecret(billkoApiKeyEncrypted);
+    } catch (_) {
+      decrypted = "";
+    }
+  }
+
   return {
     ...rest,
+    billkoApiKey: decrypted,
     billkoKeyConfigured: Boolean(
-      companyDetails.billkoKeyConfigured || billkoApiKeyEncrypted,
+      companyDetails.billkoKeyConfigured || billkoApiKeyEncrypted || decrypted,
     ),
   };
 }
@@ -79,4 +107,6 @@ module.exports = {
   decryptSecret,
   mergeCompanyBillkoKey,
   stripBillkoSecrets,
+  BILLKO_READY_CACHE_NS,
+  invalidateOrganizerBillkoReadyCache,
 };

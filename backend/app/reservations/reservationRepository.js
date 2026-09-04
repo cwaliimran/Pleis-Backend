@@ -26,6 +26,9 @@ const { createTransactionService } = require("../userWalletService/transactions/
 const { TAX_RATE_RESERVATION } = require("../../config/CONSTANTS");
 const { usePromoCode } = require("../promoCode/promoCodeRepository");
 const ReservationType = require("@ReservationTypeModel");
+const {
+  assertOrganizerBillkoReady,
+} = require("../../commonModules/paymentsIntegrations/billko/billkoCredentials");
 
 const moment = require("moment-timezone");
 const ReservationPreferences = require("@ReservationPreferencesModel");
@@ -812,6 +815,16 @@ const createReservation = async (data, session) => {
   }
 
   data.amount = finalReservationAmount;
+
+  const hasPaidPreOrder = Boolean(preOrderMenuItems?.items?.length);
+  const needsPayment =
+    finalReservationAmount > 0 ||
+    data.status === "pendingPayment" ||
+    hasPaidPreOrder;
+
+  if (needsPayment) {
+    await assertOrganizerBillkoReady(data.companyOrganizer);
+  }
 
   /* ---------- Confirmation flow ---------- */
 

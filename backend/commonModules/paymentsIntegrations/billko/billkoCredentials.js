@@ -1,5 +1,9 @@
 const mongoose = require("mongoose");
-const { decryptSecret } = require("./billkoAuth");
+const { cache } = require("@redisCache");
+const {
+  decryptSecret,
+  BILLKO_READY_CACHE_NS,
+} = require("./billkoAuth");
 
 function getPleisBillkoApiKey() {
   const key = process.env.BILLKO_PLEIS_API_KEY;
@@ -38,19 +42,39 @@ async function getOrganizerBillkoApiKey(companyOrganizerId) {
   };
 }
 
-async function assertOrganizerBillkoReady(companyOrganizerId) {
-  if (!companyOrganizerId) {
-    const error = new Error("billko_account_required");
-    error.statusCode = 403;
-    throw error;
-  }
-
+async function loadOrganizerBillkoReady(companyOrganizerId) {
   const User = mongoose.model("User");
   const organizer = await User.findById(companyOrganizerId)
     .select("companyDetails.billkoApiKeyEncrypted")
     .lean();
 
-  if (!organizer?.companyDetails?.billkoApiKeyEncrypted) {
+  return {
+    exists: Boolean(organizer),
+    ready: Boolean(organizer?.companyDetails?.billkoApiKeyEncrypted),
+  };
+}
+
+async function assertOrganizerBillkoReady(companyOrganizerId) {
+  if (!companyOrganizerId) {
+    const error = new Error("billko_organizer_missing");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const status = await cache({
+    namespace: BILLKO_READY_CACHE_NS,
+    params: { id: String(companyOrganizerId) },
+    ttl: null, // never expire
+    fetchFn: () => loadOrganizerBillkoReady(companyOrganizerId),
+  });
+
+  if (!status?.exists) {
+    const error = new Error("billko_account_required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!status.ready) {
     const error = new Error("billko_account_required");
     error.statusCode = 403;
     throw error;

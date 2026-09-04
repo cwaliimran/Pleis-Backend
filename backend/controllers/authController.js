@@ -205,7 +205,7 @@ const companyDetails = async (req, res) => {
         location !== undefined ? location : user.companyDetails?.location,
       suppliers:
         suppliers !== undefined ? suppliers : user.companyDetails?.suppliers,
-      ...mergeCompanyBillkoKey(user.companyDetails, { billkoApiKey }),
+      ...mergeCompanyBillkoKey(user.companyDetails, { billkoApiKey }, user._id),
     };
 
     await user.save();

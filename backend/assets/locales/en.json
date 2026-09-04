@@ -304,6 +304,7 @@
   "invalid_type": "Invalid type",
   "share_link_generated_successfully": "Share link generated successfully",
   "invalid_parameters": "Invalid parameters",
-  "billko_account_required": "A Billko account is required before you can take payments. Register with Billko, then add your API key in company details.",
-  "billko_api_key_required_to_sell": "A Billko account is required before you can take payments. Register with Billko, then add your API key in company details."
+  "billko_account_required": "This venue isn't accepting payments right now. Billko setup is incomplete.",
+  "billko_organizer_missing": "This venue isn't accepting payments right now. Billko setup is incomplete.",
+  "billko_api_key_required_to_sell": "This venue isn't accepting payments right now. Billko setup is incomplete."
 }

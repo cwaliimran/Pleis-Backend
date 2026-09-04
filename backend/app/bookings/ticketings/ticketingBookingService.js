@@ -42,8 +42,6 @@ const createTicketingBookingService = async (
   const { organizationId, companyOrganizer } =
     await getOrganizationIdFromTicketId(firstTicketId);
 
-  await assertOrganizerBillkoReady(companyOrganizer);
-
   const eventId =
     validationResult.ticketSnapshots[0]?.snapshot?.event || null;
 
@@ -148,6 +146,8 @@ const createTicketingBookingService = async (
     paymentStatus = "paid";
     orderStatus = "paid";
   } else {
+    await assertOrganizerBillkoReady(companyOrganizer);
+
     if (!data.paymentDetails) {
       throw new Error("payment_details_required");
     }

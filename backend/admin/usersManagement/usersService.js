@@ -311,7 +311,7 @@ const updateUser = async (req, res, options = {}) => {
         location: companyDetails.location ?? user.companyDetails?.location,
         suppliers: companyDetails.suppliers ?? user.companyDetails?.suppliers ?? [],
         status: companyDetails.status ?? user.companyDetails?.status ?? "active",
-        ...mergeCompanyBillkoKey(user.companyDetails, companyDetails),
+        ...mergeCompanyBillkoKey(user.companyDetails, companyDetails, user._id),
 
         // update loyaltySettings if provided
         loyaltySettings: {
