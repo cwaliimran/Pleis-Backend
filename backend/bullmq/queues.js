@@ -1,3 +1,7 @@
+/**
+ * Queue producers — safe to import from the web process.
+ * Do not import ../bullmq (workers) from web.
+ */
 const { Queue } = require("bullmq");
 const connection = require("./connection");
 

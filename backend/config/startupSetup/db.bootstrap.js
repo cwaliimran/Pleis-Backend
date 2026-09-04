@@ -47,6 +47,16 @@ async function createUserViaUtility(payload) {
 ---------------------------------- */
 async function runDBBootstrap() {
     try {
+        const alreadyDone = await Bootstrap.findOne({
+            version: { $gte: BOOTSTRAP_VERSION },
+        });
+        if (alreadyDone) {
+            logger.info("DB bootstrap already up-to-date", {
+                version: alreadyDone.version,
+            });
+            return;
+        }
+
         // 🔒 VERSIONED ATOMIC LOCK
         const bootstrap = await Bootstrap.findOneAndUpdate(
             { version: { $lt: BOOTSTRAP_VERSION } },
@@ -55,7 +65,7 @@ async function runDBBootstrap() {
         );
 
         if (!bootstrap) {
-            console.log("ℹ️ Bootstrap already up-to-date");
+            logger.info("DB bootstrap already up-to-date");
             return;
         }
 

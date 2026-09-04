@@ -44,11 +44,52 @@ module.exports = {
       env: {
         NODE_ENV: "dev",
         PORT: 4012,
+        PROCESS_ROLE: "web",
+      },
+
+      env_dev: {
+        NODE_ENV: "dev",
+        PORT: 4012,
+        PROCESS_ROLE: "web",
       },
 
       env_prod: {
         NODE_ENV: "prod",
         PORT: 4014,
+        PROCESS_ROLE: "web",
+      },
+    },
+    {
+      name: "pleis-worker",
+      script: "backend/worker.js",
+
+      exec_mode: "fork",
+      instances: 1,
+
+      max_memory_restart: "512M",
+      kill_timeout: 8000,
+      listen_timeout: 8000,
+
+      restart_delay: 2000,
+      exp_backoff_restart_delay: 100,
+
+      output: path.join(PM2_LOG_DIR, "worker-out.log"),
+      error: path.join(PM2_LOG_DIR, "worker-error.log"),
+      log_date_format: "YYYY-MM-DD HH:mm:ss",
+
+      env: {
+        NODE_ENV: "dev",
+        PROCESS_ROLE: "worker",
+      },
+
+      env_dev: {
+        NODE_ENV: "dev",
+        PROCESS_ROLE: "worker",
+      },
+
+      env_prod: {
+        NODE_ENV: "prod",
+        PROCESS_ROLE: "worker",
       },
     },
   ],

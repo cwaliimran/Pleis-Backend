@@ -1,4 +1,10 @@
 /**
+ * Web process — HTTP + Socket.IO only.
+ * Cron, BullMQ workers, and mongodump run in backend/worker.js.
+ */
+process.env.PROCESS_ROLE = process.env.PROCESS_ROLE || "web";
+
+/**
  * ------------------------------------------------
  * Unified Logging (FIRST – before anything else)
  * ------------------------------------------------
@@ -52,11 +58,7 @@ const { textModerationMiddleware } = require("./services/moderation/textModerati
 const { sendResponse } = require("./helperUtils/responseUtil");
 
 const connectToDB = require("./helperUtils/server-setup");
-const { backupMongoDB } = require("./helperUtils/dataBaseBackup");
 const { getRedisClient } = require("./config/redis/redisConfig");
-const { startCrons } = require("./config/cron");
-require('./bullmq');
-
 
 /**
  * ------------------------------------------------
@@ -205,6 +207,7 @@ server.listen(PORT, () => {
   logger.info("HTTP server listening", {
     port: PORT,
     env: process.env.NODE_ENV,
+    role: process.env.PROCESS_ROLE,
   });
 });
 
@@ -220,9 +223,6 @@ server.listen(PORT, () => {
     await connectToDB();
     await initTextModeration();
     getRedisClient();
-    startCrons();
-
-    setInterval(backupMongoDB, 24 * 60 * 60 * 1000);
   } catch (err) {
     crashLogger.fatal("Startup failure", err);
     process.exit(1);

@@ -34,6 +34,7 @@ function logCrash({ type, error }) {
     type,
     pid: process.pid,
     workerId: process.env.NODE_APP_INSTANCE,
+    role: process.env.PROCESS_ROLE,
     fingerprint: fp,
     message: error?.message,
     stack: error?.stack,

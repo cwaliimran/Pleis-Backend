@@ -1,3 +1,4 @@
+const os = require("os");
 const cron = require("node-cron");
 const { acquireLock, releaseLock } = require("@redisCache");
 
@@ -36,7 +37,49 @@ const {
 } = require("./giveAways/giveAwaysExpireAndWinnerCron.cron");
 const { runLoyaltyChallengeUpdateCron } = require("./loyalty/challenges/challengeUpdate");
 
+const HOSTNAME = os.hostname();
+
+const cronContext = (extra = {}) => ({
+  role: process.env.PROCESS_ROLE || "unknown",
+  hostname: HOSTNAME,
+  pid: process.pid,
+  ...extra,
+});
+
+async function runLockedCron(lockKey, ttlSeconds, job) {
+  const lock = await acquireLock(lockKey, ttlSeconds);
+
+  if (!lock) {
+    logger.info("Cron skipped (lock held)", cronContext({ lockKey }));
+    return;
+  }
+
+  try {
+    logger.info("Cron run started", cronContext({ lockKey }));
+    await job();
+    logger.info("Cron run completed", cronContext({ lockKey }));
+  } catch (err) {
+    logger.error("Cron run failed", cronContext({
+      lockKey,
+      error: err.message,
+      stack: err.stack,
+    }));
+  } finally {
+    await releaseLock(lockKey, lock);
+  }
+}
+
 const startCrons = () => {
+  if (process.env.PROCESS_ROLE === "web") {
+    logger.error(
+      "startCrons refused: cron must run on the worker process only",
+      cronContext(),
+    );
+    return;
+  }
+
+  logger.info("Cron scheduler starting", cronContext());
+
   /* ======================================================
      🔁 CRON 1: Reconcile pending payments (every 5 seconds)
      ====================================================== */
@@ -62,21 +105,11 @@ const startCrons = () => {
      ====================================================== */
   // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
   cron.schedule("0 0 0 * * *", async () => {
-    const lockKey = "cron:recurring-events-midnight";
-    const lock = await acquireLock(lockKey, 60); // 1 min TTL
-
-    if (!lock) return;
-
-    try {
+    await runLockedCron("cron:recurring-events-midnight", 60, async () => {
       await runRecurringEventsCron();
       await runRecurringPromotionsCron();
       await runRecurringGlobalPromotionsCron();
-      console.log("✅ Midnight recurring cron completed");
-    } catch (err) {
-      console.error("❌ Midnight recurring cron failed:", err);
-    } finally {
-      await releaseLock(lockKey, lock);
-    }
+    });
   });
 
   ///* ======================================================
@@ -84,88 +117,40 @@ const startCrons = () => {
   //   ====================================================== */
   // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
   cron.schedule("* * * * *", async () => {
-    const lockKey = "cron:event-reminders";
-    const lock = await acquireLock(lockKey, 50);
-
-    if (!lock) return;
-
-    try {
-      await runEventReminderCron();
-    } catch (err) {
-      console.error("Reminder cron error:", err);
-    } finally {
-      await releaseLock(lockKey, lock);
-    }
+    await runLockedCron("cron:event-reminders", 50, () => runEventReminderCron());
   });
 
   /* ======================================================
      ⏳ CRON 4: Challenge expiring soon reminders (every hour)
      ====================================================== */
   cron.schedule("0 * * * *", async () => {
-    const lockKey = "cron:challenge-expiring-soon";
-    const lock = await acquireLock(lockKey, 50);
-
-    if (!lock) return;
-
-    try {
-      await runLoyaltyChallengeExpiringSoonCron();
-    } catch (err) {
-      console.error("Challenge expiring soon cron error:", err);
-    } finally {
-      await releaseLock(lockKey, lock);
-    }
+    await runLockedCron("cron:challenge-expiring-soon", 50, () =>
+      runLoyaltyChallengeExpiringSoonCron(),
+    );
   });
   /* ======================================================
      ⏳ CRON 4: Challenge update 
      ====================================================== */
   cron.schedule("5 0 * * *", async () => {
-    const lockKey = "cron:challenge-update";
-    const lock = await acquireLock(lockKey, 50);
-
-    if (!lock) return;
-
-    try {
-      await runLoyaltyChallengeUpdateCron();
-    } catch (err) {
-      console.error("Challenge update cron error:", err);
-    } finally {
-      await releaseLock(lockKey, lock);
-    }
+    await runLockedCron("cron:challenge-update", 50, () =>
+      runLoyaltyChallengeUpdateCron(),
+    );
   });
 
   /* ======================================================
      ⏳ CRON 5: Global Challenge expiring soon reminders (every hour)
      ====================================================== */
   cron.schedule("0 * * * *", async () => {
-    const lockKey = "cron:global-challenge-expiring-soon";
-    const lock = await acquireLock(lockKey, 50);
-
-    if (!lock) return;
-
-    try {
-      await runGlobalChallengeExpiringSoonCron();
-    } catch (err) {
-      console.error("Global Challenge expiring soon cron error:", err);
-    } finally {
-      await releaseLock(lockKey, lock);
-    }
+    await runLockedCron("cron:global-challenge-expiring-soon", 50, () =>
+      runGlobalChallengeExpiringSoonCron(),
+    );
   });
 
   // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
   cron.schedule("*/10 * * * *", async () => {
-    const lockKey = "cron:engagement-buffer-flush";
-    const lock = await acquireLock(lockKey, 120);
-
-    if (!lock) return;
-
-    try {
-      await flushEngagementBuffer();
-      console.log("📊 Engagement buffer flushed");
-    } catch (err) {
-      console.error("❌ Engagement flush cron failed:", err);
-    } finally {
-      await releaseLock(lockKey, lock);
-    }
+    await runLockedCron("cron:engagement-buffer-flush", 120, () =>
+      flushEngagementBuffer(),
+    );
   });
 
   ///* ======================================================
@@ -174,38 +159,17 @@ const startCrons = () => {
   // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
   cron.schedule("0 * * * *", async () => {
     // run every 1 hour for production
-    const lockKey = "cron:promo-code-expiry";
-    const lock = await acquireLock(lockKey, 50);
-
-    if (!lock) return;
-
-    try {
-      await PromoCodeExpireCron();
-    } catch (err) {
-      console.error("Promo code expiry cron error:", err);
-    } finally {
-      await releaseLock(lockKey, lock);
-    }
+    await runLockedCron("cron:promo-code-expiry", 50, () => PromoCodeExpireCron());
   });
 
   ///* ======================================================
-  //   🕛 CRON 7: Subscription reminder (every minute)
+  //   🕛 CRON 7: Subscription reminder (every 6 hours)
   //   ====================================================== */
-  cron.schedule("*/3 * * * * *", async () => {
-    //5 seconds for testing
-    // cron.schedule("0 * * * *", async () => { // run every 1 hour for production
-    const lockKey = "cron:subscription-reminder";
-    const lock = await acquireLock(lockKey, 50);
-
-    if (!lock) return;
-
-    try {
-      await runSubscriptionReminderCron();
-    } catch (err) {
-      console.error("Subscription reminder cron error:", err);
-    } finally {
-      await releaseLock(lockKey, lock);
-    }
+  cron.schedule("0 */6 * * *", async () => {
+    // run every 6 hours for production
+    await runLockedCron("cron:subscription-reminder", 50, () =>
+      runSubscriptionReminderCron(),
+    );
   });
 
   ///* ======================================================
@@ -214,18 +178,9 @@ const startCrons = () => {
   // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
   cron.schedule("0 * * * *", async () => {
     // run every 1 hour for production
-    const lockKey = "cron:giveaways-expiry";
-    const lock = await acquireLock(lockKey, 50);
-
-    if (!lock) return;
-
-    try {
-      await giveAwaysExpireAndWinnerCron();
-    } catch (err) {
-      console.error("Giveaways expiry cron error:", err);
-    } finally {
-      await releaseLock(lockKey, lock);
-    }
+    await runLockedCron("cron:giveaways-expiry", 50, () =>
+      giveAwaysExpireAndWinnerCron(),
+    );
   });
 };
 

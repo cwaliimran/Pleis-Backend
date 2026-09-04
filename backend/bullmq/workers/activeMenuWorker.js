@@ -71,16 +71,29 @@ const activeMenuWorker = new Worker(
   },
 );
 
-activeMenuWorker.on("completed", (job, result) => {
- 
+activeMenuWorker.on("completed", (job) => {
+  logger.info("active-menu job completed", {
+    jobId: job?.id,
+    organizationId: job?.data?.organizationId,
+    menuId: job?.data?.menuId,
+  });
 });
 
 activeMenuWorker.on("failed", (job, err) => {
- 
+  logger.error("active-menu job failed", {
+    jobId: job?.id,
+    organizationId: job?.data?.organizationId,
+    menuId: job?.data?.menuId,
+    error: err?.message,
+    stack: err?.stack,
+  });
 });
 
 activeMenuWorker.on("error", (err) => {
- 
+  logger.error("active-menu worker error", {
+    error: err?.message,
+    stack: err?.stack,
+  });
 });
 
 module.exports = activeMenuWorker;

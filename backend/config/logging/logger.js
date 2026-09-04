@@ -1,8 +1,10 @@
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 
 const isProd = process.env.NODE_ENV === "prod";
 const LOG_DIR = path.resolve(__dirname, "../../../logs/app");
+const HOSTNAME = os.hostname();
 
 function write(level, message, meta = {}) {
   const entry = {
@@ -10,6 +12,8 @@ function write(level, message, meta = {}) {
     level,
     pid: process.pid,
     workerId: process.env.NODE_APP_INSTANCE,
+    role: process.env.PROCESS_ROLE,
+    hostname: HOSTNAME,
     message,
     ...meta,
   };

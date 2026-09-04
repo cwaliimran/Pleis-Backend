@@ -37,7 +37,7 @@ Consumers include **mobile apps**, **admin panel**, **organizer (business) porta
 | Process mgr | PM2 configs in `backend/config/ecosystem.config*.js`, Azure `pm2-runtime` |
 | Tests | Mocha + Supertest in devDependencies; no standard `test/` tree found in repo |
 
-**Entry point:** `backend/server.js`  
+**Entry points:** `backend/server.js` (HTTP + Socket.IO, `PROCESS_ROLE=web`); `backend/worker.js` (BullMQ workers, cron, mongodump, `PROCESS_ROLE=worker`).  
 **Env files:** `.env.${NODE_ENV}` (e.g. `.env.dev`) — see `.env.example`.
 
 ---
@@ -244,7 +244,7 @@ Uploads: `/api/v1/upload`, `/api/v1/upload/azure`.
 ## 12. CI / deployment
 
 - **GitHub Actions:** `.github/workflows/dev.yml` — on `dev` branch: `npm ci`, artifact upload, deploy to **Azure Web App** (Pleis-backend-dev).
-- **PM2:** `npm run pm2:dev:start`, Azure variants `pm2:azure:dev` / `pm2:azure:prod`.
+- **PM2:** `npm run pm2:dev:start` starts **web + worker**. Azure variants `pm2:azure:dev` / `pm2:azure:prod` (same App Service, two PM2 apps; worker does not bind `PORT`).
 
 ---
 
@@ -273,7 +273,9 @@ Uploads: `/api/v1/upload`, `/api/v1/upload/azure`.
 
 ```bash
 npm i
-npm run dev          # NODE_ENV=dev, PORT=4012, nodemon
+npm run dev          # web only, NODE_ENV=dev, PORT=4012, nodemon
+npm run dev1         # web only, PORT=4014
+npm run dev:worker   # cron + BullMQ + backup (second terminal)
 npm run prod
 npm run update:alias
 ```
