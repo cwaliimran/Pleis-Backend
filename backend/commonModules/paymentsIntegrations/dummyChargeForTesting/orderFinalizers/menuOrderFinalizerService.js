@@ -5,7 +5,10 @@ const {
   createTransactionService,
 } = require("../../../../app/userWalletService/transactions/services/unifiedTransactionsService");
 
-const { emitOrderEvent, emitOrderUpdate } = require("@socketIo/orders/orderSocketEmitter");
+const {
+  emitNewOrder,
+  emitMenuOrderPaymentSockets,
+} = require("@socketIo/orders/orderSocketEmitter");
 const {
   menuItemOrderFormatter,
 } = require("../../../../app/menuItemsAndOrdering/orders/formatter/menuItemOrderFormatter");
@@ -74,57 +77,47 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
 
       await menuOrder.save({ session });
 
-      const populatedOrder = await MenuOrders.findById(menuOrder._id)
-        .populate("organization", "basicInfo.name")
-        .populate("user", "firstName lastName email timezone")
-        .lean();
-
-      const mBody = menuOrderConfirmationEmailTemplate({
-        userName: populatedOrder.user.firstName + " " + populatedOrder.user.lastName,
-        order: populatedOrder,
-        organizationName: populatedOrder.organization?.basicInfo?.name || "Restaurant",
-        currency: "EUR",
-      });
-
-      await sendEmailViaMailgun(menuOrder.user.email, "Your order has been confirmed", mBody);
-
       const totalPrice = menuOrder.totalPrice || 0;
 
       if (totalPrice > 0) {
-        const pointsCalculation = await calculatePointsRepo(menuOrder.user, companyOrganizer, totalPrice);
+        try {
+          const pointsCalculation = await calculatePointsRepo(menuOrder.user, companyOrganizer, totalPrice);
 
-        companyPoints = {
-          base: pointsCalculation.organizer.earnedPoints,
-          multiplier: pointsCalculation.organizer.organizerMultiplier || 1,
-          total: pointsCalculation.organizer.earnedPoints,
-          pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
-        };
+          companyPoints = {
+            base: pointsCalculation.organizer.earnedPoints,
+            multiplier: pointsCalculation.organizer.organizerMultiplier || 1,
+            total: pointsCalculation.organizer.earnedPoints,
+            pointsPerEuro: pointsCalculation.organizer.pointsPerEuro,
+          };
 
-        globalPoints = {
-          base: pointsCalculation.global.earnedPoints,
-          multiplier: pointsCalculation.global.globalMultiplier || 1,
-          total: pointsCalculation.global.earnedPoints,
-          pointsPerEuro: pointsCalculation.global.pointsPerEuro,
-        };
+          globalPoints = {
+            base: pointsCalculation.global.earnedPoints,
+            multiplier: pointsCalculation.global.globalMultiplier || 1,
+            total: pointsCalculation.global.earnedPoints,
+            pointsPerEuro: pointsCalculation.global.pointsPerEuro,
+          };
 
-        const trx = await createTransactionService(
-          {
-            user: menuOrder.user,
-            companyOrganizer,
-            organization: menuOrder.organization._id,
-            companyPoints,
-            globalPoints,
-            allowNegative: false,
-            type: "earn",
-            description: "Menu order payment",
-            entityId: menuOrder._id,
-            domainType: "menuorders",
-          },
-          session,
-        );
+          const trx = await createTransactionService(
+            {
+              user: menuOrder.user,
+              companyOrganizer,
+              organization: menuOrder.organization._id,
+              companyPoints,
+              globalPoints,
+              allowNegative: false,
+              type: "earn",
+              description: "Menu order payment",
+              entityId: menuOrder._id,
+              domainType: "menuorders",
+            },
+            session,
+          );
 
-        if (!trx.success) {
-          throw new Error(trx.message || "failed_loyalty_update");
+          if (!trx.success) {
+            console.error("[LOYALTY] Menu points failed, continuing paid fulfill:", trx.message);
+          }
+        } catch (loyaltyErr) {
+          console.error("[LOYALTY] Menu points threw, continuing paid fulfill:", loyaltyErr);
         }
       }
     }
@@ -153,6 +146,47 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
    🚀 POST-COMMIT SIDE EFFECTS (OUTSIDE TRANSACTION)
 ===================================================== */
   if (committed && menuOrder) {
+    /**
+     * 📡 Sockets first so UI updates even if FCM/email later fails.
+     * ORDER_UPDATE is immediate; NEW_ORDER follows with formatted user payload.
+     */
+    emitMenuOrderPaymentSockets(menuOrder, result.status, { includeNewOrder: false });
+    if (result.status === "paid") {
+      fireAndForget((async () => {
+        const populatedOrder = await MenuOrders.findById(menuOrder._id)
+          .populate("organization", "basicInfo.name")
+          .populate("user", "firstName lastName email timezone")
+          .lean();
+        if (!populatedOrder?.user?.email) return;
+        const mBody = menuOrderConfirmationEmailTemplate({
+          userName: `${populatedOrder.user.firstName || ""} ${populatedOrder.user.lastName || ""}`.trim(),
+          order: populatedOrder,
+          organizationName: populatedOrder.organization?.basicInfo?.name || "Restaurant",
+          currency: "EUR",
+        });
+        await sendEmailViaMailgun(populatedOrder.user.email, "Your order has been confirmed", mBody);
+      })(), "MENU_ORDER_CONFIRMATION_EMAIL");
+
+      findAppUserByIdWithProjectionService(menuOrder.user, {
+        profileIcon: 1,
+        firstName: 1,
+        lastName: 1,
+        email: 1,
+        username: 1,
+        timezone: 1,
+      })
+        .then((userDetails) => {
+          let formattedOrder = menuItemOrderFormatter(menuOrder, userDetails.timezone);
+
+          formattedOrder.user = userDetails;
+          formattedOrder.organization =
+            menuOrder.organization?._id || menuOrder.organization;
+
+          emitNewOrder(menuOrder, formattedOrder);
+        })
+        .catch((err) => console.error("Order emit failed:", err));
+    }
+
     if (result.status === "paid") {
       fireAndForget(
         enqueueFiscalDocument({
@@ -172,11 +206,6 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       );
     }
 
-    /**
-     * =====================================================
-     * 🎯 Loyalty Side Effects
-     * =====================================================
-     */
     if (result.status === "paid") {
       try {
         handleLoyaltyEarningConsequences({
@@ -191,11 +220,6 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       }
     }
 
-    /**
-     * =====================================================
-     * 🔔 Menu Order Notifications (Fire & Forget)
-     * =====================================================
-     */
     if (result.status === "paid") {
       fireAndForget(
         sendMenuOrderNotification({
@@ -214,43 +238,6 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
         }),
         "MENU_ORDER_CANCELLED_NOTIFICATION",
       );
-    }
-
-    /**
-     * =====================================================
-     * 📡 Real-Time Socket Emit
-     * =====================================================
-     */
-    if (result.status === "paid") {
-      emitOrderUpdate(menuOrder, ["status", "payment"]);
-      findAppUserByIdWithProjectionService(menuOrder.user, {
-        profileIcon: 1,
-        firstName: 1,
-        lastName: 1,
-        email: 1,
-        username: 1,
-        timezone: 1,
-      })
-        .then((userDetails) => {
-          let formattedOrder = menuItemOrderFormatter(menuOrder, userDetails.timezone);
-
-          formattedOrder.user = userDetails;
-          formattedOrder.organization = menuOrder.organization._id;
-
-          emitOrderEvent({
-            io: global.io,
-            eventName: "NEW_ORDER",
-            orderId: menuOrder._id,
-            organizationId: menuOrder.organization._id,
-            userId: menuOrder.user,
-            data: formattedOrder,
-          });
-        })
-        .catch((err) => console.error("Order emit failed:", err));
-    }
-
-    if (result.status === "failed") {
-      emitOrderUpdate(menuOrder, ["status", "payment", "cancellation"]);
     }
   }
 };

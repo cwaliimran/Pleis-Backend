@@ -262,19 +262,36 @@ process.on("SIGINT", shutdown);
  * Crash handlers (unexpected)
  * =======================================================
  */
+const {
+  isFirebaseTransientNetworkError,
+} = require("./config/firebaseAdmin");
+
 process.on("unhandledRejection", (reason) => {
   const error =
     reason instanceof Error ? reason : new Error(String(reason));
 
+  if (isFirebaseTransientNetworkError(error)) {
+    logger.error("Firebase network error (ignored)", {
+      error: error.message,
+    });
+    return;
+  }
+
   crashLogger.fatal("Unhandled Promise Rejection", error);
 
-  // Give logger time to flush
   setTimeout(() => {
     process.exit(1);
   }, 100);
 });
 
 process.on("uncaughtException", (err) => {
+  if (isFirebaseTransientNetworkError(err)) {
+    logger.error("Firebase network error (ignored)", {
+      error: err.message,
+    });
+    return;
+  }
+
   crashLogger.fatal("Uncaught Exception", err);
 
   setTimeout(() => {

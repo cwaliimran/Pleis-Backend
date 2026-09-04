@@ -41,7 +41,7 @@ async function enqueueFiscalDocument({ kind, orderId }) {
   return fiscalDocumentsQueue.add(
     kind,
     { kind, orderId: String(orderId) },
-    { jobId: `${kind}:${orderId}` },
+    { jobId: `${kind}-${orderId}` },
   );
 }
 

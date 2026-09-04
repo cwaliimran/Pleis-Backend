@@ -23,6 +23,7 @@ const {
 const { sendEmailViaMailgun } = require("../../../../helperUtils/emailUtil");
 const { findAppUserByIdWithProjectionService } = require("../../../../app/usersManagement/usersService");
 const triggerBadgeEngine = require("@triggerGlobalStreak");
+const { emitMenuOrderPaymentSockets } = require("@socketIo/orders/orderSocketEmitter");
 const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   const session = await mongoose.startSession();
 
@@ -238,6 +239,14 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   // 🚀 POST-COMMIT SIDE EFFECTS
   // =====================================================
   if (committed && userReservation) {
+    /**
+     * 📡 Pre-order menu sockets first so kitchen/user UI updates
+     */
+    if (menuOrder?._id) {
+      const freshMenuOrder = await MenuOrders.findById(menuOrder._id);
+      emitMenuOrderPaymentSockets(freshMenuOrder || menuOrder, result.status);
+    }
+
     if (result.status === "paid") {
       fireAndForget(
         enqueueFiscalDocument({

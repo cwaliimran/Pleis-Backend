@@ -77,7 +77,7 @@ const sendMenuOrderNotification = async ({
       return;
     }
 
-    await sendUserNotifications({
+    sendUserNotifications({
       recipientIds: userIds,
       title: config.title(order),
       body: config.body(order),

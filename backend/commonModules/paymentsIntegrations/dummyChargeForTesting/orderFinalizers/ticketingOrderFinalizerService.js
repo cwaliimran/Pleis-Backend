@@ -16,6 +16,7 @@ const { generateQRCode } = require("../../../../helperUtils/qrGenerator");
 const { ticketConfirmationEmailTemplate, ticketFailedEmailTemplate } = require("../../../../helperUtils/emailTemplates/ticketingEmailTemplates");
 const { sendEmailViaMailgun } = require("../../../../helperUtils/emailUtil");
 const triggerBadgeEngine = require("@triggerGlobalStreak");
+const { emitMenuOrderPaymentSockets } = require("@socketIo/orders/orderSocketEmitter");
 
 /**
  * Ticketing Order Finalizer
@@ -327,6 +328,14 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
   // 🚀 POST-COMMIT SIDE EFFECTS (OUTSIDE TRANSACTION)
   // =====================================================
   if (committed && order) {
+    /**
+     * 📡 Pre-order menu sockets first so kitchen/user UI updates
+     */
+    if (menuOrder?._id) {
+      const freshMenuOrder = await MenuOrders.findById(menuOrder._id);
+      emitMenuOrderPaymentSockets(freshMenuOrder || menuOrder, result.status);
+    }
+
     if (result.status === "paid") {
       fireAndForget(
         enqueueFiscalDocument({
