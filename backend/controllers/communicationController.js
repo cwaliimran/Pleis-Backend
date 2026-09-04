@@ -197,20 +197,25 @@ const sendUserNotifications = async ({
             })
           );
 
-          // Send notifications without awaiting
-          const sendNotificationPromise = sendNotification(userDevices, {
-            title,
-            body,
-            data: {
-              ...dataWithStringValues, // Additional data payload
-              subjectId: sender ? sender.toString() : null, // Convert subjectId to plain text
-              objectId: objectId ? objectId.toString() : null, // Ensure objectId is also plain text
-            },
-            image
-          });
-
-          const sendNotificationResponse = await sendNotificationPromise;
-          responses.push({ userId, sendNotificationResponse });
+          try {
+            const sendNotificationResponse = await sendNotification(userDevices, {
+              title,
+              body,
+              data: {
+                ...dataWithStringValues,
+                subjectId: sender ? sender.toString() : null,
+                objectId: objectId ? objectId.toString() : null,
+              },
+              image
+            });
+            responses.push({ userId, sendNotificationResponse });
+          } catch (notifyErr) {
+            console.error(
+              "Error sending FCM notification for user",
+              userId,
+              notifyErr?.message || notifyErr,
+            );
+          }
         }
 
         //log all response using json.stringify for better readability
@@ -240,7 +245,10 @@ const sendUserNotifications = async ({
         logger.log("No devices found for the provided user IDs.");
       }
     } catch (error) {
-      console.error("Error sending notifications in background");
+      console.error(
+        "Error sending notifications in background",
+        error?.message || error,
+      );
     }
   });
 };
@@ -315,22 +323,34 @@ const sendNotification = async (recipients, payload) => {
   try {
     const promises = [];
 
-    // Send to Android devices
     if (androidTokens.length > 0) {
-      const androidPromise = adminFireBConfig.messaging().sendEachForMulticast({
-        tokens: androidTokens,
-        ...androidPayload,
-      });
-      promises.push(androidPromise);
+      promises.push(
+        adminFireBConfig
+          .messaging()
+          .sendEachForMulticast({
+            tokens: androidTokens,
+            ...androidPayload,
+          })
+          .catch((error) => {
+            console.error("FCM Android send failed:", error?.message || error);
+            return { responses: [] };
+          }),
+      );
     }
 
-    // Send to iOS devices
     if (iosTokens.length > 0) {
-      const iosPromise = adminFireBConfig.messaging().sendEachForMulticast({
-        tokens: iosTokens,
-        ...iosPayload,
-      });
-      promises.push(iosPromise);
+      promises.push(
+        adminFireBConfig
+          .messaging()
+          .sendEachForMulticast({
+            tokens: iosTokens,
+            ...iosPayload,
+          })
+          .catch((error) => {
+            console.error("FCM iOS send failed:", error?.message || error);
+            return { responses: [] };
+          }),
+      );
     }
 
     const responses = await Promise.all(promises);
@@ -340,24 +360,13 @@ const sendNotification = async (recipients, payload) => {
     };
 
     responses.forEach((response) => {
-      result.responses = result.responses.concat(response.responses);
-    });
-
-    result.responses.forEach((r, index) => {
-      if (!r.success) {
-        //payload
-        // console.error(`❌ FCM Error at index ${index}`);
-        // console.error("Code:", r.error?.code);
-        // console.error("Message:", r.error?.message);
-        // console.error("Stack:", r.error?.stack);
-        // console.error("Full Error:", r.error);
-      }
+      result.responses = result.responses.concat(response.responses || []);
     });
 
     return result;
   } catch (error) {
-    // console.error("Error sending notifications:", error);
-    throw error;
+    console.error("Error sending notifications:", error?.message || error);
+    return { responses: [] };
   }
 };
 

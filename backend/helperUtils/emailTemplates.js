@@ -915,6 +915,8 @@ const organizerWelcomeEmailTemplate = (organizerName) => `
 
         <p>Your application is currently under review by our team. We’ll verify your details and notify you once your account has been approved.</p>
 
+        <p>To take payments you also need a <strong>Billko</strong> account. Billko registration is done with Billko directly (contract signing). After they give you an API key, add it in Pleis under company details. Transactions stay blocked until that key is saved.</p>
+
         <p>This usually takes <strong>1–2 business days</strong>. Once approved, you’ll be able to create events, manage tickets, and grow your audience.</p>
 
         <p>If you have any questions in the meantime, feel free to reach out to our support team.</p>

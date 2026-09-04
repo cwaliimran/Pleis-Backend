@@ -47,6 +47,9 @@ const {
 const {
   isOrderingEnabled,
 } = require("../../../admin/menuManagement/menu/menusRepository");
+const {
+  assertOrganizerBillkoReady,
+} = require("../../../commonModules/paymentsIntegrations/billko/billkoCredentials");
 
 const orderNeedsConfirmation = (orderItems = [], orderCombos = []) =>
   orderItems.some((item) => item.status === "pending") ||
@@ -258,12 +261,14 @@ const placeOrder = async ({
   promoCode,
   tip,
   reservationId,
+  paymentTiming,
 }) => {
   const cartCombos = combos || [];
 
   if (!items.length && !cartCombos.length) {
     throw new Error("Cart is empty");
   }
+
 
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -328,6 +333,7 @@ const placeOrder = async ({
     }
 
     const companyOrganizer = await getOrgCompanyOrganizer(organizationId);
+    await assertOrganizerBillkoReady(companyOrganizer);
 
     const { orderCombos, combosTotal, combosSaleDiscount } =
       await buildOrderCombos({
@@ -415,7 +421,6 @@ const placeOrder = async ({
       totalPrice = voucherResult.orderAmountDue;
     }
 
-
     const setting = await getSetttings({ organization: organizationId });
     totalPrice += Number(tip || 0);
     let orderData = {
@@ -424,6 +429,7 @@ const placeOrder = async ({
       items: orderItems,
       combos: orderCombos,
       totalPrice,
+      paymentTiming,
       reservation: reservationId || null,
       priceBreakdown: {
         itemsTotal,

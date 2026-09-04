@@ -2,6 +2,7 @@
 
 const { createVerificationLink } = require("../models/UserModel");
 const { getFullImageUrl } = require("@utils/imageHelper");
+const { stripBillkoSecrets } = require("../commonModules/paymentsIntegrations/billko/billkoAuth");
 
 
 const  formatUserResponse = (
@@ -25,14 +26,14 @@ const  formatUserResponse = (
     language: userObject.language,
     country: userObject.country,
     publicId: userObject.publicId,
-    companyDetails: userObject.companyDetails || null,
+    companyDetails: stripBillkoSecrets(userObject.companyDetails) || null,
   };
 
   // Main response object
   let response = {
     basicInfo,
     accountState: {
-      companyDetails: userObject.companyDetails || null,
+      companyDetails: stripBillkoSecrets(userObject.companyDetails) || null,
       twoFactorAuth: userObject.twoFA?.isEnabled || false,
       userType: userType || "user",
       status: userObject.accountState?.status || "active",
@@ -73,9 +74,11 @@ const  formatUserResponse = (
 
   if (userType === "organizer") {
     basicInfo.organizationName = userObject.organizationName || "";
-    basicInfo.companyDetails = userObject.companyDetails || null;
-    //add termsAccepted to organizer
+    basicInfo.companyDetails = stripBillkoSecrets(userObject.companyDetails) || null;
     response.accountState.termsAccepted = userObject.termsAccepted || false;
+    response.accountState.billkoSetupRequired = !Boolean(
+      basicInfo.companyDetails?.billkoKeyConfigured,
+    );
     response.organizations = userObject.organizations || [];
   }
   else if (userType == "staff" || userType == "manager") {

@@ -6,6 +6,7 @@ const { monriWebhookController, getOrdersTransactions, getOrdersTransactionDetai
 const auth = require("../../../../middlewares/authMiddleware");
 
 router.post("/payments/monri", auth, express.json({ type: "*/*" }), monriWebhookController);
+router.use("/billko", require("../../billko/billkoRoutes"));
 
 //get all transactions
 router.get("/orders-transactions", auth, getOrdersTransactions)

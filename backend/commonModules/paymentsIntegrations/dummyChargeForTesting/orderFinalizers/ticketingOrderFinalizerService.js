@@ -10,11 +10,13 @@ const { sendEventNotification } = require("../../../../controllers/notificationH
 const { sendMenuOrderNotification } = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
 const { sendReservationNotification } = require("../../../../controllers/notificationHelper/reservationNotificationService");
 const { fireAndForget } = require("../../../../helperUtils/responseUtil");
+const { enqueueFiscalDocument } = require("../../../../bullmq/queues");
 const { findAppUserByIdWithProjectionService } = require("../../../../app/usersManagement/usersService");
 const { generateQRCode } = require("../../../../helperUtils/qrGenerator");
 const { ticketConfirmationEmailTemplate, ticketFailedEmailTemplate } = require("../../../../helperUtils/emailTemplates/ticketingEmailTemplates");
 const { sendEmailViaMailgun } = require("../../../../helperUtils/emailUtil");
 const triggerBadgeEngine = require("@triggerGlobalStreak");
+const { emitMenuOrderPaymentSockets } = require("@socketIo/orders/orderSocketEmitter");
 
 /**
  * Ticketing Order Finalizer
@@ -326,6 +328,41 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
   // 🚀 POST-COMMIT SIDE EFFECTS (OUTSIDE TRANSACTION)
   // =====================================================
   if (committed && order) {
+    /**
+     * 📡 Pre-order menu sockets first so kitchen/user UI updates
+     */
+    if (menuOrder?._id) {
+      const freshMenuOrder = await MenuOrders.findById(menuOrder._id);
+      emitMenuOrderPaymentSockets(freshMenuOrder || menuOrder, result.status);
+    }
+
+    if (result.status === "paid") {
+      fireAndForget(
+        enqueueFiscalDocument({
+          kind: "ticketing_invoices",
+          orderId: order._id,
+        }),
+        "FISCAL_TICKETING_INVOICES",
+      );
+      if (userReservation?._id) {
+        fireAndForget(
+          enqueueFiscalDocument({
+            kind: "reservation_confirmation",
+            orderId: userReservation._id,
+          }),
+          "FISCAL_RESERVATION_CONFIRMATION",
+        );
+      }
+      if (menuOrder?._id) {
+        fireAndForget(
+          enqueueFiscalDocument({
+            kind: "ordering_confirmation",
+            orderId: menuOrder._id,
+          }),
+          "FISCAL_ORDERING_CONFIRMATION",
+        );
+      }
+    }
 
     if (order.orderPricing?.total && order.orderPricing.total > 0) {
       fireAndForget(

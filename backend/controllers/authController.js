@@ -9,6 +9,7 @@ const {
 } = require("../helperUtils/responseUtil");
 const { formatUserResponse } = require("../helperUtils/userResponseUtil");
 const { sendEmailViaMailgun } = require("../helperUtils/emailUtil");
+const { mergeCompanyBillkoKey } = require("../commonModules/paymentsIntegrations/billko/billkoAuth");
 const {
   forgotPasswordViaLinkEmailTemplate,
   registrationViaLinkEmailTemplate,
@@ -161,6 +162,7 @@ const companyDetails = async (req, res) => {
     representativeName,
     location,
     suppliers,
+    billkoApiKey,
   } = req.body;
 
   try {
@@ -184,6 +186,7 @@ const companyDetails = async (req, res) => {
 
     // Update only provided company details, keep existing fields if not provided
     user.companyDetails = {
+      ...(user.companyDetails?.toObject?.() || user.companyDetails || {}),
       logo: logo !== undefined ? logo : user.companyDetails?.logo,
       coverImage: coverImage !== undefined ? coverImage : user.companyDetails?.coverImage,
       description: description !== undefined ? description : user.companyDetails?.description,
@@ -202,6 +205,7 @@ const companyDetails = async (req, res) => {
         location !== undefined ? location : user.companyDetails?.location,
       suppliers:
         suppliers !== undefined ? suppliers : user.companyDetails?.suppliers,
+      ...mergeCompanyBillkoKey(user.companyDetails, { billkoApiKey }, user._id),
     };
 
     await user.save();

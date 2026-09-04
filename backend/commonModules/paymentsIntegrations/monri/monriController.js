@@ -6,8 +6,19 @@ const monriRepository = require("./monriRepository");
 const { verifyTransaction, createTransactionMonriOrder } = require("./monriService");
 const { UserBillingInformation } = require("../../transactions/UserBillingInformation");
 const { SubscriptionTypes } = require("../../../models/UserModel");
+const {
+  assertOrganizerBillkoReady,
+} = require("../billko/billkoCredentials");
+const { TicketingOrders } = require("@TicketingOrdersModel");
+const { UserReservations } = require("@UserReservationsModel");
+const MenuOrders = require("@OrdersModel");
+const {
+  fulfillMonriRedirectPayment,
+} = require("../paymentsWebhook/services/paymentWebhookService");
+const {
+  evaluateMonriSuccessIntent,
+} = require("./monriSuccessGuard");
 
-const FORCE_MONRI_TEST_ENV = true;
 const PAID_SUBSCRIPTION_TYPES = Object.values(SubscriptionTypes).filter(
   (type) => type !== SubscriptionTypes.FREE
 );
@@ -26,23 +37,42 @@ function normalizeDbPaymentMethod(paymentMethod) {
   return "card";
 }
 
-function isApprovedMonriResponse(payload) {
-  return (
-    payload.response_code === "0000" ||
-    payload.response_code === "000" ||
-    payload.status === "approved"
-  );
+async function assertBillkoReadyForMonriOrder(orderType, orderNumber) {
+  if (!orderNumber) return;
+  let companyOrganizerId;
+  if (orderType === "menuorders") {
+    const order = await MenuOrders.findById(orderNumber)
+      .select("companyOrganizer")
+      .lean();
+    companyOrganizerId = order?.companyOrganizer;
+  } else if (orderType === "ticketingbookings") {
+    const order = await TicketingOrders.findById(orderNumber)
+      .select("companyOrganizer")
+      .lean();
+    companyOrganizerId = order?.companyOrganizer;
+  } else if (orderType === "userreservations") {
+    const reservation = await UserReservations.findById(orderNumber)
+      .select("companyOrganizer")
+      .lean();
+    companyOrganizerId = reservation?.companyOrganizer;
+  }
+  if (companyOrganizerId) {
+    await assertOrganizerBillkoReady(companyOrganizerId);
+  }
 }
 
 function isMonriProduction() {
-  if (FORCE_MONRI_TEST_ENV) return false;
-
+  const base = String(process.env.MONRI_BASE_URL || "").toLowerCase();
+  if (base.includes("ipgtest")) return false;
+  if (base.includes("ipg.monri.com")) return true;
   return ["prod", "production"].includes(
     String(process.env.NODE_ENV || "").toLowerCase()
   );
 }
 
 function getMonriBaseUrl() {
+  const configured = String(process.env.MONRI_BASE_URL || "").replace(/\/$/, "");
+  if (configured) return configured;
   return isMonriProduction()
     ? "https://ipg.monri.com"
     : "https://ipgtest.monri.com";
@@ -330,8 +360,6 @@ googlePay.on("paymentError", function() {
 exports.handleSuccess = async (req, res) => {
   try {
     const payload = getMonriCallbackPayload(req);
-
-
     const orderNumber = payload.order_number;
 
     if (!orderNumber) {
@@ -344,45 +372,89 @@ exports.handleSuccess = async (req, res) => {
       return res.status(404).json({ message: "Transaction not found" });
     }
 
-    // Browser redirect includes digest — verify it.
-    // Merchant server-to-server callback is JSON without digest.
-    if (payload.digest) {
-      const isValid = verifyMonriSuccessDigest({
-        payload,
-        successUrl: process.env.SUCCESS_URL,
-      });
+    const decision = evaluateMonriSuccessIntent({
+      req,
+      payload,
+      tx,
+      successUrl: process.env.SUCCESS_URL,
+    });
 
-      if (!isValid) {
+    if (decision.action === "reject") {
+      if (decision.reason === "invalid_digest" && tx.status !== "paid") {
         await monriRepository.updateTransaction(orderNumber, {
           status: "invalid",
           rawCallback: payload,
         });
-
-        return res.status(400).json({ message: "Invalid digest" });
       }
+      return res.status(decision.httpStatus || 400).json({
+        message:
+          decision.reason === "invalid_digest"
+            ? "Invalid digest"
+            : decision.reason === "digest_required"
+              ? "Missing digest"
+              : decision.reason === "amount_mismatch"
+                ? "Amount mismatch"
+                : "Payment rejected",
+        orderNumber,
+        orderType: tx.orderType,
+        userId: tx.userId,
+        orderFulfilled: false,
+        fulfillReason: decision.reason,
+      });
     }
 
-    const approved = isApprovedMonriResponse(payload);
+    if (decision.action === "ignore") {
+      return res.status(200).json({
+        message: "Payment pending",
+        orderNumber,
+        orderType: tx.orderType,
+        userId: tx.userId,
+        orderFulfilled: false,
+        fulfillReason: decision.reason,
+      });
+    }
+
+    const status = decision.action === "fulfill_failed" ? "failed" : "paid";
     const update = {
       rawCallback: payload,
       ...(payload.approval_code && { approvalCode: payload.approval_code }),
       ...(payload.id != null && { monriTransactionId: String(payload.id) }),
       ...(payload.pan_token && { panToken: payload.pan_token }),
     };
-
-    if (approved) {
-      update.status = "paid";
-    } else {
-      update.status = "failed";
+    if (tx.status !== "paid" && tx.status !== "refunded") {
+      update.status = status;
     }
 
     await monriRepository.updateTransaction(orderNumber, update);
 
+    let fulfill = { handled: false, reason: "not_attempted" };
+    try {
+      fulfill = (await fulfillMonriRedirectPayment({
+        tx,
+        payload,
+        status,
+      })) || fulfill;
+    } catch (fulfillErr) {
+      console.error("Monri success fulfill failed:", fulfillErr);
+      fulfill = {
+        handled: false,
+        reason: fulfillErr.message || "fulfill_threw",
+      };
+    }
+
+    const paid = status === "paid";
+    const orderFulfilled =
+      paid &&
+      (Boolean(fulfill.handled) ||
+        fulfill.reason === "duplicate event" ||
+        decision.reason === "already_paid");
     return res.status(200).json({
-      message: approved ? "Payment successful" : "Payment failed",
+      message: paid ? "Payment successful" : "Payment failed",
       orderNumber,
       orderType: tx.orderType,
       userId: tx.userId,
+      orderFulfilled,
+      fulfillReason: fulfill.reason || decision.reason || null,
     });
   } catch (err) {
     console.error("Monri success handler error:", err);
@@ -407,6 +479,30 @@ exports.handleCancel = async (req, res) => {
       return res.status(404).json({ message: "Transaction not found" });
     }
 
+    if (tx.status === "paid" || tx.status === "refunded") {
+      return res.status(200).json({
+        message: "Payment already finalized",
+        orderNumber,
+        orderType: tx.orderType,
+        userId: tx.userId,
+      });
+    }
+
+    const hasCancelSignal =
+      payload.response_code ||
+      payload.status === "declined" ||
+      payload.status === "cancelled" ||
+      req.method === "POST";
+
+    if (!hasCancelSignal && tx.status === "pending") {
+      return res.status(200).json({
+        message: "Payment pending",
+        orderNumber,
+        orderType: tx.orderType,
+        userId: tx.userId,
+      });
+    }
+
     await monriRepository.updateTransaction(orderNumber, {
       status: "cancelled",
       rawCallback: payload,
@@ -424,23 +520,6 @@ exports.handleCancel = async (req, res) => {
   }
 };
 
-
-
-function verifyMonriSuccessDigest({ payload, successUrl }) {
-  const url = new URL(successUrl);
-
-  // Append all params EXCEPT digest
-  Object.keys(payload).forEach((key) => {
-    if (key !== "digest") {
-      url.searchParams.append(key, payload[key]);
-    }
-  });
-
-  const raw = `${process.env.MONRI_KEY}${url.toString()}`;
-  const expected = crypto.createHash("sha512").update(raw).digest("hex");
-
-  return expected === payload.digest;
-}
 
 
 exports.createClientSecret = async (req, res) => {
@@ -496,6 +575,8 @@ exports.createWebPaySession = async (req, res) => {
     const currency = "EUR";
     const { amount, orderType, orderNumber, paymentMethod } = req.query;
     const userId = req.user._id;
+
+    await assertBillkoReadyForMonriOrder(orderType, orderNumber);
 
     // Normalize query paymentMethod to DB enum value
     const dbPaymentMethod = normalizeDbPaymentMethod(paymentMethod);
@@ -636,6 +717,10 @@ exports.createWebPaySession = async (req, res) => {
 
     if (err.code === "ORDER_ALREADY_FINALIZED" || err.statusCode === 409) {
       return res.status(409).json({ message: err.message });
+    }
+
+    if (err.statusCode === 403) {
+      return res.status(403).json({ message: err.message });
     }
 
     if (err.code === 11000) {
