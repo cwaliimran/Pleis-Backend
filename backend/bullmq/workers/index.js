@@ -1,9 +1,9 @@
 const activeMenuWorker = require("./activeMenuWorker");
-// const anotherWorker = require('./anotherWorker'); // add future workers here
+const fiscalDocumentsWorker = require("./fiscalDocumentsWorker");
 
 const workers = [
   activeMenuWorker,
-  // anotherWorker,
+  fiscalDocumentsWorker,
 ];
 
 module.exports = workers;

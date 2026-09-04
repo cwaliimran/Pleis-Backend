@@ -1,6 +1,9 @@
 const { User } = require("../models/UserModel");
 const { Devices } = require("../models/Devices");
 const { userCache } = require("../config/nodeCache");
+const {
+  invalidateOrganizerBillkoReadyCache,
+} = require("../commonModules/paymentsIntegrations/billko/billkoAuth");
 
 const HARD_DELETE_SELECT =
   "+deletionMeta email username phoneNumber provider firstName lastName accountState googleId facebookId appleId";
@@ -12,6 +15,7 @@ const hardDeleteUserById = async (userId) => {
 
   if (user.accountState.status === "deleted") {
     userCache.del(userId.toString());
+    invalidateOrganizerBillkoReadyCache(userId);
     return { alreadyDeleted: true };
   }
 
@@ -49,6 +53,7 @@ const hardDeleteUserById = async (userId) => {
 
   await Devices.updateOne({ userId }, { $set: { devices: [] } });
   userCache.del(userId.toString());
+  invalidateOrganizerBillkoReadyCache(userId);
 
   return { alreadyDeleted: false };
 };

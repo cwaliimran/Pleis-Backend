@@ -11,6 +11,7 @@ const { FEATURE_KEYS } = require("../admin/features/Feature");
 const { validatePhoneNumber } = require("../helperUtils/validationsUtil");
 const { sendEmailViaMailgun } = require("../helperUtils/emailUtil");
 const { registrationViaLinkEmailTemplate, registrationViaOtpEmailTemplate } = require("../helperUtils/emailTemplates");
+const { mergeCompanyBillkoKey } = require("../commonModules/paymentsIntegrations/billko/billkoAuth");
 
 // Main utility function
 const registerUserUtility = async (req, res, options = {}) => {
@@ -216,7 +217,16 @@ const registerUserUtility = async (req, res, options = {}) => {
 
       companyDetails.loyaltySettings = companyDetails.loyaltySettings || {};
       companyDetails.loyaltySettings.title = (companyDetails.name ? companyDetails.name + " - Loyalty Club" : "Loyalty Club");
+    }
 
+    if (userType === "organizer" && companyDetails) {
+      const billkoFields = mergeCompanyBillkoKey(
+        existingUser?.companyDetails,
+        companyDetails,
+        existingUser?._id,
+      );
+      delete companyDetails.billkoApiKey;
+      Object.assign(companyDetails, billkoFields);
     }
 
     // Create or reuse user

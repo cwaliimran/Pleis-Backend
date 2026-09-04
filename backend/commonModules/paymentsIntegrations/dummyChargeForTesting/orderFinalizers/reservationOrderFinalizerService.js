@@ -13,6 +13,7 @@ const {
   sendMenuOrderNotification,
 } = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
 const { fireAndForget } = require("../../../../helperUtils/responseUtil");
+const { enqueueFiscalDocument } = require("../../../../bullmq/queues");
 const { getUserReservationDetails } = require("../../../../app/reservations/reservationRepository");
 const { userReservationsFormatter } = require("../../../../app/reservations/formaters/reservationFormetter");
 const {
@@ -22,6 +23,7 @@ const {
 const { sendEmailViaMailgun } = require("../../../../helperUtils/emailUtil");
 const { findAppUserByIdWithProjectionService } = require("../../../../app/usersManagement/usersService");
 const triggerBadgeEngine = require("@triggerGlobalStreak");
+const { emitMenuOrderPaymentSockets } = require("@socketIo/orders/orderSocketEmitter");
 const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   const session = await mongoose.startSession();
 
@@ -237,7 +239,32 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
   // 🚀 POST-COMMIT SIDE EFFECTS
   // =====================================================
   if (committed && userReservation) {
-  
+    /**
+     * 📡 Pre-order menu sockets first so kitchen/user UI updates
+     */
+    if (menuOrder?._id) {
+      const freshMenuOrder = await MenuOrders.findById(menuOrder._id);
+      emitMenuOrderPaymentSockets(freshMenuOrder || menuOrder, result.status);
+    }
+
+    if (result.status === "paid") {
+      fireAndForget(
+        enqueueFiscalDocument({
+          kind: "reservation_confirmation",
+          orderId: userReservation._id,
+        }),
+        "FISCAL_RESERVATION_CONFIRMATION",
+      );
+      if (menuOrder?._id) {
+        fireAndForget(
+          enqueueFiscalDocument({
+            kind: "ordering_confirmation",
+            orderId: menuOrder._id,
+          }),
+          "FISCAL_ORDERING_CONFIRMATION",
+        );
+      }
+    }
 
     if (userReservation.amount && userReservation.amount > 0) {
       fireAndForget(

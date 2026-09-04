@@ -6,6 +6,14 @@ const mongoose = require("mongoose");
 
 const saveIfNotProcessed = async (data) => {
   try {
+    if (data.orderNumber && data.paymentStatus) {
+      const existing = await WebhookEvent.findOne({
+        provider: data.provider,
+        orderNumber: data.orderNumber,
+        paymentStatus: data.paymentStatus,
+      }).select("_id").lean();
+      if (existing) return null;
+    }
     return await WebhookEvent.create(data);
   } catch (err) {
     if (err.code === 11000) return null; // already processed

@@ -47,6 +47,9 @@ const {
 const {
   isOrderingEnabled,
 } = require("../../../admin/menuManagement/menu/menusRepository");
+const {
+  assertOrganizerBillkoReady,
+} = require("../../../commonModules/paymentsIntegrations/billko/billkoCredentials");
 
 const orderNeedsConfirmation = (orderItems = [], orderCombos = []) =>
   orderItems.some((item) => item.status === "pending") ||
@@ -330,6 +333,7 @@ const placeOrder = async ({
     }
 
     const companyOrganizer = await getOrgCompanyOrganizer(organizationId);
+    await assertOrganizerBillkoReady(companyOrganizer);
 
     const { orderCombos, combosTotal, combosSaleDiscount } =
       await buildOrderCombos({

@@ -130,6 +130,7 @@ const importMenuItems = async (data) => {
     // optional defaults
     type: "Default",
     taxPercent: 0,
+    status: "active",
 
     startTime: null,
     endTime: null,
@@ -145,8 +146,6 @@ const importMenuItems = async (data) => {
 
     upSellItem: false,
     isAvailableInStock: true,
-
-    status: "active",
 
     // tracking imported preset
     parentPreset: preset._id,

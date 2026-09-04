@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { stripBillkoSecrets } = require("../commonModules/paymentsIntegrations/billko/billkoAuth");
 
 const CompanySchema = new mongoose.Schema(
   {
@@ -65,6 +66,14 @@ const CompanySchema = new mongoose.Schema(
         ref: "Suppliers",
       },
     ],
+    billkoApiKeyEncrypted: {
+      type: String,
+      default: "",
+    },
+    billkoKeyConfigured: {
+      type: Boolean,
+      default: false,
+    },
     default: [],
 
     loyaltySettings: {
@@ -111,5 +120,12 @@ const CompanySchema = new mongoose.Schema(
     _id: false,
   }
 );
+
+function stripSecrets(_doc, ret) {
+  return stripBillkoSecrets(ret);
+}
+
+CompanySchema.set("toJSON", { transform: stripSecrets });
+CompanySchema.set("toObject", { transform: stripSecrets });
 
 module.exports = { CompanySchema };

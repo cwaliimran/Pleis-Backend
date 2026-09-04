@@ -5,11 +5,105 @@ const { ticketingOrderFinalizerService } = require("../../dummyChargeForTesting/
 const { reservationOrderFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/reservationOrderFinalizerService");
 const { menuOrderFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/menuOrderFinalizerService");
 const { ticketingTransferFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/ticketingTransferFinalizerService");
-const { generateMeta, convertTimezoneToUtc } = require("../../../../helperUtils/responseUtil");
+const { generateMeta, convertTimezoneToUtc, fireAndForget } = require("../../../../helperUtils/responseUtil");
+const { enqueueFiscalDocument } = require("../../../../bullmq/queues");
 const { DASHBOARD_KEYS, TRANSSECTION_KEYS, withSubFilters } = require("../utils/transsectionKeyMap");
 const { calculateGrowth } = require("../utils/transsectionDate.utils");
 const moment = require("moment");
 const { findByOrderNumber } = require("../../monri/monriRepository");
+const { emitMenuOrderPaymentSockets } = require("@socketIo/orders/orderSocketEmitter");
+const { TicketingOrders } = require("@TicketingOrdersModel");
+const { UserReservations } = require("@UserReservationsModel");
+const MenuOrders = require("@OrdersModel");
+
+function toWebhookPaymentMethod(method) {
+  if (method === "applePay") return "applePay";
+  if (method === "cash") return "cash";
+  return "card";
+}
+
+async function loadOrderWebhookContext(orderType, orderNumber, fallbackUserId) {
+  if (orderType === "menuorders") {
+    const order = await MenuOrders.findById(orderNumber)
+      .populate("organization", "creator")
+      .select("user organization")
+      .lean();
+    if (!order) return null;
+    return {
+      user: order.user,
+      organization: order.organization?._id || order.organization,
+      companyOrganizer: order.organization?.creator,
+    };
+  }
+
+  if (orderType === "ticketingbookings") {
+    const order = await TicketingOrders.findById(orderNumber)
+      .select("user organization companyOrganizer")
+      .lean();
+    if (!order) return null;
+    return {
+      user: order.user,
+      organization: order.organization,
+      companyOrganizer: order.companyOrganizer,
+    };
+  }
+
+  if (orderType === "userreservations") {
+    const reservation = await UserReservations.findById(orderNumber)
+      .select("userId organizationId companyOrganizer")
+      .lean();
+    if (!reservation) return null;
+    return {
+      user: reservation.userId || fallbackUserId,
+      organization: reservation.organizationId,
+      companyOrganizer: reservation.companyOrganizer,
+    };
+  }
+
+  return null;
+}
+
+async function loadMenuOrderForPaymentSockets(orderType, orderNumber) {
+  if (orderType === "menuorders") {
+    return MenuOrders.findById(orderNumber);
+  }
+
+  if (orderType === "userreservations") {
+    const reservation = await UserReservations.findById(orderNumber)
+      .select("preOrderMenuItemsOrder")
+      .lean();
+    if (!reservation?.preOrderMenuItemsOrder) return null;
+    return MenuOrders.findById(reservation.preOrderMenuItemsOrder);
+  }
+
+  if (orderType === "ticketingbookings") {
+    const reservation = await UserReservations.findOne({
+      ticketingOrderRef: orderNumber,
+    })
+      .select("preOrderMenuItemsOrder")
+      .lean();
+    if (!reservation?.preOrderMenuItemsOrder) return null;
+    return MenuOrders.findById(reservation.preOrderMenuItemsOrder);
+  }
+
+  return null;
+}
+
+async function emitPaymentOrderSockets({
+  orderType,
+  orderId,
+  status,
+  includeNewOrder = true,
+}) {
+  try {
+    const order = await loadMenuOrderForPaymentSockets(orderType, orderId);
+    if (!order) return;
+    emitMenuOrderPaymentSockets(order, status, { includeNewOrder });
+  } catch (err) {
+    console.error("Payment ORDER_UPDATE emit failed:", err);
+  }
+}
+
 const processPaymentWebhook = async ({
   provider,
   payload,
@@ -17,7 +111,9 @@ const processPaymentWebhook = async ({
 
   //get monri payment method by orderNumber
   let monriPaymentMethod = await findByOrderNumber(payload.transaction.orderNumber);
-  let paymentMethod = monriPaymentMethod ? monriPaymentMethod.paymentMethod : "applePay";
+  let paymentMethod = toWebhookPaymentMethod(
+    monriPaymentMethod ? monriPaymentMethod.paymentMethod : "card",
+  );
   const event = await webhookRepository.saveIfNotProcessed({
     provider,
     orderNumber: payload.transaction.orderNumber,
@@ -32,13 +128,6 @@ const processPaymentWebhook = async ({
     payload,
   });
 
-  // 👇 EXPLICIT RESULT
-  if (!event) {
-    return {
-      handled: false,
-      reason: "duplicate event",
-    };
-  }
   let orderType = payload.transaction.metadata.type;
   let orderId = payload.transaction.orderNumber;
   const result = {
@@ -46,33 +135,102 @@ const processPaymentWebhook = async ({
     transactionId: payload.transaction.id,
   };
 
-  if (orderType === "ticketingbookings") {
-    await ticketingOrderFinalizerService({ orderId, result });
+  if (event) {
+    if (orderType === "ticketingbookings") {
+      await ticketingOrderFinalizerService({ orderId, result });
+    }
+
+    if (orderType === "tickettransfer") {
+      let metadata = payload.transaction.metadata
+      await ticketingTransferFinalizerService({ bookingId: metadata.bookingId, userId: metadata.userId, newUserId: metadata.newUserId, result: payload.transaction });
+    }
+
+    if (orderType === "userreservations") {
+      await reservationOrderFinalizerService({
+        reservationId: orderId,
+        result,
+      });
+    }
+    if (orderType === "menuorders") {
+      await menuOrderFinalizerService({
+        menuOrderId: orderId,
+        result,
+      });
+    }
   }
 
-  if (orderType === "tickettransfer") {
-    let metadata = payload.transaction.metadata
-    await ticketingTransferFinalizerService({ bookingId: metadata.bookingId, userId: metadata.userId, newUserId: metadata.newUserId, result: payload.transaction });
-  }
+  await emitPaymentOrderSockets({
+    orderType,
+    orderId,
+    status: result.status,
+    includeNewOrder: !event,
+  });
 
-  if (orderType === "userreservations") {
-    await reservationOrderFinalizerService({
-      reservationId: orderId,
-      result,
-    });
-  }
-  if (orderType === "menuorders") {
-    await menuOrderFinalizerService({
-      menuOrderId: orderId,
-      result,
-    });
+  if (result.status === "paid") {
+    const fiscalKind = {
+      menuorders: "ordering_confirmation",
+      userreservations: "reservation_confirmation",
+      ticketingbookings: "ticketing_invoices",
+    }[orderType];
+    if (fiscalKind) {
+      fireAndForget(
+        enqueueFiscalDocument({ kind: fiscalKind, orderId }),
+        "FISCAL_DOCUMENT_ENQUEUE",
+      );
+    }
   }
 
   return {
-    handled: true,
+    handled: Boolean(event),
+    reason: event ? undefined : "duplicate event",
   };
 };
 
+/**
+ * Called from Monri success redirect (no app JWT).
+ * Same fulfill path as POST /webhooks/payments/monri.
+ */
+const fulfillMonriRedirectPayment = async ({ tx, payload, status }) => {
+  if (!tx?.orderType || tx.orderType === "subscription" || tx.orderType === "tickettransfer") {
+    return { handled: false, reason: "unsupported_order_type" };
+  }
+
+  const context = await loadOrderWebhookContext(
+    tx.orderType,
+    tx.orderNumber,
+    tx.userId,
+  );
+
+  if (!context?.user || !context?.organization || !context?.companyOrganizer) {
+    return { handled: false, reason: "order_context_missing" };
+  }
+
+  const transactionId =
+    payload.id ||
+    payload.reference_number ||
+    payload.approval_code ||
+    String(tx.orderNumber);
+
+  const result = await processPaymentWebhook({
+    provider: "monri",
+    payload: {
+      user: context.user,
+      transaction: {
+        id: String(transactionId),
+        orderNumber: tx.orderNumber,
+        status,
+        amount: payload.amount || tx.amount,
+        metadata: {
+          type: tx.orderType,
+          companyOrganizer: context.companyOrganizer,
+          organization: context.organization,
+        },
+      },
+    },
+  });
+
+  return result;
+};
 
 const getOrdersTransactionsService = async ({
   page = 1,
@@ -297,4 +455,10 @@ const getTransactionStatsService = async ({ dateFilter, timezone, companyOrganiz
   };
 };
 
-module.exports = { processPaymentWebhook, getOrdersTransactionsService, getOrdersTransactionDetailsService, getTransactionStatsService };
+module.exports = {
+  processPaymentWebhook,
+  fulfillMonriRedirectPayment,
+  getOrdersTransactionsService,
+  getOrdersTransactionDetailsService,
+  getTransactionStatsService,
+};

@@ -10,6 +10,9 @@ const { resolveTimeSensitivePricing } = require("./utils/timeSensitivePricing");
 const { Types } = require("mongoose");
 const { TAX_RATE_BOOKING } = require("../../../config/CONSTANTS");
 const { usePromoCode } = require("../../promoCode/promoCodeRepository");
+const {
+  assertOrganizerBillkoReady,
+} = require("../../../commonModules/paymentsIntegrations/billko/billkoCredentials");
 
 
 const createTicketingBookingService = async (
@@ -143,6 +146,8 @@ const createTicketingBookingService = async (
     paymentStatus = "paid";
     orderStatus = "paid";
   } else {
+    await assertOrganizerBillkoReady(companyOrganizer);
+
     if (!data.paymentDetails) {
       throw new Error("payment_details_required");
     }
