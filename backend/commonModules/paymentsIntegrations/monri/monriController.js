@@ -90,6 +90,47 @@ function generateDigest({ orderNumber, amount, currency }) {
   return crypto.createHash("sha512").update(raw).digest("hex");
 }
 
+const MONRI_FORM_SKIP_KEYS = new Set([
+  "clientSecret",
+  "trx_token",
+  "locale",
+  "environment",
+  "payment_url",
+  "form_action",
+]);
+
+async function createMonriCardPaymentUrl(sessionFields) {
+  const body = new URLSearchParams();
+  Object.entries(sessionFields).forEach(([key, value]) => {
+    if (MONRI_FORM_SKIP_KEYS.has(key) || value === undefined || value === null) {
+      return;
+    }
+    body.append(key, String(value));
+  });
+
+  const response = await axios.post(
+    `${getMonriBaseUrl()}/v2/form`,
+    body.toString(),
+    {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+      },
+      timeout: 8000,
+      validateStatus: () => true,
+    },
+  );
+
+  if (!response.data?.payment_url) {
+    const error = new Error("monri_form_failed");
+    error.statusCode = 502;
+    error.details = response.data || { status: response.status };
+    throw error;
+  }
+
+  return response.data.payment_url;
+}
+
 
 exports.redirectToMonriWebPay = async (req, res) => {
   try {
@@ -602,19 +643,18 @@ exports.createWebPaySession = async (req, res) => {
         paymentMethod: dbPaymentMethod,
       });
 
-      return res.json({
+      const session = {
         authenticity_token: process.env.MONRI_AUTH_TOKEN,
         transaction_type: "purchase",
         order_number: orderNumber,
         order_info: "App payment",
-        amount,
+        amount: String(amount),
         currency,
         language: "en",
         digest,
         success_url_override: process.env.SUCCESS_URL,
         cancel_url_override: process.env.CANCEL_URL,
         supported_payment_methods: "card",
-        // Monri form ch_* customer fields
         ch_full_name: fullName,
         ch_address: billingAddress.address || "",
         ch_city: billingAddress.city || "",
@@ -622,7 +662,19 @@ exports.createWebPaySession = async (req, res) => {
         ch_country: country,
         ch_email: billing?.email || "",
         ch_phone: billing?.phone || "",
-      });
+        form_action: `${getMonriBaseUrl()}/v2/form`,
+      };
+
+      try {
+        session.payment_url = await createMonriCardPaymentUrl(session);
+      } catch (formErr) {
+        console.warn(
+          "Monri /v2/form unavailable; returning session without payment_url:",
+          formErr.details || formErr.message,
+        );
+      }
+
+      return res.json(session);
     }
 
     // -----------------------------

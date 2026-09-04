@@ -4,7 +4,14 @@ const billkoInvoiceSchema = new mongoose.Schema(
   {
     kind: {
       type: String,
-      enum: ["service_fee", "tickets", "subscription", "commission"],
+      enum: [
+        "service_fee",
+        "tickets",
+        "menu_items",
+        "reservation",
+        "subscription",
+        "commission",
+      ],
       required: true,
     },
     seller: {

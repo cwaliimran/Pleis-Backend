@@ -171,6 +171,39 @@ function buildTicketProducts(ticketLines, organizerAttributionNote) {
   }));
 }
 
+function buildServiceProducts(lines, organizerAttributionNote) {
+  return lines.map((line) => ({
+    uniqueCode: line.uniqueCode,
+    name: line.name,
+    type: ProductType.Service,
+    quantity: line.quantity,
+    unitRetailPrice: toGross(line.unitRetailPrice),
+    taxRateLabels: [line.taxRateLabel],
+    ...(organizerAttributionNote ? { note: organizerAttributionNote } : {}),
+  }));
+}
+
+function scaleLinesToGross(lines, targetGross) {
+  const current = productTotal(lines);
+  const target = toGross(targetGross);
+  if (!lines.length || current <= 0 || target <= 0 || current === target) {
+    return lines;
+  }
+  let allocated = 0;
+  return lines.map((line, index) => {
+    if (index === lines.length - 1) {
+      const remaining = toGross(target - allocated);
+      const unitRetailPrice = toGross(remaining / line.quantity);
+      return { ...line, unitRetailPrice };
+    }
+    const share = (toGross(line.unitRetailPrice) * line.quantity) / current;
+    const lineTotal = toGross(target * share);
+    const unitRetailPrice = toGross(lineTotal / line.quantity);
+    allocated = toGross(allocated + unitRetailPrice * line.quantity);
+    return { ...line, unitRetailPrice };
+  });
+}
+
 function buildOrganizerAttributionNote(organizer) {
   const parts = [
     organizer?.companyName,
@@ -198,6 +231,8 @@ module.exports = {
   buildCreateInvoicePayload,
   buildServiceFeeProducts,
   buildTicketProducts,
+  buildServiceProducts,
+  scaleLinesToGross,
   buildOrganizerAttributionNote,
   PLEIS_REVENUE_TAX_LABEL,
   VOUCHER_TAX_LABEL,

@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 const { sendUserNotifications } = require("../../../controllers/communicationController");
 const { NotificationTypes } = require("@NotificationsModel");
 const { emitOrderUpdate } = require("@socketIo/orders/orderSocketEmitter");
+const { fireAndForget } = require("../../../helperUtils/responseUtil");
+const { enqueueFiscalDocument } = require("../../../bullmq/queues");
 
 
 const getOrders = async ({ activeorderStatus, pickupFilter, orderStatus, activeKeyword, timezone, page, limit, keyword, status, organizationId, date, range }) => {
@@ -100,6 +102,16 @@ const updateOrders = async (staffId, id, data) => {
 
 
   await order.save();
+
+  if (data.paymentStatus === "paid") {
+    fireAndForget(
+      enqueueFiscalDocument({
+        kind: "ordering_confirmation",
+        orderId: order._id,
+      }),
+      "FISCAL_ORDERING_CONFIRMATION",
+    );
+  }
 
   const updateTypes = [];
   if (data.status !== undefined) updateTypes.push("status");

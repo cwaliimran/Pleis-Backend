@@ -2,91 +2,112 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Monri card form test</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+    />
+    <title>Pleis card payment</title>
     <style>
+      :root {
+        color-scheme: light;
+      }
+      html,
       body {
-        font-family: system-ui, sans-serif;
-        max-width: 720px;
-        margin: 24px auto;
-        padding: 0 16px;
+        margin: 0;
+        min-height: 100%;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #f6f6f7;
         color: #111;
       }
-      label {
-        display: block;
-        font-size: 12px;
-        margin-top: 8px;
+      .wrap {
+        max-width: 480px;
+        margin: 0 auto;
+        padding: 24px 16px 32px;
+      }
+      h1 {
+        font-size: 20px;
+        font-weight: 650;
+        margin: 0 0 8px;
+      }
+      p {
+        margin: 0;
         color: #444;
+        line-height: 1.45;
+        font-size: 15px;
       }
-      textarea,
-      input {
-        width: 100%;
-        box-sizing: border-box;
-        padding: 8px;
-        margin-top: 4px;
-        font-family: ui-monospace, monospace;
+      .card {
+        margin-top: 20px;
+        background: #fff;
+        border-radius: 14px;
+        padding: 20px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
       }
-      textarea {
-        min-height: 280px;
+      .spinner {
+        width: 28px;
+        height: 28px;
+        border: 3px solid #ddd;
+        border-top-color: #111;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 8px auto 16px;
       }
-      button {
-        margin-top: 16px;
-        padding: 10px 16px;
-        font-size: 16px;
-        cursor: pointer;
-      }
-      .hint {
-        background: #f4f4f4;
-        padding: 12px;
-        border-radius: 8px;
-        font-size: 14px;
-        line-height: 1.4;
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
       }
       .error {
         color: #b00020;
-        margin-top: 8px;
         font-size: 14px;
+        margin-top: 12px;
+        white-space: pre-wrap;
       }
-      code {
-        background: #eee;
-        padding: 1px 4px;
+      details {
+        margin-top: 24px;
+        font-size: 13px;
+        color: #555;
+      }
+      textarea,
+      button {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      textarea {
+        min-height: 160px;
+        margin-top: 8px;
+        padding: 8px;
+        font-family: ui-monospace, monospace;
+        font-size: 12px;
+      }
+      button {
+        margin-top: 12px;
+        padding: 12px;
+        font-size: 16px;
+        border: 0;
+        border-radius: 10px;
+        background: #111;
+        color: #fff;
+      }
+      button:disabled {
+        opacity: 0.6;
       }
     </style>
   </head>
   <body>
-    <h1>Monri card form test</h1>
-    <p class="hint">
-      Paste the <code>web-pay-session</code> JSON, then click
-      <strong>Open payment form</strong>. The page asks Monri for
-      <code>payment_url</code> and opens it with GET (a form POST to
-      <code>/v2/form</code> redirects with POST and 404s).
-    </p>
-
-    <label>
-      web-pay-session JSON
-      <textarea id="session-json">{
-    "authenticity_token": "14bf739fca468f153cea8159f1b1f381e25f684c",
-    "transaction_type": "purchase",
-    "order_number": "6a9aa5be36b75e5f3e05df6d",
-    "order_info": "App payment",
-    "amount": "3000",
-    "currency": "EUR",
-    "language": "en",
-    "digest": "8b1d4ced5d521d6008fc1e673e2352eb251206ffc0bd6347599f6fb8e6de9e8c3d963e806aeb21b361ed86761f8f2e9be0070beafa48060a42c5ee3f02631a4f",
-    "success_url_override": "https://pleis-bmgwc0exbmdzc8cn.germanywestcentral-01.azurewebsites.net/api/v1/app/payments/monri/success",
-    "cancel_url_override": "https://pleis-bmgwc0exbmdzc8cn.germanywestcentral-01.azurewebsites.net/api/v1/app/payments/monri/cancel",
-    "supported_payment_methods": "card",
-    "ch_full_name": "Ahmad khan",
-    "ch_address": "123 Main Street",
-    "ch_city": "Lahore",
-    "ch_zip": "182626",
-    "ch_country": "pk",
-    "ch_email": "ahmad@mail.com",
-    "ch_phone": ""
-}</textarea>
-    </label>
-    <div id="parse-error" class="error"></div>
-    <button type="button" id="open-form">Open payment form</button>
+    <div class="wrap">
+      <h1>Secure card payment</h1>
+      <p id="status-text">Opening Monri payment form…</p>
+      <div class="card" id="loader">
+        <div class="spinner"></div>
+        <p style="text-align: center">Do not close this screen.</p>
+      </div>
+      <div id="parse-error" class="error"></div>
+      <details id="debug-panel">
+        <summary>Desktop test: paste web-pay-session JSON</summary>
+        <textarea id="session-json" placeholder='{"payment_url":"https://..."}'></textarea>
+        <button type="button" id="open-form">Open payment form</button>
+      </details>
+    </div>
 
     <script>
       const SKIP_KEYS = new Set([
@@ -94,26 +115,45 @@
         "trx_token",
         "locale",
         "environment",
+        "payment_url",
+        "form_action",
       ]);
 
-      document.getElementById("open-form").addEventListener("click", async () => {
-        const errorEl = document.getElementById("parse-error");
-        const button = document.getElementById("open-form");
-        errorEl.textContent = "";
-
-        let session;
+      function notifyApp(payload) {
         try {
-          session = JSON.parse(document.getElementById("session-json").value);
-        } catch (err) {
-          errorEl.textContent = "Invalid JSON: " + err.message;
-          return;
-        }
+          if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+            window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+          }
+        } catch (err) {}
+      }
 
+      function showError(message) {
+        const errorEl = document.getElementById("parse-error");
+        const status = document.getElementById("status-text");
+        const loader = document.getElementById("loader");
+        errorEl.textContent = message;
+        status.textContent = "Could not open payment form";
+        loader.style.display = "none";
+        notifyApp({ type: "monri_form_error", message });
+      }
+
+      async function openMonriCardForm(session) {
         if (!session || typeof session !== "object") {
-          errorEl.textContent = "JSON must be an object.";
+          showError("Missing web-pay-session.");
           return;
         }
 
+        if (session.payment_url) {
+          notifyApp({
+            type: "monri_form_opening",
+            order_number: session.order_number || null,
+          });
+          window.location.replace(session.payment_url);
+          return;
+        }
+
+        const formAction =
+          session.form_action || "https://ipgtest.monri.com/v2/form";
         const body = new URLSearchParams();
         Object.entries(session).forEach(([key, value]) => {
           if (SKIP_KEYS.has(key) || value === undefined || value === null) {
@@ -122,34 +162,52 @@
           body.append(key, String(value));
         });
 
-        button.disabled = true;
-        button.textContent = "Loading…";
+        const res = await fetch(formAction, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Accept: "application/json",
+          },
+          body,
+        });
 
-        try {
-          const res = await fetch("https://ipgtest.monri.com/v2/form", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-              Accept: "application/json",
-            },
-            body,
-          });
-
-          const data = await res.json();
-          if (!res.ok || !data.payment_url) {
-            errorEl.textContent =
-              "Monri error: " + JSON.stringify(data.errors || data);
-            button.disabled = false;
-            button.textContent = "Open payment form";
-            return;
-          }
-
-          window.location.href = data.payment_url;
-        } catch (err) {
-          errorEl.textContent = "Request failed: " + err.message;
-          button.disabled = false;
-          button.textContent = "Open payment form";
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.payment_url) {
+          showError("Monri error: " + JSON.stringify(data.errors || data));
+          return;
         }
+
+        notifyApp({
+          type: "monri_form_opening",
+          order_number: session.order_number || data.order_number || null,
+        });
+        window.location.replace(data.payment_url);
+      }
+
+      window.startMonriCardForm = function startMonriCardForm(session) {
+        openMonriCardForm(session).catch((err) => {
+          showError("Request failed: " + (err && err.message ? err.message : err));
+        });
+      };
+
+      document.addEventListener("DOMContentLoaded", () => {
+        if (window.MONRI_WEB_PAY_SESSION) {
+          document.getElementById("debug-panel").style.display = "none";
+          window.startMonriCardForm(window.MONRI_WEB_PAY_SESSION);
+        }
+
+        document.getElementById("open-form").addEventListener("click", () => {
+          const errorEl = document.getElementById("parse-error");
+          errorEl.textContent = "";
+          try {
+            const session = JSON.parse(
+              document.getElementById("session-json").value,
+            );
+            window.startMonriCardForm(session);
+          } catch (err) {
+            showError("Invalid JSON: " + err.message);
+          }
+        });
       });
     </script>
   </body>

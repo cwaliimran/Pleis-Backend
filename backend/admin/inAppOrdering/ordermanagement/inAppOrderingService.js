@@ -14,6 +14,8 @@ const {
 } = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/handleLoyaltyEarningConsequences");
 const webhookRepository = require("../../../commonModules/paymentsIntegrations/paymentsWebhook/repositories/webhookRepository");
 const { getOrgCompanyOrganizer } = require("../../../admin/organizations/organizationRepository");
+const { fireAndForget } = require("../../../helperUtils/responseUtil");
+const { enqueueFiscalDocument } = require("../../../bullmq/queues");
 
 const getDateRange = (period) => {
   const now = new Date();
@@ -316,6 +318,16 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
   }
 
   await order.save();
+
+  if (paymentChanged && order.paymentStatus === "paid") {
+    fireAndForget(
+      enqueueFiscalDocument({
+        kind: "ordering_confirmation",
+        orderId: order._id,
+      }),
+      "FISCAL_ORDERING_CONFIRMATION",
+    );
+  }
 
   emitOrderUpdate(order, updateTypes.length ? updateTypes : ["order"]);
 

@@ -271,9 +271,9 @@ process.on("unhandledRejection", (reason) => {
     reason instanceof Error ? reason : new Error(String(reason));
 
   if (isFirebaseTransientNetworkError(error)) {
-    logger.error("Firebase network error (ignored)", {
-      error: error.message,
-    });
+    // logger.error("Firebase network error (ignored)", {
+    //   error: error.message,
+    // });
     return;
   }
 
@@ -286,9 +286,9 @@ process.on("unhandledRejection", (reason) => {
 
 process.on("uncaughtException", (err) => {
   if (isFirebaseTransientNetworkError(err)) {
-    logger.error("Firebase network error (ignored)", {
-      error: err.message,
-    });
+    // logger.error("Firebase network error (ignored)", {
+    //   error: err.message,
+    // });
     return;
   }
 
