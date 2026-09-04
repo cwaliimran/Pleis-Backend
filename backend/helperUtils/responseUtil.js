@@ -747,11 +747,12 @@ const convertDateFormat = (
 const getReadableErrorMessage = (error) => {
   // Set status code based on error type
   const statusCode =
-    error.name === "ValidationError"
+    error.statusCode ||
+    (error.name === "ValidationError"
       ? 400
       : error.code === 11000
         ? 409
-        : 500;
+        : 500);
 
   // Handle duplicate key error
   if (error.code === 11000 && error.message.includes("dup key")) {

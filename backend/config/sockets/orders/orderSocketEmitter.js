@@ -92,15 +92,48 @@ async function emitOrderEventAsync({
 }
 
 function emitOrderUpdate(order, updateTypes = []) {
+  if (!order) return;
   emitOrderEvent({
     io: global.io,
     eventName: "ORDER_UPDATE",
     orderId: order._id,
-    organizationId: order.organization,
-    userId: order.user,
+    organizationId: order.organization?._id || order.organization,
+    userId: order.user?._id || order.user,
     data: order,
     updateTypes,
   });
 }
 
-module.exports = { emitOrderEvent, emitOrderUpdate };
+function emitNewOrder(order, data) {
+  if (!order) return;
+  emitOrderEvent({
+    io: global.io,
+    eventName: "NEW_ORDER",
+    orderId: order._id,
+    organizationId: order.organization?._id || order.organization,
+    userId: order.user?._id || order.user,
+    data: data || order,
+  });
+}
+
+function emitMenuOrderPaymentSockets(order, status, { includeNewOrder = true } = {}) {
+  if (!order) return;
+
+  const updateTypes =
+    status === "failed"
+      ? ["status", "payment", "cancellation"]
+      : ["status", "payment"];
+
+  emitOrderUpdate(order, updateTypes);
+
+  if (includeNewOrder && status === "paid") {
+    emitNewOrder(order);
+  }
+}
+
+module.exports = {
+  emitOrderEvent,
+  emitOrderUpdate,
+  emitNewOrder,
+  emitMenuOrderPaymentSockets,
+};

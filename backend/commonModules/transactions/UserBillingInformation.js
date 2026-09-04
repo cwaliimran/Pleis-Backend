@@ -27,6 +27,26 @@ const userBillinginformationSchema = new mongoose.Schema(
             required: true,
             trim: true,
         },
+        type: {
+            type: String,
+            enum: ["person", "company"],
+            default: "person",
+        },
+        companyName: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        personalIdentificationNumber: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        phone: {
+            type: String,
+            trim: true,
+            default: "",
+        },
 
         // --------------------------------------------
         // BILLING ADDRESS

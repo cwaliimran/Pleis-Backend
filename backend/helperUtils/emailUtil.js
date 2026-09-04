@@ -13,14 +13,26 @@ const sendEmailViaMailgun = async (emails, subject, body, config = {}) => {
       fromEmail = "Pleis <noreply@pleis.ai>",
       attachments = [],
       isHtml = true,
+      replyTo,
     } = config;
 
-    const data = await mg.messages.create(process.env.MAILGUN_DOMAIN, {
+    const payload = {
       from: fromEmail,
       to: emails,
       subject,
       ...(isHtml ? { html: body } : { text: body }),
-    });
+    };
+
+    if (replyTo) payload["h:Reply-To"] = replyTo;
+    if (attachments.length) {
+      payload.attachment = attachments.map((file) => ({
+        filename: file.filename,
+        data: file.data,
+        contentType: file.contentType || "application/octet-stream",
+      }));
+    }
+
+    const data = await mg.messages.create(process.env.MAILGUN_DOMAIN, payload);
 
     return { success: true, data };
 

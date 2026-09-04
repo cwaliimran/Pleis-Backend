@@ -13,6 +13,7 @@ const { validatePhoneNumber } = require("../../helperUtils/validationsUtil");
 const { accountStatusEmailTemplate } = require("../../helperUtils/emailTemplates");
 const { sendEmailViaMailgun } = require("../../helperUtils/emailUtil");
 const { createOrSkipDevice } = require("../../models/Devices");
+const { mergeCompanyBillkoKey } = require("../../commonModules/paymentsIntegrations/billko/billkoAuth");
 
 const APP_NAME = "Pleis App";
 
@@ -274,6 +275,7 @@ const updateUser = async (req, res, options = {}) => {
         representativeName: companyDetails.representativeName ?? user.companyDetails?.representativeName,
         location: companyDetails.location ?? user.companyDetails?.location,
         suppliers: companyDetails.suppliers ?? user.companyDetails?.suppliers,
+        ...mergeCompanyBillkoKey(user.companyDetails, companyDetails, user._id),
 
         //update loyaltySettings if provided
         loyaltySettings: {
