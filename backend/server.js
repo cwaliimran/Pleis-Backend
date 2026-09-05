@@ -140,10 +140,8 @@ app.use(i18nConfig.init);
 // ✅ unified access logs
 app.use(accessLogger);
 
-// keep existing middleware (unchanged)
-if (process.env.NODE_ENV !== "prod") {
-  app.use(morgan("dev"));
-}
+// request line in every env (Azure / PM2 log stream)
+app.use(morgan(process.env.NODE_ENV === "prod" ? "combined" : "dev"));
 
 app.use(express.json());
 app.use(textModerationMiddleware);

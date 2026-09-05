@@ -2,12 +2,8 @@ const cron = require("node-cron");
 const { acquireLock, releaseLock } = require("@redisCache");
 
 const {
-  reconcilePendingTicketingOrdersPayments,
-} = require("./payments/reconcilePendingTicketingOrdersPayments");
-
-const {
-  reconcilePendingUserReservationPayments,
-} = require("./payments/reconcilePendingUserReservationPayments");
+  reconcilePendingMonriPayments,
+} = require("../../commonModules/paymentsIntegrations/monri/monriReconcileService");
 
 const { runRecurringEventsCron } = require("./events/recurringEvents.core");
 const { runEventReminderCron } = require("./events/eventReminder.cron");
@@ -38,24 +34,51 @@ const { runLoyaltyChallengeUpdateCron } = require("./loyalty/challenges/challeng
 
 const startCrons = () => {
   /* ======================================================
-     🔁 CRON 1: Reconcile pending payments (every 5 seconds)
+     🔁 CRON 1: Monri reconcile (every 10 minutes)
+     If the user never hits success URL / webhook, ask Monri
+     whether the charge was captured and fulfill if approved.
+     Redis lock: only one server runs the scan.
      ====================================================== */
-  // cron.schedule("*/5 * * * * *", async () => {
-  //   const lockKey = "cron:reconcile-payments";
-  //   const lock = await acquireLock(lockKey, 10); // 10s TTL
+  cron.schedule("*/10 * * * *", async () => {
+    const lockKey = "cron:reconcile-monri-payments";
+    const lock = await acquireLock(lockKey, 300);
 
-  //   if (!lock) return;
+    if (!lock) {
+      console.warn("[payment-reconcile] skipped — another instance holds the lock");
+      return;
+    }
 
-  //   try {
-  //     // await reconcilePendingTicketingOrdersPayments();
-  //     // await reconcilePendingUserReservationPayments();
-  //     // console.log("✅ Payment reconciliation completed");
-  //   } catch (err) {
-  //     console.error("❌ Reconciliation job failed:", err);
-  //   } finally {
-  //     await releaseLock(lockKey, lock);
-  //   }
-  // });
+    const maxTries = 2;
+    try {
+      for (let attempt = 1; attempt <= maxTries; attempt++) {
+        console.log(`[payment-reconcile] starting try ${attempt}/${maxTries}`);
+        try {
+          const summary = await reconcilePendingMonriPayments();
+          const monriFailed = (summary.timeouts || 0) + (summary.errors || 0);
+          console.log(
+            "[payment-reconcile] try result",
+            JSON.stringify({ attempt, maxTries, ...summary }),
+          );
+          if (monriFailed >= 2 && attempt < maxTries) {
+            console.warn(
+              "[payment-reconcile] Monri bad response — restarting job now",
+            );
+            continue;
+          }
+          return;
+        } catch (err) {
+          console.error(
+            `[payment-reconcile] job crashed try ${attempt}/${maxTries}:`,
+            err.message,
+          );
+          if (attempt >= maxTries) return;
+          console.warn("[payment-reconcile] restarting job now");
+        }
+      }
+    } finally {
+      await releaseLock(lockKey, lock);
+    }
+  });
 
   /* ======================================================
      🕛 CRON 2: Recurring events (every day at midnight)

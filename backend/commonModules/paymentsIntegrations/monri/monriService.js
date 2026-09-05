@@ -64,22 +64,53 @@ async function createPayByLink(amount) {
   return response.data;
 }
 
+function getMonriBaseUrl() {
+  const configured = String(process.env.MONRI_BASE_URL || "").replace(/\/$/, "");
+  if (configured) return configured;
+  return "https://ipgtest.monri.com";
+}
+
+// Monri source of truth: GET /v2/transactions?order_number=
 async function verifyTransaction(orderNumber) {
-  const response = await axios.get(
-    "https://ipgtest.monri.com/v2/transactions",
-    {
-      params: { order_number: orderNumber },
-      headers: {
-        Authorization: `key-${process.env.MONRI_AUTH_TOKEN}`,
-      },
-    }
+  const url = `${getMonriBaseUrl()}/v2/transactions`;
+  const response = await axios.get(url, {
+    params: { order_number: orderNumber },
+    headers: {
+      Accept: "application/json",
+      Authorization: `key-${process.env.MONRI_AUTH_TOKEN}`,
+    },
+    timeout: 15000,
+    validateStatus: () => true,
+  });
+
+  console.log(
+    "[monri-verify] exact response:",
+    JSON.stringify({
+      orderNumber,
+      url,
+      httpStatus: response.status,
+      statusText: response.statusText,
+      data: response.data ?? null,
+    }),
   );
 
-  if (!response.data?.transactions?.length) {
-    throw new Error("Transaction not found");
+  if (response.status !== 200) {
+    const err = new Error(
+      `Monri HTTP ${response.status}: ${JSON.stringify(response.data ?? null)}`,
+    );
+    err.code = "MONRI_BAD_RESPONSE";
+    err.httpStatus = response.status;
+    err.data = response.data ?? null;
+    throw err;
   }
 
-  return response.data.transactions[0];
+  const data = response.data;
+  if (!data) return null;
+  if (Array.isArray(data.transactions) && data.transactions.length) {
+    return data.transactions[0];
+  }
+  if (data.transaction) return data.transaction;
+  return null;
 }
 
 
@@ -99,4 +130,9 @@ const createTransactionMonriOrder = async (req, res) => {
 };
 
 
-module.exports = { createPayByLink, verifyTransaction, createTransactionMonriOrder };
+module.exports = {
+  createPayByLink,
+  verifyTransaction,
+  createTransactionMonriOrder,
+  getMonriBaseUrl,
+};

@@ -16,6 +16,7 @@ const webhookRepository = require("../../../commonModules/paymentsIntegrations/p
 const { getOrgCompanyOrganizer } = require("../../../admin/organizations/organizationRepository");
 const { fireAndForget } = require("../../../helperUtils/responseUtil");
 const { enqueueFiscalDocument } = require("../../../bullmq/queues");
+const { syncMonriTransactionStatus } = require("../../../commonModules/paymentsIntegrations/monri/monriRepository");
 
 const getDateRange = (period) => {
   const now = new Date();
@@ -326,6 +327,10 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
         orderId: order._id,
       }),
       "FISCAL_ORDERING_CONFIRMATION",
+    );
+    fireAndForget(
+      syncMonriTransactionStatus(order._id, "paid"),
+      "MONRI_TX_SYNC_PAID",
     );
   }
 

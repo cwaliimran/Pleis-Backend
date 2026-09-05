@@ -56,6 +56,8 @@ const monriTransactionSchema = new mongoose.Schema(
     refundedAmount: { type: Number, default: 0 },
 
     rawCallback: mongoose.Schema.Types.Mixed,
+    // Last time we asked Monri if this pending tx was captured.
+    lastReconcileAttemptAt: Date,
   },
   { timestamps: true }
 );

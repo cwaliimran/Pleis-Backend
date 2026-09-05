@@ -6,6 +6,7 @@ const { NotificationTypes } = require("@NotificationsModel");
 const { emitOrderUpdate } = require("@socketIo/orders/orderSocketEmitter");
 const { fireAndForget } = require("../../../helperUtils/responseUtil");
 const { enqueueFiscalDocument } = require("../../../bullmq/queues");
+const { syncMonriTransactionStatus } = require("../../../commonModules/paymentsIntegrations/monri/monriRepository");
 
 
 const getOrders = async ({ activeorderStatus, pickupFilter, orderStatus, activeKeyword, timezone, page, limit, keyword, status, organizationId, date, range }) => {
@@ -110,6 +111,10 @@ const updateOrders = async (staffId, id, data) => {
         orderId: order._id,
       }),
       "FISCAL_ORDERING_CONFIRMATION",
+    );
+    fireAndForget(
+      syncMonriTransactionStatus(order._id, "paid"),
+      "MONRI_TX_SYNC_PAID",
     );
   }
 

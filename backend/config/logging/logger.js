@@ -22,7 +22,7 @@ function write(level, message, meta = {}) {
     fs.appendFileSync(path.join(LOG_DIR, "app.log"), line);
   }
 
-  if (!isProd) console.log(line.trim());
+  console.log(line.trim());
 }
 
 module.exports = {

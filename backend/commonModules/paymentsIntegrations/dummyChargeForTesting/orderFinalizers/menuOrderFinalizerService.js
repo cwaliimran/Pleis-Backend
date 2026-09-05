@@ -18,6 +18,7 @@ const {
 } = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
 const { fireAndForget } = require("../../../../helperUtils/responseUtil");
 const { enqueueFiscalDocument } = require("../../../../bullmq/queues");
+const { syncMonriTransactionStatus } = require("../../monri/monriRepository");
 
 const { handleLoyaltyEarningConsequences } = require("./handleLoyaltyEarningConsequences");
 const { menuOrderConfirmationEmailTemplate } = require("../../../../helperUtils/emailTemplates");
@@ -76,6 +77,9 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       menuOrder.transactionId = result.transactionId || null;
 
       await menuOrder.save({ session });
+      await syncMonriTransactionStatus(menuOrderId, "paid", {
+        ...(result.transactionId && { monriTransactionId: String(result.transactionId) }),
+      }).catch((err) => console.error("[monri-sync] menu paid:", err.message));
 
       const totalPrice = menuOrder.totalPrice || 0;
 
@@ -129,6 +133,9 @@ const menuOrderFinalizerService = async ({ menuOrderId, result }) => {
       menuOrder.status = "cancelled";
       menuOrder.paymentStatus = "failed";
       await menuOrder.save({ session });
+      await syncMonriTransactionStatus(menuOrderId, "failed").catch((err) =>
+        console.error("[monri-sync] menu failed:", err.message),
+      );
     }
 
     await session.commitTransaction();
