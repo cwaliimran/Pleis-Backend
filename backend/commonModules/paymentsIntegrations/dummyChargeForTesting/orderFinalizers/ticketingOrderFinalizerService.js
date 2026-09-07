@@ -11,6 +11,7 @@ const { sendMenuOrderNotification } = require("../../../../controllers/notificat
 const { sendReservationNotification } = require("../../../../controllers/notificationHelper/reservationNotificationService");
 const { fireAndForget } = require("../../../../helperUtils/responseUtil");
 const { enqueueFiscalDocument } = require("../../../../bullmq/queues");
+const { syncMonriTransactionStatus } = require("../../monri/monriRepository");
 const { findAppUserByIdWithProjectionService } = require("../../../../app/usersManagement/usersService");
 const { generateQRCode } = require("../../../../helperUtils/qrGenerator");
 const { ticketConfirmationEmailTemplate, ticketFailedEmailTemplate } = require("../../../../helperUtils/emailTemplates/ticketingEmailTemplates");
@@ -68,6 +69,12 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
       await session.commitTransaction();
       return;
     }
+
+    await syncMonriTransactionStatus(
+      orderId,
+      result.status === "paid" ? "paid" : "failed",
+      result.transactionId ? { monriTransactionId: String(result.transactionId) } : {},
+    ).catch((err) => console.error("[monri-sync] ticketing:", err.message));
 
     // Fetch related reservation
     userReservation = await UserReservations
