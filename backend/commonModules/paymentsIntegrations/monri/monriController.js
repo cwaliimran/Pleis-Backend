@@ -90,6 +90,17 @@ const MONRI_FORM_SKIP_KEYS = new Set([
   "form_action",
 ]);
 
+function isRetryableMonriFormError(err) {
+  return (
+    err?.code === "ENOTFOUND" ||
+    err?.code === "EAI_AGAIN" ||
+    err?.code === "ECONNRESET" ||
+    err?.code === "ETIMEDOUT" ||
+    err?.code === "ECONNABORTED" ||
+    err?.code === "ECONNREFUSED"
+  );
+}
+
 async function createMonriCardPaymentUrl(sessionFields) {
   const body = new URLSearchParams();
   Object.entries(sessionFields).forEach(([key, value]) => {
@@ -99,27 +110,50 @@ async function createMonriCardPaymentUrl(sessionFields) {
     body.append(key, String(value));
   });
 
-  const response = await axios.post(
-    `${getMonriBaseUrl()}/v2/form`,
-    body.toString(),
-    {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/json",
-      },
-      timeout: 8000,
-      validateStatus: () => true,
-    },
-  );
+  const maxTries = 3;
+  let lastError;
+  for (let attempt = 1; attempt <= maxTries; attempt++) {
+    try {
+      const response = await axios.post(
+        `${getMonriBaseUrl()}/v2/form`,
+        body.toString(),
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Accept: "application/json",
+          },
+          timeout: 20000,
+          family: 4,
+          validateStatus: () => true,
+        },
+      );
 
-  if (!response.data?.payment_url) {
-    const error = new Error("monri_form_failed");
-    error.statusCode = 502;
-    error.details = response.data || { status: response.status };
-    throw error;
+      if (response.data?.payment_url) {
+        return response.data.payment_url;
+      }
+
+      lastError = new Error("monri_form_failed");
+      lastError.statusCode = 502;
+      lastError.details = response.data || { status: response.status };
+    } catch (err) {
+      lastError = err;
+    }
+
+    console.warn(
+      `[monri-form] try ${attempt}/${maxTries} failed:`,
+      lastError?.code || lastError?.message,
+      lastError?.details || "",
+    );
+    if (attempt < maxTries && isRetryableMonriFormError(lastError)) {
+      await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+      continue;
+    }
+    break;
   }
 
-  return response.data.payment_url;
+  const error = lastError || new Error("monri_form_failed");
+  error.statusCode = error.statusCode || 502;
+  throw error;
 }
 
 
@@ -656,16 +690,8 @@ exports.createWebPaySession = async (req, res) => {
         form_action: `${getMonriBaseUrl()}/v2/form`,
       };
 
-      try {
-        session.payment_url = await createMonriCardPaymentUrl(session);
-      } catch (formErr) {
-        console.warn(
-          "Monri /v2/form unavailable; returning session without payment_url:",
-          formErr.details || formErr.message,
-        );
-      }
-
-      return res.json(session);
+      const payment_url = await createMonriCardPaymentUrl(session);
+      return res.json({ payment_url });
     }
 
     // -----------------------------
@@ -764,6 +790,17 @@ exports.createWebPaySession = async (req, res) => {
 
     if (err.statusCode === 403) {
       return res.status(403).json({ message: err.message });
+    }
+
+    if (err.message === "monri_form_failed" || err.code === "ENOTFOUND" || err.statusCode === 502) {
+      return res.status(502).json({
+        message: "Failed to open Monri card form",
+        error: {
+          message: err.message,
+          code: err.code,
+          details: err.details,
+        },
+      });
     }
 
     if (err.code === 11000) {
@@ -872,9 +909,9 @@ exports.createSubscriptionWebPaySession = async (req, res) => {
       ch_phone: billing?.phone || "",
     };
 
-    // Card — same shape as /web-pay-session
+    // Card — same as /web-pay-session: only payment_url goes to the app
     if (!paymentMethod || paymentMethod === "card") {
-      return res.json({
+      const session = {
         authenticity_token: getMonriAuthToken(),
         transaction_type: "purchase",
         order_number: orderNumber,
@@ -887,7 +924,10 @@ exports.createSubscriptionWebPaySession = async (req, res) => {
         cancel_url_override: getMonriCancelUrl(),
         supported_payment_methods: "card",
         ...customerFields,
-      });
+        form_action: `${getMonriBaseUrl()}/v2/form`,
+      };
+      const payment_url = await createMonriCardPaymentUrl(session);
+      return res.json({ payment_url });
     }
 
     // Apple Pay / Google Pay — same shape as /web-pay-session
