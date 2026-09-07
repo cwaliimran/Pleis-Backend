@@ -10,6 +10,7 @@ const { sendResponse, getReadableErrorMessage } =
 const { getCardById } = require("../repositories/userCardRepository");
 const { default: axios } = require("axios");
 const { UserBillingInformation } = require("../../../transactions/UserBillingInformation");
+const { getMonriBaseUrl, getMonriAuthToken, getMonriCurrency } = require("../../monri/monriEnv");
 
 
 const saveUserCard = async (req, res) => {
@@ -155,7 +156,7 @@ const chargeSavedCard = async (req, res) => {
             transaction: {
                 transaction_type: "purchase",
                 amount: Number(amount), // minor units (e.g., 500 = €5.00)
-                currency: "EUR",
+                currency: getMonriCurrency(),
                 order_number: orderNumber,
 
                 pan_token: card.panToken,
@@ -177,11 +178,11 @@ const chargeSavedCard = async (req, res) => {
         };
 
         const response = await axios.post(
-            "https://ipgtest.monri.com/v2/transaction",
+            `${getMonriBaseUrl()}/v2/transaction`,
             payload,
             {
                 headers: {
-                    Authorization: `key-${process.env.MONRI_AUTH_TOKEN}`,
+                    Authorization: `key-${getMonriAuthToken()}`,
                     "Content-Type": "application/json",
                 },
             }

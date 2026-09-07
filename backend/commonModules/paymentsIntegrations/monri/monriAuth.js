@@ -1,8 +1,9 @@
 const crypto = require("crypto");
+const { getMonriKey, getMonriAuthToken } = require("./monriEnv");
 
 function buildAuthorizationHeader({ body }) {
-  const merchantKey = process.env.MONRI_KEY;
-  const authToken = process.env.MONRI_AUTH_TOKEN;
+  const merchantKey = getMonriKey();
+  const authToken = getMonriAuthToken();
 
   // unix timestamp (seconds)
   const timestamp = Math.floor(Date.now() / 1000).toString();
