@@ -81,6 +81,10 @@ const getOrders = async ({
       .map((id) => new mongoose.Types.ObjectId(id.trim())); // Convert to ObjectId
   }
 
+  if (pickupFilter) {
+    console.log("pickupFilter", pickupFilter);
+  }
+
   // Prepare status filter dynamically
   let statusFilter = {};
   // if(pickupFilter=="tableService"){
@@ -121,10 +125,7 @@ const getOrders = async ({
     statusFilter = { status: orderStatus.trim() };
   }
 
-  if (pickupFilter && pickupFilter.trim()) {
-    const normalizedPickupType = normalizePickupType(pickupFilter);
-    statusFilter.pickupType = normalizedPickupType;
-  }
+
 
   if (paymentMethod && paymentMethod.trim()) {
     statusFilter.paymentMethod = paymentMethod.trim();
@@ -137,11 +138,7 @@ const getOrders = async ({
     statusFilter.createdAt = { $gte: start, $lte: end };
   }
   if (startDate && endDate) {
-    const start = new Date(startDate);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
-    statusFilter.createdAt = { $gte: start, $lte: end };
+    statusFilter.createdAt = { $gte: startDate, $lte: endDate };
   }
 
   // Create query for event count
@@ -173,6 +170,17 @@ const getOrders = async ({
         organization: { $in: organizationsIds }, // Match against the parsed organizations
       },
     },
+
+    // 🔹 Filter by delivery option (pickup) when provided
+    ...(pickupFilter
+      ? [
+          {
+            $match: {
+              deliveryOption: new mongoose.Types.ObjectId(pickupFilter),
+            },
+          },
+        ]
+      : []),
 
     // 🔹 Lookup user information from the "users" collection
     {
@@ -281,6 +289,7 @@ const getOrders = async ({
         pickupType: 1,
         createdAt: 1,
         combos: 1,
+        paymentTiming: 1,
         orderType: 1,
         tableNumber: 1,
         user: 1, // Include the user info in the final result
@@ -308,6 +317,7 @@ const getOrders = async ({
       },
     },
   ];
+
 
   const [filteredOrders, activeCount, rejectedCompletedCount, count] =
     await Promise.all([

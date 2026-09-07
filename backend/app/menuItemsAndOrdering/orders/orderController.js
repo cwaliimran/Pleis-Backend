@@ -12,6 +12,7 @@ const placeOrder = async (req, res) => {
     deliveryOption,
     promoCode,
     userId,
+    paymentTiming,
     tip,
     reservationId,
   } = req.body;
@@ -27,6 +28,12 @@ const placeOrder = async (req, res) => {
 
     if (pickupType === "tableService") {
       validateData.rawData.push("tableNumber");
+    }
+    if (paymentTiming === undefined) {
+      validateData.rawData.push("paymentTiming");
+    }
+    if (paymentTiming !== undefined) {
+      validateData.enumFields.paymentTiming = ["payNow", "payLater"];
     }
 
     if (!validateParams(req, res, validateData)) return;
@@ -44,6 +51,7 @@ const placeOrder = async (req, res) => {
       tip,
       reservationId,
       deliveryOption,
+      paymentTiming,
     });
 
     return sendResponse({

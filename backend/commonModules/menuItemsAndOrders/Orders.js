@@ -43,7 +43,11 @@ const OrdersSchema = new mongoose.Schema(
       index: true,
       default: () => `ORD-${generateOrderId()}`,
     },
-    organization: { type: mongoose.Schema.Types.ObjectId, ref: "Organizations", required: true },
+    organization: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organizations",
+      required: true,
+    },
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     items: [OrderItemSchema],
     combos: { type: [OrderComboSchema], default: [] },
@@ -61,12 +65,29 @@ const OrdersSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pendingPayment", "pending", "confirmed", "sent", "completed", "cancelled", "rejected", "preorder"],
+      enum: [
+        "pendingPayment",
+        "pending",
+        "confirmed",
+        "sent",
+        "completed",
+        "cancelled",
+        "rejected",
+        "preorder",
+        "ready",
+      ],
       default: "pending",
     },
     lockUntil: {
       type: Date,
       index: true,
+    },
+
+    paymentTiming: {
+      type: String,
+      required: true,
+      enum: ["payNow", "payLater"],
+      default: "payNow",
     },
 
     notes: { type: String, default: "" },

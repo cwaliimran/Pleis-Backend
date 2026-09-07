@@ -214,12 +214,14 @@ const startCrons = () => {
   ///* ======================================================
   //   🕛 CRON 7: Subscription reminder
   //   ====================================================== */
-  cron.schedule("0 * * * *", async () => { // run every 6 hours for production
+  // cron.schedule("*/3 * * * * *", async () => {
+    //5 seconds for testing
+    cron.schedule("0 * * * *", async () => { // run every 1 hour for production
     const lockKey = "cron:subscription-reminder";
     const lock = await acquireLock(lockKey, 50);
 
     if (!lock) return;
-
+      
     try {
       await runSubscriptionReminderCron();
     } catch (err) {
