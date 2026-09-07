@@ -14,6 +14,7 @@ const {
 } = require("../../../../controllers/notificationHelper/menuOrderNotificationService");
 const { fireAndForget } = require("../../../../helperUtils/responseUtil");
 const { enqueueFiscalDocument } = require("../../../../bullmq/queues");
+const { syncMonriTransactionStatus } = require("../../monri/monriRepository");
 const { getUserReservationDetails } = require("../../../../app/reservations/reservationRepository");
 const { userReservationsFormatter } = require("../../../../app/reservations/formaters/reservationFormetter");
 const {
@@ -81,6 +82,9 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
         },
         { session },
       );
+      await syncMonriTransactionStatus(reservationId, "paid", {
+        ...(result.transactionId && { monriTransactionId: String(result.transactionId) }),
+      }).catch((err) => console.error("[monri-sync] reservation paid:", err.message));
 
       if (menuOrder) {
         await MenuOrders.updateOne(
@@ -183,6 +187,9 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
           },
         },
         { session },
+      );
+      await syncMonriTransactionStatus(reservationId, "failed").catch((err) =>
+        console.error("[monri-sync] reservation failed:", err.message),
       );
 
       if (menuOrder) {

@@ -14,6 +14,9 @@ const {
 } = require("../../../commonModules/paymentsIntegrations/dummyChargeForTesting/orderFinalizers/handleLoyaltyEarningConsequences");
 const webhookRepository = require("../../../commonModules/paymentsIntegrations/paymentsWebhook/repositories/webhookRepository");
 const { getOrgCompanyOrganizer } = require("../../../admin/organizations/organizationRepository");
+const { fireAndForget } = require("../../../helperUtils/responseUtil");
+const { enqueueFiscalDocument } = require("../../../bullmq/queues");
+const { syncMonriTransactionStatus } = require("../../../commonModules/paymentsIntegrations/monri/monriRepository");
 
 const getDateRange = (period) => {
   const now = new Date();
@@ -317,6 +320,20 @@ const updateOrderDetailsService = async ({ orderId, data }) => {
   }
 
   await order.save();
+
+  if (paymentChanged && order.paymentStatus === "paid") {
+    fireAndForget(
+      enqueueFiscalDocument({
+        kind: "ordering_confirmation",
+        orderId: order._id,
+      }),
+      "FISCAL_ORDERING_CONFIRMATION",
+    );
+    fireAndForget(
+      syncMonriTransactionStatus(order._id, "paid"),
+      "MONRI_TX_SYNC_PAID",
+    );
+  }
 
   emitOrderUpdate(order, updateTypes.length ? updateTypes : ["order"]);
 

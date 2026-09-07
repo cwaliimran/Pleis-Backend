@@ -19,8 +19,13 @@ const {
 const ORDER_NUMBER = "6a9aad3eabe30c611ee7432e";
 const USER_ID = "692e9a6ae9eddb01e3459d4f";
 const LOCAL_SUCCESS = "http://127.0.0.1:4012/api/v1/app/payments/monri/success";
-const MERCHANT_KEY = process.env.MONRI_KEY;
-const SUCCESS_URL = process.env.SUCCESS_URL;
+const {
+  getMonriKey,
+  getMonriSuccessUrl,
+  getMonriCurrency,
+} = require("./monriEnv");
+const MERCHANT_KEY = getMonriKey();
+const SUCCESS_URL = getMonriSuccessUrl();
 
 function assert(condition, label) {
   if (!condition) {
@@ -47,7 +52,7 @@ function runGuardCases() {
       amount: "1500",
       approval_code: "629762",
       ch_full_name: "John Doe",
-      currency: "EUR",
+      currency: getMonriCurrency(),
       order_number: ORDER_NUMBER,
       response_code: "0000",
     },
@@ -179,7 +184,7 @@ async function runHttpCases() {
 
 async function main() {
   if (!MERCHANT_KEY || !SUCCESS_URL) {
-    throw new Error("MONRI_KEY / SUCCESS_URL missing from .env.dev");
+    throw new Error("MONRI_KEY / SUCCESS_URL missing from environment");
   }
   runGuardCases();
   await runHttpCases();

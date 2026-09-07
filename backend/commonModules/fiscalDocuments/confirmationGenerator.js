@@ -8,7 +8,7 @@ const {
   renderPaymentConfirmationEmailHtml,
   formatZagreb,
   escapeHtml,
-} = require("./pdfRenderer");
+} = require("./confirmationHtmlRenderer");
 const { displayPercent } = require("../paymentsIntegrations/billko/taxRateLabels");
 const {
   DEFAULT_LOCALE,

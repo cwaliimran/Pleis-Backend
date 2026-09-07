@@ -218,6 +218,7 @@ const getUserInterestsIdsForRecommendation = async (userId) => {
 
   return cache({
     namespace: cacheKey,
+    ttl: null,
     fetchFn: async () => {
       const interests = await UserInterests.findOne({ user: userId })
         .select("categories venueTypes tags")
