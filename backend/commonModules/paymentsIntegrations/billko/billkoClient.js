@@ -3,12 +3,12 @@ const axios = require("axios");
 const BILLKO_ERROR_INVALID_KEY = "E01001";
 
 function getBillkoBaseUrl() {
-  return (
-    process.env.BILLKO_BASE_URL ||
-    (["prod", "production"].includes(String(process.env.NODE_ENV || "").toLowerCase())
-      ? "https://billko.eu"
-      : "https://test.billko.eu")
-  );
+  return String(process.env.BILLKO_BASE_URL || "https://billko.eu").replace(/\/$/, "");
+}
+
+function isBillkoTest() {
+  const raw = String(process.env.BILLKO_TEST ?? "true").trim().toLowerCase();
+  return raw !== "false" && raw !== "0" && raw !== "no";
 }
 
 function getCallbackUrl() {
@@ -24,15 +24,43 @@ function createClient(apiKey) {
     throw error;
   }
 
-  return axios.create({
+  const client = axios.create({
     baseURL: `${getBillkoBaseUrl()}/api-client`,
     headers: {
-      "Content-Type": "application/json",
       Accept: "application/json",
       "x-api-key": apiKey,
     },
     timeout: 30000,
   });
+
+  client.interceptors.request.use((config) => {
+    const method = String(config.method || "get").toLowerCase();
+    const hasBody = ["post", "put", "patch"].includes(method);
+    const headers = config.headers || {};
+
+    if (hasBody) {
+      headers["Content-Type"] = "application/json";
+    } else {
+      // GET with Content-Type: application/json and an empty body makes
+      // Billko's ASP.NET JSON serializer return 400 "no JSON tokens".
+      if (typeof headers.delete === "function") {
+        headers.delete("Content-Type");
+      } else {
+        delete headers["Content-Type"];
+        delete headers["content-type"];
+      }
+      config.data = undefined;
+    }
+
+    if (isBillkoTest()) {
+      config.params = { ...(config.params || {}), test: true };
+    }
+
+    config.headers = headers;
+    return config;
+  });
+
+  return client;
 }
 
 function sanitizeHeaders(headers) {
@@ -192,6 +220,7 @@ function isInvalidApiKeyError(error) {
 module.exports = {
   BILLKO_ERROR_INVALID_KEY,
   getBillkoBaseUrl,
+  isBillkoTest,
   getCallbackUrl,
   createInvoice,
   listInvoices,

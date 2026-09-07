@@ -152,8 +152,10 @@
           return;
         }
 
-        const formAction =
-          session.form_action || "https://ipgtest.monri.com/v2/form";
+        const formAction = session.form_action;
+        if (!formAction) {
+          throw new Error("web-pay-session missing form_action (set MONRI_BASE_URL)");
+        }
         const body = new URLSearchParams();
         Object.entries(session).forEach(([key, value]) => {
           if (SKIP_KEYS.has(key) || value === undefined || value === null) {

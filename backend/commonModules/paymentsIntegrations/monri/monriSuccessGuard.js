@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { getMonriKey } = require("./monriEnv");
 
 function isApprovedMonriResponse(payload = {}) {
   return (
@@ -41,7 +42,7 @@ function getRawSuccessUrlWithoutDigest(req, successUrl) {
 
 function verifyMonriSuccessDigest({ req, payload, successUrl, merchantKey }) {
   const digest = payload?.digest;
-  const key = merchantKey || process.env.MONRI_KEY;
+  const key = merchantKey || getMonriKey();
   if (!digest || !successUrl || !key) return false;
 
   const urlWithoutDigest = getRawSuccessUrlWithoutDigest(req, successUrl);

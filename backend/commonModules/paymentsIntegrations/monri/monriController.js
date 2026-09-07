@@ -18,6 +18,18 @@ const {
 const {
   evaluateMonriSuccessIntent,
 } = require("./monriSuccessGuard");
+const {
+  getMonriBaseUrl,
+  getMonriKey,
+  getMonriAuthToken,
+  getMonriSuccessUrl,
+  getMonriCancelUrl,
+  getMonriCurrency,
+  getMonriLanguage,
+  getMonriCountry,
+  getMonriLocale,
+  getMonriComponentsEnv,
+} = require("./monriEnv");
 
 const PAID_SUBSCRIPTION_TYPES = Object.values(SubscriptionTypes).filter(
   (type) => type !== SubscriptionTypes.FREE
@@ -61,32 +73,11 @@ async function assertBillkoReadyForMonriOrder(orderType, orderNumber) {
   }
 }
 
-function isMonriProduction() {
-  const base = String(process.env.MONRI_BASE_URL || "").toLowerCase();
-  if (base.includes("ipgtest")) return false;
-  if (base.includes("ipg.monri.com")) return true;
-  return ["prod", "production"].includes(
-    String(process.env.NODE_ENV || "").toLowerCase()
-  );
-}
-
-function getMonriBaseUrl() {
-  const configured = String(process.env.MONRI_BASE_URL || "").replace(/\/$/, "");
-  if (configured) return configured;
-  return isMonriProduction()
-    ? "https://ipg.monri.com"
-    : "https://ipgtest.monri.com";
-}
-
-function getMonriComponentsEnv() {
-  return isMonriProduction() ? "prod" : "test";
-}
-
 /**
  * digest = SHA512(key + order_number + amount + currency)
  */
 function generateDigest({ orderNumber, amount, currency }) {
-  const raw = `${process.env.MONRI_KEY}${orderNumber}${amount}${currency}`;
+  const raw = `${getMonriKey()}${orderNumber}${amount}${currency}`;
   return crypto.createHash("sha512").update(raw).digest("hex");
 }
 
@@ -136,7 +127,7 @@ exports.redirectToMonriWebPay = async (req, res) => {
   try {
     // --- REQUIRED PAYMENT DATA ---
 
-    const currency = "EUR";
+    const currency = getMonriCurrency();
     const { amount, orderType, orderNumber } = req.query
 
     // --- PERSIST TRANSACTION (so we can track it) ---
@@ -165,7 +156,7 @@ exports.redirectToMonriWebPay = async (req, res) => {
     <p>Redirecting to secure payment...</p>
 
     <form method="POST" action="${getMonriBaseUrl()}/v2/form">
-      <input type="hidden" name="authenticity_token" value="${process.env.MONRI_AUTH_TOKEN}" />
+      <input type="hidden" name="authenticity_token" value="${getMonriAuthToken()}" />
       <input type="hidden" name="transaction_type" value="purchase" />
 
       <input type="hidden" name="order_number" value="${orderNumber}" />
@@ -173,10 +164,10 @@ exports.redirectToMonriWebPay = async (req, res) => {
 
       <input type="hidden" name="amount" value="${amount}" />
       <input type="hidden" name="currency" value="${currency}" />
-      <input type="hidden" name="language" value="en" />
+      <input type="hidden" name="language" value="${getMonriLanguage()}" />
 
-      <input type="hidden" name="success_url_override" value="${process.env.SUCCESS_URL}" />
-      <input type="hidden" name="cancel_url_override" value="${process.env.CANCEL_URL}" />
+      <input type="hidden" name="success_url_override" value="${getMonriSuccessUrl()}" />
+      <input type="hidden" name="cancel_url_override" value="${getMonriCancelUrl()}" />
       <inputtype="hidden"name="ch_read_only"value="true"/>
 
       <input type="hidden" name="digest" value="${digest}" />
@@ -194,7 +185,7 @@ exports.redirectToMonriWebPay = async (req, res) => {
 
 exports.redirectToMonriWalletPay = async (req, res) => {
   try {
-    const currency = "EUR";
+    const currency = getMonriCurrency();
     let { amount, orderType, orderNumber } = req.query;
 
     amount = Number(amount);
@@ -281,7 +272,7 @@ button {
 
 <script>
 
-const monri = Monri("${process.env.MONRI_AUTH_TOKEN}", {
+const monri = Monri("${getMonriAuthToken()}", {
   environment: "${getMonriComponentsEnv()}"
 });
 
@@ -305,7 +296,7 @@ document.getElementById("payBtn").onclick = async function() {
     if(result.status === "success") {
 
       window.location.href =
-        "${process.env.SUCCESS_URL}?order_number=${orderNumber}";
+        "${getMonriSuccessUrl()}?order_number=${orderNumber}";
 
     } else {
 
@@ -332,10 +323,10 @@ const applePay = components.create("apple-pay", {
     city: "Zagreb",
     zip: "10000",
     phone: "+385991234567",
-    country: "HR",
+    country: "${getMonriCountry()}",
     email: "test@test.com",
     orderInfo: "Mobile payment",
-    language: "en",
+    language: "${getMonriLanguage()}",
     ch_read_only: "true",
   }
 });
@@ -350,8 +341,8 @@ applePay.mount("apple-pay");
 const googlePay = components.create("google-pay", {
   trx_token: "${trxToken}",
   environment: "${getMonriComponentsEnv()}",
-  countryCode: "HR",
-  currencyCode: "EUR",
+  countryCode: "${getMonriCountry()}",
+  currencyCode: "${getMonriCurrency()}",
   ch_read_only: "true",
 });
 
@@ -364,12 +355,12 @@ googlePay.mount("google-pay");
 
 applePay.on("paymentSuccess", function(result) {
   window.location.href =
-    "${process.env.SUCCESS_URL}?order_number=${orderNumber}";
+    "${getMonriSuccessUrl()}?order_number=${orderNumber}";
 });
 
 googlePay.on("paymentSuccess", function(result) {
   window.location.href =
-    "${process.env.SUCCESS_URL}?order_number=${orderNumber}";
+    "${getMonriSuccessUrl()}?order_number=${orderNumber}";
 });
 
 
@@ -378,11 +369,11 @@ googlePay.on("paymentSuccess", function(result) {
 ----------------------- */
 
 applePay.on("paymentError", function() {
-  window.location.href = "${process.env.CANCEL_URL}";
+  window.location.href = "${getMonriCancelUrl()}";
 });
 
 googlePay.on("paymentError", function() {
-  window.location.href = "${process.env.CANCEL_URL}";
+  window.location.href = "${getMonriCancelUrl()}";
 });
 
 </script>
@@ -417,7 +408,7 @@ exports.handleSuccess = async (req, res) => {
       req,
       payload,
       tx,
-      successUrl: process.env.SUCCESS_URL,
+      successUrl: getMonriSuccessUrl(),
     });
 
     if (decision.action === "reject") {
@@ -565,7 +556,7 @@ exports.handleCancel = async (req, res) => {
 
 exports.createClientSecret = async (req, res) => {
   try {
-    let { amount, currency = "EUR", orderInfo } = req.body;
+    let { amount, currency = getMonriCurrency(), orderInfo } = req.body;
 
     amount = Number(amount);
     if (!Number.isInteger(amount)) {
@@ -613,7 +604,7 @@ exports.createWebPaySession = async (req, res) => {
       status: "active",
     });
 
-    const currency = "EUR";
+    const currency = getMonriCurrency();
     const { amount, orderType, orderNumber, paymentMethod } = req.query;
     const userId = req.user._id;
 
@@ -625,7 +616,7 @@ exports.createWebPaySession = async (req, res) => {
     // Build reusable billing fields
     const billingAddress = billing?.billingAddress || {};
     const fullName = `${billing?.firstName || ""} ${billing?.lastName || ""}`.trim() || "Guest User";
-    const country = billingAddress.country === "USA" ? "US" : (billingAddress.country || "");
+    const country = billingAddress.country === "USA" ? "US" : (billingAddress.country || getMonriCountry());
 
     const digest = generateDigest({ orderNumber, amount, currency });
 
@@ -644,16 +635,16 @@ exports.createWebPaySession = async (req, res) => {
       });
 
       const session = {
-        authenticity_token: process.env.MONRI_AUTH_TOKEN,
+        authenticity_token: getMonriAuthToken(),
         transaction_type: "purchase",
         order_number: orderNumber,
         order_info: "App payment",
         amount: String(amount),
         currency,
-        language: "en",
+        language: getMonriLanguage(),
         digest,
-        success_url_override: process.env.SUCCESS_URL,
-        cancel_url_override: process.env.CANCEL_URL,
+        success_url_override: getMonriSuccessUrl(),
+        cancel_url_override: getMonriCancelUrl(),
         supported_payment_methods: "card",
         ch_full_name: fullName,
         ch_address: billingAddress.address || "",
@@ -720,7 +711,7 @@ exports.createWebPaySession = async (req, res) => {
     const environment = getMonriComponentsEnv();
 
     const response = {
-      authenticity_token: process.env.MONRI_AUTH_TOKEN,
+      authenticity_token: getMonriAuthToken(),
       clientSecret,
       trx_token,
       order_number: orderNumber,
@@ -733,7 +724,7 @@ exports.createWebPaySession = async (req, res) => {
     // APPLE PAY (Component)
     // -----------------------------
     if (paymentMethod === "apple-pay") {
-      response.locale = "en-US";
+      response.locale = getMonriLocale();
       response.environment = environment;
       response.supported_payment_methods = "apple-pay";
 
@@ -750,7 +741,7 @@ exports.createWebPaySession = async (req, res) => {
     // GOOGLE PAY (Component)
     // -----------------------------
     if (paymentMethod === "google-pay") {
-      response.countryCode = country || "US";
+      response.countryCode = country || getMonriCountry();
       response.environment = environment;
       response.supported_payment_methods = "google-pay";
 
@@ -798,7 +789,7 @@ exports.createWebPaySession = async (req, res) => {
  */
 exports.createSubscriptionWebPaySession = async (req, res) => {
   try {
-    const currency = "EUR";
+    const currency = getMonriCurrency();
     const {
       amount,
       orderNumber,
@@ -852,7 +843,7 @@ exports.createSubscriptionWebPaySession = async (req, res) => {
     });
     const billingAddress = billing?.billingAddress || {};
     const fullName = `${billing?.firstName || ""} ${billing?.lastName || ""}`.trim();
-    const country = billingAddress.country === "USA" ? "US" : (billingAddress.country || "");
+    const country = billingAddress.country === "USA" ? "US" : (billingAddress.country || getMonriCountry());
 
     const digest = generateDigest({
       orderNumber,
@@ -884,16 +875,16 @@ exports.createSubscriptionWebPaySession = async (req, res) => {
     // Card — same shape as /web-pay-session
     if (!paymentMethod || paymentMethod === "card") {
       return res.json({
-        authenticity_token: process.env.MONRI_AUTH_TOKEN,
+        authenticity_token: getMonriAuthToken(),
         transaction_type: "purchase",
         order_number: orderNumber,
         order_info: `Subscription: ${uniqueTypes.join(", ")}`,
         amount: amountStr,
         currency,
-        language: "en",
+        language: getMonriLanguage(),
         digest,
-        success_url_override: process.env.SUCCESS_URL,
-        cancel_url_override: process.env.CANCEL_URL,
+        success_url_override: getMonriSuccessUrl(),
+        cancel_url_override: getMonriCancelUrl(),
         supported_payment_methods: "card",
         ...customerFields,
       });
@@ -925,7 +916,7 @@ exports.createSubscriptionWebPaySession = async (req, res) => {
 
     const environment = getMonriComponentsEnv();
     const response = {
-      authenticity_token: process.env.MONRI_AUTH_TOKEN,
+      authenticity_token: getMonriAuthToken(),
       clientSecret: monriApiResponse.data.client_secret,
       trx_token: monriApiResponse.data.id,
       order_number: orderNumber,
@@ -936,13 +927,13 @@ exports.createSubscriptionWebPaySession = async (req, res) => {
     };
 
     if (paymentMethod === "apple-pay") {
-      response.locale = "en-US";
+      response.locale = getMonriLocale();
       response.environment = environment;
       response.supported_payment_methods = "apple-pay";
     }
 
     if (paymentMethod === "google-pay") {
-      response.countryCode = country || "US";
+      response.countryCode = country || getMonriCountry();
       response.environment = environment;
       response.supported_payment_methods = "google-pay";
     }
@@ -989,7 +980,7 @@ async function refundViaMonri({
     payload,
     {
       headers: {
-        Authorization: `key-${process.env.MONRI_AUTH_TOKEN}`,
+        Authorization: `key-${getMonriAuthToken()}`,
         "Content-Type": "application/json",
       },
     }

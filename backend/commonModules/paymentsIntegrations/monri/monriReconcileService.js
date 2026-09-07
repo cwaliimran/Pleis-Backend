@@ -22,7 +22,7 @@ const {
 const GRACE_MS = 15 * 60 * 1000; //15 mins
 // Stop polling abandoned checkouts older than this.
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
-// Cap Monri calls per tick (ipgtest can hang).
+// Cap Monri calls per tick (lookup host can hang).
 const BATCH = 5;
 // If Monri times out this many times, abort the rest of this scan.
 const MAX_LOOKUP_TIMEOUTS = 2;

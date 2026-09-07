@@ -2,6 +2,13 @@ const axios = require("axios");
 const crypto = require("crypto");
 const { v4: uuid } = require("uuid");
 const { createTransaction } = require("./monriRepository");
+const {
+  getMonriBaseUrl,
+  getMonriKey,
+  getMonriAuthToken,
+  getMonriCurrency,
+  getMonriLanguage,
+} = require("./monriEnv");
 
 function buildAuthorizationHeader(body) {
   const fullpath = "/v2/terminal-entry/create-or-update";
@@ -9,8 +16,8 @@ function buildAuthorizationHeader(body) {
 
 
 
-  const merchantKey = process.env.MONRI_KEY;
-  const authToken = process.env.MONRI_AUTH_TOKEN;
+  const merchantKey = getMonriKey();
+  const authToken = getMonriAuthToken();
 
   const digest = crypto
     .createHash("sha512")
@@ -40,17 +47,17 @@ async function createPayByLink(amount) {
   const bodyObject = {
     transaction_type: "purchase",
     amount: amountMinor,
-    currency: "EUR",
+    currency: getMonriCurrency(),
     order_number: orderNumber,
     order_info: "Test payment",
-    language: "en",
+    language: getMonriLanguage(),
   };
 
   const body = JSON.stringify(bodyObject);
   const fullpath = "/v2/terminal-entry/create-or-update";
 
   const response = await axios.post(
-    "https://ipgtest.monri.com" + fullpath,
+    getMonriBaseUrl() + fullpath,
     body,
     {
       headers: {
@@ -64,12 +71,6 @@ async function createPayByLink(amount) {
   return response.data;
 }
 
-function getMonriBaseUrl() {
-  const configured = String(process.env.MONRI_BASE_URL || "").replace(/\/$/, "");
-  if (configured) return configured;
-  return "https://ipgtest.monri.com";
-}
-
 // Monri source of truth: GET /v2/transactions?order_number=
 async function verifyTransaction(orderNumber) {
   const url = `${getMonriBaseUrl()}/v2/transactions`;
@@ -77,7 +78,7 @@ async function verifyTransaction(orderNumber) {
     params: { order_number: orderNumber },
     headers: {
       Accept: "application/json",
-      Authorization: `key-${process.env.MONRI_AUTH_TOKEN}`,
+      Authorization: `key-${getMonriAuthToken()}`,
     },
     timeout: 15000,
     validateStatus: () => true,
