@@ -1002,19 +1002,21 @@ const getReservationsV2 = async ({
   };
   const dateTimeElemMatch = {};
 
-  if (startTime && endTime) {
+  if (startTime) {
+    // Each timeSlot's startTime/endTime is stored as a full UTC datetime
+    // (day + time) on the dateTimeSlots entry. `startTime` here already
+    // carries the correct day/timezone, and `endTime` is startTime + 1h.
+    // Match any slot that OVERLAPS the [start, end) window, i.e.
+    // slot.startTime < end AND slot.endTime > start.
     const start = new Date(startTime);
-    const end = new Date(endTime);
+    const end = endTime ? new Date(endTime) : null;
 
     dateTimeElemMatch.timeSlots = {
-      $elemMatch: {
-        startTime: { $gte: start },
-        endTime: { $lte: end },
-      },
+      $elemMatch: end
+        ? { startTime: { $lt: end }, endTime: { $gt: start } }
+        : { endTime: { $gt: start } },
     };
-  }
-
-  if (date) {
+  } else if (date) {
     const start = new Date(date);
     start.setUTCHours(0, 0, 0, 0);
     const end = new Date(start);
@@ -1023,10 +1025,12 @@ const getReservationsV2 = async ({
     dateTimeElemMatch.date = { $gte: start, $lt: end };
   }
 
-  if (startTime || date) {
+  if (Object.keys(dateTimeElemMatch).length) {
     query["timingSlots.dateTimeSlots"] = { $elemMatch: dateTimeElemMatch };
+    summaryQuery["timingSlots.dateTimeSlots"] = {
+      $elemMatch: dateTimeElemMatch,
+    };
   }
-  summaryQuery["timingSlots.dateTimeSlots"] = { $elemMatch: dateTimeElemMatch };
 
   const pipeline = [
     { $match: query },
