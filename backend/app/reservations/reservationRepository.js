@@ -542,6 +542,35 @@ const getReservationSlots = async ({ userId, date, organizationId, timezone, cap
     slots,
   };
 };
+const DAY_START = 0;
+const DAY_END = 24 * 60; // 1440
+
+// "2026-10-11" | Date | ISO string  ->  "2026-10-11"
+const toDateKey = (value) =>
+  typeof value === "string" ? value.slice(0, 10) : new Date(value).toISOString().slice(0, 10);
+
+// ISO datetime -> minutes from midnight (UTC axis, same as toDateKey)
+const toMinutes = (value) => {
+  const d = new Date(value);
+  return d.getUTCHours() * 60 + d.getUTCMinutes();
+};
+
+// A date block -> list of { start, end } ranges.
+// No slots (or bookingDuration === "wholeDay") means the whole day.
+const toRanges = (timeSlots = [], isWholeDay = false) => {
+  const ranges = isWholeDay
+    ? []
+    : timeSlots
+        .filter((s) => s?.startTime && s?.endTime)
+        .map((s) => ({ start: toMinutes(s.startTime), end: toMinutes(s.endTime) }));
+
+  return ranges.length ? ranges : [{ start: DAY_START, end: DAY_END }];
+};
+
+const overlaps = (a, b) => a.start < b.end && b.start < a.end;
+
+const sumBy = (list, key) => list.reduce((total, item) => total + (item[key] || 0), 0);
+
 const checkReservationAvailability = async ({
   reservationTypeId,
   partySize = 0,
@@ -549,8 +578,20 @@ const checkReservationAvailability = async ({
   organization,
   timingSlots,
   userId,
+  excludeReservationId, // pass this when updating an existing reservation
 }) => {
+  // 1. Normalize what the user asked for
+  const requestedDays = (timingSlots?.dateTimeSlots || []).map((block) => ({
+    date: toDateKey(block.date),
+    ranges: toRanges(block.timeSlots),
+  }));
+  if (!requestedDays.length) {
+    return { allowed: false, message: "No dates were requested" };
+  }
+
+  // 2. Load the reservation type (capacity rules)
   let reservationType = null;
+
 
   if (reservationTypeId) {
     reservationType = await ReservationType.findOne({
@@ -560,36 +601,57 @@ const checkReservationAvailability = async ({
     }).lean();
 
     if (!reservationType) {
-      return {
-        allowed: false,
-        message: "Reservation type not found or is inactive",
-      };
+      return { allowed: false, message: "Reservation type not found or is inactive" };
+    }
+    if (partySize > reservationType.maxPartySize) {
+      return { allowed: false, message: "Maximum party size has been reached" };
     }
   }
 
+  // 3. Fetch only reservations that fall inside the requested date range
+  const sortedDates = requestedDays.map((d) => d.date).sort();
+
   const filter = {
     organizationId: new mongoose.Types.ObjectId(organization),
-    status: {
-      $in: ["checkedIn", "confirmed", "needsConfirmation", "pendingPayment"],
+    status: { $in: ["checkedIn", "confirmed", "needsConfirmation", "pendingPayment"] },
+    "timingSlots.dateTimeSlots.date": {
+      $gte: new Date(`${sortedDates[0]}T00:00:00.000Z`),
+      $lte: new Date(`${sortedDates[sortedDates.length - 1]}T23:59:59.999Z`),
     },
   };
 
   if (userId) filter.userId = new mongoose.Types.ObjectId(userId);
   if (reservationTypeId) filter.reservationType = String(reservationTypeId);
+  if (excludeReservationId) filter._id = { $ne: new mongoose.Types.ObjectId(excludeReservationId) };
 
   const reservations = await UserReservations.find(filter)
     .select("timingSlots numberOfTables partySize bookingDuration")
     .lean();
 
-  // Normalize any date-like value (Date object, ISO string, or "YYYY-MM-DD") to "YYYY-MM-DD"
-  const toDateOnly = (d) => new Date(d).toISOString().slice(0, 10);
+  // 4. Per requested date: find real overlaps, then check capacity
+  for (const day of requestedDays) {
+    const conflicting = reservations.filter((reservation) => {
+      const block = (reservation.timingSlots?.dateTimeSlots || []).find(
+        (b) => toDateKey(b.date) === day.date,
+      );
 
-  const checkCapacity = ({ usedTables, usedPartySize, date }) => {
+      if (!block) return false;
+
+      const existingRanges = toRanges(block.timeSlots, reservation.bookingDuration === "wholeDay");
+
+      return existingRanges.some((existing) => day.ranges.some((req) => overlaps(req, existing)));
+    });
+
+    if (!reservationType) continue;
+
+    const usedPartySize = sumBy(conflicting, "partySize");
+    const usedTables = sumBy(conflicting, "numberOfTables");
+
     if (usedPartySize + partySize > reservationType.maxCapacity) {
       return {
         allowed: false,
         message: "Maximum capacity has been reached",
-        conflict: { date },
+        conflict: { date: day.date, used: usedPartySize, limit: reservationType.maxCapacity },
       };
     }
 
@@ -597,80 +659,12 @@ const checkReservationAvailability = async ({
       return {
         allowed: false,
         message: "Not enough tables available",
-        conflict: { date },
+        conflict: { date: day.date, used: usedTables, limit: reservationType.numberOfTables },
       };
-    }
-
-    if ( partySize > reservationType.maxPartySize) {
-      return {
-        allowed: false,
-        message: "Maximum party size has been reached",
-        conflict: { date },
-      };
-    }
-
-    return null;
-  };
-
-  for (const dateBlock of timingSlots?.dateTimeSlots || []) {
-    const date = toDateOnly(dateBlock.date);
-    const requestedSlots = dateBlock.timeSlots || [];
-    const isWholeDay = !requestedSlots.length;
-
-    const dateReservations = reservations.filter((r) =>
-      r.timingSlots?.dateTimeSlots?.some((d) => toDateOnly(d.date) === date),
-    );
-
-    // Whole-day booking: check capacity for the whole date
-    if (isWholeDay) {
-      if (reservationType) {
-        const usedTables = dateReservations.reduce((sum, r) => sum + (r.numberOfTables || 0), 0);
-        const usedPartySize = dateReservations.reduce((sum, r) => sum + (r.partySize || 0), 0);
-
-        const failure = checkCapacity({ usedTables, usedPartySize, date });
-        if (failure) {
-          return failure;
-        }
-      }
-
-      continue;
-    }
-
-    // Normal booking
-    const conflictingReservations = dateReservations.filter((r) => {
-      if (r.bookingDuration === "wholeDay") return true;
-
-      const existingBlock = r.timingSlots?.dateTimeSlots?.find((d) => toDateOnly(d.date) === date);
-
-      return requestedSlots.some((slot) => {
-        if (!slot?.startTime || !slot?.endTime) return false;
-
-        const start = new Date(slot.startTime);
-        const end = new Date(slot.endTime);
-
-        return existingBlock?.timeSlots?.some((existing) => {
-          if (!existing?.startTime || !existing?.endTime) return false;
-
-          return start < new Date(existing.endTime) && end > new Date(existing.startTime);
-        });
-      });
-    });
-
-    if (reservationType) {
-      const usedTables = conflictingReservations.reduce((sum, r) => sum + (r.numberOfTables || 0), 0);
-      const usedPartySize = conflictingReservations.reduce((sum, r) => sum + (r.partySize || 0), 0);
-
-      const failure = checkCapacity({ usedTables, usedPartySize, date });
-      if (failure) {
-        return failure;
-      }
     }
   }
 
-  return {
-    allowed: true,
-    message: "Reservation is available",
-  };
+  return { allowed: true, message: "Reservation is available" };
 };
 const createReservation = async (data, session) => {
   if (!session) throw new Error("session_required");
