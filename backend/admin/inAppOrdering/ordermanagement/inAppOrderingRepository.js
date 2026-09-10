@@ -110,11 +110,11 @@ const getOrders = async ({
   if (status && status.trim()) {
     if (status.trim() === "active") {
       statusFilter = {
-        status: { $nin: ["cancelled", "completed", "rejected"] },
+        status: { $nin: ["cancelled", "completed", "rejected","expired"] },
       };
     } else if (status.trim() === "past") {
       statusFilter = {
-        status: { $in: ["cancelled", "completed", "rejected"] },
+        status: { $in: ["cancelled", "completed", "rejected","expired"] },
       };
     }
   }
@@ -324,11 +324,11 @@ const getOrders = async ({
       MenuOrders.aggregate(pipeline),
       Orders.countDocuments({
         organization: { $in: organizationsIds },
-        status: { $nin: ["cancelled", "completed", "rejected"] },
-      }),
+        status: { $nin: ["cancelled", "completed", "rejected","expired"] },
+      }), 
       Orders.countDocuments({
         organization: { $in: organizationsIds },
-        status: { $in: ["cancelled", "completed", "rejected"] },
+        status: { $in: ["cancelled", "completed", "rejected","expired"] },
       }),
       getEventsCounts(eventCountQuery),
     ]);
