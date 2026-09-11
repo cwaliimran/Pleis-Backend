@@ -5,6 +5,8 @@ const { getModelCounts } = require("../../../helperUtils/dbUtils/queryUtil");
 const { default: mongoose } = require("mongoose");
 const { generateMeta } = require("../../../helperUtils/responseUtil");
 const { User } = require("@UserModel");
+const { createTransactionService } = require("../../../app/userWalletService/transactions/services/unifiedTransactionsService");
+const { checkLoyaltyTierPromotion } = require("../../../app/loyalty/clubMembers/clubMembersRepository");
 // Count
 const countClubMembers = async (query = {}) => {
   return ClubMembers.countDocuments(query);
@@ -205,18 +207,30 @@ const getUserJoinedClubs = async (userId) => {
 
 
 const giftPoints = async (companyOrganizer, user, points, notes) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  let committed = false;
+
   try {
-    const checkCompanyOrganizer = await User.findById(companyOrganizer);
+    const giftedPoints = Number(points);
+    if (!Number.isFinite(giftedPoints) || giftedPoints <= 0) {
+      return {
+        error: {
+          message: "invalid_points",
+        }
+      };
+    }
+
+    const checkCompanyOrganizer = await User.findById(companyOrganizer).session(session);
     if (checkCompanyOrganizer.companyDetails.status !== "active") {
-      // Instead of throwing an error, return an immediate response
       return {
         error: {
           message: "company_organizer_is_not_active",
         }
       };
     }
-    const clubMember = await ClubMembers.findOne({ user, companyOrganizer });
 
+    const clubMember = await ClubMembers.findOne({ user, companyOrganizer }).session(session);
     if (!clubMember) {
       return {
         error: {
@@ -224,15 +238,58 @@ const giftPoints = async (companyOrganizer, user, points, notes) => {
         }
       };
     }
-    clubMember.points += points;
 
-    // Save the updated club member
-    await clubMember.save();
+    const companyPoints = {
+      base: giftedPoints,
+      multiplier: 1,
+      total: giftedPoints,
+      bonusPoints: 0,
+      pointsPerEuro: 0,
+    };
 
-    return clubMember;
+    const trx = await createTransactionService(
+      {
+        user,
+        companyOrganizer,
+        companyPoints,
+        allowNegative: false,
+        type: "earn",
+        domainType: "gift",
+        entityId: clubMember._id,
+        description: notes || "Points gifted",
+      },
+      session
+    );
+
+    if (!trx.success) {
+      throw new Error(trx.message || "transaction_failed");
+    }
+
+    await session.commitTransaction();
+    committed = true;
+
+    try {
+      await checkLoyaltyTierPromotion(user, companyOrganizer);
+    } catch (err) {
+      console.error("[LOYALTY] Tier promotion failed after gift:", err);
+    }
+
+    return ClubMembers.findOne({ user, companyOrganizer });
   } catch (error) {
+    if (!committed) {
+      await session.abortTransaction();
+    }
     console.error("Error gifting points:", error);
     throw new Error("Failed to gift points");
+  } finally {
+    if (!committed) {
+      try {
+        await session.abortTransaction();
+      } catch (err) {
+        // already aborted or committed
+      }
+    }
+    session.endSession();
   }
 };
 const getUserJoinedClubsall = async (userId) => {
