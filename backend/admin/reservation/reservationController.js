@@ -749,6 +749,13 @@ const updateUserReservation = async (req, res) => {
         translationKey: "Reservation_not_found",
       });
     }
+    if (update && update.error) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: update.error,
+      });
+    }
 
     return sendResponse({
       res,
