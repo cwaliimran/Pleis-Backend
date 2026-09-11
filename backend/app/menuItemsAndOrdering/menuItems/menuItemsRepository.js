@@ -248,6 +248,16 @@ const getMenuItemsWithFiltersV2 = async ({ query = {}, timezone = null, userId =
     },
     {
       $lookup: {
+        from: "presettypes",
+        localField: "presetType",
+        foreignField: "_id",
+        pipeline: [{ $match: { status: "active" } }, { $project: { _id: 1,name: 1 } }],
+        as: "presetType",
+      },
+    },
+    { $unwind: { path: "$presetType", preserveNullAndEmptyArrays: true } },
+    {
+      $lookup: {
         from: "menusubcategories",
         localField: "subCategory",
         foreignField: "_id",
