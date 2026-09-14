@@ -35,6 +35,8 @@ const {
   giveAwaysExpireAndWinnerCron,
 } = require("./giveAways/giveAwaysExpireAndWinnerCron.cron");
 const { runLoyaltyChallengeUpdateCron } = require("./loyalty/challenges/challengeUpdate");
+const globalStatusDemotionCron = require("./statusDemotion/globalStatusDemotion/globalStatusDemotion.cron");
+const loyaltyStatusDemotionCron = require("./statusDemotion/loyaltyStatusDemotion/loyaltyStatusDemotion.crom");
 
 const startCrons = () => {
   /* ======================================================
@@ -227,6 +229,58 @@ const startCrons = () => {
       await releaseLock(lockKey, lock);
     }
   });
+
+
+
+
+
+    ///* ======================================================
+  //   🕛 CRON 8: Global status demotion (every minute)
+  //   ====================================================== */
+  // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
+  cron.schedule( "0 0 1 1 *", async () => {// At 00:00 on 1 January, once a year
+    // run every 1 hour for production
+    const lockKey = "cron:global-status-demotion";
+    const lock = await acquireLock(lockKey, 50);
+
+    if (!lock) return;
+
+    try {
+      await globalStatusDemotionCron();
+    } catch (err) {
+      console.error("Global status demotion cron error:", err);
+    } finally {
+      await releaseLock(lockKey, lock);
+    }
+  });
+      ///* ======================================================
+  //   🕛 CRON 8: Loyalty status demotion (every minute)
+  //   ====================================================== */
+  // cron.schedule("*/5 * * * * *", async () => { //5 seconds for testing
+  cron.schedule( "0 0 1 1 *", async () => {// At 00:00 on 1 January, once a year
+    // run every 1 hour for production
+    const lockKey = "cron:loyalty-status-demotion";
+    const lock = await acquireLock(lockKey, 50);
+
+    if (!lock) return;
+
+    try {
+      await loyaltyStatusDemotionCron();
+    } catch (err) {
+      console.error("Loyalty status demotion cron error:", err);
+    } finally {
+      await releaseLock(lockKey, lock);
+    }
+  });
+
+
+
+
 };
+
+
+
+
+
 
 module.exports = { startCrons };

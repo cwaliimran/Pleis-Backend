@@ -69,6 +69,7 @@ const getNextStatusLevel = async (points) => {
 const getPreviousStatusLevel = async (points) => {
   const levels = await getCachedActiveLevels();
 
+
   let prev = null;
 
   for (const lvl of levels) {
@@ -76,8 +77,9 @@ const getPreviousStatusLevel = async (points) => {
     else break;
   }
 
+
   return prev;
-};
+};  
 
 /* ============================================================
    ALL HIGHER LEVELS

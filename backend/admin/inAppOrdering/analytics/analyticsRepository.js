@@ -4,9 +4,14 @@ const { TicketingOrders } = require("@TicketingOrdersModel");
 const { getDateRanges } = require("./utils/analyticsDate.utils");
 const { UserInterests } = require("@UserInterests");
 const SearchSuggestion = require("@SearchSuggestionModel");
-const { UnifiedWalletTransactions } = require("@UnifiedWalletTransactionsModel");
+const MenuSubcategory = require("@MenuSubcategoryModel");
+const {
+  UnifiedWalletTransactions,
+} = require("@UnifiedWalletTransactionsModel");
 const mongoose = require("mongoose");
-const { getEarnTransactions } = require("../../transactions/repositories/unifiedTransactionsRepository");
+const {
+  getEarnTransactions,
+} = require("../../transactions/repositories/unifiedTransactionsRepository");
 const MonriTransaction = require("../../../commonModules/paymentsIntegrations/monri/MonriTransaction");
 const { ClubMembers } = require("@ClubMembersModel");
 const Organizations = require("@OrganizationModel");
@@ -22,16 +27,16 @@ const Reservations = require("@ReservationsModel");
 const { UserReservations } = require("@UserReservationsModel");
 const WebhookTransactionsEventModel = require("../../../commonModules/paymentsIntegrations/paymentsWebhook/repositories/WebhookTransactionsEvent.model");
 const { generateMeta } = require("@utils/responseUtil");
-const { buildUserReservationPaymentsQA } = require("./utils/buildUserReservationPaymentsQA");
+const {
+  buildUserReservationPaymentsQA,
+} = require("./utils/buildUserReservationPaymentsQA");
 const { buildUserChangeLogs } = require("./utils/buildUserChangeLogs");
 const MenuOrders = require("../../../commonModules/menuItemsAndOrders/Orders");
 const MenuItemCategories = require("@MenuItemCategoriesModel");
-
-
-
+const MenuItemSubCategories = require("@MenuItemSubCategoriesModel");
 
 const orderStatsRaw = async ({ organizations, dateFilter, timezone }) => {
-  const ranges = getDateRanges({ dateFilter, timezone }); // Get the date ranges for 
+  const ranges = getDateRanges({ dateFilter, timezone }); // Get the date ranges for
   const baseMatch = {
     ...(organizations && {
       organization: { $in: organizations }, // Directly use the organizations array
@@ -94,7 +99,8 @@ const orderStatsRaw = async ({ organizations, dateFilter, timezone }) => {
   const totalLimitedTimeItems = limitedTimeItem[0]?.totalLimitedTimeItems || 0;
 
   const totalRevenueCurrent = RevenueCurrent[0]?.totalRevenue || 0; // Extract the totalRevenue
-  const totalRevenueCommission = RevenueCommission[0]?.totalRevenueCommission || 0;
+  const totalRevenueCommission =
+    RevenueCommission[0]?.totalRevenueCommission || 0;
 
   const ItemsSoldCurrent = await MenuOrders.aggregate([
     {
@@ -121,23 +127,24 @@ const orderStatsRaw = async ({ organizations, dateFilter, timezone }) => {
       },
     },
     {
-      $count: "totalOrders" // Count the number of documents
-    }
+      $count: "totalOrders", // Count the number of documents
+    },
   ]);
   const ordersPrevious = await MenuOrders.aggregate([
     {
       $match: {
         ...baseMatch,
-        ...(ranges && { createdAt: { $gte: ranges.prevStart, $lt: ranges.prevEnd } }), // Filter by the previous date range
+        ...(ranges && {
+          createdAt: { $gte: ranges.prevStart, $lt: ranges.prevEnd },
+        }), // Filter by the previous date range
       },
     },
     {
-      $count: "totalOrders" // Count the number of documents
-    }
+      $count: "totalOrders", // Count the number of documents
+    },
   ]);
   const totalOrdersCurrent = ordersCurrent[0]?.totalOrders || 0; // Extract the totalOrders value
   const totalOrdersPrevious = ordersPrevious[0]?.totalOrders || 0; // Extract the totalOrders value
-
 
   // Extract the totalItemsSold value
   const totalItemsSold = ItemsSoldCurrent[0]?.totalItemsSold || 0;
@@ -149,7 +156,9 @@ const orderStatsRaw = async ({ organizations, dateFilter, timezone }) => {
       $match: {
         ...baseMatch,
         status: "completed", // Only completed orders
-        ...(ranges && { createdAt: { $gte: ranges.prevStart, $lt: ranges.prevEnd } }), // Filter by previous date range
+        ...(ranges && {
+          createdAt: { $gte: ranges.prevStart, $lt: ranges.prevEnd },
+        }), // Filter by previous date range
       },
     },
     {
@@ -221,17 +230,21 @@ const orderStatsRaw = async ({ organizations, dateFilter, timezone }) => {
     totalOrdersCurrent: parseInt(totalOrdersCurrent.toFixed(2)),
     totalOrdersPrevious: parseInt(totalOrdersPrevious.toFixed(2)),
     totalRevenueCurrent: parseInt(totalRevenueCurrent.toFixed(2)),
-    revenueAfterCommission: parseInt((totalRevenueCurrent - totalRevenueCommission).toFixed(2)),
+    revenueAfterCommission: parseInt(
+      (totalRevenueCurrent - totalRevenueCommission).toFixed(2),
+    ),
     totalRevenueCommission: parseInt(totalRevenueCommission.toFixed(2)),
     totalItemsSold: parseInt(totalItemsSold.toFixed(2)),
     averageOrderValue: parseInt(averageOrderValue.toFixed(2)),
     totalRevenuePrevious: parseInt(totalRevenuePrevious.toFixed(2)),
-    orderFrequencyPerHour: orderFrequencyCurrent.length ? parseInt(orderFrequencyCurrent[0].orderFrequency.toFixed(2)) : 0,
-    mostOrderedCategory: mostOrderedCategoryData[0]?.mostOrderedCategory || "N/A",
-    totalLimitedTimeItems: parseInt(totalLimitedTimeItems.toFixed(2))
+    orderFrequencyPerHour: orderFrequencyCurrent.length
+      ? parseInt(orderFrequencyCurrent[0].orderFrequency.toFixed(2))
+      : 0,
+    mostOrderedCategory:
+      mostOrderedCategoryData[0]?.mostOrderedCategory || "N/A",
+    totalLimitedTimeItems: parseInt(totalLimitedTimeItems.toFixed(2)),
   };
 };
-
 
 // ---------------- USERS ----------------
 
@@ -252,7 +265,6 @@ const getUserSingleMetric = async ({ match, range }) => {
 };
 // ---------------- EVENTS ----------------
 
-
 const getEventSingleMetric = async ({ match, range }) => {
   const finalMatch = {
     ...match,
@@ -261,8 +273,6 @@ const getEventSingleMetric = async ({ match, range }) => {
     }),
   };
 
-
-
   const result = await Events.aggregate([
     { $match: finalMatch },
     { $count: "count" },
@@ -270,10 +280,6 @@ const getEventSingleMetric = async ({ match, range }) => {
 
   return result[0]?.count || 0;
 };
-
-
-
-
 
 const getTicketSingleMetric = async ({ match, range }) => {
   const finalMatch = {
@@ -291,15 +297,12 @@ const getTicketSingleMetric = async ({ match, range }) => {
   return result[0]?.count || 0;
 };
 
-
-
-
 const getOrganizerPerformanceByMonth = async ({
   organizerId,
   organizationId,
   timezone = "UTC",
   year = new Date().getFullYear(),
-  companyOrganizer
+  companyOrganizer,
 }) => {
   const match = {
     purpose: "eventTicketPurchase",
@@ -343,16 +346,6 @@ const getOrganizerPerformanceByMonth = async ({
 
   return rows;
 };
-
-
-
-
-
-
-
-
-
-
 
 const getReservationsOverTimeRaw = async (organizations) => {
   const year = new Date().getFullYear();
@@ -432,35 +425,21 @@ const getRawGlobalLoyaltyPointsDistributed = async () => {
   return UnifiedWalletTransactions.aggregate([
     {
       $match: {
-        walletType: "globalWallet"
-      }
+        walletType: "globalWallet",
+      },
     },
     {
       $group: {
         _id: "$domainType",
         count: { $sum: 1 },
-        points: { $sum: "$points.total" }
-      }
+        points: { $sum: "$points.total" },
+      },
     },
     {
-      $sort: { count: -1 }
-    }
+      $sort: { count: -1 },
+    },
   ]);
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 const getRevenueOverTimeRaw = async (organizations) => {
   const year = new Date().getFullYear();
@@ -543,7 +522,12 @@ const getMostOrderedCategoryData = async (organizations) => {
     {
       $group: {
         _id: null,
-        categories: { $push: { category: "$categoryDetails.title", count: "$totalItemsSoldInCategory" } },
+        categories: {
+          $push: {
+            category: "$categoryDetails.title",
+            count: "$totalItemsSoldInCategory",
+          },
+        },
         totalItemsSold: { $sum: "$totalItemsSoldInCategory" },
       },
     },
@@ -558,7 +542,12 @@ const getMostOrderedCategoryData = async (organizations) => {
             in: {
               categoryName: "$$category.category",
               count: "$$category.count",
-              percent: { $multiply: [{ $divide: ["$$category.count", "$totalItemsSold"] }, 100] }, // Calculate percentage
+              percent: {
+                $multiply: [
+                  { $divide: ["$$category.count", "$totalItemsSold"] },
+                  100,
+                ],
+              }, // Calculate percentage
             },
           },
         },
@@ -578,7 +567,6 @@ const getMostOrderedCategoryData = async (organizations) => {
   return mostOrderedCategoryData;
 };
 
-
 const getReservationsByHourRaw = async (organizations) => {
   const year = new Date().getFullYear();
   const start = new Date(`${year}-01-01T00:00:00.000Z`);
@@ -593,7 +581,6 @@ const getReservationsByHourRaw = async (organizations) => {
         createdAt: { $gte: start, $lt: end },
       },
     },
-
 
     // extract hour from startTime (0–23)
     {
@@ -615,7 +602,6 @@ const getReservationsByHourRaw = async (organizations) => {
     },
   ]);
 };
-
 
 const getUserLevelStatsRaw = async (organizations) => {
   const result = await MenuOrders.aggregate([
@@ -640,12 +626,20 @@ const getUserLevelStatsRaw = async (organizations) => {
         totalRegularItems: { $sum: 1 }, // Count each item as 1
         totalUpsellItems: {
           $sum: {
-            $cond: [{ $eq: ["$items.menuItemSnapShot.upSellItem", true] }, 1, 0],
+            $cond: [
+              { $eq: ["$items.menuItemSnapShot.upSellItem", true] },
+              1,
+              0,
+            ],
           },
         },
         totalLimitedItems: {
           $sum: {
-            $cond: [{ $eq: ["$items.menuItemSnapShot.isLimitedTimeOffer", true] }, 1, 0],
+            $cond: [
+              { $eq: ["$items.menuItemSnapShot.isLimitedTimeOffer", true] },
+              1,
+              0,
+            ],
           },
         },
       },
@@ -784,11 +778,8 @@ const getUserLevelStatsRaw = async (organizations) => {
     },
   ]);
 
-
   return result;
 };
-
-
 
 const getUserReservationPaymentsQA = async ({
   organizations,
@@ -875,7 +866,8 @@ const getUserReservationChangeLogs = async ({
   };
 
   // 🔥 total count
-  const totalFiltered = await WebhookTransactionsEventModel.countDocuments(matchStage);
+  const totalFiltered =
+    await WebhookTransactionsEventModel.countDocuments(matchStage);
 
   // 🔥 main aggregation
   const data = await WebhookTransactionsEventModel.aggregate([
@@ -978,24 +970,19 @@ const getUserReservationChangeLogs = async ({
   };
 };
 
-
-
-
-
 const getMenuItemSalesData = async ({ page = 1, limit = 5, organizations }) => {
-  const skip = (page - 1) * limit;
+  page = parseInt(page);
   limit = parseInt(limit);
+  const skip = (page - 1) * limit;
 
   try {
-
-
     // Step 1: Aggregate data to calculate sales count and final price per menu item
     const salesData = await MenuOrders.aggregate([
       // Match based on organizations if provided
       {
         $match: {
-          ...(organizations && {
-            organization: { $in: organizations }, // Directly use the organizations array
+          ...(organizations?.length && {
+            organization: { $in: organizations },
           }),
         },
       },
@@ -1006,11 +993,28 @@ const getMenuItemSalesData = async ({ page = 1, limit = 5, organizations }) => {
       // Group by menuItem to calculate salesCount and totalPrice
       {
         $group: {
-          _id: "$items.menuItem", // Use menuItem as _id to group
+          _id: "$items.menuItem",
           salesCount: { $sum: "$items.quantity" },
           totalPrice: { $sum: "$items.finalPrice" },
-          categoryId: { $first: "$items.menuItemSnapShot.category" }, // Capture the categoryId from menuItemSnapShot
-          itemName: { $first: "$items.menuItemSnapShot.title" }, // Capture item name from menuItemSnapShot
+          subCategory: { $first: "$items.menuItemSnapShot.subCategory" },
+          itemName: { $first: "$items.menuItemSnapShot.title" },
+        },
+      },
+
+      // Snapshot subCategory is missing on older orders — read it from the live item
+      {
+        $lookup: {
+          from: "menuitems",
+          localField: "_id",
+          foreignField: "_id",
+          as: "menuItemDoc",
+        },
+      },
+      {
+        $addFields: {
+          subCategory: {
+            $ifNull: [{ $first: "$menuItemDoc.subCategory" }, "$subCategory"],
+          },
         },
       },
 
@@ -1018,10 +1022,10 @@ const getMenuItemSalesData = async ({ page = 1, limit = 5, organizations }) => {
       {
         $project: {
           _id: 1,
-          itemName: 1, // Include item name in the projection
+          itemName: 1,
           salesCount: 1,
           totalPrice: 1,
-          categoryId: 1, // Keep categoryId for later use
+          subCategory: 1,
         },
       },
 
@@ -1030,67 +1034,56 @@ const getMenuItemSalesData = async ({ page = 1, limit = 5, organizations }) => {
       { $limit: limit },
     ]);
 
+    // Step 2: Look up subcategory titles — drop nulls so the $in query stays valid
+    const subCategoryIds = salesData
+      .map((item) => item.subCategory)
+      .filter(Boolean);
 
+    const subCategoryDetails = subCategoryIds.length
+      ? await MenuSubcategory.find({ _id: { $in: subCategoryIds } })
+          .select("_id title")
+          .lean()
+      : [];
 
-    // Step 2: Perform a separate find query to get the category name for each categoryId
-    const categoryIds = salesData.map(item => item.categoryId); // Get all categoryIds from the sales data
-
-    // Find category names for the unique categoryIds
-    const categoryDetails = await MenuItemCategories.find({
-      _id: { $in: categoryIds },
-    }).lean();
-
-    // Map categoryId to category name for later reference
-    const categoryNameMap = categoryDetails.reduce((acc, category) => {
-      acc[category._id.toString()] = category.title;
+    const subCategoryNameMap = subCategoryDetails.reduce((acc, subCategory) => {
+      acc[subCategory._id.toString()] = subCategory.title;
       return acc;
     }, {});
 
-    // Step 3: Combine the sales data with category names and item names
-    const updatedSalesData = salesData.map(item => ({
+    // Step 3: Combine the sales data with subcategory names and item names
+    const updatedSalesData = salesData.map((item) => ({
       ...item,
-      categoryName: categoryNameMap[item.categoryId.toString()] || "Unknown", // Use category name from map
-      availabilityStatus: item.categoryId ? "Available" : "Unavailable", // Set availability status based on categoryId presence
+      subCategoryName: item.subCategory
+        ? subCategoryNameMap[String(item.subCategory)] || "Unknown"
+        : "Unknown",
+      availabilityStatus: item.subCategory ? "Available" : "Unavailable",
     }));
 
     // Get the total filtered count for pagination metadata
     const totalFiltered = await MenuOrders.aggregate([
       {
         $match: {
-          ...(organizations && { organization: { $in: organizations } }),
+          ...(organizations?.length && { organization: { $in: organizations } }),
         },
       },
-      // Unwind the items array to ensure each item is processed individually
       { $unwind: "$items" },
-      // Group by the menuItem to get unique items
-      {
-        $group: {
-          _id: "$items.menuItem", // Group by menuItem to count unique items
-        },
-      },
-      // Count the number of unique menuItems
-      {
-        $count: "totalUniqueItems",
-      },
+      { $group: { _id: "$items.menuItem" } },
+      { $count: "totalUniqueItems" },
     ]);
 
-    // Get the count of unique items from the aggregation result
-    const totalUniqueItems = totalFiltered.length > 0 ? totalFiltered[0].totalUniqueItems : 0;
+    const totalUniqueItems =
+      totalFiltered.length > 0 ? totalFiltered[0].totalUniqueItems : 0;
 
-
-
-    // Prepare metadata for pagination
     const meta = generateMeta(page, limit, totalUniqueItems);
 
     return { data: updatedSalesData, meta };
   } catch (error) {
-    console.error("Error fetching menu item sales data:", error); // Log any errors
+    console.error("Error fetching menu item sales data:", error);
     throw new Error("Error fetching menu item sales data: " + error.message);
   }
 };
 
 module.exports = {
-
   orderStatsRaw,
 
   getOrganizerPerformanceByMonth,
@@ -1106,5 +1099,5 @@ module.exports = {
   getUserReservationPaymentsQA,
   getUserReservationChangeLogs,
   getAverageOrderValueOverTimeRaw,
-  getMenuItemSalesData
+  getMenuItemSalesData,
 };
