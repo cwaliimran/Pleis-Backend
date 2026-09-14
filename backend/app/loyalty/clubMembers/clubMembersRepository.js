@@ -260,6 +260,7 @@ const checkDemotion = async (
       earned12Months,
       session
     );
+  
 
   if (!fallbackTier) return;
 
