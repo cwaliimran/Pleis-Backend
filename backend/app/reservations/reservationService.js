@@ -295,21 +295,12 @@ const cancelReservation = async (id, userId) => {
   // ---- Refund if paid ----
   if (reservation.paymentDetails?.paymentStatus === "paid" && reservation.paymentDetails?.transactionId) {
     try {
-      //TODO refund payment
-      // call refund service
-      // await refundViaMonri({
-      //   transactionId: reservation.paymentDetails.transactionId,
-      //   amount: reservation.amount,
-      //   currency: "EUR",
-      // });
-
-      // mark refunded
-      reservation.paymentDetails.paymentStatus = "refunded";
-
+      // Paid reservations are not marked refunded here. Live Monri refunds
+      // go through POST /payments/monri/refund (MONRI_LIVE_REFUND_ENABLED).
       reservation.reservationChanges.push({
         changedBy: userId,
-        action: "refundProcessed",
-        status: "completed",
+        action: "refundRequested",
+        status: "pending",
       });
     } catch (err) {
       console.error("Refund failed:", err);

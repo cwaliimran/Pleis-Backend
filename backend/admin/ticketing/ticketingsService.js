@@ -4,10 +4,14 @@ const { getOrgCompanyOrganizer } = require("../organizations/organizationReposit
 const { formatTicketing, formatEventTicketing } = require("./fomatter/formatTicketing");
 const ticketingRepo = require("./ticketingsRepository");
 const TicketingsModel = require("@TicketingsModel");
+const {
+  applyTicketTaxFields,
+} = require("../../commonModules/paymentsIntegrations/billko/taxRateLabels");
 
 const createTicketing = async (timezone, data) => {
   data.organization = await getOrganizationIdByEventId(data.event)
   data.companyOrganizer = await getOrgCompanyOrganizer(data.organization)
+  applyTicketTaxFields(data, data);
   let ticketing = await ticketingRepo.createTicketing(data);
   if (!ticketing) return null;
   return formatTicketing(timezone, ticketing);
@@ -130,6 +134,7 @@ const updateTicketing = async (id, data, timezone) => {
     quantity,
     price,
     taxPercentage,
+    taxRateLabel,
     event,
     timingSlots,
     repeatable,
@@ -146,7 +151,7 @@ const updateTicketing = async (id, data, timezone) => {
   if (title !== undefined) ticketing.title = title.trim();
   if (quantity !== undefined) ticketing.quantity = quantity;
   if (price !== undefined) ticketing.price = price;
-  if (taxPercentage !== undefined) ticketing.taxPercentage = taxPercentage;
+  applyTicketTaxFields(ticketing, { taxPercentage, taxRateLabel, status });
   if (event !== undefined) ticketing.event = event;
   if (resaleProtection !== undefined) ticketing.resaleProtection = resaleProtection;
   if (transferFee !== undefined) ticketing.transferFee = transferFee;

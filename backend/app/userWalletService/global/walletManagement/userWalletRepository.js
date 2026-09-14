@@ -239,6 +239,7 @@ const checkDemotionGlobal = async (userId, session = null) => {
     ? earned12MonthsAgg[0].total
     : 0;
 
+
   const wallet = await UserGlobalWallet.findOne({
     user: userId,
   })
@@ -336,5 +337,6 @@ module.exports = {
   updateGlobalPoints,
   getUserWallet,
   getTotalRedeemPurchases,
-  checkPromotionGlobal
+  checkPromotionGlobal,
+  checkDemotionGlobal
 };

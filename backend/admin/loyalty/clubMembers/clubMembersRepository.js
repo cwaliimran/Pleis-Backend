@@ -212,6 +212,7 @@ const giftPoints = async (companyOrganizer, user, points, notes) => {
   let committed = false;
 
   try {
+    
     const giftedPoints = Number(points);
     if (!Number.isFinite(giftedPoints) || giftedPoints <= 0) {
       return {
