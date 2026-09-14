@@ -3,7 +3,7 @@ const connection = require("../connection");
 const { QUEUE_NAMES } = require("../queues");
 const {
   handleSuccessfulPayment,
-} = require("../../commonModules/fiscalDocuments/documentService");
+} = require("../../commonModules/fiscalDocuments/jobs/documentService");
 const {
   billkoErrorDetails,
 } = require("../../commonModules/paymentsIntegrations/billko/billkoClient");

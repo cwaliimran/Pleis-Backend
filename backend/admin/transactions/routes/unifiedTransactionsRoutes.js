@@ -1,11 +1,9 @@
 // routes/unifiedTransactionsRoutes.js
 const express = require("express");
 const {
-  createTransaction,
   getTransactions,
   getTransactionDetails,
   updateTransaction,
-  deleteTransaction,
   downloadTransactions
 } = require("../controllers/unifiedTransactionsController");
 const createRateLimiter = require("../../../helperUtils/rateLimiter");

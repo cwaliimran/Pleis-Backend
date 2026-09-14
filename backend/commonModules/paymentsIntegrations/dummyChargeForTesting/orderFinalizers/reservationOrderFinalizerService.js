@@ -18,7 +18,6 @@ const { syncMonriTransactionStatus } = require("../../monri/monriRepository");
 const { getUserReservationDetails } = require("../../../../app/reservations/reservationRepository");
 const { userReservationsFormatter } = require("../../../../app/reservations/formaters/reservationFormetter");
 const {
-  reservationConfirmationEmailTemplate,
   reservationCancelledEmailTemplate,
 } = require("../../../../helperUtils/emailTemplates/userReservationsTemplates");
 const { sendEmailViaMailgun } = require("../../../../helperUtils/emailUtil");
@@ -99,30 +98,6 @@ const reservationOrderFinalizerService = async ({ reservationId, result }) => {
           },
           { session },
         );
-      }
-
-      try {
-        const reservationDetails = await getUserReservationDetails(userReservation._id);
-
-        let userDetails = await findAppUserByIdWithProjectionService(userReservation.userId, {
-          timezone: 1,
-          email: 1,
-          username: 1,
-        });
-
-        const formatted = userReservationsFormatter(reservationDetails, userDetails.timezone || "UTC");
-
-        const html = reservationConfirmationEmailTemplate({
-          userName: formatted.userName,
-          reservation: formatted,
-          organizationName: formatted.organizationName,
-          currency: "EUR",
-        });
-
-
-        sendEmailViaMailgun(userDetails.email, "Your reservation is confirmed", html);
-      } catch (err) {
-        console.error("[reservationOrderFinalizerService] Reservation confirmation email failed:", err);
       }
 
       const totalPrice = userReservation.amount || 0;

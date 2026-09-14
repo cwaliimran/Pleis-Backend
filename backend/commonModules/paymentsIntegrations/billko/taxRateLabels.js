@@ -66,6 +66,70 @@ function requireLabelFromPercent(value, context) {
   return label;
 }
 
+/**
+ * Prefer an explicit Tg label; fall back to percent→label for legacy rows.
+ * Returns null when neither yields a valid Billko label.
+ */
+function resolveTaxRateLabel({ taxRateLabel, taxPercentage, taxPercent, tax } = {}) {
+  if (isValidTaxRateLabel(taxRateLabel)) return taxRateLabel;
+  return labelFromPercent(taxPercentage ?? taxPercent ?? tax);
+}
+
+function requireTaxRateLabel(fields, context) {
+  const label = resolveTaxRateLabel(fields || {});
+  if (!label) {
+    const error = new Error("billko_unknown_tax_rate_label");
+    error.statusCode = 400;
+    error.details = { fields, context };
+    throw error;
+  }
+  return label;
+}
+
+/**
+ * Apply taxRateLabel / taxPercentage onto a ticket (or similar) document.
+ * When publishing (active/scheduled), a resolvable label is required.
+ */
+function applyTicketTaxFields(doc, data = {}) {
+  if (!doc) return doc;
+  if (data.taxRateLabel !== undefined && data.taxRateLabel !== null && data.taxRateLabel !== "") {
+    if (!isValidTaxRateLabel(data.taxRateLabel)) {
+      const error = new Error("invalid_tax_rate_label");
+      error.statusCode = 400;
+      error.details = { taxRateLabel: data.taxRateLabel };
+      throw error;
+    }
+    doc.taxRateLabel = data.taxRateLabel;
+    const pct = percentForLabel(data.taxRateLabel);
+    if (pct != null) doc.taxPercentage = pct;
+  } else if (data.taxPercentage !== undefined) {
+    doc.taxPercentage = data.taxPercentage;
+    const mapped = labelFromPercent(data.taxPercentage);
+    if (mapped) doc.taxRateLabel = mapped;
+  }
+
+  const nextStatus =
+    data.status !== undefined ? data.status : doc.status;
+  if (nextStatus === "active" || nextStatus === "scheduled") {
+    if (!isValidTaxRateLabel(doc.taxRateLabel)) {
+      // Legacy tickets defaulted taxPercentage to 0 (→ Tg1). Persist label.
+      const mapped = labelFromPercent(
+        doc.taxPercentage != null ? doc.taxPercentage : 0,
+      );
+      if (!mapped) {
+        const error = new Error("tax_rate_label_required");
+        error.statusCode = 400;
+        throw error;
+      }
+      doc.taxRateLabel = mapped;
+      if (doc.taxPercentage == null) {
+        doc.taxPercentage = percentForLabel(mapped);
+      }
+    }
+  }
+  return doc;
+}
+
 module.exports = {
   TAX_RATE_LABELS,
   TAX_RATE_PERCENT,
@@ -79,4 +143,7 @@ module.exports = {
   labelFromPercent,
   displayPercent,
   requireLabelFromPercent,
+  resolveTaxRateLabel,
+  requireTaxRateLabel,
+  applyTicketTaxFields,
 };

@@ -4,7 +4,7 @@ const { Types, default: mongoose } = require("mongoose");
 const { ticketingOrderFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/ticketingOrderFinalizerService");
 const { reservationOrderFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/reservationOrderFinalizerService");
 const { menuOrderFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/menuOrderFinalizerService");
-const { ticketingTransferFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/ticketingTransferFinalizerService");
+const { subscriptionPaymentFinalizerService } = require("../../dummyChargeForTesting/orderFinalizers/subscriptionPaymentFinalizerService");
 const { generateMeta, convertTimezoneToUtc, fireAndForget } = require("../../../../helperUtils/responseUtil");
 const { enqueueFiscalDocument } = require("../../../../bullmq/queues");
 const { DASHBOARD_KEYS, TRANSSECTION_KEYS, withSubFilters } = require("../utils/transsectionKeyMap");
@@ -157,6 +157,16 @@ const processPaymentWebhook = async ({
         result,
       });
     }
+    if (orderType === "subscription") {
+      await subscriptionPaymentFinalizerService({
+        transaction: monriPaymentMethod || {
+          orderNumber: orderId,
+          orderType,
+          userId: payload.user,
+        },
+        result,
+      });
+    }
   }
 
   await emitPaymentOrderSockets({
@@ -171,6 +181,7 @@ const processPaymentWebhook = async ({
       menuorders: "ordering_confirmation",
       userreservations: "reservation_confirmation",
       ticketingbookings: "ticketing_invoices",
+      subscription: "subscription_invoice",
     }[orderType];
     if (fiscalKind) {
       fireAndForget(
@@ -191,8 +202,23 @@ const processPaymentWebhook = async ({
  * Same fulfill path as POST /webhooks/payments/monri.
  */
 const fulfillMonriRedirectPayment = async ({ tx, payload, status }) => {
-  if (!tx?.orderType || tx.orderType === "subscription" || tx.orderType === "tickettransfer") {
+  if (!tx?.orderType || tx.orderType === "tickettransfer") {
     return { handled: false, reason: "unsupported_order_type" };
+  }
+
+  if (tx.orderType === "subscription") {
+    const result = await subscriptionPaymentFinalizerService({
+      transaction: tx,
+      result: {
+        status,
+        transactionId:
+          payload.id ||
+          payload.reference_number ||
+          payload.approval_code ||
+          String(tx.orderNumber),
+      },
+    });
+    return { handled: Boolean(result?.handled), reason: result?.reason };
   }
 
   const context = await loadOrderWebhookContext(

@@ -266,7 +266,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"provider\": \"facebook\", //\"google\", \"facebook\", \"apple\",\n    \"socialId\": \"123456789012345678424\",\n    \"profileIcon\": \"noImage.png\",\n    \"firstName\": \"Kathlyn68\",\n    \"lastName\": \"M\",\n    // \"email\": \"{{$randomExampleEmail}}\",\n    \"password\": \"123456\",\n    \"deviceType\": \"android\", //andoird/ios/web\n    \"userType\": \"user\", //organizer, user, admin\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
+                      "raw": "{\n    \"provider\": \"facebook\", //\"google\", \"facebook\", \"apple\",\n    \"socialId\": \"348391117252345678424\",\n    \"profileIcon\": \"noImage.png\",\n    \"firstName\": \"Kathlyn68\",\n    \"lastName\": \"M\",\n    // \"email\": \"{{$randomExampleEmail}}\",\n    \"password\": \"123456\",\n    \"deviceType\": \"android\", //andoird/ios/web\n    \"userType\": \"user\", //organizer, user, admin\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -11064,7 +11064,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"name\": \"Tech Innovators Ltd\",\n    \"oib\": \"12345678901\",\n    \"bankAccountNumber\": \"HR1234567890001234567\",\n    \"representativeName\": \"Alice Johnson\",\n    \"location\": {\n            \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYK\",\n            \"postalCode\": \"10011\"\n        },\n    \"suppliers\": [\"6881002e5b438e9b241870f9\",\"6881008facb33f97130688f7\"]\n}",
+                      "raw": "{\n    \"name\": \"Tech Innovators Ltd\",\n    \"oib\": \"34839111725\",\n    \"bankAccountNumber\": \"HR1234567890001234567\",\n    \"representativeName\": \"Alice Johnson\",\n    \"location\": {\n            \"coordinates\": [43.5081,16.4402],\n            \"fullAddress\": \"47 Innovation Street, New York, NY 10011, USA\",\n            \"country\": \"USA\",\n            \"city\": \"New York\",\n            \"state\": \"NYK\",\n            \"postalCode\": \"10011\"\n        },\n    \"suppliers\": [\"6881002e5b438e9b241870f9\",\"6881008facb33f97130688f7\"]\n}",
                       "options": {
                         "raw": {
                           "language": "json"
@@ -11171,7 +11171,7 @@
                     "header": [],
                     "body": {
                       "mode": "raw",
-                      "raw": "{\n    \"provider\": \"facebook\", //\"google\", \"facebook\", \"apple\",\n    \"socialId\": \"123456789012345678424\",\n    \"profileIcon\": \"noImage.png\",\n    \"firstName\": \"Kathlyn68\",\n    \"lastName\": \"M\",\n    // \"email\": \"{{$randomExampleEmail}}\",\n    \"password\": \"123456\",\n    \"deviceType\": \"web\", //andoird/ios/web\n    \"userType\": \"organizer\", //organizer, user, admin\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
+                      "raw": "{\n    \"provider\": \"facebook\", //\"google\", \"facebook\", \"apple\",\n    \"socialId\": \"348391117252345678424\",\n    \"profileIcon\": \"noImage.png\",\n    \"firstName\": \"Kathlyn68\",\n    \"lastName\": \"M\",\n    // \"email\": \"{{$randomExampleEmail}}\",\n    \"password\": \"123456\",\n    \"deviceType\": \"web\", //andoird/ios/web\n    \"userType\": \"organizer\", //organizer, user, admin\n    \"deviceId\": \"ciMKqgnjRiaQvxj2Q9T5_g:APA91bF3LLhH7TQoNny1mS-c2iK_PZ4vZXG8bKSavzUuAqQ8A2ipLSf6yWzMhvNCr9fH44mPVUukNytAYQtorUJGo2FYkdV4yusDDL_-fri0yKZ18THsh8w1hVlJ_5a_YWNFbXO479ci\", //device id from firebase fcm\n    \"timezone\": \"Asia/Karachi\"\n}",
                       "options": {
                         "raw": {
                           "language": "json"

@@ -465,6 +465,7 @@ const getLatestEventOrders = async ({ eventId, limit = 10, skip = 0 }) => {
       $match: {
         event: new mongoose.Types.ObjectId(eventId),
         purpose: "eventTicketPurchase",
+        status: { $in: ["paid", "completed"] },
       },
     },
 

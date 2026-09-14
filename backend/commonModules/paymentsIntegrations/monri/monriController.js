@@ -19,6 +19,11 @@ const {
   evaluateMonriSuccessIntent,
 } = require("./monriSuccessGuard");
 const {
+  isLiveRefundEnabled,
+  refundViaMonri,
+  planMonriRefund,
+} = require("./refundService");
+const {
   getMonriBaseUrl,
   getMonriKey,
   getMonriAuthToken,
@@ -633,10 +638,11 @@ exports.createClientSecret = async (req, res) => {
 
 exports.createWebPaySession = async (req, res) => {
   try {
+    // Populate the user to access their name information since billing does not have name fields
     const billing = await UserBillingInformation.findOne({
       user: req.user._id,
       status: "active",
-    });
+    }).populate("user", "firstName lastName");
 
     const currency = getMonriCurrency();
     const { amount, orderType, orderNumber, paymentMethod } = req.query;
@@ -649,7 +655,8 @@ exports.createWebPaySession = async (req, res) => {
 
     // Build reusable billing fields
     const billingAddress = billing?.billingAddress || {};
-    const fullName = `${billing?.firstName || ""} ${billing?.lastName || ""}`.trim() || "Guest User";
+    const fullName =
+      `${billing?.user?.firstName || ""} ${billing?.user?.lastName || ""}`.trim() || "Guest User";
     const country = billingAddress.country === "USA" ? "US" : (billingAddress.country || getMonriCountry());
 
     const digest = generateDigest({ orderNumber, amount, currency });
@@ -1003,55 +1010,78 @@ exports.createSubscriptionWebPaySession = async (req, res) => {
   }
 };
 
-async function refundViaMonri({
-  transactionId,
-  amount,
-  currency,
-}) {
-  const payload = {
-    transaction_type: "refund",
-    transaction_id: transactionId,
-    amount,
-    currency,
-  };
-
-  const response = await axios.post(
-    `${getMonriBaseUrl()}/v2/payment/refund`,
-    payload,
-    {
-      headers: {
-        Authorization: `key-${getMonriAuthToken()}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
-
-  return response.data;
-}
-
-
 exports.refundPayment = async (req, res) => {
   try {
-    const { orderNumber, amount } = req.body;
-
-    const tx = await monriRepository.findByOrderNumber(orderNumber);
-
-    if (!tx?.monriTransactionId) {
-      return res.status(400).json({
-        message: "Transaction not refundable",
+    if (!isLiveRefundEnabled()) {
+      return res.status(503).json({
+        message: "live_refund_disabled",
       });
+    }
+
+    const { orderNumber, amount } = req.body;
+    const tx = await monriRepository.findByOrderNumber(orderNumber);
+    const plan = planMonriRefund({ tx, amount });
+    if (!plan.ok) {
+      return res.status(400).json({ message: plan.error });
     }
 
     const result = await refundViaMonri({
       transactionId: tx.monriTransactionId,
-      amount: amount || tx.amount,
+      amount: plan.refundAmount,
       currency: tx.currency,
     });
 
     await monriRepository.updateTransaction(orderNumber, {
-      status: "refunded",
-      refundedAmount: amount || tx.amount,
+      status: plan.nextStatus,
+      refundedAmount: plan.nextRefundedAmount,
     });
+
+    const {
+      issueCancellationConfirmation,
+    } = require("../../fiscalDocuments/confirmation/generator");
+    const PaymentConfirmation = require("../../fiscalDocuments/models/PaymentConfirmation.model");
+    const mongoose = require("mongoose");
+    const orderObjectId = mongoose.Types.ObjectId.isValid(tx.orderNumber)
+      ? new mongoose.Types.ObjectId(String(tx.orderNumber))
+      : null;
+    const original = orderObjectId
+      ? await PaymentConfirmation.findOne({
+          orderId: orderObjectId,
+          $or: [
+            { cancelsConfirmationId: null },
+            { cancelsConfirmationId: { $exists: false } },
+          ],
+          status: "ISSUED",
+        })
+      : null;
+    if (original) {
+      await issueCancellationConfirmation(original, {
+        transactionId: tx.monriTransactionId,
+        amount: plan.refundAmount,
+      });
+    }
+
+    // Also cancel min-spend voucher when refunding a reservation (even if
+    // confirmation cancel already did it — idempotent status write).
+    if (tx.orderType === "userreservations" && orderObjectId) {
+      const { UserReservations } = require("../../reservations/UsersReservation");
+      await UserReservations.updateOne(
+        {
+          _id: orderObjectId,
+          "voucher.code": { $exists: true, $nin: [null, ""] },
+        },
+        { $set: { "voucher.status": "cancelled" } },
+      );
+    }
+
+    if (tx.orderType === "ticketingbookings") {
+      const { stornoTicketingInvoices } = require("../../fiscalDocuments/jobs/documentService");
+      // execute:true = attempt live; still gated by BILLKO_STORNO_ENABLED (default off).
+      await stornoTicketingInvoices(tx.orderNumber, {
+        execute: true,
+        refundAmount: plan.refundAmount,
+      });
+    }
 
     res.json(result);
   } catch (err) {

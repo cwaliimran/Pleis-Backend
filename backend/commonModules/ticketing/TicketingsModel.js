@@ -30,6 +30,13 @@ const ticketingsSchema = new mongoose.Schema(
       required: true,
       default: 0,
     },
+    // Billko tax rate label (Tg0–Tg4). Organizer selects explicitly; percent
+    // alone cannot distinguish Tg0 vs Tg1. Prefer this when building invoices.
+    taxRateLabel: {
+      type: String,
+      enum: ["Tg0", "Tg1", "Tg2", "Tg3", "Tg4"],
+      default: null,
+    },
     event: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Event",

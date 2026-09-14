@@ -143,3 +143,5 @@ scripts.js/renameModule.js
 .env.mobileapps
 backend/secretAssets/serviceAccountKey.json
 scripts/combine-files.js
+/raw
+/tmp

@@ -11,6 +11,9 @@
  */
 
 const Ticketings = require("@TicketingsModel");
+const {
+  applyTicketTaxFields,
+} = require("../../commonModules/paymentsIntegrations/billko/taxRateLabels");
 
 // ======================================================
 // HELPERS
@@ -62,7 +65,11 @@ const applyFields = (doc, data, options = { futureMode: false }) => {
   if (data.title !== undefined) doc.title = data.title.trim();
   if (data.quantity !== undefined) doc.quantity = data.quantity;
   if (data.price !== undefined) doc.price = data.price;
-  if (data.taxPercentage !== undefined) doc.taxPercentage = data.taxPercentage;
+  applyTicketTaxFields(doc, {
+    taxPercentage: data.taxPercentage,
+    taxRateLabel: data.taxRateLabel,
+    status: data.status,
+  });
   if (data.resaleProtection !== undefined) doc.resaleProtection = data.resaleProtection;
   if(data.transferFee !== undefined) doc.transferFee = data.transferFee;
 

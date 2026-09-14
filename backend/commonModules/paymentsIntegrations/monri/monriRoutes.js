@@ -7,6 +7,7 @@ const {
   createClientSecret,
   createWebPaySession,
   createSubscriptionWebPaySession,
+  refundPayment,
 } = require("./monriController");
 const auth = require("../../../middlewares/authMiddleware");
 
@@ -27,5 +28,6 @@ router.get("/success", handleSuccess);
 router.post("/cancel", handleCancel);
 router.get("/cancel", handleCancel);
 
+router.post("/refund", auth, refundPayment);
 
 module.exports = router;
