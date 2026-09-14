@@ -32,6 +32,10 @@ const {
   getClubMembersForUsers,
 } = require("../../app/loyalty/clubMembers/clubMembersRepository");
 const { getActiveTiersWithProjection } = require("../tiers/tiersRepository");
+const ReservationType = require("@ReservationTypeModel");
+// NOTE: lazy-required inside checkReservationAvailabilityForUpdate to avoid a
+// circular dependency (app/reservations/reservationRepository -> orders/orderService
+// -> admin/reservation/reservationRepository), which otherwise resolves this to undefined.
 const getCreatorFromOrganization = async (organizationId) => {
   try {
     const result = await Organizations.aggregate([
@@ -1183,39 +1187,43 @@ const getReservationsV2Calender = async ({
     },
     { $sort: { date: 1 } },
   ];
-  const pipelineMaxCapacity = [
-    {
-      $match: {
-        status: { $ne: "deleted" },
-        ...(companyOrganizer && {
-          companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
-        }),
-        ...(organization && {
-          organizationId: new mongoose.Types.ObjectId(organization),
-        }),
+  
+const pipelineMaxCapacity = [
+  {
+    $match: {
+      status: "active",
+
+      ...(companyOrganizer && {
+        companyOrganizer: new mongoose.Types.ObjectId(companyOrganizer),
+      }),
+
+      ...(organization && {
+        organization: new mongoose.Types.ObjectId(organization),
+      }),
+    },
+  },
+
+  {
+    $group: {
+      _id: null,
+      totalMaxCapacity: {
+        $sum: "$maxCapacity",
       },
     },
-    { $group: { _id: "$reservationType" } },
-    {
-      $lookup: {
-        from: "reservationtypes",
-        localField: "_id",
-        foreignField: "_id",
-        as: "type",
-      },
+  },
+
+  {
+    $project: {
+      _id: 0,
+      totalMaxCapacity: 1,
     },
-    { $unwind: "$type" },
-    {
-      $group: {
-        _id: null,
-        totalMaxCapacity: { $sum: "$type.maxCapacity" },
-      },
-    },
-  ];
+  },
+];
   const [reservations, maxCapacityResult] = await Promise.all([
     UserReservations.aggregate(pipeline),
-    UserReservations.aggregate(pipelineMaxCapacity),
+    ReservationType.aggregate(pipelineMaxCapacity),
   ]);
+  
   const totalMaxCapacity = maxCapacityResult[0]?.totalMaxCapacity || 0;
   const meta = {
     totalMaxCapacity,
@@ -1340,6 +1348,177 @@ const consumeReservationVoucher = async ({
     remainingBalance: newRemaining,
   };
 };
+
+
+
+
+
+// --- diff helpers -----------------------------------------------------------
+// --- shared timing helpers --------------------------------------------------
+
+const DAY_START = 0;
+const DAY_END = 24 * 60; // 1440
+
+const HHMM = /^(\d{1,2}):(\d{2})$/;
+
+// "13:00" | ISODate | ISO string  ->  minutes from UTC midnight
+const toMinutes = (value) => {
+  if (value == null) return null;
+
+  if (typeof value === "string") {
+    const match = value.match(HHMM);
+    if (match) return Number(match[1]) * 60 + Number(match[2]);
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.getUTCHours() * 60 + date.getUTCMinutes();
+};
+
+// "2026-09-10" | ISODate  ->  "2026-09-10"
+const toDateKey = (value) => {
+  if (typeof value === "string") return value.slice(0, 10);
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+};
+
+// A date block -> [{ start, end }]. No usable slots means the whole day.
+const toRanges = (timeSlots = [], isWholeDay = false) => {
+  const ranges = isWholeDay
+    ? []
+    : (timeSlots || [])
+        .map((s) => ({ start: toMinutes(s?.startTime), end: toMinutes(s?.endTime) }))
+        .filter((r) => r.start !== null && r.end !== null && r.end > r.start);
+
+  return ranges.length ? ranges : [{ start: DAY_START, end: DAY_END }];
+};
+
+const overlaps = (a, b) => a.start < b.end && b.start < a.end;
+
+const sumBy = (list, key) => list.reduce((total, item) => total + (item[key] || 0), 0);
+const num = (value) => (value == null ? 0 : Number(value));
+const slotsFingerprint = (timingSlots) => {
+  if (!Array.isArray(timingSlots) || timingSlots.length === 0) {
+    return "";
+  }
+
+  return timingSlots
+    .map((slot) => {
+      const start = slot?.startTime
+        ? new Date(slot.startTime).getTime()
+        : "";
+
+      const end = slot?.endTime
+        ? new Date(slot.endTime).getTime()
+        : "";
+
+      return `${start}-${end}`;
+    })
+    .sort()
+    .join("|");
+};
+
+
+const datesOf = (timingSlots) => {
+  if (!timingSlots?.dateTimeSlots?.length) return new Set();
+  return new Set(timingSlots.dateTimeSlots.map((slot) => toDateKey(slot.date)));
+};
+
+// --- update checker ---------------------------------------------------------
+
+const checkReservationAvailabilityForUpdate = async ({
+  reservationId,
+  organizationId: organization,
+  payload, // the complete reservation object coming from the client
+}) => {
+  const existing = await UserReservations.findOne({
+    _id: reservationId,
+    organizationId: new mongoose.Types.ObjectId(organization),
+  })
+    .select("timingSlots numberOfTables partySize bookingDuration reservationType status")
+    .lean();
+
+  if (!existing) {
+    return { allowed: false, message: "Reservation not found" };
+  }
+
+  if (["cancelled", "completed", "noShow"].includes(existing.status)) {
+    return { allowed: false, message: `A ${existing.status} reservation cannot be updated` };
+  }
+
+  const next = {
+    reservationTypeId: payload.reservationTypeId ?? payload.reservationType,
+    partySize: num(payload.partySize),
+    numberOfTables: num(payload.numberOfTables),
+    timingSlots: payload.timingSlots,
+  };
+
+  const prev = {
+    reservationTypeId: existing.reservationType,
+    partySize: num(existing.partySize),
+    numberOfTables: num(existing.numberOfTables),
+    timingSlots: existing.timingSlots,
+  };
+
+  // 1. Work out what actually changed
+  const changes = {
+    reservationType: String(next.reservationTypeId) !== String(prev.reservationTypeId),
+    partySize: next.partySize !== prev.partySize,
+    numberOfTables: next.numberOfTables !== prev.numberOfTables,
+    timing:
+      slotsFingerprint(next.timingSlots) !== slotsFingerprint(prev.timingSlots),
+  };
+
+  const changedFields = Object.keys(changes).filter((key) => changes[key]);
+
+  console.log("changedFields",changedFields);
+
+  // 2. Nothing capacity-relevant changed — the client just resent the same data
+  if (!changedFields.length) {
+    return { allowed: true, message: "No capacity-relevant changes", changes: [] };
+  }
+
+  // 3. Same slots + same type + only shrinking → always safe, no query needed
+  const onlyShrinking =
+    !changes.timing &&
+    !changes.reservationType &&
+    next.partySize <= prev.partySize &&
+    next.numberOfTables <= prev.numberOfTables;
+
+  if (onlyShrinking) {
+    return { allowed: true, message: "Reservation is available", changes: changedFields };
+  }
+
+  // 4. Basic shape validation before hitting the DB
+  if (!next.timingSlots?.dateTimeSlots?.length) {
+    return { allowed: false, message: "At least one date is required", changes: changedFields };
+  }
+
+  // 5. Full check against everyone else's bookings, excluding this reservation
+  const { checkReservationAvailability } = require("../../app/reservations/reservationRepository");
+  console.log("reservationId",reservationId);
+  const result = await checkReservationAvailability({
+    reservationTypeId: new mongoose.Types.ObjectId(next.reservationTypeId),
+    partySize: next.partySize,
+    numberOfTables: next.numberOfTables,
+    organization: new mongoose.Types.ObjectId(organization),
+    timingSlots: next.timingSlots,
+    excludeReservationId: reservationId,
+  });
+
+  // 6. Helpful extras for the client
+  const removedDates = [...datesOf(prev.timingSlots)].filter((d) => !datesOf(next.timingSlots).has(d));
+  const addedDates = [...datesOf(next.timingSlots)].filter((d) => !datesOf(prev.timingSlots).has(d));
+
+  return {
+    ...result,
+    changes: changedFields,
+    ...(removedDates.length && { removedDates }),
+    ...(addedDates.length && { addedDates }),
+  };
+};
+
+
 module.exports = {
   findUserReservationById,
   insertSingleUserReservation,
@@ -1366,4 +1545,5 @@ module.exports = {
   getLatestUserReservations,
   validateReservationForOrder,
   consumeReservationVoucher,
+  checkReservationAvailabilityForUpdate
 };

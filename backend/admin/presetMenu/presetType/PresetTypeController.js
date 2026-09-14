@@ -17,7 +17,7 @@ const createpresetType = async (req, res) => {
 
   if (
     !validateParams(req, res, {
-      rawData: ["code", "status", "name", "description","category","subCategory","type"],
+      rawData: ["code", "status", "name", "category","subCategory","type"],
     })
   )
     return;
