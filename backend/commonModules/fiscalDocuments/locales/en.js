@@ -6,6 +6,9 @@ module.exports = {
   tip: "Tip",
   item: "Item",
   reservation: "Reservation",
+  serviceFee: "Service fee",
+  ticketId: "Ticket ID",
+  fastTrack: "Fast track",
   minSpendPrepayment: "Minimum-spend prepayment (multi-use voucher)",
   print: "Print",
   download: "Download",
@@ -18,14 +21,35 @@ module.exports = {
     numbers
       ? `Invoices for your purchase (${numbers})`
       : "Invoices for your purchase",
+  invoiceEmail: {
+    title: "Your invoices",
+    heading: "Your invoices are ready",
+    intro:
+      "Thank you for your purchase. The fiscalized invoices for this order are attached as PDF files.",
+    attachNote:
+      "Please keep the attached PDFs for your records. The same documents are available in the app under Wallet → Transaction history.",
+    footer:
+      "Need help? Write to us at",
+    preheader: (numbers) =>
+      numbers
+        ? `Your invoices (${numbers}) are attached.`
+        : "Your invoices are attached.",
+    labelVenue: "Venue",
+    labelOrder: "Order",
+    labelInvoices: "Invoice numbers",
+  },
+  // Legacy one-line body kept for any leftover callers
   invoiceEmailBody:
     "<p>The fiscalized invoices for your purchase are attached.</p>",
   invoicePdf: {
     htmlLang: "en",
     title: "Invoice",
+    titleSecondary: "Račun",
+    pageWord: "page",
     details: "Invoice details",
     invoiceNumber: "Invoice number",
-    fiscalizationNumber: "Fiscalization number",
+    fiscalizationNumber: "Fiscalization number (JIR)",
+    fiscalProtectionCode: "Issuer protection code (ZKI)",
     issuedAt: "Issue date",
     paymentMethod: "Payment method",
     orderReference: "Order reference",
@@ -39,8 +63,9 @@ module.exports = {
     unitPrice: "Unit price",
     amount: "Amount",
     total: "Total",
+    issuedBy: "Issued by",
     footer:
-      "This document has been fiscalized. Issued {{ISSUED_AT}}. Enquiries: {{SUPPORT_EMAIL}}",
+      "This document has been fiscalized and is valid without a signature or stamp. Issued {{ISSUED_AT}}. Enquiries: {{SUPPORT_EMAIL}}",
     guest: "Guest",
   },
   confirmation: {
@@ -78,7 +103,7 @@ module.exports = {
     documentFooter:
       "This document was issued electronically and is valid without a signature or stamp. Issued {{ISSUED_AT}}.\n      Control record: {{DOCUMENT_HASH}} · Enquiries: {{SUPPORT_EMAIL}}",
     emailPreheader:
-      "A payment of {{CURRENCY}} {{TOTAL_AMOUNT}} has been received. Confirmation {{CONFIRMATION_NUMBER}} is in this message.",
+      "A payment of {{CURRENCY}} {{TOTAL_AMOUNT}} has been received. Confirmation {{CONFIRMATION_NUMBER}} is attached.",
     emailGreeting: "Payment received,<br>{{CUSTOMER_FIRST_NAME}}.",
     emailExpecting: "{{ORGANIZER_VENUE_NAME}} is expecting you.",
     confirmationNumber: "Confirmation number",
@@ -87,7 +112,7 @@ module.exports = {
     emailVoucherHelp:
       "The amount is deducted automatically from in-app orders, or staff can redeem it by entering the code.",
     coveringHtml:
-      "This message is your payment confirmation. It is always available in the app under\n              <strong>Wallet → Transaction history</strong>.<br><br>\n              Need help? Write to us at",
+      "The payment confirmation is attached, and it is always available in the app under\n              <strong>Wallet → Transaction history</strong>.<br><br>\n              Need help? Write to us at",
     cancellationTitle: "Payment cancellation",
   },
 };

@@ -13,8 +13,7 @@ const { fireAndForget } = require("../../../../helperUtils/responseUtil");
 const { enqueueFiscalDocument } = require("../../../../bullmq/queues");
 const { syncMonriTransactionStatus } = require("../../monri/monriRepository");
 const { findAppUserByIdWithProjectionService } = require("../../../../app/usersManagement/usersService");
-const { generateQRCode } = require("../../../../helperUtils/qrGenerator");
-const { ticketConfirmationEmailTemplate, ticketFailedEmailTemplate } = require("../../../../helperUtils/emailTemplates/ticketingEmailTemplates");
+const { ticketFailedEmailTemplate } = require("../../../../helperUtils/emailTemplates/ticketingEmailTemplates");
 const { sendEmailViaMailgun } = require("../../../../helperUtils/emailUtil");
 const triggerBadgeEngine = require("@triggerGlobalStreak");
 const { emitMenuOrderPaymentSockets } = require("@socketIo/orders/orderSocketEmitter");
@@ -165,70 +164,8 @@ const ticketingOrderFinalizerService = async ({ orderId, result }) => {
         throw new Error(trx.message || "wallet_update_failed");
       }
 
-      try {
-        // =====================================================
-        // 📧 TICKET CONFIRMATION EMAIL
-        // =====================================================
-
-        const userDetails =
-          await findAppUserByIdWithProjectionService(
-            order.user,
-            { email: 1, timezone: 1, username: 1 }
-          );
-        const bookings = await TicketingBookings
-          .find({ order: order._id })
-          .populate("organization")
-          .lean();
-
-        if (!bookings?.length) {
-          return;
-        }
-
-        // 🔹 Extract eventId from snapshot (ObjectId)
-        const eventId = bookings[0]?.ticket?.snapshot?.event;
-
-        let event = null;
-
-        if (eventId) {
-          event = await mongoose
-            .model("Event")
-            .findById(eventId)
-            .select("basicInfo schedule")
-            .lean();
-        }
-
-        const formattedTickets = [];
-
-        for (const booking of bookings) {
-          formattedTickets.push({
-            ticketBookingId: booking.ticketBookingId,
-          });
-        }
-
-        const html = ticketConfirmationEmailTemplate({
-          userName: userDetails.username,
-          organizationName: bookings[0]?.organization?.basicInfo?.name,
-          eventTitle: event?.basicInfo?.title || "",
-          eventDate: event?.schedule?.startDateTime || "",
-          eventTime: "",
-          venue: event?.basicInfo?.venueLocation?.address || "",
-          tickets: formattedTickets,
-          orderPricing: order.orderPricing,
-        });
-
-        let email = "cwaliimrandev@gmail.com"
-        if (process.env.NODE_ENV != "dev") {
-          email = userDetails.email
-        }
-        await sendEmailViaMailgun(
-          email,
-          "Your tickets are confirmed",
-          html
-        );
-
-      } catch (err) {
-        console.error("[EMAIL] Ticket confirmation email failed:", err);
-      }
+      // Success: fiscal invoice PDFs + payment confirmation (event/ticket details)
+      // via enqueueFiscalDocument → ticketing_invoices. No legacy ticket confirmation email.
     }
 
     // =====================================================

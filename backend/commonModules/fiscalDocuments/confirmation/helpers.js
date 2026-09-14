@@ -1,6 +1,10 @@
 const crypto = require("crypto");
-const { displayPercent } = require("../../paymentsIntegrations/billko/taxRateLabels");
+const {
+  displayPercent,
+  PLEIS_REVENUE_TAX_LABEL,
+} = require("../../paymentsIntegrations/billko/taxRateLabels");
 const { getCopy, humanPaymentMethod } = require("../locales");
+const { formatZagreb } = require("../shared/html");
 
 function snapshotCardFromMonriPayload(payload = {}) {
   if (!payload || typeof payload !== "object") {
@@ -26,6 +30,10 @@ function snapshotCardFromMonriPayload(payload = {}) {
 
 function computeHtmlHash(html) {
   return crypto.createHash("sha256").update(Buffer.from(html, "utf8")).digest("hex");
+}
+
+function computePdfHash(buffer) {
+  return crypto.createHash("sha256").update(buffer).digest("hex");
 }
 
 function mapOrderItems(order, locale) {
@@ -76,9 +84,107 @@ function mapOrderItems(order, locale) {
   return rows;
 }
 
+/**
+ * Confirmation line items for ticketing: event context + ticket types +
+ * individual ticket booking IDs + Pleis service fee.
+ */
+function mapTicketingItems({
+  ticketLines = [],
+  bookings = [],
+  event = null,
+  organization = null,
+  serviceFee = 0,
+  locale,
+} = {}) {
+  const copy = getCopy(locale);
+  const rows = [];
+
+  const eventTitle = event?.basicInfo?.title || "";
+  const venueName =
+    event?.basicInfo?.venue?.title ||
+    organization?.basicInfo?.name ||
+    "";
+  const startAt = event?.schedule?.startDateTime;
+  const endAt = event?.schedule?.endDateTime;
+
+  if (eventTitle) {
+    rows.push({
+      name: eventTitle,
+      vatPercent: 0,
+      quantity: 1,
+      unitPrice: 0,
+      amount: 0,
+      isOption: true,
+    });
+  }
+
+  const whenParts = [];
+  if (startAt) {
+    whenParts.push(
+      endAt
+        ? `${formatZagreb(startAt, locale)} – ${formatZagreb(endAt, locale)}`
+        : formatZagreb(startAt, locale),
+    );
+  }
+  if (venueName) whenParts.push(venueName);
+  if (whenParts.length) {
+    rows.push({
+      name: whenParts.join(" · "),
+      vatPercent: 0,
+      quantity: 1,
+      unitPrice: 0,
+      amount: 0,
+      isOption: true,
+    });
+  }
+
+  for (const line of ticketLines) {
+    const quantity = Number(line.quantity || 0);
+    const unitPrice = Number(line.unitRetailPrice || 0);
+    rows.push({
+      name: line.name || copy.item,
+      vatPercent: displayPercent(line.taxRateLabel),
+      quantity,
+      unitPrice,
+      amount: Number((unitPrice * quantity).toFixed(2)),
+    });
+  }
+
+  for (const booking of bookings) {
+    const id = booking.ticketBookingId || String(booking._id || "");
+    if (!id) continue;
+    const bits = [`${copy.ticketId}: ${id}`];
+    if (booking.isFastTrack) bits.push(copy.fastTrack);
+    if (booking.ticket?.timeSlot) bits.push(String(booking.ticket.timeSlot));
+    rows.push({
+      name: bits.join(" · "),
+      vatPercent: 0,
+      quantity: 1,
+      unitPrice: 0,
+      amount: 0,
+      isOption: true,
+    });
+  }
+
+  const fee = Number(serviceFee || 0);
+  if (fee > 0) {
+    rows.push({
+      name: copy.serviceFee,
+      vatPercent: displayPercent(PLEIS_REVENUE_TAX_LABEL),
+      quantity: 1,
+      unitPrice: fee,
+      amount: fee,
+    });
+  }
+
+  return rows;
+}
+
 module.exports = {
   snapshotCardFromMonriPayload,
   computeHtmlHash,
+  computePdfHash,
   mapOrderItems,
+  mapTicketingItems,
   humanPaymentMethod,
 };

@@ -4,6 +4,9 @@ const { TicketingBookings } = require("@TicketingBookingsModel");
 const { default: mongoose } = require("mongoose");
 const { TicketingOrders } = require("@TicketingOrdersModel");
 const { formatEventTicketing } = require("../../admin/ticketing/fomatter/formatTicketing");
+const {
+  resolveTaxRateLabel,
+} = require("../../commonModules/paymentsIntegrations/billko/taxRateLabels");
 // Create
 const createTicketing = async (data) => {
   const ticketing = new TicketingsModel(data);
@@ -163,6 +166,14 @@ const validateTicketsAndQuantity = async (ticketings) => {
       continue;
     }
 
+    if (!resolveTaxRateLabel(ticket)) {
+      errors.push({
+        ticketId,
+        message: "tax_rate_label_required",
+      });
+      continue;
+    }
+
     /* =====================================================
        SLOT-BASED TICKETS
     ===================================================== */
@@ -288,7 +299,10 @@ const validateTicketsAndQuantity = async (ticketings) => {
 
         ticketSnapshots.push({
           ticketId,
-          snapshot: ticket.toObject(),
+          snapshot: {
+            ...ticket.toObject(),
+            taxRateLabel: resolveTaxRateLabel(ticket),
+          },
           timeSlot: req.timeSlot,
           isFastTrack: req.isFastTrack === true
         });
@@ -403,7 +417,10 @@ const validateTicketsAndQuantity = async (ticketings) => {
     for (const req of requests) {
       ticketSnapshots.push({
         ticketId,
-        snapshot: ticket.toObject(),
+        snapshot: {
+          ...ticket.toObject(),
+          taxRateLabel: resolveTaxRateLabel(ticket),
+        },
         timeSlot: null,
         isFastTrack: req.isFastTrack === true
       });

@@ -8,7 +8,10 @@ const {
 const { TicketingOrders } = require("@TicketingOrdersModel");
 const { resolveTimeSensitivePricing } = require("./utils/timeSensitivePricing");
 const { Types } = require("mongoose");
-const { TAX_RATE_BOOKING } = require("../../../config/CONSTANTS");
+const {
+  computeTicketingServiceFeeCents,
+  // TAX_RATE_BOOKING, // ORIGINAL 6% flat fee — restore with: taxAmount = sumOfPrices * TAX_RATE_BOOKING
+} = require("../../../config/CONSTANTS");
 const { usePromoCode } = require("../../promoCode/promoCodeRepository");
 const {
   assertOrganizerBillkoReady,
@@ -49,6 +52,7 @@ const createTicketingBookingService = async (
   const now = getCurrentDateInTimezone({ timezone });
 
   let sumOfPrices = 0;
+  let taxAmountCents = 0;
   const resolvedTicketData = [];
 
   for (const t of data.ticketings) {
@@ -69,6 +73,11 @@ const createTicketingBookingService = async (
     }
 
     sumOfPrices += ticketPrice;
+    // DOC formula per ticket: min(base, 30 EUR) + 8% of item (integer cents).
+    // ORIGINAL: taxAmount = sumOfPrices * TAX_RATE_BOOKING (6% flat on cart).
+    taxAmountCents += computeTicketingServiceFeeCents(
+      Math.round(Number(ticketPrice) * 100),
+    );
 
     resolvedTicketData.push({
       input: t,
@@ -78,12 +87,8 @@ const createTicketingBookingService = async (
     });
   }
 
-  /* ---------- TAX ---------- */
-  let taxAmount = 0;
-
-  if (sumOfPrices > 0) {
-    taxAmount = sumOfPrices * TAX_RATE_BOOKING;
-  }
+  /* ---------- SERVICE FEE (taxAmount) ---------- */
+  const taxAmount = taxAmountCents / 100;
 
   let totalWithTax = sumOfPrices + taxAmount;
 

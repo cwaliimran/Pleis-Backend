@@ -204,14 +204,7 @@ async function resolveInvoiceApiKey(invoice) {
 
 async function resolveCustomerEmail(userId) {
   if (!userId) return { email: "", language: "" };
-  let user = null;
-  try {
-    const { User } = require("../../../models/UserModel");
-    user = await User.findById(userId).select("email language").lean();
-  } catch (error) {
-    user = null;
-  }
-  if (user?.email) return { email: user.email, language: user.language };
+  // Billko §2.1: checkout / billing email first, then account email.
   const { UserBillingInformation } = require("../../transactions/UserBillingInformation");
   const billing = await UserBillingInformation.findOne({
     user: userId,
@@ -219,7 +212,58 @@ async function resolveCustomerEmail(userId) {
   })
     .select("email")
     .lean();
-  return { email: billing?.email || "", language: user?.language || "" };
+  let user = null;
+  try {
+    const { User } = require("../../../models/UserModel");
+    user = await User.findById(userId).select("email language").lean();
+  } catch (error) {
+    user = null;
+  }
+  return {
+    email: billing?.email || user?.email || "",
+    language: user?.language || "",
+  };
+}
+
+function renderTicketingInvoiceEmailHtml({
+  locale,
+  venueName,
+  orderReference,
+  invoiceNumbers,
+  appDeepLink,
+}) {
+  const fs = require("fs");
+  const path = require("path");
+  const { getCopy, resolveLocale } = require("../locales");
+  const { fillRawTokens, fillEscapedTokens } = require("../shared/html");
+  const copy = getCopy(resolveLocale(locale));
+  const ie = copy.invoiceEmail;
+  const numbers = invoiceNumbers || "";
+  const templatePath = path.join(__dirname, "../templates/invoice-email.html");
+  let html = fs.readFileSync(templatePath, "utf8");
+  html = fillRawTokens(html, {
+    HTML_LANG: copy.htmlLang,
+    EMAIL_TITLE: ie.title,
+    EMAIL_HEADING: ie.heading,
+    EMAIL_INTRO: ie.intro,
+    EMAIL_ATTACH_NOTE: ie.attachNote,
+    EMAIL_FOOTER: ie.footer,
+    EMAIL_PREHEADER: typeof ie.preheader === "function" ? ie.preheader(numbers) : ie.preheader,
+    LBL_VENUE: ie.labelVenue,
+    LBL_ORDER: ie.labelOrder,
+    LBL_INVOICES: ie.labelInvoices,
+    OPEN_IN_APP: copy.openInApp,
+  });
+  html = fillEscapedTokens(html, {
+    VENUE_NAME: venueName || "—",
+    ORDER_REFERENCE: orderReference || "—",
+    INVOICE_NUMBERS: numbers || "—",
+    APP_DEEPLINK: appDeepLink || process.env.PLEIS_WEB || "https://pleis.hr",
+    SUPPORT_EMAIL: process.env.PLEIS_SUPPORT_EMAIL || "support@pleis.hr",
+    PLEIS_LEGAL_NAME: process.env.PLEIS_LEGAL_NAME || "Utopia Technologies d.o.o.",
+    PLEIS_WEB: process.env.PLEIS_WEB || "https://pleis.hr",
+  });
+  return html;
 }
 
 async function maybeEmailTicketingInvoicePdfs(orderNumber, userId) {
@@ -279,11 +323,37 @@ async function maybeEmailTicketingInvoicePdfs(orderNumber, userId) {
   }
 
   const numbers = rows.map((row) => row.invoiceNumber).filter(Boolean).join(", ");
+  let venueName = "";
+  try {
+    const { TicketingOrders } = require("@TicketingOrdersModel");
+    const Organizations = require("@OrganizationModel");
+    const order = await TicketingOrders.findById(orderNumber)
+      .select("organization")
+      .lean();
+    if (order?.organization) {
+      const org = await Organizations.findById(order.organization)
+        .select("basicInfo.name")
+        .lean();
+      venueName = org?.basicInfo?.name || "";
+    }
+  } catch (error) {
+    venueName = "";
+  }
+
+  const { buildConfirmationOpenUrl } = require("../api/openAppRedirect");
+  const html = renderTicketingInvoiceEmailHtml({
+    locale,
+    venueName,
+    orderReference: orderNumber,
+    invoiceNumbers: numbers,
+    appDeepLink: buildConfirmationOpenUrl(orderNumber),
+  });
+
   const { sendEmailViaMailgun } = require("../../../helperUtils/emailUtil");
   const result = await sendEmailViaMailgun(
     to,
     copy.invoiceEmailSubject(numbers),
-    copy.invoiceEmailBody,
+    html,
     {
       fromEmail: `Pleis <noreply@${process.env.MAILGUN_DOMAIN || "pleis.ai"}>`,
       replyTo: process.env.PLEIS_SUPPORT_EMAIL || "support@pleis.hr",
@@ -312,5 +382,7 @@ module.exports = {
   fetchInvoicePdf,
   resolveInvoiceApiKey,
   storeInvoicePdfIfAvailable,
+  resolveCustomerEmail,
+  renderTicketingInvoiceEmailHtml,
   maybeEmailTicketingInvoicePdfs,
 };

@@ -6,6 +6,9 @@ module.exports = {
   tip: "Napojnica",
   item: "Stavka",
   reservation: "Rezervacija",
+  serviceFee: "Naknada za uslugu",
+  ticketId: "ID ulaznice",
+  fastTrack: "Fast track",
   minSpendPrepayment: "Predujam za minimalnu potrošnju (višenamjenski vaučer)",
   print: "Ispiši",
   download: "Preuzmi",
@@ -15,14 +18,31 @@ module.exports = {
   subjectCancellation: (venue) => `Storno potvrde o plaćanju, ${venue}`,
   openInApp: "Otvori u aplikaciji",
   invoiceEmailSubject: (numbers) => (numbers ? `Račun ${numbers}` : "Račun"),
+  invoiceEmail: {
+    title: "Vaši računi",
+    heading: "Vaši računi su spremni",
+    intro:
+      "Hvala na kupnji. Fiskalizirani računi za ovu narudžbu nalaze se u privitku kao PDF datoteke.",
+    attachNote:
+      "Sačuvajte PDF-ove za svoju evidenciju. Isti dokumenti dostupni su i u aplikaciji pod Novčanik → Povijest transakcija.",
+    footer: "Trebaš pomoć? Piši nam na",
+    preheader: (numbers) =>
+      numbers ? `Računi (${numbers}) su u privitku.` : "Računi su u privitku.",
+    labelVenue: "Mjesto",
+    labelOrder: "Narudžba",
+    labelInvoices: "Brojevi računa",
+  },
   invoiceEmailBody:
     "<p>U privitku su fiskalizirani računi za vašu kupnju.</p>",
   invoicePdf: {
     htmlLang: "hr",
     title: "Račun",
+    titleSecondary: "Invoice",
+    pageWord: "stranica",
     details: "Podaci o računu",
     invoiceNumber: "Broj računa",
-    fiscalizationNumber: "Broj fiskalizacije",
+    fiscalizationNumber: "Broj fiskalizacije (JIR)",
+    fiscalProtectionCode: "Zaštitni kod izdavatelja (ZKI)",
     issuedAt: "Datum izdavanja",
     paymentMethod: "Način plaćanja",
     orderReference: "Referenca narudžbe",
@@ -36,8 +56,9 @@ module.exports = {
     unitPrice: "Jed. cijena",
     amount: "Iznos",
     total: "Ukupno",
+    issuedBy: "Izdavatelj računa",
     footer:
-      "Dokument je fiskaliziran. Izdan {{ISSUED_AT}}. Upiti: {{SUPPORT_EMAIL}}",
+      "Dokument je fiskaliziran i valjan je bez potpisa i pečata. Izdan {{ISSUED_AT}}. Upiti: {{SUPPORT_EMAIL}}",
     guest: "Kupac",
   },
   confirmation: {
@@ -75,7 +96,7 @@ module.exports = {
     documentFooter:
       "Dokument je izdan elektronički i valjan je bez potpisa i pečata. Izdan {{ISSUED_AT}}.\n      Kontrolni zapis: {{DOCUMENT_HASH}} · Upiti: {{SUPPORT_EMAIL}}",
     emailPreheader:
-      "Uplata od {{CURRENCY}} {{TOTAL_AMOUNT}} je zaprimljena. Potvrda {{CONFIRMATION_NUMBER}} je u ovoj poruci.",
+      "Uplata od {{CURRENCY}} {{TOTAL_AMOUNT}} je zaprimljena. Potvrda {{CONFIRMATION_NUMBER}} u privitku.",
     emailGreeting: "Uplata je zaprimljena,<br>{{CUSTOMER_FIRST_NAME}}.",
     emailExpecting: "{{ORGANIZER_VENUE_NAME}} te očekuje.",
     confirmationNumber: "Broj potvrde",
@@ -84,7 +105,7 @@ module.exports = {
     emailVoucherHelp:
       "Iznos se automatski oduzima od narudžbi u aplikaciji, ili ga osoblje može aktivirati unosom koda.",
     coveringHtml:
-      "Ova poruka je tvoja potvrda o plaćanju. Uvijek je dostupna i u aplikaciji pod\n              <strong>Novčanik → Povijest transakcija</strong>.<br><br>\n              Trebaš pomoć? Piši nam na",
+      "Potvrda o plaćanju je u privitku, a uvijek je dostupna i u aplikaciji pod\n              <strong>Novčanik → Povijest transakcija</strong>.<br><br>\n              Trebaš pomoć? Piši nam na",
     cancellationTitle: "Storno potvrde o plaćanju",
   },
 };

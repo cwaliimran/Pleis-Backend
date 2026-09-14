@@ -1,13 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 const { resolveLocale, getCopy } = require("../locales");
-const {
-  formatZagreb,
-  formatMoney,
-  escapeHtml,
-  fillRawTokens,
-  fillEscapedTokens,
-} = require("../shared/html");
+const { formatZagreb, formatMoney, escapeHtml, fillRawTokens, fillEscapedTokens } = require("../shared/html");
+const { resolveLogoSrc } = require("../shared/logo");
 
 const TEMPLATE_DIR = path.join(__dirname, "../templates");
 const DOCUMENT_TEMPLATE = path.join(TEMPLATE_DIR, "confirmation.html");
@@ -75,6 +70,7 @@ function dataTokens(data) {
     PLEIS_BRAND: data.pleisBrand,
     PLEIS_WEB: data.pleisWeb,
     SUPPORT_EMAIL: data.supportEmail,
+    LOGO_SRC: data.logoSrc || "",
     CONFIRMATION_NUMBER: data.confirmationNumber,
     ISSUED_AT: data.issuedAtFormatted,
     DOCUMENT_HASH: data.documentHash,
@@ -219,22 +215,30 @@ function stripEmbeddedFonts(html) {
 }
 
 function renderPaymentConfirmationHtml(data, options = {}) {
-  return applyTemplate(readTemplate(DOCUMENT_TEMPLATE), data, {
-    itemRowsHtml: data.itemRowsHtml,
-    hasVoucher: Boolean(data.voucher?.code),
-    isCancellation: Boolean(data.isCancellation),
-    filename: `${data.confirmationNumber || "confirmation"}.html`,
+  const view = {
+    ...data,
+    logoSrc: data.logoSrc || resolveLogoSrc({ forEmail: false }),
+  };
+  return applyTemplate(readTemplate(DOCUMENT_TEMPLATE), view, {
+    itemRowsHtml: view.itemRowsHtml,
+    hasVoucher: Boolean(view.voucher?.code),
+    isCancellation: Boolean(view.isCancellation),
+    filename: `${view.confirmationNumber || "confirmation"}.html`,
     injectActions: options.injectActions === true,
-    documentUrl: data.documentUrl,
+    documentUrl: view.documentUrl,
     kind: "document",
   });
 }
 
 function renderPaymentConfirmationEmailHtml(data) {
-  const html = applyTemplate(readTemplate(EMAIL_TEMPLATE), data, {
-    itemRowsHtml: data.emailItemRowsHtml,
-    hasVoucher: Boolean(data.voucher?.code),
-    isCancellation: Boolean(data.isCancellation),
+  const view = {
+    ...data,
+    logoSrc: data.logoSrc || resolveLogoSrc({ forEmail: true }),
+  };
+  const html = applyTemplate(readTemplate(EMAIL_TEMPLATE), view, {
+    itemRowsHtml: view.emailItemRowsHtml,
+    hasVoucher: Boolean(view.voucher?.code),
+    isCancellation: Boolean(view.isCancellation),
     injectActions: false,
     kind: "email",
   });

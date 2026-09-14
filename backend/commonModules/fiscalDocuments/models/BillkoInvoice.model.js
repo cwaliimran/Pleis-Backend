@@ -47,6 +47,9 @@ const billkoInvoiceSchema = new mongoose.Schema(
     billkoId: { type: String, index: true },
     invoiceNumber: { type: String, index: true },
     fiscalizationNumber: { type: String },
+    // Croatian ZKI (zaštitni kod izdavatelja). Billko may send as
+    // fiscalProtectionCode, zki, or ZKI.
+    fiscalProtectionCode: { type: String, default: "" },
     invoicePreviewLink: { type: String },
     status: {
       type: String,

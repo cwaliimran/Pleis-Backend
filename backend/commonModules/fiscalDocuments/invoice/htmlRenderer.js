@@ -4,6 +4,7 @@ const { displayPercent } = require("../../paymentsIntegrations/billko/taxRateLab
 const { toGross } = require("../../paymentsIntegrations/billko/billkoInvoiceBuilder");
 const { getCopy, resolveLocale } = require("../locales");
 const { formatZagreb, escapeHtml, fillEscapedTokens } = require("../shared/html");
+const { resolveLogoSrc } = require("../shared/logo");
 
 const TEMPLATE_PATH = path.join(__dirname, "../templates/invoice.html");
 
@@ -67,6 +68,15 @@ function fillTokens(html, data) {
   return html.split("{{ITEM_ROWS}}").join(data.itemRowsHtml || "");
 }
 
+function stripDataBlock(html, blockName) {
+  const attr = `data-block="${blockName}"`;
+  const re = new RegExp(
+    `<([a-zA-Z0-9]+)([^>]*\\s)?${attr}[^>]*>[\\s\\S]*?<\\/\\1>`,
+    "i",
+  );
+  return html.replace(re, "");
+}
+
 function renderFiscalInvoiceHtml(invoice, extras = {}) {
   const locale = resolveLocale(extras.locale);
   const labels = getCopy(locale).invoicePdf;
@@ -87,12 +97,22 @@ function renderFiscalInvoiceHtml(invoice, extras = {}) {
     .split("{{SUPPORT_EMAIL}}")
     .join(process.env.PLEIS_SUPPORT_EMAIL || "support@pleis.hr");
 
-  return fillTokens(readTemplate(), {
+  const fiscalProtectionCode =
+    invoice.fiscalProtectionCode ||
+    result.fiscalProtectionCode ||
+    result.zki ||
+    result.ZKI ||
+    "";
+
+  let html = fillTokens(readTemplate(), {
     HTML_LANG: labels.htmlLang,
     DOC_TITLE: labels.title,
+    DOC_TITLE_SECONDARY: labels.titleSecondary,
+    PAGE_WORD: labels.pageWord,
     SECTION_DETAILS: labels.details,
     LABEL_INVOICE_NUMBER: labels.invoiceNumber,
     LABEL_FISCALIZATION: labels.fiscalizationNumber,
+    LABEL_ZKI: labels.fiscalProtectionCode,
     LABEL_ISSUED_AT: labels.issuedAt,
     LABEL_PAYMENT_METHOD: labels.paymentMethod,
     LABEL_ORDER_REFERENCE: labels.orderReference,
@@ -106,10 +126,14 @@ function renderFiscalInvoiceHtml(invoice, extras = {}) {
     COL_UNIT: labels.unitPrice,
     COL_AMOUNT: labels.amount,
     LABEL_TOTAL: labels.total,
+    LBL_ISSUED_BY: labels.issuedBy,
     FOOTER_LINE: footer,
+    LOGO_SRC: resolveLogoSrc({ forEmail: false }),
+    PLEIS_BRAND: process.env.PLEIS_BRAND || "PLEIS",
     INVOICE_NUMBER: invoice.invoiceNumber || result.invoiceNumber || "",
     FISCALIZATION_NUMBER:
       invoice.fiscalizationNumber || result.fiscalizationNumber || "",
+    FISCAL_PROTECTION_CODE: fiscalProtectionCode,
     ISSUED_AT: issuedAt,
     PAYMENT_METHOD: paymentMethodLabel(paymentType, locale),
     ORDER_REFERENCE: invoice.orderNumber || result.orderNumber || "",
@@ -124,6 +148,10 @@ function renderFiscalInvoiceHtml(invoice, extras = {}) {
     INVOICE_NOTE: result.note || extras.note || "",
     itemRowsHtml: buildItemRows(products, locale),
   });
+  if (!fiscalProtectionCode) {
+    html = stripDataBlock(html, "zki");
+  }
+  return html;
 }
 
 module.exports = {

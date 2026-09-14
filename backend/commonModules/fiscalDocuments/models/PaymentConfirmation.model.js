@@ -8,7 +8,7 @@ const paymentConfirmationSchema = new mongoose.Schema(
     orderId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
     module: {
       type: String,
-      enum: ["ORDERING", "RESERVATION"],
+      enum: ["ORDERING", "RESERVATION", "TICKETING"],
       required: true,
     },
     organizerCompanyId: {
@@ -19,6 +19,12 @@ const paymentConfirmationSchema = new mongoose.Schema(
     organization: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organizations",
+    },
+    customerUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
     },
     customerName: { type: String, required: true },
     customerEmail: { type: String, required: true },
@@ -55,6 +61,14 @@ const paymentConfirmationSchema = new mongoose.Schema(
     issuedAt: { type: Date, default: Date.now },
     locale: { type: String, enum: ["en", "hr"], default: "hr" },
     emailSentAt: { type: Date, default: null },
+    // Mailgun message id from send API (`data.id`), used by delivery webhook.
+    emailMessageId: { type: String, default: null, index: true },
+    // Mail delivery lifecycle. Bounce/delivered updated by Mailgun webhook.
+    deliveryStatus: {
+      type: String,
+      enum: ["pending", "sent", "delivered", "bounced"],
+      default: "pending",
+    },
   },
   { timestamps: true },
 );
@@ -64,6 +78,7 @@ paymentConfirmationSchema.index(
   { orderId: 1, module: 1, cancelsConfirmationId: 1 },
   { unique: true },
 );
+paymentConfirmationSchema.index({ customerEmail: 1, confirmationNumber: 1 });
 
 module.exports = mongoose.model(
   "PaymentConfirmation",

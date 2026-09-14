@@ -1040,14 +1040,20 @@ exports.refundPayment = async (req, res) => {
       issueCancellationConfirmation,
     } = require("../../fiscalDocuments/confirmation/generator");
     const PaymentConfirmation = require("../../fiscalDocuments/models/PaymentConfirmation.model");
-    const original = await PaymentConfirmation.findOne({
-      orderId: tx.orderNumber,
-      $or: [
-        { cancelsConfirmationId: null },
-        { cancelsConfirmationId: { $exists: false } },
-      ],
-      status: "ISSUED",
-    });
+    const mongoose = require("mongoose");
+    const orderObjectId = mongoose.Types.ObjectId.isValid(tx.orderNumber)
+      ? new mongoose.Types.ObjectId(String(tx.orderNumber))
+      : null;
+    const original = orderObjectId
+      ? await PaymentConfirmation.findOne({
+          orderId: orderObjectId,
+          $or: [
+            { cancelsConfirmationId: null },
+            { cancelsConfirmationId: { $exists: false } },
+          ],
+          status: "ISSUED",
+        })
+      : null;
     if (original) {
       await issueCancellationConfirmation(original, {
         transactionId: tx.monriTransactionId,
@@ -1055,9 +1061,26 @@ exports.refundPayment = async (req, res) => {
       });
     }
 
+    // Also cancel min-spend voucher when refunding a reservation (even if
+    // confirmation cancel already did it — idempotent status write).
+    if (tx.orderType === "userreservations" && orderObjectId) {
+      const { UserReservations } = require("../../reservations/UsersReservation");
+      await UserReservations.updateOne(
+        {
+          _id: orderObjectId,
+          "voucher.code": { $exists: true, $nin: [null, ""] },
+        },
+        { $set: { "voucher.status": "cancelled" } },
+      );
+    }
+
     if (tx.orderType === "ticketingbookings") {
       const { stornoTicketingInvoices } = require("../../fiscalDocuments/jobs/documentService");
-      await stornoTicketingInvoices(tx.orderNumber, { execute: false });
+      // execute:true = attempt live; still gated by BILLKO_STORNO_ENABLED (default off).
+      await stornoTicketingInvoices(tx.orderNumber, {
+        execute: true,
+        refundAmount: plan.refundAmount,
+      });
     }
 
     res.json(result);

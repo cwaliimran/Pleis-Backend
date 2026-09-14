@@ -14,9 +14,26 @@ function canViewInvoice(user, invoice) {
 function canViewConfirmation(user, confirmation) {
   if (!confirmation) return false;
   if (isAdminUser(user)) return true;
-  const organizerId = user?._id || user?.id;
-  if (!organizerId || !confirmation.organizerCompanyId) return false;
-  return String(confirmation.organizerCompanyId) === String(organizerId);
+  const userId = user?._id || user?.id;
+  if (!userId) return false;
+
+  // Buyer / app user who owns the confirmation.
+  if (
+    confirmation.customerUserId &&
+    String(confirmation.customerUserId) === String(userId)
+  ) {
+    return true;
+  }
+
+  // Organizer who collected the payment.
+  if (
+    confirmation.organizerCompanyId &&
+    String(confirmation.organizerCompanyId) === String(userId)
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 function redactInvoiceForRole(user, invoice) {

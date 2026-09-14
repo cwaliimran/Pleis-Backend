@@ -11,6 +11,7 @@ const {
   findInvoicesByOrderNumber,
   isInvalidApiKeyError,
   refundInvoice,
+  isBillkoStornoEnabled,
 } = require("../../paymentsIntegrations/billko/billkoClient");
 const {
   stripPdfPayload,
@@ -28,14 +29,18 @@ const {
   mapGatewayPaymentType,
   buildBillingInformation,
   buildCreateInvoicePayload,
+  buildPartialRefundInvoicePayload,
+  resolveReferentDocumentDT,
+  isFullTicketRefund,
   buildServiceFeeProducts,
   buildTicketProducts,
   buildServiceProducts,
   scaleLinesToGross,
   buildOrganizerAttributionNote,
+  InvoiceFormat,
 } = require("../../paymentsIntegrations/billko/billkoInvoiceBuilder");
 const {
-  requireLabelFromPercent,
+  requireTaxRateLabel,
   displayPercent,
   TIP_TAX_LABEL,
   VOUCHER_TAX_LABEL,
@@ -43,6 +48,7 @@ const {
 const {
   issuePaymentConfirmation,
   mapOrderItems,
+  mapTicketingItems,
   generateVoucherCode,
   resolveLocale,
   snapshotCardFromMonriPayload,
@@ -73,6 +79,16 @@ function failUnrecoverable(error) {
   throw error;
 }
 
+function extractFiscalProtectionCode(result = {}) {
+  return (
+    result.fiscalProtectionCode ||
+    result.zki ||
+    result.ZKI ||
+    result.protectionCode ||
+    ""
+  );
+}
+
 function persistInvoiceFields(result, payload = {}) {
   const fiscalized = Boolean(result?.fiscalizationNumber);
   const raw = { ...(result || {}) };
@@ -81,10 +97,12 @@ function persistInvoiceFields(result, payload = {}) {
   if (payload.payment) raw.payment = payload.payment;
   if (payload.note) raw.note = payload.note;
   if (payload.orderNumber) raw.orderNumber = payload.orderNumber;
+  const fiscalProtectionCode = extractFiscalProtectionCode(result);
   return {
     billkoId: result?.id || result?._id || "",
     invoiceNumber: result?.invoiceNumber || "",
     fiscalizationNumber: result?.fiscalizationNumber || "",
+    fiscalProtectionCode,
     invoicePreviewLink: result?.invoicePreviewLink || "",
     pdfFileName: result?.fileName || "",
     status: fiscalized ? "fiscalized" : "fiscalization_failed",
@@ -202,10 +220,7 @@ function groupTicketLines(bookings) {
     const snapshot = booking.ticket?.snapshot || {};
     const ticketId = String(booking.ticket?.ticketId || snapshot._id || "");
     const uniqueCode = `TCK-${ticketId}`;
-    const taxRateLabel = requireLabelFromPercent(
-      snapshot.taxPercentage ?? snapshot.taxPercent ?? snapshot.tax,
-      snapshot.title,
-    );
+    const taxRateLabel = requireTaxRateLabel(snapshot, snapshot.title);
     const unitRetailPrice = Number(
       snapshot.resolvedPrice ?? snapshot.price ?? 0,
     );
@@ -245,7 +260,7 @@ async function profileNameForUser(userRef) {
 async function issueTicketingInvoices(orderId) {
   const order = await TicketingOrders.findById(orderId)
     .populate("userBillingInformation")
-    .populate("user", "firstName lastName email")
+    .populate("user", "firstName lastName email language")
     .lean();
   if (!order) throw new Error("ticketing_order_not_found");
   if (order.paymentDetails?.paymentStatus !== "paid") return null;
@@ -254,12 +269,19 @@ async function issueTicketingInvoices(orderId) {
   if (!bookings.length) throw new Error("ticketing_bookings_not_found");
 
   const userId = order.user?._id || order.user;
-  const [organization, billing, profile] = await Promise.all([
+  const { Events } = require("../../events/Event");
+  const [organization, billing, profile, event] = await Promise.all([
     Organizations.findById(order.organization).select("basicInfo location").lean(),
     order.userBillingInformation
       ? Promise.resolve(order.userBillingInformation)
       : UserBillingInformation.findOne({ user: userId, status: "active" }).lean(),
     profileNameForUser(order.user),
+    order.event
+      ? Events.findById(order.event)
+          .select("publicId basicInfo.title basicInfo.venue schedule")
+          .populate("basicInfo.venue", "title")
+          .lean()
+      : Promise.resolve(null),
   ]);
 
   const seller = await getOrganizerSeller(order.companyOrganizer, organization);
@@ -333,17 +355,65 @@ async function issueTicketingInvoices(orderId) {
   );
 
   await maybeEmailTicketingInvoicePdfs(orderNumber, userId);
-  return invoices;
+
+  const customerName =
+    [billing?.firstName, billing?.lastName].filter(Boolean).join(" ") ||
+    [profile.firstName, profile.lastName].filter(Boolean).join(" ") ||
+    "Guest";
+  const customerEmail = billing?.email || profile.email;
+  if (!customerEmail) throw new Error("confirmation_email_missing");
+
+  const locale = resolveLocale(order.user?.language);
+  const card = await loadCardSnapshotForOrder(
+    order._id,
+    order.paymentDetails?.transactionId,
+  );
+  const confirmation = await issuePaymentConfirmation({
+    module: "TICKETING",
+    orderId: order._id,
+    orderReference:
+      event?.publicId || event?.basicInfo?.title || String(order._id),
+    transactionId:
+      order.paymentDetails?.transactionId || String(order._id),
+    organizerCompanyId: order.companyOrganizer || userId,
+    organization: order.organization,
+    customerUserId: userId || null,
+    customerName,
+    customerEmail,
+    paidAt: order.updatedAt || new Date(),
+    paymentMethod: order.paymentDetails?.paymentMethod,
+    cardLast4: card.cardLast4,
+    cardBrand: card.cardBrand,
+    amount:
+      order.orderPricing?.total ??
+      ticketLines.reduce(
+        (sum, line) => sum + Number(line.unitRetailPrice || 0) * Number(line.quantity || 0),
+        0,
+      ) + feeTotal,
+    currency: "EUR",
+    items: mapTicketingItems({
+      ticketLines,
+      bookings,
+      event,
+      organization,
+      serviceFee: feeTotal,
+      locale,
+    }),
+    organizerLegalName: seller.companyName,
+    organizerVenueName:
+      event?.basicInfo?.venue?.title ||
+      seller.venueName ||
+      organization?.basicInfo?.name,
+    organizerAddress: seller.address || formatOrganizerAddress(organization?.location),
+    organizerOib: seller.oib,
+    locale,
+  });
+
+  return { invoices, confirmation };
 }
 
 function lineTaxLabel(snapshot, context) {
-  return (
-    snapshot?.taxRateLabel ||
-    requireLabelFromPercent(
-      snapshot?.taxPercent ?? snapshot?.taxPercentage ?? snapshot?.tax ?? 0,
-      context,
-    )
-  );
+  return requireTaxRateLabel(snapshot, context);
 }
 
 function buildMenuOrderLines(order) {
@@ -519,6 +589,7 @@ async function issueOrderingConfirmation(menuOrderId) {
     transactionId: order.transactionId || String(order._id),
     organizerCompanyId: organization?.creator || order.user?._id,
     organization: organization?._id || order.organization,
+    customerUserId: order.user?._id || order.user || null,
     customerName,
     customerEmail,
     paidAt: order.paidAt || new Date(),
@@ -715,6 +786,7 @@ async function issueReservationConfirmation(reservationId) {
       reservation.paymentDetails?.transactionId || String(reservation._id),
     organizerCompanyId: reservation.companyOrganizer,
     organization: organization?._id,
+    customerUserId: reservation.userId?._id || reservation.userId || null,
     customerName,
     customerEmail,
     paidAt: reservation.paidAt || new Date(),
@@ -782,22 +854,77 @@ async function issueSubscriptionInvoice(transactionId) {
   });
 }
 
-async function stornoTicketingInvoices(orderId, { execute = false } = {}) {
+function productsForPartialStorno(invoice, refundAmount) {
+  const rawProducts = Array.isArray(invoice?.rawResponse?.products)
+    ? invoice.rawResponse.products
+    : [];
+  const lines = rawProducts
+    .map((product) => ({
+      uniqueCode: product.uniqueCode,
+      name: product.name,
+      type: product.type,
+      quantity: Number(product.quantity) || 1,
+      unitRetailPrice: toGross(product.unitRetailPrice),
+      taxRateLabels: product.taxRateLabels,
+      ...(product.note ? { note: product.note } : {}),
+    }))
+    .filter((line) => line.uniqueCode && line.taxRateLabels?.[0]);
+  if (!lines.length) {
+    return [
+      {
+        uniqueCode: `RST-${String(invoice.billkoId || invoice._id).slice(0, 12)}`,
+        name: "Ticket refund",
+        type: 4,
+        quantity: 1,
+        unitRetailPrice: toGross(refundAmount),
+        taxRateLabels: (invoice.taxRateLabels || []).slice(0, 1),
+      },
+    ].filter((line) => line.taxRateLabels?.[0]);
+  }
+  return scaleLinesToGross(lines, refundAmount);
+}
+
+/**
+ * Ticket invoice storno after a Monri refund.
+ * - Service fee invoices are kept by default (Billko §4.5 / product rule).
+ * - Full ticket amount → POST /invoices/refund.
+ * - Partial → createInvoice transactionType 1 + referentDocumentNumber/DT.
+ * Live Billko calls only when BILLKO_STORNO_ENABLED=true (and execute !== false).
+ */
+async function stornoTicketingInvoices(
+  orderId,
+  { execute = true, refundAmount = null } = {},
+) {
+  const orderKey = String(orderId);
+  const orderFilter = {
+    $or: [{ orderId }, { orderNumber: orderKey }],
+  };
   const invoices = await BillkoInvoice.find({
-    orderId,
+    ...orderFilter,
     kind: { $in: ["tickets"] },
     status: { $in: ["created", "fiscalized"] },
   }).lean();
   const skippedFee = await BillkoInvoice.find({
-    orderId,
+    ...orderFilter,
     kind: "service_fee",
   })
-    .select("_id kind status")
+    .select("_id kind status amount")
     .lean();
 
-  if (!execute || process.env.BILLKO_STORNO_ENABLED !== "true") {
+  const live = execute !== false && isBillkoStornoEnabled();
+  const planned = invoices.map((row) => {
+    const full = isFullTicketRefund(refundAmount, row.amount);
     return {
-      plannedTicketStornos: invoices.map((row) => String(row._id)),
+      invoiceId: String(row._id),
+      billkoId: row.billkoId || null,
+      mode: full ? "full_refund_endpoint" : "partial_create_refund_invoice",
+      refundAmount: full ? row.amount : toGross(refundAmount),
+    };
+  });
+
+  if (!live) {
+    return {
+      plannedTicketStornos: planned,
       skippedServiceFee: skippedFee.map((row) => String(row._id)),
       executed: false,
       reason: "live_billko_storno_disabled",
@@ -810,16 +937,103 @@ async function stornoTicketingInvoices(orderId, { execute = false } = {}) {
       invoice.seller === "pleis"
         ? { apiKey: getPleisBillkoApiKey() }
         : await getOrganizerSeller(invoice.companyOrganizer);
-    const remote = await refundInvoice(seller.apiKey, {
-      id: invoice.billkoId,
+    const full = isFullTicketRefund(refundAmount, invoice.amount);
+
+    if (full) {
+      const remote = await refundInvoice(seller.apiKey, {
+        invoiceId: invoice.billkoId,
+        invoiceFormat: InvoiceFormat.A4Paper,
+        fiscalizeInvoice: true,
+      });
+      await BillkoInvoice.updateOne(
+        { _id: invoice._id },
+        { $set: { status: "refunded", lastError: "", rawResponse: remote } },
+      );
+      results.push({ mode: "full_refund_endpoint", remote });
+      continue;
+    }
+
+    const referentDocumentNumber = invoice.invoiceNumber;
+    const referentDocumentDT = resolveReferentDocumentDT(invoice);
+    if (!referentDocumentNumber || !referentDocumentDT) {
+      const error = new Error("billko_partial_storno_missing_referent");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const products = productsForPartialStorno(invoice, refundAmount);
+    if (!products.length) {
+      const error = new Error("billko_partial_storno_no_products");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const paymentType =
+      invoice.rawResponse?.payment?.[0]?.paymentType != null
+        ? invoice.rawResponse.payment[0].paymentType
+        : 2;
+    const billingInformation = invoice.rawResponse?.billingInformation;
+    if (!billingInformation) {
+      const error = new Error("billko_partial_storno_missing_billing");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const priorPartials = await BillkoInvoice.countDocuments({
+      orderId: invoice.orderId,
+      kind: "refund_storno",
     });
-    await BillkoInvoice.updateOne(
-      { _id: invoice._id },
-      { $set: { status: "refunded", lastError: "", rawResponse: remote } },
+    const stornoOrderNumber = `${invoice.orderNumber}-RST-${priorPartials + 1}`;
+    const payload = buildPartialRefundInvoicePayload({
+      orderNumber: stornoOrderNumber,
+      products,
+      paymentType,
+      billingInformation,
+      referentDocumentNumber,
+      referentDocumentDT,
+      note: `Partial refund of ${invoice.invoiceNumber}`,
+    });
+
+    let remote;
+    try {
+      remote = await createInvoice(seller.apiKey, payload);
+    } catch (error) {
+      failUnrecoverable(error);
+    }
+
+    const created = await BillkoInvoice.findOneAndUpdate(
+      { orderNumber: stornoOrderNumber, kind: "refund_storno" },
+      {
+        $set: {
+          kind: "refund_storno",
+          seller: invoice.seller,
+          orderType: invoice.orderType,
+          orderId: invoice.orderId,
+          orderNumber: stornoOrderNumber,
+          organization: invoice.organization,
+          companyOrganizer: invoice.companyOrganizer,
+          user: invoice.user,
+          amount: payload.payment?.[0]?.amount || toGross(refundAmount),
+          taxRateLabels: (payload.products || [])
+            .map((p) => p.taxRateLabels?.[0])
+            .filter(Boolean),
+          ...persistInvoiceFields(remote, payload),
+        },
+      },
+      { upsert: true, new: true },
     );
-    results.push(remote);
+    results.push({
+      mode: "partial_create_refund_invoice",
+      remote,
+      refundStornoId: String(created._id),
+    });
   }
-  return { executed: true, results, skippedServiceFee: skippedFee };
+
+  return {
+    executed: true,
+    results,
+    skippedServiceFee: skippedFee.map((row) => String(row._id)),
+  };
 }
 
 async function handleSuccessfulPayment(job) {
@@ -841,7 +1055,8 @@ async function handleSuccessfulPayment(job) {
     return issueSubscriptionInvoice(orderId);
   }
   if (kind === "ticketing_storno") {
-    return stornoTicketingInvoices(orderId, { execute: false });
+    // execute defaults true; live calls still require BILLKO_STORNO_ENABLED=true
+    return stornoTicketingInvoices(orderId);
   }
 
   throw new UnrecoverableError(`unsupported_fiscal_document_kind:${kind}`);

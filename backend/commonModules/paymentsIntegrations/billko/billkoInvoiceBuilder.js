@@ -137,6 +137,8 @@ function buildCreateInvoicePayload({
   createOrUpdateOrganizationCustomer = false,
   invoiceType = InvoiceType.Normal,
   transactionType = TransactionType.Sale,
+  referentDocumentNumber,
+  referentDocumentDT,
 }) {
   const total = productTotal(products);
   if (products.some((product) => !isValidTaxRateLabel(product.taxRateLabels?.[0]))) {
@@ -162,8 +164,61 @@ function buildCreateInvoicePayload({
   if (createOrUpdateOrganizationCustomer) {
     payload.createOrUpdateOrganizationCustomer = true;
   }
+  // Billko requires the referent pair together (full refund uses /invoices/refund instead).
+  if (referentDocumentNumber || referentDocumentDT) {
+    if (!referentDocumentNumber || !referentDocumentDT) {
+      const error = new Error("billko_referent_pair_incomplete");
+      error.statusCode = 400;
+      throw error;
+    }
+    payload.referentDocumentNumber = String(referentDocumentNumber);
+    payload.referentDocumentDT = String(referentDocumentDT);
+  }
 
   return payload;
+}
+
+/**
+ * Partial ticket storno: new invoice with transactionType Refund + referent pair.
+ * Full invoice cancel uses POST /invoices/refund instead (Billko §4.5 / §12).
+ */
+function buildPartialRefundInvoicePayload({
+  orderNumber,
+  products,
+  paymentType,
+  billingInformation,
+  referentDocumentNumber,
+  referentDocumentDT,
+  note,
+}) {
+  return buildCreateInvoicePayload({
+    orderNumber,
+    products,
+    paymentType,
+    billingInformation,
+    note,
+    transactionType: TransactionType.Refund,
+    referentDocumentNumber,
+    referentDocumentDT,
+  });
+}
+
+function resolveReferentDocumentDT(invoice = {}) {
+  const raw = invoice.rawResponse || {};
+  return (
+    raw.dateAndTimeOfIssue ||
+    raw.dateOfIssue ||
+    raw.DateAndTimeOfIssue ||
+    (invoice.createdAt ? formatBillkoDate(invoice.createdAt) : formatBillkoDate())
+  );
+}
+
+/** Full ticket storno when refund covers the ticket invoice amount (fee kept separately). */
+function isFullTicketRefund(refundAmount, ticketAmount) {
+  if (refundAmount == null) return true;
+  const ticket = toGross(ticketAmount);
+  if (!(ticket > 0)) return true;
+  return toGross(refundAmount) + 0.0001 >= ticket;
 }
 
 function buildServiceFeeProducts(ticketLines, feeTotal) {
@@ -259,6 +314,9 @@ module.exports = {
   buildBillingInformation,
   productTotal,
   buildCreateInvoicePayload,
+  buildPartialRefundInvoicePayload,
+  resolveReferentDocumentDT,
+  isFullTicketRefund,
   buildServiceFeeProducts,
   buildTicketProducts,
   buildServiceProducts,

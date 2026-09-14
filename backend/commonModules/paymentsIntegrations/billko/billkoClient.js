@@ -197,14 +197,35 @@ async function findInvoicesByOrderNumber(apiKey, orderNumber) {
   return [];
 }
 
+/**
+ * Full invoice storno (Billko §4.5). Partial refunds must use createInvoice
+ * with transactionType 1 + referentDocumentNumber/referentDocumentDT instead.
+ *
+ * Accepts either a Billko id string or a body with invoiceId / id.
+ */
 async function refundInvoice(apiKey, payload) {
   try {
     const client = createClient(apiKey);
-    const response = await client.post("/invoices/refund", payload);
+    const invoiceId =
+      typeof payload === "string"
+        ? payload
+        : payload?.invoiceId || payload?.id || payload?.billkoId;
+    const body = {
+      invoiceId,
+      invoiceFormat:
+        payload?.invoiceFormat != null ? payload.invoiceFormat : 3,
+      fiscalizeInvoice:
+        payload?.fiscalizeInvoice != null ? payload.fiscalizeInvoice : true,
+    };
+    const response = await client.post("/invoices/refund", body);
     return unwrapResult(response, "refund_invoice");
   } catch (error) {
     throw wrapAxiosError(error, "refund_invoice");
   }
+}
+
+function isBillkoStornoEnabled() {
+  return process.env.BILLKO_STORNO_ENABLED === "true";
 }
 
 function isInvalidApiKeyError(error) {
@@ -227,6 +248,7 @@ module.exports = {
   getInvoiceById,
   findInvoicesByOrderNumber,
   refundInvoice,
+  isBillkoStornoEnabled,
   isInvalidApiKeyError,
   billkoErrorDetails,
 };
