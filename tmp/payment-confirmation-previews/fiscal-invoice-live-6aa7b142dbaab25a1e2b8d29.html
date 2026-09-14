@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>4/MERCHANTDEMO/1 Invoice</title>
+  <style>
+    @page { size: A4; margin: 15mm 15mm 13mm 15mm; }
+    :root {
+      --ink: #14181F;
+      --muted: #6B7280;
+      --hairline: #E3E6EA;
+      --panel: #F6F7F9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Instrument Sans', 'DejaVu Sans', Arial, sans-serif;
+      font-size: 9pt;
+      line-height: 1.4;
+      color: var(--ink);
+      margin: 0;
+    }
+    .masthead { display: flex; justify-content: space-between; align-items: flex-start; }
+    .brand .legal { font-size: 7.5pt; letter-spacing: .6px; color: var(--muted); margin-top: 5px; }
+    .doctitle { text-align: right; }
+    .doctitle .hr { font-size: 13pt; font-weight: 700; }
+    .doctitle .en { font-size: 8.5pt; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+    .doctitle .no { font-size: 10pt; font-weight: 700; margin-top: 6px; font-variant-numeric: tabular-nums; }
+    .rule { border-top: 2px solid var(--ink); margin: 10px 0 0; }
+    h2 {
+      font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--muted); margin: 13px 0 5px; padding-bottom: 3px;
+      border-bottom: 1px solid var(--hairline);
+    }
+    .kv { width: 100%; border-collapse: collapse; }
+    .kv td { padding: 3.4px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+    .kv tr:last-child td { border-bottom: none; }
+    .kv .k { color: var(--muted); width: 46%; }
+    .kv .v { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .kv .k small { display: block; font-size: 7.5pt; color: #9AA0A8; }
+    .parties { display: flex; gap: 14px; }
+    .party { flex: 1; background: var(--panel); padding: 10px 12px; }
+    .party .role { font-size: 7.5pt; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin-bottom: 4px; }
+    .party .name { font-weight: 700; }
+    .party .line { font-size: 8pt; color: var(--muted); }
+    table.items { width: 100%; border-collapse: collapse; }
+    table.items th, table.items td {
+      padding: 5px 0; border-bottom: 1px solid var(--hairline);
+      font-variant-numeric: tabular-nums; text-align: right;
+    }
+    table.items th { font-size: 7.5pt; color: var(--muted); font-weight: 700; text-transform: uppercase; }
+    table.items .l, table.items th.l { text-align: left; }
+    table.items tfoot td { font-weight: 700; border-bottom: none; padding-top: 8px; }
+    .issuer { margin-top: 16px; font-size: 8pt; color: var(--muted); }
+    .issuer .name { font-weight: 700; color: var(--ink); }
+    .note { margin-top: 10px; font-size: 8pt; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="masthead">
+    <div class="brand">
+      <div class="legal">Test Seller</div>
+    </div>
+    <div class="doctitle">
+      <div class="hr">Invoice</div>
+      <div class="en">Račun</div>
+      <div class="no">4/MERCHANTDEMO/1</div>
+    </div>
+  </div>
+  <div class="rule"></div>
+
+  <h2>Invoice details · Podaci o računu</h2>
+  <table class="kv">
+    <tr>
+      <td class="k">Invoice number<small>Broj računa</small></td>
+      <td class="v">4/MERCHANTDEMO/1</td>
+    </tr>
+    <tr>
+      <td class="k">Fiscalization number<small>Broj fiskalizacije</small></td>
+      <td class="v">a7c7794a-796a-4736-85e9-14118c9d6ea2</td>
+    </tr>
+    <tr>
+      <td class="k">Issue date<small>Datum izdavanja</small></td>
+      <td class="v">14/09/2026, 10:33:22</td>
+    </tr>
+    <tr>
+      <td class="k">Payment method<small>Način plaćanja</small></td>
+      <td class="v">Card</td>
+    </tr>
+    <tr>
+      <td class="k">Order reference<small>Referenca narudžbe</small></td>
+      <td class="v">6aa7b142dbaab25a1e2b8d29</td>
+    </tr>
+  </table>
+
+  <h2>Parties · Strane</h2>
+  <div class="parties">
+    <div class="party">
+      <div class="role">Seller · Prodavatelj</div>
+      <div class="name">Test Seller</div>
+      <div class="line">Zagreb</div>
+      <div class="line">OIB: 123</div>
+    </div>
+    <div class="party">
+      <div class="role">Buyer · Kupac</div>
+      <div class="name">Ali Imran</div>
+      <div class="line">cwaliimran@gmail.com</div>
+      <div class="line">123 Main St, Apartment 4B 10001 New York</div>
+    </div>
+  </div>
+
+  <h2>Items · Stavke</h2>
+  <table class="items">
+    <thead>
+      <tr>
+        <th class="l">Item · Stavka</th>
+        <th>VAT %</th>
+        <th>Qty</th>
+        <th>Unit price</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="l">Service fee — General</td><td>25%</td><td>1</td><td>1.20</td><td>1.20</td></tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td class="l" colspan="4">Total (EUR)</td>
+        <td>1.20</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="note"></div>
+
+  <div class="issuer">
+    <div class="name">Test Seller</div>
+    <div>Zagreb · OIB: 123</div>
+    <div>This document has been fiscalized. Issued 14/09/2026, 10:33:22. Enquiries: support@pleis.hr</div>
+  </div>
+</body>
+</html>

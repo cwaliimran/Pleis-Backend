@@ -1,9 +1,9 @@
 const express = require("express");
-const auth = require("../../middlewares/authMiddleware");
+const auth = require("../../../middlewares/authMiddleware");
 const {
   getConfirmationDocument,
   getInvoiceDocument,
-} = require("./fiscalDocumentController");
+} = require("./controller");
 const { openConfirmationInApp } = require("./openAppRedirect");
 
 const router = express.Router();

@@ -638,10 +638,11 @@ exports.createClientSecret = async (req, res) => {
 
 exports.createWebPaySession = async (req, res) => {
   try {
+    // Populate the user to access their name information since billing does not have name fields
     const billing = await UserBillingInformation.findOne({
       user: req.user._id,
       status: "active",
-    });
+    }).populate("user", "firstName lastName");
 
     const currency = getMonriCurrency();
     const { amount, orderType, orderNumber, paymentMethod } = req.query;
@@ -654,7 +655,8 @@ exports.createWebPaySession = async (req, res) => {
 
     // Build reusable billing fields
     const billingAddress = billing?.billingAddress || {};
-    const fullName = `${billing?.firstName || ""} ${billing?.lastName || ""}`.trim() || "Guest User";
+    const fullName =
+      `${billing?.user?.firstName || ""} ${billing?.user?.lastName || ""}`.trim() || "Guest User";
     const country = billingAddress.country === "USA" ? "US" : (billingAddress.country || getMonriCountry());
 
     const digest = generateDigest({ orderNumber, amount, currency });
@@ -1036,8 +1038,8 @@ exports.refundPayment = async (req, res) => {
 
     const {
       issueCancellationConfirmation,
-    } = require("../../fiscalDocuments/confirmationGenerator");
-    const PaymentConfirmation = require("../../fiscalDocuments/PaymentConfirmation.model");
+    } = require("../../fiscalDocuments/confirmation/generator");
+    const PaymentConfirmation = require("../../fiscalDocuments/models/PaymentConfirmation.model");
     const original = await PaymentConfirmation.findOne({
       orderId: tx.orderNumber,
       $or: [
@@ -1054,7 +1056,7 @@ exports.refundPayment = async (req, res) => {
     }
 
     if (tx.orderType === "ticketingbookings") {
-      const { stornoTicketingInvoices } = require("../../fiscalDocuments/documentService");
+      const { stornoTicketingInvoices } = require("../../fiscalDocuments/jobs/documentService");
       await stornoTicketingInvoices(tx.orderNumber, { execute: false });
     }
 

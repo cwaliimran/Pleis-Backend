@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="hr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
-<title>PC-2026-00000002 Potvrda o plaćanju</title>
+<title>PC-2026-00000001 Payment confirmation</title>
 <style>
   @font-face {
     font-family: 'Instrument Sans';
@@ -39,7 +39,7 @@
     size: A4;
     margin: 15mm 15mm 13mm 15mm;
     @bottom-center {
-      content: "Potvrda o plaćanju PC-2026-00000002 · stranica " counter(page) "/" counter(pages);
+      content: "Payment confirmation PC-2026-00000001 · page " counter(page) "/" counter(pages);
       font-family: 'Instrument Sans', 'DejaVu Sans', sans-serif;
       font-size: 7.5pt;
       color: #8A8F98;
@@ -152,8 +152,8 @@
       <div class="legal">Utopia Technologies d.o.o.</div>
     </div>
     <div class="doctitle">
-      <div class="hr">Potvrda o plaćanju</div>
-      <div class="no">PC-2026-00000002</div>
+      <div class="hr">Payment confirmation</div>
+      <div class="no">PC-2026-00000001</div>
     </div>
   </div>
   <div class="rule"></div>
@@ -164,52 +164,49 @@
     <div class="sub">This is not a fiscal invoice</div>
   </div>
 
-  <div class="notice" data-block="cancellation">
-    <div class="head">STORNIRANO</div>
-    <div class="sub">Ova potvrda stornira PC-2026-00000001</div>
-  </div>
+  
 
   <!-- ============ PAYMENT DETAILS ============ -->
-  <h2>Podaci o plaćanju</h2>
+  <h2>Payment details</h2>
   <table class="kv">
     <tr>
-      <td class="k">Kupac</td>
+      <td class="k">Customer</td>
       <td class="v">Ana Test<br><span class="mono">pleis-dummy-ana@example.invalid</span></td>
     </tr>
     <tr>
-      <td class="k">Identifikator transakcije</td>
+      <td class="k">Transaction ID</td>
       <td class="v mono">txn-dummy</td>
     </tr>
     <tr>
-      <td class="k">Referenca narudžbe / događaja</td>
+      <td class="k">Order / event reference</td>
       <td class="v mono">ORD-DUMMY1</td>
     </tr>
     <tr>
-      <td class="k">Datum i vrijeme plaćanja</td>
+      <td class="k">Date and time of payment</td>
       <td class="v">10. 09. 2026. 10:00:00</td>
     </tr>
     <tr>
-      <td class="k">Način plaćanja</td>
+      <td class="k">Payment method</td>
       <td class="v">Kartica, Visa 4242</td>
     </tr>
     <tr>
-      <td class="k">Iznos</td>
+      <td class="k">Amount</td>
       <td class="v">EUR 12.00</td>
     </tr>
   </table>
 
   <!-- ============ PARTIES ============ -->
-  <h2>Strane</h2>
+  <h2>Parties</h2>
   <div class="parties">
     <div class="party">
-      <div class="role">Pružatelj usluge</div>
+      <div class="role">Service provider</div>
       <div class="name">Dummy Venue d.o.o.</div>
       <div class="line">Dummy Venue</div>
       <div class="line">Ilica 1, Zagreb</div>
       <div class="line">OIB: 00000000000</div>
     </div>
     <div class="party">
-      <div class="role">Naplatu obavio</div>
+      <div class="role">Payment collected by</div>
       <div class="name">Utopia Technologies d.o.o.</div>
       <div class="line">PLEIS</div>
       <div class="line">Zagreb</div>
@@ -218,15 +215,15 @@
   </div>
 
   <!-- ============ PAID ITEMS · ALWAYS RENDERED ============ -->
-  <h2>Stavke</h2>
+  <h2>Paid items</h2>
   <table class="items">
     <thead>
       <tr>
-        <th class="l">Stavka</th>
-        <th>PDV %</th>
-        <th>Kol.</th>
-        <th>Jed. cijena</th>
-        <th>Iznos</th>
+        <th class="l">Item</th>
+        <th>VAT %</th>
+        <th>Qty</th>
+        <th>Unit price</th>
+        <th>Amount</th>
       </tr>
     </thead>
     <tbody>
@@ -235,7 +232,7 @@
     </tbody>
     <tfoot>
       <tr>
-        <td class="l" colspan="4">Ukupno plaćeno (EUR)</td>
+        <td class="l" colspan="4">Total paid (EUR)</td>
         <td>12.00</td>
       </tr>
     </tfoot>
@@ -249,12 +246,12 @@
 
   <!-- ============ ISSUER FOOTER ============ -->
   <div class="issuer">
-    <div class="role">Izdavatelj potvrde</div>
+    <div class="role">Issued by</div>
     <div class="name">Utopia Technologies d.o.o.</div>
     <div class="line">Zagreb · OIB: 34839111725 · https://pleis.hr</div>
     <div class="sig">
-      Dokument je izdan elektronički i valjan je bez potpisa i pečata. Izdan 10. 09. 2026. 10:00:00.
-      Kontrolni zapis: abc123hash · Upiti: support@pleis.hr
+      This document was issued electronically and is valid without a signature or stamp. Issued 10. 09. 2026. 10:00:00.
+      Control record: abc123hash · Enquiries: support@pleis.hr
     </div>
   </div>
 

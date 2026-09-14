@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
  * In-process payment-redesign verification. No Mongo, no Monri, no Billko HTTP.
- * Run: node backend/commonModules/fiscalDocuments/verifyPaymentRedesign.js
+ * Run: node backend/commonModules/fiscalDocuments/scripts/verifyPaymentRedesign.js
  */
 const fs = require("fs");
 const path = require("path");
 
-const ROOT = path.join(__dirname, "../../..");
+const ROOT = path.join(__dirname, "../../../..");
 const PREVIEW_DIR = path.join(ROOT, "tmp/payment-confirmation-previews");
 const PASS_LABEL = process.env.VERIFY_PASS || "1";
 if (!process.env.API_BASE_URL) {
@@ -72,7 +72,7 @@ function fixtureView(overrides = {}) {
     emailItemRowsHtml:
       overrides.emailItemRowsHtml ||
       `<tr><td style="padding:4px 0;font-size:13px;color:#14181F;">Burger × 1</td><td align="right" style="padding:4px 0;font-size:13px;font-weight:700;color:#14181F;">12.00</td></tr>`,
-    appDeepLink: require("./openAppRedirect").buildConfirmationOpenUrl(
+    appDeepLink: require("../api/openAppRedirect").buildConfirmationOpenUrl(
       overrides.confirmationNumber || "PC-2026-00000001",
     ),
     documentUrl: "",
@@ -87,9 +87,9 @@ function stepHtmlEmails() {
   const {
     renderPaymentConfirmationHtml,
     renderPaymentConfirmationEmailHtml,
-  } = require("./confirmationHtmlRenderer");
-  const { DEFAULT_LOCALE } = require("./confirmationI18n");
-  const { computeHtmlHash } = require("./confirmationHelpers");
+  } = require("../confirmation/htmlRenderer");
+  const { DEFAULT_LOCALE } = require("../locales");
+  const { computeHtmlHash } = require("../confirmation/helpers");
 
   assert(DEFAULT_LOCALE === "hr", "default locale is hr");
 
@@ -119,6 +119,10 @@ function stepHtmlEmails() {
   const docWithBar = renderPaymentConfirmationHtml(withoutVoucher, {
     injectActions: true,
   });
+  const docEn = renderPaymentConfirmationHtml({
+    ...withoutVoucher,
+    locale: "en",
+  });
 
   fs.mkdirSync(PREVIEW_DIR, { recursive: true });
   const written = {
@@ -127,6 +131,7 @@ function stepHtmlEmails() {
     "email-without-voucher-en.html": emailEn,
     "email-cancellation-hr.html": emailCancel,
     "document-without-voucher-hr.html": docNoVoucher,
+    "document-without-voucher-en.html": docEn,
     "document-with-voucher-hr.html": docVoucher,
     "document-cancellation-hr.html": docCancel,
   };
@@ -136,6 +141,23 @@ function stepHtmlEmails() {
 
   assert(emailNoVoucher.includes("Otvori u aplikaciji"), "HR email has CTA");
   assert(emailEn.includes("Open in the app"), "EN email has CTA");
+  assert(
+    emailEn.includes("This message is your payment confirmation"),
+    "EN covering email is English",
+  );
+  assert(!emailEn.includes("Otvori u aplikaciji"), "EN email CTA is not Croatian");
+  assert(!emailEn.includes("Potvrda o plaćanju"), "EN email is not Croatian");
+  assert(docEn.includes("Payment confirmation"), "EN document title");
+  assert(docEn.includes("Payment details"), "EN document section");
+  assert(
+    !docEn.includes("Potvrda o plaćanju ·") && !docEn.includes("Podaci o plaćanju ·"),
+    "EN document has no bilingual headings",
+  );
+  assert(
+    !docNoVoucher.includes("Payment details ·") &&
+      !docNoVoucher.includes("Strane · Parties"),
+    "HR document has no bilingual headings",
+  );
   assert(
     emailNoVoucher.includes("app/open?id="),
     "CTA uses share-style open URL",
@@ -152,7 +174,7 @@ function stepHtmlEmails() {
     buildConfirmationOpenUrl,
     buildAppSchemeLink,
     renderOpenAppHtml,
-  } = require("./openAppRedirect");
+  } = require("../api/openAppRedirect");
   const openUrl = buildConfirmationOpenUrl("PC-2026-00000001");
   assert(
     openUrl.includes("app/open?id=PC-2026-00000001"),
@@ -207,7 +229,7 @@ function stepHtmlEmails() {
 
 function stepSourceGates() {
   console.log("\n== Step 1/3/4 source gates ==");
-  const docSrc = readSrc("backend/commonModules/fiscalDocuments/documentService.js");
+  const docSrc = readSrc("backend/commonModules/fiscalDocuments/jobs/documentService.js");
   const ordering = extractFn(docSrc, "issueOrderingConfirmation");
   const reservation = extractFn(docSrc, "issueReservationConfirmation");
   const ticketing = extractFn(docSrc, "issueTicketingInvoices");
@@ -240,6 +262,13 @@ function stepSourceGates() {
   );
   assert(ticketing.includes('kind: "service_fee"'), "ticketing still issues service fee");
   assert(ticketing.includes('kind: "tickets"'), "ticketing still issues tickets");
+  assert(
+    ticketing.includes('populate("user"') &&
+      ticketing.includes("order.user?.firstName") &&
+      !ticketing.includes("protectionUserDetails") &&
+      !ticketing.includes("protectionNameFallback"),
+    "ticketing invoice buyer uses logged-in user profile, not ticket attendee",
+  );
   assert(handle.includes("subscription_invoice"), "worker handles subscription invoices");
   assert(
     !menuFinalizer.includes("Your order has been confirmed"),
@@ -258,14 +287,14 @@ function stepSourceGates() {
     "ticketing QR email is unchanged (no invoice PDF on QR mail)",
   );
   const generator = readSrc(
-    "backend/commonModules/fiscalDocuments/confirmationGenerator.js",
+    "backend/commonModules/fiscalDocuments/confirmation/generator.js",
   );
   assert(
     generator.includes("buildConfirmationOpenUrl"),
     "confirmation emails use share-style open URL",
   );
   const fiscalRoutes = readSrc(
-    "backend/commonModules/fiscalDocuments/fiscalDocumentRoutes.js",
+    "backend/commonModules/fiscalDocuments/api/routes.js",
   );
   assert(
     fiscalRoutes.includes('router.get("/open"'),
@@ -287,11 +316,16 @@ function stepSourceGates() {
     "potvrda email does not attach a PDF",
   );
   const invoiceCtl = readSrc(
-    "backend/commonModules/fiscalDocuments/fiscalDocumentController.js",
+    "backend/commonModules/fiscalDocuments/api/controller.js",
   );
   assert(
     invoiceCtl.includes("application/pdf") && invoiceCtl.includes("fetchInvoicePdf"),
     "fiscal invoice download serves Billko PDF",
+  );
+  assert(
+    invoiceCtl.includes('populate("user", "language")') &&
+      invoiceCtl.includes("fetchInvoicePdf(invoice, { locale })"),
+    "invoice download uses customer language",
   );
   assert(
     ticketing.includes("maybeEmailTicketingInvoicePdfs"),
@@ -318,19 +352,19 @@ function stepRefundAndFields() {
     nextRefundStatus,
     planMonriRefund,
     isLiveRefundEnabled,
-  } = require("../paymentsIntegrations/monri/refundService");
+  } = require("../../paymentsIntegrations/monri/refundService");
   const {
     mapOrderItems,
     snapshotCardFromMonriPayload,
     humanPaymentMethod,
-  } = require("./confirmationHelpers");
-  const { canViewInvoice, canViewConfirmation } = require("./fiscalDocumentAccess");
+  } = require("../confirmation/helpers");
+  const { canViewInvoice, canViewConfirmation } = require("../api/access");
   const {
     buildSubscriptionInvoicePayload,
-  } = require("./subscriptionInvoiceBuilder");
-  const { InvoiceType } = require("../paymentsIntegrations/billko/billkoInvoiceBuilder");
-  const { buildLedgerEntryInput } = require("../paymentsIntegrations/ledger/ledgerWriter");
-  const { applyLedgerListFilters } = require("../paymentsIntegrations/ledger/ledgerFilters");
+  } = require("../invoice/subscriptionBuilder");
+  const { InvoiceType } = require("../../paymentsIntegrations/billko/billkoInvoiceBuilder");
+  const { buildLedgerEntryInput } = require("../../paymentsIntegrations/ledger/ledgerWriter");
+  const { applyLedgerListFilters } = require("../../paymentsIntegrations/ledger/ledgerFilters");
 
   assert(isLiveRefundEnabled() === false, "live Monri refunds are disabled by default");
   assert(
@@ -456,13 +490,14 @@ function stepRefundAndFields() {
   assert(filtered.cardLast4 === "4242", "additive ledger filters");
 }
 
-function stepFiscalInvoicePdf() {
+async function stepFiscalInvoicePdf() {
   console.log("\n== Fiscal invoice PDF (Billko račun only) ==");
   const {
     buildInvoicePdfAttachment,
     looksLikePdf,
-  } = require("./billkoInvoicePdf");
-  const { renderFiscalInvoiceHtml } = require("./invoiceHtmlRenderer");
+    localeForInvoice,
+  } = require("../invoice/pdf");
+  const { renderFiscalInvoiceHtml } = require("../invoice/htmlRenderer");
 
   const html = renderFiscalInvoiceHtml(
     {
@@ -482,8 +517,8 @@ function stepFiscalInvoicePdf() {
           },
         ],
         billingInformation: {
-          firstName: "Suheer",
-          lastName: "Zahid",
+          firstName: "Ali",
+          lastName: "Imran",
           emailAddress: "pleis-dummy@example.invalid",
         },
         payment: [{ paymentType: 2, amount: 20 }],
@@ -496,9 +531,104 @@ function stepFiscalInvoicePdf() {
     },
   );
   assert(html.includes("Račun"), "fiscal template is a račun");
+  assert(html.includes("Podaci o računu"), "HR PDF uses Croatian labels");
+  assert(!html.includes("Invoice details"), "HR PDF is Croatian-only labels");
+  assert(html.includes("Kartica"), "HR PDF payment method is Kartica");
   assert(!html.includes("OVO NIJE FISKALIZIRANI RAČUN"), "fiscal PDF is not a potvrda");
   assert(html.includes("14/SUBMERCHANTDEMO/1"), "invoice number is in HTML");
   assert(html.includes("General"), "Billko line items are in HTML");
+  assert(html.includes("Ali Imran"), "HR PDF buyer is the logged-in user name");
+  assert(!html.includes("Guest User"), "HR PDF buyer is not Guest User");
+  assert(!html.includes("Suheer Zahid"), "HR PDF buyer is not ticket attendee");
+  assert(html.includes("{{DOC_TITLE}}") === false, "invoice tokens are filled");
+
+  const htmlEn = renderFiscalInvoiceHtml(
+    {
+      invoiceNumber: "3/MERCHANTDEMO/1",
+      fiscalizationNumber: "JIR-TEST",
+      orderNumber: "6aa7a4a1441346c43cfe1270",
+      amount: 1.2,
+      currency: "EUR",
+      createdAt: new Date("2026-09-14T07:52:24Z"),
+      rawResponse: {
+        products: [
+          {
+            name: "Service fee — General",
+            quantity: 1,
+            unitRetailPrice: 1.2,
+            taxRateLabels: ["Tg4"],
+          },
+        ],
+        billingInformation: {
+          firstName: "Ali",
+          lastName: "Imran",
+          emailAddress: "pleis-dummy@example.invalid",
+        },
+        payment: [{ paymentType: 2, amount: 1.2 }],
+      },
+    },
+    {
+      locale: "en",
+      sellerLegalName: "Dummy Organizer d.o.o.",
+      sellerAddress: "Ilica 1, Zagreb",
+      sellerOib: "12345678901",
+    },
+  );
+  assert(htmlEn.includes('lang="en"'), "EN PDF html lang");
+  assert(htmlEn.includes(">Invoice<"), "EN PDF primary title is Invoice");
+  assert(htmlEn.includes("Invoice details"), "EN PDF section labels");
+  assert(!htmlEn.includes("Račun"), "EN PDF has no Croatian title");
+  assert(!htmlEn.includes("Podaci o računu"), "EN PDF has no Croatian details");
+  assert(htmlEn.includes("This document has been fiscalized"), "EN PDF footer");
+  assert(htmlEn.includes(">Card<"), "EN PDF payment method is Card");
+  assert(htmlEn.includes("Ali Imran"), "EN PDF buyer is the logged-in user name");
+  assert(!htmlEn.includes("Guest User"), "EN PDF buyer is not Guest User");
+  assert(!htmlEn.includes("Suheer Zahid"), "EN PDF buyer is not ticket attendee");
+  assert(!htmlEn.includes("Kartica"), "EN PDF is not Croatian payment method");
+  assert(!htmlEn.includes("Dokument je fiskaliziran"), "EN PDF is not Croatian footer");
+  assert(!htmlEn.includes("{{DOC_TITLE}}"), "EN invoice tokens are filled");
+
+  const { customerFromBilling } = require("../invoice/htmlRenderer");
+  const { buildBillingInformation } = require("../../paymentsIntegrations/billko/billkoInvoiceBuilder");
+  const billed = buildBillingInformation(
+    {},
+    { firstName: "Ali", lastName: "Imran" },
+  );
+  assert(billed.firstName === "Ali" && billed.lastName === "Imran", "billing fallback uses user profile name");
+  const missing = buildBillingInformation({});
+  assert(
+    `${missing.firstName} ${missing.lastName}`.trim() !== "Guest User",
+    "missing billing names are not Guest User",
+  );
+  assert(
+    customerFromBilling({ firstName: "Guest", lastName: "User" }, "en").name !== "Guest User",
+    "PDF renderer does not print Guest User",
+  );
+  assert(
+    customerFromBilling({ firstName: "Ali", lastName: "Imran" }, "en").name === "Ali Imran",
+    "PDF renderer prints the real buyer name",
+  );
+
+  fs.mkdirSync(PREVIEW_DIR, { recursive: true });
+  fs.writeFileSync(path.join(PREVIEW_DIR, "fiscal-invoice-hr.html"), html);
+  fs.writeFileSync(path.join(PREVIEW_DIR, "fiscal-invoice-en.html"), htmlEn);
+
+  const template = require("fs").readFileSync(
+    require("path").join(__dirname, "../templates/invoice.html"),
+    "utf8",
+  );
+  assert(
+    template.includes("{{DOC_TITLE}}") &&
+      template.includes("{{SECTION_DETAILS}}") &&
+      template.includes("{{HTML_LANG}}") &&
+      template.includes("{{PAYMENT_METHOD}}") &&
+      template.includes("{{FOOTER_LINE}}"),
+    "fiscal invoice template uses i18n tokens",
+  );
+  assert(
+    !template.includes(">Račun<") && !template.includes("Podaci o računu"),
+    "fiscal invoice template is not hardcoded Croatian",
+  );
 
   const pdfBytes = Buffer.from("%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n");
   const attachment = buildInvoicePdfAttachment({
@@ -511,20 +641,79 @@ function stepFiscalInvoicePdf() {
   assert(attachment.contentType === "application/pdf", "Mailgun content-type is application/pdf");
 
   const emailSrc = require("fs").readFileSync(
-    require("path").join(__dirname, "billkoInvoicePdf.js"),
+    require("path").join(__dirname, "../invoice/pdf.js"),
     "utf8",
   );
   assert(
     emailSrc.includes("generateInvoicePdf") &&
       emailSrc.includes("renderFiscalInvoiceHtml") &&
-      emailSrc.includes("maybeEmailTicketingInvoicePdfs"),
+      emailSrc.includes("maybeEmailTicketingInvoicePdfs") &&
+      emailSrc.includes("invoiceEmailSubject"),
     "ticketing invoice email path generates PDF from HTML template",
   );
+  const { getCopy } = require("../locales");
+  assert(
+    getCopy("en").invoiceEmailSubject("3/MERCHANTDEMO/1, 16/SUBMERCHANTDEMO/1") ===
+      "Invoices for your purchase (3/MERCHANTDEMO/1, 16/SUBMERCHANTDEMO/1)",
+    "EN invoice email subject",
+  );
+  assert(
+    getCopy("en").invoiceEmailBody.includes("attached"),
+    "EN invoice email body",
+  );
+  assert(
+    getCopy("hr").invoiceEmailSubject("2/MERCHANTDEMO/1") === "Račun 2/MERCHANTDEMO/1",
+    "HR invoice email subject",
+  );
+  assert(
+    getCopy("en").invoiceEmailSubject("3/MERCHANTDEMO/1, 16/SUBMERCHANTDEMO/1") !==
+      "Invoice 3/MERCHANTDEMO/1, 16/SUBMERCHANTDEMO/1",
+    "EN subject is not the old Invoice ${numbers} format",
+  );
+
+  const fetchFn = extractFn(emailSrc, "fetchInvoicePdf");
+  const storeFn = extractFn(emailSrc, "storeInvoicePdfIfAvailable");
+  const emailFn = extractFn(emailSrc, "maybeEmailTicketingInvoicePdfs");
+  assert(
+    emailSrc.includes('require("../../../models/UserModel")'),
+    "invoice PDF locale loads User via UserModel",
+  );
+  assert(
+    emailSrc.includes("generateInvoicePdf(row, { locale })"),
+    "email generates PDF in the customer locale",
+  );
+  assert(
+    !emailFn.includes("fetchInvoicePdf("),
+    "email does not attach Azure-cached PDF via fetchInvoicePdf",
+  );
+  assert(
+    fetchFn.includes("generateInvoicePdf") && !fetchFn.includes("pdfFileUrl"),
+    "admin download regenerates PDF instead of using Azure HR cache",
+  );
+  assert(
+    storeFn.includes("pdfStorageKey") && storeFn.includes("pdfFileUrl"),
+    "store skips overwriting an existing Azure cache",
+  );
+  assert(
+    storeFn.includes("__pdfBuffer"),
+    "store reuses a just-generated buffer instead of regenerating HR",
+  );
+
+  assert(
+    (await localeForInvoice({ user: { language: "en" } })) === "en",
+    "localeForInvoice uses populated user.language",
+  );
+  assert(
+    (await localeForInvoice({ user: { language: "hr" } })) === "hr",
+    "localeForInvoice populated HR",
+  );
+  assert((await localeForInvoice({}, "en")) === "en", "localeForInvoice fallback");
+  assert((await localeForInvoice({})) === "hr", "localeForInvoice defaults to hr");
 }
 
 function stepPendingNoNumber() {
   console.log("\n== Failed/pending does not allocate PC ==");
-  const docSrc = readSrc("backend/commonModules/fiscalDocuments/documentService.js");
+  const docSrc = readSrc("backend/commonModules/fiscalDocuments/jobs/documentService.js");
   const ordering = extractFn(docSrc, "issueOrderingConfirmation");
   const reservation = extractFn(docSrc, "issueReservationConfirmation");
   assert(
@@ -536,7 +725,7 @@ function stepPendingNoNumber() {
     "unpaid reservation skips confirmation",
   );
   const generator = readSrc(
-    "backend/commonModules/fiscalDocuments/confirmationGenerator.js",
+    "backend/commonModules/fiscalDocuments/confirmation/generator.js",
   );
   assert(
     generator.includes("allocateConfirmationNumber") &&
@@ -545,16 +734,19 @@ function stepPendingNoNumber() {
   );
 }
 
-function main() {
+async function main() {
   console.log(`\nPayment redesign verification pass ${PASS_LABEL}`);
   console.log("No Mongo / Monri / Billko HTTP in this script.\n");
   stepHtmlEmails();
   stepSourceGates();
   stepRefundAndFields();
-  stepFiscalInvoicePdf();
+  await stepFiscalInvoicePdf();
   stepPendingNoNumber();
   console.log(`\nALL CHECKS PASSED (pass ${PASS_LABEL})`);
   console.log(`Previews: ${PREVIEW_DIR}`);
 }
 
-main();
+main().catch((error) => {
+  console.error(error.message || error);
+  process.exit(1);
+});

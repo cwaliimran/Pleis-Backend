@@ -1,21 +1,17 @@
 const fs = require("fs");
 const path = require("path");
+const { resolveLocale, getCopy } = require("../locales");
 const {
-  resolveLocale,
-  getCopy,
-  localizeDocumentTemplate,
-  localizeEmailTemplate,
-} = require("./confirmationI18n");
+  formatZagreb,
+  formatMoney,
+  escapeHtml,
+  fillRawTokens,
+  fillEscapedTokens,
+} = require("../shared/html");
 
-const TEMPLATE_DIR = path.join(__dirname, "templates");
-const DOCUMENT_TEMPLATE = path.join(
-  TEMPLATE_DIR,
-  "payment_confirmation_template.html",
-);
-const EMAIL_TEMPLATE = path.join(
-  TEMPLATE_DIR,
-  "payment_confirmation_email.html",
-);
+const TEMPLATE_DIR = path.join(__dirname, "../templates");
+const DOCUMENT_TEMPLATE = path.join(TEMPLATE_DIR, "confirmation.html");
+const EMAIL_TEMPLATE = path.join(TEMPLATE_DIR, "confirmation-email.html");
 
 const templateCache = new Map();
 
@@ -26,34 +22,52 @@ function readTemplate(filePath) {
   return templateCache.get(filePath);
 }
 
-function formatZagreb(date, locale = "en") {
-  if (!date) return "";
-  const intlLocale = resolveLocale(locale) === "hr" ? "hr-HR" : "en-GB";
-  return new Intl.DateTimeFormat(intlLocale, {
-    timeZone: "Europe/Zagreb",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  }).format(date);
+function copyTokens(copy, kind) {
+  const c = copy.confirmation;
+  const email = kind === "email";
+  return {
+    HTML_LANG: copy.htmlLang,
+    DOC_TITLE: c.docTitle,
+    PAGE_WORD: c.pageWord,
+    LBL_CANCELLED: c.cancelled,
+    LBL_CANCELS: c.cancels,
+    SECTION_PAYMENT: c.sectionPayment,
+    LBL_CUSTOMER: c.labelCustomer,
+    LBL_TRANSACTION_ID: c.labelTransactionId,
+    LBL_ORDER_REFERENCE: email ? c.emailOrderReference : c.labelOrderReference,
+    LBL_PAID_AT: c.labelPaidAt,
+    LBL_PAYMENT_METHOD: c.labelPaymentMethod,
+    LBL_AMOUNT: c.labelAmount,
+    SECTION_PARTIES: c.sectionParties,
+    ROLE_SERVICE_PROVIDER: c.roleServiceProvider,
+    ROLE_COLLECTED_BY: c.roleCollectedBy,
+    SECTION_ITEMS: email ? c.emailItems : c.sectionItems,
+    COL_ITEM: c.colItem,
+    COL_VAT: c.colVat,
+    COL_QTY: c.colQty,
+    COL_UNIT: c.colUnit,
+    COL_AMOUNT: c.colAmount,
+    LBL_TOTAL_PAID: c.totalPaid,
+    LBL_VOUCHER_TITLE: c.voucherTitle,
+    LBL_VOUCHER_CODE: c.voucherCode,
+    LBL_VOUCHER_VALUE: c.voucherValue,
+    LBL_VOUCHER_VALID: c.voucherValid,
+    LBL_VOUCHER_REDEEM: c.voucherRedeem,
+    LBL_VOUCHER_HELP: email ? c.emailVoucherHelp : c.voucherHelp,
+    LBL_ISSUED_BY: c.issuedBy,
+    LBL_DOCUMENT_FOOTER: c.documentFooter,
+    EMAIL_PREHEADER: c.emailPreheader,
+    EMAIL_GREETING: c.emailGreeting,
+    EMAIL_EXPECTING: c.emailExpecting,
+    LBL_CONFIRMATION_NUMBER: c.confirmationNumber,
+    EMAIL_VOUCHER_VALUE: c.emailVoucherValue,
+    EMAIL_COVERING: c.coveringHtml,
+    OPEN_IN_APP: copy.openInApp,
+    LBL_CANCELLATION_TITLE: c.cancellationTitle,
+  };
 }
 
-function formatMoney(amount, currency = "EUR") {
-  return `${currency} ${Number(amount || 0).toFixed(2)}`;
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function flattenTokens(data) {
+function dataTokens(data) {
   return {
     PLEIS_LEGAL_NAME: data.pleisLegalName,
     PLEIS_OIB: data.pleisOib,
@@ -89,13 +103,11 @@ function flattenTokens(data) {
   };
 }
 
-function fillTokens(html, data, itemRowsHtml) {
-  const replacements = flattenTokens(data);
-  Object.entries(replacements).forEach(([token, value]) => {
-    html = html.split(`{{${token}}}`).join(escapeHtml(value == null ? "" : String(value)));
-  });
-  html = html.split("{{ITEM_ROWS}}").join(itemRowsHtml || "");
-  return html;
+function fillTokens(html, data, itemRowsHtml, kind) {
+  const locale = resolveLocale(data.locale);
+  html = fillRawTokens(html, copyTokens(getCopy(locale), kind));
+  html = fillEscapedTokens(html, dataTokens(data));
+  return html.split("{{ITEM_ROWS}}").join(itemRowsHtml || "");
 }
 
 function findMatchingCloseTag(html, start, tag) {
@@ -186,8 +198,8 @@ function injectActionsBar(html, options) {
   return bar + html;
 }
 
-function applyTemplate(html, data, { itemRowsHtml, hasVoucher, isCancellation, filename, documentUrl, injectActions }) {
-  html = fillTokens(html, data, itemRowsHtml);
+function applyTemplate(html, data, { itemRowsHtml, hasVoucher, isCancellation, filename, documentUrl, injectActions, kind }) {
+  html = fillTokens(html, data, itemRowsHtml, kind);
   if (!hasVoucher) {
     html = stripDataBlock(html, "voucher");
   }
@@ -207,27 +219,24 @@ function stripEmbeddedFonts(html) {
 }
 
 function renderPaymentConfirmationHtml(data, options = {}) {
-  const locale = resolveLocale(data.locale);
-  let html = localizeDocumentTemplate(readTemplate(DOCUMENT_TEMPLATE), locale);
-  html = applyTemplate(html, data, {
+  return applyTemplate(readTemplate(DOCUMENT_TEMPLATE), data, {
     itemRowsHtml: data.itemRowsHtml,
     hasVoucher: Boolean(data.voucher?.code),
     isCancellation: Boolean(data.isCancellation),
     filename: `${data.confirmationNumber || "confirmation"}.html`,
     injectActions: options.injectActions === true,
     documentUrl: data.documentUrl,
+    kind: "document",
   });
-  return html;
 }
 
 function renderPaymentConfirmationEmailHtml(data) {
-  const locale = resolveLocale(data.locale);
-  let html = localizeEmailTemplate(readTemplate(EMAIL_TEMPLATE), locale);
-  html = applyTemplate(html, data, {
+  const html = applyTemplate(readTemplate(EMAIL_TEMPLATE), data, {
     itemRowsHtml: data.emailItemRowsHtml,
     hasVoucher: Boolean(data.voucher?.code),
     isCancellation: Boolean(data.isCancellation),
     injectActions: false,
+    kind: "email",
   });
   return stripEmbeddedFonts(html);
 }

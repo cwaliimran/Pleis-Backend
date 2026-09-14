@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="hr">
+<html lang="{{HTML_LANG}}">
 <head>
 <meta charset="utf-8">
-<title>{{CONFIRMATION_NUMBER}} Potvrda o plaćanju</title>
+<title>{{CONFIRMATION_NUMBER}} {{DOC_TITLE}}</title>
 <style>
   @font-face {
     font-family: 'Instrument Sans';
@@ -39,7 +39,7 @@
     size: A4;
     margin: 15mm 15mm 13mm 15mm;
     @bottom-center {
-      content: "Potvrda o plaćanju {{CONFIRMATION_NUMBER}} · stranica " counter(page) "/" counter(pages);
+      content: "{{DOC_TITLE}} {{CONFIRMATION_NUMBER}} · {{PAGE_WORD}} " counter(page) "/" counter(pages);
       font-family: 'Instrument Sans', 'DejaVu Sans', sans-serif;
       font-size: 7.5pt;
       color: #8A8F98;
@@ -152,8 +152,7 @@
       <div class="legal">{{PLEIS_LEGAL_NAME}}</div>
     </div>
     <div class="doctitle">
-      <div class="hr">Potvrda o plaćanju</div>
-      <div class="en">Payment confirmation</div>
+      <div class="hr">{{DOC_TITLE}}</div>
       <div class="no">{{CONFIRMATION_NUMBER}}</div>
     </div>
   </div>
@@ -166,51 +165,51 @@
   </div>
 
   <div class="notice" data-block="cancellation">
-    <div class="head">STORNIRANO · CANCELLED</div>
-    <div class="sub">Ova potvrda stornira {{CANCELLED_CONFIRMATION_NUMBER}}</div>
+    <div class="head">{{LBL_CANCELLED}}</div>
+    <div class="sub">{{LBL_CANCELS}} {{CANCELLED_CONFIRMATION_NUMBER}}</div>
   </div>
 
   <!-- ============ PAYMENT DETAILS ============ -->
-  <h2>Podaci o plaćanju · Payment details</h2>
+  <h2>{{SECTION_PAYMENT}}</h2>
   <table class="kv">
     <tr>
-      <td class="k">Kupac<small>Customer</small></td>
+      <td class="k">{{LBL_CUSTOMER}}</td>
       <td class="v">{{CUSTOMER_NAME}}<br><span class="mono">{{CUSTOMER_EMAIL}}</span></td>
     </tr>
     <tr>
-      <td class="k">Identifikator transakcije<small>Transaction ID</small></td>
+      <td class="k">{{LBL_TRANSACTION_ID}}</td>
       <td class="v mono">{{TRANSACTION_ID}}</td>
     </tr>
     <tr>
-      <td class="k">Referenca narudžbe / događaja<small>Order / event reference</small></td>
+      <td class="k">{{LBL_ORDER_REFERENCE}}</td>
       <td class="v mono">{{ORDER_REFERENCE}}</td>
     </tr>
     <tr>
-      <td class="k">Datum i vrijeme plaćanja<small>Date and time of payment</small></td>
+      <td class="k">{{LBL_PAID_AT}}</td>
       <td class="v">{{PAID_AT}}</td>
     </tr>
     <tr>
-      <td class="k">Način plaćanja<small>Payment method</small></td>
+      <td class="k">{{LBL_PAYMENT_METHOD}}</td>
       <td class="v">{{PAYMENT_METHOD}}</td>
     </tr>
     <tr>
-      <td class="k">Iznos<small>Amount</small></td>
+      <td class="k">{{LBL_AMOUNT}}</td>
       <td class="v">{{CURRENCY}} {{TOTAL_AMOUNT}}</td>
     </tr>
   </table>
 
   <!-- ============ PARTIES ============ -->
-  <h2>Strane · Parties</h2>
+  <h2>{{SECTION_PARTIES}}</h2>
   <div class="parties">
     <div class="party">
-      <div class="role">Pružatelj usluge · Service provider</div>
+      <div class="role">{{ROLE_SERVICE_PROVIDER}}</div>
       <div class="name">{{ORGANIZER_LEGAL_NAME}}</div>
       <div class="line">{{ORGANIZER_VENUE_NAME}}</div>
       <div class="line">{{ORGANIZER_ADDRESS}}</div>
       <div class="line">OIB: {{ORGANIZER_OIB}}</div>
     </div>
     <div class="party">
-      <div class="role">Naplatu obavio · Payment collected by</div>
+      <div class="role">{{ROLE_COLLECTED_BY}}</div>
       <div class="name">{{PLEIS_LEGAL_NAME}}</div>
       <div class="line">{{PLEIS_BRAND}}</div>
       <div class="line">{{PLEIS_ADDRESS}}</div>
@@ -219,15 +218,15 @@
   </div>
 
   <!-- ============ PAID ITEMS · ALWAYS RENDERED ============ -->
-  <h2>Stavke · Paid items</h2>
+  <h2>{{SECTION_ITEMS}}</h2>
   <table class="items">
     <thead>
       <tr>
-        <th class="l">Stavka · Item</th>
-        <th>PDV %</th>
-        <th>Kol.</th>
-        <th>Jed. cijena</th>
-        <th>Iznos</th>
+        <th class="l">{{COL_ITEM}}</th>
+        <th>{{COL_VAT}}</th>
+        <th>{{COL_QTY}}</th>
+        <th>{{COL_UNIT}}</th>
+        <th>{{COL_AMOUNT}}</th>
       </tr>
     </thead>
     <tbody>
@@ -236,7 +235,7 @@
     </tbody>
     <tfoot>
       <tr>
-        <td class="l" colspan="4">Ukupno plaćeno · Total paid ({{CURRENCY}})</td>
+        <td class="l" colspan="4">{{LBL_TOTAL_PAID}} ({{CURRENCY}})</td>
         <td>{{TOTAL_AMOUNT}}</td>
       </tr>
     </tfoot>
@@ -247,36 +246,35 @@
        never for a reservation without a minimum-spend prepayment.
        ============================================================== -->
   <div data-block="voucher">
-    <h2>Vaučer za minimalnu potrošnju · Minimum-spend voucher</h2>
+    <h2>{{LBL_VOUCHER_TITLE}}</h2>
     <div class="voucher">
       <table style="width:100%;border-collapse:collapse">
         <tr>
           <td style="vertical-align:top">
-            <div class="lab">Broj vaučera · Voucher code</div>
+            <div class="lab">{{LBL_VOUCHER_CODE}}</div>
             <div class="code">{{VOUCHER_CODE}}</div>
           </td>
           <td style="vertical-align:top;text-align:right;width:38%">
-            <div class="lab">Vrijednost · Value</div>
+            <div class="lab">{{LBL_VOUCHER_VALUE}}</div>
             <div class="amt">{{CURRENCY}} {{VOUCHER_AMOUNT}}</div>
           </td>
         </tr>
       </table>
       <div class="meta">
-        Vrijedi · Valid: {{VOUCHER_VALID_FROM}} – {{VOUCHER_VALID_TO}}<br>
-        Mjesto korištenja · Redeemable at: {{ORGANIZER_VENUE_NAME}}<br>
-        Iznos se automatski oduzima od narudžbi u aplikaciji, ili ga osoblje aktivira unosom koda.
+        {{LBL_VOUCHER_VALID}} {{VOUCHER_VALID_FROM}} – {{VOUCHER_VALID_TO}}<br>
+        {{LBL_VOUCHER_REDEEM}} {{ORGANIZER_VENUE_NAME}}<br>
+        {{LBL_VOUCHER_HELP}}
       </div>
     </div>
   </div>
 
   <!-- ============ ISSUER FOOTER ============ -->
   <div class="issuer">
-    <div class="role">Izdavatelj potvrde · Issued by</div>
+    <div class="role">{{LBL_ISSUED_BY}}</div>
     <div class="name">{{PLEIS_LEGAL_NAME}}</div>
     <div class="line">{{PLEIS_ADDRESS}} · OIB: {{PLEIS_OIB}} · {{PLEIS_WEB}}</div>
     <div class="sig">
-      Dokument je izdan elektronički i valjan je bez potpisa i pečata. Izdan {{ISSUED_AT}}.
-      Kontrolni zapis: {{DOCUMENT_HASH}} · Upiti: {{SUPPORT_EMAIL}}
+      {{LBL_DOCUMENT_FOOTER}}
     </div>
   </div>
 

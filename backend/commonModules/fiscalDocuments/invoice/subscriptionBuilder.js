@@ -6,8 +6,8 @@ const {
   buildCreateInvoicePayload,
   splitStreet,
   countryCode,
-} = require("../paymentsIntegrations/billko/billkoInvoiceBuilder");
-const { PLEIS_REVENUE_TAX_LABEL } = require("../paymentsIntegrations/billko/taxRateLabels");
+} = require("../../paymentsIntegrations/billko/billkoInvoiceBuilder");
+const { PLEIS_REVENUE_TAX_LABEL } = require("../../paymentsIntegrations/billko/taxRateLabels");
 
 function buildOrganizerBillingInformation(user, organization) {
   const details = user?.companyDetails || {};

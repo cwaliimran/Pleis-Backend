@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="hr">
+<html lang="{{HTML_LANG}}">
 <head>
   <meta charset="UTF-8" />
-  <title>{{INVOICE_NUMBER}} Račun</title>
+  <title>{{INVOICE_NUMBER}} {{DOC_TITLE}}</title>
   <style>
     @page { size: A4; margin: 15mm 15mm 13mm 15mm; }
     :root {
@@ -61,62 +61,61 @@
       <div class="legal">{{SELLER_LEGAL_NAME}}</div>
     </div>
     <div class="doctitle">
-      <div class="hr">Račun</div>
-      <div class="en">Invoice</div>
+      <div class="hr">{{DOC_TITLE}}</div>
       <div class="no">{{INVOICE_NUMBER}}</div>
     </div>
   </div>
   <div class="rule"></div>
 
-  <h2>Podaci o računu · Invoice details</h2>
+  <h2>{{SECTION_DETAILS}}</h2>
   <table class="kv">
     <tr>
-      <td class="k">Broj računa<small>Invoice number</small></td>
+      <td class="k">{{LABEL_INVOICE_NUMBER}}</td>
       <td class="v">{{INVOICE_NUMBER}}</td>
     </tr>
     <tr>
-      <td class="k">Broj fiskalizacije<small>Fiscalization number</small></td>
+      <td class="k">{{LABEL_FISCALIZATION}}</td>
       <td class="v">{{FISCALIZATION_NUMBER}}</td>
     </tr>
     <tr>
-      <td class="k">Datum izdavanja<small>Issue date</small></td>
+      <td class="k">{{LABEL_ISSUED_AT}}</td>
       <td class="v">{{ISSUED_AT}}</td>
     </tr>
     <tr>
-      <td class="k">Način plaćanja<small>Payment method</small></td>
+      <td class="k">{{LABEL_PAYMENT_METHOD}}</td>
       <td class="v">{{PAYMENT_METHOD}}</td>
     </tr>
     <tr>
-      <td class="k">Referenca narudžbe<small>Order reference</small></td>
+      <td class="k">{{LABEL_ORDER_REFERENCE}}</td>
       <td class="v">{{ORDER_REFERENCE}}</td>
     </tr>
   </table>
 
-  <h2>Strane · Parties</h2>
+  <h2>{{SECTION_PARTIES}}</h2>
   <div class="parties">
     <div class="party">
-      <div class="role">Prodavatelj · Seller</div>
+      <div class="role">{{ROLE_SELLER}}</div>
       <div class="name">{{SELLER_LEGAL_NAME}}</div>
       <div class="line">{{SELLER_ADDRESS}}</div>
       <div class="line">OIB: {{SELLER_OIB}}</div>
     </div>
     <div class="party">
-      <div class="role">Kupac · Buyer</div>
+      <div class="role">{{ROLE_BUYER}}</div>
       <div class="name">{{CUSTOMER_NAME}}</div>
       <div class="line">{{CUSTOMER_EMAIL}}</div>
       <div class="line">{{CUSTOMER_ADDRESS}}</div>
     </div>
   </div>
 
-  <h2>Stavke · Items</h2>
+  <h2>{{SECTION_ITEMS}}</h2>
   <table class="items">
     <thead>
       <tr>
-        <th class="l">Stavka · Item</th>
-        <th>PDV %</th>
-        <th>Kol.</th>
-        <th>Jed. cijena</th>
-        <th>Iznos</th>
+        <th class="l">{{COL_ITEM}}</th>
+        <th>{{COL_VAT}}</th>
+        <th>{{COL_QTY}}</th>
+        <th>{{COL_UNIT}}</th>
+        <th>{{COL_AMOUNT}}</th>
       </tr>
     </thead>
     <tbody>
@@ -124,7 +123,7 @@
     </tbody>
     <tfoot>
       <tr>
-        <td class="l" colspan="4">Ukupno · Total ({{CURRENCY}})</td>
+        <td class="l" colspan="4">{{LABEL_TOTAL}} ({{CURRENCY}})</td>
         <td>{{TOTAL_AMOUNT}}</td>
       </tr>
     </tfoot>
@@ -135,7 +134,7 @@
   <div class="issuer">
     <div class="name">{{SELLER_LEGAL_NAME}}</div>
     <div>{{SELLER_ADDRESS}} · OIB: {{SELLER_OIB}}</div>
-    <div>Dokument je fiskaliziran. Izdan {{ISSUED_AT}}. Upiti: {{SUPPORT_EMAIL}}</div>
+    <div>{{FOOTER_LINE}}</div>
   </div>
 </body>
 </html>

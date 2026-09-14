@@ -3,26 +3,26 @@ const { TicketingOrders } = require("@TicketingOrdersModel");
 const { TicketingBookings } = require("@TicketingBookingsModel");
 const { UserReservations } = require("@UserReservationsModel");
 const MenuOrders = require("@OrdersModel");
-const { UserBillingInformation } = require("../transactions/UserBillingInformation");
+const { UserBillingInformation } = require("../../transactions/UserBillingInformation");
 const Organizations = require("@OrganizationModel");
-const BillkoInvoice = require("./BillkoInvoice.model");
+const BillkoInvoice = require("../models/BillkoInvoice.model");
 const {
   createInvoice,
   findInvoicesByOrderNumber,
   isInvalidApiKeyError,
   refundInvoice,
-} = require("../paymentsIntegrations/billko/billkoClient");
+} = require("../../paymentsIntegrations/billko/billkoClient");
 const {
   stripPdfPayload,
   storeInvoicePdfIfAvailable,
   maybeEmailTicketingInvoicePdfs,
-} = require("./billkoInvoicePdf");
+} = require("../invoice/pdf");
 const {
   getPleisBillkoApiKey,
   getOrganizerSeller,
   getOrganizerParty,
   formatOrganizerAddress,
-} = require("../paymentsIntegrations/billko/billkoCredentials");
+} = require("../../paymentsIntegrations/billko/billkoCredentials");
 const {
   toGross,
   mapGatewayPaymentType,
@@ -33,25 +33,25 @@ const {
   buildServiceProducts,
   scaleLinesToGross,
   buildOrganizerAttributionNote,
-} = require("../paymentsIntegrations/billko/billkoInvoiceBuilder");
+} = require("../../paymentsIntegrations/billko/billkoInvoiceBuilder");
 const {
   requireLabelFromPercent,
   displayPercent,
   TIP_TAX_LABEL,
   VOUCHER_TAX_LABEL,
-} = require("../paymentsIntegrations/billko/taxRateLabels");
+} = require("../../paymentsIntegrations/billko/taxRateLabels");
 const {
   issuePaymentConfirmation,
   mapOrderItems,
   generateVoucherCode,
   resolveLocale,
   snapshotCardFromMonriPayload,
-} = require("./confirmationGenerator");
-const { getCopy } = require("./confirmationI18n");
-const MonriTransaction = require("../paymentsIntegrations/monri/MonriTransaction");
+} = require("../confirmation/generator");
+const { getCopy } = require("../locales");
+const MonriTransaction = require("../../paymentsIntegrations/monri/MonriTransaction");
 const {
   buildSubscriptionInvoicePayload,
-} = require("./subscriptionInvoiceBuilder");
+} = require("../invoice/subscriptionBuilder");
 
 function failUnrecoverable(error) {
   if (
@@ -226,6 +226,7 @@ function groupTicketLines(bookings) {
 async function issueTicketingInvoices(orderId) {
   const order = await TicketingOrders.findById(orderId)
     .populate("userBillingInformation")
+    .populate("user", "firstName lastName email")
     .lean();
   if (!order) throw new Error("ticketing_order_not_found");
   if (order.paymentDetails?.paymentStatus !== "paid") return null;
@@ -233,17 +234,30 @@ async function issueTicketingInvoices(orderId) {
   const bookings = await TicketingBookings.find({ order: order._id }).lean();
   if (!bookings.length) throw new Error("ticketing_bookings_not_found");
 
+  const userId = order.user?._id || order.user;
   const [organization, billing] = await Promise.all([
     Organizations.findById(order.organization).select("basicInfo location").lean(),
     order.userBillingInformation
       ? Promise.resolve(order.userBillingInformation)
-      : UserBillingInformation.findOne({ user: order.user, status: "active" }).lean(),
+      : UserBillingInformation.findOne({ user: userId, status: "active" }).lean(),
   ]);
 
   const seller = await getOrganizerSeller(order.companyOrganizer, organization);
   const ticketLines = groupTicketLines(bookings);
   const paymentType = mapGatewayPaymentType(order.paymentDetails?.paymentMethod);
-  const billingInformation = buildBillingInformation(billing);
+  const billingInformation = buildBillingInformation(
+    {
+      ...(billing || {}),
+      firstName: order.user?.firstName || billing?.firstName,
+      lastName: order.user?.lastName || billing?.lastName,
+      email: billing?.email || order.user?.email,
+    },
+    {
+      firstName: order.user?.firstName,
+      lastName: order.user?.lastName,
+      email: order.user?.email,
+    },
+  );
   const orderNumber = String(order._id);
   const feeTotal = toGross(order.orderPricing?.taxAmount || 0);
 
@@ -268,7 +282,7 @@ async function issueTicketingInvoices(orderId) {
         orderNumber,
         organization: order.organization,
         companyOrganizer: order.companyOrganizer,
-        user: order.user,
+        user: userId,
         uniqueCodePrefix: "FEE-",
       }),
     );
@@ -295,12 +309,12 @@ async function issueTicketingInvoices(orderId) {
       orderNumber,
       organization: order.organization,
       companyOrganizer: order.companyOrganizer,
-      user: order.user,
+      user: userId,
       uniqueCodePrefix: "TCK-",
     }),
   );
 
-  await maybeEmailTicketingInvoicePdfs(orderNumber, order.user);
+  await maybeEmailTicketingInvoicePdfs(orderNumber, userId);
   return invoices;
 }
 

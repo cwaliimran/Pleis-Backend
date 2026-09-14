@@ -1,15 +1,15 @@
-const PaymentConfirmation = require("./PaymentConfirmation.model");
-const BillkoInvoice = require("./BillkoInvoice.model");
-const { sendResponse } = require("../../helperUtils/responseUtil");
+const PaymentConfirmation = require("../models/PaymentConfirmation.model");
+const BillkoInvoice = require("../models/BillkoInvoice.model");
+const { sendResponse } = require("../../../helperUtils/responseUtil");
 const {
   canViewConfirmation,
   canViewInvoice,
   redactInvoiceForRole,
-} = require("./fiscalDocumentAccess");
+} = require("./access");
 const {
   fetchInvoicePdf,
   storeInvoicePdfIfAvailable,
-} = require("./billkoInvoicePdf");
+} = require("../invoice/pdf");
 
 async function getConfirmationDocument(req, res) {
   try {
@@ -46,7 +46,9 @@ async function getConfirmationDocument(req, res) {
 
 async function getInvoiceDocument(req, res) {
   try {
-    const invoice = await BillkoInvoice.findById(req.params.id).lean();
+    const invoice = await BillkoInvoice.findById(req.params.id)
+      .populate("user", "language")
+      .lean();
     if (!invoice || !canViewInvoice(req.user, invoice)) {
       return sendResponse({
         res,
@@ -62,7 +64,8 @@ async function getInvoiceDocument(req, res) {
       });
     }
 
-    const pdf = await fetchInvoicePdf(invoice);
+    const locale = invoice.user?.language;
+    const pdf = await fetchInvoicePdf(invoice, { locale });
     if (!pdf) {
       return sendResponse({
         res,
@@ -70,7 +73,7 @@ async function getInvoiceDocument(req, res) {
         translationKey: "document_not_stored",
       });
     }
-    storeInvoicePdfIfAvailable(invoice).catch((error) => {
+    storeInvoicePdfIfAvailable(invoice, { locale }).catch((error) => {
       console.error("[billko] invoice PDF cache failed:", error.message);
     });
     res.setHeader("Content-Type", "application/pdf");

@@ -42,7 +42,7 @@ async function sellerExtrasForInvoice(invoice) {
       sellerOib: process.env.PLEIS_OIB || "",
     };
   }
-  const { getOrganizerParty } = require("../paymentsIntegrations/billko/billkoCredentials");
+  const { getOrganizerParty } = require("../../paymentsIntegrations/billko/billkoCredentials");
   const party = await getOrganizerParty(invoice.companyOrganizer);
   return {
     sellerLegalName: party.companyName,
@@ -51,10 +51,40 @@ async function sellerExtrasForInvoice(invoice) {
   };
 }
 
-async function generateInvoicePdf(invoice) {
-  const { renderFiscalInvoiceHtml } = require("./invoiceHtmlRenderer");
+function languageFromUserRef(userRef) {
+  if (userRef && typeof userRef === "object" && userRef.language != null) {
+    return userRef.language;
+  }
+  return null;
+}
+
+async function findUserLanguage(userRef) {
+  const populated = languageFromUserRef(userRef);
+  if (populated != null && String(populated).trim()) return String(populated);
+  const id = userRef && typeof userRef === "object" ? userRef._id : userRef;
+  if (!id) return "";
+  try {
+    const { User } = require("../../../models/UserModel");
+    const user = await User.findById(id).select("language").lean();
+    return user?.language || "";
+  } catch (error) {
+    return "";
+  }
+}
+
+async function localeForInvoice(invoice, fallback) {
+  const { resolveLocale, DEFAULT_LOCALE } = require("../locales");
+  if (fallback) return resolveLocale(fallback);
+  if (!invoice?.user) return DEFAULT_LOCALE;
+  const language = await findUserLanguage(invoice.user);
+  return resolveLocale(language || DEFAULT_LOCALE);
+}
+
+async function generateInvoicePdf(invoice, options = {}) {
+  const { renderFiscalInvoiceHtml } = require("./htmlRenderer");
   const { htmlToPdfBuffer } = require("./htmlToPdf");
   const extras = await sellerExtrasForInvoice(invoice);
+  extras.locale = await localeForInvoice(invoice, options.locale);
   const html = renderFiscalInvoiceHtml(invoice, extras);
   const buffer = await htmlToPdfBuffer(html);
   if (!looksLikePdf(buffer)) {
@@ -70,17 +100,26 @@ async function generateInvoicePdf(invoice) {
   };
 }
 
-async function storeInvoicePdfIfAvailable(invoice) {
+async function storeInvoicePdfIfAvailable(invoice, options = {}) {
   if (!invoice) return invoice;
+  // Keep an existing Azure cache as-is (may be HR from an earlier generate).
+  // Email/download always generate a fresh locale-correct PDF and must not
+  // attach this cached file.
   if (invoice.pdfStorageKey && invoice.pdfFileUrl) return invoice;
   try {
-    const pdf = await generateInvoicePdf(invoice);
-    const { uploadFilesToAzure } = require("../../controllers/uploadAzureController");
-    const BillkoInvoice = require("./BillkoInvoice.model");
+    let buffer = invoice.__pdfBuffer;
+    let fileName = invoice.__pdfFileName;
+    if (!looksLikePdf(buffer)) {
+      const pdf = await generateInvoicePdf(invoice, options);
+      buffer = pdf.buffer;
+      fileName = pdf.fileName;
+    }
+    const { uploadFilesToAzure } = require("../../../controllers/uploadAzureController");
+    const BillkoInvoice = require("../models/BillkoInvoice.model");
     const uploaded = await uploadFilesToAzure([
       {
-        buffer: pdf.buffer,
-        originalname: pdf.fileName,
+        buffer,
+        originalname: fileName,
         mimetype: "application/pdf",
       },
     ]);
@@ -88,26 +127,30 @@ async function storeInvoicePdfIfAvailable(invoice) {
     const update = {
       pdfStorageKey: file?.file || "",
       pdfFileUrl: file?.fileUrl || "",
-      pdfFileName: pdf.fileName,
+      pdfFileName: fileName,
     };
     await BillkoInvoice.updateOne({ _id: invoice._id }, { $set: update });
     Object.assign(invoice, update);
-    invoice.__pdfBuffer = pdf.buffer;
-    invoice.__pdfFileName = pdf.fileName;
+    invoice.__pdfBuffer = buffer;
+    invoice.__pdfFileName = fileName;
   } catch (error) {
     console.error("[billko] local invoice PDF failed:", error.message);
   }
   return invoice;
 }
 
-async function fetchInvoicePdf(invoice) {
+async function fetchInvoicePdf(invoice, options = {}) {
   if (invoice?.__pdfBuffer && looksLikePdf(invoice.__pdfBuffer)) {
     return {
       buffer: invoice.__pdfBuffer,
       fileName: invoice.__pdfFileName || invoicePdfFilename(invoice),
     };
   }
-  const generated = await generateInvoicePdf(invoice);
+  const generated = await generateInvoicePdf(invoice, options);
+  if (invoice) {
+    invoice.__pdfBuffer = generated.buffer;
+    invoice.__pdfFileName = generated.fileName;
+  }
   return { buffer: generated.buffer, fileName: generated.fileName };
 }
 
@@ -116,7 +159,7 @@ async function resolveInvoiceApiKey(invoice) {
   const {
     getPleisBillkoApiKey,
     getOrganizerBillkoApiKey,
-  } = require("../paymentsIntegrations/billko/billkoCredentials");
+  } = require("../../paymentsIntegrations/billko/billkoCredentials");
   if (invoice.seller === "pleis") return getPleisBillkoApiKey();
   if (!invoice.companyOrganizer) return null;
   const { apiKey } = await getOrganizerBillkoApiKey(invoice.companyOrganizer);
@@ -124,23 +167,28 @@ async function resolveInvoiceApiKey(invoice) {
 }
 
 async function resolveCustomerEmail(userId) {
-  if (!userId) return "";
-  const User = require("mongoose").model("User");
-  const user = await User.findById(userId).select("email").lean();
-  if (user?.email) return user.email;
-  const { UserBillingInformation } = require("../transactions/UserBillingInformation");
+  if (!userId) return { email: "", language: "" };
+  let user = null;
+  try {
+    const { User } = require("../../../models/UserModel");
+    user = await User.findById(userId).select("email language").lean();
+  } catch (error) {
+    user = null;
+  }
+  if (user?.email) return { email: user.email, language: user.language };
+  const { UserBillingInformation } = require("../../transactions/UserBillingInformation");
   const billing = await UserBillingInformation.findOne({
     user: userId,
     status: "active",
   })
     .select("email")
     .lean();
-  return billing?.email || "";
+  return { email: billing?.email || "", language: user?.language || "" };
 }
 
 async function maybeEmailTicketingInvoicePdfs(orderNumber, userId) {
   if (!orderNumber) return { sent: false, reason: "missing_order_number" };
-  const BillkoInvoice = require("./BillkoInvoice.model");
+  const BillkoInvoice = require("../models/BillkoInvoice.model");
   const rows = await BillkoInvoice.find({
     orderNumber,
     kind: { $in: ["tickets", "service_fee"] },
@@ -154,12 +202,29 @@ async function maybeEmailTicketingInvoicePdfs(orderNumber, userId) {
     return { sent: false, reason: "already_emailed" };
   }
 
+  const customer = await resolveCustomerEmail(userId);
+  const to = customer.email;
+  if (!to) {
+    console.error("[billko] invoice email not sent: customer email missing", orderNumber);
+    return { sent: false, reason: "email_missing" };
+  }
+
+  const { getCopy, resolveLocale } = require("../locales");
+  const locale = resolveLocale(customer.language);
+  const copy = getCopy(locale);
+
   const attachments = [];
   for (const row of rows) {
-    await storeInvoicePdfIfAvailable(row);
     let pdf = null;
     try {
-      pdf = await fetchInvoicePdf(row);
+      pdf = await generateInvoicePdf(row, { locale });
+      await storeInvoicePdfIfAvailable(
+        Object.assign(row, {
+          __pdfBuffer: pdf.buffer,
+          __pdfFileName: pdf.fileName,
+        }),
+        { locale },
+      );
     } catch (error) {
       console.warn("[billko] local PDF failed:", row.kind, error.message);
     }
@@ -177,18 +242,12 @@ async function maybeEmailTicketingInvoicePdfs(orderNumber, userId) {
     return { sent: false, reason: "pdf_not_available" };
   }
 
-  const to = await resolveCustomerEmail(userId);
-  if (!to) {
-    console.error("[billko] invoice email not sent: customer email missing", orderNumber);
-    return { sent: false, reason: "email_missing" };
-  }
-
   const numbers = rows.map((row) => row.invoiceNumber).filter(Boolean).join(", ");
-  const { sendEmailViaMailgun } = require("../../helperUtils/emailUtil");
+  const { sendEmailViaMailgun } = require("../../../helperUtils/emailUtil");
   const result = await sendEmailViaMailgun(
     to,
-    numbers ? `Račun ${numbers}` : "Račun",
-    "<p>U privitku su fiskalizirani računi za vašu kupnju.</p>",
+    copy.invoiceEmailSubject(numbers),
+    copy.invoiceEmailBody,
     {
       fromEmail: `Pleis <noreply@${process.env.MAILGUN_DOMAIN || "pleis.ai"}>`,
       replyTo: process.env.PLEIS_SUPPORT_EMAIL || "support@pleis.hr",
@@ -212,6 +271,7 @@ module.exports = {
   invoicePdfFilename,
   stripPdfPayload,
   buildInvoicePdfAttachment,
+  localeForInvoice,
   generateInvoicePdf,
   fetchInvoicePdf,
   resolveInvoiceApiKey,

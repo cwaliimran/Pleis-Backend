@@ -1,6 +1,6 @@
 const crypto = require("crypto");
-const { displayPercent } = require("../paymentsIntegrations/billko/taxRateLabels");
-const { getCopy, humanPaymentMethod } = require("./confirmationI18n");
+const { displayPercent } = require("../../paymentsIntegrations/billko/taxRateLabels");
+const { getCopy, humanPaymentMethod } = require("../locales");
 
 function snapshotCardFromMonriPayload(payload = {}) {
   if (!payload || typeof payload !== "object") {

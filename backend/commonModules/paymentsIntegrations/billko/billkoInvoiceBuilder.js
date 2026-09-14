@@ -60,6 +60,31 @@ function mapGatewayPaymentType(paymentMethod) {
   return PaymentType.Card;
 }
 
+function trimName(value) {
+  return String(value || "").trim();
+}
+
+function isPlaceholderPersonName(firstName, lastName) {
+  const joined = [firstName, lastName]
+    .map(trimName)
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return !joined || joined === "guest" || joined === "guest user";
+}
+
+function personNameFromParts(...sources) {
+  for (const source of sources) {
+    if (!source) continue;
+    const firstName = trimName(source.firstName);
+    const lastName = trimName(source.lastName || source.surName);
+    if (!isPlaceholderPersonName(firstName, lastName)) {
+      return { firstName, lastName };
+    }
+  }
+  return { firstName: "", lastName: "" };
+}
+
 function buildBillingInformation(billing, fallback = {}) {
   const address = billing?.billingAddress || {};
   const { street, streetNumber } = splitStreet(address.address || fallback.address || "");
@@ -84,8 +109,9 @@ function buildBillingInformation(billing, fallback = {}) {
     payload.companyName = billing.companyName;
     payload.personalIdentificationNumber = billing.personalIdentificationNumber;
   } else {
-    payload.firstName = billing?.firstName || fallback.firstName || "Guest";
-    payload.lastName = billing?.lastName || fallback.lastName || "User";
+    const person = personNameFromParts(billing, fallback);
+    payload.firstName = person.firstName || "Guest";
+    payload.lastName = person.lastName;
   }
 
   if (billing?.phone) payload.phoneNumber = billing.phone;
@@ -228,6 +254,8 @@ module.exports = {
   splitStreet,
   countryCode,
   mapGatewayPaymentType,
+  isPlaceholderPersonName,
+  personNameFromParts,
   buildBillingInformation,
   productTotal,
   buildCreateInvoicePayload,

@@ -1,28 +1,28 @@
 const moment = require("moment-timezone");
 const { customAlphabet } = require("nanoid");
-const PaymentConfirmation = require("./PaymentConfirmation.model");
-const PaymentConfirmationSequence = require("./PaymentConfirmationSequence.model");
+const PaymentConfirmation = require("../models/PaymentConfirmation.model");
+const PaymentConfirmationSequence = require("../models/PaymentConfirmationSequence.model");
 const {
   renderPaymentConfirmationHtml,
   renderPaymentConfirmationEmailHtml,
   formatZagreb,
   escapeHtml,
-} = require("./confirmationHtmlRenderer");
-const { displayPercent } = require("../paymentsIntegrations/billko/taxRateLabels");
+} = require("./htmlRenderer");
+const { displayPercent } = require("../../paymentsIntegrations/billko/taxRateLabels");
 const {
   DEFAULT_LOCALE,
   resolveLocale,
   getCopy,
   humanPaymentMethod,
-} = require("./confirmationI18n");
+} = require("../locales");
 const {
   snapshotCardFromMonriPayload,
   computeHtmlHash,
   mapOrderItems,
-} = require("./confirmationHelpers");
-const { uploadFilesToAzure } = require("../../controllers/uploadAzureController");
-const { sendEmailViaMailgun } = require("../../helperUtils/emailUtil");
-const { buildConfirmationOpenUrl } = require("./openAppRedirect");
+} = require("./helpers");
+const { uploadFilesToAzure } = require("../../../controllers/uploadAzureController");
+const { sendEmailViaMailgun } = require("../../../helperUtils/emailUtil");
+const { buildConfirmationOpenUrl } = require("../api/openAppRedirect");
 
 const VOUCHER_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const voucherChunk = customAlphabet(VOUCHER_ALPHABET, 4);

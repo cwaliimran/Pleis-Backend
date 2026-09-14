@@ -83,7 +83,7 @@ router.use("/reviews", require("../reviews/reviewsRoutes"));
 router.use("/support", require("../support/supportRoutes"));
 router.use("/feed-config", require("../feedConfig/feedConfigRoutes"));
 router.use("/preset-menu", require("../presetMenu/index"));
-router.use("/fiscal-documents", require("../../commonModules/fiscalDocuments/fiscalDocumentRoutes"));
+router.use("/fiscal-documents", require("../../commonModules/fiscalDocuments/api/routes"));
 
 
 
